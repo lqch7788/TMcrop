@@ -2746,44 +2746,59 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('PROPAGATION 数量补全失败:', e.message);
   }
 
-  // ========== V13.0: 采收入库审批表 (harvest_inbounds) ==========
+  // ========== V13.0: 采收入库表 + 审计日志表 ==========
   try {
     seedLog.info('检查 harvest_inbounds 表...');
     db.run(`CREATE TABLE IF NOT EXISTS harvest_inbounds (
       id TEXT PRIMARY KEY,
       inbound_code TEXT UNIQUE NOT NULL,
-      harvest_record_id TEXT,
-      harvest_code TEXT,
-      stock_type TEXT NOT NULL,
-      source_module TEXT NOT NULL,
-      source_record_id TEXT,
-      source_record_code TEXT,
+      source_type TEXT NOT NULL,
+      source_id TEXT,
+      source_code TEXT,
       crop_name TEXT NOT NULL,
-      crop_variety TEXT,
+      variety_name TEXT,
+      inbound_date TEXT NOT NULL,
       quantity REAL DEFAULT 0,
       unit TEXT DEFAULT '公斤',
       warehouse_id TEXT,
       warehouse_name TEXT,
-      inbound_date TEXT,
+      batch_code TEXT,
       status TEXT DEFAULT 'pending',
-      sale_type TEXT,
-      unit_price REAL DEFAULT 0,
-      total_amount REAL DEFAULT 0,
-      auditor TEXT,
-      audit_time TEXT,
+      auditor_id TEXT,
+      auditor_name TEXT,
       audit_opinion TEXT,
+      audit_time TEXT,
+      operator_id TEXT,
       operator_name TEXT,
       remarks TEXT,
-      create_time TEXT,
-      update_time TEXT,
-      deleted_at TEXT
+      is_deleted INTEGER DEFAULT 0,
+      created_at TEXT,
+      updated_at TEXT
     )`);
     try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_code ON harvest_inbounds(inbound_code)'); } catch (e) {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_status ON harvest_inbounds(status)'); } catch (e) {}
-    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_stock_type ON harvest_inbounds(stock_type)'); } catch (e) {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_source_type ON harvest_inbounds(source_type)'); } catch (e) {}
     seedLog.info('  harvest_inbounds 表初始化完成');
   } catch (e: any) {
     seedLog.error('harvest_inbounds 表创建失败:', e.message);
+  }
+
+  try {
+    seedLog.info('检查 audit_logs 表...');
+    db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      business_type TEXT NOT NULL,
+      business_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      operator_id TEXT,
+      operator_name TEXT,
+      opinion TEXT,
+      created_at TEXT
+    )`);
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_business ON audit_logs(business_type, business_id)'); } catch (e) {}
+    seedLog.info('  audit_logs 表初始化完成');
+  } catch (e: any) {
+    seedLog.error('audit_logs 表创建失败:', e.message);
   }
 }
 
