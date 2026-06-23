@@ -12,6 +12,8 @@ import { useUserStore, usePlantLabelStore } from '../../../../stores';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { LabelTypeSelector } from '@/components/ui';
+import type { LabelType } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 
@@ -30,6 +32,12 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [allLabelNumbers, setAllLabelNumbers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [printLabels, setPrintLabels] = useState<string[]>([]);
+
+  // 2026-06-23: 标签粒度 — 批次/单株/混合 三态 + 数量
+  const [labelType, setLabelType] = useState<LabelType>('batch');
+  const [labelQuantity, setLabelQuantity] = useState(1);
+  // 混合模式：每行 quantity 可编辑（以行索引为 key）
+  const [mixedQuantities, setMixedQuantities] = useState<Record<number, number>>({});
 
   // P0: 标签 Store（用于 batch 模式打印时同步入库）
   const batchCreateLabels = usePlantLabelStore((s) => s.batchCreateLabels);
@@ -105,8 +113,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); setLoading(false); return; }
         labelsToPrint = [...selectedLabels];
       } else {
-        // 批量生成
-        // P2: startIdx 用后端真实标签数（避免重复入库/编号错乱）
+        // 批量生成（2026-06-23: 标签粒度三态）
         const existingLabels = usePlantLabelStore.getState().labels.filter(
           (l) => String(l.seedlingId) === String(record.id)
         );
@@ -116,15 +123,25 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           seedlingId?: string | null;
           moveInAreaName?: string | null;
           moveInDate?: string | null;
+          quantity?: number;
         }> = [];
-        for (let i = 0; i < printCount; i++) {
+
+        // 确定生成数量和每标签株数
+        const genCount = labelType === 'batch' ? 1 : printCount;
+        for (let i = 0; i < genCount; i++) {
           const labelNumber = `${record.seedlingCode}-${String(startIdx + i + 1).padStart(4, '0')}`;
           labelsToPrint.push(labelNumber);
+          const qty = labelType === 'batch'
+            ? labelQuantity
+            : labelType === 'mixed'
+              ? (mixedQuantities[i] ?? 1)
+              : 1; // single 模式每标签 1 株
           newLabels.push({
             labelNumber,
             seedlingId: record.id,
             moveInAreaName: record.siteName || null,
             moveInDate: record.startDate || null,
+            quantity: qty,
           });
         }
 
@@ -173,11 +190,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       if (labelsToExport.length === 0) { showAlert('没有可导出的标签'); return; }
 
-      const baseUrl = 'https://tm-crop.com/ResumeTimeline';
+      const baseUrl = `${window.location.origin}/crop/seedlings`;
       const rows = labelsToExport.map((label, i) => ({
         index: i + 1,
         label,
-        url: `${baseUrl}?labelID=${encodeURIComponent(label)}`,
+        url: `${baseUrl}?labelNumber=${encodeURIComponent(label)}`,
       }));
 
       const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签打印</title>
@@ -239,13 +256,17 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     );
   };
 
-  // 二维码内容
-  const getQrCodeValue = (label: string) => JSON.stringify({
-    type: 'seedling', code: label, sourceCode: record.sourceCode,
-    cropCode: record.cropCode, cropName: record.cropName,
-    variety: record.cropVariety, quantity: record.survivalCount,
-    site: record.siteName, date: record.startDate
-  });
+  // 二维码内容（2026-06-23: 新增 url 字段，扫码跳转育苗页+自动开标签管理弹窗）
+  const getQrCodeValue = (label: string) => {
+    const baseUrl = window.location.origin;
+    return JSON.stringify({
+      type: 'seedling', code: label, sourceCode: record.sourceCode,
+      cropCode: record.cropCode, cropName: record.cropName,
+      variety: record.cropVariety, quantity: record.survivalCount,
+      site: record.siteName, date: record.startDate,
+      url: `${baseUrl}/crop/seedlings?labelNumber=${encodeURIComponent(label)}`
+    });
+  };
 
   const currentQrCodeValue = previewLabel ? getQrCodeValue(previewLabel) : '';
 
@@ -352,19 +373,105 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             </div>
           )}
 
-          {/* 批量生成模式 */}
+          {/* 批量生成模式 — 2026-06-23 标签粒度三态 */}
           {printMode === 'batch' && (
-            <div className="flex items-center gap-4">
+            <div className="space-y-3">
+              {/* 标签类型选择器 */}
               <div>
-                <Label className="text-gray-600 text-xs">生成数量</Label>
-                <Input type="number" min="1" max={remainingCount}
-                  value={printCount}
-                  onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
-                  className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                <Label className="text-gray-600 text-xs mb-1 block">标签类型</Label>
+                <LabelTypeSelector value={labelType} onChange={setLabelType} hidden={['mixed'] as LabelType[]} />
               </div>
-              <div className="text-xs text-gray-500">
-                将生成 {printCount} 个标签（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
-              </div>
+
+              {/* 批次模式：1 个标签 + 每标签株数 */}
+              {labelType === 'batch' && (
+                <div className="flex items-center gap-4">
+                  <div>
+                    <Label className="text-gray-600 text-xs">每标签株数</Label>
+                    <Input type="number" min="1" max={remainingCount}
+                      value={labelQuantity}
+                      onChange={(e) => setLabelQuantity(Math.max(1, Number(e.target.value)))}
+                      className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    将生成 1 个标签，代表 {labelQuantity} 株苗
+                  </div>
+                </div>
+              )}
+
+              {/* 单株模式：N 个标签，每标签 1 株（保持旧行为） */}
+              {labelType === 'single' && (
+                <div className="flex items-center gap-4">
+                  <div>
+                    <Label className="text-gray-600 text-xs">生成数量</Label>
+                    <Input type="number" min="1" max={remainingCount}
+                      value={printCount}
+                      onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
+                      className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    将生成 {printCount} 个标签，每个 1 株（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
+                  </div>
+                </div>
+              )}
+
+              {/* 混合模式：N 个标签，逐行可编辑株数 */}
+              {labelType === 'mixed' && (
+                <div>
+                  <div className="flex items-center gap-4 mb-2">
+                    <div>
+                      <Label className="text-gray-600 text-xs">生成数量</Label>
+                      <Input type="number" min="1" max={Math.min(remainingCount, 50)}
+                        value={printCount}
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.min(50, Number(e.target.value)));
+                          setPrintCount(n);
+                          // 重置混合数量表（新行默认 qty=1）
+                          const mq: Record<number, number> = {};
+                          for (let i = 0; i < n; i++) mq[i] = 1;
+                          setMixedQuantities(mq);
+                        }}
+                        className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      将生成 {printCount} 个标签，每行可单独指定株数
+                    </div>
+                  </div>
+                  {/* 混合模式预览表格 */}
+                  <div className="max-h-32 overflow-y-auto border border-gray-200 rounded bg-white">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-1 text-left text-gray-500">序号</th>
+                          <th className="px-2 py-1 text-left text-gray-500">标签编号（预览）</th>
+                          <th className="px-2 py-1 text-left text-gray-500">株数</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {Array.from({ length: printCount }, (_, i) => (
+                          <tr key={i}>
+                            <td className="px-2 py-1 text-gray-600">{i + 1}</td>
+                            <td className="px-2 py-1 font-mono text-gray-700">
+                              {record.seedlingCode}-{String(allLabelNumbers.length + i + 1).padStart(4, '0')}
+                            </td>
+                            <td className="px-2 py-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={mixedQuantities[i] ?? 1}
+                                onChange={(e) => setMixedQuantities((prev) => ({
+                                  ...prev,
+                                  [i]: Math.max(1, Number(e.target.value)),
+                                }))}
+                                className="w-16 px-1 py-0 border border-gray-300 rounded text-xs h-6"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
