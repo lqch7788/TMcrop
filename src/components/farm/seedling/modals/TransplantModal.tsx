@@ -15,6 +15,7 @@ import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 
 interface TransplantModalProps {
   isOpen: boolean;
@@ -56,7 +57,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
     }
 
     // 生成种植批号
-    const plantCode = `ZZ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const plantCode = await generateSeedlingCodeByDate(new Date());
 
     // 溯源码
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + record.cropName.substring(0, 2);

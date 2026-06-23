@@ -298,8 +298,8 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     external_seed_note: (seedling as any).externalSeedNote,
   };
 
-  const result = await enhancedApiClient.post<{ id: string }>('/seedlings', backendData);
-  return { ...seedling, id: result.id } as Seedling;
+  const result = await enhancedApiClient.post<any>('/seedlings', backendData);
+  return result as Seedling;
 }
 
 /**
@@ -419,8 +419,8 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     const snake = FIELD_TO_SNAKE[k] ?? k;
     backendUpdates[snake] = v;
   }
-  const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, backendUpdates);
-  return result ? { ...updates, id } as Seedling : null;
+  const result = await enhancedApiClient.put<any>(`/seedlings/${id}`, backendUpdates);
+  return result as Seedling;
 }
 
 /**

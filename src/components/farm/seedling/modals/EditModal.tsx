@@ -84,6 +84,8 @@ export function EditModal({
     replantCount: (record as any).replantCount ?? 0,  // 2026-06-16: 补苗累计
   });
 
+  const updateItem = useSeedlingStore((s) => s.updateItem);
+
   // 方案2.7: combogrid种源选择器状态
   const [sourceSearch, setSourceSearch] = useState('');
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
@@ -183,7 +185,7 @@ export function EditModal({
     const lossRate = initialCount > 0 ? Math.round((lossCount / initialCount) * 100) : 0;
 
     try {
-      await useSeedlingStore.getState().updateItem(String(record.id), {
+      await updateItem(String(record.id), {
         sourceId: formData.sourceId,
         sourceCode,
         cropName: formData.cropName,

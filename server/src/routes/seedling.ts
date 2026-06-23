@@ -350,7 +350,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     // 步骤4：提交 + 落盘
     db.exec('COMMIT');
     saveDatabase();
-    return res.status(201).json({ success: true, data: { id: newId } });
+    const saved = queryToObjects(db, 'SELECT * FROM seedlings WHERE id = ?', [newId])[0];
+    return res.status(201).json({ success: true, data: saved });
   } catch (insertErr) {
     // 任一失败：整体回滚（sql.js 在 ROLLBACK 后会自动丢弃事务内所有变更）
     try { db.exec('ROLLBACK'); } catch { /* ignore */ }
@@ -1009,7 +1010,7 @@ router.post('/', (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId } });
+    res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM seedlings WHERE id = ?', [newId])[0] });
   } catch (error) {
     console.error('创建育苗记录失败:', error);
     // 2026-06-15: 透出真实错误（铁律 #12：失败大声）
@@ -1098,7 +1099,7 @@ router.put('/:id', (req: Request, res: Response) => {
       } catch { /* correction 失败不影响主流程 */ }
     }
 
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, data: queryToObjects(db, "SELECT * FROM seedlings WHERE id = ?", [id])[0] });
   } catch (error) {
     console.error('更新育苗记录失败:', error);
     res.status(500).json({ success: false, error: '更新育苗记录失败' });
@@ -1111,30 +1112,29 @@ router.delete('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    // 2026-06-14: 删除前先读 source_id/source_mode/source_deducted_quantity 用于反向补偿种源
     const stmt = db.prepare('SELECT source_id, source_mode, source_deducted_quantity FROM seedlings WHERE id = ?');
     stmt.bind([id]);
-    let row: any = null;
+    let row = null;
     if (stmt.step()) row = stmt.getAsObject();
     stmt.free();
 
-    db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
-
-    // 2026-06-14: 反向补偿种源（内部种源 + 有扣减量）
-    if (row && row.source_mode === 'internal' && row.source_id) {
-      const deducted = Number(row.source_deducted_quantity) || 0;
-      if (deducted > 0) {
-        try {
+    db.exec('BEGIN');
+    try {
+      db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
+      if (row && row.source_mode === 'internal' && row.source_id) {
+        const deducted = Number(row.source_deducted_quantity) || 0;
+        if (deducted > 0) {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE id = ?',
             [deducted, now, row.source_id]);
-        } catch (e) {
-          console.error('[seedling DELETE] 种源反向补偿失败:', e);
         }
       }
+      db.exec('COMMIT');
+      saveDatabase();
+      res.json({ success: true, data: { id, deleted: true } });
+    } catch (innerErr) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw innerErr;
     }
-
-    saveDatabase();
-    res.json({ success: true, message: '育苗记录已删除' });
   } catch (error) {
     console.error('删除育苗记录失败:', error);
     res.status(500).json({ success: false, error: '删除育苗记录失败' });
@@ -1392,7 +1392,7 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
+    res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
   } catch (error) {
     console.error('添加每日记录失败:', error);
     res.status(500).json({ success: false, error: '添加每日记录失败' });
@@ -1520,7 +1520,7 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
     // (原 2026-06-14 的 diff 累加逻辑在新校验流程下会重复累加，已移除)
 
     saveDatabase();
-    res.json({ success: true, data: { id: recordId, updated: true } });
+    res.json({ success: true, data: queryToObjects(db, "SELECT * FROM daily_records WHERE id = ?", [recordId])[0] });
   } catch (error) {
     console.error('更新每日记录失败:', error);
     res.status(500).json({ success: false, error: '更新每日记录失败' });
@@ -1650,7 +1650,7 @@ router.post('/:id/transplant-records', (req: Request, res: Response) => {
     db.run('UPDATE seedlings SET status = ?, update_time = ? WHERE id = ?', ['transplanted', now, id]);
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
+    res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM transplant_records WHERE id = ?', [newId])[0] });
   } catch (error) {
     console.error('添加定植记录失败:', error);
     res.status(500).json({ success: false, error: '添加定植记录失败' });
