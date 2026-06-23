@@ -60,7 +60,9 @@ import contractRenewalRouter from './contractRenewal';
 import salaryBudgetRouter from './salaryBudget';
 import fertilizerRouter from './fertilizer';
 import regionRouter from './region';
-import plantLabelRouter from './plantLabel';
+import plantMarksRouter from './plantMarks';
+import plantLabelsRouter from './plantLabels';
+import plantLabelResumesRouter from './plantLabelResumes';
 import materialCodeCategoriesRouter from './materialCodeCategories';
 import backupRouter from './backup';
 import plantingRecordRouter from './plantingRecord';
@@ -290,7 +292,9 @@ router.use('/fertilizer', requireAuth, fertilizerRouter);
 router.use('/region', requireAuth, regionRouter);
 
 // 种植标签管理路由 - V10.0 (plant_labels + plant_marks)
-router.use('/plant-labels', requireAuth, plantLabelRouter);
+router.use('/plant-labels', requireAuth, plantMarksRouter);
+router.use('/plant-labels', requireAuth, plantLabelsRouter);
+router.use('/plant-labels', requireAuth, plantLabelResumesRouter);
 
 // 数据备份恢复路由 - 需要认证
 router.use('/backup', requireAuth, backupRouter);
