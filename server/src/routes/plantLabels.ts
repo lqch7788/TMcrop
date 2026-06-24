@@ -28,12 +28,25 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
     }
 
+    // 确定标签编号前缀：优先查 seedling_code（育苗批号），其次 planting 端查不到，再兜底 crop_name，最后 LABEL
+    let codePrefix = crop_name || 'LABEL';
+    if (seedling_id) {
+      const seedlingResult = db.exec('SELECT seedling_code FROM seedlings WHERE id = ?', [String(seedling_id)]);
+      const seedlingCode = seedlingResult[0]?.values?.[0]?.[0];
+      if (seedlingCode) codePrefix = String(seedlingCode);
+    } else if (planting_id) {
+      const plantingResult = db.exec('SELECT planting_code FROM plantings WHERE id = ?', [String(planting_id)]);
+      const plantingCode = plantingResult[0]?.values?.[0]?.[0];
+      if (plantingCode) codePrefix = String(plantingCode);
+    }
+
     const labels: any[] = [];
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
     for (let i = 0; i < count; i++) {
       const seq = existingCount + i + 1;
-      const labelNumber = `${crop_name || 'LABEL'}-${String(seq).padStart(6, '0')}`;
+      // 育苗/种植批号格式: YM20260615-001-0001 / ZZ20260615-001-0001（4位序号）
+      const labelNumber = `${codePrefix}-${String(seq).padStart(4, '0')}`;
 
       db.run(
         `INSERT INTO plant_labels (label_number, planting_id, seedling_id, move_in_area_name, move_in_date, quantity, create_time)
