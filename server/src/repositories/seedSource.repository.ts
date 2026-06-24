@@ -377,11 +377,12 @@ export class SeedSourceRepository {
    */
   async getTodayMaxSerial(dateStr: string): Promise<number> {
     const db = getDatabase();
-    // 匹配格式: ZZ + 日期 + - + 序号 (如 ZZ20260513-001)
+    // 匹配格式: ZZ + 日期(8位) + - + 序号(3位) = 14 字符
+    // 2026-06-24 修复: 去掉错误的 LENGTH=16 过滤（实际长度 14），导致永远查不到 max
     const pattern = `ZZ${dateStr}-___`;
     const stmt = db.prepare(`
       SELECT source_code FROM seed_sources
-      WHERE source_code LIKE ? AND LENGTH(source_code) = 16 AND deleted_at IS NULL
+      WHERE source_code LIKE ? AND deleted_at IS NULL
       ORDER BY source_code DESC LIMIT 1
     `);
     stmt.bind([pattern]);
@@ -390,7 +391,7 @@ export class SeedSourceRepository {
     if (stmt.step()) {
       const row = stmt.getAsObject() as { source_code: string };
       const code = row.source_code;
-      // 提取序号部分 (最后3位)
+      // 提取序号部分（最后 3 位数字）
       const serialStr = code.slice(-3);
       maxSerial = parseInt(serialStr, 10) || 0;
     }

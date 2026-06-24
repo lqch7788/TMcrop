@@ -13,6 +13,7 @@ import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型
@@ -880,13 +881,32 @@ export function PlantingTable({
                     </TableCell>
                   )}
                   <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                    <span
-                      className="font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 hover:underline"
-                      onClick={() => onDetail(record)}
-                      title="点击查看详情"
-                    >
-                      {record.plantCode}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 hover:underline"
+                        onClick={() => onDetail(record)}
+                        title="点击查看详情"
+                      >
+                        {record.plantCode}
+                      </span>
+                      {/* 2026-06-24: 用途标识 badge — 区分育种 / 留种 / 普通种植 */}
+                      {record.isBreeding && (
+                        <Badge
+                          className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0"
+                          title={`育种实验 · 世代 ${record.generation || '-'}${record.parentMaleCode ? ' · 父本 ' + record.parentMaleCode : ''}${record.parentFemaleCode ? ' · 母本 ' + record.parentFemaleCode : ''}`}
+                        >
+                          🌱 育种{record.generation ? ' ' + record.generation : ''}
+                        </Badge>
+                      )}
+                      {record.isSeedSaving && (
+                        <Badge
+                          className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0"
+                          title={`种植留种 · 标记 ${record.seedPlantMarker || '-'}`}
+                        >
+                          🌾 留种
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.productionPlanCode ? (

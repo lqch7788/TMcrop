@@ -124,9 +124,11 @@ export function AddModal({
   };
 
   // 2026-06-15: 数量体系重构 — 6 种模式合并为 2 种
+  // 2026-06-24: 育苗吸收种源管理的「无性繁殖」功能
+  // 1:1 涵盖种子/嫁接/单种球；1:多 涵盖匍匐茎/组培/扦插/分株/块茎/枝条等所有无性繁殖方式
   const PROPAGATION_MODES = [
-    { value: 'one_to_one', label: '1:1 育苗', desc: '一对一（种子/嫁接）', needsMother: false, needsScion: false },
-    { value: 'one_to_many', label: '1:多 育苗', desc: '母株+子苗（匍匐茎/组培/扦插/分株）', needsMother: true, needsScion: false },
+    { value: 'one_to_one', label: '1:1 育苗', desc: '一对一（种子 / 嫁接 / 单种球）', needsMother: false, needsScion: false },
+    { value: 'one_to_many', label: '1:多 育苗', desc: '母株+子苗（匍匐茎 / 组培 / 扦插 / 分株 / 块茎 / 枝条）', needsMother: true, needsScion: false },
   ] as const;
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
@@ -693,6 +695,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       cancelText="取消"
     >
       <div className="space-y-6">
+        {/* ========== 2026-06-24: 新流程 Banner — 育苗吸收种源管理「无性繁殖」 ========== */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800">
+          <b>育苗</b>已吸收无性繁殖：选 <b>1:多</b> 模式可记录扦插 / 嫁接 / 分株 / 块茎 / 枝条 / 组培 / 匍匐茎等所有无性繁殖方式。
+          育苗成品同样通过「行级采收入库」入作物库存，再调拨入种源管理。
+        </div>
+
         {/* ========== 2026-06-14: 繁殖模式选择（建档后锁定） ========== */}
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">

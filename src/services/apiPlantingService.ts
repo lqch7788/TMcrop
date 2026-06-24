@@ -146,6 +146,16 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     // 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
     disposeQty: Number(item.disposeQty) || 0,
     disposeUnit: String(item.disposeUnit || ''),
+    // 2026-06-24: 育种实验 + 种植留种字段（种源管理吸收功能）
+    isBreeding: Boolean(item.isBreeding),
+    parentMaleCode: String(item.parentMaleCode || ''),
+    parentFemaleCode: String(item.parentFemaleCode || ''),
+    generation: String(item.generation || ''),
+    breedingMethod: String(item.breedingMethod || ''),
+    breedingLocation: String(item.breedingLocation || ''),
+    targetTraits: String(item.targetTraits || ''),
+    isSeedSaving: Boolean(item.isSeedSaving),
+    seedPlantMarker: String(item.seedPlantMarker || ''),
   };
 }
 

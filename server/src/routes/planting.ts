@@ -96,9 +96,21 @@ router.get('/', (req: Request, res: Response) => {
       cv.variety_name AS varietyName,
       cv.sub_variety1_name AS subVariety1Name,
       p.root_name AS rootName,
-      (SELECT s.area_id FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1) AS areaId,
-      (SELECT s.area_name FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1) AS areaName,
-      COALESCE((SELECT SUM(s.quantity) FROM planting_area_stocks s WHERE s.planting_id = p.id), 0) AS plantingCount,
+      -- 2026-06-24: 修复 list 列表显示 0 问题
+      -- 新建种植记录没有 planting_area_stocks 行（只有走 V2 movePlantingV2 流程的才有）
+      -- areaId/areaName/plantingCount 都从 stocks 表 SUM 不准确，需回退到 plantings 表原值
+      COALESCE(
+        (SELECT s.area_id FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1),
+        p.area_id
+      ) AS areaId,
+      COALESCE(
+        (SELECT s.area_name FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1),
+        p.area_name
+      ) AS areaName,
+      COALESCE(
+        NULLIF((SELECT SUM(s.quantity) FROM planting_area_stocks s WHERE s.planting_id = p.id), 0),
+        p.planting_quantity
+      ) AS plantingCount,
       p.planting_date AS plantingDate,
       p.soil_ph AS soilPH,
       p.soil_ec AS soilEC,
@@ -132,6 +144,16 @@ router.get('/', (req: Request, res: Response) => {
       p.create_by AS createBy,
       p.create_time AS createTime,
       p.update_time AS updateTime,
+      -- 2026-06-24: 育种实验 + 种植留种字段（种源管理吸收功能）
+      p.is_breeding AS isBreeding,
+      p.parent_male_code AS parentMaleCode,
+      p.parent_female_code AS parentFemaleCode,
+      p.generation AS generation,
+      p.breeding_method AS breedingMethod,
+      p.breeding_location AS breedingLocation,
+      p.target_traits AS targetTraits,
+      p.is_seed_saving AS isSeedSaving,
+      p.seed_plant_marker AS seedPlantMarker,
       -- 2026-06-17: 4 列聚合（LEFT JOIN + SUM(CASE WHEN destination=...) GROUP BY p.id）
       COALESCE(SUM(CASE WHEN phr.destination = 'harvest' THEN phr.quantity END), 0) AS harvestToInventoryQty,
       COALESCE(SUM(CASE WHEN phr.destination = 'circulate' THEN phr.quantity END), 0) AS residualToSourceQty,
@@ -672,6 +694,18 @@ router.post('/', (req: Request, res: Response) => {
     const finalProductionPlanId = body.production_plan_id || body.productionPlanId || '';
     const finalProductionPlanCode = body.production_plan_code || body.productionPlanCode || '';
 
+    // 2026-06-24: 育种实验字段（种源管理「育种计划产出」吸收到种植管理）
+    const finalIsBreeding = body.is_breeding === true || body.isBreeding === true ? 1 : 0;
+    const finalParentMaleCode = body.parent_male_code || body.parentMaleCode || null;
+    const finalParentFemaleCode = body.parent_female_code || body.parentFemaleCode || null;
+    const finalGeneration = body.generation || null;
+    const finalBreedingMethod = body.breeding_method || body.breedingMethod || null;
+    const finalBreedingLocation = body.breeding_location || body.breedingLocation || null;
+    const finalTargetTraits = body.target_traits || body.targetTraits || null;
+    // 2026-06-24: 种植留种字段（种源管理「种植留种」吸收到种植管理）
+    const finalIsSeedSaving = body.is_seed_saving === true || body.isSeedSaving === true ? 1 : 0;
+    const finalSeedPlantMarker = body.seed_plant_marker || body.seedPlantMarker || null;
+
     const db = getDatabase();
 
     // 2026-06-22 修复 8 处查重：POST 前全表查重（含软删记录）
@@ -746,8 +780,10 @@ router.post('/', (req: Request, res: Response) => {
           area_id, area_name, root_name, greenhouse_name, planting_date, planting_quantity, planted_quantity,
           survival_quantity, survival_rate, growth_status, expected_harvest_date, status, remarks, create_by, create_time, update_time,
           soil_ph, soil_ec, attrition_rate, target_yield, target_yield_unit, transplant_count, transplant_date, is_harvest, harvest_date,
-          harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code,
+          is_breeding, parent_male_code, parent_female_code, generation, breeding_method, breeding_location, target_traits,
+          is_seed_saving, seed_plant_marker
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -757,7 +793,9 @@ router.post('/', (req: Request, res: Response) => {
         finalStatus, finalRemarks, finalCreateBy, now, now,
         finalSoilPh, finalSoilEc, finalAttritionRate, finalTargetYield, finalTargetYieldUnit, finalTransplantCount, finalTransplantDate,
         finalIsHarvest, finalHarvestDate, finalHarvestQuantity, finalPrintCount, finalTraceabilityCode,
-        finalPictures, finalProductionPlanId, finalProductionPlanCode
+        finalPictures, finalProductionPlanId, finalProductionPlanCode,
+        finalIsBreeding, finalParentMaleCode, finalParentFemaleCode, finalGeneration, finalBreedingMethod, finalBreedingLocation, finalTargetTraits,
+        finalIsSeedSaving, finalSeedPlantMarker
       ]);
 
       // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
