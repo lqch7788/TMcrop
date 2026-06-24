@@ -98,6 +98,9 @@ const getStatusBadge = (status: InventoryStatus | string) => {
     case InventoryStatus.EMPTY:
     case 'empty':
       return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已用完</span>;
+    case InventoryStatus.TRANSFERRED:
+    case 'transferred':
+      return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">已调拨</span>;
     default:
       return null;
   }

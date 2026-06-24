@@ -311,6 +311,38 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       insertValues.map(v => v === undefined ? null : v)
     );
 
+    // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
+    // business_id=seedling.id, business_type='seedling'，source_instance_id=来源种源
+    // 在同一 BEGIN/COMMIT 块内，seedling 失败时自动回滚 crop_instance
+    // 注：transplanted_count / harvest_stocked_count 是后续累加字段，新建时为 0
+    const seedlingCiId = `CI${Date.now()}-sd`;
+    db.run(
+      `INSERT INTO crop_instances (
+        id, instance_code, crop_name, crop_variety, business_id, business_type,
+        source_instance_id, initial_quantity, current_quantity,
+        planted_quantity, harvested_quantity, status, seedling_start_date,
+        create_by, create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        seedlingCiId,
+        seedling_code || `YM${Date.now().toString().slice(0, 8)}-001`,  // 兜底（前端通常调 generate-code 传入）
+        crop_name,
+        crop_variety,
+        newId,
+        'seedling',
+        effectiveSourceId || null,
+        Number(seedling_quantity) || 0,
+        Number(survival_quantity || seedling_quantity) || 0,
+        0,  // transplanted_count（新建时为 0）
+        0,  // harvest_stocked_count（新建时为 0）
+        status || 'growing',
+        seedling_date,
+        chargePerson,
+        now,
+        now,
+      ]
+    );
+
     // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
     try {
       const flowType = isExternalMode ? 'external→seedling' : 'seed_source→seedling';
@@ -957,6 +989,37 @@ router.post('/', (req: Request, res: Response) => {
     db.run(
       `INSERT INTO seedlings (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
       insertValues.map(v => v === undefined ? null : v)
+    );
+
+    // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
+    // 此路径无 BEGIN/COMMIT（与上面 with-deduct 不同），但每条 db.run 自动提交，所以是独立的
+    // 即使后续的剩余数量扣减失败，crop_instance 行也不会被回滚 — 这是有意的，因为 seedling 主行已入库
+    const seedlingCiId2 = `CI${Date.now()}-sd2`;
+    db.run(
+      `INSERT INTO crop_instances (
+        id, instance_code, crop_name, crop_variety, business_id, business_type,
+        source_instance_id, initial_quantity, current_quantity,
+        planted_quantity, harvested_quantity, status, seedling_start_date,
+        create_by, create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        seedlingCiId2,
+        seedling_code || `YM${Date.now().toString().slice(0, 8)}-002`,  // 兜底
+        crop_name || null,
+        crop_variety || null,
+        newId,
+        'seedling',
+        source_id || null,
+        Number(seedling_quantity) || 0,
+        Number(survival_quantity || seedling_quantity) || 0,
+        0,
+        0,
+        status || 'growing',
+        seedling_date || null,
+        chargePerson,
+        now,
+        now,
+      ]
     );
 
     // 2026-06-14: 内部种源时扣减种源 remaining_quantity（POST / 路径原本没扣，P1-B 补全）

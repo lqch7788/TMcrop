@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { FlowLogTab } from '../../trace/FlowLogTab';
-import { History } from 'lucide-react';
+import { History, ArrowLeftRight } from 'lucide-react';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import { PropagationType, PropagationStatus } from '../../../../types/crop';
@@ -16,6 +16,8 @@ import { PropagationType, PropagationStatus } from '../../../../types/crop';
 // 繁殖途径标签
 const PROPAGATION_TYPE_LABELS: Record<string, string> = {
   external: '外购入库', breeding: '育种计划产出', seed_saving: '种植留种', asexual: '无性繁殖',
+  // 2026-06-24: 库存调拨入种源
+  transfer_from_inventory: '库存调拨',
 };
 const PROPAGATION_STATUS_LABELS: Record<string, string> = {
   planned: '已计划', in_progress: '进行中', harvested: '已采收', quality_checked: '已质检',
@@ -40,7 +42,9 @@ export function DetailModal({
   onClose,
   record
 }: DetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'trace' | 'flow'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'trace' | 'flow' | 'transfer-source'>('info');
+  // 2026-06-24: 库存调拨来源 — 仅 transferredFromStockId 有值时显示对应 Tab
+  const hasTransferSource = !!record.transferredFromStockId;
 
   const formatUnit = (unit: string) => UNIT_MAP[unit] || unit || '';
 
@@ -71,6 +75,13 @@ export function DetailModal({
           }`}
         >
           基本信息
+          {/* 2026-06-24: 调拨来源徽章 — transferredFromStockId 有值时显示 */}
+          {hasTransferSource && (
+            <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">
+              <ArrowLeftRight className="w-3 h-3" />
+              调拨来源
+            </span>
+          )}
         </Button>
         <Button
           variant="ghost"
@@ -98,6 +109,22 @@ export function DetailModal({
           <History className="w-4 h-4" />
           流转记录
         </Button>
+        {/* 2026-06-24: 库存调拨来源 Tab（条件渲染） */}
+        {hasTransferSource && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveTab('transfer-source')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent flex items-center gap-1 ${
+              activeTab === 'transfer-source'
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <ArrowLeftRight className="w-4 h-4" />
+            调拨来源
+          </Button>
+        )}
       </div>
 
       {/* 标签页内容 */}
@@ -307,10 +334,86 @@ export function DetailModal({
           </div>
         )}
       </div>
-      ) : (
+      ) : activeTab === 'flow' ? (
         /* 流转记录标签页（2026-06-16: 业务流水全链路表格 + 导出，不依赖库存实例） */
         <FlowLogTab code={record.seedCode} businessId={record.id} />
-      )}
+      ) : activeTab === 'transfer-source' && hasTransferSource ? (
+        /* 2026-06-24: 库存调拨来源 Tab — 展示原库存的全量元数据 + 追溯入口 */
+        <div className="space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+              <ArrowLeftRight className="w-4 h-4 text-emerald-600" />
+              调拨来源（原库存信息）
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原库存 ID：</span>
+                <code className="text-xs font-mono text-gray-700">{record.transferredFromStockId}</code>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">来源业务类型：</span>
+                <span className="text-sm text-gray-900">{record.transferredFromBusinessType || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">来源业务 ID：</span>
+                <code className="text-xs font-mono text-gray-700">{record.transferredFromBusinessId || '—'}</code>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始入库日期：</span>
+                <span className="text-sm text-gray-900">{record.originalInboundDate || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始来源模块：</span>
+                <span className="text-sm text-gray-900">{record.originalSourceModule || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始来源 ID：</span>
+                <code className="text-xs font-mono text-gray-700">{record.originalSourceId || '—'}</code>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">作物 / 品种 / 价格</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始作物：</span>
+                <span className="text-sm text-gray-900">{record.originalCropName || record.cropName || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始品种：</span>
+                <span className="text-sm text-gray-900">{record.originalVarietyName || record.cropVariety || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始单位：</span>
+                <span className="text-sm text-gray-900">{record.originalUnit || record.unit || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始单价：</span>
+                <span className="text-sm text-gray-900">
+                  {record.originalUnitPrice != null ? `¥${record.originalUnitPrice}` : '—'}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始供应商：</span>
+                <span className="text-sm text-gray-900">{record.originalSupplierName || '—'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-28">原始生产计划：</span>
+                <code className="text-xs font-mono text-gray-700">{record.originalProductionPlanCode || '—'}</code>
+              </div>
+            </div>
+          </div>
+
+          {record.originalHarvestRecordId && (
+            <div className="text-xs text-gray-500 bg-amber-50 border border-amber-200 rounded p-3">
+              <strong>采收记录：</strong>
+              <code className="font-mono">{record.originalHarvestRecordId}</code>
+              <span className="ml-2">（调拨前的入库来源）</span>
+            </div>
+          )}
+        </div>
+      ) : null}
     </UnifiedModal>
   );
 }

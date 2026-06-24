@@ -364,7 +364,6 @@ export function SeedSourceTable({
                 </TableHead>
               )}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种源批号</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">关联生产计划</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
@@ -434,13 +433,6 @@ export function SeedSourceTable({
                     >
                       {record.seedCode}
                     </Button>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {record.productionPlanCode ? (
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
-                        {record.productionPlanCode}
-                      </span>
-                    ) : '-'}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
@@ -530,7 +522,9 @@ export function SeedSourceTable({
                           2026-06-19: 新增 linkedPlantingId 判断 — 回流种源（关联种植记录的）属于
                           "附带产物"或"回流产物"，已隐含完成整个繁殖过程，不需要过程管理。
                           只对真正手动创建的"育种计划"才显示这两个按钮。 */}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && !record.linkedPlantingId && (
+                      {/* 2026-06-24: 库存调拨入种源 — 已隐含完成全过程，隐藏过程记录/阶段推进按钮
+                          transferredFromStockId 有值 = 调拨来源是库存行（非手动育种）*/}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && !record.linkedPlantingId && !record.transferredFromStockId && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -542,8 +536,9 @@ export function SeedSourceTable({
                         </Button>
                       )}
                       {/* 阶段推进：失败状态下隐藏（已锁定失败，不可继续推进）
-                          2026-06-19: 同样增加 linkedPlantingId 判断，仅手动育种计划显示 */}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && !record.linkedPlantingId && (
+                          2026-06-19: 同样增加 linkedPlantingId 判断，仅手动育种计划显示
+                          2026-06-24: 调拨来源也不显示（成品入库，无需推进阶段） */}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && !record.linkedPlantingId && !record.transferredFromStockId && (
                         <Button
                           variant="ghost"
                           size="icon"

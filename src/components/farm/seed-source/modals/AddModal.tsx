@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors, ArrowLeftRight } from 'lucide-react';
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -29,6 +29,8 @@ import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
+// 2026-06-24: 库存调拨入种源（新增弹窗第 5 选项）
+import { InventoryTransferPanel } from './InventoryTransferPanel';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -155,6 +157,9 @@ export function AddModal({
   // 快速新增弹窗状态
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  // 2026-06-24: 库存调拨入种源 — 多选调拨明细
+  const [transferItems, setTransferItems] = useState<import('../../../../services/seedSourceTransferService').TransferItem[]>([]);
+
   // 挂载时触发供应商全量加载（store 内部有 5 分钟去重）
   useEffect(() => {
     void loadSuppliers();
@@ -254,7 +259,35 @@ export function AddModal({
     setSeedCode(newCode);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (overrideItems?: import('../../../../services/seedSourceTransferService').TransferItem[]) => {
+    // 2026-06-24: 库存调拨分支 — 完全独立的提交路径，绕过所有外购/育种字段校验
+    // P0-3 修复：接受 overrideItems 参数，避免 React state 闭包过期问题（panel onConfirm 异步 setState 后立即调用）
+    if (formData.propagationType === PropagationType.TRANSFER_FROM_INVENTORY) {
+      const items = overrideItems ?? transferItems;
+      if (items.length === 0) {
+        await showAlert('请先在调拨面板选择至少 1 条库存');
+        return;
+      }
+      try {
+        // P0-2 修复：操作员信息完整透传（之前 store action 只接收 1 个参数，operator 被静默丢弃）
+        const operator = currentUser?.name ? { id: String(currentUser.id || ''), name: currentUser.name } : undefined;
+        const results = await useSeedSourceStore.getState().createFromTransfer(items, operator);
+        await showAlert(
+          `调拨成功！共生成 ${results.length} 条新种源：\n${results.map((r) => r.newSeedSourceCode).join('\n')}`,
+          '成功'
+        );
+        setTransferItems([]);
+        // P1-4 修复：调拨成功后重置表单，避免重开 modal 见脏数据
+        resetForm();
+        onSuccess?.();
+        onClose();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '调拨失败';
+        await showAlert(`调拨失败：${msg}`);
+      }
+      return;
+    }
+
     // 验证必填项
     if (!seedCode) {
       await showAlert('请先生成种源批号');
@@ -472,7 +505,8 @@ export function AddModal({
         onClose={onClose}
         title="新增种源"
         size="xl"
-        showFooter={true}
+        // 2026-06-24: 库存调拨模式下隐藏底部保存按钮 — 面板内「确认调拨」自动触发提交
+        showFooter={formData.propagationType !== PropagationType.TRANSFER_FROM_INVENTORY}
         onSubmit={handleSubmit}
         submitText="保存"
         cancelText="取消"
@@ -481,12 +515,14 @@ export function AddModal({
           {/* 入库方式选择（占两列） */}
           <div className="col-span-2">
             <Label className="text-gray-900">入库方式</Label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
               {[
                 { value: PropagationType.EXTERNAL, label: '外购入库', desc: '来自外部供应商的种子采购', Icon: ShoppingCart },
                 { value: PropagationType.BREEDING, label: '育种计划产出', desc: '关联生产批次，自动化管理', Icon: Dna },
                 { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '自产自留，品质稳定', Icon: Sprout },
                 { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '分株、扦插等无性繁殖方式', Icon: Scissors },
+                // 2026-06-24: 库存调拨 — 从作物库存 3 种 stock_type 调入种源（移动语义）
+                { value: PropagationType.TRANSFER_FROM_INVENTORY, label: '库存调拨', desc: '从作物库存调入', Icon: ArrowLeftRight },
               ].map((opt) => {
                 const IconComponent = opt.Icon;
                 return (
@@ -547,6 +583,26 @@ export function AddModal({
             </div>
             <p className="mt-1 text-xs text-gray-400">格式：ZZ + 年月日(8位) + "-" + 流水号(3位)</p>
           </div>
+
+          {/* ===== 库存调拨分支（2026-06-24）=====
+              选中「库存调拨」时独占显示面板；隐藏所有其他字段
+              调拨面板内 onConfirm → 写入 transferItems，handleSubmit 直接走 createFromTransfer 路径 */}
+          {formData.propagationType === PropagationType.TRANSFER_FROM_INVENTORY && (
+            <div className="col-span-2">
+              <InventoryTransferPanel
+                onConfirm={(items) => {
+                  setTransferItems(items);
+                  // P0-3 修复：直接传 items 给 handleSubmit（不再依赖陈旧闭包）
+                  void handleSubmit(items);
+                }}
+              />
+            </div>
+          )}
+
+          {/* 以下所有字段（作物选择 / 种源类型 / 供应商 / 数量 / 单价 / 图片 / 备注 / 补录）在 transfer 模式下都隐藏
+              （库存调拨面板已包含这些信息，无需重复输入） */}
+          {formData.propagationType !== PropagationType.TRANSFER_FROM_INVENTORY && (
+          <>
 
           {/* 作物选择 - 使用统一的 CropCodeSelector */}
           <div>
@@ -774,6 +830,9 @@ export function AddModal({
               </div>
             </>
           )}
+
+          {/* 以下所有字段（供应商 / 数量 / 单价 / 图片 / 备注 / 补录）在 transfer 模式下都隐藏。
+              使用 NOT TRANSFER 包裹替代逐个加条件（避免漏改）。 */}
 
           {/* 供应商 - 只在外购入库时显示 */}
           {formData.propagationType === PropagationType.EXTERNAL && (
@@ -1046,6 +1105,8 @@ export function AddModal({
                                placeholder="请输入补录原因，说明为什么需要补录此入库记录"
               />
             </div>
+          )}
+          </>
           )}
         </div>
       </UnifiedModal>

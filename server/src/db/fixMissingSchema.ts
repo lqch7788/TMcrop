@@ -2148,6 +2148,39 @@ export async function fixMissingSchema(): Promise<void> {
     } else { seedLog.error(`  ✗ seed_sources.deleted_at 失败: ${e.message}`); }
   }
 
+  // 2026-06-24: 库存调拨入种源功能 — seed_sources 加 14 个 transfer 元数据列
+  // transferred_from_stock_id: 外键回指原 inventory_stock.id（追溯锚点）
+  // transferred_from_business_type / business_id: 原库存所属业务类型 + 业务ID
+  // original_*: 全量携带原库存元数据（品种/采收时间/来源/价格等）
+  const transferColumns = [
+    { name: 'transferred_from_stock_id', sql: 'INTEGER REFERENCES inventory_stock(id)' },
+    { name: 'transferred_from_business_type', sql: 'TEXT' },
+    { name: 'transferred_from_business_id', sql: 'TEXT' },
+    { name: 'original_inbound_date', sql: 'TEXT' },
+    { name: 'original_source_module', sql: 'TEXT' },
+    { name: 'original_source_id', sql: 'TEXT' },
+    { name: 'original_harvest_record_id', sql: 'TEXT' },
+    { name: 'original_crop_id', sql: 'TEXT' },
+    { name: 'original_crop_name', sql: 'TEXT' },
+    { name: 'original_variety_id', sql: 'TEXT' },
+    { name: 'original_variety_name', sql: 'TEXT' },
+    { name: 'original_unit', sql: 'TEXT' },
+    { name: 'original_unit_price', sql: 'REAL' },
+    { name: 'original_supplier_id', sql: 'TEXT' },
+    { name: 'original_supplier_name', sql: 'TEXT' },
+    { name: 'original_production_plan_code', sql: 'TEXT' },
+  ];
+  for (const col of transferColumns) {
+    try {
+      db.run(`ALTER TABLE seed_sources ADD COLUMN ${col.name} ${col.sql}`);
+      seedLog.info(`  ✓ seed_sources.${col.name} 字段已添加`);
+    } catch (e: any) {
+      if (e.message?.includes('duplicate column')) {
+        seedLog.info(`  - seed_sources.${col.name} 已存在，跳过`);
+      } else { seedLog.error(`  ✗ seed_sources.${col.name} 失败: ${e.message}`); }
+    }
+  }
+
   // material_flow_log 加 business_code 字段（幂等补列）
   try {
     db.run('ALTER TABLE material_flow_log ADD COLUMN business_code TEXT');

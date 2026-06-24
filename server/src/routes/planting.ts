@@ -760,6 +760,37 @@ router.post('/', (req: Request, res: Response) => {
         finalPictures, finalProductionPlanId, finalProductionPlanCode
       ]);
 
+      // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
+      // business_id=planting.id, business_type='planting'，source_instance_id=来源种源/育苗
+      // 在同一 BEGIN/COMMIT 块内，planting 失败时自动回滚 crop_instance
+      const plantingCiId = `CI${Date.now()}-pl`;
+      db.run(
+        `INSERT INTO crop_instances (
+          id, instance_code, crop_name, crop_variety, business_id, business_type,
+          source_instance_id, initial_quantity, current_quantity,
+          planted_quantity, harvested_quantity, status, planting_date,
+          create_by, create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          plantingCiId,
+          finalPlantCode,
+          finalCropName,
+          finalCropVariety,
+          newId,
+          'planting',
+          finalSourceId || null,
+          finalPlantingQuantity,
+          finalPlantingQuantity,
+          finalPlantedQuantity || 0,
+          0,
+          finalStatus || 'growing',
+          finalPlantingDate,
+          finalCreateBy,
+          now,
+          now,
+        ]
+      );
+
       // 写入 material_flow_log 流转流水
       writeFlowLog({
         flow_type: flowType,
