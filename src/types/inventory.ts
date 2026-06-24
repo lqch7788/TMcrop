@@ -19,6 +19,8 @@ export enum InventoryStatus {
   OUTBOUND = 'outbound',
   /** 已用完 */
   EMPTY = 'empty',
+  /** 2026-06-24: 已调拨到种源管理（源行从作物库存列表中隐藏） */
+  TRANSFERRED = 'transferred',
 }
 
 /** 库存类型（种源/种苗/成品） */

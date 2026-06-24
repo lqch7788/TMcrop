@@ -39,6 +39,15 @@ import { UNIT_ENUM } from './planting';
 import inventoryInboundFromSourceRouter from './inventoryInboundFromSource';
 router.use('/inbound-from-source', inventoryInboundFromSourceRouter);
 
+// ============================================================
+// 2026-06-24: 库存调拨入种源（种源管理新增弹窗第 5 选项）
+// POST /api/inventory/transfer-to-source
+// GET  /api/inventory/transferable-sources
+// 必须在 /:id 之前注册（同 inbound-from-source）
+// ============================================================
+import inventoryTransferRouter from './inventoryTransfer';
+router.use('/', inventoryTransferRouter);
+
 /**
  * 入库请求 Zod Schema
  * - sourceModule: 'seed_source' | 'seedling' | 'planting'
@@ -494,6 +503,8 @@ router.get('/', (req: Request, res: Response) => {
 
     let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
     const params: any[] = [];
+    // 2026-06-24: 排除已调拨到种源管理的行（种源管理是内部专用库存，不与作物库存重叠）
+    sql += ` AND status != 'transferred'`;
     if (stock_type) { sql += ` AND stock_type = ?`; params.push(stock_type); }
     if (crop_name) { sql += ` AND crop_name LIKE ?`; params.push(`%${crop_name}%`); }
     if (status) { sql += ` AND status = ?`; params.push(status); }

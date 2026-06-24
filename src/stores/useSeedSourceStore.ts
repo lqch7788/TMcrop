@@ -12,6 +12,8 @@ import { create } from 'zustand';
 import { SeedSource, PropagationRecord, PropagationStatus } from '../types/crop';
 import * as seedSourceService from '../services/apiSeedSourceService';
 import type { CheckDeletableResult, DeletableReference } from '../services/apiSeedSourceService';
+import { seedSourceTransferService, type TransferItem, type TransferResult } from '../services/seedSourceTransferService';
+import { useInventoryStore } from './useInventoryStore';
 import { todayLocal } from '@/lib/dateUtils';
 
 /** 结束类型 */
@@ -59,6 +61,19 @@ interface SeedSourceState {
   deletePropagationRecord: (seedSourceId: string, recordId: string) => Promise<void>;
   updatePropagationStage: (seedSourceId: string, newStage: PropagationStatus) => Promise<void>;
   completePropagation: (seedSourceId: string, quantity: number) => Promise<void>;
+
+  // ===== 库存调拨入种源（2026-06-24）=====
+  /**
+   * 调拨入种源：多选库存 → 移动语义写入
+   * - 调拨成功后重新拉种源列表
+   * - 触发 useInventoryStore.notifyChange() 跨页刷新作物库存
+   * - 不 catch 错误（让上层 toast 显示具体信息）
+   * - P0-2 修复：operator 参数必传（之前缺失导致审计流水中 operator_name='system'）
+   */
+  createFromTransfer: (
+    items: TransferItem[],
+    operator?: { id?: string; name?: string }
+  ) => Promise<TransferResult[]>;
 }
 
 export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
@@ -189,6 +204,22 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
           : item
       ),
     }));
+  },
+
+  // 2026-06-24: 库存调拨入种源 — 多选调拨 → 后端事务 → 触发跨页刷新
+  // P0-2 修复：operator 参数完整透传到 service（之前签名只接 items，operator 静默丢失）
+  createFromTransfer: async (items, operator) => {
+    set({ isLoading: true, error: null });
+    try {
+      const results = await seedSourceTransferService.createFromTransfer(items, operator);
+      // 重新拉种源列表（让新调拨的种源立即可见）
+      await get().loadItems();
+      // 触发作物库存页跨页刷新（扣减了原库存）
+      useInventoryStore.getState().notifyChange();
+      return results;
+    } finally {
+      set({ isLoading: false });
+    }
   },
 }));
 

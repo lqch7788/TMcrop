@@ -243,6 +243,9 @@ export class InventoryStockRepository {
     let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
     const params: any[] = [];
 
+    // 2026-06-24: 排除已调拨到种源管理的行（种源管理是内部专用库存，不与作物库存重叠）
+    sql += ` AND status != 'transferred'`;
+
     if (stockType) {
       sql += ` AND stock_type = ?`;
       params.push(stockType);

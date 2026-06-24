@@ -51,6 +51,11 @@ export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, { label: string; b
   seedling:            { label: '育苗',         bg: 'bg-emerald-100', text: 'text-emerald-700' },
   seed_source:         { label: '种源',         bg: 'bg-emerald-100', text: 'text-emerald-700' },
   harvest:             { label: '采收入库',     bg: 'bg-orange-100',  text: 'text-orange-700' },
+  // 2026-06-24: 库存调拨入种源（调拨面板产生的新种源来源途径）
+  inventory_transfer:  { label: '库存调拨',     bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  // 2026-06-24 兼容：早期 service 误将 'transfer_from_inventory' 写入 inventory_stock.source_type，
+  // 现已改为 'inventory_transfer'，保留此别名让历史数据仍能渲染中文
+  transfer_from_inventory: { label: '库存调拨', bg: 'bg-cyan-100',    text: 'text-cyan-700' },
 };
 
 /** 兼容旧用法：仅返回 label（避免破坏老代码） */
@@ -244,12 +249,16 @@ export const PROPAGATION_TYPE_LABELS: Record<string, string> = {
   breeding: '育种计划',
   seed_saving: '种植留种',
   asexual: '无性繁殖',
+  // 2026-06-24: 库存调拨入种源（新增繁殖途径）
+  transfer_from_inventory: '库存调拨',
 };
 export const PROPAGATION_TYPE_COLORS: Record<string, string> = {
   external: 'bg-gray-100 text-gray-600',
   breeding: 'bg-orange-100 text-orange-700',
   seed_saving: 'bg-green-100 text-green-700',
   asexual: 'bg-purple-100 text-purple-700',
+  // 2026-06-24: 库存调拨 — 青色与 source_origin 'inventory_transfer' 区分
+  transfer_from_inventory: 'bg-cyan-100 text-cyan-700',
 };
 
 // ========== 繁殖阶段状态标签（种源管理专用） ==========
@@ -278,6 +287,8 @@ export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; t
   low_stock: { label: '库存不足', bg: 'bg-blue-600', text: 'text-white' },
   expired: { label: '已过期', bg: 'bg-red-600', text: 'text-white' },
   out_of_stock: { label: '缺货', bg: 'bg-slate-600', text: 'text-white' },
+  // 2026-06-24: 已调拨到种源管理
+  transferred: { label: '已调拨', bg: 'bg-cyan-600', text: 'text-white' },
 };
 
 // ========== 采收状态映射 ==========

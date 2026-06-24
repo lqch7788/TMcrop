@@ -68,6 +68,23 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'end_type',
   'end_time',
   'print_count',
+  // 2026-06-24: 库存调拨入种源 — 全量元数据列
+  'transferred_from_stock_id',
+  'transferred_from_business_type',
+  'transferred_from_business_id',
+  'original_inbound_date',
+  'original_source_module',
+  'original_source_id',
+  'original_harvest_record_id',
+  'original_crop_id',
+  'original_crop_name',
+  'original_variety_id',
+  'original_variety_name',
+  'original_unit',
+  'original_unit_price',
+  'original_supplier_id',
+  'original_supplier_name',
+  'original_production_plan_code',
 ]);
 
 /**

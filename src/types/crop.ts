@@ -29,7 +29,8 @@ export type SourceOrigin =
   | 'cutting'            // 扦插繁殖
   | 'direct_seedling'     // 直接育苗（自繁）
   | 'direct_planting'     // 直接种植（外购苗）
-  | 'external_harvest';   // 外购成品入库
+  | 'external_harvest'    // 外购成品入库
+  | 'inventory_transfer'; // 2026-06-24: 库存调拨入种源（移动语义）
 
 /** 种子类型 */
 export enum SeedType {
@@ -113,6 +114,11 @@ export enum PropagationType {
   BREEDING = 'breeding',       // 育种计划产出
   SEED_SAVING = 'seed_saving', // 种植留种
   ASEXUAL = 'asexual',         // 无性繁殖
+  // 2026-06-24: 库存调拨入种源（种源管理新增弹窗第 5 选项）
+  // 从作物库存（seed/seedling/product 3 种 stock_type）调入种源
+  // 移动语义：扣减原库存 current_quantity + 生成新种源 + 全量携带元数据
+  // 字面量独立于现有 inventory.SourceType.TRANSFER = 'transfer'
+  TRANSFER_FROM_INVENTORY = 'transfer_from_inventory',
 }
 
 /** 统一繁殖阶段 - 适用于所有繁殖途径 */
@@ -250,6 +256,36 @@ export interface SeedSource {
   breedingLocation?: string;      // 育种/繁殖地点
   targetTraits?: string;          // 育种目标性状
   generation?: string;            // 世代（F1/F2/BC1）
+
+  // 2026-06-24: 库存调拨入种源 — 全量元数据（来自 inventoryTransfer.service 写入）
+  /** 调拨来源库存 ID（外键回指 inventory_stock.id，调拨生成的种源才有值） */
+  transferredFromStockId?: string;
+  /** 调拨来源业务类型（harvest / purchase / transfer） */
+  transferredFromBusinessType?: string;
+  /** 调拨来源业务 ID（原 harvest_records.id 或其他业务单据） */
+  transferredFromBusinessId?: string;
+  /** 原始入库日期（来自原 inventory_stock.inbound_date） */
+  originalInboundDate?: string;
+  /** 原始来源模块（seed_source / seedling / planting / harvest） */
+  originalSourceModule?: string;
+  /** 原始来源 ID（原 seed_sources.id / seedlings.id / plantings.id / harvest_records.id） */
+  originalSourceId?: string;
+  /** 原始采收记录 ID（仅 harvest 业务类型有） */
+  originalHarvestRecordId?: string;
+  /** 原始作物 ID/名称（追溯用） */
+  originalCropId?: string;
+  originalCropName?: string;
+  /** 原始品种 ID/名称 */
+  originalVarietyId?: string;
+  originalVarietyName?: string;
+  /** 原始单位/单价 */
+  originalUnit?: string;
+  originalUnitPrice?: number;
+  /** 原始供应商（外购入库时） */
+  originalSupplierId?: string;
+  originalSupplierName?: string;
+  /** 原始生产计划编码 */
+  originalProductionPlanCode?: string;
 }
 
 // ========== 每日记录类型 ==========
