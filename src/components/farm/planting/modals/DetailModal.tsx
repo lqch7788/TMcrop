@@ -193,6 +193,75 @@ export function DetailModal({
           </div>
         </div>
 
+        {/* 2026-06-24: 育种 / 留种信息（种源管理吸收功能）— 仅当标记时显示 */}
+        {(record.isBreeding || record.isSeedSaving) && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
+              育种 / 留种信息
+              {record.isBreeding && (
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">🌱 育种实验</span>
+              )}
+              {record.isSeedSaving && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">🌾 种植留种</span>
+              )}
+            </h4>
+
+            {/* 育种实验子区 */}
+            {record.isBreeding && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <div className="text-xs font-semibold text-emerald-800 mb-2">🌱 育种实验设置</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">父本编码：</span>
+                    <span className="text-sm font-mono text-gray-900">{record.parentMaleCode || '-'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">母本编码：</span>
+                    <span className="text-sm font-mono text-gray-900">{record.parentFemaleCode || '-'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">世代：</span>
+                    <span className="text-sm font-mono text-emerald-700 font-medium">{record.generation || '-'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">育种方法：</span>
+                    <span className="text-sm text-gray-900">{record.breedingMethod || '-'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">育种地点：</span>
+                    <span className="text-sm text-gray-900">{record.breedingLocation || '-'}</span>
+                  </div>
+                  {record.targetTraits && (
+                    <div className="col-span-2 flex items-start">
+                      <span className="text-sm text-gray-500 w-24 flex-shrink-0">目标性状：</span>
+                      <span className="text-sm text-gray-900 whitespace-pre-line">{record.targetTraits}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-amber-600 mt-2">
+                  ⚠ 标记为育种实验后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
+                </p>
+              </div>
+            )}
+
+            {/* 留种子区 */}
+            {record.isSeedSaving && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="text-xs font-semibold text-amber-800 mb-2">🌾 种植留种设置</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 w-24">留种株号：</span>
+                    <span className="text-sm font-mono text-amber-700 font-medium">{record.seedPlantMarker || '-'}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600 mt-2">
+                  ⚠ 标记为留种后，行级采收入库弹窗的「库存类型」默认选「种源」。
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 其他信息 */}
         <div>
           <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">其他信息</h4>

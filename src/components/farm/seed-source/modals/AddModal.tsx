@@ -514,13 +514,20 @@ export function AddModal({
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {/* 入库方式选择（占两列） */}
           <div className="col-span-2">
+            {/* 2026-06-24: 移除 3 个老入库方式（育种/留种/无性繁殖），已迁移到种植/育苗管理
+                - 育种实验 → 种植管理 → 「育种实验设置」section
+                - 种植留种 → 种植管理 → 「种植留种设置」section
+                - 无性繁殖 → 育苗管理 → 1:多 模式（扦插/嫁接/分株/块茎/枝条）
+                老数据（propagationType=breeding/seed_saving/asexual）的查看与编辑由 EditModal/DetailModal 继续支持
+            */}
+            <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <b>新流程：</b>种源管理为内部仓库，仅支持 <b>外购入库</b> + <b>库存调拨</b>。
+              自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。
+            </div>
             <Label className="text-gray-900">入库方式</Label>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { value: PropagationType.EXTERNAL, label: '外购入库', desc: '来自外部供应商的种子采购', Icon: ShoppingCart },
-                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '关联生产批次，自动化管理', Icon: Dna },
-                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '自产自留，品质稳定', Icon: Sprout },
-                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '分株、扦插等无性繁殖方式', Icon: Scissors },
                 // 2026-06-24: 库存调拨 — 从作物库存 3 种 stock_type 调入种源（移动语义）
                 { value: PropagationType.TRANSFER_FROM_INVENTORY, label: '库存调拨', desc: '从作物库存调入', Icon: ArrowLeftRight },
               ].map((opt) => {
@@ -531,12 +538,14 @@ export function AddModal({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    // P1 #7 修复: 切换入库方式时清空已选供应商，避免 EXTERNAL→BREEDING 切换时残留
+                    // 2026-06-24: sourceOrigin 简化为只跟 propagationType 走（去掉 self_produced 分支）
+                    const newSourceOrigin: SourceOrigin =
+                      opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'inventory_transfer';
                     setFormData(prev => ({
                       ...prev,
                       propagationType: opt.value,
                       propagationMethod: '',
-                      sourceOrigin: opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'self_produced' as SourceOrigin,
+                      sourceOrigin: newSourceOrigin,
                       supplierId: '',
                       supplierName: '',
                     }));

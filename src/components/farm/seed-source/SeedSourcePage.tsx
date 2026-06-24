@@ -637,6 +637,14 @@ export default function SeedSourcePage() {
       {/* 2026-06-05: 顶部统计卡片已删除（user 要求） */}
 
       {/* 2026-06-04: 移除重算库存状态按钮，status 改为实时计算无需手动重算 */}
+
+      {/* 2026-06-24: 新流程说明 banner — 引导用户从种植/育苗走 */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800 mb-3">
+        <span className="font-medium">新流程说明：</span>
+        种源管理为内部仓库，仅支持 <b>外购入库</b> 与 <b>库存调拨</b>。
+        自有种源请通过「种植管理 / 育苗管理 → 行级采收入库」入作物库存后，再调拨到此处。
+      </div>
+
       <SeedSourceFilter
         filters={filters}
         onChange={setFilters}

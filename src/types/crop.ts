@@ -536,6 +536,17 @@ export interface Planting {
   // 来源信息（V3.0 追溯用）
   sourceInstanceId?: string;   // 来源库存实例ID
   seedlingInstanceId?: string; // 育苗实例ID（如果来源是种苗）
+  // 2026-06-24: 育种实验设置（种源管理「育种计划产出」吸收到种植管理）
+  isBreeding?: boolean;            // 是否为育种实验
+  parentMaleCode?: string;        // 父本编码
+  parentFemaleCode?: string;      // 母本编码
+  generation?: string;            // 世代: F1/F2/F3/BC1/BC2
+  breedingMethod?: string;         // 育种方法: 杂交/选择/回交/...
+  breedingLocation?: string;      // 育种地点
+  targetTraits?: string;          // 目标性状
+  // 2026-06-24: 种植留种（种源管理「种植留种」吸收到种植管理）
+  isSeedSaving?: boolean;         // 是否用于留种
+  seedPlantMarker?: string;       // 留种株号/标记（如 A区第3排 / 标记#001-#050）
   // 结束标记（2026-06-05：强结分支；2026-06-17：扩展 5 种 endType）
   endType?: 'normal' | 'abnormal' | 'harvest' | 'circulate' | 'self_seed' | 'disposal';
   endTime?: string;                // 结束时间（ISO）

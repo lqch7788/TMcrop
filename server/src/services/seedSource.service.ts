@@ -269,7 +269,7 @@ export class SeedSourceService {
    */
   async generateCode(dateStr: string): Promise<string | null> {
     const db = getDatabase();
-    const MAX_RETRIES = 10;
+    const MAX_RETRIES = 100;  // 2026-06-24: 提到 100，支持大批量调拨（如 50 条）
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       // 获取当日最大序号（仅 active）
@@ -278,9 +278,10 @@ export class SeedSourceService {
       // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
       const candidate = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
 
-      // 全表查重：包括软删记录（防历史 conflict）
+      // 2026-06-24 修复: 加 deleted_at IS NULL 过滤，避免软删 code 被视为占用
+      // 之前没过滤，导致之前测试失败的 002/003/004（软删）占用了新序号空间
       const stmt = db.prepare(`
-        SELECT 1 FROM seed_sources WHERE source_code = ? LIMIT 1
+        SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
       `);
       stmt.bind([candidate]);
       const exists = stmt.step();

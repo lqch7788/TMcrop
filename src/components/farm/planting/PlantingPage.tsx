@@ -565,7 +565,8 @@ export default function PlantingPage() {
         />
       )}
 
-      {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
+      {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations）
+          2026-06-24: 留种种植默认 stockType=seed（采收入种源库存），其他默认 product */}
       {inboundUnifiedRecord && (
         <UnifiedRowHarvestInboundModal
           isOpen={inboundUnifiedOpen}
@@ -574,7 +575,7 @@ export default function PlantingPage() {
             setInboundUnifiedRecord(null)
           }}
           onSuccess={loadItems}
-          stockType="product"
+          stockType={inboundUnifiedRecord.isSeedSaving ? 'seed' : 'product'}
           sourceModule="planting"
           sourceRecord={{
             id: inboundUnifiedRecord.id,
