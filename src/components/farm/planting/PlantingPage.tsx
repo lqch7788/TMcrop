@@ -11,6 +11,7 @@ import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { HarvestRecordModal } from './modals/HarvestRecordModal';
+import { RecordModal } from './modals/RecordModal';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
@@ -134,6 +135,22 @@ export default function PlantingPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Planting | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
+
+  // 2026-06-25 v3: 育种/留种记录弹窗状态
+  const [recordModal, setRecordModal] = useState<{
+    open: boolean;
+    recordType: 'breeding' | 'seed_saving';
+    record: Planting | null;
+  }>({ open: false, recordType: 'breeding', record: null });
+  const handleBreedingRecord = (record: Planting) => {
+    setRecordModal({ open: true, recordType: 'breeding', record });
+  };
+  const handleSeedSavingRecord = (record: Planting) => {
+    setRecordModal({ open: true, recordType: 'seed_saving', record });
+  };
+  const closeRecordModal = () => {
+    setRecordModal({ open: false, recordType: 'breeding', record: null });
+  };
 
   // 标签/标记/移动弹窗状态
   const [labelDetailOpen, setLabelDetailOpen] = useState(false);
@@ -512,6 +529,8 @@ export default function PlantingPage() {
         onMove={handleMove}
         onMark={handleMark}
         onViewMoveRecords={handleViewMoveRecords}
+        onBreedingRecord={handleBreedingRecord}
+        onSeedSavingRecord={handleSeedSavingRecord}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
@@ -566,7 +585,7 @@ export default function PlantingPage() {
       )}
 
       {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations）
-          2026-06-24: 留种种植默认 stockType=seed（采收入种源库存），其他默认 product */}
+          2026-06-25 v3: 移除 stockType='seed' 路径 — 留种采收也入产品库存，后续由种源库手动调拨入种源 */}
       {inboundUnifiedRecord && (
         <UnifiedRowHarvestInboundModal
           isOpen={inboundUnifiedOpen}
@@ -575,7 +594,7 @@ export default function PlantingPage() {
             setInboundUnifiedRecord(null)
           }}
           onSuccess={loadItems}
-          stockType={inboundUnifiedRecord.isSeedSaving ? 'seed' : 'product'}
+          stockType="product"
           sourceModule="planting"
           sourceRecord={{
             id: inboundUnifiedRecord.id,
@@ -585,6 +604,21 @@ export default function PlantingPage() {
             cropCode: inboundUnifiedRecord.cropCode || '',
             unit: inboundUnifiedRecord.unit,
             plantingMode: inboundUnifiedRecord.plantingMode,
+          }}
+        />
+      )}
+
+      {/* 2026-06-25 v3: 育种/留种记录弹窗 */}
+      {recordModal.record && (
+        <RecordModal
+          isOpen={recordModal.open}
+          onClose={closeRecordModal}
+          onSuccess={loadItems}
+          recordType={recordModal.recordType}
+          parentRecord={{
+            id: recordModal.record.id,
+            plantCode: recordModal.record.plantCode,
+            cropName: recordModal.record.cropName,
           }}
         />
       )}

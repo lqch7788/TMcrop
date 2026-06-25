@@ -149,4 +149,255 @@ router.post('/', (req, res, next) => seedSourceController.create(req, res, next)
 router.put('/:id', (req, res, next) => seedSourceController.update(req, res, next));
 router.delete('/:id', (req, res, next) => seedSourceController.delete(req, res, next));
 
+// ============ 2026-06-25 v3: 库存调拨入现有种源（append_existing 模式）============
+/**
+ * POST /api/seed-sources/append-from-inventory
+ * 业务：用户在种源库操作列「调拨」按钮 → 选作物库存批次 → 提交
+ *   1. 扣减 inventory_stock
+ *   2. 写 inventory_transaction (outbound)
+ *   3. UPDATE seed_sources（追加到目标种源）
+ *   4. 写 inventory_inbound_records
+ *   5. 同一 SQL 事务
+ */
+import { z } from 'zod';
+import { generateInstanceId } from '../services/inventory.service';
+
+const AppendItemSchema = z.object({
+  sourceStockId: z.string().min(1),
+  transferQuantity: z.number().int().positive(),
+  unit: z.string().min(1),
+});
+const AppendFromInventorySchema = z.object({
+  targetSeedSourceId: z.string().min(1),
+  items: z.array(AppendItemSchema).min(1).max(100),
+  operatorId: z.string().optional(),
+  operatorName: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+class AppendBusinessError extends Error {
+  code: string;
+  httpStatus: number;
+  constructor(code: string, message: string, httpStatus = 400) {
+    super(message);
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+router.post('/append-from-inventory', async (req, res) => {
+  try {
+    const parsed = AppendFromInventorySchema.safeParse(req.body);
+    if (!parsed.success) {
+      const issues =
+        (parsed.error as unknown as { issues?: Array<{ message?: string }> }).issues || [];
+      return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
+    }
+    const { targetSeedSourceId, items, operatorId, operatorName, remarks } = parsed.data;
+    const operator = { id: operatorId || '', name: operatorName || 'system' };
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const dateStr = now.slice(0, 10);
+
+    const writtenStockIds: string[] = [];
+    const writtenTxIds: string[] = [];
+    const writtenInboundRecordIds: string[] = [];
+    const originalSeedSourceSnapshot: Array<{ id: string; available_count: number; quantity: number }> = [];
+    const originalStockSnapshot: Array<{ id: string; current_quantity: number; available_quantity: number }> = [];
+
+    try {
+      // 1. 校验目标种源（用 prepared statement 模式）
+      const targetStmt = db.prepare(
+        `SELECT id, source_code, available_count, quantity, unit, crop_code, crop_name
+         FROM seed_sources WHERE id = ? AND deleted_at IS NULL`
+      );
+      targetStmt.bind([targetSeedSourceId]);
+      const targetRow = targetStmt.step() ? (targetStmt.getAsObject() as Record<string, unknown>) : null;
+      targetStmt.free();
+      if (!targetRow) {
+        throw new AppendBusinessError('SEED_SOURCE_NOT_FOUND', '目标种源不存在', 404);
+      }
+      const targetUnit = String(targetRow.unit || '');
+      const targetCropCode = String(targetRow.crop_code || '');
+      const targetCropName = String(targetRow.crop_name || '');
+      const targetCode = String(targetRow.source_code || '');
+      originalSeedSourceSnapshot.push({
+        id: targetSeedSourceId,
+        available_count: Number(targetRow.available_count || 0),
+        quantity: Number(targetRow.quantity || 0),
+      });
+
+      let totalAppended = 0;
+
+      for (const item of items) {
+        // 2. 读源库存
+        const sourceStmt = db.prepare(`SELECT * FROM inventory_stock WHERE id = ?`);
+        sourceStmt.bind([item.sourceStockId]);
+        const sourceObj = sourceStmt.step() ? (sourceStmt.getAsObject() as Record<string, unknown>) : null;
+        sourceStmt.free();
+        if (!sourceObj) {
+          throw new AppendBusinessError('STOCK_NOT_FOUND', `源库存不存在: id=${item.sourceStockId}`, 404);
+        }
+        const sourceCurrent = Number(sourceObj.current_quantity || 0);
+        const sourceAvailable = Number(sourceObj.available_quantity || 0);
+        const sourceUnit = String(sourceObj.unit || '');
+        const sourceStatus = String(sourceObj.status || '');
+        const sourceCropCode = String(sourceObj.crop_code || '');
+        const sourceInstanceId = String(sourceObj.instance_id || '');
+
+        // 存储原始库存快照（用于精确回滚）
+        originalStockSnapshot.push({
+          id: item.sourceStockId,
+          current_quantity: sourceCurrent,
+          available_quantity: sourceAvailable,
+        });
+
+        // 3. 业务校验
+        if (sourceStatus === 'depleted' || sourceCurrent <= 0) {
+          throw new AppendBusinessError('STOCK_NOT_AVAILABLE', `源库存已耗尽: ${sourceInstanceId}`);
+        }
+        if (sourceCurrent < item.transferQuantity) {
+          throw new AppendBusinessError(
+            'INSUFFICIENT_QUANTITY',
+            `源库存 ${sourceInstanceId} 可用 ${sourceCurrent}${sourceUnit}，需调拨 ${item.transferQuantity}${item.unit}`
+          );
+        }
+        if (sourceUnit !== item.unit) {
+          throw new AppendBusinessError('UNIT_MISMATCH', `源库存单位 ${sourceUnit} ≠ 调拨单位 ${item.unit}`);
+        }
+        if (sourceUnit !== targetUnit) {
+          throw new AppendBusinessError('UNIT_MISMATCH_TARGET', `源库存单位 ${sourceUnit} ≠ 目标种源单位 ${targetUnit}`);
+        }
+        if (sourceCropCode && targetCropCode && sourceCropCode !== targetCropCode) {
+          throw new AppendBusinessError('CROP_CODE_MISMATCH', `源库存作物 ${sourceCropCode} ≠ 目标种源作物 ${targetCropCode}`);
+        }
+
+        // 4. 扣减源库存
+        const newSourceCurrent = sourceCurrent - item.transferQuantity;
+        const newSourceAvailable = Math.max(0, sourceAvailable - item.transferQuantity);
+        const newSourceStatus = newSourceCurrent === 0 ? 'depleted' : sourceStatus;
+        const updStock = db.prepare(
+          `UPDATE inventory_stock
+           SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
+           WHERE id = ? AND current_quantity >= ?`
+        );
+        updStock.run([newSourceCurrent, newSourceAvailable, newSourceStatus, now, item.sourceStockId, item.transferQuantity]);
+        updStock.free();
+        writtenStockIds.push(item.sourceStockId);
+
+        // 5. 写 inventory_transaction (outbound)
+        const outTxId = await generateInstanceId('TX', dateStr);
+        const outTransactionId = `OUT-${dateStr}-${outTxId.slice(-6)}`;
+        const insTx = db.prepare(
+          `INSERT INTO inventory_transaction (
+            id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+            balance_before, balance_after, business_id, business_type, business_code,
+            operator_id, operator_name, operate_date, remarks, create_time
+          ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)`
+        );
+        insTx.run([
+          outTxId, outTransactionId, sourceInstanceId, String(sourceObj.stock_type || 'seed'),
+          item.transferQuantity, sourceCurrent, newSourceCurrent,
+          targetSeedSourceId, targetCode, operator.id, operator.name, dateStr,
+          `调拨入种源 ${targetCode}（追加模式）`, now,
+        ]);
+        insTx.free();
+        writtenTxIds.push(outTxId);
+
+        // 6. UPDATE 目标种源
+        const updSS = db.prepare(
+          `UPDATE seed_sources
+           SET available_count = available_count + ?, quantity = quantity + ?, update_time = ?
+           WHERE id = ? AND deleted_at IS NULL`
+        );
+        updSS.run([item.transferQuantity, item.transferQuantity, now, targetSeedSourceId]);
+        updSS.free();
+
+        // 7. 写 inventory_inbound_records
+        const inRecId = await generateInstanceId('IR', dateStr);
+        const insIR = db.prepare(
+          `INSERT INTO inventory_inbound_records (
+            id, source_module, source_id, source_code,
+            target_module, target_id, target_code,
+            quantity, unit, quality_grade, operator_id, operator_name,
+            remarks, record_date, create_time
+          ) VALUES (?, 'inventory', ?, ?, 'seed_source', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        );
+        insIR.run([
+          inRecId, item.sourceStockId, sourceInstanceId,
+          targetSeedSourceId, targetCode, item.transferQuantity, item.unit,
+          null, operator.id, operator.name,
+          remarks || `追加入库（从 ${sourceInstanceId}）`,
+          dateStr, now,
+        ]);
+        insIR.free();
+        writtenInboundRecordIds.push(inRecId);
+
+        totalAppended += item.transferQuantity;
+      }
+
+      // 8. 读最新值
+      const newStateStmt = db.prepare(
+        `SELECT available_count, quantity FROM seed_sources WHERE id = ?`
+      );
+      newStateStmt.bind([targetSeedSourceId]);
+      const newState = newStateStmt.step() ? (newStateStmt.getAsObject() as Record<string, unknown>) : null;
+      newStateStmt.free();
+      const newAvailable = Number(newState?.available_count || 0);
+      const newQuantity = Number(newState?.quantity || 0);
+
+      saveDatabase();
+
+      return res.json({
+        success: true,
+        appendedCount: totalAppended,
+        newAvailableCount: newAvailable,
+        newQuantity,
+        targetSeedSource: { id: targetSeedSourceId, code: targetCode, cropName: targetCropName },
+      });
+    } catch (err) {
+      console.error('[append-from-inventory] failed, rolling back:', err);
+      try {
+        for (const id of writtenInboundRecordIds) {
+          const d = db.prepare('DELETE FROM inventory_inbound_records WHERE id = ?');
+          d.run([id]);
+          d.free();
+        }
+        for (const snap of originalSeedSourceSnapshot) {
+          const u = db.prepare(
+            `UPDATE seed_sources SET available_count = ?, quantity = ?, update_time = ? WHERE id = ?`
+          );
+          u.run([snap.available_count, snap.quantity, now, snap.id]);
+          u.free();
+        }
+        for (const id of writtenTxIds) {
+          const d = db.prepare('DELETE FROM inventory_transaction WHERE id = ?');
+          d.run([id]);
+          d.free();
+        }
+        for (const snap of originalStockSnapshot) {
+          const u = db.prepare(
+            `UPDATE inventory_stock
+             SET current_quantity = ?, available_quantity = ?, status = 'in_stock', update_time = ?
+             WHERE id = ?`
+          );
+          u.run([snap.current_quantity, snap.available_quantity, now, snap.id]);
+          u.free();
+        }
+        saveDatabase();
+      } catch (rollbackErr) {
+        console.error('[append-from-inventory] rollback failed:', rollbackErr);
+      }
+      throw err;
+    }
+  } catch (err) {
+    if (err instanceof AppendBusinessError) {
+      return res.status(err.httpStatus).json({ success: false, code: err.code, error: err.message });
+    }
+    console.error('[append-from-inventory] server error:', err);
+    return res.status(500).json({ success: false, error: err instanceof Error ? err.message : '调拨失败' });
+  }
+});
+
 export default router;

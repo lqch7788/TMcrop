@@ -131,6 +131,42 @@ export const seedSourceTransferService = {
     );
     return results || [];
   },
+
+  /**
+   * 2026-06-25 v3: 库存调拨 → 追加到现有种源（不创建新记录）
+   * POST /api/seed-sources/append-from-inventory
+   * 用途：种源操作列「调拨」按钮 — 用户给已存在的种源补货
+   * @returns 追加数量 + 新可用库存
+   */
+  async appendToExistingSeedSource(params: {
+    targetSeedSourceId: string;
+    items: TransferItem[];
+    operator?: { id?: string; name?: string };
+    remarks?: string;
+  }): Promise<{ appendedCount: number; newAvailableCount: number; newQuantity: number }> {
+    if (!params.targetSeedSourceId) {
+      throw new Error('目标种源 ID 不能为空');
+    }
+    if (!params.items || params.items.length === 0) {
+      throw new Error('至少选择 1 条调拨记录');
+    }
+    if (params.items.length > 100) {
+      throw new Error('批量调拨单次最多 100 条');
+    }
+    // 修复：enhancedApiClient 已自动解包 data 字段
+    const result = await enhancedApiClient.post<{
+      appendedCount: number;
+      newAvailableCount: number;
+      newQuantity: number;
+    }>('/seed-sources/append-from-inventory', {
+      targetSeedSourceId: params.targetSeedSourceId,
+      items: params.items,
+      operatorId: params.operator?.id,
+      operatorName: params.operator?.name,
+      remarks: params.remarks,
+    });
+    return result || { appendedCount: 0, newAvailableCount: 0, newQuantity: 0 };
+  },
 };
 
 export default seedSourceTransferService;

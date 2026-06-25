@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
+import { Edit2, GitBranch, Trash2, Printer, Eye, Image, Download, Plus, Calendar, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -37,6 +37,8 @@ interface SeedlingTableProps {
   onImageClick: (images: string[]) => void;
   // 结束相关回调
   onEnd: (record: Seedling, endType: 'normal' | 'abnormal') => void;
+  // 2026-06-25 v3: 繁殖记录回调（仅 1:多 模式显示）
+  onPropagationRecord?: (record: Seedling) => void;
   // 2026-06-18: 任务 5 — 出圃入库回调
   onInbound?: (record: Seedling) => void;
   // 模式状态
@@ -75,6 +77,7 @@ export function SeedlingTable({
   onLabelManage,
   onImageClick,
   onEnd,
+  onPropagationRecord,
   onInbound,
   operationMode,
   onOperationModeChange,
@@ -703,6 +706,18 @@ export function SeedlingTable({
                           title="出圃入库"
                         >
                           <Package className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* 2026-06-25 v3: 繁殖记录按钮 — 仅 1:多 模式显示 */}
+                      {onPropagationRecord && (record.propagationMode || 'one_to_one') === 'one_to_many' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onPropagationRecord(record)}
+                          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                          title="繁殖记录"
+                        >
+                          <GitBranch className="w-4 h-4" />
                         </Button>
                       )}
                       {!record.endTime && (

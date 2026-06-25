@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
+import { Bookmark, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -55,6 +55,9 @@ interface PlantingTableProps {
   onMark?: (record: Planting) => void;
   // 2026-06-19: 移入/移出记录查看回调
   onViewMoveRecords?: (record: Planting) => void;
+  // 2026-06-25 v3: 育种/留种记录回调
+  onBreedingRecord?: (record: Planting) => void;
+  onSeedSavingRecord?: (record: Planting) => void;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -96,6 +99,8 @@ export function PlantingTable({
   onMove,
   onMark,
   onViewMoveRecords,
+  onBreedingRecord,
+  onSeedSavingRecord,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -545,6 +550,30 @@ export function PlantingTable({
                 title="标记管理"
               >
                 <Bookmark className="w-4 h-4" />
+              </Button>
+            )}
+            {/* 2026-06-25 v3: 育种记录按钮 — 仅 isBreeding=true 的行显示 */}
+            {record.isBreeding && onBreedingRecord && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onBreedingRecord(record)}
+                title="育种记录"
+                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+              >
+                <Sprout className="w-4 h-4" />
+              </Button>
+            )}
+            {/* 2026-06-25 v3: 留种记录按钮 — 仅 isSeedSaving=true 的行显示 */}
+            {record.isSeedSaving && onSeedSavingRecord && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSeedSavingRecord(record)}
+                title="留种记录"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+              >
+                <Wheat className="w-4 h-4" />
               </Button>
             )}
           </div>
