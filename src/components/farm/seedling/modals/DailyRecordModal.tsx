@@ -127,7 +127,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     const motherAvailable = Math.max(0,
       (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0)
     );
-    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/定植/自动定植/采收入库）
+    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/定植/采收入库）
+    // 2026-06-25: 移除 autoPlantedCount（不再统计）
     // ⚠️ 注意：本次损耗 lc 和本次定植 tc 不参与"剩余可用"计算（避免双重扣减）
     //   校验逻辑是 lc+tc ≤ seedlingAvailable（即：用户本次最多可扣减多少）
     const seedlingAvailable = Math.max(0,
@@ -136,7 +137,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       + (isMotherMode ? 0 : rc)     // 2026-06-16 修复：1:1 模式补苗计入小苗池（补种子）
       - (record.seedlingLossCount || 0)
       - (record.transplantedCount || 0)
-      - (record.autoPlantedCount || 0)
       - (record.harvestStockedCount || 0)
     );
 

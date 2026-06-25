@@ -25,7 +25,8 @@ interface PlantingState {
   updateItem: (id: string, updates: Partial<Planting>) => Promise<Planting | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
-  harvestPlanting: (id: string, harvestDate: string, harvestCount?: number) => Promise<boolean>;
+  // 2026-06-25: attritionRate 透传（采收后自动计算写回 plantings.attrition_rate）
+  harvestPlanting: (id: string, harvestDate: string, harvestCount?: number, attritionRate?: number) => Promise<boolean>;
 
   // 2026-06-17: 采收记录 actions
   loadHarvestRecords: (plantingId: string) => Promise<void>;
@@ -109,9 +110,9 @@ export const usePlantingStore = create<PlantingState>()(
       }
     },
 
-    harvestPlanting: async (id, harvestDate, harvestCount) => {
+    harvestPlanting: async (id, harvestDate, harvestCount, attritionRate) => {
       try {
-        const result = await plantingService.harvestPlanting(id, harvestDate, harvestCount);
+        const result = await plantingService.harvestPlanting(id, harvestDate, harvestCount, attritionRate);
         if (result) {
           set((s) => ({
             items: s.items.map((i) =>

@@ -75,11 +75,10 @@ export function EditModal({
     propagationMultiple: record.propagationMultiple || 0,
     customMultiple: record.customMultiple || 0,
     theoreticalYield: record.theoreticalYield || 0,
-    // 2026-06-15: 数量体系重构 — 5 业务字段（统一显示）
+    // 2026-06-15: 数量体系重构 — 4 业务字段（统一显示，2026-06-25 移除 autoPlantedCount）
     motherLossCount: record.motherLossCount ?? 0,
     seedlingLossCount: record.seedlingLossCount ?? 0,
     transplantedCount: record.transplantedCount ?? 0,
-    autoPlantedCount: record.autoPlantedCount ?? 0,
     harvestStockedCount: record.harvestStockedCount ?? 0,
     replantCount: record.replantCount ?? 0,  // 2026-06-16: 补苗累计
   });
@@ -159,11 +158,10 @@ export function EditModal({
       propagationMultiple: record.propagationMultiple || 0,
       customMultiple: record.customMultiple || 0,
       theoreticalYield: record.theoreticalYield || 0,
-      // 2026-06-15: 数量体系重构 — 5 业务字段
+      // 2026-06-15: 数量体系重构 — 4 业务字段（2026-06-25 移除 autoPlantedCount）
       motherLossCount: record.motherLossCount ?? 0,
       seedlingLossCount: record.seedlingLossCount ?? 0,
       transplantedCount: record.transplantedCount ?? 0,
-      autoPlantedCount: record.autoPlantedCount ?? 0,
       harvestStockedCount: record.harvestStockedCount ?? 0,
     });
   }, [record]);
@@ -462,16 +460,16 @@ export function EditModal({
           />
         </div>
 
-        {/* 已定植数量 = 人工定植 + 自动定植（每日记录+种植管理自动累加，不可手动改） */}
+        {/* 已定植数量 = 人工定植（每日记录自动累加，不可手动改，2026-06-25 移除自动定植） */}
         <div>
           <Label className="text-gray-700">
-            已定植数量（人工+自动）
-            <span className="text-xs text-gray-500 ml-1">（人工定植 + 自动定植 自动累加）</span>
+            已定植数量
+            <span className="text-xs text-gray-500 ml-1">（人工定植 自动累加）</span>
           </Label>
           <Input
             type="number"
             min={0}
-            value={(record.transplantedCount || 0) + (record.autoPlantedCount || 0) || ''}
+            value={(record.transplantedCount || 0) || ''}
             title="从每日记录累加（手动修改仅用于纠错）"
             className={`${deepInputClass} bg-gray-100`}
           />
@@ -504,11 +502,6 @@ export function EditModal({
                 className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
-              <Label className="text-gray-700">自动定植累计</Label>
-              <Input type="number" value={formData.autoPlantedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
-            </div>
-            <div>
               <Label className="text-gray-700">采收入库累计</Label>
               <Input type="number" value={formData.harvestStockedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
                 className={`${deepInputClass} bg-gray-100`} />
@@ -523,7 +516,7 @@ export function EditModal({
           <p className="text-xs text-gray-500 mt-2">
             {/* 2026-06-16: 剩余可定植公式按模式分支（兼容历史脏数据：mother - motherLoss） */}
             {/* 1:1 模式：expanded = mother（后端同步），只算一次：expanded - 各种 */}
-            {/* 1:多 模式：(母株存活 - 母株累计损耗) + 小苗累计产出 - 小苗累计损耗 - 人工定植累计 - 自动定植累计 - 采收入库累计 */}
+            {/* 1:多 模式：(母株存活 - 母株累计损耗) + 小苗累计产出 - 小苗累计损耗 - 人工定植累计 - 采收入库累计（2026-06-25 移除自动定植） */}
             {(() => {
               const is11 = (record.propagationMode || 'one_to_one') === 'one_to_one';
               // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并）
@@ -531,7 +524,6 @@ export function EditModal({
               const seedlingAvailable = (record.expandedPlantCount || 0)
                 - (formData.seedlingLossCount || 0)
                 - (formData.transplantedCount || 0)
-                - (formData.autoPlantedCount || 0)
                 - (formData.harvestStockedCount || 0);
               return `母株池剩余 = ${Math.max(0, motherAvailable).toLocaleString()} 株 | 小苗池剩余 = ${Math.max(0, seedlingAvailable).toLocaleString()} 株（两池独立，不合并）`;
             })()}

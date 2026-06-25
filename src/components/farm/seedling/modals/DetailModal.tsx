@@ -214,10 +214,6 @@ export function DetailModal({
                 <span className="text-sm text-blue-600 font-medium">{(record.transplantedCount || 0).toLocaleString()}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-32" title="种植管理自动累加，DB: auto_planted_count">自动定植累计：</span>
-                <span className="text-sm text-blue-600 font-medium">{(record.autoPlantedCount || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center">
                 <span className="text-sm text-gray-500 w-32" title="采收入库累计，DB: harvest_stocked_count">采收入库累计：</span>
                 <span className="text-sm text-purple-600 font-medium">{(record.harvestStockedCount || 0).toLocaleString()}</span>
               </div>
@@ -228,8 +224,9 @@ export function DetailModal({
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              累计已定植 = 人工定植累计 + 自动定植累计 = {((record.transplantedCount || 0) + (record.autoPlantedCount || 0)).toLocaleString()} 株
+              累计已定植 = 人工定植累计 = {(record.transplantedCount || 0).toLocaleString()} 株
               ｜ 累计损耗 = 母株累计损耗 + 小苗累计损耗 = {((record.motherLossCount || 0) + (record.seedlingLossCount || 0)).toLocaleString()} 株
+              {record.autoPlantedCount ? ` ｜ 历史自动定植（已废弃，DB 字段保留）：${record.autoPlantedCount}` : ''}
             </p>
           </div>
         </div>

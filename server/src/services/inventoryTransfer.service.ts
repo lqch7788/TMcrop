@@ -26,6 +26,23 @@ import { generateInstanceId } from './inventory.service';
 
 export type TransferStockType = 'seed' | 'seedling' | 'product';
 
+/**
+ * 根据源库存 stock_type 映射到 seed_sources.source_type（调拨入种源时使用）
+ * - seed → seed（种子）
+ * - seedling → seedling（种苗/实生苗）
+ * - product → other（产品/果实不属于典型种源，归入"其他"）
+ * 2026-06-25 修复：之前 service 硬编码 source_type='transfer'，导致种源列表"种源类型"列
+ *   无法反映原库存类型（seed/seedling/product）。调拨后种源页面应正确显示原库存类型。
+ */
+function mapStockTypeToSeedSourceType(stockType: string): string {
+  switch (stockType) {
+    case 'seed': return 'seed';
+    case 'seedling': return 'seedling';
+    case 'product': return 'other';
+    default: return 'other';
+  }
+}
+
 export interface TransferInput {
   /** inventory_stock.id（生产环境为 TEXT，测试可为字符串） */
   sourceStockId: string | number;
@@ -381,7 +398,7 @@ export async function executeTransferToSource(
           create_time, update_time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          newSeedSourceId, newCode, `${sourceStock.crop_name || ''}（调拨）`, 'transfer', 'inventory_transfer',
+          newSeedSourceId, newCode, `${sourceStock.crop_name || ''}（调拨）`, mapStockTypeToSeedSourceType(sourceStock.stock_type), 'inventory_transfer',
           sourceStock.production_plan_code || '', '', '', sourceStock.variety_name || '',
           sourceStock.crop_name || '', sourceStock.variety_name || '', sourceStock.crop_code || '',
           sourceStock.supplier_id || '', sourceStock.supplier_name || '',
@@ -434,9 +451,9 @@ export async function executeTransferToSource(
           warehouse_id, warehouse_name, inbound_date,
           unit_price, status, version,
           create_time, update_time
-        ) VALUES (?, ?, 'seed', ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 1, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 1, ?, ?)`,
         [
-          newStockId, newInstanceId, newSeedSourceId, newCode,
+          newStockId, newInstanceId, sourceStock.stock_type, newSeedSourceId, newCode,
           'inventory_transfer', newCropInstanceId,
           sourceStock.crop_code || '', sourceStock.crop_name, sourceStock.variety_id, sourceStock.variety_name,
           item.transferQuantity, item.transferQuantity, 0, sourceUnit,
@@ -454,9 +471,9 @@ export async function executeTransferToSource(
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
           balance_before, balance_after, business_id, business_type, business_code,
           operator_id, operator_name, operate_date, remarks, create_time
-        ) VALUES (?, ?, ?, 'seed', 'transfer_in', ?, 0, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, 'transfer_in', ?, 0, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)`,
         [
-          inTxId, inTransactionId, newInstanceId,
+          inTxId, inTransactionId, newInstanceId, sourceStock.stock_type,
           item.transferQuantity, item.transferQuantity,
           newSeedSourceId, newCode,
           operator.id || '', operator.name, now.slice(0, 10),

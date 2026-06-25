@@ -11,7 +11,6 @@ import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
-import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
@@ -209,7 +208,6 @@ export default function SeedlingPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [dailyRecordModalOpen, setDailyRecordModalOpen] = useState(false);
-  const [transplantModalOpen, setTransplantModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [labelManageOpen, setLabelManageOpen] = useState(false);
@@ -225,8 +223,8 @@ export default function SeedlingPage() {
   // 2026-06-09 删除警告弹窗
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // 操作模式状态（用于查看详情、编辑、每日记录、定植操作、打印、图片、删除等操作的统一流程）
-  const [operationMode, setOperationMode] = useState<'normal' | 'detail' | 'edit' | 'dailyRecord' | 'transplant' | 'print' | 'image' | 'delete' | 'export'>('normal');
+  // 操作模式状态（用于查看详情、编辑、每日记录、打印、图片、删除等操作的统一流程，2026-06-25 移除 transplant 模式）
+  const [operationMode, setOperationMode] = useState<'normal' | 'detail' | 'edit' | 'dailyRecord' | 'print' | 'image' | 'delete' | 'export'>('normal');
 
   // 打印模式状态
   const [printMode, setPrintMode] = useState(false);
@@ -316,11 +314,6 @@ export default function SeedlingPage() {
         setCurrentRecord(updatedRecord);
       }
     }
-  };
-
-  const handleTransplant = (record: Seedling) => {
-    setCurrentRecord(record);
-    setTransplantModalOpen(true);
   };
 
   const handlePrint = (record: Seedling) => {
@@ -713,7 +706,6 @@ export default function SeedlingPage() {
         onEdit={handleEdit}
         onDetail={handleDetail}
         onDailyRecord={handleDailyRecord}
-        onTransplant={handleTransplant}
         onPrint={handlePrint}
         onLabelManage={handleLabelManage}
         onInbound={handleInbound}
@@ -775,16 +767,6 @@ export default function SeedlingPage() {
           onClose={() => setDailyRecordModalOpen(false)}
           onSuccess={handleDailyRecordSuccess}
           record={currentRecord}
-        />
-      )}
-
-      {currentRecord && (
-        <TransplantModal
-          isOpen={transplantModalOpen}
-          onClose={() => setTransplantModalOpen(false)}
-          onSuccess={loadItems}
-          record={currentRecord}
-          areas={areas}
         />
       )}
 

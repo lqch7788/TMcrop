@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
-import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
+import { PLANTING_STATUS_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -893,7 +893,7 @@ export function PlantingTable({
                       {record.isBreeding && (
                         <Badge
                           className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0"
-                          title={`育种实验 · 世代 ${record.generation || '-'}${record.parentMaleCode ? ' · 父本 ' + record.parentMaleCode : ''}${record.parentFemaleCode ? ' · 母本 ' + record.parentFemaleCode : ''}`}
+                          title={`育种计划 · 世代 ${record.generation || '-'}${record.parentMaleCode ? ' · 父本 ' + record.parentMaleCode : ''}${record.parentFemaleCode ? ' · 母本 ' + record.parentFemaleCode : ''}`}
                         >
                           🌱 育种{record.generation ? ' ' + record.generation : ''}
                         </Badge>
@@ -919,10 +919,15 @@ export function PlantingTable({
                     <span className="font-mono text-gray-700">{record.sourceCode || '-'}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {record.sourceType === 'seed' ? (
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">种子</span>
-                    ) : (
+                    {/* 2026-06-25: 改用种源自身类型（badge 显示 SOURCE_TYPE_MAP），无关联时按历史 sourceType 兜底 */}
+                    {record.sourceSeedSourceType ? (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
+                        {SOURCE_TYPE_MAP[record.sourceSeedSourceType] || record.sourceSeedSourceType}
+                      </span>
+                    ) : record.sourceType === 'seedling' ? (
                       <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs font-medium">种苗</span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">种子</span>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm">

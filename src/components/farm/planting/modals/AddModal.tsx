@@ -2,15 +2,14 @@
  * 种植新增弹窗
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { X, Upload, RefreshCw, AlertTriangle } from 'lucide-react';
-import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
-import { getSeedSources } from '../../../../services/apiSeedSourceService';
-import { getSeedlings } from '../../../../services/apiSeedlingService';
+import { X, Upload, RefreshCw, AlertTriangle, Search, ChevronDown } from 'lucide-react';
+import { SourceType, PlantingStatus, SeedSource } from '../../../../types/crop';
+import { getSeedSources, searchSeedSources } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -44,11 +43,10 @@ export function AddModal({
   areas,
 }: AddModalProps) {
   const [formData, setFormData] = useState({
-    // 2026-06-19: 修复初始 sourceType 与 originPath 不一致 bug
-    // originPath='direct_from_seed'（直接播种）应配 sourceType=SEED（种源），下拉显示"选择种源"
-    // 之前默认 SEEDLING，下拉显示"选择育苗批次"与"直接播种"语义冲突
+    // 2026-06-25: 所有种植来源改为从种源选择（种源已支持库存调拨种苗）
+    // 移除"经育苗移栽"路径 — 育苗 → 出圃入库 → 调拨入种源 → 种植
     sourceType: SourceType.SEED,
-    originPath: 'direct_from_seed' as 'direct_from_seed' | 'via_seedling',  // V2 改造 (任务 15): 来源路径二选一
+    originPath: 'direct_from_seed' as const,  // 单一来源路径（兼容 schema）
     sourceId: '',
     sourceCode: '',
     selectedCropCode: '',  // 用于查询品种路径
@@ -58,17 +56,19 @@ export function AddModal({
     areaName: '',
     rootName: '',
     plantingCount: 0,
+    // 2026-06-25: 种植单位（从数据词典 unit 选；DB plantings.unit 已有，默认 '株'）
+    unit: '株',
     plantingDate: todayLocal(),
     soilPH: 6.5,
     soilEC: 1.0,
-    // 2026-06-18: 损耗率 + 目标产量（完成比例 = harvestToInventoryQty / target_yield）
-    attritionRate: 0,
+    // 2026-06-18: 目标产量（完成比例 = harvestToInventoryQty / target_yield）
+    // 2026-06-25: 移除 attritionRate 字段（采收后由 HarvestModal 自动计算并写回）
     targetYield: 0,
     targetYieldUnit: '克',
     remarks: '',
     productionPlanId: '',     // 关联生产计划ID
     productionPlanCode: '',   // 关联生产计划批次号
-    // 2026-06-24: 育种实验设置（种源管理「育种计划产出」吸收到种植管理）
+    // 2026-06-25: 育种计划设置（与生产计划「育种计划」对齐，种植管理吸收种源管理「育种计划产出」）
     isBreeding: false,
     parentMaleCode: '',
     parentFemaleCode: '',
@@ -85,16 +85,53 @@ export function AddModal({
   const storePlans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
+  // 2026-06-25: 弹窗打开时重置 formData 为初始值（修复 isBreeding/isSeedSaving 持久化的 bug）
+  // 根因：<AddModal> 即使 isOpen=false 也不卸载组件，useState 初始值只执行一次，
+  //       导致用户上一次提交的值（特别是 checkbox 状态）会持久保留
   useEffect(() => {
     if (isOpen) {
+      setFormData({
+        sourceType: SourceType.SEED,
+        originPath: 'direct_from_seed',
+        sourceId: '',
+        sourceCode: '',
+        selectedCropCode: '',
+        cropName: '',
+        cropVariety: '',
+        areaId: '',
+        areaName: '',
+        rootName: '',
+        plantingCount: 0,
+        unit: '株',
+        plantingDate: todayLocal(),
+        soilPH: 6.5,
+        soilEC: 1.0,
+        targetYield: 0,
+        targetYieldUnit: '克',
+        remarks: '',
+        productionPlanId: '',
+        productionPlanCode: '',
+        isBreeding: false,
+        parentMaleCode: '',
+        parentFemaleCode: '',
+        generation: '',
+        breedingMethod: '',
+        breedingLocation: '',
+        targetTraits: '',
+        isSeedSaving: false,
+        seedPlantMarker: '',
+      });
+      setSeedSourceKeyword('');
+      setPlantCode('');
+      setPictures([]);
       fetchPlans(); // 弹窗打开时刷新生产计划列表
     }
   }, [isOpen, fetchPlans]);
 
-  // 筛选可用的生产计划批次（只显示种植计划类型，不限状态）
+  // 筛选可用的生产计划批次（2026-06-25: 种植管理吸收育种功能，关联计划含种植+育种）
   const availableProductionPlans = useMemo(() => {
     return storePlans.filter((batch: any) =>
-      batch.planType === PlanType.PLANTING
+      batch.planType === PlanType.PLANTING || batch.planType === PlanType.SEED_BREEDING
     );
   }, [storePlans]);
 
@@ -114,53 +151,52 @@ export function AddModal({
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
 
-  // 来源类型切换：内部来源（选择已有种源/育苗）/ 外部来源（手动录入）
-  const [sourceMode, setSourceMode] = useState<'internal' | 'external'>('internal');
-  const [externalSourceCode, setExternalSourceCode] = useState('');
-  const [externalSourceName, setExternalSourceName] = useState('');
-  const [externalSourceQuantity, setExternalSourceQuantity] = useState<number>(0);
-
-  // 种源列表和育苗列表状态
+  // 2026-06-25: 所有种植来源都从种源管理选择（外部来源必须先录入种源）
+  // 种源列表状态 + 搜索关键词
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
-  const [seedlings, setSeedlings] = useState<Seedling[]>([]);
+  const [seedSourceKeyword, setSeedSourceKeyword] = useState('');
+  const seedSourceSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 2026-06-18: 计算当前所选来源的可定植数量（种源: availableCount, 育苗: availableTransplantCount）
-  // 供"种植数量"输入框下方实时显示余量警告
-  // null = 外部来源或未选（不显示警告）
-  // 必须在 seedSources/seedlings useState 声明之后（避免 TDZ ReferenceError）
+  // 计算当前所选种源的可定植数量（availableCount）
+  // null = 未选（不显示警告）
   const availableAmount = useMemo<number | null>(() => {
-    if (sourceMode === 'external') return null  // 外部来源无数限制
     if (!formData.sourceId) return null
-    if (formData.sourceType === SourceType.SEED) {
-      const s = seedSources.find(x => x.id === formData.sourceId)
-      return s ? s.availableCount : null
-    }
-    if (formData.sourceType === SourceType.SEEDLING) {
-      const s = seedlings.find(x => x.id === formData.sourceId)
-      return s ? ((s as any).availableTransplantCount ?? 0) : null
-    }
-    return null
-  }, [sourceMode, formData.sourceId, formData.sourceType, seedSources, seedlings])
+    const s = seedSources.find(x => x.id === formData.sourceId)
+    return s ? s.availableCount : null
+  }, [formData.sourceId, seedSources])
+
+  // 当前所选种源单位（用于种植数量警告展示）
+  const selectedSourceUnit = useMemo<string>(() => {
+    if (!formData.sourceId) return ''
+    const s = seedSources.find(x => x.id === formData.sourceId)
+    return s?.unit || ''
+  }, [formData.sourceId, seedSources])
 
   // 2026-06-18: 数量超限标记（用于提交拦截 + 红框提示）
   const overLimit = availableAmount !== null && formData.plantingCount > availableAmount
 
-  // 加载种源列表和育苗列表
+  // 加载种源列表（默认加载全部，搜索词变化时按关键词查询）
   useEffect(() => {
-    if (isOpen) {
-      Promise.all([
-        getSeedSources(),
-        getSeedlings()
-      ]).then(([sources, seedlingsData]) => {
-        setSeedSources(sources.filter((s: SeedSource) => s.availableCount > 0));
-        setSeedlings(seedlingsData.filter((s: Seedling) =>
-          s.status === 'transplant_ready' || s.status === 'in_progress'
-        ));
-      }).catch(error => {
-        // logger.error('加载数据失败:', error);
-      });
+    if (!isOpen) return
+    const load = (kw: string) => {
+      const promise = kw.trim()
+        ? searchSeedSources(kw)
+        : getSeedSources()
+      promise
+        .then((sources) => {
+          setSeedSources(sources.filter((s: SeedSource) => s.availableCount > 0));
+        })
+        .catch(error => {
+          // logger.error('加载种源失败:', error);
+        });
     }
-  }, [isOpen]);
+    // debounce 300ms（避免连续输入频繁请求）
+    if (seedSourceSearchTimerRef.current) clearTimeout(seedSourceSearchTimerRef.current)
+    seedSourceSearchTimerRef.current = setTimeout(() => load(seedSourceKeyword), 300)
+    return () => {
+      if (seedSourceSearchTimerRef.current) clearTimeout(seedSourceSearchTimerRef.current)
+    }
+  }, [isOpen, seedSourceKeyword]);
 
   const handleSubmit = async () => {
     if (!plantCode) {
@@ -177,26 +213,20 @@ export function AddModal({
       return
     }
 
-    // 外部来源验证
-    if (sourceMode === 'external') {
-      if (!externalSourceCode.trim()) {
-        await showAlert('请输入外部来源批号');
-        return;
-      }
-      if (!externalSourceName.trim()) {
-        await showAlert('请输入来源名称');
-        return;
-      }
+    // 来源校验：必须选择种源（外部来源必须先录入种源管理）
+    if (!formData.sourceId) {
+      await showAlert('请先选择种源');
+      return;
     }
 
-    // 2026-06-24: 育种实验校验
+    // 2026-06-25: 育种计划校验
     if (formData.isBreeding) {
       if (!formData.parentMaleCode.trim()) {
-        await showAlert('标记为育种实验时，父本编码必填');
+        await showAlert('标记为育种计划时，父本编码必填');
         return;
       }
       if (!formData.parentFemaleCode.trim()) {
-        await showAlert('标记为育种实验时，母本编码必填');
+        await showAlert('标记为育种计划时，母本编码必填');
         return;
       }
       if (formData.parentMaleCode.trim() === formData.parentFemaleCode.trim()) {
@@ -204,7 +234,7 @@ export function AddModal({
         return;
       }
       if (!formData.generation) {
-        await showAlert('标记为育种实验时，世代必填');
+        await showAlert('标记为育种计划时，世代必填');
         return;
       }
     }
@@ -229,7 +259,7 @@ export function AddModal({
         sourceType: formData.sourceType as SourceType,
         originPath: formData.originPath,  // V2 改造 (任务 15): 传递 originPath 字段
         sourceId: formData.sourceId,
-        sourceCode: sourceMode === 'internal' ? formData.sourceCode : externalSourceCode,
+        sourceCode: formData.sourceCode,
         cropName: formData.cropName,
         cropVariety: formData.cropVariety,
         cropCode,
@@ -237,14 +267,15 @@ export function AddModal({
         areaName,
         rootName,
         plantingCount: formData.plantingCount,
+        // 2026-06-25: 单位从数据词典选（DB plantings.unit 列已有）
+        unit: formData.unit,
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,
         soilEC: formData.soilEC,
         transplantCount: 0,
         transplantDate: '',
         isHarvest: false,
-        // 2026-06-18: 损耗率 + 目标产量（用户可填）
-        attritionRate: formData.attritionRate,
+        // 2026-06-18: 目标产量（用户可填，损耗率不再手动填，采收后自动写回）
         targetYield: formData.targetYield,
         targetYieldUnit: formData.targetYieldUnit,
         printCount: 0,
@@ -255,44 +286,24 @@ export function AddModal({
         createBy: '系统',
         productionPlanId: formData.productionPlanId || undefined,
         productionPlanCode: formData.productionPlanCode || undefined,
-        // 外部来源信息
-        sourceMode,
-        ...(sourceMode === 'external' ? {
-          externalSourceCode,
-          externalSourceName,
-          externalSourceQuantity,
-        } : {}),
-        // 2026-06-24: 育种实验字段
+        // 2026-06-25: 移除外部来源逻辑（外部来源必须先录入种源管理）
+        // 2026-06-25: 育种计划字段（移除 breedingLocation — 与种植区域语义重叠）
         isBreeding: formData.isBreeding,
         parentMaleCode: formData.isBreeding ? formData.parentMaleCode : undefined,
         parentFemaleCode: formData.isBreeding ? formData.parentFemaleCode : undefined,
         generation: formData.isBreeding ? formData.generation : undefined,
         breedingMethod: formData.isBreeding ? formData.breedingMethod : undefined,
-        breedingLocation: formData.isBreeding ? formData.breedingLocation : undefined,
         targetTraits: formData.isBreeding ? formData.targetTraits : undefined,
         // 2026-06-24: 种植留种字段
         isSeedSaving: formData.isSeedSaving,
         seedPlantMarker: formData.isSeedSaving ? formData.seedPlantMarker : undefined,
       });
 
-      // 更新作物实例的定植数量（仅内部来源）
-      if (sourceMode === 'internal') {
-        let instanceId: string | undefined;
-        if (formData.sourceType === SourceType.SEED) {
-          // 来自种源
-          const source = seedSources.find(s => s.id === formData.sourceId);
-          instanceId = source?.instanceId;
-        } else {
-          // 来自育苗（育苗关联的种源有instanceId）
-          const seedling = seedlings.find(s => s.id === formData.sourceId);
-          if (seedling) {
-            const source = seedSources.find(s => s.id === seedling.sourceId);
-            instanceId = source?.instanceId;
-          }
-        }
-        if (instanceId) {
-          await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
-        }
+      // 更新作物实例的定植数量（来源必为种源）
+      const source = seedSources.find(s => s.id === formData.sourceId);
+      const instanceId = source?.instanceId;
+      if (instanceId) {
+        await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
       }
     } catch (error) {
       // logger.error('添加种植记录失败:', error);
@@ -324,21 +335,6 @@ export function AddModal({
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
         cropVariety: source.cropVariety,
-      });
-    }
-  };
-
-  // 处理来源选择变化（育苗）
-  const handleSeedlingChange = (sourceId: string) => {
-    const seedling = seedlings.find(s => s.id === sourceId);
-    if (seedling) {
-      setFormData({
-        ...formData,
-        sourceId,
-        sourceCode: seedling.seedlingCode,
-        selectedCropCode: seedling.cropCode || '',
-        cropName: seedling.cropName,
-        cropVariety: seedling.cropVariety,
       });
     }
   };
@@ -408,135 +404,48 @@ export function AddModal({
                 <SelectItem value="__none__">不关联</SelectItem>
                 {availableProductionPlans.map(plan => (
                   <SelectItem key={plan.id} value={plan.id}>
-                    [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
+                    [{plan.planTypeName || (plan.planType === PlanType.SEED_BREEDING ? '育种计划' : '种植计划')}] {plan.batchCode} - {plan.cropName}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-        {/* 来源路径 + 来源类型切换 */}
+        {/* 2026-06-25: 来源路径/来源类型字段全部移除，默认从种源选择 */}
         <div className="col-span-2">
-          <div className="grid grid-cols-2 gap-x-6 mb-3">
-            {/* 来源路径 */}
-            <div>
-              <Label className="text-gray-900">来源路径</Label>
-              <div className="flex gap-4 mt-1">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="originPath"
-                    value="direct_from_seed"
-                    checked={formData.originPath === 'direct_from_seed'}
-                    onChange={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        originPath: 'direct_from_seed',
-                        sourceType: SourceType.SEED,
-                        sourceId: '',
-                        sourceCode: '',
-                        cropName: '',
-                        cropVariety: ''
-                      }));
-                    }}
-                    className="w-4 h-4 text-emerald-600 accent-emerald-600"
-                  />
-                  <span className="text-sm text-gray-700">直接播种</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="originPath"
-                    value="via_seedling"
-                    checked={formData.originPath === 'via_seedling'}
-                    onChange={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        originPath: 'via_seedling',
-                        sourceType: SourceType.SEEDLING,
-                        sourceId: '',
-                        sourceCode: '',
-                        cropName: '',
-                        cropVariety: ''
-                      }));
-                    }}
-                    className="w-4 h-4 text-emerald-600 accent-emerald-600"
-                  />
-                  <span className="text-sm text-gray-700">经育苗移栽</span>
-                </label>
-              </div>
+          <Label className="text-gray-900">
+            选择种源 <span className="text-xs text-gray-500 font-normal">（来自种源管理的种源列表）</span>
+          </Label>
+          {/* 2026-06-25: 搜索框 + 下拉选择 同行布局 */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                value={seedSourceKeyword}
+                onChange={(e) => setSeedSourceKeyword(e.target.value)}
+                placeholder="搜索：种源批号 / 作物名称 / 作物编号 / 作物品种"
+                className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 w-full"
+              />
             </div>
-            {/* 来源类型切换 */}
-            <div>
-              <Label className="text-gray-900">来源类型</Label>
-              <div className="flex gap-2 mt-1">
-                <Button variant={sourceMode === 'internal' ? 'default' : 'secondary'} size="sm"
-                  onClick={() => { setSourceMode('internal'); setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '' })); }}>
-                  内部来源
-                </Button>
-                <Button variant={sourceMode === 'external' ? 'default' : 'secondary'} size="sm"
-                  onClick={() => setSourceMode('external')}>
-                  外部来源
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* 来源选择区域 */}
-          {sourceMode === 'internal' ? (
-            <div>
-              <Label className="text-gray-900">
-                {formData.sourceType === SourceType.SEED ? '选择种源' : '选择育苗批次'}
-              </Label>
+            <div className="flex-1">
               <Select
                 value={formData.sourceId}
-                onValueChange={(val) => {
-                  if (formData.sourceType === SourceType.SEED) {
-                    handleSeedSourceChange(val);
-                  } else {
-                    handleSeedlingChange(val);
-                  }
-                }}
+                onValueChange={handleSeedSourceChange}
               >
                 <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择" />
+                  <SelectValue placeholder={seedSources.length === 0 ? '（无匹配种源）' : '请选择'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {formData.sourceType === SourceType.SEED ? (
-                    seedSources.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    seedlings.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {(s as any).availableTransplantCount ?? 0}
-                      </SelectItem>
-                    ))
-                  )}
+                  {seedSources.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount} {s.unit || ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label className="text-gray-900">外部来源批号</Label>
-                <Input type="text" value={externalSourceCode} onChange={(e) => setExternalSourceCode(e.target.value)}
-                  className={deepInputClass} placeholder="如：EXT-001" />
-              </div>
-              <div>
-                <Label className="text-gray-900">来源名称</Label>
-                <Input type="text" value={externalSourceName} onChange={(e) => setExternalSourceName(e.target.value)}
-                  className={deepInputClass} placeholder="如：外部采购苗" />
-              </div>
-              <div>
-                <Label className="text-gray-900">数量</Label>
-                <Input type="number" min={0} value={externalSourceQuantity || ''} onChange={(e) => setExternalSourceQuantity(Number(e.target.value))}
-                  className={deepInputClass} placeholder="来源数量" />
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* 作物品种 */}
@@ -563,128 +472,30 @@ export function AddModal({
           />
         </div>
 
-        {/* 种植区域 */}
-        <div>
-          <Label className="text-gray-900">种植区域</Label>
-          <DictSelect
-            category="planting_area"
-            value={formData.areaId}
-            onChange={(value) => handleAreaChange(value)}
-            placeholder="选择种植区域"
-          />
-        </div>
-
-        {/* 种植数量 */}
-        <div>
-          <Label className="text-gray-900">种植数量</Label>
-          <Input
-            type="number"
-            value={formData.plantingCount || ''}
-            onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-            className={`${deepInputClass} ${overLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
-          />
-          {/* 2026-06-18: 实时显示可定植余量 + 超限警告（参照 2026-06-18 用户反馈） */}
-          {availableAmount !== null && (
-            <p className={`mt-1 text-xs flex items-center gap-1 ${overLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-              <AlertTriangle className={`w-3 h-3 ${overLimit ? 'text-red-600' : 'text-gray-400'}`} />
-              可定植数量: <span className="font-semibold">{availableAmount}</span>
-              {overLimit ? `，已超出 ${formData.plantingCount - availableAmount} 株` : ''}
-            </p>
-          )}
-        </div>
-
-        {/* 种植日期 */}
-        <div>
-          <Label className="text-gray-900">种植日期</Label>
-          <DatePicker className="w-full"
-            selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, plantingDate: todayLocal(date) })}
-          />
-        </div>
-
-        {/* 土壤PH值 */}
-        <div>
-          <Label className="text-gray-900">土壤PH值</Label>
-          <Input
-            type="number"
-            step="0.1"
-            value={formData.soilPH || ''}
-            onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
-            placeholder="如：6.5"
-            className={deepInputClass}
-          />
-        </div>
-
-        {/* 土壤EC值 */}
-        <div>
-          <Label className="text-gray-900">土壤EC值</Label>
-          <Input
-            type="number"
-            step="0.1"
-            value={formData.soilEC || ''}
-            onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
-            placeholder="如：1.2"
-            className={deepInputClass}
-          />
-        </div>
-
-        {/* 损耗率 */}
-        <div>
-          <Label className="text-gray-900">损耗率（%）</Label>
-          <Input
-            type="number"
-            step="0.1"
-            min={0}
-            max={100}
-            value={formData.attritionRate || ''}
-            onChange={(e) => setFormData({ ...formData, attritionRate: Number(e.target.value) })}
-            placeholder="如：5（默认 0）"
-            className={deepInputClass}
-          />
-        </div>
-
-        {/* 目标产量 */}
-        <div>
-          <Label className="text-gray-900">目标产量</Label>
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              min={0}
-              value={formData.targetYield || ''}
-              onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) })}
-              placeholder="如：500"
-              className={`${deepInputClass} flex-1`}
-            />
-            {/* 2026-06-18: 目标产量单位（从数据词典 unit 选） */}
-            <div style={{ minWidth: '120px' }}>
-              <DictSelect
-                category="unit"
-                value={formData.targetYieldUnit}
-                onChange={(value) => setFormData({ ...formData, targetYieldUnit: value })}
-                placeholder="单位"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 2026-06-24: 育种实验设置 — 种源管理「育种计划产出」吸收到种植管理 */}
+        {/* 2026-06-25: 育种计划设置（移到这里，在区域/数量之前，让用户先决定种植模式） */}
         <div className="col-span-2">
-          <details className="border border-emerald-200 rounded-lg">
-            <summary className="px-3 py-2 bg-emerald-50 cursor-pointer text-sm font-medium text-emerald-800 rounded-t-lg flex items-center gap-2">
-              <span>🌱 育种实验设置（可选）</span>
-              {formData.isBreeding && (
-                <Badge className="bg-emerald-600 text-white text-xs">已开启</Badge>
-              )}
+          <details className="group border border-emerald-200 rounded-lg">
+            <summary className="px-3 py-2 bg-emerald-50 cursor-pointer text-sm font-medium text-emerald-800 rounded-t-lg flex items-center justify-between gap-2 list-none">
+              <span className="flex items-center gap-2">
+                🌱 育种计划设置（可选）
+                {formData.isBreeding && (
+                  <Badge className="bg-emerald-600 text-white text-xs">已开启</Badge>
+                )}
+              </span>
+              {/* 2026-06-25: 自定义折叠箭头（替代浏览器默认 disclosure marker，更醒目） */}
+              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <div className="p-3 space-y-3 border-t border-emerald-200">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="is-breeding"
                   checked={formData.isBreeding}
-                  onCheckedChange={(v) => setFormData({ ...formData, isBreeding: !!v })}
+                  // 2026-06-25: 与「种植留种」互斥 — 选育种计划时自动取消留种（业务语义不同，不能并存）
+                  onCheckedChange={(v) => setFormData({ ...formData, isBreeding: !!v, isSeedSaving: !v ? false : formData.isSeedSaving })}
+                  disabled={formData.isSeedSaving}
                 />
                 <Label htmlFor="is-breeding" className="text-sm cursor-pointer">
-                  标记为育种实验（采收的种子可调拨入种源管理）
+                  标记为育种计划（采收的种子可调拨入种源管理）
                 </Label>
               </div>
 
@@ -760,17 +571,7 @@ export function AddModal({
                     </div>
                   </div>
 
-                  {/* 育种地点 */}
-                  <div>
-                    <Label className="text-gray-900">育种地点</Label>
-                    <Input
-                      value={formData.breedingLocation}
-                      onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
-                      placeholder="例: 育种温室A"
-                      className={deepInputClass}
-                    />
-                  </div>
-
+                  {/* 2026-06-25: 移除「育种地点」字段 — 与上方「种植区域」语义重叠，统一用种植区域表示 */}
                   {/* 目标性状 */}
                   <div>
                     <Label className="text-gray-900">目标性状</Label>
@@ -784,7 +585,7 @@ export function AddModal({
                   </div>
 
                   <p className="text-xs text-amber-600">
-                    ⚠ 标记为育种实验后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
+                    ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
                   </p>
                 </>
               )}
@@ -792,21 +593,26 @@ export function AddModal({
           </details>
         </div>
 
-        {/* 2026-06-24: 种植留种设置 — 种源管理「种植留种」吸收到种植管理 */}
+        {/* 2026-06-25: 种植留种设置 — 种源管理「种植留种」吸收到种植管理 */}
         <div className="col-span-2">
-          <details className="border border-amber-200 rounded-lg">
-            <summary className="px-3 py-2 bg-amber-50 cursor-pointer text-sm font-medium text-amber-800 rounded-t-lg flex items-center gap-2">
-              <span>🌾 种植留种设置（可选）</span>
-              {formData.isSeedSaving && (
-                <Badge className="bg-amber-600 text-white text-xs">已开启</Badge>
-              )}
+          <details className="group border border-amber-200 rounded-lg">
+            <summary className="px-3 py-2 bg-amber-50 cursor-pointer text-sm font-medium text-amber-800 rounded-t-lg flex items-center justify-between gap-2 list-none">
+              <span className="flex items-center gap-2">
+                🌾 种植留种设置（可选）
+                {formData.isSeedSaving && (
+                  <Badge className="bg-amber-600 text-white text-xs">已开启</Badge>
+                )}
+              </span>
+              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <div className="p-3 space-y-3 border-t border-amber-200">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="is-seed-saving"
                   checked={formData.isSeedSaving}
-                  onCheckedChange={(v) => setFormData({ ...formData, isSeedSaving: !!v })}
+                  // 2026-06-25: 与「育种计划」互斥 — 选种植留种时自动取消育种计划
+                  onCheckedChange={(v) => setFormData({ ...formData, isSeedSaving: !!v, isBreeding: !v ? false : formData.isBreeding })}
+                  disabled={formData.isBreeding}
                 />
                 <Label htmlFor="is-seed-saving" className="text-sm cursor-pointer">
                   本种植用于留种（采收时入种源库存而非产品库存）
@@ -830,6 +636,110 @@ export function AddModal({
               )}
             </div>
           </details>
+        </div>
+
+        {/* 种植区域 */}
+        <div>
+          <Label className="text-gray-900">种植区域</Label>
+          <DictSelect
+            category="planting_area"
+            value={formData.areaId}
+            onChange={(value) => handleAreaChange(value)}
+            placeholder="选择种植区域"
+          />
+        </div>
+
+        {/* 种植数量 + 单位 — 2026-06-25 单位从数据词典 unit 选 */}
+        <div>
+          <Label className="text-gray-900">种植数量</Label>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              value={formData.plantingCount || ''}
+              onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
+              className={`${deepInputClass} flex-1 ${overLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
+            />
+            <div style={{ minWidth: '120px' }}>
+              <DictSelect
+                category="unit"
+                value={formData.unit}
+                onChange={(value) => setFormData({ ...formData, unit: value })}
+                placeholder="单位"
+              />
+            </div>
+          </div>
+          {/* 实时显示可定植余量 + 超限警告（2026-06-25 用种源单位） */}
+          {availableAmount !== null && (
+            <p className={`mt-1 text-xs flex items-center gap-1 ${overLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+              <AlertTriangle className={`w-3 h-3 ${overLimit ? 'text-red-600' : 'text-gray-400'}`} />
+              可定植数量: <span className="font-semibold">{availableAmount}</span>
+              {selectedSourceUnit && ` ${selectedSourceUnit}`}
+              {overLimit ? `（已超出 ${formData.plantingCount - availableAmount} ${formData.unit || selectedSourceUnit}）` : ''}
+            </p>
+          )}
+        </div>
+
+        {/* 种植日期 */}
+        <div>
+          <Label className="text-gray-900">种植日期</Label>
+          <DatePicker className="w-full"
+            selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
+            onChange={(date) => setFormData({ ...formData, plantingDate: todayLocal(date) })}
+          />
+        </div>
+
+        {/* 土壤PH值 */}
+        <div>
+          <Label className="text-gray-900">土壤PH值</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={formData.soilPH || ''}
+            onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
+            placeholder="如：6.5"
+            className={deepInputClass}
+          />
+        </div>
+
+        {/* 土壤EC值 */}
+        <div>
+          <Label className="text-gray-900">土壤EC值</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={formData.soilEC || ''}
+            onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
+            placeholder="如：1.2"
+            className={deepInputClass}
+          />
+        </div>
+
+        {/* 2026-06-25: 损耗率字段移除 — 属于采收后计算的实际值，不在创建时填写 */}
+        {/* 原 attritionRate 字段由 HarvestModal 采收时按 (1 - 采收产量/种植数量) × 100% 计算后写回 */}
+
+
+        {/* 目标产量 */}
+        <div>
+          <Label className="text-gray-900">目标产量</Label>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min={0}
+              value={formData.targetYield || ''}
+              onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) })}
+              placeholder="如：500"
+              className={`${deepInputClass} flex-1`}
+            />
+            {/* 2026-06-18: 目标产量单位（从数据词典 unit 选） */}
+            <div style={{ minWidth: '120px' }}>
+              <DictSelect
+                category="unit"
+                value={formData.targetYieldUnit}
+                onChange={(value) => setFormData({ ...formData, targetYieldUnit: value })}
+                placeholder="单位"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 备注 - 占两列 */}

@@ -252,6 +252,21 @@ export async function getSeedSources(): Promise<SeedSource[]> {
 }
 
 /**
+ * 多字段模糊搜索种源（2026-06-25: 前端 combogrid 用）
+ * 搜索范围：种源批号 / 作物名称 / 作物编号 / 作物品种
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
+ */
+export async function searchSeedSources(keyword: string): Promise<SeedSource[]> {
+  if (!keyword || !keyword.trim()) {
+    return getSeedSources();
+  }
+  const data = await enhancedApiClient.get<BackendSeedSource[]>(
+    `/seed-sources?keyword=${encodeURIComponent(keyword.trim())}`
+  );
+  return transformSeedSourceFromBackend(data) as SeedSource[];
+}
+
+/**
  * 根据ID获取单个种源
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */

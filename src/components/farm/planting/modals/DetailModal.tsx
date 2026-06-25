@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
-import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
+import { PLANTING_STATUS_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { X, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { FlowLogTab } from '../../trace/FlowLogTab';
 
@@ -124,7 +124,12 @@ export function DetailModal({
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">来源类型：</span>
-              <span className="text-sm text-gray-900">{record.sourceType === 'seed' ? '种子' : '种苗'}</span>
+              {/* 2026-06-25: 改用种源自身类型（SOURCE_TYPE_MAP），无关联时按历史 sourceType 兜底 */}
+              <span className="text-sm text-gray-900">
+                {record.sourceSeedSourceType
+                  ? (SOURCE_TYPE_MAP[record.sourceSeedSourceType] || record.sourceSeedSourceType)
+                  : (record.sourceType === 'seedling' ? '种苗' : '种子')}
+              </span>
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">关联批号：</span>
@@ -193,23 +198,23 @@ export function DetailModal({
           </div>
         </div>
 
-        {/* 2026-06-24: 育种 / 留种信息（种源管理吸收功能）— 仅当标记时显示 */}
+        {/* 2026-06-25: 育种 / 留种信息（与生产计划「育种计划」对齐）— 仅当标记时显示 */}
         {(record.isBreeding || record.isSeedSaving) && (
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
               育种 / 留种信息
               {record.isBreeding && (
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">🌱 育种实验</span>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs">🌱 育种计划</span>
               )}
               {record.isSeedSaving && (
                 <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">🌾 种植留种</span>
               )}
             </h4>
 
-            {/* 育种实验子区 */}
+            {/* 育种计划子区 */}
             {record.isBreeding && (
               <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <div className="text-xs font-semibold text-emerald-800 mb-2">🌱 育种实验设置</div>
+                <div className="text-xs font-semibold text-emerald-800 mb-2">🌱 育种计划设置</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex items-center">
                     <span className="text-sm text-gray-500 w-24">父本编码：</span>
@@ -227,10 +232,7 @@ export function DetailModal({
                     <span className="text-sm text-gray-500 w-24">育种方法：</span>
                     <span className="text-sm text-gray-900">{record.breedingMethod || '-'}</span>
                   </div>
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-500 w-24">育种地点：</span>
-                    <span className="text-sm text-gray-900">{record.breedingLocation || '-'}</span>
-                  </div>
+                  {/* 2026-06-25: 移除「育种地点」展示 — 与种植区域语义重叠，统一看上方「区域」字段 */}
                   {record.targetTraits && (
                     <div className="col-span-2 flex items-start">
                       <span className="text-sm text-gray-500 w-24 flex-shrink-0">目标性状：</span>
@@ -239,7 +241,7 @@ export function DetailModal({
                   )}
                 </div>
                 <p className="text-xs text-amber-600 mt-2">
-                  ⚠ 标记为育种实验后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
+                  ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
                 </p>
               </div>
             )}

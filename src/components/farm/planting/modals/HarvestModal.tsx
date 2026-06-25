@@ -62,8 +62,13 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
       : 0;
 
     try {
-      // 调用采收服务
-      await usePlantingStore.getState().harvestPlanting(String(record.id), formData.harvestDate, harvestCount);
+      // 调用采收服务（2026-06-25: 透传实际损耗率，后端写回 plantings.attrition_rate）
+      await usePlantingStore.getState().harvestPlanting(
+        String(record.id),
+        formData.harvestDate,
+        harvestCount,
+        attritionRate
+      );
     } catch (error) {
       // logger.error('采收登记失败:', error);
       showAlert('采收登记失败，请重试');
