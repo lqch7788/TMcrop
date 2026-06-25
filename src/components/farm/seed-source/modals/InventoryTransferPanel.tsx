@@ -1,12 +1,15 @@
 /**
- * 库存调拨选择面板（种源管理新增弹窗 → 库存调拨分支）
- * 2026-06-24: B4 实施
+ * 库存调拨选择面板（种源管理 → 库存调拨）
+ * 2026-06-24: B4 实施（种源新增弹窗 — 创建新种源）
+ * 2026-06-25 v3: 加 mode='append_existing' 模式（种源操作列 — 追加现有种源库存）
  *
  * 业务：
  * - 拉取 GET /api/inventory/transferable-sources 列出 3 种 stock_type 可调拨库存
  * - 多选 + 每行调拨数量调整（默认 = currentQuantity，单位继承）
  * - 校验：quantity > 0 且 ≤ currentQuantity，unit 必须等于原库存 unit
- * - 确认 → 调用 onConfirm(items) → AddModal 触发后续调拨提交
+ * - 确认 → 调用 onConfirm(items) → 父组件触发后续调拨提交
+ *   - mode='create_new'（默认）→ 父组件调 createFromTransfer 创建新种源
+ *   - mode='append_existing' → 父组件调 appendToExistingSeedSource 追加到目标种源
  *
  * 数据流（V2.1 铁律）：
  * 组件 → seedSourceTransferService → enhancedApiClient → API（无缓存）
@@ -41,7 +44,17 @@ import {
   type TransferStockType,
 } from '@/services/seedSourceTransferService';
 
+/** 调拨模式 */
+export type InventoryTransferMode = 'create_new' | 'append_existing';
+
 interface InventoryTransferPanelProps {
+  /** 调拨模式：
+   *  - 'create_new'（默认）: 父组件（AddModal）调 createFromTransfer 创建新种源
+   *  - 'append_existing': 父组件（SeedSourcePage 操作列弹窗）调 appendToExistingSeedSource 追加到目标种源
+   */
+  mode?: InventoryTransferMode;
+  /** 模式 = 'append_existing' 时必填：目标种源 ID */
+  targetSeedSourceId?: string;
   /** 确认调拨：返回选中的明细给父组件 */
   onConfirm: (items: TransferItem[]) => void;
 }
@@ -72,7 +85,11 @@ function formatSource(row: TransferableSourceRow): string {
   return '—';
 }
 
-export function InventoryTransferPanel({ onConfirm }: InventoryTransferPanelProps) {
+export function InventoryTransferPanel({
+  mode = 'create_new',
+  targetSeedSourceId,
+  onConfirm,
+}: InventoryTransferPanelProps) {
   const toast = useToast();
 
   // ============ 筛选状态 ============
@@ -262,7 +279,12 @@ export function InventoryTransferPanel({ onConfirm }: InventoryTransferPanelProp
   return (
     <div className="space-y-4">
       {/* ============ 顶部状态条 ============ */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {mode === 'append_existing' && (
+          <Badge className="bg-amber-100 text-amber-800 text-xs">
+            模式：追加到现有种源（不创建新记录）
+          </Badge>
+        )}
         <Badge variant="outline" className="text-xs">
           {loading ? '加载中…' : `共 ${rows.length} 条可调拨`}
         </Badge>

@@ -6,8 +6,10 @@ import { Router, Request, Response, NextFunction } from 'express';
 import cropVarietyRouter from './cropVariety';
 import inventoryRouter from './inventory';
 import seedlingRouter from './seedling';
+import seedlingPropagationRecordsRouter from './seedlingPropagationRecords';
 import seedSourceRouter from './seedSource';
 import plantingRouter from './planting';
+import plantingRecordsRouter from './plantingRecords';
 import harvestRouter from './harvest';
 import harvestInboundRouter from './harvestInbound';
 import supplierRouter from './supplier';
@@ -124,12 +126,14 @@ router.use('/inventory', requireAuth, inventoryRouter);
 
 // 育苗管理路由 - 需要认证
 router.use('/seedlings', requireAuth, seedlingRouter);
+router.use('/seedlings', requireAuth, seedlingPropagationRecordsRouter);
 
 // 种源管理路由 - 需要认证
 router.use('/seed-sources', requireAuth, seedSourceRouter);
 
 // 种植管理路由 - 需要认证
 router.use('/plantings', requireAuth, plantingRouter);
+router.use('/plantings', requireAuth, plantingRecordsRouter);
 
 // 采收管理路由 - 需要认证
 router.use('/harvest', requireAuth, harvestRouter);

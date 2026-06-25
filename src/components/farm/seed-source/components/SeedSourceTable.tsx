@@ -1,23 +1,21 @@
 /**
  * 种源数据表格组件
  * 右上角按钮逻辑：编辑/删除/导出 → 需要选择记录后确认
- * 行内按钮逻辑：查看详情/打印/图片 → 直接执行
+ * 行内按钮逻辑：查看详情/调拨/入库登记/打印/图片 → 直接执行
+ *
+ * 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记
+ * 移除：过程记录 / 阶段推进 / 正常结束 / 异常结束 / 回流记录 / 外购提示
  */
 
 import React from 'react';
-import { CheckCircle, ClipboardList, Download, Edit2, GitBranch, HelpCircle, Package, Plus, Printer, Recycle, Trash2, X, XCircle } from 'lucide-react';
+import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
+import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 import {
   UNIT_MAP,
   STOCK_STATUS_MAP,
   SOURCE_TYPE_MAP,
   SOURCE_ORIGIN_MAP,
-  // 2026-06-06: 抽离重复 3 处（SeedSourceTable / PropagationRecordModal / PropagationStageModal）
-  PROPAGATION_TYPE_LABELS,
-  PROPAGATION_TYPE_COLORS,
-  PROPAGATION_STATUS_LABELS,
-  PROPAGATION_STATUS_COLORS,
 } from '../../../../constants/cropConstants';
 import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
@@ -49,15 +47,11 @@ interface SeedSourceTableProps {
   onDetail: (record: SeedSource) => void;
   onPrint: (record: SeedSource) => void;
   onImageClick: (images: string[]) => void;
-  // 结束相关回调
-  onEnd: (record: SeedSource, endType: 'normal' | 'abnormal') => void;
-  // 繁殖途径回调
-  onPropagationRecord: (record: SeedSource) => void;
-  onPropagationStage: (record: SeedSource) => void;
-  // 回流记录回调 (Phase 4: 前端 UI 接入)
-  onCirculation?: (record: SeedSource) => void;
-  // 2026-06-18: 入库登记回调（任务 4）
-  onInbound?: (record: SeedSource) => void;
+  // 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记
+  // 调拨：从作物库存调入种源（追加模式，append_existing）
+  onTransfer: (record: SeedSource) => void;
+  // 入库登记：行级多次入库（同一仓库补货）
+  onInbound: (record: SeedSource) => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -91,10 +85,7 @@ export function SeedSourceTable({
   onDetail,
   onPrint,
   onImageClick,
-  onEnd,
-  onPropagationRecord,
-  onPropagationStage,
-  onCirculation,
+  onTransfer,
   onInbound,
   operationMode,
   onOperationModeChange,
@@ -445,22 +436,8 @@ export function SeedSourceTable({
                     {SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      {record.propagationType && record.propagationType !== 'external' ? (
-                        <>
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${PROPAGATION_TYPE_COLORS[record.propagationType] || 'bg-gray-100 text-gray-600'}`}>
-                            {PROPAGATION_TYPE_LABELS[record.propagationType] || record.propagationType}
-                          </span>
-                          {record.propagationStatus && (
-                            <span className={`px-1.5 py-0.5 rounded text-xs ${PROPAGATION_STATUS_COLORS[record.propagationStatus] || 'bg-gray-100 text-gray-600'}`}>
-                              {PROPAGATION_STATUS_LABELS[record.propagationStatus] || record.propagationStatus}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-'}</span>
-                      )}
-                    </div>
+                    {/* 2026-06-25 v3: 种源只有 external + transfer_from_inventory — 统一显示 SOURCE_ORIGIN_MAP */}
+                    <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-'}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</TableCell>
@@ -517,99 +494,27 @@ export function SeedSourceTable({
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
-                      {/* 2026-06-05: 删除操作列的「查看详情」按钮（与点击种源批号重复） */}
-                      {/* 繁殖途径操作按钮（非外购 + 未完成 + 手动育种计划 = 显示）
-                          2026-06-19: 新增 linkedPlantingId 判断 — 回流种源（关联种植记录的）属于
-                          "附带产物"或"回流产物"，已隐含完成整个繁殖过程，不需要过程管理。
-                          只对真正手动创建的"育种计划"才显示这两个按钮。 */}
-                      {/* 2026-06-24: 库存调拨入种源 — 已隐含完成全过程，隐藏过程记录/阶段推进按钮
-                          transferredFromStockId 有值 = 调拨来源是库存行（非手动育种）*/}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && !record.linkedPlantingId && !record.transferredFromStockId && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onPropagationRecord(record)}
-                          className="text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
-                          title="过程记录"
-                        >
-                          <ClipboardList className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 阶段推进：失败状态下隐藏（已锁定失败，不可继续推进）
-                          2026-06-19: 同样增加 linkedPlantingId 判断，仅手动育种计划显示
-                          2026-06-24: 调拨来源也不显示（成品入库，无需推进阶段） */}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && !record.linkedPlantingId && !record.transferredFromStockId && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onPropagationStage(record)}
-                          className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
-                          title="阶段推进"
-                        >
-                          <GitBranch className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-06-19: 外购种源无繁殖过程 — 天蓝色 HelpCircle（信息提示图标，非可点击按钮）
-                          之前用 disabled 会触发 button.tsx 的 disabled:pointer-events-none 全局类，
-                          导致 title tooltip 不显示。改为不设 disabled，保留天蓝色 + title 提示。 */}
-                      {(!record.propagationType || record.propagationType === PropagationType.EXTERNAL) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-sky-600 bg-sky-50 hover:bg-sky-100"
-                          title="外购种源无繁殖过程。如需追踪繁殖阶段，请编辑种源把『来源途径』改为：育种 / 留种 / 无性繁殖"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* Phase 4: 回流记录按钮 — 展示该种源的回流历史 */}
-                      {onCirculation && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onCirculation(record)}
-                          className="text-gray-500 hover:text-cyan-600 hover:bg-cyan-50"
-                          title="回流记录"
-                        >
-                          <Recycle className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-06-18: 任务 4 — 入库登记按钮（接入 InventoryInboundModal） */}
-                      {onInbound && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onInbound(record)}
-                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                          title="入库登记"
-                        >
-                          <Package className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-06-05: 去掉 productionPlanCode 守卫 — 新建未关联生产计划的种源也要能结束（强结） */}
-                      {/* 2026-06-06: 失败种源已"完结"为失败，隐藏强结按钮避免误操作 */}
-                      {!record.endTime && record.propagationStatus !== PropagationStatus.FAILED && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'normal')}
-                            className="text-gray-500 hover:text-green-600 hover:bg-green-50"
-                            title="正常结束"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'abnormal')}
-                            className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
-                            title="异常结束"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
+                      {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记 */}
+                      {/* 调拨：从作物库存调入种源（追加模式 append_existing） */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onTransfer(record)}
+                        className="text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
+                        title="调拨入库（从作物库存追加）"
+                      >
+                        <ArrowLeftRight className="w-4 h-4" />
+                      </Button>
+                      {/* 入库登记：行级多次入库（同一仓库补货） */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onInbound(record)}
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                        title="入库登记"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

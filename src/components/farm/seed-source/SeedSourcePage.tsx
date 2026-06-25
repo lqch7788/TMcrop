@@ -15,10 +15,9 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { PropagationRecordModal } from './modals/PropagationRecordModal';
-import { PropagationStageModal } from './modals/PropagationStageModal';
-import { CirculationHistoryModal } from './modals/CirculationHistoryModal';
-import { Button, DeleteConfirmModal } from '../../../components/ui';
+import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
+import { seedSourceTransferService } from '@/services/seedSourceTransferService';
+import { Button, DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
 import {
   cropCategories,
   suppliers,
@@ -28,6 +27,7 @@ import {
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { computeStockStatus } from '../../../lib/stockStatus';
@@ -66,6 +66,11 @@ export default function SeedSourcePage() {
 
   // Toast 通知
   const toast = useToastStore((s) => s.toast);
+  // 2026-06-25 v3: 获取当前用户信息（用于调拨操作的操作人记录）
+  const authCurrentUser = useAuthStore((s) => s.currentUser);
+  const currentUser = authCurrentUser
+    ? { id: authCurrentUser.oid, name: authCurrentUser.realName || authCurrentUser.username || '' }
+    : null;
 
   // 状态
   const [filters, setFilters] = useState<SeedSourceFilters>({
@@ -142,15 +147,7 @@ export default function SeedSourcePage() {
   // 打印记录（待打印队列）
   const [printRecords, setPrintRecords] = useState<SeedSource[]>([]);
 
-  // 繁殖途径弹窗状态
-  const [propagationRecordOpen, setPropagationRecordOpen] = useState(false);
-  const [propagationStageOpen, setPropagationStageOpen] = useState(false);
-  const [propagationRecord, setPropagationRecord] = useState<SeedSource | null>(null);
-
-  // Phase 4: 回流记录弹窗状态
-  const [circulationModalOpen, setCirculationModalOpen] = useState(false);
-  const [circulationRecord, setCirculationRecord] = useState<SeedSource | null>(null);
-
+  // 2026-06-25 v3: 种源是纯仓库 — 移除繁殖过程/阶段推进/回流记录弹窗
   // 2026-06-18: 任务 4 — 入库登记弹窗状态 + 入库记录子表数据
   const [inboundModal, setInboundModal] = useState<{ open: boolean; record: SeedSource | null }>({
     open: false,
@@ -330,59 +327,7 @@ export default function SeedSourcePage() {
     setShowDeleteModal(true);
   }, [selectedRows, toast]);
 
-  // 处理结束计划
-  // 2026-06-06: M2 — 强结种源分支下沉到 store.endSeedSource；此处保留 cropBatch 结束流程编排
-  const handleEnd = async (record: SeedSource, endType: 'normal' | 'abnormal') => {
-    const hasPlan = !!record.productionPlanCode;
-    let batch: Awaited<ReturnType<typeof cropBatchService.getCropBatchByCode>> | null = null;
-    if (hasPlan) {
-      batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode!);
-    }
-
-    // 分支 1: 有生产计划且能找到 → 走原"结束生产计划"流程
-    if (hasPlan && batch) {
-      if (batch.batchStatus === 'completed') {
-        await showAlert('该生产计划已完成结束，不能重复结束');
-        return;
-      }
-      const completionRate = cropBatchService.getCompletionRate(batch, record.initialCount);
-      const isNormal = endType === 'normal';
-      const confirmMsg = isNormal
-        ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
-        : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
-
-      if (!await showConfirm(confirmMsg)) return;
-
-      const result = await cropBatchService.endCropBatch(batch.id, endType);
-      if (result) {
-        await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
-        await loadItems();
-      } else {
-        await showAlert('结束失败');
-      }
-      return;
-    }
-
-    // 分支 2: 没有生产计划 / 查不到 → 强结种源本身（Store action）
-    const isNormal = endType === 'normal';
-    const reason = !hasPlan
-      ? '该种源未关联生产计划。'
-      : `未找到关联的生产计划 [${record.productionPlanCode}]，可能已被删除。`;
-    const confirmed = await showConfirm(
-      `${reason}\n是否${isNormal ? '正常' : '异常'}结束该种源订单？\n` +
-      `（结束后将${hasPlan ? '解除生产计划关联并' : ''}记录结束标记）`
-    );
-    if (!confirmed) return;
-
-    try {
-      await endSeedSource(record.id, { endType });
-      await showAlert(isNormal ? '种源订单已正常结束（强结）' : '种源订单已异常结束（强结）');
-      await loadItems();
-    } catch (e: any) {
-      // logger.error('[强结失败]', e);
-      await showAlert(`强结失败：${e?.message || String(e)}`);
-    }
-  };
+  // 2026-06-25 v3: 种源是纯仓库 — 移除 handleEnd（正常/异常结束）
 
   // 导出相关处理
   const handleExportClick = () => {
@@ -424,17 +369,44 @@ export default function SeedSourcePage() {
     setSelectedRows([]);
   };
 
-  // 处理繁殖过程记录
-  const handlePropagationRecord = (record: SeedSource) => {
-    setPropagationRecord(record);
-    setPropagationRecordOpen(true);
+  // 2026-06-25 v3: 种源是纯仓库 — 移除 handlePropagationRecord / handleCirculation
+  // 2026-06-25 v3: handleTransfer（调拨入库 append_existing 模式）— 弹 InventoryTransferPanel
+  const [transferModal, setTransferModal] = useState<{ open: boolean; record: SeedSource | null }>({
+    open: false,
+    record: null,
+  });
+  const handleTransfer = (record: SeedSource) => {
+    setTransferModal({ open: true, record });
   };
 
-  // Phase 4: 处理回流记录查看
-  const handleCirculation = (record: SeedSource) => {
-    setCirculationRecord(record);
-    setCirculationModalOpen(true);
-  };
+  // 关闭调拨弹窗
+  const handleTransferClose = useCallback(() => {
+    setTransferModal({ open: false, record: null });
+  }, []);
+
+  // 调拨确认 — appendToExistingSeedSource
+  const handleTransferConfirm = useCallback(
+    async (items: Array<{ sourceStockId: string; transferQuantity: number; unit: string }>) => {
+      const record = transferModal.record;
+      if (!record) return;
+      try {
+        const result = await seedSourceTransferService.appendToExistingSeedSource({
+          targetSeedSourceId: record.id,
+          items,
+          operator: currentUser ? { id: currentUser.id, name: currentUser.name } : undefined,
+        });
+        toast.success(
+          `调拨成功：追加 ${result.appendedCount} ${record.unit}，当前可用 ${result.newAvailableCount}`
+        );
+        handleTransferClose();
+        await loadItems();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await showAlert(`调拨失败：${msg}`);
+      }
+    },
+    [transferModal.record, currentUser, loadItems, toast]
+  );
 
   // 2026-06-18: 任务 4 — 入库登记入口 + 加载/导出辅助
   const handleInbound = (record: SeedSource) => {
@@ -487,11 +459,7 @@ export default function SeedSourcePage() {
     URL.revokeObjectURL(url)
   }
 
-  // 处理繁殖阶段推进
-  const handlePropagationStage = (record: SeedSource) => {
-    setPropagationRecord(record);
-    setPropagationStageOpen(true);
-  };
+  // 2026-06-25 v3: 移除 handlePropagationStage（阶段推进功能）
 
   const handleConfirmExport = async () => {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
@@ -667,7 +635,6 @@ export default function SeedSourcePage() {
         onPrint={handlePrint}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
-        onEnd={handleEnd}
         onAdd={handleAdd}
         operationMode={operationMode}
         onOperationModeChange={(m) => setBatchOp({ mode: m })}
@@ -683,9 +650,7 @@ export default function SeedSourcePage() {
         canDelete={canDelete}
         canExport={canExport}
         canPrint={canPrint}
-        onPropagationRecord={handlePropagationRecord}
-        onPropagationStage={handlePropagationStage}
-        onCirculation={handleCirculation}
+        onTransfer={handleTransfer}
         onInbound={handleInbound}
       />
 
@@ -741,29 +706,7 @@ export default function SeedSourcePage() {
       />
 
       {/* 繁殖途径弹窗 */}
-      <PropagationRecordModal
-        isOpen={propagationRecordOpen}
-        onClose={() => setPropagationRecordOpen(false)}
-        record={propagationRecord}
-        onSuccess={loadItems}
-      />
-
-      <PropagationStageModal
-        isOpen={propagationStageOpen}
-        onClose={() => setPropagationStageOpen(false)}
-        record={propagationRecord}
-        onSuccess={loadItems}
-      />
-
-      {/* Phase 4: 回流记录弹窗 */}
-      {circulationRecord && (
-        <CirculationHistoryModal
-          isOpen={circulationModalOpen}
-          onClose={() => setCirculationModalOpen(false)}
-          seedSourceId={circulationRecord.id}
-          seedCode={circulationRecord.seedCode}
-        />
-      )}
+      {/* 2026-06-25 v3: 移除 3 个 Modal — 繁殖过程记录 / 阶段推进 / 回流记录 */}
 
       {/* 2026-06-19: 任务 4 — 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
       {inboundModal.record && (
@@ -782,6 +725,23 @@ export default function SeedSourcePage() {
             unit: inboundModal.record.unit,
           }}
         />
+      )}
+
+      {/* 2026-06-25 v3: 调拨入库弹窗（append_existing 模式 — 不创建新种源，追加到目标） */}
+      {transferModal.record && (
+        <UnifiedModal
+          isOpen={transferModal.open}
+          onClose={handleTransferClose}
+          title={`调拨入库 - ${transferModal.record.seedCode}（追加模式）`}
+          size="xl"
+          showFooter={false}
+        >
+          <InventoryTransferPanel
+            mode="append_existing"
+            targetSeedSourceId={transferModal.record.id}
+            onConfirm={handleTransferConfirm}
+          />
+        </UnifiedModal>
       )}
 
       {/* 2026-06-18: 任务 4 — 入库记录子表（折叠区） */}
