@@ -101,6 +101,8 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     sourceType: sourceType,
     sourceId: item.sourceId || '',
     sourceCode: item.sourceCode || '',
+    // 2026-06-25: 关联种源的真实类型（badge 显示用）
+    sourceSeedSourceType: item.sourceSeedSourceType || undefined,
     cropName: item.cropName || '',
     cropVariety: item.cropVariety || '',
     cropCode: item.cropCode || '',
@@ -279,10 +281,17 @@ export async function deletePlantings(ids: string[]): Promise<boolean> {
  * 之前 payload 用 camelCase 导致后端读到 undefined, harvest_quantity 永远为 0
  * 这里把 UI 字段（camelCase 入参）翻译成后端期望的 snake_case
  */
-export async function harvestPlanting(id: string, harvestDate: string, harvestCount?: number): Promise<boolean> {
+export async function harvestPlanting(
+  id: string,
+  harvestDate: string,
+  harvestCount?: number,
+  // 2026-06-25: 损耗率（采收后自动计算并写回 plantings.attrition_rate）
+  attritionRate?: number
+): Promise<boolean> {
   await enhancedApiClient.post(`/plantings/${id}/harvest`, {
     harvest_date: harvestDate,
     harvest_quantity: harvestCount,
+    attrition_rate: attritionRate,
   });
   return true;
 }

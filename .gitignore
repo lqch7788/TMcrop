@@ -100,3 +100,5 @@ sqlite3.exe
 
 # TypeScript 构建缓存（不提交）
 tsconfig.tsbuildinfo
+*.db-shm
+*.db-wal

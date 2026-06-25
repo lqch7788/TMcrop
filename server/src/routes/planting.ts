@@ -87,6 +87,8 @@ router.get('/', (req: Request, res: Response) => {
       p.source_type AS sourceType,
       p.source_id AS sourceId,
       p.source_name AS sourceCode,
+      -- 2026-06-25: 关联种源的 source_type（badge 显示用，外部来源/历史 seedling 取不到为 NULL）
+      ss.source_type AS sourceSeedSourceType,
       p.crop_code AS cropCode,
       p.crop_name AS cropName,
       p.crop_variety AS cropVariety,
@@ -179,6 +181,8 @@ router.get('/', (req: Request, res: Response) => {
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
     LEFT JOIN crop_varieties cv ON cv.crop_code = p.crop_code
+    -- 2026-06-25: 取关联种源的 source_type（内部来源时取到种源真实类型，外部来源/历史 seedling 取不到）
+    LEFT JOIN seed_sources ss ON ss.id = p.source_id
     WHERE p.deleted_at IS NULL`;
     const params: any[] = [];
 
@@ -1094,10 +1098,11 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // 采收路由 - 更新种植记录的采收状态和采收数量
+// 2026-06-25: 接收前端算好的 attrition_rate（产出后实际损耗率），写回 plantings.attrition_rate
 router.post('/:id/harvest', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { harvest_quantity, harvest_date } = req.body;
+    const { harvest_quantity, harvest_date, attrition_rate } = req.body;
     const now = new Date().toISOString();
     const db = getDatabase();
 
@@ -1111,10 +1116,10 @@ router.post('/:id/harvest', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '种植记录不存在' });
     }
 
-    // 更新采收状态和采收数量
+    // 更新采收状态、采收数量、损耗率（2026-06-25 新增损耗率写回）
     db.run(
-      `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', update_time = ? WHERE id = ?`,
-      [harvest_date || now, harvest_quantity || 0, now, id]
+      `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, attrition_rate = ?, status = 'harvested', update_time = ? WHERE id = ?`,
+      [harvest_date || now, harvest_quantity || 0, attrition_rate ?? 0, now, id]
     );
     saveDatabase();
     res.json({ success: true, data: { id } });

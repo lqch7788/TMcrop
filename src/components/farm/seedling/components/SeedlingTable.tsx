@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -32,7 +32,6 @@ interface SeedlingTableProps {
   // 直接执行的操作回调
   onDetail: (record: Seedling) => void;
   onDailyRecord: (record: Seedling) => void;
-  onTransplant: (record: Seedling) => void;
   onPrint: (record: Seedling) => void;
   onLabelManage?: (record: Seedling) => void;
   onImageClick: (images: string[]) => void;
@@ -72,7 +71,6 @@ export function SeedlingTable({
   onAdd,
   onDetail,
   onDailyRecord,
-  onTransplant,
   onPrint,
   onLabelManage,
   onImageClick,
@@ -454,7 +452,6 @@ export function SeedlingTable({
             <col className="w-20" />
             <col className="w-20" />
             <col className="w-20" />
-            <col className="w-20" />
             <col className="w-24" />
             {/* 操作列固定宽度 w-72 (288px ≈ 7 个 32px icon 按钮 + padding) */}
             <col className="w-72" />
@@ -483,9 +480,8 @@ export function SeedlingTable({
               {/* ===== 小苗池（5 列） — 绿色半透明背景标识 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计产出">小苗累计产出</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 人工定植 - 自动定植 - 采收入库">小苗剩余数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 人工定植 - 采收入库">小苗剩余数量</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池人工定植累计">人工定植累计</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池自动定植累计">自动定植累计</th>
               {/* ===== 派生 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">完成比例</th>
@@ -497,7 +493,7 @@ export function SeedlingTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 21 : 20} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -602,25 +598,20 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
                     {(record.seedlingLossCount || 0).toLocaleString()}
                   </td>
-                  {/* 小苗剩余数量 = expanded - loss - trans - auto - harvest（派生列） */}
+                  {/* 小苗剩余数量 = expanded - loss - trans - harvest（派生列，2026-06-25 移除 auto_planted_count） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30">
                     {(() => {
                       const expanded = record.expandedPlantCount || 0;
                       const loss = record.seedlingLossCount || 0;
                       const trans = record.transplantedCount || 0;
-                      const auto = record.autoPlantedCount || 0;
                       const harvest = record.harvestStockedCount || 0;
-                      const remaining = Math.max(0, expanded - loss - trans - auto - harvest);
+                      const remaining = Math.max(0, expanded - loss - trans - harvest);
                       return remaining.toLocaleString();
                     })()}
                   </td>
                   {/* 人工定植累计 = transplantedCount */}
                   <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
                     {(record.transplantedCount || 0).toLocaleString()}
-                  </td>
-                  {/* 自动定植累计 = autoPlantedCount */}
-                  <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
-                    {(record.autoPlantedCount || 0).toLocaleString()}
                   </td>
                   {/* ===== 派生 ===== */}
                   {/* 目标成苗数 = targetSurvivalCount */}
@@ -682,16 +673,6 @@ export function SeedlingTable({
                       >
                         <Calendar className="w-4 h-4" />
                       </Button>
-                      {record.status === SeedlingStatus.TRANSPLANT_READY && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onTransplant(record)}
-                          title="定植操作"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </Button>
-                      )}
                       {onLabelManage && (
                         <Button
                           variant="ghost"

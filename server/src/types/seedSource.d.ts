@@ -126,6 +126,8 @@ export interface CompletePropagationDTO {
  */
 export interface SeedSourceQuery {
   crop_name?: string;
+  // 2026-06-25: 多字段模糊搜索（前端 combogrid 用）
+  keyword?: string;
   status?: string;
   page?: number;
   limit?: number;

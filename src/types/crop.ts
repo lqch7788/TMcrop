@@ -500,9 +500,11 @@ export interface PlantingHarvestRecord {
 export interface Planting {
   id: string;
   plantCode: string;          // 种植批号
-  sourceType: SourceType;     // 来源类型
+  sourceType: SourceType;     // 来源类型（种植时的来源：种源/育苗/外部）
   sourceId: string;           // 来源ID（种源或育苗ID）
   sourceCode: string;         // 来源批号
+  // 2026-06-25: 关联种源的 source_type（badge 显示用，内部来源时是种源真实类型）
+  sourceSeedSourceType?: string;
   cropName: string;           // 作物名称
   cropVariety: string;         // 作物品种
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)

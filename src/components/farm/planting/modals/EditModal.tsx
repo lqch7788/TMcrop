@@ -7,6 +7,7 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Planting } from '../../../../types/crop';
+import { SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '@/components/ui';
@@ -70,7 +71,10 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
     }
   };
 
-  const sourceTypeLabel = record.sourceType === 'seed' ? '种子（直接播种）' : '种苗（经育苗移栽）';
+  // 2026-06-25: 改用种源自身类型（SOURCE_TYPE_MAP），无关联时按历史 sourceType 兜底
+  const sourceTypeLabel = record.sourceSeedSourceType
+    ? (SOURCE_TYPE_MAP[record.sourceSeedSourceType] || record.sourceSeedSourceType)
+    : (record.sourceType === 'seedling' ? '种苗' : '种子');
 
   return (
     <UnifiedModal
@@ -155,17 +159,18 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
           />
         </div>
 
-        {/* 损耗率(%) */}
+        {/* 2026-06-25: 损耗率改为只读（采收后由 HarvestModal 自动计算并写回） */}
         <div>
-          <Label className="text-gray-900">损耗率(%)</Label>
+          <Label className="text-gray-700">损耗率(%) <span className="text-xs text-gray-500 font-normal">（采收后自动计算）</span></Label>
           <Input
             type="number"
             step="0.1"
             min="0"
             max="100"
             value={formData.attritionRate ?? ''}
-            onChange={(e) => setFormData({ ...formData, attritionRate: Number(e.target.value) })}
-            className={deepInputClass}
+            readOnly
+            title="采收后自动计算（1 - 采收产量/种植数量 × 100%）"
+            className={`${deepInputClass} bg-gray-100`}
           />
         </div>
 

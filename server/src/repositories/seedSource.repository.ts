@@ -99,7 +99,7 @@ export class SeedSourceRepository {
    */
   async findAll(query: SeedSourceQuery): Promise<{ data: SeedSourceRecord[]; total: number }> {
     const db = getDatabase();
-    const { crop_name, status, page = 1, limit = 50 } = query;
+    const { crop_name, keyword, status, page = 1, limit = 50 } = query;
 
     // 使用 SQL 别名将数据库字段映射到前端期望的字段名
     // 通过 LEFT JOIN 获取 crop_varieties 表的详细信息
@@ -170,6 +170,14 @@ export class SeedSourceRepository {
       params.push(`%${crop_name}%`);
     }
 
+    // 2026-06-25: 多字段模糊搜索（前端 combogrid 用）
+    // 搜索范围：种源批号 / 作物名称 / 作物编号 / 作物品种
+    if (keyword && keyword.trim()) {
+      const like = `%${keyword.trim()}%`;
+      baseSql += ' AND (ss.source_code LIKE ? OR ss.crop_name LIKE ? OR ss.crop_code LIKE ? OR ss.crop_variety LIKE ?)';
+      params.push(like, like, like, like);
+    }
+
     // status 过滤已废弃（2026-06-04 改实时计算）
 
     // Count 查询
@@ -179,6 +187,11 @@ export class SeedSourceRepository {
     if (crop_name) {
       countSql += ' AND ss.crop_name LIKE ?';
       countParams.push(`%${crop_name}%`);
+    }
+    if (keyword && keyword.trim()) {
+      const like = `%${keyword.trim()}%`;
+      countSql += ' AND (ss.source_code LIKE ? OR ss.crop_name LIKE ? OR ss.crop_code LIKE ? OR ss.crop_variety LIKE ?)';
+      countParams.push(like, like, like, like);
     }
     // status 过滤已废弃：2026-06-04 status 改为前端实时计算，后端不再支持 status 过滤
 
