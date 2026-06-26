@@ -127,37 +127,70 @@ export class SeedSourceService {
     const incomingId = typeof data.id === 'string' && /^SS\d+$/.test(data.id) ? data.id : null;
     const newId = incomingId || `SS${Date.now()}`;
 
+    // 2026-06-26: 兼容两种字段名（camelCase / snake_case）
+    // 之前用 if (sourceCode) 会让空字符串绕过查重，导致空 source_code 入库
+    const finalSourceCode = ((data as any).source_code || (data as any).sourceCode || '').trim();
+
     // 设置默认值
     // 2026-06-04: status 字段已废弃，改为前端实时计算，后端不再设默认值
     const record = {
       ...data,
       id: newId,
+      // 2026-06-26: 显式设置 source_code，避免 spread 不命中或 camelCase 未转换时漏字段
+      source_code: finalSourceCode,
       source_origin: data.source_origin || 'external_purchase',
       remaining_quantity: data.remaining_quantity || data.quantity || 0,
       used_quantity: data.used_quantity || 0,
       quantity: data.quantity || 0
     };
 
-    // 2026-06-22 修复 8 处查重：POST 前查重 source_code（仅 active，软删可复用）
-    const sourceCode = (data as any).source_code || (data as any).sourceCode;
-    if (sourceCode) {
-      const db = getDatabase();
-      const dupStmt = db.prepare(`
-        SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
-      `);
-      dupStmt.bind([sourceCode]);
-      if (dupStmt.step()) {
-        dupStmt.free();
-        throw new BusinessError(
-          SeedSourceErrorCode.INVALID_DECREASE_COUNT,
-          `编号 ${sourceCode} 已存在`,
-        );
-      }
-      dupStmt.free();
+    // 2026-06-26: sourceCode 必须非空 — 允许空白字符（trim 后空也拒绝）
+    if (!finalSourceCode) {
+      throw new BusinessError(
+        SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+        '种源批号（source_code）不能为空，请先生成或填写',
+      );
     }
+
+    // 2026-06-22 修复 8 处查重：POST 前查重 source_code（仅 active，软删可复用）
+    const db = getDatabase();
+    const dupStmt = db.prepare(`
+      SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
+    `);
+    dupStmt.bind([finalSourceCode]);
+    if (dupStmt.step()) {
+      dupStmt.free();
+      throw new BusinessError(
+        SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+        `编号 ${finalSourceCode} 已存在`,
+      );
+    }
+    dupStmt.free();
 
     // 返回 repository.create 的完整记录（含 create_time/update_time）
     return await this.repository.create(record);
+  }
+
+  /**
+   * 检查种源批号是否已存在（用于前端实时查重）
+   * 2026-06-26: 三层防重的第一层 — 前端用，POST 前先调
+   * @param sourceCode 种源批号
+   * @param excludeId 排除自身（用于编辑时排除自己的记录）
+   * @returns 是否已存在（true=已存在，不可使用）
+   */
+  async checkSourceCodeExists(sourceCode: string, excludeId?: string): Promise<boolean> {
+    const code = (sourceCode || '').trim();
+    if (!code) return false;  // 空值不算"已存在"，由 create 那边拒绝空值
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT id FROM seed_sources
+      WHERE source_code = ? AND deleted_at IS NULL AND id <> ?
+      LIMIT 1
+    `);
+    stmt.bind([code, excludeId || '']);
+    const exists = stmt.step();
+    stmt.free();
+    return exists;
   }
 
   /**

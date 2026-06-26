@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { seedSourceController } from '../controllers/seedSource.controller';
+import { seedSourceService } from '../services/seedSource.service';
 import { getDatabase, saveDatabase } from '../db';
 import { seedSourceRepository } from '../repositories/seedSource.repository';
 import { authenticate } from '../middleware/auth';
@@ -20,6 +21,19 @@ router.use(authenticate);
 
 // 生成种源编码
 router.get('/generate-code', (req, res, next) => seedSourceController.generateCode(req, res, next));
+
+// 2026-06-26: 检查种源批号是否已存在（POST 前查重，避开 UNIQUE 异常）
+router.get('/check-source-code', asyncHandler(async (req, res) => {
+  const { code, excludeId } = req.query;
+  if (!code || typeof code !== 'string') {
+    return res.status(400).json({ success: false, error: '缺少 code 参数' });
+  }
+  const exists = await seedSourceService.checkSourceCodeExists(
+    code,
+    typeof excludeId === 'string' ? excludeId : undefined
+  );
+  res.json({ success: true, data: { exists, code } });
+}));
 
 // 批量删除路由必须在 /:id 之前
 router.delete('/batch', (req, res, next) => seedSourceController.deleteBatch(req, res, next));
@@ -160,7 +174,8 @@ router.delete('/:id', (req, res, next) => seedSourceController.delete(req, res, 
  *   5. 同一 SQL 事务
  */
 import { z } from 'zod';
-import { generateInstanceId } from '../services/inventory.service';
+// 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
+import { formatLocalDateISO } from '../utils/dateUtil';
 
 const AppendItemSchema = z.object({
   sourceStockId: z.string().min(1),
@@ -198,18 +213,21 @@ router.post('/append-from-inventory', async (req, res) => {
 
     const db = getDatabase();
     const now = new Date().toISOString();
-    const dateStr = now.slice(0, 10);
+    // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
+    const dateStr = formatLocalDateISO();
 
     const writtenStockIds: string[] = [];
     const writtenTxIds: string[] = [];
     const writtenInboundRecordIds: string[] = [];
-    const originalSeedSourceSnapshot: Array<{ id: string; available_count: number; quantity: number }> = [];
+    // 2026-06-26: 修复 — DB 列名是 remaining_quantity（不是 available_count）
+    const originalSeedSourceSnapshot: Array<{ id: string; remaining_quantity: number; quantity: number }> = [];
     const originalStockSnapshot: Array<{ id: string; current_quantity: number; available_quantity: number }> = [];
 
     try {
       // 1. 校验目标种源（用 prepared statement 模式）
+      // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
       const targetStmt = db.prepare(
-        `SELECT id, source_code, available_count, quantity, unit, crop_code, crop_name
+        `SELECT id, source_code, remaining_quantity, quantity, unit, crop_code, crop_name
          FROM seed_sources WHERE id = ? AND deleted_at IS NULL`
       );
       targetStmt.bind([targetSeedSourceId]);
@@ -224,7 +242,8 @@ router.post('/append-from-inventory', async (req, res) => {
       const targetCode = String(targetRow.source_code || '');
       originalSeedSourceSnapshot.push({
         id: targetSeedSourceId,
-        available_count: Number(targetRow.available_count || 0),
+        // 2026-06-26: 修复 — DB 列名是 remaining_quantity
+        remaining_quantity: Number(targetRow.remaining_quantity || 0),
         quantity: Number(targetRow.quantity || 0),
       });
 
@@ -287,8 +306,11 @@ router.post('/append-from-inventory', async (req, res) => {
         writtenStockIds.push(item.sourceStockId);
 
         // 5. 写 inventory_transaction (outbound)
-        const outTxId = await generateInstanceId('TX', dateStr);
-        const outTransactionId = `OUT-${dateStr}-${outTxId.slice(-6)}`;
+        // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('TX') 与 inventory_stock.instance_id 跨表冲突
+        // 之前用 generateInstanceId('TX', dateStr) 只查 inventory_stock.instance_id 的 maxSerial，
+        // 不能避免与 inventory_transaction.transaction_id 的 UNIQUE 冲突
+        const outTxId = `TXO-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const outTransactionId = `OUT-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
         const insTx = db.prepare(
           `INSERT INTO inventory_transaction (
             id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -306,30 +328,48 @@ router.post('/append-from-inventory', async (req, res) => {
         writtenTxIds.push(outTxId);
 
         // 6. UPDATE 目标种源
+        // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
         const updSS = db.prepare(
           `UPDATE seed_sources
-           SET available_count = available_count + ?, quantity = quantity + ?, update_time = ?
+           SET remaining_quantity = remaining_quantity + ?, quantity = quantity + ?, update_time = ?
            WHERE id = ? AND deleted_at IS NULL`
         );
         updSS.run([item.transferQuantity, item.transferQuantity, now, targetSeedSourceId]);
         updSS.free();
 
         // 7. 写 inventory_inbound_records
-        const inRecId = await generateInstanceId('IR', dateStr);
+        // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('IR') 与 inventory_stock.instance_id 跨表冲突
+        const inRecId = `IRA-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        // 2026-06-26: 修复 — inventory_inbound_records 表 schema 修正
+        // 实际列（按 schema.ts / fixMissingSchema.ts）：
+        //   id, record_type, record_date, source_module, source_id, source_code,
+        //   stock_type, source_type, warehouse_id, warehouse_name,
+        //   crop_id, crop_code, crop_name, variety_name,
+        //   quantity, unit, unit_price, total_amount, quality_grade,
+        //   supplier_id, supplier_name, production_plan_id, production_plan_code,
+        //   business_id, notes, operator_name, create_by, create_time, update_time
+        // 之前错误使用了不存在的列：target_module, target_id, target_code, operator_id, remarks
         const insIR = db.prepare(
           `INSERT INTO inventory_inbound_records (
-            id, source_module, source_id, source_code,
-            target_module, target_id, target_code,
-            quantity, unit, quality_grade, operator_id, operator_name,
-            remarks, record_date, create_time
-          ) VALUES (?, 'inventory', ?, ?, 'seed_source', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            id, record_type, record_date, source_module, source_id, source_code,
+            stock_type, source_type,
+            crop_code, crop_name,
+            quantity, unit, quality_grade,
+            business_id, notes, operator_name, create_time
+          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         insIR.run([
-          inRecId, item.sourceStockId, sourceInstanceId,
-          targetSeedSourceId, targetCode, item.transferQuantity, item.unit,
-          null, operator.id, operator.name,
-          remarks || `追加入库（从 ${sourceInstanceId}）`,
-          dateStr, now,
+          inRecId,
+          dateStr,
+          item.sourceStockId, sourceInstanceId,
+          String(sourceObj.stock_type || 'seed'),
+          targetCropCode, targetCropName,
+          item.transferQuantity, item.unit,
+          null,
+          targetSeedSourceId,
+          remarks || `追加入库（从 ${sourceInstanceId} 入种源 ${targetCode}）`,
+          operator.name,
+          now,
         ]);
         insIR.free();
         writtenInboundRecordIds.push(inRecId);
@@ -338,13 +378,14 @@ router.post('/append-from-inventory', async (req, res) => {
       }
 
       // 8. 读最新值
+      // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
       const newStateStmt = db.prepare(
-        `SELECT available_count, quantity FROM seed_sources WHERE id = ?`
+        `SELECT remaining_quantity, quantity FROM seed_sources WHERE id = ?`
       );
       newStateStmt.bind([targetSeedSourceId]);
       const newState = newStateStmt.step() ? (newStateStmt.getAsObject() as Record<string, unknown>) : null;
       newStateStmt.free();
-      const newAvailable = Number(newState?.available_count || 0);
+      const newAvailable = Number(newState?.remaining_quantity || 0);
       const newQuantity = Number(newState?.quantity || 0);
 
       saveDatabase();
@@ -365,10 +406,11 @@ router.post('/append-from-inventory', async (req, res) => {
           d.free();
         }
         for (const snap of originalSeedSourceSnapshot) {
+          // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
           const u = db.prepare(
-            `UPDATE seed_sources SET available_count = ?, quantity = ?, update_time = ? WHERE id = ?`
+            `UPDATE seed_sources SET remaining_quantity = ?, quantity = ?, update_time = ? WHERE id = ?`
           );
-          u.run([snap.available_count, snap.quantity, now, snap.id]);
+          u.run([snap.remaining_quantity, snap.quantity, now, snap.id]);
           u.free();
         }
         for (const id of writtenTxIds) {

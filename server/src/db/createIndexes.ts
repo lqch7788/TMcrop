@@ -34,6 +34,51 @@ export function createIndexes() {
     ON seed_sources(status, remaining_quantity)
   `);
 
+  // 2026-06-26: 种源批号(source_code) UNIQUE 索引 — DB 层防重
+  // 之前只靠 service 层查重，并发场景会绕过。先清理历史重复（保留最早一条，重命名其他为 -DUP-...），
+  // 再建 UNIQUE 索引。同时空 source_code 也算冲突（多个空记录也不允许）。
+  try {
+    const dupResult = db.exec(`
+      SELECT source_code, MIN(create_time) AS keep_time
+      FROM seed_sources
+      WHERE deleted_at IS NULL AND source_code IS NOT NULL AND source_code <> ''
+      GROUP BY source_code
+      HAVING COUNT(*) > 1
+    `);
+    if (dupResult.length > 0 && dupResult[0].values.length > 0) {
+      const codeIdx = dupResult[0].columns.indexOf('source_code');
+      const timeIdx = dupResult[0].columns.indexOf('keep_time');
+      let cleanedCount = 0;
+      for (const row of dupResult[0].values) {
+        const code = row[codeIdx] as string;
+        const keepTime = row[timeIdx] as string;
+        // 把非保留行的 source_code 加上 -DUP-<id后6位> 后缀
+        const updStmt = db.prepare(`
+          UPDATE seed_sources
+          SET source_code = source_code || '-DUP-' || substr(id, -6)
+          WHERE source_code = ? AND deleted_at IS NULL AND create_time <> ?
+        `);
+        updStmt.run([code, keepTime]);
+        updStmt.free();
+        cleanedCount++;
+      }
+      console.log(`✓ 清理了 ${cleanedCount} 组 source_code 重复（保留最早一条）`);
+    }
+  } catch (e) {
+    // 表可能尚未存在（首次启动）
+  }
+  // UNIQUE 索引：保证 active 种源批号唯一
+  try {
+    db.run(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_seed_sources_source_code_active
+      ON seed_sources(source_code)
+      WHERE deleted_at IS NULL AND source_code IS NOT NULL AND source_code <> ''
+    `);
+  } catch (e: any) {
+    // 已存在或数据冲突，记录但不阻断
+    console.warn('idx_seed_sources_source_code_active 索引创建失败:', e.message);
+  }
+
   // ========== 3. 育苗表索引 ==========
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_seedlings_source
