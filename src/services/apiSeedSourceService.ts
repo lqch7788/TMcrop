@@ -404,6 +404,23 @@ export async function generateSeedCode(dateStr: string): Promise<string> {
   return await enhancedApiClient.get<string>(`/seed-sources/generate-code?date=${dateStr}`);
 }
 
+/**
+ * 检查种源批号是否已存在（POST 前实时查重，避开 UNIQUE 异常）
+ * 2026-06-26: 三层防重的第一层 — 前端用，POST 前先调
+ * @param code 种源批号
+ * @param excludeId 编辑时排除自身 ID
+ * @returns true=已存在（不可用），false=可用
+ */
+export async function checkSourceCodeExists(code: string, excludeId?: string): Promise<boolean> {
+  if (!code || !code.trim()) return false; // 空值不算"已存在"，由 service.create 拒绝
+  const params = new URLSearchParams({ code: code.trim() });
+  if (excludeId) params.set('excludeId', excludeId);
+  const result = await enhancedApiClient.get<{ exists: boolean; code: string }>(
+    `/seed-sources/check-source-code?${params.toString()}`
+  );
+  return !!result?.exists;
+}
+
 // ========== 繁殖过程记录 API ==========
 
 /**
