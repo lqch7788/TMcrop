@@ -1,0 +1,320 @@
+/**
+ * 种源退库 service（2026-06-26 Q1）
+ *
+ * 业务场景：种源管理操作列「退库」按钮 — 把调拨入种源的数量退回原作物库存
+ *
+ * 严格约束：
+ * - 必须 1:1 关联 inventory_inbound_records 流水（追溯链 = 该流水记录的 source_id = 原库存 ID）
+ * - 不允许用户自选其他库存
+ * - 支持部分退（quantity - returned_quantity 范围内）
+ *
+ * 数据流：
+ * 1. inventory_inbound_records.returned_quantity += N
+ * 2. 原 inventory_stock.current_quantity += N
+ * 3. seed_sources.remaining_quantity -= N + quantity -= N
+ * 4. 写 inventory_transaction (transfer_in 类型)
+ */
+
+import { getDatabase, saveDatabase } from '../db';
+import { formatLocalDateISO } from '../utils/dateUtil';
+
+export const SeedSourceReturnErrorCode = {
+  INBOUND_RECORD_NOT_FOUND: 'SEED_SRC_RETURN_INBOUND_NOT_FOUND',
+  INSUFFICIENT_RETURNABLE: 'SEED_SRC_RETURN_INSUFFICIENT_RETURNABLE',
+  INSUFFICIENT_SOURCE_AVAILABLE: 'SEED_SRC_RETURN_INSUFFICIENT_SOURCE',
+  SOURCE_STOCK_GONE: 'SEED_SRC_RETURN_SOURCE_STOCK_GONE',
+  UNIT_MISMATCH: 'SEED_SRC_RETURN_UNIT_MISMATCH',
+  EMPTY_ITEMS: 'SEED_SRC_RETURN_EMPTY_ITEMS',
+} as const;
+
+export class SeedSourceReturnBusinessError extends Error {
+  code: string;
+  httpStatus: number;
+  constructor(code: string, message: string, httpStatus = 400) {
+    super(message);
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+export interface ReturnItem {
+  inboundRecordId: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface ReturnResult {
+  returnedCount: number;
+  newSourceRemaining: number;
+  newSourceTotal: number;
+}
+
+/**
+ * 执行种源退库（事务级，失败自动回滚）
+ */
+export function executeReturnToInventory(
+  targetSeedSourceId: string,
+  items: ReturnItem[],
+): ReturnResult {
+  if (!targetSeedSourceId) {
+    throw new SeedSourceReturnBusinessError(
+      SeedSourceReturnErrorCode.EMPTY_ITEMS,
+      '目标种源 ID 不能为空',
+    );
+  }
+  if (!items || items.length === 0) {
+    throw new SeedSourceReturnBusinessError(
+      SeedSourceReturnErrorCode.EMPTY_ITEMS,
+      '至少选择 1 条退库流水',
+    );
+  }
+
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const dateStr = formatLocalDateISO();
+  let totalReturned = 0;
+
+  // 注：sql.js 不支持事务回滚，任一步骤抛错即终止后续写入
+  // 1. 锁定并读取目标种源
+  const ssStmt = db.prepare(
+    `SELECT id, source_code, remaining_quantity, quantity, unit, crop_code
+     FROM seed_sources WHERE id = ? AND deleted_at IS NULL`
+  );
+  ssStmt.bind([targetSeedSourceId]);
+  const ss = ssStmt.step() ? (ssStmt.getAsObject() as Record<string, unknown>) : null;
+  ssStmt.free();
+  if (!ss) {
+    throw new SeedSourceReturnBusinessError(
+      SeedSourceReturnErrorCode.INBOUND_RECORD_NOT_FOUND,
+      `目标种源不存在: id=${targetSeedSourceId}`,
+      404,
+    );
+  }
+  const sourceUnit = String(ss.unit || '');
+  let sourceRemaining = Number(ss.remaining_quantity || 0);
+  let sourceTotal = Number(ss.quantity || 0);
+
+  for (const item of items) {
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INSUFFICIENT_RETURNABLE,
+        `退库数量必须为正整数: recordId=${item.inboundRecordId}, qty=${item.quantity}`,
+      );
+    }
+
+    // 2. 锁定流水（FOR UPDATE 语义：sql.js 是单线程内存，这里直接读取）
+    const irStmt = db.prepare(
+      `SELECT id, source_module, source_id, source_code, stock_type,
+              quantity, returned_quantity, unit
+       FROM inventory_inbound_records WHERE id = ?`
+    );
+    irStmt.bind([item.inboundRecordId]);
+    const ir = irStmt.step() ? (irStmt.getAsObject() as Record<string, unknown>) : null;
+    irStmt.free();
+    if (!ir) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INBOUND_RECORD_NOT_FOUND,
+        `退库流水不存在: id=${item.inboundRecordId}`,
+        404,
+      );
+    }
+
+    // 3. 校验：流水是否关联到本种源（追溯链校验，防止跨种源退库）
+    //    通过 inventory_inbound_records.business_id = 种源 ID 来校验
+    const bizStmt = db.prepare(
+      `SELECT business_id FROM inventory_inbound_records WHERE id = ?`
+    );
+    bizStmt.bind([item.inboundRecordId]);
+    const bizRow = bizStmt.step() ? (bizStmt.getAsObject() as Record<string, unknown>) : null;
+    bizStmt.free();
+    if (!bizRow || String(bizRow.business_id || '') !== targetSeedSourceId) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INBOUND_RECORD_NOT_FOUND,
+        `退库流水 ${item.inboundRecordId} 不属于种源 ${targetSeedSourceId}`,
+        404,
+      );
+    }
+
+    const irUnit = String(ir.unit || '');
+    const irQuantity = Number(ir.quantity || 0);
+    const irReturned = Number(ir.returned_quantity || 0);
+    const irSourceId = String(ir.source_id || '');
+
+    // 4. 单位一致
+    if (irUnit !== sourceUnit) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.UNIT_MISMATCH,
+        `流水单位 ${irUnit} ≠ 种源单位 ${sourceUnit}`,
+      );
+    }
+    if (item.unit && item.unit !== irUnit) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.UNIT_MISMATCH,
+        `退库单位 ${item.unit} ≠ 流水单位 ${irUnit}`,
+      );
+    }
+
+    // 5. 可退量校验
+    const returnable = irQuantity - irReturned;
+    if (item.quantity > returnable) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INSUFFICIENT_RETURNABLE,
+        `退库数量 ${item.quantity} 超过可退量 ${returnable}（流水 ${item.inboundRecordId}）`,
+      );
+    }
+
+    // 6. 种源可用量校验
+    if (item.quantity > sourceRemaining) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INSUFFICIENT_SOURCE_AVAILABLE,
+        `种源可用 ${sourceRemaining}${sourceUnit} < 退库 ${item.quantity}${item.unit}`,
+      );
+    }
+
+    // 7. 锁定并读取原库存
+    const stockStmt = db.prepare(
+      `SELECT id, instance_id, current_quantity, available_quantity, status
+       FROM inventory_stock WHERE id = ?`
+    );
+    stockStmt.bind([irSourceId]);
+    const stock = stockStmt.step() ? (stockStmt.getAsObject() as Record<string, unknown>) : null;
+    stockStmt.free();
+    if (!stock) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.SOURCE_STOCK_GONE,
+        `原库存不存在: id=${irSourceId}`,
+        410,
+      );
+    }
+
+    // 8. 更新流水 returned_quantity
+    db.run(
+      `UPDATE inventory_inbound_records
+       SET returned_quantity = returned_quantity + ?, update_time = ?
+       WHERE id = ?`,
+      [item.quantity, now, item.inboundRecordId],
+    );
+
+    // 9. 增加原库存
+    const oldCurrent = Number(stock.current_quantity || 0);
+    const oldAvailable = Number(stock.available_quantity || 0);
+    const newCurrent = oldCurrent + item.quantity;
+    const newAvailable = oldAvailable + item.quantity;
+    db.run(
+      `UPDATE inventory_stock
+       SET current_quantity = ?, available_quantity = ?, status = 'in_stock', update_time = ?
+       WHERE id = ?`,
+      [newCurrent, newAvailable, now, irSourceId],
+    );
+
+    // 10. 扣减种源
+    sourceRemaining -= item.quantity;
+    sourceTotal -= item.quantity;
+    db.run(
+      `UPDATE seed_sources
+       SET remaining_quantity = ?, quantity = ?, update_time = ?
+       WHERE id = ?`,
+      [sourceRemaining, sourceTotal, now, targetSeedSourceId],
+    );
+
+    // 11. 写 inventory_transaction (transfer_in)
+    const txId = `TX-RET-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    db.run(
+      `INSERT INTO inventory_transaction (
+        id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+        balance_before, balance_after, business_id, business_type, business_code,
+        operator_id, operator_name, operate_date, remarks, create_time
+      ) VALUES (?, ?, ?, ?, 'transfer_in', ?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?)`,
+      [
+        txId,
+        txId,
+        String(stock.instance_id || ''),
+        String(ir.stock_type || ''),
+        item.quantity,
+        oldCurrent,
+        newCurrent,
+        irSourceId,
+        String(ir.source_code || ''),
+        'system',
+        'system',
+        dateStr,
+        `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}`,
+        now,
+      ],
+    );
+
+    totalReturned += item.quantity;
+  }
+
+  saveDatabase();
+
+  return {
+    returnedCount: totalReturned,
+    newSourceRemaining: sourceRemaining,
+    newSourceTotal: sourceTotal,
+  };
+}
+
+/**
+ * 列出种源的可退库流水（含已退累计 + 剩余可退）
+ */
+export interface ReturnableInboundRow {
+  id: string;
+  sourceId: string;
+  sourceCode: string;
+  sourceInstanceId: string | null;
+  stockType: string;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  recordDate: string;
+  quantity: number;
+  returnedQuantity: number;
+  returnableQuantity: number;
+  unit: string;
+  cropName: string | null;
+  cropCode: string | null;
+}
+
+export function listReturnableInboundRecords(seedSourceId: string): ReturnableInboundRow[] {
+  if (!seedSourceId) return [];
+  const db = getDatabase();
+  const stmt = db.prepare(
+    `SELECT ir.id, ir.source_module, ir.source_id, ir.source_code,
+            ist.instance_id AS source_instance_id,
+            ir.stock_type, ir.warehouse_id, ir.warehouse_name,
+            ir.record_date, ir.quantity, COALESCE(ir.returned_quantity, 0) AS returned_quantity,
+            ir.unit, ir.crop_name, ir.crop_code
+     FROM inventory_inbound_records ir
+     LEFT JOIN inventory_stock ist ON ir.source_id = ist.id
+     WHERE ir.source_module = 'inventory'
+       AND ir.business_id = ?
+       AND ir.record_type = 'inbound'
+       AND COALESCE(ir.returned_quantity, 0) < ir.quantity
+     ORDER BY ir.record_date DESC, ir.id DESC`
+  );
+  stmt.bind([seedSourceId]);
+  const rows: ReturnableInboundRow[] = [];
+  while (stmt.step()) {
+    const r = stmt.getAsObject() as Record<string, unknown>;
+    const quantity = Number(r.quantity || 0);
+    const returned = Number(r.returned_quantity || 0);
+    rows.push({
+      id: String(r.id || ''),
+      sourceId: String(r.source_id || ''),
+      sourceCode: String(r.source_code || ''),
+      sourceInstanceId: r.source_instance_id ? String(r.source_instance_id) : null,
+      stockType: String(r.stock_type || ''),
+      warehouseId: r.warehouse_id ? String(r.warehouse_id) : null,
+      warehouseName: r.warehouse_name ? String(r.warehouse_name) : null,
+      recordDate: String(r.record_date || ''),
+      quantity,
+      returnedQuantity: returned,
+      returnableQuantity: quantity - returned,
+      unit: String(r.unit || ''),
+      cropName: r.crop_name ? String(r.crop_name) : null,
+      cropCode: r.crop_code ? String(r.crop_code) : null,
+    });
+  }
+  stmt.free();
+  return rows;
+}

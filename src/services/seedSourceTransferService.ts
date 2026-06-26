@@ -62,6 +62,24 @@ export interface TransferResult {
   transferInTxId: string;
 }
 
+/** 2026-06-26 Q1: 种源的可退库流水（用于退库弹窗） */
+export interface ReturnableInboundRow {
+  id: string;
+  sourceId: string;
+  sourceCode: string;
+  sourceInstanceId: string | null;
+  stockType: string;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  recordDate: string;
+  quantity: number;
+  returnedQuantity: number;
+  returnableQuantity: number;
+  unit: string;
+  cropName: string | null;
+  cropCode: string | null;
+}
+
 /** 列出可调拨库存的查询参数 */
 export interface ListTransferableFilters {
   stockType?: TransferStockType[];
@@ -71,6 +89,10 @@ export interface ListTransferableFilters {
   /** P2-8 修复：分页参数（默认后端 500 条） */
   limit?: number;
   offset?: number;
+  /** 2026-06-26 修复：追加模式作物过滤（只列同作物的库存） */
+  cropName?: string;
+  /** 2026-06-26 修复：与 cropName 组合精确定位（同作物名下的品种） */
+  cropVariety?: string;
 }
 
 // ============ Service ============
@@ -99,6 +121,13 @@ export const seedSourceTransferService = {
     }
     if (filters.offset != null) {
       params.push(`offset=${filters.offset}`);
+    }
+    // 2026-06-26 修复：追加模式作物过滤参数
+    if (filters.cropName) {
+      params.push(`cropName=${encodeURIComponent(filters.cropName)}`);
+    }
+    if (filters.cropVariety) {
+      params.push(`cropVariety=${encodeURIComponent(filters.cropVariety)}`);
     }
     const qs = params.length > 0 ? `?${params.join('&')}` : '';
     // 修复：enhancedApiClient 已自动解包 data 字段（apiClient.ts:223），service 不应再 .data 二层访问
@@ -166,6 +195,52 @@ export const seedSourceTransferService = {
       remarks: params.remarks,
     });
     return result || { appendedCount: 0, newAvailableCount: 0, newQuantity: 0 };
+  },
+
+  /**
+   * 2026-06-26 Q1: 种源退库 — 严格 1:1 关联原库存（inventory_inbound_records）
+   * POST /api/seed-sources/return-to-inventory
+   * 用途：种源操作列「退库」按钮 — 把调拨入种源的数量退回原作物库存
+   */
+  async returnToInventory(params: {
+    targetSeedSourceId: string;
+    items: Array<{ inboundRecordId: string; quantity: number; unit?: string }>;
+    operator?: { id?: string; name?: string };
+    remarks?: string;
+  }): Promise<{ returnedCount: number; newSourceRemaining: number; newSourceTotal: number }> {
+    if (!params.targetSeedSourceId) {
+      throw new Error('目标种源 ID 不能为空');
+    }
+    if (!params.items || params.items.length === 0) {
+      throw new Error('至少选择 1 条退库流水');
+    }
+    if (params.items.length > 100) {
+      throw new Error('批量退库单次最多 100 条');
+    }
+    const result = await enhancedApiClient.post<{
+      returnedCount: number;
+      newSourceRemaining: number;
+      newSourceTotal: number;
+    }>('/seed-sources/return-to-inventory', {
+      targetSeedSourceId: params.targetSeedSourceId,
+      items: params.items,
+      operatorId: params.operator?.id,
+      operatorName: params.operator?.name,
+      remarks: params.remarks,
+    });
+    return result || { returnedCount: 0, newSourceRemaining: 0, newSourceTotal: 0 };
+  },
+
+  /**
+   * 2026-06-26 Q1: 列出种源的可退库流水（用于退库弹窗）
+   * GET /api/seed-sources/:id/inbound-records
+   */
+  async listReturnableInboundRecords(seedSourceId: string): Promise<ReturnableInboundRow[]> {
+    if (!seedSourceId) return [];
+    const rows = await enhancedApiClient.get<ReturnableInboundRow[]>(
+      `/seed-sources/${seedSourceId}/inbound-records`,
+    );
+    return rows || [];
   },
 };
 

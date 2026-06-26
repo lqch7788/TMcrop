@@ -1027,6 +1027,14 @@ router.delete('/batch', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const placeholders = idArray.map(() => '?').join(',');
     db.run(`UPDATE plantings SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...idArray]);
+    // 2026-06-26: cascade 标记回流记录为撤销，避免软删种植后产生孤儿引用阻断种源删除
+    const circPlaceholders = idArray.map(() => '?').join(',');
+    db.run(
+      `UPDATE crop_circulation_records
+       SET is_revoked = 1, revoked_at = ?, revoked_by = ?, notes = COALESCE(notes, '') || ?
+       WHERE source_module = 'planting' AND source_id IN (${circPlaceholders}) AND is_revoked = 0`,
+      [now, 'planting_soft_delete', ' [cascade: 种植已软删]', ...idArray]
+    );
     saveDatabase();
     res.json({ success: true, data: { deletedCount: idArray.length } });
   } catch (error) {
@@ -1068,6 +1076,19 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     // 软删除：标记 deleted_at 而非物理删除
     db.run('UPDATE plantings SET deleted_at = ? WHERE id = ?', [now, id]);
+
+    // 2026-06-26: cascade 标记回流记录为撤销，避免软删种植后产生孤儿引用阻断种源删除
+    // sql.js 是内存数据库，必须 saveDatabase() 才能持久化到磁盘（saveDatabase 在下方调用）
+    try {
+      db.run(
+        `UPDATE crop_circulation_records
+         SET is_revoked = 1, revoked_at = ?, revoked_by = ?, notes = COALESCE(notes, '') || ?
+         WHERE source_module = 'planting' AND source_id = ? AND is_revoked = 0`,
+        [now, 'planting_soft_delete', ' [cascade: 种植已软删]', id]
+      );
+    } catch (e) {
+      console.error('[DELETE /:id] cascade ERROR:', e);
+    }
 
     // 2026-06-14: 反向累加到上游
     if (row) {

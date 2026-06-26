@@ -49,6 +49,9 @@ const ListTransferableQuerySchema = z.object({
   // P2-8 修复：分页参数
   limit: z.coerce.number().int().min(1).max(1000).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  // 2026-06-26 修复：追加模式作物过滤（避免显示不相关作物的库存）
+  cropName: z.string().optional(),
+  cropVariety: z.string().optional(),
 });
 
 // ============ 路由处理器 ============
@@ -118,7 +121,7 @@ router.get('/transferable-sources', async (req: Request, res: Response) => {
       const firstMsg = issues[0]?.message || 'Query 参数校验失败';
       return res.status(400).json({ success: false, error: firstMsg, issues });
     }
-    const { stockType, keyword, dateFrom, dateTo, limit, offset } = parsed.data;
+    const { stockType, keyword, dateFrom, dateTo, limit, offset, cropName, cropVariety } = parsed.data;
 
     // 2. stockType 字符串解析
     let stockTypeFilter: TransferStockType[] | undefined;
@@ -142,6 +145,8 @@ router.get('/transferable-sources', async (req: Request, res: Response) => {
       dateTo,
       limit,
       offset,
+      cropName,
+      cropVariety,
     });
     res.json({
       success: true,

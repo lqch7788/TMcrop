@@ -146,6 +146,7 @@ export async function executeInboundFromSource(
   if (input.isSupplementary && !input.supplementaryReason) {
     throw new Error('isSupplementary=true 时 supplementaryReason 必填');
   }
+  // 注：种源入库单位校验已在 route 层（3.6 节）提前完成
 
   // 反查源 crop_instance_id（用于 source_instance_id 关联，库存追溯依赖）
   const sourceInstanceId = findSourceInstanceId(db, input.sourceModule, input.sourceRecordId);
@@ -307,16 +308,18 @@ export async function executeInboundFromSource(
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
 
-      // 2026-06-19: 种源行入库时同步扣减种源 remaining_quantity
-      // 业务语义：种源"入库"是产物离开种源进入作物库存（内部使用 → 对外）
-      // 种源剩余必须扣减，否则无论登记多少都不变，不合理
-      // 只对 seed_source 类型扣减，seedling 行不扣（育苗还没"入库"概念）
+      // 2026-06-26: 种源行入库时同步累加种源 quantity + remaining_quantity
+      // 业务语义：种源"入库" = 给种源仓库加货（外购/自产 → 种源仓库）
+      // 与 append-from-inventory 路由（调拨入库）保持一致逻辑：quantity += N, remaining_quantity += N
+      // 修复：之前误写成 -=（认为入库是"产物离开种源"），但 V3 重构后种源是纯仓库，入库即加货
       if (input.sourceModule === 'seed_source') {
         db.run(
           `UPDATE seed_sources
-           SET remaining_quantity = MAX(0, COALESCE(remaining_quantity, 0) - ?)
+           SET remaining_quantity = COALESCE(remaining_quantity, 0) + ?,
+               quantity = COALESCE(quantity, 0) + ?,
+               update_time = ?
            WHERE id = ? AND deleted_at IS NULL`,
-          [product.harvestQuantity, input.sourceRecordId]
+          [product.harvestQuantity, product.harvestQuantity, now, input.sourceRecordId]
         );
       }
       writtenStockIds.push(stockId);

@@ -2631,6 +2631,7 @@ function fixApprovedProductionPlanStatus(): void {
         crop_name TEXT,
         variety_name TEXT,
         quantity REAL NOT NULL DEFAULT 0,
+        returned_quantity REAL DEFAULT 0,
         unit TEXT NOT NULL,
         unit_price REAL DEFAULT 0,
         total_amount REAL DEFAULT 0,
@@ -2650,6 +2651,8 @@ function fixApprovedProductionPlanStatus(): void {
     db.run('CREATE INDEX IF NOT EXISTS idx_inbound_source ON inventory_inbound_records (source_module, source_id)');
     db.run('CREATE INDEX IF NOT EXISTS idx_inbound_stock_type ON inventory_inbound_records (stock_type, record_date)');
     db.run('CREATE INDEX IF NOT EXISTS idx_inbound_warehouse ON inventory_inbound_records (warehouse_id)');
+    // 2026-06-26: 退库功能 — inventory_inbound_records 加 returned_quantity 列
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN returned_quantity REAL DEFAULT 0'); } catch (e: any) { /* duplicate column */ }
     seedLog.info('  ✓ inventory_inbound_records 表 + 3 索引就绪');
   } catch (e: any) {
     seedLog.error('inventory_inbound_records 创建失败:', e.message);

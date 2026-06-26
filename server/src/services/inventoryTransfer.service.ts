@@ -126,6 +126,10 @@ export async function listTransferableSources(filters: {
   dateTo?: string;
   limit?: number;
   offset?: number;
+  /** 2026-06-26 修复：按作物名过滤（追加到现有种源模式 — 只列同作物的库存） */
+  cropName?: string;
+  /** 2026-06-26 修复：按作物品种名过滤（追加模式 — 与 cropName 组合精确定位） */
+  cropVariety?: string;
 }): Promise<TransferableSourceRow[]> {
   const db = getDatabase();
 
@@ -151,6 +155,17 @@ export async function listTransferableSources(filters: {
   `;
   // 注意：生产 inventory_stock 表没有 deleted_at 列（2026-06-24 排查确认），
   //       软删除逻辑由其他表维护，这里不过滤 deleted_at
+
+  // 2026-06-26 修复：按作物名 + 品种名过滤（追加模式 — 仅显示同作物的库存）
+  // inventory_stock 表无 crop_code 列，用 crop_name + variety_name 组合定位
+  if (filters.cropName) {
+    sql += ' AND ist.crop_name = ?';
+    params.push(filters.cropName);
+  }
+  if (filters.cropVariety) {
+    sql += ' AND (ist.variety_name = ? OR ist.variety_name IS NULL)';
+    params.push(filters.cropVariety);
+  }
 
   if (filters.keyword) {
     // 搜索覆盖：作物名、品种名、库存编号、作物编码、供应商、生产计划、采收单号

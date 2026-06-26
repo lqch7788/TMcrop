@@ -85,6 +85,32 @@ export class SeedSourceController {
   }
 
   /**
+   * 2026-06-26: 种源审计日志写入工具（复用 audit_logs 表）
+   * business_type = 'seed_source'，action = 'create' | 'update' | 'delete'
+   * opinion 字段存"修改前→修改后"快照（update 时每字段1条）
+   */
+  private writeAuditLog(args: {
+    seedSourceId: string;
+    action: 'create' | 'update' | 'delete';
+    opinion?: string;
+    operatorName?: string;
+  }): void {
+    try {
+      const { getDatabase } = require('../db');
+      const db = getDatabase();
+      const id = `AUD-SS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const now = new Date().toISOString();
+      db.run(
+        `INSERT INTO audit_logs (id, business_type, business_id, action, operator_id, operator_name, opinion, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, 'seed_source', args.seedSourceId, args.action, '', args.operatorName || 'system', args.opinion || '', now]
+      );
+    } catch (e) {
+      console.warn('[seedSource.audit] write failed:', (e as Error).message);
+    }
+  }
+
+  /**
    * POST /seed-sources
    * 创建种源
    */
@@ -115,6 +141,13 @@ export class SeedSourceController {
           created_by: (data as any).create_by || (data as any).createBy || '',
         });
       } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+      // 2026-06-26: 写审计日志
+      this.writeAuditLog({
+        seedSourceId: (result as any)?.id || '',
+        action: 'create',
+        opinion: `创建种源 ${(data as any).seed_code || (data as any).seedCode || ''} (${(data as any).crop_name || (data as any).cropName || ''})`,
+        operatorName: (data as any).create_by || (data as any).createBy || '',
+      });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -129,12 +162,14 @@ export class SeedSourceController {
     try {
       const { id } = req.params;
       const data: UpdateSeedSourceDTO = req.body;
+      // 2026-06-26: 写审计日志前先取旧值做 diff
+      let oldRecord: any = null;
+      try { oldRecord = await this.service.getById(id); } catch (_) { /* 不存在时 update 会失败 */ }
       const result = await this.service.update(id, data);
       // 数量变更时写 correction
       if ((data as any).quantity !== undefined) {
         try {
           const { writeCorrection } = require('../services/flowLogService');
-          const oldRecord = await this.service.getById(id);
           const oldQty = (oldRecord as any)?.quantity || 0;
           const newQty = (data as any).quantity || 0;
           const delta = newQty - oldQty;
@@ -150,6 +185,28 @@ export class SeedSourceController {
             });
           }
         } catch (e) { /* correction 写入失败不影响主流程 */ }
+      }
+      // 2026-06-26: 写审计日志（update + diff 快照）
+      try {
+        const diffs: string[] = [];
+        const watchFields = ['cropName', 'cropVariety', 'unit', 'quantity', 'unitPrice', 'supplierName', 'remarks'];
+        for (const f of watchFields) {
+          const oldVal = (oldRecord as any)?.[f];
+          const newVal = (data as any)[f] ?? (data as any)[f.charAt(0).toLowerCase() + f.slice(1)];
+          if (oldVal !== undefined && newVal !== undefined && String(oldVal) !== String(newVal)) {
+            diffs.push(`${f}: ${oldVal} → ${newVal}`);
+          }
+        }
+        if (diffs.length > 0) {
+          this.writeAuditLog({
+            seedSourceId: id,
+            action: 'update',
+            opinion: `修改字段: ${diffs.slice(0, 5).join('; ')}${diffs.length > 5 ? ` (+${diffs.length - 5}项)` : ''}`,
+            operatorName: req.body?.operatorName || req.body?.createBy || req.body?.updateBy || 'system',
+          });
+        }
+      } catch (e) {
+        console.warn('[seedSource.update] audit failed:', (e as Error).message);
       }
       res.json({ success: true, data: result });
     } catch (error) {
@@ -168,8 +225,20 @@ export class SeedSourceController {
       const { getDatabase, saveDatabase } = require('../db');
       const db = getDatabase();
       const now = new Date().toISOString();
+      // 2026-06-26: 取种源 code 用于审计日志
+      const oldStmt = db.prepare('SELECT source_code FROM seed_sources WHERE id = ?');
+      oldStmt.bind([id]);
+      const oldRow = oldStmt.step() ? oldStmt.getAsObject() as any : null;
+      oldStmt.free();
       db.run('UPDATE seed_sources SET deleted_at = ? WHERE id = ?', [now, id]);
       saveDatabase();
+      // 2026-06-26: 写审计日志
+      this.writeAuditLog({
+        seedSourceId: id,
+        action: 'delete',
+        opinion: `软删种源 ${oldRow?.source_code || id}`,
+        operatorName: (req.body as any)?.operatorName || (req as any).user?.name || 'system',
+      });
       res.json({ success: true, data: { id } });
     } catch (error) {
       next(toHttpError(error as Error));
