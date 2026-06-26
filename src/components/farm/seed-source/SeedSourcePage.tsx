@@ -4,8 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList, Download } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Package, Download } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
@@ -41,8 +40,6 @@ import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
-  // 2026-06-05: 跳转到繁殖过程记录全量查看页
-  const navigate = useNavigate();
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   // 种源模块权限 - 已取消，直接设置为 true
@@ -587,17 +584,6 @@ export default function SeedSourcePage() {
               <h1 className="text-2xl font-bold text-gray-900">种源管理</h1>
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
-          </div>
-          {/* 2026-06-05: 繁殖过程记录全量查看入口 — 2026-06-05 改蓝色背景 */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="blue"
-              size="sm"
-              onClick={() => navigate('/crop/propagation-records')}
-            >
-              <ClipboardList className="w-4 h-4 mr-1" />
-              繁殖过程记录
-            </Button>
           </div>
         </div>
       </div>
