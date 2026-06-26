@@ -125,7 +125,6 @@ const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
 const DispatchPage = lazy(() => import('./components/dispatch').then(module => ({ default: module.DispatchPage })));
 const MyTasksPage = lazy(() => import('./components/labor/myTasks/MyTasksPage'));
 const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
-const PropagationRecordsPage = lazy(() => import('./pages/PropagationRecordsPage'));
 const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
@@ -239,7 +238,6 @@ function AppContent() {
 
           {/* 作物管理 */}
           <Route path="/crop/seed-source" element={<SeedSource />} />
-          <Route path="/crop/propagation-records" element={<PropagationRecordsPage />} />
           <Route path="/crop/seedling" element={<Seedling />} />
           <Route path="/crop/planting" element={<Planting />} />
           <Route path="/crop/harvest" element={<CropHarvest />} />
