@@ -12,7 +12,7 @@ import { SourceType, PropagationType, PropagationStatus, BreedingMethod, Asexual
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { todayLocal } from '@/lib/dateUtils';
-import { generateSeedCode } from '../../../../services/apiSeedSourceService';
+import { generateSeedCode, checkSourceCodeExists } from '../../../../services/apiSeedSourceService';
 // 2026-06-04: status 改为实时计算，AddModal 不再调用 computeStockStatus
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 // supplierService 已重写为兼容层（从 useSupplierStore 读内存数据，**不再用 localStorage**）
@@ -252,9 +252,14 @@ export function AddModal({
 
   // 生成种源批号
   const handleGenerateSeedCode = async () => {
+    // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
+    const todayLocal = () => {
+      const d = new Date();
+      return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    };
     const dateStr = formData.purchaseDate
       ? formData.purchaseDate.replace(/-/g, '')
-      : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      : todayLocal();
     const newCode = await generateSeedCode(dateStr);
     setSeedCode(newCode);
   };
@@ -292,6 +297,17 @@ export function AddModal({
     if (!seedCode) {
       await showAlert('请先生成种源批号');
       return;
+    }
+    // 2026-06-26: 前端实时查重（三层防重第 1 层），避开 UNIQUE 异常
+    try {
+      const exists = await checkSourceCodeExists(seedCode);
+      if (exists) {
+        await showAlert(`种源批号 ${seedCode} 已存在，请重新生成或换一个`);
+        return;
+      }
+    } catch (err) {
+      // 查重失败不阻断（后端还有 service + DB UNIQUE 兜底）
+      console.warn('[AddModal] checkSourceCodeExists 失败，继续提交:', err);
     }
     if (!selectedCrop) {
       await showAlert('请选择作物');
