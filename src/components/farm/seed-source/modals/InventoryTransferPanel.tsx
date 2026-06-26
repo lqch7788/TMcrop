@@ -55,6 +55,10 @@ interface InventoryTransferPanelProps {
   mode?: InventoryTransferMode;
   /** 模式 = 'append_existing' 时必填：目标种源 ID */
   targetSeedSourceId?: string;
+  /** 2026-06-26 修复：模式 = 'append_existing' 时按目标种源的作物名过滤库存 */
+  targetCropName?: string;
+  /** 2026-06-26 修复：模式 = 'append_existing' 时按目标种源的作物品种名过滤库存 */
+  targetCropVariety?: string;
   /** 确认调拨：返回选中的明细给父组件 */
   onConfirm: (items: TransferItem[]) => void;
 }
@@ -88,6 +92,8 @@ function formatSource(row: TransferableSourceRow): string {
 export function InventoryTransferPanel({
   mode = 'create_new',
   targetSeedSourceId,
+  targetCropName,
+  targetCropVariety,
   onConfirm,
 }: InventoryTransferPanelProps) {
   const toast = useToast();
@@ -121,6 +127,9 @@ export function InventoryTransferPanel({
         keyword: keyword.trim() || undefined,
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        // 2026-06-26 修复：追加模式按目标种源作物名/品种名过滤，避免显示不相关作物库存
+        cropName: mode === 'append_existing' ? targetCropName : undefined,
+        cropVariety: mode === 'append_existing' ? targetCropVariety : undefined,
       });
       setRows(data);
     } catch (err) {
@@ -142,7 +151,7 @@ export function InventoryTransferPanel({
     if (!hasInteracted) return;
     loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stockTypeFilter.join(','), dateFrom, dateTo, hasInteracted]);
+  }, [stockTypeFilter.join(','), dateFrom, dateTo, hasInteracted, targetCropName, targetCropVariety, mode]);
 
   // 关键字用 debounce（300ms）
   useEffect(() => {

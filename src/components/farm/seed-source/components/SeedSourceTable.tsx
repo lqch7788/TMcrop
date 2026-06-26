@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 import {
@@ -32,6 +32,15 @@ function formatUnit(unit: string): string {
   return UNIT_MAP[unit] || unit || '';
 }
 
+// 2026-06-26: 文本列宽限 — 超过 maxLen 字符截断显示（鼠标 hover 通过 title 看完整内容）
+// 数字列不截断（toLocaleString 千位分隔符后宽度可控）
+// maxLen=16 是按"8 个汉字"视觉宽度推算（1 汉字 ≈ 2 英文字符宽）
+function truncateText(text: string | number | null | undefined, maxLen = 16): string {
+  if (text === null || text === undefined || text === '') return '-';
+  const s = String(text);
+  return s.length <= maxLen ? s : `${s.slice(0, maxLen)}…`;
+}
+
 interface SeedSourceTableProps {
   data: SeedSource[];
   pagination: { current: number; pageSize: number };
@@ -52,6 +61,8 @@ interface SeedSourceTableProps {
   onTransfer: (record: SeedSource) => void;
   // 入库登记：行级多次入库（同一仓库补货）
   onInbound: (record: SeedSource) => void;
+  // 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records）
+  onReturn?: (record: SeedSource) => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -87,6 +98,7 @@ export function SeedSourceTable({
   onImageClick,
   onTransfer,
   onInbound,
+  onReturn,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -420,27 +432,33 @@ export function SeedSourceTable({
                       variant="link"
                       size="sm"
                       onClick={() => onDetail(record)}
-                      title="点击查看详情"
+                      title={`${record.seedCode}（点击查看详情）`}
                     >
-                      {record.seedCode}
+                      {truncateText(record.seedCode)}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm">
-                    <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
+                  <TableCell className="px-4 py-3 text-sm" title={getStandardCropCode(record) || undefined}>
+                    <span className="font-mono text-orange-600">{truncateText(getStandardCropCode(record))}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record)}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {getVarietyPath(record)}
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" title={getCropVarietyName(record)}>
+                    {truncateText(getCropVarietyName(record))}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={getVarietyPath(record)}>
+                    {truncateText(getVarietyPath(record))}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}>
+                    {truncateText(SOURCE_TYPE_MAP[record.sourceType] || record.sourceType)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin}>
                     {/* 2026-06-25 v3: 种源只有 external + transfer_from_inventory — 统一显示 SOURCE_ORIGIN_MAP */}
-                    <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-'}</span>
+                    <span>{truncateText(SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin)}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.supplierName || undefined}>
+                    {truncateText(record.supplierName)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.purchaseDate}>
+                    {truncateText(record.purchaseDate)}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap" title="创建时的初始登记数量">
                     {record.initialCount.toLocaleString()}
                   </TableCell>
@@ -489,8 +507,12 @@ export function SeedSourceTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={record.remarks || undefined}>
+                    {truncateText(record.remarks)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.createBy}>
+                    {truncateText(record.createBy)}
+                  </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
@@ -515,6 +537,18 @@ export function SeedSourceTable({
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
+                      {/* 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records） */}
+                      {onReturn && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onReturn(record)}
+                          className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                          title="退库（退回原作物库存）"
+                        >
+                          <Undo2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

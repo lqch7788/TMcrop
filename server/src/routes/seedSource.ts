@@ -5,12 +5,19 @@
  */
 
 import { Router } from 'express';
+import { z } from 'zod';
 import { seedSourceController } from '../controllers/seedSource.controller';
 import { seedSourceService } from '../services/seedSource.service';
 import { getDatabase, saveDatabase } from '../db';
 import { seedSourceRepository } from '../repositories/seedSource.repository';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+import {
+  executeReturnToInventory,
+  listReturnableInboundRecords,
+  SeedSourceReturnBusinessError,
+  type ReturnItem,
+} from '../services/seedSourceReturn.service';
 
 const router = Router();
 
@@ -439,6 +446,146 @@ router.post('/append-from-inventory', async (req, res) => {
     }
     console.error('[append-from-inventory] server error:', err);
     return res.status(500).json({ success: false, error: err instanceof Error ? err.message : '调拨失败' });
+  }
+});
+
+/**
+ * GET /api/seed-sources/:id/inbound-records
+ * 列出该种源的可退库流水（inventory_inbound_records 中 source_module='inventory' 且未退完）
+ * 2026-06-26 Q1: 种源退库功能 — 必须 1:1 关联原库存
+ */
+router.get('/:id/inbound-records', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const rows = listReturnableInboundRecords(id);
+  res.json({ success: true, data: rows });
+}));
+
+/**
+ * GET /api/seed-sources/:id/history-inbound
+ * 2026-06-26: 种源历史入库流水（全部 inventory_inbound_records，含 source_module='inventory' 调拨和 'seed_source' 入库）
+ * 用于种源页"入库记录" Tab
+ */
+router.get('/:id/history-inbound', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { getDatabase } = require('../db');
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT * FROM inventory_inbound_records
+    WHERE (source_id = ? AND source_module = 'seed_source')
+       OR (business_id = ?)
+    ORDER BY create_time DESC LIMIT 200
+  `);
+  stmt.bind([id, id]);
+  const rows: any[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  res.json({ success: true, data: rows });
+}));
+
+/**
+ * GET /api/seed-sources/:id/history-inventory
+ * 2026-06-26: 种源关联的库存流水（inventory_transaction）
+ * 用于种源页"库存流水" Tab
+ */
+router.get('/:id/history-inventory', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { getDatabase } = require('../db');
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT it.* FROM inventory_transaction it
+    INNER JOIN inventory_stock ist ON it.instance_id = ist.instance_id
+    WHERE it.business_id = ? OR ist.business_id = ? OR ist.business_type = 'inventory_transfer' AND ist.business_code = (
+      SELECT source_code FROM seed_sources WHERE id = ?
+    )
+    ORDER BY it.create_time DESC LIMIT 200
+  `);
+  stmt.bind([id, id, id]);
+  const rows: any[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  res.json({ success: true, data: rows });
+}));
+
+/**
+ * GET /api/seed-sources/:id/history-circulation
+ * 2026-06-26: 种源关联的回流记录（crop_circulation_records）
+ * 用于种源页"回流记录" Tab
+ */
+router.get('/:id/history-circulation', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { getDatabase } = require('../db');
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT * FROM crop_circulation_records
+    WHERE parent_source_id = ? OR new_source_id = ?
+    ORDER BY created_at DESC LIMIT 200
+  `);
+  stmt.bind([id, id]);
+  const rows: any[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  res.json({ success: true, data: rows });
+}));
+
+/**
+ * GET /api/seed-sources/:id/history-audit
+ * 2026-06-26: 种源审计记录（audit_logs 表，business_type='seed_source'）
+ * 用于种源页"变更记录" Tab
+ */
+router.get('/:id/history-audit', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { getDatabase } = require('../db');
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    SELECT * FROM audit_logs
+    WHERE business_type = 'seed_source' AND business_id = ?
+    ORDER BY created_at DESC LIMIT 200
+  `);
+  stmt.bind([id]);
+  const rows: any[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  res.json({ success: true, data: rows });
+}));
+
+/**
+ * POST /api/seed-sources/return-to-inventory
+ * 2026-06-26 Q1: 种源退库（严格 1:1 关联 inventory_inbound_records）
+ * Body: { targetSeedSourceId, items: [{ inboundRecordId, quantity, unit }] }
+ */
+const ReturnItemSchema = z.object({
+  inboundRecordId: z.string().min(1, { message: 'inboundRecordId 必填' }),
+  quantity: z.number().int().positive({ message: '退库数量必须为正整数' }),
+  unit: z.string().min(1).optional(),
+});
+const ReturnSchema = z.object({
+  targetSeedSourceId: z.string().min(1, { message: '目标种源 ID 必填' }),
+  items: z.array(ReturnItemSchema).min(1, { message: '至少 1 条退库明细' }).max(100),
+  operatorId: z.string().optional(),
+  operatorName: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+router.post('/return-to-inventory', async (req, res) => {
+  try {
+    const parsed = ReturnSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const issues = (parsed.error as any)?.issues || [];
+      const first = issues[0];
+      return res.status(400).json({ success: false, error: first?.message || '参数错误' });
+    }
+    const { targetSeedSourceId, items } = parsed.data;
+    const result = executeReturnToInventory(
+      targetSeedSourceId,
+      items.map(i => ({ inboundRecordId: i.inboundRecordId, quantity: i.quantity, unit: i.unit || '' })),
+    );
+    res.json({ success: true, data: result });
+  } catch (e: any) {
+    if (e instanceof SeedSourceReturnBusinessError) {
+      return res.status(e.httpStatus).json({ success: false, code: e.code, error: e.message });
+    }
+    console.error('[return-to-inventory] server error:', e);
+    return res.status(500).json({ success: false, error: e?.message || '退库失败' });
   }
 });
 

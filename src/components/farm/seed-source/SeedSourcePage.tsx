@@ -3,7 +3,7 @@
  * 功能：种源列表展示、筛选、新增、编辑、删除、标签打印、图片查看、导出Excel
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Edit2, Trash2, Printer, Eye, Image, Package, Download } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
@@ -15,6 +15,9 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
+import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
+import { SeedSourceInboundModal } from './modals/SeedSourceInboundModal';
+import { SeedSourceHistoryTabs } from './components/SeedSourceHistoryTabs';
 import { seedSourceTransferService } from '@/services/seedSourceTransferService';
 import { Button, DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
 import {
@@ -35,7 +38,6 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
 import { useInventoryInboundStore } from '@/stores/useInventoryInboundStore';
 import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
-import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
@@ -96,6 +98,33 @@ export default function SeedSourcePage() {
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  // 2026-06-26 修复：种源列表加载完后，自动为每条种源拉取入库记录
+  // 之前只在用户点"入库登记"时才拉，子表一直显示 0 条
+  const items = useSeedSourceStore((s) => s.items);
+
+  // 当前页第一个种源 ID（用于追溯 Tab 默认显示）
+  const currentPageSeedSourceId = useMemo(() => {
+    if (!items?.length) return '';
+    const start = (pagination.current - 1) * pagination.pageSize;
+    return items[start]?.id || '';
+  }, [items, pagination.current, pagination.pageSize]);
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    // 当前页可见的种源都拉一次（limit 通常 10-20，并发安全）
+    const currentPageItems = items.slice(
+      (pagination.current - 1) * pagination.pageSize,
+      pagination.current * pagination.pageSize,
+    );
+    currentPageItems.forEach((it) => {
+      void loadInboundRecords(`seed_source:${it.id}`, {
+        sourceModule: 'seed_source',
+        sourceId: it.id,
+        limit: 100,
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, pagination.current, pagination.pageSize]);
 
   // 2026-06-06: R3 — 监听 store.loadItems 错误并弹 Toast（不修改 store 内部实现）
   // store 内部已在 catch 中 set({ error: msg })，此处仅做 UI 展示
@@ -376,6 +405,40 @@ export default function SeedSourcePage() {
     setTransferModal({ open: true, record });
   };
 
+  // 2026-06-26 Q1: handleReturn（退库到原库存 1:1 关联）— 弹 SeedSourceReturnModal
+  const [returnModal, setReturnModal] = useState<{ open: boolean; record: SeedSource | null }>({
+    open: false,
+    record: null,
+  });
+  const handleReturn = (record: SeedSource) => {
+    setReturnModal({ open: true, record });
+  };
+  const handleReturnClose = useCallback(() => {
+    setReturnModal({ open: false, record: null });
+  }, []);
+  const handleReturnConfirm = useCallback(
+    async (items: Array<{ inboundRecordId: string; quantity: number; unit: string }>) => {
+      const record = returnModal.record;
+      if (!record) return;
+      try {
+        const result = await seedSourceTransferService.returnToInventory({
+          targetSeedSourceId: record.id,
+          items,
+          operator: currentUser ? { id: currentUser.id, name: currentUser.name } : undefined,
+        });
+        toast.success(
+          `退库成功：退回 ${result.returnedCount} ${record.unit}，剩余可用 ${result.newSourceRemaining}`,
+        );
+        handleReturnClose();
+        await loadItems();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await showAlert(`退库失败：${msg}`);
+      }
+    },
+    [returnModal.record, currentUser, loadItems, toast],
+  );
+
   // 关闭调拨弹窗
   const handleTransferClose = useCallback(() => {
     setTransferModal({ open: false, record: null });
@@ -416,10 +479,12 @@ export default function SeedSourcePage() {
     });
   };
 
-  // 弹窗提交成功后刷新该种源的入库记录
+  // 弹窗提交成功后刷新该种源数据 + 入库记录子表
+  // 2026-06-26 修复：之前漏调 loadItems()，种源列表的入库数量/剩余数量不会更新
   const handleInboundSuccess = () => {
     const rec = inboundModal.record;
     if (!rec) return;
+    void loadItems();  // 刷新种源列表（入库数量 + 剩余数量）
     void loadInboundRecords(`seed_source:${rec.id}`, {
       sourceModule: 'seed_source',
       sourceId: rec.id,
@@ -637,6 +702,7 @@ export default function SeedSourcePage() {
         canExport={canExport}
         canPrint={canPrint}
         onTransfer={handleTransfer}
+        onReturn={handleReturn}
         onInbound={handleInbound}
       />
 
@@ -694,14 +760,12 @@ export default function SeedSourcePage() {
       {/* 繁殖途径弹窗 */}
       {/* 2026-06-25 v3: 移除 3 个 Modal — 繁殖过程记录 / 阶段推进 / 回流记录 */}
 
-      {/* 2026-06-19: 任务 4 — 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
+      {/* 2026-06-26: 重构 — 替换 UnifiedRowHarvestInboundModal 为 SeedSourceInboundModal（采购语义） */}
       {inboundModal.record && (
-        <UnifiedRowHarvestInboundModal
+        <SeedSourceInboundModal
           isOpen={inboundModal.open}
           onClose={() => setInboundModal({ open: false, record: null })}
           onSuccess={handleInboundSuccess}
-          stockType="seed"
-          sourceModule="seed_source"
           sourceRecord={{
             id: inboundModal.record.id,
             code: inboundModal.record.seedCode,
@@ -725,55 +789,42 @@ export default function SeedSourcePage() {
           <InventoryTransferPanel
             mode="append_existing"
             targetSeedSourceId={transferModal.record.id}
+            targetCropName={transferModal.record.cropName}
+            targetCropVariety={transferModal.record.cropVariety || transferModal.record.varietyName}
             onConfirm={handleTransferConfirm}
           />
         </UnifiedModal>
       )}
 
-      {/* 2026-06-18: 任务 4 — 入库记录子表（折叠区） */}
-      <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 2026-06-26 Q1: 退库弹窗（严格 1:1 关联原库存） */}
+      {returnModal.record && (
+        <UnifiedModal
+          isOpen={returnModal.open}
+          onClose={handleReturnClose}
+          title={`退库 - ${returnModal.record.seedCode}（退回原作物库存）`}
+          size="xl"
+          showFooter={false}
+        >
+          <SeedSourceReturnModal
+            targetSeedSourceId={returnModal.record.id}
+            targetSeedSourceCode={returnModal.record.seedCode}
+            onConfirm={handleReturnConfirm}
+          />
+        </UnifiedModal>
+      )}
+
+      {/* 2026-06-26: 4 Tabs 统一追溯（入库/库存/回流/变更）*/}
+      <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
         <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100">
-          入库记录 (共 {allInboundRecords.length} 条)
+          追溯记录 — {selectedRows.length === 1
+            ? `选中种源 ${items.find(i => i.id === selectedRows[0])?.seedCode || ''}`
+            : currentPageSeedSourceId
+              ? `当前种源 ${items.find(i => i.id === currentPageSeedSourceId)?.seedCode || ''}`
+              : '暂无种源'}
         </summary>
-        <div className="p-3">
-          {allInboundRecords.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 text-sm">暂无入库记录</div>
-          ) : (
-            <>
-              <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-blue-500 text-white sticky top-0">
-                    <tr>
-                      <th className="px-2 py-2 text-left">入库日期</th>
-                      <th className="px-2 py-2 text-left">来源编码</th>
-                      <th className="px-2 py-2 text-left">仓库</th>
-                      <th className="px-2 py-2 text-left">数量</th>
-                      <th className="px-2 py-2 text-left">单位</th>
-                      <th className="px-2 py-2 text-left">品质</th>
-                      <th className="px-2 py-2 text-left">操作员</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allInboundRecords.slice(0, 20).map((r) => (
-                      <tr key={r.id} className="hover:bg-gray-50">
-                        <td className="px-2 py-1.5">{r.recordDate}</td>
-                        <td className="px-2 py-1.5">{r.sourceCode || r.sourceId}</td>
-                        <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
-                        <td className="px-2 py-1.5">{r.quantity}</td>
-                        <td className="px-2 py-1.5">{r.unit}</td>
-                        <td className="px-2 py-1.5">{r.qualityGrade || '-'}</td>
-                        <td className="px-2 py-1.5">{r.operatorName || r.createBy || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Button onClick={exportInboundCSV} className="mt-3" size="sm" variant="outline">
-                <Download className="w-4 h-4 mr-1" /> 导出 CSV
-              </Button>
-            </>
-          )}
-        </div>
+        <SeedSourceHistoryTabs
+          seedSourceId={selectedRows.length === 1 ? selectedRows[0] : (currentPageSeedSourceId || '')}
+        />
       </details>
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}

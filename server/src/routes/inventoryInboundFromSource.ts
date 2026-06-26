@@ -121,6 +121,35 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
+    // 3.6 2026-06-26: 种源入库单位必须与种源记录单位一致（前端已自动锁定，后端兜底）
+    if (input.sourceModule === 'seed_source') {
+      const { getDatabase } = await import('../db');
+      const db = getDatabase();
+      const ssStmt = db.prepare('SELECT unit, source_code FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
+      ssStmt.bind([input.sourceRecordId]);
+      const ss = ssStmt.step() ? (ssStmt.getAsObject() as any) : null;
+      ssStmt.free();
+      if (!ss) {
+        return res.status(404).json({ success: false, error: '种源不存在或已删除' });
+      }
+      const seedUnit = String(ss.unit || '');
+      const seedCode = String(ss.source_code || '');
+      if (seedUnit && input.unit && seedUnit !== input.unit) {
+        return res.status(400).json({
+          success: false,
+          error: `单位不一致：种源 ${seedCode} 单位为 ${seedUnit}，请求单位为 ${input.unit}`,
+        });
+      }
+      for (const p of input.products || []) {
+        if (seedUnit && p.unit && p.unit !== seedUnit) {
+          return res.status(400).json({
+            success: false,
+            error: `产品单位不一致：种源单位 ${seedUnit} ≠ 产品单位 ${p.unit}`,
+          });
+        }
+      }
+    }
+
     // 4. harvestDate 不能晚于今天
     const today = new Date().toISOString().slice(0, 10);
     if (input.harvestDate > today) {

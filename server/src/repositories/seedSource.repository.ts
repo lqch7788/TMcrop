@@ -832,14 +832,17 @@ export class SeedSourceRepository {
 
       // 引用方5：回流记录（V2 crop_circulation_records.parent_source_id）
       // 2026-06-19: 附带追溯链 — 关联的种植 ID/批号 + 作物 + planting_harvest_records 子记录
+      // 2026-06-26: 修复 — INNER JOIN + p.deleted_at IS NULL 过滤掉已软删种植产生的孤儿引用
+      //             配合 routes/planting.ts 软删 cascade 标记 is_revoked=1，彻底避免阻断种源删除
       for (const row of queryRows(
         `SELECT cr.id, cr.circulation_type, cr.circulation_date, cr.is_revoked,
                 cr.source_module, cr.source_id,
                 p.planting_code, p.crop_name, p.crop_variety,
                 cr.notes
          FROM crop_circulation_records cr
-         LEFT JOIN plantings p ON cr.source_module = 'planting' AND cr.source_id = p.id
+         INNER JOIN plantings p ON cr.source_module = 'planting' AND cr.source_id = p.id
          WHERE cr.parent_source_id = ? AND cr.is_revoked = 0
+           AND (p.deleted_at IS NULL OR p.deleted_at = '')
          ORDER BY cr.created_at DESC LIMIT 100`, id)) {
         const sourceModule = row[4] as string;
         const sourceId = row[5] as string;

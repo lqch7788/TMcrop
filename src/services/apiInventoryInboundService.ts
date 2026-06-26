@@ -38,18 +38,22 @@ export interface InboundRecordsQuery {
 }
 
 /** GET /api/inventory/inbound-records — 分页查询入库记录
- *  ⚠️ enhancedApiClient 的 baseURL 已含 /api 前缀，service 不要再加 /api
+ *  ⚠️ enhancedApiClient 已自动 unwrap response.data，所以 res 直接就是 InventoryInboundRecord[]
+ *     （修复 2026-06-26：之前错误地再次取 res.data → undefined，导致种源页面入库记录始终显示 0 条）
  */
 export async function listInboundRecords(
   q: InboundRecordsQuery
 ): Promise<{ data: InventoryInboundRecord[]; total: number }> {
-  const res = await enhancedApiClient.get<{
-    data: InventoryInboundRecord[]
-    meta: { total: number; page: number; limit: number }
-  }>('/inventory/inbound-records', { params: q as Record<string, unknown> })
+  const res = await enhancedApiClient.get<InventoryInboundRecord[]>(
+    '/inventory/inbound-records',
+    { params: q as Record<string, unknown> },
+  );
 
+  const records = Array.isArray(res) ? res : [];
   return {
-    data: res?.data ?? [],
-    total: res?.meta?.total ?? 0,
-  }
+    data: records,
+    // 注：后端响应包含 meta.total，但 enhancedApiClient 已 unwrap data，total 信息丢失
+    // 当前 UI 不依赖 total（前端只用 records 数组），如需恢复 total 请改为单独 GET 端点
+    total: records.length,
+  };
 }
