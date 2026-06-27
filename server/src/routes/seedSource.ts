@@ -549,6 +549,18 @@ router.get('/:id/history-audit', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/seed-sources/:id/history
+ * 2026-06-27: 统一实体历史端点（audit_logs + inbound + transaction + circulation UNION）
+ * 替代分散的 4 个 history-* 端点（旧端点保留兼容）
+ */
+router.get('/:id/history', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { queryEntityHistory } = require('../services/entityHistory.service');
+  const items = queryEntityHistory('seed_source', id, 200);
+  res.json({ success: true, data: items });
+}));
+
+/**
  * POST /api/seed-sources/return-to-inventory
  * 2026-06-26 Q1: 种源退库（严格 1:1 关联 inventory_inbound_records）
  * Body: { targetSeedSourceId, items: [{ inboundRecordId, quantity, unit }] }

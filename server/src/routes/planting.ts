@@ -1718,4 +1718,19 @@ router.post('/:id/end', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/plantings/:id/history
+ * 2026-06-27: 种植实体历史（audit_logs + inbound + transaction UNION）
+ */
+router.get('/:id/history', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { queryEntityHistory } = require('../services/entityHistory.service');
+    const items = queryEntityHistory('planting', id, 200);
+    res.json({ success: true, data: items });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 export default router;

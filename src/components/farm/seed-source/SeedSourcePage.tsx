@@ -3,7 +3,7 @@
  * 功能：种源列表展示、筛选、新增、编辑、删除、标签打印、图片查看、导出Excel
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Edit2, Trash2, Printer, Eye, Image, Package, Download } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
@@ -17,7 +17,7 @@ import { ExportFormatModal } from './modals/ExportFormatModal';
 import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
 import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
 import { SeedSourceInboundModal } from './modals/SeedSourceInboundModal';
-import { SeedSourceHistoryTabs } from './components/SeedSourceHistoryTabs';
+
 import { seedSourceTransferService } from '@/services/seedSourceTransferService';
 import { Button, DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
 import {
@@ -103,12 +103,6 @@ export default function SeedSourcePage() {
   // 之前只在用户点"入库登记"时才拉，子表一直显示 0 条
   const items = useSeedSourceStore((s) => s.items);
 
-  // 当前页第一个种源 ID（用于追溯 Tab 默认显示）
-  const currentPageSeedSourceId = useMemo(() => {
-    if (!items?.length) return '';
-    const start = (pagination.current - 1) * pagination.pageSize;
-    return items[start]?.id || '';
-  }, [items, pagination.current, pagination.pageSize]);
   useEffect(() => {
     if (!items || items.length === 0) return;
     // 当前页可见的种源都拉一次（limit 通常 10-20，并发安全）
@@ -812,20 +806,6 @@ export default function SeedSourcePage() {
           />
         </UnifiedModal>
       )}
-
-      {/* 2026-06-26: 4 Tabs 统一追溯（入库/库存/回流/变更）*/}
-      <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" open>
-        <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100">
-          追溯记录 — {selectedRows.length === 1
-            ? `选中种源 ${items.find(i => i.id === selectedRows[0])?.seedCode || ''}`
-            : currentPageSeedSourceId
-              ? `当前种源 ${items.find(i => i.id === currentPageSeedSourceId)?.seedCode || ''}`
-              : '暂无种源'}
-        </summary>
-        <SeedSourceHistoryTabs
-          seedSourceId={selectedRows.length === 1 ? selectedRows[0] : (currentPageSeedSourceId || '')}
-        />
-      </details>
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
       <DeleteConfirmModal
