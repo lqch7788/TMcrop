@@ -2157,4 +2157,15 @@ router.put('/:id/transplant-history/:labelNumber/status', (req: Request, res: Re
   }
 });
 
+/**
+ * GET /api/seedlings/:id/history
+ * 2026-06-27: 育苗实体历史（audit_logs + inbound + transaction UNION）
+ */
+router.get('/:id/history', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { queryEntityHistory } = require('../services/entityHistory.service');
+  const items = queryEntityHistory('seedling', id, 200);
+  res.json({ success: true, data: items });
+}));
+
 export default router;
