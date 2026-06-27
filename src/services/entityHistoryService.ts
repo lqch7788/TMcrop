@@ -17,6 +17,7 @@ export interface HistoryItem {
   refModule?: string;
   operatorName?: string;
   remarks?: string;
+  cropName?: string;
   raw?: Record<string, unknown>;
 }
 
@@ -33,6 +34,7 @@ interface EntityHistoryRow {
   refModule?: string;
   operatorName?: string;
   remarks?: string;
+  cropName?: string;
 }
 
 /** material_flow_log 流转数据 */
@@ -64,6 +66,25 @@ async function fetchEntityHistory(entity: string, entityId: string): Promise<His
   }));
 }
 
+/** material_flow_log flowType → 中文 */
+const FLOW_TYPE_CN: Record<string, string> = {
+  'seed_source→seedling': '种源 → 育苗',
+  'seed_source→planting': '种源 → 种植',
+  'seedling→planting': '育苗 → 种植',
+  'planting→harvest': '种植 → 采收',
+  'seedling→harvest': '育苗 → 采收',
+  'external→seedling': '外部种源 → 育苗',
+  'external→planting': '外部 → 种植',
+  'inventory→external': '库存 → 出库',
+  'inventory→planting': '库存 → 种植',
+  'inventory→seedling': '库存 → 育苗',
+  'inventory→seed_source': '库存 → 种源',
+  'seed_source→harvest': '种源 → 采收',
+  'plan→seed_source': '计划 → 种源',
+  'planting→seed_source': '种植 → 种源',
+  correction: '数量修正',
+};
+
 /**
  * 查询 material_flow_log（调已有 /material-flow-log/trace 端点）
  */
@@ -79,7 +100,7 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
       occurredAt: r.createdAt,
       source: 'flow' as const,
       category: 'flow' as const,
-      action: r.flowType || '流转',
+      action: FLOW_TYPE_CN[r.flowType] || r.flowType || '流转',
       quantityDelta: r.targetQuantity || r.sourceQuantity || undefined,
       unit: r.targetUnit || r.sourceUnit,
       refCode: r.sourceCode || r.targetCode,

@@ -319,6 +319,7 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       entity="seed-sources"
       entityId={record.id}
       entityCode={record.seedCode}
+      entitySourceType={record.sourceType}
       extraTabs={extraTabs}
     />
   );

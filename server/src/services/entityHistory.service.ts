@@ -25,6 +25,7 @@ export interface HistoryItem {
   refModule?: string;
   operatorName?: string;
   remarks?: string;
+  cropName?: string;          // 作物品种（inbound 表有）
   raw?: Record<string, unknown>;
 }
 
@@ -76,21 +77,25 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   }
 
   // 2. inventory_inbound_records（inbound）
+  // 注意：business_id 可能为空，source_id + source_module 是主要关联路径
   try {
     const stmt = db.prepare(`
       SELECT id, record_date, source_module, source_code, source_type,
-             quantity, unit, warehouse_name, operator_name, notes, create_time
+             quantity, unit, warehouse_name, operator_name, notes, create_time,
+             crop_name
       FROM inventory_inbound_records
-      WHERE business_id = ?
+      WHERE (business_id = ? OR (source_id = ? AND source_module = ?))
       ORDER BY create_time DESC LIMIT ?
     `);
-    stmt.bind([entityId, limit]);
+    const sourceModule = entityType === 'seed_source' ? 'seed_source'
+      : entityType === 'seedling' ? 'seedling' : 'planting';
+    stmt.bind([entityId, entityId, sourceModule, limit]);
     while (stmt.step()) {
       const r = stmt.getAsObject() as Record<string, unknown>;
       const qty = Number(r.quantity || 0);
       results.push({
         id: String(r.id || ''),
-        occurredAt: String(r.record_date || r.create_time || ''),
+        occurredAt: String(r.create_time || r.record_date || ''),
         source: 'entity',
         category: 'inbound',
         action: `入库 +${qty}`,
@@ -100,6 +105,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         refModule: String(r.source_module || ''),
         operatorName: String(r.operator_name || ''),
         remarks: String(r.notes || ''),
+        cropName: r.crop_name ? String(r.crop_name) : undefined,
       });
     }
     stmt.free();
@@ -136,7 +142,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
                   : txnType;
       results.push({
         id: String(r.id || ''),
-        occurredAt: String(r.operate_date || r.create_time || ''),
+        occurredAt: String(r.create_time || r.operate_date || ''),
         source: 'entity',
         category: 'transaction',
         action: actionLabel,
@@ -167,7 +173,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         const qty = Number(r.quantity || 0);
         results.push({
           id: String(r.id || ''),
-          occurredAt: String(r.circulation_date || r.created_at || ''),
+          occurredAt: String(r.created_at || r.circulation_date || ''),
           source: 'entity',
           category: 'circulation',
           action: String(r.circulation_type || '回流'),

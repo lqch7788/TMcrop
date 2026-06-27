@@ -8,6 +8,7 @@ import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout,
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
 import { AddModal } from './modals/AddModal';
+import { Button } from '@/components/ui';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
@@ -251,9 +252,10 @@ export default function SeedlingPage() {
   const inboundRecordsMap = useInventoryInboundStore((s) => s.recordsBySource);
   const loadInboundRecords = useInventoryInboundStore((s) => s.loadRecords);
 
-  // flat 入库记录，按 createTime 倒序
+  // flat 入库记录，按 createTime 倒序（仅育苗模块）
   const allInboundRecords: InventoryInboundRecord[] = Object.values(inboundRecordsMap)
     .flat()
+    .filter((r) => r.sourceModule === 'seedling')
     .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
 
   // 筛选后的数据
