@@ -31,6 +31,8 @@ interface EntityDetailModalProps {
   entityId: string;
   /** 实体编码（用于 material_flow_log 关联） */
   entityCode: string;
+  /** 实体的种源类型（仅种源页面传，如 seed/cutting/grafting） */
+  entitySourceType?: string;
   /** 可选附加 Tab */
   extraTabs?: ExtraTab[];
 }
@@ -43,6 +45,7 @@ export function EntityDetailModal({
   entity,
   entityId,
   entityCode,
+  entitySourceType,
   extraTabs = [],
 }: EntityDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('info');
@@ -112,6 +115,7 @@ export function EntityDetailModal({
             entity={entity}
             entityId={entityId}
             entityCode={entityCode}
+            entitySourceType={entitySourceType}
           />
         </div>
       )}
