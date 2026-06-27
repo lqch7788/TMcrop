@@ -18,6 +18,7 @@ export interface HistoryItem {
   operatorName?: string;
   remarks?: string;
   cropName?: string;
+  inboundSource?: string;     // 入库来源（外购/调拨/自产等）
   raw?: Record<string, unknown>;
 }
 
@@ -35,6 +36,7 @@ interface EntityHistoryRow {
   operatorName?: string;
   remarks?: string;
   cropName?: string;
+  inboundSource?: string;
 }
 
 /** material_flow_log 流转数据 */

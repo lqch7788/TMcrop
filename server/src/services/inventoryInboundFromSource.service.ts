@@ -253,7 +253,8 @@ export async function executeInboundFromSource(
         business_id: harvestRecordId,
         business_type: 'harvest',
         business_code: harvestCode,
-        source_type: input.sourceModule,
+        // 2026-06-27: 种源入库用 inboundSourceType（用户选的外购/自产/内部），其他模块 fallback 到 sourceModule
+        source_type: (input as any).inboundSourceType || input.sourceModule,
         source_instance_id: sourceInstanceId,  // 关键：库存追溯链依赖
         crop_code: product.cropCode || null,
         crop_name: product.cropName,
@@ -281,6 +282,7 @@ export async function executeInboundFromSource(
         update_time: now,
       };
 
+      // 写入 inventory_stock（种源/育苗/种植三入口统一落库）
       db.run(`
         INSERT INTO inventory_stock (
           id, instance_id, stock_type, business_id, business_type, business_code,
@@ -307,21 +309,6 @@ export async function executeInboundFromSource(
         stockRecord.area_name,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
-
-      // 2026-06-26: 种源行入库时同步累加种源 quantity + remaining_quantity
-      // 业务语义：种源"入库" = 给种源仓库加货（外购/自产 → 种源仓库）
-      // 与 append-from-inventory 路由（调拨入库）保持一致逻辑：quantity += N, remaining_quantity += N
-      // 修复：之前误写成 -=（认为入库是"产物离开种源"），但 V3 重构后种源是纯仓库，入库即加货
-      if (input.sourceModule === 'seed_source') {
-        db.run(
-          `UPDATE seed_sources
-           SET remaining_quantity = COALESCE(remaining_quantity, 0) + ?,
-               quantity = COALESCE(quantity, 0) + ?,
-               update_time = ?
-           WHERE id = ? AND deleted_at IS NULL`,
-          [product.harvestQuantity, product.harvestQuantity, now, input.sourceRecordId]
-        );
-      }
       writtenStockIds.push(stockId);
 
       // 步骤 3：写 inventory_inbound_records
@@ -337,7 +324,7 @@ export async function executeInboundFromSource(
       `, [
         recordId, input.harvestDate,
         input.sourceModule, input.sourceRecordId, input.sourceRecordCode,
-        input.stockType, input.sourceModule,
+        input.stockType, (input as any).inboundSourceType || input.sourceModule,
         input.warehouseId, input.warehouseName || null,
         product.cropCode || null, product.cropName, product.cropVariety || null,
         product.harvestQuantity, product.unit,

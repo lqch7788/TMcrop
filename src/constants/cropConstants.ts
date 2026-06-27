@@ -15,13 +15,15 @@ export const SEED_SOURCE_STATUS_MAP: Record<string, { label: string; color: stri
 };
 
 // ========== 种源类型映射 ==========
+// key 与 src/types/crop.ts 的 SourceType 枚举值一一对应
 export const SOURCE_TYPE_MAP: Record<string, string> = {
   seed: '种子',
   seedling: '种苗/实生苗',
-  tissue_culture: '组培苗',
-  grafting: '嫁接苗',
   cutting: '扦插苗',
-  division: '分株苗',
+  grafting: '嫁接苗',
+  tissue_culture: '组培苗',
+  split: '分株苗',
+  bulb: '种球/球根',
   spore: '孢子/菌种',
   other: '其他',
 };

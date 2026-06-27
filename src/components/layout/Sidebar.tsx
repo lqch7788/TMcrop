@@ -42,7 +42,7 @@ const productionSubItems = [
 
 // 作物管理子菜单
 const cropSubItems = [
-  { icon: Sprout, label: '种源管理', path: '/crop/seed-source' },
+  { icon: Sprout, label: '内部种源', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
   { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
