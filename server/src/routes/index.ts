@@ -60,6 +60,9 @@ import resignationRouter from './resignation';
 import recruitmentRouter from './recruitment';
 import teamMembersRouter from './teamMembers';
 import contractRenewalRouter from './contractRenewal';
+import contractRouter from './contract';
+import performanceRouter from './performance';
+import riskRouter from './risk';
 import salaryBudgetRouter from './salaryBudget';
 import fertilizerRouter from './fertilizer';
 import regionRouter from './region';
@@ -287,6 +290,9 @@ router.use('/team-members', requireAuth, teamMembersRouter);
 
 // 合同续签路由 - 需要认证
 router.use('/contract-renewal', requireAuth, contractRenewalRouter);
+router.use('/contracts', requireAuth, contractRouter);
+router.use('/performance', requireAuth, performanceRouter);
+router.use('/risks', requireAuth, riskRouter);
 
 // 工资预算路由 - 需要认证
 router.use('/salary-budget', requireAuth, salaryBudgetRouter);
