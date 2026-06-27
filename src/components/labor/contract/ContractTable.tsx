@@ -215,29 +215,48 @@ export function ContractTable() {
     return Object.keys(errors).length === 0;
   };
 
-  // 提交表单
-  const handleSubmit = () => {
+  // 提交表单（2026-06-27：try/await + 错误显式化，确保数据真的进后端）
+  const handleSubmit = async () => {
     if (!validateForm()) return;
-    if (editingContract) {
-      updateContract(editingContract.id, formData);
-    } else {
-      createContract(formData);
+    try {
+      if (editingContract) {
+        await updateContract(editingContract.id, formData);
+      } else {
+        await createContract(formData);
+      }
+      setIsFormOpen(false);
+      await showAlert('保存成功');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '保存失败';
+      console.error('[ContractTable] submit failed:', e);
+      await showAlert(`保存失败：${msg}\n请检查后端服务是否正常运行。`);
     }
-    setIsFormOpen(false);
   };
 
   // 终止合同
-  const handleTerminate = (contract: Contract) => {
+  const handleTerminate = async (contract: Contract) => {
     const reason = window.prompt('请输入终止原因：');
-    if (reason) {
-      terminateContract(contract.id, reason);
+    if (!reason) return;
+    try {
+      await terminateContract(contract.id, reason);
+      await showAlert('已终止');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '终止失败';
+      console.error('[ContractTable] terminate failed:', e);
+      await showAlert(`终止失败：${msg}`);
     }
   };
 
   // 删除合同
   const handleDelete = async (contract: Contract) => {
     if (await showConfirm(`确定删除合同 "${contract.contractCode}" 吗？`)) {
-      deleteContract(contract.id);
+      try {
+        await deleteContract(contract.id);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '删除失败';
+        console.error('[ContractTable] delete failed:', e);
+        await showAlert(`删除失败：${msg}`);
+      }
     }
   };
 
@@ -272,8 +291,18 @@ export function ContractTable() {
     setShowDeleteWarning(true);
   };
 
-  const handleDeleteConfirm = () => {
-    selectedRows.forEach(id => deleteContract(id));
+  const handleDeleteConfirm = async () => {
+    try {
+      // 顺序 await，任一失败则抛错中断后续删除
+      for (const id of selectedRows) {
+        await deleteContract(id);
+      }
+      await showAlert(`已删除 ${selectedRows.length} 条合同`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '批量删除失败';
+      console.error('[ContractTable] batch delete failed:', e);
+      await showAlert(`批量删除失败：${msg}`);
+    }
     setSelectedRows([]);
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
