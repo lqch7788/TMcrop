@@ -253,7 +253,8 @@ export class SeedSourceRepository {
       newId,
       data.source_code || '',
       data.source_name || '',
-      data.source_type || '',
+      // 2026-06-27: 兼容 camelCaseRequest 中间件转换后的 sourceType
+      data.source_type || (data as any).sourceType || '',
       data.source_origin || 'external_purchase',
       data.production_plan_code || '',
       data.crop_category || '',

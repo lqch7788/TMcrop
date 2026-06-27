@@ -26,6 +26,7 @@ export interface HistoryItem {
   operatorName?: string;
   remarks?: string;
   cropName?: string;          // 作物品种（inbound 表有）
+  inboundSource?: string;     // 入库来源类型（外购/调拨/自产等，仅 inbound 有）
   raw?: Record<string, unknown>;
 }
 
@@ -106,6 +107,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         operatorName: String(r.operator_name || ''),
         remarks: String(r.notes || ''),
         cropName: r.crop_name ? String(r.crop_name) : undefined,
+        inboundSource: String(r.source_type || ''),
       });
     }
     stmt.free();

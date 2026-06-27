@@ -527,13 +527,13 @@ export function SeedSourceTable({
                       >
                         <ArrowLeftRight className="w-4 h-4" />
                       </Button>
-                      {/* 入库登记：行级多次入库（同一仓库补货） */}
+                      {/* 商品种源入库：行级多次入库（同一仓库补货）；仅入商品种源池，不直接入本种源台账 */}
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => onInbound(record)}
                         className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                        title="入库登记"
+                        title="商品种源入库（仅入商品种源池；如需入种源台账请用调拨入库）"
                       >
                         <Plus className="w-4 h-4" />
                       </Button>

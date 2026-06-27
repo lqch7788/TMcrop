@@ -559,7 +559,7 @@ router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM inventory_stock WHERE id = ? OR instance_id = ? LIMIT 1');
+    const stmt = db.prepare('SELECT * FROM inventory_stock WHERE (id = ? OR instance_id = ?) LIMIT 1');
     stmt.bind([id, id]);
     if (!stmt.step()) {
       stmt.free();

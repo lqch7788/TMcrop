@@ -15,6 +15,27 @@ import { fetchFullHistory, type HistoryItem } from '@/services/entityHistoryServ
 import { SOURCE_TYPE_MAP } from '@/constants/cropConstants';
 import * as XLSX from 'xlsx';
 
+/** 入库来源类型 → 中文（外购入库/调拨入库/自产入库 等） */
+const INBOUND_SOURCE_LABELS: Record<string, string> = {
+  external_purchased: '外购入库',
+  self_produced: '自产入库',
+  self_use: '自用入库',
+  external_sale: '外售入库',
+  transfer_inbound: '调拨入库',
+  transfer_out: '调拨出库',
+  transfer_in: '退库入库',
+  circulation: '回流',
+  seed_saving: '留种',
+  // 实际数据中 source_type 也会存 source_module 的值
+  seed_source: '种源入库',
+  seedling: '育苗入库',
+  planting: '种植入库',
+  inventory: '库存调拨',
+  manual: '手动入库',
+  correction: '数量修正',
+  external: '外部入库',
+};
+
 interface EntityHistoryTimelineProps {
   /** 实体标识（seed-sources / seedlings / plantings） */
   entity: 'seed-sources' | 'seedlings' | 'plantings';
@@ -54,6 +75,12 @@ function fmtDelta(delta?: number, unit?: string): string {
 function fmtSourceType(t?: string): string {
   if (!t) return '-';
   return SOURCE_TYPE_MAP[t] || t;
+}
+
+/** 入库来源 → 中文 */
+function fmtInboundSource(t?: string): string {
+  if (!t) return '-';
+  return INBOUND_SOURCE_LABELS[t] || t;
 }
 
 /** 分类标签颜色 */
@@ -103,6 +130,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
       '序号': i + 1,
       '时间': fmtTime(r.occurredAt),
       '类型': r.action,
+      '来源': fmtInboundSource(r.inboundSource),
       '作物品种': r.cropName || '-',
       '种源类型': sourceTypeLabel,
       '数量变化': fmtDelta(r.quantityDelta, r.unit),
@@ -113,7 +141,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = [
-      { wch: 6 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+      { wch: 6 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
       { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 30 },
     ];
     const wb = XLSX.utils.book_new();
@@ -231,6 +259,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
                 <tr>
                   <th className="px-2 py-2 text-left w-36">时间</th>
                   <th className="px-2 py-2 text-left w-24">类型</th>
+                  <th className="px-2 py-2 text-left w-24">来源</th>
                   <th className="px-2 py-2 text-left w-24">作物品种</th>
                   <th className="px-2 py-2 text-left w-28 whitespace-nowrap">种源类型</th>
                   <th className="px-2 py-2 text-left w-24">数量变化</th>
@@ -248,6 +277,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
                         {r.action}
                       </span>
                     </td>
+                    <td className="px-2 py-1.5 text-xs text-gray-600">{fmtInboundSource(r.inboundSource)}</td>
                     <td className="px-2 py-1.5 text-xs text-gray-700">{r.cropName || '-'}</td>
                     <td className="px-2 py-1.5 text-xs text-gray-600">{fmtSourceType(entitySourceType)}</td>
                     <td className={`px-2 py-1.5 text-xs font-medium ${(r.quantityDelta ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>

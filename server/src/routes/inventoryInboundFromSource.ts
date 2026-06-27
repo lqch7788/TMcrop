@@ -51,6 +51,8 @@ const ProductSchema = z.object({
 const InboundFromSourceSchema = z.object({
   stockType: z.enum(['seed', 'seedling', 'product']),
   sourceModule: z.enum(['seed_source', 'seedling', 'planting']),
+  // 2026-06-27: 种源入库专用 — 用户选的入库来源（外购/自产/内部）
+  inboundSourceType: z.string().optional(),
   sourceRecordId: z.string().min(1, { message: '源记录 ID 必填' }),
   sourceRecordCode: z.string().min(1, { message: '源记录 code 必填' }),
   harvestDate: z.string().min(1, { message: '采收日期必填' }),

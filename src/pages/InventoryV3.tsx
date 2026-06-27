@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Boxes, Package, Leaf, Sprout } from 'lucide-react';
+import { Boxes, Leaf, Package, Sprout } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '@/lib/utils';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
@@ -170,7 +170,7 @@ export default function InventoryV3Page() {
     const headers = ['实例ID', '类型', '作物', '品种', '数量', '可用', '冻结', '仓库', '来源', '状态', '入库日期'];
     const csvRows = [headers.join(',')];
     rowsToExport.forEach((s) => {
-      const stockTypeLabel = s.stockType === 'seed' ? '种源' : s.stockType === 'seedling' ? '种苗' : '成品';
+      const stockTypeLabel = s.stockType === 'seed' ? '商品种源' : s.stockType === 'seedling' ? '种苗' : '成品';
       const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
       const sourceLabel = s.sourceType === 'self_produced' ? '自产' : '外购';
       csvRows.push([
@@ -282,7 +282,7 @@ export default function InventoryV3Page() {
               {[
                 { key: 'all', label: '全部', icon: <Package className="w-4 h-4" />,
                   activeStyle: 'bg-blue-600 text-white shadow-md ring-1 ring-blue-700' },
-                { key: 'seed', label: '种源', icon: <Leaf className="w-4 h-4" />,
+                { key: 'seed', label: '商品种源', icon: <Leaf className="w-4 h-4" />,
                   activeStyle: 'bg-amber-500 text-white shadow-md ring-1 ring-amber-600' },
                 { key: 'seedling', label: '种苗', icon: <Sprout className="w-4 h-4" />,
                   activeStyle: 'bg-green-500 text-white shadow-md ring-1 ring-green-600' },

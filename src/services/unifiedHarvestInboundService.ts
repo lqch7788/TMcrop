@@ -31,6 +31,8 @@ export interface InboundProduct {
 export interface UnifiedInboundInput {
   stockType: StockType
   sourceModule: SourceModule
+  /** 入库来源类型（外购入库/自产入库/内部调拨 等）— 种源入库专用 */
+  inboundSourceType?: string
   sourceRecordId: string
   sourceRecordCode: string
   harvestDate: string

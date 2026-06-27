@@ -213,7 +213,7 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
   const validate = (): string | null => {
     const qty = Number(quantity) || 0;
     if (qty <= 0) return '请填写入库数量（> 0）';
-    if (!fixedUnit) return '该种源未配置单位，请先到种源管理设置单位';
+    if (!fixedUnit) return '该种源未配置单位，请先到内部种源设置单位';
     if (!warehouseId) return '种源库未配置，请到【基础数据-仓库】创建 seed_storage 类型仓库';
     if (sourceType === 'external_purchase' && !supplierId) return '外购入库必须选择供应商';
     if ((sourceType === 'external_purchase' || sourceType === 'internal_seed') && purchaserNames.length === 0) {
@@ -240,6 +240,7 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
       const result = await submitUnifiedInbound({
         stockType: 'seed' as StockType,
         sourceModule: 'seed_source' as SourceModule,
+        inboundSourceType: sourceType,  // 用户选的入库来源（外购/自产/内部）
         sourceRecordId: sourceRecord.id,
         sourceRecordCode: sourceRecord.code,
         // 字段名复用以适配现有 service：harvestDate 实际承载采购日期
@@ -294,7 +295,7 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
       title={
         <div className="flex items-center gap-2">
           <Sprout className="w-5 h-5 text-emerald-600" />
-          <span>种源入库登记 - {sourceRecord.code}</span>
+          <span>商品种源入库 - {sourceRecord.code}（入作物库存 → 商品种源池）</span>
         </div>
       }
       submitText={submitting ? '提交中...' : '确认入库'}
@@ -315,6 +316,15 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
               {sourceRecord.cropVariety ? ` (${sourceRecord.cropVariety})` : ''}
               {sourceRecord.unit ? ` · 单位 ${sourceRecord.unit}` : ''}
             </div>
+          </div>
+        </div>
+
+        {/* 2026-06-27: 两步走流程说明 — 提示本次入商品种源池，非入种源台账 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="font-medium mb-1">⚠ 操作说明</div>
+          <div>本次操作将入库到 <b>作物库存 → 商品种源</b> 池。</div>
+          <div className="mt-1 text-xs">
+            如需入库到 <b>内部种源台账</b>，请走操作列的「<b>调拨入库</b>」按钮（从商品种源池调拨）。
           </div>
         </div>
 

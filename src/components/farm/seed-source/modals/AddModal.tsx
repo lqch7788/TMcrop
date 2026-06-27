@@ -349,6 +349,7 @@ export function AddModal({
       const baseData: any = {
         seedCode: seedCode,
         sourceOrigin: formData.sourceOrigin,
+        sourceType: formData.sourceType,
         cropCategory: formData.cropCategory,
         typeName: formData.typeName,
         varietyName: formData.varietyName,
@@ -537,7 +538,7 @@ export function AddModal({
                 老数据（propagationType=breeding/seed_saving/asexual）的查看与编辑由 EditModal/DetailModal 继续支持
             */}
             <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              <b>新流程：</b>种源管理为内部仓库，仅支持 <b>外购入库</b> + <b>库存调拨</b>。
+              <b>新流程：</b>内部种源为内部仓库，仅支持 <b>外购入库</b> + <b>库存调拨</b>。
               自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。
             </div>
             <Label className="text-gray-900">入库方式</Label>
