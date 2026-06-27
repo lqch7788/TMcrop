@@ -3337,6 +3337,96 @@ export function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_problem_attachments_flow ON problem_attachments(flow_record_id)`);
   } catch (e) {}
 
+  // ========== 合同管理主表（2026-06-27 P0：替代前端 mock Store）==========
+  // 字段与 useContractStore.ts ContractData 对齐
+  db.run(`
+    CREATE TABLE IF NOT EXISTS contracts (
+      id TEXT PRIMARY KEY,
+      contract_code TEXT NOT NULL,
+      staff_id TEXT NOT NULL,
+      staff_name TEXT NOT NULL,
+      id_card TEXT,
+      contract_type TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT '生效中',
+      monthly_salary REAL,
+      daily_wage REAL,
+      hourly_wage REAL,
+      signing_date TEXT,
+      attachments TEXT,
+      remarks TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT,
+      deleted_at TEXT
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_contracts_staff ON contracts(staff_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_contracts_end_date ON contracts(end_date)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_contracts_deleted ON contracts(deleted_at)`);
+  } catch (e) {}
+
+  // ========== 绩效考核记录表（2026-06-27 P0：替代前端 mock Store）==========
+  // 字段与 usePerformanceStore.ts PerformanceRecord 对齐
+  db.run(`
+    CREATE TABLE IF NOT EXISTS performance_records (
+      id TEXT PRIMARY KEY,
+      staff_id TEXT NOT NULL,
+      staff_name TEXT NOT NULL,
+      department TEXT,
+      month TEXT NOT NULL,
+      task_completion_rate REAL DEFAULT 0,
+      attendance_rate REAL DEFAULT 0,
+      work_quality REAL DEFAULT 0,
+      safety_compliance REAL DEFAULT 0,
+      teamwork_attitude REAL DEFAULT 0,
+      total_score REAL DEFAULT 0,
+      rank TEXT,
+      status TEXT NOT NULL DEFAULT '待评估',
+      remarks TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT,
+      deleted_at TEXT
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_performance_staff ON performance_records(staff_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_performance_month ON performance_records(month)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_performance_department ON performance_records(department)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_performance_deleted ON performance_records(deleted_at)`);
+  } catch (e) {}
+
+  // ========== 风险预警表（2026-06-27 P0：替代前端 mock Store）==========
+  // 字段与 useRiskStore.ts RiskAlert 对齐
+  db.run(`
+    CREATE TABLE IF NOT EXISTS risk_alerts (
+      id TEXT PRIMARY KEY,
+      alert_type TEXT NOT NULL,
+      alert_type_name TEXT,
+      level TEXT NOT NULL DEFAULT 'warning',
+      title TEXT NOT NULL,
+      content TEXT,
+      staff_id TEXT,
+      staff_name TEXT,
+      department TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      handle_time TEXT,
+      handler TEXT,
+      remarks TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT,
+      deleted_at TEXT
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_staff ON risk_alerts(staff_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_status ON risk_alerts(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_level ON risk_alerts(level)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_deleted ON risk_alerts(deleted_at)`);
+  } catch (e) {}
+
   // 创建索引
   try {
     createIndexes();

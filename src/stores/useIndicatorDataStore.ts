@@ -217,12 +217,10 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
             isLoading: false,
           });
         } catch (error) {
-          // logger.warn('[IndicatorDataStore] API获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
-          // persist 中间件自动从 localStorage 恢复 indicators
-          const fallback = get().indicators;
+          // 2026-06-27 P0：API 失败显式化（V2.1 铁律：无缓存兜底）
+          // 直接 log 错误 + 设 error 状态，让 UI 展示给用户
+          console.error('[IndicatorDataStore] fetchIndicators API 失败:', error);
           set({
-            categorySummary: computeCategorySummary(fallback),
-            analyzeData: computeAnalyzeData(fallback),
             error: (error as Error).message,
             isLoading: false,
           });
