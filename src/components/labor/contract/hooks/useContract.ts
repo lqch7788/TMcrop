@@ -2,17 +2,23 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useContractStore } from '@/stores';
 import type { ContractData, ContractFormData, ContractFilters, ContractStatus } from '@/stores';
 
+/** 业务接口（async：返回 Promise 让调用方能 await + 错误处理） */
 export interface UseContractReturn {
   contracts: ContractData[];
   filters: ContractFilters;
   pagination: { currentPage: number; pageSize: number; total: number };
+  isLoading: boolean;
+  error: string | null;
   setFilters: (filters: ContractFilters) => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
-  createContract: (data: ContractFormData) => void;
-  updateContract: (id: string, data: Partial<ContractFormData>) => void;
-  terminateContract: (id: string, reason: string) => void;
-  deleteContract: (id: string) => void;
+  /** 主动刷新（重新从后端拉取） */
+  refresh: () => Promise<void>;
+  /** CRUD（async，失败会抛错给调用方） */
+  createContract: (data: ContractFormData) => Promise<ContractData>;
+  updateContract: (id: string, data: Partial<ContractFormData>) => Promise<ContractData>;
+  terminateContract: (id: string, reason: string) => Promise<ContractData>;
+  deleteContract: (id: string) => Promise<boolean>;
   getContractById: (id: string) => ContractData | undefined;
   getExpiringContracts: (days: number) => ContractData[];
   filteredContracts: ContractData[];
@@ -21,6 +27,9 @@ export interface UseContractReturn {
 export function useContract(): UseContractReturn {
   // ========== 从 Store 获取数据和方法 ==========
   const items = useContractStore((s) => s.items);
+  const isLoading = useContractStore((s) => s.isLoading);
+  const error = useContractStore((s) => s.error);
+  const storeFetch = useContractStore((s) => s.fetchContracts);
   const storeCreateContract = useContractStore((s) => s.createContract);
   const storeUpdateContract = useContractStore((s) => s.updateContract);
   const storeTerminateContract = useContractStore((s) => s.terminateContract);
@@ -29,15 +38,15 @@ export function useContract(): UseContractReturn {
   const storeGetExpiringContracts = useContractStore((s) => s.getExpiringContracts);
   const storeGetComputedStatus = useContractStore((s) => s.getComputedStatus);
 
-  // ========== 组件挂载时初始化数据（确保种子数据存在） ==========
+  // ========== 组件挂载时从后端拉取 ==========
   useEffect(() => {
-    // Store persist 会自动从 localStorage 恢复数据
-    // 如果是首次使用（无缓存），自动使用 MOCK_CONTRACTS 种子数据
-    if (items.length === 0) {
-      // 种子数据已在 Store 初始化时设置（MOCK_CONTRACTS）
-      // 如果确实为空（用户清空了数据），不自动恢复
-    }
-  }, [items.length]);
+    storeFetch().catch((e) => {
+      // fetchContracts 已经在 store 内 setError，这里只 log
+      console.error('[useContract] fetchContracts failed:', e);
+    });
+    // 只挂载时跑一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ========== 本地 UI 状态 ==========
   const [filters, setFilters] = useState<ContractFilters>({
@@ -105,9 +114,12 @@ export function useContract(): UseContractReturn {
     contracts,
     filters,
     pagination: { ...pagination, total: filteredContracts.length },
+    isLoading,
+    error,
     setFilters,
     setPage,
     setPageSize,
+    refresh: () => storeFetch(),
     createContract: storeCreateContract,
     updateContract: storeUpdateContract,
     terminateContract: storeTerminateContract,

@@ -59,15 +59,25 @@ function getStoreForTask(task: Task) {
   return useFarmTaskStore.getState();
 }
 
-/** 异步API同步（fire-and-forget），失败不影响本地操作 */
+/** 异步API同步（fire-and-forget）
+ * 2026-06-27 P0 修复：失败必须显式 log + 上报（CLAUDE.md Rule 12: Fail Loud）
+ * 失败不再静默吞错，让用户在浏览器 console 能看到 API 同步失败
+ */
 function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
-  Promise.resolve().then(async () => {
-    try {
+  Promise.resolve()
+    .then(async () => {
       await apiCall();
-    } catch (error) {
-      // logger.warn(`[useTasks] ${label} API同步失败:`, error);
-    }
-  });
+    })
+    .catch((error) => {
+      // Fail Loud: 把错误写到 console + 全局事件总线
+      // （用户在 F12 console 能看到，也方便后续埋点统计失败率）
+      console.error(`[useTasks] ${label} API同步失败:`, error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('api-sync-failed', {
+          detail: { label, error: error instanceof Error ? error.message : String(error), timestamp: Date.now() },
+        }));
+      }
+    });
 }
 
 // ============================================
