@@ -10,7 +10,6 @@ import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import GlobalDialog from './components/common/GlobalDialog';
-import { syncManager } from './services/syncManager';
 import { useAuthStore, useSystemConfigStore, useCropVarietyStore } from './stores';
 import { useThemeConfig } from './hooks/useThemeConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -381,12 +380,6 @@ function App() {
 
   // ★ V3.0 Phase 4: 动态主题 — 同步 theme.* 配置到 CSS 变量
   useThemeConfig();
-
-  // 启动同步管理器（SYNC模式）
-  useEffect(() => {
-    syncManager.start();
-    return () => syncManager.stop();
-  }, []);
 
   return (
     <BrowserRouter
