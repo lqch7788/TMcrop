@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark } from 'lucide-react';
+import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark, Calendar } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
@@ -12,6 +12,7 @@ import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { HarvestRecordModal } from './modals/HarvestRecordModal';
 import { RecordModal } from './modals/RecordModal';
+import { DailyRecordModal } from './modals/DailyRecordModal';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
@@ -147,6 +148,21 @@ export default function PlantingPage() {
   };
   const handleSeedSavingRecord = (record: Planting) => {
     setRecordModal({ open: true, recordType: 'seed_saving', record });
+  };
+  // 2026-06-28: 每日记录弹窗状态
+  const [dailyRecordModal, setDailyRecordModal] = useState<{
+    open: boolean;
+    record: Planting | null;
+  }>({ open: false, record: null });
+  const handleDailyRecord = (record: Planting) => {
+    setDailyRecordModal({ open: true, record });
+  };
+  const closeDailyRecord = () => {
+    setDailyRecordModal({ open: false, record: null });
+  };
+  const handleDailyRecordSuccess = () => {
+    closeDailyRecord();
+    // Store action 内部已 await loadItems()，列表会实时刷新
   };
   const closeRecordModal = () => {
     setRecordModal({ open: false, recordType: 'breeding', record: null });
@@ -555,6 +571,7 @@ export default function PlantingPage() {
         onViewMoveRecords={handleViewMoveRecords}
         onBreedingRecord={handleBreedingRecord}
         onSeedSavingRecord={handleSeedSavingRecord}
+        onDailyRecord={handleDailyRecord}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
@@ -644,6 +661,16 @@ export default function PlantingPage() {
             plantCode: recordModal.record.plantCode,
             cropName: recordModal.record.cropName,
           }}
+        />
+      )}
+
+      {/* 2026-06-28: 种植管理每日记录弹窗（与育苗管理 DailyRecordModal 一致；单池简化版） */}
+      {dailyRecordModal.record && (
+        <DailyRecordModal
+          isOpen={dailyRecordModal.open}
+          onClose={closeDailyRecord}
+          onSuccess={handleDailyRecordSuccess}
+          record={dailyRecordModal.record}
         />
       )}
 
