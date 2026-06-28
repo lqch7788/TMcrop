@@ -77,6 +77,24 @@ const PROPAGATION_FORMS = [
   { value: '球根', label: '球根' },
 ]
 
+/**
+ * 2026-06-27：成品形态（种植行采收入库）
+ * key 与后端 HARVEST_FORM_MAP / src/constants/cropConstants 一致
+ */
+const HARVEST_FORMS = [
+  { value: 'whole_plant', label: '整株' },
+  { value: 'flower', label: '花朵' },
+  { value: 'fruit', label: '果实' },
+  { value: 'seed', label: '种子' },
+  { value: 'tuber', label: '块茎' },
+  { value: 'bulb', label: '球根' },
+  { value: 'leaf', label: '叶片' },
+  { value: 'root', label: '根茎' },
+  { value: 'stem', label: '茎秆' },
+  { value: 'cutting', label: '枝条' },
+  { value: 'other', label: '其他' },
+]
+
 // 2026-06-19: 采收形态（每条 product 必填，区分果实/籽/枝条等）
 const SOURCE_FORMS = [
   { value: '果实', label: '果实' },
@@ -149,6 +167,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
   // 2026-06-19: 种源形态（仅种源行入库必填）
   const [propagationForm, setPropagationForm] = useState<string>('')
+  // 2026-06-27：成品形态（仅种植行入库时使用）
+  const [harvestForm, setHarvestForm] = useState<string>('')
 
   // products: 种源/育苗 lock 1 条，种植允许多条
   const [products, setProducts] = useState<InboundProduct[]>([
@@ -325,6 +345,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       warehouseName: warehouseName || undefined,
       // 2026-06-19: 种源形态（仅种源行入库必填）
       propagationForm: propagationForm || undefined,
+      harvestForm: harvestForm || undefined,
       products: products.map((p) => ({
         ...p,
         harvestQuantity: Number(p.harvestQuantity) || 0,
@@ -554,6 +575,23 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
               </SelectTrigger>
               <SelectContent>
                 {PROPAGATION_FORMS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
+
+        {/* 2026-06-27：成品类型（仅种植行入库可选）
+            —— 因为同一棵植株在不同阶段可采收不同产物，每次入库独立选择 */}
+        {sourceModule === 'planting' && (
+          <FormField label="成品类型">
+            <Select value={harvestForm} onValueChange={setHarvestForm}>
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="选择本次采收的成品类型（可选）" />
+              </SelectTrigger>
+              <SelectContent>
+                {HARVEST_FORMS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>

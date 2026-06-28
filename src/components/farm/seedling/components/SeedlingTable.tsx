@@ -280,8 +280,9 @@ export function SeedlingTable({
     onSelectionChange([]);
   };
 
+  // 2026-06-27：去掉 overflow-hidden，否则会截断内部 overflow-x-auto 的水平滚动条
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       {/* 右上角操作按钮栏 - 根据模式显示不同内容 */}
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">育苗列表</h3>
@@ -432,32 +433,42 @@ export function SeedlingTable({
         </div>
       </div>
 
-      {/* 表格 */}
-      <div className="overflow-x-auto">
-        <table className="w-full table-fixed">
+      {/* 表格 — 2026-06-27：固定宽度 2400px + 强制横向滚动条
+    容器 1022px → 表格 2400px → 溢出 1378px 出滚动条
+    数值列 8% × 2400 = 192px（够 4-5 中文字符 + 千位数字）
+    关键列 9-10% = 216-240px（够 13 字符单据号） */}
+      <div className="overflow-x-auto" style={{ overflowX: 'auto', width: '100%' }}>
+        <table
+          style={{ width: '2400px', tableLayout: 'fixed', minWidth: '2400px' }}
+          className="text-sm"
+        >
+          {/* 2026-06-27：百分比列宽重新分配
+              - 关联种源 / 作物编码 各占 9-10%（足够 13 字符不截断）
+              - 操作列占 14%（足够 7 个 28px 图标按钮）
+              - 数值列各 4%（数字 + padding 够用）
+              - 总和 100%（含 showCheckbox 多 2.5% 会溢出触发横向滚动） */}
           <colgroup>
-            {showCheckbox && <col className="w-10" />}
-            <col className="w-32" />
-            <col className="w-20" />
-            <col className="w-32" />
-            <col className="w-28" />
-            <col className="w-24" />
-            <col className="w-20" />
-            <col className="w-40" />
-            <col className="w-24" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-20" />
-            <col className="w-24" />
-            {/* 操作列固定宽度 w-72 (288px ≈ 7 个 32px icon 按钮 + padding) */}
-            <col className="w-72" />
+            {showCheckbox && <col className="w-[2.5%]" />}
+            <col className="w-[8%]" />   {/* 育苗批号 YM20260624-001 */}
+            <col className="w-[5%]" />   {/* 繁殖模式 1:1 / 1:多 */}
+            <col className="w-[6%]" />   {/* 关联生产计划 PZ-XXX */}
+            <col className="w-[10%]" />  {/* 关联种源 ZZ20260601-001 (13字符) */}
+            <col className="w-[9%]" />   {/* 作物编码 FR010300400 (11字符) */}
+            <col className="w-[6%]" />   {/* 作物品种 紫树莓 */}
+            <col className="w-[9%]" />   {/* 品种路径 水果类-浆果类-树莓... */}
+            <col className="w-[7%]" />   {/* 育苗区域 育苗温室A区 */}
+            {/* 2026-06-27：用户指令 — 数值列宽度加倍 4%→8%，完成比例 3%→6% */}
+            <col className="w-[8%]" />   {/* 初始数量 */}
+            <col className="w-[8%]" />   {/* 母株存活数 */}
+            <col className="w-[8%]" />   {/* 母株累计损耗 */}
+            <col className="w-[8%]" />   {/* 补苗累计 */}
+            <col className="w-[8%]" />   {/* 小苗累计产出 */}
+            <col className="w-[8%]" />   {/* 小苗累计损耗 */}
+            <col className="w-[8%]" />   {/* 小苗剩余数量 */}
+            <col className="w-[8%]" />   {/* 目标成苗数 */}
+            <col className="w-[6%]" />   {/* 完成比例 999% */}
+            <col className="w-[5%]" />   {/* 状态 进行中 */}
+            <col className="w-[14%]" />  {/* 操作列 — 7 个 28px 图标按钮 */}
           </colgroup>
           {/* thead 正常布局（不 sticky，避免和操作列 sticky 冲突） */}
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -483,11 +494,10 @@ export function SeedlingTable({
               {/* ===== 小苗池（5 列） — 绿色半透明背景标识 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计产出">小苗累计产出</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 人工定植 - 采收入库">小苗剩余数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池人工定植累计">人工定植累计</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 采收入库（2026-06-28 移除已定植统计）">小苗剩余数量</th>
               {/* ===== 派生 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">完成比例</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="完成比例 = (小苗累计产出 − 小苗累计损耗) / 目标成苗数">完成比例</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">状态</th>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index，避免脱离 thead） */}
               <th className="sticky right-0 px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)]">操作</th>
@@ -496,7 +506,7 @@ export function SeedlingTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 21 : 20} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 20 : 19} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -548,9 +558,9 @@ export function SeedlingTable({
                       </span>
                     ) : '-'}
                   </td>
-                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap">{record.sourceCode}</td>
+                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center truncate" title={record.sourceCode || ''}>{record.sourceCode}</td>
                   <td className="px-2 py-1.5 text-xs text-center">
-                    <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
+                    <span className="font-mono text-orange-600 truncate inline-block max-w-full" title={getStandardCropCode(record) || ''}>{getStandardCropCode(record) || '-'}</span>
                   </td>
                   <td className="px-2 py-1.5 text-sm text-gray-900 text-center truncate" title={record.cropVariety || record.cropName}>
                     {/* 作物品种列：从品种库获取最细化名称 */}
@@ -601,20 +611,15 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
                     {(record.seedlingLossCount || 0).toLocaleString()}
                   </td>
-                  {/* 小苗剩余数量 = expanded - loss - trans - harvest（派生列，2026-06-25 移除 auto_planted_count） */}
+                  {/* 小苗剩余数量 = expanded - loss - harvest（2026-06-28：彻底移除已定植/自动定植统计，业务上种植管理不再从育苗管理取苗） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30">
                     {(() => {
                       const expanded = record.expandedPlantCount || 0;
                       const loss = record.seedlingLossCount || 0;
-                      const trans = record.transplantedCount || 0;
                       const harvest = record.harvestStockedCount || 0;
-                      const remaining = Math.max(0, expanded - loss - trans - harvest);
+                      const remaining = Math.max(0, expanded - loss - harvest);
                       return remaining.toLocaleString();
                     })()}
-                  </td>
-                  {/* 人工定植累计 = transplantedCount */}
-                  <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
-                    {(record.transplantedCount || 0).toLocaleString()}
                   </td>
                   {/* ===== 派生 ===== */}
                   {/* 目标成苗数 = targetSurvivalCount */}
@@ -622,10 +627,13 @@ export function SeedlingTable({
                     {(record.targetSurvivalCount ?? 0).toLocaleString()}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                    {/* 2026-06-16: 完成比例 = 小苗累计产出 / 目标成苗数（统一公式，不区分模式） */}
+                    {/* 2026-06-28: 完成比例 = (累计产出 - 累计损耗) / 目标成苗数
+                          扣损耗反映"实际可用苗数"对目标的达成率，避免已死苗数虚增完成度 */}
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (() => {
                       const expanded = Math.max(0, record.expandedPlantCount || 0);
-                      const ratio = expanded / record.targetSurvivalCount;
+                      const loss = Math.max(0, record.seedlingLossCount || 0);
+                      const available = Math.max(0, expanded - loss);
+                      const ratio = available / record.targetSurvivalCount;
                       return (
                         <span className={`font-medium ${
                           ratio >= 0.8 ? 'text-green-600' : ratio >= 0.5 ? 'text-amber-600' : 'text-red-600'

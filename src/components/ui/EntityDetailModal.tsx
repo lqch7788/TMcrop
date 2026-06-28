@@ -5,12 +5,17 @@
  * 1. 基本信息（props.basicInfoPanel）
  * 2. 追溯时间线（EntityHistoryTimeline，必选）
  * 3. 额外 Tab（props.extraTabs，可选）
+ *
+ * 2026-06-27：原 entitySourceType prop 改为 typeColumn，3 个 entity 各自传：
+ * - 种源：{ label: '种源类型', value: '种子' }
+ * - 育苗：{ label: '种苗类型', value: '穴盘苗' }
+ * - 种植：{ label: '成品类型', value: '果实' }
  */
 
 import React, { useState } from 'react';
 import { UnifiedModal, Button } from '@/components/ui';
 import { Clock } from 'lucide-react';
-import { EntityHistoryTimeline } from './EntityHistoryTimeline';
+import { EntityHistoryTimeline, type TypeColumnConfig } from './EntityHistoryTimeline';
 
 interface ExtraTab {
   key: string;
@@ -31,8 +36,14 @@ interface EntityDetailModalProps {
   entityId: string;
   /** 实体编码（用于 material_flow_log 关联） */
   entityCode: string;
-  /** 实体的种源类型（仅种源页面传，如 seed/cutting/grafting） */
-  entitySourceType?: string;
+  /**
+   * 实体类型列配置（2026-06-27）
+   * - 种源：{ label: '种源类型', value: fmtSourceType(record.sourceType) }
+   * - 育苗：{ label: '种苗类型', value: fmtSeedlingForm(record.seedlingForm) }
+   * - 种植：{ label: '成品类型', value: fmtHarvestForm(record.harvestForm) }
+   * 不传则详情弹窗的追溯时间线表格不显示"类型"列
+   */
+  typeColumn?: TypeColumnConfig;
   /** 可选附加 Tab */
   extraTabs?: ExtraTab[];
 }
@@ -45,7 +56,7 @@ export function EntityDetailModal({
   entity,
   entityId,
   entityCode,
-  entitySourceType,
+  typeColumn,
   extraTabs = [],
 }: EntityDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('info');
@@ -115,7 +126,7 @@ export function EntityDetailModal({
             entity={entity}
             entityId={entityId}
             entityCode={entityCode}
-            entitySourceType={entitySourceType}
+            typeColumn={typeColumn}
           />
         </div>
       )}

@@ -38,6 +38,8 @@ export interface InventoryInboundRecord {
   cropCode: string | null
   cropName: string | null
   varietyName: string | null
+  /** 2026-06-28：后端 LEFT JOIN harvest_records 取的采收形态（whole_plant/flower/fruit/...） */
+  harvestForm?: string | null
   quantity: number
   unit: string
   unitPrice: number

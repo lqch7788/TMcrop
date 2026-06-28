@@ -61,6 +61,8 @@ export interface InboundFromSourceInput {
   operatorName?: string;
   // 2026-06-19: 种源形态（仅种源行入库时必填）
   propagationForm?: string;  // 种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根
+  // 2026-06-27: 成品形态（仅种植行入库时可选，整株/花朵/果实/种子/块茎 等）
+  harvestForm?: string;
 }
 
 export interface InboundFromSourceResult {
@@ -207,6 +209,8 @@ export async function executeInboundFromSource(
       inbound_type: input.saleType === 'self_use' ? 'self_use' : 'external_sale',
       batch_code: input.sourceRecordCode,
       products: JSON.stringify(input.products),
+      // 2026-06-27：成品形态（整株/花朵/果实/种子/块茎 等），由前端采收入库 Modal 选择
+      harvest_form: input.harvestForm || null,
       // 溯源字段（D11 决策）
       source_module: input.sourceModule,
       create_by: operator,
@@ -222,16 +226,16 @@ export async function executeInboundFromSource(
         harvester_ids, harvester_names, auditor_id,
         remarks, warehouse_id, unit_price, unit,
         status, inbound_type, batch_code, products,
-        source_module,
+        source_module, harvest_form,
         create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       harvestRecord.id, harvestRecord.harvest_code, harvestRecord.source_id, harvestRecord.source_name,
       harvestRecord.harvest_date, harvestRecord.greenhouse_id, harvestRecord.greenhouse_name,
       harvestRecord.harvester_ids, harvestRecord.harvester_names, harvestRecord.auditor_id,
       harvestRecord.remarks, harvestRecord.warehouse_id, harvestRecord.unit_price, harvestRecord.unit,
       harvestRecord.status, harvestRecord.inbound_type, harvestRecord.batch_code, harvestRecord.products,
-      harvestRecord.source_module,
+      harvestRecord.source_module, harvestRecord.harvest_form || null,
       harvestRecord.create_by, harvestRecord.create_time, harvestRecord.update_time,
     ]);
     writtenRecordIds.push(harvestRecordId);

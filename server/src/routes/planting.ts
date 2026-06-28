@@ -43,6 +43,11 @@ const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
 ]);
 
 /** 通用 UPDATE 白名单过滤：拒绝未知列，返回 {fields, values} */
+// 2026-06-28：支持 camelCase 别名匹配 — 前端走 enhancedApiClient 习惯发 camelCase，
+//            白名单是 snake_case，需要把 camelCase 转 snake_case 再匹配
+function toSnake(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
+}
 function buildWhitelistedUpdate(
   updates: Record<string, any>,
   extra: any[] = [],
@@ -53,11 +58,13 @@ function buildWhitelistedUpdate(
   const rejected: string[] = [];
   for (const [k, v] of Object.entries(updates)) {
     if (k === 'id') continue;
-    if (!allowed.has(k)) {
+    // 优先匹配原 key（snake_case），fallback camelCase 转 snake_case
+    const matchedKey = allowed.has(k) ? k : (allowed.has(toSnake(k)) ? toSnake(k) : null);
+    if (!matchedKey) {
       rejected.push(k);
       continue;
     }
-    cols.push(`${k} = ?`);
+    cols.push(`${matchedKey} = ?`);
     vals.push(v);
   }
   return { fields: cols.join(', '), values: [...vals, ...extra], rejected };
@@ -743,38 +750,20 @@ router.post('/', (req: Request, res: Response) => {
         }
         flowType = 'seed_source→planting';
       } else if (lowerSourceType === 'seedling') {
+        // 2026-06-28：业务规则变更 — 种植管理不再从育苗管理页面获取种苗（统一从内部种源）。
+        // 此分支保留兼容，但写入 auto_planted_count 的逻辑已停用，避免脏数据。
         if (finalSourceId) {
-          // 2026-06-15: 数量体系重构 — 统一可定植量公式（1:1 / 1:多 同公式）
-          // 可定植量 = mother_plant_count + expanded_plant_count - seedling_loss_count
-          //              - transplanted_count - auto_planted_count - harvest_stocked_count
           const chk = db.exec(
-            "SELECT propagation_mode, mother_plant_count, expanded_plant_count, seedling_loss_count, transplanted_count, auto_planted_count, harvest_stocked_count FROM seedlings WHERE id = ? AND deleted_at IS NULL",
+            "SELECT 1 FROM seedlings WHERE id = ? AND deleted_at IS NULL",
             [finalSourceId]
           );
           if (!chk[0]?.values?.[0]) {
             try { db.exec('ROLLBACK'); } catch {}
             return res.status(404).json({ success: false, error: '育苗记录不存在' });
           }
-          const mother = Number(chk[0].values[0][1] || 0);
-          const expanded = Number(chk[0].values[0][2] || 0);
-          const seedlingLoss = Number(chk[0].values[0][3] || 0);
-          const transplanted = Number(chk[0].values[0][4] || 0);
-          const autoPlanted = Number(chk[0].values[0][5] || 0);
-          const harvestStocked = Number(chk[0].values[0][6] || 0);
-          // 统一公式
-          const available = mother + expanded - seedlingLoss - transplanted - autoPlanted - harvestStocked;
-          if (available < finalPlantingQuantity) {
-            try { db.exec('ROLLBACK'); } catch {}
-            return res.status(400).json({
-              success: false,
-              error: `可定植余量不足：当前 ${available}（母株+扩繁-损耗-已定植-自动定植-已采收），需 ${finalPlantingQuantity}`
-            });
-          }
-          // 2026-06-15: 累加到 auto_planted_count（不再累加到 planted_count）
-          db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count + ? WHERE id = ?',
-            [finalPlantingQuantity, finalSourceId]);
+          // 不再做可用量校验和累加（业务上已停用）
         }
-        flowType = 'seedling→planting';
+        flowType = 'seedling→planting(deprecated)';
       }
 
       // 插入种植记录
@@ -787,7 +776,7 @@ router.post('/', (req: Request, res: Response) => {
           harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code,
           is_breeding, parent_male_code, parent_female_code, generation, breeding_method, breeding_location, target_traits,
           is_seed_saving, seed_plant_marker
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -799,7 +788,7 @@ router.post('/', (req: Request, res: Response) => {
         finalIsHarvest, finalHarvestDate, finalHarvestQuantity, finalPrintCount, finalTraceabilityCode,
         finalPictures, finalProductionPlanId, finalProductionPlanCode,
         finalIsBreeding, finalParentMaleCode, finalParentFemaleCode, finalGeneration, finalBreedingMethod, finalBreedingLocation, finalTargetTraits,
-        finalIsSeedSaving, finalSeedPlantMarker
+        finalIsSeedSaving, finalSeedPlantMarker,
       ]);
 
       // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
@@ -924,10 +913,8 @@ router.put('/:id', (req: Request, res: Response) => {
           if (oldSourceType === 'seed' && oldSourceId) {
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
               [delta, now, oldSourceId]);
-          } else if (oldSourceType === 'seedling' && oldSourceId) {
-            db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count - ?, update_time = ? WHERE id = ?',
-              [delta, now, oldSourceId]);
           }
+          // 2026-06-28：移除 oldSourceType === 'seedling' 的 auto_planted_count -= delta（业务已停用）
         }
       } catch {}
     }
@@ -1098,8 +1085,7 @@ router.delete('/:id', (req: Request, res: Response) => {
         const sid = row.source_id;
         if (qty > 0 && sid) {
           if (stype === 'seedling') {
-            // 育苗 → 回滚 seedlings.auto_planted_count
-            db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count - ? WHERE id = ?', [qty, sid]);
+            // 2026-06-28：移除 seedlings.auto_planted_count 回滚（业务已停用）
           } else if (stype === 'seed') {
             // 种源 → 回滚 seed_sources.remaining_quantity
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ? WHERE id = ?', [qty, sid]);

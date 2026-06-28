@@ -618,7 +618,10 @@ export function initializeDatabase() {
       planting_mode TEXT,
       target_yield REAL DEFAULT 0,
       harvest_area REAL DEFAULT 0,
-      products TEXT
+      products TEXT,
+      -- 2026-06-27：成品形态（整株/花朵/果实/种子/块茎 等）
+      -- 一棵植株在不同阶段可采收不同产物，harvest_form 应在 harvest_records 而非 plantings
+      harvest_form TEXT
     )
   `);
 

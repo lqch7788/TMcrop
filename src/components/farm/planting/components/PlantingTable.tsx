@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X } from 'lucide-react';
+import { Bookmark, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -34,6 +34,8 @@ interface PlantingTableProps {
   onImageClick: (images: string[]) => void;
   // V2 改造 (任务 16): 种植结束弹窗
   onEndV2?: (record: Planting) => void;
+  // 2026-06-28: 直接结束回调（与育苗管理"正常结束"/"异常结束"按钮一致）
+  onEnd?: (record: Planting, endType: 'normal' | 'abnormal') => void;
   // 2026-06-19: 行级采收入库回调（unify-harvest-inbound-into-source-operations）
   onInbound?: (record: Planting) => void;
   // 模式状态
@@ -94,6 +96,7 @@ export function PlantingTable({
   canExport = true,
   canPrint = true,
   onEndV2,
+  onEnd,
   onInbound,
   onLabelDetail,
   onMove,
@@ -551,6 +554,27 @@ export function PlantingTable({
               >
                 <Bookmark className="w-4 h-4" />
               </Button>
+            )}
+            {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 两个独立按钮（放在标记管理图标后面） */}
+            {!record.endTime && !record.isHarvestLocked && onEnd && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEnd(record, 'normal')}
+                  title="正常结束"
+                >
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEnd(record, 'abnormal')}
+                  title="异常结束"
+                >
+                  <XCircle className="w-4 h-4 text-red-600" />
+                </Button>
+              </>
             )}
             {/* 2026-06-25 v3: 育种记录按钮 — 仅 isBreeding=true 的行显示 */}
             {record.isBreeding && onBreedingRecord && (
@@ -1094,6 +1118,27 @@ export function PlantingTable({
                         >
                           <Bookmark className="w-4 h-4" />
                         </Button>
+                      )}
+                      {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束（放在标记管理图标后面） */}
+                      {!record.endTime && !record.isHarvestLocked && onEnd && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'normal')}
+                            title="正常结束"
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'abnormal')}
+                            title="异常结束"
+                          >
+                            <XCircle className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>

@@ -1,6 +1,8 @@
 /**
  * 种植详情弹窗（2026-06-27 重构）
  * 使用通用 EntityDetailModal 包装，Tab：基本信息 / 追溯时间线
+ *
+ * 2026-06-27：追溯时间线新增"成品类型"列（数据源 harvest_form）
  */
 
 import React, { useState } from 'react';
@@ -303,6 +305,8 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       entity="plantings"
       entityId={record.id}
       entityCode={record.plantCode}
+      // 2026-06-27：成品类型移到 harvest_records 表（每条采收独立记录产物形态）
+      // 种植详情弹窗不再显示"成品类型"列，详情见采收记录
     />
   );
 }

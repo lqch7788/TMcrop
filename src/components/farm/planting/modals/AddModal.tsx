@@ -688,6 +688,9 @@ export function AddModal({
           />
         </div>
 
+        {/* 2026-06-27：成品类型已移到 harvest_records 表（采收入库时选择）
+            —— 因为同一棵植株在不同阶段可采收不同产物，详见行级"采收入库"操作 */}
+
         {/* 土壤PH值 */}
         <div>
           <Label className="text-gray-900">土壤PH值</Label>

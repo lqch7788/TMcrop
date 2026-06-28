@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download, ChevronDown } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
 import { AddModal } from './modals/AddModal';
@@ -14,6 +14,8 @@ import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
+import { QUALITY_GRADE_MAP, HARVEST_FORM_MAP } from '@/constants/cropConstants';
+import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { RecordModal } from '../planting/modals/RecordModal';
@@ -252,6 +254,17 @@ export default function SeedlingPage() {
   const inboundRecordsMap = useInventoryInboundStore((s) => s.recordsBySource);
   const loadInboundRecords = useInventoryInboundStore((s) => s.loadRecords);
 
+  // 2026-06-27：修复入库记录不显示 bug — 页面挂载时自动加载"育苗模块全部入库记录"
+  // 之前 bug: loadInboundRecords 只在用户点击"入库"按钮时调用，导致刷新页面后
+  // recordsBySource 为空，折叠区始终显示"共 0 条"（但数据库其实有数据）
+  // 位置说明：必须放在 loadInboundRecords 定义之后（避免 TDZ ReferenceError）
+  useEffect(() => {
+    void loadInboundRecords('seedling:__all__', {
+      sourceModule: 'seedling',
+      limit: 100,
+    });
+  }, [loadInboundRecords]);
+
   // flat 入库记录，按 createTime 倒序（仅育苗模块）
   const allInboundRecords: InventoryInboundRecord[] = Object.values(inboundRecordsMap)
     .flat()
@@ -278,8 +291,12 @@ export default function SeedlingPage() {
       if (filters.survivalCountMax !== undefined && item.survivalCount > filters.survivalCountMax) return false;
       if (filters.lossCountMin !== undefined && item.lossCount < filters.lossCountMin) return false;
       if (filters.lossCountMax !== undefined && item.lossCount > filters.lossCountMax) return false;
-      // 现存数量 = 成活 - 已定植
-      const surplus = (item.survivalCount || 0) - (item.plantedCount || 0);
+      // 现存数量 = 小苗剩余 = 产出 - 损耗 - 采收入库（2026-06-28：彻底移除已定植统计）
+      const surplus = Math.max(0,
+        (item.expandedPlantCount || 0)
+        - (item.seedlingLossCount || 0)
+        - (item.harvestStockedCount || 0)
+      );
       if (filters.surplusMin !== undefined && surplus < filters.surplusMin) return false;
       if (filters.surplusMax !== undefined && surplus > filters.surplusMax) return false;
       if (filters.survivalRateMin !== undefined && item.survivalRate < filters.survivalRateMin) return false;
@@ -362,32 +379,37 @@ export default function SeedlingPage() {
     toast.success('入库成功');
   };
 
-  // CSV 导出（UTF-8 BOM 防 Excel 乱码）
-  const exportInboundCSV = () => {
+  // 2026-06-28：入库记录导出改为 Excel（用 xlsx 库生成真正的 .xlsx）
+  // 之前是手写 CSV + UTF-8 BOM 兼容 Excel，但中文长内容偶尔列宽错乱；
+  // 现在用 xlsx 库按列设置 wch，Excel/WPS 打开自动适配列宽
+  const exportInboundExcel = () => {
     if (allInboundRecords.length === 0) {
       showAlert('没有入库记录可导出');
       return
     }
-    const headers = ['入库日期', '来源编码', '来源模块', '仓库', '数量', '单位', '品质', '操作员', '备注']
+    const headers = ['入库日期', '来源编码', '作物编码', '作物品种', '采收形态', '仓库', '数量', '单位', '品质', '操作员', '备注']
     const rows = allInboundRecords.map((r) => [
-      r.recordDate,
+      r.recordDate ? String(r.recordDate).split('T')[0] : '',
       r.sourceCode || r.sourceId,
-      r.sourceModule,
+      r.cropCode || '',
+      r.cropName && r.varietyName ? `${r.cropName}/${r.varietyName}` : (r.cropName || r.varietyName || ''),
+      r.harvestForm ? (HARVEST_FORM_MAP[r.harvestForm] ?? r.harvestForm) : '',
       r.warehouseName || r.warehouseId || '',
-      r.quantity.toString(),
+      r.quantity,
       r.unit,
-      r.qualityGrade || '',
+      r.qualityGrade ? (QUALITY_GRADE_MAP[r.qualityGrade]?.label ?? r.qualityGrade) : '',
       r.operatorName || r.createBy || '',
       r.notes || '',
     ])
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `育苗入库记录_${todayLocal()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    // 列宽：按表头最大字符数 × 2 估算（中文按 2 宽算）
+    ws['!cols'] = headers.map((h, i) => {
+      const maxCellLen = Math.max(h.length, ...rows.map(r => String(r[i] ?? '').length))
+      return { wch: Math.max(12, maxCellLen * 2) }
+    })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '育苗入库记录')
+    XLSX.writeFile(wb, `育苗入库记录_${todayLocal()}.xlsx`)
   }
 
   const handleImageClick = (images: string[]) => {
@@ -577,17 +599,21 @@ export default function SeedlingPage() {
     // 获取选中的数据
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头（按规划完整字段）
+    // 导出表头（按规划完整字段，2026-06-28：移除"已定植数量"列）
     const headers = [
       '育苗批号', '作物编码', '关联种源', '作物名称', '作物品种',
       '育苗方式', '育苗区域', '开始日期', '预计结束日期', '实际结束日期',
       '初始数量', '目标成苗率', '目标成苗数', '成活数量', '损耗数量', '现存数量',
-      '完成比例', '已定植数量', '损耗率', '育苗结束', '状态', '品质等级',
+      '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
 
-    // 计算剩余总数
-    const getRemainingCount = (record: Seedling) => (record.survivalCount || 0) - (record.plantedCount || 0);
+    // 计算剩余总数 = 产出 - 损耗 - 采收入库（2026-06-28：移除已定植统计）
+    const getRemainingCount = (record: Seedling) => Math.max(0,
+      (record.expandedPlantCount || 0)
+      - (record.seedlingLossCount || 0)
+      - (record.harvestStockedCount || 0)
+    );
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -607,8 +633,8 @@ export default function SeedlingPage() {
       '成活数量': record.survivalCount,
       '损耗数量': record.lossCount,
       '现存数量': getRemainingCount(record),
-      '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round((record.survivalCount || 0) / record.targetSurvivalCount * 100)}%` : '-',
-      '已定植数量': record.plantedCount,
+      // 2026-06-28：完成比例 = (产出 - 损耗) / 目标（与 SeedlingTable 一致）
+      '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, ((record.expandedPlantCount || 0) - (record.seedlingLossCount || 0))) / record.targetSurvivalCount * 100)}%` : '-',
       '损耗率': `${record.lossRate}%`,
       '育苗结束': record.isFinished ? '是' : '否',
       '状态': record.status === SeedlingStatus.IN_PROGRESS ? '进行中' : record.status === SeedlingStatus.TRANSPLANT_READY ? '待定植' : record.status === SeedlingStatus.COMPLETED ? '已完成' : '异常',
@@ -845,9 +871,26 @@ export default function SeedlingPage() {
       )}
 
       {/* 2026-06-18: 任务 5 — 入库记录子表（折叠区） */}
-      <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100">
-          入库记录 (共 {allInboundRecords.length} 条)
+      <details className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            {/* 2026-06-28：折叠箭头 — group-open:rotate-180 在展开时旋转 180° */}
+            <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
+            入库记录 (共 {allInboundRecords.length} 条)
+          </span>
+          {/* 2026-06-28：导出按钮挪到 summary 同一行靠右；onClick 阻止冒泡到 summary 的折叠切换 */}
+          {allInboundRecords.length > 0 && (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exportInboundExcel();
+              }}
+            >
+              <Download className="w-4 h-4 mr-1" /> 导出 Excel
+            </Button>
+          )}
         </summary>
         <div className="p-3">
           {allInboundRecords.length === 0 ? (
@@ -860,6 +903,9 @@ export default function SeedlingPage() {
                     <tr>
                       <th className="px-2 py-2 text-left">入库日期</th>
                       <th className="px-2 py-2 text-left">来源编码</th>
+                      <th className="px-2 py-2 text-left">作物编码</th>
+                      <th className="px-2 py-2 text-left">作物品种</th>
+                      <th className="px-2 py-2 text-left">采收形态</th>
                       <th className="px-2 py-2 text-left">仓库</th>
                       <th className="px-2 py-2 text-left">数量</th>
                       <th className="px-2 py-2 text-left">单位</th>
@@ -870,21 +916,23 @@ export default function SeedlingPage() {
                   <tbody>
                     {allInboundRecords.slice(0, 20).map((r) => (
                       <tr key={r.id} className="hover:bg-gray-50">
-                        <td className="px-2 py-1.5">{r.recordDate}</td>
+                        {/* 2026-06-28：入库日期只显示年月日（防御 ISO 字符串含 T） */}
+                        <td className="px-2 py-1.5">{r.recordDate ? String(r.recordDate).split('T')[0] : '-'}</td>
                         <td className="px-2 py-1.5">{r.sourceCode || r.sourceId}</td>
+                        <td className="px-2 py-1.5">{r.cropCode || '-'}</td>
+                        <td className="px-2 py-1.5">{r.cropName && r.varietyName ? `${r.cropName}/${r.varietyName}` : (r.cropName || r.varietyName || '-')}</td>
+                        <td className="px-2 py-1.5">{r.harvestForm ? (HARVEST_FORM_MAP[r.harvestForm] ?? r.harvestForm) : '-'}</td>
                         <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
                         <td className="px-2 py-1.5">{r.quantity}</td>
                         <td className="px-2 py-1.5">{r.unit}</td>
-                        <td className="px-2 py-1.5">{r.qualityGrade || '-'}</td>
+                        {/* 2026-06-28：品质英文 → 中文（兼容 A/B/C/D 老数据） */}
+                        <td className="px-2 py-1.5">{r.qualityGrade ? (QUALITY_GRADE_MAP[r.qualityGrade]?.label ?? r.qualityGrade) : '-'}</td>
                         <td className="px-2 py-1.5">{r.operatorName || r.createBy || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <Button onClick={exportInboundCSV} className="mt-3" size="sm" variant="outline">
-                <Download className="w-4 h-4 mr-1" /> 导出 CSV
-              </Button>
             </>
           )}
         </div>

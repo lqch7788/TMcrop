@@ -15,6 +15,15 @@ import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import {
+  WATERING_METHOD_MAP,
+  WATERING_UNIT_MAP,
+  FERTILIZER_CATEGORY_MAP,
+  PESTICIDE_CATEGORY_MAP,
+  APPLICATION_METHOD_MAP,
+  FEED_UNIT_MAP,
+} from '@/constants/cropConstants';
+import { FeedRecordCard, type FeedRecordItem } from './FeedRecordCard';
 import { Button } from '@/components/ui';
 import { Edit2, Trash2, Download, X, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -82,6 +91,66 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     onSuccess?.();
   };
 
+  // 2026-06-28：施肥/用药子表辅助函数
+  /** 生成前端唯一 ID（编辑时识别行） */
+  const genFeedId = (prefix: 'fr' | 'pr') =>
+    `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  /** 创建一行默认空记录 */
+  const makeEmptyFeedRecord = (mode: 'fertilizer' | 'pesticide'): FeedRecordItem => ({
+    id: genFeedId(mode === 'fertilizer' ? 'fr' : 'pr'),
+    name: '',
+    category: mode === 'fertilizer' ? 'foliar' : 'fungicide',
+    amount: undefined,
+    unit: 'g',
+    dilution: undefined,
+    dilutionType: 'dilute',
+    applicationMethod: 'spray',
+    notes: '',
+    ...(mode === 'pesticide' ? { safetyInterval: undefined, targetPest: '' } : {}),
+  });
+  /** 添加一行施肥 */
+  const handleAddFertilizer = () => {
+    setFormData(prev => ({
+      ...prev,
+      fertilizerRecords: [makeEmptyFeedRecord('fertilizer'), ...(prev.fertilizerRecords || [])],
+    }));
+  };
+  /** 添加一行用药 */
+  const handleAddPesticide = () => {
+    setFormData(prev => ({
+      ...prev,
+      pesticideRecords: [makeEmptyFeedRecord('pesticide'), ...(prev.pesticideRecords || [])],
+    }));
+  };
+  /** 更新施肥行 */
+  const handleUpdateFertilizer = (idx: number, next: FeedRecordItem) => {
+    setFormData(prev => ({
+      ...prev,
+      fertilizerRecords: (prev.fertilizerRecords || []).map((r, i) => (i === idx ? next : r)),
+    }));
+  };
+  /** 更新用药行 */
+  const handleUpdatePesticide = (idx: number, next: FeedRecordItem) => {
+    setFormData(prev => ({
+      ...prev,
+      pesticideRecords: (prev.pesticideRecords || []).map((r, i) => (i === idx ? next : r)),
+    }));
+  };
+  /** 删除施肥行 */
+  const handleRemoveFertilizer = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      fertilizerRecords: (prev.fertilizerRecords || []).filter((_, i) => i !== idx),
+    }));
+  };
+  /** 删除用药行 */
+  const handleRemovePesticide = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      pesticideRecords: (prev.pesticideRecords || []).filter((_, i) => i !== idx),
+    }));
+  };
+
   const OPERATORS = useMemo(() => {
     return getDictItems('operator').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
@@ -90,10 +159,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     recordDate: todayLocal(),
     temperature: undefined as number | undefined,
     humidity: undefined as number | undefined,
+    // 2026-06-28：浇水方式 + 浇水量（PR1）
+    // watering=false 时隐藏方式/量；watering=true 时显示
     watering: false,
+    wateringMethod: undefined as string | undefined,  // 浇水方式：spray/drip/flood/mist/dip/pot
+    wateringAmount: undefined as number | undefined,  // 浇水量（数值）
+    wateringUnit: 'L' as string | undefined,          // 单位：L/ml/kg/pot
+    // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储到 daily_records.data JSON）
+    fertilizerRecords: [] as FeedRecordItem[],
+    pesticideRecords: [] as FeedRecordItem[],
     abnormality: '',
     survivalCountChange: undefined as number | undefined,
-    plantedCountChange: undefined as number | undefined,
     lossCountChange: undefined as number | undefined,
     runnerIncreaseCount: undefined as number | undefined,
     replantChange: undefined as number | undefined,  // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
@@ -119,7 +195,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     const sc = isMotherMode ? (formData.survivalCountChange || 0) : 0;  // 1:多=母株损耗；1:1=0（死字段）
     const ri = isMotherMode ? (formData.runnerIncreaseCount || 0) : 0;  // 1:多=小苗产出；1:1=0（死字段）
     const lc = formData.lossCountChange || 0;
-    const tc = formData.plantedCountChange || 0;                        // 人工定植
     const rc = formData.replantChange || 0;                            // 2026-06-16: 补苗
 
     // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并！）
@@ -127,16 +202,14 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     const motherAvailable = Math.max(0,
       (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0)
     );
-    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/定植/采收入库）
-    // 2026-06-25: 移除 autoPlantedCount（不再统计）
-    // ⚠️ 注意：本次损耗 lc 和本次定植 tc 不参与"剩余可用"计算（避免双重扣减）
-    //   校验逻辑是 lc+tc ≤ seedlingAvailable（即：用户本次最多可扣减多少）
+    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/采收入库）
+    // 2026-06-28：彻底移除 transplantedCount（已定植）业务字段，业务规则：种植管理不再从育苗取苗
+    // ⚠️ 注意：本次损耗 lc 不参与"剩余可用"计算（避免双重扣减）
     const seedlingAvailable = Math.max(0,
       (record.expandedPlantCount || 0)
       + ri                          // 本次产出
-      + (isMotherMode ? 0 : rc)     // 2026-06-16 修复：1:1 模式补苗计入小苗池（补种子）
+      + (isMotherMode ? 0 : rc)     // 1:1 模式补苗计入小苗池（补种子）
       - (record.seedlingLossCount || 0)
-      - (record.transplantedCount || 0)
       - (record.harvestStockedCount || 0)
     );
 
@@ -146,15 +219,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         await showAlert(`1:多 模式：母株损耗 ${sc} 超过母株剩余可用 ${motherAvailable} 株，请调整（母株池：${motherAvailable} 株）`);
         return;
       }
-      // 1:多 模式：小苗池校验 — 小苗损耗 + 人工定植不能超过小苗剩余可用
-      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailable) {
-        await showAlert(`1:多 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
+      // 1:多 模式：小苗池校验 — 小苗损耗不能超过小苗剩余可用
+      if (lc > 0 && lc > seedlingAvailable) {
+        await showAlert(`1:多 模式：小苗损耗 ${lc} 超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
         return;
       }
     } else {
       // 1:1 模式：小苗池校验（母株池无损耗概念，无需校验）
-      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailable) {
-        await showAlert(`1:1 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
+      if (lc > 0 && lc > seedlingAvailable) {
+        await showAlert(`1:1 模式：小苗损耗 ${lc} 超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
         return;
       }
     }
@@ -166,20 +239,53 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
 
     try {
       // 2026-06-16: 数量体系重构 — bizData 用 5 个新字段名（损耗/产出/定植 + 补苗）
+      // 2026-06-28：浇水推断 — 填了方式或量就算浇了（不再依赖复选框 watering 字段）
+      const hasWatering = !!(formData.wateringMethod || formData.wateringAmount != null);
       const bizData: any = {
         temperature: formData.temperature,
         humidity: formData.humidity,
-        watering: formData.watering,
+        watering: hasWatering,
+        // 2026-06-28：浇水方式 + 浇水量（PR1）— 仅当 hasWatering 时写入
+        wateringMethod: hasWatering ? formData.wateringMethod : undefined,
+        wateringAmount: hasWatering ? formData.wateringAmount : undefined,
+        wateringUnit: hasWatering ? formData.wateringUnit : undefined,
+        // 2026-06-28：施肥/用药记录子表（仅写入有效行：name 非空 + amount > 0）
+        fertilizerRecords: (formData.fertilizerRecords || [])
+          .filter(r => r.name && r.amount && r.amount > 0)
+          .map(r => ({
+            id: r.id,
+            name: r.name,
+            category: r.category,
+            amount: r.amount,
+            unit: r.unit,
+            dilution: r.dilution,
+            dilutionType: r.dilutionType,
+            applicationMethod: r.applicationMethod,
+            notes: r.notes || undefined,
+          })),
+        pesticideRecords: (formData.pesticideRecords || [])
+          .filter(r => r.name && r.amount && r.amount > 0)
+          .map(r => ({
+            id: r.id,
+            name: r.name,
+            category: r.category,
+            amount: r.amount,
+            unit: r.unit,
+            dilution: r.dilution,
+            dilutionType: r.dilutionType,
+            applicationMethod: r.applicationMethod,
+            safetyInterval: r.safetyInterval,
+            targetPest: r.targetPest || undefined,
+            notes: r.notes || undefined,
+          })),
         abnormality: formData.abnormality || undefined,
         // 5 个新业务字段
         motherLossChange: sc,      // 1:多=母株损耗；1:1=0
         seedlingLossChange: lc,    // 两种模式=小苗损耗
         expandedChange: ri,        // 1:多=小苗产出；1:1=0
-        transplantedChange: tc,    // 两种模式=人工定植
         replantChange: rc,         // 2026-06-16: 补苗（两种模式都支持）
-        // 4 个旧字段名（兼容历史 data 读取）
+        // 4 个旧字段名（兼容历史 data 读取）— 2026-06-27 移除 transplantedChange/plantedCountChange
         survivalCountChange: sc,
-        plantedCountChange: tc,
         lossCountChange: lc,
         runnerIncreaseCount: ri,
         phValue: formData.phValue,
@@ -195,18 +301,22 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         await showAlert('添加记录失败，请重试');
         return;
       }
-      // 重置表单
+      // 重置表单（2026-06-28 修复：必须重置施肥/用药子表数组，否则下次新建会残留上次数据）
       setFormData({
         recordDate: todayLocal(),
         temperature: undefined,
         humidity: undefined,
         watering: false,
+        wateringMethod: undefined,
+        wateringAmount: undefined,
+        wateringUnit: 'L',
+        fertilizerRecords: [],  // ← 新增：清空施肥子表
+        pesticideRecords: [],   // ← 新增：清空用药子表
         abnormality: '',
         survivalCountChange: undefined,
-        plantedCountChange: undefined,
         lossCountChange: undefined,
         runnerIncreaseCount: undefined,
-        replantChange: undefined,  // 2026-06-16
+        replantChange: undefined,
         remarks: '',
         phValue: undefined,
         ecValue: undefined,
@@ -227,8 +337,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   // 后端再 stringify 一层写入 data 列 → 覆盖真实业务字段 → 下次 GET spread 时业务字段全消失。
   // 修复：只挑真正的业务字段作为 editingRow 初始值。
   const BUSINESS_FIELDS = [
-    'recordDate', 'temperature', 'humidity', 'watering', 'abnormality',
-    'survivalCountChange', 'plantedCountChange', 'lossCountChange',
+    'recordDate', 'temperature', 'humidity', 'watering',
+    'wateringMethod', 'wateringAmount', 'wateringUnit',  // 2026-06-28：浇水方式 + 量
+    'fertilizerRecords', 'pesticideRecords',            // 2026-06-28：施肥/用药子表
+    'abnormality',
+    'survivalCountChange', 'lossCountChange',
     'runnerIncreaseCount', 'replantChange', 'phValue', 'ecValue', 'operator', 'remarks',
   ] as const;
 
@@ -262,7 +375,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         : (() => {
             const biz: any = {};
             ['temperature', 'humidity', 'watering', 'abnormality',
-             'survivalCountChange', 'plantedCountChange', 'lossCountChange',
+             'survivalCountChange', 'lossCountChange',
              'runnerIncreaseCount', 'phValue', 'ecValue', 'operator'].forEach(k => {
               if (editingRow[k] !== undefined) biz[k] = editingRow[k];
             });
@@ -310,21 +423,40 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       await showAlert('没有记录可导出');
       return;
     }
-    const data = latestDailyRecords.map(r => ({
-      '日期': r.recordDate,
-      '温度(℃)': r.temperature ?? '',
-      '湿度(%)': r.humidity ?? '',
-      'pH值': r.phValue ?? '',
-      'EC值(mS/cm)': r.ecValue ?? '',
-      '浇水': r.watering ? '是' : '否',
-      '母株损耗': r.survivalCountChange ?? '',
-      '小苗产出': r.runnerIncreaseCount ?? '',
-      '人工定植': r.plantedCountChange ?? '',
-      '小苗损耗': r.lossCountChange ?? '',
-      '补苗': r.replantChange ?? '',
-      '操作员': r.operator ?? '',
-      '备注': r.remarks ?? ''
-    }));
+    const data = latestDailyRecords.map(r => {
+      // 2026-06-28：施肥/用药明细（多行转文本）
+      const fertText = (r.fertilizerRecords || [])
+        .map(f => `${f.name} ${f.amount || 0}${FEED_UNIT_MAP[f.unit as string] || f.unit}${f.dilutionType === 'dilute' && f.dilution ? `×${f.dilution}倍` : '(干施)'}`)
+        .join('; ');
+      const pestText = (r.pesticideRecords || [])
+        .map(p => `${p.name} ${p.amount || 0}${FEED_UNIT_MAP[p.unit as string] || p.unit}${p.dilutionType === 'dilute' && p.dilution ? `×${p.dilution}倍` : ''}${p.targetPest ? `/${p.targetPest}` : ''}${p.safetyInterval ? `(安全间隔${p.safetyInterval}天)` : ''}`)
+        .join('; ');
+      return {
+        '日期': r.recordDate,
+        '温度(℃)': r.temperature ?? '',
+        '湿度(%)': r.humidity ?? '',
+        'pH值': r.phValue ?? '',
+        'EC值(mS/cm)': r.ecValue ?? '',
+        '浇水': r.watering ? '是' : '否',
+        // 2026-06-28：PR1 浇水方式 + 量（参考字典）
+        '浇水方式': r.watering ? (WATERING_METHOD_MAP[r.wateringMethod as string] || r.wateringMethod || '-') : '-',
+        '浇水量': r.watering && r.wateringAmount != null
+          ? `${r.wateringAmount} ${WATERING_UNIT_MAP[r.wateringUnit as string] || r.wateringUnit || ''}`
+          : '-',
+        // 2026-06-28：施肥/用药子表（种类数 + 明细）
+        '施肥种类': (r.fertilizerRecords || []).length,
+        '施肥明细': fertText || '-',
+        '用药种类': (r.pesticideRecords || []).length,
+        '用药明细': pestText || '-',
+        '母株损耗': r.survivalCountChange ?? '',
+        '小苗产出': r.runnerIncreaseCount ?? '',
+        // 2026-06-27：移除"人工定植"列
+        '小苗损耗': r.lossCountChange ?? '',
+        '补苗': r.replantChange ?? '',
+        '操作员': r.operator ?? '',
+        '备注': r.remarks ?? ''
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '每日记录');
@@ -375,13 +507,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         </span>
       );
     }
-    if (field === 'plantedCountChange' && value !== undefined) {
-      return (
-        <span className={value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-500'}>
-          {value > 0 ? '+' : ''}{value}
-        </span>
-      );
-    }
+    // 2026-06-27：移除 plantedCountChange 字段路由
     if (field === 'lossCountChange' && value !== undefined) {
       return <span className="text-red-600">+{value}</span>;
     }
@@ -414,95 +540,274 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         <div className="bg-gray-50 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">添加新记录</h4>
           <div className="grid grid-cols-3 gap-4">
-            {/* 第一行：记录日期 */}
+            {/* 2026-06-28：UI 重构 — 第 1 行：记录日期 + 操作人员 + 异常情况（基础信息紧凑排列） */}
             <div>
-              <Label className="text-gray-700">记录日期</Label>
+              <Label className="text-gray-700">记录日期 <span className="text-red-500">*</span></Label>
               <DatePicker className="w-full"
                 selected={formData.recordDate ? new Date(formData.recordDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, recordDate: todayLocal(date) })}
               />
             </div>
-            {/* 第一行：温度 */}
             <div>
-              <Label className="text-gray-700">温度（℃）</Label>
+              <Label className="text-gray-700">操作人员</Label>
+              <Select
+                value={formData.operator}
+                onValueChange={(val) => setFormData({ ...formData, operator: val })}
+              >
+                <SelectTrigger className={deepInputClass}>
+                  <SelectValue placeholder="请选择操作人员" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.map(op => (
+                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-700">异常情况</Label>
               <Input
-                type="number"
-                value={formData.temperature || ''}
-                onChange={(e) => setFormData({ ...formData, temperature: Number(e.target.value) })}
+                type="text"
+                value={formData.abnormality}
+                onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
+                placeholder="无异常请留空"
                 className={deepInputClass}
               />
             </div>
-            {/* 第一行：湿度 */}
-            <div>
-              <Label className="text-gray-700">湿度（%）</Label>
-              <Input
-                type="number"
-                value={formData.humidity || ''}
-                onChange={(e) => setFormData({ ...formData, humidity: Number(e.target.value) })}
-                className={deepInputClass}
-              />
-            </div>
-            {/* 第二行：pH值 */}
-            <div>
-              <Label className="text-gray-700">pH值</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.phValue ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  phValue: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="如：6.5"
-                className={deepInputClass}
-              />
-            </div>
-            {/* 第二行：EC值 */}
-            <div>
-              <Label className="text-gray-700">EC值（mS/cm）</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.ecValue ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  ecValue: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="如：2.0"
-                className={deepInputClass}
-              />
-            </div>
-            {/* 第二行：是否浇水 */}
-            <div>
-              <Label className="text-gray-700">是否浇水</Label>
-              <div className="flex items-center h-full">
-                <Input
-                  type="checkbox"
-                  checked={formData.watering}
-                  onChange={(e) => setFormData({ ...formData, watering: e.target.checked })}
-                  className="w-5 h-5 text-emerald-600 rounded border-gray-400"
-                />
-                <span className="ml-2 text-sm text-gray-600">{formData.watering ? '是' : '否'}</span>
+            {/* 2026-06-28：环境参数折叠面板（参照施肥/用药模式）— 默认展开 */}
+            <details
+              className="md:col-span-3 border border-blue-100 rounded-lg bg-blue-50/20 overflow-hidden"
+              open
+            >
+              <summary className="cursor-pointer select-none px-3 py-2 bg-blue-50/50 hover:bg-blue-50 text-sm font-semibold text-blue-800 flex items-center justify-between">
+                <span>▼ 🌡️ 环境参数（温度/湿度/pH/EC — 4 项）</span>
+                <span className="text-xs text-blue-600 font-normal">
+                  {formData.temperature != null ? `${formData.temperature}℃` : '-'}
+                  {' / '}
+                  {formData.humidity != null ? `${formData.humidity}%` : '-'}
+                  {' / pH '}{formData.phValue ?? '-'}
+                  {' / EC '}{formData.ecValue ?? '-'}
+                </span>
+              </summary>
+              <div className="p-3 grid grid-cols-4 gap-3">
+                <div>
+                  <Label className="text-gray-700">温度（℃）</Label>
+                  <Input
+                    type="number"
+                    value={formData.temperature || ''}
+                    onChange={(e) => setFormData({ ...formData, temperature: Number(e.target.value) })}
+                    placeholder="如：25"
+                    className={deepInputClass}
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-700">湿度（%）</Label>
+                  <Input
+                    type="number"
+                    value={formData.humidity || ''}
+                    onChange={(e) => setFormData({ ...formData, humidity: Number(e.target.value) })}
+                    placeholder="如：65"
+                    className={deepInputClass}
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-700">pH值</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={formData.phValue ?? ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      phValue: e.target.value ? Number(e.target.value) : undefined
+                    })}
+                    placeholder="如：6.5"
+                    className={deepInputClass}
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-700">EC值（mS/cm）</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={formData.ecValue ?? ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ecValue: e.target.value ? Number(e.target.value) : undefined
+                    })}
+                    placeholder="如：2.0"
+                    className={deepInputClass}
+                  />
+                </div>
               </div>
-            </div>
-            {/* 2026-06-16: 数量体系重构 — 1:1 模式只显示 2 个输入框（损耗 + 定植） */}
-            {/* 1:多 模式：母株损耗（仅 1:多 模式） */}
-            {isMotherMode && (
-              <div>
-                <Label className="text-gray-700">
-                  母株损耗
-                  <span className="text-xs text-gray-500 ml-1">（母株死亡/减少，存入"母株损耗"字段）</span>
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={formData.survivalCountChange ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === '' || v === '-') {
-                      setFormData({ ...formData, survivalCountChange: undefined });
-                      return;
-                    }
+            </details>
+            {/* 2026-06-28：浇水折叠面板（简化版）— 不再需要勾选，用户填了就记录 */}
+            {/* open 状态：用户填了方式/量 → 自动展开（视觉反馈），否则保持折叠 */}
+            <details
+              className="md:col-span-3 border border-cyan-100 rounded-lg bg-cyan-50/20 overflow-hidden"
+              open={!!(formData.wateringMethod || formData.wateringAmount != null)}
+            >
+              <summary className="cursor-pointer select-none px-3 py-2 bg-cyan-50/50 hover:bg-cyan-50 text-sm font-semibold text-cyan-800 flex items-center justify-between">
+                <span>▼ 💧 浇水（{(formData.wateringMethod || formData.wateringAmount != null) ? '已填写' : '未填写'}）</span>
+                <span className="text-xs text-cyan-700 font-normal">
+                  {formData.wateringMethod
+                    ? `${WATERING_METHOD_MAP[formData.wateringMethod] || formData.wateringMethod}`
+                    : ''}
+                  {formData.wateringAmount != null
+                    ? ` / ${formData.wateringAmount}${WATERING_UNIT_MAP[formData.wateringUnit as string] || formData.wateringUnit || ''}`
+                    : ''}
+                  {!formData.wateringMethod && formData.wateringAmount == null && '点击展开 — 选方式 + 填浇水量（可填可不填）'}
+                </span>
+              </summary>
+              <div className="p-3 grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-gray-700">浇水方式</Label>
+                  <Select
+                    value={formData.wateringMethod || 'spray'}
+                    onValueChange={(v) => setFormData({ ...formData, wateringMethod: v })}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="选择浇水方式（可选）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* 16 种浇水方式（2026-06-28：PR1）— 从 WATERING_METHOD_MAP 自动渲染，便于维护 */}
+                      {Object.entries(WATERING_METHOD_MAP).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-gray-700">浇水量</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={formData.wateringAmount ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        wateringAmount: e.target.value ? Number(e.target.value) : undefined
+                      })}
+                      placeholder="如：5（可选）"
+                      className={`${deepInputClass} flex-1`}
+                    />
+                    <Select
+                      value={formData.wateringUnit || 'L'}
+                      onValueChange={(v) => setFormData({ ...formData, wateringUnit: v })}
+                    >
+                      <SelectTrigger className={`${deepInputClass} w-24`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* 单位（2026-06-28：PR1）— 从 WATERING_UNIT_MAP 自动渲染 */}
+                        {Object.entries(WATERING_UNIT_MAP).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </details>
+            {/* 2026-06-28：施肥折叠面板（动态列表，1:N 嵌套）— md:col-span-3 占满弹窗宽度 */}
+            <details
+              className="md:col-span-3 border border-emerald-100 rounded-lg bg-emerald-50/20 overflow-hidden"
+              open={(formData.fertilizerRecords?.length || 0) > 0}
+            >
+              <summary className="cursor-pointer select-none px-3 py-2 bg-emerald-50/50 hover:bg-emerald-50 text-sm font-semibold text-emerald-800 flex items-center justify-between">
+                <span>▼ 施肥（{(formData.fertilizerRecords?.length || 0)} 种）</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleAddFertilizer(); }}
+                  className="text-xs px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                >
+                  + 添加
+                </button>
+              </summary>
+              <div className="p-3 space-y-2">
+                {(formData.fertilizerRecords?.length || 0) === 0 ? (
+                  <div className="text-center py-3 text-xs text-gray-500">
+                    暂无施肥记录 — 点击「+ 添加」记录
+                  </div>
+                ) : (
+                  formData.fertilizerRecords!.map((rec, idx) => (
+                    <FeedRecordCard
+                      key={rec.id}
+                      mode="fertilizer"
+                      value={rec}
+                      onChange={(next) => handleUpdateFertilizer(idx, next)}
+                      onRemove={() => handleRemoveFertilizer(idx)}
+                    />
+                  ))
+                )}
+              </div>
+            </details>
+            {/* 2026-06-28：用药折叠面板（动态列表，1:N 嵌套，含安全间隔期/防治对象）— md:col-span-3 占满宽度 */}
+            <details
+              className="md:col-span-3 border border-red-100 rounded-lg bg-red-50/20 overflow-hidden"
+              open={(formData.pesticideRecords?.length || 0) > 0}
+            >
+              <summary className="cursor-pointer select-none px-3 py-2 bg-red-50/50 hover:bg-red-50 text-sm font-semibold text-red-800 flex items-center justify-between">
+                <span>▼ 用药（{(formData.pesticideRecords?.length || 0)} 种）</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleAddPesticide(); }}
+                  className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  + 添加
+                </button>
+              </summary>
+              <div className="p-3 space-y-2">
+                {(formData.pesticideRecords?.length || 0) === 0 ? (
+                  <div className="text-center py-3 text-xs text-gray-500">
+                    暂无用药记录 — 点击「+ 添加」记录
+                  </div>
+                ) : (
+                  formData.pesticideRecords!.map((rec, idx) => (
+                    <FeedRecordCard
+                      key={rec.id}
+                      mode="pesticide"
+                      value={rec}
+                      onChange={(next) => handleUpdatePesticide(idx, next)}
+                      onRemove={() => handleRemovePesticide(idx)}
+                    />
+                  ))
+                )}
+              </div>
+            </details>
+            {/* 2026-06-28：数量池统计折叠到二级（避免与施肥/用药面板混淆，UI 更整洁）— md:col-span-3 占满宽度 */}
+            <details
+              className="md:col-span-3 border border-gray-200 rounded-lg bg-gray-50/50 overflow-hidden"
+              open={false}
+            >
+              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
+                <span>▼ 数量统计（母株/小苗池 — 与施肥/用药独立）</span>
+                <span className="text-xs text-gray-500 font-normal">
+                  {(formData.motherLossCount || 0) > 0 ? '母株损耗 ' + formData.motherLossCount : ''}
+                  {(formData.expandedPlantCount || 0) > 0 ? ' 小苗产出 ' + formData.expandedPlantCount : ''}
+                  {(formData.seedlingLossCount || 0) > 0 ? ' 小苗损耗 ' + formData.seedlingLossCount : ''}
+                  {(formData.replantCount || 0) > 0 ? ' 补苗 ' + formData.replantCount : ''}
+                </span>
+              </summary>
+              {/* 2026-06-28：内部 4 列布局 — 1:多 模式 4 字段一行（母株损耗/小苗产出/小苗损耗/补苗）；1:1 模式 3 字段（无母株损耗/小苗产出） */}
+              <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* 1:多 模式：母株损耗（仅 1:多 模式） */}
+                {isMotherMode && (
+                  <div>
+                    <Label className="text-gray-700">
+                      母株损耗
+                      <span className="text-xs text-gray-500 ml-1">（母株死亡/减少，存入"母株损耗"字段）</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.survivalCountChange ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '' || v === '-') {
+                          setFormData({ ...formData, survivalCountChange: undefined });
+                          return;
+                        }
                     const n = Number(v);
                     if (!isNaN(n) && n >= 0) {
                       setFormData({ ...formData, survivalCountChange: n });
@@ -540,31 +845,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 />
               </div>
             )}
-            {/* 人工定植（两种模式都显示） */}
-            <div>
-              <Label className="text-gray-700">
-                人工定植
-                <span className="text-xs text-gray-500 ml-1">（人工把小苗定植到种植区，存入"人工定植"字段）</span>
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.plantedCountChange ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '' || v === '-') {
-                    setFormData({ ...formData, plantedCountChange: undefined });
-                    return;
-                  }
-                  const n = Number(v);
-                  if (!isNaN(n) && n >= 0) {
-                    setFormData({ ...formData, plantedCountChange: n });
-                  }
-                }}
-                placeholder="今日人工定植数（不可为负）"
-                className={deepInputClass}
-              />
-            </div>
+            {/* 2026-06-27：移除"人工定植"录入字段（按业务规则：所有成品小苗必须先入库再出库） */}
             {/* 小苗损耗（两种模式都显示） */}
             <div>
               <Label className="text-gray-700">
@@ -617,33 +898,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
-            {/* 操作人员 + 异常情况 — 2 个一排 */}
-            <div>
-              <Label className="text-gray-700">操作人员</Label>
-              <Select
-                value={formData.operator}
-                onValueChange={(val) => setFormData({ ...formData, operator: val })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择操作人员" />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPERATORS.map(op => (
-                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-gray-700">异常情况</Label>
-              <Input
-                type="text"
-                value={formData.abnormality}
-                onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
-                placeholder="无异常请留空"
-                className={deepInputClass}
-              />
-            </div>
+              </div>{/* 关闭数量统计 details 内层 grid */}
+            </details>{/* 关闭数量统计 details 面板 */}
+            {/* 2026-06-28：操作人员 + 异常情况 已移到第 1 行（与记录日期同排），此处不再重复 */}
             {/* 备注（单独一行，占3列） */}
             <div className="col-span-3">
               <Label className="text-gray-700">备注</Label>
@@ -688,10 +945,16 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold">pH</th>
                     <th className="px-2 py-2 text-left font-semibold">EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
+                    {/* 2026-06-28：PR1 浇水方式 + 量（新增两列） */}
+                    <th className="px-2 py-2 text-left font-semibold w-24">浇水方式</th>
+                    <th className="px-2 py-2 text-left font-semibold w-24">浇水量</th>
+                    {/* 2026-06-28：施肥/用药子表（种类计数，详情 hover tooltip） */}
+                    <th className="px-2 py-2 text-left font-semibold w-16 text-emerald-700">施肥</th>
+                    <th className="px-2 py-2 text-left font-semibold w-16 text-red-700">用药</th>
                     {/* 2026-06-16: 列名对齐 DB 字段 — 1:1 模式无 sc 累加（死字段），隐藏"成活变化"列；1:多 模式显示"母株损耗"列 */}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">母株损耗</th>}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
-                    <th className="px-2 py-2 text-left font-semibold">人工定植</th>
+                    {/* 2026-06-27：移除"人工定植"列（按业务规则：所有成品小苗必须先入库再出库） */}
                     <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>
                     {/* 2026-06-16: 补苗列（两种模式都显示） */}
                     <th className="px-2 py-2 text-left font-semibold">补苗</th>
@@ -728,6 +991,43 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'watering', r.watering)}
                       </td>
+                      {/* 2026-06-28：PR1 浇水方式 + 浇水量（2 列） */}
+                      <td className="px-2 py-1.5 text-xs">
+                        {r.watering ? (WATERING_METHOD_MAP[r.wateringMethod as string] || r.wateringMethod || '-') : '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-xs">
+                        {r.watering && r.wateringAmount != null
+                          ? `${r.wateringAmount} ${WATERING_UNIT_MAP[r.wateringUnit as string] || r.wateringUnit || ''}`
+                          : '-'}
+                      </td>
+                      {/* 2026-06-28：修复 bug — 施肥/用药 必须在 小苗损耗/补苗 之前渲染（对齐 thead 顺序）
+                          之前 bug：thead 顺序是「施肥/用药 → 母株损耗/小苗产出 → 小苗损耗/补苗」，
+                          但 tbody 顺序是「母株损耗/小苗产出 → 小苗损耗/补苗 → 施肥/用药」，
+                          导致列错位，用户看到的"施肥"列实际是母株损耗数据，"小苗损耗"列实际是施肥种数 */}
+                      <td className="px-2 py-1.5">
+                        {(r.fertilizerRecords?.length || 0) > 0 ? (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 cursor-help"
+                            title={(r.fertilizerRecords || []).map(f =>
+                              `${f.name} ${f.amount || 0}${FEED_UNIT_MAP[f.unit as string] || f.unit}${f.dilutionType === 'dilute' && f.dilution ? `×${f.dilution}倍` : '(干施)'}`
+                            ).join('\n')}
+                          >
+                            {r.fertilizerRecords!.length} 种
+                          </span>
+                        ) : <span className="text-gray-300">-</span>}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {(r.pesticideRecords?.length || 0) > 0 ? (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 cursor-help"
+                            title={(r.pesticideRecords || []).map(p =>
+                              `${p.name} ${p.amount || 0}${FEED_UNIT_MAP[p.unit as string] || p.unit}${p.dilutionType === 'dilute' && p.dilution ? `×${p.dilution}倍` : ''}${p.targetPest ? `/${p.targetPest}` : ''}${p.safetyInterval ? `(间隔${p.safetyInterval}天)` : ''}`
+                            ).join('\n')}
+                          >
+                            {r.pesticideRecords!.length} 种
+                          </span>
+                        ) : <span className="text-gray-300">-</span>}
+                      </td>
                       {/* 2026-06-16: 1:多 模式才显示母株损耗列（1:1 模式 sc 是死字段） */}
                       {isMotherMode && (
                         <td className="px-2 py-1.5">
@@ -739,9 +1039,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                           {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
                         </td>
                       )}
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'plantedCountChange', r.plantedCountChange)}
-                      </td>
+                      {/* 2026-06-27：移除 plantedCountChange 数据列 */}
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
                       </td>

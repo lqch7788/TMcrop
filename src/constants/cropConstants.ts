@@ -28,6 +28,128 @@ export const SOURCE_TYPE_MAP: Record<string, string> = {
   other: '其他',
 };
 
+// ========== 种苗形态映射（2026-06-27 新增）==========
+// 区别于种源类型（source_type，描述种源本身），种苗形态描述种苗作为成品的状态
+// 应用场景：种苗详情弹窗的"种苗类型"列、种苗列表筛选、表单录入
+export const SEEDLING_FORM_MAP: Record<string, string> = {
+  flower: '花朵',
+  branch: '枝条',
+  bare_root: '裸根苗',
+  plug: '穴盘苗',
+  cup: '杯苗',
+  potted: '盆栽苗',
+  balled: '土球苗',
+  seedling: '实生苗',
+  other: '其他',
+};
+
+// ========== 成品形态映射（2026-06-27 新增）==========
+// 描述作物种植采收后的成品状态（如整株、花朵、果实、种子、块茎等）
+// 应用场景：种植详情弹窗的"成品类型"列、采收登记、库存入库
+export const HARVEST_FORM_MAP: Record<string, string> = {
+  whole_plant: '整株',
+  flower: '花朵',
+  fruit: '果实',
+  seed: '种子',
+  tuber: '块茎',
+  bulb: '球根',
+  leaf: '叶片',
+  root: '根茎',
+  stem: '茎秆',
+  cutting: '枝条',
+  other: '其他',
+};
+
+// ========== 浇水方式映射（2026-06-28：PR1 浇水字段扩充） ==========
+// 16 种主流浇水方式，覆盖人工/滴灌/喷灌/漫灌/其他 5 类
+export const WATERING_METHOD_MAP: Record<string, string> = {
+  // 人工类
+  manual_watering: '人工浇水',
+  water_pot: '浇水壶',
+  manual_dip: '人工浸盆',
+  // 滴灌类
+  drip_irrigation: '滴灌',
+  drip_tube: '滴管',
+  drip_emitter: '滴箭',
+  drip_tape: '滴灌带',
+  // 喷灌类
+  sprinkler: '喷灌',
+  spray: '喷淋',
+  mist: '喷雾',
+  micro_sprinkler: '微喷',
+  atomization: '雾化',
+  // 漫灌/沟灌类
+  flood: '漫灌',
+  furrow: '沟灌',
+  basin: '淹灌',
+  // 其他
+  seepage: '渗灌',
+  root_dip: '蘸根',
+};
+
+// 浇水量单位映射（2026-06-28：PR1 — 7 种单位覆盖小量到大宗）
+export const WATERING_UNIT_MAP: Record<string, string> = {
+  ml: '毫升',
+  L: '升',
+  kg: '公斤',
+  pot: '瓢',
+  barrel: '桶',
+  ton: '吨',
+  m3: '立方米',
+};
+
+// ========== 施肥类型映射（2026-06-28：每日记录子表） ==========
+// 与 FertilizerRecordItem['category'] 一一对应
+export const FERTILIZER_CATEGORY_MAP: Record<string, string> = {
+  foliar: '叶面肥',
+  base: '基肥',
+  top: '追肥',
+  dressing: '冲施肥',
+  organic: '有机肥',
+  compound: '复合肥',
+  other: '其他',
+};
+
+// ========== 药剂类型映射（2026-06-28：每日记录子表） ==========
+// 与 PesticideRecordItem['category'] 一一对应
+export const PESTICIDE_CATEGORY_MAP: Record<string, string> = {
+  fungicide: '杀菌剂',
+  insecticide: '杀虫剂',
+  herbicide: '除草剂',
+  acaricide: '杀螨剂',
+  bio: '生物制剂',
+  other: '其他',
+};
+
+// ========== 施用方式映射（2026-06-28：施肥/用药共用） ==========
+export const APPLICATION_METHOD_MAP: Record<string, string> = {
+  spray: '喷雾',
+  pour: '浇灌',
+  dip: '蘸根',
+  spread: '撒施',
+  dust: '喷粉',
+  other: '其他',
+};
+
+// ========== 稀释方式映射（2026-06-28：施肥/用药共用） ==========
+// dilute=配水稀释喷洒；dry=直接撒施（如颗粒肥、毒土）
+export const DILUTION_TYPE_MAP: Record<string, string> = {
+  dilute: '稀释',
+  dry: '干施',
+};
+
+// ========== 用量单位映射（2026-06-28：施肥/用药共用 — 8 种） ==========
+export const FEED_UNIT_MAP: Record<string, string> = {
+  g: '克',
+  kg: '公斤',
+  L: '升',
+  ml: '毫升',
+  bottle: '瓶',
+  bag: '袋',
+  pack: '包',
+  scoop: '勺',
+};
+
 // ========== 种源来源途径映射 ==========
 // V3.1 库存来源字典（与 inventory.ts 的 SourceType enum 一一对应）
 // key 同时支持短码（gift）和带后缀的（external_purchased）以兼容不同来源

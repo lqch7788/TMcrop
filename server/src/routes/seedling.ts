@@ -288,6 +288,7 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       'propagation_mode', 'mother_plant_count', 'expanded_plant_count', 'scion_count',
       'source_deducted_quantity',
       'charge_person',
+      'seedling_form',
       'create_time', 'update_time',
     ];
     const insertValues = [
@@ -300,6 +301,7 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
       safeCount,
       chargePerson,
+      seedling.seedling_form || null, // 2026-06-27：种苗形态
       now, now,
     ];
     if (insertCols.length !== insertValues.length) {
@@ -970,6 +972,7 @@ router.post('/', (req: Request, res: Response) => {
       'propagation_mode', 'mother_plant_count', 'expanded_plant_count', 'scion_count',
       'source_deducted_quantity',
       'charge_person',
+      'seedling_form',
       'create_time', 'update_time',
     ];
     const insertValues = [
@@ -981,6 +984,7 @@ router.post('/', (req: Request, res: Response) => {
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
       (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
       chargePerson,
+      seedling_form || null, // 2026-06-27：种苗形态
       now, now,
     ];
     if (insertCols.length !== insertValues.length) {
@@ -1116,6 +1120,8 @@ router.put('/:id', (req: Request, res: Response) => {
       'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
       // 2026-06-15: 负责人（编辑弹窗"负责人"显示空 bug 修复）
       'charge_person',
+      // 2026-06-27 P0：种苗形态（详情弹窗"种苗类型"列数据源）
+      'seedling_form',
     ]);
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
     if (safeKeys.length === 0) {
@@ -1213,7 +1219,7 @@ router.delete('/:id', (req: Request, res: Response) => {
  */
 export function validateDailyChange(id: string, changeData: any): string | null {
   const db = getDatabase();
-  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count, expanded_plant_count, seedling_loss_count, transplanted_count FROM seedlings WHERE id = ?');
+  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count, expanded_plant_count, seedling_loss_count FROM seedlings WHERE id = ?');
   stmt.bind([id]);
   let row: any = null;
   if (stmt.step()) row = stmt.getAsObject();
@@ -1224,16 +1230,15 @@ export function validateDailyChange(id: string, changeData: any): string | null 
   const mode = row.propagation_mode || 'one_to_one';
   const is11 = mode === 'one_to_one';
 
-  // 4 个 delta（统一新字段名）
+  // 2026-06-28：3 个 delta（移除 transplantedChange 业务字段，业务规则：种植管理不再从育苗取苗）
   const mlc = Number(changeData?.motherLossChange) || 0;
   const slc = Number(changeData?.seedlingLossChange) || 0;
   const ec = Number(changeData?.expandedChange) || 0;
-  const tc = Number(changeData?.transplantedChange) || 0;
-  // 2026-06-16: 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
+  // 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
   const rc = Number(changeData?.replantChange) || 0;
   if (rc < 0) return '补苗数不能为负';
 
-  // 2026-06-16: 母株池 / 小苗池 严格分离校验
+  // 母株池 / 小苗池 严格分离校验
   // 母株池：1:1 = 当前 + 补苗（无损耗）；1:多 = 当前 - 损耗 + 补苗
   // 小苗池：1:1 = expanded（=母株同步）；1:多 = 当前产出 + 本次产出
   const newMother = is11
@@ -1242,8 +1247,6 @@ export function validateDailyChange(id: string, changeData: any): string | null 
   const newMotherLoss = (Number(row.mother_loss_count) || 0) + mlc;
   const newExpanded = is11 ? newMother : ((Number(row.expanded_plant_count) || 0) + ec);
   const newSeedlingLoss = (Number(row.seedling_loss_count) || 0) + slc;
-  const newTransplanted = (Number(row.transplanted_count) || 0) + tc;
-  const newAutoPlanted = Number(row.auto_planted_count) || 0;  // 此字段由其他路径累加（不在 daily_record.data 里）
   const newHarvestStocked = Number(row.harvest_stocked_count) || 0;  // 此字段由其他路径累加
 
   // 母株池校验
@@ -1255,12 +1258,10 @@ export function validateDailyChange(id: string, changeData: any): string | null 
   // 小苗池校验（与母株池严格分离）
   if (newExpanded < 0) return '小苗产出累计越界';
   if (newSeedlingLoss < 0) return '小苗累计损耗不能为负';
-  if (newTransplanted < 0) return '人工定植累计不能为负';
-  // 小苗池总消耗 = 小苗损耗 + 人工定植 + 自动定植 + 采收入库
-  // 小苗池剩余可用 = 小苗产出 - 小苗损耗 - 人工定植 - 自动定植 - 采收入库
-  const smallAvailable = newExpanded - newSeedlingLoss - newTransplanted - newAutoPlanted - newHarvestStocked;
+  // 2026-06-28：移除 transplanted/autoPlanted 校验，小苗池消耗 = 损耗 + 采收入库
+  const smallAvailable = newExpanded - newSeedlingLoss - newHarvestStocked;
   if (smallAvailable < 0) {
-    return `小苗池消耗超过产出：累计产出 ${newExpanded}，累计消耗 ${newSeedlingLoss + newTransplanted + newAutoPlanted + newHarvestStocked}`;
+    return `小苗池消耗超过产出：累计产出 ${newExpanded}，累计消耗 ${newSeedlingLoss + newHarvestStocked}`;
   }
   if (newSeedlingLoss > newExpanded) {
     return `小苗损耗 ${newSeedlingLoss} 超过已产出 ${newExpanded}`;
@@ -1281,22 +1282,18 @@ function normalizeChangeData(raw: any, propagationMode: string): any {
   if (!raw || typeof raw !== 'object') return raw || {};
   const is11 = (propagationMode || 'one_to_one') === 'one_to_one';
   const legacySc = Number(raw.survivalCountChange) || 0;
-  const legacyTc = Number(raw.plantedCountChange) || 0;
   const legacyLc = Number(raw.lossCountChange) || 0;
   const legacyRi = Number(raw.runnerIncreaseCount) || 0;
   const legacyRc = Number(raw.replantChange) || 0;
   return {
-    // 2026-06-16: 优先新字段名（前端已发新字段名），回退旧字段名
-    // 关键修复：旧字段值为 0 时不覆盖新字段值（用 || 短路判断）
+    // 2026-06-28：移除 transplantedChange 字段映射（业务规则：种植管理不再从育苗取苗）
     motherLossChange: is11 ? 0 : (Number(raw.motherLossChange) || legacySc),
     seedlingLossChange: Number(raw.seedlingLossChange) || legacyLc,
     expandedChange: Number(raw.expandedChange) || legacyRi || (is11 ? legacySc : 0),
-    transplantedChange: Number(raw.transplantedChange) || legacyTc,
-    // 2026-06-16: 补苗（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
+    // 补苗（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
     replantChange: Math.max(0, Number(raw.replantChange) || legacyRc),
     // 保留旧字段名（用于 daily_record.data 写回时的兼容性）
     survivalCountChange: raw.survivalCountChange,
-    plantedCountChange: raw.plantedCountChange,
     lossCountChange: raw.lossCountChange,
     runnerIncreaseCount: raw.runnerIncreaseCount,
   };
@@ -1350,7 +1347,7 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
   // 累加到新字段
   safeAdd('mother_loss_count', mlc * sign);
   safeAdd('seedling_loss_count', slc * sign);
-  safeAdd('transplanted_count', tc * sign);
+  // 2026-06-28：移除 transplanted_count 累加（业务规则：种植管理不再从育苗取苗）
   safeAdd('replant_count', rc * sign);  // 2026-06-16: 补苗累计（两种模式都加）
 
   if (!is11) {
@@ -1918,9 +1915,12 @@ router.get('/:id/available-count', (req: Request, res: Response) => {
     }
 
     const survivalQuantity = item.survival_quantity || 0;
-    // 2026-06-13: 修复 — seedlings 表列名是 planted_count，不是 planted_quantity
-    const plantedQuantity = item.planted_count || 0;
-    const availableCount = survivalQuantity - plantedQuantity;
+    // 2026-06-28：业务规则变更，种植管理不再从育苗取苗，"可用定植"改为"可用苗数"：
+    // 可用苗数 = 累计产出 - 累计损耗 - 采收入库累计（不含已定植，业务上已停止统计）
+    const expanded = item.expanded_plant_count || 0;
+    const seedlingLoss = item.seedling_loss_count || 0;
+    const harvestStocked = item.harvest_stocked_count || 0;
+    const availableCount = expanded - seedlingLoss - harvestStocked;
 
     res.json({ success: true, data: Math.max(0, availableCount) });
   } catch (error) {
@@ -1933,41 +1933,9 @@ router.get('/:id/available-count', (req: Request, res: Response) => {
  * POST /api/seedlings/:id/increase-planted
  */
 router.post('/:id/increase-planted', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { count } = req.body;
-
-    if (typeof count !== 'number' || count <= 0) {
-      return res.status(400).json({ success: false, error: '无效的数量' });
-    }
-
-    const db = getDatabase();
-
-    // 检查育苗记录是否存在
-    const stmt = db.prepare('SELECT * FROM seedlings WHERE id = ?');
-    stmt.bind([id]);
-    let item: any = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
-
-    if (!item || Object.keys(item).length === 0) {
-      return res.status(404).json({ success: false, error: '育苗记录不存在' });
-    }
-
-    const now = new Date().toISOString();
-    // 2026-06-16: 数量体系重构 — 累加到 auto_planted_count（与 planting.ts 一致），停止写旧字段 planted_count
-    const currentAutoPlanted = item.auto_planted_count || 0;
-    const newAutoPlanted = currentAutoPlanted + count;
-
-    db.run('UPDATE seedlings SET auto_planted_count = ?, update_time = ? WHERE id = ?', [newAutoPlanted, now, id]);
-    saveDatabase();
-
-    res.json({ success: true, data: { auto_planted_count: newAutoPlanted } });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '增加已定植数量失败' });
-  }
+  // 2026-06-28：业务规则变更 — 种植管理不再从育苗管理页面获取种苗（统一从内部种源）。
+  // 此接口保留 route 不删（避免旧调用 404），但写入 DB 的逻辑已停用，仅返回成功。
+  res.json({ success: true, data: { auto_planted_count: 0 }, deprecated: true });
 });
 
 /**

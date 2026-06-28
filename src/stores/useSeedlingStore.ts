@@ -132,13 +132,9 @@ export const useSeedlingStore = create<SeedlingState>()(
       try {
         const result = await seedlingService.increasePlantedCount(id, count);
         if (result) {
-          // 2026-06-16: 数量体系重构 — 后端 increase-planted 路由累加到 auto_planted_count
-          // 前端 store 同步更新 autoPlantedCount 避免数据分裂（UI 与 DB 一致）
-          set((s) => ({
-            items: s.items.map((i) =>
-              i.id === id ? { ...i, autoPlantedCount: ((i as any).autoPlantedCount || 0) + count } : i
-            ),
-          }));
+          // 2026-06-28：业务规则变更 — 种植管理不再从育苗取苗，此函数调用入口应该已被禁用
+          // 保留函数避免外部 import 报错，但不再修改 store 状态（无业务意义）
+          void count;
         }
         return result;
       } catch (error) {

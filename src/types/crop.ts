@@ -301,15 +301,17 @@ export interface DailyRecord {
   humidity?: number;          // 湿度
   watering: boolean;          // 是否浇水
   abnormality?: string;       // 异常情况
-  // 数量变化字段
+  // 数量变化字段（2026-06-28 移除 plantedCountChange）
   survivalCountChange?: number;  // 成活数量变化（正数增加，负数减少）
-  plantedCountChange?: number;  // 定植数量变化
   lossCountChange?: number;    // 损耗数量
   runnerIncreaseCount?: number;  // 2026-06-05: 扩繁小苗数量（草莓匍匐茎育苗等无性繁殖场景，记录当天新增的小苗数）
   replantChange?: number;     // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
   remarks?: string;           // 备注
   // 水质参数（补充）
   phValue?: number;          // pH值
+  // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储在 daily_records.data JSON）
+  fertilizerRecords?: FertilizerRecordItem[];
+  pesticideRecords?: PesticideRecordItem[];
   ecValue?: number;           // EC值 (电导率)
   // 操作信息（补充）
   operator?: string;          // 操作人员
@@ -403,7 +405,7 @@ export interface Seedling {
   endDate?: string;           // 实际结束日期
   initialCount: number;       // 初始数量
   survivalCount: number;      // 成活数量
-  plantedCount: number;       // 已定植数量
+  // 2026-06-28：移除 plantedCount 字段（业务规则：种植管理不再从育苗取苗）
   survivalRate: number;       // 成苗率
   lossCount: number;          // 损耗数量
   lossRate: number;           // 损耗率
@@ -459,16 +461,63 @@ export interface Seedling {
   // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
   endType?: 'normal' | 'abnormal'; // 结束类型
   endTime?: string;                // 结束时间（ISO）
-  // 2026-06-15: 数量体系重构 — 5 业务字段（由每日记录自动累加）
+  // 2026-06-15: 数量体系重构 — 5 业务字段 → 3 业务字段（2026-06-28 移除 transplantedCount/autoPlantedCount）
   motherLossCount?: number;    // 母株累计损耗（1:多模式专用）
   seedlingLossCount?: number;  // 小苗累计损耗
-  transplantedCount?: number;  // 人工定植累计
-  autoPlantedCount?: number;   // 自动定植累计（种植管理触发）
   harvestStockedCount?: number; // 采收入库累计
   customMultiple?: number;     // 自定义扩繁倍数
 }
 
-// ========== 种植类型 ==========
+// ========== 每日记录施肥/用药子表（2026-06-28） ==========
+// 1 次记录可含多条施肥/用药（1:N 嵌套），用前端生成 id 识别编辑行
+
+/** 施肥记录项（叶面肥/基肥/追肥/冲施肥/有机肥/复合肥） */
+export interface FertilizerRecordItem {
+  /** 前端生成 ID（编辑时识别用），格式 fr_${timestamp}_${random} */
+  id: string;
+  /** 肥料名称（手输，不强制字典） */
+  name: string;
+  /** 施肥类型 */
+  category: 'foliar' | 'base' | 'top' | 'dressing' | 'organic' | 'compound' | 'other';
+  /** 用量数值（必填 > 0） */
+  amount: number;
+  /** 用量单位 */
+  unit: 'g' | 'kg' | 'L' | 'ml' | 'bottle' | 'bag' | 'pack' | 'scoop';
+  /** 稀释比例（倍数），仅当 dilutionType='dilute' 必填 */
+  dilution?: number;
+  /** 稀释方式：稀释 / 干施 */
+  dilutionType: 'dilute' | 'dry';
+  /** 施用方式 */
+  applicationMethod: 'spray' | 'pour' | 'dip' | 'spread' | 'dust' | 'other';
+  /** 备注（可选） */
+  notes?: string;
+}
+
+/** 用药记录项（杀菌剂/杀虫剂/除草剂/杀螨剂/生物制剂） */
+export interface PesticideRecordItem {
+  /** 前端生成 ID */
+  id: string;
+  /** 药剂名称（手输） */
+  name: string;
+  /** 药剂类型 */
+  category: 'fungicide' | 'insecticide' | 'herbicide' | 'acaricide' | 'bio' | 'other';
+  /** 用量数值（必填 > 0） */
+  amount: number;
+  /** 用量单位 */
+  unit: 'g' | 'kg' | 'L' | 'ml' | 'bottle' | 'bag' | 'pack' | 'scoop';
+  /** 稀释比例（倍数），仅当 dilutionType='dilute' 必填 */
+  dilution?: number;
+  /** 稀释方式：稀释 / 干施 */
+  dilutionType: 'dilute' | 'dry';
+  /** 施用方式 */
+  applicationMethod: 'spray' | 'pour' | 'dip' | 'spread' | 'dust' | 'other';
+  /** 安全间隔期（天）— 药剂特有，决定何时可采收 */
+  safetyInterval?: number;
+  /** 防治对象 — 药剂特有 */
+  targetPest?: string;
+  /** 备注（可选） */
+  notes?: string;
+}
 
 /**
  * 种植采收记录（V2 — Phase 1: 2026-06-17）

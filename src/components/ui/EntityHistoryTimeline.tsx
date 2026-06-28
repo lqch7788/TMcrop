@@ -12,7 +12,6 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Clock, Table2, Download, Loader2, RefreshCw } from 'lucide-react';
 import { Button, Tooltip } from '@/components/ui';
 import { fetchFullHistory, type HistoryItem } from '@/services/entityHistoryService';
-import { SOURCE_TYPE_MAP } from '@/constants/cropConstants';
 import * as XLSX from 'xlsx';
 
 /** 入库来源类型 → 中文（外购入库/调拨入库/自产入库 等） */
@@ -36,6 +35,20 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   external: '外部入库',
 };
 
+/**
+ * 类型列配置：每个 entity 都有自己的"类型"概念
+ * - 种源：source_type（seed/cutting/grafting 等）→ "种源类型"
+ * - 育苗：seedling_form（花朵/枝条/裸根苗/穴盘苗 等）→ "种苗类型"
+ * - 种植：harvest_form（整株/花朵/果实/种子 等）→ "成品类型"
+ * 调用方传 typeColumn 才会显示该列；不传则不显示
+ */
+export interface TypeColumnConfig {
+  /** 列标题（"种源类型"/"种苗类型"/"成品类型"） */
+  label: string;
+  /** 该 entity 的类型值（已格式化好的中文） */
+  value: string;
+}
+
 interface EntityHistoryTimelineProps {
   /** 实体标识（seed-sources / seedlings / plantings） */
   entity: 'seed-sources' | 'seedlings' | 'plantings';
@@ -43,8 +56,12 @@ interface EntityHistoryTimelineProps {
   entityId: string;
   /** 实体编码（用于关联 material_flow_log） */
   entityCode: string;
-  /** 实体的种源类型标签（仅种源页面传，如 seed/cutting/grafting 等） */
-  entitySourceType?: string;
+  /**
+   * 实体的"类型"列配置（2026-06-27 新增，替代原硬编码"种源类型"列）
+   * - 不传则不显示"类型"列
+   * - 传了则按 label 显示列标题，value 显示单元格内容
+   */
+  typeColumn?: TypeColumnConfig;
 }
 
 /** 分类筛选配置（含悬停说明） */
@@ -76,12 +93,6 @@ function fmtDelta(delta?: number, unit?: string): string {
   return `${sign}${delta}${unit ? ' ' + unit : ''}`;
 }
 
-/** 种源类型 → 中文 */
-function fmtSourceType(t?: string): string {
-  if (!t) return '-';
-  return SOURCE_TYPE_MAP[t] || t;
-}
-
 /** 入库来源 → 中文 */
 function fmtInboundSource(t?: string): string {
   if (!t) return '-';
@@ -100,7 +111,7 @@ function catBadge(cat: string): string {
   }
 }
 
-export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySourceType }: EntityHistoryTimelineProps) {
+export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn }: EntityHistoryTimelineProps) {
   const [view, setView] = useState<'timeline' | 'table'>('timeline');
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
@@ -130,25 +141,36 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
   // 导出 Excel
   const handleExport = () => {
     if (filtered.length === 0) return;
-    const sourceTypeLabel = fmtSourceType(entitySourceType);
-    const rows = filtered.map((r, i) => ({
-      '序号': i + 1,
-      '时间': fmtTime(r.occurredAt),
-      '类型': r.action,
-      '来源': fmtInboundSource(r.inboundSource),
-      '作物品种': r.cropName || '-',
-      '种源类型': sourceTypeLabel,
-      '数量变化': fmtDelta(r.quantityDelta, r.unit),
-      '关联单号': r.refCode || '-',
-      '关联模块': r.refModule || '-',
-      '操作员': r.operatorName || '-',
-      '备注': r.remarks || '-',
-    }));
+    // 类型列：有 typeColumn 则用其 label/value，否则不导出该列
+    const typeLabel = typeColumn?.label;
+    const typeValue = typeColumn?.value || '-';
+    const rows = filtered.map((r, i) => {
+      const row: Record<string, string | number> = {
+        '序号': i + 1,
+        '时间': fmtTime(r.occurredAt),
+        '类型': r.action,
+        '来源': fmtInboundSource(r.inboundSource),
+        '作物品种': r.cropName || '-',
+        '数量变化': fmtDelta(r.quantityDelta, r.unit),
+        '关联单号': r.refCode || '-',
+        '关联模块': r.refModule || '-',
+        '操作员': r.operatorName || '-',
+        '备注': r.remarks || '-',
+      };
+      if (typeLabel) row[typeLabel] = typeValue;
+      return row;
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 6 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
+    // 动态列宽：固定列 + 可选类型列
+    const baseCols = [
+      { wch: 6 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
       { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 30 },
     ];
+    if (typeLabel) {
+      // 把"类型列"插入到"作物品种"之后（位置 4）
+      baseCols.splice(4, 0, { wch: 12 });
+    }
+    ws['!cols'] = baseCols;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '追溯历史');
     XLSX.writeFile(wb, `追溯历史_${entityCode}_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -267,38 +289,73 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, entitySour
         /* ===== 表格模式 ===== */
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="w-full text-sm">
+            {/* table-fixed：列宽由 <th> 决定，不被内容撑开（解决"备注列占 1/3 宽度"问题） */}
+            <table className="w-full text-sm table-fixed">
+              <colgroup>
+                {/* 不带 typeColumn 时：8 列比例 18/9/12/11/13/17/8/12 */}
+                {/* 带 typeColumn 时：9 列比例 17/9/11/10/10/11/16/7/9 */}
+                {typeColumn ? (
+                  <>
+                    <col className="w-[17%]" /> {/* 时间 */}
+                    <col className="w-[9%]" />  {/* 类型 */}
+                    <col className="w-[11%]" /> {/* 来源 */}
+                    <col className="w-[10%]" /> {/* 作物品种 */}
+                    <col className="w-[10%]" /> {/* 类型列（种源类型/种苗类型/成品类型） */}
+                    <col className="w-[11%]" /> {/* 数量变化 */}
+                    <col className="w-[16%]" /> {/* 关联单号 */}
+                    <col className="w-[7%]" />  {/* 操作员 */}
+                    <col className="w-[9%]" />  {/* 备注 */}
+                  </>
+                ) : (
+                  <>
+                    <col className="w-[18%]" /> {/* 时间 */}
+                    <col className="w-[9%]" />  {/* 类型 */}
+                    <col className="w-[12%]" /> {/* 来源 */}
+                    <col className="w-[11%]" /> {/* 作物品种 */}
+                    <col className="w-[13%]" /> {/* 数量变化 */}
+                    <col className="w-[17%]" /> {/* 关联单号 */}
+                    <col className="w-[8%]" />  {/* 操作员 */}
+                    <col className="w-[12%]" /> {/* 备注 */}
+                  </>
+                )}
+              </colgroup>
               <thead className="bg-blue-500 text-white sticky top-0 z-10">
                 <tr>
-                  <th className="px-2 py-2 text-left w-36">时间</th>
-                  <th className="px-2 py-2 text-left w-24">类型</th>
-                  <th className="px-2 py-2 text-left w-24">来源</th>
-                  <th className="px-2 py-2 text-left w-24">作物品种</th>
-                  <th className="px-2 py-2 text-left w-28 whitespace-nowrap">种源类型</th>
-                  <th className="px-2 py-2 text-left w-24">数量变化</th>
-                  <th className="px-2 py-2 text-left">关联单号</th>
-                  <th className="px-2 py-2 text-left w-16">操作员</th>
-                  <th className="px-2 py-2 text-left">备注</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">时间</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">类型</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">来源</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">作物品种</th>
+                  {typeColumn && (
+                    <th className="px-2 py-2 text-left whitespace-nowrap">{typeColumn.label}</th>
+                  )}
+                  <th className="px-2 py-2 text-left whitespace-nowrap">数量变化</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">关联单号</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">操作员</th>
+                  <th className="px-2 py-2 text-left whitespace-nowrap">备注</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filtered.map((r, idx) => (
                   <tr key={r.id || idx} className="hover:bg-gray-50">
-                    <td className="px-2 py-1.5 text-xs text-gray-500 font-mono">{fmtTime(r.occurredAt)}</td>
+                    <td className="px-2 py-1.5 text-xs text-gray-500 font-mono truncate" title={fmtTime(r.occurredAt)}>{fmtTime(r.occurredAt)}</td>
                     <td className="px-2 py-1.5">
-                      <span className={`px-1.5 py-0.5 text-xs rounded border ${catBadge(r.category)}`}>
+                      <span className={`px-1.5 py-0.5 text-xs rounded border whitespace-nowrap ${catBadge(r.category)}`}>
                         {r.action}
                       </span>
                     </td>
-                    <td className="px-2 py-1.5 text-xs text-gray-600">{fmtInboundSource(r.inboundSource)}</td>
-                    <td className="px-2 py-1.5 text-xs text-gray-700">{r.cropName || '-'}</td>
-                    <td className="px-2 py-1.5 text-xs text-gray-600">{fmtSourceType(entitySourceType)}</td>
-                    <td className={`px-2 py-1.5 text-xs font-medium ${(r.quantityDelta ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td className="px-2 py-1.5 text-xs text-gray-600 truncate" title={fmtInboundSource(r.inboundSource)}>{fmtInboundSource(r.inboundSource)}</td>
+                    <td className="px-2 py-1.5 text-xs text-gray-700 truncate" title={r.cropName || '-'}>{r.cropName || '-'}</td>
+                    {typeColumn && (
+                      <td className="px-2 py-1.5 text-xs text-gray-600 truncate" title={typeColumn.value || '-'}>{typeColumn.value || '-'}</td>
+                    )}
+                    <td className={`px-2 py-1.5 text-xs font-medium whitespace-nowrap ${(r.quantityDelta ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {fmtDelta(r.quantityDelta, r.unit)}
                     </td>
-                    <td className="px-2 py-1.5 text-xs font-mono text-gray-600">{r.refCode || '-'}</td>
-                    <td className="px-2 py-1.5 text-xs text-gray-600">{r.operatorName || '-'}</td>
-                    <td className="px-2 py-1.5 text-xs text-gray-500">{r.remarks || '-'}</td>
+                    <td className="px-2 py-1.5 text-xs font-mono text-gray-600 truncate" title={r.refCode || '-'}>{r.refCode || '-'}</td>
+                    <td className="px-2 py-1.5 text-xs text-gray-600 truncate" title={r.operatorName || '-'}>{r.operatorName || '-'}</td>
+                    <td className="px-2 py-1.5 text-xs text-gray-500 truncate" title={r.remarks || '-'}>
+                      {r.remarks || '-'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -1,0 +1,286 @@
+/**
+ * 施肥/用药记录行卡组件（2026-06-28：每日记录子表）
+ *
+ * 设计要点：
+ * - 折叠态：只显示名称+类型摘要 + ✕删除
+ * - 展开态：完整 6 字段表单 + 药剂特有两个字段条件渲染
+ * - 行卡内联编辑，不嵌套弹窗（操作深度最浅）
+ * - 受控组件：value + onChange 由父组件管理（便于父组件序列化到 JSON）
+ */
+import React, { useState } from 'react'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
+import { ChevronDown, ChevronRight, X } from 'lucide-react'
+import {
+  FERTILIZER_CATEGORY_MAP,
+  PESTICIDE_CATEGORY_MAP,
+  APPLICATION_METHOD_MAP,
+  DILUTION_TYPE_MAP,
+  FEED_UNIT_MAP,
+} from '@/constants/cropConstants'
+
+// 通用行卡 item（兼容施肥和用药的并集类型）
+export interface FeedRecordItem {
+  id: string
+  name: string
+  category: string
+  amount: number | undefined
+  unit: string
+  dilution?: number
+  dilutionType: 'dilute' | 'dry'
+  applicationMethod: string
+  notes?: string
+  // 药剂特有
+  safetyInterval?: number
+  targetPest?: string
+}
+
+interface FeedRecordCardProps {
+  /** 行卡模式：fertilizer=施肥 / pesticide=用药 */
+  mode: 'fertilizer' | 'pesticide'
+  /** 行数据 */
+  value: FeedRecordItem
+  /** 变更回调 */
+  onChange: (next: FeedRecordItem) => void
+  /** 删除回调 */
+  onRemove: () => void
+  /** 是否默认展开 */
+  defaultExpanded?: boolean
+}
+
+const CATEGORY_MAP = {
+  fertilizer: FERTILIZER_CATEGORY_MAP,
+  pesticide: PESTICIDE_CATEGORY_MAP,
+}
+
+export function FeedRecordCard({
+  mode,
+  value,
+  onChange,
+  onRemove,
+  defaultExpanded = false,
+}: FeedRecordCardProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded || !value.name)
+  const categoryMap = CATEGORY_MAP[mode]
+  const summary = `${value.name || '（未命名）'} · ${categoryMap[value.category] || value.category || '未分类'}`
+
+  return (
+    <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+      {/* 折叠/展开头部 */}
+      <div
+        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? (
+          <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+        )}
+        <span className="text-sm text-gray-700 flex-1 truncate" title={summary}>
+          {summary}
+        </span>
+        {value.amount != null && value.amount > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {value.amount} {FEED_UNIT_MAP[value.unit] || value.unit}
+            {value.dilutionType === 'dilute' && value.dilution ? ` × ${value.dilution}倍` : ''}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="text-gray-400 hover:text-red-600 hover:bg-red-50 rounded p-1 shrink-0 transition-colors"
+          title="删除此行"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 展开态：完整表单（2026-06-28：4 字段一行布局，与数量统计面板一致） */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30">
+          {/* 第 1 行：名称 + 类型 + 用量 + 单位（4 字段一行） */}
+          <div className="grid grid-cols-4 gap-2">
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">
+                {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={value.name}
+                onChange={(e) => onChange({ ...value, name: e.target.value })}
+                placeholder={mode === 'fertilizer' ? '如：绿叶青叶面肥' : '如：多菌灵'}
+                className="h-8 text-sm border-gray-300"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">类型</Label>
+              <Select
+                value={value.category || Object.keys(categoryMap)[0]}
+                onValueChange={(v) => onChange({ ...value, category: v })}
+              >
+                <SelectTrigger className="h-8 text-sm border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(categoryMap).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">
+                用量 <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.1"
+                value={value.amount ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    amount: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+                placeholder="如：10"
+                className="h-8 text-sm border-gray-300"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">单位</Label>
+              <Select
+                value={value.unit || 'g'}
+                onValueChange={(v) => onChange({ ...value, unit: v })}
+              >
+                <SelectTrigger className="h-8 text-sm border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FEED_UNIT_MAP).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* 第 2 行：稀释方式 + 稀释比例 + 施用方式 + 备注（4 字段一行） */}
+          <div className="grid grid-cols-4 gap-2">
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">稀释方式</Label>
+              <Select
+                value={value.dilutionType || 'dilute'}
+                onValueChange={(v) =>
+                  onChange({ ...value, dilutionType: v as 'dilute' | 'dry' })
+                }
+              >
+                <SelectTrigger className="h-8 text-sm border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DILUTION_TYPE_MAP).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">
+                稀释比例 {value.dilutionType === 'dry' && <span className="text-gray-400">（干施不需要）</span>}
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={value.dilution ?? ''}
+                disabled={value.dilutionType === 'dry'}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    dilution: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+                placeholder="如：800"
+                className="h-8 text-sm border-gray-300 disabled:bg-gray-100"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">施用方式</Label>
+              <Select
+                value={value.applicationMethod || 'spray'}
+                onValueChange={(v) => onChange({ ...value, applicationMethod: v })}
+              >
+                <SelectTrigger className="h-8 text-sm border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(APPLICATION_METHOD_MAP).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">备注</Label>
+              <Input
+                value={value.notes || ''}
+                onChange={(e) => onChange({ ...value, notes: e.target.value })}
+                placeholder="可选"
+                className="h-8 text-sm border-gray-300"
+              />
+            </div>
+          </div>
+
+          {/* 第 3 行（药剂特有）：防治对象 + 安全间隔期 + 占位 + 占位（4 字段一行，保持对齐） */}
+          {mode === 'pesticide' && (
+            <div className="grid grid-cols-4 gap-2">
+              <div>
+                <Label className="text-xs text-gray-600 mb-1">防治对象</Label>
+                <Input
+                  value={value.targetPest || ''}
+                  onChange={(e) => onChange({ ...value, targetPest: e.target.value })}
+                  placeholder="如：白粉病 / 蚜虫"
+                  className="h-8 text-sm border-gray-300"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600 mb-1">
+                  安全间隔期（天）<span className="text-gray-400">— 决定何时可采收</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={value.safetyInterval ?? ''}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      safetyInterval: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  placeholder="如：7"
+                  className="h-8 text-sm border-gray-300"
+                />
+              </div>
+              {/* 2 个占位列，保持 4 列对齐 */}
+              <div></div>
+              <div></div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
