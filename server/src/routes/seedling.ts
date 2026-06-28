@@ -1360,6 +1360,29 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
     // 1:1 模式：expanded_plant_count 由 mother_plant_count 派生（总投入数 = initial + replant）
     db.run('UPDATE seedlings SET expanded_plant_count = mother_plant_count WHERE id = ?', [id]);
   }
+
+  // 2026-06-28：同步旧字段（前端 UI 标签预览显示需要）— 修复"成活数量/成活率全是 0"bug
+  // 之前 bug：daily_records 累加只更新了新字段（mother_loss_count/seedling_loss_count 等），
+  // 但旧字段（survival_quantity/loss_count/survival_rate/loss_rate）从未被同步，
+  // 导致前端 apiSeedlingService 归一化后 survivalCount 永远是 0。
+  db.run(`
+    UPDATE seedlings
+    SET
+      loss_count = seedling_loss_count,
+      survival_quantity = MAX(0, seedling_quantity - seedling_loss_count),
+      survival_rate = CASE
+        WHEN seedling_quantity > 0
+        THEN ROUND((CAST(MAX(0, seedling_quantity - seedling_loss_count) AS REAL) / seedling_quantity) * 100, 1)
+        ELSE 0
+      END,
+      loss_rate = CASE
+        WHEN seedling_quantity > 0
+        THEN ROUND((CAST(seedling_loss_count AS REAL) / seedling_quantity) * 100, 1)
+        ELSE 0
+      END
+    WHERE id = ?
+  `, [id]);
+
   return null;
 }
 

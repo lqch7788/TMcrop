@@ -250,22 +250,31 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** P0: 前端批量入库（保留前端 labelNumber 规则） */
   batchCreateLabels: async (labels) => {
     try {
-      const res = await enhancedApiClient.post('/plant-labels/batch-create', {
-        labels: labels.map(l => ({
-          labelNumber: l.labelNumber,
-          seedlingId: l.seedlingId || null,
-          plantingId: l.plantingId || null,
-          moveInAreaName: l.moveInAreaName || null,
-          moveInDate: l.moveInDate || null,
-          quantity: l.quantity ?? 1,
-        }))
-      });
-      if (res.success) {
+      // 2026-06-28 修复：enhancedApiClient.post 已自动解包，res 是后端的 data 字段
+      // 成功响应：{ inserted: N, insertedIds: [...] } — 用 inserted 字段判断成功
+      // 失败响应：apiClient 会自动 throw，所以走 catch
+      const res = await enhancedApiClient.post<{ inserted?: number; insertedIds?: number[] }>(
+        '/plant-labels/batch-create',
+        {
+          labels: labels.map(l => ({
+            labelNumber: l.labelNumber,
+            seedlingId: l.seedlingId || null,
+            plantingId: l.plantingId || null,
+            moveInAreaName: l.moveInAreaName || null,
+            moveInDate: l.moveInDate || null,
+            quantity: l.quantity ?? 1,
+          }))
+        }
+      );
+      if (res && typeof res.inserted === 'number' && res.inserted > 0) {
+        // 入库成功 — 刷新 Store 让所有订阅者看到新标签
         await get().loadLabels();
-        return res.data;
+        return res;
       }
       return null;
-    } catch {
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[usePlantLabelStore] batchCreateLabels 失败:', error);
       return null;
     }
   },

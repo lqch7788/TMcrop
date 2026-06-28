@@ -203,10 +203,54 @@ router.post('/batch-create', (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    const rows: string[] = [];
-    const params: any[] = [];
+    const validItems: any[] = [];
     for (const item of labels) {
       if (!item.labelNumber) continue;
+      validItems.push(item);
+    }
+
+    if (validItems.length === 0) {
+      res.status(400).json({ success: false, error: '没有有效标签' });
+      return;
+    }
+
+    // 2026-06-28：检测重复 — 在 INSERT 之前查 DB，找出已存在的 label_number
+    // 防御层 1：DB UNIQUE 约束（fixMissingSchema 已加 idx_plant_labels_label_number_unique）
+    // 防御层 2：这里预先检测，让前端拿到清晰的"哪些已存在"信息
+    const labelNumbers = validItems.map((it) => it.labelNumber);
+    const placeholders = labelNumbers.map(() => '?').join(',');
+    const existingResult = db.exec(
+      `SELECT label_number FROM plant_labels WHERE label_number IN (${placeholders})`,
+      labelNumbers
+    );
+    const existingSet = new Set<string>();
+    if (existingResult[0]?.values) {
+      for (const row of existingResult[0].values) {
+        existingSet.add(String(row[0]));
+      }
+    }
+
+    // 过滤掉已存在的（不插入），告知前端已跳过的标签
+    const toInsert = validItems.filter((it) => !existingSet.has(it.labelNumber));
+    const skipped = validItems.filter((it) => existingSet.has(it.labelNumber));
+
+    if (toInsert.length === 0) {
+      res.status(200).json({
+        success: true,
+        data: {
+          inserted: 0,
+          skipped: skipped.length,
+          skippedLabelNumbers: skipped.map((s) => s.labelNumber),
+          insertedIds: [],
+          message: `所有 ${skipped.length} 个标签编号已存在，已跳过`,
+        },
+      });
+      return;
+    }
+
+    const rows: string[] = [];
+    const params: any[] = [];
+    for (const item of toInsert) {
       rows.push('(?, ?, ?, ?, ?, ?, ?)');
       params.push(
         item.labelNumber,
@@ -217,11 +261,6 @@ router.post('/batch-create', (req: Request, res: Response) => {
         item.quantity ?? 1,
         now
       );
-    }
-
-    if (rows.length === 0) {
-      res.status(400).json({ success: false, error: '没有有效标签' });
-      return;
     }
 
     db.run(
@@ -240,7 +279,12 @@ router.post('/batch-create', (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      data: { inserted: rows.length, insertedIds },
+      data: {
+        inserted: rows.length,
+        skipped: skipped.length,
+        skippedLabelNumbers: skipped.map((s) => s.labelNumber),
+        insertedIds,
+      },
     });
     saveDatabase();
   } catch (error) {
