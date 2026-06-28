@@ -138,14 +138,6 @@ export const DILUTION_TYPE_MAP: Record<string, string> = {
   dry: '干施',
 };
 
-// ========== 繁殖事件子苗状态映射（2026-06-28：方案B 合并繁殖记录到每日记录） ==========
-// 仅 1:多 模式有意义，记录本次繁殖事件产出的子苗健康状态
-export const PROPAGATION_STATUS_MAP: Record<string, string> = {
-  healthy: '健康',
-  weak: '弱苗',
-  diseased: '病害',
-};
-
 // ========== 用量单位映射（2026-06-28：施肥/用药共用 — 8 种） ==========
 export const FEED_UNIT_MAP: Record<string, string> = {
   g: '克',

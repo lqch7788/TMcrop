@@ -22,10 +22,8 @@ import {
   PESTICIDE_CATEGORY_MAP,
   APPLICATION_METHOD_MAP,
   FEED_UNIT_MAP,
-  PROPAGATION_STATUS_MAP,
 } from '@/constants/cropConstants';
 import { FeedRecordCard, type FeedRecordItem } from './FeedRecordCard';
-import { PropagationEventCard, type PropagationEventItem } from './PropagationEventCard';
 import { Button } from '@/components/ui';
 import { Edit2, Trash2, Download, X, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -153,37 +151,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     }));
   };
 
-  // 2026-06-28：繁殖事件子表辅助函数（方案B：合并繁殖记录到每日记录，仅 1:多 模式）
-  /** 创建一行默认空繁殖事件 */
-  const makeEmptyPropagationEvent = (): PropagationEventItem => ({
-    id: `pe_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    motherChange: undefined,
-    seedlingOutput: undefined,
-    seedlingStatus: 'healthy',
-    remarks: '',
-  });
-  /** 添加一行繁殖事件 */
-  const handleAddPropagation = () => {
-    setFormData(prev => ({
-      ...prev,
-      propagationEvents: [makeEmptyPropagationEvent(), ...(prev.propagationEvents || [])],
-    }));
-  };
-  /** 更新繁殖事件 */
-  const handleUpdatePropagation = (idx: number, next: PropagationEventItem) => {
-    setFormData(prev => ({
-      ...prev,
-      propagationEvents: (prev.propagationEvents || []).map((e, i) => (i === idx ? next : e)),
-    }));
-  };
-  /** 删除繁殖事件 */
-  const handleRemovePropagation = (idx: number) => {
-    setFormData(prev => ({
-      ...prev,
-      propagationEvents: (prev.propagationEvents || []).filter((_, i) => i !== idx),
-    }));
-  };
-
   const OPERATORS = useMemo(() => {
     return getDictItems('operator').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
@@ -201,8 +168,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储到 daily_records.data JSON）
     fertilizerRecords: [] as FeedRecordItem[],
     pesticideRecords: [] as FeedRecordItem[],
-    // 2026-06-28：繁殖事件子表（仅 1:多 模式有意义，方案B 合并繁殖记录到每日记录）
-    propagationEvents: [] as PropagationEventItem[],
     abnormality: '',
     survivalCountChange: undefined as number | undefined,
     lossCountChange: undefined as number | undefined,
@@ -276,22 +241,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       // 2026-06-16: 数量体系重构 — bizData 用 5 个新字段名（损耗/产出/定植 + 补苗）
       // 2026-06-28：浇水推断 — 填了方式或量就算浇了（不再依赖复选框 watering 字段）
       const hasWatering = !!(formData.wateringMethod || formData.wateringAmount != null);
-      // 2026-06-28：繁殖事件聚合 — 把所有事件子苗产出求和，自动累加到 runnerIncreaseCount
-      const propagationEvents = (formData.propagationEvents || [])
-        .filter(e => (e.seedlingOutput != null && e.seedlingOutput > 0) || (e.motherChange != null && e.motherChange !== 0))
-        .map(e => ({
-          id: e.id,
-          motherChange: e.motherChange,
-          seedlingOutput: e.seedlingOutput,
-          seedlingStatus: e.seedlingStatus,
-          remarks: e.remarks || undefined,
-        }));
-      const totalSeedlingOutput = propagationEvents.reduce(
-        (sum, e) => sum + (e.seedlingOutput || 0),
-        0
-      );
-      // 1:多 模式：ri 来自繁殖事件聚合；1:1 模式：ri=0（无繁殖概念）
-      const riAggregated = isMotherMode ? totalSeedlingOutput : 0;
       const bizData: any = {
         temperature: formData.temperature,
         humidity: formData.humidity,
@@ -329,18 +278,16 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             targetPest: r.targetPest || undefined,
             notes: r.notes || undefined,
           })),
-        // 2026-06-28：繁殖事件子表（方案B：合并繁殖记录到每日记录；仅 1:多 模式有意义）
-        propagationEvents,
         abnormality: formData.abnormality || undefined,
         // 5 个新业务字段
         motherLossChange: sc,      // 1:多=母株损耗；1:1=0
         seedlingLossChange: lc,    // 两种模式=小苗损耗
-        expandedChange: riAggregated,  // 2026-06-28：从繁殖事件自动聚合（不再手动填）
+        expandedChange: ri,        // 1:多=小苗产出；1:1=0
         replantChange: rc,         // 2026-06-16: 补苗（两种模式都支持）
         // 4 个旧字段名（兼容历史 data 读取）— 2026-06-27 移除 transplantedChange/plantedCountChange
         survivalCountChange: sc,
         lossCountChange: lc,
-        runnerIncreaseCount: riAggregated,
+        runnerIncreaseCount: ri,
         phValue: formData.phValue,
         ecValue: formData.ecValue,
         operator: formData.operator || undefined,
@@ -365,7 +312,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         wateringUnit: 'L',
         fertilizerRecords: [],  // ← 新增：清空施肥子表
         pesticideRecords: [],   // ← 新增：清空用药子表
-        propagationEvents: [],  // 2026-06-28：清空繁殖事件子表（方案B）
         abnormality: '',
         survivalCountChange: undefined,
         lossCountChange: undefined,
@@ -394,7 +340,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     'recordDate', 'temperature', 'humidity', 'watering',
     'wateringMethod', 'wateringAmount', 'wateringUnit',  // 2026-06-28：浇水方式 + 量
     'fertilizerRecords', 'pesticideRecords',            // 2026-06-28：施肥/用药子表
-    'propagationEvents',                                // 2026-06-28：繁殖事件子表（方案B）
     'abnormality',
     'survivalCountChange', 'lossCountChange',
     'runnerIncreaseCount', 'replantChange', 'phValue', 'ecValue', 'operator', 'remarks',
@@ -486,18 +431,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       const pestText = (r.pesticideRecords || [])
         .map(p => `${p.name} ${p.amount || 0}${FEED_UNIT_MAP[p.unit as string] || p.unit}${p.dilutionType === 'dilute' && p.dilution ? `×${p.dilution}倍` : ''}${p.targetPest ? `/${p.targetPest}` : ''}${p.safetyInterval ? `(安全间隔${p.safetyInterval}天)` : ''}`)
         .join('; ');
-      // 2026-06-28：繁殖事件文本（仅 1:多 模式有意义）
-      const propText = (r.propagationEvents || [])
-        .map(e => {
-          const parts: string[] = [];
-          if (e.motherChange != null && e.motherChange !== 0) parts.push(`母株${e.motherChange > 0 ? '+' : ''}${e.motherChange}`);
-          if (e.seedlingOutput != null && e.seedlingOutput > 0) parts.push(`子苗+${e.seedlingOutput}`);
-          if (e.seedlingStatus) parts.push(PROPAGATION_STATUS_MAP[e.seedlingStatus] || e.seedlingStatus);
-          if (e.remarks) parts.push(`备注:${e.remarks}`);
-          return parts.join('/');
-        })
-        .filter(s => s)
-        .join('; ');
       return {
         '日期': r.recordDate,
         '温度(℃)': r.temperature ?? '',
@@ -515,9 +448,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         '施肥明细': fertText || '-',
         '用药种类': (r.pesticideRecords || []).length,
         '用药明细': pestText || '-',
-        // 2026-06-28：繁殖事件（方案B：合并繁殖记录到每日记录）
-        '繁殖次数': (r.propagationEvents || []).length,
-        '繁殖明细': propText || '-',
         '母株损耗': r.survivalCountChange ?? '',
         '小苗产出': r.runnerIncreaseCount ?? '',
         // 2026-06-27：移除"人工定植"列
@@ -779,40 +709,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 </div>
               </div>
             </details>
-            {/* 2026-06-28：繁殖事件折叠面板（方案B：合并繁殖记录到每日记录，仅 1:多 模式）— md:col-span-3 占满宽度 */}
-            {isMotherMode && (
-              <details
-                className="md:col-span-3 border border-indigo-100 rounded-lg bg-indigo-50/20 overflow-hidden"
-                open={(formData.propagationEvents?.length || 0) > 0}
-              >
-                <summary className="cursor-pointer select-none px-3 py-2 bg-indigo-50/50 hover:bg-indigo-50 text-sm font-semibold text-indigo-800 flex items-center justify-between">
-                  <span>▼ 🌱 繁殖事件（{(formData.propagationEvents?.length || 0)} 次）</span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); handleAddPropagation(); }}
-                    className="text-xs px-2 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                  >
-                    + 添加
-                  </button>
-                </summary>
-                <div className="p-3 space-y-2">
-                  {(formData.propagationEvents?.length || 0) === 0 ? (
-                    <div className="text-center py-3 text-xs text-gray-500">
-                      暂无繁殖事件 — 母株产生匍匐茎苗/扦插/组培/分株时记录
-                    </div>
-                  ) : (
-                    formData.propagationEvents!.map((event, idx) => (
-                      <PropagationEventCard
-                        key={event.id}
-                        value={event}
-                        onChange={(next) => handleUpdatePropagation(idx, next)}
-                        onRemove={() => handleRemovePropagation(idx)}
-                      />
-                    ))
-                  )}
-                </div>
-              </details>
-            )}
             {/* 2026-06-28：施肥折叠面板（动态列表，1:N 嵌套）— md:col-span-3 占满弹窗宽度 */}
             <details
               className="md:col-span-3 border border-emerald-100 rounded-lg bg-emerald-50/20 overflow-hidden"
@@ -1055,10 +951,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     {/* 2026-06-28：施肥/用药子表（种类计数，详情 hover tooltip） */}
                     <th className="px-2 py-2 text-left font-semibold w-16 text-emerald-700">施肥</th>
                     <th className="px-2 py-2 text-left font-semibold w-16 text-red-700">用药</th>
-                    {/* 2026-06-28：繁殖事件（方案B — 仅 1:多 模式显示） */}
-                    {isMotherMode && (
-                      <th className="px-2 py-2 text-left font-semibold w-16 text-indigo-700">繁殖</th>
-                    )}
                     {/* 2026-06-16: 列名对齐 DB 字段 — 1:1 模式无 sc 累加（死字段），隐藏"成活变化"列；1:多 模式显示"母株损耗"列 */}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">母株损耗</th>}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
@@ -1136,26 +1028,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                           </span>
                         ) : <span className="text-gray-300">-</span>}
                       </td>
-                      {/* 2026-06-28：繁殖事件列（方案B — 仅 1:多 模式显示） */}
-                      {isMotherMode && (
-                        <td className="px-2 py-1.5">
-                          {(r.propagationEvents?.length || 0) > 0 ? (
-                            <span
-                              className="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 cursor-help"
-                              title={(r.propagationEvents || []).map(e => {
-                                const parts: string[] = [];
-                                if (e.motherChange != null && e.motherChange !== 0) parts.push(`母株${e.motherChange > 0 ? '+' : ''}${e.motherChange}`);
-                                if (e.seedlingOutput != null && e.seedlingOutput > 0) parts.push(`子苗+${e.seedlingOutput}`);
-                                if (e.seedlingStatus) parts.push(PROPAGATION_STATUS_MAP[e.seedlingStatus] || e.seedlingStatus);
-                                if (e.remarks) parts.push(`备注:${e.remarks}`);
-                                return parts.join('/') || '（空）';
-                              }).join('\n')}
-                            >
-                              {r.propagationEvents!.length} 次
-                            </span>
-                          ) : <span className="text-gray-300">-</span>}
-                        </td>
-                      )}
                       {/* 2026-06-16: 1:多 模式才显示母株损耗列（1:1 模式 sc 是死字段） */}
                       {isMotherMode && (
                         <td className="px-2 py-1.5">
