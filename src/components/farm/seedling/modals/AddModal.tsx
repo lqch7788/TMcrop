@@ -8,6 +8,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
+import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
@@ -25,8 +26,8 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input, NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {
@@ -462,7 +463,7 @@ export function AddModal({
       expectedEndDate: formData.expectedEndDate || undefined,
       initialCount: finalInitialCount,
       survivalCount: 0,
-      plantedCount: 0,
+      // 2026-06-28：移除 plantedCount 写入（业务规则：种植管理不再从育苗取苗）
       survivalRate: 0,
       lossCount: 0,
       lossRate: 0,
@@ -1330,6 +1331,25 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 onChange={(value) => handleSeedlingTypeChange(value)}
                 placeholder="请选择育苗方式"
               />
+            </div>
+
+            {/* 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）— 详情弹窗"种苗类型"列数据源 */}
+            <div>
+              <Label className="text-gray-900">种苗形态</Label>
+              <Select
+                value={(formData as any).seedlingForm || '__none__'}
+                onValueChange={(v) => setFormData({ ...formData, seedlingForm: v === '__none__' ? '' : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择种苗形态（可选）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">不指定</SelectItem>
+                  {Object.entries(SEEDLING_FORM_MAP).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 其他育苗方式输入框（占满整行） */}

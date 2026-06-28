@@ -55,11 +55,9 @@ interface BackendSeedling {
   motherPlantCount?: number;
   expandedPlantCount?: number;
   scionCount?: number;
-  // 2026-06-15: 数量体系重构 — 5 业务字段
+  // 2026-06-15: 数量体系重构 — 5 业务字段（2026-06-28 移除 transplantedCount/autoPlantedCount，业务上种植管理不再从育苗取苗）
   motherLossCount?: number;
   seedlingLossCount?: number;
-  transplantedCount?: number;
-  autoPlantedCount?: number;
   harvestStockedCount?: number;
   // 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
   replantCount?: number;
@@ -125,6 +123,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     cropVariety: item.varietyName || item.cropName || '',
     cropCode: item.cropCode || '',
     seedlingType: item.seedlingType || '',
+    seedlingForm: item.seedlingForm || '', // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
     siteId: item.areaName || '',
     siteName: item.greenhouseName || item.areaName || '',
     startDate: item.seedlingDate ? item.seedlingDate.split('T')[0] : '',
@@ -132,7 +131,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     endDate: item.actualFinishDate ? item.actualFinishDate.split('T')[0] : '',
     initialCount: item.seedlingQuantity || 0,
     survivalCount: item.survivalQuantity || 0,
-    plantedCount: item.planted_count || 0,
+    // 2026-06-28：移除 plantedCount 映射（业务上已停止使用）
     survivalRate: survivalRate,
     lossCount: item.lossCount || 0,
     lossRate: item.lossRate || 0,
@@ -166,21 +165,16 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     scionCount: item.scionCount ?? 0,
     // 2026-06-15: 透传负责人 — 修复编辑弹窗"负责人"显示空 bug
     chargePerson: item.chargePerson ?? '',
-    // 2026-06-15: 数量体系重构 — 透传 5 业务字段
+    // 2026-06-15: 数量体系重构 — 透传 3 业务字段（2026-06-28 移除 transplantedCount/autoPlantedCount）
     motherLossCount: item.motherLossCount ?? 0,
     seedlingLossCount: item.seedlingLossCount ?? 0,
-    transplantedCount: item.transplantedCount ?? 0,
-    autoPlantedCount: item.autoPlantedCount ?? 0,
     harvestStockedCount: item.harvestStockedCount ?? 0,
     // 2026-06-16: 透传补苗累计
     replantCount: item.replantCount ?? 0,
-    // 2026-06-16: 派生字段 — 可定植数量 = expanded - 损耗 - 人工定植 - 自动定植 - 采收入库
-    // 种植管理"经育苗移栽"模式下拉取此值显示
+    // 2026-06-16: 派生字段 — 可用苗数 = expanded - 损耗 - 采收入库（2026-06-28 移除已定植/自动定植，业务规则：种植管理不再从育苗取苗）
     availableTransplantCount: Math.max(0,
       (item.expandedPlantCount ?? 0)
       - (item.seedlingLossCount ?? 0)
-      - (item.transplantedCount ?? 0)
-      - (item.autoPlantedCount ?? 0)
       - (item.harvestStockedCount ?? 0)
     ),
     // 2026-06-15: 5 预估字段
@@ -354,13 +348,14 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     // 2026-06-15: 数量体系重构 — 5 业务字段
     mother_loss_count: s.motherLossCount ?? 0,
     seedling_loss_count: s.seedlingLossCount ?? 0,
-    transplanted_count: s.transplantedCount ?? 0,
-    auto_planted_count: s.autoPlantedCount ?? 0,
+    // 2026-06-28：移除 transplanted_count/auto_planted_count 写入（业务规则：种植管理不再从育苗取苗）
     harvest_stocked_count: s.harvestStockedCount ?? 0,
     // 2026-06-15: 5 预估字段
     propagation_multiple: s.propagationMultiple ?? 0,
     custom_multiple: s.customMultiple ?? 0,
     theoretical_yield: s.theoreticalYield ?? 0,
+    // 2026-06-27: 种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
+    seedling_form: s.seedlingForm ?? null,
   };
 }
 
@@ -392,6 +387,7 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     cropName: 'crop_name',
     cropVariety: 'crop_variety',
     seedlingType: 'seedling_type',
+    seedlingForm: 'seedling_form', // 2026-06-27：种苗形态
     greenhouseName: 'greenhouse_name',
     siteName: 'greenhouse_name',
     areaName: 'area_name',

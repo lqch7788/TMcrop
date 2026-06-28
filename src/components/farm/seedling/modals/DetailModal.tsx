@@ -1,11 +1,14 @@
 /**
  * 育苗详情弹窗（2026-06-27 重构）
  * 使用通用 EntityDetailModal 包装，Tab：基本信息 / 追溯时间线
+ *
+ * 2026-06-27：追溯时间线新增"种苗类型"列（数据源 seedling_form）
  */
 
 import React from 'react';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
+import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -140,10 +143,6 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
               <span className="text-sm text-red-500 font-medium">{(record.seedlingLossCount || 0).toLocaleString()}</span>
             </div>
             <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-32">人工定植累计：</span>
-              <span className="text-sm text-blue-600 font-medium">{(record.transplantedCount || 0).toLocaleString()}</span>
-            </div>
-            <div className="flex items-center">
               <span className="text-sm text-gray-500 w-32">采收入库累计：</span>
               <span className="text-sm text-purple-600 font-medium">{(record.harvestStockedCount || 0).toLocaleString()}</span>
             </div>
@@ -153,8 +152,7 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            累计已定植 = 人工定植累计 = {(record.transplantedCount || 0).toLocaleString()} 株
-            ｜ 累计损耗 = 母株累计损耗 + 小苗累计损耗 = {((record.motherLossCount || 0) + (record.seedlingLossCount || 0)).toLocaleString()} 株
+            累计损耗 = 母株累计损耗 + 小苗累计损耗 = {((record.motherLossCount || 0) + (record.seedlingLossCount || 0)).toLocaleString()} 株
           </p>
         </div>
       </div>
@@ -243,6 +241,14 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       entity="seedlings"
       entityId={record.id}
       entityCode={record.seedlingCode}
+      // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
+      typeColumn={{
+        label: '种苗类型',
+        // 注：service 类型未声明 seedlingForm（待下次 service 改造补全），运行时从 record 读取
+        value: (record as any).seedlingForm
+          ? (SEEDLING_FORM_MAP[(record as any).seedlingForm] || (record as any).seedlingForm)
+          : '-',
+      }}
     />
   );
 }

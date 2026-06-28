@@ -40,14 +40,26 @@ export interface InboundRecordsQuery {
 /** GET /api/inventory/inbound-records — 分页查询入库记录
  *  ⚠️ enhancedApiClient 已自动 unwrap response.data，所以 res 直接就是 InventoryInboundRecord[]
  *     （修复 2026-06-26：之前错误地再次取 res.data → undefined，导致种源页面入库记录始终显示 0 条）
+ *
+ *  2026-06-27 修复：enhancedApiClient.get 第二个参数 options 是 ApiOptions（只有 retryCount），
+ *     没有 params 字段。原代码传 `{params: q}` 被当作 ApiOptions 丢弃，导致
+ *     sourceModule/sourceId 等过滤条件完全没传到后端，后端返回全量数据。
+ *     现改为直接拼到 URL 上。
  */
 export async function listInboundRecords(
   q: InboundRecordsQuery
 ): Promise<{ data: InventoryInboundRecord[]; total: number }> {
-  const res = await enhancedApiClient.get<InventoryInboundRecord[]>(
-    '/inventory/inbound-records',
-    { params: q as Record<string, unknown> },
-  );
+  // 过滤掉 undefined / null / 空串，避免产生 `key=` 这种无效 query
+  const cleaned: Record<string, string> = {};
+  for (const [k, v] of Object.entries(q)) {
+    if (v !== undefined && v !== null && v !== '') {
+      cleaned[k] = String(v);
+    }
+  }
+  const qs = new URLSearchParams(cleaned).toString();
+  const url = qs ? `/inventory/inbound-records?${qs}` : '/inventory/inbound-records';
+
+  const res = await enhancedApiClient.get<InventoryInboundRecord[]>(url);
 
   const records = Array.isArray(res) ? res : [];
   return {

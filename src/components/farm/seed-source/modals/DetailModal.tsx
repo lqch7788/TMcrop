@@ -319,7 +319,10 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       entity="seed-sources"
       entityId={record.id}
       entityCode={record.seedCode}
-      entitySourceType={record.sourceType}
+      typeColumn={{
+        label: '种源类型',
+        value: record.sourceType ? (SOURCE_TYPE_MAP[record.sourceType] || record.sourceType) : '-',
+      }}
       extraTabs={extraTabs}
     />
   );

@@ -312,8 +312,19 @@ router.get('/inbound-records', (req: Request, res: Response) => {
     const countResult = db.exec(`SELECT COUNT(*) FROM inventory_inbound_records ${where}`, params)
     const total = Number(countResult[0]?.values?.[0]?.[0]) || 0
 
-    // 列表
-    const listSql = `SELECT * FROM inventory_inbound_records ${where} ORDER BY create_time DESC LIMIT ? OFFSET ?`
+    // 列表 — LEFT JOIN harvest_records 取 harvest_form（采收形态）
+    // 2026-06-28：入库记录需要展示采收形态，但 inventory_inbound_records 表没存 harvest_form，
+    //            改去 harvest_records 通过 business_id 关联获取（一个入库 = harvest_records 一条）
+    const joinWhere = where ? where.replace(/^WHERE/i, 'WHERE') : ''
+    const listSql = `
+      SELECT ir.*, hr.harvest_form AS harvest_form
+      FROM inventory_inbound_records ir
+      LEFT JOIN harvest_records hr ON ir.business_id = hr.id
+      ${joinWhere}
+      ORDER BY ir.create_time DESC
+      LIMIT ? OFFSET ?
+    `
+    // params 复用（业务 id / 时间过滤仍然作用于 ir），但 params 是 [whereParams..., limitNum, offset]
     const stmt = db.prepare(listSql)
     stmt.bind([...params, limitNum, offset])
     const records: any[] = []

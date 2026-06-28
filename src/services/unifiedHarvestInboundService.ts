@@ -51,6 +51,11 @@ export interface UnifiedInboundInput {
   warehouseName?: string
   products: InboundProduct[]
   operatorName?: string
+  /**
+   * 2026-06-27：成品形态（仅种植行入库时可选，整株/花朵/果实/种子/块茎 等）
+   * 由 UnifiedRowHarvestInboundModal 的"成品类型"下拉框传入
+   */
+  harvestForm?: string
 }
 
 export interface UnifiedInboundResult {

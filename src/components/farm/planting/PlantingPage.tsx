@@ -28,7 +28,7 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
 
 export default function PlantingPage() {
@@ -225,6 +225,29 @@ export default function PlantingPage() {
   const handleEndV2 = (record: Planting) => {
     setCurrentRecord(record);
     setHarvestModalOpen(true);
+  };
+
+  // 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 直接走 updateItem
+  // 不依赖生产计划关联，不打开弹窗，直接弹确认后改 end_type/end_time/status
+  const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
+    const isNormal = endType === 'normal';
+    const confirmMsg = isNormal
+      ? `确认正常结束此种植记录？\n\n结束后禁止一切入库和补录操作`
+      : `确认异常结束此种植记录？\n\n结束后如需补录，需提交审核申请`;
+    if (!await showConfirm(confirmMsg)) return;
+
+    const result = await updateItem(record.id, {
+      endType,
+      endTime: todayLocal(),
+      status: PlantingStatus.ENDED,  // 'ended'
+      isHarvestLocked: true,        // 2026-06-17: 软锁，避免后续误操作
+    } as Partial<Planting>);
+    if (result) {
+      await showAlert(isNormal ? '种植记录已正常结束' : '种植记录已异常结束');
+      await loadItems();
+    } else {
+      await showAlert('结束失败');
+    }
   };
 
   const handleImageClick = (images: string[]) => {
@@ -510,6 +533,7 @@ export default function PlantingPage() {
       <PlantingTable
         data={filteredData}
         onEndV2={handleEndV2}
+        onEnd={handleEnd}
         onInbound={(record) => {
           setInboundUnifiedRecord(record)
           setInboundUnifiedOpen(true)
