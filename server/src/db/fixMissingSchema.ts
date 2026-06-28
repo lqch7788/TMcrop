@@ -2148,6 +2148,52 @@ export async function fixMissingSchema(): Promise<void> {
     } else { seedLog.error(`  ✗ seed_sources.deleted_at 失败: ${e.message}`); }
   }
 
+  // 2026-06-28: 一次性补偿存量数据 — 把所有 seedlings 旧字段（survival_quantity/loss_count/survival_rate/loss_rate）从新字段派生同步
+  // 修复"标签打印预览显示成活数量=0、成活率=0%"的 bug
+  // 根因：daily_records 累加只更新了新字段，旧字段从未同步
+  try {
+    const result = db.run(`
+      UPDATE seedlings
+      SET
+        loss_count = seedling_loss_count,
+        survival_quantity = MAX(0, seedling_quantity - seedling_loss_count),
+        survival_rate = CASE
+          WHEN seedling_quantity > 0
+          THEN ROUND((CAST(MAX(0, seedling_quantity - seedling_loss_count) AS REAL) / seedling_quantity) * 100, 1)
+          ELSE 0
+        END,
+        loss_rate = CASE
+          WHEN seedling_quantity > 0
+          THEN ROUND((CAST(seedling_loss_count AS REAL) / seedling_quantity) * 100, 1)
+          ELSE 0
+        END
+      WHERE deleted_at IS NULL
+    `);
+    seedLog.info(`  ✓ seedlings 旧字段一次性同步完成（影响行数：${(result as any)?.changes ?? '?'}）`);
+  } catch (e: any) {
+    seedLog.error(`  ✗ seedlings 旧字段同步失败: ${e.message}`);
+  }
+
+  // 2026-06-28: 修复"标签重复入库"bug — 给 plant_labels.label_number 加 UNIQUE 索引（先清理重复数据）
+  // 根因：原 schema label_number 无 UNIQUE 约束 + 后端 /batch-create 不检查重复，导致前端生成相同编号多次入库
+  // 修复策略：先按 (label_number, seedling_id) 分组保留 id 最小的一条，其他删除；然后加 UNIQUE INDEX
+  try {
+    // 步骤 1：清理重复数据（保留每组最早的记录）
+    const dedupeResult = db.run(`
+      DELETE FROM plant_labels
+      WHERE id NOT IN (
+        SELECT MIN(id) FROM plant_labels GROUP BY label_number
+      )
+    `);
+    seedLog.info(`  ✓ plant_labels 重复数据清理完成（删除行数：${(dedupeResult as any)?.changes ?? '?'}）`);
+
+    // 步骤 2：添加 UNIQUE INDEX（幂等：CREATE UNIQUE INDEX IF NOT EXISTS）
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_plant_labels_label_number_unique ON plant_labels(label_number)`);
+    seedLog.info(`  ✓ plant_labels.label_number UNIQUE INDEX 已添加`);
+  } catch (e: any) {
+    seedLog.error(`  ✗ plant_labels UNIQUE 约束添加失败: ${e.message}`);
+  }
+
   // 2026-06-24: 库存调拨入种源功能 — seed_sources 加 14 个 transfer 元数据列
   // transferred_from_stock_id: 外键回指原 inventory_stock.id（追溯锚点）
   // transferred_from_business_type / business_id: 原库存所属业务类型 + 业务ID

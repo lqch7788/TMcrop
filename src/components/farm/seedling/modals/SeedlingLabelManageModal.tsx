@@ -16,7 +16,43 @@ import { LabelResumePanel } from './LabelResumePanel';
 import { AddResumeForm } from './AddResumeForm';
 
 const PAGE_SIZE = 20;
-const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
+
+// 2026-06-28：导出可选字段（用户点击"导出"按钮后弹窗勾选）
+const EXPORT_FIELDS = [
+  { key: 'labelNumber', label: '标签编号', defaultChecked: true },
+  { key: 'moveInAreaName', label: '移入位置', defaultChecked: true },
+  { key: 'moveInDate', label: '移入日期', defaultChecked: true },
+  { key: 'moveOutAreaName', label: '移出位置', defaultChecked: true },
+  { key: 'moveOutDate', label: '移出日期', defaultChecked: true },
+  { key: 'quantity', label: '数量', defaultChecked: true },
+  { key: 'status', label: '状态', defaultChecked: false },
+  { key: 'createTime', label: '创建时间', defaultChecked: true },
+  { key: 'resumes', label: '履历记录（移入/移出/标记）', defaultChecked: false },
+] as const;
+
+// 2026-06-28：枚举值中文映射字典（导出 Excel 用，避免用户看到英文）
+// plant_labels.status 枚举
+const STATUS_LABEL_MAP: Record<string, string> = {
+  active: '在用',
+  void: '已作废',
+  printed: '已打印',
+  archived: '已归档',
+  disabled: '已停用',
+};
+// plant_label_resume.operation_type 枚举
+const OPERATION_TYPE_MAP: Record<string, string> = {
+  move_in: '移入',
+  move_out: '移出',
+  mark: '标记',
+  void: '作废',
+};
+// plant_mark.mark_aid 枚举（标记类型）
+const MARK_TYPE_MAP: Record<string, string> = {
+  normal: '正常',
+  attention: '关注',
+  issue: '问题',
+  quality: '优质',
+};
 
 interface SeedlingLabelManageModalProps {
   isOpen: boolean;
@@ -131,38 +167,117 @@ export default function SeedlingLabelManageModal({
   }, [selectedLabelId, loadResumesForLabels]);
 
   // ---------- 导出 ----------
-  const handleExport = useCallback(
-    (size: number) => {
-      const toExport = size === 0 ? filteredLabels : filteredLabels.slice(0, size);
-      if (toExport.length === 0) { showAlert('无数据可导出'); return; }
+  // 2026-06-28：重构为多选弹窗式（删除原"导出 1000/2000/全部"按钮组）— 用户点击"导出"按钮后弹窗选择字段
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  // 选中的导出字段 key 集合
+  const [selectedExportFields, setSelectedExportFields] = useState<Set<string>>(
+    () => new Set(EXPORT_FIELDS.filter((f) => f.defaultChecked).map((f) => f.key))
+  );
+  // 导出范围：'filtered' = 当前筛选结果；'currentPage' = 当前页
+  const [exportScope, setExportScope] = useState<'filtered' | 'currentPage'>('filtered');
 
-      const headers = ['标签编号', '移入位置', '移入日期', '移出位置', '移出日期', '数量', '状态', '创建时间'];
-      const rows = toExport.map((l: any) => [
-        l.labelNumber,
-        l.moveInAreaName || '',
-        l.moveInDate || '',
-        l.moveOutAreaName || '',
-        l.moveOutDate || '',
-        l.quantity ?? '',
-        l.status || '',
-        l.createTime || '',
-      ]);
+  const handleOpenExport = () => setExportModalOpen(true);
 
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签数据</title>
+  const toggleExportField = (key: string) => {
+    setSelectedExportFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAllExportFields = () => {
+    setSelectedExportFields(new Set(EXPORT_FIELDS.map((f) => f.key)));
+  };
+
+  const deselectAllExportFields = () => {
+    setSelectedExportFields(new Set());
+  };
+
+  // 实际执行导出（按选中的字段动态生成列）
+  const handleConfirmExport = useCallback(async () => {
+    if (selectedExportFields.size === 0) {
+      showAlert('请至少选择一个导出字段');
+      return;
+    }
+
+    // 决定导出范围
+    const dataSource = exportScope === 'currentPage' ? paginatedLabels : filteredLabels;
+    if (dataSource.length === 0) {
+      showAlert('无数据可导出');
+      return;
+    }
+
+    const selectedFields = EXPORT_FIELDS.filter((f) => selectedExportFields.has(f.key));
+    const headers = selectedFields.map((f) => f.label);
+
+    // 检查是否需要加载履历（如果选了"履历记录"）
+    const needResumes = selectedExportFields.has('resumes');
+    let resumeMapForExport = resumeMap;
+    if (needResumes && dataSource.length > 0) {
+      const labelIds = dataSource.map((l: any) => l.id);
+      await loadResumesForLabels(labelIds);
+      // 从 Store 拿最新的 resumeMap
+      resumeMapForExport = usePlantLabelStore.getState().resumeMap;
+    }
+
+    const rows = dataSource.map((l: any) => {
+      const resumeText = needResumes
+        ? (resumeMapForExport[l.id] || [])
+            .map((r: any) => {
+              // 2026-06-28：枚举值全部转中文（之前用户看到的是英文 enum 值）
+              const opTypeCn = OPERATION_TYPE_MAP[r.operationType] || r.operationType || '-';
+              const fromArea = r.fromAreaName || '-';
+              const toArea = r.toAreaName || '-';
+              const date = r.operationDate || '';
+              // 标记类型：markName 优先（已经是中文），否则按 markId 查字典
+              const markName = r.markName || '';
+              const qtyChange = r.quantityChange != null
+                ? `(数量${r.quantityChange > 0 ? '+' : ''}${r.quantityChange}${r.quantityAfter != null ? `→剩${r.quantityAfter}` : ''})`
+                : '';
+              const reason = r.reason ? ` 备注:${r.reason}` : '';
+              const operator = r.operatorName ? ` 操作人:${r.operatorName}` : '';
+              // 标记操作的输出格式不同
+              if (r.operationType === 'mark') {
+                return `${opTypeCn} ${markName || '-'}${qtyChange}${operator}${reason}`;
+              }
+              return `${opTypeCn} ${fromArea}→${toArea} ${date}${qtyChange}${operator}${reason}`;
+            })
+            .join('; ')
+        : '';
+
+      return selectedFields.map((f) => {
+        switch (f.key) {
+          case 'labelNumber': return l.labelNumber || '';
+          case 'moveInAreaName': return l.moveInAreaName || '';
+          case 'moveInDate': return l.moveInDate || '';
+          case 'moveOutAreaName': return l.moveOutAreaName || '';
+          case 'moveOutDate': return l.moveOutDate || '';
+          case 'quantity': return l.quantity ?? '';
+          // 2026-06-28：状态枚举值转中文（之前用户看到的是 active/void 英文）
+          case 'status': return STATUS_LABEL_MAP[l.status] || l.status || '';
+          case 'createTime': return l.createTime || '';
+          case 'resumes': return resumeText;
+          default: return '';
+        }
+      });
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签数据</title>
 <style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px 10px}th{background:#059669;color:#fff}</style>
 </head><body><table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
 <tbody>${rows.map((r) => `<tr>${r.map((v) => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
 
-      const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `育苗标签_${seedlingCode}_${todayLocal()}.xls`;
-      a.click();
-      URL.revokeObjectURL(url);
-    },
-    [filteredLabels, seedlingCode]
-  );
+    const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `育苗标签_${seedlingCode}_${todayLocal()}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportModalOpen(false);
+  }, [selectedExportFields, exportScope, paginatedLabels, filteredLabels, resumeMap, loadResumesForLabels, seedlingCode]);
 
   // ---------- 补充生成 ----------
   const handleBatchGenerate = async () => {
@@ -210,21 +325,16 @@ export default function SeedlingLabelManageModal({
 
         {/* 工具栏: 导出 */}
         <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-end">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">导出:</span>
-            {EXPORT_SIZES.map((size) => (
-              <Button
-                key={size}
-                onClick={() => handleExport(size)}
-                variant="outline"
-                size="sm"
-                className="text-xs hover:bg-emerald-50 hover:border-emerald-300"
-              >
-                <Download className="w-4 h-4" />
-                {size === 0 ? '全部' : `${size}条`}
-              </Button>
-            ))}
-          </div>
+          {/* 2026-06-28：删除原"导出 1000/2000/全部"按钮组，改为单一"导出"按钮 + 弹窗选择字段 */}
+          <Button
+            onClick={handleOpenExport}
+            variant="blue"
+            size="sm"
+            className="text-xs"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            导出
+          </Button>
         </div>
 
         {/* 主体：左侧标签列表 + 右侧履历时间线 */}
@@ -320,6 +430,106 @@ export default function SeedlingLabelManageModal({
           </div>
         </div>
       </div>
+
+      {/* 2026-06-28：导出弹窗（选择字段 + 范围） */}
+      {exportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-xl">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                选择导出内容
+              </h3>
+              <Button onClick={() => setExportModalOpen(false)} variant="ghost" size="icon" className="text-white hover:bg-blue-700">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* 字段多选 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-700">导出字段（可多选）</span>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={selectAllExportFields} className="text-xs text-blue-600 hover:bg-blue-50">
+                      全选
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={deselectAllExportFields} className="text-xs text-gray-500 hover:bg-gray-50">
+                      全不选
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                  {EXPORT_FIELDS.map((f) => (
+                    <label
+                      key={f.key}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm hover:bg-blue-50 transition-colors ${
+                        selectedExportFields.has(f.key) ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedExportFields.has(f.key)}
+                        onChange={() => toggleExportField(f.key)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="text-gray-700">{f.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  已选 {selectedExportFields.size} / {EXPORT_FIELDS.length} 个字段
+                </div>
+              </div>
+
+              {/* 导出范围 */}
+              <div>
+                <span className="text-sm font-semibold text-gray-700 block mb-2">导出范围</span>
+                <div className="flex gap-2">
+                  <label className={`flex-1 flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
+                    exportScope === 'filtered' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="exportScope"
+                      checked={exportScope === 'filtered'}
+                      onChange={() => setExportScope('filtered')}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-700">当前筛选结果</div>
+                      <div className="text-xs text-gray-500">共 {filteredLabels.length} 条</div>
+                    </div>
+                  </label>
+                  <label className={`flex-1 flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
+                    exportScope === 'currentPage' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="exportScope"
+                      checked={exportScope === 'currentPage'}
+                      onChange={() => setExportScope('currentPage')}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-700">当前页</div>
+                      <div className="text-xs text-gray-500">最多 20 条</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setExportModalOpen(false)}>
+                取消
+              </Button>
+              <Button variant="blue" size="sm" onClick={handleConfirmExport}>
+                <Download className="w-4 h-4 mr-1" />
+                确认导出
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

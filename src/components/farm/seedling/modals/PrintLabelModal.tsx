@@ -23,6 +23,28 @@ interface PrintLabelModalProps {
   record: Seedling;
 }
 
+// 2026-06-28：打印模式字典（卡片按钮显示：图标 + 主标题 + 副标题 + tooltip 描述）
+const PRINT_MODE_MAP: Record<'single' | 'multi' | 'batch', { label: string; sublabel: string; desc: string; icon: string }> = {
+  single: {
+    label: '单标签打印',
+    sublabel: '重打 1 个已存在',
+    desc: '从已有标签中选择 1 个重新打印（适合标签褪色/丢失后补打）',
+    icon: '🏷️',
+  },
+  multi: {
+    label: '多标签打印',
+    sublabel: '批量勾选已存在',
+    desc: '从已有标签列表中勾选多个一并打印（适合整批补打）',
+    icon: '📋',
+  },
+  batch: {
+    label: '批量生成',
+    sublabel: '生成新标签',
+    desc: '系统生成新的标签编号 + 同步入库 + 打印（适合首次打标签）',
+    icon: '✨',
+  },
+};
+
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
   const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('detail');
   const [printMode, setPrintMode] = useState<'single' | 'multi' | 'batch'>('single');
@@ -35,9 +57,38 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
   // 2026-06-23: 标签粒度 — 批次/单株/混合 三态 + 数量
   const [labelType, setLabelType] = useState<LabelType>('batch');
-  const [labelQuantity, setLabelQuantity] = useState(1);
+  // 2026-06-28：整批共享模式默认值改为"初始数量"（不再硬编码 1）— 前端 Store 归一化后字段是 initialCount
+  const [labelQuantity, setLabelQuantity] = useState(record?.initialCount || 1);
   // 混合模式：每行 quantity 可编辑（以行索引为 key）
   const [mixedQuantities, setMixedQuantities] = useState<Record<number, number>>({});
+
+  // 2026-06-28：record 切换时（如关闭再打开另一批）重置 labelQuantity 默认值
+  useEffect(() => {
+    if (record?.id && record.initialCount != null) {
+      setLabelQuantity(record.initialCount);
+    }
+  }, [record?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 2026-06-28：整批共享模式快捷口径计算
+  // 关键修正（用户报告 YM20260623-001 母株存活 1220 株，标签弹窗却显示 0）：
+  // 之前误用 record.survivalCount（= 后端 survival_quantity = 从未正确写入 = 永远是 0）。
+  // 实际正确的"当前存活"应该按模式区分：
+  //   - 1:多：母株存活数 motherPlantCount（用户核心关切）
+  //   - 1:1：成活数量 = initialCount - seedlingLossCount
+  const initialQuantity = record?.initialCount || 1;
+  const propagationMode = record?.propagationMode || 'one_to_one';
+  const currentSurviving = (() => {
+    if (propagationMode === 'one_to_many') {
+      // 1:多：母株存活数（用户最关心的数字，对应表格"母株存活数 1220"列）
+      return record?.motherPlantCount || 0;
+    }
+    // 1:1：初始播种数 - 累计损耗
+    return Math.max(0, (record?.initialCount || 0) - (record?.seedlingLossCount || 0));
+  })();
+  // 本次新增：小苗池累计产出（仅 1:多 模式有意义；1:1 模式用累计补苗作为本次新增）
+  const recentNew = propagationMode === 'one_to_many'
+    ? (record?.expandedPlantCount || 0)
+    : (record?.replantCount || 0);
 
   // P0: 标签 Store（用于 batch 模式打印时同步入库）
   const batchCreateLabels = usePlantLabelStore((s) => s.batchCreateLabels);
@@ -70,7 +121,10 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       } else {
         // 兜底：首次生成场景（后端无任何标签），前端拼接初始列表
         const seedlingCode = record.seedlingCode || '';
-        const count = record.survivalCount || record.initialCount || 0;
+        // 2026-06-28 修正：用 motherPlantCount（1:多模式）或 initialCount（1:1模式）作为兜底，不再用永远=0 的 survivalCount
+        const count = propagationMode === 'one_to_many'
+          ? (record.motherPlantCount || record.initialCount || 0)
+          : (record.initialCount || 0);
         if (seedlingCode && count > 0) {
           const nums: string[] = [];
           const maxLabels = Math.min(count, 200);
@@ -84,7 +138,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     })();
 
     return () => { cancelled = true; };
-  }, [isOpen, record?.id, record?.seedlingCode, record?.survivalCount, record?.initialCount, loadLabels]);
+  }, [isOpen, record?.id, record?.seedlingCode, record?.motherPlantCount, record?.initialCount, loadLabels]);
 
   // printLabels更新后触发打印
   useEffect(() => {
@@ -97,8 +151,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   }, [printLabels]);
 
-  // 剩余可用数量
-  const remainingCount = record?.survivalCount || record?.initialCount || 0;
+  // 剩余可用数量 — 按模式区分（1:多=母株存活；1:1=初始数量）
+  // 2026-06-28 修正：不再用永远=0 的 survivalCount
+  const remainingCount = propagationMode === 'one_to_many'
+    ? (record?.motherPlantCount || record?.initialCount || 0)
+    : (record?.initialCount || 0);
 
   // 处理打印
   const handlePrint = async () => {
@@ -147,11 +204,18 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
         // P0: 同步入库（让标签管理弹窗能看到这些标签）
         if (newLabels.length > 0) {
-          const result = await batchCreateLabels(newLabels);
+          const result: any = await batchCreateLabels(newLabels);
           if (!result) {
             showAlert('标签入库失败，打印已中止');
             setLoading(false);
             return;
+          }
+          // 2026-06-28：后端去重 — 如果有标签已存在，会被跳过，告知用户
+          if (result.skipped > 0 && result.skippedLabelNumbers?.length > 0) {
+            showAlert(
+              `已跳过 ${result.skipped} 个已存在标签：${result.skippedLabelNumbers.slice(0, 5).join('、')}` +
+              (result.skipped > 5 ? ` 等` : '')
+            );
           }
         }
 
@@ -262,7 +326,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     return JSON.stringify({
       type: 'seedling', code: label, sourceCode: record.sourceCode,
       cropCode: record.cropCode, cropName: record.cropName,
-      variety: record.cropVariety, quantity: record.survivalCount,
+      variety: record.cropVariety, quantity: currentSurviving,
       site: record.siteName, date: record.startDate,
       url: `${baseUrl}/crop/seedlings?labelNumber=${encodeURIComponent(label)}`
     });
@@ -275,7 +339,8 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       isOpen={isOpen}
       onClose={onClose}
       title="标签打印与导出"
-      size="lg"
+      // 2026-06-28：弹窗大小从 lg 升级到 xl（默认 900×600，比 lg 大约 30%，更宽松布局）
+      size="xl"
       height={650}
       showFooter={true}
       footer={
@@ -314,18 +379,34 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       <div className="space-y-4">
         {/* 打印模式选择 */}
         <div className="bg-blue-50 rounded-lg p-4">
-          <div className="flex gap-4 mb-4">
-            {(['single', 'multi', 'batch'] as const).map(mode => (
-              <Label key={mode} className="flex items-center gap-2">
-                <Input type="radio" name="printMode" value={mode}
-                  checked={printMode === mode}
-                  onChange={() => { setPrintMode(mode); setSelectedLabels([]); }}
-                  className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-medium">
-                  {mode === 'single' ? '单标签打印' : mode === 'multi' ? '多标签打印' : '批量生成'}
-                </span>
-              </Label>
-            ))}
+          {/* 2026-06-28：打印模式选择器改为卡片按钮（参照 LabelTypeSelector 风格）— 一眼看出 3 种模式的区别 */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['single', 'multi', 'batch'] as const).map(mode => {
+              const info = PRINT_MODE_MAP[mode];
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => { setPrintMode(mode); setSelectedLabels([]); }}
+                  className={`px-3 py-2 rounded-lg border-2 text-left transition-all ${
+                    printMode === mode
+                      ? 'border-emerald-500 bg-emerald-50 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                  }`}
+                  title={info.desc}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{info.icon}</span>
+                    <span className={`text-sm ${printMode === mode ? 'font-semibold text-emerald-800' : 'font-medium text-gray-700'}`}>
+                      {info.label}
+                    </span>
+                  </div>
+                  <div className={`text-xs mt-0.5 ${printMode === mode ? 'text-emerald-700' : 'text-gray-500'}`}>
+                    {info.sublabel}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* 单标签模式 */}
@@ -382,34 +463,56 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <LabelTypeSelector value={labelType} onChange={setLabelType} hidden={['mixed'] as LabelType[]} />
               </div>
 
-              {/* 批次模式：1 个标签 + 每标签株数 */}
+              {/* 整批共享模式：1 个标签承载 N 株苗（共享粒度）— 2026-06-28 强化文案 + 快捷口径按钮 */}
               {labelType === 'batch' && (
-                <div className="flex items-center gap-4">
-                  <div>
-                    <Label className="text-gray-600 text-xs">每标签株数</Label>
-                    <Input type="number" min="1" max={remainingCount}
-                      value={labelQuantity}
-                      onChange={(e) => setLabelQuantity(Math.max(1, Number(e.target.value)))}
-                      className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                <div className="p-3 bg-emerald-50 rounded border border-emerald-200 space-y-2">
+                  {/* 第 1 行：输入框 + 快捷口径按钮 */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div>
+                      <Label className="text-gray-700 text-xs font-semibold">每标签承载苗数</Label>
+                      <Input type="number" min="1" max={remainingCount}
+                        value={labelQuantity}
+                        onChange={(e) => setLabelQuantity(Math.max(1, Number(e.target.value)))}
+                        className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-600">快捷口径：</span>
+                      <button type="button" onClick={() => setLabelQuantity(initialQuantity)}
+                        className="px-2 py-0.5 text-xs rounded border border-emerald-300 bg-white hover:bg-emerald-100 transition-colors"
+                        title={`初始数量 ${initialQuantity} 株`}>
+                        初始 {initialQuantity}
+                      </button>
+                      <button type="button" onClick={() => setLabelQuantity(currentSurviving)}
+                        className="px-2 py-0.5 text-xs rounded border border-emerald-300 bg-white hover:bg-emerald-100 transition-colors"
+                        title={`当前存活 ${currentSurviving} 株（初始 - 损耗）`}>
+                        存活 {currentSurviving}
+                      </button>
+                      <button type="button" onClick={() => setLabelQuantity(recentNew)}
+                        className="px-2 py-0.5 text-xs rounded border border-emerald-300 bg-white hover:bg-emerald-100 transition-colors"
+                        title={`本次新增 ${recentNew} 株`}>
+                        新增 {recentNew}
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    将生成 1 个标签，代表 {labelQuantity} 株苗
+                  {/* 第 2 行：结果预览 */}
+                  <div className="text-xs text-emerald-800">
+                    → <span className="font-semibold">生成 1 个标签</span>，该标签代表 <span className="font-semibold">{labelQuantity} 株苗</span>（共用一个二维码）
                   </div>
                 </div>
               )}
 
-              {/* 单株模式：N 个标签，每标签 1 株（保持旧行为） */}
+              {/* 每株独立模式：N 个标签，每标签 1 株（独立粒度）— 2026-06-28 强化文案，让"每株=独立标签"语义清晰 */}
               {labelType === 'single' && (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 p-3 bg-cyan-50 rounded border border-cyan-200">
                   <div>
-                    <Label className="text-gray-600 text-xs">生成数量</Label>
+                    <Label className="text-gray-700 text-xs font-semibold">生成标签数（= 苗数）</Label>
                     <Input type="number" min="1" max={remainingCount}
                       value={printCount}
                       onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
                       className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    将生成 {printCount} 个标签，每个 1 株（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
+                    </div>
+                  <div className="text-xs text-cyan-800">
+                    → <span className="font-semibold">生成 {printCount} 个标签</span>，每株苗 1 个独立二维码（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
                   </div>
                 </div>
               )}
@@ -540,8 +643,16 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <div className="text-gray-500">初始数量：</div><div className="text-gray-900">{record.initialCount?.toLocaleString()}</div>
-                    <div className="text-gray-500">成活数量：</div><div className="text-emerald-600 font-bold">{record.survivalCount?.toLocaleString()}</div>
-                    <div className="text-gray-500">成活率：</div><div className="text-emerald-600">{record.survivalRate}%</div>
+                    {/* 2026-06-28：成活数量按模式实时计算（不依赖后端 survival_quantity 同步 — 旧字段已停止维护） */}
+                    <div className="text-gray-500">成活数量：</div>
+                    <div className="text-emerald-600 font-bold">{currentSurviving.toLocaleString()}</div>
+                    {/* 成活率 = currentSurviving / initialCount × 100% — 同样前端实时算 */}
+                    <div className="text-gray-500">成活率：</div>
+                    <div className="text-emerald-600">
+                      {initialQuantity > 0
+                        ? `${Math.round((currentSurviving / initialQuantity) * 100)}%`
+                        : '0%'}
+                    </div>
                     <div className="text-gray-500">育苗日期：</div><div className="text-gray-900">{record.startDate}</div>
                   </div>
                 </div>
