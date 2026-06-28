@@ -312,6 +312,10 @@ export interface DailyRecord {
   // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储在 daily_records.data JSON）
   fertilizerRecords?: FertilizerRecordItem[];
   pesticideRecords?: PesticideRecordItem[];
+  // 2026-06-28：繁殖事件子表（仅 1:多 模式，1:N 嵌套，存储在 daily_records.data JSON）
+  // 业务定位：母株产生匍匐茎苗/扦插/组培/分株的事件记录
+  // ⚠️ 已移除"移栽位置"字段 — 2026-06-28 业务规则：育苗不再统计人工定植，统一从作物库存出库统计
+  propagationEvents?: PropagationEventItem[];
   ecValue?: number;           // EC值 (电导率)
   // 操作信息（补充）
   operator?: string;          // 操作人员
@@ -517,6 +521,24 @@ export interface PesticideRecordItem {
   targetPest?: string;
   /** 备注（可选） */
   notes?: string;
+}
+
+// ========== 每日记录繁殖事件子表（2026-06-28，方案 B：合并繁殖记录到每日记录） ==========
+// 业务定位：母株产生匍匐茎苗/扦插/组培/分株的事件记录（仅 1:多 模式有意义）
+// ⚠️ 已移除"移栽位置"字段 — 业务规则：育苗不再统计人工定植，统一从作物库存出库统计
+
+/** 繁殖事件项（母株产生新苗的事实记录） */
+export interface PropagationEventItem {
+  /** 前端生成 ID（编辑时识别用），格式 pe_${timestamp}_${random} */
+  id: string;
+  /** 母株变化数（新增母株数，仅 1:多 模式有意义） */
+  motherChange?: number;
+  /** 子苗产出数（匍匐茎/扦插/组培/分株产生的新苗数） */
+  seedlingOutput?: number;
+  /** 子苗状态 */
+  seedlingStatus?: 'healthy' | 'weak' | 'diseased';
+  /** 备注（可选） */
+  remarks?: string;
 }
 
 /**

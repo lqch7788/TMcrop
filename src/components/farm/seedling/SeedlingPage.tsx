@@ -18,7 +18,7 @@ import { QUALITY_GRADE_MAP, HARVEST_FORM_MAP } from '@/constants/cropConstants';
 import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { RecordModal } from '../planting/modals/RecordModal';
+// 2026-06-28 方案B：移除 RecordModal import — 繁殖记录已合并到每日记录弹窗
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
 import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useInventoryInboundStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
@@ -235,17 +235,7 @@ export default function SeedlingPage() {
   const [printRecords, setPrintRecords] = useState<Seedling[]>([]);
 
   // 2026-06-18: 任务 5 — 出圃入库弹窗状态 + 入库记录子表数据
-  // 2026-06-25 v3: 繁殖记录弹窗状态（仅 1:多 模式显示）
-  const [propagationRecordModal, setPropagationRecordModal] = useState<{ open: boolean; record: Seedling | null }>({
-    open: false,
-    record: null,
-  });
-  const handlePropagationRecord = (record: Seedling) => {
-    setPropagationRecordModal({ open: true, record });
-  };
-  const closePropagationRecordModal = () => {
-    setPropagationRecordModal({ open: false, record: null });
-  };
+  // 2026-06-28 方案B：移除独立繁殖记录弹窗（已合并到每日记录弹窗的 🌱 繁殖事件 折叠面板）
 
   const [inboundModal, setInboundModal] = useState<{ open: boolean; record: Seedling | null }>({
     open: false,
@@ -747,7 +737,7 @@ export default function SeedlingPage() {
         onEdit={handleEdit}
         onDetail={handleDetail}
         onDailyRecord={handleDailyRecord}
-        onPropagationRecord={handlePropagationRecord}
+        // 2026-06-28 方案B：移除 onPropagationRecord 引用 — 繁殖记录已合并到每日记录
         onPrint={handlePrint}
         onLabelManage={handleLabelManage}
         onInbound={handleInbound}
@@ -855,20 +845,7 @@ export default function SeedlingPage() {
         />
       )}
 
-      {/* 2026-06-25 v3: 繁殖记录弹窗（复用 RecordModal，type='propagation'） */}
-      {propagationRecordModal.record && (
-        <RecordModal
-          isOpen={propagationRecordModal.open}
-          onClose={closePropagationRecordModal}
-          onSuccess={loadItems}
-          recordType="propagation"
-          parentRecord={{
-            id: propagationRecordModal.record.id,
-            seedlingCode: propagationRecordModal.record.seedlingCode,
-            cropName: propagationRecordModal.record.cropName,
-          }}
-        />
-      )}
+      {/* 2026-06-28 方案B：移除独立繁殖记录弹窗 — 已合并到每日记录弹窗的 🌱 繁殖事件 折叠面板 */}
 
       {/* 2026-06-18: 任务 5 — 入库记录子表（折叠区） */}
       <details className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
