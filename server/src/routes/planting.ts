@@ -13,6 +13,11 @@ import { executeCirculation } from '../services/circulation.service';
 import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import { HarvestService } from '../services/harvest.service';
 import { generateInstanceId } from '../services/inventory.service';
+import {
+  validateDailyChange,
+  normalizeChangeData,
+  applyDailyChangeToPlanting,
+} from '../services/plantingDailyChange';
 const harvestService = new HarvestService();
 const router = Router();
 
@@ -125,6 +130,9 @@ router.get('/', (req: Request, res: Response) => {
       p.soil_ec AS soilEC,
       p.transplant_count AS transplantCount,
       p.transplant_date AS transplantDate,
+      -- 2026-06-28: 每日记录累加字段（损耗/补栽/剩余 = planting_quantity + supplement_count - loss_count）
+      p.loss_count AS lossCount,
+      p.supplement_count AS supplementCount,
       p.is_harvest AS isHarvest,
       p.harvest_date AS harvestDate,
       p.attrition_rate AS attritionRate,
@@ -1222,119 +1230,290 @@ router.post('/reset', (req: Request, res: Response) => {
   }
 });
 
-// ========== 田间管理每日记录 API ==========
+// ========== 种植管理每日记录 API（2026-06-28） ==========
+// 与育苗管理一致：写到 daily_records 通用表，record_type='planting'
+// 4 个路由：GET 列表 / POST 新增 / PUT 编辑 / DELETE 删除
+// 数量统计：损耗/补栽 delta 自动累加到 plantings 主表
+// 业务校验：损耗 ≤ 当前活体剩余（planting_quantity + supplement_count - loss_count）
 
 /**
- * 获取田间管理每日记录列表
- * GET /api/plantings/daily-records
+ * 获取某种植批次的每日记录列表
+ * GET /api/plantings/:id/daily-records
  */
-router.get('/daily-records', (req: Request, res: Response) => {
+router.get('/:id/daily-records', (req, res) => {
   try {
-    const { greenhouse_name, crop_name, record_date, page = 1, limit = 50 } = req.query;
+    const { id } = req.params;
+    const { page = 1, limit = 50 } = req.query;
     const db = getDatabase();
 
-    let sql = `SELECT * FROM farm_tasks WHERE task_type IN ('日常管理', '浇水', '施肥', '除草', '病虫害防治') AND 1=1`;
-    const params: any[] = [];
+    const countSql = 'SELECT COUNT(*) FROM daily_records WHERE related_id = ? AND related_type = ?';
+    const countParams = [id, 'planting'];
+    const total = execCount(db, countSql, countParams);
 
-    if (greenhouse_name) {
-      sql += ' AND greenhouse_name LIKE ?';
-      params.push(`%${greenhouse_name}%`);
-    }
-
-    if (crop_name) {
-      sql += ' AND task_content LIKE ?';
-      params.push(`%${crop_name}%`);
-    }
-
-    if (record_date) {
-      sql += ' AND plan_date = ?';
-      params.push(record_date);
-    }
-
-    const countSql = sql.replace('SELECT *', 'SELECT COUNT(*)');
-    const total = execCount(db, countSql, params);
-
-    sql += ' ORDER BY plan_date DESC, plan_time DESC';
+    let sql = 'SELECT * FROM daily_records WHERE related_id = ? AND related_type = ? ORDER BY record_date DESC, create_time DESC';
     const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ? OFFSET ?`;
-    params.push(Number(limit), offset);
+    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
 
-    const items = queryToObjects(db, sql, params);
-    res.json({ success: true, data: items, meta: { total, page: Number(page), limit: Number(limit) } });
+    const items = queryToObjects(db, sql, [id, 'planting']);
+    // 展开 data JSON 字段（与育苗一致）
+    const expandedItems = items.map((it: any) => {
+      if (it.data) {
+        try {
+          const parsed = JSON.parse(it.data);
+          return { ...parsed, ...it };
+        } catch {
+          /* ignore parse error */
+        }
+      }
+      return it;
+    });
+
+    res.json({
+      success: true,
+      data: expandedItems,
+      meta: { total, page: Number(page), limit: Number(limit) },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: '获取田间管理记录失败' });
+    console.error('获取种植每日记录失败:', error);
+    res.status(500).json({ success: false, error: '获取种植每日记录失败' });
   }
 });
 
 /**
- * 创建田间管理每日记录
- * POST /api/plantings/daily-records
+ * 添加种植管理每日记录
+ * POST /api/plantings/:id/daily-records
  */
-router.post('/daily-records', (req: Request, res: Response) => {
-  try {
-    const { task_code, task_title, task_type, task_content, assignee_name,
-            greenhouse_name, area_name, plan_date, plan_time, batch_id, batch_code, create_by } = req.body;
-
-    const newId = `FM${Date.now()}`;
-    const now = new Date().toISOString();
-    const db = getDatabase();
-
-    db.run(`
-      INSERT INTO farm_tasks (id, task_code, task_title, task_type, task_content, assignee_name,
-        greenhouse_name, area_name, plan_date, plan_time, batch_id, batch_code, status, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, task_code || `FM${Date.now()}`, task_title, task_type || '日常管理', task_content,
-        assignee_name, greenhouse_name, area_name, plan_date, plan_time || '08:00',
-        batch_id, batch_code, 'completed', create_by, now, now]);
-
-    saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId } });
-  } catch (error) {
-    console.error('创建田间管理记录失败:', error);
-    res.status(500).json({ success: false, error: '创建田间管理记录失败' });
-  }
-});
-
-/**
- * 更新田间管理每日记录
- * PUT /api/plantings/daily-records/:id
- */
-router.put('/daily-records/:id', (req: Request, res: Response) => {
+router.post('/:id/daily-records', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
-    const now = new Date().toISOString();
+    const { recordDate, data, remarks, createBy } = req.body || {};
     const db = getDatabase();
 
-    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now, id], FARM_TASK_ALLOWED_UPDATE_COLUMNS);
-    if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
+    // 校验种植记录存在
+    const pStmt = db.prepare('SELECT * FROM plantings WHERE id = ? AND deleted_at IS NULL');
+    pStmt.bind([id]);
+    const planting = pStmt.step() ? pStmt.getAsObject() : null;
+    pStmt.free();
+    if (!planting) {
+      return res.status(404).json({ success: false, error: '种植记录不存在' });
     }
-    if (rejected.length > 0) {
-      console.warn(`[ZP-1 farm_task] rejected unknown columns: ${rejected.join(', ')}`);
+    // 已结束的种植不能新增每日记录
+    if (planting.end_time) {
+      return res.status(400).json({ success: false, error: '种植已结束，无法新增每日记录' });
     }
 
-    db.run(`UPDATE farm_tasks SET ${fields}, update_time = ? WHERE id = ?`, values);
+    // 业务上限预校验（先校验后写入）
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const normalized = normalizeChangeData(parsed);
+        const validateErr = validateDailyChange(id, normalized);
+        if (validateErr) {
+          return res.status(400).json({ success: false, error: validateErr });
+        }
+      } catch (e) {
+        /* JSON 解析失败时跳过 */
+      }
+    }
+
+    // 生成 ID（与育苗保持一致格式：DR + 时间戳）
+    const newId = `DR${Date.now()}`;
+    const newOid = `DR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const now = formatLocalDateISO();
+
+    // 写入 daily_records 通用表
+    db.run(
+      `INSERT INTO daily_records (
+        id, oid, record_type, record_date, related_id, related_code, related_type,
+        crop_name, crop_variety, greenhouse_name, quantity, unit, data, remarks,
+        create_by, create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newId,
+        newOid,
+        'planting',
+        recordDate || now,
+        id,
+        planting.planting_code,
+        'planting',
+        planting.crop_name || '',
+        planting.crop_variety || '',
+        planting.greenhouse_name || '',
+        0,
+        planting.unit || '株',
+        data ? JSON.stringify(data) : null,
+        remarks || '',
+        createBy || '',
+        now,
+        now,
+      ]
+    );
+
+    // 应用 delta 到 plantings 主表（+1 = 新增正向）
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const normalized = normalizeChangeData(parsed);
+        applyDailyChangeToPlanting(id, normalized, 1);
+      } catch (e) {
+        /* JSON 解析失败不影响 daily_records 插入 */
+      }
+    }
+
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    const inserted = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [newId]);
+    res.status(201).json({ success: true, data: inserted[0] || { id: newId } });
   } catch (error) {
-    res.status(500).json({ success: false, error: '更新田间管理记录失败' });
+    console.error('添加种植每日记录失败:', error);
+    res.status(500).json({ success: false, error: '添加种植每日记录失败' });
   }
 });
 
 /**
- * 删除田间管理每日记录
- * DELETE /api/plantings/daily-records/:id
+ * 更新种植管理每日记录（事务原子：反向补偿 + 正向重放）
+ * PUT /api/plantings/:id/daily-records/:recordId
  */
-router.delete('/daily-records/:id', (req: Request, res: Response) => {
+router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id, recordId } = req.params;
+    const { recordDate, remarks, data } = req.body || {};
     const db = getDatabase();
-    db.run('DELETE FROM farm_tasks WHERE id = ?', [id]);
+    const now = formatLocalDateISO();
+
+    // 校验 planting 存在
+    const pStmt = db.prepare('SELECT id, end_time FROM plantings WHERE id = ?');
+    pStmt.bind([id]);
+    const planting = pStmt.step() ? pStmt.getAsObject() : null;
+    pStmt.free();
+    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' });
+    if (planting.end_time) return res.status(400).json({ success: false, error: '种植已结束，无法编辑' });
+
+    // 读旧记录用于反向补偿
+    const oldStmt = db.prepare('SELECT data FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?');
+    oldStmt.bind([recordId, id, 'planting']);
+    let oldData: any = {};
+    if (oldStmt.step()) {
+      const row = oldStmt.getAsObject() as any;
+      try {
+        oldData = row.data ? JSON.parse(row.data) : {};
+      } catch {
+        oldData = {};
+      }
+    }
+    oldStmt.free();
+
+    // 编辑场景事务：先反向抵消旧值，校验新值，通过则正向应用
+    if (data !== undefined) {
+      try {
+        const newParsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const oldNormalized = normalizeChangeData(oldData);
+        const newNormalized = normalizeChangeData(newParsed);
+
+        const hasLossChange = oldNormalized.lossChange !== newNormalized.lossChange;
+        const hasSupplementChange = oldNormalized.supplementChange !== newNormalized.supplementChange;
+        if (hasLossChange || hasSupplementChange) {
+          // 1) 反向抵消旧值
+          if (oldData && Object.keys(oldData).length > 0) {
+            applyDailyChangeToPlanting(id, oldNormalized, -1);
+          }
+          // 2) 校验新值
+          const validateErr = validateDailyChange(id, newNormalized);
+          if (validateErr) {
+            // 3) 校验失败：还原旧值
+            if (oldData && Object.keys(oldData).length > 0) {
+              applyDailyChangeToPlanting(id, oldNormalized, 1);
+            }
+            return res.status(400).json({ success: false, error: validateErr });
+          }
+          // 4) 校验通过：应用新值
+          applyDailyChangeToPlanting(id, newNormalized, 1);
+        }
+      } catch (e) {
+        /* JSON 解析失败时跳过 */
+      }
+    }
+
+    // UPDATE daily_records
+    const dataJson = data !== undefined ? JSON.stringify(data) : null;
+    const fields = ['update_time = ?'];
+    const values: any[] = [now];
+    if (recordDate) {
+      fields.push('record_date = ?');
+      values.push(recordDate);
+    }
+    if (dataJson !== null) {
+      fields.push('data = ?');
+      values.push(dataJson);
+    }
+    if (remarks !== undefined) {
+      fields.push('remarks = ?');
+      values.push(remarks || '');
+    }
+    values.push(recordId, id, 'planting');
+
+    db.run(
+      `UPDATE daily_records SET ${fields.join(', ')} WHERE id = ? AND related_id = ? AND related_type = ?`,
+      values
+    );
+
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    const updated = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
+    res.json({ success: true, data: updated[0] || { id: recordId } });
   } catch (error) {
-    res.status(500).json({ success: false, error: '删除田间管理记录失败' });
+    console.error('编辑种植每日记录失败:', error);
+    res.status(500).json({ success: false, error: '编辑种植每日记录失败' });
+  }
+});
+
+/**
+ * 删除种植管理每日记录（事务原子：反向累加）
+ * DELETE /api/plantings/:id/daily-records/:recordId
+ */
+router.delete('/:id/daily-records/:recordId', (req, res) => {
+  try {
+    const { id, recordId } = req.params;
+    const db = getDatabase();
+
+    // 校验 planting 存在
+    const pStmt = db.prepare('SELECT end_time FROM plantings WHERE id = ?');
+    pStmt.bind([id]);
+    const planting = pStmt.step() ? pStmt.getAsObject() : null;
+    pStmt.free();
+    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' });
+    if (planting.end_time) return res.status(400).json({ success: false, error: '种植已结束，无法删除' });
+
+    // 读旧记录用于反向累加
+    const oldStmt = db.prepare('SELECT data FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?');
+    oldStmt.bind([recordId, id, 'planting']);
+    let oldData: any = {};
+    if (oldStmt.step()) {
+      const row = oldStmt.getAsObject() as any;
+      try {
+        oldData = row.data ? JSON.parse(row.data) : {};
+      } catch {
+        oldData = {};
+      }
+    }
+    oldStmt.free();
+
+    // DELETE daily_records
+    db.run('DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?', [
+      recordId,
+      id,
+      'planting',
+    ]);
+
+    // 反向累加（-1 把之前 +1 的变更抵消）
+    if (oldData && Object.keys(oldData).length > 0) {
+      const normalized = normalizeChangeData(oldData);
+      applyDailyChangeToPlanting(id, normalized, -1);
+    }
+
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除种植每日记录失败:', error);
+    res.status(500).json({ success: false, error: '删除种植每日记录失败' });
   }
 });
 
