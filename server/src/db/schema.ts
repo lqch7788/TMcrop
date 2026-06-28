@@ -559,7 +559,10 @@ export function initializeDatabase() {
       production_plan_id TEXT,
       production_plan_code TEXT,
       origin_path TEXT
-        CHECK(origin_path IN ('direct_from_seed','via_seedling'))
+        CHECK(origin_path IN ('direct_from_seed','via_seedling')),
+      -- 2026-06-28：种植管理每日记录累加字段（活体剩余 = planting_quantity + supplement_count - loss_count）
+      loss_count INTEGER DEFAULT 0,
+      supplement_count INTEGER DEFAULT 0
     )
   `);
 

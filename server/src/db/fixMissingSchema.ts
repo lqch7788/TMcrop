@@ -1431,6 +1431,11 @@ export async function fixMissingSchema(): Promise<void> {
     // 2026-06-13: 修复 — plantings.planted_quantity 列缺失导致种植 POST 报"no such column"
     // schema.ts L421 有，fixMissingSchema 历史漏补，存量 DB 升级失败
     { name: 'planted_quantity', sql: 'ALTER TABLE plantings ADD COLUMN planted_quantity INTEGER DEFAULT 0' },
+    // 2026-06-28：种植管理每日记录累加字段
+    // 活体剩余 = planting_quantity + supplement_count - loss_count
+    // 补栽无上限；损耗必须 ≤ 当前活体剩余（POST 路由校验）
+    { name: 'loss_count', sql: 'ALTER TABLE plantings ADD COLUMN loss_count INTEGER DEFAULT 0' },
+    { name: 'supplement_count', sql: 'ALTER TABLE plantings ADD COLUMN supplement_count INTEGER DEFAULT 0' },
   ];
 
   for (const col of plantingsColumns) {
