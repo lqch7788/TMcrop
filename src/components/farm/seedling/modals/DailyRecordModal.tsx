@@ -449,10 +449,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         '用药种类': (r.pesticideRecords || []).length,
         '用药明细': pestText || '-',
         '母株损耗': r.survivalCountChange ?? '',
+        '补苗': r.replantChange ?? '',
         '小苗产出': r.runnerIncreaseCount ?? '',
         // 2026-06-27：移除"人工定植"列
         '小苗损耗': r.lossCountChange ?? '',
-        '补苗': r.replantChange ?? '',
         '操作员': r.operator ?? '',
         '备注': r.remarks ?? ''
       };
@@ -580,7 +580,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               open
             >
               <summary className="cursor-pointer select-none px-3 py-2 bg-blue-50/50 hover:bg-blue-50 text-sm font-semibold text-blue-800 flex items-center justify-between">
-                <span>▼ 🌡️ 环境参数（温度/湿度/pH/EC — 4 项）</span>
+                <span>▼ 环境参数（温度/湿度/pH/EC — 4 项）</span>
                 <span className="text-xs text-blue-600 font-normal">
                   {formData.temperature != null ? `${formData.temperature}℃` : '-'}
                   {' / '}
@@ -647,7 +647,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               open={!!(formData.wateringMethod || formData.wateringAmount != null)}
             >
               <summary className="cursor-pointer select-none px-3 py-2 bg-cyan-50/50 hover:bg-cyan-50 text-sm font-semibold text-cyan-800 flex items-center justify-between">
-                <span>▼ 💧 浇水（{(formData.wateringMethod || formData.wateringAmount != null) ? '已填写' : '未填写'}）</span>
+                <span>▼ 浇水（{(formData.wateringMethod || formData.wateringAmount != null) ? '已填写' : '未填写'}）</span>
                 <span className="text-xs text-cyan-700 font-normal">
                   {formData.wateringMethod
                     ? `${WATERING_METHOD_MAP[formData.wateringMethod] || formData.wateringMethod}`
@@ -655,7 +655,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   {formData.wateringAmount != null
                     ? ` / ${formData.wateringAmount}${WATERING_UNIT_MAP[formData.wateringUnit as string] || formData.wateringUnit || ''}`
                     : ''}
-                  {!formData.wateringMethod && formData.wateringAmount == null && '点击展开 — 选方式 + 填浇水量（可填可不填）'}
                 </span>
               </summary>
               <div className="p-3 grid grid-cols-2 gap-3">
@@ -781,15 +780,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               open={false}
             >
               <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
-                <span>▼ 数量统计（母株/小苗池 — 与施肥/用药独立）</span>
+                <span>▼ 母株/小苗数量统计</span>
                 <span className="text-xs text-gray-500 font-normal">
                   {(formData.motherLossCount || 0) > 0 ? '母株损耗 ' + formData.motherLossCount : ''}
+                  {(formData.replantCount || 0) > 0 ? ' 补苗 ' + formData.replantCount : ''}
                   {(formData.expandedPlantCount || 0) > 0 ? ' 小苗产出 ' + formData.expandedPlantCount : ''}
                   {(formData.seedlingLossCount || 0) > 0 ? ' 小苗损耗 ' + formData.seedlingLossCount : ''}
-                  {(formData.replantCount || 0) > 0 ? ' 补苗 ' + formData.replantCount : ''}
                 </span>
               </summary>
-              {/* 2026-06-28：内部 4 列布局 — 1:多 模式 4 字段一行（母株损耗/小苗产出/小苗损耗/补苗）；1:1 模式 3 字段（无母株损耗/小苗产出） */}
+              {/* 2026-06-28：内部 4 列布局 — 1:多 模式 4 字段一行（母株损耗/补苗/小苗产出/小苗损耗 — 母株池先排，再小苗池）；1:1 模式 2 字段（补苗/小苗损耗） */}
               <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* 1:多 模式：母株损耗（仅 1:多 模式） */}
                 {isMotherMode && (
@@ -818,6 +817,34 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 />
               </div>
             )}
+            {/* 2026-06-28：补苗移到母株损耗之后（按"母株池 → 小苗池"业务分组：母株损耗+补苗=母株池；小苗产出+小苗损耗=小苗池） */}
+            {/* 补苗（两种模式都显示）— 1:1=补种子进入；1:多=补母株进入；补入"补苗累计"字段 */}
+            <div>
+              <Label className="text-gray-700">
+                补苗
+                <span className="text-xs text-gray-500 ml-1">
+                  （{isMotherMode ? '新增母株进入苗床，存入"补苗累计"字段' : '重新补种子进入苗床，存入"补苗累计"字段'}）
+                </span>
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={formData.replantChange ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || v === '-') {
+                    setFormData({ ...formData, replantChange: undefined });
+                    return;
+                  }
+                  const n = Number(v);
+                  if (!isNaN(n) && n >= 0) {
+                    setFormData({ ...formData, replantChange: n });
+                  }
+                }}
+                placeholder={isMotherMode ? '今日新增母株数（不可为负）' : '今日补种子数（不可为负）'}
+                className={deepInputClass}
+              />
+            </div>
             {/* 小苗产出（仅 1:多 模式 — 1:1 模式无"小苗产出"业务概念） */}
             {isMotherMode && (
               <div>
@@ -868,33 +895,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   }
                 }}
                 placeholder="今日小苗死亡数（不可为负）"
-                className={deepInputClass}
-              />
-            </div>
-            {/* 2026-06-16: 补苗（两种模式都显示）— 1:1=补种子进入；1:多=补母株进入；补入"补苗累计"字段 */}
-            <div>
-              <Label className="text-gray-700">
-                补苗
-                <span className="text-xs text-gray-500 ml-1">
-                  （{isMotherMode ? '新增母株进入苗床，存入"补苗累计"字段' : '重新补种子进入苗床，存入"补苗累计"字段'}）
-                </span>
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.replantChange ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '' || v === '-') {
-                    setFormData({ ...formData, replantChange: undefined });
-                    return;
-                  }
-                  const n = Number(v);
-                  if (!isNaN(n) && n >= 0) {
-                    setFormData({ ...formData, replantChange: n });
-                  }
-                }}
-                placeholder={isMotherMode ? '今日新增母株数（不可为负）' : '今日补种子数（不可为负）'}
                 className={deepInputClass}
               />
             </div>
@@ -953,11 +953,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold w-16 text-red-700">用药</th>
                     {/* 2026-06-16: 列名对齐 DB 字段 — 1:1 模式无 sc 累加（死字段），隐藏"成活变化"列；1:多 模式显示"母株损耗"列 */}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">母株损耗</th>}
+                    {/* 2026-06-28：补苗列移到母株损耗后（母株池字段先排列） */}
+                    <th className="px-2 py-2 text-left font-semibold">补苗</th>
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
                     {/* 2026-06-27：移除"人工定植"列（按业务规则：所有成品小苗必须先入库再出库） */}
                     <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>
-                    {/* 2026-06-16: 补苗列（两种模式都显示） */}
-                    <th className="px-2 py-2 text-left font-semibold">补苗</th>
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
                     <th className="px-2 py-2 text-left font-semibold">备注</th>
                     <th className="px-2 py-2 text-center font-semibold w-24">操作</th>
@@ -1034,6 +1034,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                           {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
                         </td>
                       )}
+                      {/* 2026-06-28：补苗列移到母株损耗后（母株池字段先排列） */}
+                      <td className="px-2 py-1.5">
+                        {renderEditableCell(r, 'replantChange', r.replantChange)}
+                      </td>
                       {isMotherMode && (
                         <td className="px-2 py-1.5">
                           {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
@@ -1042,10 +1046,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       {/* 2026-06-27：移除 plantedCountChange 数据列 */}
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
-                      </td>
-                      {/* 2026-06-16: 补苗列 */}
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'replantChange', r.replantChange)}
                       </td>
                       <td className="px-2 py-1.5">{r.operator || '-'}</td>
                       <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]">{r.remarks || '-'}</td>
