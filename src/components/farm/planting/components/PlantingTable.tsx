@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
+import { Bookmark, Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -60,6 +60,8 @@ interface PlantingTableProps {
   // 2026-06-25 v3: 育种/留种记录回调
   onBreedingRecord?: (record: Planting) => void;
   onSeedSavingRecord?: (record: Planting) => void;
+  // 2026-06-28: 每日记录回调
+  onDailyRecord?: (record: Planting) => void;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -104,6 +106,7 @@ export function PlantingTable({
   onViewMoveRecords,
   onBreedingRecord,
   onSeedSavingRecord,
+  onDailyRecord,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -368,6 +371,45 @@ export function PlantingTable({
           <span className="text-emerald-600 font-medium">{(count || 0).toLocaleString()}{record.unit || ''}</span>
         )
       },
+      // 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余）
+      {
+        title: '损耗数量',
+        dataIndex: 'lossCount',
+        width: 100,
+        render: (count: number, record: Planting) => (
+          <span className={(count || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+            {count ? `${count.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '补栽数量',
+        dataIndex: 'supplementCount',
+        width: 100,
+        render: (count: number, record: Planting) => (
+          <span className={(count || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+            {count ? `${count.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '剩余数量',
+        dataIndex: 'remainingCount',
+        width: 100,
+        render: (_: unknown, record: Planting) => {
+          // 活体剩余 = plantingCount + supplementCount - lossCount（MAX 0）
+          const remaining = Math.max(0,
+            (record.plantingCount || 0) +
+            (record.supplementCount || 0) -
+            (record.lossCount || 0)
+          );
+          return (
+            <span className="text-blue-600 font-bold">
+              {remaining.toLocaleString()}{record.unit || ''}
+            </span>
+          );
+        }
+      },
       {
         title: '种植日期',
         dataIndex: 'plantingDate',
@@ -512,6 +554,17 @@ export function PlantingTable({
                 title="采收与结束"
               >
                 <Recycle className="w-4 h-4 text-emerald-600" />
+              </Button>
+            )}
+            {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}
+            {!record.endTime && onDailyRecord && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDailyRecord(record)}
+                title="每日记录"
+              >
+                <Calendar className="w-4 h-4 text-blue-600" />
               </Button>
             )}
             {/* 2026-06-19: 行级采收入库按钮（unify-harvest-inbound-into-source-operations） */}
@@ -892,6 +945,10 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植区域</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植数量</TableHead>
+              {/* 2026-06-28: 每日记录累加 3 列 */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">损耗数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">补栽数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">剩余数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植日期</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤PH</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤EC</TableHead>
@@ -910,7 +967,7 @@ export function PlantingTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 25 : 24} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -995,6 +1052,22 @@ export function PlantingTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{record.areaName}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
                     {(record.plantingCount || 0).toLocaleString()}{record.unit || ''}
+                  </TableCell>
+                  {/* 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余） */}
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                    <span className={(record.lossCount || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                      {record.lossCount ? `${record.lossCount.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                    <span className={(record.supplementCount || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                      {record.supplementCount ? `${record.supplementCount.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                    <span className="text-blue-600 font-bold">
+                      {Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0)).toLocaleString()}{record.unit || ''}
+                    </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.plantingDate}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
@@ -1087,6 +1160,17 @@ export function PlantingTable({
                           title="采收与结束"
                         >
                           <Recycle className="w-4 h-4 text-emerald-600" />
+                        </Button>
+                      )}
+                      {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}
+                      {!record.endTime && onDailyRecord && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDailyRecord(record)}
+                          title="每日记录"
+                        >
+                          <Calendar className="w-4 h-4 text-blue-600" />
                         </Button>
                       )}
                       {onLabelDetail && (

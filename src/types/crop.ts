@@ -617,6 +617,45 @@ export interface Planting {
   selfSeedToSourceUnit?: string        // 2026-06-19: 自交种子最近单位
   disposeQty?: number                  // 直接废弃累计（2026-06-18 加；circulate_to_inventory 已去掉）
   disposeUnit?: string                 // 2026-06-19: 直接废弃最近单位
+  // 2026-06-28：每日记录累加字段（活体剩余 = plantingCount + supplementCount - lossCount）
+  lossCount?: number                   // 损耗累计
+  supplementCount?: number             // 补栽累计
+}
+
+/**
+ * 种植管理每日记录（2026-06-28）
+ * 简化版 DailyRecord：去掉母株/小苗双池（种植只有单池）
+ * 数量统计字段：lossChange（损耗）、supplementChange（补栽）
+ * 写入 daily_records 通用表，record_type='planting'
+ */
+export interface PlantingDailyRecord {
+  id: string;
+  plantingId: string;                  // 关联种植ID
+  recordDate: string;                  // 记录日期
+  // 环境参数
+  temperature?: number;                // 温度 ℃
+  humidity?: number;                   // 湿度 %
+  phValue?: number;                    // pH 值
+  ecValue?: number;                    // EC 值 mS/cm
+  // 浇水
+  watering?: boolean;
+  wateringMethod?: string;
+  wateringAmount?: number;
+  wateringUnit?: string;
+  // 施肥/用药子表（1:N 嵌套，存到 data JSON）
+  fertilizerRecords?: FertilizerRecordItem[];
+  pesticideRecords?: PesticideRecordItem[];
+  // 异常 + 操作
+  abnormality?: string;
+  operator?: string;
+  remarks?: string;
+  // 数量变化（核心：写入时累加到 plantings 主表）
+  lossChange?: number;                 // 当天损耗
+  supplementChange?: number;           // 当天补栽
+  // 时间戳
+  createBy?: string;
+  createTime?: string;
+  updateTime?: string;
 }
 
 // ========== 筛选状态类型 ==========

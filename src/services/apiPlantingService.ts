@@ -158,6 +158,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     targetTraits: String(item.targetTraits || ''),
     isSeedSaving: Boolean(item.isSeedSaving),
     seedPlantMarker: String(item.seedPlantMarker || ''),
+    // 2026-06-28: 每日记录累加字段（活体剩余 = plantingCount + supplementCount - lossCount）
+    lossCount: Number(item.lossCount) || 0,
+    supplementCount: Number(item.supplementCount) || 0,
   };
 }
 

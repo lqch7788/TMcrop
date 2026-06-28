@@ -3,9 +3,10 @@
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { Planting, PlantingHarvestRecord } from '../types/crop';
+import { Planting, PlantingHarvestRecord, PlantingDailyRecord } from '../types/crop';
 import * as plantingService from '../services/apiPlantingService';
 import type { AddHarvestRecordInput } from '../services/apiPlantingService';
+import * as plantingDailyRecordService from '../services/apiPlantingDailyRecordService';
 
 interface PlantingState {
   items: Planting[];
@@ -43,10 +44,15 @@ interface PlantingState {
       notes?: string;
     }
   ) => Promise<boolean>;
+
+  // 2026-06-28: 每日记录 actions（与育苗一致，简化版无母株/小苗双池）
+  addDailyRecord: (plantingId: string, record: Omit<PlantingDailyRecord, 'id' | 'plantingId'>) => Promise<PlantingDailyRecord | null>;
+  updateDailyRecord: (plantingId: string, recordId: string, updates: Partial<PlantingDailyRecord>) => Promise<boolean>;
+  deleteDailyRecord: (plantingId: string, recordId: string) => Promise<boolean>;
 }
 
 export const usePlantingStore = create<PlantingState>()(
-  (set) => ({
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -213,6 +219,47 @@ export const usePlantingStore = create<PlantingState>()(
         return true;
       } catch (error) {
         set({ error: (error as Error).message || '结束种植失败' });
+        return false;
+      }
+    },
+
+    // 2026-06-28: 每日记录 actions（与育苗一致；数量变化通过 service 自动累加到主表）
+    addDailyRecord: async (plantingId, record) => {
+      try {
+        const result = await plantingDailyRecordService.addPlantingDailyRecord(plantingId, record);
+        if (result) {
+          // 主表 loss_count / supplement_count 已变更，重新加载列表
+          await get().loadItems();
+        }
+        return result;
+      } catch (error) {
+        set({ error: (error as Error).message || '添加每日记录失败' });
+        return null;
+      }
+    },
+
+    updateDailyRecord: async (plantingId, recordId, updates) => {
+      try {
+        const success = await plantingDailyRecordService.updatePlantingDailyRecord(plantingId, recordId, updates);
+        if (success) {
+          await get().loadItems();
+        }
+        return success;
+      } catch (error) {
+        set({ error: (error as Error).message || '更新每日记录失败' });
+        return false;
+      }
+    },
+
+    deleteDailyRecord: async (plantingId, recordId) => {
+      try {
+        const success = await plantingDailyRecordService.deletePlantingDailyRecord(plantingId, recordId);
+        if (success) {
+          await get().loadItems();
+        }
+        return success;
+      } catch (error) {
+        set({ error: (error as Error).message || '删除每日记录失败' });
         return false;
       }
     },
