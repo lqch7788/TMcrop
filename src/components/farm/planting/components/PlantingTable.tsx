@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
+import { Bookmark, Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -551,9 +551,10 @@ export function PlantingTable({
                 variant="ghost"
                 size="icon"
                 onClick={() => onEndV2(record)}
-                title="采收与结束"
+                title="采收"
               >
-                <Recycle className="w-4 h-4 text-emerald-600" />
+                {/* 2026-06-28: 图标改为 Package（与育苗管理"采收"图标一致） */}
+                <Package className="w-4 h-4" />
               </Button>
             )}
             {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}
@@ -1157,9 +1158,10 @@ export function PlantingTable({
                           variant="ghost"
                           size="icon"
                           onClick={() => onEndV2(record)}
-                          title="采收与结束"
+                          title="采收"
                         >
-                          <Recycle className="w-4 h-4 text-emerald-600" />
+                          {/* 2026-06-28: 图标改为 Package（与育苗管理"采收"图标一致） */}
+                          <Package className="w-4 h-4" />
                         </Button>
                       )}
                       {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}

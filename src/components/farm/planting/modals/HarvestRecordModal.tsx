@@ -471,7 +471,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`采收与结束 - ${record.plantCode}`}
+      title={`采收 - ${record.plantCode}`}
       size="xxxl"
       showFooter={true}
       onSubmit={handleAdd}
@@ -934,16 +934,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               </span>
             </div>
           </div>
-          <div className="mt-3 flex justify-end">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleTotalEnd}
-              disabled={record.isHarvestLocked}
-            >
-              {record.isHarvestLocked ? '已结束（软锁）' : '总结束（软锁）'}
-            </Button>
-          </div>
+          {/* 2026-06-28: 移除"总结束（软锁）"按钮 — 与操作列"正常/异常结束"功能重复 */}
         </div>
       </div>
     </UnifiedModal>
