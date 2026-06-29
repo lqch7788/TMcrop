@@ -971,8 +971,8 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">损耗率</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采收入库量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">残株回种源量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">自交种子入种源量</TableHead>
+              {/* 2026-06-29: 合并残株回种源 + 自交种子入种源 + 种植自留种 为 1 列「种植自留种量」 */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植自留种量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">废弃量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
@@ -983,7 +983,7 @@ export function PlantingTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 25 : 24} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 24 : 23} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
