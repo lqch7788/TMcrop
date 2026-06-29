@@ -89,29 +89,29 @@ export default function PlantingLabelManageModal({
   // ---------- 自动选中（扫码跳转，仅执行一次） ----------
   const hasAutoSelected = useRef(false);
 
-  // 打开弹窗时加载标签
+  // 打开弹窗时加载标签 + 扫码深链自动选中
+  // 2026-06-29 修复：合并两个 useEffect 为一个，在 loadLabels 完成后立即执行 autoSelect，
+  // 避免 React 18 批处理下两个 useEffect 的 race condition 导致 autoSelectLabelNumber 未触发 setSelectedLabelId
   useEffect(() => {
     if (isOpen && plantingId) {
-      loadLabels({ plantingId });
       hasAutoSelected.current = false;
+      loadLabels({ plantingId }).then(() => {
+        // 加载完成后，检查扫码深链传入的 autoSelectLabelNumber
+        if (!autoSelectLabelNumber || hasAutoSelected.current) return;
+        const freshLabels = usePlantLabelStore.getState().labels;
+        const idx = freshLabels.findIndex(
+          (l: any) => l.labelNumber === autoSelectLabelNumber
+        );
+        if (idx !== -1) {
+          hasAutoSelected.current = true;
+          const label = freshLabels[idx] as any;
+          setSelectedLabelId(label.id);
+          setLabelPage(Math.floor(idx / PAGE_SIZE) + 1);
+          loadResumesForLabels([label.id]);
+        }
+      });
     }
-  }, [isOpen, plantingId, loadLabels]);
-
-  // 自动选中指定编号标签
-  useEffect(() => {
-    if (isOpen && autoSelectLabelNumber && labels.length > 0 && !hasAutoSelected.current) {
-      const idx = labels.findIndex(
-        (l: any) => l.labelNumber === autoSelectLabelNumber
-      );
-      if (idx !== -1) {
-        hasAutoSelected.current = true;
-        const label = labels[idx] as any;
-        setSelectedLabelId(label.id);
-        setLabelPage(Math.floor(idx / PAGE_SIZE) + 1);
-        loadResumesForLabels([label.id]);
-      }
-    }
-  }, [isOpen, autoSelectLabelNumber, labels, loadResumesForLabels]);
+  }, [isOpen, plantingId, loadLabels, autoSelectLabelNumber, loadResumesForLabels]);
 
   // ---------- 派生数据 ----------
   const plantingLabels = labels;
