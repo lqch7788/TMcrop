@@ -172,10 +172,9 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
   harvest: {
     typeName: '采收记录',
     loader: async (requestId) => {
-      const { useHarvestStore } = await import('../stores/useHarvestStore');
-      const state = useHarvestStore.getState();
-      if (state.items?.length === 0) await state.loadItems?.();
-      return useHarvestStore.getState().items?.find((i: any) => i.id === requestId);
+      // 2026-06-29: 采收入库页面已删除，改用 apiHarvestService 直接查 API
+      const { getHarvestRecordById } = await import('../services/apiHarvestService');
+      return getHarvestRecordById(requestId);
     },
   },
 
