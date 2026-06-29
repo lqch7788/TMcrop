@@ -190,6 +190,19 @@ router.get('/', (req: Request, res: Response) => {
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination IN ('circulate', 'self_seed', 'planting_self_kept')
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS selfKeptToSourceUnit,
+      -- 2026-06-29: 形态分布明细（GROUP BY seed_form）— 返回 JSON 字符串，前端解析成 chip 列表
+      -- 格式：[{seedForm, quantity, unit}, ...]，前端展示：「枝条 200根 · 种子 100粒」
+      (
+        SELECT '[' || GROUP_CONCAT('{"seedForm":"' || COALESCE(source_form, '未知') || '","quantity":' || quantity || ',"unit":"' || COALESCE(unit, '') || '"}', ',') || ']'
+        FROM (
+          SELECT source_form, unit, SUM(quantity) AS quantity
+          FROM planting_harvest_records
+          WHERE planting_id = p.id
+            AND destination IN ('circulate', 'self_seed', 'planting_self_kept')
+            AND source_form IS NOT NULL
+          GROUP BY source_form, unit
+        )
+      ) AS selfKeptByForm,
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'circulate'
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS residualToSourceUnit,
@@ -1681,20 +1694,26 @@ router.post('/:id/harvest-records', async (req, res) => {
       // 注: circulate / self_seed 已在 BEGIN 之前完成 executeCirculation (避免与外层事务冲突)
 
       // INSERT planting_harvest_records（副作用审计记录）
+      // 2026-06-29: 加 source_form 列（planting_self_keit 时存采收形态）
+      // 与 inventory_stock.source_form 同名复用（"果实/种子/枝条..."）
       db.run(`
         INSERT INTO planting_harvest_records (
           id, record_type, record_date, planting_id, planting_code,
           destination, sub_type, warehouse_id, warehouse_name,
           quantity, unit, notes, operator_name, create_by, create_by_id,
           create_time, update_time,
-          harvest_record_id, inventory_stock_id, circulation_record_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          harvest_record_id, inventory_stock_id, circulation_record_id,
+          source_form
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         harvestRecordId, 'planting', recordDate || now.split('T')[0], plantingId, planting.planting_code,
         destination, subType || null, warehouseId || null, warehouseName || null,
         quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
         now, now,
         generatedHarvestId, generatedStockId, generatedCircId,
+        // 2026-06-29: planting_self_keit 时用 seedForm 写入 source_form 列（果实/种子/枝条等）
+        // 兼容历史记录（circulate/self_seed）时不写，保留 NULL
+        destination === 'planting_self_kept' ? (seedForm || null) : null,
       ])
 
       // UPDATE planting.status（标记为采收中，但未结束）

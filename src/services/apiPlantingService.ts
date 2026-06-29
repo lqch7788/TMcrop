@@ -144,6 +144,22 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     // 2026-06-29: 合并 3 个 destination 值的种植自留种累计（前端用一个字段统一显示）
     selfKeptToSourceQty: Number(item.selfKeptToSourceQty) || 0,
     selfKeptToSourceUnit: String(item.selfKeptToSourceUnit || ''),
+    // 2026-06-29: 种植自留种按形态分布明细（后端 GROUP_CONCAT 字符串，前端 JSON.parse 解析）
+    selfKeptByForm: (() => {
+      const raw = (item as any).selfKeptByForm
+      if (!raw || typeof raw !== 'string') return []
+      try {
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+        return parsed.map((it: any) => ({
+          seedForm: String(it.seedForm || ''),
+          quantity: Number(it.quantity) || 0,
+          unit: String(it.unit || ''),
+        }))
+      } catch {
+        return []
+      }
+    })(),
     residualToSourceQty: Number(item.residualToSourceQty) || 0,
     residualToSourceUnit: String(item.residualToSourceUnit || ''),
     selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
@@ -376,21 +392,29 @@ export async function endPlanting(id: string, input: EndPlantingInput): Promise<
 // ============================================
 
 /** 获取种植的采收记录列表 */
+/**
+ * 2026-06-29: 把后端 source_form 字段映射为前端的 seedForm（语义统一：果实/种子/枝条等）
+ * 后端 planting_harvest_records 表里 source_form 列存采收形态（与 inventory_stock.source_form 复用）
+ */
+function normalizeHarvestRecord<T extends { sourceForm?: string }>(record: T): T & { seedForm?: string } {
+  return { ...record, seedForm: record.sourceForm }
+}
+
 export async function getPlantingHarvestRecords(plantingId: string): Promise<PlantingHarvestRecord[]> {
   const data = await enhancedApiClient.get<PlantingHarvestRecord[]>(`/plantings/${plantingId}/harvest-records`)
-  return data
+  return data.map(normalizeHarvestRecord)
 }
 
 /** 添加 1 条采收记录 */
 export async function addPlantingHarvestRecord(plantingId: string, input: AddHarvestRecordInput): Promise<PlantingHarvestRecord> {
   const data = await enhancedApiClient.post<PlantingHarvestRecord>(`/plantings/${plantingId}/harvest-records`, input)
-  return data
+  return normalizeHarvestRecord(data)
 }
 
 /** 编辑 1 条采收记录 */
 export async function updatePlantingHarvestRecord(plantingId: string, recordId: string, input: AddHarvestRecordInput): Promise<PlantingHarvestRecord> {
   const data = await enhancedApiClient.put<PlantingHarvestRecord>(`/plantings/${plantingId}/harvest-records/${recordId}`, input)
-  return data
+  return normalizeHarvestRecord(data)
 }
 
 /** 删除 1 条采收记录 */

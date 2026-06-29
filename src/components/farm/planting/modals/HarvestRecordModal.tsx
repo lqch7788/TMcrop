@@ -89,6 +89,9 @@ function parseErrorMessage(raw: string | undefined): string {
 function getDestinationLabel(dest: string): string {
   const map: Record<string, string> = {
     harvest: '采收入库',
+    // 2026-06-29: 合并种植自留种（替代旧 circulate / self_seed 双选项）
+    planting_self_kept: '种植自留种',
+    // 老值保留兼容历史记录展示
     circulate: '残株回种源',
     self_seed: '自交种子入种源',
     dispose: '直接废弃',
@@ -898,7 +901,17 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               导出
             </Button>
           </div>
-          {harvestRecords.length === 0 ? (
+          {/* 2026-06-29: 强制按 create_time + record_date 倒序（最新在前），避免 store prepend 顺序异常 */}
+          {(() => {
+            const sortedHistory = [...harvestRecords].sort((a, b) => {
+              const aTime = (a.createTime || '').toString()
+              const bTime = (b.createTime || '').toString()
+              if (aTime && bTime) return bTime.localeCompare(aTime)
+              const aDate = (a.recordDate || '').toString()
+              const bDate = (b.recordDate || '').toString()
+              return bDate.localeCompare(aDate)
+            })
+            return sortedHistory.length === 0 ? (
             <div className="text-center py-8 text-gray-500">暂无采收记录</div>
           ) : (
             <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
@@ -917,11 +930,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   </tr>
                 </thead>
                 <tbody>
-                  {harvestRecords.map((r) => (
+                  {sortedHistory.map((r) => (
                     <tr key={r.id} className="hover:bg-gray-50">
                       <td className="px-2 py-1.5">{r.recordDate}</td>
                       <td className="px-2 py-1.5">{getDestinationLabel(r.destination)}</td>
-                      <td className="px-2 py-1.5">{getSubTypeLabel(r.subType)}</td>
+                      {/* 2026-06-29: 采收形态优先于 subType 显示（planting_self_kept 新数据有 seedForm） */}
+                      <td className="px-2 py-1.5">{(r as any).seedForm || getSubTypeLabel(r.subType)}</td>
                       <td className="px-2 py-1.5">{r.quantity}</td>
                       <td className="px-2 py-1.5">{r.unit}</td>
                       <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
@@ -945,13 +959,15 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 </tbody>
               </table>
             </div>
-          )}
+            )
+          })()}
         </div>
 
         {/* 累计统计 + 总结束 */}
         <div className="bg-gray-50 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">去向累计</h4>
-          <div className="grid grid-cols-4 gap-4 text-sm">
+          {/* 2026-06-29: 4 列减为 3 列（合并残株回种源 + 自交种子 = 种植自留种） */}
+          <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-gray-600">采收入库：</span>
               <span className="font-bold text-blue-600">
@@ -959,15 +975,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               </span>
             </div>
             <div>
-              <span className="text-gray-600">残株回种源：</span>
+              <span className="text-gray-600">种植自留种：</span>
               <span className="font-bold text-emerald-600">
-                {(record.residualToSourceQty || 0).toLocaleString()} {record.unit || ''}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">自交种子：</span>
-              <span className="font-bold text-amber-600">
-                {(record.selfSeedToSourceQty || 0).toLocaleString()} {record.unit || ''}
+                {(record.selfKeptToSourceQty || 0).toLocaleString()} {record.selfKeptToSourceUnit || record.unit || ''}
               </span>
             </div>
             <div>

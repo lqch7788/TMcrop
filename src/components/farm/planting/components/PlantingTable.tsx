@@ -468,12 +468,37 @@ export function PlantingTable({
       {
         title: '种植自留种量',
         dataIndex: 'selfKeptToSourceQty',
-        width: 130,
-        render: (qty: number, record: Planting) => (
-          <span className={qty > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
-            {qty ? `${qty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
-          </span>
-        )
+        width: 200,
+        // 2026-06-29: 多产物明细 chip 显示（如「枝条 200根 · 种子 100粒」）
+        // 退化到老数据：仅 selfKeptToSourceQty 总数（没 breakdown）
+        render: (qty: number, record: Planting) => {
+          const breakdown = record.selfKeptByForm || []
+          if (breakdown.length === 0) {
+            return (
+              <span className={qty > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                {qty ? `${qty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
+              </span>
+            )
+          }
+          return (
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-xs text-emerald-600 font-medium">
+                {qty.toLocaleString()}{record.selfKeptToSourceUnit || record.unit || ''}
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {breakdown.map((it, idx) => (
+                  <span
+                    key={`${it.seedForm}-${idx}`}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    title={`${it.seedForm} ${it.quantity}${it.unit}`}
+                  >
+                    {it.seedForm} {it.quantity.toLocaleString()}{it.unit}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        }
       },
       {
         title: '废弃量',
