@@ -1647,6 +1647,17 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• seed_sources.end_time:', e.message);
   }
 
+  // 2026-06-29: 种植自留种功能合并 — seed_sources 加 seed_form 列
+  // 存储种植自留种回流时的采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）
+  // 老种源记录保持 NULL 不变（外部购买/历史数据不涉及此字段）
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN seed_form TEXT`);
+    seedLog.info('✓ seed_sources 表添加 seed_form 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.seed_form 列已存在');
+    else seedLog.skip('• seed_sources.seed_form:', e.message);
+  }
+
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
