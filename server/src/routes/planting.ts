@@ -212,7 +212,7 @@ router.get('/', (req: Request, res: Response) => {
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'dispose'
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS disposeUnit
-      -- 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_keit）— 旧值保留作历史数据
+      -- 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）— 旧值保留作历史数据
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
     LEFT JOIN crop_varieties cv ON cv.crop_code = p.crop_code
@@ -1694,7 +1694,7 @@ router.post('/:id/harvest-records', async (req, res) => {
       // 注: circulate / self_seed 已在 BEGIN 之前完成 executeCirculation (避免与外层事务冲突)
 
       // INSERT planting_harvest_records（副作用审计记录）
-      // 2026-06-29: 加 source_form 列（planting_self_keit 时存采收形态）
+      // 2026-06-29: 加 source_form 列（planting_self_kept 时存采收形态）
       // 与 inventory_stock.source_form 同名复用（"果实/种子/枝条..."）
       db.run(`
         INSERT INTO planting_harvest_records (
@@ -1711,7 +1711,7 @@ router.post('/:id/harvest-records', async (req, res) => {
         quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
         now, now,
         generatedHarvestId, generatedStockId, generatedCircId,
-        // 2026-06-29: planting_self_keit 时用 seedForm 写入 source_form 列（果实/种子/枝条等）
+        // 2026-06-29: planting_self_kept 时用 seedForm 写入 source_form 列（果实/种子/枝条等）
         // 兼容历史记录（circulate/self_seed）时不写，保留 NULL
         destination === 'planting_self_kept' ? (seedForm || null) : null,
       ])
