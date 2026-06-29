@@ -317,7 +317,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('请选择采收形态（果实/种子/种苗/枝条等）')
       return
     }
-    // 2026-06-29: planting_self_keit 必须选采收形态（用于 seed_sources.seed_form）
+    // 2026-06-29: planting_self_kept 必须选采收形态（用于 seed_sources.seed_form）
     if (destination === 'planting_self_kept' && !sourceForm) {
       showAlert('种植自留种必须选择采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）')
       return
@@ -409,7 +409,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
     setSubmitting(true)
     try {
-      // 2026-06-29: 合并 planting_self_keit 替代旧 circulate / self_seed
+      // 2026-06-29: 合并 planting_self_kept 替代旧 circulate / self_seed
       // - 老值（circulate/self_seed）作为历史值仍可被后端接受（编辑历史记录）
       // - 新建只能选 planting_self_kept
       // - subType 前端不再传（由后端基于 seedForm 派生）

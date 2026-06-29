@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -51,10 +51,10 @@ interface PlantingTableProps {
   printMode?: boolean;
   onPrintModeChange?: (mode: boolean) => void;
   onConfirmPrint?: (records: Planting[]) => void;
-  // 标签/移动/标记回调
-  onLabelDetail?: (record: Planting) => void;
+  // 2026-06-29：标签管理回调（合并原 onLabelDetail + onMark，参考育苗管理 SeedlingTable）
+  onLabelManage?: (record: Planting) => void;
+  // 移动回调（移入/移出，种植特有全批级操作，保留独立入口）
   onMove?: (record: Planting) => void;
-  onMark?: (record: Planting) => void;
   // 2026-06-19: 移入/移出记录查看回调
   onViewMoveRecords?: (record: Planting) => void;
   // 2026-06-25 v3: 育种/留种记录回调
@@ -100,9 +100,8 @@ export function PlantingTable({
   onEndV2,
   onEnd,
   onInbound,
-  onLabelDetail,
+  onLabelManage,
   onMove,
-  onMark,
   onViewMoveRecords,
   onBreedingRecord,
   onSeedSavingRecord,
@@ -599,12 +598,12 @@ export function PlantingTable({
                 <Package className="w-4 h-4" />
               </Button>
             )}
-            {onLabelDetail && (
+            {onLabelManage && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onLabelDetail(record)}
-                title="标签详情"
+                onClick={() => onLabelManage(record)}
+                title="标签管理"
               >
                 <Tag className="w-4 h-4" />
               </Button>
@@ -617,16 +616,6 @@ export function PlantingTable({
                 title="移入/移出"
               >
                 <MoveRight className="w-4 h-4" />
-              </Button>
-            )}
-            {onMark && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onMark(record)}
-                title="标记管理"
-              >
-                <Bookmark className="w-4 h-4" />
               </Button>
             )}
             {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 两个独立按钮（放在标记管理图标后面） */}
@@ -1190,12 +1179,12 @@ export function PlantingTable({
                           <Calendar className="w-4 h-4 text-blue-600" />
                         </Button>
                       )}
-                      {onLabelDetail && (
+                      {onLabelManage && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => onLabelDetail(record)}
-                          title="标签详情"
+                          onClick={() => onLabelManage(record)}
+                          title="标签管理"
                         >
                           <Tag className="w-4 h-4" />
                         </Button>
@@ -1208,16 +1197,6 @@ export function PlantingTable({
                           title="移入/移出"
                         >
                           <MoveRight className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {onMark && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onMark(record)}
-                          title="标记管理"
-                        >
-                          <Bookmark className="w-4 h-4" />
                         </Button>
                       )}
                       {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束（放在标记管理图标后面） */}

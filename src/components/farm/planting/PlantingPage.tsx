@@ -3,7 +3,8 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark, Calendar } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
@@ -18,12 +19,11 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore, useToastStore } from '../../../stores';
-import type { PlantLabel, PlantMark } from '../../../stores/usePlantLabelStore';
-import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
+import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore } from '../../../stores';
+// 2026-06-29：合并 onLabelDetail + onMark → onLabelManage（参考育苗管理 SeedlingTable）
+import PlantingLabelManageModal from './modals/PlantingLabelManageModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
 import PlantingMoveRecordsModal from './modals/PlantingMoveRecordsModal';
-import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import { useAuthPermission } from '../../../hooks/usePermission';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
@@ -33,6 +33,8 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
 
 export default function PlantingPage() {
+  // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage）
+  const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -79,12 +81,8 @@ export default function PlantingPage() {
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
 
-  // 从标签 Store 获取标签/标记数据
-  const {
-    labels: plantLabels, resumeMap, marks,
-    loadLabels, loadMarks, loadResumesForLabels,
-    submitMove, submitMark
-  } = usePlantLabelStore();
+  // 2026-06-29：移除 usePlantLabelStore 调用 — 新 PlantingLabelManageModal 内部自带 store 调用
+  // （旧 markModal/labelDetailModal 路径已删除；planting page 不再预加载标签列表）
 
   // 作物品种数据（从种植数据中提取唯一品种，而不是从品种库获取所有品种）
   const cropNames = useMemo(() => {
@@ -168,11 +166,14 @@ export default function PlantingPage() {
     setRecordModal({ open: false, recordType: 'breeding', record: null });
   };
 
-  // 标签/标记/移动弹窗状态
-  const [labelDetailOpen, setLabelDetailOpen] = useState(false);
+  // 2026-06-29：标签管理弹窗状态（合并原 labelDetailOpen + markModalOpen）
+  const [labelManageOpen, setLabelManageOpen] = useState(false);
+  // 标签管理弹窗用：只存 id+code 即可，避免 Planting 全量 state 引起不必要的 re-render
+  const [labelManageRecord, setLabelManageRecord] = useState<{ id: string; plantCode: string } | null>(null);
+  // 2026-06-29：扫码跳转 — 自动选中指定 labelNumber
+  const [autoSelectLabelNumber, setAutoSelectLabelNumber] = useState<string | undefined>(undefined);
+  // 移入/移出弹窗状态（保留 — 种植特有全批级操作）
   const [moveModalOpen, setMoveModalOpen] = useState(false);
-  const [markModalOpen, setMarkModalOpen] = useState(false);
-  const [currentLabelPlanting, setCurrentLabelPlanting] = useState<Planting | null>(null);
 
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
@@ -303,17 +304,11 @@ export default function PlantingPage() {
     }
   }, [selectedRows, deleteItems, showAlert, enhancedApiClient]);
 
-  // 标签详情 - 加载该种植的标签并打开弹窗
-  const handleLabelDetail = async (record: Planting) => {
-    setCurrentLabelPlanting(record);
-    await loadLabels({ plantingId: record.id });
-    // 从 store 读取最新状态（避免闭包陷阱）
-    const freshLabels = usePlantLabelStore.getState().labels;
-    const labelIds = freshLabels.map(l => l.id);
-    if (labelIds.length > 0) {
-      await loadResumesForLabels(labelIds);
-    }
-    setLabelDetailOpen(true);
+  // 2026-06-29：标签管理（合并原 handleLabelDetail + handleMark）— 装载标签后打开新 PlantingLabelManageModal
+  const handleLabelManage = (record: Planting) => {
+    setLabelManageRecord({ id: record.id, plantCode: record.plantCode || '' });
+    setAutoSelectLabelNumber(undefined);
+    setLabelManageOpen(true);
   };
 
   // 移入/移出 - 打开弹窗（整批级别，不依赖标签）
@@ -329,29 +324,50 @@ export default function PlantingPage() {
     setMoveRecordsOpen(true)
   }
 
-  // 标记管理 - 加载标签和标记后打开弹窗
-  const handleMark = async (record: Planting) => {
-    setCurrentLabelPlanting(record);
-    await loadLabels({ plantingId: record.id });
-    await loadMarks();
-    setMarkModalOpen(true);
-  };
-
   // 2026-06-22: 弹窗内部已调 movePlantingV2；handleMoveSubmit 仅用于通知父组件刷新列表
   const handleMoveSubmit = async (_input: MovePlantingInputV2) => {
     await loadItems();
     return true;
   };
 
-  const handleMarkSubmit = async (markId: number, labelIds: number[]) => {
-    const ok = await submitMark(markId, labelIds);
-    if (ok) {
-      await showAlert('标记分配成功');
-    } else {
-      await showAlert('标记分配失败');
-    }
-    return ok;
-  };
+  // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage L173-208）
+  // QR 码扫描后跳转到本页面 + 自动开标签管理弹窗 + 定位到指定标签
+  useEffect(() => {
+    const labelNumber = searchParams.get('labelNumber');
+    if (!labelNumber) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res: any = await enhancedApiClient.get(`/plant-labels/by-number/${encodeURIComponent(labelNumber)}`);
+        // enhancedApiClient 已解包 data，兼容 {success, data} 和直接返回
+        const payload = res?.data || res;
+        const label = payload?.label || payload;
+        if (!label || !label.plantingId) return;
+        if (cancelled) return;
+
+        // 从 labelNumber 提取 plantCode（格式：{plantCode}-{4位序号}）
+        const parts = String(labelNumber).split('-');
+        const plantCode = parts.length > 1 ? parts.slice(0, -1).join('-') : labelNumber;
+
+        setLabelManageRecord({ id: String(label.plantingId), plantCode });
+        setAutoSelectLabelNumber(labelNumber);
+        setLabelManageOpen(true);
+
+        // 清理 URL 参数，避免刷新重复打开
+        const next = new URLSearchParams(searchParams);
+        next.delete('labelNumber');
+        const newUrl = next.toString()
+          ? `${window.location.pathname}?${next.toString()}`
+          : window.location.pathname;
+        window.history.replaceState(null, '', newUrl);
+      } catch {
+        // 扫码查询失败，静默处理
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []); // 仅在 mount 时执行一次
 
   const handleSearch = () => {
     setPagination({ ...pagination, current: 1 });
@@ -565,9 +581,8 @@ export default function PlantingPage() {
         onDelete={handleDelete}
         onImageClick={handleImageClick}
         onAdd={() => setAddModalOpen(true)}
-        onLabelDetail={handleLabelDetail}
+        onLabelManage={handleLabelManage}
         onMove={handleMove}
-        onMark={handleMark}
         onViewMoveRecords={handleViewMoveRecords}
         onBreedingRecord={handleBreedingRecord}
         onSeedSavingRecord={handleSeedSavingRecord}
@@ -698,21 +713,16 @@ export default function PlantingPage() {
         selectedCount={selectedRows.length}
       />
 
-      {/* 标签详情弹窗 */}
-      <PlantingLabelDetailModal
-        isOpen={labelDetailOpen}
-        onClose={() => setLabelDetailOpen(false)}
-        labels={plantLabels.map(l => ({
-          id: l.id,
-          labelNumber: l.label_number,
-          plantingId: parseInt(l.planting_id, 10) || 0,
-          moveInAreaName: l.move_in_area_name || '',
-          moveInDate: l.move_in_date || '',
-          moveOutAreaName: l.move_out_area_name || '',
-          moveOutDate: l.move_out_date || '',
-        }))}
-        resumeMap={resumeMap}
-      />
+      {/* 2026-06-29：种植标签管理弹窗（合并原 PlantingLabelDetailModal + PlantingMarkModal，参考 SeedlingLabelManageModal） */}
+      {labelManageRecord && (
+        <PlantingLabelManageModal
+          isOpen={labelManageOpen}
+          onClose={() => { setLabelManageOpen(false); setLabelManageRecord(null); setAutoSelectLabelNumber(undefined); }}
+          plantingId={labelManageRecord.id}
+          plantingCode={labelManageRecord.plantCode}
+          autoSelectLabelNumber={autoSelectLabelNumber}
+        />
+      )}
 
       {/* 移入/移出弹窗（整批级别） */}
       {currentRecord && (
@@ -733,27 +743,6 @@ export default function PlantingPage() {
           planting={currentRecord}
         />
       )}
-
-      {/* 标记管理弹窗 */}
-      <PlantingMarkModal
-        isOpen={markModalOpen}
-        onClose={() => setMarkModalOpen(false)}
-        marks={marks.map(m => ({
-          id: m.id,
-          name: m.name,
-          color: m.color,
-          icon: m.icon,
-          parentId: m.parent_id,
-          markAid: m.mark_aid,
-          isUse: m.is_use,
-          sortOrder: m.sort_order,
-        }))}
-        labels={plantLabels.map(l => ({
-          id: l.id,
-          labelNumber: l.label_number,
-        }))}
-        onSubmit={handleMarkSubmit}
-      />
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
       <DeleteConfirmModal
