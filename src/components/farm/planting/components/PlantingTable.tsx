@@ -942,7 +942,7 @@ export function PlantingTable({
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <TableRow className="hover:from-blue-500 hover:to-blue-600">
               {showCheckbox && (
-                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12 text-center">
                   <Input
                     type="checkbox"
                     checked={selectedRows.length === data.length && data.length > 0}
@@ -957,32 +957,32 @@ export function PlantingTable({
                   />
                 </TableHead>
               )}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植批号</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">关联生产计划</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源批号</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源类型</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植区域</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植批号</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">关联生产计划</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">来源批号</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">来源类型</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">作物编码</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">作物品种</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">品种路径</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植区域</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植数量</TableHead>
               {/* 2026-06-28: 每日记录累加 3 列 */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">损耗数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">补栽数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30">剩余数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植日期</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤PH</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤EC</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">损耗率</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采收入库量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">损耗数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">补栽数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">剩余数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植日期</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">土壤PH</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">土壤EC</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">损耗率</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">已采收</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">采收入库量</TableHead>
               {/* 2026-06-29: 合并残株回种源 + 自交种子入种源 + 种植自留种 为 1 列「种植自留种量」 */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="自留种入库到内部种源">种植自留种量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">废弃量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">废弃量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">完成比例</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">状态</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
-              <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20">操作</TableHead>
+              <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20 text-center">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
@@ -996,7 +996,7 @@ export function PlantingTable({
               currentData.map((record) => (
                 <TableRow key={record.id} className="hover:bg-gray-50">
                   {showCheckbox && (
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3 text-center">
                       <Input
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
@@ -1011,7 +1011,7 @@ export function PlantingTable({
                       />
                     </TableCell>
                   )}
-                  <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap text-center">
                     <div className="flex items-center gap-1.5">
                       <span
                         className="font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 hover:underline"
@@ -1039,17 +1039,17 @@ export function PlantingTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {record.productionPlanCode ? (
                       <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">
                         {record.productionPlanCode}
                       </span>
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     <span className="font-mono text-gray-700">{record.sourceCode || '-'}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {/* 2026-06-25: 改用种源自身类型（badge 显示 SOURCE_TYPE_MAP），无关联时按历史 sourceType 兜底 */}
                     {record.sourceSeedSourceType ? (
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
@@ -1061,66 +1061,66 @@ export function PlantingTable({
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">种子</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm">
+                  <TableCell className="px-4 py-3 text-sm text-center">
                     <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap text-center">
                     {getCropVarietyName(record)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {getVarietyPath(record)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{record.areaName}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">{record.areaName}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap text-center">
                     {(record.plantingCount || 0).toLocaleString()}{record.unit || ''}
                   </TableCell>
                   {/* 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余） */}
-                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     <span className={(record.lossCount || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
                       {record.lossCount ? `${record.lossCount.toLocaleString()}${record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     <span className={(record.supplementCount || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
                       {record.supplementCount ? `${record.supplementCount.toLocaleString()}${record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     <span className="text-blue-600 font-bold">
                       {Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0)).toLocaleString()}{record.unit || ''}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.plantingDate}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{record.plantingDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">
                     {record.soilPH != null && record.soilPH > 0 ? record.soilPH.toFixed(1) : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">
                     {record.soilEC != null && record.soilEC > 0 ? record.soilEC.toFixed(1) : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     {record.attritionRate != null && record.attritionRate > 0 ? (
                       <span className="text-amber-600 font-medium">{record.attritionRate.toFixed(1)}%</span>
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap text-center">
                     {(record.harvestQuantity || 0).toLocaleString()}{record.unit || ''}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     <span className={(record.harvestToInventoryQty || 0) > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}>
                       {record.harvestToInventoryQty ? `${record.harvestToInventoryQty.toLocaleString()}${record.harvestToInventoryUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     <span className={(record.selfKeptToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
                       {record.selfKeptToSourceQty ? `${record.selfKeptToSourceQty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     <span className={(record.disposeQty || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
                       {record.disposeQty ? `${record.disposeQty.toLocaleString()}${record.disposeUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     {(() => {
                       const harvestQty = record.harvestQuantity || 0;
                       const target = record.targetYield;
@@ -1135,7 +1135,7 @@ export function PlantingTable({
                       );
                     })()}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     <div className="flex items-center gap-1.5">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}>
                         {statusMap[record.status as keyof typeof statusMap]?.label || record.status}
@@ -1156,7 +1156,7 @@ export function PlantingTable({
                     </div>
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
-                  <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
+                  <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10 text-center">
                     <div className="flex gap-1">
                       {record.pictures && record.pictures.length > 0 && (
                         <Button
