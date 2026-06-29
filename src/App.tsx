@@ -20,7 +20,6 @@ import Production from './pages/Production';
 import Tasks from './pages/Tasks';
 import Materials from './pages/Materials';
 import EnvironmentMonitor from './pages/EnvironmentMonitor';
-import Harvest from './pages/Harvest';
 import InventoryV3 from './pages/InventoryV3';
 import OutboundRecordsPage from './pages/OutboundRecordsPage';
 import ProduceCodeRule from './pages/ProduceCodeRule';
@@ -128,7 +127,6 @@ const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
 const Customer = lazy(() => import('./components/farm/customer/CustomerPage'));
-const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const MaterialFlow = lazy(() => import('./pages/material-flow/MaterialFlowPage'));
 const Fertilizer = lazy(() => import('./pages/crop/Fertilizer'));
 // 生产汇总表 V1.0 - 8页面重构 → V1.1 合并为5页面
@@ -239,7 +237,6 @@ function AppContent() {
           <Route path="/crop/seed-source" element={<SeedSource />} />
           <Route path="/crop/seedling" element={<Seedling />} />
           <Route path="/crop/planting" element={<Planting />} />
-          <Route path="/crop/harvest" element={<CropHarvest />} />
           <Route path="/crop/material-flow" element={<MaterialFlow />} />
 <Route path="/crop/fertilizer" element={<Fertilizer />} />
           <Route path="/crop-inventory" element={<InventoryV3 />} />
@@ -300,7 +297,6 @@ function AppContent() {
           <Route path="/materials" element={<Materials />} />
           <Route path="/inspection" element={<FarmTaskHub />} />
           <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
-          <Route path="/harvest" element={<Harvest />} />
           <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
           <Route path="/iot-monitor" element={<IoTMonitor />} />
           <Route path="/env-control" element={<EnvControl />} />

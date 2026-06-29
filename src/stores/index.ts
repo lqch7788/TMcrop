@@ -96,7 +96,6 @@ export { usePlantingStore } from './usePlantingStore';
 export { usePlantLabelStore } from './usePlantLabelStore';
 export type { PlantLabel, PlantLabelResume, PlantMark, MoveFormData } from './usePlantLabelStore';
 
-export { useHarvestStore } from './useHarvestStore';
 export { useInventoryStore } from './useInventoryStore';
 export type { InventoryFilters } from './useInventoryStore';
 

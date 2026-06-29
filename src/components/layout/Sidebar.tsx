@@ -9,7 +9,7 @@ import {
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
-  Leaf, Flower2, Trees, CheckCircle,
+  Leaf, Flower2, Trees,
   DollarSign, Layers, Link as LinkIcon,
   Bug,
   FileDown
@@ -45,7 +45,6 @@ const cropSubItems = [
   { icon: Sprout, label: '内部种源', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
-  { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
   { icon: TrendingUp, label: '流转追溯', path: '/crop/material-flow' },
