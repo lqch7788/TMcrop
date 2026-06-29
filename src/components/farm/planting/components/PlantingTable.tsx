@@ -466,7 +466,12 @@ export function PlantingTable({
         )
       },
       {
-        title: '种植自留种量',
+        title: (
+          // 2026-06-29: 列头悬停提示 — 解释种植自留种流向内部种源（不入作物库存）
+          <span title="自留种入库到内部种源">
+            种植自留种量
+          </span>
+        ),
         dataIndex: 'selfKeptToSourceQty',
         width: 200,
         // 2026-06-29: 多产物明细 chip 显示（如「枝条 200根 · 种子 100粒」）
@@ -972,7 +977,7 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采收入库量</TableHead>
               {/* 2026-06-29: 合并残株回种源 + 自交种子入种源 + 种植自留种 为 1 列「种植自留种量」 */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植自留种量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="自留种入库到内部种源">种植自留种量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">废弃量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
