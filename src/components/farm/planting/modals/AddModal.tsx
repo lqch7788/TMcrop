@@ -85,6 +85,14 @@ export function AddModal({
   const storePlans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
+  // 2026-06-28: 字段级校验错误状态（替代 showAlert 文字提示，改为输入框红框 + Label 红※）
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearError = (field: string) => setErrors((prev) => {
+    if (!prev[field]) return prev;
+    const { [field]: _, ...rest } = prev;
+    return rest;
+  });
+
   // 2026-06-25: 弹窗打开时重置 formData 为初始值（修复 isBreeding/isSeedSaving 持久化的 bug）
   // 根因：<AddModal> 即使 isOpen=false 也不卸载组件，useState 初始值只执行一次，
   //       导致用户上一次提交的值（特别是 checkbox 状态）会持久保留
@@ -124,6 +132,7 @@ export function AddModal({
       setSeedSourceKeyword('');
       setPlantCode('');
       setPictures([]);
+      setErrors({});  // 2026-06-28: 弹窗打开时清空校验错误
       fetchPlans(); // 弹窗打开时刷新生产计划列表
     }
   }, [isOpen, fetchPlans]);
@@ -199,25 +208,20 @@ export function AddModal({
   }, [isOpen, seedSourceKeyword]);
 
   const handleSubmit = async () => {
-    if (!plantCode) {
-      await showAlert('请先生成种植批号');
-      return;
-    }
-    if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
-      await showAlert('请填写完整信息');
-      return;
-    }
-    // 2026-06-18: 数量超限硬拦截（防止保存失败但用户不知道）
-    if (overLimit) {
-      await showAlert(`种植数量 ${formData.plantingCount} 超过可定植数量 ${availableAmount}，请调整后重试`)
-      return
-    }
+    // 2026-06-28: 字段级校验（替代文字提示，用红框 + 红※标识）
+    const newErrors: Record<string, string> = {};
+    if (!plantCode) newErrors.plantCode = '请先生成种植批号';
+    if (!formData.sourceId) newErrors.sourceId = '请选择种源';
+    if (!formData.areaId) newErrors.areaId = '请选择种植区域';
+    if (!formData.plantingCount || formData.plantingCount <= 0) newErrors.plantingCount = '请输入种植数量';
+    if (overLimit) newErrors.plantingCount = `超过可定植数量 ${availableAmount}`;
 
-    // 来源校验：必须选择种源（外部来源必须先录入种源管理）
-    if (!formData.sourceId) {
-      await showAlert('请先选择种源');
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    // 通过校验，清空旧 errors
+    setErrors({});
 
     // 2026-06-25: 育种计划校验
     if (formData.isBreeding) {
@@ -306,6 +310,7 @@ export function AddModal({
         await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
       }
     } catch (error) {
+      // 2026-06-28: 网络/服务错误的兜底提示（保留弹窗，提示用户刷新）
       // logger.error('添加种植记录失败:', error);
       showAlert('添加失败，请重试');
       return;
@@ -365,14 +370,16 @@ export function AddModal({
         {/* 种植批号 + 关联生产计划 — 同行排列 */}
         <div className="col-span-2 grid grid-cols-2 gap-x-6">
           <div>
-            <Label className="text-gray-900">种植批号</Label>
+            <Label className="text-gray-900">
+              种植批号 <span className="text-red-500">*</span>
+            </Label>
             <div className="flex gap-2">
               <Input
                 type="text"
                 value={plantCode}
                 readOnly
                 placeholder="点击生成按钮获取批号"
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-800 font-mono"
+                className={`flex-1 px-3 py-2 border rounded-lg text-sm bg-gray-50 text-gray-800 font-mono ${errors.plantCode ? 'border-red-500 ring-1 ring-red-200' : 'border-gray-200'}`}
               />
               <Button
                 variant="default"
@@ -414,7 +421,8 @@ export function AddModal({
         {/* 2026-06-25: 来源路径/来源类型字段全部移除，默认从种源选择 */}
         <div className="col-span-2">
           <Label className="text-gray-900">
-            选择种源 <span className="text-xs text-gray-500 font-normal">（来自种源管理的种源列表）</span>
+            选择种源 <span className="text-red-500">*</span>
+            <span className="text-xs text-gray-500 font-normal ml-1">（来自种源管理的种源列表）</span>
           </Label>
           {/* 2026-06-25: 搜索框 + 下拉选择 同行布局 */}
           <div className="flex gap-2">
@@ -431,9 +439,9 @@ export function AddModal({
             <div className="flex-1">
               <Select
                 value={formData.sourceId}
-                onValueChange={handleSeedSourceChange}
+                onValueChange={(v) => { clearError('sourceId'); handleSeedSourceChange(v); }}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className={`${deepInputClass} ${errors.sourceId ? 'border-red-500 ring-1 ring-red-200' : ''}`}>
                   <SelectValue placeholder={seedSources.length === 0 ? '（无匹配种源）' : '请选择'} />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,6 +454,7 @@ export function AddModal({
               </Select>
             </div>
           </div>
+          {errors.sourceId && <p className="mt-1 text-xs text-red-600">{errors.sourceId}</p>}
         </div>
 
         {/* 作物品种 */}
@@ -640,24 +649,31 @@ export function AddModal({
 
         {/* 种植区域 */}
         <div>
-          <Label className="text-gray-900">种植区域</Label>
-          <DictSelect
-            category="planting_area"
-            value={formData.areaId}
-            onChange={(value) => handleAreaChange(value)}
-            placeholder="选择种植区域"
-          />
+          <Label className="text-gray-900">
+            种植区域 <span className="text-red-500">*</span>
+          </Label>
+          <div className={errors.areaId ? 'border border-red-500 rounded-lg ring-1 ring-red-200' : ''}>
+            <DictSelect
+              category="planting_area"
+              value={formData.areaId}
+              onChange={(value) => { clearError('areaId'); handleAreaChange(value); }}
+              placeholder="选择种植区域"
+            />
+          </div>
+          {errors.areaId && <p className="mt-1 text-xs text-red-600">{errors.areaId}</p>}
         </div>
 
         {/* 种植数量 + 单位 — 2026-06-25 单位从数据词典 unit 选 */}
         <div>
-          <Label className="text-gray-900">种植数量</Label>
+          <Label className="text-gray-900">
+            种植数量 <span className="text-red-500">*</span>
+          </Label>
           <div className="flex gap-2">
             <Input
               type="number"
               value={formData.plantingCount || ''}
-              onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-              className={`${deepInputClass} flex-1 ${overLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
+              onChange={(e) => { clearError('plantingCount'); setFormData({ ...formData, plantingCount: Number(e.target.value) }); }}
+              className={`${deepInputClass} flex-1 ${(overLimit || errors.plantingCount) ? 'border-red-500 ring-1 ring-red-200' : ''}`}
             />
             <div style={{ minWidth: '120px' }}>
               <DictSelect
