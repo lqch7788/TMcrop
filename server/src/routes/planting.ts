@@ -783,8 +783,9 @@ router.post('/', (req: Request, res: Response) => {
           soil_ph, soil_ec, attrition_rate, target_yield, target_yield_unit, transplant_count, transplant_date, is_harvest, harvest_date,
           harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code,
           is_breeding, parent_male_code, parent_female_code, generation, breeding_method, breeding_location, target_traits,
-          is_seed_saving, seed_plant_marker
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          is_seed_saving, seed_plant_marker,
+          loss_count, supplement_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -797,6 +798,8 @@ router.post('/', (req: Request, res: Response) => {
         finalPictures, finalProductionPlanId, finalProductionPlanCode,
         finalIsBreeding, finalParentMaleCode, finalParentFemaleCode, finalGeneration, finalBreedingMethod, finalBreedingLocation, finalTargetTraits,
         finalIsSeedSaving, finalSeedPlantMarker,
+        // 2026-06-28: 新建时 loss_count/supplement_count 默认 0（每日记录累加写入）
+        0, 0,
       ]);
 
       // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
