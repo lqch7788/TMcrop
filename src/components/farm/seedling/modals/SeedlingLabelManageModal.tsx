@@ -421,6 +421,7 @@ export default function SeedlingLabelManageModal({
               onClick={() => setShowBatchGenerate((v) => !v)}
               variant="outline"
               size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <Plus className="w-4 h-4" /> 补充生成
             </Button>
