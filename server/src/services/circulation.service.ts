@@ -28,6 +28,26 @@ export const SourceModuleEnum = z.enum(['planting', 'harvest', 'seedling']);
 export const DestinationEnum = z.enum(['seed_source', 'inventory_stock']);
 export const PropagationSubTypeEnum = z.enum(['cutting', 'seed_saving', 'g0_g1']);
 
+// 2026-06-29: 种植自留种回流时的采收形态选项（写 seed_sources.seed_form）
+// 果实/枝条/穗条/块根/块茎/鳞茎/叶片/花朵/整株 → cutting（取植物体）
+// 种子/种苗                                                  → seed_saving
+// 其他                                                       → cutting（兜底）
+export const SEED_FORM_OPTIONS = [
+  '果实', '种子', '种苗', '穗条', '枝条',
+  '块根', '块茎', '鳞茎', '叶片', '花朵', '整株', '其他',
+] as const;
+export type SeedForm = typeof SEED_FORM_OPTIONS[number];
+
+/**
+ * 2026-06-29: 根据采收形态派生 PROPAGATION 子类型
+ */
+export function deriveSeedFormSubType(seedForm: string): 'cutting' | 'seed_saving' {
+  const cuttingForms = ['果实', '枝条', '穗条', '块根', '块茎', '鳞茎', '叶片', '花朵', '整株'];
+  if (cuttingForms.includes(seedForm)) return 'cutting';
+  if (seedForm === '种子' || seedForm === '种苗') return 'seed_saving';
+  return 'cutting';
+}
+
 export const CirculationInputSchema = z.object({
   circulationType: CirculationTypeEnum,
   sourceModule: SourceModuleEnum,
@@ -40,6 +60,8 @@ export const CirculationInputSchema = z.object({
   unit: z.string().optional(),
   notes: z.string().optional(),
   operatorId: z.string().optional(),
+  // 2026-06-29: 种植自留种回流时存到 seed_sources.seed_form
+  seedForm: z.string().optional(),
 });
 
 export type CirculationInput = z.infer<typeof CirculationInputSchema>;
@@ -204,6 +226,8 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
   // 2026-06-18: PROPAGATION 也把 quantity 写入新种源 remaining_quantity
   // 让 cutting/seed_saving/self_seed 实际可用数量反映填入的数量
   const seedQuantity = input.quantity ?? 0
+  // 2026-06-29: 种植自留种采收形态 — 写到 seed_sources.seed_form
+  const seedForm = input.seedForm || null
 
   // 2026-06-18: 读 planting 拿 crop 信息 + plantingCode
   // planting.source_id 可能是种源（SS前缀）也可能是育苗（SD前缀）
@@ -262,7 +286,8 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
       status, create_by, create_by_id, create_time, update_time,
       propagation_type, propagation_status, propagation_method,
       linked_planting_id, linked_planting_code,
-      generation
+      generation,
+      seed_form
     ) VALUES (
       ?, ?, ?, 'seed', ?, ?,
       ?, ?, ?, ?, ?, ?,
@@ -271,6 +296,7 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
       'active', ?, ?, ?, ?,
       ?, 'completed', ?,
       ?, ?,
+      ?,
       ?
     )
   `, [
@@ -283,6 +309,8 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
     propagationTypeDb, propagationMethod,
     input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
     input.subType === 'seed_saving' ? 'F1' : (input.subType === 'cutting' ? '无性' : null),
+    // 2026-06-29: 种植自留种采收形态
+    seedForm,
   ])
 
   db.run(`

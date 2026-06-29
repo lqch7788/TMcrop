@@ -9,7 +9,7 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 import { handleMove } from '../services/plantingMoveHandler';
 import { authenticate } from '../middleware/auth';
-import { executeCirculation } from '../services/circulation.service';
+import { executeCirculation, deriveSeedFormSubType, SEED_FORM_OPTIONS } from '../services/circulation.service';
 import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import { HarvestService } from '../services/harvest.service';
 import { generateInstanceId } from '../services/inventory.service';
@@ -173,6 +173,10 @@ router.get('/', (req: Request, res: Response) => {
       p.seed_plant_marker AS seedPlantMarker,
       -- 2026-06-17: 4 列聚合（LEFT JOIN + SUM(CASE WHEN destination=...) GROUP BY p.id）
       COALESCE(SUM(CASE WHEN phr.destination = 'harvest' THEN phr.quantity END), 0) AS harvestToInventoryQty,
+      -- 2026-06-29: 合并残株回种源(circulate)+自交种子入种源(self_seed)+种植自留种(planting_self_kept) 为一个 selfKeptToSourceQty
+      -- 老数据和老端点的历史值都被合并展示在「种植自留种」列
+      COALESCE(SUM(CASE WHEN phr.destination IN ('circulate', 'self_seed', 'planting_self_kept') THEN phr.quantity END), 0) AS selfKeptToSourceQty,
+      -- 保留旧字段名供后端老代码兼容（前端不再使用）
       COALESCE(SUM(CASE WHEN phr.destination = 'circulate' THEN phr.quantity END), 0) AS residualToSourceQty,
       COALESCE(SUM(CASE WHEN phr.destination = 'self_seed' THEN phr.quantity END), 0) AS selfSeedToSourceQty,
       -- 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
@@ -182,7 +186,10 @@ router.get('/', (req: Request, res: Response) => {
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'harvest'
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS harvestToInventoryUnit,
-      -- 2026-06-19: 同样为"残株回种源/自交种子/直接废弃"3 列返回最近单位
+      -- 2026-06-29: 合并 3 个 destination 的最近单位（保留老字段名 residualToSourceUnit/selfSeedToSourceUnit 兼容）
+      (SELECT unit FROM planting_harvest_records
+        WHERE planting_id = p.id AND destination IN ('circulate', 'self_seed', 'planting_self_kept')
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS selfKeptToSourceUnit,
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'circulate'
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS residualToSourceUnit,
@@ -192,7 +199,7 @@ router.get('/', (req: Request, res: Response) => {
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'dispose'
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS disposeUnit
-      -- 2026-06-18: 去掉 circulate_to_inventory（4 个去向变 4 个：harvest/circulate/self_seed/dispose）
+      -- 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_keit）— 旧值保留作历史数据
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
     LEFT JOIN crop_varieties cv ON cv.crop_code = p.crop_code
@@ -370,7 +377,8 @@ router.get('/:id/move-records', (req, res) => {
 router.put('/:id/harvest-records/:recordId', async (req, res) => {
   try {
     const { id, recordId } = req.params;
-    const { recordDate, destination, subType, warehouseId, warehouseName, quantity, unit, notes } = req.body || {};
+    // 2026-06-29: 加 seedForm 字段（种植自留种采收形态）
+    const { recordDate, destination, subType, seedForm, warehouseId, warehouseName, quantity, unit, notes } = req.body || {};
     const db = getDatabase();
     const now = formatLocalDateISO();
 
@@ -393,10 +401,26 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
 
     // 字段校验
     if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' });
-    // 2026-06-18: destination 白名单校验（去掉 circulate_to_inventory 后只接受 4 个值）
-    const PUT_ALLOWED_DESTINATIONS = ['harvest', 'circulate', 'self_seed', 'dispose'];
+    // 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）
+    // circulate / self_seed 保留作为历史数据值，不允许新建
+    const PUT_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept', 'dispose'];
     if (!PUT_ALLOWED_DESTINATIONS.includes(destination)) {
-      return res.status(400).json({ success: false, error: `destination 必须是 4 个之一: ${PUT_ALLOWED_DESTINATIONS.join(' / ')}` });
+      return res.status(400).json({ success: false, error: `destination 必须是 3 个之一: ${PUT_ALLOWED_DESTINATIONS.join(' / ')}` });
+    }
+    // 2026-06-29: planting_self_kept 必须传 seedForm（采收形态）
+    if (destination === 'planting_self_kept') {
+      if (!seedForm) {
+        return res.status(400).json({
+          success: false,
+          error: '种植自留种必须填写采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）'
+        });
+      }
+      if (!SEED_FORM_OPTIONS.includes(seedForm)) {
+        return res.status(400).json({
+          success: false,
+          error: `采收形态必须是 12 个之一: ${SEED_FORM_OPTIONS.join(' / ')}`
+        });
+      }
     }
     if (destination === 'harvest' && !warehouseId) {
       return res.status(400).json({ success: false, error: '必须选择仓库' });
@@ -404,22 +428,19 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' });
     }
-    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 种植数量 − Σ(其他 dispose records)
-    // 编辑时：新数量 + 当前 old 的旧数量 替换；剩余 = plantingQty − (Σ全部 − old.quantity)
+    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 活体剩余
+    // 2026-06-29: 修复 — 之前漏算补栽/损耗，导致大量补栽后误判上限
+    // 活体剩余 = planting_quantity + supplement_count - loss_count（与前端弹窗 + 列表"剩余数量"列公式保持一致）
+    // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限
     if (destination === 'dispose' && quantity && Number(quantity) > 0) {
-      const disposeSum = db.prepare(
-        `SELECT COALESCE(SUM(quantity), 0) AS sum FROM planting_harvest_records WHERE planting_id = ? AND destination = ? AND id != ?`
-      );
-      disposeSum.bind([id, 'dispose', recordId]);
-      const sumRow = disposeSum.step() ? disposeSum.getAsObject() : { sum: 0 };
-      disposeSum.free();
       const plantingQty = Number(planting.planting_quantity) || 0;
-      const othersDisposed = Number(sumRow.sum) || 0;
-      const remaining = plantingQty - othersDisposed;
+      const supplementCount = Number(planting.supplement_count) || 0;
+      const lossCount = Number(planting.loss_count) || 0;
+      const remaining = plantingQty + supplementCount - lossCount;
       if (Number(quantity) > remaining) {
         return res.status(400).json({
           success: false,
-          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} - 其他已废弃 ${othersDisposed}）`
+          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} + 补栽 ${supplementCount} - 损耗 ${lossCount}）`
         });
       }
     }
@@ -512,20 +533,14 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
       } catch (e) {
         console.error('[harvest-records PUT/dispose] write circulation failed:', e);
       }
-    } else if (destination === 'circulate' || destination === 'self_seed') {
+    } else if (destination === 'planting_self_kept') {
+      // 2026-06-29: 合并 plant_self_kept 替代旧 circulate / self_seed
       if (!planting.source_id) {
         return res.status(400).json({ success: false, error: '该种植记录无种源，无法回流' });
       }
-      // 自交种子强制 seed_saving；QUANTITY 类型不需要 subType
-      let finalSubType: string | undefined;
-      if (destination === 'self_seed') {
-        finalSubType = 'seed_saving';
-      } else if (subType === 'quantity_refill') {
-        finalSubType = undefined;
-      } else {
-        finalSubType = subType;
-      }
-      const circType = subType === 'quantity_refill' ? 'QUANTITY' : 'PROPAGATION';
+      // 派生 subType 由 seedForm 自动推导（前端不再传 subType/quantity_refill）
+      const finalSubType = deriveSeedFormSubType(seedForm || '');
+      const circType = 'PROPAGATION';
 
       const result = executeCirculation({
         circulationType: circType,
@@ -535,8 +550,10 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         subType: finalSubType,
         destination: 'seed_source',
         quantity, unit, notes,
+        seedForm: seedForm || undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
       });
       if (result?.circulationId) generatedCircId = result.circulationId;
+      if (result?.newSourceId) generatedHarvestId = result.newSourceId;
     }
 
     // UPDATE planting_harvest_records
@@ -644,9 +661,11 @@ router.get('/:id', (req: Request, res: Response) => {
     for (const row of unitRows) {
       const dest = row.destination;
       if (!dest || seen.has(dest)) continue;
+      // 2026-06-29: 合并 planting_self_kept → selfKeptToSourceUnit（保留 circulate/self_seed 兼容）
       if (dest === 'harvest') item.harvestToInventoryUnit = row.unit || '';
       else if (dest === 'circulate') item.residualToSourceUnit = row.unit || '';
       else if (dest === 'self_seed') item.selfSeedToSourceUnit = row.unit || '';
+      else if (dest === 'planting_self_kept') item.selfKeptToSourceUnit = row.unit || '';
       else if (dest === 'dispose') item.disposeUnit = row.unit || '';
       seen.add(dest);
     }
@@ -1537,16 +1556,32 @@ router.delete('/:id/daily-records/:recordId', (req, res) => {
 router.post('/:id/harvest-records', async (req, res) => {
   try {
     const { id } = req.params
+    // 2026-06-29: 加 seedForm 字段（种植自留种采收形态）
     const {
-      recordDate, destination, subType, warehouseId, warehouseName,
+      recordDate, destination, subType, seedForm, warehouseId, warehouseName,
       quantity, unit, notes, operatorName, createBy, createById
     } = req.body || {}
 
     if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' })
-    // 2026-06-18: destination 白名单校验（去掉 circulate_to_inventory 后只接受 4 个值）
-    const POST_ALLOWED_DESTINATIONS = ['harvest', 'circulate', 'self_seed', 'dispose']
+    // 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）
+    const POST_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept', 'dispose']
     if (!POST_ALLOWED_DESTINATIONS.includes(destination)) {
-      return res.status(400).json({ success: false, error: `destination 必须是 4 个之一: ${POST_ALLOWED_DESTINATIONS.join(' / ')}` })
+      return res.status(400).json({ success: false, error: `destination 必须是 3 个之一: ${POST_ALLOWED_DESTINATIONS.join(' / ')}` })
+    }
+    // 2026-06-29: planting_self_kept 必须传 seedForm（采收形态）
+    if (destination === 'planting_self_kept') {
+      if (!seedForm) {
+        return res.status(400).json({
+          success: false,
+          error: '种植自留种必须填写采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）'
+        });
+      }
+      if (!SEED_FORM_OPTIONS.includes(seedForm)) {
+        return res.status(400).json({
+          success: false,
+          error: `采收形态必须是 12 个之一: ${SEED_FORM_OPTIONS.join(' / ')}`
+        });
+      }
     }
 
     const db = getDatabase()
@@ -1567,22 +1602,19 @@ router.post('/:id/harvest-records', async (req, res) => {
     if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' })
     }
-    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 种植数量 − Σ已dispose
-    // 防止"超过种植数量"的废弃数据脏掉统计
+    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 活体剩余
+    // 2026-06-29: 修复 — 之前漏算补栽/损耗，导致大量补栽后误判上限
+    // 活体剩余 = planting_quantity + supplement_count - loss_count（与前端弹窗 + 列表"剩余数量"列公式保持一致）
+    // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限
     if (destination === 'dispose' && quantity && Number(quantity) > 0) {
-      const disposeSum = db.prepare(
-        `SELECT COALESCE(SUM(quantity), 0) AS sum FROM planting_harvest_records WHERE planting_id = ? AND destination = ?`
-      )
-      disposeSum.bind([id, 'dispose'])
-      const sumRow = disposeSum.step() ? disposeSum.getAsObject() : { sum: 0 }
-      disposeSum.free()
       const plantingQty = Number(planting.planting_quantity) || 0
-      const alreadyDisposed = Number(sumRow.sum) || 0
-      const remaining = plantingQty - alreadyDisposed
+      const supplementCount = Number(planting.supplement_count) || 0
+      const lossCount = Number(planting.loss_count) || 0
+      const remaining = plantingQty + supplementCount - lossCount
       if (Number(quantity) > remaining) {
         return res.status(400).json({
           success: false,
-          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} - 已废弃 ${alreadyDisposed}）`
+          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} + 补栽 ${supplementCount} - 损耗 ${lossCount}）`
         })
       }
     }
@@ -1597,24 +1629,16 @@ router.post('/:id/harvest-records', async (req, res) => {
     let generatedStockId: string | null = null
     let generatedCircId: string | null = null
 
-    // === 副作用前置：2 个回流类 destination 必须先调 executeCirculation ===
+    // === 副作用前置：种植自留种回流 destination 必须先调 executeCirculation ===
     // (executeCirculation 内部调 saveDatabase()，与外层 BEGIN/COMMIT 冲突会破坏 sql.js 事务状态 — 与 /end 路由保持一致: 不在外层事务中)
-    if (destination === 'circulate' || destination === 'self_seed') {
+    if (destination === 'planting_self_kept') {
       // 必须有种源才能回流
       if (!planting.source_id) {
         return res.status(400).json({ success: false, error: '该种植记录无种源，无法回流' })
       }
-      // 自交种子强制 seed_saving；QUANTITY 类型不需要 subType；其余按入参
-      let finalSubType: string | undefined
-      if (destination === 'self_seed') {
-        finalSubType = 'seed_saving'
-      } else if (subType === 'quantity_refill') {
-        finalSubType = undefined
-      } else {
-        finalSubType = subType
-      }
-
-      const circType = subType === 'quantity_refill' ? 'QUANTITY' : 'PROPAGATION'
+      // 2026-06-29: 派生 subType 由 seedForm 自动推导（取消 quantity_refill）
+      const finalSubType = deriveSeedFormSubType(seedForm || '')
+      const circType = 'PROPAGATION'
 
       const result = executeCirculation({
         circulationType: circType,
@@ -1624,6 +1648,7 @@ router.post('/:id/harvest-records', async (req, res) => {
         subType: finalSubType,
         destination: 'seed_source',
         quantity, unit, notes,
+        seedForm: seedForm || undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
       })
       if (result?.circulationId) generatedCircId = result.circulationId
     }
@@ -1853,12 +1878,19 @@ router.post('/:id/end', async (req, res) => {
     if (!planting.source_id) {
       return res.status(400).json({ success: false, error: '该种植记录无种源,无法回流' })
     }
-    // 自交种子 强制 seed_saving
+    // 2026-06-29: /end 路由保留向后兼容 — 旧 self_seed / quantity_refill 入参仍生效
+    // 新 planting_self_kept 入口则按 seedForm 派生（由调用方在请求体传 seedForm）
     let finalSubType: string | undefined
+    let derivedSeedForm: string | undefined
     if (endType === 'self_seed') {
       finalSubType = 'seed_saving'
+      derivedSeedForm = seedForm || '其他'
     } else if (subType === 'quantity_refill') {
       finalSubType = undefined  // QUANTITY 类型不需要 subType
+    } else if (endType === 'planting_self_kept' && seedForm) {
+      // 2026-06-29: 新合并 planting_self_kept — 按 seedForm 派生
+      finalSubType = deriveSeedFormSubType(seedForm)
+      derivedSeedForm = seedForm
     } else {
       finalSubType = subType  // cutting/seed_saving (PROPAGATION)
     }
@@ -1872,6 +1904,7 @@ router.post('/:id/end', async (req, res) => {
       subType: finalSubType,
       destination: 'seed_source',
       quantity, unit, notes,
+      seedForm: derivedSeedForm,  // 2026-06-29: 新增
     })
 
     // 公共收尾：标记种植记录已结束
