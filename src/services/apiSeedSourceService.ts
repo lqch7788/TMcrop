@@ -127,6 +127,8 @@ interface BackendSeedSource {
   propagationType?: string;
   propagationStatus?: string;
   propagationMethod?: string;
+  // 2026-06-29: 种植自留种回流时的采收形态
+  seedForm?: string;
   parentMaleId?: string;
   parentMaleCode?: string;
   parentFemaleId?: string;
@@ -222,6 +224,8 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     propagationType: (item.propagationType as PropagationType) || PropagationType.EXTERNAL,
     propagationStatus: (item.propagationStatus as PropagationStatus) || undefined,
     propagationMethod: item.propagationMethod || undefined,
+    // 2026-06-29: 种植自留种回流时的采收形态（如"枝条"/"种子"/"果实"等）
+    seedForm: item.seedForm || undefined,
     parentMaleId: item.parentMaleId || undefined,
     parentMaleCode: item.parentMaleCode || undefined,
     parentFemaleId: item.parentFemaleId || undefined,

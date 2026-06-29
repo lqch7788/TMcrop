@@ -60,6 +60,15 @@ interface HarvestRecordModalProps {
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
 
+// 2026-06-29: 种植自留种 — 采收形态选项（替代 circulate/self_seed 的 subType 三选一）
+// 与 harvest 模式共享 sourceForm state，但语义不同：
+// - harvest 模式：果实/种子/种苗... 用于入库产物分类（inventory_stock.product_form）
+// - planting_self_kept 模式：同样 12 选，用于回流到 seed_sources.seed_form
+const SEED_FORM_OPTIONS = [
+  '果实', '种子', '种苗', '穗条', '枝条',
+  '块根', '块茎', '鳞茎', '叶片', '花朵', '整株', '其他',
+] as const
+
 type SubType = 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
 
 /** 解析后端错误信息（Zod JSON 错误可能为数组） */
@@ -195,14 +204,23 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
   const hasSeedSource = !!record.sourceId
   const requiresWarehouse = destination === 'harvest'
-  const requiresCirculation = destination === 'circulate' || destination === 'self_seed'
+  // 2026-06-29: 合并 planting_self_kept 替代 circulate + self_seed
+  // 老值 'circulate' / 'self_seed' 仍兼容：编辑历史记录时仍能展示，但新建时已不允许
+  const requiresSelfKept = destination === 'planting_self_kept' || destination === 'circulate' || destination === 'self_seed'
 
   // 数量类型（必填 > 0）；PROPAGATION（cutting/seed_saving）不需
   const isQuantityType = subType === 'quantity_refill'
   const isPropagationType = subType === 'cutting' || subType === 'seed_saving'
 
-  // 2026-06-18: dispose 剩余可处理植株数 = 种植数量 − 已废弃
-  const remainingDispose = Math.max(0, (record.plantingCount || 0) - (record.disposeQty || 0))
+  // 2026-06-29: dispose 剩余可废弃 = 活体剩余
+  // 活体剩余 = plantingCount + supplementCount - lossCount（与列表"剩余数量"列公式保持一致）
+  // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限（与列表权威源对齐）
+  // 修复 bug：旧公式只读 plantingCount，导致补栽后剩余数被低估
+  const remainingDispose = Math.max(0,
+    (record.plantingCount || 0)
+    + (record.supplementCount || 0)
+    - (record.lossCount || 0)
+  )
   const disposeOverLimit = destination === 'dispose' && Number(quantity) > remainingDispose
 
   const resetForm = () => {
@@ -260,7 +278,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('请选择去向')
       return
     }
-    if (requiresCirculation && !hasSeedSource) {
+    // 2026-06-29: 合并 planting_self_kept 替代旧 circulate / self_seed
+    if (requiresSelfKept && !hasSeedSource) {
       showAlert('该种植记录无种源,无法回流')
       return
     }
@@ -278,7 +297,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     }
     // 2026-06-18: dispose 上限硬拦截（前端先挡，后端也会再挡）
     if (destination === 'dispose' && qtyNum > remainingDispose) {
-      showAlert(`直接废弃数量 ${qtyNum} 超过剩余可废弃 ${remainingDispose}（种植 ${record.plantingCount} - 已废弃 ${record.disposeQty || 0}）`)
+      // 2026-06-29: 文案与后端 planting.ts dispose 校验保持一致（活体剩余，不扣 disposeQty）
+      showAlert(`直接废弃数量 ${qtyNum} 超过剩余可废弃 ${remainingDispose}（种植 ${record.plantingCount} + 补栽 ${record.supplementCount || 0} - 损耗 ${record.lossCount || 0}）`)
       return
     }
     if (destination && destination !== 'harvest' && !unit) {
@@ -292,6 +312,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     // 2026-06-19: destination='harvest' 必须选采收形态（区分果实/种子/种苗/枝条等）
     if (destination === 'harvest' && !sourceForm) {
       showAlert('请选择采收形态（果实/种子/种苗/枝条等）')
+      return
+    }
+    // 2026-06-29: planting_self_keit 必须选采收形态（用于 seed_sources.seed_form）
+    if (destination === 'planting_self_kept' && !sourceForm) {
+      showAlert('种植自留种必须选择采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）')
       return
     }
 
@@ -381,10 +406,20 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
     setSubmitting(true)
     try {
+      // 2026-06-29: 合并 planting_self_keit 替代旧 circulate / self_seed
+      // - 老值（circulate/self_seed）作为历史值仍可被后端接受（编辑历史记录）
+      // - 新建只能选 planting_self_kept
+      // - subType 前端不再传（由后端基于 seedForm 派生）
+      const inputDestination: AddHarvestRecordInput['destination'] =
+        destination === 'planting_self_kept' ? 'planting_self_kept'
+        : destination === 'harvest' ? 'harvest'
+        : 'dispose'
+
       const input: AddHarvestRecordInput = {
         recordDate,
-        destination: destination as AddHarvestRecordInput['destination'],
-        subType: requiresCirculation ? subType : undefined,
+        destination: inputDestination,
+        subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
+        seedForm: requiresSelfKept ? sourceForm : undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
           ? activeWarehouses.find((w: any) => w.id === warehouseId || w.oid === warehouseId)?.name
@@ -399,9 +434,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       const result = await addHarvestRecord(record.id, input)
       if (result) {
         showAlert('采收记录添加成功')
-        // 2026-06-19: 残株回种源 / 自交种子入种源 后，跨页通知种源列表刷新
+        // 2026-06-29: 种植自留种 提交后跨页通知种源列表刷新
         // 否则新种源不会在 SeedSourcePage 立即出现（用户需要手动刷新）
-        if (requiresCirculation) {
+        if (requiresSelfKept) {
           try { await useSeedSourceStore.getState().loadItems() } catch (_) {}
         }
         resetForm()
@@ -500,11 +535,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <SelectItem value="harvest">
                     <span className="flex items-center gap-1.5"><Wheat className="w-3.5 h-3.5" /> 采收入库</span>
                   </SelectItem>
-                  <SelectItem value="circulate" disabled={!hasSeedSource}>
-                    <span className="flex items-center gap-1.5"><Recycle className="w-3.5 h-3.5" /> 残株回种源</span>
-                  </SelectItem>
-                  <SelectItem value="self_seed" disabled={!hasSeedSource}>
-                    <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 自交种子入种源</span>
+                  {/* 2026-06-29: 合并「残株回种源」「自交种子入种源」为「种植自留种」 */}
+                  <SelectItem value="planting_self_kept" disabled={!hasSeedSource}>
+                    <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 种植自留种</span>
                   </SelectItem>
                   <SelectItem value="dispose">
                     <span className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> 直接废弃</span>
@@ -513,40 +546,50 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               </Select>
               {!hasSeedSource && (
                 <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> 该种植记录无种源, 回流相关选项已禁用
+                  <AlertTriangle className="w-3 h-3" /> 该种植记录无种源, 种植自留种选项已禁用
                 </p>
               )}
             </div>
-            {requiresCirculation && (
+            {/* 2026-06-29: 合并种植自留种 — 替代原「回流方式」三选 Select（circulate 时切割/留种/数量回填, self_seed 时仅留种）*/}
+            {/* 新 UI 用「采收形态」12 选下拉；后端基于 seedForm 派生 PROPAGATION subType */}
+            {destination === 'planting_self_kept' && (
               <div>
-                <Label>回流方式 *</Label>
-                <Select value={subType} onValueChange={(v) => setSubType(v as SubType)}>
+                <Label>采收形态 *</Label>
+                <Select value={sourceForm} onValueChange={setSourceForm}>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="选采收形态（果实/种子/种苗/穗条/枝条等）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEED_FORM_OPTIONS.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* 2026-06-29: 种植自留种说明 */}
+                <p className="mt-1 text-xs text-gray-500 flex items-start gap-1">
+                  <span className="text-emerald-600">💡</span>
+                  <span>
+                    果实/枝条/穗条/整株等植物体请选「扦插类」；种子/种苗请选「留种」。
+                    数量回流到内部种源列表，不进作物库存。
+                  </span>
+                </p>
+              </div>
+            )}
+            {/* 兼容历史老记录（circulate/self_seed）— 仍显示原 subType，但禁止通过 UI 新建 */}
+            {(destination === 'circulate' || destination === 'self_seed') && (
+              <div>
+                <Label>回流方式（历史记录，不可修改）</Label>
+                <Select value={subType} onValueChange={(v) => setSubType(v as SubType)} disabled>
                   <SelectTrigger className={deepInputClass}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {destination === 'circulate' ? (
-                      <>
-                        <SelectItem value="cutting">扦插繁殖（建新种源）</SelectItem>
-                        <SelectItem value="seed_saving">留种（建新种源）</SelectItem>
-                        <SelectItem value="quantity_refill">数量回填（追加到原种源）</SelectItem>
-                      </>
-                    ) : (
-                      <SelectItem value="seed_saving">留种（建新种源）</SelectItem>
-                    )}
+                    <SelectItem value={subType}>{getSubTypeLabel(subType)}</SelectItem>
                   </SelectContent>
                 </Select>
-                {/* 2026-06-19: 回流方式简易说明（根据当前 subType 动态切换） */}
-                {requiresCirculation && (
-                  <p className="mt-1 text-xs text-gray-500 flex items-start gap-1">
-                    <span className="text-emerald-600">💡</span>
-                    <span>
-                      {subType === 'cutting' && '用植株枝条扦插出新的种源（无性繁殖，基因与母本一致）'}
-                      {subType === 'seed_saving' && '从植株上采收种子留作下一季用种（有性繁殖，标记 F1 代）'}
-                      {subType === 'quantity_refill' && '不建新种源记录，把数量直接加到原种源（用于数据修正/盘点补差）'}
-                    </span>
-                  </p>
-                )}
+                <p className="mt-1 text-xs text-gray-400">
+                  此记录为旧版本（circulate/self_seed），已合并到「种植自留种」。
+                </p>
               </div>
             )}
             {requiresWarehouse && (
@@ -682,7 +725,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     <p className={`mt-1 text-xs flex items-center gap-1 ${disposeOverLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                       <AlertTriangle className={`w-3 h-3 ${disposeOverLimit ? 'text-red-600' : 'text-gray-400'}`} />
                       剩余可废弃: <span className="font-semibold">{remainingDispose}</span> 株
-                      （种植 {record.plantingCount} - 已废弃 {record.disposeQty || 0}）
+                      （种植 {record.plantingCount} + 补栽 {record.supplementCount || 0} - 损耗 {record.lossCount || 0}）
                       {disposeOverLimit ? `，已超出 ${Number(quantity) - remainingDispose}` : ''}
                     </p>
                   )}
