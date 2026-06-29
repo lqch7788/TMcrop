@@ -15,7 +15,6 @@
 import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository } from '../repositories/inventoryTransaction.repository';
-import { harvestRepository } from '../repositories/harvest.repository';
 import { generateInstanceId } from './inventory.service';
 
 export type StockType = 'seed' | 'seedling' | 'product';

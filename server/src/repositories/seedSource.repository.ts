@@ -278,7 +278,7 @@ export class SeedSourceRepository {
       data.create_by_id || '',
       // 2026-06-05: 修复繁殖字段缺失（与 list SQL/前端 service 同步）
       data.propagation_type || 'external',
-      data.propagation_status || null,
+      data.propagationStatus || null,
       data.propagation_method || '',
       data.parent_male_id || '',
       data.parent_male_code || '',

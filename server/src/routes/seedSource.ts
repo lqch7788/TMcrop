@@ -180,7 +180,6 @@ router.delete('/:id', (req, res, next) => seedSourceController.delete(req, res, 
  *   4. 写 inventory_inbound_records
  *   5. 同一 SQL 事务
  */
-import { z } from 'zod';
 // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
 import { formatLocalDateISO } from '../utils/dateUtil';
 

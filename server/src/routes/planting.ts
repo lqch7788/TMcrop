@@ -11,14 +11,12 @@ import { handleMove } from '../services/plantingMoveHandler';
 import { authenticate } from '../middleware/auth';
 import { executeCirculation, deriveSeedFormSubType, SEED_FORM_OPTIONS } from '../services/circulation.service';
 import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
-import { HarvestService } from '../services/harvest.service';
 import { generateInstanceId } from '../services/inventory.service';
 import {
   validateDailyChange,
   normalizeChangeData,
   applyDailyChangeToPlanting,
 } from '../services/plantingDailyChange';
-const harvestService = new HarvestService();
 const router = Router();
 
 // C1：全局应用 auth 中间件（演示模式自动放行）
@@ -1759,7 +1757,7 @@ router.post('/:id/harvest-records', async (req, res) => {
 router.post('/:id/end', async (req, res) => {
   try {
     const { id } = req.params
-    const { endType, subType, warehouseId, quantity, unit, notes } = req.body || {}
+    const { endType, subType, warehouseId, quantity, unit, notes, seedForm } = req.body || {}
     const db = getDatabase()
     // sql.js 标准模式：bind + step + getAsObject（.get() 在 sql.js 中不可靠，返回空对象）
     const stmt = db.prepare(`SELECT * FROM plantings WHERE id = ?`)
@@ -1772,7 +1770,7 @@ router.post('/:id/end', async (req, res) => {
 
     // ========== 1. 采收入库：写 harvest_records + inventory_stock（库存实例） ==========
     if (endType === 'harvest') {
-      const harvestQty = Number(quantity) || planting.harvest_quantity || 0
+      const harvestQty = Number(quantity) || Number(planting.harvest_quantity) || 0
       if (harvestQty <= 0) {
         return res.status(400).json({ success: false, error: '采收入库必须填写数量' })
       }

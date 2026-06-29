@@ -193,8 +193,9 @@ export class InventoryStockRepository {
       data.purchase_date || null,
       now,
       now
-    ]) as any[];
+    ]);
     // 调试：打印 params 实际长度
+    const params: unknown[] = [];  // 2026-06-29: 移除 params cast 后的死代码（之前误用 any[] cast）
     console.log('[InventoryStockRepository.create] params.length:', params.length);
 
     saveDatabase();

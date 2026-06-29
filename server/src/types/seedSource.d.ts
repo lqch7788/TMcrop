@@ -35,9 +35,9 @@ export interface SeedSourceRecord {
   update_time: string;
   // P0 #1: 种源图片（JSON 字符串）
   pictures?: string;
-  // 繁殖途径字段
+  // 繁殖途径字段（camelCase：queryToObjects 自动转，service 访问用 propagationStatus）
   propagation_type?: string;
-  propagation_status?: string;
+  propagationStatus?: string;
   propagation_method?: string;
   parent_male_id?: string;
   parent_male_code?: string;

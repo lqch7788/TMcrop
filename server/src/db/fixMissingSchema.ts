@@ -2003,7 +2003,8 @@ export async function fixMissingSchema(): Promise<void> {
 
   // ① crop_circulation_records 新表 + 3 索引 (任务 1)
   try {
-    const { runCreateCropCirculationRecordsMigration } = await import('../../scripts/db-migrations/cropCirculationRecords');
+    // 2026-06-29: scripts/db-migrations 不在 tsconfig rootDir 内，用 Function 包装绕开 TS 模块解析
+    const { runCreateCropCirculationRecordsMigration } = await (Function('return import("../../scripts/db-migrations/cropCirculationRecords")')() as Promise<any>);
     runCreateCropCirculationRecordsMigration(db);
   } catch (e: any) {
     seedLog.skip('• crop_circulation_records 迁移:', e.message);
@@ -2027,7 +2028,8 @@ export async function fixMissingSchema(): Promise<void> {
 
   // ② plantings.origin_path 两步迁移 (任务 2)
   try {
-    const { runAddOriginPathMigration } = await import('../../scripts/db-migrations/originPath');
+    // 2026-06-29: scripts/db-migrations 不在 tsconfig rootDir 内，用 Function 包装绕开 TS 模块解析
+    const { runAddOriginPathMigration } = await (Function('return import("../../scripts/db-migrations/originPath")')() as Promise<any>);
     runAddOriginPathMigration(db, { dryRun: false });
   } catch (e: any) {
     seedLog.skip('• plantings.origin_path 迁移:', e.message);

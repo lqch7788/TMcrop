@@ -62,6 +62,8 @@ export const CirculationInputSchema = z.object({
   operatorId: z.string().optional(),
   // 2026-06-29: 种植自留种回流时存到 seed_sources.seed_form
   seedForm: z.string().optional(),
+  // 2026-06-29: 来源单据编号（用于 flow_log 追踪，如 ZZ20260627-001）
+  sourceRecordCode: z.string().optional(),
 });
 
 export type CirculationInput = z.infer<typeof CirculationInputSchema>;
@@ -317,7 +319,7 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
     INSERT INTO crop_circulation_records
     (id, circulation_type, source_module, source_id, parent_source_id, new_source_id, quantity, unit, circulation_date, operator_id, notes)
     VALUES (?, 'PROPAGATION', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, newSourceId, seedQuantity, input.unit, circulationDate, input.operatorId, input.notes])
+  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, newSourceId, seedQuantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
 
   // 2026-06-19: 写 material_flow_log，让 DetailModal「流转记录」Tab 能看到回流链路
   try {
@@ -362,7 +364,7 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
     INSERT INTO crop_circulation_records
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes)
     VALUES (?, 'QUANTITY', ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit, circulationDate, input.operatorId, input.notes])
+  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
 
   // 2026-06-19: 写 material_flow_log（数量回填到原种源）
   try {
@@ -402,7 +404,7 @@ function executeQuantityToInventory(input: CirculationInput, circId: string): Ci
     INSERT INTO crop_circulation_records
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes, disposition)
     VALUES (?, 'QUANTITY', ?, ?, ?, ?, ?, ?, ?, ?, 'SALES')
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit, circulationDate, input.operatorId, input.notes])
+  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
 
   // 同步写 inventory_stock (残株入库, stock_type='residue', business_type='circulation')
   const stockId = generateId('STK')
@@ -411,7 +413,7 @@ function executeQuantityToInventory(input: CirculationInput, circId: string): Ci
     INSERT INTO inventory_stock
     (id, instance_id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
     VALUES (?, ?, 'residue', ?, 'circulation', ?, ?, ?, ?, 'active', datetime('now','localtime'))
-  `, [stockId, instanceId, circId, quantity, quantity, input.unit, input.warehouseId])
+  `, [stockId, instanceId, circId, quantity, quantity, input.unit ?? null, input.warehouseId ?? null])
 
   saveDatabase()
   return { circulationId: circId, stockId }
@@ -426,7 +428,7 @@ function executeDisposal(input: CirculationInput, circId: string): CirculationRe
     INSERT INTO crop_circulation_records
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes, disposition)
     VALUES (?, 'DISPOSAL', ?, ?, ?, ?, ?, ?, ?, ?, 'DISPOSAL')
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit, circulationDate, input.operatorId, input.notes])
+  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
 
   // 2026-06-19: 写 material_flow_log（处置废弃）— 用 correction 类型记录数量变化
   try {
@@ -474,7 +476,7 @@ export const RevokeInputSchema = z.object({
 export function revokeCirculation(circId: string, rawInput: unknown): void {
   const input = RevokeInputSchema.parse(rawInput)
   const db = getDatabase()
-  const circ = db.prepare(`SELECT * FROM crop_circulation_records WHERE id = ?`).get(circId) as any
+  const circ = db.prepare(`SELECT * FROM crop_circulation_records WHERE id = ?`).get([circId]) as any
   if (!circ) throw new Error('回流记录不存在')
   if (circ.is_revoked) throw new Error('回流已撤销')
 

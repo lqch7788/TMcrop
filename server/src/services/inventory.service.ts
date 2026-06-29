@@ -614,7 +614,7 @@ const DETAIL_URL_MAP: Record<string, string> = {
 
 export function traceInventorySource(stockId: string): { businessType: string; businessId: string; detailUrl: string } {
   const db = getDatabase()
-  const stock = db.prepare(`SELECT * FROM inventory_stock WHERE id = ?`).get(stockId) as any
+  const stock = db.prepare(`SELECT * FROM inventory_stock WHERE id = ?`).get([stockId]) as any
   if (!stock) throw new Error('库存记录不存在')
   const urlPrefix = DETAIL_URL_MAP[stock.business_type]
   if (!urlPrefix) {

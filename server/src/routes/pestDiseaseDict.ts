@@ -21,7 +21,7 @@ router.get('/next-code', (req: Request, res: Response) => {
   const stmt = db.prepare(
     `SELECT dict_code FROM pest_disease_dict WHERE dict_type = ? AND dict_code LIKE ? ORDER BY dict_code DESC LIMIT 1`
   );
-  stmt.bind([type, `${prefix}%`]);
+  stmt.bind([type, `${prefix}%`] as any);
 
   let lastCode = '';
   if (stmt.step()) {
@@ -161,7 +161,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     // 检查是否有关联药剂
     const related = db.prepare(
       'SELECT COUNT(*) as count FROM pesticide_pest_relation WHERE pest_id = ?'
-    ).get(id) as { count: number };
+    ).get([id]) as any;
 
     if (related.count > 0) {
       return res.status(400).json({ success: false, error: '该病虫害存在关联药剂，无法删除' });
@@ -247,7 +247,7 @@ router.delete('/:pestId/relations/:pesticideId', (req: Request, res: Response) =
     const db = getDatabase();
 
     db.prepare('DELETE FROM pesticide_pest_relation WHERE pest_id = ? AND pesticide_id = ?')
-      .run(pestId, pesticideId);
+      .run([pestId, pesticideId]);
     saveDatabase();
     res.json({ success: true });
   } catch (error) {

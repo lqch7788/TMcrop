@@ -9,7 +9,7 @@ import * as inventoryService from './apiInventoryService';
 import * as seedSourceService from './apiSeedSourceService';
 import * as seedlingService from './apiSeedlingService';
 import * as plantingService from './apiPlantingService';
-import * as harvestService from './apiHarvestService';
+import * as harvestService from './harvestRecordService';
 
 /**
  * 生产计划关联记录
@@ -203,7 +203,7 @@ export async function getRelatedHarvests(productionPlanId: string): Promise<Prod
   }
 
   // 2. 备用：直接从采收服务查询
-  const harvests = await harvestService.getHarvestRecords();
+  const harvests = await harvestService.listHarvestRecords();
   for (const harvest of harvests) {
     if (harvest.productionPlanId === productionPlanId) {
       if (!relations.some(r => r.businessId === harvest.id)) {

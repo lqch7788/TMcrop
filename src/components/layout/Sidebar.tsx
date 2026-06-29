@@ -45,6 +45,7 @@ const cropSubItems = [
   { icon: Sprout, label: '内部种源', path: '/crop/seed-source' },
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
+
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
   { icon: TrendingUp, label: '流转追溯', path: '/crop/material-flow' },

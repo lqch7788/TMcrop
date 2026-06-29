@@ -53,6 +53,9 @@ export interface GreenhouseSeed {
   location: string;
   status: string;
   createTime: string;
+  // 2026-06-29: harvest 重构新增 — 跨种源迁移用（基础 oid/name）
+  baseOid?: string;
+  baseName?: string;
 }
 
 /**
