@@ -526,8 +526,12 @@ export interface PesticideRecordItem {
 export interface PlantingHarvestRecord {
   id: string
   recordDate: string                 // 采收日期 YYYY-MM-DD
-  destination: 'harvest' | 'circulate' | 'self_seed' | 'dispose'
+  // 2026-06-29: 4 个去向减为 3 个（circulate + self_seed 合并为 planting_self_kept）
+  // 老值 circulate / self_seed 保留作历史数据值
+  destination: 'harvest' | 'planting_self_kept' | 'circulate' | 'self_seed' | 'dispose'
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
+  // 2026-06-29: 种植自留种采收形态（仅 planting_self_kept 必有）
+  seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他'
   warehouseId?: string
   warehouseName?: string
   quantity: number
@@ -611,9 +615,12 @@ export interface Planting {
   isHarvestLocked?: boolean            // 软锁标志
   harvestToInventoryQty?: number       // 采收入库累计
   harvestToInventoryUnit?: string      // 2026-06-19: 最近一次采收入库的单位（用户实际选择的单位，可能与 record.unit 不同）
-  residualToSourceQty?: number         // 残株回种源累计
+  // 2026-06-29: 合并残株回种源+自交种子+种植自留种 三者到「种植自留种」一列
+  selfKeptToSourceQty?: number         // 种植自留种累计（含历史 circulate/self_seed 数据）
+  selfKeptToSourceUnit?: string        // 种植自留种最近单位
+  residualToSourceQty?: number         // 残株回种源累计（老字段，保留兼容）
   residualToSourceUnit?: string        // 2026-06-19: 残株回种源最近单位
-  selfSeedToSourceQty?: number         // 自交种子入种源累计
+  selfSeedToSourceQty?: number         // 自交种子入种源累计（老字段，保留兼容）
   selfSeedToSourceUnit?: string        // 2026-06-19: 自交种子最近单位
   disposeQty?: number                  // 直接废弃累计（2026-06-18 加；circulate_to_inventory 已去掉）
   disposeUnit?: string                 // 2026-06-19: 直接废弃最近单位

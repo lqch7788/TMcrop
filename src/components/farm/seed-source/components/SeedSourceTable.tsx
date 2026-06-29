@@ -10,6 +10,7 @@
 import React from 'react';
 import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
 import {
   UNIT_MAP,
@@ -446,8 +447,16 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={getVarietyPath(record)}>
                     {truncateText(getVarietyPath(record))}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}>
-                    {truncateText(SOURCE_TYPE_MAP[record.sourceType] || record.sourceType)}
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={
+                    // 2026-06-29: 种植自留种回流种源时 seedForm 优先（如"枝条"/"种子"等）
+                    record.seedForm || SOURCE_TYPE_MAP[record.sourceType] || record.sourceType
+                  }>
+                    {/* 2026-06-29: 优先显示 seedForm（水果/种苗/枝条等具体形态）— 老种源/外部购买显示原 sourceType */}
+                    {record.seedForm ? (
+                      <Badge variant="default" className="bg-emerald-100 text-emerald-800">{truncateText(record.seedForm)}</Badge>
+                    ) : (
+                      truncateText(SOURCE_TYPE_MAP[record.sourceType] || record.sourceType)
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin}>
                     {/* 2026-06-25 v3: 种源只有 external + transfer_from_inventory — 统一显示 SOURCE_ORIGIN_MAP */}

@@ -466,22 +466,12 @@ export function PlantingTable({
         )
       },
       {
-        title: '残株回种源量',
-        dataIndex: 'residualToSourceQty',
-        width: 110,
+        title: '种植自留种量',
+        dataIndex: 'selfKeptToSourceQty',
+        width: 130,
         render: (qty: number, record: Planting) => (
           <span className={qty > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
-            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
-          </span>
-        )
-      },
-      {
-        title: '自交种子入种源量',
-        dataIndex: 'selfSeedToSourceQty',
-        width: 120,
-        render: (qty: number, record: Planting) => (
-          <span className={qty > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
-            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+            {qty ? `${qty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
           </span>
         )
       },
@@ -1091,13 +1081,8 @@ export function PlantingTable({
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    <span className={(record.residualToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
-                      {record.residualToSourceQty ? `${record.residualToSourceQty.toLocaleString()}${record.residualToSourceUnit || record.unit || ''}` : '-'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    <span className={(record.selfSeedToSourceQty || 0) > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
-                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.selfSeedToSourceUnit || record.unit || ''}` : '-'}
+                    <span className={(record.selfKeptToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                      {record.selfKeptToSourceQty ? `${record.selfKeptToSourceQty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">

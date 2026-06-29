@@ -141,6 +141,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     isHarvestLocked: Boolean(item.isHarvestLocked),
     harvestToInventoryQty: Number(item.harvestToInventoryQty) || 0,
     harvestToInventoryUnit: String(item.harvestToInventoryUnit || ''),
+    // 2026-06-29: 合并 3 个 destination 值的种植自留种累计（前端用一个字段统一显示）
+    selfKeptToSourceQty: Number(item.selfKeptToSourceQty) || 0,
+    selfKeptToSourceUnit: String(item.selfKeptToSourceUnit || ''),
     residualToSourceQty: Number(item.residualToSourceQty) || 0,
     residualToSourceUnit: String(item.residualToSourceUnit || ''),
     selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
@@ -319,11 +322,14 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
 
 /**
  * 添加采收记录的入参
+ * 2026-06-29: 4 个去向减为 3 个（circulate + self_seed 合并为 planting_self_kept）
+ * 取消 quantity_refill subType（前端不再传）
  */
 export interface AddHarvestRecordInput {
   recordDate: string
-  destination: 'harvest' | 'circulate' | 'self_seed' | 'dispose'
-  subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
+  destination: 'harvest' | 'planting_self_kept' | 'dispose'
+  subType?: 'cutting' | 'seed_saving'
+  seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他'
   warehouseId?: string
   warehouseName?: string
   quantity: number
