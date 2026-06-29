@@ -392,10 +392,10 @@ export default function SeedlingLabelManageModal({
                 placeholder="移入区域（如：东区-A区）"
                 className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
               />
-              <Button onClick={handleBatchGenerate} disabled={batchGenerating} size="sm">
+              <Button onClick={handleBatchGenerate} disabled={batchGenerating} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                 {batchGenerating ? '生成中...' : '生成'}
               </Button>
-              <Button onClick={() => setShowBatchGenerate(false)} variant="secondary" size="sm">
+              <Button onClick={() => setShowBatchGenerate(false)} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
                 取消
               </Button>
             </div>
@@ -424,7 +424,7 @@ export default function SeedlingLabelManageModal({
             >
               <Plus className="w-4 h-4" /> 补充生成
             </Button>
-            <Button onClick={onClose} variant="secondary" size="sm">
+            <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
               <X className="w-4 h-4" /> 关闭
             </Button>
           </div>
