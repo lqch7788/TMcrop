@@ -236,10 +236,12 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** 批量生成标签（育苗/种植标签打印） */
   generateBatchLabels: async (params) => {
     try {
-      const res = await enhancedApiClient.post('/plant-labels/generate-batch', params);
-      if (res.success) {
+      // 2026-06-29: enhancedApiClient.post 已自动解包 {success, data} envelope
+      // res 直接是 data 内容（即 {labels, totalPrinted}），不再有 .success 字段
+      const data = await enhancedApiClient.post('/plant-labels/generate-batch', params);
+      if (data && typeof data === 'object' && 'labels' in data) {
         await get().loadLabels();
-        return res.data;
+        return data as { labels: unknown[]; totalPrinted: number };
       }
       return null;
     } catch {
