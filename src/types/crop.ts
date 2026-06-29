@@ -618,6 +618,8 @@ export interface Planting {
   // 2026-06-29: 合并残株回种源+自交种子+种植自留种 三者到「种植自留种」一列
   selfKeptToSourceQty?: number         // 种植自留种累计（含历史 circulate/self_seed 数据）
   selfKeptToSourceUnit?: string        // 种植自留种最近单位
+  // 2026-06-29: 种植自留种按形态分布明细（前端列表渲染 chip：「枝条 200根 · 种子 100粒」）
+  selfKeptByForm?: Array<{ seedForm: string; quantity: number; unit: string }>
   residualToSourceQty?: number         // 残株回种源累计（老字段，保留兼容）
   residualToSourceUnit?: string        // 2026-06-19: 残株回种源最近单位
   selfSeedToSourceQty?: number         // 自交种子入种源累计（老字段，保留兼容）
