@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getProductionPlans } from '@/services/apiProductionPlanService';
 import { getSeedlings } from '@/services/apiSeedlingService';
 import { getPlantings } from '@/services/apiPlantingService';
-import { getHarvestRecords } from '@/services/apiHarvestService';
+import { listHarvestRecords } from '@/services/harvestRecordService';
 import { getInventoryList } from '@/services/apiInventoryService';
 import { CropBatch } from '@/types';
 import { Seedling } from '@/types/crop';
@@ -52,7 +52,7 @@ export function useProductionChainStats() {
 
   const { data: harvestRecords = [], isLoading: isLoadingHarvest } = useQuery({
     queryKey: ['harvest-records'],
-    queryFn: getHarvestRecords,
+    queryFn: listHarvestRecords,
   });
 
   const { data: inventoryRecords = [], isLoading: isLoadingInventory } = useQuery({

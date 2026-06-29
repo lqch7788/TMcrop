@@ -177,8 +177,9 @@ import { z } from 'zod';
  * - via_seedling 路径暂不强校验 (V1.1 现状: 无 seedling_batch_id 字段)
  */
 export const CreatePlantingSchema = z.object({
+  // 2026-06-29: Zod v4 移除 errorMap，改用 message 字段
   origin_path: z.enum(['direct_from_seed', 'via_seedling'], {
-    errorMap: () => ({ message: '来源路径必填 (direct_from_seed 或 via_seedling)' }),
+    message: '来源路径必填 (direct_from_seed 或 via_seedling)',
   }),
   source_id: z.string().optional(), // 强校验由 .refine 决定
   planting_code: z.string().optional(),

@@ -96,7 +96,7 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(500).json({ success: false, error: `INSERT 列数(${cols.length})与值数(${vals.length})不一致` });
     }
     const placeholders = cols.map(() => '?').join(', ');
-    db.run(`INSERT INTO risk_alerts (${cols.join(', ')}) VALUES (${placeholders})`, vals as unknown[]);
+    db.run(`INSERT INTO risk_alerts (${cols.join(', ')}) VALUES (${placeholders})`, vals as any);
     saveDatabase();
 
     const r = db.exec('SELECT * FROM risk_alerts WHERE id = ?', [id]);
@@ -129,7 +129,7 @@ router.put('/:id', (req: Request, res: Response) => {
     sets.push('update_time = ?');
     vals.push(new Date().toISOString());
     vals.push(req.params.id);
-    db.run(`UPDATE risk_alerts SET ${sets.join(', ')} WHERE id = ?`, vals as unknown[]);
+    db.run(`UPDATE risk_alerts SET ${sets.join(', ')} WHERE id = ?`, vals as any);
     saveDatabase();
 
     const r = db.exec('SELECT * FROM risk_alerts WHERE id = ?', [req.params.id]);
@@ -147,7 +147,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const now = new Date().toISOString();
     const r = db.run('UPDATE risk_alerts SET deleted_at = ?, update_time = ? WHERE id = ?', [now, now, req.params.id]);
-    if (r.changes === 0) return res.status(404).json({ success: false, error: '风险预警不存在' });
+    if ((r as any).changes === 0) return res.status(404).json({ success: false, error: '风险预警不存在' });
     saveDatabase();
     res.json({ success: true, message: '已删除' });
   } catch (e) {

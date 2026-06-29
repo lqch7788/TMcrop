@@ -185,11 +185,11 @@ router.delete('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     const result = db.run('DELETE FROM material_flow_log WHERE id = ? OR oid = ?', [id, id]);
-    if (result.changes === 0) {
+    if ((result as any).changes === 0) {
       return res.status(404).json({ success: false, error: '流转记录不存在' });
     }
     saveDatabase();
-    res.json({ success: true, data: { deletedCount: result.changes } });
+    res.json({ success: true, data: { deletedCount: (result as any).changes } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -219,7 +219,7 @@ router.delete('/', (req: Request, res: Response) => {
       [...ids, ...ids]
     );
     saveDatabase();
-    res.json({ success: true, data: { deletedCount: result.changes } });
+    res.json({ success: true, data: { deletedCount: (result as any).changes } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }

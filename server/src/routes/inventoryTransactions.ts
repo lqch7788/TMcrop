@@ -133,6 +133,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       businessId?: string;
       businessType: string;
       businessCode?: string;
+      targetId?: string;  // 2026-06-29: 出库目标 ID（planting self-kept 等场景用）
       quantity: number;
       operatorId?: string;
       operatorName?: string;
@@ -262,11 +263,11 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
           source_unit: stock.unit || '',
           source_category: mapInventorySourceToCategory(stock.source_type || stock.sourceType),
           target_type: body.businessType || '',
-          target_id: body.target_id || body.instanceId || '',
-          target_code: body.business_code || body.businessCode || '',
+          target_id: body.targetId || body.instanceId || '',
+          target_code: body.businessCode || '',
           target_quantity: body.quantity || 0,
           target_unit: stock.unit || '',
-          business_code: body.business_code || body.businessCode || '',
+          business_code: body.businessCode || '',
           created_by: (req as any).user?.name || '',
         });
       }

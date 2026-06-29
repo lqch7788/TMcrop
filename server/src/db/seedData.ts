@@ -3372,7 +3372,7 @@ function seedBusinessCropBatches() {
        seedling_site_name, target_seedling_count, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      batch.id, batch.batch_code, batch.plan_type, batch.plan_type_name, batch.crop_name, batch.crop_type, batch.variety,
+      batch.id || '', batch.batch_code || '', batch.plan_type || '', batch.plan_type_name || '', batch.crop_name || '', batch.crop_type || '', batch.variety || '',
       batch.greenhouse_id || '', batch.greenhouse_name || '', batch.planting_area || 0, batch.stage || '', batch.stage_name || '',
       batch.start_date || '', batch.expected_harvest_date || '', batch.target_yield || 0, batch.actual_yield || 0, batch.status || '', batch.planting_mode || '',
       batch.responsible_person || '', batch.publisher || '', batch.publish_date || '', batch.last_modify_date || '', batch.batch_status || '',

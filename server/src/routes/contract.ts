@@ -110,7 +110,7 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(500).json({ success: false, error: `INSERT 列数(${cols.length})与值数(${vals.length})不一致` });
     }
     const placeholders = cols.map(() => '?').join(', ');
-    db.run(`INSERT INTO contracts (${cols.join(', ')}) VALUES (${placeholders})`, vals as unknown[]);
+    db.run(`INSERT INTO contracts (${cols.join(', ')}) VALUES (${placeholders})`, vals as any);
     saveDatabase();
 
     // 返回完整记录
@@ -150,7 +150,7 @@ router.put('/:id', (req: Request, res: Response) => {
     vals.push(new Date().toISOString());
     vals.push(req.params.id);
 
-    db.run(`UPDATE contracts SET ${sets.join(', ')} WHERE id = ?`, vals as unknown[]);
+    db.run(`UPDATE contracts SET ${sets.join(', ')} WHERE id = ?`, vals as any);
     saveDatabase();
 
     // 返回完整记录
@@ -169,7 +169,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const now = new Date().toISOString();
     const r = db.run('UPDATE contracts SET deleted_at = ?, update_time = ? WHERE id = ?', [now, now, req.params.id]);
-    if (r.changes === 0) {
+    if ((r as any).changes === 0) {
       return res.status(404).json({ success: false, error: '合同不存在' });
     }
     saveDatabase();

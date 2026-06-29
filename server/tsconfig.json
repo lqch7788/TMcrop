@@ -17,5 +17,12 @@
     "checkJs": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "middleware/*.js", "services/*.js"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "middleware/*.js",
+    "services/*.js",
+    "scripts",
+    "src/__tests__/migrations"
+  ]
 }

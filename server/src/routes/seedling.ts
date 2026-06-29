@@ -925,7 +925,8 @@ router.post('/', (req: Request, res: Response) => {
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
             work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
             source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
-            propagation_mode, mother_plant_count, expanded_plant_count, scion_count } = req.body;
+            propagation_mode, mother_plant_count, expanded_plant_count, scion_count, source_deducted_quantity,
+            charge_person, seedling_form } = req.body;
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
