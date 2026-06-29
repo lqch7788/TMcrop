@@ -257,7 +257,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       if (labelsToExport.length === 0) { showAlert('没有可导出的标签'); return; }
 
-      const baseUrl = `${window.location.origin}/crop/plantings`;
+      const baseUrl = `${window.location.origin}/crop/planting`;
       const rows = labelsToExport.map((label, i) => ({
         index: i + 1,
         label,
@@ -331,7 +331,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       cropCode: record.cropCode, cropName: record.cropName,
       variety: record.cropVariety, quantity: currentSurviving,
       site: record.areaName, date: record.plantingDate,
-      url: `${baseUrl}/crop/plantings?labelNumber=${encodeURIComponent(label)}`
+      url: `${baseUrl}/crop/planting?labelNumber=${encodeURIComponent(label)}`
     });
   };
 
