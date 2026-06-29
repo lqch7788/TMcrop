@@ -1205,6 +1205,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'products', sql: 'ALTER TABLE harvest_records ADD COLUMN products TEXT' },                 // 产品明细 JSON 数组字符串
     // 2026-06-19 unify-harvest-inbound-into-source-operations: 溯源字段
     { name: 'source_module', sql: "ALTER TABLE harvest_records ADD COLUMN source_module TEXT" },        // 来源模块 'seed_source'|'seedling'|'planting'
+    // 2026-06-27: 成品形态（果实/种子/种苗/枝条 等）— schema.ts 已含但 fixMissingSchema 漏补，导致老 DB 升级后 INSERT 报"no such column: harvest_form"
+    { name: 'harvest_form', sql: "ALTER TABLE harvest_records ADD COLUMN harvest_form TEXT" },
     // 2026-06-04: 软删除列 — 修复"用户删除后重启被 seed 复活"bug。删除时只标 deleted_at，物理行保留
     { name: 'deleted_at', sql: 'ALTER TABLE harvest_records ADD COLUMN deleted_at TEXT' },
   ];
