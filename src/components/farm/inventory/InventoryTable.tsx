@@ -230,7 +230,18 @@ export function InventoryTable({
                       {stock.cropCode || cropCodeMap.get(stock.cropName || '') || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {getStockTypeBadge(stock.stockType)}
+                      <div className="flex flex-col gap-0.5">
+                        {getStockTypeBadge(stock.stockType)}
+                        {/* 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他 12 选）
+                            历史数据（2026-06-30 前的入库）productForm 为空，UI 显示 "—"，新做的入库会带具体形态 */}
+                        {stock.productForm ? (
+                          <span className="text-xs text-gray-600" title={`成品形态：${stock.productForm}`}>
+                            {stock.productForm}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm text-gray-900 truncate max-w-xs">{stock.cropName || '-'}</div>

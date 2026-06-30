@@ -145,6 +145,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       unit: record.unit || '克',
       grade: '',
       sourceForm: '',
+      // 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他）
+      // 与顶部"采收形态"下拉联动（useEffect 同步）
+      productForm: '',
     },
   ])
 
@@ -205,6 +208,14 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const harvestRecords: PlantingHarvestRecord[] = harvestRecordsMap[record.id] || []
   const activeWarehouses = warehouses.filter((w: any) => !w.status || w.status === 'active')
 
+  // 2026-06-30 Bug 12 修复：顶部"采收形态"选择 → 自动同步到 products[0].productForm
+  // 原因：submitUnifiedInbound 入参 products[].productForm 是写入 inventory_stock.product_form 的唯一通道
+  //       种植行单一产物（单条 product），不需要多形态选择，把顶部 sourceForm 同步过去即可
+  useEffect(() => {
+    if (!sourceForm) return
+    setProducts((prev) => prev.map((p, i) => (i === 0 ? { ...p, productForm: sourceForm } : p)))
+  }, [sourceForm])
+
   const hasSeedSource = !!record.sourceId
   const requiresWarehouse = destination === 'harvest'
   // 2026-06-29: 合并 planting_self_kept 替代 circulate + self_seed
@@ -246,6 +257,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       unit: record.unit || '克',
       grade: '',
       sourceForm: '',
+      // 2026-06-30 Bug 12 修复：成品形态重置
+      productForm: '',
     }])
   }
 

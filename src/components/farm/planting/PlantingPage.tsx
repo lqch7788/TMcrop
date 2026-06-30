@@ -240,7 +240,13 @@ export default function PlantingPage() {
 
   // V2 改造 (任务 16): 触发种植结束弹窗
   const handleEndV2 = (record: Planting) => {
-    setCurrentRecord(record);
+    // 2026-06-30 Bug 11 修复：实时从 store 取最新 record
+    // 原因：setCurrentRecord 用传入的 record 是 stale 快照（store items 后续会被
+    //       行级采收入库 onSuccess=loadItems 刷新，但 currentRecord 不会自动同步），
+    //       导致 HarvestRecordModal 里的 harvestToInventoryQty 永远是打开时的旧值（显示 0）。
+    // 限制：handleEdit / handleDetail / handleMove 有同样风险，但用户未报，按 Rule 3 不主动改
+    const latest = usePlantingStore.getState().items.find((i) => i.id === record.id) || record;
+    setCurrentRecord(latest);
     setHarvestModalOpen(true);
   };
 
@@ -644,6 +650,7 @@ export default function PlantingPage() {
           2026-06-25 v3: 移除 stockType='seed' 路径 — 留种采收也入产品库存，后续由种源库手动调拨入种源 */}
       {inboundUnifiedRecord && (
         <UnifiedRowHarvestInboundModal
+          key={inboundUnifiedRecord.id}  // 2026-06-30 Bug 修复：强制 sourceRecord 变化时重 mount，避免 useState 复用旧值
           isOpen={inboundUnifiedOpen}
           onClose={() => {
             setInboundUnifiedOpen(false)

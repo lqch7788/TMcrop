@@ -435,6 +435,9 @@ function toCamelStock(row: any): InventoryStock {
     unitPrice: Number(row.unit_price ?? row.unitPrice ?? 0),
     totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0),
     purchaseDate: row.purchase_date ?? row.purchaseDate ?? '',
+    // 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他 12 选）
+    // 写入端：executeInboundFromSource.service.ts:279
+    productForm: row.product_form ?? row.productForm ?? '',
   } as unknown as InventoryStock;
 }
 

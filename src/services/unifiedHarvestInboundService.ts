@@ -26,6 +26,9 @@ export interface InboundProduct {
   grade?: string
   auditor?: string
   remarks?: string
+  // 2026-06-30 Bug 12 修复：形态字段
+  productForm?: string  // 成品形态（果实/种子/花朵等，写入 inventory_stock.product_form）
+  sourceForm?: string   // 产物形态（种源/育苗/种植行通用，历史兼容）
 }
 
 export interface UnifiedInboundInput {
