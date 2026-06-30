@@ -17,7 +17,7 @@ import {
   DownstreamTraceResult,
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
-import { getPlantingModeLabel, SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
+import { SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
 
 interface InventoryTableProps {
   data: InventoryStock[];
@@ -148,6 +148,8 @@ export function InventoryTable({
     }
   };
 
+  // 2026-06-30 Bug 12 二轮：去掉「种植模式」列，改为独立「形态」列
+  // 形态列单独提出比嵌在「类型」列下方更醒目（用户反馈嵌在小灰字不显眼）
   const colSpan = showCheckboxes ? 16 : 15;
 
   return (
@@ -171,7 +173,7 @@ export function InventoryTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物信息</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">形态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">可用</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">冻结</th>
@@ -230,18 +232,7 @@ export function InventoryTable({
                       {stock.cropCode || cropCodeMap.get(stock.cropName || '') || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        {getStockTypeBadge(stock.stockType)}
-                        {/* 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他 12 选）
-                            历史数据（2026-06-30 前的入库）productForm 为空，UI 显示 "—"，新做的入库会带具体形态 */}
-                        {stock.productForm ? (
-                          <span className="text-xs text-gray-600" title={`成品形态：${stock.productForm}`}>
-                            {stock.productForm}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </div>
+                      {getStockTypeBadge(stock.stockType)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm text-gray-900 truncate max-w-xs">{stock.cropName || '-'}</div>
@@ -277,8 +268,18 @@ export function InventoryTable({
                     <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName || stock.areaName}>
                       {stock.greenhouseName || stock.areaName || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {getPlantingModeLabel(stock.plantingMode) || '-'}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {/* 2026-06-30 Bug 12 二轮：独立的「形态」列（原「种植模式」列位置）
+                          来源：库存行 stock.productForm（HarvestRecordModal / UnifiedRowHarvestInboundModal
+                          顶部「采收形态」/「成品形态」下拉 → 写入 inventory_stock.product_form）
+                          历史数据（修复前做的 11 条入库）product_form 为空，显示 — */}
+                      {stock.productForm ? (
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                          {stock.productForm}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {stock.currentQuantity}
