@@ -269,16 +269,12 @@ export function InventoryTable({
                       {stock.greenhouseName || stock.areaName || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {/* 2026-06-30 Bug 19 修复：形态列按 stock_type 分流读 fallback 链
-                          （种源/育苗入库时形态写到 propagation_form，种植入库写到 product_form，
-                          部分老数据写的是 source_form 列）：
-                          product → productForm
-                          seed/seedling → propagationForm → productForm
+                      {/* 2026-06-30 Bug 21 修复：库存形态列统一读产品明细「采收形态」sourceForm
+                          后端仅写 source_form 列（统一写入字段）。
+                          历史数据 productForm 的也保留作为 fallback（兼容老数据）。
                           全部空 → — */}
                       {(() => {
-                        const form = (stock.stockType === 'product')
-                          ? (stock.productForm || stock.sourceForm || stock.propagationForm || '')
-                          : (stock.propagationForm || stock.productForm || stock.sourceForm || '')
+                        const form = stock.sourceForm || stock.productForm || ''
                         return form ? (
                           <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium" title={form}>
                             {form}

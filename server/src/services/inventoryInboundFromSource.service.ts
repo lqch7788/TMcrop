@@ -58,8 +58,7 @@ export interface InboundFromSourceInput {
   warehouseName?: string;
   products: InboundProduct[];
   operatorName?: string;
-  // 2026-06-19: 种源形态（仅种源行入库时必填）
-  propagationForm?: string;  // 种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根
+  // 2026-06-19: 种源形态（仅种源行入库时必填）— 2026-06-30 Bug 21 删
   // 2026-06-27: 成品形态（仅种植行入库时可选，整株/花朵/果实/种子/块茎 等）
   harvestForm?: string;
 }
@@ -277,9 +276,10 @@ export async function executeInboundFromSource(
         greenhouse_name: input.greenhouseNames?.[0] || autoGreenhouseName,
         area_name: autoAreaName,
         // 2026-06-19: 形态/类型字段
-        product_form: product.productForm || null,        // 采收形态
-        propagation_form: input.propagationForm || null,  // 种源形态（仅种源行）
-        source_form: product.sourceForm || null,          // 育苗/种植产物类型
+        // 2026-06-30 Bug 21：统一改读产品明细 sourceForm（写入 source_form 列），
+        // 移除 propagation_form 写入 — 种源入库的 seedForm 走 seed_sources 表独立链路
+        product_form: product.productForm || null,        // 采收形态（product 行用）
+        source_form: product.sourceForm || null,          // 育苗/种植产物类型（统一形态字段）
         status: 'in_stock',
         version: 1,
         create_time: now,
@@ -287,6 +287,7 @@ export async function executeInboundFromSource(
       };
 
       // 写入 inventory_stock（种源/育苗/种植三入口统一落库）
+      // 2026-06-30 Bug 21：列清单删除 propagation_form（统一走产品明细 sourceForm）
       db.run(`
         INSERT INTO inventory_stock (
           id, instance_id, stock_type, business_id, business_type, business_code,
@@ -296,7 +297,7 @@ export async function executeInboundFromSource(
           warehouse_id, warehouse_name, inbound_date,
           quality_grade, grade, unit_price,
           planting_mode, greenhouse_name,
-          product_form, propagation_form, source_form,
+          product_form, source_form,
           area_name,
           status, version, create_time, update_time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -309,7 +310,7 @@ export async function executeInboundFromSource(
         stockRecord.warehouse_id, stockRecord.warehouse_name, stockRecord.inbound_date,
         stockRecord.quality_grade, stockRecord.grade, stockRecord.unit_price,
         stockRecord.planting_mode, stockRecord.greenhouse_name,
-        stockRecord.product_form, stockRecord.propagation_form, stockRecord.source_form,
+        stockRecord.product_form, stockRecord.source_form,
         stockRecord.area_name,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
