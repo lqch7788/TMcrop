@@ -10,6 +10,7 @@ import {
   UseVarietyTreeReturn,
   DisplayMode
 } from '../types';
+import { CropVariety } from '../../../../types/cropVariety';
 import { produceCategories, getProduceTypesByCategory, ProduceCategoryCode } from '../../../../data/produceCodeRule';
 import { getVarietyOptions, getAllVarieties as getLocalVarieties } from '../../../../services/cropVarietyService';
 import { getCategoryExtensions, getTypeExtensions, getVarietyExtensions, getSubVariety1Extensions } from '../../../../services/cropVarietyExtensionService';
@@ -212,12 +213,12 @@ const buildTreeNode = (
           if (recordedVarieties.length > 0) {
             for (const rv of recordedVarieties) {
               const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
-                ? rv.subVariety1Name
-                : (rv.detailVarietyName || rv.subVariety1Name);
+                ? (rv.subVariety1Name || '')
+                : (rv.detailVarietyName || rv.subVariety1Name || '');
               const detailNode: VarietyTreeNode = {
-                key: `${key}${rv.detailVarietyCode || '00'}`,
+                key: `${key}${String(rv.detailVarietyCode ?? '00')}`,
                 name: detailName,
-                code: rv.detailVarietyCode || '00',
+                code: String(rv.detailVarietyCode ?? '00'),
                 level: 'detail',
                 children: [],
                 isLeaf: true,
@@ -253,13 +254,13 @@ const buildTreeNode = (
       // 当 detailVarietyCode 为 '00' 或空时，使用 subVariety1Name 作为名称
       // 否则使用用户录入的 detailVarietyName
       const detailName = (!rv.detailVarietyCode || rv.detailVarietyCode === '00' || rv.detailVarietyCode === '')
-        ? rv.subVariety1Name
-        : (rv.detailVarietyName || rv.subVariety1Name);
+        ? (rv.subVariety1Name || '')
+        : (rv.detailVarietyName || rv.subVariety1Name || '');
 
       const detailNode: VarietyTreeNode = {
-        key: `${key}${rv.detailVarietyCode}`,
+        key: `${key}${String(rv.detailVarietyCode ?? '')}`,
         name: detailName,
-        code: rv.detailVarietyCode || '00',
+        code: String(rv.detailVarietyCode ?? '00'),
         level: 'detail',
         children: [],
         isLeaf: true,

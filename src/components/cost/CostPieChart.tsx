@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from 'recharts';
+import {PieChart, Pie, Cell, ResponsiveContainer, Tooltip} from 'recharts';
 
 interface CostPieChartProps {
   data: Array<{
@@ -35,8 +35,8 @@ export const CostPieChart: React.FC<CostPieChartProps> = ({ data }) => {
   const totalAmount = data.reduce((sum, d) => sum + d.value, 0);
 
   // 渲染外部标签
-  const renderCustomizedLabel = (props: any) => {
-    const { cx, cy, midAngle, innerRadius, outerRadius, percentage } = props;
+  const renderCustomizedLabel = ({ percentage, outerRadius, cx, midAngle, cy }: any) => {
+
     if (percentage < 5) return null; // 太小的不显示
 
     const RADIAN = Math.PI / 180;
