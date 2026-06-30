@@ -148,7 +148,8 @@ export async function listTransferableSources(filters: {
       ist.inbound_date, ist.source_module, ist.source_id, ist.source_type,
       ist.unit_price, ist.supplier_id, ist.supplier_name,
       ist.production_plan_code,
-      ist.warehouse_id, ist.warehouse_name
+      ist.warehouse_id, ist.warehouse_name,
+      ist.product_form  -- 2026-06-30 Bug 13：列表展示形态 + 调拨入种源时自动复制形态
     FROM inventory_stock ist
     WHERE ist.stock_type IN (${placeholders})
       AND ist.current_quantity > 0
@@ -227,6 +228,8 @@ export async function listTransferableSources(filters: {
       supplierId: obj.supplier_id,
       supplierName: obj.supplier_name,
       productionPlanCode: obj.production_plan_code,
+      // 2026-06-30 Bug 13：调拨面板列表展示形态字段（前端 UI 显示 + 调拨时自动复制到 seed_sources.seed_form）
+      productForm: obj.product_form || '',
       // harvest_record_id 字段不在生产 inventory_stock schema 中，移除引用
       warehouseId: obj.warehouse_id,
       warehouseName: obj.warehouse_name,
@@ -392,6 +395,9 @@ export async function executeTransferToSource(
       }
 
       const newSeedSourceId = `SS${Date.now()}${String(writtenSeedSourceIds.length).padStart(2, '0')}`;
+      // 2026-06-30 Bug 13：调拨入种源时自动从源库存 product_form 复制形态
+      // （不暴露给前端 UI 简化 — 调拨形态 ≈ 源库存形态 = 入库时定的形态，传递是有意义的）
+      const transferSeedForm = sourceStock.product_form || null;
       db.run(
         `INSERT INTO seed_sources (
           id, source_code, source_name, source_type, source_origin,
@@ -410,8 +416,9 @@ export async function executeTransferToSource(
           original_unit, original_unit_price,
           original_supplier_id, original_supplier_name,
           original_production_plan_code,
+          seed_form,
           create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           newSeedSourceId, newCode, `${sourceStock.crop_name || ''}（调拨）`, mapStockTypeToSeedSourceType(sourceStock.stock_type), 'inventory_transfer',
           sourceStock.production_plan_code || '', '', '', sourceStock.variety_name || '',
@@ -430,6 +437,7 @@ export async function executeTransferToSource(
           sourceUnit, sourceStock.unit_price || 0,
           sourceStock.supplier_id, sourceStock.supplier_name,
           sourceStock.production_plan_code,
+          transferSeedForm,
           now, now,
         ]
       );

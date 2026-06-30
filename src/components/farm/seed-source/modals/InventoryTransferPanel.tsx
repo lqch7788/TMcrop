@@ -397,6 +397,8 @@ export function InventoryTransferPanel({
                 <TableHead className="w-44">库存编号</TableHead>
                 <TableHead className="w-24">类型</TableHead>
                 <TableHead className="w-52">作物 / 品种</TableHead>
+                {/* 2026-06-30 Bug 13：「形态」列（库存类型 下方），方便挑选不同形态的库存做调拨 */}
+                <TableHead className="w-28">形态</TableHead>
                 <TableHead className="w-32 text-right">可用数量</TableHead>
                 <TableHead className="w-48">调拨数量</TableHead>
                 <TableHead className="w-32">入库日期</TableHead>
@@ -439,6 +441,16 @@ export function InventoryTransferPanel({
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    {/* 2026-06-30 Bug 13：形态列 — 调拨面板列出作物形态方便挑选；调拨入种源时此形态自动复制到 seed_sources.seed_form */}
+                    <TableCell>
+                      {row.productForm ? (
+                        <Badge className="bg-emerald-100 text-emerald-800 text-xs whitespace-nowrap">
+                          {row.productForm}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="text-sm font-medium text-gray-900 whitespace-nowrap">

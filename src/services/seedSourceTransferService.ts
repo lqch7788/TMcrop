@@ -44,6 +44,9 @@ export interface TransferableSourceRow {
   // harvestRecordId: 生产 inventory_stock 无此列（修复 2026-06-24）
   warehouseId: string | null;
   warehouseName: string | null;
+  // 2026-06-30 Bug 13：作物形态（果实/种子/花朵 等 12 选 — 从 inventory_stock.product_form 读取）
+  // 后端 listTransferableSources SQL 已加这列；前端 UI 用于在调拨面板列表里展示
+  productForm?: string;
 }
 
 /** 调拨面板单条提交数据 */
@@ -51,6 +54,9 @@ export interface TransferItem {
   sourceStockId: string;
   transferQuantity: number;
   unit: string;
+  // 2026-06-30 Bug 13: 调拨入种源时携带的形态（自动从源库存 product_form 复制，允许前端覆盖为 undefined）
+  // 后端 inventoryTransfer.service.ts 把 seedForm 写到 seed_sources.seed_form
+  seedForm?: string;
 }
 
 /** 单条调拨结果（来自 POST /transfer-to-source data 数组的每个元素） */
