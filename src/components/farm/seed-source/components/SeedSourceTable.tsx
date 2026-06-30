@@ -370,7 +370,7 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种源类型</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">形态</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源途径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
@@ -406,6 +406,7 @@ export function SeedSourceTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
+                {/* 2026-06-30 Bug 13：种源类型列已合并到形态列，colSpan 18/17（原 19/18 -1） */}
                 <TableCell colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
@@ -446,16 +447,30 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={getVarietyPath(record)}>
                     {truncateText(getVarietyPath(record))}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={
-                    // 2026-06-29: 种植自留种回流种源时 seedForm 优先（如"枝条"/"种子"等）
-                    record.seedForm || SOURCE_TYPE_MAP[record.sourceType] || record.sourceType
-                  }>
-                    {/* 2026-06-29: 优先显示 seedForm（水果/种苗/枝条等具体形态）— 老种源/外部购买显示原 sourceType */}
-                    {record.seedForm ? (
-                      <Badge variant="default" className="bg-emerald-100 text-emerald-800">{truncateText(record.seedForm)}</Badge>
-                    ) : (
-                      truncateText(SOURCE_TYPE_MAP[record.sourceType] || record.sourceType)
-                    )}
+                  {/* 2026-06-30 Bug 13：种源类型 + 形态 合一列（按用户决策 B）
+                      优先 seedForm（果实/种子/种苗/枝条/花朵 等 12 选 — 来自回流 / 调拨）；
+                      fallback 到 SOURCE_TYPE_MAP（种子/扦插苗/嫁接苗/组培苗 等 — 来自繁殖途径）；
+                      都没有则显示 —。
+                      原因：种源已退化为仓库角色，不再区分繁殖细节，简化展示 */}
+                  <TableCell
+                    className="px-4 py-3 whitespace-nowrap"
+                    title={
+                      record.seedForm
+                        ? `形态：${record.seedForm}`
+                        : (SOURCE_TYPE_MAP[record.sourceType] || record.sourceType || '-')
+                    }
+                  >
+                    {(() => {
+                      const form = record.seedForm
+                        || SOURCE_TYPE_MAP[record.sourceType]
+                        || record.sourceType
+                        || ''
+                      return form ? (
+                        <Badge variant="default" className="bg-emerald-100 text-emerald-800">{truncateText(form)}</Badge>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )
+                    })()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin}>
                     {/* 2026-06-25 v3: 种源只有 external + transfer_from_inventory — 统一显示 SOURCE_ORIGIN_MAP */}
