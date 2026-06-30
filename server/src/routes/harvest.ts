@@ -9,6 +9,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db';
+import { queryToObjects } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -18,7 +19,7 @@ router.use(authenticate);
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const rows = (db.prepare('SELECT * FROM harvest_records ORDER BY create_time DESC') as any).all();
+    const rows = queryToObjects<any>(db, 'SELECT * FROM harvest_records ORDER BY create_time DESC');
     res.json(rows);
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
@@ -29,7 +30,8 @@ router.get('/', (req: Request, res: Response) => {
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM harvest_records WHERE id = ?').get([req.params.id]);
+    const rows = queryToObjects<any>(db, 'SELECT * FROM harvest_records WHERE id = ?', [req.params.id]);
+    const row = rows[0];
     if (!row) return res.status(404).json({ success: false, error: '记录不存在' });
     res.json(row);
   } catch (e: any) {
