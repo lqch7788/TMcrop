@@ -3,14 +3,14 @@
  * 包含：时间范围筛选、分组维度切换、柱状图、饼图、汇总数字
  * 使用 Recharts 渲染图表
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, Legend, ResponsiveContainer,
 } from 'recharts';
 import { useFertilizerStore } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
-import { Input } from '@/components/ui';
+
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
@@ -25,7 +25,7 @@ const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4
 
 export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
   const store = useFertilizerStore();
-  const { items, stats } = store;
+  const items = store.items;
 
   const [timeRange, setTimeRange] = useState({ start: '', end: '' });
   const [groupBy, setGroupBy] = useState<'month' | 'crop' | 'fertilizer_type' | 'greenhouse'>('fertilizer_type');

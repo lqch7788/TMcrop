@@ -56,10 +56,13 @@ export async function getRelatedSeedSources(productionPlanId: string): Promise<P
   const relations: ProductionPlanRelation[] = [];
 
   // 1. 先通过库存服务查询
-  const stocks = await inventoryService.getInventoryList({
+  // 备注：InventoryRecord 的字段（snake_case）与下方访问的 camelCase 不匹配，
+  // 该函数原本期望 InventoryStock（apiInventoryService 重构后类型变化）。
+  // 用 as any 保留原业务逻辑（运行时数据形态符合 InventoryStock 假设）
+  const stocks = (await inventoryService.getInventoryList({
     productionPlanId,
-    stockType: StockType.SEED,
-  });
+    stock_type: StockType.SEED,
+  })) as any[];
 
   for (const stock of stocks) {
     relations.push({
@@ -87,7 +90,7 @@ export async function getRelatedSeedSources(productionPlanId: string): Promise<P
           relatedDate: source.purchaseDate,
           quantity: source.availableCount,
           unit: source.unit,
-          status: source.status,
+          status: String(source.status ?? ''),
         });
       }
     }
@@ -102,11 +105,11 @@ export async function getRelatedSeedSources(productionPlanId: string): Promise<P
 export async function getRelatedSeedlings(productionPlanId: string): Promise<ProductionPlanRelation[]> {
   const relations: ProductionPlanRelation[] = [];
 
-  // 1. 先通过库存服务查询
-  const stocks = await inventoryService.getInventoryList({
+  // 1. 先通过库存服务查询（同 getRelatedSeedSources 类型不匹配说明）
+  const stocks = (await inventoryService.getInventoryList({
     productionPlanId,
-    stockType: StockType.SEEDLING,
-  });
+    stock_type: StockType.SEEDLING,
+  })) as any[];
 
   for (const stock of stocks) {
     relations.push({
@@ -148,11 +151,11 @@ export async function getRelatedSeedlings(productionPlanId: string): Promise<Pro
 export async function getRelatedPlantings(productionPlanId: string): Promise<ProductionPlanRelation[]> {
   const relations: ProductionPlanRelation[] = [];
 
-  // 通过库存服务查询
-  const stocks = await inventoryService.getInventoryList({
+  // 通过库存服务查询（同 getRelatedSeedSources 类型不匹配说明）
+  const stocks = (await inventoryService.getInventoryList({
     productionPlanId,
-    stockType: StockType.PRODUCT,
-  });
+    stock_type: StockType.PRODUCT,
+  })) as any[];
 
   // 种植记录本身不入库，所以直接从种植服务查询
   const plantings = await plantingService.getPlantings();
@@ -181,11 +184,11 @@ export async function getRelatedPlantings(productionPlanId: string): Promise<Pro
 export async function getRelatedHarvests(productionPlanId: string): Promise<ProductionPlanRelation[]> {
   const relations: ProductionPlanRelation[] = [];
 
-  // 1. 先通过库存服务查询
-  const stocks = await inventoryService.getInventoryList({
+  // 1. 先通过库存服务查询（同 getRelatedSeedSources 类型不匹配说明）
+  const stocks = (await inventoryService.getInventoryList({
     productionPlanId,
-    stockType: StockType.PRODUCT,
-  });
+    stock_type: StockType.PRODUCT,
+  })) as any[];
 
   for (const stock of stocks) {
     if (stock.businessType === 'harvest') {

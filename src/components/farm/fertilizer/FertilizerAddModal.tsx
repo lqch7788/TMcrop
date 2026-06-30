@@ -3,7 +3,7 @@
  * 4个区域：基础信息、肥料与用量、位置与时间、操作与备注
  * 使用 UnifiedModal 包装，提交时调用 store.createItem()
  */
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 
 // 深度输入框样式
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { DictSelect } from '../../common/settings/DictSelect';
-import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
+
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, useProductionPlanStore, useFertilizerLibraryStore, usePlantingStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
@@ -50,6 +50,9 @@ const defaultForm = {
   // 关联种植记录
   plantingId: '',
   plantingCode: '',
+  // 关联生产计划（可选）
+  productionPlanId: '',
+  productionPlanCode: '',
 };
 
 export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddModalProps) {
@@ -75,7 +78,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
 
   // 获取生产计划列表（过滤已完成）
   const planOptions = useMemo(() => {
-    const plans = useProductionPlanStore.getState().batches;
+    const plans = useProductionPlanStore.getState().batches as any[];
     const activePlans = plans.filter(p => p.status !== 'completed');
     if (!planSearchKeyword.trim()) return activePlans;
     const kw = planSearchKeyword.toLowerCase();
@@ -119,7 +122,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   }, []);
 
   // 作物选择处理
-  const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {
+  const handleCropCodeChange = useCallback((_code: string, varietyInfo: CropVariety | null) => {
     if (varietyInfo) {
       setSelectedCrop(varietyInfo);
       setCropCode(varietyInfo.cropCode);
@@ -344,7 +347,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                                 plan.status === 'planned' ? 'bg-amber-100 text-amber-600' :
                                 'bg-gray-100 text-gray-500'
                               }`}>
-                                {plan.status === 'in_progress' ? '进行中' : plan.status === 'planned' ? '计划中' : plan.status}
+                                {(plan as any).status === 'in_progress' ? '进行中' : (plan as any).status === 'planned' ? '计划中' : (plan as any).status}
                               </span>
                             </Button>
                           ))

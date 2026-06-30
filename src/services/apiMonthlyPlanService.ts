@@ -4,7 +4,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { MonthlyPlan } from '../types/planning';
+import { MonthlyPlan, MonthlyPlanRecord } from '../types/planning';
 
 // 后端返回的数据类型
 interface BackendMonthlyPlan {

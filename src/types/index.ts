@@ -496,6 +496,12 @@ export interface Position {
   departmentId: string;
   level: number;
   parentId?: string;
+  // 兼容扩展字段（PositionBatchEditModal 使用）
+  code?: string;
+  dept?: string;
+  salary?: number;
+  status?: string;
+  description?: string;
 }
 
 // 员工类型 - 农业种植管理系统专用

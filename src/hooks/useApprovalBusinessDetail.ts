@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { Approval, BusinessLink } from '../types/approval';
+import {Approval} from '../types/approval';
 
 // ============================================================
 // 业务详情返回类型
@@ -75,8 +75,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { usePurchasePlanStore } = await import('../stores/usePurchasePlanStore');
       const state = usePurchasePlanStore.getState();
-      if (state.batches.length === 0) await state.fetchPlans();
-      return usePurchasePlanStore.getState().batches.find((p: any) => p.id === requestId);
+      if (state.plans.length === 0) await state.fetchPlans();
+      return usePurchasePlanStore.getState().plans.find((p: any) => p.id === requestId);
     },
   },
   production_plan: {
@@ -110,8 +110,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useTechSolutionStore } = await import('../stores/useTechSolutionStore');
       const state = useTechSolutionStore.getState();
-      if (state.items?.length === 0) await state.loadItems?.();
-      return useTechSolutionStore.getState().items?.find((i: any) => i.id === requestId);
+      if (state.solutions?.length === 0) await state.fetchSolutions?.();
+      return useTechSolutionStore.getState().solutions?.find((s: any) => s.id === requestId);
     },
   },
 
@@ -138,8 +138,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useInspectionDataStore } = await import('../stores/useInspectionDataStore');
       const state = useInspectionDataStore.getState();
-      if (state.items?.length === 0) await state.loadItems?.();
-      return useInspectionDataStore.getState().items?.find((i: any) => i.id === requestId);
+      if (state.records?.length === 0) await state.fetchRecords?.();
+      return useInspectionDataStore.getState().records?.find((r: any) => r.id === requestId);
     },
   },
   inspection_issue: {
@@ -147,7 +147,7 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useInspectionDataStore } = await import('../stores/useInspectionDataStore');
       const state = useInspectionDataStore.getState();
-      return state.items?.find((i: any) => i.id === requestId);
+      return state.records?.find((r: any) => r.id === requestId);
     },
   },
   resolve: {
@@ -155,7 +155,7 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useProblemStore } = await import('../stores/useProblemStore');
       const state = useProblemStore.getState();
-      if (state.problems?.length === 0) await state.loadItems?.();
+      if (state.problems?.length === 0) await state.fetchProblems?.();
       return useProblemStore.getState().problems?.find((p: any) => p.id === requestId);
     },
   },
@@ -184,8 +184,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useLeaveStore } = await import('../stores/leaveStore');
       const state = useLeaveStore.getState();
-      if (state.leaves?.length === 0) await state.loadItems?.();
-      return useLeaveStore.getState().leaves?.find((l: any) => l.id === requestId);
+      if (state.leaveRecords?.length === 0) await state.fetchItems?.();
+      return useLeaveStore.getState().leaveRecords?.find((l: any) => l.id === requestId);
     },
   },
   overtime: {
@@ -193,8 +193,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useOvertimeStore } = await import('../stores/overtimeStore');
       const state = useOvertimeStore.getState();
-      if (state.overtimes?.length === 0) await state.loadItems?.();
-      return useOvertimeStore.getState().overtimes?.find((o: any) => o.id === requestId);
+      if (state.overtimeRecords?.length === 0) await state.fetchItems?.();
+      return useOvertimeStore.getState().overtimeRecords?.find((o: any) => o.id === requestId);
     },
   },
   resignation: {
@@ -202,8 +202,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useResignationStore } = await import('../stores/useResignationStore');
       const state = useResignationStore.getState();
-      if (state.resignations?.length === 0) await state.loadItems?.();
-      return useResignationStore.getState().resignations?.find((r: any) => r.id === requestId);
+      if (state.items?.length === 0) await state.fetchItems?.();
+      return useResignationStore.getState().items?.find((r: any) => r.id === requestId);
     },
   },
   resign: {
@@ -211,7 +211,7 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useResignationStore } = await import('../stores/useResignationStore');
       const state = useResignationStore.getState();
-      return state.resignations?.find((r: any) => r.id === requestId);
+      return state.items?.find((r: any) => r.id === requestId);
     },
   },
   recruitment: {
@@ -219,8 +219,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useRecruitmentStore } = await import('../stores/useRecruitmentStore');
       const state = useRecruitmentStore.getState();
-      if (state.recruitments?.length === 0) await state.loadItems?.();
-      return useRecruitmentStore.getState().recruitments?.find((r: any) => r.id === requestId);
+      if (state.items?.length === 0) await state.fetchItems?.();
+      return useRecruitmentStore.getState().items?.find((r: any) => r.id === requestId);
     },
   },
   onboarding: {
@@ -228,8 +228,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useOnboardingStore } = await import('../stores/useOnboardingStore');
       const state = useOnboardingStore.getState();
-      if (state.onboardings?.length === 0) await state.loadItems?.();
-      return useOnboardingStore.getState().onboardings?.find((o: any) => o.id === requestId);
+      if (state.items?.length === 0) await state.fetchItems?.();
+      return useOnboardingStore.getState().items?.find((o: any) => o.id === requestId);
     },
   },
   attendance_repair: {
@@ -278,25 +278,25 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     typeName: '指标数据',
     loader: async (requestId) => {
       const { useIndicatorStore } = await import('../stores/useIndicatorStore');
-      const state = useIndicatorStore.getState();
+      const state = useIndicatorStore.getState() as any;
       if (state.indicators?.length === 0) await state.loadItems?.();
-      return useIndicatorStore.getState().indicators?.find((i: any) => i.id === requestId);
+      return state.indicators?.find((i: any) => i.id === requestId);
     },
   },
   budget_create: {
     typeName: '预算编制',
     loader: async (requestId) => {
       const { useBudgetStore } = await import('../stores/useBudgetStore');
-      const state = useBudgetStore.getState();
+      const state = useBudgetStore.getState() as any;
       if (state.budgets?.length === 0) await state.loadItems?.();
-      return useBudgetStore.getState().budgets?.find((b: any) => b.id === requestId);
+      return state.budgets?.find((b: any) => b.id === requestId);
     },
   },
   budget_adjust: {
     typeName: '预算调整',
     loader: async (requestId) => {
       const { useBudgetStore } = await import('../stores/useBudgetStore');
-      const state = useBudgetStore.getState();
+      const state = useBudgetStore.getState() as any;
       return state.budgets?.find((b: any) => b.id === requestId);
     },
   },
@@ -378,7 +378,7 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useAnnouncementStore } = await import('../stores/useAnnouncementStore');
       const state = useAnnouncementStore.getState();
-      if (state.announcements?.length === 0) await state.loadItems?.();
+      if (state.announcements?.length === 0) await state.fetchAnnouncements?.();
       return useAnnouncementStore.getState().announcements?.find((a: any) => a.id === requestId);
     },
   },

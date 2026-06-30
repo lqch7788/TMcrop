@@ -5,7 +5,7 @@
 // 调用后端API /api/approval-linkage/update
 // ============================================================
 
-import { Approval, BusinessLink, ApprovalType } from '../types/approval';
+import {Approval, ApprovalType} from '../types/approval';
 import { logger } from '../lib/logger';
 import {
   registerApprovalIntegration,

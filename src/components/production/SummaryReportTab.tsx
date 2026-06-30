@@ -14,7 +14,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { ProductionChainTable, ChainTableType } from './ProductionChainTable';
-import { useProductionChainStats, ProductionChainData } from '@/hooks/useProductionChainStats';
+import {useProductionChainStats} from '@/hooks/useProductionChainStats';
 import { Button } from '@/components/ui';
 
 // Tab配置接口
@@ -77,7 +77,8 @@ const tabConfigs: TabConfig[] = [
  */
 export function SummaryReportTab() {
   const navigate = useNavigate();
-  const { stats, data, isLoading } = useProductionChainStats();
+  const { data, stats } = useProductionChainStats() as any;
+
   const [activeTab, setActiveTab] = useState<string>('productionPlans');
 
   // 获取当前激活的Tab配置
@@ -189,7 +190,7 @@ export function SummaryReportTab() {
         <ProductionChainTable
           type={activeConfig.tableType}
           data={getTableData()}
-          onView={(record) => {
+          onView={() => {
             // 查看记录详情
           }}
         />
