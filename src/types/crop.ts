@@ -198,6 +198,8 @@ export interface SeedSource {
   varietyName: string;        // 品种名称（如：菠菜）
   cropName: string;           // 作物名称（最细化，如：圆叶菠菜）
   cropVariety: string;        // 作物品种（对应数据库字段，存储上一级品种名）
+  // 2026-06-30: 种源入库时的采收形态（如"枝条"/"种子"/"果实"等），种植自留种回流时必填
+  seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他';
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
   supplierId: string;          // 供应商ID
   supplierName: string;        // 供应商名称

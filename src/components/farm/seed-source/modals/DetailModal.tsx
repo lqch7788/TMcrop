@@ -1,15 +1,16 @@
 /**
  * 种源详情弹窗（2026-06-27 重构）
- * 使用通用 EntityDetailModal 包装，Tab：基本信息 / 追溯时间线 / 调拨来源（条件）
+ * 使用通用 EntityDetailModal 包装，Tab：基本信息 / 追溯时间线 / 调拨来源（条件）/ 调入种植
  */
 
-import React from 'react';
-import { ArrowLeftRight } from 'lucide-react';
-import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
+import { useEffect, useState } from 'react';
+import { ArrowLeftRight, MoveRight } from 'lucide-react';
+import { Alert, AlertDescription, EntityDetailModal } from '@/components/ui';
 import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import { PropagationType } from '../../../../types/crop';
+import { getSeedSourceMoveRecords, type SeedSourceMoveRecord } from '@/services/apiSeedSourceService';
 
 const PROPAGATION_TYPE_LABELS: Record<string, string> = {
   external: '外购入库', breeding: '育种计划产出', seed_saving: '种植留种',
@@ -298,17 +299,130 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
   );
 }
 
+/**
+ * 调入种植面板
+ * 2026-06-30: 列示当前种源被调入/调出到种植单的全量履历。
+ * 数据来源：GET /api/seed-sources/:id/move-records
+ */
+function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
+  const [records, setRecords] = useState<SeedSourceMoveRecord[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!seedSourceId) return
+    setLoading(true)
+    setError(null)
+    // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
+    getSeedSourceMoveRecords(seedSourceId)
+      .then((data) => setRecords(Array.isArray(data) ? data : []))
+      .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
+      .finally(() => setLoading(false))
+  }, [seedSourceId])
+
+  if (loading) {
+    return <div className="text-center py-8 text-gray-500">加载中…</div>
+  }
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (records.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg">
+        暂无调入种植记录
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+        <MoveRight className="w-4 h-4 text-emerald-600" />
+        调入种植记录（共 {records.length} 条）
+      </h4>
+      <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead className="bg-blue-500 text-white sticky top-0">
+            <tr>
+              <th className="px-2 py-2 text-left">日期</th>
+              <th className="px-2 py-2 text-left">类型</th>
+              <th className="px-2 py-2 text-right">数量</th>
+              <th className="px-2 py-2 text-left">目标种植单</th>
+              <th className="px-2 py-2 text-left">目标区域</th>
+              <th className="px-2 py-2 text-left">操作员</th>
+              <th className="px-2 py-2 text-left">备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((r) => (
+              <tr key={r.id} className="hover:bg-gray-50 border-b border-gray-100">
+                <td className="px-2 py-1.5">{r.operationDate || '-'}</td>
+                <td className="px-2 py-1.5">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                      r.operationType === 'move_in'
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-amber-50 text-amber-600'
+                    }`}
+                  >
+                    {r.operationType === 'move_in' ? '调入' : '调出'}
+                  </span>
+                </td>
+                <td className="px-2 py-1.5 text-right font-medium">
+                  {(r.quantity || 0).toLocaleString()}
+                </td>
+                <td className="px-2 py-1.5">
+                  <code className="text-xs">{r.plantingCode || '-'}</code>
+                </td>
+                <td className="px-2 py-1.5">{r.toAreaName || '-'}</td>
+                <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
+                <td
+                  className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
+                  title={r.remarks || ''}
+                >
+                  {r.remarks || '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   const hasTransferSource = !!record.transferredFromStockId;
 
-  const extraTabs = hasTransferSource
-    ? [{
-        key: 'transfer-source',
-        label: '调拨来源',
-        icon: <ArrowLeftRight className="w-4 h-4" />,
-        content: <TransferSourcePanel record={record} />,
-      }]
-    : [];
+  // 2026-06-30: 条件渲染两个 extra tab —
+  //  - 调拨来源：有 transferredFromStockId 时（即来源是其他库存调拨）才显示
+  //  - 调入种植：所有种源都显示（即便暂时没记录，也允许用户看到空态）
+  const extraTabs: Array<{
+    key: string
+    label: string
+    icon: React.ReactNode
+    content: React.ReactNode
+  }> = []
+
+  if (hasTransferSource) {
+    extraTabs.push({
+      key: 'transfer-source',
+      label: '调拨来源',
+      icon: <ArrowLeftRight className="w-4 h-4" />,
+      content: <TransferSourcePanel record={record} />,
+    })
+  }
+
+  extraTabs.push({
+    key: 'move-to-plantings',
+    label: '调入种植',
+    icon: <MoveRight className="w-4 h-4" />,
+    content: <MoveToPlantingsPanel seedSourceId={record.id} />,
+  })
 
   return (
     <EntityDetailModal

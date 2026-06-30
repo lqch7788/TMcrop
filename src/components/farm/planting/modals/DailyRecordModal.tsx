@@ -30,7 +30,7 @@ import {
 } from '@/constants/cropConstants';
 import { FeedRecordCard, type FeedRecordItem } from '@/components/farm/seedling/modals/FeedRecordCard';
 import { Edit2, Trash2, Download, X, Check } from 'lucide-react';
-import * as XLSX from 'xlsx';
+
 import { exportPlantingDailyRecordsToExcel } from '../../../../services/excelExportService';
 
 interface DailyRecordModalProps {
@@ -735,6 +735,12 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     补栽
                     <span className="text-xs text-gray-500 ml-1">（补种/补苗，存入 plantings.supplement_count）</span>
                   </Label>
+                  {/* 2026-06-30: 补栽不关联种源溯源警告
+                      缘由：补栽只更新 plantings.supplement_count 累加数字，不写入 planting_seed_sources，
+                      会破坏全链路追溯。建议使用「调入」功能选择具体种源批号 — 补栽仅作为应急通道。 */}
+                  <div className="bg-amber-50 border border-amber-300 rounded p-2 text-xs text-amber-800 mb-2">
+                    ⚠️ 补栽不关联种源溯源，建议使用「调入」功能选择具体种源批号。补栽仅作为无法溯源时的应急通道。
+                  </div>
                   <Input
                     type="number"
                     min="0"

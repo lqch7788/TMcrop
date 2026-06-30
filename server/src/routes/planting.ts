@@ -322,6 +322,30 @@ router.get('/generate-code', (req: Request, res: Response) => {
 });
 
 /**
+ * 2026-06-30: 种植调入弹窗"目标区域"下拉用
+ * GET /api/plantings/:id/area-stocks
+ * 注意：必须放在 GET /:id 之前，否则 :id 会吞掉 "area-stocks" 路径段
+ */
+router.get('/:id/area-stocks', (req: Request, res: Response) => {
+  try {
+    const plantingId = String(req.params.id)
+    const rows = queryToObjects<any>(
+      getDatabase(),
+      `SELECT id, area_id AS areaId, area_name AS areaName, quantity,
+              source_type AS sourceType, source_id AS sourceId, source_code AS sourceCode
+       FROM planting_area_stocks
+       WHERE planting_id = ?
+       ORDER BY quantity DESC`,
+      [plantingId]
+    )
+    res.json({ success: true, data: rows })
+  } catch (e: any) {
+    console.error('获取种植区域库存失败:', e)
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
+  }
+})
+
+/**
  * 获取某 planting 的所有采收记录（按日期降序）
  * GET /api/plantings/:id/harvest-records
  * 注意：必须放在 GET /:id 之前，否则 :id 会吞掉 "harvest-records" 路径段
