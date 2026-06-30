@@ -178,10 +178,15 @@ router.get('/lookup', (req, res) => {
     // 上限 200，默认 50（防止误传超大值拖慢列表）
     const limit = Math.min(Number(req.query.limit) || 50, 200)
 
-    // 仅返回有库存且未终止的种源
+    // 仅返回有库存 + 未终止 + 非产品库存 + 未软删除的种源
+    // 2026-06-30 Bug 修复：排除 source_type='product'（产品库存不属于种源范围）
+    //                  + 排除 deleted_at IS NOT NULL（软删除的种源不应该出现在调入弹窗）
+    // 与种源管理列表对齐：active 状态 + source_type 排除 product + 仅未软删除
     const conditions: string[] = [
       "remaining_quantity > 0",
       "status NOT IN ('depleted', 'cancelled')",
+      "source_type != 'product'",  // 排除产品库存
+      "deleted_at IS NULL",        // 排除软删除（与种源管理列表对齐）
     ]
     const params: any[] = []
 

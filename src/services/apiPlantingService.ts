@@ -106,6 +106,12 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     cropName: item.cropName || '',
     cropVariety: item.cropVariety || '',
     cropCode: item.cropCode || '',
+    // 2026-06-30 Bug 修复：后端 LEFT JOIN crop_varieties 返的字段，前端 transform 必须读
+    // 否则 getVarietyByAny 兜底失败，导致列表"作物编码/作物品种/品种路径"3 列错乱
+    categoryName: item.categoryName || undefined,
+    typeName: item.typeName || undefined,
+    varietyName: item.varietyName || undefined,
+    subVariety1Name: item.subVariety1Name || undefined,
     areaId: item.areaId || '',
     areaName: item.areaName || '',
     rootName: item.rootName || '',
@@ -542,5 +548,32 @@ export async function getPlantingAreaStocks(
   const rows = await enhancedApiClient.get<PlantingAreaStock[]>(
     `/plantings/${plantingId}/area-stocks`
   )
+  return Array.isArray(rows) ? rows : []
+}
+
+/**
+ * 2026-06-30: 调出模式用 — 按 cropName 查找同作物候选目标订单（排除自己）
+ * 后端 handler 调出分支会校验 cropCode 一致（line 248-254），这里只是 UI 层筛选
+ */
+export interface PlantingLookupRow {
+  id: string
+  plantCode: string
+  cropName: string
+  cropVariety: string
+  cropCode: string
+  areaName: string
+}
+
+export async function lookupPlantingsForMove(params: {
+  cropName?: string
+  excludeId?: string
+  limit?: number
+}): Promise<PlantingLookupRow[]> {
+  const qs: string[] = []
+  if (params.cropName) qs.push(`cropName=${encodeURIComponent(params.cropName)}`)
+  if (params.excludeId) qs.push(`excludeId=${encodeURIComponent(params.excludeId)}`)
+  if (params.limit != null) qs.push(`limit=${params.limit}`)
+  const url = `/plantings/lookup${qs.length ? '?' + qs.join('&') : ''}`
+  const rows = await enhancedApiClient.get<PlantingLookupRow[]>(url)
   return Array.isArray(rows) ? rows : []
 }

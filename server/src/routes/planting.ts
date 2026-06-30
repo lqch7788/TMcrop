@@ -109,8 +109,10 @@ router.get('/', (req: Request, res: Response) => {
       cv.sub_variety1_name AS subVariety1Name,
       p.root_name AS rootName,
       -- 2026-06-24: 修复 list 列表显示 0 问题
-      -- 新建种植记录没有 planting_area_stocks 行（只有走 V2 movePlantingV2 流程的才有）
-      -- areaId/areaName/plantingCount 都从 stocks 表 SUM 不准确，需回退到 plantings 表原值
+      -- 2026-06-30 Bug 修复：列表"种植数量"列直接用 p.planting_quantity
+      -- 原因：调入时 handler 已累加到主表（plantingMoveHandler.ts:196），area_stocks 是追溯数据不参与显示
+      -- 修复前：列表用 area_stocks SUM → 调入后只显示"本次调入数量"，用户感觉"覆盖"
+      -- 修复后：列表直接用主表累加值 → 调入前后都显示累计总量，与用户预期一致
       COALESCE(
         (SELECT s.area_id FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1),
         p.area_id
@@ -119,10 +121,7 @@ router.get('/', (req: Request, res: Response) => {
         (SELECT s.area_name FROM planting_area_stocks s WHERE s.planting_id = p.id ORDER BY s.quantity DESC LIMIT 1),
         p.area_name
       ) AS areaName,
-      COALESCE(
-        NULLIF((SELECT SUM(s.quantity) FROM planting_area_stocks s WHERE s.planting_id = p.id), 0),
-        p.planting_quantity
-      ) AS plantingCount,
+      p.planting_quantity AS plantingCount,
       p.planting_date AS plantingDate,
       p.soil_ph AS soilPH,
       p.soil_ec AS soilEC,
@@ -372,6 +371,51 @@ router.get('/:id/harvest-records', (req, res) => {
  * Body: { operationType, toAreaId, toAreaName, quantity, operationDate, remarks, sourceType, sourceId, sourceCode, targetPlantingId, fromAreaId, fromAreaName }
  * 行为：见 plantingMoveHandler.ts（核心校验 + 事务写入；本路由只做参数提取 + 落盘）
  */
+/**
+ * 2026-06-30: 调出模式用 — 按 cropName 查找同作物候选目标订单（排除自己）
+ * GET /api/plantings/lookup
+ * 必须在 /:id 路由之前注册（否则被 :id 吞掉）
+ */
+router.get('/lookup', (req: Request, res: Response) => {
+  try {
+    const cropName = String(req.query.cropName || '').trim()
+    const excludeId = String(req.query.excludeId || '').trim()
+    const limit = Math.min(Number(req.query.limit) || 50, 200)
+
+    const conditions: string[] = [
+      "deleted_at IS NULL",
+      "status NOT IN ('ended', 'harvested', 'cancelled')",
+    ]
+    const params: any[] = []
+
+    if (cropName) {
+      conditions.push('crop_name LIKE ?')
+      params.push(`%${cropName}%`)
+    }
+    if (excludeId) {
+      conditions.push('id != ?')
+      params.push(excludeId)
+    }
+
+    const sql = `
+      SELECT id,
+             planting_code AS plantCode,
+             crop_name AS cropName,
+             crop_variety AS cropVariety,
+             crop_code AS cropCode,
+             area_name AS areaName
+      FROM plantings
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY create_time DESC
+      LIMIT ?
+    `
+    const rows = queryToObjects<any>(getDatabase(), sql, [...params, limit])
+    res.json({ success: true, data: rows })
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
+  }
+})
+
 router.post('/:id/move', async (req, res) => {
   const { id } = req.params;
   const db = getDatabase();

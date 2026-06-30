@@ -116,8 +116,9 @@ export async function handleMove(
         return { status: 400, body: { success: false, error: '请选择来源批号' } }
       }
 
+      // 2026-06-30 Bug 修复：seed_sources 表没有 area_id 列，移除（种源本身无"区域"概念）
       const src = queryToObjects<any>(db,
-        `SELECT id, source_code, crop_code, crop_variety, remaining_quantity, status, area_id
+        `SELECT id, source_code, crop_code, crop_variety, remaining_quantity, status
          FROM seed_sources WHERE id = ?`, [sourceId])
       if (src.length === 0) {
         return { status: 404, body: { success: false, error: '来源种源/育苗记录不存在' } }
@@ -180,11 +181,24 @@ export async function handleMove(
              from_area_id, from_area_name, to_area_id, to_area_name,
              quantity, operation_date, operator_name, remarks, create_time)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          // 2026-06-30 Bug 修复：种源无 areaId，调入的 from_area 留空
           [moveId, plantingId, cur.plantingCode, 'move_in',
-           s.areaId || '', s.sourceCode || '',
+           '', s.sourceCode || '',
            toAreaId || '', toAreaName,
            qty, operationDate || today, operatorName, remarks, now],
         )
+
+        // 2026-06-30 Bug 修复：调入时同步累加 plantings.planting_quantity
+        // 原因：列表 fallback 逻辑（area_stocks 优先 + 主表 fallback）会让用户感觉
+        //       "首次调入时从原值跳到新值"（看起来像覆盖）。同步累加主表保证
+        //       主表与 area_stocks 之和永远一致，列表显示与调入数量始终累加。
+        db.run(
+          `UPDATE plantings SET planting_quantity = planting_quantity + ?, update_time = ? WHERE id = ?`,
+          [qty, now, plantingId],
+        )
+        // 2026-06-30 验证埋点：调入成功后输出累加结果，让用户能确认后端是否加载新代码
+        const afterQ = queryToObjects<any>(db, `SELECT planting_quantity FROM plantings WHERE id = ?`, [plantingId])[0]
+        console.log(`[move-in] plantingId=${plantingId} qty=${qty} newPlantingQuantity=${afterQ?.plantingQuantity}`)
 
         db.exec('COMMIT')
         return {
@@ -297,6 +311,21 @@ export async function handleMove(
          fromAreaId, fromAreaName,
          toAreaId, toAreaName,
          qty, operationDate || today, operatorName, remarks, now],
+      )
+
+      // 2026-06-30 Bug 修复：调出时同步扣减源种植单的主表 planting_quantity
+      // 与"调入累加主表"对称：保持主表 = 历次调入之和 - 历次调出之和
+      // 不然列表显示与 area_stocks 累加值偏差累积
+      db.run(
+        `UPDATE plantings SET planting_quantity = planting_quantity - ?, update_time = ? WHERE id = ?`,
+        [qty, now, plantingId],
+      )
+
+      // 2026-06-30 Bug 修复：调出时同步累加目标种植单的主表 planting_quantity
+      // 让"调入/调出任意一侧"都让目标单的主表同步变化（保持数据一致）
+      db.run(
+        `UPDATE plantings SET planting_quantity = planting_quantity + ?, update_time = ? WHERE id = ?`,
+        [qty, now, targetPlantingId],
       )
 
       db.exec('COMMIT')

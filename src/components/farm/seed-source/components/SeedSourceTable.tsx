@@ -7,11 +7,10 @@
  * 移除：过程记录 / 阶段推进 / 正常结束 / 异常结束 / 回流记录 / 外购提示
  */
 
-import React from 'react';
 import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
-import { SeedSource, StockStatus, SourceType } from '../../../../types/crop';
+import {SeedSource, SourceType} from '../../../../types/crop';
 import {
   UNIT_MAP,
   STOCK_STATUS_MAP,
@@ -20,7 +19,7 @@ import {
 } from '../../../../constants/cropConstants';
 import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip } from '@/components/ui';
+import {SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip} from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
@@ -375,11 +374,11 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源途径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="创建时填的初始数量（采购量 / 预估产量），固定不变">初始数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="入库累计总量 = 初始数量 + 阶段管理中分批录入的入库数量">入库数量</TableHead>
+              {/* 2026-06-30 合并：内部种源仓库不做育种，"初始数量" 与 "入库数量" 语义合并为 1 列 */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="种源入库数量（采购/调拨一次性入库）">入库数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">剩余数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余率</TableHead>
+              {/* 2026-06-30 合并：内部仓库不做分批，剩余率与状态列功能重叠（都是库存健康度表达） */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 <Tooltip
                   content={
@@ -468,26 +467,14 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.purchaseDate}>
                     {truncateText(record.purchaseDate)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap" title="创建时的初始登记数量">
-                    {record.initialCount.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap" title="入库累计 = 初始 + 阶段管理中分批录入的入库数量">
-                    {(record as any).quantity?.toLocaleString() ?? record.initialCount.toLocaleString()}
+                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap" title="种源入库数量">
+                    {record.quantity?.toLocaleString() ?? record.initialCount.toLocaleString()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.availableCount.toLocaleString()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {formatUnit(record.unit) || '-'}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    {record.initialCount > 0 ? (
-                      <span className={`font-medium ${getStatusColorClass(computeStockStatus(record.availableCount, record.initialCount)).text}`}>
-                        {getCompletionRate(record.availableCount, record.initialCount)}%
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
