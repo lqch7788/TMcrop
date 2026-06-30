@@ -13,7 +13,6 @@ import { useInventoryStore } from '@/stores/useInventoryStore'
 
 export type StockType = 'seed' | 'seedling' | 'product'
 export type SourceModule = 'seed_source' | 'seedling' | 'planting'
-export type SaleType = 'self_use' | 'external_sale'
 
 export interface InboundProduct {
   cropCode?: string
@@ -45,7 +44,6 @@ export interface UnifiedInboundInput {
   harvesterNames?: string[]
   auditor?: string
   remarks?: string
-  saleType?: SaleType
   isSupplementary?: boolean
   supplementaryReason?: string
   unitPrice?: number

@@ -49,7 +49,7 @@ export interface InboundFromSourceInput {
   harvesterNames?: string[];
   operator?: string;
   remarks?: string;
-  saleType?: 'self_use' | 'external_sale';
+  // 2026-06-30 Bug 18：saleType 字段删除（无业务用途 + 污染 inbound_type 列）
   isSupplementary?: boolean;
   supplementaryReason?: string;
   unitPrice?: number;
@@ -205,7 +205,8 @@ export async function executeInboundFromSource(
       unit_price: input.unitPrice || 0,
       unit: input.unit,
       status: 'completed',
-      inbound_type: input.saleType === 'self_use' ? 'self_use' : 'external_sale',
+      // 2026-06-30 Bug 18：删 inbound_type 写入（避免 self_use/external_sale 污染字典 INBOUND_TYPE_MAP
+      // 标准值 seed_source/seedling/planting_harvest）。后续若需此分类，建议从 stockType 派生。
       batch_code: input.sourceRecordCode,
       products: JSON.stringify(input.products),
       // 2026-06-27：成品形态（整株/花朵/果实/种子/块茎 等），由前端采收入库 Modal 选择

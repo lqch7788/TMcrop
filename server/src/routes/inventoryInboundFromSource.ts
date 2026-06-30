@@ -62,7 +62,7 @@ const InboundFromSourceSchema = z.object({
   harvesterNames: z.array(z.string()).optional(),
   operator: z.string().optional(),
   remarks: z.string().optional(),
-  saleType: z.enum(['self_use', 'external_sale']).optional(),
+  // 2026-06-30 Bug 18：删除 saleType 字段（无业务用途 + 污染 inbound_type 列）
   isSupplementary: z.boolean().optional(),
   supplementaryReason: z.string().optional(),
   unitPrice: z.number().nonnegative({ message: '单价不能为负' }).max(1000000, { message: '单价不能超过 1,000,000' }).optional(),

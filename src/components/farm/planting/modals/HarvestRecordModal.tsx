@@ -377,7 +377,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           harvesterNames,
           operator: operator || currentUser?.realName || 'system',
           remarks: notes || undefined,
-          saleType: 'external_sale',  // 种植行入库默认外售入作物库存
           unitPrice: Number(unitPrice) || 0,
           unit,
           warehouseId,

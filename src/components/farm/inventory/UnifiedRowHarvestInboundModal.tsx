@@ -4,7 +4,6 @@
  *
  * 基于 InventoryInboundModal 模式扩展，承载原采收入库页 AddModal 全部 18 字段：
  * - harvestDate, greenhouseIds[], batchCode, harvesterIds[], auditor, remarks
- * - saleType (self_use / external_sale)
  * - isSupplementary + supplementaryReason
  * - unitPrice, unit, warehouseId
  * - products[] (种源/育苗 lock 1 条，种植 1..N)
@@ -39,7 +38,6 @@ import {
   validateUnifiedInboundInput,
   type StockType,
   type SourceModule,
-  type SaleType,
   type InboundProduct,
 } from '@/services/unifiedHarvestInboundService'
 
@@ -50,11 +48,6 @@ const STOCK_TYPE_LABEL: Record<StockType, { label: string; icon: React.ReactNode
   seedling: { label: '种苗', icon: <Leaf className="w-5 h-5 text-green-600" /> },
   product: { label: '种植成品', icon: <Wheat className="w-5 h-5 text-amber-600" /> },
 }
-
-const SALE_TYPE_OPTIONS: Array<{ value: SaleType; label: string }> = [
-  { value: 'self_use', label: '自用' },
-  { value: 'external_sale', label: '外售' },
-]
 
 const QUALITY_GRADES = [
   { value: 'special', label: '特优' },
@@ -158,9 +151,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const loadUsers = useUserStore((s) => s.loadUsers)
   const [harvesterPopoverOpen, setHarvesterPopoverOpen] = useState(false)
   const [remarks, setRemarks] = useState<string>('')
-  const [saleType, setSaleType] = useState<SaleType>(
-    stockType === 'product' ? 'external_sale' : 'self_use'
-  )
   const [isSupplementary, setIsSupplementary] = useState<boolean>(false)
   const [supplementaryReason, setSupplementaryReason] = useState<string>('')
   const [unitPrice, setUnitPrice] = useState<number | string>(0)
@@ -218,7 +208,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setHarvesterNames([])
       setOperator(currentUser?.realName || '')
       setRemarks('')
-      setSaleType(stockType === 'product' ? 'external_sale' : 'self_use')
       setIsSupplementary(false)
       setSupplementaryReason('')
       setUnitPrice(0)
@@ -351,7 +340,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       harvesterNames,
       operator: operator || undefined,
       remarks: remarks || undefined,
-      saleType,
       isSupplementary: isSupplementary || undefined,
       supplementaryReason: isSupplementary ? supplementaryReason : undefined,
       unitPrice: Number(unitPrice) || 0,
@@ -474,18 +462,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                   <SelectItem key={w.id || w.warehouseId} value={w.id || w.warehouseId}>
                     {w.name || w.warehouseName}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="销售类型">
-            <Select value={saleType} onValueChange={(v) => setSaleType(v as SaleType)}>
-              <SelectTrigger className={deepInputClass}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SALE_TYPE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
