@@ -66,7 +66,7 @@ const getTypeLabel = (type: string): string => {
 
 export function MyTasksPage() {
   // 使用统一任务管理 Hook（数据闭环核心）
-  const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, getTaskRecordsByTaskId } = useTasks();
+  const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, getTaskRecordsByTaskId } = useTasks() as any;
   const { addTaskRecord, getRecordsByTaskId } = useOperationRecords();
 
   // 从 Zustand Store 获取任务数据（作为统一任务加载失败时的降级数据源）
