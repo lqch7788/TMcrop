@@ -190,6 +190,11 @@ export interface InventoryStock {
   // 来源：行级采收入库 / HarvestRecordModal 顶部"采收形态" → inventory_stock.product_form
   // 注意：历史库存（2026-06-30 前的入库）未带 productForm 写入，UI 显示空即可，不要假设一定有值
   productForm?: string;
+  // 2026-06-30 Bug 19 修复：种源/育苗形态（propagation_form 列，对应种源形态下拉）
+  // 来源：行级采收入库 stockType='seed'/'seedling' 弹窗顶部「种源形态」propagationForm
+  // 写入：executeInboundFromSource.service.ts:280 propagation_form: input.propagationForm || null
+  // 与 Bug 12 的 productForm 是同一概念的不同字段（按 stockType 分流写入不同列）
+  propagationForm?: string;
 }
 
 /**

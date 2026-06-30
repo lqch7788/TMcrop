@@ -269,17 +269,24 @@ export function InventoryTable({
                       {stock.greenhouseName || stock.areaName || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {/* 2026-06-30 Bug 12 二轮：独立的「形态」列（原「种植模式」列位置）
-                          来源：库存行 stock.productForm（HarvestRecordModal / UnifiedRowHarvestInboundModal
-                          顶部「采收形态」/「成品形态」下拉 → 写入 inventory_stock.product_form）
-                          历史数据（修复前做的 11 条入库）product_form 为空，显示 — */}
-                      {stock.productForm ? (
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-                          {stock.productForm}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
+                      {/* 2026-06-30 Bug 19 修复：形态列按 stock_type 分流读 fallback 链
+                          （种源/育苗入库时形态写到 propagation_form，种植入库写到 product_form，
+                          部分老数据写的是 source_form 列）：
+                          product → productForm
+                          seed/seedling → propagationForm → productForm
+                          全部空 → — */}
+                      {(() => {
+                        const form = (stock.stockType === 'product')
+                          ? (stock.productForm || stock.sourceForm || stock.propagationForm || '')
+                          : (stock.propagationForm || stock.productForm || stock.sourceForm || '')
+                        return form ? (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium" title={form}>
+                            {form}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {stock.currentQuantity}
