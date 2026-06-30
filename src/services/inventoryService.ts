@@ -438,6 +438,8 @@ function toCamelStock(row: any): InventoryStock {
     // 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他 12 选）
     // 写入端：executeInboundFromSource.service.ts:279
     productForm: row.product_form ?? row.productForm ?? '',
+    // 2026-06-30 Bug 19 修复：种源/育苗形态（写入端：service:280 propagation_form）
+    propagationForm: row.propagation_form ?? row.propagationForm ?? '',
   } as unknown as InventoryStock;
 }
 
