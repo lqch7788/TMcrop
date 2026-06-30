@@ -14,93 +14,93 @@ import type { Approval, BusinessLink } from './approval';
 export interface ApprovalIntegrationHandler {
   // ========== 业务审批（10种）==========
   // 物资/领料申请
-  onMaterialRequestApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'material' }>) => void;
-  onMaterialRequestPartiallyApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'material' }>, approvedItems: Record<string, number>) => void;
+  onMaterialRequestApproved?: (approval: Approval, link: BusinessLink) => void;
+  onMaterialRequestPartiallyApproved?: (approval: Approval, link: BusinessLink, approvedItems: Record<string, number>) => void;
   // 退料单
-  onReturnMaterialApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'return' }>) => void;
+  onReturnMaterialApproved?: (approval: Approval, link: BusinessLink) => void;
   // 采购申请
-  onPurchaseRequestApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'purchase' }>) => void;
+  onPurchaseRequestApproved?: (approval: Approval, link: BusinessLink) => void;
   // 物料入库
-  onMaterialInboundApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'material_inbound' }>) => void;
+  onMaterialInboundApproved?: (approval: Approval, link: BusinessLink) => void;
   // 库存调拨
-  onMaterialTransferApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'material_transfer' }>) => void;
+  onMaterialTransferApproved?: (approval: Approval, link: BusinessLink) => void;
   // 种源入库
-  onSeedSourceInboundApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'seed_source_inbound' }>) => void;
+  onSeedSourceInboundApproved?: (approval: Approval, link: BusinessLink) => void;
   // 育苗计划
-  onSeedlingPlanApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'seedling_plan' }>) => void;
+  onSeedlingPlanApproved?: (approval: Approval, link: BusinessLink) => void;
   // 种植计划
-  onPlantingPlanApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'planting_plan' }>) => void;
+  onPlantingPlanApproved?: (approval: Approval, link: BusinessLink) => void;
   // 订单创建/变更
-  onOrderCreateApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'order_create' }>) => void;
-  onOrderChangeApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'order_change' }>) => void;
+  onOrderCreateApproved?: (approval: Approval, link: BusinessLink) => void;
+  onOrderChangeApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 生产审批（5种）==========
   // 生产计划
-  onProductionPlanApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'production' }>) => void;
+  onProductionPlanApproved?: (approval: Approval, link: BusinessLink) => void;
   // 生产批次
-  onProductionBatchApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'production_batch' }>) => void;
+  onProductionBatchApproved?: (approval: Approval, link: BusinessLink) => void;
   // 批次变更
-  onBatchChangeApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'batch_change' }>) => void;
+  onBatchChangeApproved?: (approval: Approval, link: BusinessLink) => void;
   // 批次作废
-  onBatchVoidApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'batch_void' }>) => void;
+  onBatchVoidApproved?: (approval: Approval, link: BusinessLink) => void;
   // 技术方案
-  onTechSolutionApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'tech_solution' }>) => void;
+  onTechSolutionApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 农事审批（4种）==========
   // 任务派发
-  onTaskDispatchApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'task_dispatch' }>) => void;
+  onTaskDispatchApproved?: (approval: Approval, link: BusinessLink) => void;
   // 任务变更
-  onTaskChangeApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'task_change' }>) => void;
+  onTaskChangeApproved?: (approval: Approval, link: BusinessLink) => void;
   // 巡查问题
-  onInspectionIssueApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'inspection_issue' }>) => void;
+  onInspectionIssueApproved?: (approval: Approval, link: BusinessLink) => void;
   // 问题整改
-  onIssueResolveApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'issue_resolve' }>) => void;
+  onIssueResolveApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 采收审批（1种）==========
   // 采收申请
-  onHarvestRequestApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'harvest' }>) => void;
+  onHarvestRequestApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 作物补录审批（3种）==========
   // 种源补录
-  onSeedSourceSupplementaryApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'seed_source' }>) => void;
+  onSeedSourceSupplementaryApproved?: (approval: Approval, link: BusinessLink) => void;
   // 育苗补录
-  onSeedlingSupplementaryApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'seedling' }>) => void;
+  onSeedlingSupplementaryApproved?: (approval: Approval, link: BusinessLink) => void;
   // 作物入库补录
-  onCropStorageSupplementaryApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'crop_storage' }>) => void;
+  onCropStorageSupplementaryApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 指标/公告审批（2种）==========
   // 指标审批
-  onIndicatorApprovalApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'indicator' }>) => void;
+  onIndicatorApprovalApproved?: (approval: Approval, link: BusinessLink) => void;
   // 公告审批
-  onAnnouncementApprovalApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'announcement' }>) => void;
+  onAnnouncementApprovalApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 成本审批（2种）==========
   // 预算编制
-  onBudgetCreateApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'budget_create' }>) => void;
+  onBudgetCreateApproved?: (approval: Approval, link: BusinessLink) => void;
   // 预算调整
-  onBudgetAdjustApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'budget_adjust' }>) => void;
+  onBudgetAdjustApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== HR审批（11种）==========
   // 请假
-  onLeaveApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'leave' }>) => void;
+  onLeaveApproved?: (approval: Approval, link: BusinessLink) => void;
   // 加班
-  onOvertimeApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'overtime' }>) => void;
+  onOvertimeApproved?: (approval: Approval, link: BusinessLink) => void;
   // 离职
-  onResignationApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'resign' }>) => void;
+  onResignationApproved?: (approval: Approval, link: BusinessLink) => void;
   // 招聘
-  onRecruitmentApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'recruitment' }>) => void;
+  onRecruitmentApproved?: (approval: Approval, link: BusinessLink) => void;
   // 入职
-  onOnboardingApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'onboarding' }>) => void;
+  onOnboardingApproved?: (approval: Approval, link: BusinessLink) => void;
   // 考勤补录
-  onAttendanceRepairApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'attendance_repair' }>) => void;
+  onAttendanceRepairApproved?: (approval: Approval, link: BusinessLink) => void;
   // 调薪
-  onSalaryAdjustmentApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'salary_adjustment' }>) => void;
+  onSalaryAdjustmentApproved?: (approval: Approval, link: BusinessLink) => void;
   // 合同续签
-  onContractRenewalApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'contract_renewal' }>) => void;
+  onContractRenewalApproved?: (approval: Approval, link: BusinessLink) => void;
   // 工资预算
-  onSalaryBudgetApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'salary_budget' }>) => void;
+  onSalaryBudgetApproved?: (approval: Approval, link: BusinessLink) => void;
   // 转岗
-  onTransferApproved?: (approval: Approval, link: Extract<BusinessLink, { type: 'transfer' }>) => void;
+  onTransferApproved?: (approval: Approval, link: BusinessLink) => void;
 
   // ========== 通用回调 ==========
   // 处理审批拒绝
@@ -134,122 +134,122 @@ export function executeApprovalIntegration(
         if (!businessLink) break;
         // ========== 业务审批（10种）==========
         if (businessLink.type === 'material' && handler.onMaterialRequestApproved) {
-          handler.onMaterialRequestApproved(approval, businessLink as Extract<BusinessLink, { type: 'material' }>);
+          handler.onMaterialRequestApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'return' && handler.onReturnMaterialApproved) {
-          handler.onReturnMaterialApproved(approval, businessLink as Extract<BusinessLink, { type: 'return' }>);
+          handler.onReturnMaterialApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'purchase' && handler.onPurchaseRequestApproved) {
-          handler.onPurchaseRequestApproved(approval, businessLink as Extract<BusinessLink, { type: 'purchase' }>);
+          handler.onPurchaseRequestApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'material_inbound' && handler.onMaterialInboundApproved) {
-          handler.onMaterialInboundApproved(approval, businessLink as Extract<BusinessLink, { type: 'material_inbound' }>);
+          handler.onMaterialInboundApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'material_transfer' && handler.onMaterialTransferApproved) {
-          handler.onMaterialTransferApproved(approval, businessLink as Extract<BusinessLink, { type: 'material_transfer' }>);
+          handler.onMaterialTransferApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'seed_source_inbound' && handler.onSeedSourceInboundApproved) {
-          handler.onSeedSourceInboundApproved(approval, businessLink as Extract<BusinessLink, { type: 'seed_source_inbound' }>);
+          handler.onSeedSourceInboundApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'seedling_plan' && handler.onSeedlingPlanApproved) {
-          handler.onSeedlingPlanApproved(approval, businessLink as Extract<BusinessLink, { type: 'seedling_plan' }>);
+          handler.onSeedlingPlanApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'planting_plan' && handler.onPlantingPlanApproved) {
-          handler.onPlantingPlanApproved(approval, businessLink as Extract<BusinessLink, { type: 'planting_plan' }>);
+          handler.onPlantingPlanApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'order_create' && handler.onOrderCreateApproved) {
-          handler.onOrderCreateApproved(approval, businessLink as Extract<BusinessLink, { type: 'order_create' }>);
+          handler.onOrderCreateApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'order_change' && handler.onOrderChangeApproved) {
-          handler.onOrderChangeApproved(approval, businessLink as Extract<BusinessLink, { type: 'order_change' }>);
+          handler.onOrderChangeApproved(approval, businessLink as BusinessLink);
         }
         // ========== 生产审批（5种）==========
         if (businessLink.type === 'production' && handler.onProductionPlanApproved) {
-          handler.onProductionPlanApproved(approval, businessLink as Extract<BusinessLink, { type: 'production' }>);
+          handler.onProductionPlanApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'production_batch' && handler.onProductionBatchApproved) {
-          handler.onProductionBatchApproved(approval, businessLink as Extract<BusinessLink, { type: 'production_batch' }>);
+          handler.onProductionBatchApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'batch_change' && handler.onBatchChangeApproved) {
-          handler.onBatchChangeApproved(approval, businessLink as Extract<BusinessLink, { type: 'batch_change' }>);
+          handler.onBatchChangeApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'batch_void' && handler.onBatchVoidApproved) {
-          handler.onBatchVoidApproved(approval, businessLink as Extract<BusinessLink, { type: 'batch_void' }>);
+          handler.onBatchVoidApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'tech_solution' && handler.onTechSolutionApproved) {
-          handler.onTechSolutionApproved(approval, businessLink as Extract<BusinessLink, { type: 'tech_solution' }>);
+          handler.onTechSolutionApproved(approval, businessLink as BusinessLink);
         }
         // ========== 农事审批（4种）==========
         if (businessLink.type === 'task_dispatch' && handler.onTaskDispatchApproved) {
-          handler.onTaskDispatchApproved(approval, businessLink as Extract<BusinessLink, { type: 'task_dispatch' }>);
+          handler.onTaskDispatchApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'task_change' && handler.onTaskChangeApproved) {
-          handler.onTaskChangeApproved(approval, businessLink as Extract<BusinessLink, { type: 'task_change' }>);
+          handler.onTaskChangeApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'inspection_issue' && handler.onInspectionIssueApproved) {
-          handler.onInspectionIssueApproved(approval, businessLink as Extract<BusinessLink, { type: 'inspection_issue' }>);
+          handler.onInspectionIssueApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'issue_resolve' && handler.onIssueResolveApproved) {
-          handler.onIssueResolveApproved(approval, businessLink as Extract<BusinessLink, { type: 'issue_resolve' }>);
+          handler.onIssueResolveApproved(approval, businessLink as BusinessLink);
         }
         // ========== 采收审批（1种）==========
         if (businessLink.type === 'harvest' && handler.onHarvestRequestApproved) {
-          handler.onHarvestRequestApproved(approval, businessLink as Extract<BusinessLink, { type: 'harvest' }>);
+          handler.onHarvestRequestApproved(approval, businessLink as BusinessLink);
         }
         // ========== 作物补录审批（3种）==========
         if (businessLink.type === 'seed_source' && handler.onSeedSourceSupplementaryApproved) {
-          handler.onSeedSourceSupplementaryApproved(approval, businessLink as Extract<BusinessLink, { type: 'seed_source' }>);
+          handler.onSeedSourceSupplementaryApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'seedling' && handler.onSeedlingSupplementaryApproved) {
-          handler.onSeedlingSupplementaryApproved(approval, businessLink as Extract<BusinessLink, { type: 'seedling' }>);
+          handler.onSeedlingSupplementaryApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'crop_storage' && handler.onCropStorageSupplementaryApproved) {
-          handler.onCropStorageSupplementaryApproved(approval, businessLink as Extract<BusinessLink, { type: 'crop_storage' }>);
+          handler.onCropStorageSupplementaryApproved(approval, businessLink as BusinessLink);
         }
         // ========== 指标/公告审批（2种）==========
         if (businessLink.type === 'indicator' && handler.onIndicatorApprovalApproved) {
-          handler.onIndicatorApprovalApproved(approval, businessLink as Extract<BusinessLink, { type: 'indicator' }>);
+          handler.onIndicatorApprovalApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'announcement' && handler.onAnnouncementApprovalApproved) {
-          handler.onAnnouncementApprovalApproved(approval, businessLink as Extract<BusinessLink, { type: 'announcement' }>);
+          handler.onAnnouncementApprovalApproved(approval, businessLink as BusinessLink);
         }
         // ========== 成本审批（2种）==========
         if (businessLink.type === 'budget_create' && handler.onBudgetCreateApproved) {
-          handler.onBudgetCreateApproved(approval, businessLink as Extract<BusinessLink, { type: 'budget_create' }>);
+          handler.onBudgetCreateApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'budget_adjust' && handler.onBudgetAdjustApproved) {
-          handler.onBudgetAdjustApproved(approval, businessLink as Extract<BusinessLink, { type: 'budget_adjust' }>);
+          handler.onBudgetAdjustApproved(approval, businessLink as BusinessLink);
         }
         // ========== HR审批（11种）==========
         if (businessLink.type === 'leave' && handler.onLeaveApproved) {
-          handler.onLeaveApproved(approval, businessLink as Extract<BusinessLink, { type: 'leave' }>);
+          handler.onLeaveApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'overtime' && handler.onOvertimeApproved) {
-          handler.onOvertimeApproved(approval, businessLink as Extract<BusinessLink, { type: 'overtime' }>);
+          handler.onOvertimeApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'resign' && handler.onResignationApproved) {
-          handler.onResignationApproved(approval, businessLink as Extract<BusinessLink, { type: 'resign' }>);
+          handler.onResignationApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'recruitment' && handler.onRecruitmentApproved) {
-          handler.onRecruitmentApproved(approval, businessLink as Extract<BusinessLink, { type: 'recruitment' }>);
+          handler.onRecruitmentApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'onboarding' && handler.onOnboardingApproved) {
-          handler.onOnboardingApproved(approval, businessLink as Extract<BusinessLink, { type: 'onboarding' }>);
+          handler.onOnboardingApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'attendance_repair' && handler.onAttendanceRepairApproved) {
-          handler.onAttendanceRepairApproved(approval, businessLink as Extract<BusinessLink, { type: 'attendance_repair' }>);
+          handler.onAttendanceRepairApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'salary_adjustment' && handler.onSalaryAdjustmentApproved) {
-          handler.onSalaryAdjustmentApproved(approval, businessLink as Extract<BusinessLink, { type: 'salary_adjustment' }>);
+          handler.onSalaryAdjustmentApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'contract_renewal' && handler.onContractRenewalApproved) {
-          handler.onContractRenewalApproved(approval, businessLink as Extract<BusinessLink, { type: 'contract_renewal' }>);
+          handler.onContractRenewalApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'salary_budget' && handler.onSalaryBudgetApproved) {
-          handler.onSalaryBudgetApproved(approval, businessLink as Extract<BusinessLink, { type: 'salary_budget' }>);
+          handler.onSalaryBudgetApproved(approval, businessLink as BusinessLink);
         }
         if (businessLink.type === 'transfer' && handler.onTransferApproved) {
-          handler.onTransferApproved(approval, businessLink as Extract<BusinessLink, { type: 'transfer' }>);
+          handler.onTransferApproved(approval, businessLink as BusinessLink);
         }
         break;
 
@@ -257,7 +257,7 @@ export function executeApprovalIntegration(
         if (businessLink?.type === 'material' && handler.onMaterialRequestPartiallyApproved) {
           handler.onMaterialRequestPartiallyApproved(
             approval,
-            businessLink as Extract<BusinessLink, { type: 'material' }>,
+            businessLink as BusinessLink,
             (extra?.approvedItems as Record<string, number>) || {}
           );
         }

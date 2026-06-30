@@ -402,6 +402,7 @@ export interface Seedling {
   seedlingType: string;        // 育苗方式
   siteId: string;             // 场地ID
   siteName: string;            // 场地名称
+  seedlingForm?: string;       // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
   startDate: string;          // 开始日期
   expectedEndDate?: string;   // 预计结束日期
   endDate?: string;           // 实际结束日期
@@ -563,6 +564,12 @@ export interface Planting {
   cropName: string;           // 作物名称
   cropVariety: string;         // 作物品种
   cropCode: string;           // 作物编码（11位）- 类别(2) + 类型(2) + 品种(2) + 子品种(3) + 详细(2)
+  // 2026-06-30 Bug 修复：后端 list SQL LEFT JOIN crop_varieties 返的字段，前端 transform 必须读
+  // 否则 getVarietyByAny 兜底（用 record 自身字段组装伪 CropVariety）失败
+  categoryName?: string;      // 大类名（花卉类/蔬菜类/水果类等）
+  typeName?: string;          // 类型名（叶菜类/浆果类/鲜切花等）
+  varietyName?: string;      // 品种名（草莓/玫瑰/郁金香等）
+  subVariety1Name?: string;   // 子品种名（红颜/章姬等）
   areaId: string;            // 区域ID
   areaName: string;           // 区域名称
   rootName: string;           // 大棚/根区名称

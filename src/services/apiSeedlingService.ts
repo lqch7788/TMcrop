@@ -25,6 +25,7 @@ interface BackendSeedling {
   seedlingType: string;
   greenhouseName?: string;
   areaName: string;
+  seedlingForm?: string;       // 2026-06-27：种苗形态
   seedlingDate: string;
   expectedFinishDate?: string;
   actualFinishDate?: string;
@@ -44,7 +45,6 @@ interface BackendSeedling {
   lossRate?: number;
   isFinished?: number;
   chargePerson?: string;
-  targetSurvivalCount?: number;
   categoryName?: string;
   typeName?: string;
   varietyName?: string;
@@ -149,7 +149,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     orderId: undefined,
     orderCode: undefined,
     orgName: undefined,
-    seedlingTaskTime: item.workHours || item.work_hours || undefined,
+    seedlingTaskTime: typeof item.work_hours === 'number' ? item.work_hours : undefined,
     planType: undefined,
     productionPlanId: undefined,
     calculateMode: undefined,
@@ -238,7 +238,7 @@ export async function generateSeedlingCode(): Promise<string> {
  * 根据日期生成育苗单号
  * 降级策略：API 失败返回空字符串
  */
-export async function generateSeedlingCodeByDate(date: Date | string): Promise<string> {
+export async function generateSeedlingCodeByDate(_date: Date | string): Promise<string> {
   try {
     return await enhancedApiClient.get<string>('/seedlings/generate-code');
   } catch {
@@ -264,12 +264,12 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     crop_name: seedling.cropName,
     crop_variety: seedling.cropVariety,
     seedling_type: seedling.seedlingType,
-    greenhouse_name: seedling.greenhouseName || seedling.siteName,
-    area_name: seedling.areaName || seedling.siteId,
-    seedling_date: seedling.startDate || seedling.seedlingDate,
-    expected_finish_date: seedling.expectedEndDate || seedling.expectedFinishDate,
-    actual_finish_date: seedling.actualFinishDate,
-    seedling_quantity: seedling.initialCount || seedling.seedlingQuantity,
+    greenhouse_name: seedling.siteName,
+    area_name: seedling.siteId,
+    seedling_date: seedling.startDate,
+    expected_finish_date: seedling.expectedEndDate,
+    actual_finish_date: seedling.endDate,
+    seedling_quantity: seedling.initialCount,
     // 2026-06-15: 数量体系重构 — survival_quantity/planted_count/loss_count 停止写入（由新 5 业务字段 + 派生）
     survival_quantity: undefined,
     survival_rate: seedling.survivalRate || 0,
@@ -279,17 +279,10 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     target_survival_rate: seedling.targetSurvivalRate ?? null,
     target_survival_count: seedling.targetSurvivalCount ?? null,
     status: seedling.status,
-    seedling_status: seedling.seedlingStatus,
     remarks: seedling.remarks,
     create_by: seedling.createBy,
-    work_hours: seedling.workHours,
+    work_hours: seedling.seedlingTaskTime,
     pictures: Array.isArray(seedling.pictures) ? JSON.stringify(seedling.pictures) : seedling.pictures,
-    // 2026-06-13: 外部种源字段（从 Record<string, unknown> 透传）
-    source_mode: seedling.sourceMode,
-    external_seed_code: seedling.externalSeedCode,
-    external_seed_name: seedling.externalSeedName,
-    external_seed_quantity: seedling.externalSeedQuantity,
-    external_seed_note: seedling.externalSeedNote,
   };
 
   const result = await enhancedApiClient.post<any>('/seedlings', backendData);
@@ -501,7 +494,7 @@ export async function increasePlantedCount(id: string, count: number): Promise<b
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTransplantReadySeedlings(): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<Seedling[]>('/seedlings/transplant-ready');
+  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings/transplant-ready');
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 

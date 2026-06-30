@@ -36,6 +36,8 @@ export interface InventoryFilters {
   status?: InventoryStatus;
   page?: number;
   limit?: number;
+  // 生产计划联动过滤（用于 getRelated* 服务）
+  productionPlanId?: string;
 }
 
 // 库存聚合查询结果

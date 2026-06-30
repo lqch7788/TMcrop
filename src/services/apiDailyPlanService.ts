@@ -4,7 +4,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { DailyPlan } from '../types/planning';
+import { DailyPlan, DailyPlanRecord } from '../types/planning';
 
 // 后端返回的数据类型
 interface BackendDailyPlan {

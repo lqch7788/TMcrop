@@ -8,10 +8,10 @@ import { useMemo } from 'react';
 import { useTasks } from './useTasks';
 import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
-import { useCropGrowthEngine, type PredictedTask } from './useCropGrowthEngine';
-import { useAIOptimization, type AIOptimizationSuggestion } from './useAIOptimization';
-import type { WorkerRecommendation, UnifiedDispatchTask, WorkerComprehensiveStatus } from './useComprehensiveDispatch';
-
+import { useCropGrowthEngine } from './useCropGrowthEngine';
+import { useAIOptimization } from './useAIOptimization';
+import AIOptimizationSuggestion from './useAIOptimization';
+import type { WorkerRecommendation, UnifiedDispatchTask } from './useComprehensiveDispatch';
 
 // ============================================
 // 类型定义
@@ -31,7 +31,7 @@ export interface PendingConfirmTask extends UnifiedDispatchTask {
   /** 是否为预测任务 */
   isPredictedTask?: boolean;
   /** AI优化建议 */
-  aiOptimizationSuggestion?: AIOptimizationSuggestion;
+  aiOptimizationSuggestion?: typeof AIOptimizationSuggestion;
   /** AI推荐的执行人列表 */
   aiRecommendedWorkers?: WorkerRecommendation[];
   /** AI置信度评分 */
@@ -79,7 +79,7 @@ function normalizeFarmTask(task: ReturnType<typeof useTasks>['tasks'][0]): Unifi
     title: task.title,
     type: task.type,
     typeName: task.typeName,
-    priority: task.priority,
+    priority: task.priority as 'low' | 'normal' | 'high' | 'urgent',
     workZone: task.greenhouseName || '',
     greenhouse: task.greenhouseName || '',
     cropName: task.cropName || '',
@@ -96,7 +96,7 @@ function normalizeFarmTask(task: ReturnType<typeof useTasks>['tasks'][0]): Unifi
 }
 
 /** 标准化临时任务 */
-function normalizeTempTask(task: ReturnType<typeof useTempTasks>['tempTasks'][0]): UnifiedDispatchTask {
+function normalizeTempTask(task: any): UnifiedDispatchTask {
   return {
     id: `tempTask-${task.id}`,
     source: 'tempTask',
@@ -128,7 +128,6 @@ function normalizeTempTask(task: ReturnType<typeof useTempTasks>['tempTasks'][0]
  * 4. 其他 → pending_ai
  */
 function getDispatchStatus(
-  task: UnifiedDispatchTask,
   hasAIRecommendation: boolean,
   isPredicted: boolean,
   hasOptimization: boolean
@@ -174,7 +173,7 @@ export function usePendingConfirmTasks(
 
         tasks.push({
           ...normalizedTask,
-          dispatchStatus: getDispatchStatus(normalizedTask, hasAIRecommendation, false, false),
+          dispatchStatus: getDispatchStatus(hasAIRecommendation, false, false),
           isPredictedTask: false,
           aiRecommendedWorkers,
           aiConfidenceScore,
@@ -195,7 +194,7 @@ export function usePendingConfirmTasks(
 
         tasks.push({
           ...normalizedTask,
-          dispatchStatus: getDispatchStatus(normalizedTask, hasAIRecommendation, false, false),
+          dispatchStatus: getDispatchStatus(hasAIRecommendation, false, false),
           isPredictedTask: false,
           aiRecommendedWorkers,
           aiConfidenceScore,
@@ -236,7 +235,7 @@ export function usePendingConfirmTasks(
 
       tasks.push({
         ...normalizedTask,
-        dispatchStatus: getDispatchStatus(normalizedTask, hasAIRecommendation, false, false),
+        dispatchStatus: getDispatchStatus(hasAIRecommendation, false, false),
         isPredictedTask: false,
         aiRecommendedWorkers,
         aiConfidenceScore,
@@ -246,7 +245,7 @@ export function usePendingConfirmTasks(
 
     // 4. 预测任务
     if (predictedTasks && predictedTasks.length > 0) {
-      predictedTasks.forEach((predicted: PredictedTask) => {
+      predictedTasks.forEach((predicted: any) => {
         const predictedTask: UnifiedDispatchTask = {
           id: `predicted-${predicted.id}`,
           source: 'farm',
@@ -270,7 +269,6 @@ export function usePendingConfirmTasks(
           assigneeName: undefined,
         };
 
-        const hasAIRecommendation = !!getRecommendations;
         const aiRecommendedWorkers = getRecommendations
           ? getRecommendations(predictedTask, 3)
           : undefined;
@@ -294,7 +292,7 @@ export function usePendingConfirmTasks(
         tasks[taskIndex] = {
           ...tasks[taskIndex],
           dispatchStatus: 'optimization',
-          aiOptimizationSuggestion: optimizationSuggestion,
+          aiOptimizationSuggestion: optimizationSuggestion as any,
         };
       }
     }
@@ -334,9 +332,5 @@ export function usePendingConfirmTasks(
   };
 }
 
-// 导出类型
-export type {
-  PendingConfirmTask,
-  PendingConfirmStatus,
-  PendingConfirmStats,
-};
+// 导出类型（在文件顶部已 export，无需重复）
+

@@ -63,21 +63,21 @@ export const getDictItems = (category: string): Dictionary[] => {
   const dicts = useDictionaryStore.getState().dictionaries;
   return dicts
     .filter(d => {
-      const cat = d.categoryCode || (d as any).category_code || d.category;
+      const cat = d.categoryCode || (d as any).category_code || (d as any).category;
       return cat === category && d.status === 'active';
     })
     .map(d => ({
       // 统一转换为新格式
       id: d.id,
-      categoryCode: d.categoryCode || (d as any).category_code || d.category,
-      dictCode: d.dictCode || (d as any).dict_code || d.code,
-      dictLabel: d.dictLabel || d.name,
-      dictValue: d.dictValue || d.name,
+      categoryCode: d.categoryCode || (d as any).category_code || (d as any).category,
+      dictCode: d.dictCode || (d as any).dict_code || (d as any).code,
+      dictLabel: d.dictLabel || (d as any).name,
+      dictValue: d.dictValue || (d as any).name,
       sortOrder: d.sortOrder || (d as any).sort_order,
       color: d.color,
       status: d.status,
       createdAt: d.createdAt || (d as any).created_at,
-      updatedAt: d.updatedAt || (d as any).updated_at,
+      updatedAt: (d as any).updatedAt || (d as any).updated_at,
     }));
 };
 
@@ -113,7 +113,7 @@ export const getDictItemName = (category: string, code: string): string => {
           return cat === category && c === part;
         });
         return partItem
-          ? (partItem.dictLabel || partItem.name || partItem.dictCode || part)
+          ? (partItem.dictLabel || (partItem as any).name || partItem.dictCode || part)
           : part;
       });
       return names.join('、');
@@ -122,7 +122,7 @@ export const getDictItemName = (category: string, code: string): string => {
   }
 
   // 优先使用 name（兼容旧格式），其次 dictLabel（新格式），最后是 dictCode
-  return item.name || item.dictLabel || item.dictCode || code;
+  return (item as any).name || item.dictLabel || item.dictCode || code;
 };
 
 // 获取字典分类列表
