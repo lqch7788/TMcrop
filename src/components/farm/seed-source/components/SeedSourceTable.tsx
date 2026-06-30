@@ -461,8 +461,14 @@ export function SeedSourceTable({
                         || SOURCE_TYPE_MAP[record.sourceType]
                         || record.sourceType
                         || ''
+                      // 2026-06-30 Bug 16：用 inline span 替代 Badge variant=default
+                      // 原因：Badge default 自带 bg-gray-900 + hover:bg-gray-900/80（黑底），
+                      //       className 的 bg-emerald-100 被覆盖，鼠标悬停变黑底。
+                      // 改为纯 span，无 hover 样式，颜色固定。
                       return form ? (
-                        <Badge variant="default" className="bg-emerald-100 text-emerald-800">{truncateText(form)}</Badge>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded-full font-medium whitespace-nowrap">
+                          {truncateText(form)}
+                        </span>
                       ) : (
                         <span className="text-gray-300">—</span>
                       )
