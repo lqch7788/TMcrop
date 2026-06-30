@@ -23,7 +23,7 @@ import { categoryConfig } from '../../types/warehouseInbound.types';
 
 export default function WarehouseOverviewPage() {
   // Zustand Store 数据
-  const { items: allMaterials, isLoading, loadItems, addItem, updateItem, deleteItem, deleteItems } = useWarehouseMaterialStore();
+  const { items: allMaterials, loadItems, addItem, updateItem, deleteItem, deleteItems } = useWarehouseMaterialStore();
 
   // 初始化加载
   useEffect(() => { loadItems(); }, [loadItems]);
