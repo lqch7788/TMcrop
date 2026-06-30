@@ -167,6 +167,10 @@ export interface TempTask {
   progress?: number;
   // 必填反馈要求
   requiredFeedback?: string[];
+  // 兼容字段（TempTaskPage/旧数据使用）
+  rejectReason?: string;
+  location?: string;
+  planStart?: string;
 }
 
 // 临时任务配置

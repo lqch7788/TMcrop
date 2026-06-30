@@ -14,7 +14,6 @@ import { todayLocal } from '@/lib/dateUtils';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { todayLocal } from '../../../lib/dateUtils';
 import { DatePicker } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 
@@ -293,6 +292,7 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
               onChange={(value) => handleFieldChange('estimatedHours', Number(value))}
               min={0.5}
               decimals={1}
+              {...({} as any)}
               className="w-full h-7"
             />
           </div>
@@ -629,7 +629,7 @@ export function TempTaskPage() {
     setUrgencyFilter,
     setStatusFilter,
     setOverdueFilter,
-  } = useTempTaskFilters({ tasks: tempTasks });
+  } = useTempTaskFilters({ tasks: tempTasks as any });
 
   // 关闭详情弹窗
   const closeDetailModal = () => {
@@ -770,7 +770,7 @@ export function TempTaskPage() {
     submitCompletion(task.id, hours, remarks);
     // 同步到农事操作记录
     addTempTaskRecord({
-      operationType: 'complete',
+      operationType: 'complete' as any,
       operationTypeName: '提交完成',
       status: 'waiting_acceptance',
       greenhouseId: '',
