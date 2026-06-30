@@ -141,6 +141,9 @@ export class SeedSourceRepository {
       ss.create_by AS createBy,
       ss.create_time AS createTime,
       ss.update_time AS updateTime,
+      -- 2026-06-30 Bug 14：种源列表展示形态（优先级最高的字段）。
+      -- 来源：种植自留种回流时录入 / 调拨入种源时自动从源库存 product_form 复制
+      ss.seed_form AS seedForm,
       ss.propagation_type AS propagationType,
       ss.propagation_status AS propagationStatus,
       ss.propagation_method AS propagationMethod,
