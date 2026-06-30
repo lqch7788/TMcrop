@@ -557,12 +557,18 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </FormField>
         </div>
 
-        {/* 2026-06-19: 种源形态（仅种源行入库必填） */}
-        {sourceModule === 'seed_source' && (
-          <FormField label="种源形态" required>
+        {/* 2026-06-30 Bug 20 修复：种源形态下拉扩展到 seedling（之前仅 seed_source 显示）
+            原因：seedling 入库界面没有 propagationForm 输入口，propagation_form 列写入永远空
+            上限：种源形态现在 seed_source (必填) + seedling (可选) + product 不显示
+            注：product 仍走顶部 harvestForm → products[i].productForm 链路 */}
+        {stockType !== 'product' && (
+          <FormField
+            label="种源形态"
+            required={sourceModule === 'seed_source'}
+          >
             <Select value={propagationForm} onValueChange={setPropagationForm}>
               <SelectTrigger className={deepInputClass}>
-                <SelectValue placeholder="选择种源形态（必填）" />
+                <SelectValue placeholder={`选择种源形态${sourceModule === 'seed_source' ? '（必填）' : '（可选）'}`} />
               </SelectTrigger>
               <SelectContent>
                 {PROPAGATION_FORMS.map((o) => (
