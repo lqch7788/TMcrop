@@ -3,12 +3,12 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, CheckCircle, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
-import { CropVariety } from '../../../../types/crop';
+import { CropVariety } from '../../../../types/cropVariety';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
-import { PLANTING_STATUS_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+import { SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -24,6 +24,7 @@ interface PlantingTableProps {
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  onHarvest?: (record: Planting) => void;
   selectedRows: string[];
   onSelectionChange: (keys: string[]) => void;
   onAdd?: () => void;  // 新增回调
@@ -74,6 +75,8 @@ export function PlantingTable({
   data,
   pagination,
   onChange,
+  onPageSizeChange,
+  onHarvest,
   selectedRows,
   onSelectionChange,
   onAdd,
@@ -102,7 +105,6 @@ export function PlantingTable({
   onInbound,
   onLabelManage,
   onMove,
-  onViewMoveRecords,
   onBreedingRecord,
   onSeedSavingRecord,
   onDailyRecord,
@@ -315,7 +317,7 @@ export function PlantingTable({
         title: '种植批号',
         dataIndex: 'plantCode',
         width: 140,
-        render: (code: string, record: Planting) => (
+        render: (code: any, record: Planting) => (
           <span
             className="font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 hover:underline"
             onClick={() => onDetail(record)}
@@ -329,7 +331,7 @@ export function PlantingTable({
         title: '关联生产计划',
         dataIndex: 'productionPlanCode',
         width: 140,
-        render: (code: string) => (
+        render: (code: any) => (
           code ? (
             <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">
               {code}
@@ -341,7 +343,7 @@ export function PlantingTable({
         title: '作物编码',
         dataIndex: 'cropCode',
         width: 120,
-        render: (code: string, record: Planting) => (
+        render: (code: any, record: Planting) => (
           <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
         )
       },
