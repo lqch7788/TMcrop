@@ -5,7 +5,8 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowLeftRight, MoveRight } from 'lucide-react';
-import { Alert, AlertDescription, EntityDetailModal } from '@/components/ui';
+import { Alert, AlertDescription } from '@/components/ui';
+import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
@@ -88,10 +89,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-500 w-24">总金额：</span>
             <span className="text-sm text-gray-900">¥{record.totalAmount.toLocaleString()}</span>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">初始数量：</span>
-            <span className="text-sm text-gray-900">{record.initialCount.toLocaleString()} {formatUnit(record.unit)}</span>
-          </div>
+          {/* 2026-06-30 合并：内部种源仓库不做育种，移除"初始数量"行（与入库数量合并） */}
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">可用数量：</span>
             <span className="text-sm font-medium text-emerald-600">{record.availableCount.toLocaleString()} {formatUnit(record.unit)}</span>

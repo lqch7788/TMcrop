@@ -127,7 +127,7 @@ export class SeedSourceRepository {
       ss.purchase_price AS unitPrice,
       ss.total_amount AS totalAmount,
       ss.remaining_quantity AS availableCount,     -- 当前可用
-      COALESCE(ss.initial_count, ss.quantity, 0) AS initialCount,  -- 2026-06-19: 修正 — 创建时填的初始登记数量
+      COALESCE(ss.initial_count, ss.quantity, 0) AS initialCount,  -- 2026-06-19 修正：创建时填的初始登记数量；2026-06-30 合并：内部种源仓库场景下 initialCount 与 quantity 语义一致（前端展示时与 quantity 同列）
       COALESCE(ss.pictures, '[]') AS pictures,
       ss.used_quantity AS usedQuantity,
       ss.remaining_quantity,
@@ -272,6 +272,10 @@ export class SeedSourceRepository {
       data.total_amount || 0,
       data.used_quantity || 0,
       data.remaining_quantity || data.quantity || 0,
+      // 2026-06-30 Bug 5 修复：INSERT 补 initial_count 字段
+      // 2026-06-19 修正语义：创建时填的初始登记数量（前端 AddModal 写 initialCount = formData.quantity）
+      // 兼容 camelCaseRequest 中间件 + 老数据 fallback 到 quantity
+      (data as any).initial_count ?? (data as any).initialCount ?? data.quantity ?? 0,
       // 2026-06-04: status 不再写入 DB，由前端 computeStockStatus(availableCount, initialCount) 实时计算
       data.remarks || '',
       data.create_by || '',
@@ -302,14 +306,16 @@ export class SeedSourceRepository {
       INSERT INTO seed_sources (id, source_code, source_name, source_type, source_origin,
         production_plan_code, crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
         supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
-        total_amount, used_quantity, remaining_quantity, remarks, create_by, create_by_id,
+        total_amount, used_quantity, remaining_quantity,
+        initial_count,
+        remarks, create_by, create_by_id,
         propagation_type, propagation_status, propagation_method,
         parent_male_id, parent_male_code, parent_female_id, parent_female_code,
         mother_plant_id, mother_plant_code, linked_planting_id, linked_planting_code,
         propagation_start_date, expected_harvest_date, actual_harvest_date,
         breeding_location, target_traits, generation,
         create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, params);
 
     // P0 #1: 单独 UPDATE pictures 列（避免破坏既有 INSERT 字段顺序）

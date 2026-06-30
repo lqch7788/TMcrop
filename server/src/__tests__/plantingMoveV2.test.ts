@@ -66,7 +66,8 @@ beforeEach(async () => {
       is_harvest_locked INTEGER DEFAULT 0,
       end_time TEXT,
       planting_date TEXT,
-      create_time TEXT
+      create_time TEXT,
+      update_time TEXT  -- 2026-06-30 Bug 修复：调入同步累加 planting_quantity 时需要此列
     )
   `)
 
@@ -115,7 +116,7 @@ describe('POST /:id/move — 调入', () => {
   // 用 planting.area_id 作为 toAreaId 调入应成功，handler 应 INSERT 一条新行
   it('successfully moves in when planting_area_stocks is empty (fallback to planting.area_id)', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     // 注意：不写 planting_area_stocks — 模拟新建订单（只有 plantings 主表有 area_id）
     db.run(
@@ -156,9 +157,51 @@ describe('POST /:id/move — 调入', () => {
     expect(moves[0].quantity).toBe(50)
   })
 
+  // 2026-06-30 Bug 修复回归：连续 2 次调入，主表 planting_quantity 应累加（10+3=13）
+  it('accumulates plantings.planting_quantity on consecutive move_in', async () => {
+    db.run(
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 10, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
+    )
+    db.run(
+      `INSERT INTO seed_sources VALUES ('S1', 'SRC001', 'seed', 'CC001', 'var1', 'src1', 200, 0, 'sufficient', 'src_area')`,
+    )
+
+    // 第一次调入 3
+    const r1 = await handleMove(db, 'P1', {
+      operationType: 'move_in',
+      toAreaId: 'A1',
+      toAreaName: 'area1',
+      sourceType: 'seed',
+      sourceId: 'S1',
+      sourceCode: 'SRC001',
+      quantity: 3,
+    }, TEST_USER)
+    expect(r1.status).toBe(200)
+
+    // 第二次调入 10
+    const r2 = await handleMove(db, 'P1', {
+      operationType: 'move_in',
+      toAreaId: 'A1',
+      toAreaName: 'area1',
+      sourceType: 'seed',
+      sourceId: 'S1',
+      sourceCode: 'SRC001',
+      quantity: 10,
+    }, TEST_USER)
+    expect(r2.status).toBe(200)
+
+    // 断言主表累加：10 (初始) + 3 (第1次) + 10 (第2次) = 23
+    const p = queryToObjects<any>(db, `SELECT planting_quantity FROM plantings WHERE id = 'P1'`)[0]
+    expect(p.plantingQuantity).toBe(23)
+
+    // 断言 area_stocks 累加：3 + 10 = 13
+    const s = queryToObjects<any>(db, `SELECT quantity FROM planting_area_stocks WHERE planting_id = 'P1'`)[0]
+    expect(s.quantity).toBe(13)
+  })
+
   it('rejects when source insufficient', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     db.run(
       `INSERT INTO seed_sources VALUES ('S1', 'SRC001', 'seed', 'CC001', 'var1', 'src1', 50, 0, 'sufficient', 'src_area')`,
@@ -185,13 +228,13 @@ describe('POST /:id/move — 调入', () => {
 describe('POST /:id/move — 调出', () => {
   it('rejects when from area stock insufficient', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     db.run(
       `INSERT INTO planting_area_stocks VALUES ('STK1', 'P1', 'A1', 'area1', 50, 'migrate', null, 'ZZ001', '2026-06-21', null, 'now', 'now')`,
     )
     db.run(
-      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC001', 'var1', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC001', 'var1', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
 
     const result = await handleMove(db, 'P1', {
@@ -210,13 +253,13 @@ describe('POST /:id/move — 调出', () => {
 
   it('rejects when crop code mismatch', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     db.run(
       `INSERT INTO planting_area_stocks VALUES ('STK1', 'P1', 'A1', 'area1', 100, 'migrate', null, 'ZZ001', '2026-06-21', null, 'now', 'now')`,
     )
     db.run(
-      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC002', 'var2', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC002', 'var2', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
 
     const result = await handleMove(db, 'P1', {
@@ -235,7 +278,7 @@ describe('POST /:id/move — 调出', () => {
 
   it('rejects self-move (same area)', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     db.run(
       `INSERT INTO planting_area_stocks VALUES ('STK1', 'P1', 'A1', 'area1', 100, 'migrate', null, 'ZZ001', '2026-06-21', null, 'now', 'now')`,
@@ -255,15 +298,55 @@ describe('POST /:id/move — 调出', () => {
     expect(result.body.error).toMatch(/源区域与目标区域相同/)
   })
 
-  it('rejects when planting is ended', async () => {
+  // 2026-06-30 Bug 修复回归：调出同步扣减源主表 + 累加目标主表
+  it('accumulates plantings.planting_quantity on move_out (source -qty, target +qty)', async () => {
     db.run(
-      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'ended', 0, '2026-06-20', '2026-06-21', 'now')`,
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
     db.run(
       `INSERT INTO planting_area_stocks VALUES ('STK1', 'P1', 'A1', 'area1', 100, 'migrate', null, 'ZZ001', '2026-06-21', null, 'now', 'now')`,
     )
     db.run(
-      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC001', 'var1', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now')`,
+      `INSERT INTO planting_area_stocks VALUES ('STK2', 'P2', 'A2', 'area2', 0, 'migrate', null, 'ZZ002', '2026-06-21', null, 'now', 'now')`,
+    )
+    db.run(
+      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC001', 'var1', 'crop2', 'A2', 'area2', 20, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
+    )
+
+    const result = await handleMove(db, 'P1', {
+      operationType: 'move_out',
+      fromAreaId: 'A1',
+      fromAreaName: 'area1',
+      toAreaId: 'A2',
+      toAreaName: 'area2',
+      targetPlantingId: 'P2',
+      quantity: 30,
+    }, TEST_USER)
+    expect(result.status).toBe(200)
+
+    // 断言：源主表 100 - 30 = 70
+    const p1 = queryToObjects<any>(db, `SELECT planting_quantity FROM plantings WHERE id = 'P1'`)[0]
+    expect(p1.plantingQuantity).toBe(70)
+    // 断言：目标主表 20 + 30 = 50
+    const p2 = queryToObjects<any>(db, `SELECT planting_quantity FROM plantings WHERE id = 'P2'`)[0]
+    expect(p2.plantingQuantity).toBe(50)
+    // 断言：源 area_stocks 100 - 30 = 70
+    const s1 = queryToObjects<any>(db, `SELECT quantity FROM planting_area_stocks WHERE planting_id = 'P1' AND area_id = 'A1'`)[0]
+    expect(s1.quantity).toBe(70)
+    // 断言：目标 area_stocks 0 + 30 = 30
+    const s2 = queryToObjects<any>(db, `SELECT quantity FROM planting_area_stocks WHERE planting_id = 'P2' AND area_id = 'A2'`)[0]
+    expect(s2.quantity).toBe(30)
+  })
+
+  it('rejects when planting is ended', async () => {
+    db.run(
+      `INSERT INTO plantings VALUES ('P1', 'ZZ001', 'CC001', 'var1', 'crop1', 'A1', 'area1', 100, 0, 'ended', 0, '2026-06-20', '2026-06-21', 'now', 'now')`,
+    )
+    db.run(
+      `INSERT INTO planting_area_stocks VALUES ('STK1', 'P1', 'A1', 'area1', 100, 'migrate', null, 'ZZ001', '2026-06-21', null, 'now', 'now')`,
+    )
+    db.run(
+      `INSERT INTO plantings VALUES ('P2', 'ZZ002', 'CC001', 'var1', 'crop2', 'A2', 'area2', 0, 0, 'growing', 0, null, '2026-06-21', 'now', 'now')`,
     )
 
     const result = await handleMove(db, 'P1', {
