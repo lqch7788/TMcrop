@@ -186,6 +186,10 @@ export interface InventoryStock {
   unitPrice?: number;
   totalAmount?: number;
   purchaseDate?: string;
+  // 2026-06-30 Bug 12 修复：成品形态（果实/种子/花朵/枝条/整株/其他 12 选）
+  // 来源：行级采收入库 / HarvestRecordModal 顶部"采收形态" → inventory_stock.product_form
+  // 注意：历史库存（2026-06-30 前的入库）未带 productForm 写入，UI 显示空即可，不要假设一定有值
+  productForm?: string;
 }
 
 /**

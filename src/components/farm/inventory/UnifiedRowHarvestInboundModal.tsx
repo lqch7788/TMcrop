@@ -27,11 +27,11 @@ import {
   NumberInput,
   Button,
 } from '@/components/ui'
-import { Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, Package, X, ChevronDown } from 'lucide-react'
+import {Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, X, ChevronDown} from 'lucide-react'
 import { useWarehouseStore, useInventoryStore } from '@/stores'
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { useUserStore, getActiveUsers } from '@/stores/useUserStore'
+import {useUserStore} from '@/stores/useUserStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert } from '@/lib/dialogService'
 import {
@@ -181,6 +181,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       unit: sourceRecord.unit || '克',
       grade: '',
       sourceForm: '',  // 采收形态（果实/籽/枝条等）
+      // 2026-06-30 Bug 12 修复：成品形态（写入 inventory_stock.product_form）
+      // 顶部"成品形态"下拉（harvestForm）→ useEffect 同步到 products[i].productForm
+      productForm: '',
     },
   ])
 
@@ -231,12 +234,23 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           unit: sourceRecord.unit || '克',
           grade: '',
           sourceForm: '',  // 采收形态
+          productForm: '',  // 2026-06-30 Bug 12 修复：成品形态重置
         },
       ])
       setError(null)
     }
     prevIsOpen.current = isOpen
   }, [isOpen, stockType, sourceRecord, currentUser])
+
+  // 2026-06-30 Bug 12 修复：顶部"成品形态"harvestForm → 同步到所有 products[].productForm
+  // 原因：executeInboundFromSource.service.ts:279 写 product_form: product.productForm
+  //       种植行允许多产物（果实+种子+枝条），顶部一个下拉选了形态后，每条 product 都用同一形态
+  // 限制：多产物场景下用户希望"每条产物的形态不同"？当前产品明细里没单独的形态下拉
+  //       — 若未来需要多形态，加每行 productForm Select 即可
+  useEffect(() => {
+    if (!harvestForm) return
+    setProducts((prev) => prev.map((p) => ({ ...p, productForm: harvestForm })))
+  }, [harvestForm])
 
   // ---- 字典项 ----
   const unitOptions = useMemo(() => {
@@ -312,6 +326,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         unit: sourceRecord.unit || '克',
         grade: '',
         sourceForm: '',  // 采收形态
+        productForm: '',  // 2026-06-30 Bug 12 修复：成品形态初始值
       },
     ])
   }
@@ -323,7 +338,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // ---- 提交 ----
   const handleSubmit = async () => {
     setError(null)
-    const harvesters = harvesterNames.join(',')
+
     const input = {
       stockType,
       sourceModule,
