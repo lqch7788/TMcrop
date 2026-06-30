@@ -7,7 +7,7 @@
 import React, { useState, useMemo } from 'react';
 import { AlertTriangle, CheckCircle, Clock, DollarSign, Info, Send, X } from 'lucide-react';
 import { ApprovalType } from '../../types/approval';
-import { ApprovalLevel, getApprovalLevelName } from '../../config/approvalHierarchy';
+import { ApprovalLevel, APPROVAL_LEVEL_NAMES as getApprovalLevelName } from '../../config/approvalHierarchy';
 import { useApprovalLevel } from '../../hooks/useApprovalLevel';
 import { Button, UnifiedModal } from '@/components/ui';
 
@@ -85,8 +85,7 @@ export function ApprovalSubmitPanel({
   }, [approvalType, amount, additionalData, resolveLevel]);
 
   // 判断审批流程
-  const getApprovalFlowInfo = () => {
-    const { level, config, reason } = levelResult;
+  const getApprovalFlowInfo = (level: ApprovalLevel, config: any) => {
 
     if (level === ApprovalLevel.EXEMPT) {
       return {
@@ -127,7 +126,7 @@ export function ApprovalSubmitPanel({
     };
   };
 
-  const flowInfo = getApprovalFlowInfo();
+  const flowInfo = getApprovalFlowInfo(resolveLevel || ApprovalLevel.STANDARD, null);
 
   // 处理提交
   const handleSubmit = async () => {
