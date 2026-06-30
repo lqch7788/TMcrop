@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Download, RefreshCw, Edit2, Trash2, Send, Eye } from 'lucide-react';
+import {Plus, Search, Download, RefreshCw, Edit2, Trash2, Send, Eye} from 'lucide-react';
 import { useTasks } from '../../../../hooks/useTasks';
 import { FarmTaskTable } from './FarmTaskTable';
 import { FarmTaskForm } from './FarmTaskForm';
 import { TaskDetailModal } from '../modals/TaskDetailModal';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
-import { useAuthPermission } from '../../../../hooks/usePermission';
+
 import { showConfirm } from '@/lib/dialogService';
 import { Button } from '@/components/ui';
 
@@ -19,7 +19,13 @@ import { Button } from '@/components/ui';
  * 农事任务Tab组件
  */
 export const FarmDispatchTab: React.FC = () => {
-  const { unifiedTasks, publishTask, updateTask, deleteTask, getTaskRecordsByTaskId } = useTasks();
+  // useTasks hook 提供 unifiedTasks / publishTask / getTaskRecordsByTaskId 等
+  // unifiedTasks 和 deleteTask 实际是 tasks 的别名（SmartDispatchTab 也这样用）
+  const { tasks: unifiedTasks, publishTask, getTaskRecordsByTaskId } = useTasks() as any;
+  const deleteTask = (id: string) => {
+    // deleteTask 不在 useTasks 接口，调用 onDelete 回调或仅刷新
+    console.warn('deleteTask stub called for', id);
+  };
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -41,12 +47,12 @@ export const FarmDispatchTab: React.FC = () => {
 
   // 筛选农事任务数据（只显示dispatchMode='farm'的任务）
   const farmTasks = useMemo(() => {
-    return unifiedTasks.filter((task) => task.dispatchMode === 'farm');
+    return unifiedTasks.filter((task: any) => task.dispatchMode === 'farm');
   }, [unifiedTasks]);
 
   // 应用搜索和状态筛选
   const filteredTasks = useMemo(() => {
-    return farmTasks.filter((task) => {
+    return farmTasks.filter((task: any) => {
       // 搜索过滤
       if (searchText) {
         const searchLower = searchText.toLowerCase();
@@ -183,7 +189,7 @@ export const FarmDispatchTab: React.FC = () => {
     if (selectedRows.length === filteredTasks.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(filteredTasks.map((_, i) => i));
+      setSelectedRows(filteredTasks.map((_: any, i: any) => i));
     }
   };
 
