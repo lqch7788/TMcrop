@@ -454,11 +454,7 @@ export function SeedSourceTable({
                       原因：种源已退化为仓库角色，不再区分繁殖细节，简化展示 */}
                   <TableCell
                     className="px-4 py-3 whitespace-nowrap"
-                    title={
-                      record.seedForm
-                        ? `形态：${record.seedForm}`
-                        : (SOURCE_TYPE_MAP[record.sourceType] || record.sourceType || '-')
-                    }
+                    title={undefined}
                   >
                     {(() => {
                       const form = record.seedForm
