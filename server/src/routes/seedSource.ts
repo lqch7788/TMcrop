@@ -18,6 +18,7 @@ import {
   SeedSourceReturnBusinessError,
   type ReturnItem,
 } from '../services/seedSourceReturn.service';
+import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
@@ -160,6 +161,94 @@ router.post('/circulation/:id/revoke', (req, res) => {
     res.json({ success: true })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })
+  }
+})
+
+/**
+ * 2026-06-30: 种植调入弹窗用 — 按作物品种名搜索可用种源
+ * GET /api/seed-sources/lookup
+ * 注意：必须在 /:id 主路由之前注册，否则会被 :id 匹配拦截
+ */
+router.get('/lookup', (req, res) => {
+  try {
+    // 参数归一化：trim 空串视为未传
+    const cropName = String(req.query.cropName || '').trim()
+    const cropVariety = String(req.query.cropVariety || '').trim()
+    const seedForm = String(req.query.seedForm || '').trim()
+    // 上限 200，默认 50（防止误传超大值拖慢列表）
+    const limit = Math.min(Number(req.query.limit) || 50, 200)
+
+    // 仅返回有库存且未终止的种源
+    const conditions: string[] = [
+      "remaining_quantity > 0",
+      "status NOT IN ('depleted', 'cancelled')",
+    ]
+    const params: any[] = []
+
+    if (cropName) {
+      conditions.push('crop_name LIKE ?')
+      params.push(`%${cropName}%`)
+    }
+    if (cropVariety) {
+      conditions.push('crop_variety LIKE ?')
+      params.push(`%${cropVariety}%`)
+    }
+    if (seedForm) {
+      // seedForm 是枚举值（seedling/seed/cutting/...），精确匹配
+      conditions.push('seed_form = ?')
+      params.push(seedForm)
+    }
+
+    const sql = `
+      SELECT id,
+             source_code AS sourceCode,
+             crop_name AS cropName,
+             crop_variety AS cropVariety,
+             seed_form AS seedForm,
+             remaining_quantity AS remainingQuantity,
+             unit,
+             source_type AS sourceType,
+             status
+      FROM seed_sources
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY create_time DESC
+      LIMIT ?
+    `
+    const rows = queryToObjects<any>(getDatabase(), sql, [...params, limit])
+    res.json({ success: true, data: rows })
+  } catch (e: any) {
+    console.error('[seed-sources/lookup] error:', e)
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
+  }
+})
+
+/**
+ * 2026-06-30: 种源详情"调入种植"tab 数据源
+ * GET /api/seed-sources/:id/move-records
+ * 必须在 /:id 主路由之前注册，否则会被 /:id 匹配拦截
+ */
+router.get('/:id/move-records', (req, res) => {
+  try {
+    const seedSourceId = String(req.params.id)
+    const rows = queryToObjects<any>(
+      getDatabase(),
+      `SELECT id, operation_date AS operationDate,
+              operation_type AS operationType, quantity,
+              source_id AS sourceId, source_code AS sourceCode,
+              planting_id AS plantingId, planting_code AS plantingCode,
+              to_area_id AS toAreaId, to_area_name AS toAreaName,
+              from_area_id AS fromAreaId, from_area_name AS fromAreaName,
+              operator_name AS operatorName, remarks,
+              create_time AS createTime
+       FROM planting_move_records
+       WHERE source_id = ? AND source_type = 'seed'
+       ORDER BY operation_date DESC, create_time DESC`,
+      [seedSourceId]
+    )
+    res.json({ success: true, data: rows })
+  } catch (e: any) {
+    console.error('[seed-sources/:id/move-records] error:', e)
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
   }
 })
 

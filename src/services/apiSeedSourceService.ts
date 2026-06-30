@@ -774,3 +774,76 @@ export async function printLabel(
 ): Promise<{ id: string; printCount: number }> {
   return await createPrintRecord(seedSourceId, printType, printCount, operator, labelNumbers);
 }
+
+// ========== 2026-06-30: 种植调入弹窗查询接口 ==========
+
+/** 2026-06-30: 种植调入弹窗用 — 按作物品种名搜索可用种源 */
+export interface SeedSourceLookupRow {
+  id: string
+  sourceCode: string
+  cropName: string
+  cropVariety: string
+  seedForm: string
+  remainingQuantity: number
+  unit: string
+  sourceType: string
+  status: string
+}
+
+export interface LookupAvailableSeedSourceParams {
+  cropName?: string
+  cropVariety?: string
+  seedForm?: string
+  limit?: number
+}
+
+/**
+ * 2026-06-30: 种植调入弹窗用 — 按作物品种名搜索可用种源
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
+ */
+export async function lookupAvailableSeedSources(
+  params: LookupAvailableSeedSourceParams = {}
+): Promise<SeedSourceLookupRow[]> {
+  const qs: string[] = []
+  if (params.cropName) qs.push(`cropName=${encodeURIComponent(params.cropName)}`)
+  if (params.cropVariety) qs.push(`cropVariety=${encodeURIComponent(params.cropVariety)}`)
+  if (params.seedForm) qs.push(`seedForm=${encodeURIComponent(params.seedForm)}`)
+  if (params.limit != null) qs.push(`limit=${params.limit}`)
+  const url = `/seed-sources/lookup${qs.length ? '?' + qs.join('&') : ''}`
+  // enhancedApiClient 已自动解包 data（参见 api-client-response-unwrapping.md）
+  const rows = await enhancedApiClient.get<SeedSourceLookupRow[]>(url)
+  return Array.isArray(rows) ? rows : []
+}
+
+/** 2026-06-30: 种源详情"调入种植"tab — 移入/移出履历 */
+export interface SeedSourceMoveRecord {
+  id: string
+  operationDate: string
+  operationType: 'move_in' | 'move_out'
+  quantity: number
+  sourceId: string
+  sourceCode: string
+  plantingId: string
+  plantingCode: string
+  toAreaId: string
+  toAreaName: string
+  fromAreaId: string
+  fromAreaName: string
+  operatorName: string
+  remarks: string
+  createTime: string
+}
+
+/**
+ * 2026-06-30: 获取某一种源的调入/调出种植履历
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
+ */
+export async function getSeedSourceMoveRecords(
+  seedSourceId: string
+): Promise<SeedSourceMoveRecord[]> {
+  if (!seedSourceId) return []
+  const rows = await enhancedApiClient.get<SeedSourceMoveRecord[]>(
+    `/seed-sources/${seedSourceId}/move-records`
+  )
+  return Array.isArray(rows) ? rows : []
+}

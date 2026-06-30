@@ -2405,6 +2405,26 @@ export async function fixMissingSchema(): Promise<void> {
   createPlantingAreaStocksTable(db);
   migrateToAreaStocks(db);
 
+  // 2026-06-30：seed_sources.seed_form 一次性回填（按 source_type 映射）
+  // 老种源记录保持 NULL 不变时（外部购买/历史数据不涉及此字段），按 source_type 给个合理默认值
+  // 外部购买/采购基本是"种子"，回流的"cutting/grafting/..."等是繁殖类型
+  try {
+    const seedFormMap: Array<[string, string]> = [
+      ['seed', '种子'], ['seedling', '种苗'], ['cutting', '穗条'],
+      ['grafting', '枝条'], ['tissue_culture', '其他'], ['split', '整株'],
+      ['bulb', '鳞茎'], ['other', '其他'],
+    ];
+    for (const [srcType, seedForm] of seedFormMap) {
+      db.run(
+        `UPDATE seed_sources SET seed_form = ? WHERE source_type = ? AND (seed_form IS NULL OR seed_form = '')`,
+        [seedForm, srcType]
+      );
+    }
+    saveDatabase();
+  } catch (e: any) {
+    seedLog.error('seed_form 回填失败：', e.message);
+  }
+
   saveDatabase();
 }
 

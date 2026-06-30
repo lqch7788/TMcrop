@@ -433,6 +433,7 @@ export function initializeDatabase() {
   `);
 
   // 创建种源表
+  // 2026-06-30：加 seed_form 列 — 形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）
   db.run(`
     CREATE TABLE IF NOT EXISTS seed_sources (
       id TEXT PRIMARY KEY,
@@ -456,7 +457,8 @@ export function initializeDatabase() {
       create_by TEXT,
       create_time TEXT,
       update_time TEXT,
-      deleted_at TEXT
+      deleted_at TEXT,
+      seed_form TEXT
     )
   `);
 

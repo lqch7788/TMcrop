@@ -517,3 +517,30 @@ export async function movePlantingV2(
   );
   return data;
 }
+
+// ========== 2026-06-30: 种植调入弹窗"目标区域"下拉用 ==========
+
+/** 2026-06-30: 种植调入弹窗"目标区域"下拉用 — 某一种植下所有区域库存 */
+export interface PlantingAreaStock {
+  id: string
+  areaId: string
+  areaName: string
+  quantity: number
+  sourceType: string | null
+  sourceId: string | null
+  sourceCode: string | null
+}
+
+/**
+ * 2026-06-30: 获取某一种植的区域库存列表
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
+ */
+export async function getPlantingAreaStocks(
+  plantingId: string
+): Promise<PlantingAreaStock[]> {
+  if (!plantingId) return []
+  const rows = await enhancedApiClient.get<PlantingAreaStock[]>(
+    `/plantings/${plantingId}/area-stocks`
+  )
+  return Array.isArray(rows) ? rows : []
+}
