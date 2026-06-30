@@ -58,17 +58,8 @@ const QUALITY_GRADES = [
 ]
 
 // 2026-06-19: 种源形态（种源行入库必填）
-const PROPAGATION_FORMS = [
-  { value: '种子', label: '种子' },
-  { value: '种苗', label: '种苗' },
-  { value: '实生苗', label: '实生苗' },
-  { value: '扦插苗', label: '扦插苗' },
-  { value: '嫁接苗', label: '嫁接苗' },
-  { value: '组培苗', label: '组培苗' },
-  { value: '分株苗', label: '分株苗' },
-  { value: '种球', label: '种球' },
-  { value: '球根', label: '球根' },
-]
+// 2026-06-30 Bug 21：已删除 PROPAGATION_FORMS（用户选 B — 库存形态列改读产品明细
+// "采收形态" sourceForm / inventory_stock.source_form；种源形态字段不再独立写入库存）
 
 /**
  * 2026-06-27：成品形态（种植行采收入库）
@@ -155,8 +146,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [supplementaryReason, setSupplementaryReason] = useState<string>('')
   const [unitPrice, setUnitPrice] = useState<number | string>(0)
   const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
-  // 2026-06-19: 种源形态（仅种源行入库必填）
-  const [propagationForm, setPropagationForm] = useState<string>('')
+  // 2026-06-19: 种源形态（仅种源行入库必填）— 2026-06-30 Bug 21 删：用户选 B，
+  //   改为统一从产品明细 sourceForm（= inventory_stock.source_form）读形态
   // 2026-06-27：成品形态（仅种植行入库时使用）
   const [harvestForm, setHarvestForm] = useState<string>('')
 
@@ -212,7 +203,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setSupplementaryReason('')
       setUnitPrice(0)
       setUnit(sourceRecord.unit || '克')
-      setPropagationForm('')  // 重置种源形态
       setProducts([
         {
           cropCode: sourceRecord.cropCode || '',
@@ -346,8 +336,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       unit,
       warehouseId,
       warehouseName: warehouseName || undefined,
-      // 2026-06-19: 种源形态（仅种源行入库必填）
-      propagationForm: propagationForm || undefined,
+      // 2026-06-30 Bug 21：propagationForm 字段删除，统一从产品明细 sourceForm 读 inventory 形态
       harvestForm: harvestForm || undefined,
       products: products.map((p) => ({
         ...p,
@@ -557,27 +546,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </FormField>
         </div>
 
-        {/* 2026-06-30 Bug 20 修复：种源形态下拉扩展到 seedling（之前仅 seed_source 显示）
-            原因：seedling 入库界面没有 propagationForm 输入口，propagation_form 列写入永远空
-            上限：种源形态现在 seed_source (必填) + seedling (可选) + product 不显示
-            注：product 仍走顶部 harvestForm → products[i].productForm 链路 */}
-        {stockType !== 'product' && (
-          <FormField
-            label="种源形态"
-            required={sourceModule === 'seed_source'}
-          >
-            <Select value={propagationForm} onValueChange={setPropagationForm}>
-              <SelectTrigger className={deepInputClass}>
-                <SelectValue placeholder={`选择种源形态${sourceModule === 'seed_source' ? '（必填）' : '（可选）'}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {PROPAGATION_FORMS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        )}
+        {/* 2026-06-30 Bug 21：顶部"种源形态"Select 已删除，统一走产品明细 sourceForm
+            （详见本 commit message 解释） */}
 
         {/* 2026-06-27：成品类型（仅种植行入库可选）
             —— 因为同一棵植株在不同阶段可采收不同产物，每次入库独立选择 */}

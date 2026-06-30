@@ -71,8 +71,7 @@ const InboundFromSourceSchema = z.object({
   warehouseName: z.string().optional(),
   products: z.array(ProductSchema).min(1, { message: '至少需要 1 条产品明细' }),
   operatorName: z.string().optional(),
-  // 2026-06-19: 种源形态（仅种源行入库必填）
-  propagationForm: z.string().optional(),
+  // 2026-06-30 Bug 21：删除 propagationForm Zod 字段（统一走产品明细 sourceForm）
 });
 
 /**
@@ -115,13 +114,7 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'isSupplementary=true 时 supplementaryReason 必填' });
     }
 
-    // 3.5 种源行入库时 propagationForm 必填（种源形态：种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）
-    if (input.sourceModule === 'seed_source' && !input.propagationForm) {
-      return res.status(400).json({
-        success: false,
-        error: '种源行入库必须填写种源形态（propagationForm）：种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根',
-      });
-    }
+    // 2026-06-30 Bug 21：删除 propagationForm 必填校验（产品明细 sourceForm 已替代）
 
     // 3.6 2026-06-26: 种源入库单位必须与种源记录单位一致（前端已自动锁定，后端兜底）
     if (input.sourceModule === 'seed_source') {
