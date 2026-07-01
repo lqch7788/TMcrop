@@ -4,13 +4,15 @@
  * 2026-06-23: 粒度扩展 + autoSelectLabelNumber + 补充生成入口
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Download, Plus } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { X, Download, Plus, Trash2 } from 'lucide-react';
+import { Button, UnifiedModal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
 import type { PlantLabel, PlantLabelResume } from '@/stores/usePlantLabelStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { enhancedApiClient } from '@/lib/apiClient';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { LabelTable } from './LabelTable';
 import { LabelResumePanel } from './LabelResumePanel';
 import { AddResumeForm } from './AddResumeForm';
@@ -72,12 +74,19 @@ export default function SeedlingLabelManageModal({
 }: SeedlingLabelManageModalProps) {
   const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } =
     usePlantLabelStore();
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   // ---------- 标签列表状态 ----------
   const [searchText, setSearchText] = useState('');
   const [labelPage, setLabelPage] = useState(1);
   const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
+  // 2026-07-01: 多选（批量作废用）
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showAddResume, setShowAddResume] = useState(false);
+  // 2026-07-01: 批量作废弹窗状态
+  const [showBatchVoid, setShowBatchVoid] = useState(false);
+  const [batchVoidReason, setBatchVoidReason] = useState('');
+  const [batchVoiding, setBatchVoiding] = useState(false);
 
   // ---------- 补充生成状态 ----------
   const [showBatchGenerate, setShowBatchGenerate] = useState(false);
@@ -147,6 +156,69 @@ export default function SeedlingLabelManageModal({
     [loadResumesForLabels]
   );
 
+  // 2026-07-01: 多选切换（批量作废用）
+  const toggleSelectLabel = useCallback((labelId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(labelId)) next.delete(labelId);
+      else next.add(labelId);
+      return next;
+    });
+  }, []);
+
+  // 2026-07-01: 清除所有多选
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // 2026-07-01: 全选/取消当前页
+  const toggleSelectAll = useCallback(() => {
+    const pageIds = new Set(paginatedLabels.map((l: any) => l.id));
+    const allSelected = paginatedLabels.every((l: any) => selectedIds.has(l.id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...pageIds]));
+    }
+  }, [paginatedLabels, selectedIds]);
+
+  // 2026-07-01: 批量作废
+  const handleBatchVoid = async () => {
+    if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
+    if (!batchVoidReason.trim()) { showAlert('请填写作废原因'); return; }
+    setBatchVoiding(true);
+    let success = 0;
+    let fail = 0;
+    try {
+      for (const labelId of selectedIds) {
+        try {
+          await enhancedApiClient.post(`/plant-labels/${labelId}/resumes`, {
+            operation_type: 'void',
+            operation_date: todayLocal(),
+            operator_name: currentUser?.realName || 'system',
+            reason: batchVoidReason.trim(),
+            quantity_change: 0,
+          });
+          success++;
+        } catch { fail++; }
+      }
+      showAlert(`批量作废完成：成功 ${success} 个${fail > 0 ? `，失败 ${fail} 个` : ''}`);
+      setShowBatchVoid(false);
+      setBatchVoidReason('');
+      setSelectedIds(new Set());
+      await loadLabels({ seedlingId });
+      if (selectedLabelId && selectedIds.has(selectedLabelId)) {
+        setSelectedLabelId(null);
+      }
+    } catch (e) {
+      showAlert('网络错误：' + (e as Error).message);
+    } finally {
+      setBatchVoiding(false);
+    }
+  };
+
   const handleSearchChange = useCallback((v: string) => {
     setSearchText(v);
     setLabelPage(1);
@@ -173,8 +245,8 @@ export default function SeedlingLabelManageModal({
   const [selectedExportFields, setSelectedExportFields] = useState<Set<string>>(
     () => new Set(EXPORT_FIELDS.filter((f) => f.defaultChecked).map((f) => f.key))
   );
-  // 导出范围：'filtered' = 当前筛选结果；'currentPage' = 当前页
-  const [exportScope, setExportScope] = useState<'filtered' | 'currentPage'>('filtered');
+  // 导出范围：'selected' = 已选标签；'filtered' = 当前筛选结果；'currentPage' = 当前页
+  const [exportScope, setExportScope] = useState<'selected' | 'filtered' | 'currentPage'>('filtered');
 
   const handleOpenExport = () => setExportModalOpen(true);
 
@@ -203,7 +275,14 @@ export default function SeedlingLabelManageModal({
     }
 
     // 决定导出范围
-    const dataSource = exportScope === 'currentPage' ? paginatedLabels : filteredLabels;
+    let dataSource: any[];
+    if (exportScope === 'selected') {
+      dataSource = filteredLabels.filter((l: any) => selectedIds.has(l.id));
+    } else if (exportScope === 'currentPage') {
+      dataSource = paginatedLabels;
+    } else {
+      dataSource = filteredLabels;
+    }
     if (dataSource.length === 0) {
       showAlert('无数据可导出');
       return;
@@ -277,7 +356,7 @@ export default function SeedlingLabelManageModal({
     a.click();
     URL.revokeObjectURL(url);
     setExportModalOpen(false);
-  }, [selectedExportFields, exportScope, paginatedLabels, filteredLabels, resumeMap, loadResumesForLabels, seedlingCode]);
+  }, [selectedExportFields, exportScope, paginatedLabels, filteredLabels, selectedIds, resumeMap, loadResumesForLabels, seedlingCode]);
 
   // ---------- 补充生成 ----------
   const handleBatchGenerate = async () => {
@@ -311,36 +390,20 @@ export default function SeedlingLabelManageModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[85vh] flex flex-col">
-        {/* 标题栏 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
-          <h3 className="text-lg font-semibold text-white">
-            育苗标签管理 - {seedlingCode}
-          </h3>
-          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-emerald-700">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
-        {/* 工具栏: 导出 */}
-        <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-end">
-          {/* 2026-06-28：删除原"导出 1000/2000/全部"按钮组，改为单一"导出"按钮 + 弹窗选择字段 */}
-          <Button
-            onClick={handleOpenExport}
-            variant="blue"
-            size="sm"
-            className="text-xs"
-          >
-            <Download className="w-4 h-4 mr-1" />
-            导出
-          </Button>
-        </div>
-
-        {/* 主体：左侧标签列表 + 右侧履历时间线 */}
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`育苗标签管理 - ${seedlingCode}`}
+      size="xxxl"
+      showFooter={false}
+      enableDrag={true}
+      enableResize={true}
+      showMaximize={true}
+    >
+      {/* 主体：左侧标签列表 + 右侧履历时间线 */}
         <div className="flex-1 overflow-hidden flex">
           {/* 左侧：标签列表（含搜索） */}
-          <div className="w-2/5 border-r border-gray-200">
+          <div className="w-1/2 border-r border-gray-200">
             <LabelTable
               labels={paginatedLabels as any}
               selectedLabelId={selectedLabelId}
@@ -351,11 +414,15 @@ export default function SeedlingLabelManageModal({
               onPageChange={setLabelPage}
               onSelectLabel={handleSelectLabel}
               loading={labelsLoading}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelectLabel}
+              onToggleSelectAll={toggleSelectAll}
+              onClearSelection={clearSelection}
             />
           </div>
 
           {/* 右侧：标签履历时间线 */}
-          <div className="w-3/5 overflow-y-auto p-4">
+          <div className="w-1/2 overflow-y-auto p-4">
             <LabelResumePanel
               selectedLabel={selectedLabel}
               resumes={selectedResumes}
@@ -385,13 +452,16 @@ export default function SeedlingLabelManageModal({
                 placeholder="生成数量"
                 className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-24"
               />
-              <Input
-                type="text"
-                value={batchAreaName}
-                onChange={(e) => setBatchAreaName(e.target.value)}
-                placeholder="移入区域（如：东区-A区）"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
-              />
+              <div className="flex items-center gap-1">
+                <Input
+                  type="text"
+                  value={batchAreaName}
+                  onChange={(e) => setBatchAreaName(e.target.value)}
+                  placeholder="移入区域（如：东区-A区）"
+                  className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
+                />
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold cursor-help" title="该植株被种植到的具体地块位置（如：东区-A区-3号畦），非育苗温室区域">?</span>
+              </div>
               <Button onClick={handleBatchGenerate} disabled={batchGenerating} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                 {batchGenerating ? '生成中...' : '生成'}
               </Button>
@@ -410,10 +480,15 @@ export default function SeedlingLabelManageModal({
           <div className="flex items-center gap-2">
             <Button
               onClick={() => setShowAddResume((v) => !v)}
-              disabled={!selectedLabelId}
+              disabled={!selectedLabelId || selectedLabel?.status === 'voided' || selectedIds.size > 0}
               variant="default"
               size="sm"
-              title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签新增履历'}
+              title={
+                selectedIds.size > 0 ? '多选模式下请先取消勾选，再点击行选择单个标签'
+                : !selectedLabelId ? '请先在左侧选择标签'
+                : selectedLabel?.status === 'voided' ? '已作废标签无法添加履历'
+                : '为当前标签新增履历'
+              }
             >
               <Plus className="w-4 h-4" /> 新增履历
             </Button>
@@ -425,12 +500,33 @@ export default function SeedlingLabelManageModal({
             >
               <Plus className="w-4 h-4" /> 补充生成
             </Button>
+            <Button
+              onClick={handleOpenExport}
+              variant="outline"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+            >
+              <Download className="w-4 h-4 mr-1" /> 导出
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
+                setBatchVoidReason('');
+                setShowBatchVoid(true);
+              }}
+              disabled={selectedIds.size === 0}
+              variant="outline"
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              title={selectedIds.size === 0 ? '请先勾选标签' : `批量作废已选 ${selectedIds.size} 个标签`}
+            >
+              <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            </Button>
             <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
               <X className="w-4 h-4" /> 关闭
             </Button>
           </div>
         </div>
-      </div>
 
       {/* 2026-06-28：导出弹窗（选择字段 + 范围） */}
       {exportModalOpen && (
@@ -487,6 +583,22 @@ export default function SeedlingLabelManageModal({
                 <span className="text-sm font-semibold text-gray-700 block mb-2">导出范围</span>
                 <div className="flex gap-2">
                   <label className={`flex-1 flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
+                    exportScope === 'selected' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="exportScope"
+                      checked={exportScope === 'selected'}
+                      onChange={() => setExportScope('selected')}
+                      className="w-4 h-4 text-blue-600"
+                      disabled={selectedIds.size === 0}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-700">已选标签</div>
+                      <div className="text-xs text-gray-500">{selectedIds.size > 0 ? `共 ${selectedIds.size} 条` : '请先在左侧勾选标签'}</div>
+                    </div>
+                  </label>
+                  <label className={`flex-1 flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
                     exportScope === 'filtered' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
                   }`}>
                     <input
@@ -531,6 +643,51 @@ export default function SeedlingLabelManageModal({
           </div>
         </div>
       )}
-    </div>
+
+      {/* 2026-07-01: 批量作废弹窗 */}
+      {showBatchVoid && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-xl w-full max-w-sm shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-500 to-red-600 rounded-t-xl">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                批量作废 {selectedIds.size} 个标签
+              </h3>
+              <Button onClick={() => setShowBatchVoid(false)} variant="ghost" size="icon" className="text-white hover:bg-red-700">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">作废原因 *</label>
+                <Input
+                  value={batchVoidReason}
+                  onChange={(e) => setBatchVoidReason(e.target.value)}
+                  placeholder="如：标签重复、植株死亡、录入错误等"
+                  className="px-3 py-2 border border-gray-400 rounded-lg text-sm w-full"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                将对已选的 {selectedIds.size} 个标签执行作废操作，操作后标签状态变为"已作废"且不可再添加履历。
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowBatchVoid(false)} disabled={batchVoiding}>
+                取消
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleBatchVoid}
+                disabled={batchVoiding || !batchVoidReason.trim()}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {batchVoiding ? '作废中...' : '确认作废'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </UnifiedModal>
   );
 }

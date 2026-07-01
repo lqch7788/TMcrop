@@ -11,7 +11,7 @@ import { MapPin, Tag, ArrowRight, ArrowLeft, Image as ImageIcon } from 'lucide-r
 
 export interface LabelResumeEntry {
   id: number;
-  operationType: 'move_in' | 'move_out' | 'mark';
+  operationType: 'move_in' | 'move_out' | 'mark' | 'void';
   fromAreaName?: string;
   toAreaName?: string;
   areaName?: string;
@@ -21,6 +21,10 @@ export interface LabelResumeEntry {
   operatorName?: string;
   // 2026-06-22: 现场拍照存证
   imageBase64?: string | null;
+  // 2026-07-01: 数量追踪 + 原因/备注
+  quantityChange?: number | null;
+  quantityAfter?: number | null;
+  reason?: string | null;
 }
 
 export interface LabelResumeTimelineProps {
@@ -37,6 +41,7 @@ const OPERATION_CONFIG: Record<string, { label: string; icon: React.ReactNode; b
   move_in:   { label: '移入', icon: <ArrowRight className="w-3 h-3" />, bgClass: 'bg-emerald-100', textClass: 'text-emerald-700' },
   move_out:  { label: '移出', icon: <ArrowLeft className="w-3 h-3" />,  bgClass: 'bg-orange-100',  textClass: 'text-orange-700' },
   mark:      { label: '标记', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-purple-100',  textClass: 'text-purple-700' },
+  void:      { label: '作废', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-red-100',     textClass: 'text-red-700' },
 };
 
 // ========== 组件 ==========
@@ -191,6 +196,25 @@ function ResumeCard({
         <MapPin className="w-3 h-3 inline mr-1 text-gray-400" />
         {areaLabel}
       </p>
+
+      {/* 2026-07-01: 数量变化 + 剩余 + 原因/备注 */}
+      {(entry.quantityChange != null || entry.quantityAfter != null || entry.reason) && (
+        <div className="mt-1.5 space-y-0.5">
+          {entry.quantityChange != null && (
+            <p className="text-xs text-gray-600">
+              数量变化：<span className={entry.quantityChange > 0 ? 'text-emerald-600 font-medium' : 'text-orange-600 font-medium'}>
+                {entry.quantityChange > 0 ? '+' : ''}{entry.quantityChange}
+              </span>
+              {entry.quantityAfter != null && (
+                <span className="text-gray-400"> → 剩余 {entry.quantityAfter}</span>
+              )}
+            </p>
+          )}
+          {entry.reason && (
+            <p className="text-xs text-gray-500">备注：{entry.reason}</p>
+          )}
+        </div>
+      )}
 
       {/* 日期 + 操作员 */}
       <p className="text-xs text-gray-400 mt-1">

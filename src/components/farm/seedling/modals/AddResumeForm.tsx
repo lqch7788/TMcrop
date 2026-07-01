@@ -83,7 +83,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
 
       if (addOpType === 'mark') {
         // 打标记（专用接口）
-        const res: any = await enhancedApiClient.post('/plant-labels/marks/assign', {
+        const res: any = await enhancedApiClient.post('/plant-labels/assign', {
           mark_id: addMarkId,
           label_ids: [labelId],
         });
