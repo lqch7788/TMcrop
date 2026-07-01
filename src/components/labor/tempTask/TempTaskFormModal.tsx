@@ -44,7 +44,7 @@ interface TempTaskFormModalProps {
   onClose: () => void;
   onSubmitDraft: () => void;
   onSubmit: () => void;
-  onChange: <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => void;
+  onChange: (key: string, value: any) => void;
   generateNewTaskCode: () => void;
   /** 派发模式：manual=手动选择，ai_assisted=待智能推荐 */
   dispatchMode?: 'manual' | 'ai_assisted';
@@ -359,7 +359,7 @@ export function TempTaskFormModal({
                       greenhouse: formData.workLocation,
                       description: formData.description,
                       estimatedHours: formData.estimatedHours,
-                    }}
+                    } as any}
                     recommendations={recommendations}
                     onWorkerSelect={handleAIWorkerSelect}
                     onManualSelect={() => handleDispatchModeChange('manual')}

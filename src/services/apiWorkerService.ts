@@ -23,7 +23,7 @@ const FALLBACK_WORKERS: Worker[] = [
   { id: 'S006', workerId: 'S006', name: '黄蓉', gender: '女', phone: '13800001006', position: '管理员', department: '生产部', status: 'active' },
   { id: 'S007', workerId: 'S007', name: '陈家洛', gender: '男', phone: '13800001007', position: '农艺师', department: '生产部', status: 'active' },
   { id: 'S008', workerId: 'S008', name: '任盈盈', gender: '女', phone: '13800001008', position: '技术员', department: '生产部', status: 'active' },
-];
+] as any;
 
 /**
  * 获取所有员工列表（带缓存）
