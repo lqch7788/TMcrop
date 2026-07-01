@@ -42,7 +42,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, taskReco
           {/* 详情内容 */}
           <div className="overflow-y-auto max-h-[90vh] p-6">
             <TaskDetail
-              task={task}
+              task={task as any}
               taskRecords={taskRecords}
               onClose={onClose}
             />

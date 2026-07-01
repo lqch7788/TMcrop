@@ -43,7 +43,7 @@ export function TaskDetailModal({ task, onClose, onConfirmComplete }: TaskDetail
       <div className="col-span-2">
         <Label className="text-xs text-gray-500 uppercase tracking-wide">任务标题</Label>
         <div className="flex items-center gap-2 mt-1">
-          <TaskModeBadge mode={task.mode} />
+          <TaskModeBadge mode={task.mode as any} />
           <p className="text-sm font-medium text-gray-900">{task.title}</p>
         </div>
       </div>
