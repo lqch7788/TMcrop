@@ -7,10 +7,13 @@
  * 移除：过程记录 / 阶段推进 / 正常结束 / 异常结束 / 回流记录 / 外购提示
  */
 
+import React, { useState, useEffect } from 'react';
 import { ArrowLeftRight, Download, Edit2, Plus, Printer, Tag, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import {SeedSource, SourceType} from '../../../../types/crop';
+import type { CropVariety } from '@/types/cropVariety';
+import * as cropVarietyService from '@/services/cropVarietyService';
 import {
   UNIT_MAP,
   STOCK_STATUS_MAP,
@@ -117,23 +120,86 @@ export function SeedSourceTable({
   canExport = true,
   canPrint = true,
 }: SeedSourceTableProps) {
-  // 根据记录存储的字段构建品种完整路径（不依赖品种缓存，避免缓存冲突）
-  const getVarietyPath = (record: SeedSource): string => {
-    const parts: string[] = [];
-    if (record.cropCategory) parts.push(record.cropCategory);
-    if (record.typeName) parts.push(record.typeName);
-    if (record.varietyName) parts.push(record.varietyName);
-    if (record.cropVariety && record.cropVariety !== record.varietyName) parts.push(record.cropVariety);
-    return parts.join(' > ');
+  // 2026-07-01: 品种库缓存 — 从作物品种库实时查询完整四段路径（对标种植管理）
+  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+
+  useEffect(() => {
+    const loadVarieties = async () => {
+      const varieties = await cropVarietyService.getAllVarieties();
+      const cache = new Map<string, CropVariety>();
+      varieties.forEach((v: CropVariety) => {
+        // 按 subVariety1Name 缓存（最细分）
+        const key1 = v.subVariety1Name || '';
+        if (key1 && !cache.has(key1)) cache.set(key1, v);
+        // 按 varietyName 缓存
+        const key2 = v.varietyName || '';
+        if (key2 && !cache.has(key2)) cache.set(key2, v);
+        // 按 cropCode 缓存（最精确）
+        const key3 = v.cropCode || '';
+        if (key3 && !cache.has(key3)) cache.set(key3, v);
+      });
+      setVarietyCache(cache);
+    };
+    loadVarieties();
+  }, []);
+
+  // 从品种库查找完整品种信息（对标种植管理 PlantingTable.getVarietyByAny）
+  const getVarietyByAny = (record: SeedSource): CropVariety | null => {
+    // 优先 cropCode 查找
+    if (record.cropCode) {
+      const v = varietyCache.get(record.cropCode);
+      if (v) return v;
+    }
+    // cropName 模糊匹配
+    if (record.cropName) {
+      for (const [key, variety] of varietyCache.entries()) {
+        const fullName = variety.subVariety1Name || variety.varietyName || '';
+        if (fullName.includes(record.cropName) || record.cropName.includes(fullName)) {
+          return variety;
+        }
+      }
+    }
+    // cropVariety 模糊匹配
+    if (record.cropVariety) {
+      for (const [key, variety] of varietyCache.entries()) {
+        const fullName = variety.subVariety1Name || variety.varietyName || '';
+        if (fullName.includes(record.cropVariety) || record.cropVariety.includes(fullName)) {
+          return variety;
+        }
+      }
+    }
+    return null;
   };
 
-  // 获取标准作物编码（直接使用记录存储的 cropCode）
+  // 品种完整路径：从品种库查四段路径（类别 > 类型 > 品种 > 子品种）
+  const getVarietyPath = (record: SeedSource): string => {
+    const variety = getVarietyByAny(record);
+    if (!variety) {
+      // 兜底：用 record 自身字段拼接
+      const parts: string[] = [];
+      if (record.cropCategory) parts.push(record.cropCategory);
+      if (record.cropName) parts.push(record.cropName);
+      if (record.cropVariety && record.cropVariety !== record.cropName) parts.push(record.cropVariety);
+      return parts.length > 0 ? parts.join(' > ') : '-';
+    }
+    const parts: string[] = [];
+    if (variety.categoryName) parts.push(variety.categoryName);
+    if (variety.typeName) parts.push(variety.typeName);
+    if (variety.varietyName) parts.push(variety.varietyName);
+    if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
+    return parts.join(' > ') || '-';
+  };
+
+  // 获取标准作物编码（从品种库获取 cropCode）
   const getStandardCropCode = (record: SeedSource): string => {
-    return record.cropCode || '';
+    const variety = getVarietyByAny(record);
+    return variety?.cropCode || record.cropCode || '';
   };
 
   // 获取作物品种名称（最细分：子品种 > 品种 > 作物名）
   const getCropVarietyName = (record: SeedSource): string => {
+    const variety = getVarietyByAny(record);
+    if (variety) return variety.subVariety1Name || variety.varietyName || record.cropName || '';
     return record.cropVariety || record.cropName || '';
   };
 

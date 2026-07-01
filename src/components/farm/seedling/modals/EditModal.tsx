@@ -50,6 +50,7 @@ export function EditModal({
     cropName: record.cropName,
     cropVariety: record.cropVariety,
     seedlingType: record.seedlingType,
+    unit: record.unit || '株',  // 2026-07-01: 单位
     siteId: record.siteId,
     siteName: record.siteName,
     startDate: record.startDate,
@@ -187,6 +188,7 @@ export function EditModal({
         cropName: formData.cropName,
         cropVariety: formData.cropVariety,
         cropCode: formData.selectedCropCode,
+        unit: formData.unit || '株',  // 2026-07-01: 单位
         seedlingType: formData.seedlingType,
         siteId: formData.siteId,
         siteName,
@@ -385,6 +387,28 @@ export function EditModal({
               {seedlingTypes.map(t => (
                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 2026-07-01: 单位选择器 */}
+        <div>
+          <Label className="text-gray-900">单位</Label>
+          <Select
+            value={formData.unit}
+            onValueChange={(val) => setFormData({ ...formData, unit: val })}
+          >
+            <SelectTrigger className={deepInputClass}>
+              <SelectValue placeholder="选择单位" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="株">株</SelectItem>
+              <SelectItem value="粒">粒</SelectItem>
+              <SelectItem value="颗">颗</SelectItem>
+              <SelectItem value="盆">盆</SelectItem>
+              <SelectItem value="棵">棵</SelectItem>
+              <SelectItem value="个">个</SelectItem>
+              <SelectItem value="kg">kg</SelectItem>
             </SelectContent>
           </Select>
         </div>

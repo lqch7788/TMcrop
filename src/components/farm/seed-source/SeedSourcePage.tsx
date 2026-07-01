@@ -827,6 +827,7 @@ export default function SeedSourcePage() {
           onClose={() => setLabelManageModal({ open: false, record: null })}
           seedSourceId={labelManageModal.record.id}
           seedSourceCode={labelManageModal.record.seedCode}
+          unit={labelManageModal.record.unit || '粒'}
         />
       )}
 

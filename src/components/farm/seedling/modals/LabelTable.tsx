@@ -23,6 +23,8 @@ interface LabelTableProps {
   onToggleSelect?: (id: number) => void;
   onToggleSelectAll?: () => void;
   onClearSelection?: () => void;
+  /** 标签单位（默认"株"，种源可能为"粒/颗/kg"等） */
+  unit?: string;
 }
 
 export function LabelTable({
@@ -39,6 +41,7 @@ export function LabelTable({
   onToggleSelect,
   onToggleSelectAll,
   onClearSelection,
+  unit = '株',
 }: LabelTableProps) {
   return (
     <div className="flex flex-col h-full">
@@ -127,7 +130,7 @@ export function LabelTable({
                   <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInAreaName || '-'}</TableCell>
                   <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInDate || '-'}</TableCell>
                   <TableCell className="px-3 py-2">
-                    <LabelBadge status={label.status} quantity={label.quantity} />
+                    <LabelBadge status={label.status} quantity={label.quantity} unit={unit} />
                   </TableCell>
                 </TableRow>
               ))}

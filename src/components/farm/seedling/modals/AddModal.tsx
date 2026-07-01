@@ -99,6 +99,7 @@ export function AddModal({
     cropVariety: '',
     seedlingType: '',
     seedlingTypeOther: '',
+    unit: '株',  // 2026-07-01: 单位（株/粒/颗/盆等）
     siteId: '',
     siteName: '',
     seedlingCode: '',
@@ -456,6 +457,7 @@ export function AddModal({
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
       cropCode: formData.selectedCropCode,
+      unit: formData.unit || '株',  // 2026-07-01: 单位
       seedlingType: finalSeedlingType,
       siteId: formData.siteId,
       siteName,
@@ -529,12 +531,13 @@ export function AddModal({
 
     // 创建草稿任务（供任务中心分派执行人）
     if (addedSeedlingId) {
+      const unitLabel = formData.unit || '株';
       const workContent = `作物品种：${formData.cropVariety || formData.cropName}
 育苗方式：${formData.seedlingType}
-初始数量：${formData.initialCount}株
+初始数量：${formData.initialCount}${unitLabel}
 目标成活率：${formData.targetSurvivalRate}%
-目标成活数量：${targetSurvivalCount}株
-${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式：母株${formData.motherPlantCount}株 × ${formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple}倍` : ''}`;
+目标成活数量：${targetSurvivalCount}${unitLabel}
+${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式：母株${formData.motherPlantCount}${unitLabel} × ${formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple}倍` : ''}`;
 
       tasksHook.createTask({
         title: `【育苗】${formData.cropName}-${formData.seedlingCode}`,
@@ -1367,6 +1370,30 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 />
               </div>
             )}
+
+            {/* 2026-07-01: 单位选择器 — 用户确认育苗产出单位 */}
+            <div>
+              <Label className="text-gray-900">
+                单位 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.unit}
+                onValueChange={(val) => setFormData({ ...formData, unit: val })}
+              >
+                <SelectTrigger className={deepInputClass}>
+                  <SelectValue placeholder="选择单位" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="株">株</SelectItem>
+                  <SelectItem value="粒">粒</SelectItem>
+                  <SelectItem value="颗">颗</SelectItem>
+                  <SelectItem value="盆">盆</SelectItem>
+                  <SelectItem value="棵">棵</SelectItem>
+                  <SelectItem value="个">个</SelectItem>
+                  <SelectItem value="kg">kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* 计划类型 */}
             <div>

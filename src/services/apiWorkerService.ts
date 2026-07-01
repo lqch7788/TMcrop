@@ -12,18 +12,18 @@ let cachedWorkers: Worker[] = [];
 let cacheTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 缓存5分钟
 
-// MOCK数据作为API失败时的降级方案
-const FALLBACK_WORKERS: Worker[] = [
-  { id: 'U001', workerId: 'U001', name: '陆启闯', gender: '男', phone: '13811112222', position: '管理员', department: '管理部', status: 'active' },
-  { id: 'S001', workerId: 'S001', name: '郭靖', gender: '男', phone: '13800001001', position: '农艺师', department: '生产部', status: 'active' },
-  { id: 'S002', workerId: 'S002', name: '杨过', gender: '男', phone: '13800001002', position: '技术员', department: '生产部', status: 'active' },
-  { id: 'S003', workerId: 'S003', name: '张无忌', gender: '男', phone: '13800001003', position: '管理员', department: '生产部', status: 'active' },
-  { id: 'S004', workerId: 'S004', name: '令狐冲', gender: '男', phone: '13800001004', position: '农艺师', department: '生产部', status: 'active' },
-  { id: 'S005', workerId: 'S005', name: '段誉', gender: '男', phone: '13800001005', position: '技术员', department: '生产部', status: 'active' },
-  { id: 'S006', workerId: 'S006', name: '黄蓉', gender: '女', phone: '13800001006', position: '管理员', department: '生产部', status: 'active' },
-  { id: 'S007', workerId: 'S007', name: '陈家洛', gender: '男', phone: '13800001007', position: '农艺师', department: '生产部', status: 'active' },
-  { id: 'S008', workerId: 'S008', name: '任盈盈', gender: '女', phone: '13800001008', position: '技术员', department: '生产部', status: 'active' },
-] as any;
+// MOCK数据作为API失败时的降级方案（仅包含核心字段，完整 Worker 类型字段数远多于 mock）
+const FALLBACK_WORKERS: Partial<Worker>[] = [
+  { id: 'U001', workerId: 'U001', name: '陆启闯', gender: '男', phone: '13811112222', position: '管理员', department: '管理部', status: '在职' },
+  { id: 'S001', workerId: 'S001', name: '郭靖', gender: '男', phone: '13800001001', position: '农艺师', department: '生产部', status: '在职' },
+  { id: 'S002', workerId: 'S002', name: '杨过', gender: '男', phone: '13800001002', position: '技术员', department: '生产部', status: '在职' },
+  { id: 'S003', workerId: 'S003', name: '张无忌', gender: '男', phone: '13800001003', position: '管理员', department: '生产部', status: '在职' },
+  { id: 'S004', workerId: 'S004', name: '令狐冲', gender: '男', phone: '13800001004', position: '农艺师', department: '生产部', status: '在职' },
+  { id: 'S005', workerId: 'S005', name: '段誉', gender: '男', phone: '13800001005', position: '技术员', department: '生产部', status: '在职' },
+  { id: 'S006', workerId: 'S006', name: '黄蓉', gender: '女', phone: '13800001006', position: '管理员', department: '生产部', status: '在职' },
+  { id: 'S007', workerId: 'S007', name: '陈家洛', gender: '男', phone: '13800001007', position: '农艺师', department: '生产部', status: '在职' },
+  { id: 'S008', workerId: 'S008', name: '任盈盈', gender: '女', phone: '13800001008', position: '技术员', department: '生产部', status: '在职' },
+] as Partial<Worker>[];
 
 /**
  * 获取所有员工列表（带缓存）
@@ -43,9 +43,9 @@ export async function getWorkers(forceRefresh: boolean = false): Promise<Worker[
     // API 成功但返回空数据时，使用降级数据
     if (!workers || workers.length === 0) {
       console.warn('员工API返回空数据，使用降级员工列表');
-      cachedWorkers = FALLBACK_WORKERS;
+      cachedWorkers = FALLBACK_WORKERS as unknown as Worker[];
       cacheTime = now;
-      return FALLBACK_WORKERS;
+      return FALLBACK_WORKERS as unknown as Worker[];
     }
     cachedWorkers = workers;
     cacheTime = now;
@@ -53,7 +53,7 @@ export async function getWorkers(forceRefresh: boolean = false): Promise<Worker[
   } catch (error) {
     logger.error('获取员工列表失败，使用降级方案', error);
     // API失败时返回降级数据
-    return FALLBACK_WORKERS;
+    return FALLBACK_WORKERS as unknown as Worker[];
   }
 }
 
@@ -67,7 +67,7 @@ export async function getWorkerList(forceRefresh: boolean = false): Promise<Work
 
   // 如果缓存有效且不强制刷新，直接返回缓存
   if (!forceRefresh && cachedWorkers.length > 0 && (now - cacheTime) < CACHE_DURATION) {
-    return cachedWorkers.filter(w => w.status === 'active');
+    return cachedWorkers.filter(w => w.status === '在职');
   }
 
   try {
@@ -75,9 +75,9 @@ export async function getWorkerList(forceRefresh: boolean = false): Promise<Work
     // API 成功但返回空数据时（数据库无员工记录），使用降级数据
     if (!workers || workers.length === 0) {
       console.warn('员工API返回空数据，使用降级员工列表');
-      cachedWorkers = FALLBACK_WORKERS;
+      cachedWorkers = FALLBACK_WORKERS as unknown as Worker[];
       cacheTime = now;
-      return FALLBACK_WORKERS;
+      return FALLBACK_WORKERS as unknown as Worker[];
     }
     cachedWorkers = workers;
     cacheTime = now;
@@ -85,7 +85,7 @@ export async function getWorkerList(forceRefresh: boolean = false): Promise<Work
   } catch (error) {
     logger.error('获取在职员工列表失败，使用降级方案', error);
     // API失败时返回降级数据
-    return FALLBACK_WORKERS;
+    return FALLBACK_WORKERS as unknown as Worker[];
   }
 }
 

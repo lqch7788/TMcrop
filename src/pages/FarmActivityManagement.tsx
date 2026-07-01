@@ -10,10 +10,26 @@ import {
   Calendar, User, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, AlertTriangle
 } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useFarmActivityStore, useZoneStore, useWorkerStore } from '../stores';
-import type { FarmActivity } from '../services/apiBasicDataService';
+import { useFarmActivityStore } from '../stores/useFarmActivityStore';
+import { useZoneStore, useWorkerStore } from '../stores';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
+
+/** 农事活动数据类型（useFarmActivityStore 内部使用，页面重定义以解耦导入） */
+interface FarmActivity {
+  id: number;
+  activityCode?: string;
+  activityName?: string;
+  activityType?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  priority?: string;
+  branchOid?: string;
+  blockOid?: string;
+  assigneeIds?: string[];
+  description?: string;
+}
 
 const ACTIVITY_TYPES: Record<string, { label: string; color: string }> = {
   WATERING: { label: '灌溉', color: 'bg-blue-100 text-blue-700' },
@@ -65,7 +81,7 @@ export default function FarmActivityManagement() {
   const zoneOptions = useMemo(() => zones.map(z => ({ value: z.oid, label: z.zoneName })), [zones]);
   const workerOptions = useMemo(() => workers.map(w => ({ value: w.oid || w.id, label: w.name || w.realName })), [workers]);
 
-  const filteredActivities = activities.filter(a => {
+  const filteredActivities = activities.filter((a: FarmActivity) => {
     const matchSearch = !searchText ||
       (a.activityName || '').toLowerCase().includes(searchText.toLowerCase()) ||
       (a.activityCode || '').toLowerCase().includes(searchText.toLowerCase());
@@ -166,10 +182,10 @@ export default function FarmActivityManagement() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: '总数', value: activities.length, color: 'bg-green-500' },
-          { label: '待执行', value: activities.filter(a => a.status === 'active').length, color: 'bg-gray-500' },
-          { label: '进行中', value: activities.filter(a => a.status === 'in_progress').length, color: 'bg-blue-500' },
-          { label: '已完成', value: activities.filter(a => a.status === 'completed').length, color: 'bg-emerald-500' },
-          { label: '已取消', value: activities.filter(a => a.status === 'cancelled').length, color: 'bg-red-500' },
+          { label: '待执行', value: activities.filter((a: FarmActivity) => a.status === 'active').length, color: 'bg-gray-500' },
+          { label: '进行中', value: activities.filter((a: FarmActivity) => a.status === 'in_progress').length, color: 'bg-blue-500' },
+          { label: '已完成', value: activities.filter((a: FarmActivity) => a.status === 'completed').length, color: 'bg-emerald-500' },
+          { label: '已取消', value: activities.filter((a: FarmActivity) => a.status === 'cancelled').length, color: 'bg-red-500' },
         ].map((stat, index) => (
           <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
@@ -232,7 +248,7 @@ export default function FarmActivityManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginated.map((activity) => {
+              {paginated.map((activity: FarmActivity) => {
                 const typeInfo = ACTIVITY_TYPES[activity.activityType || ''] || { label: activity.activityType || '-', color: 'bg-gray-100 text-gray-600' };
                 const statusInfo = STATUS_CONFIG[activity.status || ''] || { label: activity.status || '-', color: 'bg-gray-100 text-gray-600', icon: Clock };
                 const priorityInfo = PRIORITY_CONFIG[activity.priority || ''] || { label: activity.priority || '-', color: 'text-gray-600 bg-gray-50' };
@@ -286,7 +302,7 @@ export default function FarmActivityManagement() {
       </div>
 
       {showModal && (
-        <Modal isOpen={showModal} onClose={handleCloseModal} title={editingActivity ? '编辑农事活动' : '新增农事活动'} onConfirm={handleSubmit}>
+        <Modal isOpen={showModal} onClose={handleCloseModal} title={editingActivity ? '编辑农事活动' : '新增农事活动'} onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="活动编码" required error={errors.activityCode}>

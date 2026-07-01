@@ -66,7 +66,7 @@ export interface CropBatch {
   // 统一使用 batchStatus，删除原有的 status 字段（2026-06-05）
   batchStatus: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected' | 'published';
   // 兼容字段（farmData.ts mock 数据使用 — 2026-06-30 tsc 兼容）
-  status?: any;
+  status?: string;
   plantingMode: string;
   responsiblePerson: string;
   // 新增字段
@@ -149,7 +149,7 @@ export interface TempTask {
   taskCode: string;
   title: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'cancelled' | 'rejected' | 'pending_reassign';
+  status: 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'cancelled' | 'accepted' | 'failed' | 'abandoned' | 'rejected' | 'pending_reassign';
   assigneeId: string;
   assigneeName: string;
   assignerId: string;
@@ -329,10 +329,9 @@ export interface InspectionRecord {
   createBy?: string;
   updateTime?: string;
   updateBy?: string;
-  inspectionType?: string;
+  // 巡查类型（扩展字段，合并原 string 声明，避免重复属性）
+  inspectionType?: string | 'farm' | 'equipment' | 'infrastructure' | 'other';
   [key: string]: any;
-  // 巡查类型（扩展字段）
-  inspectionType?: 'farm' | 'equipment' | 'infrastructure' | 'other';
   // 位置信息（二维码扫描）
   locationCode?: string;
   locationName?: string;
@@ -575,8 +574,7 @@ export interface Worker {
   annualAssessments: AssessmentRecord[];  // 年度考核记录
 
   // 状态
-  status: '在职' | '离职' | '退休' | 'active';
-  statusClass?: string;         // 测试文件使用 — 2026-06-30 tsc 兼容
+  status: '在职' | '离职' | '退休';
   leaveDate?: string;        // 离职日期（离职时填写）
   leaveReason?: string;      // 离职原因
 

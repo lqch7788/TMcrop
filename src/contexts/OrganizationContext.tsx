@@ -19,39 +19,39 @@ import {
 } from '../types/authority';
 
 interface OrganizationContextValue {
-  organizations: ReturnType<typeof useOrganizationStore>['organizations'];
+  organizations: Organization[];
   loadOrganizations: () => Promise<void>;
   saveOrganization: (org: Partial<Organization>) => Promise<void>;
   deleteOrganization: (oid: string) => Promise<void>;
 
-  roles: ReturnType<typeof useOrganizationStore>['roles'];
+  roles: Role[];
   loadRoles: (orgOid?: string) => Promise<void>;
   saveRole: (role: Partial<Role>) => Promise<void>;
   deleteRole: (oid: string) => Promise<void>;
 
-  users: ReturnType<typeof useOrganizationStore>['users'];
+  users: User[];
   loadUsers: (params?: { orgOid?: string; status?: string }) => Promise<void>;
   saveUser: (user: Partial<User>) => Promise<void>;
   deleteUser: (oid: string) => Promise<void>;
   getUserRoles: (userOid: string) => Promise<string[]>;
   assignUserRoles: (userOid: string, roleOids: string[]) => Promise<void>;
 
-  processes: ReturnType<typeof useOrganizationStore>['processes'];
+  processes: Process[];
   loadProcesses: (params?: { appType?: AppType; id?: string }) => Promise<void>;
   saveProcess: (process: Partial<Process>) => Promise<void>;
   deleteProcess: (oid: string) => Promise<void>;
 
-  actions: ReturnType<typeof useOrganizationStore>['actions'];
+  actions: Action[];
   loadActions: (params?: { appType?: AppType; category?: string }) => Promise<void>;
 
-  roleAuthorities: ReturnType<typeof useOrganizationStore>['roleAuthorities'];
+  roleAuthorities: RoleAuthorityItem[];
   loadRoleAuthority: (roleOid: string, appType?: AppType) => Promise<void>;
   saveRoleAuthority: (
     roleOid: string,
     authorities: { processOid: string; actionOid: string; value: AuthValue }[]
   ) => Promise<void>;
 
-  roleDataAuthorities: ReturnType<typeof useOrganizationStore>['roleDataAuthorities'];
+  roleDataAuthorities: RoleDataAuthorityItem[];
   loadRoleDataAuthority: (roleOid: string) => Promise<void>;
   saveRoleDataAuthority: (roleOid: string, orgOids: string[], isAuthorize: boolean) => Promise<void>;
 

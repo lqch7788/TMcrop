@@ -53,6 +53,8 @@ interface SeedSourceLabelManageModalProps {
   onClose: () => void;
   seedSourceId: string;
   seedSourceCode: string;
+  /** 标签单位（默认"株"，种源可能为"粒/颗/kg"等） */
+  unit?: string;
   /** 扫码跳转时自动选中指定编号的标签 */
   autoSelectLabelNumber?: string;
 }
@@ -62,6 +64,7 @@ export default function SeedSourceLabelManageModal({
   onClose,
   seedSourceId,
   seedSourceCode,
+  unit = '粒',
   autoSelectLabelNumber,
 }: SeedSourceLabelManageModalProps) {
   const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } =
@@ -395,6 +398,7 @@ export default function SeedSourceLabelManageModal({
             onToggleSelect={toggleSelectLabel}
             onToggleSelectAll={toggleSelectAll}
             onClearSelection={clearSelection}
+            unit={unit}
           />
         </div>
 

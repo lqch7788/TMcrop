@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as apiLaborService from '../services/apiLaborService';
-import type { Worker } from '../types';
+import type { Worker, TrainingRecord } from '../types';
 import { CreateEmployeeParams, UpdateEmployeeParams } from '../types/labor/employee';
 
 // Mock enhancedApiClient
@@ -35,7 +35,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getAllWorkers - 获取所有员工/工人列表', () => {
     it('应该能够获取所有员工列表', async () => {
-      const mockWorkers: any[] = [
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
         {
           id: 'W001',
           name: '张三',
@@ -76,7 +77,7 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkerById - 根据ID获取员工/工人', () => {
     it('应该能够根据ID获取员工详情', async () => {
-      const mockWorker: any = {
+      const mockWorker: Partial<Worker> & { statusClass?: string } = {
         id: 'W001',
         name: '张三',
         position: '操作工',
@@ -107,7 +108,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkers - 获取员工列表（支持筛选）', () => {
     it('应该能够按部门筛选员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
@@ -122,7 +124,8 @@ describe('人工管理 API 服务', () => {
     });
 
     it('应该能够按岗位筛选员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
@@ -137,37 +140,40 @@ describe('人工管理 API 服务', () => {
     });
 
     it('应该能够按员工类型筛选员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
-        employeeType: '正式工',
-      } as any);
+        employeeType: 'FULL_TIME',
+      } as unknown as Partial<CreateEmployeeParams>);
 
       expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { employeeType: '正式工' },
+        params: { employeeType: 'FULL_TIME' },
         useCache: true,
         cacheStrategy: 'network-first',
       });
     });
 
     it('应该能够按状态筛选员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
-        status: 'active',
-      } as any);
+        status: 'ON_BOARD',
+      } as unknown as Partial<CreateEmployeeParams>);
 
       expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { status: 'active' },
+        params: { status: 'ON_BOARD' },
         useCache: true,
         cacheStrategy: 'network-first',
       });
     });
 
     it('应该能够按姓名搜索员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
@@ -182,23 +188,24 @@ describe('人工管理 API 服务', () => {
     });
 
     it('应该能够组合多个筛选条件', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkers({
         deptId: 'DEPT001',
         positionId: 'POS001',
-        employeeType: '正式工',
-        status: 'active',
+        employeeType: 'FULL_TIME',
+        status: 'ON_BOARD',
         name: '张三',
-      } as any);
+      } as unknown as Partial<CreateEmployeeParams>);
 
       expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
         params: {
           deptId: 'DEPT001',
           positionId: 'POS001',
-          employeeType: '正式工',
-          status: 'active',
+          employeeType: 'FULL_TIME',
+          status: 'ON_BOARD',
           name: '张三',
         },
         useCache: true,
@@ -209,7 +216,7 @@ describe('人工管理 API 服务', () => {
 
   describe('createWorker - 创建员工', () => {
     it('应该能够创建新员工', async () => {
-      const newWorkerData: any = {
+      const newWorkerData = {
         name: '王五',
         idCard: '110101199001011234',
         phone: '13800138000',
@@ -217,14 +224,14 @@ describe('人工管理 API 服务', () => {
         department: '生产部',
         deptId: 'DEPT001',
         positionId: 'POS001',
-        employeeType: '正式工',
+        employeeType: 'FULL_TIME',
         joinDate: '2026-01-01',
-      };
+      } as unknown as CreateEmployeeParams;
 
       const createdWorker = {
         id: 'W003',
         ...newWorkerData,
-        status: 'active',
+        status: 'ON_BOARD',
       };
 
       (enhancedApiClient.post as any).mockResolvedValue(createdWorker);
@@ -242,7 +249,7 @@ describe('人工管理 API 服务', () => {
   describe('updateWorker - 更新员工信息', () => {
     it('应该能够更新员工信息', async () => {
       const workerId = 'W001';
-      const updates: any = {
+      const updates: Partial<UpdateEmployeeParams> = {
         phone: '13900139000',
         positionId: '高级操作工',
       };
@@ -253,7 +260,7 @@ describe('人工管理 API 服务', () => {
         phone: '13900139000',
         position: '高级操作工',
         department: '生产部',
-        status: 'active',
+        status: 'ON_BOARD',
       };
 
       (enhancedApiClient.put as any).mockResolvedValue(updatedWorker);
@@ -305,7 +312,8 @@ describe('人工管理 API 服务', () => {
 
   describe('searchWorkers - 根据姓名搜索员工', () => {
     it('应该能够根据姓名搜索员工', async () => {
-      const mockWorkers: any[] = [
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
         {
           id: 'W001',
           name: '张三',
@@ -330,7 +338,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkersByDepartment - 根据部门获取员工', () => {
     it('应该能够获取指定部门的员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkersByDepartment('DEPT001');
@@ -344,7 +353,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkersByPosition - 根据岗位获取员工', () => {
     it('应该能够获取指定岗位的员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkersByPosition('POS001');
@@ -358,10 +368,11 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkersByType - 根据员工类型获取员工', () => {
     it('应该能够获取指定类型的员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
-      await apiLaborService.getWorkersByType('正式工');
+      await apiLaborService.getWorkersByType('FULL_TIME');
 
       // URL 编码取决于运行时实现，验证调用模式即可
       const calls = (enhancedApiClient.get as any).mock.calls;
@@ -376,10 +387,11 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkersByStatus - 根据状态获取员工', () => {
     it('应该能够获取指定状态的员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
-      await apiLaborService.getWorkersByStatus('active');
+      await apiLaborService.getWorkersByStatus('ON_BOARD');
 
       expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/status/active', {
         useCache: true,
@@ -390,7 +402,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getActiveWorkers - 获取在职员工列表', () => {
     it('应该能够获取所有在职员工', async () => {
-      const mockWorkers: any[] = [
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
         {
           id: 'W001',
           name: '张三',
@@ -415,7 +428,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getLeftWorkers - 获取离职员工列表', () => {
     it('应该能够获取所有离职员工', async () => {
-      const mockWorkers: any[] = [
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
         {
           id: 'W099',
           name: '赵六',
@@ -474,7 +488,7 @@ describe('人工管理 API 服务', () => {
         total: 100,
         active: 80,
         left: 20,
-        byType: { '正式工': 60, '临时工': 40 },
+        byType: { 'FULL_TIME': 60, 'TEMPORARY': 40 },
         byDepartment: { '生产部': 50, '技术部': 30, '行政部': 20 },
       };
 
@@ -508,7 +522,8 @@ describe('人工管理 API 服务', () => {
 
   describe('getWorkersBySkillTag - 根据技能标签获取员工', () => {
     it('应该能够获取具有特定技能标签的员工', async () => {
-      const mockWorkers: any[] = [];
+      // 测试 mock 数据，Worker 接口精简版（仅包含测试需要的字段）
+const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       (enhancedApiClient.get as any).mockResolvedValue(mockWorkers);
 
       await apiLaborService.getWorkersBySkillTag('采收');
@@ -548,7 +563,7 @@ describe('人工管理 API 服务', () => {
       (enhancedApiClient.post as any).mockResolvedValue(undefined);
 
       const record = { title: '新员工培训', date: '2026-05-01', result: '通过' };
-      const result = await apiLaborService.addTrainingRecord('W001', record as any);
+      const result = await apiLaborService.addTrainingRecord('W001', record as Partial<TrainingRecord>);
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/training-records',
@@ -645,10 +660,10 @@ describe('人工管理 API 服务', () => {
       const mockResult = { success: 95, failed: 5 };
       (enhancedApiClient.post as any).mockResolvedValue(mockResult);
 
-      const workers: any[] = [
+      const workers = [
         { name: '员工1', phone: '13800000001' },
         { name: '员工2', phone: '13800000002' },
-      ];
+      ] as CreateEmployeeParams[];
       const result = await apiLaborService.importWorkers(workers);
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(

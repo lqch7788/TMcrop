@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 import { exportOutboundCSV } from '@/services/inventoryTransactionService';
+import type { OutboundQuery as ServiceOutboundQuery, OutboundRow as ServiceOutboundRow, OutboundSummary as ServiceOutboundSummary } from '@/services/inventoryTransactionService';
 import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
 // 2026-06-04 紧急修复：跨页刷新订阅（任何写操作 → useInventoryStore.notifyChange()
 // → version 自增 → 此 useEffect 重跑 → 重新加载最新数据）
@@ -66,7 +67,7 @@ export default function OutboundRecordsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const toast = useToast();
+  const { toast } = useToast();
 
   // 数据加载：筛选条件变化即重查 + 跨页刷新订阅（出库/入库后自动重查）
   const inventoryVersion = useInventoryStore((s) => s.version);
@@ -148,7 +149,7 @@ export default function OutboundRecordsPage() {
       setSelectedRows([]);
       setDeleteMode(false);
     } else {
-      showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
+      showAlert(`删除失败：${result.error || '未知错误'}`);
     }
   };
 
@@ -171,7 +172,7 @@ export default function OutboundRecordsPage() {
       const selectedData = rows.filter(r => selectedRows.includes(r.id));
       if (format === 'csv') {
         // CSV 走后端（保持一致性）
-        const blob = await exportOutboundCSV(query);
+        const blob = await exportOutboundCSV(query as unknown as ServiceOutboundQuery);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -181,10 +182,10 @@ export default function OutboundRecordsPage() {
         toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'xlsx') {
         // XLSX 走前端（按选中的行生成）
-        exportOutboundXLSX(selectedData, summary);
+        exportOutboundXLSX(selectedData as unknown as ServiceOutboundRow[], summary as unknown as ServiceOutboundSummary);
         toast.success(`XLSX 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'pdf') {
-        await exportOutboundPDF(selectedData, summary);
+        await exportOutboundPDF(selectedData as unknown as ServiceOutboundRow[], summary as unknown as ServiceOutboundSummary);
         toast.success(`PDF 下载已开始（共 ${selectedData.length} 条）`);
       }
     } catch (e: any) {
@@ -213,7 +214,7 @@ export default function OutboundRecordsPage() {
       <OutboundRecordsStats summary={summary} loading={loading} />
 
       {/* 6 维筛选 */}
-      <OutboundRecordsFilter value={query} onChange={handleFilterChange} onReset={handleReset} />
+      <OutboundRecordsFilter value={query as unknown as ServiceOutboundQuery} onChange={handleFilterChange} onReset={handleReset} />
 
       {/* 工具栏：复用 ActionToolbar（对齐订单管理 OrderPage 模式：title + 导出/批量/删除等按钮） */}
       <ActionToolbar

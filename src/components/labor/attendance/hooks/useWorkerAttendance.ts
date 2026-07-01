@@ -41,7 +41,7 @@ export interface UseWorkerAttendanceReturn {
   filters: AttendanceFilters;
   pagination: { currentPage: number; pageSize: number };
   exportMode: boolean;
-  selectedRows: number[];
+  selectedRows: string[];
   exportFormat: ExportFormat;
   showExportModal: boolean;
 
@@ -55,13 +55,13 @@ export interface UseWorkerAttendanceReturn {
   setFilters: (filters: Partial<AttendanceFilters>) => void;
   setPagination: (pagination: Partial<{ currentPage: number; pageSize: number }>) => void;
   setExportMode: (mode: boolean) => void;
-  setSelectedRows: (rows: number[]) => void;
+  setSelectedRows: (rows: string[]) => void;
   setExportFormat: (format: ExportFormat) => void;
   setShowExportModal: (show: boolean) => void;
 
   // 选择操作
   handleSelectAll: () => void;
-  handleSelectRow: (id: number) => void;
+  handleSelectRow: (id: string) => void;
 
   // 导出操作
   handleExportClick: () => void;
@@ -87,7 +87,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
 
   // 导出模式状态
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
@@ -146,7 +146,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   }, [selectedRows.length, filteredData]);
 
   // 选择/取消单行
-  const handleSelectRow = useCallback((id: number) => {
+  const handleSelectRow = useCallback((id: string) => {
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
     );

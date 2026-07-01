@@ -312,7 +312,7 @@ export function TempTaskFormModal({
             />
           </FormField>
 
-          <FormField label="执行人" required error={errors.assigneeId as any}>
+          <FormField label="执行人" required error={errors.assigneeId}>
             {/* 派发模式切换 */}
             <div className="flex gap-4 mb-3">
               <Label className="flex items-center gap-2 cursor-pointer" onClick={() => handleDispatchModeChange('manual')}>
@@ -354,12 +354,14 @@ export function TempTaskFormModal({
                       title: formData.title,
                       type: formData.tempTaskType,
                       typeName: TEMP_TASK_TYPES.find(t => t.value === formData.tempTaskType)?.label || '临时任务',
-                      priority: formData.urgency === 'critical' ? 'urgent' : formData.urgency === 'urgent' ? 'high' : 'normal',
+                      priority: (formData.urgency === 'critical' ? 'urgent' : formData.urgency === 'urgent' ? 'high' : 'normal') as 'urgent' | 'high' | 'normal' | 'low',
                       workZone: formData.workLocation,
                       greenhouse: formData.workLocation,
-                      description: formData.description,
+                      cropName: '',
+                      requiredSkills: [],
                       estimatedHours: formData.estimatedHours,
-                    } as any}
+                      dueDate: formData.dueDate,
+                    }}
                     recommendations={recommendations}
                     onWorkerSelect={handleAIWorkerSelect}
                     onManualSelect={() => handleDispatchModeChange('manual')}
@@ -438,7 +440,7 @@ export function TempTaskFormModal({
             />
           </FormField>
 
-          <FormField label="人工数量" error={errors.workerCount as any}>
+          <FormField label="人工数量" error={errors.workerCount}>
             <NumberInput
               value={formData.workerCount}
               onChange={(value) => onChange('workerCount', parseInt(value) || 1)}
