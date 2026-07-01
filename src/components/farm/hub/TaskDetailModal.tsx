@@ -252,8 +252,8 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">优先级</Label>
-                  <p className={`font-semibold ${priorityMap[task.priority]?.color || 'text-gray-900'}`}>
-                    {priorityMap[task.priority]?.label || task.priority || '普通'}
+                  <p className={`font-semibold ${priorityMap[task.priority || 'normal']?.color || 'text-gray-900'}`}>
+                    {priorityMap[task.priority || 'normal']?.label || task.priority || '普通'}
                   </p>
                 </div>
               </div>
@@ -320,7 +320,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {task.materials.map((m, i) => (
+                      {task.materials.map((m: any, i: number) => (
                         <TableRow key={`mat-${m.name}-${i}`}>
                           <TableCell className="py-2 text-gray-900">{m.name}</TableCell>
                           <TableCell className="py-2 text-gray-900 text-right">{m.qty}</TableCell>
@@ -351,7 +351,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {task.tools.map((t, i) => (
+                        {task.tools.map((t: any, i: number) => (
                           <TableRow key={`tool-${t.name}-${i}`}>
                             <TableCell className="py-2 text-gray-900">{t.name}</TableCell>
                             <TableCell className="py-2 text-gray-900 text-right">{t.qty}</TableCell>
@@ -399,8 +399,8 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                 <div>
                   <Label className="text-xs text-sky-600">预计时长</Label>
                   <p className="font-semibold text-gray-900">
-                    {task.estimatedDays > 0 ? `${task.estimatedDays}天` : ''}
-                    {task.estimatedHours > 0 ? `${task.estimatedHours}小时` : ''}
+                    {(task.estimatedDays || 0) > 0 ? `${task.estimatedDays}天` : ''}
+                    {(task.estimatedHours || 0) > 0 ? `${task.estimatedHours}小时` : ''}
                     {!task.estimatedDays && !task.estimatedHours ? '-' : ''}
                   </p>
                 </div>
