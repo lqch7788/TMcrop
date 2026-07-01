@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, Download, Edit2, Package, Plus, RefreshCw, RotateCcw, Search, Trash2, Upload, Users, X } from 'lucide-react';
+import { Download, Edit2, Plus, RefreshCw, RotateCcw, Search, Trash2, Upload, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
@@ -113,7 +113,6 @@ export const PieceworkPage: React.FC = () => {
   const {
     data,
     total,
-    stats,
     pagination,
     filters,
     updateFilters,
@@ -310,34 +309,6 @@ export const PieceworkPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-3">
-        <StatCard
-          icon={<Users className="w-4 h-4" />}
-          label="计件工人"
-          value={stats.totalWorkers}
-          color="blue"
-        />
-        <StatCard
-          icon={<Package className="w-4 h-4" />}
-          label="总数量"
-          value={stats.totalQuantity.toLocaleString()}
-          color="green"
-        />
-        <StatCard
-          icon={<Coins className="w-4 h-4" />}
-          label="总工资"
-          value={`¥${stats.totalAmount.toLocaleString()}`}
-          color="emerald"
-        />
-        <StatCard
-          icon={<Coins className="w-4 h-4" />}
-          label="人均工资"
-          value={`¥${stats.avgAmountPerWorker.toFixed(2)}`}
-          color="purple"
-        />
-      </div>
-
       {/* 筛选区域 */}
       <div className="bg-[#F2F6FA] rounded-lg p-3">
         <div className="flex flex-wrap items-end gap-3">
@@ -527,37 +498,6 @@ export const PieceworkPage: React.FC = () => {
           }
         }}
       />
-    </div>
-  );
-};
-
-// 统计卡片组件（紧凑型彩色背景）
-const StatCard: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color: string;
-}> = ({ icon, label, value, color }) => {
-  const colorClasses: Record<string, { bg: string; icon: string; value: string; label: string }> = {
-    blue: { bg: 'bg-blue-50', icon: 'text-blue-600', value: 'text-blue-700', label: 'text-blue-600' },
-    green: { bg: 'bg-green-50', icon: 'text-green-600', value: 'text-green-700', label: 'text-green-600' },
-    emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', value: 'text-emerald-700', label: 'text-emerald-600' },
-    purple: { bg: 'bg-purple-50', icon: 'text-purple-600', value: 'text-purple-700', label: 'text-purple-600' },
-  };
-
-  const styles = colorClasses[color] || colorClasses.blue;
-
-  return (
-    <div className={`${styles.bg} rounded-lg p-2`}>
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-          <span className={styles.icon}>{icon}</span>
-        </div>
-        <div>
-          <p className={`text-lg font-bold ${styles.value}`}>{value}</p>
-          <p className={`text-xs ${styles.label}`}>{label}</p>
-        </div>
-      </div>
     </div>
   );
 };

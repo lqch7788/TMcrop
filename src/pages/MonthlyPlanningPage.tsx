@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertTriangle, Banknote, Calendar, CheckCircle, ChevronLeft, ClipboardList, DollarSign, Download, FileText, RefreshCw, RotateCw, ShoppingCart, Timer, Users, X, Zap } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle, ChevronLeft, DollarSign, Download, FileText, RefreshCw, RotateCw, ShoppingCart, Users, X, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -330,15 +330,6 @@ export default function MonthlyPlanningPage() {
     showAlert('导出功能开发中...');
   };
 
-  const statsData = monthlyPlan
-    ? [
-        { label: '总任务数', value: monthlyPlan.totalTasks, icon: ClipboardList, bgColor: 'bg-blue-50 border border-blue-200', iconColor: 'text-blue-500' },
-        { label: '预估工时', value: `${monthlyPlan.totalHours}h`, icon: Timer, bgColor: 'bg-purple-50 border border-purple-200', iconColor: 'text-purple-500' },
-        { label: '所需人员', value: Math.round(monthlyPlan.totalHours / 8), icon: Users, bgColor: 'bg-cyan-50 border border-cyan-200', iconColor: 'text-cyan-500' },
-        { label: '预估成本', value: `¥${monthlyPlan.totalCost.toFixed(0)}`, icon: Banknote, bgColor: 'bg-orange-50 border border-orange-200', iconColor: 'text-orange-500' },
-      ]
-    : [];
-
   // 任务类型分布
   const taskTypeSummary: TaskTypeSummary[] = useMemo(() => {
     if (!monthlyPlan) return [];
@@ -382,26 +373,6 @@ export default function MonthlyPlanningPage() {
             <p className="text-sm text-gray-500">未来一个月任务规划与物资需求</p>
           </div>
         </div>
-      </div>
-
-      {/* 统计卡片 - 淡彩底 */}
-      <div className="grid grid-cols-4 gap-4">
-        {statsData.map((stat, index) => {
-          const IconComponent = stat.icon;
-          return (
-            <div key={index} className={`${stat.bgColor} rounded-lg px-3 py-2.5`}>
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
-                  <IconComponent className={`w-5 h-5 ${stat.iconColor}`} />
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
       </div>
 
       {/* 日期选择和操作按钮 */}
