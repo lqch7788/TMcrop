@@ -113,6 +113,8 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   }, [printLabels]);
 
   const remainingCount = record?.availableCount || 0;
+  // 标签单位（从种源记录取，兜底"粒"）
+  const labelUnit = record?.unit || '粒';
 
   // 处理打印
   const handlePrint = async () => {
@@ -275,7 +277,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     return JSON.stringify({
       type: 'seed-source', code: label, seedCode: record.seedCode,
       cropCode: record.cropCode, cropName: record.cropName,
-      variety: record.cropVariety, quantity: record.availableCount,
+      variety: record.cropVariety, quantity: `${record.availableCount} ${labelUnit}`,
       supplier: record.supplierName, date: record.purchaseDate,
       url: `${baseUrl}/crop/seed-sources?labelNumber=${encodeURIComponent(label)}`
     });
@@ -412,7 +414,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                   className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
               </div>
               <div className="text-xs text-emerald-800">
-                → <span className="font-semibold">生成 {printCount} 个标签</span>，每个标签代表 1 单位种源（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
+                → <span className="font-semibold">生成 {printCount} 个标签</span>，每个标签代表 1 {labelUnit}（可用库存：{remainingCount} {labelUnit}，已生成：{allLabelNumbers.length}）
               </div>
             </div>
           )}
@@ -481,8 +483,8 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 </div>
                 <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <div className="text-gray-500">可用数量：</div><div className="text-emerald-600 font-bold">{record.availableCount.toLocaleString()}</div>
-                    <div className="text-gray-500">入库数量：</div><div className="text-gray-900">{(record.quantity ?? record.initialCount)?.toLocaleString()}</div>
+                    <div className="text-gray-500">可用数量：</div><div className="text-emerald-600 font-bold">{record.availableCount.toLocaleString()} {labelUnit}</div>
+                    <div className="text-gray-500">入库数量：</div><div className="text-gray-900">{(record.quantity ?? record.initialCount)?.toLocaleString()} {labelUnit}</div>
                     <div className="text-gray-500">采购日期：</div><div className="text-gray-900">{record.purchaseDate}</div>
                   </div>
                 </div>

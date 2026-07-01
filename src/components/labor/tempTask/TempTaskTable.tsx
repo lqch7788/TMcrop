@@ -1,13 +1,15 @@
 import { AlertTriangle, Bell, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, MapPin, Play, Send, Undo2, User, X, XCircle } from 'lucide-react';
 import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
-import { type TempTask } from '../../../hooks/useTempTasks';
+import { type TempTask, type TempTaskStatus, TEMP_TASK_STATUS_CONFIG } from '../../../hooks/useTempTasks';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
-const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+// 本地 statusConfig 补充 TEMP_TASK_STATUS_CONFIG 中不存在但 UI 需要的状态
+const statusConfig: Record<TempTaskStatus, { label: string; color: string; bg: string }> = {
+  ...TEMP_TASK_STATUS_CONFIG,
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-50' },
   pending: { label: '待执行', color: 'text-amber-600', bg: 'bg-amber-50' },
   accepted: { label: '已接受', color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -257,13 +259,13 @@ export function TempTaskTable({
                   </div>
                 </TableCell>
                 <TableCell className="px-3 py-3 text-center text-sm text-gray-600">
-                  {(task as any).estimatedDays || 0}天
+                  {task.estimatedDays || 0}天
                 </TableCell>
                 <TableCell className="px-3 py-3 text-center text-sm text-gray-600">
-                  {(task as any).workerCount || 1}人
+                  {task.workerCount || 1}人
                 </TableCell>
                 <TableCell className="px-3 py-3 text-center text-sm font-medium text-emerald-600">
-                  {((task as any).estimatedDays * 8 + task.estimatedHours) * ((task as any).workerCount || 1)}h
+                  {((task.estimatedDays || 0) * 8 + task.estimatedHours) * (task.workerCount || 1)}h
                 </TableCell>
                 <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[task.status].bg} ${statusConfig[task.status].color}`}>

@@ -17,7 +17,7 @@ import { useFarmTaskStore } from '../stores/farmTaskStore';
 //                                      ↓
 //                              pending_reassign (第2次驳回，等待重新派发)
 
-export type TempTaskStatus = 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'rejected' | 'pending_reassign';
+export type TempTaskStatus = 'draft' | 'pending' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'cancelled' | 'accepted' | 'failed' | 'abandoned' | 'rejected' | 'pending_reassign';
 
 // 状态标签配置
 export const TEMP_TASK_STATUS_CONFIG: Record<TempTaskStatus, { label: string; color: string; bg: string }> = {
@@ -26,6 +26,10 @@ export const TEMP_TASK_STATUS_CONFIG: Record<TempTaskStatus, { label: string; co
   in_progress: { label: '进行中', color: 'text-blue-600', bg: 'bg-blue-100' },
   waiting_acceptance: { label: '待验收', color: 'text-orange-600', bg: 'bg-orange-100' },
   completed: { label: '已完成', color: 'text-green-600', bg: 'bg-green-100' },
+  cancelled: { label: '已取消', color: 'text-gray-600', bg: 'bg-gray-50' },
+  accepted: { label: '已接受', color: 'text-teal-600', bg: 'bg-teal-50' },
+  failed: { label: '执行失败', color: 'text-red-600', bg: 'bg-red-50' },
+  abandoned: { label: '已放弃', color: 'text-gray-500', bg: 'bg-gray-100' },
   rejected: { label: '已驳回', color: 'text-red-600', bg: 'bg-red-100' },
   pending_reassign: { label: '待重新派发', color: 'text-purple-600', bg: 'bg-purple-100' },
 };

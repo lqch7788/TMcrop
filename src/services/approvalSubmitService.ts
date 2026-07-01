@@ -4,7 +4,7 @@
 // 功能：帮助业务模块快速接入审批流程
 // ============================================================
 
-import { ApprovalType } from '../types/approval';
+import { ApprovalType, BusinessLink } from '../types/approval';
 import { createApprovalWithLevel } from '../hooks/useApprovalLevel';
 import { useApprovalContext } from '../contexts/ApprovalContext';
 import { logger } from '../lib/logger';
@@ -77,7 +77,7 @@ class ApprovalSubmitService {
         applicantDepartment: businessData.applicantDepartment,
         title: businessData.title,
         additionalData: businessData.additionalData,
-        businessLink: businessData.businessLink as any,
+        businessLink: businessData.businessLink as unknown as BusinessLink,
       });
 
       // 2. 生成审批编号

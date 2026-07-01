@@ -137,14 +137,15 @@ export interface MaterialItem {
 // ============================================================
 
 export interface BusinessLink {
-  // 业务类型 - 支持全部37种审批类型
+  // 业务类型 - 支持全部42种审批类型
   type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' |
         'resign' | 'return' | 'recruitment' | 'harvest' | 'seed_source' | 'seedling' |
         'material_inbound' | 'material_transfer' | 'seed_source_inbound' | 'seedling_plan' |
         'planting_plan' | 'order_create' | 'order_change' | 'production_batch' |
         'batch_change' | 'batch_void' | 'tech_solution' | 'task_dispatch' |
         'task_change' | 'inspection_issue' | 'issue_resolve' | 'crop_storage' |
-        'indicator' | 'announcement' | 'budget_create' | 'budget_adjust';
+        'indicator' | 'announcement' | 'budget_create' | 'budget_adjust' |
+        'salary_adjustment' | 'salary_budget' | 'attendance_repair' | 'contract_renewal' | 'onboarding';
   requestId: string;
   requestCode: string;
 

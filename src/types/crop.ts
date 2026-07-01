@@ -411,6 +411,7 @@ export interface Seedling {
   startDate: string;          // 开始日期
   expectedEndDate?: string;   // 预计结束日期
   endDate?: string;           // 实际结束日期
+  unit: string;                // 单位（株/粒/颗/盆等，默认"株"）
   initialCount: number;       // 初始数量
   survivalCount: number;      // 成活数量
   // 2026-06-28：移除 plantedCount 字段（业务规则：种植管理不再从育苗取苗）

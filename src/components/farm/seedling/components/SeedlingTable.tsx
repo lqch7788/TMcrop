@@ -454,6 +454,7 @@ export function SeedlingTable({
             <col className="w-[6%]" />   {/* 作物品种 紫树莓 */}
             <col className="w-[9%]" />   {/* 品种路径 水果类-浆果类-树莓... */}
             <col className="w-[7%]" />   {/* 育苗区域 育苗温室A区 */}
+            <col className="w-[4%]" />   {/* 单位 株/粒/颗 */}
             {/* 2026-06-27：用户指令 — 数值列宽度加倍 4%→8%，完成比例 3%→6% */}
             <col className="w-[8%]" />   {/* 初始数量 */}
             <col className="w-[8%]" />   {/* 母株存活数 */}
@@ -483,6 +484,7 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">品种路径</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">育苗区域</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">单位</th>
               {/* ===== 母株池（4 列） — 蓝色半透明背景标识 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池初始数量（建档时投入）">初始数量</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池当前存活数">母株存活数</th>
@@ -503,7 +505,7 @@ export function SeedlingTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 20 : 19} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 21 : 20} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -582,6 +584,7 @@ export function SeedlingTable({
                     })()}
                   </td>
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap">{record.siteName}</td>
+                  <td className="px-2 py-1.5 text-sm text-gray-600 text-center whitespace-nowrap">{record.unit || '株'}</td>
                   {/* ===== 母株池（4 列） — 与 thead bg-indigo-500/30 对应 ===== */}
                   {/* 初始数量 = seedlingQuantity（建档时投入） */}
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">

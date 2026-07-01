@@ -63,7 +63,7 @@ export default function Reports() {
   };
 
   const handleDoExport = async () => {
-    let exportData: { headers: string[]; data: Record<string, string>[] } | null = null;
+    let exportData: { headers: string[]; data: Record<string, string | number>[] } | null = null;
 
     if (selectedRows.includes('yield') && yieldStats && yieldStats.length > 0) {
       exportData = {
@@ -291,8 +291,8 @@ export default function Reports() {
 
       <ReportCharts
         reportType={reportType as 'yield' | 'cost' | 'labor'}
-        yieldStats={yieldStats}
-        costAnalysis={costAnalysis}
+        yieldStats={yieldStats as unknown as { name: string; value: number }[]}
+        costAnalysis={costAnalysis as unknown as { name: string; value: number }[]}
         monthlyLabor={monthlyLabor}
       />
 

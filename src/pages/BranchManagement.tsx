@@ -6,10 +6,23 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Building2, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useBranchStore } from '../stores';
-import type { Branch } from '../stores';
+import { useBranchStore } from '../stores/useBranchStore';
 import { showConfirm } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
+
+/** 基地数据类型（useBranchStore 内部使用，页面重定义以解耦导入） */
+interface Branch {
+  id: number;
+  branchCode?: string;
+  branchName?: string;
+  location?: string;
+  area?: number;
+  manager?: string;
+  contact?: string;
+  status?: string;
+  blockCount?: number;
+  description?: string;
+}
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',
@@ -21,7 +34,7 @@ export default function BranchManagement() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [formData, setFormData] = useState<Partial<Branch>>({});
@@ -32,7 +45,7 @@ export default function BranchManagement() {
     loadBranches();
   }, []);
 
-  const filteredBranches = branches.filter(branch => {
+  const filteredBranches = branches.filter((branch: Branch) => {
     const matchSearch = !searchText ||
       (branch.branchName || '').toLowerCase().includes(searchText.toLowerCase()) ||
       (branch.branchCode || '').toLowerCase().includes(searchText.toLowerCase()) ||
@@ -129,9 +142,9 @@ export default function BranchManagement() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: '基地总数', value: branches.length, color: 'bg-blue-500' },
-          { label: '在用基地', value: branches.filter(b => b.status === 'active').length, color: 'bg-emerald-500' },
-          { label: '闲置基地', value: branches.filter(b => b.status === 'inactive').length, color: 'bg-amber-500' },
-          { label: '总面积(亩)', value: branches.reduce((sum, b) => sum + (b.area || 0), 0), color: 'bg-purple-500' },
+          { label: '在用基地', value: branches.filter((b: Branch) => b.status === 'active').length, color: 'bg-emerald-500' },
+          { label: '闲置基地', value: branches.filter((b: Branch) => b.status === 'inactive').length, color: 'bg-amber-500' },
+          { label: '总面积(亩)', value: branches.reduce((sum: number, b: Branch) => sum + (b.area || 0), 0), color: 'bg-purple-500' },
         ].map((stat, index) => (
           <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-3">
@@ -209,7 +222,7 @@ export default function BranchManagement() {
                       <td colSpan={8} className="px-4 py-8 text-center text-gray-400">暂无数据</td>
                     </tr>
                   ) : (
-                    paginatedBranches.map((branch) => (
+                    paginatedBranches.map((branch: Branch) => (
                       <tr key={branch.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm font-medium text-blue-600">{branch.branchCode}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 font-medium">{branch.branchName}</td>
@@ -275,7 +288,7 @@ export default function BranchManagement() {
           isOpen={showModal}
           onClose={handleCloseModal}
           title={editingBranch ? '编辑基地' : '新增基地'}
-          onConfirm={handleSubmit}
+          onSubmit={handleSubmit}
         >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
