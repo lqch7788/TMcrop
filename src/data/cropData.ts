@@ -20,7 +20,7 @@ import {
 // ========== Mock数据 ==========
 
 /** 种源数据 - 种源批号格式：ZZ + 年月日(8位) + "-" + 流水号(3位) */
-export const seedSources: SeedSource[] = [
+export const seedSources = [
   {
     id: 'SS001',
     seedCode: 'ZZ20260115-001',
@@ -130,7 +130,7 @@ export const seedSources: SeedSource[] = [
 /** 育苗数据 - 按新增弹窗字段更新，cropCode使用品种库完整11位编码
  * 育苗批号格式：YM + 年月日(YYYYMMDD) + "-" + 3位流水号，如 YM20260201-001
  */
-export const seedlings: Seedling[] = [
+export const seedlings = [
   {
     id: 'SD001',
     seedlingCode: 'YM20260201-001',
@@ -241,7 +241,7 @@ export const seedlings: Seedling[] = [
 ];
 
 /** 种植数据 */
-export const plantings: Planting[] = [
+export const plantings = [
   {
     id: 'PL001',
     plantCode: 'ZZ2026-001-01',
