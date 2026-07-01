@@ -36,19 +36,8 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
 import { showAlert } from '@/lib/dialogService';
-
-/** 种源类型 → 供应商类型 级联映射 */
-const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
-  seed: 'SP',              // 种子 → 原材料供应
-  seedling: 'SP',          // 种苗 → 原材料供应
-  cutting: 'SP',           // 扦插苗 → 原材料供应
-  grafting: 'SP',          // 嫁接苗 → 原材料供应
-  tissue_culture: 'SP',    // 组培苗 → 原材料供应
-  split: 'SP',             // 分株苗 → 原材料供应
-  bulb: 'SP',              // 种球 → 原材料供应
-  other: null,             // 其他 → 显示全部供应商
-};
 
 interface AddModalProps {
   isOpen: boolean;
@@ -92,8 +81,12 @@ export function AddModal({
         department: storeUsers[0].orgOid || '生产部',
       };
     }
-    return { id: 'U013', name: '未知用户', department: '生产部' };
+    // 2026-07-01 P1-8：auth + storeUsers 都拿不到时直接拒绝，不写入脏数据
+    return null;
   })();
+
+  // 2026-07-01 P1-8：currentUser 拿不到时拒绝写入（在 handleSubmit 里判断，不在此处早返回避免 hooks 顺序错乱）
+  const canSubmit = currentUser !== null;
   const cropBatches = storePlans.length > 0
     ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
     : [];
@@ -177,7 +170,7 @@ export function AddModal({
 
   // 种源类型→供应商类型级联过滤
   const filteredSearchResults = useMemo(() => {
-    const targetSupplierType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+    const targetSupplierType = ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
     if (!targetSupplierType) return supplierSearchResults; // null = 展示全部
     return supplierSearchResults.filter(s => s.supplierType === targetSupplierType);
   }, [supplierSearchResults, formData.sourceType]);
@@ -199,7 +192,7 @@ export function AddModal({
   // 当种源类型改变时，清空已选供应商（类型不匹配）
   useEffect(() => {
     if (selectedSupplier) {
-      const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
+      const targetType = ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
       if (targetType && selectedSupplier.supplierType !== targetType) {
         setSelectedSupplier(null);
         setFormData(prev => ({ ...prev, supplierId: '', supplierName: '' }));
@@ -265,6 +258,11 @@ export function AddModal({
   };
 
   const handleSubmit = async (overrideItems?: import('../../../../services/seedSourceTransferService').TransferItem[]) => {
+    // 2026-07-01 P1-8：currentOperator 可能为 null（auth 失效时）
+    if (!currentOperator) {
+      showAlert('无法识别当前操作员，请先登录系统');
+      return;
+    }
     // 2026-06-24: 库存调拨分支 — 完全独立的提交路径，绕过所有外购/育种字段校验
     // P0-3 修复：接受 overrideItems 参数，避免 React state 闭包过期问题（panel onConfirm 异步 setState 后立即调用）
     if (formData.propagationType === PropagationType.TRANSFER_FROM_INVENTORY) {
@@ -914,7 +912,7 @@ export function AddModal({
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                       {formData.sourceType !== 'other' && filteredSearchResults.length !== supplierSearchResults.length && supplierSearchResults.length > 0 && (
                         <div className="px-3 py-1.5 text-xs text-emerald-600 bg-emerald-50 border-b border-emerald-100">
-                          已按种源类型过滤：显示"{(SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType] || '')}"类型供应商
+                          已按种源类型过滤：显示"{(ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType] || '')}"类型供应商
                         </div>
                       )}
                       {filteredSearchResults.length > 0 ? (

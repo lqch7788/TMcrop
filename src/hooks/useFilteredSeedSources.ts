@@ -6,12 +6,29 @@
 import { useMemo } from 'react';
 import { SeedSource, SeedSourceFilters } from '../types/crop';
 import { computeStockStatus } from '../lib/stockStatus';
+import { StockStatus } from '../types/crop';
 import { useUserStore } from '../stores/useUserStore';
+import { seedSourceStatusOptions } from '../data/cropData';
 
 export function useFilteredSeedSources(
   sources: SeedSource[],
   filters: SeedSourceFilters,
 ): SeedSource[] {
+  // 2026-07-01 P1-1 修复：开发态校验 seedSourceStatusOptions 的 value 与 StockStatus 枚举一致
+  // 防止某天 STOCK_STATUS_MAP key 改名导致 status 筛选静默失灵
+  if (process.env.NODE_ENV !== 'production') {
+    const validStatuses = new Set(Object.values(StockStatus) as string[]);
+    for (const opt of seedSourceStatusOptions) {
+      if (opt.value !== '__all__' && !validStatuses.has(opt.value)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[useFilteredSeedSources] 库存状态筛选 value="${opt.value}" 不在 StockStatus 枚举内，`
+          + `有效值: ${Array.from(validStatuses).join(', ')}`
+        );
+      }
+    }
+  }
+
   return useMemo(() => {
     // 记录人 ID → 名称（用于级联筛选）
     let recorderName = '';

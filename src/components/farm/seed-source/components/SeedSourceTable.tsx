@@ -30,6 +30,9 @@ import { showAlert } from '@/lib/dialogService';
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
 
+// 2026-07-01 P1-9：列数抽常量（包含操作列），加列时只需更新这个数字
+const TOTAL_COLUMNS = 17;
+
 // 单位格式化函数（优先使用常量映射，兜底返回原值）
 function formatUnit(unit: string): string {
   return UNIT_MAP[unit] || unit || '';
@@ -475,8 +478,8 @@ export function SeedSourceTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                {/* 2026-06-30 Bug 13：种源类型列已合并到形态列，colSpan 18/17（原 19/18 -1） */}
-                <TableCell colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
+                {/* 2026-07-01 P1-9：列数抽常量（避免加列时漏改 colSpan） */}
+                <TableCell colSpan={showCheckbox ? TOTAL_COLUMNS + 1 : TOTAL_COLUMNS} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>

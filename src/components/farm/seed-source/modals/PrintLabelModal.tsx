@@ -22,6 +22,20 @@ interface PrintLabelModalProps {
   record: SeedSource;
 }
 
+// 2026-07-01 P1-4 修复：HTML 转义防止 XSS + 表格结构破坏
+function escapeHtml(str: string | null | undefined): string {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 2026-07-01 P2-9：标签列表最大显示数（超过时只显示前 N 个 + 提示）
+const MAX_LABEL_DISPLAY = 200;
+
 // 打印模式字典（卡片按钮显示）
 const PRINT_MODE_MAP: Record<'single' | 'multi' | 'batch', { label: string; sublabel: string; desc: string; icon: string }> = {
   single: {
@@ -80,6 +94,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         .map((l) => l.labelNumber);
 
       if (labelNumbers.length > 0) {
+        // 2026-07-01 P2-9：硬编码 200 抽常量 + 截断提示
         setAllLabelNumbers(labelNumbers);
         setPreviewLabel(labelNumbers[0]);
       } else {
@@ -88,7 +103,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         const count = record.availableCount || 0;
         if (seedCode && count > 0) {
           const nums: string[] = [];
-          const maxLabels = Math.min(count, 200);
+          const maxLabels = Math.min(count, MAX_LABEL_DISPLAY);
           for (let i = 0; i < maxLabels; i++) {
             nums.push(`${seedCode}-${String(i + 1).padStart(4, '0')}`);
           }
@@ -130,10 +145,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         labelsToPrint = [...selectedLabels];
       } else {
         // 批量生成：入库到 plant_labels 表
-        const existingLabels = usePlantLabelStore.getState().labels.filter(
-          (l) => String(l.seedSourceId) === String(record.id)
-        );
-        const startIdx = existingLabels.length;
         const newLabels: Array<{
           labelNumber: string;
           seedSourceId?: string | null;
@@ -141,6 +152,14 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           moveInDate?: string | null;
           quantity?: number;
         }> = [];
+
+        // 2026-07-01 P1-3 修复：先 await loadLabels 确保 store 是最新状态
+        // 避免多用户/快速点击时序号跳号
+        await loadLabels({ seedSourceId: record.id });
+        const existingLabels = usePlantLabelStore.getState().labels.filter(
+          (l) => String(l.seedSourceId) === String(record.id)
+        );
+        const startIdx = existingLabels.length;
 
         for (let i = 0; i < printCount; i++) {
           const labelNumber = `${record.seedCode}-${String(startIdx + i + 1).padStart(4, '0')}`;
@@ -176,7 +195,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           .filter((l) => String(l.seedSourceId) === String(record.id))
           .map((l) => l.labelNumber);
         if (refreshedNumbers.length > 0) {
-          setAllLabelNumbers(refreshedNumbers.slice(0, 200));
+          setAllLabelNumbers(refreshedNumbers.slice(0, MAX_LABEL_DISPLAY));
         }
       }
 
@@ -239,11 +258,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     </tr></thead>
     <tbody>${rows.map(r => `<tr>
       <td>${r.index}</td>
-      <td>${record.cropName}</td>
-      <td>${record.supplierName || '-'}</td>
-      <td><a href="${r.url}" target="_blank">${r.url}</a></td>
-      <td style="font-family:monospace;font-size:11px;">${r.label}</td>
-      <td>${record.purchaseDate || '-'}</td>
+      <td>${escapeHtml(record.cropName)}</td>
+      <td>${escapeHtml(record.supplierName || '-')}</td>
+      <td><a href="${escapeHtml(r.url)}" target="_blank">${escapeHtml(r.url)}</a></td>
+      <td style="font-family:monospace;font-size:11px;">${escapeHtml(r.label)}</td>
+      <td>${escapeHtml(record.purchaseDate || '-')}</td>
     </tr>`).join('')}</tbody>
   </table>
 </body></html>`;

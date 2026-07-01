@@ -1658,6 +1658,15 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• seed_sources.seed_form:', e.message);
   }
 
+  // 2026-07-01: 种源审计字段 — seed_sources 加 update_by 列
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN update_by TEXT`);
+    seedLog.info('✓ seed_sources 表添加 update_by 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.update_by 列已存在');
+    else seedLog.skip('• seed_sources.update_by:', e.message);
+  }
+
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);

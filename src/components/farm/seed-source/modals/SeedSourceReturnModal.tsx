@@ -133,8 +133,8 @@ export function SeedSourceReturnModal({
         errors.push(`${row.sourceCode}: 退库 ${quantity} 超过可退 ${row.returnableQuantity}`);
         continue;
       }
-      // unit 强制 = 流水单位（用户不能改）
-      items.push({ inboundRecordId, transferQuantity: undefined as any, quantity, unit });
+      // 2026-07-01 P2-7：移除 `transferQuantity: undefined as any` 死代码
+      items.push({ inboundRecordId, quantity, unit });
     }
     if (errors.length > 0) {
       toast.error(`校验失败：${errors.join('；')}`);
@@ -274,8 +274,8 @@ export function SeedSourceReturnModal({
                         <div className="flex items-center gap-1">
                           <NumberInput
                             value={qty}
-                            onChange={(v) => updateQuantity(row.id, parseFloat(v) || 0)}
-                            decimals={2}
+                            onChange={(v) => updateQuantity(row.id, parseInt(String(v), 10) || 0)}
+                            decimals={0}
                             className="w-24"
                             placeholder="0"
                           />
