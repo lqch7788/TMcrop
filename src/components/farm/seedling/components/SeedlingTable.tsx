@@ -667,84 +667,46 @@ export function SeedlingTable({
                   </td>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index） */}
                   <td className="sticky right-0 px-2 py-1.5 text-xs text-center bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                    <div className="flex gap-1 justify-center">
-                      {/* 2026-07-01: 已结束的育苗记录禁止编辑 */}
-                      {!record.endTime && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(record)}
-                          title="编辑"
-                        >
+                    {/* 2026-07-01: 已正常结束 → 全部锁定；异常结束 → 保留补录通道（隐藏结束按钮）；进行中 → 全部可用 */}
+                    {record.status === 'completed' || record.endType === 'normal' ? (
+                      <span className="text-gray-400 text-xs italic">已锁定</span>
+                    ) : (
+                      <div className="flex gap-1 justify-center">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(record)} title="编辑">
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                      )}
-                      {/* 2026-07-01: 已结束的育苗记录禁止每日记录（防止数据不一致） */}
-                      {!record.endTime && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDailyRecord(record)}
-                          title="每日记录"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
                           <Calendar className="w-4 h-4" />
                         </Button>
-                      )}
-                      {/* 标签管理：已结束后仍可查看（只读），但禁止新增履历（AddResumeForm 内部已处理） */}
-                      {onLabelManage && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onLabelManage(record)}
-                          title="标签管理"
-                        >
-                          <Tag className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-07-01: 出圃入库 — 已结束后禁止 */}
-                      {onInbound && !record.endTime && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onInbound(record)}
-                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                          title="出圃入库"
-                        >
-                          <Package className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {record.pictures && record.pictures.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onImageClick(record.pictures)}
-                          title="查看图片"
-                        >
-                          <Image className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-06-28 方案B：移除独立"繁殖记录"按钮 — 已合并到每日记录弹窗的 🌱 繁殖事件 折叠面板 */}
-                      {!record.endTime && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'normal')}
-                            title="正常结束"
-                          >
-                            <CheckCircle className="w-4 h-4" />
+                        {onLabelManage && (
+                          <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
+                            <Tag className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'abnormal')}
-                            title="异常结束"
-                          >
-                            <XCircle className="w-4 h-4" />
+                        )}
+                        {onInbound && (
+                          <Button variant="ghost" size="icon" onClick={() => onInbound(record)}
+                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50" title="出圃入库">
+                            <Package className="w-4 h-4" />
                           </Button>
-                        </>
-                      )}
-                    </div>
+                        )}
+                        {record.pictures && record.pictures.length > 0 && (
+                          <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
+                            <Image className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {/* 异常结束 → 隐藏结束按钮（补录通道保留，结束按钮不再需要） */}
+                        {record.status !== 'abnormal' && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))

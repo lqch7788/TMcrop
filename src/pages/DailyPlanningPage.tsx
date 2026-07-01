@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, AlertTriangle, Bot, Calendar, CheckCircle, ChevronDown, ChevronLeft, CircleCheck, Clock, FileText, RefreshCw, RotateCw, Send, TriangleAlert } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Bot, Calendar, CheckCircle, ChevronDown, ChevronLeft, Clock, RefreshCw, RotateCw, Send } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -244,18 +244,6 @@ export default function DailyPlanningPage() {
     setReport(dailyReport);
   };
 
-  // 统计卡片数据，使用 useMemo 避免每次渲染重新创建
-  const statsData = useMemo(() => {
-    if (!report) return [];
-    return [
-      { label: '总任务数', value: report.totalTasks, icon: FileText, bgColor: 'bg-blue-50 border border-blue-200', iconColor: 'text-blue-500' },
-      { label: '待处理', value: report.pendingTasks, icon: Clock, bgColor: 'bg-orange-50 border border-orange-200', iconColor: 'text-orange-500' },
-      { label: '进行中', value: report.inProgressTasks, icon: AlertCircle, bgColor: 'bg-indigo-50 border border-indigo-200', iconColor: 'text-indigo-500' },
-      { label: '已完成', value: report.completedTasks, icon: CircleCheck, bgColor: 'bg-green-50 border border-green-200', iconColor: 'text-green-500' },
-      { label: '已超期', value: report.overdueTasks, icon: TriangleAlert, bgColor: 'bg-red-50 border border-red-200', iconColor: 'text-red-500' },
-    ];
-  }, [report]);
-
   return (
     <div className="space-y-4">
       {/* Page Header - 紧凑型标题卡片 */}
@@ -294,26 +282,6 @@ export default function DailyPlanningPage() {
             一键确认派发 ({todayPlan.totalTasks} 项)
           </Button>
         </div>
-      </div>
-
-      {/* 统计卡片 - 淡彩底 */}
-      <div className="grid grid-cols-5 gap-3">
-        {statsData.map((stat, index) => {
-          const IconComponent = stat.icon;
-          return (
-            <div key={index} className={`${stat.bgColor} rounded-lg px-3 py-2.5`}>
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center`}>
-                  <IconComponent className={`w-4 h-4 ${stat.iconColor}`} />
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
       </div>
 
       {/* AI 建议 */}

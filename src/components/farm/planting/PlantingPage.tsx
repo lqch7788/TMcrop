@@ -280,7 +280,7 @@ export default function PlantingPage() {
       endType,
       endTime: todayLocal(),
       status: endStatus,
-      isHarvestLocked: true,
+      isHarvestLocked: isNormal,  // 2026-07-01: 仅正常结束锁死，异常结束保留补录通道
     } as Partial<Planting>);
     if (result) {
       await showAlert(isNormal ? '种植记录已正常结束' : '种植记录已异常结束');

@@ -556,118 +556,70 @@ export function PlantingTable({
         title: '操作',
         width: 250,
         render: (_: unknown, record: Planting) => (
+          /* 2026-07-01: 正常结束 → 全部锁定；异常结束 → 保留补录通道；进行中 → 全部可用 */
+          record.status === 'ended' && record.endType !== 'abnormal' ? (
+            <span className="text-gray-400 text-xs italic">已锁定</span>
+          ) : (
           <div className="flex gap-1">
             {record.pictures && record.pictures.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onImageClick(record.pictures)}
-                title="查看图片"
-              >
+              <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
                 <Image className="w-4 h-4" />
               </Button>
             )}
-            {!record.endTime && !record.isHarvestLocked && onEndV2 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onEndV2(record)}
-                title="采收"
-              >
-                {/* 2026-06-28: 图标改为 Package（与育苗管理"采收"图标一致） */}
+            {/* 2026-07-01: 异常结束(status=cancelled)保留补录通道；正常结束(status=ended)全部锁定 */}
+            {!record.isHarvestLocked && record.status !== 'ended' && onEndV2 && (
+              <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
                 <Package className="w-4 h-4" />
               </Button>
             )}
-            {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}
-            {!record.endTime && onDailyRecord && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDailyRecord(record)}
-                title="每日记录"
-              >
+            {record.status !== 'ended' && onDailyRecord && (
+              <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
                 <Calendar className="w-4 h-4 text-blue-600" />
               </Button>
             )}
-            {/* 2026-06-19: 行级采收入库按钮（unify-harvest-inbound-into-source-operations） */}
-            {!record.endTime && !record.isHarvestLocked && onInbound && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onInbound(record)}
-                title="采收入库（行级）"
-              >
+            {!record.isHarvestLocked && record.status !== 'ended' && onInbound && (
+              <Button variant="ghost" size="icon" onClick={() => onInbound(record)} title="采收入库（行级）">
                 <Package className="w-4 h-4" />
               </Button>
             )}
             {onLabelManage && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onLabelManage(record)}
-                title="标签管理"
-              >
+              <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
                 <Tag className="w-4 h-4" />
               </Button>
             )}
-            {onMove && !record.isHarvest && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onMove(record)}
-                title="移入/移出"
-              >
+            {onMove && !record.isHarvest && record.status !== 'ended' && (
+              <Button variant="ghost" size="icon" onClick={() => onMove(record)} title="移入/移出">
                 <MoveRight className="w-4 h-4" />
               </Button>
             )}
-            {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 两个独立按钮（放在标记管理图标后面） */}
-            {!record.endTime && !record.isHarvestLocked && onEnd && (
+            {/* 结束按钮：仅在未结束时显示（进行中和异常结束都隐藏） */}
+            {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEnd(record, 'normal')}
-                  title="正常结束"
-                >
+                <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
                   <CheckCircle className="w-4 h-4 text-green-600" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEnd(record, 'abnormal')}
-                  title="异常结束"
-                >
+                <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
                   <XCircle className="w-4 h-4 text-red-600" />
                 </Button>
               </>
             )}
-            {/* 2026-06-25 v3: 育种记录按钮 — 仅 isBreeding=true 的行显示 */}
-            {record.isBreeding && onBreedingRecord && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onBreedingRecord(record)}
-                title="育种记录"
-                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-              >
+            {/* 育种/留种按钮：仅进行中时显示 */}
+            {record.status !== 'cancelled' && record.status !== 'ended' && record.isBreeding && onBreedingRecord && (
+              <Button variant="ghost" size="icon" onClick={() => onBreedingRecord(record)} title="育种记录"
+                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
                 <Sprout className="w-4 h-4" />
               </Button>
             )}
-            {/* 2026-06-25 v3: 留种记录按钮 — 仅 isSeedSaving=true 的行显示 */}
-            {record.isSeedSaving && onSeedSavingRecord && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onSeedSavingRecord(record)}
-                title="留种记录"
-                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-              >
+            {record.status !== 'cancelled' && record.status !== 'ended' && record.isSeedSaving && onSeedSavingRecord && (
+              <Button variant="ghost" size="icon" onClick={() => onSeedSavingRecord(record)} title="留种记录"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
                 <Wheat className="w-4 h-4" />
               </Button>
             )}
           </div>
+          )
         )
-      }
+      },
     );
 
     return cols;
@@ -1148,81 +1100,56 @@ export function PlantingTable({
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10 text-center">
+                    {/* 2026-07-01: 正常结束 → 全部锁定；异常结束 → 保留补录通道；进行中 → 全部可用 */}
+                    {record.status === 'ended' && record.endType !== 'abnormal' ? (
+                      <span className="text-gray-400 text-xs italic">已锁定</span>
+                    ) : (
                     <div className="flex gap-1">
                       {record.pictures && record.pictures.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onImageClick(record.pictures)}
-                          title="查看图片"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
                           <Image className="w-4 h-4" />
                         </Button>
                       )}
-                      {!record.endTime && !record.isHarvestLocked && onEndV2 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEndV2(record)}
-                          title="采收"
-                        >
-                          {/* 2026-06-28: 图标改为 Package（与育苗管理"采收"图标一致） */}
+                      {/* 2026-07-01: 异常结束(status=cancelled)保留补录通道；正常结束(status=ended)全部锁定 */}
+                      {!record.isHarvestLocked && record.status !== 'ended' && onEndV2 && (
+                        <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
                           <Package className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 2026-06-28: 每日记录按钮（与育苗管理一致 — endTime 存在时隐藏） */}
-                      {!record.endTime && onDailyRecord && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDailyRecord(record)}
-                          title="每日记录"
-                        >
+                      {record.status !== 'ended' && onDailyRecord && (
+                        <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
                           <Calendar className="w-4 h-4 text-blue-600" />
                         </Button>
                       )}
+                      {/* 2026-07-01: 采收入库 — 异常结束后仍可补录 */}
+                      {!record.isHarvestLocked && record.status !== 'ended' && onInbound && (
+                        <Button variant="ghost" size="icon" onClick={() => onInbound(record)} title="采收入库（行级）">
+                          <Package className="w-4 h-4" />
+                        </Button>
+                      )}
                       {onLabelManage && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onLabelManage(record)}
-                          title="标签管理"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
                           <Tag className="w-4 h-4" />
                         </Button>
                       )}
-                      {onMove && !record.isHarvest && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onMove(record)}
-                          title="移入/移出"
-                        >
+                      {onMove && !record.isHarvest && record.status !== 'ended' && (
+                        <Button variant="ghost" size="icon" onClick={() => onMove(record)} title="移入/移出">
                           <MoveRight className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束（放在标记管理图标后面） */}
-                      {!record.endTime && !record.isHarvestLocked && onEnd && (
+                      {/* 结束按钮：仅在未结束时显示（进行中和异常结束都隐藏） */}
+                      {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'normal')}
-                            title="正常结束"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
                             <CheckCircle className="w-4 h-4 text-green-600" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'abnormal')}
-                            title="异常结束"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
                             <XCircle className="w-4 h-4 text-red-600" />
                           </Button>
                         </>
                       )}
                     </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
