@@ -64,7 +64,9 @@ export interface CropBatch {
   targetYield: number;
   actualYield: number;
   // 统一使用 batchStatus，删除原有的 status 字段（2026-06-05）
-  batchStatus: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
+  batchStatus: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected' | 'published';
+  // 兼容字段（farmData.ts mock 数据使用 — 2026-06-30 tsc 兼容）
+  status?: any;
   plantingMode: string;
   responsiblePerson: string;
   // 新增字段
@@ -117,7 +119,7 @@ export interface Task {
   batchCode: string;
   greenhouseId: string;
   greenhouseName: string;
-  mode: 'glass' | 'solar';
+  mode: 'glass' | 'solar' | 'field' | 'open';
   assigneeId: string;
   assigneeName: string;
   assignerId: string;
@@ -240,7 +242,7 @@ export interface Greenhouse {
   id: string;
   code: string;
   name: string;
-  type: 'glass' | 'solar' | 'open';
+  type: 'glass' | 'solar' | 'open' | 'field';
   area: number;
   location: string;
   status: 'active' | 'maintenance' | 'inactive';
@@ -376,7 +378,7 @@ export interface HarvestRecord {
   harvesterNames: string[];
   warehouseId: string;
   warehouseName: string;
-  status: 'harvested' | 'graded' | 'stored';
+  status: 'harvested' | 'graded' | 'stored' | 'pending' | 'harvesting' | 'audited' | 'cancelled';
   // 审核人员
   auditor: string;
   // 新增字段
