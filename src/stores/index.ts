@@ -15,7 +15,7 @@ export { useAttendanceStore, getAttendanceByDate, getAttendanceByWorker, getAtte
 export type { AttendanceRecord, AttendanceFilters, AttendanceStatus, StatusClass } from './attendanceStore';
 
 export { useFarmTaskStore, getTasksByStatus, getTasksByAssignee, getTasksByDateRange, getOverdueTasks } from './farmTaskStore';
-export type { Task, TaskStatus, FarmTaskFilters } from './farmTaskStore';
+export type { Task as FarmTask, TaskStatus, FarmTaskFilters } from './farmTaskStore';
 
 export { useLeaveStore, getLeaveByWorker, getLeaveByStatus, getLeaveByDateRange } from './leaveStore';
 export type { LeaveRecord, LeaveType, LeaveStatus, LeaveFilters } from './leaveStore';
@@ -30,7 +30,7 @@ export { useCompensationStore, getSalaryByWorker, getSalaryByPeriod, getPendingS
 export type { SalaryRecord, CompensationFilters, PayPeriod } from './compensationStore';
 
 export { useIotStore, getDevicesByGreenhouse, getDevicesByType, getOnlineDevices } from './iotStore';
-export type { Device, DeviceReading, DeviceType, DeviceStatus, EnvironmentDataPoint } from './iotStore';
+export type { Device as IotDevice, DeviceType, DeviceStatus, EnvironmentDataPoint } from './iotStore';
 
 export { useAlertStore, getPendingAlerts, getAlertsByLevel, getAlertsByGreenhouse, getCriticalAlerts } from './alertStore';
 export type { Alert, AlertStats, AlertLevel, AlertStatus, AlertFilters } from './alertStore';
@@ -148,7 +148,7 @@ export { useZoneStore, getZoneByOid, getZonesByBase, getActiveZones } from './us
 export type { Zone } from '../services/apiBasicDataService';
 
 export { useDeviceStore, getDeviceByOid, getDevicesByGreenhouseOid, getActiveDevices } from './useDeviceStore';
-export type { Device } from '../services/apiBasicDataService';
+export type { Device as ApiDevice } from '../services/apiBasicDataService';
 
 export { useTeamStore, getTeamByOid, getTeamsByDepartment, getActiveTeams } from './useTeamStore';
 export type { Team } from '../services/apiBasicDataService';
@@ -160,10 +160,10 @@ export { useBaseOperationsStore } from './useBaseOperationsStore';
 export type { BaseStats, SelectedNodeInfo } from './useBaseOperationsStore';
 
 export { useUserStore, getUserByOid, getUsersByDepartment, getActiveUsers } from './useUserStore';
-export type { User } from '../services/authorityService';
+export type { User } from '../types/authority';
 
 export { useWorkerStore } from './useWorkerStore';
-export type { Worker } from '../services/apiWorkerService';
+export type { Worker } from '../types';
 
 export { useTempTaskStore } from './useTempTaskStore';
 export type { TempTaskData } from './useTempTaskStore';
@@ -223,7 +223,6 @@ export { usePerformanceStore } from './usePerformanceStore';
 
 // ==================== 劳动风险预警 V2.0 Store ====================
 export { useRiskStore } from './useRiskStore';
-export type { RiskStats } from './useRiskStore';
 
 // ==================== 考勤补录 V2.0 Store ====================
 export { useAttendanceRepairStore } from './useAttendanceRepairStore';
@@ -263,7 +262,7 @@ export type { SalaryRecord as SalaryRecordV2, SalaryCalcType, SalaryStatus } fro
 
 // ==================== 临时工入职 V2.0 Store ====================
 export { useTempWorkerStore } from './useTempWorkerStore';
-export type { TempWorker, WorkerType, ContractType, StaffStatus, SkillTag } from './useTempWorkerStore';
+export type { TempWorker, WorkerType, ContractType as TempContractType, StaffStatus, SkillTag } from './useTempWorkerStore';
 
 // ==================== 计件工资 V2.0 Store ====================
 export { usePieceworkStore } from './usePieceworkStore';
@@ -330,4 +329,4 @@ export type { FertilizerLibrary, FertilizerSpec } from './useFertilizerLibrarySt
 
 // 2026-06-18: 库存入库审计 Store（按模块下沉入库）
 export { useInventoryInboundStore } from './useInventoryInboundStore';
-export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord, InboundRecordsQuery } from '../types/inventoryInbound';
+export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord } from '../types/inventoryInbound';
