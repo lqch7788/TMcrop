@@ -24,7 +24,7 @@ import {
   SourceType,
 } from '../types/inventory';
 
-interface InventoryFilters {
+export interface InventoryFilters {
   stockType?: StockType | '';
   status?: InventoryStatus | '';
   sourceType?: SourceType | '';
