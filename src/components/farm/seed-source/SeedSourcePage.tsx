@@ -553,7 +553,7 @@ export default function SeedSourcePage() {
 
     // 导出表头（含图片列）
     // 2026-06-06: L7 对齐表格列名 — 表格「作物品种」实际为 cropVariety||cropName，拆为「最细化」+「细分品种」两列
-    const headers = ['种源图片', '种源批号', '种源类型', '作物类别', '作物品种（最细化）', '作物品种（细分品种）', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
+    const headers = ['种源图片（链接）', '种源批号', '种源类型', '作物类别', '作物品种（最细化）', '作物品种（细分品种）', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -600,7 +600,7 @@ export default function SeedSourcePage() {
         const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
         // 设置图片列宽约 240px (30字符) + 行高
         ws['!cols'] = headers.map((h, i) => {
-          if (h === '种源图片') return { wch: 30 }; // 图片列宽
+          if (h === '种源图片（链接）') return { wch: 30 }; // 图片列宽
           if (h === '备注') return { wch: 25 };
           return { wch: 15 };
         });

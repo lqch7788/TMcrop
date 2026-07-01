@@ -20,7 +20,7 @@ import {
   SOURCE_TYPE_MAP,
   SOURCE_ORIGIN_MAP,
 } from '../../../../constants/cropConstants';
-import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
+import { computeStockStatus, getCompletionRate, getStatusColorClass, LOW_THRESHOLD_RATIO } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
 import {SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip} from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -456,9 +456,10 @@ export function SeedSourceTable({
                   content={
                     <div className="text-left space-y-1">
                       <div className="font-medium border-b border-white/30 pb-1 mb-1">状态判定规则</div>
+                      {/* 2026-07-01 P2-4：阈值从 LOW_THRESHOLD_RATIO 派生（避免改阈值时漏改文案） */}
                       <div>· 剩余率 = 0% → <span className="text-red-200 font-semibold">耗尽</span></div>
-                      <div>· 剩余率 &lt; 20% → <span className="text-amber-200 font-semibold">不足</span></div>
-                      <div>· 剩余率 ≥ 20% → <span className="text-white font-semibold">充足</span></div>
+                      <div>· 剩余率 &lt; {Math.round(LOW_THRESHOLD_RATIO * 100)}% → <span className="text-amber-200 font-semibold">不足</span></div>
+                      <div>· 剩余率 ≥ {Math.round(LOW_THRESHOLD_RATIO * 100)}% → <span className="text-white font-semibold">充足</span></div>
                     </div>
                   }
                   position="bottom"
@@ -553,8 +554,9 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.supplierName || undefined}>
                     {truncateText(record.supplierName)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.purchaseDate}>
-                    {truncateText(record.purchaseDate)}
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.purchaseDate || record.createTime}>
+                    {/* 2026-07-01 P2-19：调拨入种源的 record.purchaseDate 为空时 fallback 到 createTime */}
+                    {truncateText(record.purchaseDate || record.createTime)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap" title="种源入库数量">
                     {record.quantity?.toLocaleString() ?? record.initialCount.toLocaleString()}
