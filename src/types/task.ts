@@ -252,13 +252,11 @@ export interface Task {
   description?: string;
   remarks?: string;
   materials?: { name: string; qty: number; unit: string }[] | string[];
-  tools?: { name: string; qty: number; unit: string }[] | string[];
   typeConfig?: Record<string, any>;     // 任务类型配置（FarmTaskHub 使用）
   sopContent?: string;                   // 标准作业流程内容
   workLocation?: string;                 // = location 别名
-  cancelledReason?: string;              // 取消原因
-  cancelledAt?: string;                  // 取消时间
-  cancelledBy?: string;                  // 取消人
+  // 注：cancelledReason/cancelledAt/cancelledBy 已在 212-214 定义，不再重复
+  // 注：dispatchMode 已在 239 定义，不再重复
   sourceProblemId?: string;              // 问题处理任务关联
   sourceInspectionId?: string;           // 巡查反馈关联
   urgency?: 'urgent' | 'high' | 'normal'; // 紧急程度
@@ -267,13 +265,31 @@ export interface Task {
   startDate?: string;                    // 任务开始日期
   rejectionReason?: string;              // 驳回原因
   rejectionCount?: number;               // 驳回次数
+  // 临时任务关联字段（useTasks.ts 使用 — 2026-06-30 tsc 兼容）
+  tempTaskType?: string;                 // = type 临时任务别名
+  inspectionType?: string;               // 巡查类型
+  tempTaskData?: any;                    // 关联 TempTaskData
+  workerCount?: number;                  // 人工数
+  submitterId?: string;                  // 提交人ID（problem 子记录）
+  submitterName?: string;                // 提交人名
+  // 业务对象回溯字段
+  inspectionId?: string;
+  cropBatchId?: string;
+  cropBatchCode?: string;
   toolsRemarks?: string;
-  dispatchMode?: 'farm' | 'tempTask' | 'smart' | 'problem' | 'inspection';
-  tools?: { name: string; qty: number; unit: string }[];  // 工具列表
-  toolsRemarks?: string;      // 工具备注（当选择"其他"时使用）
+  // 注：tools 已在第 283 行定义（涵盖类型兼容），不再重复
   rejectReason?: string;
   executorRejectCount?: number;  // 执行人拒绝次数，达到2次后必须更换执行人
   subTasks?: SubTask[];
+  // 兼容字段（useTasks ts 错误）
+  tools?: { name: string; qty: number; unit: string }[] | string[];
+  workDuration?: number;            // = estimatedHours 别名
+  abandonedReason?: string;
+  isAuthCheck?: boolean;
+  isOverdue?: boolean;
+  location?: string;                 // = greenhouseName 别名（problem 子记录）
+  inspectionLevel?: string;
+  batchOid?: string;
 
   // ========== 兼容旧界面字段 ==========
   types?: string[];        // 任务类型数组，与 type 字段对应
