@@ -62,10 +62,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.getAllTasks();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks');
       expect(result).toEqual(mockTasks);
     });
 
@@ -106,10 +103,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.getTaskById('NS20260417-001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks/NS20260417-001', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks/NS20260417-001');
       expect(result).toEqual(mockTask);
     });
   });
@@ -123,11 +117,7 @@ describe('农事任务 API 服务', () => {
         status: ['pending', 'in_progress'] as TaskStatus[],
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks', {
-        params: { status: 'pending,in_progress' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks?status=pending%2Cin_progress');
     });
 
     it('应该能够按执行人筛选任务', async () => {
@@ -138,11 +128,7 @@ describe('农事任务 API 服务', () => {
         assigneeId: 'W001',
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks', {
-        params: { assigneeId: 'W001' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks?assigneeId=W001');
     });
 
     it('应该能够按日期范围筛选任务', async () => {
@@ -156,14 +142,7 @@ describe('农事任务 API 服务', () => {
         },
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks', {
-        params: {
-          startDate: '2026-04-01',
-          endDate: '2026-04-30',
-        },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks?startDate=2026-04-01&endDate=2026-04-30');
     });
 
     it('应该能够组合多个筛选条件', async () => {
@@ -177,16 +156,7 @@ describe('农事任务 API 服务', () => {
         priority: 'high',
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks', {
-        params: {
-          status: 'pending',
-          assigneeId: 'W001',
-          greenhouseId: 'GH001',
-          priority: 'high',
-        },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks?status=pending&assigneeId=W001&greenhouseId=GH001&priority=high');
     });
   });
 
@@ -223,10 +193,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.createTask(newTaskData);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith('/farm-tasks', newTaskData, {
-        offlineQueue: true,
-        useCache: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith('/farm-tasks', newTaskData);
       expect(result).toEqual(createdTask);
     });
   });
@@ -265,9 +232,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.updateTask(taskId, updates);
 
-      expect(enhancedApiClient.put).toHaveBeenCalledWith(`/farm-tasks/${taskId}`, updates, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.put).toHaveBeenCalledWith(`/farm-tasks/${taskId}`, updates);
       expect(result).toEqual(updatedTask);
     });
 
@@ -286,9 +251,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.deleteTask('NS20260417-001');
 
-      expect(enhancedApiClient.delete).toHaveBeenCalledWith('/farm-tasks/NS20260417-001', {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.delete).toHaveBeenCalledWith('/farm-tasks/NS20260417-001');
       expect(result).toBe(true);
     });
   });
@@ -322,9 +285,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.acceptTask(taskId);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/accept`, undefined, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/accept`);
       expect(result).toEqual(acceptedTask);
     });
   });
@@ -363,9 +324,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/progress`,
-        { progress, feedback },
-        { offlineQueue: true }
-      );
+        { progress, feedback });
       expect(result).toEqual(updatedTask);
     });
 
@@ -433,9 +392,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.publishTask(taskId);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/publish`, undefined, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/publish`);
       expect(result).toEqual(publishedTask);
     });
   });
@@ -469,9 +426,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.withdrawTask(taskId);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/withdraw`, undefined, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/withdraw`);
       expect(result).toEqual(withdrawnTask);
     });
   });
@@ -508,9 +463,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/complete`,
-        { comments },
-        { offlineQueue: true }
-      );
+        { comments });
       expect(result).toEqual(completedTask);
     });
   });
@@ -547,9 +500,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/reject`,
-        { reason },
-        { offlineQueue: true }
-      );
+        { reason });
       expect(result).toEqual(rejectedTask);
     });
   });
@@ -586,9 +537,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/cancel`,
-        { reason },
-        { offlineQueue: true }
-      );
+        { reason });
       expect(result).toEqual(cancelledTask);
     });
   });
@@ -625,9 +574,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/abandon`,
-        { reason },
-        { offlineQueue: true }
-      );
+        { reason });
       expect(result).toEqual(abandonedTask);
     });
   });
@@ -664,9 +611,7 @@ describe('农事任务 API 服务', () => {
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         `/farm-tasks/${taskId}/reassign`,
-        { assigneeId: newAssigneeId },
-        { offlineQueue: true }
-      );
+        { assigneeId: newAssigneeId });
       expect(result).toEqual(reassignedTask);
     });
   });
@@ -686,10 +631,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.getTaskStats();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks/stats', {
-        useCache: true,
-        cacheStrategy: 'stale-while-revalidate',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/farm-tasks/stats');
       expect(result).toEqual(mockStats);
     });
   });
@@ -703,9 +645,7 @@ describe('农事任务 API 服务', () => {
       const result = await apiFarmTaskService.deleteTasks(taskIds);
 
       expect(enhancedApiClient.delete).toHaveBeenCalledWith(
-        `/farm-tasks/batch?ids=${taskIds.join(',')}`,
-        { offlineQueue: true }
-      );
+        `/farm-tasks/batch?ids=${taskIds.join(',')}`);
       expect(result).toBe(true);
     });
   });
@@ -739,9 +679,7 @@ describe('农事任务 API 服务', () => {
 
       const result = await apiFarmTaskService.archiveTask(taskId);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/archive`, undefined, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith(`/farm-tasks/${taskId}/archive`);
       expect(result).toEqual(archivedTask);
     });
   });

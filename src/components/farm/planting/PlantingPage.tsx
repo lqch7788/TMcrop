@@ -76,7 +76,7 @@ export default function PlantingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取种植数据
-  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems } = usePlantingStore();
+  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
   // 2026-06-06: 监听 store 错误并弹 Toast
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
@@ -253,17 +253,34 @@ export default function PlantingPage() {
   // 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 直接走 updateItem
   // 不依赖生产计划关联，不打开弹窗，直接弹确认后改 end_type/end_time/status
   const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
+    // 2026-07-01: 防重复结束
+    if (record.endTime) {
+      await showAlert('该种植记录已结束，不能重复操作');
+      return;
+    }
     const isNormal = endType === 'normal';
+
+    // 2026-07-01: 强化结束确认文案 — 明确告知后果，防止误操作
     const confirmMsg = isNormal
-      ? `确认正常结束此种植记录？\n\n结束后禁止一切入库和补录操作`
-      : `确认异常结束此种植记录？\n\n结束后如需补录，需提交审核申请`;
+      ? `⚠️ 确认正常结束此种植记录？\n\n` +
+        `【正常结束】订单完成后将【锁定】，禁止一切后续操作：\n` +
+        `  • 禁止入库\n` +
+        `  • 禁止补录\n` +
+        `  • 禁止修改\n\n` +
+        `⚠️ 此操作不可撤销！`
+      : `⚠️ 确认异常结束此种植记录？\n\n` +
+        `【异常结束】因故中断，后续操作受限：\n` +
+        `  • 补录入库【需提交审核】\n` +
+        `  • 禁止新增入库\n\n` +
+        `是否确认异常结束？`;
     if (!await showConfirm(confirmMsg)) return;
 
+    const endStatus = isNormal ? PlantingStatus.ENDED : PlantingStatus.CANCELLED;
     const result = await updateItem(record.id, {
       endType,
       endTime: todayLocal(),
-      status: PlantingStatus.ENDED,  // 'ended'
-      isHarvestLocked: true,        // 2026-06-17: 软锁，避免后续误操作
+      status: endStatus,
+      isHarvestLocked: true,
     } as Partial<Planting>);
     if (result) {
       await showAlert(isNormal ? '种植记录已正常结束' : '种植记录已异常结束');
