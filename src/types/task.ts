@@ -290,6 +290,13 @@ export interface Task {
   location?: string;                 // = greenhouseName 别名（problem 子记录）
   inspectionLevel?: string;
   batchOid?: string;
+  checkDate?: string;                // = startDate 别名（problem 子记录）
+  remark?: string;
+  rejectCount?: number;
+  // 反馈时间字段
+  submittedAt?: string;
+  submissionTime?: string;
+  feedbackTime?: string;
 
   // ========== 兼容旧界面字段 ==========
   types?: string[];        // 任务类型数组，与 type 字段对应

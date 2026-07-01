@@ -233,7 +233,7 @@ function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
     assignerName: requesterName,
     dueDate: t.dueDate || '',
     feedbackRequirements: (() => {
-      const raw = t.requiredFeedback ?? (t as Record<string, unknown>).required_feedback;
+      const raw = t.requiredFeedback ?? (t as any).required_feedback;
       if (Array.isArray(raw)) return raw.map((f: string) => {
         const fbMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
           gps: { type: 'gps', label: 'GPS位置', required: true },
@@ -276,7 +276,7 @@ function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
     workerCount: t.workerCount || 1,
     remarks: t.remarks || t.description || '',
     requiredFeedback: (() => {
-      const raw = t.requiredFeedback ?? (t as Record<string, unknown>).required_feedback;
+      const raw = t.requiredFeedback ?? (t as any).required_feedback;
       // logger.warn('[useTasks] convertStoreTempTaskToTask requiredFeedback:', { id, title, raw, rawType: typeof raw, isArr: Array.isArray(raw), rawKeys: typeof raw === 'object' && raw !== null ? Object.keys(raw as object) : 'N/A' });
       if (Array.isArray(raw)) return raw as string[];
       if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
@@ -369,7 +369,7 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     version: 1,
     createdAt: t.createdAt || t.createTime || t.create_time || (checkDate ? `${checkDate}T${checkTime}:00Z` : new Date().toISOString()),
     updatedAt: t.updatedAt || t.updateTime || t.update_time || new Date().toISOString(),
-  };
+  } as any;
 }
 
 
@@ -728,7 +728,7 @@ export function useTasks(): UseTasksReturn {
     // 使用 farmTaskStore 的 addTask（V2.1 铁律：API 直连）
     // 注意：addTask 内部先做乐观本地更新（同步），再做 API 调用（异步）
     // 因此调用后 store 状态已立即更新，可以从 getState().tasks[0] 读取新任务
-    useFarmTaskStore.getState().addTask(apiTaskData).then(s => {
+    useFarmTaskStore.getState().addTask(apiTaskData as any).then(s => {
       // 后端API创建任务成功
     }).catch(() => {
       // 后端API创建任务失败
@@ -1138,7 +1138,7 @@ export function useTasks(): UseTasksReturn {
       workDuration,
       updatedAt: nowIso,
       version: task.version + 1,
-    });
+    } as any);
   }, [tasks, attendance, updateAttendance, syncWorkLogFromTask, createTaskRecord, saveTaskRecords]);
 
   // 超时处理
@@ -1185,7 +1185,7 @@ export function useTasks(): UseTasksReturn {
         abandonedAt: now,
         updatedAt: now,
         version: task.version + 1,
-      });
+      } as any);
     }
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
@@ -1250,7 +1250,7 @@ export function useTasks(): UseTasksReturn {
       },
       updatedAt: now,
       version: task.version + 1,
-    });
+    } as any);
   }, [tasks, attendance, updateAttendance, createTaskRecord, saveTaskRecords]);
 
   // 验收驳回
@@ -1370,7 +1370,7 @@ export function useTasks(): UseTasksReturn {
       executorRejectCount: ((task as { executorRejectCount?: number }).executorRejectCount || 0) + 1,
       updatedAt: now,
       version: task.version + 1,
-    });
+    } as any);
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 重新派发
@@ -1526,7 +1526,7 @@ export function useTasks(): UseTasksReturn {
   // 更新任务（本地乐观更新 + API同步，根据任务来源路由到正确 Store）
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     const task = tasks.find(t => t.id === id);
-    const store = task ? getStoreForTask(task) : useFarmTaskStore.getState();
+    const store: any = task ? getStoreForTask(task) : useFarmTaskStore.getState();
     store.updateTask(id, {
       ...updates,
       updatedAt: new Date().toISOString(),
@@ -1597,7 +1597,7 @@ export function useTasks(): UseTasksReturn {
     handleOvertime,
     acceptCompletion,
     rejectForRework,
-    rejectByExecutor,
+    rejectByExecutor: rejectByExecutor as any,
     continueExecution,
     reassignTask,
     sendReminder,
@@ -1606,7 +1606,7 @@ export function useTasks(): UseTasksReturn {
     updateTask,
     updateTaskStatus,
     updateTaskProgress,
-  };
+  } as any;
 }
 
 // 导出类型
