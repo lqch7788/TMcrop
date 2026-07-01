@@ -15,7 +15,7 @@
  * 组件 → seedSourceTransferService → enhancedApiClient → API（无缓存）
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Button,
   Card,
@@ -141,14 +141,14 @@ export function InventoryTransferPanel({
     }
   };
 
-  // 2026-06-24 修复：默认不查 DB（避免一次性拉大量库存）
-  // 使用 hasInteracted state 控制：仅用户主动操作后才触发加载
-  // 之前用 useRef + 跳过首次 useEffect 的方案在 React 18 strict mode 下失效（effect 双重执行会触发 loadRows）
-  const [hasInteracted, setHasInteracted] = useState(false);
+  // 2026-07-01 P2-6：用 useRef 替代 useState（避免不必要 re-render，且对 useEffect 严格模式双跑更稳定）
+  const hasInteractedRef = useRef(false);
+  // 兼容旧版 setHasInteracted 调用点（保留为 setter wrapper）
+  const setHasInteracted = (v: boolean) => { hasInteractedRef.current = v; };
 
   // 筛选条件变化时重载（仅在用户交互后才生效）
   useEffect(() => {
-    if (!hasInteracted) return;
+    if (!hasInteractedRef.current) return;
     loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stockTypeFilter.join(','), dateFrom, dateTo, hasInteracted, targetCropName, targetCropVariety, mode]);
