@@ -14,13 +14,12 @@ import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
-import { QUALITY_GRADE_MAP, HARVEST_FORM_MAP } from '@/constants/cropConstants';
 import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 // 2026-06-28 方案B：移除 RecordModal import — 繁殖记录已合并到每日记录弹窗
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
-import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useInventoryInboundStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
@@ -29,9 +28,7 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
-import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
-import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
@@ -241,25 +238,6 @@ export default function SeedlingPage() {
     open: false,
     record: null,
   });
-  const inboundRecordsMap = useInventoryInboundStore((s) => s.recordsBySource);
-  const loadInboundRecords = useInventoryInboundStore((s) => s.loadRecords);
-
-  // 2026-06-27：修复入库记录不显示 bug — 页面挂载时自动加载"育苗模块全部入库记录"
-  // 之前 bug: loadInboundRecords 只在用户点击"入库"按钮时调用，导致刷新页面后
-  // recordsBySource 为空，折叠区始终显示"共 0 条"（但数据库其实有数据）
-  // 位置说明：必须放在 loadInboundRecords 定义之后（避免 TDZ ReferenceError）
-  useEffect(() => {
-    void loadInboundRecords('seedling:__all__', {
-      sourceModule: 'seedling',
-      limit: 100,
-    });
-  }, [loadInboundRecords]);
-
-  // flat 入库记录，按 createTime 倒序（仅育苗模块）
-  const allInboundRecords: InventoryInboundRecord[] = Object.values(inboundRecordsMap)
-    .flat()
-    .filter((r) => r.sourceModule === 'seedling')
-    .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
@@ -351,56 +329,11 @@ export default function SeedlingPage() {
   // 2026-06-18: 任务 5 — 出圃入库入口 + 加载/导出辅助
   const handleInbound = (record: Seedling) => {
     setInboundModal({ open: true, record });
-    void loadInboundRecords(`seedling:${record.id}`, {
-      sourceModule: 'seedling',
-      sourceId: record.id,
-      limit: 100,
-    });
   };
 
   const handleInboundSuccess = () => {
-    const rec = inboundModal.record;
-    if (!rec) return;
-    void loadInboundRecords(`seedling:${rec.id}`, {
-      sourceModule: 'seedling',
-      sourceId: rec.id,
-      limit: 100,
-    });
     toast.success('入库成功');
   };
-
-  // 2026-06-28：入库记录导出改为 Excel（用 xlsx 库生成真正的 .xlsx）
-  // 之前是手写 CSV + UTF-8 BOM 兼容 Excel，但中文长内容偶尔列宽错乱；
-  // 现在用 xlsx 库按列设置 wch，Excel/WPS 打开自动适配列宽
-  const exportInboundExcel = () => {
-    if (allInboundRecords.length === 0) {
-      showAlert('没有入库记录可导出');
-      return
-    }
-    const headers = ['入库日期', '来源编码', '作物编码', '作物品种', '采收形态', '仓库', '数量', '单位', '品质', '操作员', '备注']
-    const rows = allInboundRecords.map((r) => [
-      r.recordDate ? String(r.recordDate).split('T')[0] : '',
-      r.sourceCode || r.sourceId,
-      r.cropCode || '',
-      r.cropName && r.varietyName ? `${r.cropName}/${r.varietyName}` : (r.cropName || r.varietyName || ''),
-      r.harvestForm ? (HARVEST_FORM_MAP[r.harvestForm] ?? r.harvestForm) : '',
-      r.warehouseName || r.warehouseId || '',
-      r.quantity,
-      r.unit,
-      r.qualityGrade ? (QUALITY_GRADE_MAP[r.qualityGrade]?.label ?? r.qualityGrade) : '',
-      r.operatorName || r.createBy || '',
-      r.notes || '',
-    ])
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-    // 列宽：按表头最大字符数 × 2 估算（中文按 2 宽算）
-    ws['!cols'] = headers.map((h, i) => {
-      const maxCellLen = Math.max(h.length, ...rows.map(r => String(r[i] ?? '').length))
-      return { wch: Math.max(12, maxCellLen * 2) }
-    })
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '育苗入库记录')
-    XLSX.writeFile(wb, `育苗入库记录_${todayLocal()}.xlsx`)
-  }
 
   const handleImageClick = (images: string[]) => {
     setCurrentImages(images);
@@ -844,76 +777,6 @@ export default function SeedlingPage() {
           }}
         />
       )}
-
-      {/* 2026-06-28 方案B：移除独立繁殖记录弹窗 — 已合并到每日记录弹窗的 🌱 繁殖事件 折叠面板 */}
-
-      {/* 2026-06-18: 任务 5 — 入库记录子表（折叠区） */}
-      <details className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            {/* 2026-06-28：折叠箭头 — group-open:rotate-180 在展开时旋转 180° */}
-            <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
-            入库记录 (共 {allInboundRecords.length} 条)
-          </span>
-          {/* 2026-06-28：导出按钮挪到 summary 同一行靠右；onClick 阻止冒泡到 summary 的折叠切换 */}
-          {allInboundRecords.length > 0 && (
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                exportInboundExcel();
-              }}
-            >
-              <Download className="w-4 h-4 mr-1" /> 导出 Excel
-            </Button>
-          )}
-        </summary>
-        <div className="p-3">
-          {allInboundRecords.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 text-sm">暂无入库记录</div>
-          ) : (
-            <>
-              <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-blue-500 text-white sticky top-0">
-                    <tr>
-                      <th className="px-2 py-2 text-left">入库日期</th>
-                      <th className="px-2 py-2 text-left">来源编码</th>
-                      <th className="px-2 py-2 text-left">作物编码</th>
-                      <th className="px-2 py-2 text-left">作物品种</th>
-                      <th className="px-2 py-2 text-left">采收形态</th>
-                      <th className="px-2 py-2 text-left">仓库</th>
-                      <th className="px-2 py-2 text-left">数量</th>
-                      <th className="px-2 py-2 text-left">单位</th>
-                      <th className="px-2 py-2 text-left">品质</th>
-                      <th className="px-2 py-2 text-left">操作员</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allInboundRecords.slice(0, 20).map((r) => (
-                      <tr key={r.id} className="hover:bg-gray-50">
-                        {/* 2026-06-28：入库日期只显示年月日（防御 ISO 字符串含 T） */}
-                        <td className="px-2 py-1.5">{r.recordDate ? String(r.recordDate).split('T')[0] : '-'}</td>
-                        <td className="px-2 py-1.5">{r.sourceCode || r.sourceId}</td>
-                        <td className="px-2 py-1.5">{r.cropCode || '-'}</td>
-                        <td className="px-2 py-1.5">{r.cropName && r.varietyName ? `${r.cropName}/${r.varietyName}` : (r.cropName || r.varietyName || '-')}</td>
-                        <td className="px-2 py-1.5">{r.harvestForm ? (HARVEST_FORM_MAP[r.harvestForm] ?? r.harvestForm) : '-'}</td>
-                        <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
-                        <td className="px-2 py-1.5">{r.quantity}</td>
-                        <td className="px-2 py-1.5">{r.unit}</td>
-                        {/* 2026-06-28：品质英文 → 中文（兼容 A/B/C/D 老数据） */}
-                        <td className="px-2 py-1.5">{r.qualityGrade ? (QUALITY_GRADE_MAP[r.qualityGrade]?.label ?? r.qualityGrade) : '-'}</td>
-                        <td className="px-2 py-1.5">{r.operatorName || r.createBy || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-      </details>
 
       {/* 导出格式选择弹窗 */}
       <ExportFormatModal

@@ -2922,6 +2922,71 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('audit_logs 表创建失败:', e.message);
   }
+
+  // 2026-07-01: 一次性迁移 — harvest_records.products JSON 里 cropName/cropVariety 互换
+  // 历史 bug：seedlings/seed_sources/plantings 主表的 crop_name 字段实际存"品种"（如"红富士"），
+  // crop_variety 字段实际存"类型/名称"（如"苹果"），字段名与值语义相反。
+  // 旧入库代码未做字段绑定交换，直接把 seedlings.crop_name 存到 harvest_records.products[].cropName，
+  // 导致弹窗里"作物名称"列显示"红富士"而非"苹果"。
+  // 前端已修复（UnifiedRowHarvestInboundModal 默认值做交换），这里做一次性历史数据修复：
+  // 把所有 harvest_records.products JSON 里的 cropName ↔ cropVariety 互换，
+  // 之后再入库的 records 字段值就与用户期望语义一致了。
+  // 幂等保护：用一个 schema_migrations 表记录是否已执行过（如果已有 'harvest_crop_field_swap_v1' 则跳过）
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )`);
+    const checkStmt = db.prepare(`SELECT id FROM schema_migrations WHERE id = ?`);
+    checkStmt.bind(['harvest_crop_field_swap_v1']);
+    const alreadyApplied = checkStmt.step();
+    checkStmt.free();
+    if (alreadyApplied) {
+      seedLog.skip('• harvest_records.products cropName/cropVariety 互换：已执行过，跳过');
+    } else {
+      // 1. 读所有 harvest_records
+      const stmt = db.prepare(`SELECT id, products FROM harvest_records WHERE products IS NOT NULL AND products != '' AND deleted_at IS NULL`);
+      let migratedCount = 0;
+      const updateStmt = db.prepare(`UPDATE harvest_records SET products = ? WHERE id = ?`);
+      while (stmt.step()) {
+        const row = stmt.getAsObject() as any;
+        const id = row.id;
+        const productsStr = row.products;
+        try {
+          const products = JSON.parse(productsStr);
+          if (!Array.isArray(products) || products.length === 0) continue
+          let changed = false
+          const swapped = products.map((p: any) => {
+            if (p && typeof p === 'object' && ('cropName' in p || 'cropVariety' in p)) {
+              changed = true
+              return { ...p, cropName: p.cropVariety, cropVariety: p.cropName }
+            }
+            return p
+          })
+          if (changed) {
+            updateStmt.bind([JSON.stringify(swapped), id])
+            updateStmt.step()
+            updateStmt.reset()
+            migratedCount++
+          }
+        } catch { /* 跳过非 JSON 数据 */ }
+      }
+      stmt.free()
+      updateStmt.free()
+      // 2. 记录已执行
+      if (migratedCount > 0) {
+        const insertStmt = db.prepare(`INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)`)
+        insertStmt.bind(['harvest_crop_field_swap_v1', new Date().toISOString()])
+        insertStmt.step()
+        insertStmt.free()
+        seedLog.info(`  ✓ harvest_records.products cropName/cropVariety 互换：${migratedCount} 条记录已迁移`)
+      } else {
+        seedLog.skip('• harvest_records.products cropName/cropVariety 互换：无可迁移数据')
+      }
+    }
+  } catch (e: any) {
+    seedLog.error('harvest_records.products 迁移失败:', e.message)
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
