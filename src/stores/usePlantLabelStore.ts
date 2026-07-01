@@ -217,7 +217,7 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** 分配标记给标签 */
   submitMark: async (markId, labelIds) => {
     try {
-      const res = await enhancedApiClient.post('/plant-labels/marks/assign', {
+      const res = await enhancedApiClient.post('/plant-labels/assign', {
         mark_id: markId,
         label_ids: labelIds,
       });
