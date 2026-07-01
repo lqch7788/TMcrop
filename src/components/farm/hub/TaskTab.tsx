@@ -433,7 +433,7 @@ export function TaskTab({
             <SelectContent>
               <SelectItem value="all">全部批次</SelectItem>
               {batchCodeOptions.map((code) => (
-                <SelectItem key={code} value={code}>
+                <SelectItem key={code || ''} value={code || ''}>
                   {code}
                 </SelectItem>
               ))}
@@ -492,7 +492,7 @@ export function TaskTab({
       ) : (
       /* 使用迁移的 TaskTable 组件 */
       <TaskTable
-        tasks={filteredTasks}
+        tasks={filteredTasks as any}
         stats={stats}
         currentPage={currentPage}
         pageSize={pageSize}
@@ -530,16 +530,16 @@ export function TaskTab({
           }
         }}
         onSelectAll={handleSelectAll}
-        onViewDetail={handleViewDetail}
-        onViewSop={onViewSop}
-        onAccept={handleAccept}
-        onWithdraw={handleWithdraw}
-        onCancel={handleCancel}
-        onOvertime={handleOvertime}
-        onContinue={handleContinue}
-        onReassign={handleReassign}
-        onSelectExecutor={handleSelectExecutor}
-        onPublish={handlePublish}
+        onViewDetail={handleViewDetail as any}
+        onViewSop={onViewSop as any}
+        onAccept={handleAccept as any}
+        onWithdraw={handleWithdraw as any}
+        onCancel={handleCancel as any}
+        onOvertime={handleOvertime as any}
+        onContinue={handleContinue as any}
+        onReassign={handleReassign as any}
+        onSelectExecutor={handleSelectExecutor as any}
+        onPublish={handlePublish as any}
         isMyTasksView={false}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {

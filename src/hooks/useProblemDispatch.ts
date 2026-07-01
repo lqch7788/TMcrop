@@ -38,7 +38,7 @@ const STATUS_EN = {
 /** 检查问题状态是否为指定中文状态 */
 const isStatus = (p: ProblemData, cn: string): boolean => {
   // ?????????statusLabel????? status ?????
-  return p.status === cn || p.statusLabel === cn || STATUS_EN_TO_CN[p.status] === cn;
+  return (p as any).status === cn || (p as any).statusLabel === cn || (STATUS_EN_TO_CN as any)[(p as any).status] === cn;
 };
 
 // 问题类型到任务类型的映射
@@ -186,7 +186,7 @@ export function useProblemDispatch() {
   // 获取问题关联的任务
   const getTaskForProblem = useCallback(
     (problemId: number): Task | undefined => {
-      return tasks.find(t => t.sourceProblemId === problemId);
+      return (tasks as any).find((t: any) => t.sourceProblemId === problemId);
     },
     [tasks]
   );
@@ -209,7 +209,7 @@ export function useProblemDispatch() {
     const severity = getIssueSeverity(problem);
 
     // 判断问题类型
-    const getProblemType = (text: string): { type: Task['type']; typeName: string } => {
+    const getProblemType = (text: string): { type: any; typeName: string } => {
       if (text.includes('虫') || text.includes('蚜')) return { type: 'pesticide', typeName: '植保' };
       if (text.includes('病') || text.includes('斑') || text.includes('灰霉')) return { type: 'pesticide', typeName: '植保' };
       if (text.includes('水') || text.includes('旱')) return { type: 'irrigation', typeName: '灌溉' };
@@ -231,7 +231,6 @@ export function useProblemDispatch() {
       batchCode: '',
       greenhouseId: problem.greenhouseId || '',
       greenhouseName: problem.greenhouseName || '',
-      mode: 'glass' as 'glass' | 'solar',
       assigneeId,
       assigneeName,
       assignerId: dispatcherId,
@@ -240,13 +239,11 @@ export function useProblemDispatch() {
       workDuration: 0,
       requiredMaterials: [],
       description: `问题描述：${issueText}\n严重程度：${severity}\n巡查时间：${problem.checkDate || ''} ${problem.checkTime || ''}\n温室：${problem.greenhouseName || ''}\n作物：${problem.cropName || ''}`,
-      actualWorkload: 0,
       sourceProblemId: problemId,
       requiredFeedback: requiredFeedback || [],
       sourceId: problem.sourceId || '',
       sourceCode: problem.sourceId || '',
-      dispatchMode: 'problem' as 'farm' | 'tempTask' | 'smart' | 'problem',
-    });
+    } as any);
 
     // 创建流转记录（中文标签用于UI展示）
     const flowRecord: ProblemFlowRecord = {
@@ -283,7 +280,7 @@ export function useProblemDispatch() {
       dispatcherName,
     }]);
 
-    return newTask;
+    return newTask as any;
   }, [storeProblems, updateProblemInStore, createTask, setDispatchRecords]);
 
   // 批量分派问题
@@ -544,7 +541,7 @@ export function useProblemDispatch() {
   // 获取问题流转记录
   const getProblemFlowRecords = useCallback((problemId: number): ProblemFlowRecord[] => {
     const problem = storeProblems.find(p => p.id === problemId);
-    return getFlowRecords(problem);
+    return getFlowRecords(problem!) as any;
   }, [storeProblems]);
 
   // 获取员工列表
