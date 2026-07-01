@@ -176,7 +176,12 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     remarks: '',
     phValue: undefined as number | undefined,
     ecValue: undefined as number | undefined,
-    operator: ''
+    operator: '',
+    // 兼容字段：母株/小苗数量统计别名（2026-06-30 tsc 兼容）
+    motherLossCount: undefined as number | undefined,
+    replantCount: undefined as number | undefined,
+    expandedPlantCount: undefined as number | undefined,
+    seedlingLossCount: undefined as number | undefined,
   });
 
   // 编辑状态
@@ -320,8 +325,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         remarks: '',
         phValue: undefined,
         ecValue: undefined,
-        operator: ''
-      });
+        operator: '',
+        // 兼容字段（同步添加 — 2026-06-30 tsc 兼容）
+        motherLossCount: undefined,
+        replantCount: undefined,
+        expandedPlantCount: undefined,
+        seedlingLossCount: undefined,
+      } as any);
     } catch (error) {
       // logger.error('添加每日记录失败:', error);
       await showAlert('添加记录失败，请重试');
@@ -349,8 +359,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     setEditingId(r.id);
     const cleanRow: Partial<DailyRecord> = {};
     BUSINESS_FIELDS.forEach(k => {
-      if (r[k] !== undefined) {
-        cleanRow[k] = r[k];
+      if (r[k as keyof DailyRecord] !== undefined) {
+        (cleanRow as any)[k] = r[k as keyof DailyRecord];
       }
     });
     setEditingRow(cleanRow);

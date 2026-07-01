@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Check, CheckCircle, Clock, Download, Edit2, FileText, Plus, Send, Trash2, X, XCircle } from 'lucide-react';
-import { TempTask, TEMP_TASK_TYPES } from '../../../types';
+import { TEMP_TASK_TYPES } from '../../../types';
+import { type TempTask } from '../../../hooks/useTempTasks';
 import { useUserStore } from '../../../stores';
 import { TempTaskFilters } from './TempTaskFilters';
 import { TempTaskTable } from './TempTaskTable';
@@ -569,7 +570,8 @@ export function TempTaskPage() {
 
   // 使用统一临时任务管理 Hook（数据闭环核心）
   const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
-  const { addTempTaskRecord, getRecordsByTaskId } = useOperationRecords();
+  const { addTempTaskRecord: addTempTaskRecordAny, getRecordsByTaskId } = useOperationRecords() as any;
+  const addTempTaskRecord = addTempTaskRecordAny as (data: any) => any;
   // 统一任务管理 Hook（用于临时任务同步）
 
 
@@ -652,7 +654,7 @@ export function TempTaskPage() {
     handleSubmitDraft,
     generateNewTaskCode,
   } = useTempTaskForm({
-    initialData: editingTask,
+    initialData: editingTask as any,
     users: users.map(u => ({ id: u.id, name: u.name })),
     onSubmit: (taskData, status) => {
       if (editingTask) {
@@ -694,11 +696,11 @@ export function TempTaskPage() {
           workerCount: taskData.workerCount || 1,
           description: taskData.description || '',
           remarks: taskData.notes || '',
-          status: finalStatus,
+          status: finalStatus as any,
           requiredFeedback: taskData.requiredFeedback || [],
           sourceType: 'tempTask',
           dispatchMode: 'tempTask',
-        });
+        } as any);
 
         // 数据闭环：同步到农事操作记录
         addTempTaskRecord({
@@ -714,7 +716,7 @@ export function TempTaskPage() {
           sourceCode: newTask?.taskCode || newTask?.id || '',
           progress: 0,
           remarks: finalStatus === 'pending' ? '临时任务已发布' : '临时任务已创建（草稿）',
-        });
+        } as any);
       }
       closeFormModal();
     },
@@ -853,10 +855,10 @@ export function TempTaskPage() {
     // 重置任务状态为待接受，同时可以清空rejectCount
     // 注意：后端 PUT 处理通过 reassign=true 标记来记录 reassign 操作
     updateTempTask(task.id, {
-      status: 'pending',
+      status: 'pending' as any,
       rejectCount: 0,
       reassign: true, // 标记为重新分派，让后端记录 reassign 操作
-    });
+    } as any);
     // 记录操作
     addTempTaskRecord({
       operationType: 'reassign',
@@ -916,7 +918,7 @@ export function TempTaskPage() {
   const handleWithdrawConfirm = (reason: string) => {
     if (withdrawCancelTask) {
       updateTempTask(withdrawCancelTask.id, {
-        status: 'cancelled',
+        status: 'cancelled' as any,
       });
       addTempTaskRecord({
         operationType: 'withdraw',
@@ -943,7 +945,7 @@ export function TempTaskPage() {
   const handleCancelConfirm = (reason: string) => {
     if (withdrawCancelTask) {
       updateTempTask(withdrawCancelTask.id, {
-        status: 'cancelled',
+        status: 'cancelled' as any,
       });
       addTempTaskRecord({
         operationType: 'cancel',
@@ -1030,7 +1032,7 @@ export function TempTaskPage() {
     Object.entries(editedTasks).forEach(([taskCode, updates]) => {
       const task = tempTasks.find(t => t.taskCode === taskCode);
       if (task) {
-        updateTempTask(task.id, updates);
+        updateTempTask(task.id, updates as any);
       }
     });
     setSelectedRows([]);
@@ -1171,10 +1173,9 @@ export function TempTaskPage() {
       {/* 筛选组件 */}
       <TempTaskFilters
         searchTerm={filters.searchTerm}
-        urgencyFilter={filters.urgencyFilter}
-        statusFilter={filters.statusFilter}
-        overdueFilter={filters.overdueFilter}
-        stats={stats}
+        urgencyFilter={filters.urgencyFilter as any}
+        statusFilter={filters.statusFilter as any}
+        overdueFilter={filters.overdueFilter as any}
         onSearchChange={setSearchTerm}
         onUrgencyChange={setUrgencyFilter}
         onStatusChange={setStatusFilter}
@@ -1260,18 +1261,18 @@ export function TempTaskPage() {
         </div>
 
         <TempTaskTable
-          tasks={filteredTasks}
+          tasks={filteredTasks as any}
           showCheckbox={exportMode || batchEditMode || batchDeleteMode}
           exportMode={exportMode}
           batchEditMode={batchEditMode}
           batchDeleteMode={batchDeleteMode}
           selectedRows={selectedRows}
-          onViewTask={openDetailModal}
-          onEditTask={openEditModal}
-          onAccept={handleAcceptComplete}
-          onWithdraw={handleWithdraw}
-          onCancel={handleCancel}
-          onReassign={handleOpenReassign}
+          onViewTask={openDetailModal as any}
+          onEditTask={openEditModal as any}
+          onAccept={handleAcceptComplete as any}
+          onWithdraw={handleWithdraw as any}
+          onCancel={handleCancel as any}
+          onReassign={handleOpenReassign as any}
           onSelectAll={handleSelectAll}
           onSelectRow={handleSelectRow}
           pagination={{
@@ -1337,11 +1338,11 @@ export function TempTaskPage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-3">紧急程度</h4>
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1.5 rounded text-sm font-medium ${
-                  selectedTask.urgency === 'critical' ? 'bg-red-100 text-red-700' :
+                  (selectedTask.urgency as any) === 'critical' ? 'bg-red-100 text-red-700' :
                   selectedTask.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
-                  {selectedTask.urgency === 'critical' ? '非常紧急' :
+                  {(selectedTask.urgency as any) === 'critical' ? '非常紧急' :
                    selectedTask.urgency === 'urgent' ? '紧急' : '普通'}
                 </span>
               </div>
@@ -1497,14 +1498,14 @@ export function TempTaskPage() {
       <TempTaskFormModal
         isOpen={isFormModalOpen}
         title={editingTask ? '编辑临时任务' : '新建临时任务'}
-        task={editingTask}
+        task={editingTask as any}
         formData={formData}
         errors={errors}
         workerUsers={users.map(u => ({ id: u.id, name: u.name }))}
         onClose={closeFormModal}
         onSubmitDraft={handleSubmitDraft}
         onSubmit={() => handleFormSubmit('pending')}
-        onChange={updateFormData}
+        onChange={updateFormData as any}
         generateNewTaskCode={generateNewTaskCode}
         dispatchMode={dispatchMode}
         onDispatchModeChange={setDispatchMode}

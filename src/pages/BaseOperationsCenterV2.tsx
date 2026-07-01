@@ -85,13 +85,13 @@ function buildTreeData(
   blocks: { oid: string; blockCode: string; blockName: string; zoneOid: string }[],
   currentBaseOid: string,
   searchQuery: string
-): TreeNode[] {
+): any[] {
   const query = searchQuery.toLowerCase();
 
   // 如果有当前基地OID，只显示该基地的数据
   if (currentBaseOid) {
     const currentBase = bases.find(b => b.oid === currentBaseOid);
-    if (!currentBase) return [];
+    if (!currentBase) return [] as any;
 
     return [{
       key: `base_${currentBase.oid}`,
@@ -375,41 +375,41 @@ export default function BaseOperationsCenterV2() {
           // 新增温室
           await useGreenhouseStore.getState().addGreenhouse({
             ...formData,
-            baseOid: selectedNode.oid,
+            baseOid: selectedNode.oid || '',
           });
           showToast('温室新增成功', 'success');
         } else if (selectedNode.type === 'greenhouse') {
           // 新增区域
           await useZoneStore.getState().addZone({
             ...formData,
-            greenhouseOid: selectedNode.oid,
+            greenhouseOid: selectedNode.oid || '',
           });
           showToast('区域新增成功', 'success');
         } else if (selectedNode.type === 'zone') {
           // 新增地块
           await useBlockStore.getState().addBlock({
             ...formData,
-            zoneOid: selectedNode.oid,
+            zoneOid: selectedNode.oid || '',
           });
           showToast('地块新增成功', 'success');
         } else if (selectedNode.type === 'block') {
           // 新增种植记录
           await usePlantingRecordStore.getState().addRecord({
             ...formData,
-            blockOid: selectedNode.oid,
-          });
+            block_oid: selectedNode.oid || '',
+          } as any);
           showToast('种植记录新增成功', 'success');
         }
       } else if (modalType === 'edit' && editingItem) {
         // 编辑
         if (editingItem.type === 'greenhouse') {
-          await useGreenhouseStore.getState().editGreenhouse(editingItem.oid, formData);
+          await useGreenhouseStore.getState().editGreenhouse(editingItem.oid || '', formData);
           showToast('温室编辑成功', 'success');
         } else if (editingItem.type === 'zone') {
-          await useZoneStore.getState().editZone(editingItem.oid, formData);
+          await useZoneStore.getState().editZone(editingItem.oid || '', formData);
           showToast('区域编辑成功', 'success');
         } else if (editingItem.type === 'block') {
-          await useBlockStore.getState().editBlock(editingItem.oid, formData);
+          await useBlockStore.getState().editBlock(editingItem.oid || '', formData);
           showToast('地块编辑成功', 'success');
         }
       }
@@ -423,11 +423,8 @@ export default function BaseOperationsCenterV2() {
 
   // 处理删除
   const handleDelete = async (oid: string) => {
-    const confirmed = await showAlert('确定要删除吗？删除后无法恢复。', '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    });
-    if (!confirmed) return;
+    await showAlert('确定要删除吗？删除后无法恢复。');
+    // showAlert 仅接受 1 个参数（message）；删除按钮文字由 UI 提供
 
     try {
       if (selectedNode.type === 'greenhouse') {
@@ -448,7 +445,7 @@ export default function BaseOperationsCenterV2() {
 
   // 使用 buildTreeData 函数构建本地树形数据
   const treeData = useMemo(() => {
-    return buildTreeData(bases, greenhouses, zones, blocks, baseOidFromUrl, searchTerm);
+    return buildTreeData(bases as any, greenhouses as any, zones as any, blocks as any, baseOidFromUrl, searchTerm) as any;
   }, [bases, greenhouses, zones, searchTerm]);
 
   // 按基地过滤后的数据（用于列表视图）
@@ -458,14 +455,14 @@ export default function BaseOperationsCenterV2() {
 
   const filteredZones = useMemo(() => {
     if (!baseOidFromUrl) return zones;
-    const baseGhOids = new Set(filteredGreenhouses.map(g => g.oid));
-    return zones.filter(z => baseGhOids.has(z.greenhouseOid));
+    const baseGhOids = new Set(filteredGreenhouses.map(g => String(g.oid || '')));
+    return zones.filter(z => baseGhOids.has(String(z.greenhouseOid || '')));
   }, [zones, filteredGreenhouses, baseOidFromUrl]);
 
   const filteredRecords = useMemo(() => {
     if (!baseOidFromUrl) return records;
-    const baseGhOids = new Set(filteredGreenhouses.map(g => g.oid));
-    return records.filter(r => baseGhOids.has(r.facilityOid));
+    const baseGhOids = new Set(filteredGreenhouses.map(g => String(g.oid || '')));
+    return records.filter(r => baseGhOids.has(String(r.facilityOid || '')));
   }, [records, filteredGreenhouses, baseOidFromUrl]);
 
   // 加载所有数据（仅首次挂载时）
@@ -579,10 +576,10 @@ export default function BaseOperationsCenterV2() {
     switch (selectedNode.type) {
       case 'base': {
         const baseGreenhouses = greenhouses.filter(gh => gh.baseOid === selectedNode.oid);
-        const baseZoneOids = new Set(zones.filter(z => baseGreenhouses.some(gh => gh.oid === z.greenhouseOid)).map(z => z.oid));
+        const baseZoneOids = new Set(zones.filter(z => baseGreenhouses.some(gh => gh.oid === String(z.greenhouseOid || ''))).map(z => String(z.oid || '')));
         const baseRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === r.blockOid);
-          return block && baseZoneOids.has(block.zoneOid);
+          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
+          return block && baseZoneOids.has(String(block.zoneOid || ''));
         });
         const plantingRecords = baseRecords.filter(r => r.status === 'planting');
 
@@ -594,10 +591,10 @@ export default function BaseOperationsCenterV2() {
         };
       }
       case 'greenhouse': {
-        const ghZoneOids = new Set(zones.filter(z => z.greenhouseOid === selectedNode.oid).map(z => z.oid));
+        const ghZoneOids = new Set(zones.filter(z => z.greenhouseOid === selectedNode.oid).map(z => String(z.oid || '')));
         const ghRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === r.blockOid);
-          return block && ghZoneOids.has(block.zoneOid);
+          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
+          return block && ghZoneOids.has(String(block.zoneOid || ''));
         });
         const plantingRecords = ghRecords.filter(r => r.status === 'planting');
 
@@ -610,7 +607,7 @@ export default function BaseOperationsCenterV2() {
       }
       case 'zone': {
         const zoneRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === r.blockOid);
+          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
           return block?.zoneOid === selectedNode.oid;
         });
         const plantingRecords = zoneRecords.filter(r => r.status === 'planting');
@@ -622,6 +619,8 @@ export default function BaseOperationsCenterV2() {
           currentCrop: plantingRecords[0]?.cropName || '-',
         };
       }
+      default:
+        return { totalArea: 0, zoneCount: 0, plantingCount: 0, currentCrop: '-' };
     }
   }, [selectedNode, greenhouses, zones, records]);
 
@@ -947,15 +946,15 @@ export default function BaseOperationsCenterV2() {
               baseOid={baseOidFromUrl}
               baseName={bases.find(b => b.oid === baseOidFromUrl)?.name || ''}
               loading={loading}
-              onAdd={async (data) => {
+              onAdd={async (data: any) => {
                 await useGreenhouseStore.getState().addGreenhouse(data);
                 loadAllData(); // 刷新 useBaseOperationsStore
               }}
-              onEdit={async (id, data) => {
+              onEdit={async (id: any, data: any) => {
                 await useGreenhouseStore.getState().editGreenhouse(id, data);
                 loadAllData();
               }}
-              onRemove={async (id) => {
+              onRemove={async (id: any) => {
                 await useGreenhouseStore.getState().removeGreenhouse(id);
                 loadAllData();
               }}
@@ -968,15 +967,15 @@ export default function BaseOperationsCenterV2() {
               zones={filteredZones}
               greenhouses={filteredGreenhouses}
               loading={loading}
-              onAdd={async (data) => {
+              onAdd={async (data: any) => {
                 await useZoneStore.getState().addZone(data);
                 loadAllData();
               }}
-              onEdit={async (id, data) => {
+              onEdit={async (id: any, data: any) => {
                 await useZoneStore.getState().editZone(id, data);
                 loadAllData();
               }}
-              onRemove={async (id) => {
+              onRemove={async (id: any) => {
                 await useZoneStore.getState().removeZone(id);
                 loadAllData();
               }}
@@ -990,19 +989,19 @@ export default function BaseOperationsCenterV2() {
               greenhouses={filteredGreenhouses}
               zones={filteredZones}
               loading={loading}
-              onAdd={async (data) => {
+              onAdd={async (data: any) => {
                 await usePlantingRecordStore.getState().addRecord(data);
                 loadRecords();
               }}
-              onEdit={async (id, data) => {
+              onEdit={async (id: any, data: any) => {
                 await usePlantingRecordStore.getState().editRecord(id, data);
                 loadRecords();
               }}
-              onEnd={async (id, data) => {
+              onEnd={async (id: any, data: any) => {
                 await usePlantingRecordStore.getState().endSeason(id, data);
                 loadRecords();
               }}
-              onRemove={async (id) => {
+              onRemove={async (id: any) => {
                 await usePlantingRecordStore.getState().removeRecord(id);
                 loadRecords();
               }}

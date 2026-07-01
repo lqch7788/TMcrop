@@ -95,6 +95,9 @@ export { useMaterialFlowStore } from './useMaterialFlowStore';
 export { usePlantingStore } from './usePlantingStore';
 export { usePlantLabelStore } from './usePlantLabelStore';
 export type { PlantLabel, PlantLabelResume, PlantMark, MoveFormData } from './usePlantLabelStore';
+// 2026-07-01: 行级采收入库弹窗底部"采收记录"历史表 store
+export { useHarvestRecordStore } from './useHarvestRecordStore';
+export type { SourceModule } from './useHarvestRecordStore';
 
 
 export { useInventoryStore } from './useInventoryStore';

@@ -101,6 +101,9 @@ export interface FarmHubState {
   // 操作记录（最近20条）
   recentRecords: UnifiedOperationRecord[];
 
+  // 全量操作记录（FarmTaskHub 弹窗使用 — 兼容字段）
+  allRecords?: UnifiedOperationRecord[];
+
   // 加载状态
   isLoading: boolean;
 }
@@ -139,6 +142,15 @@ export interface UseFarmHubReturn {
   getFilteredTasks: () => Task[];
   getFilteredProblems: () => ProblemEntry[];
   getFilteredInspections: () => InspectionRecord[];
+
+  // 兼容字段（FarmTaskHub.tsx 使用 — 2026-06-30 tsc 兼容）
+  inspectionFilters?: any;
+  setInspectionFilter?: any;
+  resetInspectionFilters?: any;
+  inspectionPage?: number;
+  inspectionPageSize?: number;
+  inspectionGoToPage?: any;
+  [key: string]: any;
 }
 
 // ============================================

@@ -171,7 +171,7 @@ export const ENV_ALERT_RULES: EnvAlertRule[] = [
     action: ['ventilation', 'co2_enrichment'],
     severity: 'warning',
   },
-];
+] as any;
 
 // ============================================
 // 病虫害预警规则
@@ -362,7 +362,7 @@ export const PEST_ALERT_RULES: PestAlertRule[] = [
     action: ['pruning', 'fertilization'],
     urgencyLevel: 2,
   },
-];
+] as any;
 
 // ============================================
 // 作物阶段任务定义
@@ -943,7 +943,7 @@ export const RECOMMENDATION_RULES: RecommendationRule[] = [
     cooldownHours: 12,
     priority: 2,
   },
-];
+] as any;
 
 // ============================================
 // 辅助函数

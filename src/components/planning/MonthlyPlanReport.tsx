@@ -321,9 +321,8 @@ export default function MonthlyPlanReportComponent({
           <Statistic
             title="预估成本"
             value={plan.totalCost}
-            prefix="¥"
             precision={0}
-            prefix={<DollarSign />}
+            prefix={<><span>¥</span><DollarSign /></>}
             valueStyle={{ color: '#fa8c16' }}
           />
         </Card>

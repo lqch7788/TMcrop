@@ -7,17 +7,32 @@ import { cn } from "@/lib/utils"
 // 当 value=""时自动映射为 sentinel 值，onValueChange 时反向映射
 const ALL_SENTINEL = '__all__';
 
-const Select: React.FC<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>> = ({
-  value,
-  onValueChange,
-  ...props
-}) => (
+const Select = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> & {
+    onChange?: (e: { target: { value: string } } | any) => void;  // 兼容 onChange（HTML 风格 — 2026-06-30 tsc 兼容）
+    options?: any;                                                  // 忽略（Antd 风格 options prop — 兼容）
+  }
+>(({ value, onValueChange, onChange, options, ...props }, ref) => (
   <SelectPrimitive.Root
+    ref={ref}
     value={value === '' ? ALL_SENTINEL : value}
-    onValueChange={onValueChange ? (val: string) => onValueChange(val === ALL_SENTINEL ? '' : val) : undefined}
+    onValueChange={
+      onValueChange
+        ? (val: string) => {
+            const mapped = val === ALL_SENTINEL ? '' : val;
+            onValueChange(mapped);
+            // 也调用 onChange（HTML 风格 onChange(e) — 兼容旧 API）
+            if (onChange) onChange({ target: { value: mapped } });
+          }
+        : onChange
+        ? (val: string) => onChange({ target: { value: val === ALL_SENTINEL ? '' : val } })
+        : undefined
+    }
     {...props}
   />
-);
+));
+Select.displayName = 'Select';
 
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value

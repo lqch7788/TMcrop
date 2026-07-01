@@ -10,11 +10,12 @@ export interface StatisticProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string
   value: number | string
   prefix?: React.ReactNode
-  suffix?: React.ReactNode
+  suffix?: string | React.ReactNode
   precision?: number
   trend?: number
   trendDirection?: 'up' | 'down'
   formatter?: (value: number) => string
+  valueStyle?: React.CSSProperties
 }
 
 const Statistic = React.forwardRef<HTMLDivElement, StatisticProps>(

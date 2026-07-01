@@ -9,14 +9,17 @@ export type ProgressType = 'line' | 'circle' | 'dashboard'
 export type ProgressSize = 'sm' | 'md' | 'lg'
 
 export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: number
+  value?: number
   max?: number
   showLabel?: boolean
+  showInfo?: boolean
   type?: ProgressType
   size?: ProgressSize
   strokeColor?: string
   trailColor?: string
   strokeWidth?: number
+  percent?: number          // Antd 风格别名（兼容旧用法）
+  format?: (percent: number) => React.ReactNode  // Antd 风格（兼容旧用法）
 }
 
 const sizeMap: Record<ProgressSize, { lineHeight: number; circleSize: number; strokeWidth: number }> = {

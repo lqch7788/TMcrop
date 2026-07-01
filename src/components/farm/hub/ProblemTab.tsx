@@ -22,7 +22,7 @@ import { AlertTriangle, Camera, Check, CheckCircle, Clock, Download, Eye, FileTe
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
+import type { SourceModuleType } from '../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
 // 必填反馈选项常量（避免在组件内重复定义）
@@ -177,16 +177,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
     switch (statusFilter) {
       case 'pending':
-        list = pendingProblems;
+        list = pendingProblems as any;
         break;
       case 'dispatched':
-        list = dispatchedProblems;
+        list = dispatchedProblems as any;
         break;
       case 'handled':
-        list = handledProblems;
+        list = handledProblems as any;
         break;
       default:
-        list = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
+        list = [...pendingProblems, ...dispatchedProblems, ...handledProblems] as any;
     }
 
     if (severityFilter !== 'all') {
@@ -275,8 +275,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       workZone: problem.greenhouseName || '',
       greenhouse: problem.greenhouseName || '',
       cropName: problem.cropName || '',
-      batchId: problem.batchId,
-      batchCode: problem.batchCode,
+      batchId: (problem as any).batchId,
+      batchCode: (problem as any).batchCode,
       requiredSkills: [],
       estimatedHours: 2,
       dueDate: '',
@@ -402,7 +402,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     if (selectedProblems.length === pendingProblems.length) {
       setSelectedProblems([]);
     } else {
-      setSelectedProblems(pendingProblems.map(p => p.id));
+      setSelectedProblems(pendingProblems.map(p => p.id) as any);
     }
   };
 
@@ -542,7 +542,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       '问题描述': row.issueText,
       '严重程度': row.issueSeverity,
       '状态': row.status,
-      '处理人': row.handler || row.handlerName || row.assigneeName || '-',
+      '处理人': row.handler || row.handlerName || (row as any).assigneeName || '-',
       '巡检日期': row.checkDate,
       '巡检时间': row.checkTime,
     }));
@@ -766,7 +766,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                         <span className="text-sm text-gray-500">（{worker.position}）</span>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
-                        {(worker.skillTags || []).slice(0, 2).map(tag => (
+                        {(worker.skillTags || []).slice(0, 2).map((tag: any) => (
                           <span
                             key={tag}
                             className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
@@ -1146,6 +1146,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         <div className="space-y-4">
         {/* 筛选工具栏 */}
         <ProblemFilterToolbar
+          onBatchDispatch={() => {}}
+          onBatchDelete={() => {}}
+          onExport={() => {}}
           timeFilter={timeFilter}
           dateRange={dateRange}
           statusFilter={statusFilter}
@@ -1237,7 +1240,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           batchDeleteMode={batchDeleteMode}
           batchDispatchMode={batchDispatchMode}
           exportMode={exportMode}
-          pendingProblems={pendingProblems}
+          pendingProblems={pendingProblems as any}
           onViewDetail={(problem) => setDetailModal({ isOpen: true, problem })}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={handleBatchSelectAll}

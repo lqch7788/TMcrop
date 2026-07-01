@@ -164,6 +164,12 @@ export interface TempTask {
 
   // 进度（0-100）
   progress?: number;
+
+  // 兼容字段（types/index.ts 旧版别名 — 2026-06-30 tsc 兼容）
+  workLocation?: string;     // = location 别名
+  tempTaskType?: string;     // = type 别名
+  notes?: string;            // = remarks 别名
+  planStart?: string;        // 计划开始时间（兼容）
 }
 
 // ============================================

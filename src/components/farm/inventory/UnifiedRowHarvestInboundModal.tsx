@@ -12,6 +12,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import {
   Modal,
   FormField,
@@ -26,11 +27,12 @@ import {
   NumberInput,
   Button,
 } from '@/components/ui'
-import {Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, X, ChevronDown} from 'lucide-react'
+import {Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, X, ChevronDown, Download} from 'lucide-react'
 import { useWarehouseStore, useInventoryStore } from '@/stores'
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import {useUserStore} from '@/stores/useUserStore'
+import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert } from '@/lib/dialogService'
 import {
@@ -40,6 +42,7 @@ import {
   type SourceModule,
   type InboundProduct,
 } from '@/services/unifiedHarvestInboundService'
+import type { HarvestRecord } from '@/types'
 
 // ============ 常量 ============
 
@@ -176,6 +179,11 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const loadWarehouses = useWarehouseStore((s: any) => s.loadWarehouses)
   const dictionaries = useDictionaryStore((s: any) => s.dictionaries)
   const loadDictionaries = useDictionaryStore((s: any) => s.loadDictionaries)
+  // 2026-07-01: 弹窗底部"采收记录"历史表 + 导出 Excel
+  const loadHarvestRecords = useHarvestRecordStore((s) => s.loadRecords)
+  const recordsByKey = useHarvestRecordStore((s) => s.recordsByKey)
+  const loadingByKey = useHarvestRecordStore((s) => s.loadingByKey)
+  const prependHarvestRecord = useHarvestRecordStore((s) => s.prependRecord)
 
   // ---- 加载字典/仓库 ----
   useEffect(() => {
@@ -183,8 +191,12 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       loadWarehouses?.()
       loadDictionaries?.()
       loadUsers?.()
+      // 2026-07-01: 弹窗打开时加载该来源记录的采收历史
+      if (sourceRecord?.id) {
+        loadHarvestRecords(sourceModule, sourceRecord.id)
+      }
     }
-  }, [isOpen, loadWarehouses, loadDictionaries, loadUsers])
+  }, [isOpen, loadWarehouses, loadDictionaries, loadUsers, sourceModule, sourceRecord?.id, loadHarvestRecords])
 
   // ---- 重置表单 ----
   // 2026-06-19 修复：只从 false→true 切换时重置（用 ref 标记上一次 isOpen 状态），
@@ -365,6 +377,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       showAlert(`入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`, {
         title: '成功',
       })
+      // 2026-07-01: 刷新该来源的采收历史（提交后 store 里数据陈旧，重新拉取）
+      if (sourceRecord?.id) {
+        void loadHarvestRecords(sourceModule, sourceRecord.id)
+      }
       onSuccess?.()
       onClose()
     } catch (e: any) {
@@ -377,6 +393,117 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // ---- UI ----
   const meta = STOCK_TYPE_LABEL[stockType]
   const titleText = `采收入库（${meta.label}）`
+
+  // 2026-07-01: 弹窗底部"采收记录"历史表数据
+  // recordKey = `${sourceModule}:${sourceRecord.id}`，对应 store 里的索引
+  const recordKey = sourceRecord?.id ? `${sourceModule}:${sourceRecord.id}` : ''
+  const historyRecords: HarvestRecord[] = (recordKey ? recordsByKey[recordKey] : undefined) || []
+  const historyLoading = !!loadingByKey[recordKey]
+
+  // 2026-07-01: 品质等级中文化（与产品明细 Select 选项一致：special/excellent/good/qualified/unqualified → 特优/优/良/合格/不合格）
+  const GRADE_LABEL: Record<string, string> = {
+    special: '特优',
+    excellent: '优',
+    good: '良',
+    qualified: '合格',
+    unqualified: '不合格',
+  }
+  function gradeLabel(value: string | undefined | null): string {
+    if (!value) return ''
+    return GRADE_LABEL[value] || value
+  }
+
+  // 2026-07-01: 弹窗表 + 导出 Excel 共用的列名定义（保持一致）
+  // 弹窗表 16 列：日期/单号/产物序号/作物编码/产物名/品种/数量/单位/采收形态/品质/仓库/采收员/操作员/补录/创建时间/操作
+  const EXCEL_HEADERS = [
+    '采收日期', '入库单号', '来源编码', '采收形态', '产物序号', '作物编码', '产物名',
+    '作物品种', '采收数量', '单位', '品质', '采收形态(产物)', '单价(元)',
+    '仓库', '采收员', '操作员', '补录', '补录原因', '备注', '创建时间',
+  ] as const
+
+  // 2026-07-01: 解析 harvest_records.products 字段（JSON 字符串 → InboundProduct[]）
+  // 入库时后端把整组 products 存成 JSON.stringify(input.products)，前端读出后 JSON.parse
+  function parseProductsField(productsField: unknown): InboundProduct[] {
+    if (!productsField) return []
+    if (Array.isArray(productsField)) return productsField as InboundProduct[]
+    if (typeof productsField === 'string') {
+      try {
+        const parsed = JSON.parse(productsField)
+        return Array.isArray(parsed) ? (parsed as InboundProduct[]) : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  // 2026-07-01: 导出历史记录为 Excel（用 xlsx 库，按"每个 product 1 行"展开）
+  // 1 条入库记录 = 1..N 条 product（种源/育苗=1，种植=多产物），导出时按产物展开方便审计
+  const handleExportExcel = () => {
+    if (historyRecords.length === 0) {
+      showAlert('暂无采收记录可导出')
+      return
+    }
+    // 共用工具：从 harvest_records + products 数组里提 1 行数据
+    const harvesterNamesStr = (r: any): string => {
+      try {
+        const arr = typeof r.harvesterNames === 'string' ? JSON.parse(r.harvesterNames) : r.harvesterNames
+        return Array.isArray(arr) ? arr.join('、') : ''
+      } catch { return '' }
+    }
+    const buildRow = (r: any, p: any, idx: number): Record<string, unknown> => ({
+      '采收日期': r.harvestDate || '',
+      '入库单号': r.harvestCode || r.id,
+      '来源编码': r.sourceCode || '',
+      '采收形态': r.harvestForm || '',
+      '产物序号': idx > 0 ? idx + 1 : '',
+      '作物编码': p.cropCode || '',
+      '产物名': p.cropName || '',
+      '作物品种': p.cropVariety || '',
+      '采收数量': p.harvestQuantity ?? '',
+      '单位': p.unit || '',
+      '品质': gradeLabel(p.grade),  // 2026-07-01: 品质英→中
+      '采收形态(产物)': p.sourceForm || p.productForm || '',
+      '单价(元)': r.unitPrice ?? '',
+      '仓库': r.warehouseName || r.warehouseId || '',
+      '采收员': harvesterNamesStr(r),
+      '操作员': r.operator || r.operatorName || r.createBy || '',
+      '补录': r.isSupplementary ? '是' : '否',
+      '补录原因': r.supplementaryReason || '',
+      '备注': p.remarks || r.remarks || r.notes || '',
+      '创建时间': r.createTime || '',
+    })
+    const rows: Record<string, unknown>[] = []
+    for (const r of historyRecords) {
+      const products = parseProductsField((r as any).products)
+      if (products.length === 0) {
+        rows.push(buildRow(r, {}, 0))
+      } else {
+        products.forEach((p, idx) => rows.push(buildRow(r, p, idx)))
+      }
+    }
+    const ws = XLSX.utils.json_to_sheet(rows, { header: [...EXCEL_HEADERS] })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '采收记录')
+    const filename = `采收记录_${sourceRecord.code}_${todayLocal()}.xlsx`
+    XLSX.writeFile(wb, filename)
+  }
+
+  // 2026-07-01: 删除 1 条采收记录（弹窗删除按钮）
+  const deleteRecord = useHarvestRecordStore((s) => s.deleteRecord)
+  const deletingIds = useHarvestRecordStore((s) => s.deletingIds)
+  const handleDeleteRecord = async (recordId: string) => {
+    const ok = await showConfirm('确定删除这条采收记录？\n将同时删除对应的库存实例、入库审计和流水。')
+    if (!ok) return
+    try {
+      const success = await deleteRecord(recordId, sourceModule, sourceRecord.id || '')
+      if (success) {
+        showAlert('删除成功', { title: '成功' })
+      }
+    } catch (e: any) {
+      showAlert(e?.message || '删除失败')
+    }
+  }
 
   return (
     <Modal
@@ -428,122 +555,133 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </div>
         )}
 
-        {/* 基础字段 2 列 */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="采收日期" required>
-            <DatePicker
-              className="w-full"
-              selected={harvestDate ? new Date(harvestDate) : undefined}
-              onChange={(date) => setHarvestDate(todayLocal(date))}
-            />
-          </FormField>
-          <FormField label="目标仓库" required>
-            <Select value={warehouseId} onValueChange={(v) => {
-              setWarehouseId(v)
-              const w = (warehouses || []).find((x: any) => x.id === v || x.warehouseId === v)
-              if (w) setWarehouseName(w.name || w.warehouseName || '')
-            }}>
-              <SelectTrigger className={deepInputClass}>
-                <SelectValue placeholder="选择仓库" />
-              </SelectTrigger>
-              <SelectContent>
-                {(warehouses || []).map((w: any) => (
-                  <SelectItem key={w.id || w.warehouseId} value={w.id || w.warehouseId}>
-                    {w.name || w.warehouseName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="单价（元）">
-            <NumberInput
-              value={unitPrice}
-              onChange={setUnitPrice}
-              min={0}
-              max={1000000}
-              step={0.01}
-              className={deepInputClass}
-            />
-          </FormField>
-          <FormField label="采收员">
-            <div className="relative">
-              {/* 触发按钮：显示已选 chip 列表 + 下拉箭头 */}
-              <button
-                type="button"
-                onClick={() => setHarvesterPopoverOpen(!harvesterPopoverOpen)}
-                className={`${deepInputClass} w-full text-left flex items-center justify-between min-h-[44px] ${harvesterPopoverOpen ? 'border-emerald-500 ring-2 ring-emerald-200' : ''}`}
-              >
-                <div className="flex-1 flex flex-wrap gap-1">
-                  {harvesterNames.length === 0 ? (
-                    <span className="text-gray-400">点击选择采收员（可多选）</span>
-                  ) : (
-                    harvesterNames.map((name, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded"
-                      >
-                        {name}
-                        <X
-                          className="w-3 h-3 cursor-pointer hover:text-emerald-950"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setHarvesterNames((prev) => prev.filter((_, i) => i !== idx))
-                            setHarvesterIds((prev) => prev.filter((_, i) => i !== idx))
-                          }}
-                        />
-                      </span>
-                    ))
-                  )}
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-500 ml-2 shrink-0" />
-              </button>
-              {/* 多选下拉列表 */}
-              {harvesterPopoverOpen && (
-                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {users.length === 0 ? (
-                    <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
-                  ) : (
-                    users.map((u: any) => {
-                      const name = u.realName || u.real_name || u.username
-                      const checked = harvesterNames.includes(name)
-                      return (
-                        <label
-                          key={u.oid || u.id}
-                          className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer"
+        {/* 基础字段单行布局：5 个字段（采收日期 / 目标仓库 / 单价 / 采收员 / 操作员）同行展示。
+            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 12。 */}
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-2">
+            <FormField label="采收日期" required>
+              <DatePicker
+                className="w-full"
+                selected={harvestDate ? new Date(harvestDate) : undefined}
+                onChange={(date) => setHarvestDate(todayLocal(date))}
+              />
+            </FormField>
+          </div>
+          <div className="col-span-2">
+            <FormField label="目标仓库" required>
+              <Select value={warehouseId} onValueChange={(v) => {
+                setWarehouseId(v)
+                const w = (warehouses || []).find((x: any) => x.id === v || x.warehouseId === v)
+                if (w) setWarehouseName(w.name || w.warehouseName || '')
+              }}>
+                <SelectTrigger className={deepInputClass}>
+                  <SelectValue placeholder="选择仓库" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(warehouses || []).map((w: any) => (
+                    <SelectItem key={w.id || w.warehouseId} value={w.id || w.warehouseId}>
+                      {w.name || w.warehouseName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+          <div className="col-span-2">
+            <FormField label="单价（元）">
+              <NumberInput
+                value={unitPrice}
+                onChange={setUnitPrice}
+                min={0}
+                max={1000000}
+                step={0.01}
+                className={deepInputClass}
+              />
+            </FormField>
+          </div>
+          <div className="col-span-4">
+            <FormField label="采收员">
+              <div className="relative">
+                {/* 触发按钮：显示已选 chip 列表 + 下拉箭头 */}
+                <button
+                  type="button"
+                  onClick={() => setHarvesterPopoverOpen(!harvesterPopoverOpen)}
+                  className={`${deepInputClass} w-full text-left flex items-center justify-between min-h-[44px] ${harvesterPopoverOpen ? 'border-emerald-500 ring-2 ring-emerald-200' : ''}`}
+                >
+                  <div className="flex-1 flex flex-wrap gap-1">
+                    {harvesterNames.length === 0 ? (
+                      <span className="text-gray-400">点击选择采收员（可多选）</span>
+                    ) : (
+                      harvesterNames.map((name, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded"
                         >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              if (checked) {
-                                setHarvesterNames((prev) => prev.filter((n) => n !== name))
-                                setHarvesterIds((prev) => prev.filter((_, i) => harvesterNames[i] !== name))
-                              } else {
-                                setHarvesterNames((prev) => [...prev, name])
-                                setHarvesterIds((prev) => [...prev, u.oid || u.id || `H${prev.length}`])
-                              }
+                          {name}
+                          <X
+                            className="w-3 h-3 cursor-pointer hover:text-emerald-950"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setHarvesterNames((prev) => prev.filter((_, i) => i !== idx))
+                              setHarvesterIds((prev) => prev.filter((_, i) => i !== idx))
                             }}
                           />
-                          <span className="text-sm">{name}</span>
-                          {u.username && u.username !== name && (
-                            <span className="text-xs text-gray-400">@{u.username}</span>
-                          )}
-                        </label>
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </FormField>
-          <FormField label="操作员">
-            <Input
-              value={operator}
-              onChange={(e) => setOperator(e.target.value)}
-              placeholder="默认当前登录人员"
-              className={deepInputClass}
-            />
-          </FormField>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500 ml-2 shrink-0" />
+                </button>
+                {/* 多选下拉列表 */}
+                {harvesterPopoverOpen && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {users.length === 0 ? (
+                      <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
+                    ) : (
+                      users.map((u: any) => {
+                        const name = u.realName || u.real_name || u.username
+                        const checked = harvesterNames.includes(name)
+                        return (
+                          <label
+                            key={u.oid || u.id}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                if (checked) {
+                                  setHarvesterNames((prev) => prev.filter((n) => n !== name))
+                                  setHarvesterIds((prev) => prev.filter((_, i) => harvesterNames[i] !== name))
+                                } else {
+                                  setHarvesterNames((prev) => [...prev, name])
+                                  setHarvesterIds((prev) => [...prev, u.oid || u.id || `H${prev.length}`])
+                                }
+                              }}
+                            />
+                            <span className="text-sm">{name}</span>
+                            {u.username && u.username !== name && (
+                              <span className="text-xs text-gray-400">@{u.username}</span>
+                            )}
+                          </label>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            </FormField>
+          </div>
+          <div className="col-span-2">
+            <FormField label="操作员">
+              <Input
+                value={operator}
+                onChange={(e) => setOperator(e.target.value)}
+                placeholder="默认当前登录人员"
+                className={deepInputClass}
+              />
+            </FormField>
+          </div>
         </div>
 
         {/* 2026-06-30 Bug 21：顶部"种源形态"Select 已删除，统一走产品明细 sourceForm
@@ -597,102 +735,107 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             )}
           </div>
           <div className="space-y-2">
-            {products.map((p, idx) => (
-              <div key={idx} className="border rounded-lg p-3 bg-gray-50">
-                <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-3">
-                    <div className="text-xs text-gray-500 mb-1">产物名</div>
-                    <Input
-                      value={p.cropName}
-                      onChange={(e) => updateProduct(idx, { cropName: e.target.value })}
-                      className={deepInputClass}
-                      disabled={productsLocked}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <div className="text-xs text-gray-500 mb-1">品种</div>
-                    <Input
-                      value={p.cropVariety || ''}
-                      onChange={(e) => updateProduct(idx, { cropVariety: e.target.value })}
-                      className={deepInputClass}
-                      disabled={productsLocked}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <div className="text-xs text-gray-500 mb-1">采收数量</div>
-                    <NumberInput
-                      value={p.harvestQuantity}
-                      onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
-                      min={0}
-                      className={deepInputClass}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <div className="text-xs text-gray-500 mb-1">单位</div>
-                    <Select
-                      value={p.unit}
-                      onValueChange={(v) => updateProduct(idx, { unit: v })}
-                    >
-                      <SelectTrigger className={deepInputClass}>
-                        <SelectValue placeholder="选单位" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unitOptions.length === 0 ? (
-                          <SelectItem value="克" disabled>字典加载中…</SelectItem>
-                        ) : (
-                          unitOptions.map((u) => (
-                            <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* 2026-06-19: 种源形态已表达入库类型，产品内"采收形态"仅种植行（product）显示
-                      避免与"种源形态"字段语义重复 */}
-                  {sourceModule !== 'seed_source' && (
-                  <div className="col-span-2">
-                    <div className="text-xs text-gray-500 mb-1">采收形态</div>
-                    <Select
-                      value={p.sourceForm || ''}
-                      onValueChange={(v) => updateProduct(idx, { sourceForm: v })}
-                    >
-                      <SelectTrigger className={deepInputClass}>
-                        <SelectValue placeholder="选形态" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SOURCE_FORMS.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  )}
-                  <div className="col-span-2">
-                    <div className="text-xs text-gray-500 mb-1">品质</div>
-                    <Select
-                      value={p.grade || ''}
-                      onValueChange={(v) => updateProduct(idx, { grade: v })}
-                    >
-                      <SelectTrigger className={deepInputClass}>
-                        <SelectValue placeholder="选品质" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {QUALITY_GRADES.map((g) => (
-                          <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-1 flex items-end">
-                    {!productsLocked && products.length > 1 && (
-                      <Button size="sm" variant="ghost" onClick={() => removeProduct(idx)}>
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
+            {products.map((p, idx) => {
+              // 2026-07-01：所有产品明细字段同一行展示。
+              // 种源行（sourceModule === 'seed_source'）不显示"采收形态"，列宽自动补齐。
+              const showSourceForm = sourceModule !== 'seed_source'
+              return (
+                <div key={idx} className="border rounded-lg p-3 bg-gray-50">
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className={showSourceForm ? 'col-span-2' : 'col-span-3'}>
+                      <div className="text-xs text-gray-500 mb-1">产物名</div>
+                      <Input
+                        value={p.cropName}
+                        onChange={(e) => updateProduct(idx, { cropName: e.target.value })}
+                        className={deepInputClass}
+                        disabled={productsLocked}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-xs text-gray-500 mb-1">品种</div>
+                      <Input
+                        value={p.cropVariety || ''}
+                        onChange={(e) => updateProduct(idx, { cropVariety: e.target.value })}
+                        className={deepInputClass}
+                        disabled={productsLocked}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-xs text-gray-500 mb-1">采收数量</div>
+                      <NumberInput
+                        value={p.harvestQuantity}
+                        onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
+                        min={0}
+                        className={deepInputClass}
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <div className="text-xs text-gray-500 mb-1">单位</div>
+                      <Select
+                        value={p.unit}
+                        onValueChange={(v) => updateProduct(idx, { unit: v })}
+                      >
+                        <SelectTrigger className={deepInputClass}>
+                          <SelectValue placeholder="选单位" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unitOptions.length === 0 ? (
+                            <SelectItem value="克" disabled>字典加载中…</SelectItem>
+                          ) : (
+                            unitOptions.map((u) => (
+                              <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* 2026-06-19: 种源形态已表达入库类型，产品内"采收形态"仅非种源行显示
+                        避免与"种源形态"字段语义重复 */}
+                    {showSourceForm && (
+                      <div className="col-span-2">
+                        <div className="text-xs text-gray-500 mb-1">采收形态</div>
+                        <Select
+                          value={p.sourceForm || ''}
+                          onValueChange={(v) => updateProduct(idx, { sourceForm: v })}
+                        >
+                          <SelectTrigger className={deepInputClass}>
+                            <SelectValue placeholder="选形态" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SOURCE_FORMS.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
+                    <div className={showSourceForm ? 'col-span-2' : 'col-span-3'}>
+                      <div className="text-xs text-gray-500 mb-1">品质</div>
+                      <Select
+                        value={p.grade || ''}
+                        onValueChange={(v) => updateProduct(idx, { grade: v })}
+                      >
+                        <SelectTrigger className={deepInputClass}>
+                          <SelectValue placeholder="选品质" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUALITY_GRADES.map((g) => (
+                            <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-1 flex items-end">
+                      {!productsLocked && products.length > 1 && (
+                        <Button size="sm" variant="ghost" onClick={() => removeProduct(idx)}>
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -705,6 +848,135 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             className={deepInputClass}
           />
         </FormField>
+
+        {/* 2026-07-01: 弹窗底部"采收记录"历史表（仿照种植 HarvestRecordModal 样式）
+            数据来自 harvest_records 表按 (source_module, source_id) 过滤
+            每条入库记录按 products 数组展开成多行（与 Excel 导出列保持一致）
+            品质英→中、导出按钮绿色、加删除按钮 */}
+        <div className="border-t pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-medium">
+              采收记录（{historyRecords.length} 条）
+              {historyLoading && <span className="ml-2 text-xs text-gray-500">加载中…</span>}
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={historyRecords.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Download className="w-4 h-4 mr-1" /> 导出 Excel
+            </Button>
+          </div>
+          {historyRecords.length === 0 ? (
+            <div className="text-center py-6 text-sm text-gray-500 border border-dashed border-gray-200 rounded-lg">
+              {historyLoading ? '正在加载采收记录…' : '暂无采收记录'}
+            </div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-500 text-white sticky top-0">
+                  <tr>
+                    <th className="px-2 py-2 text-left whitespace-nowrap">采收日期</th>
+                    <th className="px-2 py-2 text-left whitespace-nowrap">入库单号</th>
+                    <th className="px-2 py-2 text-left">产物名</th>
+                    <th className="px-2 py-2 text-left">品种</th>
+                    <th className="px-2 py-2 text-right whitespace-nowrap">采收数量</th>
+                    <th className="px-2 py-2 text-left">单位</th>
+                    <th className="px-2 py-2 text-left">采收形态</th>
+                    <th className="px-2 py-2 text-left">品质</th>
+                    <th className="px-2 py-2 text-left">仓库</th>
+                    <th className="px-2 py-2 text-left">采收员</th>
+                    <th className="px-2 py-2 text-left">操作员</th>
+                    <th className="px-2 py-2 text-left">补录</th>
+                    <th className="px-2 py-2 text-left">创建时间</th>
+                    <th className="px-2 py-2 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRecords.flatMap((r) => {
+                    const products = parseProductsField((r as any).products)
+                    let harvesterStr = ''
+                    try {
+                      const arr = typeof (r as any).harvesterNames === 'string'
+                        ? JSON.parse((r as any).harvesterNames)
+                        : (r as any).harvesterNames
+                      harvesterStr = Array.isArray(arr) ? arr.join('、') : ''
+                    } catch { /* ignore */ }
+                    const isDeleting = !!deletingIds[r.id]
+                    // 没有 products 详情时也展示 1 行（汇总级）
+                    if (products.length === 0) {
+                      return [
+                        <tr key={r.id} className="hover:bg-gray-50 align-top">
+                          <td className="px-2 py-1.5 whitespace-nowrap">{r.harvestDate || '-'}</td>
+                          <td className="px-2 py-1.5 font-mono text-xs">{(r as any).harvestCode || r.id}</td>
+                          <td className="px-2 py-1.5" colSpan={7}><span className="text-gray-400">（无产品明细）</span></td>
+                          <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
+                          <td className="px-2 py-1.5 text-xs">{harvesterStr || '-'}</td>
+                          <td className="px-2 py-1.5">{(r as any).operator || r.operatorName || r.createBy || '-'}</td>
+                          <td className="px-2 py-1.5 text-xs">
+                            {(r as any).isSupplementary
+                              ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>
+                              : <span className="text-gray-400">否</span>}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">{(r as any).createTime || '-'}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRecord(r.id)}
+                              disabled={isDeleting}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>,
+                      ]
+                    }
+                    return products.map((p, idx) => (
+                      <tr key={`${r.id}-${idx}`} className="hover:bg-gray-50 align-top">
+                        <td className="px-2 py-1.5 whitespace-nowrap">{r.harvestDate || '-'}</td>
+                        <td className="px-2 py-1.5 font-mono text-xs">{(r as any).harvestCode || r.id}</td>
+                        <td className="px-2 py-1.5 font-medium">{p.cropName || '-'}</td>
+                        <td className="px-2 py-1.5">{p.cropVariety || '-'}</td>
+                        <td className="px-2 py-1.5 text-right text-emerald-700 font-medium">{p.harvestQuantity ?? 0}</td>
+                        <td className="px-2 py-1.5">{p.unit || '-'}</td>
+                        <td className="px-2 py-1.5">{p.sourceForm || p.productForm || (r as any).harvestForm || '-'}</td>
+                        <td className="px-2 py-1.5">{gradeLabel(p.grade) || '-'}</td>
+                        <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
+                        <td className="px-2 py-1.5 text-xs">{harvesterStr || '-'}</td>
+                        <td className="px-2 py-1.5">{(r as any).operator || r.operatorName || r.createBy || '-'}</td>
+                        <td className="px-2 py-1.5 text-xs">
+                          {(r as any).isSupplementary
+                            ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>
+                            : <span className="text-gray-400">否</span>}
+                        </td>
+                        <td className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">{(r as any).createTime || '-'}</td>
+                        <td className="px-2 py-1.5 text-center">
+                          {idx === 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRecord(r.id)}
+                              disabled={isDeleting}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {/* 底部按钮已移到 Modal footer prop（避免双"取消"按钮） */}
       </div>

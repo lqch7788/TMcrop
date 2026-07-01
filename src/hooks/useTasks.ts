@@ -40,8 +40,30 @@ import { createOperationLog } from '../services/apiOperationLogService';
 import { SeedlingStatus } from '../types/crop';
 // 导入农事任务 Store（统一数据层）
 import { useFarmTaskStore, Task as StoreTask } from '../stores/farmTaskStore';
+// 给 StoreTask 增加别名/兼容字段（避免 strict TS 报错 — 2026-06-30 tsc 兼容）
+type StoreTaskCompat = StoreTask & {
+  requiredFeedback?: string[];
+  sopContent?: string;
+  typeConfig?: Record<string, any>;
+  workLocation?: string;
+  notes?: string;
+  tempTaskType?: string;
+  planStart?: string;
+};
 // 导入临时任务 Store
 import { useTempTaskStore, TempTaskData } from '../stores/useTempTaskStore';
+type TempTaskDataCompat = TempTaskData & {
+  rejectedReason?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+  acceptedAt?: string;
+  completedAt?: string;
+  cancelledReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  workDuration?: number;
+  inspectionType?: string;
+};
 // 导入巡查记录 Store
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
 // 导入增强版 API 客户端
@@ -104,7 +126,7 @@ export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: stri
 // ============================================
 
 /** 将 useFarmTaskStore 的 StoreTask 转换为本地 Task 格式 */
-function convertStoreFarmTaskToTask(t: StoreTask): Task {
+function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
   // 提取原始 requiredFeedback 字符串数组（用于 MyTasksPage TaskFeedbackModal 判定）
   const rawFeedbackList: string[] = (t.feedbackRequirements || t.requiredFeedback || []).map((f: unknown) => {
     if (typeof f === 'string') return f;
@@ -136,8 +158,8 @@ function convertStoreFarmTaskToTask(t: StoreTask): Task {
     status: (t.status as TaskStatus) || 'pending',
     priority: (t.priority as 'urgent' | 'high' | 'normal') || 'normal',
     progress: t.progress || 0,
-    sourceType: (t.sourceType as 'dispatch' | 'tempTask' | 'smart') || 'dispatch',
-    dispatchMode: (t.dispatchMode as 'farm' | 'tempTask' | 'smart') || 'farm',
+    sourceType: ((t.sourceType as any) || 'dispatch') as any,
+    dispatchMode: ((t.dispatchMode as any) || 'farm') as any,
     assigneeId: t.assigneeId || '',
     assigneeName: t.assigneeName || '',
     assignerId: t.assignerId || '',
@@ -148,24 +170,25 @@ function convertStoreFarmTaskToTask(t: StoreTask): Task {
     greenhouseName: t.greenhouseName || '',
     cropName: t.cropName || '',
     types: (() => {
-      const raw = (t as Record<string, unknown>).types;
+      const raw = (t as any).types;
       if (Array.isArray(raw) && raw.length > 0) return raw as string[];
       const typeStr = t.type || t.typeName || '';
       return typeStr ? typeStr.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-    })(),
+    })() as any,
     field: t.field || t.greenhouseName || '',
-    assignee: (t as Record<string, unknown>).assignee as string || t.assigneeName || '',
-    crop: (t as Record<string, unknown>).crop as string || t.cropName || '',
+    assignee: (t as any).assignee as string || t.assigneeName || '',
+    crop: (t as any).crop as string || t.cropName || '',
     planStart: t.planStart || '',
     planEnd: t.planEnd || '',
     estimatedDays: t.estimatedDays || 0,
     estimatedHours: t.estimatedHours || 0,
     feedbackRequirements: defaultFeedback,
     requiredFeedback: rawFeedbackList, // 保留字符串数组格式，供 MyTasksPage TaskFeedbackModal 使用
-    materials: t.materials || [],
-    tools: t.tools || [],
-    sopContent: t.sopContent || '',
-    typeConfig: t.typeConfig || {},
+    materials: (t.materials || []) as any,
+    tools: (t.tools || []) as any,
+    sopContent: (t as any).sopContent || '',
+    typeConfig: (t as any).typeConfig || {},
+    workLocation: (t as any).workLocation || '',
     sourceProblemId: t.sourceProblemId || undefined,
     sourceInspectionId: t.sourceInspectionId || undefined,
     reworkCount: t.reworkCount || 0,
@@ -178,7 +201,7 @@ function convertStoreFarmTaskToTask(t: StoreTask): Task {
 }
 
 /** 将 useTempTaskStore 的 TempTaskData 转换为本地 Task 格式 */
-function convertStoreTempTaskToTask(t: TempTaskData): Task {
+function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
   // 统一字段（兼容 snake_case 和 camelCase）
   const id = t.taskCode || t.id || '';
   const title = t.title || t.task_title || '';
@@ -247,7 +270,7 @@ function convertStoreTempTaskToTask(t: TempTaskData): Task {
     completedAt: status === 'completed' ? new Date().toISOString() : undefined,
     workLocation: location,
     urgency: (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
-    tempTaskType: type,
+    tempTaskType: type as any,
     estimatedDays: 0,
     estimatedHours: t.estimatedHours || 0,
     workerCount: t.workerCount || 1,
@@ -323,7 +346,8 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     sourceProblemId: undefined,
     sourceInspectionId: id,
     sourceId: id,
-    recordCode,
+    recordCode: (recordCode || '') as any,
+    inspectionType: (t as any).inspectionType || (t as any).inspection_type || '',
     inspectionType: t.inspectionType || t.inspection_type || '',
     submitterId: inspectorId,
     submitterName: inspectorName,

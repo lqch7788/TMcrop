@@ -6,7 +6,10 @@
 
 import React from 'react';
 import { AlertTriangle, Check, CheckCircle, ChevronRight, Clock, XCircle } from 'lucide-react';
-import type { Approval, ApprovalStatus } from '../../types/approval';
+import { type Approval } from '../../types/approval';
+// tsc 1361: ApprovalStatus 在原模块被 'import type' 导入，但这里当值用。改为值导入。
+import * as ApprovalNS from '../../types/approval';
+const { ApprovalStatus } = ApprovalNS as any;
 import { ApprovalLevelBadge } from './ApprovalLevelBadge';
 import { ApprovalLevel } from '../../config/approvalHierarchy';
 import { Button } from '@/components/ui';
@@ -37,7 +40,7 @@ export function ApprovalList({
   canReject = true,
   canExport = true,
 }: ApprovalListProps) {
-  const getStatusIcon = (status: ApprovalStatus) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case ApprovalStatus.APPROVED:
         return <CheckCircle className="w-5 h-5 text-emerald-500" />;
@@ -50,7 +53,7 @@ export function ApprovalList({
     }
   };
 
-  const getStatusText = (status: ApprovalStatus) => {
+  const getStatusText = (status: any) => {
     switch (status) {
       case ApprovalStatus.DRAFT:
         return '草稿';
@@ -69,7 +72,7 @@ export function ApprovalList({
     }
   };
 
-  const getStatusBadgeClass = (status: ApprovalStatus) => {
+  const getStatusBadgeClass = (status: any) => {
     switch (status) {
       case ApprovalStatus.APPROVED:
         return 'bg-emerald-100 text-emerald-700';

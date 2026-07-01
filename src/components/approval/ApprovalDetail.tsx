@@ -7,7 +7,9 @@
 import React from 'react';
 import { Calendar, Check, CheckCircle, Clock, FileText, MessageSquare, User, XCircle } from 'lucide-react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import type { Approval, ApprovalStatus, ApprovalAction } from '../../types/approval';
+import type { Approval, ApprovalAction } from '../../types/approval';
+import * as ApprovalNS from '../../types/approval';
+const { ApprovalStatus } = ApprovalNS as any;
 import { BusinessPreview } from './BusinessPreview';
 
 interface ApprovalDetailProps {
@@ -30,7 +32,7 @@ export function ApprovalDetail({
   canApprove = true,
   canReject = true,
 }: ApprovalDetailProps) {
-  const getStatusIcon = (status: ApprovalStatus) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case ApprovalStatus.APPROVED:
         return <CheckCircle className="w-5 h-5 text-emerald-500" />;
@@ -41,7 +43,7 @@ export function ApprovalDetail({
     }
   };
 
-  const getStatusText = (status: ApprovalStatus) => {
+  const getStatusText = (status: any) => {
     switch (status) {
       case ApprovalStatus.DRAFT:
         return '草稿';

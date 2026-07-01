@@ -7,7 +7,9 @@
 import React, { useState } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Button, DatePicker, Label } from '@/components/ui';
-import type { ApprovalFilters, ApprovalType, ApprovalStatus } from '../../types/approval';
+import type { ApprovalFilters } from '../../types/approval';
+import * as ApprovalNS from '../../types/approval';
+const { ApprovalType, ApprovalStatus } = ApprovalNS as any;
 import { todayLocal } from '@/lib/dateUtils';
 
 interface ApprovalFiltersProps {
@@ -16,7 +18,7 @@ interface ApprovalFiltersProps {
   onReset: () => void;
 }
 
-const approvalTypeOptions: { value: ApprovalType; label: string }[] = [
+const approvalTypeOptions: { value: any; label: string }[] = [
   { value: ApprovalType.MATERIAL_REQUEST, label: '领料单' },
   { value: ApprovalType.PURCHASE_REQUEST, label: '采购申请' },
   { value: ApprovalType.PRODUCTION_PLAN, label: '生产计划' },
@@ -28,7 +30,7 @@ const approvalTypeOptions: { value: ApprovalType; label: string }[] = [
   { value: ApprovalType.RESIGNATION, label: '离职' },
 ];
 
-const statusOptions: { value: ApprovalStatus; label: string }[] = [
+const statusOptions: { value: any; label: string }[] = [
   { value: ApprovalStatus.DRAFT, label: '草稿' },
   { value: ApprovalStatus.PENDING, label: '待审批' },
   { value: ApprovalStatus.APPROVED, label: '已通过' },

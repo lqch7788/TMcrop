@@ -7,7 +7,8 @@ import { useState, useReducer, useEffect, useCallback } from 'react';
 import { AlertTriangle, Camera, Check, Clock, Download, Edit2, FileText, MapPin, Mic, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
-import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
+import { TEMP_TASK_TYPES } from '../../../../types';
+import { type TempTask } from '../../../../hooks/useTempTasks';
 import { useUserStore } from '../../../../stores';
 import { TempTaskFilters } from '../../../labor/tempTask/TempTaskFilters';
 import { TempTaskTable } from '../../../labor/tempTask/TempTaskTable';
@@ -695,7 +696,8 @@ export const TempTaskTab: React.FC = () => {
 
   // 使用统一临时任务管理 Hook（数据闭环核心）
   const { tempTasks, addTempTask, submitCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
-  const { addTempTaskRecord } = useOperationRecords();
+  const { addTempTaskRecord: addTempTaskRecordAny } = useOperationRecords() as any;
+  const addTempTaskRecord = addTempTaskRecordAny as (data: any) => any;
   // 统一任务管理 Hook（用于临时任务同步）
 
 
@@ -762,7 +764,7 @@ export const TempTaskTab: React.FC = () => {
     setUrgencyFilter,
     setStatusFilter,
     setOverdueFilter,
-  } = useTempTaskFilters({ tasks: tempTasks });
+  } = useTempTaskFilters({ tasks: tempTasks as any });
 
   // 关闭详情弹窗
   const closeDetailModal = () => {
@@ -785,7 +787,7 @@ export const TempTaskTab: React.FC = () => {
     handleSubmitDraft,
     generateNewTaskCode,
   } = useTempTaskForm({
-    initialData: editingTask,
+    initialData: editingTask as any,
     users: users.map(u => ({ id: u.id, name: u.name })),
     onSubmit: (taskData, status) => {
       if (editingTask) {
@@ -810,7 +812,7 @@ export const TempTaskTab: React.FC = () => {
           title: taskData.title || '',
           type: taskData.tempTaskType || 'other',
           typeName: TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他',
-          urgency: taskData.urgency || 'normal',
+          urgency: (taskData.urgency || 'normal') as any,
           priority: mapUrgencyToPriority(taskData.urgency),
           location: taskData.workLocation || '',
           greenhouseId: taskData.greenhouseId || '',
@@ -825,11 +827,11 @@ export const TempTaskTab: React.FC = () => {
           workerCount: taskData.workerCount || 1,
           description: taskData.description || '',
           remarks: taskData.notes || '',
-          status: finalStatus,
+          status: finalStatus as any,
           requiredFeedback: taskData.requiredFeedback || [],
           sourceType: 'tempTask',
           dispatchMode: 'tempTask',
-        });
+        } as any);
 
         // 数据闭环：同步到农事操作记录
         addTempTaskRecord({
@@ -1123,10 +1125,10 @@ export const TempTaskTab: React.FC = () => {
     // 重置任务状态为待接受，同时可以清空rejectCount
     // 注意：后端 PUT 处理通过 reassign=true 标记来记录 reassign 操作
     updateTempTask(task.id, {
-      status: 'pending',
+      status: 'pending' as any,
       rejectCount: 0,
       reassign: true, // 标记为重新分派，让后端记录 reassign 操作
-    });
+    } as any);
     // 记录操作
     addTempTaskRecord({
       operationType: 'reassign',
@@ -1186,7 +1188,7 @@ export const TempTaskTab: React.FC = () => {
   const handleWithdrawConfirm = (reason: string) => {
     if (withdrawCancelTask) {
       updateTempTask(withdrawCancelTask.id, {
-        status: 'cancelled',
+        status: 'cancelled' as any,
       });
       addTempTaskRecord({
         operationType: 'withdraw',
@@ -1213,7 +1215,7 @@ export const TempTaskTab: React.FC = () => {
   const handleCancelConfirm = (reason: string) => {
     if (withdrawCancelTask) {
       updateTempTask(withdrawCancelTask.id, {
-        status: 'cancelled',
+        status: 'cancelled' as any,
       });
       addTempTaskRecord({
         operationType: 'cancel',
@@ -1326,7 +1328,7 @@ export const TempTaskTab: React.FC = () => {
     Object.entries(editedTasks).forEach(([taskCode, updates]) => {
       const task = tempTasks.find(t => t.taskCode === taskCode);
       if (task) {
-        updateTempTask(task.id, updates);
+        updateTempTask(task.id, updates as any);
       }
     });
     setSelectedRows([]);
@@ -1533,12 +1535,12 @@ export const TempTaskTab: React.FC = () => {
           batchEditMode={batchEditMode}
           batchDeleteMode={batchDeleteMode}
           selectedRows={selectedRows}
-          onViewTask={openDetailModal}
-          onEditTask={openEditModal}
-          onAccept={handleAcceptComplete}
-          onWithdraw={handleWithdraw}
-          onCancel={handleCancel}
-          onReassign={handleOpenReassign}
+          onViewTask={openDetailModal as any}
+          onEditTask={openEditModal as any}
+          onAccept={handleAcceptComplete as any}
+          onWithdraw={handleWithdraw as any}
+          onCancel={handleCancel as any}
+          onReassign={handleOpenReassign as any}
           onSelectAll={handleSelectAll}
           onSelectRow={handleSelectRow}
           pagination={{
@@ -1613,11 +1615,11 @@ export const TempTaskTab: React.FC = () => {
               </h4>
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1.5 rounded text-sm font-medium ${
-                  selectedTask.urgency === 'critical' ? 'bg-red-100 text-red-700' :
+                  (selectedTask.urgency as any) === 'critical' ? 'bg-red-100 text-red-700' :
                   selectedTask.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
-                  {selectedTask.urgency === 'critical' ? '非常紧急' :
+                  {(selectedTask.urgency as any) === 'critical' ? '非常紧急' :
                    selectedTask.urgency === 'urgent' ? '紧急' : '普通'}
                 </span>
               </div>
@@ -2095,14 +2097,14 @@ export const TempTaskTab: React.FC = () => {
       <TempTaskFormModal
         isOpen={isFormModalOpen}
         title={editingTask ? '编辑临时任务' : '新建临时任务'}
-        task={editingTask}
+        task={editingTask as any}
         formData={formData}
         errors={errors}
         workerUsers={users.map(u => ({ id: u.id, name: u.name }))}
         onClose={closeFormModal}
         onSubmitDraft={handleSubmitDraft}
         onSubmit={() => handleFormSubmit('pending')}
-        onChange={updateFormData}
+        onChange={updateFormData as any}
         generateNewTaskCode={generateNewTaskCode}
         dispatchMode={dispatchMode}
         onDispatchModeChange={setDispatchMode}
@@ -2163,7 +2165,7 @@ export const TempTaskTab: React.FC = () => {
       {/* 验收确认弹窗（与农事任务验收流程一致） */}
       <TempTaskAcceptanceAdapter
         isOpen={showVerifyModal}
-        task={verifyTargetTask}
+        task={verifyTargetTask as any}
         onConfirm={handleVerifyConfirm}
         onReject={handleVerifyReject}
         onClose={() => {

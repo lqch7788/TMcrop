@@ -24,6 +24,7 @@ export type TaskStatus =
 export type TaskAction =
   | 'create'           // 创建
   | 'publish'         // 发布
+  | 'assign'          // 派发
   | 'withdraw'        // 撤回
   | 'cancel'          // 取消
   | 'accept'          // 接受
@@ -225,13 +226,17 @@ export interface Task {
   // 必填反馈项
   feedbackRequirements: FeedbackRequirement[];
 
+  // 兼容字段（MyTasksPage 等使用 — 2026-06-30 tsc 兼容）
+  requiredFeedback?: string[];     // = feedbackRequirements.map(f => f.type) 字符串版别名
+  feedbackStatus?: string;         // 当前反馈状态
+
   // 版本控制（用于乐观锁）
   version: number;
   updatedAt: string;
   createdAt: string;
 
   // 派发模式（区分三个Tab：农事任务、临时任务、智能派工）
-  dispatchMode?: 'farm' | 'tempTask' | 'smart';
+  dispatchMode?: 'farm' | 'tempTask' | 'smart' | 'problem' | 'inspection';
 
   // 智能派工相关
   recommendedExecutorName?: string;  // 推荐执行人姓名
@@ -246,7 +251,24 @@ export interface Task {
   priority?: 'urgent' | 'high' | 'normal';
   description?: string;
   remarks?: string;
-  materials?: { name: string; qty: number; unit: string }[];
+  materials?: { name: string; qty: number; unit: string }[] | string[];
+  tools?: { name: string; qty: number; unit: string }[] | string[];
+  typeConfig?: Record<string, any>;     // 任务类型配置（FarmTaskHub 使用）
+  sopContent?: string;                   // 标准作业流程内容
+  workLocation?: string;                 // = location 别名
+  cancelledReason?: string;              // 取消原因
+  cancelledAt?: string;                  // 取消时间
+  cancelledBy?: string;                  // 取消人
+  sourceProblemId?: string;              // 问题处理任务关联
+  sourceInspectionId?: string;           // 巡查反馈关联
+  urgency?: 'urgent' | 'high' | 'normal'; // 紧急程度
+  recordCode?: string;                   // 关联记录编号
+  workDuration?: number;                 // 工时（小时）
+  startDate?: string;                    // 任务开始日期
+  rejectionReason?: string;              // 驳回原因
+  rejectionCount?: number;               // 驳回次数
+  toolsRemarks?: string;
+  dispatchMode?: 'farm' | 'tempTask' | 'smart' | 'problem' | 'inspection';
   tools?: { name: string; qty: number; unit: string }[];  // 工具列表
   toolsRemarks?: string;      // 工具备注（当选择"其他"时使用）
   rejectReason?: string;

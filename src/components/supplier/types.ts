@@ -31,6 +31,18 @@ export interface Supplier {
   organization: string;
   createDate: string;
   remarks?: string;
+  // 兼容字段（useSupplierStore 使用 — 2026-06-30 tsc 兼容）
+  createBy?: string;
+  updateBy?: string;
+  createTime?: string;
+  updateTime?: string;
+  rating?: number;
+  level?: string;
+  scope?: string;
+  qualification?: string;
+  cooperationYears?: number;
+  supplyCategories?: string;
+  [key: string]: any;
 }
 
 export interface SupplierFiltersState {

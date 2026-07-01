@@ -1,5 +1,6 @@
 import { AlertTriangle, Bell, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, MapPin, Play, Send, Undo2, User, X, XCircle } from 'lucide-react';
-import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+import { type TempTask } from '../../../hooks/useTempTasks';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';

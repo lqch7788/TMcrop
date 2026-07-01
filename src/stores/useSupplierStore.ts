@@ -57,26 +57,27 @@ function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
  * 后端API响应 → 前端camelCase映射
  */
 function fromBackendFields(record: Record<string, unknown>): Supplier {
+  const r = record as any;
   return {
-    id: record.id,
-    code: record.supplierCode || record.supplier_code || record.code || '',
-    name: record.supplierName || record.supplier_name || record.name || '',
-    supplierType: record.supplierType || record.supplier_type || record.supplierType || '',
-    supplierAttribute: record.supplierAttribute || record.supplier_attribute || record.supplierAttribute || '',
-    contact: record.contactPerson || record.contact_person || record.contact || '',
-    mobilePhone: record.mobilePhone || record.mobile_phone || record.contactPhone || record.contact_phone || '',
-    workPhone: record.workPhone || record.work_phone || '',
-    fax: record.fax || '',
-    status: record.status === 'active' ? '合作中' : record.status === 'inactive' ? '暂停' : record.status || '',
-    country: record.country || '',
-    province: record.province || '',
-    city: record.city || '',
-    address: record.address || '',
-    bankName: record.bankName || record.bank_name || '',
-    bankCardNumber: record.bankCardNumber || record.bank_card_number || '',
-    organization: record.organization || '',
-    createDate: record.createDate || record.create_date || '',
-    remarks: record.remarks || '',
+    id: r.id,
+    code: r.supplierCode || r.supplier_code || r.code || '',
+    name: r.supplierName || r.supplier_name || r.name || '',
+    supplierType: r.supplierType || r.supplier_type || r.supplierType || '',
+    supplierAttribute: r.supplierAttribute || r.supplier_attribute || r.supplierAttribute || '',
+    contact: r.contactPerson || r.contact_person || r.contact || '',
+    mobilePhone: r.mobilePhone || r.mobile_phone || r.contactPhone || r.contact_phone || '',
+    workPhone: r.workPhone || r.work_phone || '',
+    fax: r.fax || '',
+    status: r.status === 'active' ? '合作中' : r.status === 'inactive' ? '暂停' : r.status || '',
+    country: r.country || '',
+    province: r.province || '',
+    city: r.city || '',
+    address: r.address || '',
+    bankName: r.bankName || r.bank_name || '',
+    bankCardNumber: r.bankCardNumber || r.bank_card_number || '',
+    organization: r.organization || '',
+    createDate: r.createDate || r.create_date || '',
+    remarks: r.remarks || '',
   };
 }
 

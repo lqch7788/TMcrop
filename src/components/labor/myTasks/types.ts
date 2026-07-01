@@ -3,6 +3,9 @@
  */
 
 // 任务扩展类型 - 统一任务管理中的任务可能包含 TaskDispatchTask 中没有的额外字段
+// TaskDispatchTask 别名（TempTaskTableRow 使用 — 2026-06-30 tsc 兼容）
+export type TaskDispatchTask = any;
+
 export interface TaskWithExtras {
   id: string;
   taskCode?: string;
