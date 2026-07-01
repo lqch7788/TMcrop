@@ -575,7 +575,7 @@ export interface Worker {
   annualAssessments: AssessmentRecord[];  // 年度考核记录
 
   // 状态
-  status: '在职' | '离职' | '退休';
+  status: '在职' | '离职' | '退休' | 'active';
   leaveDate?: string;        // 离职日期（离职时填写）
   leaveReason?: string;      // 离职原因
 

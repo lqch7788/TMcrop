@@ -419,7 +419,7 @@ export function Input({ error, className = '', type = 'text', ...props }: InputP
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
 }
 
 export function Select({ error, options, className = '', value, onChange, placeholder, disabled, ...props }: SelectProps) {

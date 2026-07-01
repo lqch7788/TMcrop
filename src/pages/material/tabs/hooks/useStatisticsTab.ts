@@ -355,11 +355,11 @@ export function useStatisticsTab() {
   const getStatSummaryData = (): StatSummaryData => {
     const allData = statActiveTab === 'monthly' ? monthlyStatisticsData : materialStatisticsData;
 
-    const totalRequisitions = allData.reduce((sum: number, item: MaterialStatItem) => sum + (item.requisitionCount || 0), 0);
-    const totalQuantity = allData.reduce((sum: number, item: MaterialStatItem) => sum + (item.totalQuantity || 0), 0);
-    const totalAmount = allData.reduce((sum: number, item: MaterialStatItem) => sum + (item.totalAmount || 0), 0);
+    const totalRequisitions = allData.reduce((sum: number, item: any) => sum + (item.requisitionCount || 0), 0);
+    const totalQuantity = allData.reduce((sum: number, item: any) => sum + (item.totalQuantity || 0), 0);
+    const totalAmount = allData.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0);
     const avgDifferenceRate = allData.length > 0
-      ? allData.reduce((sum: number, item: MaterialStatItem) => sum + (item.differenceRate || 0), 0) / allData.length
+      ? allData.reduce((sum: number, item: any) => sum + (item.differenceRate || 0), 0) / allData.length
       : 0;
 
     return {
