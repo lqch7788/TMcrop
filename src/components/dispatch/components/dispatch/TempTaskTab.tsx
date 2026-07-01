@@ -1529,7 +1529,7 @@ export const TempTaskTab: React.FC = () => {
         </div>
 
         <TempTaskTable
-          tasks={filteredTasks}
+          tasks={filteredTasks as any}
           showCheckbox={exportMode || batchEditMode || batchDeleteMode}
           exportMode={exportMode}
           batchEditMode={batchEditMode}

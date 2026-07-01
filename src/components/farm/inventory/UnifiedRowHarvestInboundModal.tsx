@@ -154,12 +154,20 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // 2026-06-27：成品形态（仅种植行入库时使用）
   const [harvestForm, setHarvestForm] = useState<string>('')
 
+  // 2026-07-01: 字段绑定交换（与种植 HarvestRecordModal 一致）
+  // 历史 bug：seedlings/seed_sources/plantings 等主表的 crop_name 字段实际存"品种"（如"红富士"），
+  // crop_variety 字段实际存"类型/名称"（如"苹果"）—— 字段名与值语义相反。
+  // 入库时需要把字段名交换，让"作物名称"列显示苹果、"作物品种"列显示红富士。
+  // 弹窗顶部 "源记录" 区域也保持原值（让用户能看到原始数据），只在入库产品明细里做交换。
+  const initialCropName = sourceRecord.cropVariety || ''  // "苹果"（取 seedlings.crop_variety）
+  const initialCropVariety = sourceRecord.cropName || ''  // "红富士"（取 seedlings.crop_name）
+
   // products: 种源/育苗 lock 1 条，种植允许多条
   const [products, setProducts] = useState<InboundProduct[]>([
     {
       cropCode: sourceRecord.cropCode || '',
-      cropName: sourceRecord.cropName || '',
-      cropVariety: sourceRecord.cropVariety || '',
+      cropName: initialCropName,
+      cropVariety: initialCropVariety,
       plantingMode: sourceRecord.plantingMode || '',
       harvestQuantity: 0,
       unit: sourceRecord.unit || '克',
@@ -218,8 +226,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setProducts([
         {
           cropCode: sourceRecord.cropCode || '',
-          cropName: sourceRecord.cropName || '',
-          cropVariety: sourceRecord.cropVariety || '',
+          cropName: initialCropName,        // 2026-07-01: 字段绑定交换（苹果）
+          cropVariety: initialCropVariety,  // 2026-07-01: 字段绑定交换（红富士）
           plantingMode: sourceRecord.plantingMode || '',
           harvestQuantity: 0,
           unit: sourceRecord.unit || '克',
@@ -310,8 +318,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       ...prev,
       {
         cropCode: sourceRecord.cropCode || '',
-        cropName: sourceRecord.cropName || '',
-        cropVariety: sourceRecord.cropVariety || '',
+        cropName: initialCropName,        // 2026-07-01: 字段绑定交换
+        cropVariety: initialCropVariety,  // 2026-07-01: 字段绑定交换
         plantingMode: sourceRecord.plantingMode || '',
         harvestQuantity: 0,
         unit: sourceRecord.unit || '克',
@@ -414,9 +422,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   }
 
   // 2026-07-01: 弹窗表 + 导出 Excel 共用的列名定义（保持一致）
-  // 弹窗表 16 列：日期/单号/产物序号/作物编码/产物名/品种/数量/单位/采收形态/品质/仓库/采收员/操作员/补录/创建时间/操作
+  // 弹窗表 16 列：日期/单号/产物序号/作物编码/作物名称/作物品种/数量/单位/采收形态/品质/仓库/采收员/操作员/补录/创建时间/操作
+  // 2026-07-01: "产物名" → "作物名称"，"品种" → "作物品种"（与入库弹窗 label 一致）
   const EXCEL_HEADERS = [
-    '采收日期', '入库单号', '来源编码', '采收形态', '产物序号', '作物编码', '产物名',
+    '采收日期', '入库单号', '来源编码', '采收形态', '产物序号', '作物编码', '作物名称',
     '作物品种', '采收数量', '单位', '品质', '采收形态(产物)', '单价(元)',
     '仓库', '采收员', '操作员', '补录', '补录原因', '备注', '创建时间',
   ] as const
@@ -458,8 +467,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       '采收形态': r.harvestForm || '',
       '产物序号': idx > 0 ? idx + 1 : '',
       '作物编码': p.cropCode || '',
-      '产物名': p.cropName || '',
-      '作物品种': p.cropVariety || '',
+      '作物名称': p.cropName || '',  // 2026-07-01: 字段名改（产物名 → 作物名称）
+      '作物品种': p.cropVariety || '',  // 2026-07-01: 字段名改（品种 → 作物品种）
       '采收数量': p.harvestQuantity ?? '',
       '单位': p.unit || '',
       '品质': gradeLabel(p.grade),  // 2026-07-01: 品质英→中
@@ -743,7 +752,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                 <div key={idx} className="border rounded-lg p-3 bg-gray-50">
                   <div className="grid grid-cols-12 gap-2">
                     <div className={showSourceForm ? 'col-span-2' : 'col-span-3'}>
-                      <div className="text-xs text-gray-500 mb-1">产物名</div>
+                      <div className="text-xs text-gray-500 mb-1">作物名称</div>
                       <Input
                         value={p.cropName}
                         onChange={(e) => updateProduct(idx, { cropName: e.target.value })}
@@ -752,7 +761,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                       />
                     </div>
                     <div className="col-span-2">
-                      <div className="text-xs text-gray-500 mb-1">品种</div>
+                      <div className="text-xs text-gray-500 mb-1">作物品种</div>
                       <Input
                         value={p.cropVariety || ''}
                         onChange={(e) => updateProduct(idx, { cropVariety: e.target.value })}
@@ -880,8 +889,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                   <tr>
                     <th className="px-2 py-2 text-left whitespace-nowrap">采收日期</th>
                     <th className="px-2 py-2 text-left whitespace-nowrap">入库单号</th>
-                    <th className="px-2 py-2 text-left">产物名</th>
-                    <th className="px-2 py-2 text-left">品种</th>
+                    <th className="px-2 py-2 text-left">作物名称</th>
+                    <th className="px-2 py-2 text-left">作物品种</th>
                     <th className="px-2 py-2 text-right whitespace-nowrap">采收数量</th>
                     <th className="px-2 py-2 text-left">单位</th>
                     <th className="px-2 py-2 text-left">采收形态</th>

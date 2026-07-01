@@ -174,7 +174,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         <div className="flex flex-wrap gap-1 items-center">
           {/* 优先使用 typeName 显示，兼容 types 数组 */}
           {task.typeName ? (
-            <span className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(task.type)}`}>
+            <span className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(task.type || '')}`}>
               {task.typeName}
             </span>
           ) : (
@@ -241,8 +241,8 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         <div className="flex items-center gap-2">
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-16 flex-shrink-0">
             <div
-              className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : task.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
-              style={{ width: `${task.progress}%` }}
+              className={`h-full rounded-full ${task.progress === 100 ? 'bg-green-500' : (task.progress || 0) > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+              style={{ width: `${task.progress || 0}%` }}
             />
           </div>
           <span className="text-xs text-gray-500">{task.progress}%</span>
