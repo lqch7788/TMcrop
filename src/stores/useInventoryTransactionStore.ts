@@ -59,6 +59,12 @@ export interface OutboundSummary {
   totalQuantity: number;
   totalAmount: number;
   count: number;
+  // 兼容字段（OutboundRecordsComponents 使用 — 2026-06-30 tsc 兼容）
+  totalCount?: number;
+  todayCount?: number;
+  byStockType?: any[];
+  byHour?: any[];
+  [key: string]: any;
 }
 
 export interface OutboundQuery {

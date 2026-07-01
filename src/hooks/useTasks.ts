@@ -270,7 +270,7 @@ function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
     completedAt: status === 'completed' ? new Date().toISOString() : undefined,
     workLocation: location,
     urgency: (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
-    tempTaskType: type as any,
+    tempTaskType: (type as any),
     estimatedDays: 0,
     estimatedHours: t.estimatedHours || 0,
     workerCount: t.workerCount || 1,
@@ -347,7 +347,6 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     sourceInspectionId: id,
     sourceId: id,
     recordCode: (recordCode || '') as any,
-    inspectionType: (t as any).inspectionType || (t as any).inspection_type || '',
     inspectionType: t.inspectionType || t.inspection_type || '',
     submitterId: inspectorId,
     submitterName: inspectorName,
@@ -826,7 +825,7 @@ export function useTasks(): UseTasksReturn {
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
-    });
+    } as any);
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 取消任务（彻底取消，后续不再执行，保留执行人信息用于审计追溯）
@@ -859,7 +858,7 @@ export function useTasks(): UseTasksReturn {
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
-    });
+    } as any);
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress

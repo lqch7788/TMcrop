@@ -184,7 +184,7 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                 </td>
                 <td className="px-3 py-3 text-sm text-gray-500">
                   {task.materials && task.materials.length > 0 ? (
-                    <span className="text-orange-600" title={task.materials.map(m => `${m.name}×${m.qty}${m.unit}`).join(', ')}>
+                    <span className="text-orange-600" title={task.materials.map((m: any) => `${m.name}×${m.qty}${m.unit}`).join(', ')}>
                       {task.materials.length}种物资
                     </span>
                   ) : '-'}

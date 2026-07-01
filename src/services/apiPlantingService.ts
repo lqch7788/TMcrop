@@ -44,11 +44,17 @@ interface BackendPlanting {
   status: string;
   remarks: string;
   productionPlanId: string;
+  // 兼容字段（LEFT JOIN 多出列 — 2026-06-30 tsc 兼容）
+  sourceSeedSourceType?: string;
+  categoryName?: string;
+  typeName?: string;
+  varietyName?: string;
+  subVariety1Name?: string;
   productionPlanCode: string;
   createBy: string;
   createTime: string;
   updateTime: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /**
