@@ -180,6 +180,7 @@ export function getTaskStatusConfig(): typeof TASK_STATUS_DEFAULTS {
 /** 操作行为配置默认值 */
 export const TASK_ACTION_DEFAULTS = {
   create: { label: '创建任务', color: 'text-blue-600', bg: 'bg-blue-50' },
+  assign: { label: '派发任务', color: 'text-blue-600', bg: 'bg-blue-50' },  // 2026-06-30 兼容别名
   publish: { label: '派发任务', color: 'text-blue-600', bg: 'bg-blue-50' },
   withdraw: { label: '撤回任务', color: 'text-gray-600', bg: 'bg-gray-50' },
   cancel: { label: '取消任务', color: 'text-gray-600', bg: 'bg-gray-50' },
