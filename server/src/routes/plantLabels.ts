@@ -43,8 +43,8 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       const plantingCode = plantingResult[0]?.values?.[0]?.[0];
       if (plantingCode) codePrefix = String(plantingCode);
     } else if (seed_source_id) {
-      // 2026-07-01: 种源标签 — 用 seed_code 作为标签前缀
-      const seedResult = db.exec('SELECT seed_code FROM seed_sources WHERE id = ?', [String(seed_source_id)]);
+      // 2026-07-01: 种源标签 — 用 source_code 作为标签前缀
+      const seedResult = db.exec('SELECT source_code FROM seed_sources WHERE id = ?', [String(seed_source_id)]);
       const seedCode = seedResult[0]?.values?.[0]?.[0];
       if (seedCode) codePrefix = String(seedCode);
     }

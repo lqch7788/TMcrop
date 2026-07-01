@@ -6,8 +6,8 @@ import {
 } from './outboundConstants';
 
 describe('OutboundBusinessType enum', () => {
-  it('应包含 8 个值', () => {
-    expect(Object.values(OutboundBusinessType)).toHaveLength(8);
+  it('应包含 10 个值', () => {
+    expect(Object.values(OutboundBusinessType)).toHaveLength(10);
   });
 
   it('所有值应是字符串且唯一', () => {
@@ -19,6 +19,7 @@ describe('OutboundBusinessType enum', () => {
   it('应包含全部业务场景', () => {
     const expected = [
       'customer_sale', 'transfer_out', 'damage_loss', 'internal_planting',
+      'internal_seedling', 'internal_seed_source',
       'gift_sample', 'return_inbound', 'inventory_adjust', 'other',
     ];
     expected.forEach((code) => {

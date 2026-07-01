@@ -926,7 +926,9 @@ router.post('/', (req: Request, res: Response) => {
             work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
             source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
             propagation_mode, mother_plant_count, expanded_plant_count, scion_count, source_deducted_quantity,
-            charge_person, seedling_form } = req.body;
+            charge_person, seedling_form, unit } = req.body;
+    // 2026-07-01: 兜底单位
+    const seedlingUnit = unit || req.body.unit || '株';
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
@@ -974,6 +976,7 @@ router.post('/', (req: Request, res: Response) => {
       'source_deducted_quantity',
       'charge_person',
       'seedling_form',
+      'unit',
       'create_time', 'update_time',
     ];
     const insertValues = [
@@ -986,6 +989,7 @@ router.post('/', (req: Request, res: Response) => {
       (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
       chargePerson,
       seedling_form || null, // 2026-06-27：种苗形态
+      seedlingUnit, // 2026-07-01: 单位
       now, now,
     ];
     if (insertCols.length !== insertValues.length) {
@@ -1123,6 +1127,7 @@ router.put('/:id', (req: Request, res: Response) => {
       'charge_person',
       // 2026-06-27 P0：种苗形态（详情弹窗"种苗类型"列数据源）
       'seedling_form',
+      'unit', // 2026-07-01: 单位
     ]);
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
     if (safeKeys.length === 0) {

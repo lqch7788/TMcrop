@@ -364,24 +364,41 @@ export default function SeedlingPage() {
 
   // 处理结束计划
   const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
-    // 2026-06-13: 放宽限制 — 没关联生产计划的记录也允许结束（仅关本记录，不动生产计划）
+    // 2026-07-01: 防重复结束 — 已结束的记录直接拒绝
+    if (record.endTime) {
+      await showAlert('该育苗记录已结束，不能重复操作');
+      return;
+    }
     const planCode = record.productionPlanCode;
     const isNormal = endType === 'normal';
-    let confirmMsg = planCode
-      ? (isNormal
-          ? `确认正常结束此生产计划？\n\n结束后禁止一切入库和补录操作`
-          : `确认异常结束此生产计划？\n\n结束后如需补录，需提交审核申请`)
-      : (isNormal
-          ? `确认正常结束此育苗记录？\n（未关联生产计划，仅关闭本记录）`
-          : `确认异常结束此育苗记录？\n（未关联生产计划，仅关闭本记录）`);
+    const endStatus = isNormal ? SeedlingStatus.COMPLETED : SeedlingStatus.ABNORMAL;
 
+    // 2026-07-01: 强化结束确认文案 — 明确告知后果，防止误操作
+    const buildEndConfirmMsg = (title: string, extra?: string) => {
+      if (isNormal) {
+        return `⚠️ ${title}\n\n` +
+          `【正常结束】订单完成后将【锁定】，禁止一切后续操作：\n` +
+          `  • 禁止入库\n` +
+          `  • 禁止补录\n` +
+          `  • 禁止修改\n\n` +
+          `⚠️ 此操作不可撤销！${extra ? `\n${extra}` : ''}`;
+      }
+      return `⚠️ ${title}\n\n` +
+        `【异常结束】因故中断，后续操作受限：\n` +
+        `  • 补录入库【需提交审核】\n` +
+        `  • 禁止新增入库\n\n` +
+        `${extra ? `${extra}\n` : ''}` +
+        `是否确认异常结束？`;
+    };
+
+    let confirmMsg: string;
     if (!planCode || planCode.trim() === '') {
-      // 本地强结 — 只需更新本条记录
+      confirmMsg = buildEndConfirmMsg(
+        isNormal ? '确认正常结束此育苗记录？' : '确认异常结束此育苗记录？',
+        '（未关联生产计划，仅关闭本记录）'
+      );
       if (!await showConfirm(confirmMsg)) return;
-      const result = await updateItem(record.id, {
-        endType,
-        endTime: todayLocal(),
-      });
+      const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
         await showAlert(isNormal ? '育苗记录已正常结束' : '育苗记录已异常结束');
         await loadItems();
@@ -393,19 +410,12 @@ export default function SeedlingPage() {
 
     const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      // 2026-06-05: 强结分支 — 关联生产计划被删/查不到时引导用户强制结束
       const confirmed = await showConfirm(
-        `未找到关联的生产计划 [${planCode}]，可能已被删除。\n` +
+        `⚠️ 未找到关联的生产计划 [${planCode}]，可能已被删除。\n\n` +
         `是否强制结束该育苗记录？\n（结束后将解除生产计划关联，并记录结束标记）`
       );
       if (!confirmed) return;
-
-      // 走 Store action（V2.1 铁律：写持久化数据走 Store）
-      const isNormal = endType === 'normal';
-      const result = await updateItem(record.id, {
-        endType,
-        endTime: todayLocal(),
-      });
+      const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
         await showAlert(isNormal ? '育苗记录已正常结束（强结）' : '育苗记录已异常结束（强结）');
         await loadItems();
@@ -421,16 +431,16 @@ export default function SeedlingPage() {
     }
 
     const completionRate = cropBatchService.getCompletionRate(batch, record.survivalCount || 0);
-    confirmMsg = isNormal
-      ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
-      : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
+    confirmMsg = buildEndConfirmMsg(
+      isNormal ? '确认正常结束此生产计划？' : '确认异常结束此生产计划？',
+      `入库完成比例：${Math.round(completionRate * 100)}%`
+    );
 
-    if (!await showConfirm(confirmMsg)) {
-      return;
-    }
+    if (!await showConfirm(confirmMsg)) return;
 
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
+      await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       loadItems();
     } else {

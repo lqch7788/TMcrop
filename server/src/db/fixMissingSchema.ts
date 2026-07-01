@@ -2214,6 +2214,22 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.error(`  ✗ plant_labels UNIQUE 约束添加失败: ${e.message}`);
   }
 
+  // 2026-06-27: seedlings 加 seedling_form 列（种苗形态 — 详情弹窗"种苗类型"列数据源）
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN seedling_form TEXT`);
+    seedLog.info('✓ seedlings 表添加 seedling_form 列');
+  } catch (e: any) {
+    seedLog.skip('• seedlings.seedling_form:', e.message);
+  }
+
+  // 2026-07-01: 种源标签管理 — plant_labels 加 seed_source_id 列
+  try {
+    db.run(`ALTER TABLE plant_labels ADD COLUMN seed_source_id TEXT`);
+    seedLog.info('✓ plant_labels 表添加 seed_source_id 列');
+  } catch (e: any) {
+    seedLog.skip('• plant_labels.seed_source_id:', e.message);
+  }
+
   // 2026-06-24: 库存调拨入种源功能 — seed_sources 加 14 个 transfer 元数据列
   // transferred_from_stock_id: 外键回指原 inventory_stock.id（追溯锚点）
   // transferred_from_business_type / business_id: 原库存所属业务类型 + 业务ID

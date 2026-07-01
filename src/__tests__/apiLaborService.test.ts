@@ -59,10 +59,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getAllWorkers();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers');
       expect(result).toEqual(mockWorkers);
     });
 
@@ -90,10 +87,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getWorkerById('W001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001');
       expect(result).toEqual(mockWorker);
     });
 
@@ -116,11 +110,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         deptId: 'DEPT001',
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { deptId: 'DEPT001' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?deptId=DEPT001');
     });
 
     it('应该能够按岗位筛选员工', async () => {
@@ -132,11 +122,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         positionId: 'POS001',
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { positionId: 'POS001' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?positionId=POS001');
     });
 
     it('应该能够按员工类型筛选员工', async () => {
@@ -148,11 +134,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         employeeType: 'FULL_TIME',
       } as unknown as Partial<CreateEmployeeParams>);
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { employeeType: 'FULL_TIME' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?employeeType=FULL_TIME');
     });
 
     it('应该能够按状态筛选员工', async () => {
@@ -164,11 +146,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         status: 'ON_BOARD',
       } as unknown as Partial<CreateEmployeeParams>);
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { status: 'ON_BOARD' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?status=ON_BOARD');
     });
 
     it('应该能够按姓名搜索员工', async () => {
@@ -180,11 +158,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         name: '张三',
       });
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: { name: '张三' },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?name=%E5%BC%A0%E4%B8%89');
     });
 
     it('应该能够组合多个筛选条件', async () => {
@@ -200,17 +174,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
         name: '张三',
       } as unknown as Partial<CreateEmployeeParams>);
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers', {
-        params: {
-          deptId: 'DEPT001',
-          positionId: 'POS001',
-          employeeType: 'FULL_TIME',
-          status: 'ON_BOARD',
-          name: '张三',
-        },
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers?deptId=DEPT001&positionId=POS001&employeeType=FULL_TIME&status=ON_BOARD&name=%E5%BC%A0%E4%B8%89');
     });
   });
 
@@ -238,10 +202,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.createWorker(newWorkerData);
 
-      expect(enhancedApiClient.post).toHaveBeenCalledWith('/labor/workers', newWorkerData, {
-        offlineQueue: true,
-        useCache: true,
-      });
+      expect(enhancedApiClient.post).toHaveBeenCalledWith('/labor/workers', newWorkerData);
       expect(result).toEqual(createdWorker);
     });
   });
@@ -267,9 +228,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.updateWorker(workerId, updates);
 
-      expect(enhancedApiClient.put).toHaveBeenCalledWith(`/labor/workers/${workerId}`, updates, {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.put).toHaveBeenCalledWith(`/labor/workers/${workerId}`, updates);
       expect(result).toEqual(updatedWorker);
     });
 
@@ -288,9 +247,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.deleteWorker('W001');
 
-      expect(enhancedApiClient.delete).toHaveBeenCalledWith('/labor/workers/W001', {
-        offlineQueue: true,
-      });
+      expect(enhancedApiClient.delete).toHaveBeenCalledWith('/labor/workers/W001');
       expect(result).toBe(true);
     });
   });
@@ -303,9 +260,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       const result = await apiLaborService.deleteWorkers(workerIds);
 
       expect(enhancedApiClient.delete).toHaveBeenCalledWith(
-        `/labor/workers/batch?ids=${workerIds.join(',')}`,
-        { offlineQueue: true }
-      );
+        `/labor/workers/batch?ids=${workerIds.join(',')}`);
       expect(result).toBe(true);
     });
   });
@@ -328,10 +283,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.searchWorkers('张三');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/search?keyword=%E5%BC%A0%E4%B8%89', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/search?keyword=%E5%BC%A0%E4%B8%89');
       expect(result).toEqual(mockWorkers);
     });
   });
@@ -344,10 +296,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       await apiLaborService.getWorkersByDepartment('DEPT001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/department/DEPT001', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/department/DEPT001');
     });
   });
 
@@ -359,10 +308,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       await apiLaborService.getWorkersByPosition('POS001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/position/POS001', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/position/POS001');
     });
   });
 
@@ -378,10 +324,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       const calls = (enhancedApiClient.get as any).mock.calls;
       expect(calls.length).toBe(1);
       expect(calls[0][0]).toMatch(/^\/labor\/workers\/type\/.+$/);
-      expect(calls[0][1]).toEqual({
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(calls[0].length).toBe(1);
     });
   });
 
@@ -393,10 +336,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       await apiLaborService.getWorkersByStatus('ON_BOARD');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/status/active', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/status/ON_BOARD');
     });
   });
 
@@ -418,10 +358,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getActiveWorkers();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/active', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/active');
       expect(result).toEqual(mockWorkers);
     });
   });
@@ -444,10 +381,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getLeftWorkers();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/left', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/left');
       expect(result).toEqual(mockWorkers);
     });
   });
@@ -460,9 +394,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/leave',
-        { leaveDate: '2026-05-01', leaveReason: '个人原因' },
-        { offlineQueue: true }
-      );
+        { leaveDate: '2026-05-01', leaveReason: '个人原因' });
       expect(result).toBe(true);
     });
   });
@@ -475,9 +407,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/rejoin',
-        { rejoinDate: '2026-06-01' },
-        { offlineQueue: true }
-      );
+        { rejoinDate: '2026-06-01' });
       expect(result).toBe(true);
     });
   });
@@ -496,10 +426,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getWorkerStats();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/stats', {
-        useCache: true,
-        cacheStrategy: 'stale-while-revalidate',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/stats');
       expect(result).toEqual(mockStats);
     });
   });
@@ -512,10 +439,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [
 
       const result = await apiLaborService.getWorkerSkillTags();
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/skill-tags', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/skill-tags');
       expect(result).toEqual(mockTags);
     });
   });
@@ -532,10 +456,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
       const calls = (enhancedApiClient.get as any).mock.calls;
       expect(calls.length).toBe(1);
       expect(calls[0][0]).toMatch(/^\/labor\/workers\/skill-tag\/.+$/);
-      expect(calls[0][1]).toEqual({
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(calls[0].length).toBe(1);
     });
   });
 
@@ -550,10 +471,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.getWorkerTrainingRecords('W001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/training-records', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/training-records');
       expect(result).toEqual(mockRecords);
     });
   });
@@ -567,9 +485,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/training-records',
-        record,
-        { offlineQueue: true }
-      );
+        record);
       expect(result).toBe(true);
     });
   });
@@ -585,10 +501,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.getWorkerAssessmentRecords('W001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/assessment-records', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/assessment-records');
       expect(result).toEqual(mockRecords);
     });
   });
@@ -602,9 +515,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/assessment-records',
-        record,
-        { offlineQueue: true }
-      );
+        record);
       expect(result).toBe(true);
     });
   });
@@ -619,10 +530,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       const result = await apiLaborService.getWorkerWorkExperiences('W001');
 
-      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/work-experiences', {
-        useCache: true,
-        cacheStrategy: 'network-first',
-      });
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/labor/workers/W001/work-experiences');
       expect(result).toEqual(mockExperiences);
     });
   });
@@ -636,9 +544,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/W001/work-experiences',
-        experience,
-        { offlineQueue: true }
-      );
+        experience);
       expect(result).toBe(true);
     });
   });
@@ -668,9 +574,7 @@ const mockWorkers: (Partial<Worker> & { statusClass?: string })[] = [];
 
       expect(enhancedApiClient.post).toHaveBeenCalledWith(
         '/labor/workers/import',
-        { workers },
-        { offlineQueue: true }
-      );
+        { workers });
       expect(result).toEqual(mockResult);
     });
   });
