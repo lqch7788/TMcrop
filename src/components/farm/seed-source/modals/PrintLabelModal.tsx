@@ -1,27 +1,48 @@
 /**
- * 种源标签打印弹窗
+ * 种源标签打印弹窗（2026-07-01 升级 — 对标育苗管理）
  * 支持单标签打印、多标签打印、批量生成、导出Excel
- * 导出用URL链接替代QR码图片，避免文件过大导致系统卡死
+ * 标签数据持久化到 plant_labels 表（通过 usePlantLabelStore）
  */
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, X } from 'lucide-react';
+import { Download, Printer, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { SeedSource } from '../../../../types/crop';
-import { printLabel } from '../../../../services/apiSeedSourceService';
-import { useUserStore, useAuthStore } from '../../../../stores';
+import { useUserStore, useAuthStore, usePlantLabelStore } from '../../../../stores';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { todayLocal } from '@/lib/dateUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: SeedSource;
 }
+
+// 打印模式字典（卡片按钮显示）
+const PRINT_MODE_MAP: Record<'single' | 'multi' | 'batch', { label: string; sublabel: string; desc: string; icon: string }> = {
+  single: {
+    label: '单标签打印',
+    sublabel: '重打 1 个已存在',
+    desc: '从已有标签中选择 1 个重新打印（适合标签褪色/丢失后补打）',
+    icon: '🏷️',
+  },
+  multi: {
+    label: '多标签打印',
+    sublabel: '批量勾选已存在',
+    desc: '从已有标签列表中勾选多个一并打印（适合整批补打）',
+    icon: '📋',
+  },
+  batch: {
+    label: '批量生成',
+    sublabel: '生成新标签',
+    desc: '系统生成新的标签编号 + 同步入库 + 打印（适合首次打标签）',
+    icon: '✨',
+  },
+};
 
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
   const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('detail');
@@ -33,31 +54,54 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [loading, setLoading] = useState(false);
   const [printLabels, setPrintLabels] = useState<string[]>([]);
 
+  // Store 操作
+  const batchCreateLabels = usePlantLabelStore((s) => s.batchCreateLabels);
+  const loadLabels = usePlantLabelStore((s) => s.loadLabels);
+
   // 获取当前操作员
-  // P2 #16 修复: 从 useAuthStore.currentUser 读取，移除 localStorage.getItem('username')
   const authCurrentUser = useAuthStore((s) => s.currentUser);
   const storeUsers = useUserStore((s) => s.users);
   const currentOperator = authCurrentUser?.name
     || authCurrentUser?.username
     || (storeUsers.length > 0 ? storeUsers[0]?.name : '系统管理员');
 
-  // 初始化标签编号列表（直接从record字段生成，不依赖localStorage查找）
+  // 打开弹窗时从后端加载已入库标签
   useEffect(() => {
     if (!isOpen || !record?.id) return;
-    const seedCode = record.seedCode || '';
-    const count = record.availableCount || 0;
-    if (seedCode && count > 0) {
-      const nums: string[] = [];
-      const maxLabels = Math.min(count, 200);
-      for (let i = 0; i < maxLabels; i++) {
-        nums.push(`${seedCode}-${String(i + 1).padStart(4, '0')}`);
-      }
-      setAllLabelNumbers(nums);
-      setPreviewLabel(nums[0]);
-    }
-  }, [isOpen, record?.id, record?.seedCode, record?.availableCount]);
+    let cancelled = false;
 
-  // printLabels更新后触发打印（等待DOM渲染完成）
+    (async () => {
+      await loadLabels({ seedSourceId: record.id });
+      if (cancelled) return;
+
+      const storeLabels = usePlantLabelStore.getState().labels;
+      const labelNumbers = storeLabels
+        .filter((l) => String(l.seedSourceId) === String(record.id))
+        .map((l) => l.labelNumber);
+
+      if (labelNumbers.length > 0) {
+        setAllLabelNumbers(labelNumbers);
+        setPreviewLabel(labelNumbers[0]);
+      } else {
+        // 兜底：无已入库标签时前端拼接
+        const seedCode = record.seedCode || '';
+        const count = record.availableCount || 0;
+        if (seedCode && count > 0) {
+          const nums: string[] = [];
+          const maxLabels = Math.min(count, 200);
+          for (let i = 0; i < maxLabels; i++) {
+            nums.push(`${seedCode}-${String(i + 1).padStart(4, '0')}`);
+          }
+          setAllLabelNumbers(nums);
+          setPreviewLabel(nums[0]);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isOpen, record?.id, record?.seedCode, record?.availableCount, loadLabels]);
+
+  // printLabels更新后触发打印
   useEffect(() => {
     if (printLabels.length > 0) {
       const timer = setTimeout(() => {
@@ -68,7 +112,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   }, [printLabels]);
 
-  // 剩余可用数量
   const remainingCount = record?.availableCount || 0;
 
   // 处理打印
@@ -78,28 +121,61 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       let labelsToPrint: string[] = [];
 
       if (printMode === 'single') {
-        if (!previewLabel) { showAlert('请选择要打印的标签'); return; }
+        if (!previewLabel) { showAlert('请选择要打印的标签'); setLoading(false); return; }
         labelsToPrint = [previewLabel];
-        await printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
       } else if (printMode === 'multi') {
-        if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); return; }
+        if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); setLoading(false); return; }
         labelsToPrint = [...selectedLabels];
-        await printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
       } else {
-        // 批量生成
-        const startIdx = allLabelNumbers.length;
+        // 批量生成：入库到 plant_labels 表
+        const existingLabels = usePlantLabelStore.getState().labels.filter(
+          (l) => String(l.seedSourceId) === String(record.id)
+        );
+        const startIdx = existingLabels.length;
+        const newLabels: Array<{
+          labelNumber: string;
+          seedSourceId?: string | null;
+          moveInAreaName?: string | null;
+          moveInDate?: string | null;
+          quantity?: number;
+        }> = [];
+
         for (let i = 0; i < printCount; i++) {
-          labelsToPrint.push(`${record.seedCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
+          const labelNumber = `${record.seedCode}-${String(startIdx + i + 1).padStart(4, '0')}`;
+          labelsToPrint.push(labelNumber);
+          newLabels.push({
+            labelNumber,
+            seedSourceId: record.id,
+            moveInAreaName: record.supplierName || null,
+            moveInDate: record.purchaseDate || null,
+            quantity: 1,
+          });
         }
-        await printLabel(record.id, 'new', printCount, currentOperator, labelsToPrint);
-        // 刷新标签列表（从record字段生成，避免localStorage ID不匹配）
-        const totalCount = allLabelNumbers.length + printCount;
-        const refreshed: string[] = [];
-        const maxShow = Math.min(totalCount, 200);
-        for (let i = 0; i < maxShow; i++) {
-          refreshed.push(`${record.seedCode}-${String(i + 1).padStart(4, '0')}`);
+
+        // 同步入库
+        if (newLabels.length > 0) {
+          const result: any = await batchCreateLabels(newLabels);
+          if (!result) {
+            showAlert('标签入库失败，打印已中止');
+            setLoading(false);
+            return;
+          }
+          if (result.skipped > 0 && result.skippedLabelNumbers?.length > 0) {
+            showAlert(
+              `已跳过 ${result.skipped} 个已存在标签：${result.skippedLabelNumbers.slice(0, 5).join('、')}` +
+              (result.skipped > 5 ? ` 等` : '')
+            );
+          }
         }
-        setAllLabelNumbers(refreshed);
+
+        // 刷新标签列表
+        const refreshedStoreLabels = usePlantLabelStore.getState().labels;
+        const refreshedNumbers = refreshedStoreLabels
+          .filter((l) => String(l.seedSourceId) === String(record.id))
+          .map((l) => l.labelNumber);
+        if (refreshedNumbers.length > 0) {
+          setAllLabelNumbers(refreshedNumbers.slice(0, 200));
+        }
       }
 
       setPrintLabels(labelsToPrint);
@@ -108,7 +184,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   };
 
-  // 导出Excel（扫描功能码为URL链接，不嵌入QR图片）
+  // 导出Excel
   const handleExportExcel = () => {
     setLoading(true);
     try {
@@ -119,7 +195,6 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       } else if (printMode === 'multi' && selectedLabels.length > 0) {
         labelsToExport = selectedLabels;
       } else {
-        // 批量模式
         const startIdx = allLabelNumbers.length;
         for (let i = 0; i < printCount; i++) {
           labelsToExport.push(`${record.seedCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
@@ -128,11 +203,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       if (labelsToExport.length === 0) { showAlert('没有可导出的标签'); return; }
 
-      const baseUrl = 'https://tm-crop.com/ResumeTimeline';
+      const baseUrl = `${window.location.origin}/crop/seed-sources`;
       const rows = labelsToExport.map((label, i) => ({
         index: i + 1,
         label,
-        url: `${baseUrl}?labelID=${encodeURIComponent(label)}`,
+        url: `${baseUrl}?labelNumber=${encodeURIComponent(label)}`,
       }));
 
       const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>种源标签打印</title>
@@ -194,13 +269,17 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     );
   };
 
-  // 二维码内容
-  const getQrCodeValue = (label: string) => JSON.stringify({
-    type: 'seed-source', code: label, seedCode: record.seedCode,
-    cropCode: record.cropCode, cropName: record.cropName,
-    variety: record.cropVariety, quantity: record.availableCount,
-    supplier: record.supplierName, date: record.purchaseDate
-  });
+  // 二维码内容（含 URL 字段，扫码跳转种源页 + 自动开标签管理弹窗）
+  const getQrCodeValue = (label: string) => {
+    const baseUrl = window.location.origin;
+    return JSON.stringify({
+      type: 'seed-source', code: label, seedCode: record.seedCode,
+      cropCode: record.cropCode, cropName: record.cropName,
+      variety: record.cropVariety, quantity: record.availableCount,
+      supplier: record.supplierName, date: record.purchaseDate,
+      url: `${baseUrl}/crop/seed-sources?labelNumber=${encodeURIComponent(label)}`
+    });
+  };
 
   const currentQrCodeValue = previewLabel ? getQrCodeValue(previewLabel) : '';
 
@@ -209,9 +288,8 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       isOpen={isOpen}
       onClose={onClose}
       title="标签打印与导出"
-      size="xxl"
-      width={1080}
-      height={975}
+      size="xl"
+      height={650}
       showFooter={true}
       footer={
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
@@ -239,6 +317,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               onClick={handlePrint}
               disabled={loading}
             >
+              <Printer className="w-4 h-4" />
               {loading ? '处理中...' : '打印'}
             </Button>
           </div>
@@ -246,20 +325,35 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       }
     >
       <div className="space-y-4">
-        {/* 打印模式选择 */}
+        {/* 打印模式选择 — 卡片按钮风格（对标育苗） */}
         <div className="bg-blue-50 rounded-lg p-4">
-          <div className="flex gap-4 mb-4">
-            {(['single', 'multi', 'batch'] as const).map(mode => (
-              <Label key={mode} className="flex items-center gap-2">
-                <Input type="radio" name="printMode" value={mode}
-                  checked={printMode === mode}
-                  onChange={() => { setPrintMode(mode); setSelectedLabels([]); }}
-                  className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-medium">
-                  {mode === 'single' ? '单标签打印' : mode === 'multi' ? '多标签打印' : '批量生成'}
-                </span>
-              </Label>
-            ))}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['single', 'multi', 'batch'] as const).map(mode => {
+              const info = PRINT_MODE_MAP[mode];
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => { setPrintMode(mode); setSelectedLabels([]); }}
+                  className={`px-3 py-2 rounded-lg border-2 text-left transition-all ${
+                    printMode === mode
+                      ? 'border-emerald-500 bg-emerald-50 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                  }`}
+                  title={info.desc}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{info.icon}</span>
+                    <span className={`text-sm ${printMode === mode ? 'font-semibold text-emerald-800' : 'font-medium text-gray-700'}`}>
+                      {info.label}
+                    </span>
+                  </div>
+                  <div className={`text-xs mt-0.5 ${printMode === mode ? 'text-emerald-700' : 'text-gray-500'}`}>
+                    {info.sublabel}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* 单标签模式 */}
@@ -307,18 +401,18 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             </div>
           )}
 
-          {/* 批量生成模式 */}
+          {/* 批量生成模式 — 种源简化版（不需要标签粒度选择器） */}
           {printMode === 'batch' && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 p-3 bg-emerald-50 rounded border border-emerald-200">
               <div>
-                <Label className="text-gray-600 text-xs">生成数量</Label>
+                <Label className="text-gray-700 text-xs font-semibold">生成数量</Label>
                 <Input type="number" min="1" max={remainingCount}
                   value={printCount}
                   onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
                   className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
               </div>
-              <div className="text-xs text-gray-500">
-                将生成 {printCount} 个标签（可用库存：{remainingCount}，已打印：{allLabelNumbers.length}）
+              <div className="text-xs text-emerald-800">
+                → <span className="font-semibold">生成 {printCount} 个标签</span>，每个标签代表 1 单位种源（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
               </div>
             </div>
           )}
@@ -333,7 +427,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           <div>
             <Label className="text-gray-700">模板选择</Label>
             <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
-              <SelectTrigger className="border-gray-200 rounded-lg text-sm">
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm">
                 <SelectValue placeholder="详情标签" />
               </SelectTrigger>
               <SelectContent>
@@ -388,6 +482,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <div className="text-gray-500">可用数量：</div><div className="text-emerald-600 font-bold">{record.availableCount.toLocaleString()}</div>
+                    <div className="text-gray-500">入库数量：</div><div className="text-gray-900">{(record.quantity ?? record.initialCount)?.toLocaleString()}</div>
                     <div className="text-gray-500">采购日期：</div><div className="text-gray-900">{record.purchaseDate}</div>
                   </div>
                 </div>
@@ -399,7 +494,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
       {/* 打印容器：正常隐藏，打印时显示所有选中标签 */}
       <div className="hidden print-container">
-        {printLabels.map((label, index) => (
+        {printLabels.map((label) => (
           <div key={label} className="print-label-card">
             <div className="bg-white p-3 border border-gray-400 rounded-lg">
               <QRCodeSVG value={getQrCodeValue(label)} size={80} />

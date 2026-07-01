@@ -17,6 +17,7 @@ import { ExportFormatModal } from './modals/ExportFormatModal';
 import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
 import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
 import { SeedSourceInboundModal } from './modals/SeedSourceInboundModal';
+import SeedSourceLabelManageModal from './modals/SeedSourceLabelManageModal';
 
 import { seedSourceTransferService } from '@/services/seedSourceTransferService';
 import { Button, DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
@@ -166,6 +167,15 @@ export default function SeedSourcePage() {
 
   // 打印记录（待打印队列）
   const [printRecords, setPrintRecords] = useState<SeedSource[]>([]);
+
+  // 2026-07-01: 标签管理弹窗状态
+  const [labelManageModal, setLabelManageModal] = useState<{ open: boolean; record: SeedSource | null }>({
+    open: false,
+    record: null,
+  });
+  const handleLabelManage = (record: SeedSource) => {
+    setLabelManageModal({ open: true, record });
+  };
 
   // 2026-06-25 v3: 种源是纯仓库 — 移除繁殖过程/阶段推进/回流记录弹窗
   // 2026-06-18: 任务 4 — 入库登记弹窗状态 + 入库记录子表数据
@@ -700,6 +710,7 @@ export default function SeedSourcePage() {
         onTransfer={handleTransfer}
         onReturn={handleReturn}
         onInbound={handleInbound}
+        onLabelManage={handleLabelManage}
       />
 
       {/* 弹窗 */}
@@ -807,6 +818,16 @@ export default function SeedSourcePage() {
             onConfirm={handleReturnConfirm}
           />
         </UnifiedModal>
+      )}
+
+      {/* 2026-07-01: 种源标签管理弹窗 */}
+      {labelManageModal.record && (
+        <SeedSourceLabelManageModal
+          isOpen={labelManageModal.open}
+          onClose={() => setLabelManageModal({ open: false, record: null })}
+          seedSourceId={labelManageModal.record.id}
+          seedSourceCode={labelManageModal.record.seedCode}
+        />
       )}
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}

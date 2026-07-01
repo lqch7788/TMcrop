@@ -13,6 +13,7 @@ export interface PlantLabel {
   label_number: string;
   planting_id: string;
   seedling_id: string | null;
+  seed_source_id: string | null;
   move_in_area_id: number | null;
   move_in_area_name: string | null;
   move_in_date: string | null;
@@ -87,7 +88,7 @@ interface PlantLabelState {
   marksLoading: boolean;
 
   // 操作
-  loadLabels: (filter?: { plantingId?: string; seedlingId?: string }) => Promise<void>;
+  loadLabels: (filter?: { plantingId?: string; seedlingId?: string; seedSourceId?: string }) => Promise<void>;
   loadResumes: (labelId: number) => Promise<PlantLabelResume[]>;
   loadResumesForLabels: (labelIds: number[]) => Promise<void>;
   loadMarks: () => Promise<void>;
@@ -100,6 +101,7 @@ interface PlantLabelState {
     labelNumber: string;
     seedlingId?: string | null;
     plantingId?: string | null;
+    seedSourceId?: string | null;
     moveInAreaName?: string | null;
     moveInDate?: string | null;
     quantity?: number;  // 2026-06-23: 标签代表的苗数
@@ -107,6 +109,7 @@ interface PlantLabelState {
 
   /** 批量生成标签 */
   generateBatchLabels: (params: {
+    seed_source_id?: string;
     seedling_id?: string;
     planting_id?: string;
     count: number;
@@ -130,7 +133,8 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
     try {
       const params = new URLSearchParams();
       if (filter?.plantingId) params.set('planting_id', filter.plantingId);
-      if (filter?.seedlingId) params.set('seedling_id', filter.seedlingId);
+      if (filter?.seedlingId) params.set("seedling_id", filter.seedlingId);
+      if (filter?.seedSourceId) params.set("seed_source_id", filter.seedSourceId);
       params.set('limit', '200');
       const res = await enhancedApiClient.get(`/plant-labels?${params.toString()}`);
       // 2026-06-05: enhancedApiClient 已自动解包 data 字段；res 实际是数组或 {success, data, meta}，兼容两种
@@ -262,6 +266,7 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
             labelNumber: l.labelNumber,
             seedlingId: l.seedlingId || null,
             plantingId: l.plantingId || null,
+            seedSourceId: l.seedSourceId || null,
             moveInAreaName: l.moveInAreaName || null,
             moveInDate: l.moveInDate || null,
             quantity: l.quantity ?? 1,
