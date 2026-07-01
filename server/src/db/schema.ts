@@ -2713,6 +2713,7 @@ export function initializeDatabase() {
       label_number TEXT NOT NULL,
       planting_id TEXT,
       seedling_id TEXT,
+      seed_source_id TEXT,
       move_in_area_id INTEGER,
       move_in_area_name TEXT,
       move_in_date TEXT,

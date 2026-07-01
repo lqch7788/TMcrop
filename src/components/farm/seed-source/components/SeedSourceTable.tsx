@@ -7,7 +7,7 @@
  * 移除：过程记录 / 阶段推进 / 正常结束 / 异常结束 / 回流记录 / 外购提示
  */
 
-import { ArrowLeftRight, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeftRight, Download, Edit2, Plus, Printer, Tag, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import {SeedSource, SourceType} from '../../../../types/crop';
@@ -63,6 +63,8 @@ interface SeedSourceTableProps {
   onInbound: (record: SeedSource) => void;
   // 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records）
   onReturn?: (record: SeedSource) => void;
+  // 2026-07-01: 标签管理 — 种源标签全生命周期管理（打印/作废/履历/导出）
+  onLabelManage?: (record: SeedSource) => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -99,6 +101,7 @@ export function SeedSourceTable({
   onTransfer,
   onInbound,
   onReturn,
+  onLabelManage,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -529,6 +532,18 @@ export function SeedSourceTable({
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
+                      {/* 2026-07-01: 标签管理 — 种源标签全生命周期管理 */}
+                      {onLabelManage && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onLabelManage(record)}
+                          className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                          title="标签管理"
+                        >
+                          <Tag className="w-4 h-4" />
+                        </Button>
+                      )}
                       {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记 */}
                       {/* 调拨：从作物库存调入种源（追加模式 append_existing） */}
                       <Button

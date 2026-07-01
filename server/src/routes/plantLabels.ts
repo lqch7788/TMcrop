@@ -12,7 +12,7 @@ const router = Router();
 router.post('/generate-batch', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { seedling_id, planting_id, count, crop_name, area_name, start_date } = req.body;
+    const { seedling_id, planting_id, seed_source_id, count, crop_name, area_name, start_date } = req.body;
 
     if (!count || count <= 0) {
       res.status(400).json({ success: false, error: 'count 必须大于 0' });
@@ -26,9 +26,13 @@ router.post('/generate-batch', (req: Request, res: Response) => {
     } else if (planting_id) {
       const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE planting_id = ?', [String(planting_id)]);
       existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
+    } else if (seed_source_id) {
+      // 2026-07-01: 种源标签计数
+      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE seed_source_id = ?', [String(seed_source_id)]);
+      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
     }
 
-    // 确定标签编号前缀：优先查 seedling_code（育苗批号），其次 planting 端查不到，再兜底 crop_name，最后 LABEL
+    // 确定标签编号前缀：优先查 seedling_code / planting_code / seed_code，兜底 crop_name，最后 LABEL
     let codePrefix = crop_name || 'LABEL';
     if (seedling_id) {
       const seedlingResult = db.exec('SELECT seedling_code FROM seedlings WHERE id = ?', [String(seedling_id)]);
@@ -38,6 +42,11 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       const plantingResult = db.exec('SELECT planting_code FROM plantings WHERE id = ?', [String(planting_id)]);
       const plantingCode = plantingResult[0]?.values?.[0]?.[0];
       if (plantingCode) codePrefix = String(plantingCode);
+    } else if (seed_source_id) {
+      // 2026-07-01: 种源标签 — 用 seed_code 作为标签前缀
+      const seedResult = db.exec('SELECT seed_code FROM seed_sources WHERE id = ?', [String(seed_source_id)]);
+      const seedCode = seedResult[0]?.values?.[0]?.[0];
+      if (seedCode) codePrefix = String(seedCode);
     }
 
     const labels: any[] = [];
@@ -49,9 +58,9 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       const labelNumber = `${codePrefix}-${String(seq).padStart(4, '0')}`;
 
       db.run(
-        `INSERT INTO plant_labels (label_number, planting_id, seedling_id, move_in_area_name, move_in_date, quantity, create_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [labelNumber, planting_id || null, seedling_id || null, area_name || null, start_date || null, 1, now]
+        `INSERT INTO plant_labels (label_number, planting_id, seedling_id, seed_source_id, move_in_area_name, move_in_date, quantity, create_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [labelNumber, planting_id || null, seedling_id || null, seed_source_id || null, area_name || null, start_date || null, 1, now]
       );
 
       labels.push({
@@ -78,7 +87,7 @@ router.post('/generate-batch', (req: Request, res: Response) => {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { planting_id, seedling_id, page = '1', limit = '100' } = req.query as Record<string, string>;
+    const { planting_id, seedling_id, seed_source_id, page = '1', limit = '100' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     const conditions: string[] = [];
@@ -86,6 +95,7 @@ router.get('/', (req: Request, res: Response) => {
 
     if (planting_id) { conditions.push('planting_id = ?'); params.push(planting_id); }
     if (seedling_id) { conditions.push('seedling_id = ?'); params.push(seedling_id); }
+    if (seed_source_id) { conditions.push('seed_source_id = ?'); params.push(seed_source_id); }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = db.exec(`SELECT COUNT(*) as cnt FROM plant_labels ${whereClause}`, params)[0]?.values[0]?.[0] ?? 0;
@@ -251,11 +261,12 @@ router.post('/batch-create', (req: Request, res: Response) => {
     const rows: string[] = [];
     const params: any[] = [];
     for (const item of toInsert) {
-      rows.push('(?, ?, ?, ?, ?, ?, ?)');
+      rows.push('(?, ?, ?, ?, ?, ?, ?, ?)');
       params.push(
         item.labelNumber,
         item.plantingId || null,
         item.seedlingId || null,
+        item.seedSourceId || null,
         item.moveInAreaName || null,
         item.moveInDate || null,
         item.quantity ?? 1,
@@ -264,7 +275,7 @@ router.post('/batch-create', (req: Request, res: Response) => {
     }
 
     db.run(
-      `INSERT INTO plant_labels (label_number, planting_id, seedling_id, move_in_area_name, move_in_date, quantity, create_time)
+      `INSERT INTO plant_labels (label_number, planting_id, seedling_id, seed_source_id, move_in_area_name, move_in_date, quantity, create_time)
        VALUES ${rows.join(', ')}`,
       params
     );

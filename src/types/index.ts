@@ -576,6 +576,7 @@ export interface Worker {
 
   // 状态
   status: '在职' | '离职' | '退休' | 'active';
+  statusClass?: string;         // 测试文件使用 — 2026-06-30 tsc 兼容
   leaveDate?: string;        // 离职日期（离职时填写）
   leaveReason?: string;      // 离职原因
 
