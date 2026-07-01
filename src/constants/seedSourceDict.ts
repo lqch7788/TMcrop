@@ -60,3 +60,35 @@ export const SOURCE_TYPES = [
   { value: 'self_produced', label: '自繁苗' },
   { value: 'external', label: '外购' },
 ] as const
+
+// 2026-07-01 P2-1：种源类型 → 供应商类型缩写（AddModal 专用，EditModal 类型不同）
+export const ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
+  seed: 'SP',              // 种子 → 原材料供应
+  seedling: 'SP',          // 种苗 → 原材料供应
+  cutting: 'SP',           // 扦插苗 → 原材料供应
+  grafting: 'SP',          // 嫁接苗 → 原材料供应
+  tissue_culture: 'SP',    // 组培苗 → 原材料供应
+  split: 'SP',             // 分株苗 → 原材料供应
+  bulb: 'SP',              // 种球 → 原材料供应
+  other: null,             // 其他 → 显示全部供应商
+};
+
+// 2026-07-01 P2-12：种源形态 → 简化标签（DetailModal 重复定义）
+export const PROPAGATION_FORM_LABELS: Record<string, string> = {
+  seed: '种子',
+  seedling: '种苗',
+  cutting: '扦插苗',
+  grafting: '嫁接苗',
+  tissue_culture: '组培苗',
+  split: '分株苗',
+  bulb: '种球',
+  flower: '花朵',
+  scion: '穗条',
+  branch: '枝条',
+  root: '块根',
+  stem: '块茎',
+  bulb_scale: '鳞茎',
+  leaf: '叶片',
+  whole_plant: '整株',
+  other: '其他',
+};

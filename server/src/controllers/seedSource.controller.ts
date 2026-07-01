@@ -162,6 +162,18 @@ export class SeedSourceController {
     try {
       const { id } = req.params;
       const data: UpdateSeedSourceDTO = req.body;
+      // 2026-07-01 P2-11：空 body 校验（避免空对象 PUT 触发 500）
+      if (!data || Object.keys(data).length === 0) {
+        res.status(400).json({ success: false, error: '请求体不能为空' });
+        return;
+      }
+      // 2026-07-01 P0-6：从请求头/用户上下文自动注入 update_by（如果客户端没传）
+      // 优先取 req.user（auth middleware），其次取 body.operatorName，最后兜底 'system'
+      const operatorName = (req as any).user?.name || (req as any).user?.username
+        || data.operatorName || (req.body as any)?.operatorName
+        || 'system';
+      if (!data.updateBy) data.updateBy = operatorName;
+
       // 2026-06-26: 写审计日志前先取旧值做 diff
       let oldRecord: any = null;
       try { oldRecord = await this.service.getById(id); } catch (_) { /* 不存在时 update 会失败 */ }

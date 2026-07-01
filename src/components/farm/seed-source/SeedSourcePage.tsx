@@ -284,62 +284,82 @@ export default function SeedSourcePage() {
   }, []);
 
   // 弹窗回调：真正执行删除（含引用检查）
+  // 2026-07-01 P0-5 修复：先全部预检，列出所有有冲突的种源，再由用户选择"删除可删的"或"取消"
   const handleDeleteConfirm = useCallback(async () => {
     const ids = [...selectedRows];
     if (ids.length === 0) return;
-    setShowDeleteModal(false);
-    // 1. 删除前检查关联引用（保留原 checkDeletable 业务）
+
+    // 1. 全部预检，区分"可删除"和"有冲突"
+    const deletable: string[] = [];
+    const conflicted: Array<{ id: string; references: any[] }> = [];
+    const errored: Array<{ id: string; error: string }> = [];
+
     for (const id of ids) {
       try {
         const res = await checkDeletable(id);
-        if (!res.deletable && res.references.length) {
-          // 2026-06-19: 按模块分组展示，便于用户快速定位"哪个页面引用了"
-          const groupedByModule: Record<string, typeof res.references> = {};
-          res.references.forEach((r) => {
-            if (!groupedByModule[r.module]) groupedByModule[r.module] = [];
-            groupedByModule[r.module].push(r);
-          });
-
-          const sections: string[] = [];
-          Object.entries(groupedByModule).forEach(([moduleName, refs]) => {
-            sections.push(`【${moduleName}】共 ${refs.length} 条：`);
-            refs.slice(0, 5).forEach((r) => {
-              const parts: string[] = [];
-              // 优先显示 targetCode（种植批号），其次 code（CIRC 内部 ID）
-              const target = (r as any).targetCode || (r as any).targetId;
-              if (target) {
-                parts.push(`「${target}」`);
-              } else {
-                parts.push(`「${r.code}」`);
-              }
-              if (r.cropName) parts.push(r.cropName);
-              if (r.cropVariety && r.cropVariety !== r.cropName) parts.push(r.cropVariety);
-              if (r.date) parts.push(r.date);
-              if (r.status) parts.push(r.status);
-              sections.push('  • ' + parts.join(' · '));
-            });
-            if (refs.length > 5) sections.push(`  …及其他 ${refs.length - 5} 条`);
-          });
-
-          await showAlert(
-            `该种源被 ${res.references.length} 条关联记录引用，无法删除：\n\n${sections.join('\n')}\n\n请先到对应模块（如种植管理 / 育苗管理）处理关联后再删除。`
-          );
-          return;
+        if (res.deletable) {
+          deletable.push(id);
+        } else {
+          conflicted.push({ id, references: res.references });
         }
       } catch (e: any) {
-        // 2026-06-06: R4 — 检查失败不阻止删除，仅暴露错误给 UI
         const msg = e?.message || String(e);
-        toast.error(`检查种源引用失败：${msg}`);
+        errored.push({ id, error: msg });
+        // 2026-06-06: R4 — 检查失败不阻止删除
+        deletable.push(id);
       }
     }
-    // 2. 调 Store action 删除
+
+    // 2. 如果全部可删，直接执行
+    if (conflicted.length === 0) {
+      setShowDeleteModal(false);
+      try {
+        await deleteItems(deletable);
+        setSelectedRows([]);
+        if (errored.length > 0) {
+          toast.warning(`已删除 ${deletable.length} 个种源（${errored.length} 个引用检查失败，已强行删除）`);
+        }
+      } catch (e: any) {
+        await showAlert(`删除失败：${e?.message || String(e)}`);
+      }
+      return;
+    }
+
+    // 3. 有冲突 — 列出所有冲突项，问用户"只删可删的"还是"取消"
+    const sections: string[] = [];
+    conflicted.forEach((c) => {
+      const refCount = c.references.length;
+      const refSummary = c.references.slice(0, 3).map((r) => {
+        const target = (r as any).targetCode || (r as any).targetId || r.code;
+        return `「${target}」`;
+      }).join('、');
+      sections.push(`• 种源 [${c.id}] 被 ${refCount} 条引用：${refSummary}${c.references.length > 3 ? '…' : ''}`);
+    });
+
+    const confirmed = await showConfirm(
+      `⚠️ 批量删除检测：\n\n` +
+      `• 可删除：${deletable.length} 个\n` +
+      `• 有冲突：${conflicted.length} 个（详见下方）\n` +
+      (errored.length > 0 ? `• 检查失败：${errored.length} 个（将强行删除）\n` : '') +
+      `\n${sections.join('\n')}\n\n` +
+      `点击「确定」删除可删除的 ${deletable.length} 个，跳过有冲突的。\n` +
+      `点击「取消」放弃全部删除。`
+    );
+    if (!confirmed) return;
+
+    setShowDeleteModal(false);
+    if (deletable.length === 0) {
+      toast.warning(`全部 ${conflicted.length} 个都有冲突，未删除任何记录`);
+      return;
+    }
     try {
-      await deleteItems(ids);
+      await deleteItems(deletable);
       setSelectedRows([]);
+      toast.success(`已删除 ${deletable.length} 个，跳过 ${conflicted.length} 个有冲突的`);
     } catch (e: any) {
       await showAlert(`删除失败：${e?.message || String(e)}`);
     }
-  }, [selectedRows, checkDeletable, deleteItems, showAlert, toast]);
+  }, [selectedRows, checkDeletable, deleteItems, showAlert, showConfirm, toast]);
 
   // 弹窗入口：单条删除走 handleDelete(ids: [id])；
   // setSelectedIdsFromCaller 包装 setSelectedRows 同步弹模态
@@ -484,11 +504,12 @@ export default function SeedSourcePage() {
   };
 
   // 弹窗提交成功后刷新该种源数据 + 入库记录子表
-  // 2026-06-26 修复：之前漏调 loadItems()，种源列表的入库数量/剩余数量不会更新
+  // 2026-07-01 P1-6：商品种源入库（SeedSourceInboundModal）写入 inventory_stock 不影响 seed_sources 表
+  // loadItems() 仍保留（保守起见 — 如果未来调整逻辑，种源台账可能需要刷新）
   const handleInboundSuccess = () => {
     const rec = inboundModal.record;
     if (!rec) return;
-    void loadItems();  // 刷新种源列表（入库数量 + 剩余数量）
+    // 注：商品种源入库不修改 seed_sources，所以无需 loadItems
     void loadInboundRecords(`seed_source:${rec.id}`, {
       sourceModule: 'seed_source',
       sourceId: rec.id,

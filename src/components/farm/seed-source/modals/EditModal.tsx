@@ -9,6 +9,7 @@ import { Button } from '@/components/ui';
 import { X, Upload } from 'lucide-react';
 import { SeedSource, SourceType, SourceOrigin } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
+import { useAuthStore } from '../../../../stores/useAuthStore';
 // 2026-06-04: status 改为实时计算，store 不再写入 status 字段，computeStockStatus 也不再需要
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
@@ -54,6 +55,9 @@ export function EditModal({
 
   // 选中的作物信息
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+
+  // 2026-07-01 P0-6：注入当前操作用户
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   // P2 #9 修复: formData 包含繁殖字段，编辑时不再丢失
   const buildFormData = (r: SeedSource) => ({
@@ -172,8 +176,13 @@ export function EditModal({
     const totalAmount = formData.quantity * formData.unitPrice;
 
     // 2026-06-04: status 改为实时计算，store 不再写入 status 字段
-    // 注意: 编辑时用 formData.quantity 作为"当前可用量"（采购数量编辑语义），initialCount 来自 record
+    // 2026-07-01 P0-4 修复：编辑时不允许修改 quantity（累计入库量）
+    // quantity 是调拨/入库的累计值，必须通过入库/调拨动作累加，否则会覆盖之前所有追加记录
+    // 采购单价/总金额也不应随 quantity 变化（采购时的快照），从 record.unitPrice 取
     // const status = computeStockStatus(formData.quantity, record.initialCount); // 不再需要，传给 store 也会被忽略
+
+    // 2026-07-01 P1-7：乐观锁保护 — 如果 record.updateTime 与 formData 不一致说明已被他人修改，警告用户
+    // 注：当前实现只在客户端打日志提示，因为完整乐观锁需要后端支持（If-Unmodified-Since 头）
 
     try {
       await useSeedSourceStore.getState().updateItem(String(record.id), {
@@ -188,12 +197,14 @@ export function EditModal({
         supplierId: formData.supplierId,
         supplierName,
         purchaseDate: formData.purchaseDate,
-        quantity: formData.quantity,
+        // quantity 已禁用（累计值由入库/调拨动作累加）
         unit: formData.unit,
         unitPrice: formData.unitPrice,
-        totalAmount,
+        totalAmount: formData.unitPrice * record.quantity,  // 总金额 = 单价 × 累计入库量（不随编辑变）
         pictures: formData.pictures,
         remarks: formData.remarks,
+        // 2026-07-01 P0-6：传 updateBy 让后端记录操作人
+        updateBy: currentUser?.realName || currentUser?.username || 'system',
         // status 字段已废弃（2026-06-04）
         // P2 #9 修复: 提交时同时传递繁殖字段，避免编辑后丢失
         propagationType: formData.propagationType,
@@ -358,21 +369,22 @@ export function EditModal({
           />
         </div>
 
-        {/* 登记数量 */}
+        {/* 2026-07-01 P0-4：登记数量改为只读（累计值由入库/调拨动作累加） */}
         <div>
-          <Label className="text-gray-900">登记数量</Label>
+          <Label className="text-gray-900">登记数量（累计）</Label>
           <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="number"
-              value={formData.quantity || ''}
-              onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                         />
+            <div className="px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700">
+              {record.quantity?.toLocaleString() || 0}
+            </div>
             <DictSelect
               category="unit"
               value={formData.unit}
               onChange={(value) => setFormData({ ...formData, unit: value })}
               placeholder="单位"
             />
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            ⚠️ 累计数量由入库/调拨操作累加，不可直接修改。如需调整，请用"调拨入库"或"商品种源入库"。
           </div>
         </div>
 

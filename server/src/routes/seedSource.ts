@@ -429,12 +429,19 @@ router.post('/append-from-inventory', async (req, res) => {
 
         // 6. UPDATE 目标种源
         // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
+        // 2026-07-01 P0-3 修复：调拨入种源时继承源库存的 seed_form（仅在种源记录 seed_form 为空时设置，避免覆盖已有值）
         const updSS = db.prepare(
           `UPDATE seed_sources
-           SET remaining_quantity = remaining_quantity + ?, quantity = quantity + ?, update_time = ?
+           SET remaining_quantity = remaining_quantity + ?, quantity = quantity + ?,
+               seed_form = COALESCE(NULLIF(seed_form, ''), ?),
+               quality_grade = COALESCE(NULLIF(quality_grade, ''), ?),
+               update_time = ?
            WHERE id = ? AND deleted_at IS NULL`
         );
-        updSS.run([item.transferQuantity, item.transferQuantity, now, targetSeedSourceId]);
+        // seed_form 和 quality_grade 从 inventory_stock 取
+        const sourceForm = String(sourceObj.stock_type || '');
+        const sourceQuality = String(sourceObj.quality_grade || '');
+        updSS.run([item.transferQuantity, item.transferQuantity, sourceForm, sourceQuality, now, targetSeedSourceId]);
         updSS.free();
 
         // 7. 写 inventory_inbound_records

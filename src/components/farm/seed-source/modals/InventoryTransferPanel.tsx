@@ -135,7 +135,7 @@ export function InventoryTransferPanel({
     } catch (err) {
       const msg = err instanceof Error ? err.message : '加载可调拨库存失败';
       setError(msg);
-      toast.error(msg);
+      // 2026-07-01 P2-17：去掉 toast.error，保留 Alert 即可（避免双重展示）
     } finally {
       setLoading(false);
     }
@@ -190,6 +190,7 @@ export function InventoryTransferPanel({
 
   // ============ 更新选中行的数量 ============
   const updateQuantity = (stockId: string, quantity: number) => {
+    setError(null);  // 2026-07-01 P1-2：用户修改数量时清空错误提示
     setSelected((prev) => {
       const next = new Map(prev);
       const existing = next.get(stockId);

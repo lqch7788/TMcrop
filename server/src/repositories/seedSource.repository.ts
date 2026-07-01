@@ -51,6 +51,7 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'propagation_type',
   'propagation_status',
   'propagation_method',
+  'update_by',  // 2026-07-01: 编辑人
   'parent_male_id',
   'parent_male_code',
   'parent_female_id',
@@ -803,15 +804,16 @@ export class SeedSourceRepository {
       }
 
       // 引用方2：繁殖过程记录（propagation_records.seed_source_id）
+      // 2026-07-01 P1-10：SELECT 加上 crop_name（之前 row[3] 是 operator，被误用作 cropName）
       for (const row of queryRows(
-        `SELECT id, stage, record_date, operator
+        `SELECT id, stage, record_date, operator, crop_name
          FROM propagation_records WHERE seed_source_id = ?
          ORDER BY record_date DESC LIMIT 100`, id)) {
         references.push({
           module: '繁殖过程记录', moduleCode: 'propagation_record',
           id: row[0] as string, code: row[0] as string,
           date: row[2] as string, status: row[1] as string,
-          cropName: row[3] as string,
+          cropName: row[4] as string,  // 现在正确指向 crop_name
         });
       }
 

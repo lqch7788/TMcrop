@@ -115,8 +115,10 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
   const [unitPrice, setUnitPrice] = useState<number | string>(0);
-  // 2026-06-26 修复：单位自动锁定种源固定单位，禁止用户改（避免选错单位导致数据污染）
-  const fixedUnit = sourceRecord.unit || '克';
+  // 2026-07-01 P0-1 修复：单位变为可编辑（默认值=种源单位）
+  // 业务规则：种源入库到商品种源池时，允许用户选择入库单位
+  // 库存商品与种源单位可以不同（如种源按"袋"采购，但库存按"克"计量）
+  const [fixedUnit, setFixedUnit] = useState<string>(sourceRecord.unit || '克');
   const [sourceType, setSourceType] = useState<string>('external_purchase');
   // 种源形态（独立于种源来源，必填）
   const [propagationForm, setPropagationForm] = useState<string>('');
@@ -631,11 +633,25 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
               </div>
               <div className="col-span-2">
                 <div className="text-xs text-gray-500 mb-1">单位 *</div>
-                {/* 2026-06-26 修复：单位自动锁定种源固定单位（与种源记录保持一致，禁止选错） */}
-                <div className={`${deepInputClass} bg-gray-50 flex items-center justify-between cursor-not-allowed`}>
-                  <span className="text-sm text-gray-900">{fixedUnit}</span>
-                  <span className="text-xs text-gray-400">自动锁定</span>
-                </div>
+                {/* 2026-07-01 P0-1：单位可编辑（默认值=种源单位） */}
+                <Select value={fixedUnit} onValueChange={setFixedUnit}>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="选择单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="克">克</SelectItem>
+                    <SelectItem value="袋">袋</SelectItem>
+                    <SelectItem value="粒">粒</SelectItem>
+                    <SelectItem value="颗">颗</SelectItem>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="株">株</SelectItem>
+                  </SelectContent>
+                </Select>
+                {sourceRecord.unit && sourceRecord.unit !== fixedUnit && (
+                  <div className="text-xs text-amber-600 mt-1">
+                    种源单位为「{sourceRecord.unit}」，当前入库单位不同，请确认
+                  </div>
+                )}
               </div>
               <div className="col-span-2">
                 <div className="text-xs text-gray-500 mb-1">品质</div>

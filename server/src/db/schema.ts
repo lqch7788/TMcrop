@@ -437,6 +437,7 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS seed_sources (
       id TEXT PRIMARY KEY,
+      update_by TEXT,  -- 2026-07-01: 最近一次编辑人
       source_code TEXT NOT NULL,
       source_name TEXT,
       source_type TEXT,
