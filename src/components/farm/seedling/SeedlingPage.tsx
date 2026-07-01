@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download, ChevronDown } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download, ChevronDown, AlertTriangle } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
 import { AddModal } from './modals/AddModal';
@@ -165,6 +165,11 @@ export default function SeedlingPage() {
       clearError();
     }
   }, [error, toast, clearError]);
+
+  // 2026-07-01: 结束确认弹窗状态（合并正常/异常为一个"结束"按钮）
+  const [endConfirm, setEndConfirm] = useState<{ record: Seedling | null; allowSupplemental: boolean }>({
+    record: null, allowSupplemental: false,
+  });
 
   // 2026-06-23: 扫码跳转 — 解析 URL ?labelNumber= 参数，自动打开标签管理弹窗
   useEffect(() => {
@@ -363,44 +368,30 @@ export default function SeedlingPage() {
   }, [pendingDeleteIds, deleteItems]);
 
   // 处理结束计划
-  const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
-    // 2026-07-01: 防重复结束 — 已结束的记录直接拒绝
+  // 2026-07-01: 合并正常/异常结束 → 一个"结束"按钮 + 弹窗内勾选"保留补录通道"
+  const handleEnd = (record: Seedling) => {
     if (record.endTime) {
-      await showAlert('该育苗记录已结束，不能重复操作');
+      showAlert('该育苗记录已结束，不能重复操作');
       return;
     }
+    setEndConfirm({ record, allowSupplemental: false });
+  };
+
+  // 执行结束操作
+  const executeEnd = async () => {
+    const record = endConfirm.record;
+    if (!record) return;
+    const allowSupplemental = endConfirm.allowSupplemental;
+    const endType = allowSupplemental ? 'abnormal' : 'normal';
+    const endStatus = allowSupplemental ? SeedlingStatus.ABNORMAL : SeedlingStatus.COMPLETED;
     const planCode = record.productionPlanCode;
-    const isNormal = endType === 'normal';
-    const endStatus = isNormal ? SeedlingStatus.COMPLETED : SeedlingStatus.ABNORMAL;
 
-    // 2026-07-01: 强化结束确认文案 — 明确告知后果，防止误操作
-    const buildEndConfirmMsg = (title: string, extra?: string) => {
-      if (isNormal) {
-        return `⚠️ ${title}\n\n` +
-          `【正常结束】订单完成后将【锁定】，禁止一切后续操作：\n` +
-          `  • 禁止入库\n` +
-          `  • 禁止补录\n` +
-          `  • 禁止修改\n\n` +
-          `⚠️ 此操作不可撤销！${extra ? `\n${extra}` : ''}`;
-      }
-      return `⚠️ ${title}\n\n` +
-        `【异常结束】因故中断，后续操作受限：\n` +
-        `  • 补录入库【需提交审核】\n` +
-        `  • 禁止新增入库\n\n` +
-        `${extra ? `${extra}\n` : ''}` +
-        `是否确认异常结束？`;
-    };
+    setEndConfirm({ record: null, allowSupplemental: false });
 
-    let confirmMsg: string;
     if (!planCode || planCode.trim() === '') {
-      confirmMsg = buildEndConfirmMsg(
-        isNormal ? '确认正常结束此育苗记录？' : '确认异常结束此育苗记录？',
-        '（未关联生产计划，仅关闭本记录）'
-      );
-      if (!await showConfirm(confirmMsg)) return;
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert(isNormal ? '育苗记录已正常结束' : '育苗记录已异常结束');
+        await showAlert(allowSupplemental ? '育苗记录已异常结束（保留补录通道）' : '育苗记录已正常结束');
         await loadItems();
       } else {
         await showAlert('结束失败');
@@ -410,14 +401,9 @@ export default function SeedlingPage() {
 
     const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      const confirmed = await showConfirm(
-        `⚠️ 未找到关联的生产计划 [${planCode}]，可能已被删除。\n\n` +
-        `是否强制结束该育苗记录？\n（结束后将解除生产计划关联，并记录结束标记）`
-      );
-      if (!confirmed) return;
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert(isNormal ? '育苗记录已正常结束（强结）' : '育苗记录已异常结束（强结）');
+        await showAlert(allowSupplemental ? '育苗记录已异常结束（强结，保留补录通道）' : '育苗记录已正常结束（强结）');
         await loadItems();
       } else {
         await showAlert('强结失败');
@@ -430,18 +416,10 @@ export default function SeedlingPage() {
       return;
     }
 
-    const completionRate = cropBatchService.getCompletionRate(batch, record.survivalCount || 0);
-    confirmMsg = buildEndConfirmMsg(
-      isNormal ? '确认正常结束此生产计划？' : '确认异常结束此生产计划？',
-      `入库完成比例：${Math.round(completionRate * 100)}%`
-    );
-
-    if (!await showConfirm(confirmMsg)) return;
-
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
-      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      await showAlert(allowSupplemental ? '生产计划已异常结束（保留补录通道）' : '生产计划已正常结束');
       loadItems();
     } else {
       await showAlert('结束失败');
@@ -805,6 +783,63 @@ export default function SeedlingPage() {
         onClose={() => { setShowDeleteModal(false); setPendingDeleteIds([]); }}
         onConfirm={handleDeleteConfirm}
       />
+
+      {/* 2026-07-01: 结束确认弹窗（合并正常/异常为一个按钮） */}
+      {endConfirm.record && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-500 to-red-600 rounded-t-xl">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> 确认结束育苗记录
+              </h3>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-red-700"
+                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              {!endConfirm.allowSupplemental ? (
+                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-sm font-semibold text-red-800">⚠️ 正常结束 — 完成后将【锁定】</div>
+                  <div className="text-xs text-red-700 mt-1">
+                    结束后禁止一切后续操作：入库、补录、修改均不可用。<br />
+                    <span className="font-semibold">此操作不可撤销！</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="text-sm font-semibold text-amber-800">异常结束 — 保留补录通道</div>
+                  <div className="text-xs text-amber-700 mt-1">
+                    结束后可继续补录入库（需审核）。
+                  </div>
+                </div>
+              )}
+              <label className="flex items-center gap-2 px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={endConfirm.allowSupplemental}
+                  onChange={(e) => setEndConfirm({ ...endConfirm, allowSupplemental: e.target.checked })}
+                  className="w-4 h-4 text-amber-600 rounded"
+                />
+                <span className="text-sm text-gray-700">
+                  保留补录通道（勾选后状态为"异常结束"，可继续补录操作）
+                </span>
+              </label>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <Button variant="secondary" size="sm"
+                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                取消
+              </Button>
+              <Button variant="default" size="sm"
+                onClick={executeEnd}
+                className={endConfirm.allowSupplemental ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}>
+                确认{endConfirm.allowSupplemental ? '异常' : '正常'}结束
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -36,7 +36,7 @@ interface SeedlingTableProps {
   onLabelManage?: (record: Seedling) => void;
   onImageClick: (images: string[]) => void;
   // 结束相关回调
-  onEnd: (record: Seedling, endType: 'normal' | 'abnormal') => void;
+  onEnd: (record: Seedling) => void;
   // 2026-06-18: 任务 5 — 出圃入库回调
   onInbound?: (record: Seedling) => void;
   // 模式状态
@@ -696,14 +696,9 @@ export function SeedlingTable({
                         )}
                         {/* 异常结束 → 隐藏结束按钮（补录通道保留，结束按钮不再需要） */}
                         {record.status !== 'abnormal' && (
-                          <>
-                            <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
-                              <XCircle className="w-4 h-4" />
-                            </Button>
-                          </>
+                          <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                            <StopCircle className="w-4 h-4" />
+                          </Button>
                         )}
                       </div>
                     )}

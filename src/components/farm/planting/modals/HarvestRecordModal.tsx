@@ -529,6 +529,18 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       cancelText="关闭"
     >
       <div className="space-y-4">
+        {/* 2026-07-01: 补录模式提示 — 已结束的记录再次采收即为补录 */}
+        {(record.status === 'cancelled' || record.endType === 'abnormal' || record.endTime) && (
+          <div className="px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="text-sm font-semibold text-amber-800">补录模式</div>
+              <div className="text-xs text-amber-700 mt-0.5">
+                此种植记录已{record.endType === 'abnormal' ? '异常' : ''}结束（{record.endTime}），当前为补录操作，采收数据将记录为完成后的补充入库。
+              </div>
+            </div>
+          </div>
+        )}
         {/* 表单区 */}
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
