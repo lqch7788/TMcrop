@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, CheckCircle, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, Tag, Trash2, Wheat, X, XCircle } from 'lucide-react';
+import { Calendar, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, StopCircle, Tag, Trash2, Wheat, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/cropVariety';
@@ -36,7 +36,7 @@ interface PlantingTableProps {
   // V2 改造 (任务 16): 种植结束弹窗
   onEndV2?: (record: Planting) => void;
   // 2026-06-28: 直接结束回调（与育苗管理"正常结束"/"异常结束"按钮一致）
-  onEnd?: (record: Planting, endType: 'normal' | 'abnormal') => void;
+  onEnd?: (record: Planting) => void;
   // 2026-06-19: 行级采收入库回调（unify-harvest-inbound-into-source-operations）
   onInbound?: (record: Planting) => void;
   // 模式状态
@@ -577,7 +577,7 @@ export function PlantingTable({
                 <Calendar className="w-4 h-4 text-blue-600" />
               </Button>
             )}
-            {!record.isHarvestLocked && record.status !== 'ended' && onInbound && (
+            {(!record.isHarvestLocked || (record.status === 'cancelled' || record.endType === 'abnormal')) && record.status !== 'ended' && onInbound && (
               <Button variant="ghost" size="icon" onClick={() => onInbound(record)} title="采收入库（行级）">
                 <Package className="w-4 h-4" />
               </Button>
@@ -592,16 +592,11 @@ export function PlantingTable({
                 <MoveRight className="w-4 h-4" />
               </Button>
             )}
-            {/* 结束按钮：仅在未结束时显示（进行中和异常结束都隐藏） */}
+            {/* 结束按钮：仅在未结束时显示 */}
             {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
-              <>
-                <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
-                  <XCircle className="w-4 h-4 text-red-600" />
-                </Button>
-              </>
+              <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                <StopCircle className="w-4 h-4" />
+              </Button>
             )}
             {/* 育种/留种按钮：仅进行中时显示 */}
             {record.status !== 'cancelled' && record.status !== 'ended' && record.isBreeding && onBreedingRecord && (
@@ -1116,15 +1111,15 @@ export function PlantingTable({
                           <Package className="w-4 h-4" />
                         </Button>
                       )}
+                      {/* 2026-07-01: 异常结束后补录 — 复用"采收"弹窗（与正常行一致，含 3 去向） */}
+                      {(record.status === 'cancelled' || record.endType === 'abnormal') && onEndV2 && (
+                        <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收（补录）">
+                          <Package className="w-4 h-4" />
+                        </Button>
+                      )}
                       {record.status !== 'ended' && onDailyRecord && (
                         <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
                           <Calendar className="w-4 h-4 text-blue-600" />
-                        </Button>
-                      )}
-                      {/* 2026-07-01: 采收入库 — 异常结束后仍可补录 */}
-                      {!record.isHarvestLocked && record.status !== 'ended' && onInbound && (
-                        <Button variant="ghost" size="icon" onClick={() => onInbound(record)} title="采收入库（行级）">
-                          <Package className="w-4 h-4" />
                         </Button>
                       )}
                       {onLabelManage && (
@@ -1137,16 +1132,11 @@ export function PlantingTable({
                           <MoveRight className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 结束按钮：仅在未结束时显示（进行中和异常结束都隐藏） */}
+                      {/* 结束按钮：仅在未结束时显示 */}
                       {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'normal')} title="正常结束">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => onEnd(record, 'abnormal')} title="异常结束">
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          </Button>
-                        </>
+                        <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                          <StopCircle className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
                     )}

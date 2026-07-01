@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar } from 'lucide-react';
+import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar, AlertTriangle } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';
@@ -250,40 +250,36 @@ export default function PlantingPage() {
     setHarvestModalOpen(true);
   };
 
-  // 2026-06-28：与育苗管理一致 — 正常结束 / 异常结束 直接走 updateItem
-  // 不依赖生产计划关联，不打开弹窗，直接弹确认后改 end_type/end_time/status
-  const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
-    // 2026-07-01: 防重复结束
+  // 2026-07-01: 合并正常/异常结束 → 一个"结束"按钮 + 弹窗内勾选
+  const [endConfirm, setEndConfirm] = useState<{ record: Planting | null; allowSupplemental: boolean }>({
+    record: null, allowSupplemental: false,
+  });
+
+  const handleEnd = (record: Planting) => {
     if (record.endTime) {
-      await showAlert('该种植记录已结束，不能重复操作');
+      showAlert('该种植记录已结束，不能重复操作');
       return;
     }
-    const isNormal = endType === 'normal';
+    setEndConfirm({ record, allowSupplemental: false });
+  };
 
-    // 2026-07-01: 强化结束确认文案 — 明确告知后果，防止误操作
-    const confirmMsg = isNormal
-      ? `⚠️ 确认正常结束此种植记录？\n\n` +
-        `【正常结束】订单完成后将【锁定】，禁止一切后续操作：\n` +
-        `  • 禁止入库\n` +
-        `  • 禁止补录\n` +
-        `  • 禁止修改\n\n` +
-        `⚠️ 此操作不可撤销！`
-      : `⚠️ 确认异常结束此种植记录？\n\n` +
-        `【异常结束】因故中断，后续操作受限：\n` +
-        `  • 补录入库【需提交审核】\n` +
-        `  • 禁止新增入库\n\n` +
-        `是否确认异常结束？`;
-    if (!await showConfirm(confirmMsg)) return;
+  const executeEnd = async () => {
+    const record = endConfirm.record;
+    if (!record) return;
+    const allowSupplemental = endConfirm.allowSupplemental;
+    const endType = allowSupplemental ? 'abnormal' : 'normal';
+    const endStatus = allowSupplemental ? PlantingStatus.CANCELLED : PlantingStatus.ENDED;
 
-    const endStatus = isNormal ? PlantingStatus.ENDED : PlantingStatus.CANCELLED;
+    setEndConfirm({ record: null, allowSupplemental: false });
+
     const result = await updateItem(record.id, {
       endType,
       endTime: todayLocal(),
       status: endStatus,
-      isHarvestLocked: isNormal,  // 2026-07-01: 仅正常结束锁死，异常结束保留补录通道
+      isHarvestLocked: !allowSupplemental,
     } as Partial<Planting>);
     if (result) {
-      await showAlert(isNormal ? '种植记录已正常结束' : '种植记录已异常结束');
+      await showAlert(allowSupplemental ? '种植记录已异常结束（保留补录通道）' : '种植记录已正常结束');
       await loadItems();
     } else {
       await showAlert('结束失败');
@@ -661,6 +657,63 @@ export default function PlantingPage() {
           onSuccess={loadItems}
           record={currentRecord}
         />
+      )}
+
+      {/* 2026-07-01: 结束确认弹窗（合并正常/异常为一个按钮） */}
+      {endConfirm.record && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-500 to-red-600 rounded-t-xl">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> 确认结束种植记录
+              </h3>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-red-700"
+                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              {!endConfirm.allowSupplemental ? (
+                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-sm font-semibold text-red-800">⚠️ 正常结束 — 完成后将【锁定】</div>
+                  <div className="text-xs text-red-700 mt-1">
+                    结束后禁止一切后续操作：入库、补录、修改均不可用。<br />
+                    <span className="font-semibold">此操作不可撤销！</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="text-sm font-semibold text-amber-800">异常结束 — 保留补录通道</div>
+                  <div className="text-xs text-amber-700 mt-1">
+                    结束后可继续补录入库。
+                  </div>
+                </div>
+              )}
+              <label className="flex items-center gap-2 px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={endConfirm.allowSupplemental}
+                  onChange={(e) => setEndConfirm({ ...endConfirm, allowSupplemental: e.target.checked })}
+                  className="w-4 h-4 text-amber-600 rounded"
+                />
+                <span className="text-sm text-gray-700">
+                  保留补录通道（勾选后状态为"异常结束"，可继续补录操作）
+                </span>
+              </label>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <Button variant="secondary" size="sm"
+                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                取消
+              </Button>
+              <Button variant="default" size="sm"
+                onClick={executeEnd}
+                className={endConfirm.allowSupplemental ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}>
+                确认{endConfirm.allowSupplemental ? '异常' : '正常'}结束
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations）
