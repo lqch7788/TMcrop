@@ -296,12 +296,16 @@ router.get('/inbound-records', (req: Request, res: Response) => {
     const db = getDatabase()
     const conditions: string[] = []
     const params: any[] = []
-    if (sourceModule) { conditions.push('source_module = ?'); params.push(sourceModule) }
-    if (sourceId) { conditions.push('source_id = ?'); params.push(sourceId) }
-    if (stockType) { conditions.push('stock_type = ?'); params.push(stockType) }
-    if (warehouseId) { conditions.push('warehouse_id = ?'); params.push(warehouseId) }
-    if (startDate) { conditions.push('record_date >= ?'); params.push(startDate) }
-    if (endDate) { conditions.push('record_date <= ?'); params.push(endDate) }
+    // 2026-07-01 Bug fix：列表 SQL 用 LEFT JOIN 关联 harvest_records，
+    // 两个表都有 source_module/source_id/stock_type/warehouse_id/record_date 列。
+    // 不加 'ir.' 前缀会触发 SQLite "ambiguous column name" 错误，loadInboundRecords 直接 500。
+    // 影响：SeedlingPage 已有的"入库记录"折叠区、useInventoryInboundStore 全量加载都失败。
+    if (sourceModule) { conditions.push('ir.source_module = ?'); params.push(sourceModule) }
+    if (sourceId) { conditions.push('ir.source_id = ?'); params.push(sourceId) }
+    if (stockType) { conditions.push('ir.stock_type = ?'); params.push(stockType) }
+    if (warehouseId) { conditions.push('ir.warehouse_id = ?'); params.push(warehouseId) }
+    if (startDate) { conditions.push('ir.record_date >= ?'); params.push(startDate) }
+    if (endDate) { conditions.push('ir.record_date <= ?'); params.push(endDate) }
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
 
     const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
@@ -309,18 +313,17 @@ router.get('/inbound-records', (req: Request, res: Response) => {
     const offset = (pageNum - 1) * limitNum
 
     // 计数
-    const countResult = db.exec(`SELECT COUNT(*) FROM inventory_inbound_records ${where}`, params)
+    const countResult = db.exec(`SELECT COUNT(*) FROM inventory_inbound_records ir ${where}`, params)
     const total = Number(countResult[0]?.values?.[0]?.[0]) || 0
 
     // 列表 — LEFT JOIN harvest_records 取 harvest_form（采收形态）
     // 2026-06-28：入库记录需要展示采收形态，但 inventory_inbound_records 表没存 harvest_form，
     //            改去 harvest_records 通过 business_id 关联获取（一个入库 = harvest_records 一条）
-    const joinWhere = where ? where.replace(/^WHERE/i, 'WHERE') : ''
     const listSql = `
       SELECT ir.*, hr.harvest_form AS harvest_form
       FROM inventory_inbound_records ir
       LEFT JOIN harvest_records hr ON ir.business_id = hr.id
-      ${joinWhere}
+      ${where}
       ORDER BY ir.create_time DESC
       LIMIT ? OFFSET ?
     `

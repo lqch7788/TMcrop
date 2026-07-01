@@ -34,7 +34,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import {useUserStore} from '@/stores/useUserStore'
 import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
 import { todayLocal } from '@/lib/dateUtils'
-import { showAlert } from '@/lib/dialogService'
+import { showAlert, showConfirm } from '@/lib/dialogService'
 import {
   submitUnifiedInbound,
   validateUnifiedInboundInput,
@@ -899,7 +899,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                     <th className="px-2 py-2 text-left">采收员</th>
                     <th className="px-2 py-2 text-left">操作员</th>
                     <th className="px-2 py-2 text-left">补录</th>
-                    <th className="px-2 py-2 text-left">创建时间</th>
                     <th className="px-2 py-2 text-center">操作</th>
                   </tr>
                 </thead>
@@ -920,7 +919,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                         <tr key={r.id} className="hover:bg-gray-50 align-top">
                           <td className="px-2 py-1.5 whitespace-nowrap">{r.harvestDate || '-'}</td>
                           <td className="px-2 py-1.5 font-mono text-xs">{(r as any).harvestCode || r.id}</td>
-                          <td className="px-2 py-1.5" colSpan={7}><span className="text-gray-400">（无产品明细）</span></td>
+                          <td className="px-2 py-1.5" colSpan={6}><span className="text-gray-400">（无产品明细）</span></td>
                           <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
                           <td className="px-2 py-1.5 text-xs">{harvesterStr || '-'}</td>
                           <td className="px-2 py-1.5">{(r as any).operator || r.operatorName || r.createBy || '-'}</td>
@@ -929,7 +928,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                               ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>
                               : <span className="text-gray-400">否</span>}
                           </td>
-                          <td className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">{(r as any).createTime || '-'}</td>
                           <td className="px-2 py-1.5 text-center">
                             <Button
                               variant="ghost"
@@ -963,7 +961,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                             ? <span className="text-amber-600">是（{(r as any).supplementaryReason || '无原因'}）</span>
                             : <span className="text-gray-400">否</span>}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-gray-500 whitespace-nowrap">{(r as any).createTime || '-'}</td>
                         <td className="px-2 py-1.5 text-center">
                           {idx === 0 ? (
                             <Button
