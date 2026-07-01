@@ -75,7 +75,7 @@ export interface MidCategory {
  * 编码配置 - 小类
  */
 export interface SubCategory {
-  code: string;
+  code?: string;
   name: string;
   prefix: string;
 }

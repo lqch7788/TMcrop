@@ -169,6 +169,10 @@ export interface TempTask {
   requiredFeedback?: string[];
   // 兼容字段（TempTaskPage/旧数据使用）
   rejectReason?: string;
+  // 兼容字段（MyTasksPage, TempTaskTable 等使用 — 2026-06-30 tsc 兼容）
+  type?: string;
+  typeName?: string;
+  greenhouseName?: string;
   location?: string;
   planStart?: string;
 }
@@ -318,6 +322,13 @@ export interface InspectionRecord {
   // 关联批次
   batchId?: string;
   batchCode?: string;
+  // 兼容字段（InspectionTab 等使用 — 2026-06-30 tsc 兼容）
+  createTime?: string;
+  createBy?: string;
+  updateTime?: string;
+  updateBy?: string;
+  inspectionType?: string;
+  [key: string]: any;
   // 巡查类型（扩展字段）
   inspectionType?: 'farm' | 'equipment' | 'infrastructure' | 'other';
   // 位置信息（二维码扫描）

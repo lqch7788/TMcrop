@@ -442,6 +442,7 @@ export function FarmTaskHub() {
                       ? 'bg-purple-500 text-white font-bold'
                       : 'bg-gray-100 text-gray-500 hover:bg-gray-200';
                   }
+                  return 'bg-gray-100 text-gray-500';
                 };
                 return (
                   <button
@@ -477,8 +478,8 @@ export function FarmTaskHub() {
                 onToggleSelect={hub.toggleSelect}
                 onSelectAll={hub.selectAll}
                 onClearSelection={hub.clearSelection}
-                filters={hub.state.filters}
-                onFilterChange={hub.setFilter}
+                filters={hub.state.filters as any}
+                onFilterChange={hub.setFilter as any}
                 onResetFilters={hub.resetFilters}
                 onViewTask={(taskId) => setDetailTaskId(taskId)}
                 onViewTaskInCalendar={(task) => setDetailTaskId(task.id)}
@@ -512,13 +513,13 @@ export function FarmTaskHub() {
                   total: hub.inspections.length,
                   normal: hub.inspections.filter(i => i.status === 'normal').length,
                   attention: hub.inspections.filter(i => i.status === 'attention').length,
-                  abnormal: hub.inspections.filter(i => i.status === 'critical' || i.status === 'abnormal').length,
+                  abnormal: hub.inspections.filter((i: any) => i.status === 'critical' || i.status === 'abnormal').length,
                 }}
                 filters={hub.inspectionFilters}
                 onFilterChange={hub.setInspectionFilter}
                 onResetFilters={hub.resetInspectionFilters}
-                currentPage={hub.inspectionPage}
-                pageSize={hub.inspectionPageSize}
+                currentPage={hub.inspectionPage ?? 1}
+                pageSize={hub.inspectionPageSize ?? 10}
                 onPageChange={hub.inspectionGoToPage}
                 onPageSizeChange={hub.inspectionGoToPageSize}
                 exportMode={hub.inspectionExportMode}
@@ -574,14 +575,14 @@ export function FarmTaskHub() {
 
         {/* 今日操作记录 */}
         <TodayOperationRecords
-          records={hub.state.recentRecords}
+          records={hub.state.recentRecords as any}
           onShowAll={() => setShowRecordPanel(true)}
         />
 
       {/* 操作记录面板 */}
       {showRecordPanel && (
         <OperationRecordPanel
-          records={hub.state.allRecords}
+          records={hub.state.allRecords as any}
           onClose={() => setShowRecordPanel(false)}
         />
       )}

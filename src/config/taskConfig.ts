@@ -56,50 +56,50 @@ export const STORAGE_DEFAULTS = {
 /** 超时配置（7个参数，前缀 task.overtime.*） */
 export function getOvertimeConfig(): typeof OVERTIME_DEFAULTS {
   return {
-    acceptWarningHours: getSystemConfigValueNumber('task.overtime.accept-warning-hours', OVERTIME_DEFAULTS.acceptWarningHours),
-    acceptCriticalHours: getSystemConfigValueNumber('task.overtime.accept-critical-hours', OVERTIME_DEFAULTS.acceptCriticalHours),
-    executionWarningHours: getSystemConfigValueNumber('task.overtime.execution-warning-hours', OVERTIME_DEFAULTS.executionWarningHours),
-    executionCriticalHours: getSystemConfigValueNumber('task.overtime.execution-critical-hours', OVERTIME_DEFAULTS.executionCriticalHours),
-    acceptanceWarningHours: getSystemConfigValueNumber('task.overtime.acceptance-warning-hours', OVERTIME_DEFAULTS.acceptanceWarningHours),
-    acceptanceCriticalHours: getSystemConfigValueNumber('task.overtime.acceptance-critical-hours', OVERTIME_DEFAULTS.acceptanceCriticalHours),
-    checkIntervalMs: getSystemConfigValueNumber('task.overtime.check-interval-ms', OVERTIME_DEFAULTS.checkIntervalMs),
-  };
+    acceptWarningHours: getSystemConfigValueNumber('task.overtime.accept-warning-hours', OVERTIME_DEFAULTS.acceptWarningHours) as any,
+    acceptCriticalHours: getSystemConfigValueNumber('task.overtime.accept-critical-hours', OVERTIME_DEFAULTS.acceptCriticalHours) as any,
+    executionWarningHours: getSystemConfigValueNumber('task.overtime.execution-warning-hours', OVERTIME_DEFAULTS.executionWarningHours) as any,
+    executionCriticalHours: getSystemConfigValueNumber('task.overtime.execution-critical-hours', OVERTIME_DEFAULTS.executionCriticalHours) as any,
+    acceptanceWarningHours: getSystemConfigValueNumber('task.overtime.acceptance-warning-hours', OVERTIME_DEFAULTS.acceptanceWarningHours) as any,
+    acceptanceCriticalHours: getSystemConfigValueNumber('task.overtime.acceptance-critical-hours', OVERTIME_DEFAULTS.acceptanceCriticalHours) as any,
+    checkIntervalMs: getSystemConfigValueNumber('task.overtime.check-interval-ms', OVERTIME_DEFAULTS.checkIntervalMs) as any,
+  } as any;
 }
 
 /** 延期限制配置（3个参数，前缀 task.deadline.*） */
 export function getDeadlineConfig(): typeof DEADLINE_DEFAULTS {
   return {
-    maxExtensions: getSystemConfigValueNumber('task.deadline.max-extensions', DEADLINE_DEFAULTS.maxExtensions),
-    maxExtensionHours: getSystemConfigValueNumber('task.deadline.max-extension-hours', DEADLINE_DEFAULTS.maxExtensionHours),
-    totalMaxExtensionHours: getSystemConfigValueNumber('task.deadline.total-max-extension-hours', DEADLINE_DEFAULTS.totalMaxExtensionHours),
-  };
+    maxExtensions: getSystemConfigValueNumber('task.deadline.max-extensions', DEADLINE_DEFAULTS.maxExtensions) as any,
+    maxExtensionHours: getSystemConfigValueNumber('task.deadline.max-extension-hours', DEADLINE_DEFAULTS.maxExtensionHours) as any,
+    totalMaxExtensionHours: getSystemConfigValueNumber('task.deadline.total-max-extension-hours', DEADLINE_DEFAULTS.totalMaxExtensionHours) as any,
+  } as any;
 }
 
 /** 催办限制配置（3个参数，前缀 task.reminder.*） */
 export function getReminderConfig(): typeof REMINDER_DEFAULTS {
   return {
-    minIntervalMinutes: getSystemConfigValueNumber('task.reminder.min-interval-minutes', REMINDER_DEFAULTS.minIntervalMinutes),
-    maxRemindersPerDay: getSystemConfigValueNumber('task.reminder.max-per-day', REMINDER_DEFAULTS.maxRemindersPerDay),
-    autoReminderHours: getSystemConfigValueNumber('task.reminder.auto-reminder-hours', REMINDER_DEFAULTS.autoReminderHours),
-  };
+    minIntervalMinutes: getSystemConfigValueNumber('task.reminder.min-interval-minutes', REMINDER_DEFAULTS.minIntervalMinutes) as any,
+    maxRemindersPerDay: getSystemConfigValueNumber('task.reminder.max-per-day', REMINDER_DEFAULTS.maxRemindersPerDay) as any,
+    autoReminderHours: getSystemConfigValueNumber('task.reminder.auto-reminder-hours', REMINDER_DEFAULTS.autoReminderHours) as any,
+  } as any;
 }
 
 /** 返工规则（前缀 task.rework.*） */
 export function getReworkConfig(): typeof REWORK_DEFAULTS {
   return {
-    maxReworkCount: getSystemConfigValueNumber('task.rework.max-count', REWORK_DEFAULTS.maxReworkCount),
-  };
+    maxReworkCount: getSystemConfigValueNumber('task.rework.max-count', REWORK_DEFAULTS.maxReworkCount) as any,
+  } as any;
 }
 
 /** 存储容量配置（5个参数，前缀 task.storage.*） */
 export function getStorageConfig(): typeof STORAGE_DEFAULTS {
   return {
-    maxRecordsPerTask: getSystemConfigValueNumber('task.storage.max-per-task', STORAGE_DEFAULTS.maxRecordsPerTask),
-    maxRecords: getSystemConfigValueNumber('task.storage.max-records', STORAGE_DEFAULTS.maxRecords),
-    archiveAfterDays: getSystemConfigValueNumber('task.storage.archive-after-days', STORAGE_DEFAULTS.archiveAfterDays),
-    warnThreshold: getSystemConfigValueNumber('task.storage.warn-threshold', STORAGE_DEFAULTS.warnThreshold),
-    criticalThreshold: getSystemConfigValueNumber('task.storage.critical-threshold', STORAGE_DEFAULTS.criticalThreshold),
-  };
+    maxRecordsPerTask: getSystemConfigValueNumber('task.storage.max-per-task', STORAGE_DEFAULTS.maxRecordsPerTask) as any,
+    maxRecords: getSystemConfigValueNumber('task.storage.max-records', STORAGE_DEFAULTS.maxRecords) as any,
+    archiveAfterDays: getSystemConfigValueNumber('task.storage.archive-after-days', STORAGE_DEFAULTS.archiveAfterDays) as any,
+    warnThreshold: getSystemConfigValueNumber('task.storage.warn-threshold', STORAGE_DEFAULTS.warnThreshold) as any,
+    criticalThreshold: getSystemConfigValueNumber('task.storage.critical-threshold', STORAGE_DEFAULTS.criticalThreshold) as any,
+  } as any;
 }
 
 // ============================================

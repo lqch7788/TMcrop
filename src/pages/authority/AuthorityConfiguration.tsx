@@ -45,7 +45,7 @@ export default function AuthorityConfiguration() {
   // UI 状态
   const [activeTab, setActiveTab] = useState<'processes' | 'authority'>('authority');
   const [selectedAppType, setSelectedAppType] = useState(0);
-  const [selectedRoleOid, setSelectedRoleOid] = useState('');
+  const [selectedRoleOid, setSelectedRoleOid] = useState<string | undefined>('');
   const [expandedProcesses, setExpandedProcesses] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -72,7 +72,7 @@ export default function AuthorityConfiguration() {
 
   // 初始化加载
   useEffect(() => {
-    loadProcesses({ appType: selectedAppType });
+    loadProcesses({ appType: selectedAppType as any });
     loadRoles();
     loadOrganizations();
   }, [selectedAppType]);
@@ -82,7 +82,7 @@ export default function AuthorityConfiguration() {
     if (!selectedRoleOid && roles.length > 0) {
       const adminRole = roles.find((r) => r.name === '系统管理员');
       if (adminRole) {
-        setSelectedRoleOid(adminRole.oid);
+        setSelectedRoleOid(adminRole.oid || '');
       }
     }
   }, [roles, selectedRoleOid]);
@@ -172,7 +172,7 @@ export default function AuthorityConfiguration() {
         // 找到对应的 action oid
         actionMap.set(act.code, 1);
       }
-      changes.set(proc.oid, actionMap);
+      changes.set(proc.oid || '', actionMap);
     }
     setAuthorityChanges(changes);
     setHasChanges(true);
@@ -185,7 +185,7 @@ export default function AuthorityConfiguration() {
       for (const act of ACTION_LIST) {
         actionMap.set(act.code, 0);
       }
-      changes.set(proc.oid, actionMap);
+      changes.set(proc.oid || '', actionMap);
     }
     setAuthorityChanges(changes);
     setHasChanges(true);
@@ -206,7 +206,7 @@ export default function AuthorityConfiguration() {
     }
 
     try {
-      await authorityService.saveRoleAuthority(selectedRoleOid, authorities);
+      await authorityService.saveRoleAuthority(selectedRoleOid, authorities as any);
       // 重新加载
       const data = await authorityService.getRoleAuthority(selectedRoleOid, selectedAppType as 0 | 1);
       setRoleAuthorities(data);
@@ -250,12 +250,12 @@ export default function AuthorityConfiguration() {
     };
     await saveProcess(payload);
     setShowProcessModal(false);
-    loadProcesses({ appType: selectedAppType });
+    loadProcesses({ appType: selectedAppType as any });
   };
 
   const handleProcessDelete = async (oid: string) => {
     await deleteProcess(oid);
-    loadProcesses({ appType: selectedAppType });
+    loadProcesses({ appType: selectedAppType as any });
   };
 
   const toggleExpand = (oid: string) => {
@@ -270,7 +270,7 @@ export default function AuthorityConfiguration() {
 
   const renderProcessTreeNode = (node: Process, depth: number) => {
     const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedProcesses.has(node.oid);
+    const isExpanded = expandedProcesses.has(node.oid || '');
 
     return (
       <div key={node.oid}>
@@ -279,7 +279,7 @@ export default function AuthorityConfiguration() {
           style={{ paddingLeft: depth * 20 + 8 }}
         >
           {hasChildren ? (
-            <Button variant="ghost" size="icon" onClick={() => toggleExpand(node.oid)} className="p-0.5 text-gray-400 hover:text-gray-600">
+            <Button variant="ghost" size="icon" onClick={() => toggleExpand(node.oid || '')} className="p-0.5 text-gray-400 hover:text-gray-600">
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
           ) : (
@@ -297,7 +297,7 @@ export default function AuthorityConfiguration() {
             <Button variant="ghost" size="icon" onClick={() => openProcessEdit(node)} className="p-1 text-gray-400 hover:text-blue-600" title="编辑">
               <Settings className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleProcessDelete(node.oid)} className="p-1 text-gray-400 hover:text-red-600" title="删除">
+            <Button variant="ghost" size="icon" onClick={() => handleProcessDelete(node.oid || '')} className="p-1 text-gray-400 hover:text-red-600" title="删除">
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -350,13 +350,13 @@ export default function AuthorityConfiguration() {
                 <td className="py-1.5 px-3 text-gray-700">{proc.name}</td>
                 <td className="py-1.5 px-3 text-xs text-gray-400 font-mono">{proc.aid}</td>
                 {ACTION_LIST.map((act) => {
-                  const val = getAuthValue(proc.oid, act.code);
+                  const val = getAuthValue(proc.oid || '', act.code);
                   return (
                     <td key={act.code} className="text-center py-1.5 px-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => toggleAuthority(proc.oid, act.code)}
+                        onClick={() => toggleAuthority(proc.oid || '', act.code)}
                         className={`w-7 h-7 rounded border font-bold text-base ${
                           val === 1
                             ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50'
@@ -487,16 +487,16 @@ export default function AuthorityConfiguration() {
                       <label key={org.oid} className="flex items-center gap-1.5 py-0.5 text-xs cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={dataAuthorities.includes(org.oid)}
+                          checked={dataAuthorities.includes(org.oid || '')}
                           onChange={async () => {
-                            const isAuth = dataAuthorities.includes(org.oid);
+                            const isAuth = dataAuthorities.includes(org.oid || '');
                             const newList = isAuth
-                              ? dataAuthorities.filter((o) => o !== org.oid)
-                              : [...dataAuthorities, org.oid];
+                              ? dataAuthorities.filter((o) => o !== (org.oid || ''))
+                              : [...dataAuthorities, org.oid || ''];
                             setDataAuthorities(newList);
                             try {
                               await authorityService.saveRoleDataAuthority(
-                                selectedRoleOid, [org.oid], !isAuth
+                                selectedRoleOid || '', [org.oid || ''], !isAuth
                               );
                             } catch (err) {
                               // logger.error('保存数据权限失败:', err);
@@ -541,7 +541,7 @@ export default function AuthorityConfiguration() {
                     <Save className="w-4 h-4" /> 保存
                   </Button>
                 )}
-                <Button onClick={() => { loadProcesses({ appType: selectedAppType }); setHasChanges(false); setAuthorityChanges(new Map()); }}
+                <Button onClick={() => { loadProcesses({ appType: selectedAppType as any }); setHasChanges(false); setAuthorityChanges(new Map()); }}
                   className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
                 >
                   <RefreshCw className="w-4 h-4" /> 刷新

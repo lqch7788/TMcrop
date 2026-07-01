@@ -317,6 +317,11 @@ export interface DailyRecord {
   ecValue?: number;           // EC值 (电导率)
   // 操作信息（补充）
   operator?: string;          // 操作人员
+
+  // 兼容字段（2026-06-28 重构后业务字段打包到 data JSON 列 — 2026-06-30 tsc 兼容）
+  data?: Record<string, any>;
+  wateringUnit?: string;
+  [key: string]: any;          // 动态索引（业务字段运行时通过 BUSINESS_FIELDS 访问）
 }
 
 // ========== 打印记录类型（新增） ==========
@@ -674,6 +679,10 @@ export interface PlantingDailyRecord {
   createBy?: string;
   createTime?: string;
   updateTime?: string;
+
+  // 兼容字段（与 DailyRecord 一致 — 2026-06-30 tsc 兼容）
+  data?: Record<string, any>;
+  [key: string]: any;          // 动态索引（业务字段运行时通过 BUSINESS_FIELDS 访问）
 }
 
 // ========== 筛选状态类型 ==========

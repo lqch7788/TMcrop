@@ -3,12 +3,18 @@ import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & {
+    size?: 'small' | 'default' | 'large';
+    extra?: React.ReactNode;
+    type?: string;
+  }
+>(({ className, size, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
       "rounded-xl border border-gray-200 bg-white shadow-sm",
+      size === 'small' && "p-2",
+      size === 'large' && "p-6",
       className
     )}
     {...props}

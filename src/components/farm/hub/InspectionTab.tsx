@@ -628,13 +628,13 @@ export function InspectionTab({
         temperature: newRecord.temperature || 0,
         humidity: newRecord.humidity || 0,
         cropStatus: newRecord.cropStatus,
-        plantHeight: newRecord.plantHeight || 0,
+        plantHeight: (newRecord as any).plantHeight || 0,
         leafCount: newRecord.leafCount || 0,
         issueText: issueText || newRecord.issueText || '未描述具体问题',
         issueSeverity: severity,
         status: '待处理' as any,
         remarks: newRecord.remarks + (feedbackUserNames ? `\n反馈人员：${feedbackUserNames}` : ''),
-        images: newRecord.issuePhotos || [] as any,
+        images: (newRecord.issuePhotos || []) as any,
         sourceModule: 'inspection',
         sourceId: newRecord.recordCode,
         flowRecords: [{
@@ -712,7 +712,7 @@ export function InspectionTab({
   const handleDoExport = async () => {
     const selectedData = filteredRecords.filter((_, index) => selectedRows.includes(index));
     const headers = ['巡查编号', '巡查类型', '巡查人员', '位置/对象', '巡查日期', '天气', '温度(°C)', '湿度(%)', '发现问题', '问题照片', '问题处理', '状态'];
-    const exportData = selectedData.map(row => ({
+    const exportData: any[] = selectedData.map((row: any) => ({
       '巡查编号': row.recordCode,
       '巡查类型': row.inspectionType === 'farm' ? '种植' : row.inspectionType === 'equipment' ? '设备' : row.inspectionType === 'infrastructure' ? '设施' : row.inspectionType === 'other' ? '其他' : '-',
       '巡查人员': row.inspectorName,
@@ -724,7 +724,7 @@ export function InspectionTab({
       '发现问题': (row.issues && row.issues.length > 0) ? row.issues.join('; ') : '-',
       '问题照片': (row.images && row.images.length > 0) ? `有${row.images.length}张照片` : '-',
       '问题处理': row.issueStatus === 'resolved' ? '已解决' : row.issueStatus === 'processing' ? '处理中' : row.issueStatus === 'pending' ? '待处理' : '-',
-      '状态': row.status === 'normal' ? '正常' : row.status === 'warning' ? '注意' : row.status === 'critical' ? '异常' : row.status === 'attention' ? '需关注' : '-'
+      '状态': row.status === 'normal' ? '正常' : (row.status as any) === 'warning' ? '注意' : row.status === 'critical' ? '异常' : row.status === 'attention' ? '需关注' : '-'
     }));
 
     let content = '';
@@ -925,7 +925,7 @@ export function InspectionTab({
 
         {/* 表格 - 使用与巡查记录页面完全一致的组件 */}
         <InspectionTable
-          records={filteredRecords}
+          records={filteredRecords as any}
           currentPage={currentPage}
           pageSize={pageSize}
           selectedRows={selectedRows}
@@ -953,7 +953,7 @@ export function InspectionTab({
           onPageChange={onPageChange}
           onPageSizeChange={(size) => { onPageSizeChange(size); }}
           problems={mergedProblems}
-          tasks={tasks}
+          tasks={tasks as any}
           onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
         />
       </div>
@@ -962,48 +962,48 @@ export function InspectionTab({
       <CreateInspectionModal
         isOpen={isCreateModalOpen}
         onClose={handleCloseCreateModal}
-        onSubmit={handleCreateRecord}
-        newRecord={newRecord}
-        onNewRecordChange={setNewRecord}
-        errors={errors}
+        onSubmit={handleCreateRecord as any}
+        newRecord={newRecord as any}
+        onNewRecordChange={setNewRecord as any}
+        errors={errors as any}
         generateRecordCode={generateRecordCode}
-        onImageUpload={handleImageUpload}
-        onRemoveImage={removeImage}
-        greenhouses={greenhouses}
-        users={users}
-        cropTypes={cropTypes}
-        cropBatches={cropBatches}
-        equipmentRecords={equipment}
-        infrastructureRecords={infrastructures}
-        onOpenQRScanner={handleOpenQRScanner}
+        onImageUpload={handleImageUpload as any}
+        onRemoveImage={removeImage as any}
+        greenhouses={greenhouses as any}
+        users={users as any}
+        cropTypes={cropTypes as any}
+        cropBatches={cropBatches as any}
+        equipmentRecords={equipment as any}
+        infrastructureRecords={infrastructures as any}
+        onOpenQRScanner={handleOpenQRScanner as any}
       />
 
       {/* 详情弹窗 */}
       <DetailInspectionModal
         isOpen={!!detailRecord}
         onClose={onCloseDetail}
-        record={detailRecord}
-        onAcceptProblem={(problemId) => {
-          setAcceptanceModal({ isOpen: true, problemId });
-        }}
+        record={detailRecord as any}
+        onAcceptProblem={((problemId: any) => {
+          setAcceptanceModal({ isOpen: true, problemId: String(problemId) as any });
+        }) as any}
       />
 
       {/* 批量编辑弹窗 */}
       <BatchEditModal
         isOpen={showBatchEditModal}
         selectedRows={selectedRows}
-        records={filteredRecords}
-        editedRecordIds={editedRecordIds}
-        editedRecords={editedRecords}
+        records={filteredRecords as any}
+        editedRecordIds={editedRecordIds as any}
+        editedRecords={editedRecords as any}
         selectedRecordId={selectedRecordId}
-        onSelectedRecordIdChange={setSelectedRecordId}
-        onEditedRecordsChange={setEditedRecords}
-        onEditedRecordIdsChange={setEditedRecordIds}
+        onSelectedRecordIdChange={setSelectedRecordId as any}
+        onEditedRecordsChange={setEditedRecords as any}
+        onEditedRecordIdsChange={setEditedRecordIds as any}
         onClose={() => setShowBatchEditModal(false)}
-        onConfirm={handleConfirmBatchEdit}
-        greenhouses={greenhouses}
-        users={users}
-        equipmentRecords={equipment}
+        onConfirm={handleConfirmBatchEdit as any}
+        greenhouses={greenhouses as any}
+        users={users as any}
+        equipmentRecords={equipment as any}
         infrastructureRecords={infrastructures}
       />
 

@@ -78,7 +78,9 @@ export interface ProblemData {
   crop_status?: string;
   cropStatus?: string;
   plant_height?: number;
+  plantHeight?: number;        // 兼容 InspectionTab 使用 camelCase — 2026-06-30
   leaf_count?: number;
+  leafCount?: number;         // 兼容 InspectionTab 使用 camelCase — 2026-06-30
   issue_text?: string;
   issueText?: string;
   issue_severity?: string;

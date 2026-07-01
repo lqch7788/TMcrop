@@ -776,4 +776,4 @@ export const approvals: Approval[] = [
       reason: '家中急事需要处理',
     },
   },
-];
+] as any;

@@ -15,7 +15,7 @@ import { Label } from '@/components/ui';
 interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  task: TaskDispatchTask | Task | null;
+  task: any | null;
   problemFlowRecords: Array<Record<string, unknown>>;
   operationRecords: Array<Record<string, unknown>>;
   taskRecords: Array<Record<string, unknown>>;
@@ -39,7 +39,7 @@ export function TaskDetailModal({
   const taskWithExtras = task as TaskWithExtras;
 
   // 渲染任务类型单元格
-  const renderTypeCell = (task: TaskDispatchTask) => {
+  const renderTypeCell = (task: any) => {
     const types = task.types || [];
     return (
       <div className="flex flex-wrap gap-1 items-center">
@@ -320,7 +320,8 @@ export function TaskDetailModal({
             // ????children?
             const children = r.children as Array<Record<string, unknown>> | undefined;
             if (children && children.length) {
-              children.forEach((child: Record<string, unknown>, childIdx: number) => {
+              children.forEach((rawChild: Record<string, unknown>, childIdx: number) => {
+                const child = rawChild as any;
                 const childType = (child.operationTypeName as string) || (child.operationType as string) || "";
                 const childAction = mapAction(childType);
                 flowRecords.push({
@@ -356,7 +357,7 @@ export function TaskDetailModal({
           
           return (
             <div>
-              <TaskFlowTimeline records={flowRecords} />
+              <TaskFlowTimeline records={flowRecords as any} />
             </div>
           );
         })()}
@@ -366,7 +367,9 @@ export function TaskDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
             <div className="space-y-4">
-              {operationRecords.map((record: Record<string, unknown>, idx: number) => (
+              {operationRecords.map((rawRecord: Record<string, unknown>, idx: number) => {
+                const record = rawRecord as any;
+                return (
                 <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -380,7 +383,9 @@ export function TaskDetailModal({
                   {/* 显示子记录（children） */}
                   {(record.children as Array<Record<string, unknown>>)?.length > 0 && (
                     <div className="mt-3 pl-4 border-l-2 border-gray-400 space-y-3">
-                      {(record.children as Array<Record<string, unknown>>).map((child: Record<string, unknown>, childIdx: number) => (
+                      {(record.children as Array<Record<string, unknown>>).map((rawChild: Record<string, unknown>, childIdx: number) => {
+                        const child = rawChild as any;
+                        return (
                         <div key={childIdx} className="bg-white rounded p-3 shadow-sm">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
@@ -396,17 +401,17 @@ export function TaskDetailModal({
                           {/* 工作量 */}
                           {(child.workloadDays || child.workloadHours || child.workers) && (
                             <div className="text-xs text-gray-600 mb-1">
-                              工作量：{child.workloadDays && `${child.workloadDays}天`}
-                              {child.workloadHours && `${child.workloadHours}小时`}
-                              {child.workers && `×${child.workers}人`}
+                              工作量：{child.workloadDays && `${child.workloadDays as any}天`}
+                              {child.workloadHours && `${child.workloadHours as any}小时`}
+                              {child.workers && `×${child.workers as any}人`}
                             </div>
                           )}
                           {/* 进度 */}
                           {child.progress !== undefined && (
                             <div className="text-xs text-gray-600 mb-1">
-                              进度：{child.progress}%
+                              进度：{child.progress as any}%
                               {(child.progressIncrement as number) !== undefined && (child.progressIncrement as number) > 0 && (
-                                <span className="text-emerald-600 ml-1">(+{child.progressIncrement}%)</span>
+                                <span className="text-emerald-600 ml-1">(+{child.progressIncrement as any}%)</span>
                               )}
                             </div>
                           )}
@@ -419,7 +424,7 @@ export function TaskDetailModal({
                           {/* 照片 */}
                           {(child.photosBefore?.length || child.photosAfter?.length) && (
                             <div className="text-xs text-blue-600 mb-1">
-                              照片：{child.photosBefore?.length || 0}张(前) + {child.photosAfter?.length || 0}张(后)
+                              照片：{(child.photosBefore as any)?.length || 0}张(前) + {(child.photosAfter as any)?.length || 0}张(后)
                             </div>
                           )}
                           {/* 语音 */}
@@ -445,11 +450,13 @@ export function TaskDetailModal({
                             </div>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -459,7 +466,8 @@ export function TaskDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">任务流转记录</h4>
             <div className="space-y-4">
-              {taskRecords.map((record: Record<string, unknown>, idx: number) => {
+              {taskRecords.map((rawRecord: Record<string, unknown>, idx: number) => {
+                const record = rawRecord as any;
                 const actionConfig = TASK_ACTION_CONFIG[record.action as keyof typeof TASK_ACTION_CONFIG];
                 const statusFromConfig = record.fromStatus ? TASK_STATUS_CONFIG[record.fromStatus as keyof typeof TASK_STATUS_CONFIG] : null;
                 const statusToConfig = record.toStatus ? TASK_STATUS_CONFIG[record.toStatus as keyof typeof TASK_STATUS_CONFIG] : null;
@@ -504,42 +512,42 @@ export function TaskDetailModal({
                     {/* 反馈内容 */}
                     {record.feedback && (
                       <div className="mt-2 space-y-1">
-                        {(record.feedback as Record<string, unknown>).text && (
+                        {((record.feedback as Record<string, any>) as any)?.text && (
                           <div className="text-sm text-gray-700 bg-white rounded p-2">
-                            {(record.feedback as Record<string, unknown>).text as string}
+                            {(record.feedback as any).text as string}
                           </div>
                         )}
-                        {(record.feedback as Record<string, unknown>).gpsLocation && (
+                        {(record.feedback as any).gpsLocation && (
                           <div className="text-xs text-emerald-600">
-                            GPS：{((record.feedback as Record<string, unknown>).gpsLocation as { lat: number; lng: number }).lat.toFixed(6)}, {((record.feedback as Record<string, unknown>).gpsLocation as { lat: number; lng: number }).lng.toFixed(6)}
+                            GPS：{((record.feedback as any).gpsLocation as { lat: number; lng: number }).lat.toFixed(6)}, {((record.feedback as any).gpsLocation as { lat: number; lng: number }).lng.toFixed(6)}
                           </div>
                         )}
-                        {(record.feedback as Record<string, unknown>).images && ((record.feedback as Record<string, unknown>).images as unknown[]).length > 0 && (
+                        {(record.feedback as any).images && ((record.feedback as any).images as unknown[]).length > 0 && (
                           <div className="text-xs text-blue-600">
-                            照片：{((record.feedback as Record<string, unknown>).images as unknown[]).length}张
+                            照片：{((record.feedback as any).images as unknown[]).length}张
                           </div>
                         )}
-                        {(record.feedback as Record<string, unknown>).voiceNote && (
+                        {(record.feedback as any).voiceNote && (
                           <div className="text-xs text-purple-600">语音备注</div>
                         )}
-                        {(record.feedback as Record<string, unknown>).materials && ((record.feedback as Record<string, unknown>).materials as Array<{ name: string; qty: number }>).length > 0 && (
+                        {(record.feedback as any).materials && ((record.feedback as any).materials as Array<{ name: string; qty: number }>).length > 0 && (
                           <div className="text-xs text-orange-600">
-                            物料：{((record.feedback as Record<string, unknown>).materials as Array<{ name: string; qty: number }>).map(m => `${m.name}×${m.qty}`).join(', ')}
+                            物料：{((record.feedback as any).materials as Array<{ name: string; qty: number }>).map(m => `${m.name}×${m.qty}`).join(', ')}
                           </div>
                         )}
                         {/* 工作量确认 */}
-                        {(record.feedback as Record<string, unknown>).workloadDays !== undefined || (record.feedback as Record<string, unknown>).workloadHours !== undefined || (record.feedback as Record<string, unknown>).workers !== undefined && (
+                        {(record.feedback as any).workloadDays !== undefined || (record.feedback as any).workloadHours !== undefined || (record.feedback as any).workers !== undefined && (
                           <div className="text-xs text-cyan-600">
                             工作量确认：
-                            {(record.feedback as Record<string, unknown>).workloadDays !== undefined && `${(record.feedback as Record<string, unknown>).workloadDays}天`}
-                            {(record.feedback as Record<string, unknown>).workloadHours !== undefined && `${(record.feedback as Record<string, unknown>).workloadHours}小时`}
-                            {(record.feedback as Record<string, unknown>).workers !== undefined && `×${(record.feedback as Record<string, unknown>).workers}人`}
+                            {(record.feedback as any).workloadDays !== undefined && `${(record.feedback as any).workloadDays}天`}
+                            {(record.feedback as any).workloadHours !== undefined && `${(record.feedback as any).workloadHours}小时`}
+                            {(record.feedback as any).workers !== undefined && `×${(record.feedback as any).workers}人`}
                           </div>
                         )}
                         {/* 物资编码 */}
-                        {(record.feedback as Record<string, unknown>).materialCode && (
+                        {(record.feedback as any).materialCode && (
                           <div className="text-xs text-pink-600">
-                            物资编码：{(record.feedback as Record<string, unknown>).materialCode as string}
+                            物资编码：{(record.feedback as any).materialCode as string}
                           </div>
                         )}
                       </div>

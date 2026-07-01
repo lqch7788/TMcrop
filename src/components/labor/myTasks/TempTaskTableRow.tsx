@@ -9,7 +9,7 @@ import { STATUS_MAP, formatDateShort, formatExpectedEndDate } from './constants'
 import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 
 interface TempTaskTableRowProps {
-  task: TaskDispatchTask | Task;
+  task: any;
   onAccept: (task: TaskDispatchTask) => void;
   onReject: (task: TaskDispatchTask) => void;
   onContinueExecution: (task: TaskDispatchTask) => void;
@@ -80,7 +80,7 @@ export function TempTaskTableRow({
       <td className="px-3 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1 text-sm text-emerald-600">
           <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          {formatExpectedEndDate(taskWithExtras.startDate, taskWithExtras.estimatedDays, taskWithExtras.estimatedHours)}
+          {formatExpectedEndDate(taskWithExtras.startDate || '', taskWithExtras.estimatedDays || 0, taskWithExtras.estimatedHours || 0)}
         </div>
       </td>
       {/* 人工 */}
@@ -95,8 +95,8 @@ export function TempTaskTableRow({
       </td>
       {/* 紧急程度 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_URGENCY_CONFIG[taskWithExtras.urgency]?.badge || 'bg-gray-100 text-gray-600'}`}>
-          {TEMP_TASK_URGENCY_CONFIG[taskWithExtras.urgency]?.label || taskWithExtras.urgency || '-'}
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${(TEMP_TASK_URGENCY_CONFIG as any)[taskWithExtras.urgency || 'normal']?.badge || 'bg-gray-100 text-gray-600'}`}>
+          {(TEMP_TASK_URGENCY_CONFIG as any)[taskWithExtras.urgency || 'normal']?.label || taskWithExtras.urgency || '-'}
         </span>
       </td>
       {/* 超时 */}

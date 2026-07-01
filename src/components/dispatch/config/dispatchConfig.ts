@@ -43,18 +43,18 @@ export const PRIORITY_DEFAULTS = {
 export function getDispatchWeights(): typeof DISPATCH_WEIGHTS_DEFAULTS {
   return {
     farm: {
-      workload: getSystemConfigValueNumber('dispatch.weights.farm.workload', DISPATCH_WEIGHTS_DEFAULTS.farm.workload),
-      skill: getSystemConfigValueNumber('dispatch.weights.farm.skill', DISPATCH_WEIGHTS_DEFAULTS.farm.skill),
-      location: getSystemConfigValueNumber('dispatch.weights.farm.location', DISPATCH_WEIGHTS_DEFAULTS.farm.location),
+      workload: getSystemConfigValueNumber('dispatch.weights.farm.workload', DISPATCH_WEIGHTS_DEFAULTS.farm.workload) as any,
+      skill: getSystemConfigValueNumber('dispatch.weights.farm.skill', DISPATCH_WEIGHTS_DEFAULTS.farm.skill) as any,
+      location: getSystemConfigValueNumber('dispatch.weights.farm.location', DISPATCH_WEIGHTS_DEFAULTS.farm.location) as any,
     },
     smart: {
-      skillMatch: getSystemConfigValueNumber('dispatch.weights.smart.skill-match', DISPATCH_WEIGHTS_DEFAULTS.smart.skillMatch),
-      location: getSystemConfigValueNumber('dispatch.weights.smart.location', DISPATCH_WEIGHTS_DEFAULTS.smart.location),
-      currentLoad: getSystemConfigValueNumber('dispatch.weights.smart.current-load', DISPATCH_WEIGHTS_DEFAULTS.smart.currentLoad),
-      historicalPerformance: getSystemConfigValueNumber('dispatch.weights.smart.historical-performance', DISPATCH_WEIGHTS_DEFAULTS.smart.historicalPerformance),
-      urgency: getSystemConfigValueNumber('dispatch.weights.smart.urgency', DISPATCH_WEIGHTS_DEFAULTS.smart.urgency),
+      skillMatch: getSystemConfigValueNumber('dispatch.weights.smart.skill-match', DISPATCH_WEIGHTS_DEFAULTS.smart.skillMatch) as any,
+      location: getSystemConfigValueNumber('dispatch.weights.smart.location', DISPATCH_WEIGHTS_DEFAULTS.smart.location) as any,
+      currentLoad: getSystemConfigValueNumber('dispatch.weights.smart.current-load', DISPATCH_WEIGHTS_DEFAULTS.smart.currentLoad) as any,
+      historicalPerformance: getSystemConfigValueNumber('dispatch.weights.smart.historical-performance', DISPATCH_WEIGHTS_DEFAULTS.smart.historicalPerformance) as any,
+      urgency: getSystemConfigValueNumber('dispatch.weights.smart.urgency', DISPATCH_WEIGHTS_DEFAULTS.smart.urgency) as any,
     },
-  };
+  } as any;
 }
 
 /**
@@ -77,26 +77,26 @@ export { getReworkConfig as getDispatchReworkConfig } from '@/config/taskConfig'
 export function getDispatchPriorityConfig(): typeof PRIORITY_DEFAULTS {
   return {
     urgent: {
-      label: getSystemConfigValue('dispatch.priority.urgent.label', PRIORITY_DEFAULTS.urgent.label),
-      color: getSystemConfigValue('dispatch.priority.urgent.color', PRIORITY_DEFAULTS.urgent.color),
-      weight: getSystemConfigValueNumber('dispatch.priority.urgent.weight', PRIORITY_DEFAULTS.urgent.weight),
+      label: getSystemConfigValue('dispatch.priority.urgent.label', PRIORITY_DEFAULTS.urgent.label) as any,
+      color: getSystemConfigValue('dispatch.priority.urgent.color', PRIORITY_DEFAULTS.urgent.color) as any,
+      weight: getSystemConfigValueNumber('dispatch.priority.urgent.weight', PRIORITY_DEFAULTS.urgent.weight) as any,
     },
     high: {
-      label: getSystemConfigValue('dispatch.priority.high.label', PRIORITY_DEFAULTS.high.label),
-      color: getSystemConfigValue('dispatch.priority.high.color', PRIORITY_DEFAULTS.high.color),
-      weight: getSystemConfigValueNumber('dispatch.priority.high.weight', PRIORITY_DEFAULTS.high.weight),
+      label: getSystemConfigValue('dispatch.priority.high.label', PRIORITY_DEFAULTS.high.label) as any,
+      color: getSystemConfigValue('dispatch.priority.high.color', PRIORITY_DEFAULTS.high.color) as any,
+      weight: getSystemConfigValueNumber('dispatch.priority.high.weight', PRIORITY_DEFAULTS.high.weight) as any,
     },
     normal: {
-      label: getSystemConfigValue('dispatch.priority.normal.label', PRIORITY_DEFAULTS.normal.label),
-      color: getSystemConfigValue('dispatch.priority.normal.color', PRIORITY_DEFAULTS.normal.color),
-      weight: getSystemConfigValueNumber('dispatch.priority.normal.weight', PRIORITY_DEFAULTS.normal.weight),
+      label: getSystemConfigValue('dispatch.priority.normal.label', PRIORITY_DEFAULTS.normal.label) as any,
+      color: getSystemConfigValue('dispatch.priority.normal.color', PRIORITY_DEFAULTS.normal.color) as any,
+      weight: getSystemConfigValueNumber('dispatch.priority.normal.weight', PRIORITY_DEFAULTS.normal.weight) as any,
     },
     low: {
-      label: getSystemConfigValue('dispatch.priority.low.label', PRIORITY_DEFAULTS.low.label),
-      color: getSystemConfigValue('dispatch.priority.low.color', PRIORITY_DEFAULTS.low.color),
-      weight: getSystemConfigValueNumber('dispatch.priority.low.weight', PRIORITY_DEFAULTS.low.weight),
+      label: getSystemConfigValue('dispatch.priority.low.label', PRIORITY_DEFAULTS.low.label) as any,
+      color: getSystemConfigValue('dispatch.priority.low.color', PRIORITY_DEFAULTS.low.color) as any,
+      weight: getSystemConfigValueNumber('dispatch.priority.low.weight', PRIORITY_DEFAULTS.low.weight) as any,
     },
-  };
+  } as any;
 }
 
 // ============================================

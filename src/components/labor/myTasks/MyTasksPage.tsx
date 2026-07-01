@@ -88,8 +88,8 @@ export function MyTasksPage() {
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 降级：unifiedTasks 为空时使用 Store 数据
-  const myTasks: (FarmTask | Task)[] = unifiedTasks.length > 0
-    ? unifiedTasks.map(t => ({
+  const myTasks: any[] = unifiedTasks.length > 0
+    ? unifiedTasks.map((t: any) => ({
         id: t.id,
         taskCode: t.taskCode || t.id,
         title: t.title || '',
@@ -233,7 +233,7 @@ export function MyTasksPage() {
     // 使用时间戳比较，确保无效日期也能正确排序
     const sortByCreatedAt = (a: FarmTask | Task | Task, b: FarmTask | Task | Task) => {
       const getCreatedAtTime = (task: FarmTask | Task | Task): number => {
-        const timeStr = (task as TaskWithExtras).createdAt || (task as TaskWithExtras).planStart || (task as TaskWithExtras).startDate || '';
+        const timeStr = (task as unknown as TaskWithExtras).createdAt || (task as unknown as TaskWithExtras).planStart || (task as unknown as TaskWithExtras).startDate || '';
         if (!timeStr) return 0;
         const date = new Date(timeStr);
         return isNaN(date.getTime()) ? 0 : date.getTime();
@@ -249,8 +249,8 @@ export function MyTasksPage() {
       case 'problem':
         // 巡查反馈/问题处理：dispatchMode 为 problem 或 inspection 的记录，按创建时间倒序
         return myTasks
-          .filter(task => {
-            const t = task as TaskWithExtras;
+          .filter((task: any) => {
+            const t = task as unknown as TaskWithExtras;
             const dm = (t as any).dispatchMode;
             if (dm === 'problem' || dm === 'inspection') return true;
             if (task.sourceProblemId !== undefined || (t as any).sourceInspectionId !== undefined) return true;
@@ -260,8 +260,8 @@ export function MyTasksPage() {
       case 'production':
         // 农事任务：仅显示 NS 开头 + dispatchMode 为 farm（或未设置）的任务，按创建时间倒序
         return myTasks
-          .filter(task => {
-            const t = task as TaskWithExtras;
+          .filter((task: any) => {
+            const t = task as unknown as TaskWithExtras;
             if (!task.taskCode || !task.taskCode.startsWith('NS')) return false;
             const dm = (t as any).dispatchMode;
             if (dm === 'problem' || dm === 'inspection' || dm === 'tempTask') return false;
@@ -273,8 +273,8 @@ export function MyTasksPage() {
       case 'temp':
         // 临时任务处理：仅显示 TT 开头 + sourceType 为 tempTask 且非草稿状态，按开始时间倒序
         return myTasks
-          .filter(task => {
-            const t = task as TaskWithExtras;
+          .filter((task: any) => {
+            const t = task as unknown as TaskWithExtras;
             if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
             if (task.status === 'draft') return false;
             return t.sourceType === 'tempTask' || (t as any).dispatchMode === 'tempTask';
@@ -286,7 +286,7 @@ export function MyTasksPage() {
               const date = new Date(timeStr);
               return isNaN(date.getTime()) ? 0 : date.getTime();
             };
-            return getTime(b as TaskWithExtras) - getTime(a as TaskWithExtras);
+            return getTime(b as unknown as TaskWithExtras) - getTime(a as unknown as TaskWithExtras);
           });
       default:
         // 全部任务也按创建时间倒序
@@ -309,13 +309,13 @@ export function MyTasksPage() {
   }), [myTasks]);
 
   // 详情弹窗状态
-  const [selectedTask, setSelectedTask] = useState<FarmTask | Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showSopModal, setShowSopModal] = useState(false);
   const [selectedSopTask, setSelectedSopTask] = useState<FarmTask | Task | null>(null);
 
   // 详情弹窗引用（用于传递正确的数据）
-  const openDetailModal = (task: FarmTask | Task) => {
+  const openDetailModal = (task: any) => {
     setSelectedTask(task);
     setShowDetailModal(true);
   };
@@ -326,7 +326,7 @@ export function MyTasksPage() {
   // 反馈表单状态
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
-    task: FarmTask | Task | null;
+    task: any | null;
   }>({ isOpen: false, task: null });
 
   const [feedbackForm, setFeedbackForm] = useState<FeedbackFormData>({
@@ -349,18 +349,18 @@ export function MyTasksPage() {
   // 拒绝原因弹窗
   const [rejectModal, setRejectModal] = useState<{
     isOpen: boolean;
-    task: FarmTask | Task | null;
+    task: any | null;
   }>({ isOpen: false, task: null });
 
   const [rejectReason, setRejectReason] = useState('');
 
   // 处理接单 - 使用统一任务管理
-  const handleAccept = (task: FarmTask | Task) => {
+  const handleAccept = (task: any) => {
     if (task.sourceProblemId) {
       acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
     }
     // 查找 unifiedTasks 中对应的任务并接受
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       acceptTask(unifiedTask.id);
       // 记录接单操作
@@ -384,7 +384,7 @@ export function MyTasksPage() {
   };
 
   // 打开拒绝弹窗
-  const openRejectModal = (task: FarmTask | Task) => {
+  const openRejectModal = (task: any) => {
     setRejectModal({ isOpen: true, task });
     setRejectReason('');
   };
@@ -397,7 +397,7 @@ export function MyTasksPage() {
       rejectProblem(task.sourceProblemId, 'U013', '陆启闯', rejectReason);
     }
     // 查找 unifiedTasks 中对应的任务
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       rejectByExecutor(unifiedTask.id, rejectReason, unifiedTask.assigneeId, unifiedTask.assigneeName);
       // 记录拒绝操作
@@ -424,8 +424,8 @@ export function MyTasksPage() {
   };
 
   // 开始处理 - 使用统一任务管理
-  const handleStartProcessing = (task: FarmTask | Task) => {
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+  const handleStartProcessing = (task: any) => {
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       updateTaskStatus(unifiedTask.id, 'in_progress');
     }
@@ -433,15 +433,17 @@ export function MyTasksPage() {
   };
 
   // 打开反馈弹窗
-  const openFeedbackModal = (task: FarmTask | Task) => {
+  const openFeedbackModal = (task: any) => {
     // 打开反馈弹窗
     setFeedbackModal({ isOpen: true, task });
     setFeedbackForm({
+      resultStatus: '' as '' | '全部完成' | '部分完成' | '延迟完成' | '其他',
       resultText: '',
       progressText: '',
       progress: task.progress || 0,
       workloadDays: '',
       workloadHours: '',
+      workloadConfirm: null,
       photosBefore: [],
       photosAfter: [],
       gpsLocation: null,
@@ -496,7 +498,7 @@ export function MyTasksPage() {
       // 新增：处理"无法继续"逻辑
       if (feedbackForm.cannotContinue && feedbackForm.cannotContinueReason.trim()) {
         // 查找 unifiedTasks 中对应的任务
-        const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+        const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
         if (unifiedTask) {
           // 1. 更新任务状态为已拒绝
           rejectByExecutor(
@@ -578,7 +580,7 @@ export function MyTasksPage() {
 
       // ========== 数据闭环：同步到 useTasks ==========
       // 查找 unifiedTasks 中对应的任务
-      const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+      const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
       if (unifiedTask) {
         const isFinal = feedbackForm.progress === 100;
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
@@ -636,15 +638,15 @@ export function MyTasksPage() {
 
   // 获取当前任务关联的问题流转记录
   const getCurrentProblemFlowRecords = () => {
-    if (!selectedTask?.sourceProblemId) return [];
-    return getProblemFlowRecords(selectedTask.sourceProblemId);
+    if (!selectedTask || !(selectedTask as any).sourceProblemId) return [];
+    return getProblemFlowRecords((selectedTask as any).sourceProblemId);
   };
 
   // 获取当前任务关联的操作记录（useOperationRecords）
   const getCurrentOperationRecords = () => {
     if (!selectedTask) return [];
     // 查找 unifiedTasks 中对应的任务
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === selectedTask.id || t.id === selectedTask.id);
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === selectedTask.id || t.id === selectedTask.id);
     if (!unifiedTask) return [];
     // 使用 getRecordsByTaskId 根据 sourceId 获取记录
     return getRecordsByTaskId(unifiedTask.id);
@@ -654,7 +656,7 @@ export function MyTasksPage() {
   const getCurrentTaskRecords = () => {
     if (!selectedTask) return [];
     // 查找 unifiedTasks 中对应的任务
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === selectedTask.id || t.id === selectedTask.id);
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === selectedTask.id || t.id === selectedTask.id);
     if (!unifiedTask) return [];
     // 使用 getTaskRecordsByTaskId 获取 useTasks 系统的记录
     return getTaskRecordsByTaskId(unifiedTask.id);
@@ -668,7 +670,7 @@ export function MyTasksPage() {
     let totalWorkers = 0;
     let recordCount = 0;
 
-    records.forEach(record => {
+    records.forEach((record: any) => {
       if (record.feedback) {
         if (record.feedback.workloadDays) {
           totalDays += record.feedback.workloadDays;
@@ -697,7 +699,7 @@ export function MyTasksPage() {
   };
 
   // 打开SOP弹窗
-  const openSopModal = (task: FarmTask | Task, e: React.MouseEvent) => {
+  const openSopModal = (task: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedSopTask(task);
     setShowSopModal(true);
@@ -705,20 +707,20 @@ export function MyTasksPage() {
 
   // 更新任务进度 - 使用统一任务管理
   const handleProgressChange = (taskId: string, progress: number) => {
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === taskId || t.id === taskId);
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === taskId || t.id === taskId);
     if (unifiedTask) {
       updateTaskProgress(unifiedTask.id, progress);
     }
     // 更新当前选中的任务显示
     if (selectedTask && selectedTask.id === taskId) {
-      setSelectedTask(prev => prev ? { ...prev, progress } : null);
+      setSelectedTask((prev: any) => prev ? { ...prev, progress } : null);
     }
     // 注意：进度100%时不自动改变状态，用户需要通过提交反馈来确认完成
   };
 
   // 确认完成 - 使用统一任务管理
-  const handleConfirmComplete = (task: FarmTask | Task) => {
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+  const handleConfirmComplete = (task: any) => {
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       // 验收完成时确保进度为100%
       updateTaskProgress(unifiedTask.id, 100);
@@ -729,8 +731,8 @@ export function MyTasksPage() {
   };
 
   // 继续执行 - 返工后恢复任务执行
-  const handleContinueExecution = (task: FarmTask | Task) => {
-    const unifiedTask = unifiedTasks.find(t => t.taskCode === task.id || t.id === task.id);
+  const handleContinueExecution = (task: any) => {
+    const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
       continueExecution(unifiedTask.id);
       // 记录操作
@@ -917,9 +919,9 @@ export function MyTasksPage() {
         isOpen={showDetailModal && !!selectedTask}
         onClose={() => { setShowDetailModal(false); setSelectedTask(null); }}
         task={selectedTask}
-        problemFlowRecords={getCurrentProblemFlowRecords()}
-        operationRecords={getCurrentOperationRecords()}
-        taskRecords={getCurrentTaskRecords()}
+        problemFlowRecords={getCurrentProblemFlowRecords() as any}
+        operationRecords={getCurrentOperationRecords() as any}
+        taskRecords={getCurrentTaskRecords() as any}
         getActualWorkload={getActualWorkload}
       />
 
@@ -930,7 +932,7 @@ export function MyTasksPage() {
         task={feedbackModal.task}
         feedbackForm={feedbackForm}
         setFeedbackForm={setFeedbackForm}
-        problemFlowRecords={feedbackModal.task?.sourceProblemId ? getProblemFlowRecords(feedbackModal.task.sourceProblemId) : []}
+        problemFlowRecords={(feedbackModal.task?.sourceProblemId ? getProblemFlowRecords(feedbackModal.task.sourceProblemId) : []) as any}
         validateRequiredFeedback={validateRequiredFeedback}
         onSubmit={handleSubmitFeedback}
       />

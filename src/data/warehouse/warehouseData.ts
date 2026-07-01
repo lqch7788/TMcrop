@@ -372,4 +372,4 @@ export const produceInventory: ProduceInventory[] = [
       { id: 'OT009', type: 'outbound', quantity: 65, date: '2026-03-28', operator: '陆启闯', remarks: '销售出库' },
     ],
   },
-];
+] as any;

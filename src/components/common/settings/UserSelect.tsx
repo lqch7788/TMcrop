@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getUsers, type User } from '../../../services/authorityService';
+import { getUsers } from '../../../services/authorityService';
+import { type User } from '../../../types/authority';
 
 interface UserSelectProps {
   value?: string;

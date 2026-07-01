@@ -22,9 +22,9 @@ export type AuthValue = 1 | 0 | -1;
 
 export interface Organization {
   id?: string;
-  oid: string;                    // 组织OID（原系统字段）
-  oidParent: string | null;       // 父组织OID
-  aid: string;                    // 组织编码（OrgAID）
+  oid?: string;                    // 组织OID（原系统字段）— 2026-06-30 改为可选兼容
+  oidParent?: string | null;       // 父组织OID
+  aid?: string;                    // 组织编码（OrgAID）— 2026-06-30 改为可选兼容
   name: string;                   // 组织名称
   description?: string;           // 描述
   address?: string;               // 地址
@@ -44,6 +44,7 @@ export interface Organization {
   createdAt?: string;
   updatedAt?: string;
   children?: Organization[];     // 子组织
+  [key: string]: any;            // 兼容任意字段
 }
 
 // ============================================
@@ -52,15 +53,17 @@ export interface Organization {
 
 export interface Role {
   id?: string;
-  oid: string;                    // 角色OID
-  orgOid: string;                 // 所属组织OID
-  aid: string;                    // 角色编码（RoleAID）
-  name: string;                   // 角色名称
+  oid?: string;
+  aid?: string;       // 2026-06-30 改为可选兼容
+  code?: string;
+  name: string;
+  orgOid?: string;
   description?: string;
+  status?: any;
   sortNumber?: number;
-  status?: OrgStatus;
   createdAt?: string;
   updatedAt?: string;
+  [key: string]: any;
 }
 
 // 角色列表项（用于下拉选择）
@@ -112,9 +115,9 @@ export interface UserRole {
 
 export interface Process {
   id?: string;
-  oid: string;                    // 工序OID
-  oidParent: string | null;        // 父工序OID
-  aid: string;                    // 工序编码（ProcessAID）
+  oid?: string;                    // 工序OID — 2026-06-30 改为可选
+  oidParent?: string | null;        // 父工序OID
+  aid?: string;                    // 工序编码（ProcessAID）— 2026-06-30 改为可选
   name: string;                   // 工序名称
   appType?: AppType;              // App类型
   execName?: string;               // 执行名称
@@ -127,6 +130,9 @@ export interface Process {
   createdAt?: string;
   updatedAt?: string;
   children?: Process[];            // 子工序
+  code?: string;                    // 2026-06-30 兼容
+  category?: string;                // 2026-06-30 兼容
+  [key: string]: any;
 }
 
 // 工序树节点（用于combotreegrid）
@@ -147,10 +153,10 @@ export interface ProcessTreeNode {
 
 export interface Action {
   id?: string;
-  oid: string;                    // 动作OID
-  aid: string;                    // 动作编码（ActionAID）
+  oid?: string;                    // 动作OID — 2026-06-30 改为可选
+  aid?: string;                    // 动作编码（ActionAID）— 2026-06-30 改为可选
   name: string;                   // 动作名称
-  category: string;               // 分类（如：查询、编辑、删除、审批）
+  category?: string;              // 分类（如：查询、编辑、删除、审批）— 2026-06-30 改为可选
   appType?: AppType;              // App类型
   description?: string;
   imageAid?: string;
@@ -158,6 +164,8 @@ export interface Action {
   status?: OrgStatus;
   createdAt?: string;
   updatedAt?: string;
+  code?: string;                   // 2026-06-30 兼容
+  [key: string]: any;
 }
 
 // ============================================
