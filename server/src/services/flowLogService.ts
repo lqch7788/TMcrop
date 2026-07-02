@@ -72,7 +72,7 @@ export function writeFlowLog(input: FlowLogInput): string {
   return id;
 }
 
-/** 写入 correction 补偿流水（数量变更时调用） */
+/** 写入 correction 补偿流水（数量变更时调用，保留原始流转类型上下文） */
 export function writeCorrection(params: {
   flow_type: string;
   source_type?: string;
@@ -86,7 +86,7 @@ export function writeCorrection(params: {
   created_by?: string;
 }): void {
   writeFlowLog({
-    flow_type: 'correction',
+    flow_type: params.flow_type || 'correction',
     crop_name: params.crop_name,
     crop_variety: params.crop_variety,
     source_type: params.source_type ?? null,

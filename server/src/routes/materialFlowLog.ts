@@ -87,13 +87,13 @@ router.get('/stats/by-crop', (req: Request, res: Response) => {
 
     const rows = db.exec(`
       SELECT crop_name, source_category,
+             target_code,
              SUM(source_quantity) as total_qty,
-             COALESCE(source_unit, '粒') as source_unit,
-             COUNT(DISTINCT target_code) as batch_count
+             COALESCE(source_unit, '粒') as source_unit
       FROM material_flow_log
       WHERE flow_type = 'seed_source→seedling'
         AND created_at BETWEEN ? AND ?
-      GROUP BY crop_name, source_category
+      GROUP BY crop_name, source_category, target_code
       ORDER BY crop_name, total_qty DESC
     `, [start, end]);
 
@@ -121,12 +121,13 @@ router.get('/stats/by-source', (req: Request, res: Response) => {
 
     const rows = db.exec(`
       SELECT crop_name, flow_type, source_category,
+             target_code,
              SUM(source_quantity) as total_qty,
              COALESCE(source_unit, '株') as source_unit
       FROM material_flow_log
       WHERE flow_type IN ('seed_source→planting', 'seedling→planting')
         AND created_at BETWEEN ? AND ?
-      GROUP BY crop_name, flow_type, source_category
+      GROUP BY crop_name, flow_type, source_category, target_code
       ORDER BY crop_name, total_qty DESC
     `, [start, end]);
 
@@ -154,13 +155,14 @@ router.get('/stats/annual', (req: Request, res: Response) => {
 
     const rows = db.exec(`
       SELECT flow_type, crop_name,
+             source_code, target_code, source_category,
              COUNT(*) as flow_count,
              SUM(COALESCE(source_quantity, target_quantity, 0)) as total_qty,
              COALESCE(source_unit, target_unit, '') as unit
       FROM material_flow_log
       WHERE flow_type != 'correction'
         AND created_at BETWEEN ? AND ?
-      GROUP BY flow_type, crop_name
+      GROUP BY flow_type, crop_name, source_code, target_code
       ORDER BY flow_type, crop_name
     `, [start, end]);
 

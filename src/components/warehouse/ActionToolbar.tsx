@@ -2,7 +2,7 @@ import { Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ActionToolbarProps {
-  title: string;
+  title: React.ReactNode;
   batchEditMode: boolean;
   deleteMode: boolean;
   exportMode: boolean;

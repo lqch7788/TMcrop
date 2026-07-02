@@ -9,7 +9,18 @@ export async function getFlowLogs(params: {
   cropName?: string; sourceCode?: string; targetCode?: string;
   startDate?: string; endDate?: string;
 }) {
-  return enhancedApiClient.get('/material-flow-log', params);
+  // enhancedApiClient.get 不支持 params 参数，必须用 URLSearchParams 拼到 URL
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  if (params.flowType) qs.set('flowType', params.flowType);
+  if (params.cropName) qs.set('cropName', params.cropName);
+  if (params.sourceCode) qs.set('sourceCode', params.sourceCode);
+  if (params.targetCode) qs.set('targetCode', params.targetCode);
+  if (params.startDate) qs.set('startDate', params.startDate);
+  if (params.endDate) qs.set('endDate', params.endDate);
+  const query = qs.toString();
+  return enhancedApiClient.get(`/material-flow-log${query ? `?${query}` : ''}`);
 }
 
 export async function traceFlow(code: string) {
@@ -17,19 +28,22 @@ export async function traceFlow(code: string) {
 }
 
 export async function getCropStats(year?: number) {
-  return enhancedApiClient.get('/material-flow-log/stats/by-crop', { year });
+  const qs = year ? `?year=${year}` : '';
+  return enhancedApiClient.get(`/material-flow-log/stats/by-crop${qs}`);
 }
 
 export async function getSourceStats(year?: number) {
-  return enhancedApiClient.get('/material-flow-log/stats/by-source', { year });
+  const qs = year ? `?year=${year}` : '';
+  return enhancedApiClient.get(`/material-flow-log/stats/by-source${qs}`);
 }
 
 export async function getAnnualStats(year?: number) {
-  return enhancedApiClient.get('/material-flow-log/stats/annual', { year });
+  const qs = year ? `?year=${year}` : '';
+  return enhancedApiClient.get(`/material-flow-log/stats/annual${qs}`);
 }
 
 export async function getInventoryTrace(instanceId: string) {
-  return enhancedApiClient.get('/material-flow-log/stats/inventory-trace', { instanceId });
+  return enhancedApiClient.get(`/material-flow-log/stats/inventory-trace?instanceId=${encodeURIComponent(instanceId)}`);
 }
 
 // 2026-06-15: 单条删除

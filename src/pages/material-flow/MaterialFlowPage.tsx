@@ -17,12 +17,18 @@ import * as XLSX from 'xlsx';
 
 const FLOW_TYPE_OPTIONS = [
   { value: 'all', label: '全部流转' },
+  { value: 'planting→seed_source', label: '种植→种源' },
   { value: 'seed_source→seedling', label: '种源→育苗' },
   { value: 'seed_source→planting', label: '种源→种植' },
   { value: 'seedling→planting', label: '育苗→种植' },
-  { value: 'planting→harvest', label: '种植→采收' },
-  { value: 'seedling→harvest', label: '育苗→采收' },
+  { value: 'plan→seed_source', label: '计划→种源' },
+  { value: 'correction', label: '修正' },
   { value: 'inventory→external', label: '库存→出库' },
+  { value: 'inventory→freeze', label: '库存→冻结' },
+  { value: 'inventory→planting', label: '库存→种植' },
+  { value: 'external→planting', label: '外部→种植' },
+  { value: 'seedling→harvest', label: '育苗→采收' },
+  { value: 'external→seedling', label: '外部→育苗' },
 ];
 
 const FLOW_TYPE_LABELS: Record<string, string> = {
@@ -340,13 +346,21 @@ export default function MaterialFlowPage() {
     }
   }, [exportMode, deleteMode]);
 
+  // 各 tab 的原始数据
   const currentRows = useMemo<any[]>(() => {
     if (activeTab === 'logs') return logs;
     if (activeTab === 'trace') return traceData;
     return statsData;
   }, [activeTab, logs, traceData, statsData]);
 
-  const allSelected = !isStatsTab && currentRows.length > 0 && selectedIds.length === currentRows.length;
+  // 分页后展示的数据：logs 走服务端分页（数据已切好），其他 tab 走客户端切片
+  const pagedData = useMemo<any[]>(() => {
+    if (activeTab === 'logs') return currentRows;
+    const start = (page - 1) * pageSize;
+    return currentRows.slice(start, start + pageSize);
+  }, [currentRows, page, pageSize, activeTab]);
+
+  const allSelected = !isStatsTab && pagedData.length > 0 && selectedIds.length === pagedData.length;
   const someSelected = !isStatsTab && selectedIds.length > 0 && !allSelected;
 
   // 用稳定的 id key
@@ -357,7 +371,7 @@ export default function MaterialFlowPage() {
   };
   const toggleAll = () => {
     if (allSelected) setSelectedIds([]);
-    else setSelectedIds(currentRows.map((r, i) => keyOf(r, i)));
+    else setSelectedIds(pagedData.map((r, i) => keyOf(r, i)));
   };
 
   const cancelSelection = () => {
@@ -366,6 +380,14 @@ export default function MaterialFlowPage() {
     setSelectedIds([]);
   };
 
+  // 切换 tab 时重置页码并清空选中
+  useEffect(() => {
+    setPage(1);
+    cancelSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // 数据加载（logs 依赖筛选条件 + 分页，其他 tab 依赖年度 + 主动触发）
   useEffect(() => {
     if (activeTab === 'logs') {
       loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
@@ -391,9 +413,8 @@ export default function MaterialFlowPage() {
     } else if (activeTab === 'annual') {
       loadAnnualStats(statYear);
     }
-    cancelSelection();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, page, pageSize, flowType, statYear]);
+  }, [activeTab, page, pageSize, flowType, cropName, startDate, endDate, statYear]);
 
   const handleSearch = () => {
     setPage(1);
@@ -583,7 +604,7 @@ export default function MaterialFlowPage() {
         </StdTableShell>
       );
     }
-    if (logs.length === 0) {
+    if (pagedData.length === 0) {
       return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, '暂无流转记录')}</StdTableShell>;
     }
     return (
@@ -602,7 +623,7 @@ export default function MaterialFlowPage() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-300">
-          {logs.map((log, i) => {
+          {pagedData.map((log: any, i: number) => {
             const key = keyOf(log, i);
             const isSelected = selectedIds.includes(key);
             return (
@@ -653,7 +674,7 @@ export default function MaterialFlowPage() {
     if (loading && traceData.length === 0) {
       return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, '追溯中...')}</StdTableShell>;
     }
-    if (traceData.length === 0) {
+    if (pagedData.length === 0) {
       return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, traceCode ? '未找到相关流转记录' : '输入批次号后点击追溯')}</StdTableShell>;
     }
     return (
@@ -670,7 +691,7 @@ export default function MaterialFlowPage() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-300">
-          {traceData.map((item, i) => {
+          {pagedData.map((item: any, i: number) => {
             const key = keyOf(item, i);
             const isSelected = selectedIds.includes(key);
             return (
@@ -717,10 +738,10 @@ export default function MaterialFlowPage() {
         ))}
       </colgroup>
     );
-    if (loading && statsData.length === 0) {
+    if (loading && pagedData.length === 0) {
       return <StdTableShell colSpan={totalCols} colGroup={colGroup} tableFixed>{emptyRow(totalCols, '加载中...')}</StdTableShell>;
     }
-    if (statsData.length === 0) {
+    if (pagedData.length === 0) {
       return <StdTableShell colSpan={totalCols} colGroup={colGroup} tableFixed>{emptyRow(totalCols, '暂无数据')}</StdTableShell>;
     }
     return (
@@ -733,7 +754,7 @@ export default function MaterialFlowPage() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-300">
-          {statsData.map((item, i) => {
+          {pagedData.map((item: any, i: number) => {
             const mapped = rowMapper(item);
             return (
               <tr key={i} className="hover:bg-emerald-50 transition-colors">
@@ -750,15 +771,15 @@ export default function MaterialFlowPage() {
     );
   };
 
-  // 分页
+  // 分页：logs 用服务端 total，其他 tab 用客户端 currentRows.length
   const renderPagination = () => {
-    if (activeTab !== 'logs') return null;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (total === 0) return null;
+    const totalItems = activeTab === 'logs' ? total : currentRows.length;
+    if (totalItems === 0) return null;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return (
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white rounded-xl shadow-sm">
         <div className="text-sm text-gray-500">
-          显示 {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} 条，共 {total} 条
+          显示 {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, totalItems)} 条，共 {totalItems} 条
         </div>
         <Pagination
           currentPage={page}
@@ -798,29 +819,73 @@ export default function MaterialFlowPage() {
 
       {/* Tab 切换 + 筛选 + 工具栏 + 表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 pt-4 pb-0">
-        <div className="flex gap-6 border-b border-gray-200">
-          {([
-            { key: 'logs', label: '流转记录', icon: Package },
-            { key: 'trace', label: '批次追溯', icon: Search },
-            { key: 'seedling', label: '育苗用料', icon: BarChart3 },
-            { key: 'planting', label: '种植用料', icon: BarChart3 },
-            { key: 'annual', label: '年度总览', icon: TrendingUp },
-          ] as { key: TabKey; label: string; icon: any }[]).map(tab => (
+        {/* Tab 导航 — 两层结构 */}
+        <div className="border-b border-gray-200">
+          {/* 第一层：主数据源 — 翠绿高亮背景 */}
+          <div className={`flex items-center px-3 py-0.5 transition-colors ${
+            activeTab === 'logs'
+              ? 'bg-gradient-to-r from-emerald-50 via-green-50 to-emerald-50'
+              : 'bg-gray-50/50'
+          }`}>
             <Button
-              key={tab.key}
               variant="ghost"
-              onClick={() => setActiveTab(tab.key)}
-              className={`relative pb-3 text-sm font-semibold ${
-                activeTab === tab.key ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'
+              onClick={() => setActiveTab('logs')}
+              className={`relative py-3 text-sm font-semibold rounded-none ${
+                activeTab === 'logs'
+                  ? 'text-emerald-700'
+                  : 'text-gray-600 hover:text-emerald-600'
               }`}
             >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-              {activeTab === tab.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
+              <Package className="w-4 h-4 mr-1.5" />
+              流转记录
+              <span className="ml-2 text-xs font-normal text-gray-400">全部物料流转原始明细</span>
+              {activeTab === 'logs' && (
+                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-emerald-500 rounded-full" />
               )}
             </Button>
-          ))}
+          </div>
+
+          {/* 关联箭头 + 第二层：数据分析视图 */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-50/70 border-t border-gray-100">
+            <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
+              <span className="text-gray-300">└</span>
+              基于以上数据
+            </span>
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'trace' as TabKey, label: '批次追溯', icon: Search, hint: '按批次号追踪完整链路', color: 'blue' },
+                { key: 'seedling' as TabKey, label: '育苗用料', icon: BarChart3, hint: '种源→育苗消耗统计', color: 'green' },
+                { key: 'planting' as TabKey, label: '种植用料', icon: BarChart3, hint: '种源/种苗→种植消耗统计', color: 'amber' },
+                { key: 'annual' as TabKey, label: '年度总览', icon: TrendingUp, hint: '全链路年度汇总', color: 'purple' },
+              ]).map(tab => {
+                const colorMap: Record<string, { bg: string; border: string; text: string }> = {
+                  blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700' },
+                  green:  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
+                  amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700' },
+                  purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
+                };
+                const c = colorMap[tab.color];
+                const isActive = activeTab === tab.key;
+                return (
+                  <Button
+                    key={tab.key}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveTab(tab.key)}
+                    title={tab.hint}
+                    className={`relative py-1.5 text-sm font-bold rounded-md transition-all ${
+                      isActive
+                        ? `${c.bg} ${c.text} border ${c.border} shadow-sm`
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-white/60 border border-transparent'
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4 mr-1" />
+                    {tab.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <div className="py-4">
@@ -873,12 +938,17 @@ export default function MaterialFlowPage() {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
                 <div className="flex items-end gap-4 flex-wrap">
                   <div className="flex-1 min-w-[200px]">
-                    <Label className="text-gray-700">批次号</Label>
+                    <Label className="text-gray-700">
+                      批次号
+                      <span className="text-gray-400 text-xs font-normal ml-2">
+                        输入种源/育苗/种植/计划编码，追溯该批次的完整流转链路
+                      </span>
+                    </Label>
                     <Input
                       value={traceCode}
                       onChange={e => setTraceCode(e.target.value)}
                       ref={traceInputRef}
-                      placeholder="SS001 / SD001 / ZZ001 / HS001"
+                      placeholder="如: ZZ20260630-001 / YM20260701-001 / PL1782974079098"
                       className="border-gray-300"
                       onKeyDown={e => e.key === 'Enter' && handleTrace()}
                     />
@@ -889,68 +959,69 @@ export default function MaterialFlowPage() {
 
               {renderToolbar(tabToolbarTitle.trace, true)}
               {renderTraceTable()}
+              {renderPagination()}
             </div>
           )}
 
           {/* 育苗用料 Tab */}
           {activeTab === 'seedling' && (
             <div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div>
-                    <Label className="text-gray-700">年度</Label>
-                    <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
-                      <SelectTrigger className="border-gray-300 min-w-[150px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              {renderToolbar(
+                <span className="inline-flex items-center gap-1.5">
+                  育苗用料统计
+                  <Label className="text-gray-400 text-xs font-normal ml-3">年度</Label>
+                  <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
+                    <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </span>,
+                true,
+              )}
 
-              {renderToolbar(tabToolbarTitle.seedling, true)}
               {renderStatsTable(
                 tabToolbarTitle.seedling,
                 [
+                  { key: 'targetCode', label: '育苗批次号' },
                   { key: 'cropName', label: '作物' },
                   { key: 'sourceCategory', label: '来源' },
                   { key: 'totalQty', label: '总用量' },
                   { key: 'sourceUnit', label: '单位' },
-                  { key: 'batchCount', label: '批次数' },
                 ],
                 (item) => ({
+                  targetCode: item.targetCode ?? item.target_code ?? '-',
                   cropName: item.cropName,
                   sourceCategory: labelCategory(item.sourceCategory),
                   totalQty: Number(item.totalQty ?? item.total_qty ?? 0).toLocaleString(),
                   sourceUnit: item.sourceUnit || '-',
-                  batchCount: item.batchCount ?? item.batch_count ?? 0,
                 }),
               )}
+              {renderPagination()}
             </div>
           )}
 
           {/* 种植用料 Tab */}
           {activeTab === 'planting' && (
             <div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div>
-                    <Label className="text-gray-700">年度</Label>
-                    <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
-                      <SelectTrigger className="border-gray-300 min-w-[150px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              {renderToolbar(
+                <span className="inline-flex items-center gap-1.5">
+                  种植用料统计
+                  <Label className="text-gray-400 text-xs font-normal ml-3">年度</Label>
+                  <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
+                    <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </span>,
+                true,
+              )}
 
-              {renderToolbar(tabToolbarTitle.planting, true)}
               {renderStatsTable(
                 tabToolbarTitle.planting,
                 [
+                  { key: 'targetCode', label: '种植批次号' },
                   { key: 'cropName', label: '作物' },
                   { key: 'flowType', label: '方式' },
                   { key: 'sourceCategory', label: '来源' },
@@ -958,6 +1029,7 @@ export default function MaterialFlowPage() {
                   { key: 'sourceUnit', label: '单位' },
                 ],
                 (item) => ({
+                  targetCode: item.targetCode ?? item.target_code ?? '-',
                   cropName: item.cropName,
                   flowType: item.flowType === 'seed_source→planting' ? '直接播种' : '育苗移栽',
                   sourceCategory: labelCategory(item.sourceCategory),
@@ -965,32 +1037,35 @@ export default function MaterialFlowPage() {
                   sourceUnit: item.sourceUnit || '-',
                 }),
               )}
+              {renderPagination()}
             </div>
           )}
 
           {/* 年度总览 Tab */}
           {activeTab === 'annual' && (
             <div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div>
-                    <Label className="text-gray-700">年度</Label>
-                    <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
-                      <SelectTrigger className="border-gray-300 min-w-[150px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              {renderToolbar(
+                <span className="inline-flex items-center gap-1.5">
+                  年度总览
+                  <Label className="text-gray-400 text-xs font-normal ml-3">年度</Label>
+                  <Select value={String(statYear)} onValueChange={v => setStatYear(Number(v))}>
+                    <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[currentYear, currentYear - 1, currentYear - 2].map(y => <SelectItem key={y} value={String(y)}>{y}年</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </span>,
+                true,
+              )}
 
-              {renderToolbar(tabToolbarTitle.annual, true)}
               {renderStatsTable(
                 tabToolbarTitle.annual,
                 [
                   { key: 'flowType', label: '流转环节' },
                   { key: 'cropName', label: '作物' },
+                  { key: 'sourceCode', label: '来源批次' },
+                  { key: 'targetCode', label: '去向批次' },
+                  { key: 'sourceCategory', label: '来源类型' },
                   { key: 'flowCount', label: '流转次数' },
                   { key: 'totalQty', label: '总量' },
                   { key: 'unit', label: '单位' },
@@ -998,11 +1073,15 @@ export default function MaterialFlowPage() {
                 (item) => ({
                   flowType: labelFlowType(item.flowType),
                   cropName: item.cropName,
+                  sourceCode: item.sourceCode ?? item.source_code ?? '-',
+                  targetCode: item.targetCode ?? item.target_code ?? '-',
+                  sourceCategory: labelCategory(item.sourceCategory),
                   flowCount: item.flowCount ?? item.flow_count ?? 0,
                   totalQty: Number(item.totalQty ?? item.total_qty ?? 0).toLocaleString(),
                   unit: item.unit || '-',
                 }),
               )}
+              {renderPagination()}
             </div>
           )}
         </div>
