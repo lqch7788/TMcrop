@@ -383,18 +383,39 @@ router.get('/freezes/:instanceId', (req: Request, res: Response) => {
   try {
     const { instanceId } = req.params;
     const db = getDatabase();
-    // 查 inventory_freeze 表（如存在），同时查 inventory_transaction 中 freeze/unfreeze 类型
     let freezes: any[] = [];
     try {
       const stmt = db.prepare(`
-        SELECT id, instance_id, quantity, reason, operator_id, operator_name,
-               freeze_date, unfreeze_date, status
+        SELECT id, instance_id, freeze_quantity, used_quantity, freeze_type,
+               order_id, order_code, customer_name, delivery_date,
+               purpose, operator_id, operator_name,
+               freeze_date, unfreeze_date, status, remarks
         FROM inventory_freeze
-        WHERE instance_id = ?
+        WHERE instance_id = ? AND status != 'released'
         ORDER BY freeze_date DESC
       `);
       stmt.bind([instanceId]);
-      while (stmt.step()) freezes.push(stmt.getAsObject());
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
+        freezes.push({
+          id: row.id,
+          instanceId: row.instance_id,
+          freezeQuantity: row.freeze_quantity,
+          usedQuantity: row.used_quantity,
+          freezeType: row.freeze_type,
+          orderId: row.order_id,
+          orderCode: row.order_code,
+          customerName: row.customer_name,
+          deliveryDate: row.delivery_date,
+          purpose: row.purpose,
+          operatorId: row.operator_id,
+          operatorName: row.operator_name,
+          freezeDate: row.freeze_date,
+          unfreezeDate: row.unfreeze_date,
+          status: row.status,
+          remarks: row.remarks,
+        });
+      }
       stmt.free();
     } catch (_e) {
       // inventory_freeze 表可能不存在，从 transaction 流水兜底
@@ -410,14 +431,21 @@ router.get('/freezes/:instanceId', (req: Request, res: Response) => {
           const tx = txStmt.getAsObject();
           freezes.push({
             id: tx.id,
-            instance_id: tx.instance_id,
-            quantity: tx.quantity,
-            reason: tx.remarks || '',
-            operator_name: tx.operator_name,
-            freeze_date: tx.transaction_type === 'freeze' ? tx.operate_date : null,
-            unfreeze_date: tx.transaction_type === 'unfreeze' ? tx.operate_date : null,
+            instanceId: tx.instance_id,
+            freezeQuantity: Math.abs(Number(tx.quantity) || 0),
+            usedQuantity: 0,
+            freezeType: 'manual',
+            orderId: null,
+            orderCode: null,
+            customerName: null,
+            deliveryDate: null,
+            purpose: tx.remarks || '',
+            operatorId: null,
+            operatorName: tx.operator_name,
+            freezeDate: tx.transaction_type === 'freeze' ? tx.operate_date : null,
+            unfreezeDate: tx.transaction_type === 'unfreeze' ? tx.operate_date : null,
             status: tx.transaction_type,
-            business_code: tx.business_code,
+            remarks: tx.remarks,
           });
         }
         txStmt.free();
@@ -429,6 +457,298 @@ router.get('/freezes/:instanceId', (req: Request, res: Response) => {
   } catch (e: any) {
     console.error('[GET /inventory/freezes/:instanceId]', e);
     res.status(500).json({ success: false, error: e?.message || '查询冻结记录失败' });
+  }
+});
+
+// ========== 冻结/解冻操作（2026-07-02 补全） ==========
+
+/** 确保 inventory_freeze 表有所需列（fixMissingSchema 被启动白名单禁用，此处自补） */
+function ensureFreezeColumns(db: any): void {
+  const cols = [
+    { name: 'instance_id', sql: 'ALTER TABLE inventory_freeze ADD COLUMN instance_id TEXT' },
+    { name: 'freeze_type', sql: "ALTER TABLE inventory_freeze ADD COLUMN freeze_type TEXT DEFAULT 'manual'" },
+    { name: 'customer_name', sql: 'ALTER TABLE inventory_freeze ADD COLUMN customer_name TEXT' },
+    { name: 'delivery_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN delivery_date TEXT' },
+    { name: 'purpose', sql: 'ALTER TABLE inventory_freeze ADD COLUMN purpose TEXT' },
+    { name: 'operator_id', sql: 'ALTER TABLE inventory_freeze ADD COLUMN operator_id TEXT' },
+    { name: 'operator_name', sql: 'ALTER TABLE inventory_freeze ADD COLUMN operator_name TEXT' },
+    { name: 'freeze_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN freeze_date TEXT' },
+    { name: 'unfreeze_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN unfreeze_date TEXT' },
+    { name: 'updated_at', sql: 'ALTER TABLE inventory_freeze ADD COLUMN updated_at TEXT' },
+  ];
+  for (const col of cols) {
+    try { db.run(col.sql); } catch { /* 列已存在则跳过 */ }
+  }
+}
+
+/** POST /api/inventory/freeze — 创建冻结记录（订单关联 / 手动独立） */
+router.post('/freeze', async (req: Request, res: Response) => {
+  try {
+    const body = req.body as {
+      instanceId: string;
+      freezeType: 'order' | 'manual';
+      freezeQuantity: number;
+      orderId?: string;
+      purpose?: string;
+      operatorId?: string;
+      operatorName?: string;
+      remarks?: string;
+    };
+
+    // 1. 校验
+    if (!body.instanceId) return res.status(400).json({ success: false, error: '缺少 instanceId' });
+    if (!body.freezeType || !['order', 'manual'].includes(body.freezeType)) {
+      return res.status(400).json({ success: false, error: 'freezeType 必须为 order 或 manual' });
+    }
+    if (!body.freezeQuantity || body.freezeQuantity <= 0) {
+      return res.status(400).json({ success: false, error: '冻结数量必须大于 0' });
+    }
+    if (body.freezeType === 'order' && !body.orderId) {
+      return res.status(400).json({ success: false, error: '关联订单冻结需要提供 orderId' });
+    }
+
+    const db = getDatabase();
+    ensureFreezeColumns(db); // 确保 inventory_freeze 表有完整列
+
+    // 2. 查库存实例
+    const stockStmt = db.prepare('SELECT * FROM inventory_stock WHERE instance_id = ?');
+    stockStmt.bind([body.instanceId]);
+    if (!stockStmt.step()) {
+      stockStmt.free();
+      return res.status(404).json({ success: false, error: `库存实例 ${body.instanceId} 不存在` });
+    }
+    const stock = stockStmt.getAsObject();
+    stockStmt.free();
+
+    const currentQty = Number(stock.current_quantity) || 0;
+    const alreadyFrozen = Number(stock.frozen_quantity) || 0;
+    const available = currentQty - alreadyFrozen;
+    if (available < body.freezeQuantity) {
+      return res.status(400).json({
+        success: false,
+        error: `可冻结数量不足：可用 ${available}，需要 ${body.freezeQuantity}`,
+      });
+    }
+
+    // 3. 关联订单时获取客户和交货日期
+    let customerName: string | null = null;
+    let deliveryDate: string | null = null;
+    let orderCode: string | null = null;
+    if (body.freezeType === 'order' && body.orderId) {
+      try {
+        const orderStmt = db.prepare('SELECT order_code, customer_name, delivery_date FROM crop_orders WHERE id = ?');
+        orderStmt.bind([body.orderId]);
+        if (orderStmt.step()) {
+          const order = orderStmt.getAsObject();
+          orderCode = String(order.order_code || '') || null;
+          customerName = String(order.customer_name || '') || null;
+          deliveryDate = String(order.delivery_date || '') || null;
+        }
+        orderStmt.free();
+      } catch { /* 订单查询失败不影响冻结 */ }
+    }
+
+    // 4. 事务：写 freeze + 更新 stock + 写 transaction + 写 flow_log
+    const { randomUUID } = await import('crypto');
+    const freezeId = randomUUID();
+    const now = new Date().toISOString();
+    const freezeDate = formatLocalDateYYYYMMDD(new Date());
+
+    try {
+      // 4a. INSERT inventory_freeze
+      db.run(`
+        INSERT INTO inventory_freeze (
+          id, instance_id, freeze_type, order_id, order_code,
+          customer_name, delivery_date, purpose,
+          freeze_quantity, used_quantity, status,
+          operator_id, operator_name, freeze_date, remarks, create_time, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'frozen', ?, ?, ?, ?, ?, ?)
+      `, [
+        freezeId, body.instanceId, body.freezeType, body.orderId || null, orderCode,
+        customerName, deliveryDate, body.purpose || (body.freezeType === 'order' ? '订单预留' : null),
+        body.freezeQuantity,
+        body.operatorId || null, body.operatorName || null, freezeDate,
+        body.remarks || null, now, now,
+      ]);
+
+      // 4b. UPDATE inventory_stock.frozen_quantity
+      const newFrozen = alreadyFrozen + body.freezeQuantity;
+      db.run(
+        'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
+        [newFrozen, now, body.instanceId]
+      );
+
+      // 4c. INSERT inventory_transaction (freeze流水)
+      const txDateStr = formatLocalDateYYYYMMDD(new Date());
+      const txId = `TRX-${txDateStr}-${String(Date.now() % 10000).padStart(4, '0')}`;
+      db.run(`
+        INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, ?, 'freeze', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        txId, txId, body.instanceId, stock.stock_type,
+        -body.freezeQuantity, currentQty, currentQty,
+        body.orderId || null, body.freezeType === 'order' ? 'order' : 'manual', orderCode || null,
+        body.operatorId || null, body.operatorName || null, freezeDate,
+        body.remarks || `冻结${body.freezeQuantity}(${body.freezeType === 'order' ? '订单关联' : '手动'})`,
+        now,
+      ]);
+
+      // 4d. 写 material_flow_log
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        writeFlowLog({
+          flow_type: 'inventory→freeze',
+          crop_name: stock.crop_name || '',
+          crop_variety: stock.variety_name || '',
+          source_type: 'inventory_stock',
+          source_id: body.instanceId,
+          source_code: body.instanceId,
+          source_quantity: body.freezeQuantity,
+          source_unit: stock.unit || '',
+          source_category: 'manual',
+          target_type: body.freezeType === 'order' ? 'order' : 'manual_freeze',
+          target_id: body.orderId || freezeId,
+          target_code: body.freezeType === 'order' ? (orderCode || body.orderId || '订单冻结') : (body.purpose || '手动冻结'),
+          target_quantity: body.freezeQuantity,
+          target_unit: stock.unit || '',
+          business_code: orderCode || null,
+          created_by: body.operatorName || '',
+        });
+      } catch { /* flow_log 写入失败不影响主流程 */ }
+
+      saveDatabase();
+
+      res.json({
+        success: true,
+        data: {
+          freezeId,
+          instanceId: body.instanceId,
+          frozenQuantity: newFrozen,
+          freezeQuantity: body.freezeQuantity,
+          freezeType: body.freezeType,
+          orderId: body.orderId || null,
+          orderCode,
+          customerName,
+          deliveryDate,
+          purpose: body.purpose || (body.freezeType === 'order' ? '订单预留' : null),
+          status: 'frozen',
+          freezeDate,
+        },
+      });
+    } catch (innerErr: any) {
+      console.error('[POST /inventory/freeze] 事务失败:', innerErr);
+      return res.status(500).json({ success: false, error: innerErr?.message || '冻结失败' });
+    }
+  } catch (e: any) {
+    console.error('[POST /inventory/freeze]', e);
+    res.status(500).json({ success: false, error: e?.message || '冻结失败' });
+  }
+});
+
+/** POST /api/inventory/unfreeze/:freezeId — 解冻（全部或部分） */
+router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
+  try {
+    const { freezeId } = req.params;
+    const body = req.body as {
+      quantity?: number;
+      operatorId?: string;
+      operatorName?: string;
+      remarks?: string;
+    };
+
+    const db = getDatabase();
+
+    // 1. 查冻结记录
+    const stmt = db.prepare('SELECT * FROM inventory_freeze WHERE id = ?');
+    stmt.bind([freezeId]);
+    if (!stmt.step()) {
+      stmt.free();
+      return res.status(404).json({ success: false, error: `冻结记录 ${freezeId} 不存在` });
+    }
+    const freeze = stmt.getAsObject();
+    stmt.free();
+
+    if (freeze.status !== 'frozen') {
+      return res.status(400).json({ success: false, error: `该冻结记录状态为 ${freeze.status}，不能解冻` });
+    }
+
+    const unfreezeQty = body.quantity && body.quantity > 0 ? body.quantity : Number(freeze.freeze_quantity || 0);
+    const remainingFrozen = Number(freeze.freeze_quantity || 0) - Number(freeze.used_quantity || 0);
+    if (unfreezeQty > remainingFrozen) {
+      return res.status(400).json({ success: false, error: `解冻数量 ${unfreezeQty} 超过剩余冻结量 ${remainingFrozen}` });
+    }
+
+    // 2. 查库存实例
+    const stockStmt = db.prepare('SELECT * FROM inventory_stock WHERE instance_id = ?');
+    stockStmt.bind([freeze.instance_id]);
+    if (!stockStmt.step()) {
+      stockStmt.free();
+      return res.status(404).json({ success: false, error: '关联的库存实例不存在' });
+    }
+    const stock = stockStmt.getAsObject();
+    stockStmt.free();
+
+    const now = new Date().toISOString();
+    const unfreezeDate = formatLocalDateYYYYMMDD(new Date());
+
+    try {
+      // 3a. 更新冻结记录
+      const newUsed = Number(freeze.used_quantity || 0) + unfreezeQty;
+      const isFullyUnfrozen = newUsed >= Number(freeze.freeze_quantity || 0);
+      db.run(
+        `UPDATE inventory_freeze
+         SET used_quantity = ?, status = ?, unfreeze_date = ?, updated_at = ?
+         WHERE id = ?`,
+        [newUsed, isFullyUnfrozen ? 'released' : 'frozen', unfreezeDate, now, freezeId]
+      );
+
+      // 3b. UPDATE inventory_stock.frozen_quantity
+      const currentFrozen = Number(stock.frozen_quantity) || 0;
+      const newFrozen = Math.max(0, currentFrozen - unfreezeQty);
+      db.run(
+        'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
+        [newFrozen, now, freeze.instance_id]
+      );
+
+      // 3c. INSERT inventory_transaction (unfreeze流水)
+      const txId = `TRX-${formatLocalDateYYYYMMDD(new Date())}-${String(Date.now() % 10000).padStart(4, '0')}`;
+      db.run(`
+        INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, ?, 'unfreeze', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        txId, txId, freeze.instance_id, stock.stock_type,
+        unfreezeQty, Number(stock.current_quantity) || 0, Number(stock.current_quantity) || 0,
+        freeze.order_id || null, freeze.freeze_type || 'manual', freeze.order_code || null,
+        body.operatorId || null, body.operatorName || null, unfreezeDate,
+        body.remarks || `解冻${unfreezeQty}`,
+        now,
+      ]);
+
+      saveDatabase();
+
+      res.json({
+        success: true,
+        data: {
+          freezeId,
+          instanceId: freeze.instance_id,
+          frozenQuantity: newFrozen,
+          unfrozenQuantity: unfreezeQty,
+          status: isFullyUnfrozen ? 'released' : 'frozen',
+        },
+      });
+    } catch (innerErr: any) {
+      console.error('[POST /inventory/unfreeze] 事务失败:', innerErr);
+      return res.status(500).json({ success: false, error: innerErr?.message || '解冻失败' });
+    }
+  } catch (e: any) {
+    console.error('[POST /inventory/unfreeze]', e);
+    res.status(500).json({ success: false, error: e?.message || '解冻失败' });
   }
 });
 

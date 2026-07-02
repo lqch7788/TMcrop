@@ -7,11 +7,12 @@
  *   - 聚合 tab 禁用复选框/单条删除（数据无 id），按钮保留仅触发说明提示
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, BarChart3, TrendingUp, Package, Trash2, Download, X, ClipboardList, RotateCcw, Box, Clock, Sprout } from 'lucide-react';
+import { Search, BarChart3, TrendingUp, Package, Trash2, Download, X, RotateCcw } from 'lucide-react';
 import { Button, Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Pagination, Checkbox, UnifiedModal, DeleteConfirmModal } from '@/components/ui';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
 import { useMaterialFlowStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
 import * as XLSX from 'xlsx';
 
 const FLOW_TYPE_OPTIONS = [
@@ -41,6 +42,10 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'manual_correction': '手动修正',
   'plan→seed_source': '计划→种源',
   'planting→seed_source': '种植→种源',
+  'inventory→freeze': '库存→冻结',
+  'external→seedling': '外部→育苗',
+  'harvest→inventory': '采收→入库',
+  'inventory→seed_source': '库存→种源',
   'other': '其他',
 };
 
@@ -63,6 +68,10 @@ const FLOW_TYPE_COLOR: Record<string, string> = {
   'manual_correction':    'bg-gray-500',
   'plan→seed_source':     'bg-sky-500',
   'planting→seed_source': 'bg-teal-500',
+  'inventory→freeze':     'bg-rose-500',
+  'external→seedling':    'bg-purple-600',
+  'harvest→inventory':    'bg-orange-600',
+  'inventory→seed_source': 'bg-cyan-700',
   'other':                'bg-slate-500',
 };
 
@@ -113,6 +122,9 @@ const TYPE_LABELS: Record<string, string> = {
   internal_planting: '内部种植',
   transfer_out: '调拨出库',
   correction: '修正',
+  manual_freeze: '手动冻结',
+  order: '订单冻结',
+  customer_sale: '客户销售',
 };
 const CODE_PREFIX_TYPE: Record<string, string> = {
   SS: '种源',
@@ -140,6 +152,9 @@ const TYPE_BADGE_COLOR: Record<string, string> = {
   外部: 'bg-purple-100 text-purple-700',
   内部种植: 'bg-teal-100 text-teal-700',
   调拨出库: 'bg-rose-100 text-rose-700',
+  手动冻结: 'bg-blue-100 text-blue-700',
+  订单冻结: 'bg-purple-100 text-purple-700',
+  客户销售: 'bg-emerald-100 text-emerald-700',
   阶段: 'bg-slate-100 text-slate-700',
   区域: 'bg-slate-100 text-slate-700',
   农场: 'bg-slate-100 text-slate-700',
@@ -157,13 +172,32 @@ const badgeOf = (type?: string | null, code?: string | null): { label: string | 
 };
 
 // 在 code 前面加"业务类型"小徽章 + code 本身
-const CodeCell: React.FC<{ type?: string | null; code?: string | null; emptyLabel?: string }> = ({ type, code, emptyLabel = '-' }) => {
+// 当 type 为 inventory_stock 或 inventory 时，code 即为 instanceId，可点击跳转库存详情
+const CodeCell: React.FC<{
+  type?: string | null;
+  code?: string | null;
+  emptyLabel?: string;
+  onInventoryClick?: (instanceId: string) => void;
+}> = ({ type, code, emptyLabel = '-', onInventoryClick }) => {
   if (!code) return <span className="text-gray-400 text-xs">{emptyLabel}</span>;
   const { label, color } = badgeOf(type, code);
+  const isInventory = type === 'inventory_stock' || type === 'inventory';
+
   return (
     <span className="inline-flex items-center justify-center gap-1 whitespace-nowrap">
       {label && <span className={`px-1.5 py-0.5 ${color} text-[10px] rounded font-medium`}>{label}</span>}
-      <span className="text-gray-600 font-mono text-xs">{code}</span>
+      {isInventory && onInventoryClick ? (
+        <button
+          type="button"
+          onClick={() => onInventoryClick(code)}
+          className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-xs cursor-pointer"
+          title={`查看库存详情: ${code}`}
+        >
+          {code}
+        </button>
+      ) : (
+        <span className="text-gray-600 font-mono text-xs">{code}</span>
+      )}
     </span>
   );
 };
@@ -290,6 +324,9 @@ export default function MaterialFlowPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  // 库存详情弹窗（从流转记录点击 instanceId 时触发）
+  const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const hasActiveMode = deleteMode || exportMode;
 
   // 2026-06-15: 聚合 tab（seedling/planting/annual）的复选框/单条删除/选中导出无意义
@@ -417,6 +454,12 @@ export default function MaterialFlowPage() {
     else loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
   };
 
+  // 点击库存实例ID → 打开库存详情弹窗
+  const handleViewInventoryDetail = (instanceId: string) => {
+    setDetailInstanceId(instanceId);
+    setDetailOpen(true);
+  };
+
   const handleDoExport = (format: 'excel' | 'csv' | 'pdf') => {
     const exportSource = selectedIds.length > 0
       ? currentRows.filter((r, i) => selectedIds.includes(keyOf(r, i)))
@@ -478,53 +521,6 @@ export default function MaterialFlowPage() {
     cancelSelection();
   };
 
-  // 顶部 7 卡
-  const renderStats = () => (
-    <div className="grid grid-cols-7 gap-4 overflow-x-auto">
-      {[
-        { label: '总条数',     value: total, color: 'bg-blue-500',   Icon: ClipboardList },
-        { label: '流转类型',   value: Object.keys(FLOW_TYPE_LABELS).length, color: 'bg-emerald-500', Icon: Box },
-        { label: '作物种类',   value: 5, color: 'bg-orange-500', Icon: Clock },
-        { label: '关联种源',   value: 1, color: 'bg-purple-500', Icon: Sprout },
-      ].map((card, i) => {
-        const IconComponent = card.Icon;
-        return (
-          <div key={`n-${i}`} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-8 h-8 rounded-lg ${card.color} flex items-center justify-center shrink-0`}>
-                <IconComponent className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">{card.value.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 leading-tight truncate">{card.label}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-      {[
-        { key: 'seed',     label: '种源', color: 'amber' },
-        { key: 'seedling', label: '种苗', color: 'green' },
-        { key: 'product',  label: '成品', color: 'emerald' },
-      ].map(t => {
-        const textC = `text-${t.color}-700`;
-        const bgC = `bg-${t.color}-100`;
-        return (
-          <div key={t.key} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-8 h-8 rounded-lg ${bgC} flex items-center justify-center shrink-0`}>
-                <span className={`text-sm font-bold ${textC}`}>{t.label.charAt(0)}</span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">-</p>
-                <p className="text-xs text-gray-500 leading-tight truncate">{t.label}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 
   const renderToolbar = (title: string, canDelete: boolean) => (
     <ActionToolbar
@@ -621,11 +617,11 @@ export default function MaterialFlowPage() {
                   </span>
                 </StdTd>
                 <StdTd className="text-gray-900">{log.cropName || '-'}</StdTd>
-                <StdTd><CodeCell type={log.sourceType} code={log.sourceCode} /></StdTd>
+                <StdTd><CodeCell type={log.sourceType} code={log.sourceCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {log.sourceQuantity != null ? `${log.sourceQuantity} ${log.sourceUnit || ''}` : '-'}
                 </StdTd>
-                <StdTd><CodeCell type={log.targetType} code={log.targetCode} /></StdTd>
+                <StdTd><CodeCell type={log.targetType} code={log.targetCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {log.targetQuantity != null ? `${log.targetQuantity} ${log.targetUnit || ''}` : '-'}
                 </StdTd>
@@ -688,11 +684,11 @@ export default function MaterialFlowPage() {
                     {labelFlowType(item.flowType)}
                   </span>
                 </StdTd>
-                <StdTd><CodeCell type={item.sourceType} code={item.sourceCode} /></StdTd>
+                <StdTd><CodeCell type={item.sourceType} code={item.sourceCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {item.sourceQuantity != null ? `${item.sourceQuantity} ${item.sourceUnit || ''}` : '-'}
                 </StdTd>
-                <StdTd><CodeCell type={item.targetType} code={item.targetCode} /></StdTd>
+                <StdTd><CodeCell type={item.targetType} code={item.targetCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
                 <StdTd>
                   <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full inline-block whitespace-nowrap">{labelCategory(item.sourceCategory)}</span>
                 </StdTd>
@@ -799,8 +795,6 @@ export default function MaterialFlowPage() {
         </div>
       </div>
 
-      {/* 流转记录：顶部统计卡 */}
-      {activeTab === 'logs' && renderStats()}
 
       {/* Tab 切换 + 筛选 + 工具栏 + 表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 pt-4 pb-0">
@@ -1014,11 +1008,29 @@ export default function MaterialFlowPage() {
         </div>
       </div>
 
+      {/* 库存详情弹窗（点击流转记录中的 instanceId 触发） */}
+      <InventoryDetailModal
+        isOpen={detailOpen}
+        stock={detailInstanceId ? ({ instanceId: detailInstanceId } as any) : null}
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailInstanceId(null);
+        }}
+      />
+
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={selectedIds.length}
-        title="确认删除流转记录"
-        description={`确定要删除选中的 ${selectedIds.length} 条流转记录吗？此操作无法恢复，删除后数据将永久丢失。`}
+        title="⚠️ 确认删除流转记录"
+        description={`确定要删除选中的 ${selectedIds.length} 条流转记录吗？
+
+⚠️ 删除后：
+• 流转追溯链将断裂，无法还原作物从种源→育苗→种植→采收→出库的完整流转路径
+• 数据永久丢失，无法恢复
+
+ℹ️ 注意：删除仅移除流转日志记录，不会影响已执行的业务操作（冻结数量、种植数量、出库记录等保持不变）。
+
+请谨慎操作，确认无误后再执行删除。`}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirmed}
       />

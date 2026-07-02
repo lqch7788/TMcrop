@@ -1776,6 +1776,32 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2.1 库存冻结表补充列（2026-07-02: 实例级冻结功能补全）
+  const freezeColumnsToAdd = [
+    { name: 'instance_id', sql: 'ALTER TABLE inventory_freeze ADD COLUMN instance_id TEXT' },
+    { name: 'freeze_type', sql: "ALTER TABLE inventory_freeze ADD COLUMN freeze_type TEXT DEFAULT 'manual'" },
+    { name: 'customer_name', sql: 'ALTER TABLE inventory_freeze ADD COLUMN customer_name TEXT' },
+    { name: 'delivery_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN delivery_date TEXT' },
+    { name: 'purpose', sql: 'ALTER TABLE inventory_freeze ADD COLUMN purpose TEXT' },
+    { name: 'operator_id', sql: 'ALTER TABLE inventory_freeze ADD COLUMN operator_id TEXT' },
+    { name: 'operator_name', sql: 'ALTER TABLE inventory_freeze ADD COLUMN operator_name TEXT' },
+    { name: 'freeze_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN freeze_date TEXT' },
+    { name: 'unfreeze_date', sql: 'ALTER TABLE inventory_freeze ADD COLUMN unfreeze_date TEXT' },
+    { name: 'updated_at', sql: 'ALTER TABLE inventory_freeze ADD COLUMN updated_at TEXT' },
+  ];
+  for (const col of freezeColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ inventory_freeze 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) {
+        seedLog.skip(`• inventory_freeze.${col.name} 列已存在`);
+      } else {
+        seedLog.skip(`• inventory_freeze.${col.name}:`, e.message);
+      }
+    }
+  }
+
   // 3. 交付记录表
   try {
     db.run(`

@@ -72,7 +72,7 @@ export function DeleteConfirmModal({
         {/* 内容区 - 与 Modal 一致 */}
         <div className="px-6 py-5 text-sm text-gray-600 space-y-2 flex-1">
           {description ? (
-            <p>{description}</p>
+            <p style={{ whiteSpace: 'pre-line' }}>{description}</p>
           ) : (
             <>
               <p>确定要删除选中的 <strong>{selectedCount}</strong> 个项目吗？</p>

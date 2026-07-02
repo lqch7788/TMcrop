@@ -7,7 +7,7 @@ import {
   StockType,
   SourceType,
   BusinessType,
-  FrozenType,
+
   InboundRequest,
   OutboundRequest,
   FreezeRequest,
@@ -300,14 +300,13 @@ export async function inboundHarvest(
     if (stockType === StockType.SEED || stockType === StockType.SEEDLING) {
       // 采收的种子/种苗默认全量冻结，用于下次流转
       await inventoryService.freezeInventory({
-        instanceId: result.instanceId,
-        frozenType: FrozenType.TASK,
-        frozenQuantity: harvestRecord.harvestQuantity,
-        businessId: harvestRecord.id,
-        businessType: BusinessType.HARVEST,
+        instanceId: result.instanceId!,
+        freezeType: 'manual',
+        freezeQuantity: harvestRecord.harvestQuantity,
+        purpose: `${stockType === StockType.SEED ? '种子' : '种苗'}采收冻结，用于下次流转`,
         operatorId,
         operatorName,
-        remarks: `${stockType === StockType.SEED ? '种子' : '种苗'}采收冻结，用于下次流转`,
+        remarks: '采收自动冻结',
       });
     }
   }

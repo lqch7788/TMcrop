@@ -480,12 +480,50 @@ export interface OutboundRequest {
 /** 冻结请求 */
 export interface FreezeRequest {
   instanceId: string;
-  frozenType: FrozenType;
-  frozenQuantity: number;
-  businessId?: string;
-  businessType?: BusinessType;
-  operatorId: string;
-  operatorName: string;
+  freezeType: 'order' | 'manual';  // 订单关联 / 手动独立
+  freezeQuantity: number;
+  orderId?: string;                // 关联订单ID(freezeType='order'时必填)
+  purpose?: string;                // 冻结用途(freezeType='manual'时)
+  operatorId?: string;
+  operatorName?: string;
+  remarks?: string;
+}
+
+/** 冻结果（API返回） */
+export interface FreezeResult {
+  success: boolean;
+  freezeId?: string;
+  instanceId?: string;
+  frozenQuantity?: number;
+  freezeQuantity?: number;
+  freezeType?: string;
+  orderId?: string;
+  orderCode?: string;
+  customerName?: string;
+  deliveryDate?: string;
+  purpose?: string;
+  status?: string;
+  freezeDate?: string;
+  error?: string;
+}
+
+/** 冻结记录（列表展示用） */
+export interface FreezeRecord {
+  id: string;
+  instanceId: string;
+  freezeQuantity: number;
+  usedQuantity: number;
+  freezeType: 'order' | 'manual';
+  orderId?: string;
+  orderCode?: string;
+  customerName?: string;
+  deliveryDate?: string;
+  purpose?: string;
+  operatorId?: string;
+  operatorName?: string;
+  freezeDate?: string;
+  unfreezeDate?: string;
+  status: 'frozen' | 'released';
   remarks?: string;
 }
 

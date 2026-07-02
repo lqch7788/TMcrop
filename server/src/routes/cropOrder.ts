@@ -167,6 +167,36 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 /**
+ * 获取活跃订单列表（用于冻结关联）
+ * GET /api/crop-orders/active
+ * 返回 status 为 pending/confirmed 的订单，含客户名和交货日期
+ */
+router.get('/active', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT id, order_code, order_name, order_type,
+             crop_name, crop_variety,
+             COALESCE(planned_quantity, quantity, 0) AS planned_quantity,
+             unit,
+             customer_name, customer_contact,
+             expected_delivery_date, order_date,
+             status, remarks
+      FROM crop_orders
+      WHERE status IN ('pending', 'confirmed', 'in_progress', 'planned')
+      ORDER BY expected_delivery_date ASC, create_time DESC
+    `);
+    const orders: any[] = [];
+    while (stmt.step()) orders.push(stmt.getAsObject());
+    stmt.free();
+    res.json({ success: true, data: orders, meta: { total: orders.length } });
+  } catch (error) {
+    console.error('获取活跃订单失败:', error);
+    res.status(500).json({ success: false, error: '获取活跃订单失败' });
+  }
+});
+
+/**
  * 获取单个订单
  * GET /api/crop-orders/:id
  */
