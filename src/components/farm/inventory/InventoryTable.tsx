@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Package, Leaf, Sprout, ArrowUpCircle } from 'lucide-react';
+import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -25,6 +25,7 @@ interface InventoryTableProps {
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
   onOutbound: (stock: InventoryStock) => void;
+  onFreeze?: (stock: InventoryStock) => void;
   onViewDetail: (stock: InventoryStock) => void;
   // 批量操作相关（与 ActionToolbar 协同）
   selectedRows?: string[];
@@ -112,6 +113,7 @@ export function InventoryTable({
   pagination,
   onChange,
   onOutbound,
+  onFreeze,
   onViewDetail,
   selectedRows = [],
   onSelectionChange,
@@ -335,6 +337,18 @@ export function InventoryTable({
                           >
                             <ArrowUpCircle className="w-4 h-4" />
                             出库
+                          </Button>
+                        )}
+                        {canOutbound && onFreeze && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => onFreeze(stock)}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="冻结"
+                          >
+                            <Snowflake className="w-4 h-4" />
+                            冻结
                           </Button>
                         )}
                       </div>

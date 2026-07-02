@@ -6,12 +6,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  X, Package, Leaf, Sprout, History, GitBranch, Info,
+  Package, Leaf, Sprout, History, GitBranch, Info,
   TrendingUp, TrendingDown, Snowflake, Lock, Unlock, Edit3,
   RefreshCw, AlertCircle, HelpCircle,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
+import { showAlert } from '@/lib/dialogService';
 import {
   StockType,
   InventoryStock,
@@ -25,6 +26,8 @@ import {
   getFreezes,
   traceUpstream,
   traceDownstream,
+  getInventoryByInstanceId,
+  unfreezeInventory,
 } from '../../../services/inventoryService';
 import {
   QUALITY_GRADE_MAP,
@@ -90,11 +93,36 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
   const [upstream, setUpstream] = useState<TraceResult[]>([]);
   const [downstream, setDownstream] = useState<DownstreamTraceResult[]>([]);
 
+  // 当 stock prop 不完整时（如从出库记录页仅传 instanceId），自动加载完整数据
+  const [resolvedStock, setResolvedStock] = useState<InventoryStock | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !stock?.instanceId) return;
+    // 判断 stock 是否完整：缺少 cropName 和 stockType 就需要加载
+    const isIncomplete = !stock.cropName && !stock.stockType;
+    if (isIncomplete) {
+      setResolving(true);
+      getInventoryByInstanceId(stock.instanceId).then((data) => {
+        setResolvedStock(data);
+        setResolving(false);
+      }).catch(() => {
+        setResolving(false);
+      });
+    } else {
+      setResolvedStock(null); // 使用 prop 数据
+    }
+  }, [isOpen, stock?.instanceId, stock?.cropName, stock?.stockType]);
+
+  // 优先用 prop 完整数据，其次用 API 加载的数据
+  const effectiveStock: InventoryStock | null = (!stock?.cropName && !stock?.stockType)
+    ? resolvedStock
+    : stock;
+
   const loadAllData = useCallback(async () => {
     if (!stock?.instanceId) return;
     setLoading(true);
     setError(null);
-    // Phase 13.2.9: 去掉 .catch(() => []) 静默吞错，错误显式抛出
     try {
       const [txs, fzs, ups, downs] = await Promise.all([
         getTransactions(stock.instanceId),
@@ -124,87 +152,112 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
 
   if (!isOpen || !stock) return null;
 
-  const sourceInfo = SOURCE_ORIGIN_MAP[stock.sourceType];
-  const statusInfo = INVENTORY_STATUS_MAP[stock.status] || { label: stock.status, bg: 'bg-gray-500', text: 'text-white' };
-  const gradeInfo = stock.grade ? QUALITY_GRADE_MAP[stock.grade] : null;
-  const available = (stock.currentQuantity ?? 0) - (stock.frozenQuantity ?? 0);
+  const sourceInfo = SOURCE_ORIGIN_MAP[effectiveStock?.sourceType ?? ''];
+  const statusInfo = INVENTORY_STATUS_MAP[effectiveStock?.status ?? ''] || { label: effectiveStock?.status ?? '-', bg: 'bg-gray-500', text: 'text-white' };
+  const gradeInfo = effectiveStock?.grade ? QUALITY_GRADE_MAP[effectiveStock.grade] : null;
+  const available = (effectiveStock?.currentQuantity ?? 0) - (effectiveStock?.frozenQuantity ?? 0);
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-          <div className="flex items-center gap-3 text-white">
-            {getStockTypeIcon(stock.stockType)}
-            <div>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                {getStockTypeLabel(stock.stockType)}库存详情
-                <span className={`px-2 py-0.5 ${statusInfo.bg} ${statusInfo.text} text-xs rounded`}>
-                  {statusInfo.label}
-                </span>
-              </h3>
-              <p className="text-sm text-emerald-100 font-mono mt-0.5">实例ID: {stock.instanceId}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={loadAllData}
-              className="text-white hover:bg-emerald-700"
-              title="刷新"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-white hover:bg-emerald-700"
-              title="关闭"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 px-4 flex items-center gap-1 bg-gray-50">
-          <TabBtn current={tab} value="basic"   icon={<Info    className="w-4 h-4" />}    label="基本信息" count={null} onClick={setTab} />
-          <TabBtn current={tab} value="history" icon={<History className="w-4 h-4" />}    label="操作历史" count={transactions.length} onClick={setTab} />
-          <TabBtn current={tab} value="trace"   icon={<GitBranch className="w-4 h-4" />} label="上下游追溯" count={upstream.length + downstream.length} onClick={setTab} />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          )}
-
-          {tab === 'basic'   && <BasicTab stock={stock} sourceInfo={sourceInfo} statusInfo={statusInfo} gradeInfo={gradeInfo} available={available} freezesCount={freezes.length} />}
-          {tab === 'history' && <HistoryTab transactions={transactions} loading={loading} error={error} onRetry={loadAllData} />}
-          {tab === 'trace'   && (
-            <TraceTab
-              upstream={upstream}
-              downstream={downstream}
-              loading={loading}
-              onSelectChild={(instanceId) => {
-                // 2026-06-19: 链式跳转（Phase 13.2.8）— 重新打开该 instanceId 的详情
-                const child = (upstream.find((u) => u.instanceId === instanceId)
-                  || downstream.find((d) => d.instanceId === instanceId)) as any
-                if (child && child.instanceId) {
-                  // 调 useInventoryStore 的 item 重新打开
-                  showAlert(`已选中 instanceId: ${instanceId}，链式跳转待 useInventoryStore 实例化后实现`, { title: '链式跳转' })
-                }
-              }}
-            />
-          )}
+  // 数据加载中占位
+  if (resolving) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-8 shadow-xl flex items-center gap-3">
+          <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-gray-600">加载库存详情...</span>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      showFooter={false}
+      size="xl"
+      title={
+        <div className="flex items-center gap-2.5">
+          {getStockTypeIcon(effectiveStock?.stockType ?? '')}
+          <div className="flex items-center gap-2">
+            <span>{getStockTypeLabel(effectiveStock?.stockType ?? '')}库存详情</span>
+            <span className={`px-2 py-0.5 ${statusInfo.bg} ${statusInfo.text} text-xs rounded font-normal`}>
+              {statusInfo.label}
+            </span>
+          </div>
+          <span className="text-sm text-white/70 font-mono font-normal ml-1">
+            {effectiveStock?.instanceId ?? stock.instanceId}
+          </span>
+        </div>
+      }
+      headerAction={
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={loadAllData}
+          className="text-white hover:bg-emerald-500"
+          title="刷新"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      }
+    >
+      {/* Tabs */}
+      <div className="border-b border-gray-200 -mx-4 sm:-mx-6 px-4 sm:px-6 flex items-center gap-1">
+        <TabBtn current={tab} value="basic"   icon={<Info    className="w-4 h-4" />}    label="基本信息" count={null} onClick={setTab} />
+        <TabBtn current={tab} value="history" icon={<History className="w-4 h-4" />}    label="操作历史" count={transactions.length} onClick={setTab} />
+        <TabBtn current={tab} value="trace"   icon={<GitBranch className="w-4 h-4" />} label="上下游追溯" count={upstream.length + downstream.length} onClick={setTab} />
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
+          <div className="text-sm text-red-700">{error}</div>
+        </div>
+      )}
+
+      {/* Tab Content */}
+      {tab === 'basic'   && effectiveStock && (
+        <BasicTab
+          stock={effectiveStock}
+          sourceInfo={sourceInfo}
+          statusInfo={statusInfo}
+          gradeInfo={gradeInfo}
+          available={available}
+          freezes={freezes}
+          onUnfreeze={async (freezeId) => {
+            if (!confirm('确定要解冻该记录吗？解冻后对应数量将恢复为可用。')) return;
+            try {
+              const result = await unfreezeInventory(freezeId);
+              if (result.success) {
+                loadAllData();
+                const { useInventoryStore } = await import('../../../stores/useInventoryStore');
+                useInventoryStore.getState().notifyChange();
+              } else {
+                alert(result.error || '解冻失败');
+              }
+            } catch (e: any) {
+              alert(e?.message || '解冻失败');
+            }
+          }}
+        />
+      )}
+      {tab === 'history' && <HistoryTab transactions={transactions} loading={loading} error={error} onRetry={loadAllData} />}
+      {tab === 'trace'   && (
+        <TraceTab
+          upstream={upstream}
+          downstream={downstream}
+          loading={loading}
+          onSelectChild={(instanceId) => {
+            const child = (upstream.find((u) => u.instanceId === instanceId)
+              || downstream.find((d) => d.instanceId === instanceId)) as any
+            if (child && child.instanceId) {
+              showAlert(`已选中 instanceId: ${instanceId}，链式跳转待 useInventoryStore 实例化后实现`, { title: '链式跳转' })
+            }
+          }}
+        />
+      )}
+    </Modal>
   );
 }
 
@@ -242,15 +295,19 @@ function TabBtn({ current, value, icon, label, count, onClick }: TabBtnProps) {
 
 // ---------- 基本信息 Tab ----------
 function BasicTab({
-  stock, sourceInfo, statusInfo, gradeInfo, available, freezesCount,
+  stock, sourceInfo, statusInfo, gradeInfo, available, freezes,
+  onUnfreeze,
 }: {
   stock: InventoryStock;
   sourceInfo: any;
   statusInfo: any;
   gradeInfo: any;
   available: number;
-  freezesCount: number;
+  freezes: any[];
+  onUnfreeze?: (freezeId: string) => void;
 }) {
+  const freezesCount = freezes.length;
+  const [showFreezeDetail, setShowFreezeDetail] = useState(false);
   const availableRatio = (stock.currentQuantity ?? 0) > 0
     ? Math.round((available / (stock.currentQuantity ?? 0)) * 100)
     : 0;
@@ -327,7 +384,16 @@ function BasicTab({
         ['已冻结',   <span className="font-mono text-blue-600">{stock.frozenQuantity} {stock.unit}</span>],
         ['可用数量', <span className="font-mono font-medium">{available} {stock.unit} <span className="text-xs text-gray-500">({availableRatio}%)</span></span>],
         ['目标产量', stock.targetYield ? `${stock.targetYield} ${stock.unit}` : '-'],
-        ['冻结记录', <span className="text-blue-600">{freezesCount} 条</span>],
+        ['冻结记录', (
+          <button
+            type="button"
+            onClick={() => setShowFreezeDetail(v => !v)}
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+          >
+            {freezesCount} 条
+            <span className="text-xs text-gray-400">{showFreezeDetail ? '▲' : '▼'}</span>
+          </button>
+        )],
       ],
     },
     {
@@ -364,19 +430,80 @@ function BasicTab({
   return (
     <div className="space-y-4">
       {sections.map((sec, i) => (
-        <div key={i} className={`${sec.bg} rounded-lg p-4 border ${sec.border.replace('border-', 'border-').replace('-300', '-200')}`}>
-          <h4 className={`text-sm font-semibold ${sec.text} mb-3 border-b ${sec.border} pb-1.5`}>
-            {sec.title}
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
-            {sec.items.map(([label, value], j) => (
-              <div key={j} className="flex flex-col">
-                <span className="text-xs text-gray-500">{label}</span>
-                <span className="text-sm text-gray-900 mt-0.5 break-all">{value}</span>
-              </div>
-            ))}
+        <React.Fragment key={i}>
+          <div className={`${sec.bg} rounded-lg p-4 border ${sec.border.replace('border-', 'border-').replace('-300', '-200')}`}>
+            <h4 className={`text-sm font-semibold ${sec.text} mb-3 border-b ${sec.border} pb-1.5`}>
+              {sec.title}
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
+              {sec.items.map(([label, value], j) => (
+                <div key={j} className="flex flex-col">
+                  <span className="text-xs text-gray-500">{label}</span>
+                  <span className="text-sm text-gray-900 mt-0.5 break-all">{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* 冻结明细（数量信息卡片下方展开） */}
+          {sec.title === '数量信息' && showFreezeDetail && freezesCount > 0 && (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h4 className="text-sm font-semibold text-blue-700 mb-2">冻结明细</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-blue-200">
+                      <th className="pb-1.5 pr-3 font-medium">方式</th>
+                      <th className="pb-1.5 pr-3 font-medium">数量</th>
+                      <th className="pb-1.5 pr-3 font-medium">用途/订单</th>
+                      <th className="pb-1.5 pr-3 font-medium">冻结日期</th>
+                      <th className="pb-1.5 pr-3 font-medium">状态</th>
+                      <th className="pb-1.5 font-medium">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100">
+                    {freezes.map((fz: any, idx: number) => (
+                      <tr key={fz.id || idx} className="text-gray-700">
+                        <td className="py-1.5 pr-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            fz.freezeType === 'order' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {fz.freezeType === 'order' ? '订单' : '手动'}
+                          </span>
+                        </td>
+                        <td className="py-1.5 pr-3 font-mono font-medium">{fz.freezeQuantity}</td>
+                        <td className="py-1.5 pr-3 max-w-[200px] truncate" title={fz.purpose || fz.orderCode || ''}>
+                          {fz.orderCode ? (
+                            <span className="font-mono text-purple-600">{fz.orderCode}</span>
+                          ) : fz.purpose || '-'}
+                        </td>
+                        <td className="py-1.5 pr-3 text-gray-500">{fz.freezeDate || '-'}</td>
+                        <td className="py-1.5 pr-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                            fz.status === 'frozen' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {fz.status === 'frozen' ? '生效中' : '已解冻'}
+                          </span>
+                        </td>
+                        <td className="py-1.5">
+                          {fz.status === 'frozen' && onUnfreeze && (
+                            <button
+                              type="button"
+                              onClick={() => onUnfreeze(fz.id)}
+                              className="text-red-500 hover:text-red-700 hover:underline text-xs"
+                            >
+                              解冻
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
       ))}
     </div>
   );

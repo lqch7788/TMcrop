@@ -21,6 +21,8 @@ import {
   InboundRequest,
   OutboundRequest,
   FreezeRequest,
+  FreezeResult,
+  FreezeRecord,
   TraceResult,
   DownstreamTraceResult,
   InventoryStats,
@@ -142,26 +144,19 @@ export async function outbound(request: OutboundRequest): Promise<InventoryOpera
  * 冻结库存
  * 调用后端 POST /api/inventory/freeze
  */
-export async function freezeInventory(request: FreezeRequest): Promise<InventoryOperationResult> {
+export async function freezeInventory(request: FreezeRequest): Promise<FreezeResult> {
   try {
-    const response = await enhancedApiClient.post<{
-      freezeId: string;
-      instanceId: string;
-      frozenQuantity: number;
-    }>('/inventory/freeze', {
+    const response = await enhancedApiClient.post<FreezeResult>('/inventory/freeze', {
       instanceId: request.instanceId,
-      frozenType: request.frozenType,
-      frozenQuantity: request.frozenQuantity,
-      businessId: request.businessId,
-      businessType: request.businessType,
+      freezeType: request.freezeType,
+      freezeQuantity: request.freezeQuantity,
+      orderId: request.orderId,
+      purpose: request.purpose,
       operatorId: request.operatorId,
       operatorName: request.operatorName,
       remarks: request.remarks,
     });
-    return {
-      success: true,
-      instanceId: response.instanceId,
-    };
+    return { success: true, ...response };
   } catch (error) {
     return {
       success: false,
@@ -171,13 +166,25 @@ export async function freezeInventory(request: FreezeRequest): Promise<Inventory
 }
 
 /**
- * 解冻库存
+ * 解冻库存（全部或部分）
  * 调用后端 POST /api/inventory/unfreeze/:freezeId
  */
-export async function unfreezeInventory(freezeId: string): Promise<InventoryOperationResult> {
+export async function unfreezeInventory(
+  freezeId: string,
+  quantity?: number,
+  operatorId?: string,
+  operatorName?: string,
+  remarks?: string
+): Promise<InventoryOperationResult> {
   try {
-    const response = await enhancedApiClient.post<{ instanceId: string }>(
-      `/inventory/unfreeze/${encodeURIComponent(freezeId)}`
+    const response = await enhancedApiClient.post<{
+      instanceId: string;
+      frozenQuantity: number;
+      unfrozenQuantity: number;
+      status: string;
+    }>(
+      `/inventory/unfreeze/${encodeURIComponent(freezeId)}`,
+      { quantity, operatorId, operatorName, remarks }
     );
     return {
       success: true,
@@ -262,6 +269,23 @@ export async function getAvailableQuantity(
     return await enhancedApiClient.get<AvailableQuantityResult>(
       `/inventory/available/${encodeURIComponent(instanceId)}`
     );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 根据 instanceId 获取单个库存记录
+ * 调用后端 GET /api/inventory/:id（兼容 id 或 instance_id 查询）
+ */
+export async function getInventoryByInstanceId(
+  instanceId: string
+): Promise<InventoryStock | null> {
+  try {
+    const data = await enhancedApiClient.get<InventoryStock>(
+      `/inventory/${encodeURIComponent(instanceId)}`
+    );
+    return data ? toCamelStock(data) : null;
   } catch {
     return null;
   }
@@ -382,6 +406,38 @@ export async function searchInventoryByCropName(
   return await enhancedApiClient.get<CropInventoryAggregation>(
     `/inventory/aggregate/by-crop${query ? `?${query}` : ''}`
   );
+}
+
+// ============================================
+// 订单关联辅助
+// ============================================
+
+/** 活跃订单（用于冻结关联） */
+export interface ActiveOrder {
+  id: string;
+  orderCode: string;
+  orderName?: string;
+  orderType?: string;
+  cropName?: string;
+  cropVariety?: string;
+  plannedQuantity: number;   // 计划数量（冻结参考），后端 COALESCE(planned_quantity, quantity)
+  unit?: string;
+  customerName?: string;
+  customerContact?: string;
+  expectedDeliveryDate?: string;
+  orderDate?: string;
+  status: string;
+  remarks?: string;
+}
+
+/** 获取活跃订单列表（用于冻结弹窗下拉选择） */
+export async function getActiveOrders(): Promise<ActiveOrder[]> {
+  try {
+    const result = await enhancedApiClient.get<{ success: boolean; data: ActiveOrder[] }>('/crop-orders/active');
+    return (result as any)?.data || (result as any) || [];
+  } catch {
+    return [];
+  }
 }
 
 // ============================================

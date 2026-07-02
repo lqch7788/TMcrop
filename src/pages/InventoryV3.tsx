@@ -18,6 +18,7 @@ import {
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
+import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
 import { DeleteConfirmModal } from '@/components/ui';
@@ -46,6 +47,8 @@ export default function InventoryV3Page() {
   // 弹窗状态
   const [outboundModalOpen, setOutboundModalOpen] = useState(false);
   const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
+  const [freezeModalOpen, setFreezeModalOpen] = useState(false);
+  const [selectedFreezeStock, setSelectedFreezeStock] = useState<InventoryStock | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
@@ -212,6 +215,17 @@ export default function InventoryV3Page() {
     [stocks]
   );
 
+  // 打开冻结弹窗
+  const handleOpenFreeze = (stock: InventoryStock) => {
+    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
+      && stock.status !== 'in_stock' && stock.status !== 'low_stock') {
+      showAlert('只有库存中或低库存状态的物品可以冻结');
+      return;
+    }
+    setSelectedFreezeStock(stock);
+    setFreezeModalOpen(true);
+  };
+
   // 打开出库弹窗
   const handleOpenOutbound = (stock: InventoryStock) => {
     if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
@@ -295,11 +309,20 @@ export default function InventoryV3Page() {
         pagination={pagination}
         onChange={setPagination}
         onOutbound={handleOpenOutbound}
+        onFreeze={handleOpenFreeze}
         onViewDetail={handleViewDetail}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         showCheckboxes={batchEditMode || deleteMode || exportMode}
         onSelectAll={handleSelectAll}
+      />
+
+      {/* 冻结弹窗 */}
+      <FreezeModal
+        isOpen={freezeModalOpen}
+        stock={selectedFreezeStock}
+        onClose={() => setFreezeModalOpen(false)}
+        onSuccess={handleOutboundSuccess}
       />
 
       {/* 出库弹窗 */}
