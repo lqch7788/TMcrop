@@ -1796,9 +1796,8 @@ router.post('/:id/harvest-records', async (req, res) => {
         quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
         now, now,
         generatedHarvestId, generatedStockId, generatedCircId,
-        // 2026-06-29: planting_self_kept 时用 seedForm 写入 source_form 列（果实/种子/枝条等）
-        // 兼容历史记录（circulate/self_seed）时不写，保留 NULL
-        destination === 'planting_self_kept' ? (seedForm || null) : null,
+        // 2026-07-02: harvest 分支也写 source_form — 修复历史记录"形态"列为空
+        (destination === 'planting_self_kept' || destination === 'harvest') ? (seedForm || null) : null,
       ])
 
       // UPDATE planting.status（标记为采收中，但未结束）
@@ -1833,6 +1832,8 @@ router.post('/:id/harvest-records', async (req, res) => {
         harvestRecordId: generatedHarvestId,
         inventoryStockId: generatedStockId,
         circulationRecordId: generatedCircId,
+        // 2026-07-02: 返回形态字段，前端 normalizeHarvestRecord 读取 sourceForm → seedForm
+        sourceForm: seedForm || null,
       }
     })
   } catch (e: any) {

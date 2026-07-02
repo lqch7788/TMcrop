@@ -5,9 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Boxes, Leaf, Package, Sprout } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
 // 一次性动作（CSV 导出）保留直调 client-side
@@ -24,7 +22,6 @@ import { showAlert } from '@/lib/dialogService';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
 import { DeleteConfirmModal } from '@/components/ui';
 
-import { InventoryStockTypeCards } from '../components/farm/inventory/InventoryStockTypeCards';
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
 import { InventoryDetailModal } from '../components/farm/inventory/InventoryDetailModal';
@@ -261,62 +258,6 @@ export default function InventoryV3Page() {
         onRefresh={loadAll}
         loading={loading}
       />
-
-      {/* 按库存类型分类小卡片 + Tab 切换（同一行：Tabs 左，分类汇总右） */}
-      <div className="flex items-stretch gap-3 flex-wrap">
-        {/* 库存类型 Tab 快速切换（加粗 + 高亮背景） */}
-        <div className="bg-white rounded-xl p-1 shadow-sm border border-gray-100 flex-1 min-w-0">
-          <Tabs
-            value={filters.stockType || 'all'}
-            onValueChange={(val) => {
-              // 同步更新筛选条件
-              const stockType =
-                val === 'all' ? '' :
-                val === 'seed' ? StockType.SEED :
-                val === 'seedling' ? StockType.SEEDLING :
-                val === 'product' ? StockType.PRODUCT : '';
-              setFilters({ ...filters, stockType: stockType as StockType | '' });
-            }}
-          >
-            <TabsList className="w-full justify-start bg-transparent p-0 gap-2 flex-wrap">
-              {[
-                { key: 'all', label: '全部', icon: <Package className="w-4 h-4" />,
-                  activeStyle: 'bg-blue-600 text-white shadow-md ring-1 ring-blue-700' },
-                { key: 'seed', label: '商品种源', icon: <Leaf className="w-4 h-4" />,
-                  activeStyle: 'bg-amber-500 text-white shadow-md ring-1 ring-amber-600' },
-                { key: 'seedling', label: '种苗', icon: <Sprout className="w-4 h-4" />,
-                  activeStyle: 'bg-green-500 text-white shadow-md ring-1 ring-green-600' },
-                { key: 'product', label: '成品', icon: <Package className="w-4 h-4" />,
-                  activeStyle: 'bg-emerald-500 text-white shadow-md ring-1 ring-emerald-600' },
-              ].map((tab) => {
-                const isActive =
-                  (filters.stockType === '' && tab.key === 'all') ||
-                  filters.stockType === tab.key;
-                return (
-                  <TabsTrigger
-                    key={tab.key}
-                    value={tab.key}
-                    className={cn(
-                      'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all',
-                      isActive
-                        ? tab.activeStyle
-                        : 'text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-900'
-                    )}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* 分类汇总（靠右） */}
-        <div className="shrink-0">
-          <InventoryStockTypeCards byStockType={stats?.byStockType} />
-        </div>
-      </div>
 
       {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
       <ActionToolbar

@@ -24,7 +24,6 @@ import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useIn
 // → version 自增 → 此 useEffect 重跑 → 重新加载最新数据）
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import {
-  OutboundRecordsStats,
   OutboundRecordsFilter,
   OutboundRecordsTable,
 } from '@/components/farm/inventory/OutboundRecordsComponents';
@@ -209,9 +208,6 @@ export default function OutboundRecordsPage() {
           </div>
         </div>
       </div>
-
-      {/* 顶部：7 个紧凑型卡片（4 数值 + 3 分类）同一行 */}
-      <OutboundRecordsStats summary={summary} loading={loading} />
 
       {/* 6 维筛选 */}
       <OutboundRecordsFilter value={query as unknown as ServiceOutboundQuery} onChange={handleFilterChange} onReset={handleReset} />
