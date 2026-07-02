@@ -22,6 +22,8 @@ interface ExtraTab {
   label: string;
   icon?: React.ReactNode;
   content: React.ReactNode;
+  /** 悬停提示 — 解释该 tab 的作用 */
+  tooltip?: string;
 }
 
 interface EntityDetailModalProps {
@@ -113,6 +115,9 @@ export function EntityDetailModal({
           >
             {tab.icon}
             {tab.label}
+            {tab.tooltip && (
+              <span className="text-gray-400 cursor-help ml-0.5" title={tab.tooltip}>ⓘ</span>
+            )}
           </Button>
         ))}
       </div>

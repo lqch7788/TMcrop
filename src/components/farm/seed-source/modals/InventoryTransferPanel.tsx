@@ -30,6 +30,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  Pagination,
   Alert,
   AlertDescription,
   EmptyState,
@@ -112,6 +113,14 @@ export function InventoryTransferPanel({
   const [rows, setRows] = useState<TransferableSourceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // 客户端分页
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, page, pageSize]);
 
   // ============ 选择状态 ============
   // Map<stockId, { quantity: number }> — unit 继承自原库存（无需存储）
@@ -146,22 +155,30 @@ export function InventoryTransferPanel({
   // 兼容旧版 setHasInteracted 调用点（保留为 setter wrapper）
   const setHasInteracted = (v: boolean) => { hasInteractedRef.current = v; };
 
+  // 初始化加载：面板打开时自动加载数据（不等待用户交互）
+  useEffect(() => {
+    loadRows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 筛选条件变化时重载（仅在用户交互后才生效）
   useEffect(() => {
     if (!hasInteractedRef.current) return;
+    setPage(1);
     loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stockTypeFilter.join(','), dateFrom, dateTo, hasInteracted, targetCropName, targetCropVariety, mode]);
+  }, [stockTypeFilter.join(','), dateFrom, dateTo, targetCropName, targetCropVariety, mode]);
 
   // 关键字用 debounce（300ms）
   useEffect(() => {
-    if (!hasInteracted) return;
+    if (!hasInteractedRef.current) return;
+    setPage(1);
     const timer = setTimeout(() => {
       loadRows();
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, hasInteracted]);
+  }, [keyword]);
 
   // 用户操作时标记已交互 → 触发首次加载
   const markInteracted = () => setHasInteracted(true);
@@ -203,22 +220,22 @@ export function InventoryTransferPanel({
 
   // ============ 全选 / 反选当前可见行 ============
   const allVisibleSelected = useMemo(() => {
-    return rows.length > 0 && rows.every((r) => selected.has(r.id));
-  }, [rows, selected]);
+    return pagedRows.length > 0 && pagedRows.every((r) => selected.has(r.id));
+  }, [pagedRows, selected]);
 
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
       // 反选：移除所有当前可见
       setSelected((prev) => {
         const next = new Map(prev);
-        rows.forEach((r) => next.delete(r.id));
+        pagedRows.forEach((r) => next.delete(r.id));
         return next;
       });
     } else {
       // 全选：加入所有当前可见（数量 = currentQuantity）
       setSelected((prev) => {
         const next = new Map(prev);
-        rows.forEach((r) => {
+        pagedRows.forEach((r) => {
           if (!next.has(r.id)) {
             next.set(r.id, { quantity: r.currentQuantity });
           }
@@ -373,7 +390,7 @@ export function InventoryTransferPanel({
           <Skeleton className="h-8 w-full" />
         </Card>
       ) : rows.length === 0 ? (
-        hasInteracted ? (
+        hasInteractedRef.current ? (
           <EmptyState
             title="暂无可调拨库存"
             description="作物库存中没有符合条件的记录，请调整筛选条件或先去库存页登记入库"
@@ -387,27 +404,26 @@ export function InventoryTransferPanel({
       ) : (
         <Card className="overflow-x-auto p-0">
           <Table className="table-fixed w-[1100px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10 text-center">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600">
+              <TableRow className="hover:from-blue-500 hover:to-blue-600">
+                <TableHead className="w-10 text-center text-white text-sm font-semibold">
                   <Checkbox
                     checked={allVisibleSelected}
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="w-44">库存编号</TableHead>
-                <TableHead className="w-24">类型</TableHead>
-                <TableHead className="w-52">作物 / 品种</TableHead>
-                {/* 2026-06-30 Bug 13：「形态」列（库存类型 下方），方便挑选不同形态的库存做调拨 */}
-                <TableHead className="w-28">形态</TableHead>
-                <TableHead className="w-32 text-right">可用数量</TableHead>
-                <TableHead className="w-48">调拨数量</TableHead>
-                <TableHead className="w-32">入库日期</TableHead>
-                <TableHead className="w-40">采收来源</TableHead>
+                <TableHead className="w-44 text-white text-sm font-semibold">库存编号</TableHead>
+                <TableHead className="w-24 text-white text-sm font-semibold">类型</TableHead>
+                <TableHead className="w-52 text-white text-sm font-semibold">作物 / 品种</TableHead>
+                <TableHead className="w-28 text-white text-sm font-semibold">形态</TableHead>
+                <TableHead className="w-32 text-right text-white text-sm font-semibold">可用数量</TableHead>
+                <TableHead className="w-48 text-white text-sm font-semibold">调拨数量</TableHead>
+                <TableHead className="w-32 text-white text-sm font-semibold">入库日期</TableHead>
+                <TableHead className="w-40 text-white text-sm font-semibold">采收来源</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => {
+              {pagedRows.map((row) => {
                 const isSelected = selected.has(row.id);
                 const sel = selected.get(row.id);
                 const qty = sel?.quantity ?? 0;
@@ -496,6 +512,23 @@ export function InventoryTransferPanel({
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {/* 分页 */}
+      {rows.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white rounded-xl">
+          <div className="text-sm text-gray-500">
+            显示 {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, rows.length)} 条，共 {rows.length} 条
+          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.max(1, Math.ceil(rows.length / pageSize))}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            showPageSize={true}
+          />
+        </div>
       )}
 
       {/* ============ 底部操作栏（仅确认调拨）==========

@@ -12,6 +12,7 @@ export function mapPropagationToCategory(propagationType: string | null | undefi
     BREEDING: 'breeding',
     SEED_SAVING: 'self_produced',
     ASEXUAL: 'asexual',
+    PLANTING_SELF_KEPT: 'planting_self_kept',
     TRANSFER_FROM_INVENTORY: 'transfer',
     GRAFTING: 'grafting',
     TISSUE_CULTURE: 'tissue_culture',

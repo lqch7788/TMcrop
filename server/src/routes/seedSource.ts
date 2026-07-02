@@ -237,17 +237,20 @@ router.get('/:id/move-records', (req, res) => {
     const seedSourceId = String(req.params.id)
     const rows = queryToObjects<any>(
       getDatabase(),
-      `SELECT id, operation_date AS operationDate,
-              operation_type AS operationType, quantity,
-              source_id AS sourceId, source_code AS sourceCode,
-              planting_id AS plantingId, planting_code AS plantingCode,
-              to_area_id AS toAreaId, to_area_name AS toAreaName,
-              from_area_id AS fromAreaId, from_area_name AS fromAreaName,
-              operator_name AS operatorName, remarks,
-              create_time AS createTime
-       FROM planting_move_records
-       WHERE source_id = ? AND source_type = 'seed'
-       ORDER BY operation_date DESC, create_time DESC`,
+      `SELECT pmr.id, pmr.operation_date AS operationDate,
+              pmr.operation_type AS operationType, pmr.quantity,
+              pmr.source_id AS sourceId, pmr.source_code AS sourceCode,
+              pmr.planting_id AS plantingId, pmr.planting_code AS plantingCode,
+              pmr.to_area_id AS toAreaId, pmr.to_area_name AS toAreaName,
+              pmr.from_area_id AS fromAreaId, pmr.from_area_name AS fromAreaName,
+              pmr.operator_name AS operatorName, pmr.remarks,
+              pmr.create_time AS createTime,
+              ss.crop_name AS cropName, ss.crop_code AS cropCode,
+              ss.seed_form AS seedForm
+       FROM planting_move_records pmr
+       LEFT JOIN seed_sources ss ON ss.id = pmr.source_id
+       WHERE pmr.source_id = ? AND pmr.source_type = 'seed'
+       ORDER BY pmr.operation_date DESC, pmr.create_time DESC`,
       [seedSourceId]
     )
     res.json({ success: true, data: rows })

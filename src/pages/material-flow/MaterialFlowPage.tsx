@@ -49,9 +49,7 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'plan→seed_source': '计划→种源',
   'planting→seed_source': '种植→种源',
   'inventory→freeze': '库存→冻结',
-  'external→seedling': '外部→育苗',
   'harvest→inventory': '采收→入库',
-  'inventory→seed_source': '库存→种源',
   'other': '其他',
 };
 
@@ -75,9 +73,7 @@ const FLOW_TYPE_COLOR: Record<string, string> = {
   'plan→seed_source':     'bg-sky-500',
   'planting→seed_source': 'bg-teal-500',
   'inventory→freeze':     'bg-rose-500',
-  'external→seedling':    'bg-purple-600',
   'harvest→inventory':    'bg-orange-600',
-  'inventory→seed_source': 'bg-cyan-700',
   'other':                'bg-slate-500',
 };
 

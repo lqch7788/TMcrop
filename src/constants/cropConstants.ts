@@ -180,6 +180,8 @@ export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, { label: string; b
   // 2026-06-24 兼容：早期 service 误将 'transfer_from_inventory' 写入 inventory_stock.source_type，
   // 现已改为 'inventory_transfer'，保留此别名让历史数据仍能渲染中文
   transfer_from_inventory: { label: '库存调拨', bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  // 2026-07-02: 种植留种回流（SRC-CUT/SRC-SS 统一）
+  planting_self_kept:   { label: '种植留种',     bg: 'bg-green-100',   text: 'text-green-700' },
 };
 
 /** 兼容旧用法：仅返回 label（避免破坏老代码） */
@@ -373,6 +375,7 @@ export const PROPAGATION_TYPE_LABELS: Record<string, string> = {
   breeding: '育种计划',
   seed_saving: '种植留种',
   asexual: '无性繁殖',
+  planting_self_kept: '种植留种',
   // 2026-06-24: 库存调拨入种源（新增繁殖途径）
   transfer_from_inventory: '库存调拨',
 };
