@@ -271,7 +271,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
           created_by: (req as any).user?.name || '',
         });
       }
-    } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+    } catch (e) { console.error('[inventoryTransactions] writeFlowLog 失败:', (e as any)?.message || e); }
 
     // 9. 返回 Store OutboundRow 全字段（用 transformRow）
     const txRow = {

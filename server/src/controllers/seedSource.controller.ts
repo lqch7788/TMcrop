@@ -140,7 +140,7 @@ export class SeedSourceController {
           business_code: (data as any).seed_code || (data as any).seedCode || '',
           created_by: (data as any).create_by || (data as any).createBy || '',
         });
-      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+      } catch (e) { console.error('[seedSource] writeFlowLog 失败:', (e as any)?.message || e); }
       // 2026-06-26: 写审计日志
       this.writeAuditLog({
         seedSourceId: (result as any)?.id || '',

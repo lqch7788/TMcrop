@@ -42,7 +42,7 @@ export class InventoryController {
           business_code: body.business_code || body.businessCode || '',
           created_by: body.create_by || body.createBy || '',
         });
-      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+      } catch (e) { console.error('[inventory.controller] writeFlowLog 失败:', (e as any)?.message || e); }
 
       res.json({
         success: true,

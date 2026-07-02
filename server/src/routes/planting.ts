@@ -659,6 +659,38 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     );
 
     saveDatabase();
+
+    // 写入 material_flow_log（P0 修复 — 编辑采收记录时补链）
+    if (destination === 'harvest' && generatedHarvestId && generatedStockId) {
+      try {
+        const plantCode = old.planting_code || id;
+        const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`;
+        const instanceId = `IPR${dateStr}-${String(Date.now()).slice(-4)}`;
+        writeFlowLog({
+          flow_type: 'planting→harvest',
+          crop_name: old.crop_name || '',
+          crop_variety: old.crop_variety || '',
+          source_type: 'planting', source_id: id, source_code: plantCode,
+          source_quantity: quantity, source_unit: unit || harvestUnit,
+          source_category: 'planting',
+          target_type: 'harvest', target_id: generatedHarvestId, target_code: harvestCode,
+          target_quantity: quantity, target_unit: unit || harvestUnit,
+          business_code: harvestCode, created_by: old.create_by || 'system',
+        });
+        writeFlowLog({
+          flow_type: 'harvest→inventory',
+          crop_name: old.crop_name || '',
+          crop_variety: old.crop_variety || '',
+          source_type: 'harvest', source_id: generatedHarvestId, source_code: harvestCode,
+          source_quantity: quantity, source_unit: unit || harvestUnit,
+          source_category: 'self_produced',
+          target_type: 'inventory_stock', target_id: generatedStockId, target_code: instanceId,
+          target_quantity: quantity, target_unit: unit || harvestUnit,
+          business_code: harvestCode, created_by: old.create_by || 'system',
+        });
+      } catch (e) { console.error('[planting] writeFlowLog 失败:', (e as any)?.message || e); }
+    }
+
     res.json({ success: true, data: { id: recordId } });
   } catch (e: any) {
     console.error('编辑采收记录失败:', e);
@@ -877,7 +909,7 @@ router.post('/', (req: Request, res: Response) => {
           }
           // 不再做可用量校验和累加（业务上已停用）
         }
-        flowType = 'seedling→planting(deprecated)';
+        flowType = 'seedling→planting';
       }
 
       // 插入种植记录
@@ -940,6 +972,16 @@ router.post('/', (req: Request, res: Response) => {
       );
 
       // 写入 material_flow_log 流转流水
+      // 查询种源来源类别（从 seed_sources.propagation_type 映射）
+      let flowSourceCategory: string | null = null;
+      if (finalSourceId && (finalSourceType === 'seed_source' || finalSourceType === 'seed')) {
+        try {
+          const { mapPropagationToCategory } = require('../lib/sourceCategoryMapper');
+          const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [finalSourceId]);
+          const propType = srcInfo[0]?.values?.[0]?.[0] as string | undefined;
+          flowSourceCategory = propType ? mapPropagationToCategory(propType) : null;
+        } catch { /* 查不到就算了 */ }
+      }
       writeFlowLog({
         flow_type: flowType,
         crop_name: finalCropName,
@@ -949,7 +991,7 @@ router.post('/', (req: Request, res: Response) => {
         source_code: finalSourceName || null,
         source_quantity: finalPlantingQuantity,
         source_unit: '株',
-        source_category: null,
+        source_category: flowSourceCategory,
         target_type: 'planting',
         target_id: newId,
         target_code: finalPlantCode,
@@ -1952,6 +1994,49 @@ router.post('/:id/end', async (req, res) => {
         [now, harvestQty, now, finalIsHarvestLocked, now, id]
       )
       saveDatabase()
+
+      // 写入 material_flow_log：种植→采收（P0 修复 — 补齐采收链路）
+      try {
+        // 链 1：种植 → 采收
+        writeFlowLog({
+          flow_type: 'planting→harvest',
+          crop_name: planting.crop_name || '',
+          crop_variety: planting.crop_variety || '',
+          source_type: 'planting',
+          source_id: id,
+          source_code: planting.planting_code || id,
+          source_quantity: harvestQty,
+          source_unit: harvestUnit,
+          source_category: 'planting',
+          target_type: 'harvest',
+          target_id: harvestId,
+          target_code: harvestCode,
+          target_quantity: harvestQty,
+          target_unit: harvestUnit,
+          business_code: harvestCode,
+          created_by: operator,
+        });
+        // 链 2：采收 → 入库
+        writeFlowLog({
+          flow_type: 'harvest→inventory',
+          crop_name: planting.crop_name || '',
+          crop_variety: planting.crop_variety || '',
+          source_type: 'harvest',
+          source_id: harvestId,
+          source_code: harvestCode,
+          source_quantity: harvestQty,
+          source_unit: harvestUnit,
+          source_category: 'self_produced',
+          target_type: 'inventory_stock',
+          target_id: stockId,
+          target_code: instanceId,
+          target_quantity: harvestQty,
+          target_unit: harvestUnit,
+          business_code: harvestCode,
+          created_by: operator,
+        });
+      } catch (e) { console.error('[planting] writeFlowLog 失败:', (e as any)?.message || e); }
+
       return res.json({
         success: true,
         data: {

@@ -3,15 +3,25 @@
  * 2026-06-13 新建
  */
 
-/** 种源 propagationType -> source_category */
+/** 种源 propagationType -> source_category（大小写不敏感匹配） */
 export function mapPropagationToCategory(propagationType: string | null | undefined): string {
+  if (!propagationType) return 'other';
   const map: Record<string, string> = {
     EXTERNAL: 'external_purchase',
+    EXTERNAL_PURCHASE: 'external_purchase',
     BREEDING: 'breeding',
     SEED_SAVING: 'self_produced',
     ASEXUAL: 'asexual',
+    TRANSFER_FROM_INVENTORY: 'transfer',
+    GRAFTING: 'grafting',
+    TISSUE_CULTURE: 'tissue_culture',
+    CUTTING: 'cutting',
+    DIVISION: 'division',
+    LAYERING: 'layering',
+    BULB: 'bulb',
   };
-  return (propagationType && map[propagationType]) ? map[propagationType] : 'other';
+  const key = propagationType.toUpperCase();
+  return map[key] || 'other';
 }
 
 /** 库存 sourceType -> source_category */

@@ -368,9 +368,16 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
 
   // 2026-06-19: 写 material_flow_log（数量回填到原种源）
   try {
+    // P4 修复：尝试从源表查找 crop_name
+    let quantityCropName = '';
+    try {
+      const srcTable = input.sourceModule === 'planting' ? 'plantings' : (input.sourceModule === 'seedling' ? 'seedlings' : 'seed_sources');
+      const srcRow = db.exec(`SELECT crop_name FROM ${srcTable} WHERE id = ? LIMIT 1`, [input.sourceId]);
+      quantityCropName = String(srcRow[0]?.values?.[0]?.[0] || '');
+    } catch { /* 查不到就用空字符串 */ }
     writeFlowLog({
       flow_type: `${input.sourceModule || 'seed_source'}→seed_source`,
-      crop_name: '',
+      crop_name: quantityCropName,
       source_type: input.sourceModule || null,
       source_id: input.sourceId || null,
       source_code: input.sourceRecordCode || input.sourceId || null,
@@ -432,9 +439,16 @@ function executeDisposal(input: CirculationInput, circId: string): CirculationRe
 
   // 2026-06-19: 写 material_flow_log（处置废弃）— 用 correction 类型记录数量变化
   try {
+    // P4 修复：尝试从源表查找 crop_name
+    let disposalCropName = '';
+    try {
+      const srcTable = input.sourceModule === 'planting' ? 'plantings' : (input.sourceModule === 'seedling' ? 'seedlings' : 'seed_sources');
+      const srcRow = db.exec(`SELECT crop_name FROM ${srcTable} WHERE id = ? LIMIT 1`, [input.sourceId]);
+      disposalCropName = String(srcRow[0]?.values?.[0]?.[0] || '');
+    } catch { /* 查不到就用空字符串 */ }
     writeFlowLog({
       flow_type: 'correction',
-      crop_name: '',
+      crop_name: disposalCropName,
       source_type: input.sourceModule || null,
       source_id: input.sourceId || null,
       source_code: input.sourceRecordCode || input.sourceId || null,

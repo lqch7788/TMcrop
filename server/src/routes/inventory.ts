@@ -617,7 +617,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
           business_code: orderCode || null,
           created_by: body.operatorName || '',
         });
-      } catch { /* flow_log 写入失败不影响主流程 */ }
+      } catch (e) { console.error('[inventory] writeFlowLog 失败:', (e as any)?.message || e); }
 
       saveDatabase();
 

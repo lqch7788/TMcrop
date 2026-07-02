@@ -1066,7 +1066,7 @@ router.post('/', (req: Request, res: Response) => {
           target_quantity: seedling_quantity || 0, target_unit: '株',
           business_code: seedling_code, created_by: create_by || '',
         });
-      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+      } catch (e) { console.error('[seedling] writeFlowLog 失败:', (e as any)?.message || e); }
     } else if (source_id) {
       try {
         const { writeFlowLog } = require('../services/flowLogService');
@@ -1085,7 +1085,7 @@ router.post('/', (req: Request, res: Response) => {
           target_quantity: seedling_quantity || 0, target_unit: '株',
           business_code: seedling_code, created_by: create_by || '',
         });
-      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+      } catch (e) { console.error('[seedling] writeFlowLog 失败:', (e as any)?.message || e); }
     }
 
     saveDatabase();
