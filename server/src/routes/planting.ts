@@ -523,10 +523,9 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         });
       }
     }
-    // 2026-06-18: 单位字典白名单校验
-    const unitParse = UNIT_ENUM.safeParse(unit);
-    if (!unitParse.success) {
-      return res.status(400).json({ success: false, error: '单位必须是字典中的值（袋/株/粒/千克/克/吨/亩）' });
+    // 2026-07-01 修复：放宽 unit 校验，与 POST 路由一致（朵等单位可入库）
+    if (unit && typeof unit !== 'string') {
+      return res.status(400).json({ success: false, error: '单位类型错误' });
     }
 
     // === 反向补偿：删除旧的下游副作用 ===
@@ -636,6 +635,15 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     }
 
     // UPDATE planting_harvest_records
+    // 2026-07-01 修复：planting_self_kept 自动写"内部种源库"（与 POST 路由一致）
+    const putFinalWarehouseId = (() => {
+      if (destination === 'planting_self_kept' && !warehouseId) return 'SEED_SOURCE_VIRTUAL'
+      return warehouseId || null
+    })()
+    const putFinalWarehouseName = (() => {
+      if (destination === 'planting_self_kept') return warehouseName || '内部种源库'
+      return warehouseName || null
+    })()
     db.run(
       `UPDATE planting_harvest_records SET
         record_date = ?, destination = ?, sub_type = ?, warehouse_id = ?, warehouse_name = ?,
@@ -643,7 +651,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         harvest_record_id = ?, inventory_stock_id = ?, circulation_record_id = ?
        WHERE id = ? AND planting_id = ?`,
       [
-        recordDate || now.split('T')[0], destination, subType || null, warehouseId || null, warehouseName || null,
+        recordDate || now.split('T')[0], destination, subType || null, putFinalWarehouseId, putFinalWarehouseName,
         quantity, unit || 'g', notes || null, now,
         generatedHarvestId, generatedStockId, generatedCircId,
         recordId, id,
@@ -1697,9 +1705,13 @@ router.post('/:id/harvest-records', async (req, res) => {
         })
       }
     }
-    // 2026-06-18: 单位字典白名单校验
-    const postUnitParse = UNIT_ENUM.safeParse(unit)
-    if (!postUnitParse.success) return res.status(400).json({ success: false, error: '单位必须是字典中的值（袋/株/粒/千克/克/吨/亩）' })
+    // 2026-07-01 修复：放宽 unit 校验，与 inventory/inbound-from-source 一致
+    // 原因：inventory 入库允许"朵"等单位（仅 z.string().min(1) 校验），
+    //       但 planting_harvest_records 仍用 UNIT_ENUM 强白名单，导致行级采收入库后
+    //       同步写 planting_harvest_records 被后端拒
+    if (unit && typeof unit !== 'string') {
+      return res.status(400).json({ success: false, error: '单位类型错误' })
+    }
 
     const now = formatLocalDateISO()
     const harvestRecordId = `PHR${Date.now()}`
@@ -1707,6 +1719,14 @@ router.post('/:id/harvest-records', async (req, res) => {
     let generatedHarvestId: string | null = null
     let generatedStockId: string | null = null
     let generatedCircId: string | null = null
+    // 2026-07-01 修复：planting_self_kept 自动写"内部种源库"虚拟仓库
+    // 声明在 try 块外，让响应也能用
+    let finalWarehouseId: string | null = warehouseId || null
+    let finalWarehouseName: string | null = warehouseName || null
+    if (destination === 'planting_self_kept') {
+      if (!finalWarehouseName) finalWarehouseName = '内部种源库'
+      if (!finalWarehouseId) finalWarehouseId = 'SEED_SOURCE_VIRTUAL'
+    }
 
     // === 副作用前置：种植自留种回流 destination 必须先调 executeCirculation ===
     // (executeCirculation 内部调 saveDatabase()，与外层 BEGIN/COMMIT 冲突会破坏 sql.js 事务状态 — 与 /end 路由保持一致: 不在外层事务中)
@@ -1760,8 +1780,7 @@ router.post('/:id/harvest-records', async (req, res) => {
       // 注: circulate / self_seed 已在 BEGIN 之前完成 executeCirculation (避免与外层事务冲突)
 
       // INSERT planting_harvest_records（副作用审计记录）
-      // 2026-06-29: 加 source_form 列（planting_self_kept 时存采收形态）
-      // 与 inventory_stock.source_form 同名复用（"果实/种子/枝条..."）
+      // 2026-07-01 修复：planting_self_kept 自动写"内部种源库"虚拟仓库（finalWarehouseId/Name 在 try 块外声明）
       db.run(`
         INSERT INTO planting_harvest_records (
           id, record_type, record_date, planting_id, planting_code,
@@ -1773,7 +1792,7 @@ router.post('/:id/harvest-records', async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         harvestRecordId, 'planting', recordDate || now.split('T')[0], plantingId, planting.planting_code,
-        destination, subType || null, warehouseId || null, warehouseName || null,
+        destination, subType || null, finalWarehouseId, finalWarehouseName,
         quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
         now, now,
         generatedHarvestId, generatedStockId, generatedCircId,
@@ -1801,8 +1820,9 @@ router.post('/:id/harvest-records', async (req, res) => {
         plantingId,
         destination,
         subType: subType || null,
-        warehouseId: warehouseId || null,
-        warehouseName: warehouseName || null,
+        // 2026-07-01 修复：响应也用 finalWarehouseId / finalWarehouseName（与 INSERT 一致）
+        warehouseId: finalWarehouseId,
+        warehouseName: finalWarehouseName,
         quantity,
         unit: unit || 'g',
         notes: notes || null,
