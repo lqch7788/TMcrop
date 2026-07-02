@@ -60,6 +60,22 @@ interface HarvestRecordModalProps {
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
 
+// 2026-07-01 P2-10 修复：补全 Warehouse / User 接口，减少 6 处 `any`
+interface WarehouseLite {
+  id?: string
+  oid?: string
+  name?: string
+  warehouseName?: string
+  status?: string
+}
+interface UserLite {
+  oid?: string
+  id?: string
+  realName?: string
+  real_name?: string
+  username?: string
+}
+
 // 2026-06-29: 种植自留种 — 采收形态选项（替代 circulate/self_seed 的 subType 三选一）
 // 与 harvest 模式共享 sourceForm state，但语义不同：
 // - harvest 模式：果实/种子/种苗... 用于入库产物分类（inventory_stock.product_form）
@@ -115,8 +131,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [destination, setDestination] = useState<EndType | null>(null)
   const [subType, setSubType] = useState<SubType>('cutting')
   const [quantity, setQuantity] = useState<number | string>(0)
-  // 2026-06-18: 单位默认值从字典选取，旧 'g' 兼容映射为 '克'
-  const [unit, setUnit] = useState<string>('克')
+  // 2026-07-01 P0-4 修复：单位初值用 record.unit 优先，没有再 fallback 到 '克'
+  // 原因：硬编码 '克' 导致默认单位与 record.unit（一般是 '株'）不一致，每次都要手动切换
+  const [unit, setUnit] = useState<string>(record.unit || '克')
   const [warehouseId, setWarehouseId] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
   const [recordDate, setRecordDate] = useState<string>(todayLocal())
@@ -192,21 +209,16 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       if (currentUser?.realName && !operator) {
         setOperator(currentUser.realName)
       }
-    }
-    // 字典加载完成后，若 unit 仍为旧的 'g' 占位，尝试对齐到 '克'
-    if (dictionaries.length > 0 && unit === '克' && record.unit && record.unit !== '克') {
-      // 仅在 record.unit 已是字典值时切换
-      if (unitOptions.includes(record.unit)) {
+      // 2026-07-01 P0-4 修复：每次弹窗打开/record 切换时，强制同步 record.unit 与表单 unit
+      if (record.unit) {
         setUnit(record.unit)
-      } else if (record.unit === 'g' && unitOptions.includes('克')) {
-        // 兼容旧数据 'g' 已是 '克'（默认占位），无需切换
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, warehouses.length, loadWarehouses, loadHarvestRecords, record.id, dictionaries.length, loadDictionaries, users.length, loadUsers, currentUser?.realName])
+  }, [isOpen, warehouses.length, loadWarehouses, loadHarvestRecords, record.id, dictionaries.length, loadDictionaries, users.length, loadUsers, currentUser?.realName, record.unit])
 
   const harvestRecords: PlantingHarvestRecord[] = harvestRecordsMap[record.id] || []
-  const activeWarehouses = warehouses.filter((w: any) => !w.status || w.status === 'active')
+  const activeWarehouses = warehouses.filter((w: WarehouseLite) => !w.status || w.status === 'active')
 
   // 2026-06-30 Bug 12 修复：顶部"采收形态"选择 → 自动同步到 products[0].productForm
   // 原因：submitUnifiedInbound 入参 products[].productForm 是写入 inventory_stock.product_form 的唯一通道
@@ -268,7 +280,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   }
 
   // 2026-06-19: 采收人员切换
-  const toggleHarvester = (u: any) => {
+  const toggleHarvester = (u: UserLite) => {
     const name = u.realName || u.real_name || u.username
     const id = u.oid || u.id || `H${harvesterNames.length}`
     if (harvesterNames.includes(name)) {
@@ -363,7 +375,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
       setSubmitting(true)
       try {
-        const warehouse = activeWarehouses.find((w: any) => w.id === warehouseId || w.oid === warehouseId)
+        const warehouse = activeWarehouses.find((w: WarehouseLite) => w.id === warehouseId || w.oid === warehouseId)
         const result = await submitUnifiedInbound({
           stockType: 'product',
           sourceModule: 'planting',
@@ -437,7 +449,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         seedForm: requiresSelfKept ? sourceForm : undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
-          ? activeWarehouses.find((w: any) => w.id === warehouseId || w.oid === warehouseId)?.name
+          ? activeWarehouses.find((w: WarehouseLite) => w.id === warehouseId || w.oid === warehouseId)?.name
           : undefined,
         quantity: qtyNum,
         unit,
@@ -554,7 +566,13 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             </div>
             <div>
               <Label>去向 *</Label>
-              <Select value={destination ?? ''} onValueChange={(v) => setDestination(v as EndType)}>
+              <Select value={destination ?? ''} onValueChange={(v) => {
+                setDestination(v as EndType);
+                // 2026-07-01 P0-3 修复：destination 切换时重置 harvest 专属字段
+                // 原因：避免上次填写的 sourceForm/products 残留到下次提交
+                setSourceForm('');
+                setUnitPrice(0);
+              }}>
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
@@ -640,7 +658,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                       <SelectValue placeholder="请选择仓库" />
                     </SelectTrigger>
                     <SelectContent>
-                      {activeWarehouses.map((w: any) => (
+                      {activeWarehouses.map((w: WarehouseLite) => (
                         <SelectItem key={w.id || w.oid} value={w.id || w.oid}>
                           {w.name || w.warehouseName || w.id}
                         </SelectItem>
@@ -719,7 +737,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                         {users.length === 0 ? (
                           <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
                         ) : (
-                          users.map((u: any) => {
+                          users.map((u: UserLite) => {
                             const name = u.realName || u.real_name || u.username
                             const checked = harvesterNames.includes(name)
                             return (

@@ -25,7 +25,7 @@ import PlantingLabelManageModal from './modals/PlantingLabelManageModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
 import PlantingMoveRecordsModal from './modals/PlantingMoveRecordsModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
-import { useAuthPermission } from '../../../hooks/usePermission';
+// 2026-07-01 P2-8 修复：useAuthPermission 是死代码（已 hardcode 全部 true），删除
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
@@ -37,8 +37,7 @@ export default function PlantingPage() {
   const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
-  // 种植模块权限 - 已取消，直接设置为 true
+  // 2026-07-01 P2-8 修复：原 useAuthPermission hook 是死代码（已 hardcode 全部 true），删除
   const canCreate = true;
   const canEdit = true;
   const canDelete = true;
@@ -71,7 +70,7 @@ export default function PlantingPage() {
     countMin: undefined,
     countMax: undefined,
   });
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 

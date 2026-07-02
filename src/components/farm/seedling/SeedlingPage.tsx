@@ -23,7 +23,7 @@ import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore,
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
-import { useAuthPermission } from '../../../hooks/usePermission';
+// 2026-07-01 P2-8 修复：useAuthPermission 是死代码（已 hardcode 全部 true），删除
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
@@ -35,8 +35,7 @@ export default function SeedlingPage() {
   const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
-  // const { can } = useAuthPermission();
-  // 育苗模块权限 - 已取消，直接设置为 true
+  // 2026-07-01 P2-8 修复：原 useAuthPermission hook 是死代码（已 hardcode 全部 true），删除
   const canCreate = true;
   const canEdit = true;
   const canDelete = true;
@@ -66,7 +65,7 @@ export default function SeedlingPage() {
     createBy: '',
     status: ''
   });
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -247,8 +246,10 @@ export default function SeedlingPage() {
   // 筛选后的数据
   const filteredData = useMemo(() => {
     return seedlings.filter(item => {
-      // 使用 startsWith 替代 includes，避免误匹配（如筛选"黄"会匹配到"黄瓜"和"黄番茄"）
-      if (filters.cropName && filters.cropName !== '__all__' && !item.cropName.startsWith(filters.cropName)) return false;
+      // 2026-07-01 P1-2 修复：cropName 筛选统一用 includes，与 PlantingPage 一致
+      // 原因：startsWith 要求前缀匹配，但 cropName 可能是 subVariety1Name（如"红树莓"），
+      //       而筛选下拉显示父类（如"树莓"）时 startsWith 会过滤掉
+      if (filters.cropName && filters.cropName !== '__all__' && !item.cropName.includes(filters.cropName)) return false;
       if (filters.seedlingCode && !item.seedlingCode.startsWith(filters.seedlingCode)) return false;
       if (filters.sourceCode && !item.sourceCode.startsWith(filters.sourceCode)) return false;
       if (filters.siteName && filters.siteName !== '__all__' && item.siteName !== filters.siteName) return false;
@@ -336,8 +337,11 @@ export default function SeedlingPage() {
     setInboundModal({ open: true, record });
   };
 
-  const handleInboundSuccess = () => {
+  // 2026-07-01 P0-5 修复：入库成功后立即刷新列表（与种植侧 onSuccess={loadItems} 对齐）
+  // 原因：之前只弹 toast，列表的 harvestStockedCount 不刷新，要等下次进入页面才看到最新入库量
+  const handleInboundSuccess = async () => {
     toast.success('入库成功');
+    await loadItems();
   };
 
   const handleImageClick = (images: string[]) => {

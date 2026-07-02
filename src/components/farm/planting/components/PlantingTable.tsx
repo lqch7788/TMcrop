@@ -1174,7 +1174,7 @@ export function PlantingTable({
             onPageSizeChange?.(size);
             onChange({ ...pagination, pageSize: size, current: 1 });
           }}
-          pageSizeOptions={[10, 20, 50]}
+          pageSizeOptions={[10, 20, 50, 100]}
           showPageSize
         />
       </div>

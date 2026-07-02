@@ -391,26 +391,15 @@ export function EditModal({
           </Select>
         </div>
 
-        {/* 2026-07-01: 单位选择器 */}
+        {/* 2026-07-01 P1-6 修复：单位改为 DictSelect（category="unit"），与 AddModal/种植 AddModal 跨页统一 */}
         <div>
           <Label className="text-gray-900">单位</Label>
-          <Select
+          <DictSelect
+            category="unit"
             value={formData.unit}
-            onValueChange={(val) => setFormData({ ...formData, unit: val })}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="选择单位" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="株">株</SelectItem>
-              <SelectItem value="粒">粒</SelectItem>
-              <SelectItem value="颗">颗</SelectItem>
-              <SelectItem value="盆">盆</SelectItem>
-              <SelectItem value="棵">棵</SelectItem>
-              <SelectItem value="个">个</SelectItem>
-              <SelectItem value="kg">kg</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => setFormData({ ...formData, unit: value })}
+            placeholder="选择单位"
+          />
         </div>
 
         {/* 育苗区域 */}
