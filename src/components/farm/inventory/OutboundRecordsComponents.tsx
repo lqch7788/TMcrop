@@ -20,10 +20,9 @@ import { Checkbox } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
-import { RotateCcw, Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
+import { RotateCcw, Eye } from 'lucide-react';
 import {
   OutboundRow,
-  OutboundSummary,
 } from '../../../stores/useInventoryTransactionStore';
 import type { OutboundQuery } from '../../../services/inventoryTransactionService';
 import {
@@ -32,103 +31,16 @@ import {
   mapLegacyBusinessType,
 } from '../../../constants/outboundConstants';
 import {
-  getPlantingModeLabel,
   QUALITY_GRADE_MAP,
 } from '../../../constants/cropConstants';
 
-// ============ 1. Stats 4 卡 ============
-
-interface OutboundRecordsStatsProps {
-  summary: OutboundSummary | null;
-  loading: boolean;
-}
-
+// ============ 1. 6 维筛选 ============
 const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: string }> = {
   seed:     { label: '种源', color: 'bg-amber-500',   icon: '🌱' },
   seedling: { label: '种苗', color: 'bg-green-500',   icon: '🌿' },
   product:  { label: '成品', color: 'bg-emerald-500', icon: '📦' },
 };
 
-export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsProps) {
-  // V3.1 用户调整：7 个卡（4 数值 + 3 分类）强制同一行
-  // 数据全部从 props 传入（summary），**不硬编码**任何 mock 数据
-  const numberCards = [
-    { label: '总条数',       value: summary?.totalCount ?? 0,     color: 'bg-blue-500',   Icon: ClipboardList },
-    { label: '总出库量',     value: summary?.totalQuantity ?? 0,  color: 'bg-emerald-500', Icon: Box },
-    { label: '今日出库次数', value: summary?.todayCount ?? 0,     color: 'bg-orange-500',  Icon: Clock },
-    { label: '品种数',       value: Object.keys(summary?.byStockType ?? {}).length, color: 'bg-purple-500', Icon: Sprout },
-  ];
-  // 3 个类型卡（从 byStockType 取数，不硬编码）
-  const typeCards = [
-    { key: 'seed',     label: '种源', color: 'amber',   data: summary?.byStockType?.seed     || { count: 0, quantity: 0 } },
-    { key: 'seedling', label: '种苗', color: 'green',   data: summary?.byStockType?.seedling || { count: 0, quantity: 0 } },
-    { key: 'product',  label: '成品', color: 'emerald', data: summary?.byStockType?.product  || { count: 0, quantity: 0 } },
-  ];
-  const typeColorMap: Record<string, { text: string; bg: string }> = {
-    amber:   { text: 'text-amber-700',   bg: 'bg-amber-100' },
-    green:   { text: 'text-green-700',   bg: 'bg-green-100' },
-    emerald: { text: 'text-emerald-700', bg: 'bg-emerald-100' },
-  };
-  return (
-    // 7 个卡同一行：grid-cols-7 强制 7 列（小屏可滚动 overflow-x-auto）
-    <div className="grid grid-cols-7 gap-4 overflow-x-auto">
-      {/* 4 个数值卡（带图标） */}
-      {numberCards.map((card, i) => {
-        const IconComponent = card.Icon;
-        return (
-          <div
-            key={`n-${i}`}
-            className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-8 h-8 rounded-lg ${card.color} flex items-center justify-center shrink-0`}>
-                <IconComponent className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">
-                  {loading ? '…' : card.value.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 leading-tight truncate">{card.label}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-      {/* 3 个类型卡（无图标，纯色 chip 风格） */}
-      {typeCards.map((t) => {
-        const c = typeColorMap[t.color];
-        return (
-          <div
-            key={t.key}
-            className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}>
-                <span className={`text-sm font-bold ${c.text}`}>
-                  {t.label.charAt(0)}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">
-                  {loading ? '…' : t.data.count.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 leading-tight truncate">
-                  {t.label} · {loading ? '…' : t.data.quantity.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ============ 2. 3 个库存类型卡 ============
-
-// OutboundRecordsStockTypeCards 已在文件顶部 re-export 复用作物库存 InventoryStockTypeCards
-
-// ============ 3. 6 维筛选 ============
 
 interface OutboundRecordsFilterProps {
   value: OutboundQuery;
@@ -320,8 +232,6 @@ export function OutboundRecordsTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质</th>
               <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">出库量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">仓库</th>
@@ -380,8 +290,6 @@ export function OutboundRecordsTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{row.cropName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getPlantingModeLabel(row.plantingMode) || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.greenhouseName}>{row.greenhouseName || '-'}</td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {QUALITY_GRADE_MAP[row.grade]?.label || row.grade || '-'}
                   </td>

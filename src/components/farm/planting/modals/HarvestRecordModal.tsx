@@ -416,7 +416,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             notes,
             createBy: currentUser?.realName || 'system',
             operatorName: currentUser?.realName || 'system',
-            sourceForm,
+            seedForm: sourceForm,
           })
           resetForm()
           onSuccess?.()
@@ -446,7 +446,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         recordDate,
         destination: inputDestination,
         subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
-        seedForm: requiresSelfKept ? sourceForm : undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
+        seedForm: (requiresSelfKept || destination === 'harvest') ? sourceForm : undefined,  // 2026-07-02: harvest 分支也写形态
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
           ? activeWarehouses.find((w: WarehouseLite) => w.id === warehouseId || w.oid === warehouseId)?.name
@@ -456,7 +456,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         notes,
         createBy: currentUser?.realName || 'system',
         operatorName: currentUser?.realName || 'system',
-        sourceForm: destination === 'harvest' ? sourceForm : undefined,
       }
       const result = await addHarvestRecord(record.id, input)
       if (result) {
@@ -962,7 +961,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <tr>
                     <th className="px-2 py-2 text-left">日期</th>
                     <th className="px-2 py-2 text-left">去向</th>
-                    <th className="px-2 py-2 text-left">方式</th>
+                    <th className="px-2 py-2 text-left">形态</th>
                     <th className="px-2 py-2 text-left">数量</th>
                     <th className="px-2 py-2 text-left">单位</th>
                     <th className="px-2 py-2 text-left">仓库</th>
