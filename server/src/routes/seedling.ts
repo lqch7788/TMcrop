@@ -1040,9 +1040,15 @@ router.post('/', (req: Request, res: Response) => {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
             [seedling_quantity, now, source_id]);
         } else {
-          console.warn(`[seedling POST] 种源可用余量不足: remaining=${remaining}, need=${seedling_quantity}`);
+          // 2026-07-01 P0-2 修复：超额直接抛 BusinessError，与 with-deduct 路由一致
+          // 防止"未扣减却建档"的不一致
+          throw new BusinessError(
+            SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
+            `可用数量不足：当前 ${remaining}，需扣减 ${seedling_quantity}`,
+          );
         }
       } catch (e) {
+        if (e instanceof BusinessError) throw e;
         console.error('[seedling POST] 扣减种源失败:', e);
       }
     }
@@ -1085,6 +1091,10 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM seedlings WHERE id = ?', [newId])[0] });
   } catch (error) {
+    // 2026-07-01 P0-2 修复：BusinessError 用其 httpStatus（默认 400），非 BusinessError 才 500
+    if (error instanceof BusinessError) {
+      return res.status(error.httpStatus || 400).json({ success: false, error: error.message });
+    }
     console.error('创建育苗记录失败:', error);
     // 2026-06-15: 透出真实错误（铁律 #12：失败大声）
     const msg = error instanceof Error ? error.message : String(error);

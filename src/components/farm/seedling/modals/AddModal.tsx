@@ -1371,28 +1371,17 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </div>
             )}
 
-            {/* 2026-07-01: 单位选择器 — 用户确认育苗产出单位 */}
+            {/* 2026-07-01 P1-6 修复：单位选择器改为 DictSelect（category="unit"），跨页统一 */}
             <div>
               <Label className="text-gray-900">
                 单位 <span className="text-red-500">*</span>
               </Label>
-              <Select
+              <DictSelect
+                category="unit"
                 value={formData.unit}
-                onValueChange={(val) => setFormData({ ...formData, unit: val })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="选择单位" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="株">株</SelectItem>
-                  <SelectItem value="粒">粒</SelectItem>
-                  <SelectItem value="颗">颗</SelectItem>
-                  <SelectItem value="盆">盆</SelectItem>
-                  <SelectItem value="棵">棵</SelectItem>
-                  <SelectItem value="个">个</SelectItem>
-                  <SelectItem value="kg">kg</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(value) => setFormData({ ...formData, unit: value })}
+                placeholder="选择单位"
+              />
             </div>
 
             {/* 计划类型 */}

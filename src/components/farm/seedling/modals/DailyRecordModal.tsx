@@ -358,6 +358,16 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const handleStartEdit = (r: DailyRecord) => {
     setEditingId(r.id);
     const cleanRow: Partial<DailyRecord> = {};
+    // 2026-07-01 P1-5 修复：保留 data JSON 里的 fertilizerRecords/pesticideRecords 等子表
+    // 原因：之前只复制 BUSINESS_FIELDS 顶层，老 data 中的 1:N 数组被丢，
+    //       编辑保存时 PUT 缺这些字段 → 历史施肥/用药明细被覆盖为 undefined
+    if (r.data && typeof r.data === 'object') {
+      Object.entries(r.data as Record<string, unknown>).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+          (cleanRow as any)[k] = v;
+        }
+      });
+    }
     BUSINESS_FIELDS.forEach(k => {
       if (r[k as keyof DailyRecord] !== undefined) {
         (cleanRow as any)[k] = r[k as keyof DailyRecord];
@@ -1058,7 +1068,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                         {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
                       </td>
                       <td className="px-2 py-1.5">{r.operator || '-'}</td>
-                      <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]">{r.remarks || '-'}</td>
+                      {/* 2026-07-01 P0-6 修复：备注超长时支持悬停查看完整内容（与种植 modal 对齐） */}
+                      <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]" title={r.remarks || ''}>
+                        {r.remarks || '-'}
+                      </td>
                       <td className="px-2 py-1.5 text-center">
                         {editingId === r.id ? (
                           <div className="flex items-center justify-center gap-1">

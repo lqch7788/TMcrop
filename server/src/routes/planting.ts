@@ -1836,6 +1836,11 @@ router.post('/:id/end', async (req, res) => {
 
     const now = formatLocalDateISO()
 
+    // 2026-07-01 P0-1 修复：补录通道契约
+    // - 'abnormal'（异常结束） → is_harvest_locked = 0（保留补录通道，让 PUT /:id/harvest-records/:id 继续可写）
+    // - 'harvest'/'dispose'/其它 → is_harvest_locked = 1（正常锁，不再允许新增采收记录）
+    const finalIsHarvestLocked = (endType === 'abnormal') ? 0 : 1
+
     // ========== 1. 采收入库：写 harvest_records + inventory_stock（库存实例） ==========
     if (endType === 'harvest') {
       const harvestQty = Number(quantity) || Number(planting.harvest_quantity) || 0
@@ -1922,8 +1927,8 @@ router.post('/:id/end', async (req, res) => {
 
       // 收尾：更新种植记录
       db.run(
-        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, update_time = ? WHERE id = ?`,
-        [now, harvestQty, now, now, id]
+        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
+        [now, harvestQty, now, finalIsHarvestLocked, now, id]
       )
       saveDatabase()
       return res.json({
@@ -1952,8 +1957,8 @@ router.post('/:id/end', async (req, res) => {
         console.error('[end/dispose] write circulation record failed:', e)
       }
       db.run(
-        `UPDATE plantings SET status = 'cancelled', end_type = 'disposal', end_time = ?, update_time = ? WHERE id = ?`,
-        [now, now, id]
+        `UPDATE plantings SET status = 'cancelled', end_type = 'disposal', end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
+        [now, finalIsHarvestLocked, now, id]
       )
       saveDatabase()
       return res.json({ success: true, data: { id, status: 'cancelled', endType: 'disposal', circulationId: circId } })
@@ -1994,8 +1999,8 @@ router.post('/:id/end', async (req, res) => {
 
     // 公共收尾：标记种植记录已结束
     db.run(
-      `UPDATE plantings SET status = 'ended', end_type = ?, end_time = ?, update_time = ? WHERE id = ?`,
-      [endType, now, now, id]
+      `UPDATE plantings SET status = 'ended', end_type = ?, end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
+      [endType, now, finalIsHarvestLocked, now, id]
     )
     saveDatabase()
     return res.json({ success: true, data: { id, status: 'ended', endType, ...result } })
