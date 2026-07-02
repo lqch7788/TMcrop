@@ -439,35 +439,10 @@ export function SeedlingTable({
           style={{ width: '2400px', tableLayout: 'fixed', minWidth: '2400px' }}
           className="text-sm"
         >
-          {/* 2026-06-27：百分比列宽重新分配
-              - 关联种源 / 作物编码 各占 9-10%（足够 13 字符不截断）
-              - 操作列占 14%（足够 7 个 28px 图标按钮）
-              - 数值列各 4%（数字 + padding 够用）
-              - 总和 100%（含 showCheckbox 多 2.5% 会溢出触发横向滚动） */}
-          <colgroup>
-            {showCheckbox && <col className="w-[2.5%]" />}
-            <col className="w-[8%]" />   {/* 育苗批号 YM20260624-001 */}
-            <col className="w-[5%]" />   {/* 繁殖模式 1:1 / 1:多 */}
-            <col className="w-[6%]" />   {/* 关联生产计划 PZ-XXX */}
-            <col className="w-[10%]" />  {/* 关联种源 ZZ20260601-001 (13字符) */}
-            <col className="w-[9%]" />   {/* 作物编码 FR010300400 (11字符) */}
-            <col className="w-[6%]" />   {/* 作物品种 紫树莓 */}
-            <col className="w-[9%]" />   {/* 品种路径 水果类-浆果类-树莓... */}
-            <col className="w-[7%]" />   {/* 育苗区域 育苗温室A区 */}
-            <col className="w-[4%]" />   {/* 单位 株/粒/颗 */}
-            {/* 2026-06-27：用户指令 — 数值列宽度加倍 4%→8%，完成比例 3%→6% */}
-            <col className="w-[8%]" />   {/* 初始数量 */}
-            <col className="w-[8%]" />   {/* 母株存活数 */}
-            <col className="w-[8%]" />   {/* 母株累计损耗 */}
-            <col className="w-[8%]" />   {/* 补苗累计 */}
-            <col className="w-[8%]" />   {/* 小苗累计产出 */}
-            <col className="w-[8%]" />   {/* 小苗累计损耗 */}
-            <col className="w-[8%]" />   {/* 小苗剩余数量 */}
-            <col className="w-[8%]" />   {/* 目标成苗数 */}
-            <col className="w-[6%]" />   {/* 完成比例 999% */}
-            <col className="w-[5%]" />   {/* 状态 进行中 */}
-            <col className="w-[14%]" />  {/* 操作列 — 7 个 28px 图标按钮 */}
-          </colgroup>
+          {/* 2026-07-01 修复：colgroup 内联写法 — 去除行内 {/} 与 JSX 注释，避免 validateDOMNesting
+              Whitespace text nodes cannot appear as a child of <colgroup> 警告
+              列宽分配：基本 8%+5%+6%+10%+9%+6%+9%+7%+4%=64%；数值 4 列×8%=32%；完成6%；状态5%；操作14% — 总和 121% 触发横向滚动 */}
+          <colgroup><>{showCheckbox && <col className="w-[2.5%]" />}<col className="w-[8%]" /><col className="w-[5%]" /><col className="w-[6%]" /><col className="w-[10%]" /><col className="w-[9%]" /><col className="w-[6%]" /><col className="w-[9%]" /><col className="w-[7%]" /><col className="w-[4%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[6%]" /><col className="w-[5%]" /><col className="w-[14%]" /></></colgroup>
           {/* thead 正常布局（不 sticky，避免和操作列 sticky 冲突） */}
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
@@ -667,9 +642,19 @@ export function SeedlingTable({
                   </td>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index） */}
                   <td className="sticky right-0 px-2 py-1.5 text-xs text-center bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                    {/* 2026-07-01: 已正常结束 → 全部锁定；异常结束 → 保留补录通道（隐藏结束按钮）；进行中 → 全部可用 */}
+                    {/* 2026-07-01 修复：3 态操作列 — 正常结束全部锁定；异常结束仅保留入库补录；进行中全部可用 */}
                     {record.status === 'completed' || record.endType === 'normal' ? (
                       <span className="text-gray-400 text-xs italic">已锁定</span>
+                    ) : record.status === 'abnormal' || record.endType === 'abnormal' ? (
+                      // 异常结束：仅保留"出圃入库"（补录通道）
+                      <div className="flex gap-1 justify-center">
+                        {onInbound && (
+                          <Button variant="ghost" size="icon" onClick={() => onInbound(record)}
+                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50" title="出圃入库（补录）">
+                            <Package className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex gap-1 justify-center">
                         <Button variant="ghost" size="icon" onClick={() => onEdit(record)} title="编辑">
@@ -683,23 +668,15 @@ export function SeedlingTable({
                             <Tag className="w-4 h-4" />
                           </Button>
                         )}
-                        {onInbound && (
-                          <Button variant="ghost" size="icon" onClick={() => onInbound(record)}
-                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50" title="出圃入库">
-                            <Package className="w-4 h-4" />
-                          </Button>
-                        )}
                         {record.pictures && record.pictures.length > 0 && (
                           <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
                             <Image className="w-4 h-4" />
                           </Button>
                         )}
-                        {/* 异常结束 → 隐藏结束按钮（补录通道保留，结束按钮不再需要） */}
-                        {record.status !== 'abnormal' && (
-                          <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
-                            <StopCircle className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {/* 进行中：显示结束按钮 */}
+                        <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                          <StopCircle className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                   </td>

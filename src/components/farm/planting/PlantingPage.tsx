@@ -5,6 +5,9 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar, AlertTriangle } from 'lucide-react';
+// 2026-07-01 修复：endConfirm 弹窗里用了 <Button> 但未导入，触发 "Button is not defined"
+// 统一从 UI 库导入
+import { Button } from '@/components/ui';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
 import { PlantingTable } from './components/PlantingTable';

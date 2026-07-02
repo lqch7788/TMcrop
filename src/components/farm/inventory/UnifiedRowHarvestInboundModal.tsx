@@ -33,6 +33,8 @@ import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import {useUserStore} from '@/stores/useUserStore'
 import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
+// 2026-07-01: 行级采收入库成功后需要同步写 planting_harvest_records，让 HarvestRecordModal 历史表能显示
+import { usePlantingStore } from '@/stores/usePlantingStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert, showConfirm } from '@/lib/dialogService'
 import {
@@ -385,6 +387,37 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       showAlert(`入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`, {
         title: '成功',
       })
+      // 2026-07-01 修复：种植行入库成功后同步写 planting_harvest_records
+      // 原因：submitUnifiedInbound 写的是 harvest_records/inventory_stock（4 表），
+      //       但 HarvestRecordModal 历史区读的是 planting_harvest_records
+      //       —— 不写这条，行级采收入库在 HarvestRecordModal 看不到
+      if (sourceModule === 'planting' && sourceRecord?.id && result.data?.harvestCode) {
+        try {
+          // 累加 products 总数（与 HarvestRecordModal 弹窗 harvest 分支的算法保持一致）
+          const totalQty = (input.products || []).reduce(
+            (s, p) => s + (Number(p.harvestQuantity) || 0),
+            0,
+          )
+          const product = input.products?.[0]
+          await usePlantingStore.getState().addHarvestRecord(sourceRecord.id, {
+            recordDate: input.harvestDate,
+            destination: 'harvest',
+            warehouseId: input.warehouseId,
+            warehouseName: input.warehouseName,
+            quantity: totalQty,
+            unit: product?.unit || input.unit,
+            notes: input.remarks,
+            createBy: useAuthStore.getState().currentUser?.realName || 'system',
+            operatorName: useAuthStore.getState().currentUser?.realName || 'system',
+            // 2026-06-30: harvest 形态（果实/种子/种苗/枝条…）
+            // 顶部"采收形态"联动 productForm（弹窗内的对应字段）
+            sourceForm: product?.productForm,
+          })
+        } catch (e) {
+          // 写 planting_harvest_records 失败不影响主流程（已成功入库）
+          console.error('[UnifiedRowHarvestInboundModal] 同步 planting_harvest_records 失败:', e)
+        }
+      }
       // 2026-07-01: 刷新该来源的采收历史（提交后 store 里数据陈旧，重新拉取）
       if (sourceRecord?.id) {
         void loadHarvestRecords(sourceModule, sourceRecord.id)

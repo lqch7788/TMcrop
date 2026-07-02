@@ -1095,9 +1095,21 @@ export function PlantingTable({
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10 text-center">
-                    {/* 2026-07-01: 正常结束 → 全部锁定；异常结束 → 保留补录通道；进行中 → 全部可用 */}
+                    {/* 2026-07-01 修复：异常结束只显示"采收（补录）"按钮 — 收紧所有非补录按钮的展示条件
+                        正常结束 → 全部锁定
+                        异常结束 → 仅采收（补录）
+                        进行中 → 全部可用 */}
                     {record.status === 'ended' && record.endType !== 'abnormal' ? (
                       <span className="text-gray-400 text-xs italic">已锁定</span>
+                    ) : (record.status === 'cancelled' || record.endType === 'abnormal') ? (
+                      // 异常结束：仅保留补录通道
+                      <div className="flex gap-1">
+                        {onEndV2 && (
+                          <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收（补录）">
+                            <Package className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     ) : (
                     <div className="flex gap-1">
                       {record.pictures && record.pictures.length > 0 && (
@@ -1105,15 +1117,8 @@ export function PlantingTable({
                           <Image className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 2026-07-01: 异常结束(status=cancelled)保留补录通道；正常结束(status=ended)全部锁定 */}
                       {!record.isHarvestLocked && record.status !== 'ended' && onEndV2 && (
                         <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
-                          <Package className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {/* 2026-07-01: 异常结束后补录 — 复用"采收"弹窗（与正常行一致，含 3 去向） */}
-                      {(record.status === 'cancelled' || record.endType === 'abnormal') && onEndV2 && (
-                        <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收（补录）">
                           <Package className="w-4 h-4" />
                         </Button>
                       )}
@@ -1132,7 +1137,6 @@ export function PlantingTable({
                           <MoveRight className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 结束按钮：仅在未结束时显示 */}
                       {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
                         <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
                           <StopCircle className="w-4 h-4" />
