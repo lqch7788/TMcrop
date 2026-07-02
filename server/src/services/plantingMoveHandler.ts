@@ -179,13 +179,14 @@ export async function handleMove(
           `INSERT INTO planting_move_records
             (id, planting_id, planting_code, operation_type,
              from_area_id, from_area_name, to_area_id, to_area_name,
-             quantity, operation_date, operator_name, remarks, create_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          // 2026-06-30 Bug 修复：种源无 areaId，调入的 from_area 留空
+             quantity, operation_date, operator_name, remarks, create_time,
+             source_id, source_type, source_code)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [moveId, plantingId, cur.plantingCode, 'move_in',
            '', s.sourceCode || '',
            toAreaId || '', toAreaName,
-           qty, operationDate || today, operatorName, remarks, now],
+           qty, operationDate || today, operatorName, remarks, now,
+           sourceId, sourceType, sourceCode || ''],
         )
 
         // 2026-06-30 Bug 修复：调入时同步累加 plantings.planting_quantity
@@ -305,12 +306,14 @@ export async function handleMove(
         `INSERT INTO planting_move_records
           (id, planting_id, planting_code, operation_type,
            from_area_id, from_area_name, to_area_id, to_area_name,
-           quantity, operation_date, operator_name, remarks, create_time)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           quantity, operation_date, operator_name, remarks, create_time,
+           source_id, source_type, source_code)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [moveId, plantingId, cur.plantingCode, 'move_out',
          fromAreaId, fromAreaName,
          toAreaId, toAreaName,
-         qty, operationDate || today, operatorName, remarks, now],
+         qty, operationDate || today, operatorName, remarks, now,
+         plantingId, 'planting', cur.plantingCode],
       )
 
       // 2026-06-30 Bug 修复：调出时同步扣减源种植单的主表 planting_quantity

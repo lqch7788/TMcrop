@@ -823,6 +823,9 @@ export interface SeedSourceMoveRecord {
   quantity: number
   sourceId: string
   sourceCode: string
+  cropName?: string
+  cropCode?: string
+  seedForm?: string
   plantingId: string
   plantingCode: string
   toAreaId: string

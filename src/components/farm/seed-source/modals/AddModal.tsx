@@ -108,7 +108,7 @@ export function AddModal({
     unitPrice: 0,
     pictures: [] as string[],
     remarks: '',
-    createBy: currentUser.name, // 默认当前登录用户
+    createBy: currentUser?.name || '', // 默认当前登录用户
     // V3.0 新增字段
     productionPlanId: '',    // 关联生产计划ID
     productionPlanCode: '',   // 关联生产计划批次号

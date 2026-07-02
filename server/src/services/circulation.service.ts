@@ -45,7 +45,8 @@ export function deriveSeedFormSubType(seedForm: string): 'cutting' | 'seed_savin
   const cuttingForms = ['果实', '枝条', '穗条', '块根', '块茎', '鳞茎', '叶片', '花朵', '整株'];
   if (cuttingForms.includes(seedForm)) return 'cutting';
   if (seedForm === '种子' || seedForm === '种苗') return 'seed_saving';
-  return 'cutting';
+  // 兜底：种植留种操作默认按留种处理（前端已强制选 seedForm，此处仅为安全网）
+  return 'seed_saving';
 }
 
 export const CirculationInputSchema = z.object({
@@ -82,11 +83,10 @@ export interface CirculationResult {
  * PROPAGATION 路径的 source_origin 派生规则
  */
 function deriveOriginFromContext(input: CirculationInput): string {
-  if (input.subType === 'cutting') return 'cutting'
-  if (input.subType === 'seed_saving') return 'internal_seed'
-  if (input.subType === 'g0_g1') return 'seedling_split'
-  // 默认按 sourceModule 派生
-  return input.sourceModule === 'harvest' ? 'internal_seed' : 'seedling_split'
+  // 种植留种统一使用 'planting_self_kept'，不再区分 cutting/internal_seed
+  if (input.subType === 'cutting' || input.subType === 'seed_saving') return 'planting_self_kept';
+  if (input.subType === 'g0_g1') return 'seedling_split';
+  return input.sourceModule === 'harvest' ? 'planting_self_kept' : 'seedling_split';
 }
 
 function generateId(prefix: string): string {
@@ -268,15 +268,8 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
     : input.subType === 'g0_g1' ? 'g0_g1'
     : null
 
-  // 2026-06-19: propagation_type 按 subType 动态映射（与 PROPAGATION_TYPE_LABELS 对齐）
-  // - cutting       → 'asexual'   (无性繁殖)
-  // - seed_saving  → 'seed_saving' (种植留种)
-  // - g0_g1        → 'breeding'   (G0/G1 代育种)
-  // 之前硬编码 'asexual'，导致所有回流（cutting + seed_saving）都显示"无性繁殖"（不合理）
-  const propagationTypeDb = input.subType === 'cutting' ? 'asexual'
-    : input.subType === 'seed_saving' ? 'seed_saving'
-    : input.subType === 'g0_g1' ? 'breeding'
-    : 'asexual'  // 兜底
+  // 种植留种统一使用 'planting_self_kept'，不再区分 cutting/seed_saving
+  const propagationTypeDb = input.subType === 'g0_g1' ? 'breeding' : 'planting_self_kept';
 
   // 2026-06-18: 全量继承 parent + 新追溯字段
   db.run(`
@@ -305,7 +298,7 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
     newSourceId, newSourceCode, parent?.source_name || null, newOrigin, input.parentSourceId,
     parent?.crop_name || planting?.crop_name || null, parent?.crop_variety || planting?.crop_variety || null, parent?.crop_code || planting?.crop_code || null,
     parent?.crop_category || null, parent?.type_name || null, parent?.variety_name || null,
-    parent?.supplier_id || null, parent?.supplier_name || null, parent?.production_plan_code || planting?.production_plan_code || null,
+    null, null, parent?.production_plan_code || planting?.production_plan_code || null, // 内部留种不继承供应商
     seedQuantity, input.unit || parent?.unit || null, circulationDate.split('T')[0], seedQuantity,
     input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
     propagationTypeDb, propagationMethod,
