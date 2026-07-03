@@ -55,6 +55,41 @@ const OPERATION_TYPE_LABELS: Record<BreedingOperationType, string> = {
   other: '其他',
 };
 
+// 2026-07-03：世代选项（覆盖植物育种 + 种子生产 + 国内常用）
+// 分组：亲本/杂交/回交/自交/双单倍体/种子生产级别
+const GENERATION_OPTIONS: Array<{ value: string; label: string; group: string }> = [
+  // 亲本
+  { value: 'P', label: 'P — 亲本（Parent）', group: '亲本世代' },
+  // 杂交世代（最常用 F1-F4 + 高代 F5-F8）
+  { value: 'F1', label: 'F1 — 子一代（杂交种）', group: '杂交世代' },
+  { value: 'F2', label: 'F2 — 子二代', group: '杂交世代' },
+  { value: 'F3', label: 'F3 — 子三代', group: '杂交世代' },
+  { value: 'F4', label: 'F4 — 子四代', group: '杂交世代' },
+  { value: 'F5', label: 'F5 — 子五代', group: '杂交世代' },
+  { value: 'F6', label: 'F6 — 子六代', group: '杂交世代' },
+  { value: 'F7', label: 'F7 — 子七代', group: '杂交世代' },
+  { value: 'F8', label: 'F8 — 子八代', group: '杂交世代' },
+  // 回交世代
+  { value: 'BC1', label: 'BC1 — 回交一代', group: '回交世代' },
+  { value: 'BC2', label: 'BC2 — 回交二代', group: '回交世代' },
+  { value: 'BC3', label: 'BC3 — 回交三代', group: '回交世代' },
+  { value: 'BC4', label: 'BC4 — 回交四代', group: '回交世代' },
+  // 自交世代
+  { value: 'S1', label: 'S1 — 自交一代', group: '自交世代' },
+  { value: 'S2', label: 'S2 — 自交二代', group: '自交世代' },
+  { value: 'S3', label: 'S3 — 自交三代', group: '自交世代' },
+  { value: 'S4', label: 'S4 — 自交四代', group: '自交世代' },
+  { value: 'S5', label: 'S5 — 自交五代', group: '自交世代' },
+  { value: 'S6', label: 'S6 — 自交六代', group: '自交世代' },
+  // 双单倍体
+  { value: 'DH', label: 'DH — 双单倍体（Doubled Haploid）', group: '特殊世代' },
+  // 种子生产级别（国内常用）
+  { value: '原原种', label: '原原种（Breeder Seed / Pre-basic）', group: '种子生产级别' },
+  { value: '原种', label: '原种（Basic Seed / Foundation）', group: '种子生产级别' },
+  { value: '良种', label: '良种（Certified Seed）', group: '种子生产级别' },
+  { value: '商品种', label: '商品种（Commercial Seed）', group: '种子生产级别' },
+];
+
 const HARVEST_PART_LABELS: Record<SeedSavingPart, string> = {
   fruit: '果实',
   seed: '种子',
@@ -173,6 +208,10 @@ export function RecordModal({
     parentFemaleSource: 'free',
     operator: '',
     remarks: '',
+    // 2026-07-03：3 个通用专业字段
+    targetTraits: [],
+    fruitCount: 0,
+    seedCount: 0,
   });
   const [seedSavingForm, setSeedSavingForm] = useState<SeedSavingRecordInput>({
     recordDate: todayLocal(),
@@ -221,6 +260,9 @@ export function RecordModal({
           parentFemaleSource: 'free',
           operator: '',
           remarks: '',
+          targetTraits: [],
+          fruitCount: 0,
+          seedCount: 0,
         });
       } else if (recordType === 'seed_saving') {
         setSeedSavingForm({
@@ -337,6 +379,10 @@ export function RecordModal({
         parentFemaleSource: br.parentFemaleSource ?? 'free',
         operator: br.operator ?? '',
         remarks: br.remarks ?? '',
+        // 2026-07-03：3 个新通用字段
+        targetTraits: br.targetTraits ?? [],
+        fruitCount: br.fruitCount ?? 0,
+        seedCount: br.seedCount ?? 0,
       });
     } else {
       const sr = record as SeedSavingRecord;
@@ -569,12 +615,30 @@ function BreedingFields({ form, onChange, deepInputClass }: BreedingFieldsProps)
       </div>
       <div>
         <Label className="text-gray-700">世代</Label>
-        <Input
+        <Select
           value={form.generation ?? ''}
-          onChange={(e) => onChange({ ...form, generation: e.target.value })}
-          placeholder="如 F1 / F2 / BC1"
-          className={deepInputClass}
-        />
+          onValueChange={(v) => onChange({ ...form, generation: v })}
+        >
+          <SelectTrigger className={deepInputClass}>
+            <SelectValue placeholder="请选择世代（如 F1 / F2 / BC1 / S3）" />
+          </SelectTrigger>
+          <SelectContent className="max-h-80">
+            {(() => {
+              // 按 group 分组渲染
+              const groups = Array.from(new Set(GENERATION_OPTIONS.map((o) => o.group)))
+              return groups.map((g) => (
+                <div key={g}>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-100">
+                    {g}
+                  </div>
+                  {GENERATION_OPTIONS.filter((o) => o.group === g).map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </div>
+              ))
+            })()}
+          </SelectContent>
+        </Select>
       </div>
       <div className="col-span-3">
         <div className="text-xs font-medium text-gray-700 mb-1">父本 *（杂交/回交必填）</div>
@@ -644,6 +708,64 @@ function BreedingFields({ form, onChange, deepInputClass }: BreedingFieldsProps)
           onChange={(e) => onChange({ ...form, remarks: e.target.value })}
           rows={1}
           placeholder="目标性状、过程记录等"
+          className={deepInputClass}
+        />
+      </div>
+
+      {/* 2026-07-03：3 个通用专业字段（适用所有 6 种操作类型） */}
+      <div className="col-span-3">
+        <Label className="text-gray-700">目标性状（多选）</Label>
+        <div className="flex flex-wrap gap-2 mt-1">
+          {(['抗病', '优质', '早熟', '丰产', '抗逆', '雄性不育', '其他'] as const).map((trait) => {
+            const selected = (form.targetTraits || []).includes(trait)
+            return (
+              <label
+                key={trait}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border cursor-pointer text-sm transition-colors ${
+                  selected
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-medium'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="w-3.5 h-3.5"
+                  checked={selected}
+                  onChange={(e) => {
+                    const list = form.targetTraits || []
+                    onChange({
+                      ...form,
+                      targetTraits: e.target.checked
+                        ? [...list, trait]
+                        : list.filter((t) => t !== trait),
+                    })
+                  }}
+                />
+                {trait}
+              </label>
+            )
+          })}
+        </div>
+      </div>
+      <div>
+        <Label className="text-gray-700">结实数（个）</Label>
+        <Input
+          type="number"
+          min="0"
+          value={form.fruitCount ?? 0}
+          onChange={(e) => onChange({ ...form, fruitCount: e.target.value ? Number(e.target.value) : 0 })}
+          placeholder="0"
+          className={deepInputClass}
+        />
+      </div>
+      <div>
+        <Label className="text-gray-700">收获种子数（粒）</Label>
+        <Input
+          type="number"
+          min="0"
+          value={form.seedCount ?? 0}
+          onChange={(e) => onChange({ ...form, seedCount: e.target.value ? Number(e.target.value) : 0 })}
+          placeholder="0"
           className={deepInputClass}
         />
       </div>
@@ -756,6 +878,9 @@ function BreedingHistoryTable({ records, editingId, onEdit, onDelete }: HistoryT
             <th className="px-2 py-2 text-left">世代</th>
             <th className="px-2 py-2 text-left">父本</th>
             <th className="px-2 py-2 text-left">母本</th>
+            <th className="px-2 py-2 text-left">目标性状</th>
+            <th className="px-2 py-2 text-right">结实</th>
+            <th className="px-2 py-2 text-right">种子</th>
             <th className="px-2 py-2 text-left">操作人</th>
             <th className="px-2 py-2 text-left">备注</th>
             <th className="px-2 py-2 text-center w-24">操作</th>
@@ -781,6 +906,22 @@ function BreedingHistoryTable({ records, editingId, onEdit, onDelete }: HistoryT
                   </Badge>
                 ) : '-'}
               </td>
+              <td className="px-2 py-1.5">
+                {(() => {
+                  const traits = typeof r.targetTraits === 'string'
+                    ? (() => { try { return JSON.parse(r.targetTraits) } catch { return [] } })()
+                    : r.targetTraits
+                  return Array.isArray(traits) && traits.length > 0 ? (
+                    <div className="flex flex-wrap gap-0.5">
+                      {traits.map((t: string) => (
+                        <span key={t} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded">{t}</span>
+                      ))}
+                    </div>
+                  ) : '-'
+                })()}
+              </td>
+              <td className="px-2 py-1.5 text-right text-emerald-700 font-medium">{r.fruitCount ?? '-'}</td>
+              <td className="px-2 py-1.5 text-right text-amber-700 font-medium">{r.seedCount ?? '-'}</td>
               <td className="px-2 py-1.5">{r.operator || '-'}</td>
               <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]">{r.remarks || '-'}</td>
               <td className="px-2 py-1.5 text-center">

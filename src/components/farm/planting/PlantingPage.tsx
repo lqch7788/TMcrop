@@ -739,6 +739,8 @@ export default function PlantingPage() {
             cropCode: inboundUnifiedRecord.cropCode || '',
             unit: inboundUnifiedRecord.unit,
             plantingMode: inboundUnifiedRecord.plantingMode,
+            // 2026-07-03：传 endType 让 modal 判断是否强制补录模式
+            endType: inboundUnifiedRecord.endType,
           }}
         />
       )}
@@ -765,6 +767,11 @@ export default function PlantingPage() {
           onClose={closeDailyRecord}
           onSuccess={handleDailyRecordSuccess}
           record={dailyRecordModal.record}
+          // 2026-07-03：已结束的种植 → 只读模式（保留查看+导出）
+          readOnly={Boolean(
+            dailyRecordModal.record &&
+            (dailyRecordModal.record.status === 'ended' || dailyRecordModal.record.endType === 'abnormal')
+          )}
         />
       )}
 
@@ -800,6 +807,10 @@ export default function PlantingPage() {
           plantingId={labelManageRecord.id}
           plantingCode={labelManageRecord.plantCode}
           autoSelectLabelNumber={autoSelectLabelNumber}
+          // 2026-07-03：已结束的种植 → 只读模式（保留查看+导出+打印）
+          readOnly={Boolean(
+            labelManageRecord.status === 'ended' || labelManageRecord.endType === 'abnormal'
+          )}
         />
       )}
 

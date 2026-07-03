@@ -554,66 +554,106 @@ export function PlantingTable({
       },
       {
         title: '操作',
-        width: 250,
-        render: (_: unknown, record: Planting) => (
-          /* 2026-07-01: 正常结束 → 全部锁定；异常结束 → 保留补录通道；进行中 → 全部可用 */
-          record.status === 'ended' && record.endType !== 'abnormal' ? (
-            <span className="text-gray-400 text-xs italic">已锁定</span>
-          ) : (
-          <div className="flex gap-1">
-            {record.pictures && record.pictures.length > 0 && (
-              <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
-                <Image className="w-4 h-4" />
-              </Button>
-            )}
-            {/* 2026-07-01: 异常结束(status=cancelled)保留补录通道；正常结束(status=ended)全部锁定 */}
-            {!record.isHarvestLocked && record.status !== 'ended' && onEndV2 && (
-              <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
-                <Package className="w-4 h-4" />
-              </Button>
-            )}
-            {record.status !== 'ended' && onDailyRecord && (
-              <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
-                <Calendar className="w-4 h-4 text-blue-600" />
-              </Button>
-            )}
-            {(!record.isHarvestLocked || (record.status === 'cancelled' || record.endType === 'abnormal')) && record.status !== 'ended' && onInbound && (
-              <Button variant="ghost" size="icon" onClick={() => onInbound(record)} title="采收入库（行级）">
-                <Package className="w-4 h-4" />
-              </Button>
-            )}
-            {onLabelManage && (
-              <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
-                <Tag className="w-4 h-4" />
-              </Button>
-            )}
-            {onMove && !record.isHarvest && record.status !== 'ended' && (
-              <Button variant="ghost" size="icon" onClick={() => onMove(record)} title="移入/移出">
-                <MoveRight className="w-4 h-4" />
-              </Button>
-            )}
-            {/* 结束按钮：仅在未结束时显示 */}
-            {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
-              <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
-                <StopCircle className="w-4 h-4" />
-              </Button>
-            )}
-            {/* 育种/留种按钮：仅进行中时显示 */}
-            {record.status !== 'cancelled' && record.status !== 'ended' && record.isBreeding && onBreedingRecord && (
-              <Button variant="ghost" size="icon" onClick={() => onBreedingRecord(record)} title="育种记录"
-                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
-                <Sprout className="w-4 h-4" />
-              </Button>
-            )}
-            {record.status !== 'cancelled' && record.status !== 'ended' && record.isSeedSaving && onSeedSavingRecord && (
-              <Button variant="ghost" size="icon" onClick={() => onSeedSavingRecord(record)} title="留种记录"
-                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                <Wheat className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+        width: 280,
+        render: (_: unknown, record: Planting) => {
+          /* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
+              正常结束(status=ended, endType!=abnormal) → 写操作全锁；读操作可用；补录关闭
+              异常结束(status=cancelled 或 endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
+              进行中 → 全部可用 */
+          const isNormalEnded = record.status === 'ended' && record.endType !== 'abnormal'
+          const isAbnormalEnded = record.status === 'cancelled' || record.endType === 'abnormal'
+          const isEnded = isNormalEnded || isAbnormalEnded
+          const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
+          // 写操作统一灰显样式
+          const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
+          // 禁用态点击 → 弹提示（仅正常结束/显式禁用时弹；异常结束的写操作可正常通过，如 onInbound 补录）
+          const guardClick = (msg: string, action?: () => void) => {
+            if (isNormalEnded) {
+              showAlert(msg)
+              return
+            }
+            action?.()
+          }
+          return (
+            <div className="flex gap-1">
+              {/* 读操作 — 始终可用 */}
+              {record.pictures && record.pictures.length > 0 && (
+                <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
+                  <Image className="w-4 h-4" />
+                </Button>
+              )}
+              {onDailyRecord && (
+                <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title={`每日记录${isEnded ? '（只读）' : ''}`}>
+                  <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
+                </Button>
+              )}
+              {onLabelManage && (
+                <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title={`标签管理${isEnded ? '（只读）' : ''}`}>
+                  <Tag className="w-4 h-4" />
+                </Button>
+              )}
+
+              {/* 写操作 — 结束态灰显+禁用（采收 onEndV2 仅进行中显示） */}
+              {onEndV2 && !isEnded && (
+                <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
+                  <Package className="w-4 h-4" />
+                </Button>
+              )}
+              {/* 采收入库（补录）：仅异常结束显示 */}
+              {onInbound && isAbnormalEnded && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => onInbound(record)}
+                  className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                  title="采收（补录）"
+                >
+                  <Package className="w-4 h-4" />
+                </Button>
+              )}
+              {/* 移入/移出：进行中可用，结束态禁用（未采收时显示） */}
+              {onMove && !record.isHarvest && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => guardClick(lockReason, () => onMove(record))}
+                  disabled={isEnded}
+                  className={isEnded ? writeClass : ''}
+                  title={isEnded ? lockReason : '移入/移出'}
+                >
+                  <MoveRight className="w-4 h-4" />
+                </Button>
+              )}
+              {/* 育种/留种：进行中可用，结束态禁用 */}
+              {record.isBreeding && onBreedingRecord && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => guardClick(lockReason, () => onBreedingRecord(record))}
+                  disabled={isEnded}
+                  className={isEnded ? writeClass : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'}
+                  title={isEnded ? lockReason : '育种记录'}
+                >
+                  <Sprout className="w-4 h-4" />
+                </Button>
+              )}
+              {record.isSeedSaving && onSeedSavingRecord && (
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => guardClick(lockReason, () => onSeedSavingRecord(record))}
+                  disabled={isEnded}
+                  className={isEnded ? writeClass : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}
+                  title={isEnded ? lockReason : '留种记录'}
+                >
+                  <Wheat className="w-4 h-4" />
+                </Button>
+              )}
+              {/* 结束按钮：仅进行中显示 */}
+              {!isEnded && !record.endTime && !record.isHarvestLocked && onEnd && (
+                <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                  <StopCircle className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           )
-        )
+        }
       },
     );
 
@@ -1095,55 +1135,101 @@ export function PlantingTable({
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10 text-center">
-                    {/* 2026-07-01 修复：异常结束只显示"采收（补录）"按钮 — 收紧所有非补录按钮的展示条件
-                        正常结束 → 全部锁定
-                        异常结束 → 仅采收（补录）
+                    {/* 2026-07-03 v2：写读分离 — 写操作结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
+                        正常结束 → 写操作全锁；读操作可用；补录关闭
+                        异常结束 → 写操作全锁（除补录）；读操作可用；补录保留
                         进行中 → 全部可用 */}
-                    {record.status === 'ended' && record.endType !== 'abnormal' ? (
-                      <span className="text-gray-400 text-xs italic">已锁定</span>
-                    ) : (record.status === 'cancelled' || record.endType === 'abnormal') ? (
-                      // 异常结束：仅保留补录通道
-                      <div className="flex gap-1">
-                        {onEndV2 && (
-                          <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收（补录）">
-                            <Package className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                    <div className="flex gap-1">
-                      {record.pictures && record.pictures.length > 0 && (
-                        <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
-                          <Image className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {!record.isHarvestLocked && record.status !== 'ended' && onEndV2 && (
-                        <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
-                          <Package className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {record.status !== 'ended' && onDailyRecord && (
-                        <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
-                          <Calendar className="w-4 h-4 text-blue-600" />
-                        </Button>
-                      )}
-                      {onLabelManage && (
-                        <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
-                          <Tag className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {onMove && !record.isHarvest && record.status !== 'ended' && (
-                        <Button variant="ghost" size="icon" onClick={() => onMove(record)} title="移入/移出">
-                          <MoveRight className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {!record.endTime && !record.isHarvestLocked && onEnd && record.status !== 'ended' && record.status !== 'cancelled' && (
-                        <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
-                          <StopCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                    )}
+                    {(() => {
+                      const isNormalEnded = record.status === 'ended' && record.endType !== 'abnormal'
+                      const isAbnormalEnded = record.status === 'cancelled' || record.endType === 'abnormal'
+                      const isEnded = isNormalEnded || isAbnormalEnded
+                      const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
+                      const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
+                      // 禁用态点击 → 弹提示（仅正常结束/显式禁用时弹；异常结束的写操作可正常通过，如 onInbound 补录）
+                      const guardClick = (msg: string, action?: () => void) => {
+                        if (isNormalEnded) {
+                          showAlert(msg)
+                          return
+                        }
+                        action?.()
+                      }
+                      return (
+                        <div className="flex gap-1">
+                          {/* 读操作 — 始终可用 */}
+                          {record.pictures && record.pictures.length > 0 && (
+                            <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
+                              <Image className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onDailyRecord && (
+                            <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title={`每日记录${isEnded ? '（只读）' : ''}`}>
+                              <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
+                            </Button>
+                          )}
+                          {onLabelManage && (
+                            <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title={`标签管理${isEnded ? '（只读）' : ''}`}>
+                              <Tag className="w-4 h-4" />
+                            </Button>
+                          )}
+
+                          {/* 写操作 — 结束态灰显+禁用（采收 onEndV2 仅进行中显示） */}
+                          {onEndV2 && !isEnded && (
+                            <Button variant="ghost" size="icon" onClick={() => onEndV2(record)} title="采收">
+                              <Package className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {/* 采收入库（补录）：仅异常结束显示 */}
+                          {onInbound && isAbnormalEnded && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => onInbound(record)}
+                              className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                              title="采收（补录）"
+                            >
+                              <Package className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onMove && !record.isHarvest && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => guardClick(lockReason, () => onMove(record))}
+                              disabled={isEnded}
+                              className={isEnded ? writeClass : ''}
+                              title={isEnded ? lockReason : '移入/移出'}
+                            >
+                              <MoveRight className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {record.isBreeding && onBreedingRecord && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => guardClick(lockReason, () => onBreedingRecord(record))}
+                              disabled={isEnded}
+                              className={isEnded ? writeClass : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'}
+                              title={isEnded ? lockReason : '育种记录'}
+                            >
+                              <Sprout className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {record.isSeedSaving && onSeedSavingRecord && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => guardClick(lockReason, () => onSeedSavingRecord(record))}
+                              disabled={isEnded}
+                              className={isEnded ? writeClass : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}
+                              title={isEnded ? lockReason : '留种记录'}
+                            >
+                              <Wheat className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {!isEnded && !record.endTime && !record.isHarvestLocked && onEnd && (
+                            <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                              <StopCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </TableCell>
                 </TableRow>
               ))

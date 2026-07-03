@@ -11,7 +11,7 @@
  *  后续如需重构可搬到 src/components/farm/labels/ 公共目录。
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Download, Plus } from 'lucide-react';
+import { X, Download, Plus, Lock } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
@@ -62,6 +62,8 @@ interface PlantingLabelManageModalProps {
   plantingCode: string;
   /** 扫码跳转时自动选中指定编号的标签（2026-06-29 新增） */
   autoSelectLabelNumber?: string;
+  // 2026-07-03：只读模式（已结束的记录）— 禁用所有写操作，保留查看+导出+打印
+  readOnly?: boolean;
 }
 
 export default function PlantingLabelManageModal({
@@ -70,6 +72,7 @@ export default function PlantingLabelManageModal({
   plantingId,
   plantingCode,
   autoSelectLabelNumber,
+  readOnly,
 }: PlantingLabelManageModalProps) {
   const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } =
     usePlantLabelStore();
@@ -317,6 +320,14 @@ export default function PlantingLabelManageModal({
           </Button>
         </div>
 
+        {/* 2026-07-03：只读模式横幅（已结束的记录） */}
+        {readOnly && (
+          <div className="px-4 py-2 bg-gray-100 border-b border-gray-300 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-gray-600 shrink-0" />
+            <span className="text-sm text-gray-700">该种植已结束，标签管理处于<strong>只读模式</strong>（可查看、导出、打印）</span>
+          </div>
+        )}
+
         {/* 工具栏: 导出 */}
         <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-end">
           <Button
@@ -401,23 +412,28 @@ export default function PlantingLabelManageModal({
             共 {filteredLabels.length} 个标签
           </span>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowAddResume((v) => !v)}
-              disabled={!selectedLabelId}
-              variant="default"
-              size="sm"
-              title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签新增履历'}
-            >
-              <Plus className="w-4 h-4" /> 新增履历
-            </Button>
-            <Button
-              onClick={() => setShowBatchGenerate((v) => !v)}
+            {/* 2026-07-03：只读模式下隐藏所有"写"操作按钮（新增履历、批量生成） */}
+            {!readOnly && (
+              <Button
+                onClick={() => setShowAddResume((v) => !v)}
+                disabled={!selectedLabelId}
+                variant="default"
+                size="sm"
+                title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签新增履历'}
+              >
+                <Plus className="w-4 h-4" /> 新增履历
+              </Button>
+            )}
+            {!readOnly && (
+              <Button
+                onClick={() => setShowBatchGenerate((v) => !v)}
               variant="outline"
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <Plus className="w-4 h-4" /> 补充生成
             </Button>
+            )}
             <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
               <X className="w-4 h-4" /> 关闭
             </Button>

@@ -4,7 +4,7 @@
  * 2026-06-23: 粒度扩展 + autoSelectLabelNumber + 补充生成入口
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Download, Plus, Trash2 } from 'lucide-react';
+import { X, Download, Plus, Trash2, Lock } from 'lucide-react';
 import { Button, UnifiedModal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
@@ -63,6 +63,8 @@ interface SeedlingLabelManageModalProps {
   seedlingCode: string;
   /** 扫码跳转时自动选中指定编号的标签（2026-06-23 新增） */
   autoSelectLabelNumber?: string;
+  // 2026-07-03：只读模式（已结束的记录）— 禁用所有写操作，保留查看+导出+打印
+  readOnly?: boolean;
 }
 
 export default function SeedlingLabelManageModal({
@@ -71,6 +73,7 @@ export default function SeedlingLabelManageModal({
   seedlingId,
   seedlingCode,
   autoSelectLabelNumber,
+  readOnly,
 }: SeedlingLabelManageModalProps) {
   const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } =
     usePlantLabelStore();
@@ -400,6 +403,14 @@ export default function SeedlingLabelManageModal({
       enableResize={true}
       showMaximize={true}
     >
+      {/* 2026-07-03：只读模式横幅（已结束的记录） */}
+      {readOnly && (
+        <div className="mb-3 px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+          <Lock className="w-4 h-4 text-gray-600 shrink-0" />
+          <span className="text-sm text-gray-700">该育苗已结束，标签管理处于<strong>只读模式</strong>（可查看、导出、打印）</span>
+        </div>
+      )}
+
       {/* 主体：左侧标签列表 + 右侧履历时间线 */}
         <div className="flex-1 overflow-hidden flex">
           {/* 左侧：标签列表（含搜索） */}
@@ -478,28 +489,33 @@ export default function SeedlingLabelManageModal({
             共 {filteredLabels.length} 个标签
           </span>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowAddResume((v) => !v)}
-              disabled={!selectedLabelId || selectedLabel?.status === 'voided' || selectedIds.size > 0}
-              variant="default"
-              size="sm"
-              title={
-                selectedIds.size > 0 ? '多选模式下请先取消勾选，再点击行选择单个标签'
-                : !selectedLabelId ? '请先在左侧选择标签'
-                : selectedLabel?.status === 'voided' ? '已作废标签无法添加履历'
-                : '为当前标签新增履历'
-              }
-            >
-              <Plus className="w-4 h-4" /> 新增履历
+            {/* 2026-07-03：只读模式下隐藏所有"写"操作按钮（新增履历、补充生成） */}
+            {!readOnly && (
+              <Button
+                onClick={() => setShowAddResume((v) => !v)}
+                disabled={!selectedLabelId || selectedLabel?.status === 'voided' || selectedIds.size > 0}
+                variant="default"
+                size="sm"
+                title={
+                  selectedIds.size > 0 ? '多选模式下请先取消勾选，再点击行选择单个标签'
+                  : !selectedLabelId ? '请先在左侧选择标签'
+                  : selectedLabel?.status === 'voided' ? '已作废标签无法添加履历'
+                  : '为当前标签新增履历'
+                }
+              >
+                <Plus className="w-4 h-4" /> 新增履历
+              </Button>
+            )}
+            {!readOnly && (
+              <Button
+                onClick={() => setShowBatchGenerate((v) => !v)}
+                variant="outline"
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              >
+                <Plus className="w-4 h-4" /> 补充生成
             </Button>
-            <Button
-              onClick={() => setShowBatchGenerate((v) => !v)}
-              variant="outline"
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              <Plus className="w-4 h-4" /> 补充生成
-            </Button>
+            )}
             <Button
               onClick={handleOpenExport}
               variant="outline"
@@ -508,20 +524,22 @@ export default function SeedlingLabelManageModal({
             >
               <Download className="w-4 h-4 mr-1" /> 导出
             </Button>
-            <Button
-              onClick={() => {
-                if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
-                setBatchVoidReason('');
-                setShowBatchVoid(true);
-              }}
-              disabled={selectedIds.size === 0}
-              variant="outline"
-              size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-              title={selectedIds.size === 0 ? '请先勾选标签' : `批量作废已选 ${selectedIds.size} 个标签`}
-            >
-              <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-            </Button>
+            {!readOnly && (
+              <Button
+                onClick={() => {
+                  if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
+                  setBatchVoidReason('');
+                  setShowBatchVoid(true);
+                }}
+                disabled={selectedIds.size === 0}
+                variant="outline"
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                title={selectedIds.size === 0 ? '请先勾选标签' : `批量作废已选 ${selectedIds.size} 个标签`}
+              >
+                <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+              </Button>
+            )}
             <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
               <X className="w-4 h-4" /> 关闭
             </Button>
