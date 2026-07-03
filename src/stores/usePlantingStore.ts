@@ -195,9 +195,16 @@ export const usePlantingStore = create<PlantingState>()(
           },
         }));
         return true;
-      } catch (error) {
-        set({ error: (error as Error).message || '删除采收记录失败' });
-        return false;
+      } catch (error: any) {
+        // 2026-07-03：不设置全局 error（避免触发右上角 toast）
+        // 错误信息透传给前端 handleDelete 在弹窗内显示固定面板
+        const err = new Error(error?.message || '删除采收记录失败') as Error & {
+          blockingRecords?: any[];
+          blockingTransactions?: any[];
+        };
+        if (error?.blockingRecords) err.blockingRecords = error.blockingRecords;
+        if (error?.blockingTransactions) err.blockingTransactions = error.blockingTransactions;
+        throw err;
       }
     },
 

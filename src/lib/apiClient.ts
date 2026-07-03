@@ -199,17 +199,28 @@ class EnhancedApiClient {
           }
         }
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorData: any = null;
         try {
-          const errorResult = await response.json();
-          if (errorResult?.error) {
-            errorMessage = errorResult.error;
+          errorData = await response.json();
+          if (errorData?.error) {
+            errorMessage = errorData.error;
           }
         } catch {
           // 忽略解析错误
         }
-        // 附带 status 字段，便于 request() 区分 HTTP 错误（不重试）和网络错误（重试）
-        const httpError = new Error(errorMessage) as Error & { status?: number };
+        // 附带 status + 阻挡详情，便于前端展示精确的阻挡记录
+        const httpError = new Error(errorMessage) as Error & {
+          status?: number;
+          blockingRecords?: any[];
+          blockingTransactions?: any[];
+        };
         httpError.status = response.status;
+        if (errorData?.blockingRecords) {
+          httpError.blockingRecords = errorData.blockingRecords;
+        }
+        if (errorData?.blockingTransactions) {
+          httpError.blockingTransactions = errorData.blockingTransactions;
+        }
         throw httpError;
       }
 

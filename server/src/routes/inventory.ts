@@ -13,6 +13,7 @@
 
 import { Router, Request, Response } from 'express';
 import { inventoryController } from '../controllers/inventory.controller';
+import { checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
@@ -1026,6 +1027,30 @@ router.delete('/batch', (req: Request, res: Response) => {
       return res.json({ success: true, data: { deletedCount: 0 } });
     }
     const db = getDatabase();
+    // 2026-07-03：批量删除前，逐条校验是否有下游出库流水
+    const blocked: Array<{ id: string; reason: string }> = [];
+    for (const stockId of idArray) {
+      const check = checkInventoryStockDeletable(stockId);
+      if (!check.ok) {
+        blocked.push({ id: stockId, reason: check.error! });
+      }
+    }
+    if (blocked.length > 0) {
+      // 收集每条被拦截的详细信息
+      const details = blocked.map((b) => {
+        const check = checkInventoryStockDeletable(b.id);
+        return {
+          stockId: b.id,
+          reason: b.reason,
+          blockingTransactions: check.blockingTransactions || [],
+        };
+      });
+      return res.status(400).json({
+        success: false,
+        error: `批量删除被拦截：${blocked.length} 条库存已被下游消耗，无法删除`,
+        blocked: details,
+      });
+    }
     // 同时按 id 和 instance_id 匹配（兼容两种形态）
     const conditions = idArray.map(() => '(id = ? OR instance_id = ?)').join(' OR ');
     const params: any[] = [];
@@ -1039,10 +1064,19 @@ router.delete('/batch', (req: Request, res: Response) => {
   }
 });
 
-/** DELETE /api/inventory/:id 兼容老删除 */
+/** DELETE /api/inventory/:id 兼容老删除（2026-07-03：增加出库校验） */
 router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // 2026-07-03：校验是否有下游出库流水
+    const check = checkInventoryStockDeletable(id);
+    if (!check.ok) {
+      return res.status(400).json({
+        success: false,
+        error: check.error,
+        blockingTransactions: check.blockingTransactions || [],
+      });
+    }
     const db = getDatabase();
     db.run('DELETE FROM inventory_stock WHERE id = ? OR instance_id = ?', [id, id]);
     saveDatabase();

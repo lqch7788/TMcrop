@@ -17,6 +17,7 @@ import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
+import { checkHarvestRecordDeletable } from '../services/inventoryDeleteGuard.service';
 
 const router = Router();
 router.use(authenticate);
@@ -89,63 +90,13 @@ router.delete('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const id = req.params.id;
 
-    // 校验记录存在
-    const existStmt = db.prepare('SELECT id FROM harvest_records WHERE id = ?');
-    existStmt.bind([id]);
-    const exists = existStmt.step();
-    existStmt.free();
-    if (!exists) return res.status(404).json({ success: false, error: '采收记录不存在' });
-
-    // 校验 1：inventory_freeze 有该 harvest_record_id 的冻结记录
-    const freezeStmt = db.prepare('SELECT id, status, freeze_quantity, used_quantity FROM inventory_freeze WHERE harvest_record_id = ?');
-    freezeStmt.bind([id]);
-    if (freezeStmt.step()) {
-      const freezeRow = freezeStmt.getAsObject() as any;
-      freezeStmt.free();
+    // 2026-07-03：使用共享校验服务（统一校验冻结 + 下游出库/调拨）
+    const checkResult = checkHarvestRecordDeletable(id);
+    if (!checkResult.ok) {
       return res.status(400).json({
         success: false,
-        error: `该入库记录已关联冻结单（id=${freezeRow.id}，状态=${freezeRow.status}），请先解除冻结再删除`,
-      });
-    }
-    freezeStmt.free();
-
-    // 校验 2：inventory_stock 关联的记录还有 frozen_quantity > 0
-    const stockFreezeStmt = db.prepare(`SELECT id, frozen_quantity, current_quantity FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`);
-    stockFreezeStmt.bind([id]);
-    const blockingStocks: any[] = [];
-    while (stockFreezeStmt.step()) {
-      const s = stockFreezeStmt.getAsObject() as any;
-      if ((s.frozenQuantity ?? 0) > 0) {
-        blockingStocks.push(s);
-      }
-    }
-    stockFreezeStmt.free();
-    if (blockingStocks.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `该入库的库存还有冻结数量未释放（${blockingStocks.length} 条），请先解冻再删除`,
-      });
-    }
-
-    // 校验 3：inventory_transaction 有非 inbound 类型的流水（说明已被出库/调拨）
-    const txStmt = db.prepare(`SELECT transaction_type AS tx_type, COUNT(*) AS cnt FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest' GROUP BY transaction_type`);
-    txStmt.bind([id]);
-    const downstreamTx: Array<{ type: string; cnt: number }> = [];
-    while (txStmt.step()) {
-      const row = txStmt.getAsObject() as any;
-      // 2026-07-01: stmt.getAsObject() 不经过 mapToCamelCase，列名保持 SQL 下划线形式
-      // SELECT transaction_type → row.transaction_type；SELECT ... AS tx_type → row.tx_type
-      const txType = row.tx_type || row.transaction_type
-      if (txType !== 'inbound') {
-        downstreamTx.push({ type: txType, cnt: row.cnt })
-      }
-    }
-    txStmt.free();
-    if (downstreamTx.length > 0) {
-      const summary = downstreamTx.map((t) => `${t.type}×${t.cnt}`).join('、')
-      return res.status(400).json({
-        success: false,
-        error: `该入库的库存已被下游消耗（${summary}），删除会破坏追溯链，请先撤销下游流水`,
+        error: checkResult.error,
+        blockingRecords: checkResult.blockingRecords || [],
       });
     }
 

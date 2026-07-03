@@ -130,14 +130,35 @@ export default function InventoryV3Page() {
   // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
   const handleDeleteModalConfirm = async () => {
     // 2026-06-04 V2.1 铁律改造：删除走 Store action（自动 notifyChange 跨页刷新）
-    const result = await deleteBatch(selectedRows);
+    const result: any = await deleteBatch(selectedRows);
     setShowDeleteModal(false);
     if (result.success) {
       showAlert(`已删除 ${result.deletedCount} 条记录`);
       setSelectedRows([]);
       setDeleteMode(false);
     } else {
-      showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
+      // 2026-07-03：用 alert 显示阻挡详情（showAlert 是居中弹窗不会消失）
+      const blockingTxs = (result as any).blockingTransactions || [];
+      const blockedList = (result as any).blocked || [];
+      const renderTxList = (txs: any[]) => txs.map((tx: any) => {
+        const type = tx.txTypeLabel || tx.txType || '-';
+        return `  · ${tx.txId || '-'}  [${type}]  ${tx.businessCode || '-'}  ×${tx.qty || 0}  ${tx.operatorName || '-'} ${tx.operateDate || '-'}`;
+      }).join('\n');
+      let detailText = result.error || '删除失败';
+      if (blockingTxs.length > 0) {
+        detailText += '\n\n以下出库/调拨记录正在使用此库存：\n';
+        detailText += renderTxList(blockingTxs);
+        detailText += '\n\n请先在「出库记录」中撤销以上出库/调拨记录，再回来删除此作物库存。';
+      } else if (blockedList.length > 0) {
+        detailText += '\n\n以下库存被拦截：\n';
+        for (const b of blockedList) {
+          detailText += '\n【' + b.stockId + '】\n';
+          const innerTxs = b.blockingTransactions || [];
+          if (innerTxs.length > 0) detailText += renderTxList(innerTxs) + '\n';
+        }
+        detailText += '\n请先删除以上出库记录，再删除这些作物库存。';
+      }
+      showAlert(detailText);
     }
   };
 
