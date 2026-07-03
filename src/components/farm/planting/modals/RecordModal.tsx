@@ -29,7 +29,11 @@ import {
 import { OPERATION_TYPE_LABELS, ASEXUAL_OPERATION_TYPES, PROPAGATION_METHOD_LABELS } from './recordModalConstants'
 import { validateBreedingForm } from './recordModalValidators'
 import { validateSeedSavingForm } from './seedSavingConstants'
-import { HARVEST_PART_LABELS } from './seedSavingConstants'
+import {
+  HARVEST_PART_LABELS, PURPOSE_LABEL_MAP, PROCESSING_LABEL_MAP,
+  CONTAINER_LABEL_MAP, SEED_TREATMENT_LABEL_MAP, MATURITY_LABEL_MAP,
+  SIZE_GRADE_LABEL_MAP, HEALTH_STATUS_LABEL_MAP, DORMANCY_LABEL_MAP,
+} from './seedSavingConstants'
 import { deepInputClass } from './BreedingFields'
 import { BreedingFields } from './BreedingFields'
 import { BreedingHistoryTable } from './BreedingHistoryTable'
@@ -402,20 +406,20 @@ export function RecordModal({
         '采收部位': r.harvestPart ? (HARVEST_PART_LABELS[r.harvestPart] || r.harvestPart) : '',
         '数量': r.quantity ?? '',
         '单位': r.unit || '',
-        '用途': r.purpose || '',
-        '处理方式': r.processingMethod || '',
+        '用途': r.purpose ? PURPOSE_LABEL_MAP[r.purpose] || r.purpose : '',
+        '处理方式': r.processingMethod ? PROCESSING_LABEL_MAP[r.processingMethod] || r.processingMethod : '',
         '存储位置': r.storageLocation || '',
-        '容器类型': r.containerType || '',
+        '容器类型': r.containerType ? CONTAINER_LABEL_MAP[r.containerType] || r.containerType : '',
         '发芽率(%)': r.germinationRate ?? '',
         '千粒重(g)': r.thousandSeedWeight ?? '',
         '纯度(%)': r.purity ?? '',
         '含水率(%)': r.moistureContent ?? '',
-        '种子处理': r.seedTreatment || '',
-        '成熟度': r.maturityStage || '',
-        '规格等级': r.sizeGrade || '',
+        '种子处理': r.seedTreatment ? SEED_TREATMENT_LABEL_MAP[r.seedTreatment] || r.seedTreatment : '',
+        '成熟度': r.maturityStage ? MATURITY_LABEL_MAP[r.maturityStage] || r.maturityStage : '',
+        '规格等级': r.sizeGrade ? SIZE_GRADE_LABEL_MAP[r.sizeGrade] || r.sizeGrade : '',
         '芽眼/节数': r.budNodeCount ?? '',
-        '检疫状态': r.healthStatus || '',
-        '休眠状态': r.dormancyState || '',
+        '检疫状态': r.healthStatus ? HEALTH_STATUS_LABEL_MAP[r.healthStatus] || r.healthStatus : '',
+        '休眠状态': r.dormancyState ? DORMANCY_LABEL_MAP[r.dormancyState] || r.dormancyState : '',
         '操作人': r.operator || '',
         '备注': r.remarks || '',
       }));

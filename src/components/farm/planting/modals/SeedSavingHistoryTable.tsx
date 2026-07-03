@@ -11,6 +11,14 @@ import {
   HARVEST_PART_LABELS,
   VEGETATIVE_HARVEST_PARTS,
   getSeedSavingRateColor,
+  PURPOSE_LABEL_MAP,
+  PROCESSING_LABEL_MAP,
+  SIZE_GRADE_LABEL_MAP,
+  HEALTH_STATUS_LABEL_MAP,
+  DORMANCY_LABEL_MAP,
+  CONTAINER_LABEL_MAP,
+  SEED_TREATMENT_LABEL_MAP,
+  MATURITY_LABEL_MAP,
 } from './seedSavingConstants'
 import type { SeedSavingRecord } from '@/services/apiPlantingSubRecordService'
 
@@ -19,11 +27,6 @@ interface SeedSavingHistoryTableProps {
   editingId: string | null
   onEdit: (record: SeedSavingRecord) => void
   onDelete: (recordId: string) => void
-}
-
-const labelMap: Record<string, string> = {
-  direct_planting: '直接播种', cold_storage: '入库冷藏', distribution: '分发交换',
-  sale: '销售', germplasm_bank: '种质保存', propagation: '继续扩繁', other: '其他',
 }
 
 export function SeedSavingHistoryTable({ records, editingId, onEdit, onDelete }: SeedSavingHistoryTableProps) {
@@ -64,7 +67,7 @@ export function SeedSavingHistoryTable({ records, editingId, onEdit, onDelete }:
                 <td className="px-2 py-1.5 font-mono text-amber-700 text-xs">{r.plantMarker}</td>
                 <td className="px-2 py-1.5">{r.harvestPart ? HARVEST_PART_LABELS[r.harvestPart] || r.harvestPart : '-'}</td>
                 <td className="px-2 py-1.5 text-right">{r.quantity != null ? `${r.quantity}${r.unit || ''}` : '-'}</td>
-                <td className="px-2 py-1.5 text-xs">{r.purpose ? labelMap[r.purpose] || r.purpose : '-'}</td>
+                <td className="px-2 py-1.5 text-xs">{r.purpose ? PURPOSE_LABEL_MAP[r.purpose] || r.purpose : '-'}</td>
                 <td className="px-2 py-1.5">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
                     veg ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
@@ -73,10 +76,11 @@ export function SeedSavingHistoryTable({ records, editingId, onEdit, onDelete }:
                 <td className="px-2 py-1.5 text-xs">
                   {veg ? (
                     <div className="space-y-0.5">
-                      {r.sizeGrade ? <div>规格: {r.sizeGrade === 'large' ? '大' : r.sizeGrade === 'medium' ? '中' : '小'}</div> : null}
+                      {r.sizeGrade ? <div>规格: {SIZE_GRADE_LABEL_MAP[r.sizeGrade] || r.sizeGrade}</div> : null}
                       {r.budNodeCount != null ? <div>芽眼/节: <span className="font-medium">{r.budNodeCount}</span></div> : null}
-                      {r.healthStatus ? <div>检疫: {r.healthStatus === 'healthy' ? '✓健康' : r.healthStatus === 'suspicious' ? '⚠可疑' : '✗带病'}</div> : null}
-                      {!r.sizeGrade && r.budNodeCount == null && !r.healthStatus ? '-' : null}
+                      {r.healthStatus ? <div>检疫: {HEALTH_STATUS_LABEL_MAP[r.healthStatus] || r.healthStatus}</div> : null}
+                      {r.dormancyState ? <div>休眠: {DORMANCY_LABEL_MAP[r.dormancyState] || r.dormancyState}</div> : null}
+                      {!r.sizeGrade && r.budNodeCount == null && !r.healthStatus && !r.dormancyState ? '-' : null}
                     </div>
                   ) : (
                     <div className="space-y-0.5">
@@ -88,14 +92,17 @@ export function SeedSavingHistoryTable({ records, editingId, onEdit, onDelete }:
                       {r.thousandSeedWeight != null ? <div>千粒重: <span className="font-medium">{r.thousandSeedWeight}g</span></div> : null}
                       {r.purity != null ? <div>纯度: {r.purity}%</div> : null}
                       {r.moistureContent != null ? <div>含水率: {r.moistureContent}%</div> : null}
-                      {r.germinationRate == null && r.thousandSeedWeight == null && r.purity == null && r.moistureContent == null ? '-' : null}
+                      {r.seedTreatment ? <div>处理: {SEED_TREATMENT_LABEL_MAP[r.seedTreatment] || r.seedTreatment}</div> : null}
+                      {r.maturityStage ? <div>成熟度: {MATURITY_LABEL_MAP[r.maturityStage] || r.maturityStage}</div> : null}
+                      {r.germinationRate == null && r.thousandSeedWeight == null && r.purity == null && r.moistureContent == null && !r.seedTreatment && !r.maturityStage ? '-' : null}
                     </div>
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-xs">
                   {r.storageLocation ? <div>{r.storageLocation}</div> : null}
-                  {r.containerType ? <div className="text-gray-400">{r.containerType}</div> : null}
-                  {!r.storageLocation && !r.containerType ? '-' : null}
+                  {r.processingMethod ? <div className="text-gray-400">{PROCESSING_LABEL_MAP[r.processingMethod] || r.processingMethod}</div> : null}
+                  {r.containerType ? <div className="text-gray-400">{CONTAINER_LABEL_MAP[r.containerType] || r.containerType}</div> : null}
+                  {!r.storageLocation && !r.processingMethod && !r.containerType ? '-' : null}
                 </td>
                 <td className="px-2 py-1.5">{r.operator || '-'}</td>
                 <td className="px-2 py-1.5 text-gray-500 truncate max-w-[150px]">{r.remarks || '-'}</td>
