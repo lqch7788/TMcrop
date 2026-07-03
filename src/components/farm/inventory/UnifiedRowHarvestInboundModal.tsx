@@ -364,7 +364,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         ...p,
         harvestQuantity: Number(p.harvestQuantity) || 0,
       })),
-      operatorName: harvesterNames[0] || 'system',
+      // 2026-07-03 修复：operatorName 应该用"操作员"（弹窗 operator 输入框，默认当前登录人），
+      // 不是采收员（harvesterNames[0]）。否则选了采收员后，弹窗历史表"操作员"列会被覆盖成采收员名字
+      operatorName: operator || currentUser?.realName || 'system',
     }
 
     const validation = validateUnifiedInboundInput(input)

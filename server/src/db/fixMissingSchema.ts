@@ -1209,6 +1209,9 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'harvest_form', sql: "ALTER TABLE harvest_records ADD COLUMN harvest_form TEXT" },
     // 2026-06-04: 软删除列 — 修复"用户删除后重启被 seed 复活"bug。删除时只标 deleted_at，物理行保留
     { name: 'deleted_at', sql: 'ALTER TABLE harvest_records ADD COLUMN deleted_at TEXT' },
+    // 2026-07-03：补录标记（异常结束后补录的入库需留痕，弹窗历史表"补录"列依赖）
+    { name: 'is_supplementary', sql: 'ALTER TABLE harvest_records ADD COLUMN is_supplementary INTEGER DEFAULT 0' },
+    { name: 'supplementary_reason', sql: 'ALTER TABLE harvest_records ADD COLUMN supplementary_reason TEXT' },
   ];
   for (const col of harvestColumnsToAdd) {
     try {

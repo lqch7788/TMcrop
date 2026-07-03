@@ -675,15 +675,6 @@ export default function SeedSourcePage() {
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
           </div>
-          {/* 2026-06-27: 两步走操作流程说明 — 靠右显示，不独立占据整行 */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800 max-w-md">
-            <span className="font-medium">两步走操作流程：</span>
-            <div className="mt-1 space-y-0.5">
-              <div><b>① 商品种源入库</b>：通过外购/自产/种植采收，让「作物库存 → 商品种源」池有货</div>
-              <div><b>② 调拨入种源</b>：从商品种源池调拨到本种源台账（本台账不可对外销售）</div>
-              <div className="text-emerald-600">⚠ 仅当商品种源池有货时，才能调拨入内部种源</div>
-            </div>
-          </div>
         </div>
       </div>
 
