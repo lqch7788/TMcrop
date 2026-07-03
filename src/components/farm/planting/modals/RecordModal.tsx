@@ -28,6 +28,8 @@ import {
 } from '@/services/apiSeedlingPropagationService';
 import { OPERATION_TYPE_LABELS, ASEXUAL_OPERATION_TYPES, PROPAGATION_METHOD_LABELS } from './recordModalConstants'
 import { validateBreedingForm } from './recordModalValidators'
+import { validateSeedSavingForm } from './seedSavingConstants'
+import { HARVEST_PART_LABELS } from './seedSavingConstants'
 import { deepInputClass } from './BreedingFields'
 import { BreedingFields } from './BreedingFields'
 import { BreedingHistoryTable } from './BreedingHistoryTable'
@@ -51,17 +53,6 @@ interface RecordModalProps {
     cropName?: string;
   };
 }
-
-const HARVEST_PART_LABELS: Record<SeedSavingPart, string> = {
-  fruit: '果实',
-  seed: '种子',
-  whole_plant: '全株',
-  root: '根',
-  stem: '茎',
-  leaf: '叶',
-  other: '其他',
-};
-
 
 export function RecordModal({
   isOpen,
@@ -110,7 +101,7 @@ export function RecordModal({
     // 2026-07-03 v3：繁殖模式
     reproductionMode: 'sexual',
   });
-  const [seedSavingForm, setSeedSavingForm] = useState<SeedSavingRecordInput>({
+  const [seedSavingForm, setSeedSavingForm] = useState<SeedSavingRecordInput & { preservationMode?: 'seed' | 'vegetative' }>({
     recordDate: todayLocal(),
     plantMarker: '',
     harvestPart: 'seed',
@@ -118,6 +109,12 @@ export function RecordModal({
     unit: '',
     operator: '',
     remarks: '',
+    preservationMode: 'seed',
+    lotNumber: '', purpose: undefined, processingMethod: undefined,
+    storageLocation: '', containerType: undefined,
+    germinationRate: undefined, thousandSeedWeight: undefined, purity: undefined,
+    moistureContent: undefined, seedTreatment: undefined, maturityStage: undefined,
+    sizeGrade: undefined, budNodeCount: undefined, healthStatus: undefined, dormancyState: undefined,
   });
 
   // 加载历史
@@ -177,6 +174,12 @@ export function RecordModal({
           unit: '',
           operator: '',
           remarks: '',
+          preservationMode: 'seed',
+          lotNumber: '', purpose: undefined, processingMethod: undefined,
+          storageLocation: '', containerType: undefined,
+          germinationRate: undefined, thousandSeedWeight: undefined, purity: undefined,
+          moistureContent: undefined, seedTreatment: undefined, maturityStage: undefined,
+          sizeGrade: undefined, budNodeCount: undefined, healthStatus: undefined, dormancyState: undefined,
         });
       } else {
         setPropagationForm({
@@ -207,14 +210,9 @@ export function RecordModal({
         if (err) { await showAlert(err); return }
         await apiPlantingSubRecordService.createBreedingRecord(parentRecord.id, breedingForm);
       } else {
-        if (!seedSavingForm.recordDate) {
-          await showAlert('请选择记录日期');
-          return;
-        }
-        if (!seedSavingForm.plantMarker) {
-          await showAlert('请输入留种株号');
-          return;
-        }
+        // 2026-07-03 v4：共享校验
+        const ssErr = validateSeedSavingForm(seedSavingForm)
+        if (ssErr) { await showAlert(ssErr); return }
         await apiPlantingSubRecordService.createSeedSavingRecord(parentRecord.id, seedSavingForm);
       }
       await loadHistory();
@@ -290,6 +288,7 @@ export function RecordModal({
       });
     } else {
       const sr = record as SeedSavingRecord;
+      const isVeg = sr.preservationMode === 'vegetative'
       setSeedSavingForm({
         recordDate: sr.recordDate,
         plantMarker: sr.plantMarker,
@@ -298,6 +297,23 @@ export function RecordModal({
         unit: sr.unit ?? '',
         operator: sr.operator ?? '',
         remarks: sr.remarks ?? '',
+        // v4
+        preservationMode: isVeg ? 'vegetative' : 'seed',
+        lotNumber: sr.lotNumber ?? '',
+        purpose: sr.purpose ?? undefined,
+        processingMethod: sr.processingMethod ?? undefined,
+        storageLocation: sr.storageLocation ?? '',
+        containerType: sr.containerType ?? undefined,
+        germinationRate: sr.germinationRate ?? undefined,
+        thousandSeedWeight: sr.thousandSeedWeight ?? undefined,
+        purity: sr.purity ?? undefined,
+        moistureContent: sr.moistureContent ?? undefined,
+        seedTreatment: sr.seedTreatment ?? undefined,
+        maturityStage: sr.maturityStage ?? undefined,
+        sizeGrade: sr.sizeGrade ?? undefined,
+        budNodeCount: sr.budNodeCount ?? undefined,
+        healthStatus: sr.healthStatus ?? undefined,
+        dormancyState: sr.dormancyState ?? undefined,
       });
     }
   };
@@ -319,10 +335,8 @@ export function RecordModal({
         if (err) { await showAlert(err); return }
         await apiPlantingSubRecordService.updateBreedingRecord(parentRecord.id, editingId, breedingForm);
       } else {
-        if (!seedSavingForm.plantMarker) {
-          await showAlert('请输入留种株号');
-          return;
-        }
+        const ssErr = validateSeedSavingForm(seedSavingForm)
+        if (ssErr) { await showAlert(ssErr); return }
         await apiPlantingSubRecordService.updateSeedSavingRecord(parentRecord.id, editingId, seedSavingForm);
       }
       setEditingId(null);
@@ -382,10 +396,26 @@ export function RecordModal({
     } else if (recordType === 'seed_saving') {
       const data = (records as SeedSavingRecord[]).map((r) => ({
         '日期': r.recordDate,
+        '留种批次号': r.lotNumber || '',
         '留种株号': r.plantMarker,
+        '保存模式': r.preservationMode === 'vegetative' ? '营养体' : '种子',
         '采收部位': r.harvestPart ? (HARVEST_PART_LABELS[r.harvestPart] || r.harvestPart) : '',
         '数量': r.quantity ?? '',
         '单位': r.unit || '',
+        '用途': r.purpose || '',
+        '处理方式': r.processingMethod || '',
+        '存储位置': r.storageLocation || '',
+        '容器类型': r.containerType || '',
+        '发芽率(%)': r.germinationRate ?? '',
+        '千粒重(g)': r.thousandSeedWeight ?? '',
+        '纯度(%)': r.purity ?? '',
+        '含水率(%)': r.moistureContent ?? '',
+        '种子处理': r.seedTreatment || '',
+        '成熟度': r.maturityStage || '',
+        '规格等级': r.sizeGrade || '',
+        '芽眼/节数': r.budNodeCount ?? '',
+        '检疫状态': r.healthStatus || '',
+        '休眠状态': r.dormancyState || '',
         '操作人': r.operator || '',
         '备注': r.remarks || '',
       }));

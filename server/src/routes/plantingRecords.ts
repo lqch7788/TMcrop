@@ -23,7 +23,13 @@ const BreedingOperationType = z.enum([
   'cross', 'self', 'backcross', 'selection', 'marker', 'other',
   'clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division',
 ]);
-const SeedSavingPart = z.enum(['fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other']);
+// 2026-07-03 v4：留种模式
+const SeedSavingPart = z.enum([
+  'fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other',
+  // 2026-07-03 v4：无性繁殖器官
+  'tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon',
+]);
+const SeedSavingMode = z.enum(['seed', 'vegetative']);
 
 // 2026-07-03 v2：繁殖方式（无性繁殖专用）
 const PropagationMethod = z.enum([
@@ -103,6 +109,26 @@ const SeedSavingRecordSchema = z.object({
   unit: z.string().optional().nullable(),
   operator: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
+  // 2026-07-03 v4：保存模式
+  preservationMode: SeedSavingMode.optional().nullable(),
+  // 共享新字段
+  lotNumber: z.string().optional().nullable(),                   // 批次号
+  purpose: z.string().optional().nullable(),                    // 用途/去向
+  processingMethod: z.string().optional().nullable(),           // 处理方式
+  storageLocation: z.string().optional().nullable(),            // 存储位置
+  containerType: z.string().optional().nullable(),              // 容器类型
+  // 种子保存专用（sexual seed preservation）
+  germinationRate: z.number().min(0).max(100).optional().nullable(),  // 发芽率(%)
+  thousandSeedWeight: z.number().nonnegative().optional().nullable(),  // 千粒重(g)
+  purity: z.number().min(0).max(100).optional().nullable(),          // 纯度(%)
+  moistureContent: z.number().min(0).max(100).optional().nullable(),  // 含水率(%)
+  seedTreatment: z.string().optional().nullable(),                    // 种子处理
+  maturityStage: z.string().optional().nullable(),                    // 成熟度
+  // 营养体保存专用（vegetative preservation）
+  sizeGrade: z.string().optional().nullable(),                 // 规格等级
+  budNodeCount: z.number().int().nonnegative().optional().nullable(), // 芽眼/节数
+  healthStatus: z.string().optional().nullable(),              // 检疫状态
+  dormancyState: z.string().optional().nullable(),             // 休眠状态
 });
 
 const UpdateBreedingRecordSchema = BreedingRecordSchema.partial();
@@ -182,10 +208,46 @@ function initTables() {
       unit TEXT,
       operator TEXT,
       remarks TEXT,
+      -- 2026-07-03 v4：保存模式 + 共享字段
+      preservation_mode TEXT,          -- 保存模式(seed/vegetative)
+      lot_number TEXT,                 -- 批次号
+      purpose TEXT,                    -- 用途/去向
+      processing_method TEXT,          -- 处理方式
+      storage_location TEXT,           -- 存储位置
+      container_type TEXT,             -- 容器类型
+      -- 种子保存专用
+      germination_rate REAL,           -- 发芽率(%)
+      thousand_seed_weight REAL,       -- 千粒重(g)
+      purity REAL,                     -- 纯度(%)
+      moisture_content REAL,           -- 含水率(%)
+      seed_treatment TEXT,             -- 种子处理
+      maturity_stage TEXT,             -- 成熟度
+      -- 营养体保存专用
+      size_grade TEXT,                 -- 规格等级
+      bud_node_count INTEGER,          -- 芽眼/节数
+      health_status TEXT,              -- 检疫状态
+      dormancy_state TEXT,             -- 休眠状态
       create_time TEXT DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (planting_id) REFERENCES plantings(id) ON DELETE CASCADE
     )
   `);
+  // 2026-07-03 v4：留种表加 16 个新列（idempotent）
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN preservation_mode TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN lot_number TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN purpose TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN processing_method TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN storage_location TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN container_type TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN germination_rate REAL`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN thousand_seed_weight REAL`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN purity REAL`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN moisture_content REAL`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN seed_treatment TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN maturity_stage TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN size_grade TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN bud_node_count INTEGER`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN health_status TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_seed_saving_records ADD COLUMN dormancy_state TEXT`); } catch (_) {}
   // 索引（按 planting_id 加速列表查询）
   const idxBr = db.prepare(`CREATE INDEX IF NOT EXISTS idx_breeding_planting ON planting_breeding_records(planting_id)`);
   idxBr.run();
@@ -438,6 +500,16 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
     }
     const data = parsed.data;
+    // 2026-07-03 v4：判断保存模式
+    const VEGETATIVE_PARTS = ['tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf']
+    const preservationMode = data.preservationMode || (VEGETATIVE_PARTS.includes(data.harvestPart || '') ? 'vegetative' : 'seed')
+    // 业务校验
+    if (preservationMode === 'seed' && data.germinationRate === undefined && data.thousandSeedWeight === undefined) {
+      // 种子模式建议填发芽率或千粒重（软校验，不拒绝）
+    }
+    if (preservationMode === 'vegetative' && !data.sizeGrade && !data.healthStatus) {
+      // 营养体模式建议填规格或检疫（软校验）
+    }
     const db = getDatabase();
     // 校验种植存在
     const pStmt = db.prepare(`SELECT id FROM plantings WHERE id = ?`);
@@ -451,12 +523,25 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
     const ins = db.prepare(
       `INSERT INTO planting_seed_saving_records (
         id, planting_id, record_date, plant_marker, harvest_part,
-        quantity, unit, operator, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        quantity, unit, operator, remarks,
+        preservation_mode, lot_number, purpose, processing_method, storage_location, container_type,
+        germination_rate, thousand_seed_weight, purity, moisture_content, seed_treatment, maturity_stage,
+        size_grade, bud_node_count, health_status, dormancy_state
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     ins.run([
       recordId, id, data.recordDate, data.plantMarker, data.harvestPart || null,
       data.quantity ?? null, data.unit || null, data.operator || null, data.remarks || null,
+      // v4：保存模式 + 共享字段
+      preservationMode || null, data.lotNumber || null, data.purpose || null,
+      data.processingMethod || null, data.storageLocation || null, data.containerType || null,
+      // v4：种子字段
+      data.germinationRate ?? null, data.thousandSeedWeight ?? null,
+      data.purity ?? null, data.moistureContent ?? null,
+      data.seedTreatment || null, data.maturityStage || null,
+      // v4：营养体字段
+      data.sizeGrade || null, data.budNodeCount ?? null,
+      data.healthStatus || null, data.dormancyState || null,
     ]);
     ins.free();
     saveDatabase();
@@ -496,6 +581,25 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
     if (data.unit !== undefined) { fields.push('unit = ?'); params.push(data.unit); }
     if (data.operator !== undefined) { fields.push('operator = ?'); params.push(data.operator); }
     if (data.remarks !== undefined) { fields.push('remarks = ?'); params.push(data.remarks); }
+    // 2026-07-03 v4：保存模式 + 共享字段
+    if (data.preservationMode !== undefined) { fields.push('preservation_mode = ?'); params.push(data.preservationMode); }
+    if (data.lotNumber !== undefined) { fields.push('lot_number = ?'); params.push(data.lotNumber); }
+    if (data.purpose !== undefined) { fields.push('purpose = ?'); params.push(data.purpose); }
+    if (data.processingMethod !== undefined) { fields.push('processing_method = ?'); params.push(data.processingMethod); }
+    if (data.storageLocation !== undefined) { fields.push('storage_location = ?'); params.push(data.storageLocation); }
+    if (data.containerType !== undefined) { fields.push('container_type = ?'); params.push(data.containerType); }
+    // v4：种子字段
+    if (data.germinationRate !== undefined) { fields.push('germination_rate = ?'); params.push(data.germinationRate); }
+    if (data.thousandSeedWeight !== undefined) { fields.push('thousand_seed_weight = ?'); params.push(data.thousandSeedWeight); }
+    if (data.purity !== undefined) { fields.push('purity = ?'); params.push(data.purity); }
+    if (data.moistureContent !== undefined) { fields.push('moisture_content = ?'); params.push(data.moistureContent); }
+    if (data.seedTreatment !== undefined) { fields.push('seed_treatment = ?'); params.push(data.seedTreatment); }
+    if (data.maturityStage !== undefined) { fields.push('maturity_stage = ?'); params.push(data.maturityStage); }
+    // v4：营养体字段
+    if (data.sizeGrade !== undefined) { fields.push('size_grade = ?'); params.push(data.sizeGrade); }
+    if (data.budNodeCount !== undefined) { fields.push('bud_node_count = ?'); params.push(data.budNodeCount); }
+    if (data.healthStatus !== undefined) { fields.push('health_status = ?'); params.push(data.healthStatus); }
+    if (data.dormancyState !== undefined) { fields.push('dormancy_state = ?'); params.push(data.dormancyState); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }
