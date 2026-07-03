@@ -10,8 +10,18 @@ import { enhancedApiClient } from '../lib/apiClient';
 
 // ============ 类型定义 ============
 
-export type BreedingOperationType = 'cross' | 'self' | 'selection' | 'backcross' | 'marker' | 'other';
+// 2026-07-03 v3：扩 enum，区分有性/无性
+// 有性：cross(杂交)/self(自交)/backcross(回交)/selection(选育-有种)/marker(标记)/other
+// 无性：clonal(无性选育)/cutting(扦插)/grafting(嫁接)/layering(压条)/tissue(组培)/division(分株)
+export type BreedingOperationType =
+  | 'cross' | 'self' | 'backcross' | 'selection' | 'marker' | 'other'
+  | 'clonal' | 'cutting' | 'grafting' | 'layering' | 'tissue' | 'division';
 export type ParentSource = 'seed_source' | 'planting' | 'free';
+// 2026-07-03 v3：繁殖方式（无性繁殖专用）
+export type PropagationMethod =
+  | 'cutting' | 'grafting' | 'layering' | 'tissue_culture' | 'division' | 'bulb' | 'tuber' | 'runner';
+// 2026-07-03 v3：繁殖模式
+export type ReproductionMode = 'sexual' | 'asexual';
 export type SeedSavingPart = 'fruit' | 'seed' | 'whole_plant' | 'root' | 'stem' | 'leaf' | 'other';
 
 export interface BreedingRecord {
@@ -30,6 +40,15 @@ export interface BreedingRecord {
   targetTraits: string[] | null;   // 目标性状：抗病/优质/早熟/丰产/抗逆/雄性不育/其他
   fruitCount: number | null;       // 结实数
   seedCount: number | null;        // 收获种子数
+  // 2026-07-03 v2：授粉花数（计算结实率用）
+  pollinatedFlowerCount: number | null;
+  // 2026-07-03 v3：无性繁殖专用字段
+  motherPlantCode: string | null;             // 母株编码
+  propagationMethod: PropagationMethod | null; // 繁殖方式
+  inoculationCount: number | null;            // 接种数
+  survivalCount: number | null;               // 成活数
+  // 2026-07-03 v3：繁殖模式
+  reproductionMode: ReproductionMode | null;
   createTime: string;
 }
 
@@ -47,6 +66,15 @@ export interface BreedingRecordInput {
   targetTraits?: string[] | null;
   fruitCount?: number | null;
   seedCount?: number | null;
+  // 2026-07-03 v2：授粉花数（计算结实率用）
+  pollinatedFlowerCount?: number | null;
+  // 2026-07-03 v3：无性繁殖专用字段
+  motherPlantCode?: string | null;
+  propagationMethod?: PropagationMethod | null;
+  inoculationCount?: number | null;
+  survivalCount?: number | null;
+  // 2026-07-03 v3：繁殖模式
+  reproductionMode?: ReproductionMode | null;
 }
 
 export interface SeedSavingRecord {
