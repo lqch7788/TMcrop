@@ -627,7 +627,10 @@ export function initializeDatabase() {
       products TEXT,
       -- 2026-06-27：成品形态（整株/花朵/果实/种子/块茎 等）
       -- 一棵植株在不同阶段可采收不同产物，harvest_form 应在 harvest_records 而非 plantings
-      harvest_form TEXT
+      harvest_form TEXT,
+      -- 2026-07-03：补录标记（异常结束后补录的入库需留痕）
+      is_supplementary INTEGER DEFAULT 0,
+      supplementary_reason TEXT
     )
   `);
 
@@ -3446,6 +3449,19 @@ export function initializeDatabase() {
 
   // 物料流转流水表
   createMaterialFlowLogTable();
+
+  // 2026-07-03：补录标记（异常结束后补录的入库需留痕）
+  // 注意：server 启动白名单禁用了 fixMissingSchema，所以 ALTER 必须放在 initializeDatabase 里
+  try {
+    db.run('ALTER TABLE harvest_records ADD COLUMN is_supplementary INTEGER DEFAULT 0');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+  try {
+    db.run('ALTER TABLE harvest_records ADD COLUMN supplementary_reason TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
 }
 
 export { createMaterialFlowLogTable };

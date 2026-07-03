@@ -210,6 +210,9 @@ export async function executeInboundFromSource(
       products: JSON.stringify(input.products),
       // 2026-06-27：成品形态（整株/花朵/果实/种子/块茎 等），由前端采收入库 Modal 选择
       harvest_form: input.harvestForm || null,
+      // 2026-07-03：补录标记（异常结束后补录的入库需留痕，弹窗历史表"补录"列依赖）
+      is_supplementary: input.isSupplementary ? 1 : 0,
+      supplementary_reason: input.supplementaryReason || null,
       // 溯源字段（D11 决策）
       source_module: input.sourceModule,
       create_by: operator,
@@ -226,8 +229,9 @@ export async function executeInboundFromSource(
         remarks, warehouse_id, unit_price, unit,
         status, inbound_type, batch_code, products,
         source_module, harvest_form,
+        is_supplementary, supplementary_reason,
         create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       harvestRecord.id, harvestRecord.harvest_code, harvestRecord.source_id, harvestRecord.source_name,
       harvestRecord.harvest_date, harvestRecord.greenhouse_id, harvestRecord.greenhouse_name,
@@ -235,6 +239,7 @@ export async function executeInboundFromSource(
       harvestRecord.remarks, harvestRecord.warehouse_id, harvestRecord.unit_price, harvestRecord.unit,
       harvestRecord.status, harvestRecord.inbound_type, harvestRecord.batch_code, harvestRecord.products,
       harvestRecord.source_module, harvestRecord.harvest_form || null,
+      harvestRecord.is_supplementary, harvestRecord.supplementary_reason,
       harvestRecord.create_by, harvestRecord.create_time, harvestRecord.update_time,
     ]);
     writtenRecordIds.push(harvestRecordId);
