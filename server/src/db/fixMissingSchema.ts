@@ -3089,6 +3089,43 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.skip('• planting_breeding_records.reproduction_mode backfill:', e.message)
   }
+
+  // ============================================================
+  // 2026-07-03 v4：字典表补留种/营养体保存专用单位
+  // 新增: 个/公斤/筐/箱/盘/捆（若已存在则跳过）
+  // ============================================================
+  try {
+    const newUnits = [
+      { id: 'UT008', dictCode: '个', dictLabel: '个', dictValue: '个', color: 'green', sortOrder: 8 },
+      { id: 'UT009', dictCode: '公斤', dictLabel: '公斤', dictValue: '公斤', color: 'orange', sortOrder: 9 },
+      { id: 'UT010', dictCode: '筐', dictLabel: '筐', dictValue: '筐', color: 'amber', sortOrder: 10 },
+      { id: 'UT011', dictCode: '箱', dictLabel: '箱', dictValue: '箱', color: 'gray', sortOrder: 11 },
+      { id: 'UT012', dictCode: '盘', dictLabel: '盘', dictValue: '盘', color: 'cyan', sortOrder: 12 },
+      { id: 'UT013', dictCode: '捆', dictLabel: '捆', dictValue: '捆', color: 'lime', sortOrder: 13 },
+    ]
+    let added = 0
+    for (const u of newUnits) {
+      const exist = db.prepare(`SELECT id FROM dictionaries WHERE id = ?`)
+      exist.bind([u.id])
+      if (!exist.step()) {
+        exist.free()
+        db.run(`INSERT OR IGNORE INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, color, sort_order, status)
+          VALUES (?, 'unit', ?, ?, ?, ?, ?, 'active')`,
+          [u.id, u.dictCode, u.dictLabel, u.dictValue, u.color, u.sortOrder])
+        added++
+      } else {
+        exist.free()
+      }
+    }
+    if (added > 0) {
+      saveDatabase()
+      seedLog.info(`✓ 字典 unit 类别补 ${added} 个新单位（个/公斤/筐/箱/盘/捆）`)
+    } else {
+      seedLog.skip('• 字典 unit 类别单位已齐全')
+    }
+  } catch (e: any) {
+    seedLog.skip('• 字典 unit 补单位:', e.message)
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

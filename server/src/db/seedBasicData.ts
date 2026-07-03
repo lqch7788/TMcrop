@@ -763,6 +763,13 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'UT005', categoryCode: 'unit', dictCode: '克', dictLabel: '克', dictValue: '克', color: 'purple', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'UT006', categoryCode: 'unit', dictCode: '吨', dictLabel: '吨', dictValue: '吨', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
   { id: 'UT007', categoryCode: 'unit', dictCode: '亩', dictLabel: '亩', dictValue: '亩', color: 'green', sortOrder: 7, isDefault: 0, status: 'active' },
+  // 2026-07-03 v4：留种/营养体保存专用单位
+  { id: 'UT008', categoryCode: 'unit', dictCode: '个', dictLabel: '个', dictValue: '个', color: 'green', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'UT009', categoryCode: 'unit', dictCode: '公斤', dictLabel: '公斤', dictValue: '公斤', color: 'orange', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'UT010', categoryCode: 'unit', dictCode: '筐', dictLabel: '筐', dictValue: '筐', color: 'amber', sortOrder: 10, isDefault: 0, status: 'active' },
+  { id: 'UT011', categoryCode: 'unit', dictCode: '箱', dictLabel: '箱', dictValue: '箱', color: 'gray', sortOrder: 11, isDefault: 0, status: 'active' },
+  { id: 'UT012', categoryCode: 'unit', dictCode: '盘', dictLabel: '盘', dictValue: '盘', color: 'cyan', sortOrder: 12, isDefault: 0, status: 'active' },
+  { id: 'UT013', categoryCode: 'unit', dictCode: '捆', dictLabel: '捆', dictValue: '捆', color: 'lime', sortOrder: 13, isDefault: 0, status: 'active' },
   // 面积单位（2026-06-20 新增：生产计划种植面积下拉专用，剥离通用 unit 字典）
   { id: 'AU001', categoryCode: 'area_unit', dictCode: 'sqm', dictLabel: '平方米 (m²)', dictValue: '平方米', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'AU013', categoryCode: 'area_unit', dictCode: 'm²', dictLabel: '平方米 (m²)', dictValue: '平方米', color: 'blue', sortOrder: 13, isDefault: 0, status: 'active' },
