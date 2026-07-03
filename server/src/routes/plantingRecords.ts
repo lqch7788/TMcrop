@@ -19,6 +19,9 @@ router.use(authenticate);
 const BreedingOperationType = z.enum(['cross', 'self', 'selection', 'backcross', 'marker', 'other']);
 const SeedSavingPart = z.enum(['fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other']);
 
+// 2026-07-03：育种记录通用字段（适用所有 6 种操作类型）
+// 目标性状：抗病/优质/早熟/丰产/抗逆/雄性不育 等
+const TARGET_TRAIT_VALUES = ['抗病', '优质', '早熟', '丰产', '抗逆', '雄性不育', '其他'] as const
 const BreedingRecordSchema = z.object({
   recordDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式 YYYY-MM-DD'),
   operationType: BreedingOperationType,
@@ -29,6 +32,11 @@ const BreedingRecordSchema = z.object({
   parentFemaleSource: z.enum(['seed_source', 'planting', 'free']).optional().nullable(),
   operator: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
+  // 新增 3 个通用字段
+  // 2026-07-03：targetTraits 在 route 业务层校验（zod 4 array.refine 对中文 unicode 处理有 bug）
+  targetTraits: z.array(z.string()).optional().nullable(),
+  fruitCount: z.number().int().nonnegative().optional().nullable(),  // 结实数
+  seedCount: z.number().int().nonnegative().optional().nullable(),  // 收获种子数
 });
 
 const SeedSavingRecordSchema = z.object({
@@ -79,10 +87,18 @@ function initTables() {
       parent_female_source TEXT,
       operator TEXT,
       remarks TEXT,
+      -- 2026-07-03：通用专业字段
+      target_traits TEXT,   -- JSON 数组：["抗病","优质","早熟",...]
+      fruit_count INTEGER,  -- 结实数（整株或单果）
+      seed_count INTEGER,   -- 收获种子数
       create_time TEXT DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (planting_id) REFERENCES plantings(id) ON DELETE CASCADE
     )
   `);
+  // 2026-07-03：已存在表加 3 个新列（idempotent）
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN target_traits TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN fruit_count INTEGER`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN seed_count INTEGER`); } catch (_) {}
   ensureTable(db, 'planting_seed_saving_records', `
     CREATE TABLE IF NOT EXISTS planting_seed_saving_records (
       id TEXT PRIMARY KEY,
@@ -166,6 +182,16 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
     if (data.parentMaleCode && data.parentFemaleCode && data.parentMaleCode === data.parentFemaleCode) {
       return res.status(400).json({ success: false, error: '父本编码不能与母本编码相同' });
     }
+    // 2026-07-03：目标性状枚举校验（业务层）
+    if (data.targetTraits && Array.isArray(data.targetTraits)) {
+      const validTraits = (TARGET_TRAIT_VALUES as readonly string[]).filter((t) => data.targetTraits!.includes(t))
+      if (validTraits.length !== data.targetTraits.length) {
+        return res.status(400).json({
+          success: false,
+          error: `目标性状必须是 ${TARGET_TRAIT_VALUES.join('/')} 之一`,
+        })
+      }
+    }
     const db = getDatabase();
     // 校验种植存在
     const pStmt = db.prepare(`SELECT id FROM plantings WHERE id = ?`);
@@ -180,14 +206,18 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
       `INSERT INTO planting_breeding_records (
         id, planting_id, record_date, operation_type, generation,
         parent_male_code, parent_male_source, parent_female_code, parent_female_source,
-        operator, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        operator, remarks, target_traits, fruit_count, seed_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     ins.run([
       recordId, id, data.recordDate, data.operationType, data.generation || null,
       data.parentMaleCode || null, data.parentMaleSource || null,
       data.parentFemaleCode || null, data.parentFemaleSource || null,
       data.operator || null, data.remarks || null,
+      // 2026-07-03：3 个新通用字段
+      data.targetTraits ? JSON.stringify(data.targetTraits) : null,
+      data.fruitCount ?? null,
+      data.seedCount ?? null,
     ]);
     ins.free();
     saveDatabase();
@@ -231,6 +261,10 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
     if (data.parentFemaleSource !== undefined) { fields.push('parent_female_source = ?'); params.push(data.parentFemaleSource); }
     if (data.operator !== undefined) { fields.push('operator = ?'); params.push(data.operator); }
     if (data.remarks !== undefined) { fields.push('remarks = ?'); params.push(data.remarks); }
+    // 2026-07-03：3 个新通用字段
+    if (data.targetTraits !== undefined) { fields.push('target_traits = ?'); params.push(data.targetTraits ? JSON.stringify(data.targetTraits) : null); }
+    if (data.fruitCount !== undefined) { fields.push('fruit_count = ?'); params.push(data.fruitCount); }
+    if (data.seedCount !== undefined) { fields.push('seed_count = ?'); params.push(data.seedCount); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }
@@ -360,6 +394,10 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
     if (data.unit !== undefined) { fields.push('unit = ?'); params.push(data.unit); }
     if (data.operator !== undefined) { fields.push('operator = ?'); params.push(data.operator); }
     if (data.remarks !== undefined) { fields.push('remarks = ?'); params.push(data.remarks); }
+    // 2026-07-03：3 个新通用字段
+    if (data.targetTraits !== undefined) { fields.push('target_traits = ?'); params.push(data.targetTraits ? JSON.stringify(data.targetTraits) : null); }
+    if (data.fruitCount !== undefined) { fields.push('fruit_count = ?'); params.push(data.fruitCount); }
+    if (data.seedCount !== undefined) { fields.push('seed_count = ?'); params.push(data.seedCount); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }

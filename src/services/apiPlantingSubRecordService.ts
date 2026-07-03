@@ -26,6 +26,10 @@ export interface BreedingRecord {
   parentFemaleSource: ParentSource | null;
   operator: string | null;
   remarks: string | null;
+  // 2026-07-03：3 个通用专业字段
+  targetTraits: string[] | null;   // 目标性状：抗病/优质/早熟/丰产/抗逆/雄性不育/其他
+  fruitCount: number | null;       // 结实数
+  seedCount: number | null;        // 收获种子数
   createTime: string;
 }
 
@@ -39,6 +43,10 @@ export interface BreedingRecordInput {
   parentFemaleSource?: ParentSource | null;
   operator?: string | null;
   remarks?: string | null;
+  // 2026-07-03：3 个通用专业字段
+  targetTraits?: string[] | null;
+  fruitCount?: number | null;
+  seedCount?: number | null;
 }
 
 export interface SeedSavingRecord {
@@ -72,7 +80,14 @@ export const apiPlantingSubRecordService = {
     const data = await enhancedApiClient.get<unknown>(
       `/plantings/${plantingId}/breeding-records`
     );
-    return Array.isArray(data) ? (data as BreedingRecord[]) : [];
+    if (!Array.isArray(data)) return [];
+    // 2026-07-03：后端返回的 targetTraits 是 JSON 字符串，前端解析为数组
+    return (data as BreedingRecord[]).map((r) => ({
+      ...r,
+      targetTraits: typeof r.targetTraits === 'string'
+        ? (() => { try { return JSON.parse(r.targetTraits as string) } catch { return [] } })()
+        : r.targetTraits ?? [],
+    }));
   },
 
   async createBreedingRecord(plantingId: string, input: BreedingRecordInput): Promise<{ id: string }> {

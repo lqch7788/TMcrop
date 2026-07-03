@@ -29,7 +29,7 @@ import {
   FEED_UNIT_MAP,
 } from '@/constants/cropConstants';
 import { FeedRecordCard, type FeedRecordItem } from '@/components/farm/seedling/modals/FeedRecordCard';
-import { Edit2, Trash2, Download, X, Check } from 'lucide-react';
+import { Edit2, Trash2, Download, X, Check, Lock } from 'lucide-react';
 
 import { exportPlantingDailyRecordsToExcel } from '../../../../services/excelExportService';
 
@@ -38,12 +38,14 @@ interface DailyRecordModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   record: Planting;
+  // 2026-07-03：只读模式（已结束的记录）— 禁用所有写操作，保留查看+导出
+  readOnly?: boolean;
 }
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
-export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
+export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly }: DailyRecordModalProps) {
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
   const addDailyRecord = usePlantingStore((state) => state.addDailyRecord);
@@ -426,12 +428,20 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       title={`每日记录 - ${record.plantCode || record.id}`}
       size="xxxl"
       showFooter={true}
-      onSubmit={handleSubmit}
-      submitText="添加记录"
+      onSubmit={readOnly ? onClose : handleSubmit}
+      submitText={readOnly ? '关闭' : '添加记录'}
       cancelText="取消"
     >
       <div className="space-y-6">
+        {/* 2026-07-03：只读模式横幅（已结束的记录） */}
+        {readOnly && (
+          <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+            <Lock className="w-4 h-4 text-gray-600 shrink-0" />
+            <span className="text-sm text-gray-700">该种植已结束，每日记录处于<strong>只读模式</strong>（可查看、导出）</span>
+          </div>
+        )}
         {/* 添加新记录 */}
+        {!readOnly && (
         <div className="bg-gray-50 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">添加新记录</h4>
           <div className="grid grid-cols-3 gap-4">
@@ -776,6 +786,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             </div>
           </div>
         </div>
+        )}
 
         {/* 历史记录列表 */}
         <div>
@@ -902,22 +913,29 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleStartEdit(r)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(r)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {!readOnly && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleStartEdit(r)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(r)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {readOnly && (
+                              <span className="text-gray-400 text-xs">只读</span>
+                            )}
                           </div>
                         )}
                       </td>

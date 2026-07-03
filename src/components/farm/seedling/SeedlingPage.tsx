@@ -724,6 +724,11 @@ export default function SeedlingPage() {
           onClose={() => setDailyRecordModalOpen(false)}
           onSuccess={handleDailyRecordSuccess}
           record={currentRecord}
+          // 2026-07-03：已结束的育苗 → 只读模式（保留查看+导出）
+          readOnly={Boolean(
+            currentRecord.status === 'completed' || currentRecord.status === 'abnormal' ||
+            currentRecord.endType === 'normal' || currentRecord.endType === 'abnormal'
+          )}
         />
       )}
 
@@ -748,6 +753,11 @@ export default function SeedlingPage() {
           seedlingId={labelManageRecord.id}
           seedlingCode={labelManageRecord.seedlingCode}
           autoSelectLabelNumber={autoSelectLabelNumber}
+          // 2026-07-03：已结束的育苗 → 只读模式（保留查看+导出+打印）
+          readOnly={Boolean(
+            labelManageRecord.status === 'completed' || labelManageRecord.status === 'abnormal' ||
+            labelManageRecord.endType === 'normal' || labelManageRecord.endType === 'abnormal'
+          )}
         />
       )}
 
@@ -766,6 +776,8 @@ export default function SeedlingPage() {
             cropVariety: inboundModal.record.cropVariety || '',
             cropCode: inboundModal.record.cropCode || '',
             unit: undefined,
+            // 2026-07-03：传 endType 让 modal 判断是否强制补录模式
+            endType: inboundModal.record.endType,
           }}
         />
       )}

@@ -642,43 +642,75 @@ export function SeedlingTable({
                   </td>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index） */}
                   <td className="sticky right-0 px-2 py-1.5 text-xs text-center bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                    {/* 2026-07-01 修复：3 态操作列 — 正常结束全部锁定；异常结束仅保留入库补录；进行中全部可用 */}
-                    {record.status === 'completed' || record.endType === 'normal' ? (
-                      <span className="text-gray-400 text-xs italic">已锁定</span>
-                    ) : record.status === 'abnormal' || record.endType === 'abnormal' ? (
-                      // 异常结束：仅保留"出圃入库"（补录通道）
-                      <div className="flex gap-1 justify-center">
-                        {onInbound && (
-                          <Button variant="ghost" size="icon" onClick={() => onInbound(record)}
-                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50" title="出圃入库（补录）">
-                            <Package className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex gap-1 justify-center">
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(record)} title="编辑">
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title="每日记录">
-                          <Calendar className="w-4 h-4" />
-                        </Button>
-                        {onLabelManage && (
-                          <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title="标签管理">
-                            <Tag className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {record.pictures && record.pictures.length > 0 && (
-                          <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
-                            <Image className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {/* 进行中：显示结束按钮 */}
-                        <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
-                          <StopCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                    {/* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
+                        正常结束(status=completed 或 endType=normal) → 写操作全锁；读操作可用；补录关闭
+                        异常结束(status=abnormal 或 endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
+                        进行中 → 全部可用 */}
+                    {(() => {
+                      const isNormalEnded = record.status === 'completed' || record.endType === 'normal'
+                      const isAbnormalEnded = record.status === 'abnormal' || record.endType === 'abnormal'
+                      const isEnded = isNormalEnded || isAbnormalEnded
+                      const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
+                      const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
+                      const guardClick = (msg: string, action?: () => void) => {
+                        // 仅在"正常结束"或"被显式禁用的写操作"时弹提示；异常结束的写操作可正常通过
+                        if (isNormalEnded) {
+                          showAlert(msg)
+                          return
+                        }
+                        action?.()
+                      }
+                      return (
+                        <div className="flex gap-1 justify-center">
+                          {/* 读操作 — 始终可用 */}
+                          {record.pictures && record.pictures.length > 0 && (
+                            <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
+                              <Image className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onDailyRecord && (
+                            <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title={`每日记录${isEnded ? '（只读）' : ''}`}>
+                              <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
+                            </Button>
+                          )}
+                          {onLabelManage && (
+                            <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title={`标签管理${isEnded ? '（只读）' : ''}`}>
+                              <Tag className="w-4 h-4" />
+                            </Button>
+                          )}
+
+                          {/* 写操作 — 结束态灰显+禁用 */}
+                          {onEdit && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => guardClick(lockReason, () => onEdit(record))}
+                              disabled={isEnded}
+                              className={isEnded ? writeClass : ''}
+                              title={isEnded ? lockReason : '编辑'}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {/* 出圃入库（onInbound）：仅异常结束显示（"出圃入库（补录）"） */}
+                          {onInbound && isAbnormalEnded && (
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => onInbound(record)}
+                              className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                              title="出圃入库（补录）"
+                            >
+                              <Package className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {/* 结束按钮：仅进行中显示 */}
+                          {!isEnded && onEnd && (
+                            <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+                              <StopCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </td>
                 </tr>
               ))
