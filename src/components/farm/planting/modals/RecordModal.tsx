@@ -28,6 +28,7 @@ import {
 } from '@/services/apiSeedlingPropagationService';
 import { OPERATION_TYPE_LABELS, ASEXUAL_OPERATION_TYPES, PROPAGATION_METHOD_LABELS } from './recordModalConstants'
 import { validateBreedingForm } from './recordModalValidators'
+import { deepInputClass } from './BreedingFields'
 import { BreedingFields } from './BreedingFields'
 import { BreedingHistoryTable } from './BreedingHistoryTable'
 import { SeedSavingFields } from './SeedSavingFields'

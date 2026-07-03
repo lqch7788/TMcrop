@@ -29,7 +29,7 @@ interface BreedingFieldsProps {
   deepInputClass: string
 }
 
-export function BreedingFields({ form, onChange }: BreedingFieldsProps) {
+export function BreedingFields({ form, onChange, deepInputClass }: BreedingFieldsProps) {
   const mode: 'sexual' | 'asexual' = form.reproductionMode || 'sexual'
   // 切换模式时清空互斥字段
   const switchMode = (newMode: 'sexual' | 'asexual') => {
