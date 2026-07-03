@@ -120,7 +120,34 @@ export function getSeedSavingRateColor(rate: number): string {
 import type { SeedSavingRecordInput } from '@/services/apiPlantingSubRecordService'
 export type SeedSavingFormState = SeedSavingRecordInput & { preservationMode?: 'seed' | 'vegetative' }
 
-// ============ 前端校验 ============
+// ============ Label lookup maps（历史表/导出中文显示用）============
+
+export const PURPOSE_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  PURPOSE_OPTIONS.map((o) => [o.value, o.label])
+)
+export const PROCESSING_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  PROCESSING_OPTIONS.map((o) => [o.value, o.label])
+)
+export const SEED_TREATMENT_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  SEED_TREATMENT_OPTIONS.map((o) => [o.value, o.label])
+)
+export const MATURITY_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  MATURITY_OPTIONS.map((o) => [o.value, o.label])
+)
+export const SIZE_GRADE_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  SIZE_GRADE_OPTIONS.map((o) => [o.value, o.label])
+)
+export const HEALTH_STATUS_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  HEALTH_STATUS_OPTIONS.map((o) => [o.value, o.label])
+)
+export const DORMANCY_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  DORMANCY_OPTIONS.map((o) => [o.value, o.label])
+)
+export const CONTAINER_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  CONTAINER_OPTIONS.map((o) => [o.value, o.label])
+)
+
+// ============ 校验 ============
 export function validateSeedSavingForm(form: SeedSavingFormState): string | null {
   if (!form.recordDate) return '请选择记录日期'
   if (!form.plantMarker) return '请输入留种株号'
