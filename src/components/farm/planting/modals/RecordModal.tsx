@@ -383,9 +383,9 @@ export function RecordModal({
           return {
             ...base,
             '父本编码': r.parentMaleCode || '',
-            '父本来源': r.parentMaleSource || '',
+            '父本来源': r.parentMaleSource === 'seed_source' ? '种源库编码' : r.parentMaleSource === 'planting' ? '种植批号' : r.parentMaleSource || '自由填写',
             '母本编码': r.parentFemaleCode || '',
-            '母本来源': r.parentFemaleSource || '',
+            '母本来源': r.parentFemaleSource === 'seed_source' ? '种源库编码' : r.parentFemaleSource === 'planting' ? '种植批号' : r.parentFemaleSource || '自由填写',
             '结实数': r.fruitCount ?? '',
             '收获种子数': r.seedCount ?? '',
             '授粉花数': r.pollinatedFlowerCount ?? '',
