@@ -9,8 +9,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { UnifiedModal, Button, Input, Label, NumberInput, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePicker, TextArea, Badge } from '@/components/ui';
-import { Edit2, Trash2, Download, X, Sprout, Wheat, GitBranch } from 'lucide-react';
+import { UnifiedModal, Button } from '@/components/ui';
+import { Download, X, Sprout, Wheat, GitBranch } from 'lucide-react';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import {
@@ -19,7 +19,6 @@ import {
   type SeedSavingRecord,
   type BreedingRecordInput,
   type SeedSavingRecordInput,
-  type BreedingOperationType,
   type SeedSavingPart,
 } from '@/services/apiPlantingSubRecordService';
 import {
@@ -27,6 +26,14 @@ import {
   type PropagationRecord,
   type PropagationRecordInput,
 } from '@/services/apiSeedlingPropagationService';
+import { OPERATION_TYPE_LABELS, ASEXUAL_OPERATION_TYPES, PROPAGATION_METHOD_LABELS } from './recordModalConstants'
+import { validateBreedingForm } from './recordModalValidators'
+import { BreedingFields } from './BreedingFields'
+import { BreedingHistoryTable } from './BreedingHistoryTable'
+import { SeedSavingFields } from './SeedSavingFields'
+import { SeedSavingHistoryTable } from './SeedSavingHistoryTable'
+import { PropagationFields } from './PropagationFields'
+import { PropagationHistoryTable } from './PropagationHistoryTable'
 import * as XLSX from 'xlsx';
 
 export type RecordType = 'breeding' | 'seed_saving' | 'propagation';
@@ -44,52 +51,6 @@ interface RecordModalProps {
   };
 }
 
-// ============ 文案映射 ============
-
-const OPERATION_TYPE_LABELS: Record<BreedingOperationType, string> = {
-  cross: '杂交',
-  self: '自交',
-  selection: '选育',
-  backcross: '回交',
-  marker: '标记',
-  other: '其他',
-};
-
-// 2026-07-03：世代选项（覆盖植物育种 + 种子生产 + 国内常用）
-// 分组：亲本/杂交/回交/自交/双单倍体/种子生产级别
-const GENERATION_OPTIONS: Array<{ value: string; label: string; group: string }> = [
-  // 亲本
-  { value: 'P', label: 'P — 亲本（Parent）', group: '亲本世代' },
-  // 杂交世代（最常用 F1-F4 + 高代 F5-F8）
-  { value: 'F1', label: 'F1 — 子一代（杂交种）', group: '杂交世代' },
-  { value: 'F2', label: 'F2 — 子二代', group: '杂交世代' },
-  { value: 'F3', label: 'F3 — 子三代', group: '杂交世代' },
-  { value: 'F4', label: 'F4 — 子四代', group: '杂交世代' },
-  { value: 'F5', label: 'F5 — 子五代', group: '杂交世代' },
-  { value: 'F6', label: 'F6 — 子六代', group: '杂交世代' },
-  { value: 'F7', label: 'F7 — 子七代', group: '杂交世代' },
-  { value: 'F8', label: 'F8 — 子八代', group: '杂交世代' },
-  // 回交世代
-  { value: 'BC1', label: 'BC1 — 回交一代', group: '回交世代' },
-  { value: 'BC2', label: 'BC2 — 回交二代', group: '回交世代' },
-  { value: 'BC3', label: 'BC3 — 回交三代', group: '回交世代' },
-  { value: 'BC4', label: 'BC4 — 回交四代', group: '回交世代' },
-  // 自交世代
-  { value: 'S1', label: 'S1 — 自交一代', group: '自交世代' },
-  { value: 'S2', label: 'S2 — 自交二代', group: '自交世代' },
-  { value: 'S3', label: 'S3 — 自交三代', group: '自交世代' },
-  { value: 'S4', label: 'S4 — 自交四代', group: '自交世代' },
-  { value: 'S5', label: 'S5 — 自交五代', group: '自交世代' },
-  { value: 'S6', label: 'S6 — 自交六代', group: '自交世代' },
-  // 双单倍体
-  { value: 'DH', label: 'DH — 双单倍体（Doubled Haploid）', group: '特殊世代' },
-  // 种子生产级别（国内常用）
-  { value: '原原种', label: '原原种（Breeder Seed / Pre-basic）', group: '种子生产级别' },
-  { value: '原种', label: '原种（Basic Seed / Foundation）', group: '种子生产级别' },
-  { value: '良种', label: '良种（Certified Seed）', group: '种子生产级别' },
-  { value: '商品种', label: '商品种（Commercial Seed）', group: '种子生产级别' },
-];
-
 const HARVEST_PART_LABELS: Record<SeedSavingPart, string> = {
   fruit: '果实',
   seed: '种子',
@@ -100,80 +61,6 @@ const HARVEST_PART_LABELS: Record<SeedSavingPart, string> = {
   other: '其他',
 };
 
-const OPERATION_TYPES: BreedingOperationType[] = ['cross', 'self', 'selection', 'backcross', 'marker', 'other'];
-const HARVEST_PARTS: SeedSavingPart[] = ['fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other'];
-
-const SEEDLING_STATUS_LABELS: Record<string, string> = {
-  healthy: '健康',
-  weak: '弱苗',
-  diseased: '病害',
-};
-
-// ============ 工具：snake_case → camelCase 适配 ============
-
-interface RawBreedingRow {
-  id: string;
-  planting_id: string;
-  record_date: string;
-  operation_type: BreedingOperationType;
-  generation: string | null;
-  parent_male_code: string | null;
-  parent_male_source: string | null;
-  parent_female_code: string | null;
-  parent_female_source: string | null;
-  operator: string | null;
-  remarks: string | null;
-  create_time: string;
-}
-
-function toBreedingRecord(raw: RawBreedingRow): BreedingRecord {
-  return {
-    id: raw.id,
-    plantingId: raw.planting_id,
-    recordDate: raw.record_date,
-    operationType: raw.operation_type,
-    generation: raw.generation,
-    parentMaleCode: raw.parent_male_code,
-    parentMaleSource: (raw.parent_male_source as BreedingRecord['parentMaleSource']) ?? null,
-    parentFemaleCode: raw.parent_female_code,
-    parentFemaleSource: (raw.parent_female_source as BreedingRecord['parentFemaleSource']) ?? null,
-    operator: raw.operator,
-    remarks: raw.remarks,
-    createTime: raw.create_time,
-  };
-}
-
-interface RawSeedSavingRow {
-  id: string;
-  planting_id: string;
-  record_date: string;
-  plant_marker: string;
-  harvest_part: string | null;
-  quantity: number | null;
-  unit: string | null;
-  operator: string | null;
-  remarks: string | null;
-  create_time: string;
-}
-
-function toSeedSavingRecord(raw: RawSeedSavingRow): SeedSavingRecord {
-  return {
-    id: raw.id,
-    plantingId: raw.planting_id,
-    recordDate: raw.record_date,
-    plantMarker: raw.plant_marker,
-    harvestPart: (raw.harvest_part as SeedSavingPart | null) ?? null,
-    quantity: raw.quantity,
-    unit: raw.unit,
-    operator: raw.operator,
-    remarks: raw.remarks,
-    createTime: raw.create_time,
-  };
-}
-
-// ============ 组件主体 ============
-
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function RecordModal({
   isOpen,
@@ -198,7 +85,7 @@ export function RecordModal({
     operator: '',
     remarks: '',
   });
-  const [breedingForm, setBreedingForm] = useState<BreedingRecordInput>({
+  const [breedingForm, setBreedingForm] = useState<BreedingRecordInput & { reproductionMode?: 'sexual' | 'asexual' }>({
     recordDate: todayLocal(),
     operationType: 'cross',
     generation: '',
@@ -212,6 +99,15 @@ export function RecordModal({
     targetTraits: [],
     fruitCount: 0,
     seedCount: 0,
+    // 2026-07-03 v2：授粉花数（计算结实率用）
+    pollinatedFlowerCount: 0,
+    // 2026-07-03 v3：无性繁殖 4 字段
+    motherPlantCode: '',
+    propagationMethod: undefined,
+    inoculationCount: 0,
+    survivalCount: 0,
+    // 2026-07-03 v3：繁殖模式
+    reproductionMode: 'sexual',
   });
   const [seedSavingForm, setSeedSavingForm] = useState<SeedSavingRecordInput>({
     recordDate: todayLocal(),
@@ -263,6 +159,13 @@ export function RecordModal({
           targetTraits: [],
           fruitCount: 0,
           seedCount: 0,
+          pollinatedFlowerCount: 0,
+          // 2026-07-03 v3：无性繁殖 4 字段
+          motherPlantCode: '',
+          propagationMethod: undefined,
+          inoculationCount: 0,
+          survivalCount: 0,
+          reproductionMode: 'sexual',
         });
       } else if (recordType === 'seed_saving') {
         setSeedSavingForm({
@@ -298,19 +201,9 @@ export function RecordModal({
         if (!propagationForm.recordDate) { await showAlert('请选择记录日期'); return; }
         await apiSeedlingPropagationService.create(parentRecord.id, propagationForm);
       } else if (recordType === 'breeding') {
-        // 校验
-        if (!breedingForm.recordDate) {
-          await showAlert('请选择记录日期');
-          return;
-        }
-        if ((breedingForm.operationType === 'cross' || breedingForm.operationType === 'backcross') && !breedingForm.parentMaleCode) {
-          await showAlert('杂交/回交时父本编码必填');
-          return;
-        }
-        if (breedingForm.parentMaleCode && breedingForm.parentFemaleCode && breedingForm.parentMaleCode === breedingForm.parentFemaleCode) {
-          await showAlert('父本编码不能与母本编码相同');
-          return;
-        }
+        // 2026-07-03 v3：共享校验
+        const err = validateBreedingForm(breedingForm)
+        if (err) { await showAlert(err); return }
         await apiPlantingSubRecordService.createBreedingRecord(parentRecord.id, breedingForm);
       } else {
         if (!seedSavingForm.recordDate) {
@@ -369,6 +262,8 @@ export function RecordModal({
       });
     } else if (recordType === 'breeding') {
       const br = record as BreedingRecord;
+      // 2026-07-03 v3：按后端 reproductionMode 推断，没有则按 operationType
+      const isAsexual = br.reproductionMode === 'asexual' || ASEXUAL_OPERATION_TYPES.includes(br.operationType)
       setBreedingForm({
         recordDate: br.recordDate,
         operationType: br.operationType,
@@ -383,6 +278,14 @@ export function RecordModal({
         targetTraits: br.targetTraits ?? [],
         fruitCount: br.fruitCount ?? 0,
         seedCount: br.seedCount ?? 0,
+        // 2026-07-03 v2：授粉花数
+        pollinatedFlowerCount: br.pollinatedFlowerCount ?? 0,
+        // 2026-07-03 v3：无性繁殖 4 字段
+        motherPlantCode: br.motherPlantCode ?? '',
+        propagationMethod: br.propagationMethod ?? undefined,
+        inoculationCount: br.inoculationCount ?? 0,
+        survivalCount: br.survivalCount ?? 0,
+        reproductionMode: isAsexual ? 'asexual' : 'sexual',
       });
     } else {
       const sr = record as SeedSavingRecord;
@@ -410,14 +313,9 @@ export function RecordModal({
       if (recordType === 'propagation') {
         await apiSeedlingPropagationService.update(parentRecord.id, editingId, propagationForm);
       } else if (recordType === 'breeding') {
-        if ((breedingForm.operationType === 'cross' || breedingForm.operationType === 'backcross') && !breedingForm.parentMaleCode) {
-          await showAlert('杂交/回交时父本编码必填');
-          return;
-        }
-        if (breedingForm.parentMaleCode && breedingForm.parentFemaleCode && breedingForm.parentMaleCode === breedingForm.parentFemaleCode) {
-          await showAlert('父本编码不能与母本编码相同');
-          return;
-        }
+        // 2026-07-03 v3：共享校验
+        const err = validateBreedingForm(breedingForm)
+        if (err) { await showAlert(err); return }
         await apiPlantingSubRecordService.updateBreedingRecord(parentRecord.id, editingId, breedingForm);
       } else {
         if (!seedSavingForm.plantMarker) {
@@ -442,17 +340,40 @@ export function RecordModal({
       return;
     }
     if (recordType === 'breeding') {
-      const data = (records as BreedingRecord[]).map((r) => ({
-        '日期': r.recordDate,
-        '操作类型': OPERATION_TYPE_LABELS[r.operationType] || r.operationType,
-        '世代': r.generation || '',
-        '父本编码': r.parentMaleCode || '',
-        '父本来源': r.parentMaleSource || '',
-        '母本编码': r.parentFemaleCode || '',
-        '母本来源': r.parentFemaleSource || '',
-        '操作人': r.operator || '',
-        '备注': r.remarks || '',
-      }));
+      const data = (records as BreedingRecord[]).map((r) => {
+        const asexual = r.reproductionMode === 'asexual' || ASEXUAL_OPERATION_TYPES.includes(r.operationType)
+        // 2026-07-03 v3：模式自适应 — 有性行填父本/母本，无性行填母株；空字段留空
+        const base = {
+          '日期': r.recordDate,
+          '操作类型': OPERATION_TYPE_LABELS[r.operationType] || r.operationType,
+          '繁殖模式': asexual ? '无性' : '有性',
+          '世代': r.generation || '',
+          '操作人': r.operator || '',
+          '备注': r.remarks || '',
+        }
+        if (asexual) {
+          return {
+            ...base,
+            '母株编码': r.motherPlantCode || '',
+            '繁殖方式': r.propagationMethod ? (PROPAGATION_METHOD_LABELS[r.propagationMethod] || r.propagationMethod) : '',
+            '接种数': r.inoculationCount ?? '',
+            '成活数': r.survivalCount ?? '',
+            '繁殖系数': r.inoculationCount && r.inoculationCount > 0 ? `${(((r.survivalCount || 0) / r.inoculationCount) * 100).toFixed(1)}%` : '',
+          }
+        } else {
+          return {
+            ...base,
+            '父本编码': r.parentMaleCode || '',
+            '父本来源': r.parentMaleSource || '',
+            '母本编码': r.parentFemaleCode || '',
+            '母本来源': r.parentFemaleSource || '',
+            '结实数': r.fruitCount ?? '',
+            '收获种子数': r.seedCount ?? '',
+            '授粉花数': r.pollinatedFlowerCount ?? '',
+            '结实率': r.pollinatedFlowerCount && r.pollinatedFlowerCount > 0 ? `${(((r.fruitCount || 0) / r.pollinatedFlowerCount) * 100).toFixed(1)}%` : '',
+          }
+        }
+      });
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '育种记录');
@@ -578,553 +499,3 @@ export function RecordModal({
     </UnifiedModal>
   );
 }
-
-// ============ 子组件：BreedingFields ============
-
-interface BreedingFieldsProps {
-  form: BreedingRecordInput;
-  onChange: (form: BreedingRecordInput) => void;
-  deepInputClass: string;
-}
-
-function BreedingFields({ form, onChange, deepInputClass }: BreedingFieldsProps) {
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <Label className="text-gray-700">记录日期 *</Label>
-        <DatePicker className="w-full"
-          selected={form.recordDate ? new Date(form.recordDate) : undefined}
-          onChange={(date) => onChange({ ...form, recordDate: todayLocal(date) })}
-        />
-      </div>
-      <div>
-        <Label className="text-gray-700">操作类型 *</Label>
-        <Select
-          value={form.operationType}
-          onValueChange={(v) => onChange({ ...form, operationType: v as BreedingOperationType })}
-        >
-          <SelectTrigger className={deepInputClass}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {OPERATION_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>{OPERATION_TYPE_LABELS[t]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label className="text-gray-700">世代</Label>
-        <Select
-          value={form.generation ?? ''}
-          onValueChange={(v) => onChange({ ...form, generation: v })}
-        >
-          <SelectTrigger className={deepInputClass}>
-            <SelectValue placeholder="请选择世代（如 F1 / F2 / BC1 / S3）" />
-          </SelectTrigger>
-          <SelectContent className="max-h-80">
-            {(() => {
-              // 按 group 分组渲染
-              const groups = Array.from(new Set(GENERATION_OPTIONS.map((o) => o.group)))
-              return groups.map((g) => (
-                <div key={g}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-100">
-                    {g}
-                  </div>
-                  {GENERATION_OPTIONS.filter((o) => o.group === g).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </div>
-              ))
-            })()}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="col-span-3">
-        <div className="text-xs font-medium text-gray-700 mb-1">父本 *（杂交/回交必填）</div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2">
-            <Input
-              value={form.parentMaleCode ?? ''}
-              onChange={(e) => onChange({ ...form, parentMaleCode: e.target.value })}
-              placeholder="父本编码（关联品种编码 / 父本种植编号 / 自由填写）"
-              className={deepInputClass}
-            />
-          </div>
-          <Select
-            value={form.parentMaleSource ?? 'free'}
-            onValueChange={(v) => onChange({ ...form, parentMaleSource: v as BreedingRecord['parentMaleSource'] })}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="seed_source">种源库编码</SelectItem>
-              <SelectItem value="planting">种植批号</SelectItem>
-              <SelectItem value="free">自由填写</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="col-span-3">
-        <div className="text-xs font-medium text-gray-700 mb-1">母本</div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2">
-            <Input
-              value={form.parentFemaleCode ?? ''}
-              onChange={(e) => onChange({ ...form, parentFemaleCode: e.target.value })}
-              placeholder="母本编码（默认本批种植，可填种源库编码）"
-              className={deepInputClass}
-            />
-          </div>
-          <Select
-            value={form.parentFemaleSource ?? 'free'}
-            onValueChange={(v) => onChange({ ...form, parentFemaleSource: v as BreedingRecord['parentFemaleSource'] })}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="seed_source">种源库编码</SelectItem>
-              <SelectItem value="planting">种植批号</SelectItem>
-              <SelectItem value="free">自由填写</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div>
-        <Label className="text-gray-700">操作人</Label>
-        <Input
-          value={form.operator ?? ''}
-          onChange={(e) => onChange({ ...form, operator: e.target.value })}
-          placeholder="操作员姓名"
-          className={deepInputClass}
-        />
-      </div>
-      <div className="col-span-2">
-        <Label className="text-gray-700">备注</Label>
-        <TextArea
-          value={form.remarks ?? ''}
-          onChange={(e) => onChange({ ...form, remarks: e.target.value })}
-          rows={1}
-          placeholder="目标性状、过程记录等"
-          className={deepInputClass}
-        />
-      </div>
-
-      {/* 2026-07-03：3 个通用专业字段（适用所有 6 种操作类型） */}
-      <div className="col-span-3">
-        <Label className="text-gray-700">目标性状（多选）</Label>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {(['抗病', '优质', '早熟', '丰产', '抗逆', '雄性不育', '其他'] as const).map((trait) => {
-            const selected = (form.targetTraits || []).includes(trait)
-            return (
-              <label
-                key={trait}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded border cursor-pointer text-sm transition-colors ${
-                  selected
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-medium'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="w-3.5 h-3.5"
-                  checked={selected}
-                  onChange={(e) => {
-                    const list = form.targetTraits || []
-                    onChange({
-                      ...form,
-                      targetTraits: e.target.checked
-                        ? [...list, trait]
-                        : list.filter((t) => t !== trait),
-                    })
-                  }}
-                />
-                {trait}
-              </label>
-            )
-          })}
-        </div>
-      </div>
-      <div>
-        <Label className="text-gray-700">结实数（个）</Label>
-        <Input
-          type="number"
-          min="0"
-          value={form.fruitCount ?? 0}
-          onChange={(e) => onChange({ ...form, fruitCount: e.target.value ? Number(e.target.value) : 0 })}
-          placeholder="0"
-          className={deepInputClass}
-        />
-      </div>
-      <div>
-        <Label className="text-gray-700">收获种子数（粒）</Label>
-        <Input
-          type="number"
-          min="0"
-          value={form.seedCount ?? 0}
-          onChange={(e) => onChange({ ...form, seedCount: e.target.value ? Number(e.target.value) : 0 })}
-          placeholder="0"
-          className={deepInputClass}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ============ 子组件：SeedSavingFields ============
-
-interface SeedSavingFieldsProps {
-  form: SeedSavingRecordInput;
-  onChange: (form: SeedSavingRecordInput) => void;
-  deepInputClass: string;
-}
-
-function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingFieldsProps) {
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <Label className="text-gray-700">记录日期 *</Label>
-        <DatePicker className="w-full"
-          selected={form.recordDate ? new Date(form.recordDate) : undefined}
-          onChange={(date) => onChange({ ...form, recordDate: todayLocal(date) })}
-        />
-      </div>
-      <div className="col-span-2">
-        <Label className="text-gray-700">留种株号 *</Label>
-        <Input
-          value={form.plantMarker}
-          onChange={(e) => onChange({ ...form, plantMarker: e.target.value })}
-          placeholder="例: A区第3排 #001-#050"
-          className={deepInputClass}
-        />
-      </div>
-      <div>
-        <Label className="text-gray-700">采收部位</Label>
-        <Select
-          value={form.harvestPart ?? 'seed'}
-          onValueChange={(v) => onChange({ ...form, harvestPart: v as SeedSavingPart })}
-        >
-          <SelectTrigger className={deepInputClass}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {HARVEST_PARTS.map((p) => (
-              <SelectItem key={p} value={p}>{HARVEST_PART_LABELS[p]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label className="text-gray-700">数量</Label>
-        <Input
-          type="number"
-          value={form.quantity ?? ''}
-          onChange={(e) => onChange({ ...form, quantity: e.target.value ? Number(e.target.value) : undefined })}
-          placeholder="数量"
-          className={deepInputClass}
-        />
-      </div>
-      <div>
-        <Label className="text-gray-700">单位</Label>
-        <Input
-          value={form.unit ?? ''}
-          onChange={(e) => onChange({ ...form, unit: e.target.value })}
-          placeholder="如 株 / 袋 / 克"
-          className={deepInputClass}
-        />
-      </div>
-      <div className="col-span-3">
-        <Label className="text-gray-700">操作人</Label>
-        <Input
-          value={form.operator ?? ''}
-          onChange={(e) => onChange({ ...form, operator: e.target.value })}
-          placeholder="操作员姓名"
-          className={deepInputClass}
-        />
-      </div>
-      <div className="col-span-3">
-        <Label className="text-gray-700">备注</Label>
-        <TextArea
-          value={form.remarks ?? ''}
-          onChange={(e) => onChange({ ...form, remarks: e.target.value })}
-          rows={1}
-          placeholder="其他说明"
-          className={deepInputClass}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ============ 历史记录表 ============
-
-interface HistoryTableProps<R> {
-  records: R[];
-  editingId: string | null;
-  onEdit: (record: R) => void;
-  onDelete: (recordId: string) => void;
-}
-
-function BreedingHistoryTable({ records, editingId, onEdit, onDelete }: HistoryTableProps<BreedingRecord>) {
-  return (
-    <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-      <table className="w-full text-sm">
-        <thead className="bg-blue-500 text-white sticky top-0">
-          <tr>
-            <th className="px-2 py-2 text-left">日期</th>
-            <th className="px-2 py-2 text-left">操作</th>
-            <th className="px-2 py-2 text-left">世代</th>
-            <th className="px-2 py-2 text-left">父本</th>
-            <th className="px-2 py-2 text-left">母本</th>
-            <th className="px-2 py-2 text-left">目标性状</th>
-            <th className="px-2 py-2 text-right">结实</th>
-            <th className="px-2 py-2 text-right">种子</th>
-            <th className="px-2 py-2 text-left">操作人</th>
-            <th className="px-2 py-2 text-left">备注</th>
-            <th className="px-2 py-2 text-center w-24">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {records.map((r) => (
-            <tr key={r.id} className="hover:bg-gray-50">
-              <td className="px-2 py-1.5 whitespace-nowrap">{r.recordDate}</td>
-              <td className="px-2 py-1.5">{OPERATION_TYPE_LABELS[r.operationType] || r.operationType}</td>
-              <td className="px-2 py-1.5">{r.generation || '-'}</td>
-              <td className="px-2 py-1.5 font-mono text-xs">
-                {r.parentMaleCode ? (
-                  <Badge variant="outline" className="text-xs">
-                    {r.parentMaleCode} <span className="text-gray-400 ml-1">({r.parentMaleSource || 'free'})</span>
-                  </Badge>
-                ) : '-'}
-              </td>
-              <td className="px-2 py-1.5 font-mono text-xs">
-                {r.parentFemaleCode ? (
-                  <Badge variant="outline" className="text-xs">
-                    {r.parentFemaleCode} <span className="text-gray-400 ml-1">({r.parentFemaleSource || 'free'})</span>
-                  </Badge>
-                ) : '-'}
-              </td>
-              <td className="px-2 py-1.5">
-                {(() => {
-                  const traits = typeof r.targetTraits === 'string'
-                    ? (() => { try { return JSON.parse(r.targetTraits) } catch { return [] } })()
-                    : r.targetTraits
-                  return Array.isArray(traits) && traits.length > 0 ? (
-                    <div className="flex flex-wrap gap-0.5">
-                      {traits.map((t: string) => (
-                        <span key={t} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded">{t}</span>
-                      ))}
-                    </div>
-                  ) : '-'
-                })()}
-              </td>
-              <td className="px-2 py-1.5 text-right text-emerald-700 font-medium">{r.fruitCount ?? '-'}</td>
-              <td className="px-2 py-1.5 text-right text-amber-700 font-medium">{r.seedCount ?? '-'}</td>
-              <td className="px-2 py-1.5">{r.operator || '-'}</td>
-              <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]">{r.remarks || '-'}</td>
-              <td className="px-2 py-1.5 text-center">
-                {editingId === r.id ? (
-                  <span className="text-xs text-amber-600">编辑中</span>
-                ) : (
-                  <div className="flex items-center justify-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SeedSavingHistoryTable({ records, editingId, onEdit, onDelete }: HistoryTableProps<SeedSavingRecord>) {
-  return (
-    <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-      <table className="w-full text-sm">
-        <thead className="bg-blue-500 text-white sticky top-0">
-          <tr>
-            <th className="px-2 py-2 text-left">日期</th>
-            <th className="px-2 py-2 text-left">留种株号</th>
-            <th className="px-2 py-2 text-left">采收部位</th>
-            <th className="px-2 py-2 text-left">数量</th>
-            <th className="px-2 py-2 text-left">单位</th>
-            <th className="px-2 py-2 text-left">操作人</th>
-            <th className="px-2 py-2 text-left">备注</th>
-            <th className="px-2 py-2 text-center w-24">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {records.map((r) => (
-            <tr key={r.id} className="hover:bg-gray-50">
-              <td className="px-2 py-1.5 whitespace-nowrap">{r.recordDate}</td>
-              <td className="px-2 py-1.5 font-mono text-amber-700">{r.plantMarker}</td>
-              <td className="px-2 py-1.5">{r.harvestPart ? (HARVEST_PART_LABELS[r.harvestPart] || r.harvestPart) : '-'}</td>
-              <td className="px-2 py-1.5">{r.quantity ?? '-'}</td>
-              <td className="px-2 py-1.5">{r.unit || '-'}</td>
-              <td className="px-2 py-1.5">{r.operator || '-'}</td>
-              <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]">{r.remarks || '-'}</td>
-              <td className="px-2 py-1.5 text-center">
-                {editingId === r.id ? (
-                  <span className="text-xs text-amber-600">编辑中</span>
-                ) : (
-                  <div className="flex items-center justify-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ============ 子组件：PropagationFields ============
-
-interface PropagationFieldsProps {
-  form: PropagationRecordInput;
-  onChange: (form: PropagationRecordInput) => void;
-  deepInputClass: string;
-}
-
-function PropagationFields({ form, onChange, deepInputClass }: PropagationFieldsProps) {
-  return (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <Label className="text-gray-700">记录日期 *</Label>
-        <DatePicker className="w-full"
-          selected={form.recordDate ? new Date(form.recordDate) : undefined}
-          onChange={(date) => onChange({ ...form, recordDate: todayLocal(date) })}
-        />
-      </div>
-      <div>
-        <Label className="text-gray-700">温度（℃）</Label>
-        <Input type="number" value={form.temperature ?? ''}
-          onChange={(e) => onChange({ ...form, temperature: e.target.value ? Number(e.target.value) : undefined })}
-          placeholder="环境温度" className={deepInputClass} />
-      </div>
-      <div>
-        <Label className="text-gray-700">湿度（%）</Label>
-        <Input type="number" value={form.humidity ?? ''}
-          onChange={(e) => onChange({ ...form, humidity: e.target.value ? Number(e.target.value) : undefined })}
-          placeholder="环境湿度" className={deepInputClass} />
-      </div>
-      <div>
-        <Label className="text-gray-700">母株数量</Label>
-        <NumberInput value={String(form.motherPlantCount ?? '')}
-          onChange={(v) => onChange({ ...form, motherPlantCount: v ? parseInt(v, 10) : undefined })}
-          placeholder="当前母株总数" className={deepInputClass} />
-      </div>
-      <div>
-        <Label className="text-gray-700">子苗产出</Label>
-        <NumberInput value={String(form.seedlingOutput ?? '')}
-          onChange={(v) => onChange({ ...form, seedlingOutput: v ? parseInt(v, 10) : undefined })}
-          placeholder="当日新产子苗数" className={deepInputClass} />
-      </div>
-      <div>
-        <Label className="text-gray-700">子苗状态</Label>
-        <Select value={form.seedlingStatus ?? 'healthy'}
-          onValueChange={(v) => onChange({ ...form, seedlingStatus: v as PropagationRecordInput['seedlingStatus'] })}>
-          <SelectTrigger className={deepInputClass}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="healthy">健康</SelectItem>
-            <SelectItem value="weak">弱苗</SelectItem>
-            <SelectItem value="diseased">病害</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="col-span-3">
-        <Label className="text-gray-700">移栽位置</Label>
-        <Input value={form.transplantPosition ?? ''}
-          onChange={(e) => onChange({ ...form, transplantPosition: e.target.value })}
-          placeholder="如温室B区 / 3号苗床" className={deepInputClass} />
-      </div>
-      <div>
-        <Label className="text-gray-700">操作人</Label>
-        <Input value={form.operator ?? ''}
-          onChange={(e) => onChange({ ...form, operator: e.target.value })}
-          placeholder="操作员姓名" className={deepInputClass} />
-      </div>
-      <div className="col-span-2">
-        <Label className="text-gray-700">备注</Label>
-        <TextArea value={form.remarks ?? ''}
-          onChange={(e) => onChange({ ...form, remarks: e.target.value })}
-          rows={1} placeholder="异常情况、病虫害等" className={deepInputClass} />
-      </div>
-    </div>
-  );
-}
-
-// ============ Propagation 历史记录表 ============
-
-function PropagationHistoryTable({ records, editingId, onEdit, onDelete }: HistoryTableProps<PropagationRecord>) {
-  return (
-    <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-      <table className="w-full text-sm">
-        <thead className="bg-blue-500 text-white sticky top-0">
-          <tr>
-            <th className="px-2 py-2 text-left">日期</th>
-            <th className="px-2 py-2 text-left">温度</th>
-            <th className="px-2 py-2 text-left">湿度</th>
-            <th className="px-2 py-2 text-left">母株</th>
-            <th className="px-2 py-2 text-left">子苗</th>
-            <th className="px-2 py-2 text-left">状态</th>
-            <th className="px-2 py-2 text-left">移栽位置</th>
-            <th className="px-2 py-2 text-left">操作人</th>
-            <th className="px-2 py-2 text-left">备注</th>
-            <th className="px-2 py-2 text-center w-24">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {records.map((r) => (
-            <tr key={r.id} className="hover:bg-gray-50">
-              <td className="px-2 py-1.5 whitespace-nowrap">{r.recordDate}</td>
-              <td className="px-2 py-1.5">{r.temperature != null ? `${r.temperature}℃` : '-'}</td>
-              <td className="px-2 py-1.5">{r.humidity != null ? `${r.humidity}%` : '-'}</td>
-              <td className="px-2 py-1.5">{r.motherPlantCount ?? '-'}</td>
-              <td className="px-2 py-1.5 text-emerald-600 font-medium">{r.seedlingOutput ?? '-'}</td>
-              <td className="px-2 py-1.5">
-                {r.seedlingStatus ? (
-                  <Badge variant="outline" className="text-xs">{SEEDLING_STATUS_LABELS[r.seedlingStatus] || r.seedlingStatus}</Badge>
-                ) : '-'}
-              </td>
-              <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]">{r.transplantPosition || '-'}</td>
-              <td className="px-2 py-1.5">{r.operator || '-'}</td>
-              <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]">{r.remarks || '-'}</td>
-              <td className="px-2 py-1.5 text-center">
-                {editingId === r.id ? (
-                  <span className="text-xs text-amber-600">编辑中</span>
-                ) : (
-                  <div className="flex items-center justify-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-// Helper functions available via direct import from this file

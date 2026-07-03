@@ -3041,7 +3041,68 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('harvest_records.products 迁移失败:', e.message)
   }
+
+  // ============================================================
+  // 2026-07-03 v3：planting_breeding_records.reproduction_mode 老数据 backfill
+  // 老数据无 reproduction_mode 字段，按 operationType 推断：
+  // - clonal/cutting/grafting/layering/tissue/division → 'asexual'
+  // - 其他 → 'sexual'
+  // ============================================================
+  try {
+    // 检查表是否存在
+    const tblStmt = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='planting_breeding_records'`)
+    const tableExists = tblStmt.step()
+    tblStmt.free()
+    if (!tableExists) {
+      seedLog.skip('• planting_breeding_records 表不存在，跳过 backfill')
+      return
+    }
+    // 检查列是否存在
+    const colStmt = db.prepare(`PRAGMA table_info(planting_breeding_records)`)
+    let hasMode = false
+    while (colStmt.step()) {
+      const row = colStmt.getAsObject() as { name: string }
+      if (row.name === 'reproduction_mode') { hasMode = true; break }
+    }
+    colStmt.free()
+    if (!hasMode) {
+      seedLog.skip('• planting_breeding_records.reproduction_mode 列不存在，跳过 backfill')
+      return
+    }
+    // 查 NULL 数量
+    const cntStmt = db.prepare(`SELECT COUNT(*) as cnt FROM planting_breeding_records WHERE reproduction_mode IS NULL`)
+    let nullCnt = 0
+    if (cntStmt.step()) {
+      nullCnt = (cntStmt.getAsObject() as { cnt: number }).cnt
+    }
+    cntStmt.free()
+    if (nullCnt > 0) {
+      // 推断：6 个无性 op → asexual
+      db.run(`UPDATE planting_breeding_records SET reproduction_mode = 'asexual' WHERE reproduction_mode IS NULL AND operation_type IN ('clonal','cutting','grafting','layering','tissue','division')`)
+      // 剩余 → sexual
+      db.run(`UPDATE planting_breeding_records SET reproduction_mode = 'sexual' WHERE reproduction_mode IS NULL`)
+      saveDatabase()
+      seedLog.info(`✓ planting_breeding_records.reproduction_mode backfill 完成：${nullCnt} 行`)
+    } else {
+      seedLog.skip('• planting_breeding_records.reproduction_mode 全部已 backfill')
+    }
+  } catch (e: any) {
+    seedLog.skip('• planting_breeding_records.reproduction_mode backfill:', e.message)
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
 // 如需独立运行，执行: npx tsx src/db/fixMissingSchema.ts
+
+// 2026-07-03 v3：standalone runner — 启动白名单禁用了 index.ts 自动调用，所以保留手动入口
+if (require.main === module) {
+  (async () => {
+    await initDatabase()
+    await fixMissingSchema()
+    process.exit(0)
+  })().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error('fixMissingSchema failed:', e)
+    process.exit(1)
+  })
+}

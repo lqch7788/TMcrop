@@ -16,8 +16,56 @@ router.use(authenticate);
 
 // ============ Zod Schemas ============
 
-const BreedingOperationType = z.enum(['cross', 'self', 'selection', 'backcross', 'marker', 'other']);
+// 2026-07-03 v2：扩 enum
+// 有性：cross(杂交)/self(自交)/backcross(回交)/selection(选育-有种)/marker(标记)/other
+// 无性：clonal(无性选育)/cutting(扦插)/grafting(嫁接)/layering(压条)/tissue(组培)/division(分株)
+const BreedingOperationType = z.enum([
+  'cross', 'self', 'backcross', 'selection', 'marker', 'other',
+  'clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division',
+]);
 const SeedSavingPart = z.enum(['fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other']);
+
+// 2026-07-03 v2：繁殖方式（无性繁殖专用）
+const PropagationMethod = z.enum([
+  'cutting', 'grafting', 'layering', 'tissue_culture', 'division', 'bulb', 'tuber', 'runner',
+]);
+
+// 2026-07-03 v3：无性操作类型常量（业务校验共用）
+const ASEXUAL_OPS: ReadonlyArray<string> = ['clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division'];
+
+/**
+ * 2026-07-03 v3：育种记录业务校验（POST/PUT 共用）
+ * @returns null = 通过；string = 错误信息
+ */
+function validateBreedingBusiness(data: {
+  operationType: string
+  parentMaleCode?: string | null
+  parentFemaleCode?: string | null
+  motherPlantCode?: string | null
+  propagationMethod?: string | null
+  inoculationCount?: number | null
+  survivalCount?: number | null
+}): string | null {
+  // 杂交/回交父本必填
+  if ((data.operationType === 'cross' || data.operationType === 'backcross') && !data.parentMaleCode) {
+    return '杂交/回交时父本编码必填'
+  }
+  // 父本 ≠ 母本
+  if (data.parentMaleCode && data.parentFemaleCode && data.parentMaleCode === data.parentFemaleCode) {
+    return '父本编码不能与母本编码相同'
+  }
+  // 无性母株必填
+  if (ASEXUAL_OPS.includes(data.operationType) && !data.motherPlantCode) {
+    return '无性繁殖时母株编码必填'
+  }
+  // 有性不应填无性字段
+  if (!ASEXUAL_OPS.includes(data.operationType)) {
+    if (data.motherPlantCode || data.propagationMethod || (data.inoculationCount && data.inoculationCount > 0) || (data.survivalCount && data.survivalCount > 0)) {
+      return '有性繁殖不应填写无性字段（母株/繁殖方式/接种数/成活数）'
+    }
+  }
+  return null
+}
 
 // 2026-07-03：育种记录通用字段（适用所有 6 种操作类型）
 // 目标性状：抗病/优质/早熟/丰产/抗逆/雄性不育 等
@@ -37,6 +85,14 @@ const BreedingRecordSchema = z.object({
   targetTraits: z.array(z.string()).optional().nullable(),
   fruitCount: z.number().int().nonnegative().optional().nullable(),  // 结实数
   seedCount: z.number().int().nonnegative().optional().nullable(),  // 收获种子数
+  pollinatedFlowerCount: z.number().int().nonnegative().optional().nullable(),  // 授粉花数（计算结实率用）
+  // 2026-07-03 v3：无性繁殖专用字段
+  motherPlantCode: z.string().optional().nullable(),                  // 母株编码
+  propagationMethod: PropagationMethod.optional().nullable(),        // 繁殖方式
+  inoculationCount: z.number().int().nonnegative().optional().nullable(),  // 接种数
+  survivalCount: z.number().int().nonnegative().optional().nullable(),      // 成活数
+  // 2026-07-03 v3：繁殖模式（'sexual' | 'asexual'，方便筛选/导出）
+  reproductionMode: z.enum(['sexual', 'asexual']).optional().nullable(),
 });
 
 const SeedSavingRecordSchema = z.object({
@@ -91,6 +147,14 @@ function initTables() {
       target_traits TEXT,   -- JSON 数组：["抗病","优质","早熟",...]
       fruit_count INTEGER,  -- 结实数（整株或单果）
       seed_count INTEGER,   -- 收获种子数
+      -- 2026-07-03 v2：授粉花数（计算结实率用）
+      pollinated_flower_count INTEGER,  -- 授粉花数
+      -- 2026-07-03 v3：无性繁殖专用字段
+      mother_plant_code TEXT,        -- 母株编码
+      propagation_method TEXT,       -- 繁殖方式（cutting/grafting/...）
+      inoculation_count INTEGER,     -- 接种数
+      survival_count INTEGER,        -- 成活数
+      reproduction_mode TEXT,        -- 繁殖模式（sexual/asexual）
       create_time TEXT DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (planting_id) REFERENCES plantings(id) ON DELETE CASCADE
     )
@@ -99,6 +163,14 @@ function initTables() {
   try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN target_traits TEXT`); } catch (_) {}
   try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN fruit_count INTEGER`); } catch (_) {}
   try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN seed_count INTEGER`); } catch (_) {}
+  // 2026-07-03 v2：授粉花数列
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN pollinated_flower_count INTEGER`); } catch (_) {}
+  // 2026-07-03 v3：无性繁殖专用 4 列 + 模式列
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN mother_plant_code TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN propagation_method TEXT`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN inoculation_count INTEGER`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN survival_count INTEGER`); } catch (_) {}
+  try { db.run(`ALTER TABLE planting_breeding_records ADD COLUMN reproduction_mode TEXT`); } catch (_) {}
   ensureTable(db, 'planting_seed_saving_records', `
     CREATE TABLE IF NOT EXISTS planting_seed_saving_records (
       id TEXT PRIMARY KEY,
@@ -174,13 +246,12 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
     }
     const data = parsed.data;
-    // 业务规则：杂交/回交 时父本必填
-    if ((data.operationType === 'cross' || data.operationType === 'backcross') && !data.parentMaleCode) {
-      return res.status(400).json({ success: false, error: '杂交/回交时父本编码必填' });
-    }
-    // 父本 ≠ 母本
-    if (data.parentMaleCode && data.parentFemaleCode && data.parentMaleCode === data.parentFemaleCode) {
-      return res.status(400).json({ success: false, error: '父本编码不能与母本编码相同' });
+    // 2026-07-03 v3：判断繁殖模式（显式 reproductionMode 优先，否则按 operationType 推断）
+    const reproductionMode = data.reproductionMode || (ASEXUAL_OPS.includes(data.operationType) ? 'asexual' : 'sexual')
+    // 业务规则（POST/PUT 共用）
+    const bizErr = validateBreedingBusiness(data)
+    if (bizErr) {
+      return res.status(400).json({ success: false, error: bizErr })
     }
     // 2026-07-03：目标性状枚举校验（业务层）
     if (data.targetTraits && Array.isArray(data.targetTraits)) {
@@ -206,8 +277,9 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
       `INSERT INTO planting_breeding_records (
         id, planting_id, record_date, operation_type, generation,
         parent_male_code, parent_male_source, parent_female_code, parent_female_source,
-        operator, remarks, target_traits, fruit_count, seed_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        operator, remarks, target_traits, fruit_count, seed_count, pollinated_flower_count,
+        mother_plant_code, propagation_method, inoculation_count, survival_count, reproduction_mode
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     ins.run([
       recordId, id, data.recordDate, data.operationType, data.generation || null,
@@ -218,6 +290,14 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
       data.targetTraits ? JSON.stringify(data.targetTraits) : null,
       data.fruitCount ?? null,
       data.seedCount ?? null,
+      // 2026-07-03 v2：授粉花数
+      data.pollinatedFlowerCount ?? null,
+      // 2026-07-03 v3：无性繁殖 4 字段 + 模式
+      data.motherPlantCode || null,
+      data.propagationMethod || null,
+      data.inoculationCount ?? null,
+      data.survivalCount ?? null,
+      reproductionMode,
     ]);
     ins.free();
     saveDatabase();
@@ -241,6 +321,21 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
     }
     const data = parsed.data;
     const db = getDatabase();
+    // 2026-07-03 v3：业务校验（PUT 也用）— 当 operationType/motherPlantCode 等关键字段被更新时校验
+    if (data.operationType) {
+      const bizErr = validateBreedingBusiness({
+        operationType: data.operationType,
+        parentMaleCode: data.parentMaleCode,
+        parentFemaleCode: data.parentFemaleCode,
+        motherPlantCode: data.motherPlantCode,
+        propagationMethod: data.propagationMethod,
+        inoculationCount: data.inoculationCount,
+        survivalCount: data.survivalCount,
+      })
+      if (bizErr) {
+        return res.status(400).json({ success: false, error: bizErr })
+      }
+    }
     // 检查记录存在
     const cStmt = db.prepare(`SELECT id FROM planting_breeding_records WHERE id = ? AND planting_id = ?`);
     cStmt.bind([recordId, id]);
@@ -265,6 +360,13 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
     if (data.targetTraits !== undefined) { fields.push('target_traits = ?'); params.push(data.targetTraits ? JSON.stringify(data.targetTraits) : null); }
     if (data.fruitCount !== undefined) { fields.push('fruit_count = ?'); params.push(data.fruitCount); }
     if (data.seedCount !== undefined) { fields.push('seed_count = ?'); params.push(data.seedCount); }
+    if (data.pollinatedFlowerCount !== undefined) { fields.push('pollinated_flower_count = ?'); params.push(data.pollinatedFlowerCount); }
+    // 2026-07-03 v3：无性繁殖字段
+    if (data.motherPlantCode !== undefined) { fields.push('mother_plant_code = ?'); params.push(data.motherPlantCode); }
+    if (data.propagationMethod !== undefined) { fields.push('propagation_method = ?'); params.push(data.propagationMethod); }
+    if (data.inoculationCount !== undefined) { fields.push('inoculation_count = ?'); params.push(data.inoculationCount); }
+    if (data.survivalCount !== undefined) { fields.push('survival_count = ?'); params.push(data.survivalCount); }
+    if (data.reproductionMode !== undefined) { fields.push('reproduction_mode = ?'); params.push(data.reproductionMode); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }
@@ -394,10 +496,6 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
     if (data.unit !== undefined) { fields.push('unit = ?'); params.push(data.unit); }
     if (data.operator !== undefined) { fields.push('operator = ?'); params.push(data.operator); }
     if (data.remarks !== undefined) { fields.push('remarks = ?'); params.push(data.remarks); }
-    // 2026-07-03：3 个新通用字段
-    if (data.targetTraits !== undefined) { fields.push('target_traits = ?'); params.push(data.targetTraits ? JSON.stringify(data.targetTraits) : null); }
-    if (data.fruitCount !== undefined) { fields.push('fruit_count = ?'); params.push(data.fruitCount); }
-    if (data.seedCount !== undefined) { fields.push('seed_count = ?'); params.push(data.seedCount); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }
