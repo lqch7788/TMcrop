@@ -33,7 +33,8 @@ import { Input, TextArea, DatePicker } from '@/components/ui'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
 import { NumberInput } from '@/components/ui'
 import { Button } from '@/components/ui'
-import { Sprout, Trash2, Recycle, Package, Wheat, AlertTriangle, Download, ChevronDown, X } from 'lucide-react'
+import { Sprout, Trash2, Recycle, Package, Wheat, AlertTriangle, AlertCircle, Download, ChevronDown, X } from 'lucide-react'
+import { DeleteErrorPanel } from '../../inventory/DeleteErrorPanel'
 import { Planting, PlantingHarvestRecord } from '../../../../types/crop'
 import type { EndType } from '../../../../types/cropCirculation'
 import type { AddHarvestRecordInput } from '@/services/apiPlantingService'
@@ -129,6 +130,12 @@ function getSubTypeLabel(sub: string | undefined): string {
 
 export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: HarvestRecordModalProps) {
   const [destination, setDestination] = useState<EndType | null>(null)
+  // 2026-07-03：删除错误信息（固定在弹窗内显示，不用 showAlert/toast 一闪而过）
+  const [deleteError, setDeleteError] = useState<{
+    message: string
+    blockingRecords?: any[]
+    blockingTransactions?: any[]
+  } | null>(null)
   const [subType, setSubType] = useState<SubType>('cutting')
   const [quantity, setQuantity] = useState<number | string>(0)
   // 2026-07-01 P0-4 修复：单位初值用 record.unit 优先，没有再 fallback 到 '克'
@@ -478,13 +485,26 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   }
 
   const handleDelete = async (recordId: string) => {
+    setDeleteError(null)  // 清上次的错误
     const ok = await showConfirm('确定删除这条采收记录？\n将同时撤销对应的库存/回流副作用。')
     if (!ok) return
-    const success = await deleteHarvestRecord(record.id, recordId)
-    if (success) {
-      onSuccess?.()
-    } else {
-      showAlert('删除失败')
+    try {
+      const success = await deleteHarvestRecord(record.id, recordId)
+      if (success) {
+        setDeleteError(null)
+        onSuccess?.()
+      }
+    } catch (e: any) {
+      // 2026-07-03：固定在弹窗内显示阻挡详情（替代 showAlert/toast 一闪而过）
+      const blockingRecords = e?.blockingRecords || []
+      const blockingTransactions = e?.blockingTransactions || []
+      if (blockingRecords.length > 0) {
+        setDeleteError({ message: e?.message || '无法删除', blockingRecords })
+      } else if (blockingTransactions.length > 0) {
+        setDeleteError({ message: e?.message || '无法删除', blockingTransactions })
+      } else {
+        setDeleteError({ message: e?.message || '删除失败' })
+      }
     }
   }
 
@@ -929,6 +949,14 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
         {/* 历史记录表 */}
         <div>
+          {deleteError && (
+            <DeleteErrorPanel
+              blockingRecords={deleteError.blockingRecords}
+              blockingTransactions={deleteError.blockingTransactions}
+              message={deleteError.message}
+              onClose={() => setDeleteError(null)}
+            />
+          )}
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
             <h4 className="text-sm font-semibold text-gray-900">历史记录 ({harvestRecords.length} 条)</h4>
             <Button

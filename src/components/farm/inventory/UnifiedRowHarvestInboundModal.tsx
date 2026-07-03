@@ -45,6 +45,7 @@ import {
   type InboundProduct,
 } from '@/services/unifiedHarvestInboundService'
 import type { HarvestRecord } from '@/types'
+import { DeleteErrorPanel } from './DeleteErrorPanel'
 
 // ============ 常量 ============
 
@@ -536,16 +537,31 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // 2026-07-01: 删除 1 条采收记录（弹窗删除按钮）
   const deleteRecord = useHarvestRecordStore((s) => s.deleteRecord)
   const deletingIds = useHarvestRecordStore((s) => s.deletingIds)
+  const [deleteError, setDeleteError] = useState<{
+    message: string
+    blockingRecords?: any[]
+    blockingTransactions?: any[]
+  } | null>(null)
   const handleDeleteRecord = async (recordId: string) => {
+    setDeleteError(null)
     const ok = await showConfirm('确定删除这条采收记录？\n将同时删除对应的库存实例、入库审计和流水。')
     if (!ok) return
     try {
       const success = await deleteRecord(recordId, sourceModule, sourceRecord.id || '')
       if (success) {
+        setDeleteError(null)
         showAlert('删除成功', { title: '成功' })
       }
     } catch (e: any) {
-      showAlert(e?.message || '删除失败')
+      const blockingRecords = e?.blockingRecords || []
+      const blockingTransactions = e?.blockingTransactions || []
+      if (blockingRecords.length > 0) {
+        setDeleteError({ message: e?.message || '无法删除', blockingRecords })
+      } else if (blockingTransactions.length > 0) {
+        setDeleteError({ message: e?.message || '无法删除', blockingTransactions })
+      } else {
+        setDeleteError({ message: e?.message || '删除失败' })
+      }
     }
   }
 
@@ -898,6 +914,14 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             每条入库记录按 products 数组展开成多行（与 Excel 导出列保持一致）
             品质英→中、导出按钮绿色、加删除按钮 */}
         <div className="border-t pt-3">
+          {deleteError && (
+            <DeleteErrorPanel
+              blockingRecords={deleteError.blockingRecords}
+              blockingTransactions={deleteError.blockingTransactions}
+              message={deleteError.message}
+              onClose={() => setDeleteError(null)}
+            />
+          )}
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium">
               采收记录（{historyRecords.length} 条）

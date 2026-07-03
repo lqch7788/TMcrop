@@ -17,6 +17,7 @@ import {
   normalizeChangeData,
   applyDailyChangeToPlanting,
 } from '../services/plantingDailyChange';
+import { checkHarvestRecordDeletable, checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 const router = Router();
 
 // C1：全局应用 auth 中间件（演示模式自动放行）
@@ -528,12 +529,44 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
       return res.status(400).json({ success: false, error: '单位类型错误' });
     }
 
-    // === 反向补偿：删除旧的下游副作用 ===
-    if (old.harvest_record_id) {
-      db.run('DELETE FROM harvest_records WHERE id = ?', [old.harvest_record_id]);
+    // === 反向补偿：删除旧的下游副作用（2026-07-03 v3：兼容老数据兜底查找） ===
+    let effHarvestId = old.harvest_record_id || null;
+    let effStockId = old.inventory_stock_id || null;
+    if (!effHarvestId) {
+      const fs = db.prepare(`
+        SELECT hr.id AS hid, ist.id AS sid
+        FROM harvest_records hr
+        LEFT JOIN inventory_stock ist ON ist.business_id = hr.id AND ist.business_type = 'harvest'
+        WHERE hr.source_module = 'planting' AND hr.source_id = ? AND hr.deleted_at IS NULL
+        ORDER BY hr.create_time DESC LIMIT 1
+      `);
+      fs.bind([id]);
+      const frow = fs.step() ? fs.getAsObject() as any : null;
+      fs.free();
+      if (frow) { effHarvestId = frow.hid || null; effStockId = effStockId || frow.sid || null; }
     }
-    if (old.inventory_stock_id) {
-      db.run('DELETE FROM inventory_stock WHERE id = ?', [old.inventory_stock_id]);
+    if (effHarvestId) {
+      const check = checkHarvestRecordDeletable(effHarvestId);
+      if (!check.ok) {
+        return res.status(400).json({ success: false, error: check.error, blockingRecords: check.blockingRecords || [] });
+      }
+      db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [effHarvestId]);
+      db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [effHarvestId]);
+      db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [effHarvestId]);
+      db.run('DELETE FROM harvest_records WHERE id = ?', [effHarvestId]);
+    } else if (effStockId) {
+      const check = checkInventoryStockDeletable(effStockId);
+      if (!check.ok) {
+        return res.status(400).json({ success: false, error: check.error, blockingTransactions: check.blockingTransactions || [] });
+      }
+      const st = db.prepare('SELECT instance_id FROM inventory_stock WHERE id = ?');
+      st.bind([effStockId]);
+      if (st.step()) {
+        const stk = st.getAsObject() as any;
+        db.run(`DELETE FROM inventory_transaction WHERE instance_id = ?`, [stk.instance_id]);
+        db.run('DELETE FROM inventory_stock WHERE id = ?', [effStockId]);
+      }
+      st.free();
     }
     if (old.circulation_record_id) {
       db.run('DELETE FROM crop_circulation_records WHERE id = ?', [old.circulation_record_id]);
@@ -725,12 +758,61 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
     oldStmt.free();
     if (!old) return res.status(404).json({ success: false, error: '采收记录不存在' });
 
-    // 反向补偿：删除下游副作用
-    if (old.harvest_record_id) {
-      db.run('DELETE FROM harvest_records WHERE id = ?', [old.harvest_record_id]);
+    // 反向补偿：删除下游副作用（2026-07-03：补齐 transaction 级联清理）
+    // 2026-07-03 v3：兼容老数据（harvest_record_id 为 null 时，通过 planting_id 反向查找）
+    let effectiveHarvestId = old.harvest_record_id || null;
+    let effectiveStockId = old.inventory_stock_id || null;
+
+    // 如果 harvest_record_id 为 null（老数据未关联），通过 planting_id 反向查找
+    if (!effectiveHarvestId) {
+      const findStmt = db.prepare(`
+        SELECT hr.id AS hid, ist.id AS sid
+        FROM harvest_records hr
+        LEFT JOIN inventory_stock ist ON ist.business_id = hr.id AND ist.business_type = 'harvest'
+        WHERE hr.source_module = 'planting' AND hr.source_id = ?
+        AND hr.deleted_at IS NULL
+        ORDER BY hr.create_time DESC LIMIT 1
+      `);
+      findStmt.bind([id]);
+      const found = findStmt.step() ? findStmt.getAsObject() as any : null;
+      findStmt.free();
+      if (found) {
+        effectiveHarvestId = found.hid || null;
+        effectiveStockId = effectiveStockId || found.sid || null;
+      }
     }
-    if (old.inventory_stock_id) {
-      db.run('DELETE FROM inventory_stock WHERE id = ?', [old.inventory_stock_id]);
+
+    if (effectiveHarvestId) {
+      const checkHarvest = checkHarvestRecordDeletable(effectiveHarvestId);
+      if (!checkHarvest.ok) {
+        return res.status(400).json({
+          success: false,
+          error: checkHarvest.error,
+          blockingRecords: checkHarvest.blockingRecords || [],
+        });
+      }
+      // 级联清理 4 张表
+      db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [effectiveHarvestId]);
+      db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [effectiveHarvestId]);
+      db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [effectiveHarvestId]);
+      db.run('DELETE FROM harvest_records WHERE id = ?', [effectiveHarvestId]);
+    } else if (effectiveStockId) {
+      const checkStock = checkInventoryStockDeletable(effectiveStockId);
+      if (!checkStock.ok) {
+        return res.status(400).json({
+          success: false,
+          error: checkStock.error,
+          blockingTransactions: checkStock.blockingTransactions || [],
+        });
+      }
+      const stkt = db.prepare('SELECT instance_id FROM inventory_stock WHERE id = ?');
+      stkt.bind([effectiveStockId]);
+      if (stkt.step()) {
+        const stk = stkt.getAsObject() as any;
+        db.run(`DELETE FROM inventory_transaction WHERE instance_id = ?`, [stk.instance_id]);
+        db.run('DELETE FROM inventory_stock WHERE id = ?', [effectiveStockId]);
+      }
+      stkt.free();
     }
     if (old.circulation_record_id) {
       db.run('DELETE FROM crop_circulation_records WHERE id = ?', [old.circulation_record_id]);
@@ -1688,7 +1770,10 @@ router.post('/:id/harvest-records', async (req, res) => {
     // 2026-06-29: 加 seedForm 字段（种植自留种采收形态）
     const {
       recordDate, destination, subType, seedForm, warehouseId, warehouseName,
-      quantity, unit, notes, operatorName, createBy, createById
+      quantity, unit, notes, operatorName, createBy, createById,
+      // 2026-07-03：采收入库弹窗 sync 写入时带进来的，不需要后端重新创建
+      harvestRecordId: frontHarvestRecordId,
+      inventoryStockId: frontInventoryStockId,
     } = req.body || {}
 
     if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' })
@@ -1837,7 +1922,10 @@ router.post('/:id/harvest-records', async (req, res) => {
         destination, subType || null, finalWarehouseId, finalWarehouseName,
         quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
         now, now,
-        generatedHarvestId, generatedStockId, generatedCircId,
+        // 2026-07-03：harvest 分支用前端传入的已创建 ID（不重复创建 harvest_records）
+        destination === 'harvest' ? (frontHarvestRecordId || null) : generatedHarvestId,
+        destination === 'harvest' ? (frontInventoryStockId || null) : generatedStockId,
+        generatedCircId,
         // 2026-07-02: harvest 分支也写 source_form — 修复历史记录"形态"列为空
         (destination === 'planting_self_kept' || destination === 'harvest') ? (seedForm || null) : null,
       ])

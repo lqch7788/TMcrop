@@ -312,7 +312,10 @@ export async function getInventoryByBusinessId(
  * 批量删除库存
  * 调用后端 DELETE /api/inventory/batch?ids=id1,id2,id3
  */
-export async function deleteInventoryBatch(ids: string[]): Promise<{ success: boolean; deletedCount: number; error?: string }> {
+export async function deleteInventoryBatch(ids: string[]): Promise<{
+  success: boolean; deletedCount: number; error?: string;
+  blockingTransactions?: any[]; blocked?: any[];
+}> {
   if (ids.length === 0) {
     return { success: true, deletedCount: 0 };
   }
@@ -321,11 +324,13 @@ export async function deleteInventoryBatch(ids: string[]): Promise<{ success: bo
       `/inventory/batch?ids=${encodeURIComponent(ids.join(','))}`
     );
     return { success: true, deletedCount: result?.deletedCount ?? ids.length };
-  } catch (error) {
+  } catch (error: any) {
     return {
       success: false,
       deletedCount: 0,
-      error: error instanceof Error ? error.message : '批量删除失败',
+      error: error?.message || '批量删除失败',
+      blockingTransactions: error?.blockingTransactions || [],
+      blocked: error?.blocked || [],
     };
   }
 }

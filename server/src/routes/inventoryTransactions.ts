@@ -316,7 +316,7 @@ router.put('/:id', async (_req: Request, res: Response) => {
   res.status(405).json({ success: false, error: '库存交易记录不允许直接更新' });
 });
 
-/** 删除出库流水（V2.1 铁律：与作物库存删除对齐，硬删 inventory_transaction） */
+/** 删除出库流水（2026-07-03：增加库存数量回填，避免出库记录删除后库存数量不一致） */
 router.delete('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -324,20 +324,42 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '缺少 id' });
     }
     const db = getDatabase();
-    // 先查是否存在
-    const stmt = db.prepare('SELECT id FROM inventory_transaction WHERE id = ?');
+    // 先查是否存在 + 获取数量和 instance_id（用于回填）
+    const stmt = db.prepare('SELECT id, instance_id, quantity, transaction_type, business_type FROM inventory_transaction WHERE id = ?');
     stmt.bind([id]);
     const exists = stmt.step();
+    const txRow = exists ? stmt.getAsObject() as any : null;
     stmt.free();
-    if (!exists) {
+    if (!exists || !txRow) {
       return res.status(404).json({ success: false, error: `出库记录 ${id} 不存在` });
     }
-    // 硬删
+    // 2026-07-03：如果是出库/调拨类流水（quantity < 0），回填库存数量
+    const txQty = Number(txRow.quantity) || 0;
+    const txType = txRow.transaction_type || txRow.transactionType;
+    const instanceId = txRow.instance_id || txRow.instanceId;
+    if (txQty < 0 && instanceId) {
+      // 出库是负数，回填 = 当前数量 + |出库数量|
+      const stockStmt = db.prepare('SELECT id, current_quantity, frozen_quantity FROM inventory_stock WHERE instance_id = ?');
+      stockStmt.bind([instanceId]);
+      if (stockStmt.step()) {
+        const stock = stockStmt.getAsObject() as any;
+        const currentQty = Number(stock.current_quantity) || 0;
+        const frozenQty = Number(stock.frozen_quantity) || 0;
+        const restoredQty = currentQty + Math.abs(txQty);
+        // 回填数量（不超过合理范围），同时更新状态
+        const newStatus = restoredQty > 0 ? 'in_stock' : 'empty';
+        const updateStmt = db.prepare('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ? WHERE instance_id = ?');
+        updateStmt.run([restoredQty, restoredQty - frozenQty, newStatus, new Date().toISOString(), instanceId]);
+        updateStmt.free();
+      }
+      stockStmt.free();
+    }
+    // 硬删流水
     const delStmt = db.prepare('DELETE FROM inventory_transaction WHERE id = ?');
     delStmt.run([id]);
     delStmt.free();
     saveDatabase();
-    return res.json({ success: true, data: { id, deleted: true } });
+    return res.json({ success: true, data: { id, deleted: true, rolledBack: txQty < 0 } });
   } catch (error) {
     console.error('[inventoryTransactions DELETE] 失败:', error);
     return res.status(500).json({
