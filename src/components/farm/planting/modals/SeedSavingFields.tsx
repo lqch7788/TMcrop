@@ -7,8 +7,10 @@
  * - 派生指标（发芽率颜色阈值）
  */
 
+import { useMemo } from 'react'
 import { Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePicker, TextArea } from '@/components/ui'
 import { OPERATORS } from '@/data/cropData'
+import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { todayLocal } from '@/lib/dateUtils'
 import {
   HARVEST_PART_LABELS,
@@ -33,6 +35,15 @@ interface SeedSavingFieldsProps {
 }
 
 export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingFieldsProps) {
+  // 2026-07-03 v4：单位从数据词典读取
+  const dictionaries = useDictionaryStore((s) => s.dictionaries)
+  const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries)
+  if (dictionaries.length === 0) { loadDictionaries() } // 惰性加载
+  const unitOptions = useMemo(
+    () => getDictItems('unit').map((d) => ({ value: d.dictCode, label: d.dictLabel })),
+    [dictionaries],
+  )
+
   const mode: 'seed' | 'vegetative' = form.preservationMode || 'seed'
   const switchMode = (newMode: 'seed' | 'vegetative') => {
     if (newMode === mode) return
@@ -122,9 +133,24 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
         </div>
         <div>
           <Label className="text-gray-700">单位</Label>
-          <Input value={form.unit ?? ''}
-            onChange={(e) => onChange({ ...form, unit: e.target.value })}
-            placeholder={mode === 'seed' ? '克 / 千克 / 粒' : '个 / 株 / 公斤'} className={deepInputClass} />
+          <Select value={form.unit ?? ''}
+            onValueChange={(v) => onChange({ ...form, unit: v })}>
+            <SelectTrigger className={deepInputClass}>
+              <SelectValue placeholder={mode === 'seed' ? '如 克 / 千克 / 粒' : '如 个 / 株 / 公斤'} />
+            </SelectTrigger>
+            <SelectContent>
+              {unitOptions.length === 0 ? (
+                <div className="px-2 py-4 text-sm text-gray-400 text-center">字典加载中...</div>
+              ) : (
+                unitOptions.map((u) => (
+                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <div className="mt-1 text-xs text-gray-400 leading-relaxed">
+            源自数据词典 · 如需新增请前往数据词典管理
+          </div>
         </div>
         <div>
           {mode === 'seed' ? (
