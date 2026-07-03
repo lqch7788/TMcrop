@@ -622,14 +622,13 @@ export function PlantingTable({
                   <MoveRight className="w-4 h-4" />
                 </Button>
               )}
-              {/* 育种/留种：进行中可用，结束态禁用 */}
+              {/* 育种/留种：读操作（查看历史+导出），所有状态均可用，结束态只读 */}
               {record.isBreeding && onBreedingRecord && (
                 <Button
                   variant="ghost" size="icon"
-                  onClick={() => guardClick(lockReason, () => onBreedingRecord(record))}
-                  disabled={isEnded}
-                  className={isEnded ? writeClass : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'}
-                  title={isEnded ? lockReason : '育种记录'}
+                  onClick={() => onBreedingRecord(record)}
+                  className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                  title={`育种记录${isEnded ? '（只读）' : ''}`}
                 >
                   <Sprout className="w-4 h-4" />
                 </Button>
@@ -637,10 +636,9 @@ export function PlantingTable({
               {record.isSeedSaving && onSeedSavingRecord && (
                 <Button
                   variant="ghost" size="icon"
-                  onClick={() => guardClick(lockReason, () => onSeedSavingRecord(record))}
-                  disabled={isEnded}
-                  className={isEnded ? writeClass : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}
-                  title={isEnded ? lockReason : '留种记录'}
+                  onClick={() => onSeedSavingRecord(record)}
+                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  title={`留种记录${isEnded ? '（只读）' : ''}`}
                 >
                   <Wheat className="w-4 h-4" />
                 </Button>
@@ -1200,13 +1198,13 @@ export function PlantingTable({
                               <MoveRight className="w-4 h-4" />
                             </Button>
                           )}
+                          {/* 育种/留种：读操作（查看历史+导出），所有状态均可用，结束态只读 */}
                           {record.isBreeding && onBreedingRecord && (
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => guardClick(lockReason, () => onBreedingRecord(record))}
-                              disabled={isEnded}
-                              className={isEnded ? writeClass : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'}
-                              title={isEnded ? lockReason : '育种记录'}
+                              onClick={() => onBreedingRecord(record)}
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              title={`育种记录${isEnded ? '（只读）' : ''}`}
                             >
                               <Sprout className="w-4 h-4" />
                             </Button>
@@ -1214,10 +1212,9 @@ export function PlantingTable({
                           {record.isSeedSaving && onSeedSavingRecord && (
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => guardClick(lockReason, () => onSeedSavingRecord(record))}
-                              disabled={isEnded}
-                              className={isEnded ? writeClass : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}
-                              title={isEnded ? lockReason : '留种记录'}
+                              onClick={() => onSeedSavingRecord(record)}
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              title={`留种记录${isEnded ? '（只读）' : ''}`}
                             >
                               <Wheat className="w-4 h-4" />
                             </Button>
