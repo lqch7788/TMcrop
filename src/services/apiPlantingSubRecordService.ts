@@ -22,7 +22,11 @@ export type PropagationMethod =
   | 'cutting' | 'grafting' | 'layering' | 'tissue_culture' | 'division' | 'bulb' | 'tuber' | 'runner';
 // 2026-07-03 v3：繁殖模式
 export type ReproductionMode = 'sexual' | 'asexual';
-export type SeedSavingPart = 'fruit' | 'seed' | 'whole_plant' | 'root' | 'stem' | 'leaf' | 'other';
+// 2026-07-03 v4：扩枚举（加无性繁殖器官）
+export type SeedSavingPart = 'fruit' | 'seed' | 'whole_plant' | 'root' | 'stem' | 'leaf' | 'other'
+  | 'tuber' | 'bulb' | 'corm' | 'rhizome' | 'cutting' | 'stolon';
+// 2026-07-03 v4：保存模式
+export type SeedPreservationMode = 'seed' | 'vegetative';
 
 export interface BreedingRecord {
   id: string;
@@ -88,6 +92,25 @@ export interface SeedSavingRecord {
   operator: string | null;
   remarks: string | null;
   createTime: string;
+  // 2026-07-03 v4：保存模式 + 共享字段
+  preservationMode: SeedPreservationMode | null;
+  lotNumber: string | null;
+  purpose: string | null;
+  processingMethod: string | null;
+  storageLocation: string | null;
+  containerType: string | null;
+  // 种子保存专用
+  germinationRate: number | null;       // 发芽率(%)
+  thousandSeedWeight: number | null;   // 千粒重(g)
+  purity: number | null;               // 纯度(%)
+  moistureContent: number | null;      // 含水率(%)
+  seedTreatment: string | null;        // 种子处理
+  maturityStage: string | null;        // 成熟度
+  // 营养体保存专用
+  sizeGrade: string | null;           // 规格等级
+  budNodeCount: number | null;        // 芽眼/节数
+  healthStatus: string | null;        // 检疫状态
+  dormancyState: string | null;       // 休眠状态
 }
 
 export interface SeedSavingRecordInput {
@@ -98,6 +121,23 @@ export interface SeedSavingRecordInput {
   unit?: string | null;
   operator?: string | null;
   remarks?: string | null;
+  // 2026-07-03 v4
+  preservationMode?: SeedPreservationMode | null;
+  lotNumber?: string | null;
+  purpose?: string | null;
+  processingMethod?: string | null;
+  storageLocation?: string | null;
+  containerType?: string | null;
+  germinationRate?: number | null;
+  thousandSeedWeight?: number | null;
+  purity?: number | null;
+  moistureContent?: number | null;
+  seedTreatment?: string | null;
+  maturityStage?: string | null;
+  sizeGrade?: string | null;
+  budNodeCount?: number | null;
+  healthStatus?: string | null;
+  dormancyState?: string | null;
 }
 
 // ============ Service ============
