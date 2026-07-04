@@ -122,7 +122,7 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
         if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
       }
       const qs = params.toString();
-      const url = qs ? `/inventory-transactions?${qs}` : '/inventory-transactions';
+      const url = qs ? `/inventory/transactions?${qs}` : '/inventory/transactions';
       const data = await enhancedApiClient.get<OutboundListResult>(url);
       set({
         rows: data?.rows || [],

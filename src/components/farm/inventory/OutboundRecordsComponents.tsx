@@ -306,7 +306,7 @@ export function OutboundRecordsTable({
                       详情
                     </Button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operateDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operatorDate || row.operateDate || '-'}</td>
                 </tr>
               ))
             )}
