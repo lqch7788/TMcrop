@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { UnifiedModal, Button } from '@/components/ui';
-import { Download, Lock, GitBranch, X, Sprout } from 'lucide-react';
+import { Download, Lock, GitBranch, X, Sprout, Pencil, Trash2 } from 'lucide-react';
 import { Seedling } from '../../../../types/crop';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -584,10 +584,10 @@ export function SeedlingPropagationModal({
                           <td className="px-2 py-1.5 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <Button variant="ghost" size="icon" onClick={() => handleStartEdit(r)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="编辑">
-                                ✏️
+                                <Pencil className="w-4 h-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50" title="删除">
-                                🗑
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50" title="删除">
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </td>

@@ -70,8 +70,11 @@ export interface PropagationRecordInput {
  * 前端 camelCase。enhancedApiClient 自动解包 data，但字段名需手工转换。
  */
 function rowToRecord(row: any): PropagationRecord {
-  // target_traits 可能是字符串 JSON 或已经是数组
-  let targetTraits: string[] | null = row.target_traits ?? null;
+  // 2026-07-04 修复：camelCaseResponseMiddleware 已把所有 snake_case → camelCase
+  // rowToRecord 必须读 camelCase 键，不能读 snake_case（铁律 #12：错误映射导致所有列为空）
+  // targetTraits 在 DB 中是 JSON 字符串，中间件把它转成了 camelCase 键 "targetTraits"
+  const rawTraits = row.targetTraits ?? row.target_traits ?? null;
+  let targetTraits: string[] | null = rawTraits ?? null;
   if (typeof targetTraits === 'string') {
     try {
       const parsed = JSON.parse(targetTraits);
@@ -82,27 +85,27 @@ function rowToRecord(row: any): PropagationRecord {
   }
   return {
     id: row.id,
-    seedlingId: row.seedling_id ?? '',
-    recordDate: row.record_date ?? '',
+    seedlingId: row.seedlingId ?? row.seedling_id ?? '',
+    recordDate: row.recordDate ?? row.record_date ?? '',
     temperature: row.temperature ?? null,
     humidity: row.humidity ?? null,
-    motherPlantCount: row.mother_plant_count ?? null,
-    seedlingOutput: row.seedling_output ?? null,
-    seedlingStatus: row.seedling_status ?? null,
-    transplantPosition: row.transplant_position ?? null,
+    motherPlantCount: row.motherPlantCount ?? row.mother_plant_count ?? null,
+    seedlingOutput: row.seedlingOutput ?? row.seedling_output ?? null,
+    seedlingStatus: row.seedlingStatus ?? row.seedling_status ?? null,
+    transplantPosition: row.transplantPosition ?? row.transplant_position ?? null,
     operator: row.operator ?? null,
     remarks: row.remarks ?? null,
-    operationType: row.operation_type ?? null,
-    reproductionMode: row.reproduction_mode ?? null,
-    motherPlantCode: row.mother_plant_code ?? null,
-    propagationMethod: row.propagation_method ?? null,
-    inoculationCount: row.inoculation_count ?? null,
-    survivalCountAsexual: row.survival_count_asexual ?? null,
+    operationType: row.operationType ?? row.operation_type ?? null,
+    reproductionMode: row.reproductionMode ?? row.reproduction_mode ?? null,
+    motherPlantCode: row.motherPlantCode ?? row.mother_plant_code ?? null,
+    propagationMethod: row.propagationMethod ?? row.propagation_method ?? null,
+    inoculationCount: row.inoculationCount ?? row.inoculation_count ?? null,
+    survivalCountAsexual: row.survivalCountAsexual ?? row.survival_count_asexual ?? null,
     targetTraits,
     generation: row.generation ?? null,
-    parentMaleCode: row.parent_male_code ?? null,
-    parentFemaleCode: row.parent_female_code ?? null,
-    createTime: row.create_time ?? '',
+    parentMaleCode: row.parentMaleCode ?? row.parent_male_code ?? null,
+    parentFemaleCode: row.parentFemaleCode ?? row.parent_female_code ?? null,
+    createTime: row.createTime ?? row.create_time ?? '',
   };
 }
 
