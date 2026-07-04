@@ -599,14 +599,13 @@ export function PlantingTable({
                   <Package className="w-4 h-4" />
                 </Button>
               )}
-              {/* 采收入库（补录）：异常结束可用；已取消灰显禁用 */}
+              {/* 采收入库（补录）：异常结束可用；已取消可查看 */}
               {onInbound && (isAbnormalEnded || isCancelled) && (
                 <Button
                   variant="ghost" size="icon"
-                  onClick={() => isCancelled ? showAlert('已取消，禁止入库') : onInbound(record)}
-                  disabled={isCancelled}
-                  className={isCancelled ? writeClass : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
-                  title={isCancelled ? '已取消，禁止入库' : '采收（补录）'}
+                  onClick={() => onInbound(record)}
+                  className={isCancelled ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
+                  title={isCancelled ? '采收（已取消，仅查看）' : '采收（补录）'}
                 >
                   <Package className="w-4 h-4" />
                 </Button>
@@ -1178,14 +1177,13 @@ export function PlantingTable({
                               <Package className="w-4 h-4" />
                             </Button>
                           )}
-                          {/* 采收入库（补录）：异常结束可用；已取消灰显禁用 */}
+                          {/* 采收入库（补录）：异常结束可用；已取消可查看 */}
                           {onInbound && (isAbnormalEnded || isCancelled) && (
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => isCancelled ? showAlert('已取消，禁止入库') : onInbound(record)}
-                              disabled={isCancelled}
-                              className={isCancelled ? writeClass : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
-                              title={isCancelled ? '已取消，禁止入库' : '采收（补录）'}
+                              onClick={() => onInbound(record)}
+                              className={isCancelled ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
+                              title={isCancelled ? '采收（已取消，仅查看）' : '采收（补录）'}
                             >
                               <Package className="w-4 h-4" />
                             </Button>

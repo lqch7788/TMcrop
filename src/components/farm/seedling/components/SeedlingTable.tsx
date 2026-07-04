@@ -707,18 +707,17 @@ export function SeedlingTable({
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           )}
-                          {/* 出圃入库（onInbound）：进行中+异常结束可用；已取消灰显禁用 */}
+                          {/* 出圃入库（onInbound）：进行中+异常结束可用+已取消可查看 */}
                           {onInbound && !record.isHarvestLocked && (
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => isCancelled ? showAlert('已取消，禁止入库') : onInbound(record)}
-                              disabled={isCancelled}
-                              className={isCancelled
-                                ? writeClass
-                                : isAbnormalEnded
+                              onClick={() => onInbound(record)}
+                              className={isAbnormalEnded
                                 ? 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+                                : isCancelled
+                                ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
                                 : 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'}
-                              title={isCancelled ? '已取消，禁止入库' : isAbnormalEnded ? '出圃入库（补录）' : '出圃入库 / 采收'}
+                              title={isAbnormalEnded ? '出圃入库（补录）' : isCancelled ? '出圃入库（已取消，仅查看）' : '出圃入库 / 采收'}
                             >
                               <Package className="w-4 h-4" />
                             </Button>
