@@ -90,13 +90,20 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     }
   }
 
+  // 2026-07-04 修复：6 态全映射（sown/cancelled 漏映射导致取消后闪现又变回 in_progress）
   let status: SeedlingStatus = SeedlingStatus.IN_PROGRESS;
-  if (item.status === 'transplant_ready') {
+  if (item.status === 'sown') {
+    status = SeedlingStatus.SOWN;
+  } else if (item.status === 'in_progress') {
+    status = SeedlingStatus.IN_PROGRESS;
+  } else if (item.status === 'transplant_ready') {
     status = SeedlingStatus.TRANSPLANT_READY;
   } else if (item.status === 'completed') {
     status = SeedlingStatus.COMPLETED;
   } else if (item.status === 'abnormal') {
     status = SeedlingStatus.ABNORMAL;
+  } else if (item.status === 'cancelled') {
+    status = SeedlingStatus.CANCELLED;
   }
 
   let survivalRate = item.survivalRate;
