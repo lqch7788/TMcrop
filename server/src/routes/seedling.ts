@@ -298,7 +298,7 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     const insertValues = [
       newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
       seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-      seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+      seedling_quantity, survival_quantity, survival_rate, status || 'sown', seedling_status, remarks, create_by, workHours || null,
       productionPlanCode || null,
       target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
       source_mode || 'internal', external_seed_code || null, external_seed_name || null, external_seed_quantity ?? 0, external_seed_note || null,
@@ -1001,7 +1001,7 @@ router.post('/', (req: Request, res: Response) => {
     const insertValues = [
       newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
       seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-      seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+      seedling_quantity, survival_quantity, survival_rate, status || 'sown', seedling_status, remarks, create_by, workHours || null,
       productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
       sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,

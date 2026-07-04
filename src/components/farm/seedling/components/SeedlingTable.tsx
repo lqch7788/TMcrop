@@ -222,12 +222,17 @@ export function SeedlingTable({
   // 判断是否需要显示复选框列
   const showCheckbox = operationMode !== 'normal' || exportMode || printMode;
 
-  // TODO: 颜色值与共享常量 SEEDLING_STATUS_MAP 不同（amber/blue/green vs blue/amber/emerald），暂保留本地定义
-  const statusMap = {
-    [SeedlingStatus.IN_PROGRESS]: { label: '进行中', color: 'text-amber-600 bg-amber-50' },
-    [SeedlingStatus.TRANSPLANT_READY]: { label: '待定植', color: 'text-blue-600 bg-blue-50' },
-    [SeedlingStatus.COMPLETED]: { label: '已完成', color: 'text-green-600 bg-green-50' },
-    [SeedlingStatus.ABNORMAL]: { label: '异常', color: 'text-red-600 bg-red-50' }
+  // 2026-07-04 v2：6 态对齐 PlantingStatus
+  // 未知/孤儿值 fallback：「已出圃」（保留显示，避免空白）
+  const statusMap: Record<string, { label: string; color: string }> = {
+    [SeedlingStatus.SOWN]: { label: '已播种', color: 'text-blue-600 bg-blue-50' },
+    [SeedlingStatus.IN_PROGRESS]: { label: '生长中', color: 'text-amber-600 bg-amber-50' },
+    [SeedlingStatus.TRANSPLANT_READY]: { label: '待出圃', color: 'text-emerald-600 bg-emerald-50' },
+    [SeedlingStatus.COMPLETED]: { label: '已出圃', color: 'text-green-600 bg-green-50' },
+    [SeedlingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-100' },
+    [SeedlingStatus.ABNORMAL]: { label: '异常', color: 'text-red-600 bg-red-50' },
+    // 历史孤儿值兼容（不应再出现，但安全网）
+    transplanted: { label: '已出圃', color: 'text-green-600 bg-green-50' },
   };
 
   // 获取选中的第一条记录
@@ -625,8 +630,8 @@ export function SeedlingTable({
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
-                        {statusMap[record.status]?.label || record.status}
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || statusMap.transplanted.color}`}>
+                        {statusMap[record.status]?.label || statusMap.transplanted.label}
                       </span>
                       {/* 2026-06-05: 强结后显示"已结束"角标 */}
                       {record.endTime && (

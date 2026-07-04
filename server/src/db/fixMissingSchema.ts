@@ -3161,6 +3161,39 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.skip('• seedlings 加无性繁殖列:', e.message)
   }
+
+  // ============================================================
+  // 2026-07-04 v3：育苗状态机升级（与 PlantingStatus 6 态对齐）
+  // 老数据迁移：
+  //   - 'transplanted'（孤儿状态）→ 'completed'（历史上有"已出圃"含义）
+  //   - 'in_progress' + end_type=<NULL> + 已播种 → 保留 in_progress（生长中）
+  // 此处只清理孤儿值，状态机语义由客户端枚举保证
+  // ============================================================
+  try {
+    const db = getDatabase()
+    // 检查表是否存在
+    const tblStmt = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='seedlings'`)
+    const tableExists = tblStmt.step()
+    tblStmt.free()
+    if (!tableExists) {
+      seedLog.skip('• seedlings 状态迁移：表不存在，跳过')
+    } else {
+      // 1. 修复孤儿状态 'transplanted' → 'completed'
+      const orphan = db.prepare(`SELECT COUNT(*) AS cnt FROM seedlings WHERE status = 'transplanted'`)
+      orphan.step()
+      const cnt = (orphan.getAsObject() as { cnt: number }).cnt
+      orphan.free()
+      if (cnt > 0) {
+        db.run(`UPDATE seedlings SET status = 'completed' WHERE status = 'transplanted'`)
+        saveDatabase()
+        seedLog.info(`✓ seedlings 孤儿状态迁移：transplanted → completed，${cnt} 行`)
+      } else {
+        seedLog.skip('• seedlings 状态迁移：无 transplanted 孤儿数据')
+      }
+    }
+  } catch (e: any) {
+    seedLog.skip('• seedlings 状态迁移:', e.message)
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
