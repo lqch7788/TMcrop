@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -39,6 +39,8 @@ interface SeedlingTableProps {
   onEnd: (record: Seedling) => void;
   // 2026-06-18: 任务 5 — 出圃入库回调
   onInbound?: (record: Seedling) => void;
+  // 2026-07-04：无性繁殖记录回调（1:多模式可见）
+  onPropagation?: (record: Seedling) => void;
   // 模式状态
   operationMode: SeedlingOperationMode;
   onOperationModeChange: (mode: SeedlingOperationMode) => void;
@@ -76,6 +78,7 @@ export function SeedlingTable({
   onImageClick,
   onEnd,
   onInbound,
+  onPropagation,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -673,6 +676,12 @@ export function SeedlingTable({
                               <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
                             </Button>
                           )}
+                          {/* 2026-07-04：无性繁殖记录 — 1:多模式可见，结束态变只读 */}
+                          {onPropagation && record.propagationMode === 'one_to_many' && (
+                            <Button variant="ghost" size="icon" onClick={() => onPropagation(record)} title={`无性繁殖记录${isEnded ? '（只读）' : ''}`}>
+                              <GitBranch className={`w-4 h-4 ${isEnded ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                            </Button>
+                          )}
                           {onLabelManage && (
                             <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title={`标签管理${isEnded ? '（只读）' : ''}`}>
                               <Tag className="w-4 h-4" />
@@ -691,13 +700,15 @@ export function SeedlingTable({
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           )}
-                          {/* 出圃入库（onInbound）：仅异常结束显示（"出圃入库（补录）"） */}
-                          {onInbound && isAbnormalEnded && (
+                          {/* 出圃入库（onInbound）：进行中 + 异常结束都显示（补录标识） */}
+                          {onInbound && !record.isHarvestLocked && (
                             <Button
                               variant="ghost" size="icon"
                               onClick={() => onInbound(record)}
-                              className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                              title="出圃入库（补录）"
+                              className={isAbnormalEnded
+                                ? 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+                                : 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'}
+                              title={isAbnormalEnded ? '出圃入库（补录）' : '出圃入库 / 采收'}
                             >
                               <Package className="w-4 h-4" />
                             </Button>

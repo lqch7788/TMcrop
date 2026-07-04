@@ -4,12 +4,12 @@
  * V3.1: 支持补录申请功能
  */
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
-import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw, Search, GitBranch } from 'lucide-react';
+import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
@@ -17,8 +17,7 @@ import * as cropInstanceService from '../../../../services/apiCropInstanceServic
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { todayLocal } from '@/lib/dateUtils';
 import { getVarietyByCode } from '../../../../services/cropVarietyService';
-import { searchMotherPlantings, getMotherGeneration, type MotherPlanting } from '../../../../services/apiPlantingService';
-import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore, useSeedlingStore } from '../../../../stores';
+import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
@@ -30,8 +29,6 @@ import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-// 2026-07-03 v5：繁殖方式标签（从种植育种常量共享）
-import { PROPAGATION_METHOD_LABELS } from '../../../farm/planting/modals/recordModalConstants';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -149,23 +146,6 @@ export function AddModal({
   // 2026-07-04：所有种源必须录入内部种源后使用，不再区分内/外
   // ═══════════════════════════════════════════════════
 
-  // ═══════════════════════════════════════════════════
-  // 2026-07-03 v5：无性繁殖母株来源（1:多模式专用）
-  // 'seed_source' = 从种源取母株；'planting' = 从种植育种批取母株
-  // ═══════════════════════════════════════════════════
-  const [motherSourceType, setMotherSourceType] = useState<'seed_source' | 'planting'>('seed_source');
-  const [motherPlantingSearch, setMotherPlantingSearch] = useState('');
-  const [motherPlantings, setMotherPlantings] = useState<MotherPlanting[]>([]);
-  const [selectedMotherPlantingId, setSelectedMotherPlantingId] = useState('');
-  const [selectedMotherPlanting, setSelectedMotherPlanting] = useState<MotherPlanting | null>(null);
-  const [motherGeneration, setMotherGeneration] = useState('');
-  const [motherSearchTimer, setMotherSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  // 无性繁殖方式（仅种植母株来源时选，种源来源时用 propagationMode 推断）
-  const [asexualMethod, setAsexualMethod] = useState<string>('');
-
-  // 解析 URL 参数（从种植页 deep link 跳转过来时自动填入母株信息）
-  const [urlParams] = useSearchParams();
-
   // 弹窗每次打开时重置所有状态
   useEffect(() => {
     if (isOpen) {
@@ -173,70 +153,8 @@ export function AddModal({
       setPictures([]);
       setSourceSearch('');
       setSourcePopoverOpen(false);
-      // 重置无性繁殖母株状态
-      setMotherSourceType('seed_source');
-      setMotherPlantingSearch('');
-      setMotherPlantings([]);
-      setSelectedMotherPlantingId('');
-      setSelectedMotherPlanting(null);
-      setMotherGeneration('');
-      setAsexualMethod('');
-      // URL 参数处理
-      const motherType = urlParams.get('motherType');
-      const motherId = urlParams.get('motherId');
-      const motherCode = urlParams.get('motherCode');
-      const motherCropName = urlParams.get('motherCropName');
-      const motherCropVariety = urlParams.get('motherCropVariety');
-      if (motherType === 'planting' && motherId && motherCode) {
-        setMotherSourceType('planting');
-        const mp = { id: motherId, plantCode: motherCode, cropName: motherCropName || '', cropVariety: motherCropVariety || '' };
-        setSelectedMotherPlantingId(motherId);
-        setSelectedMotherPlanting(mp);
-        autoFillFromMotherPlanting(mp);
-      }
     }
   }, [isOpen]);
-
-  // 从母株种植批次自动填入品种信息
-  const autoFillFromMotherPlanting = useCallback(async (mp: MotherPlanting) => {
-    setFormData(prev => ({
-      ...prev,
-      cropName: mp.cropName,
-      cropVariety: mp.cropVariety,
-      selectedCropCode: '', // 后续可通过品种库查
-    }));
-    // 异步获取世代信息
-    try {
-      const gen = await getMotherGeneration(mp.id);
-      if (gen) {
-        setMotherGeneration(gen.generation || '');
-        if (gen.cropName && !mp.cropName) {
-          setFormData(prev => ({ ...prev, cropName: gen.cropName }));
-        }
-      }
-    } catch { /* 世代信息获取失败，不影响流程 */ }
-  }, []);
-
-  // 搜索种植母株（debounce 300ms）
-  const handleMotherSearchChange = (kw: string) => {
-    setMotherPlantingSearch(kw);
-    if (motherSearchTimer) clearTimeout(motherSearchTimer);
-    const timer = setTimeout(async () => {
-      try {
-        const list = await searchMotherPlantings(kw);
-        setMotherPlantings(list);
-      } catch { setMotherPlantings([]); }
-    }, 300);
-    setMotherSearchTimer(timer);
-  };
-
-  // 选择母株种植批次
-  const handleSelectMotherPlanting = async (mp: MotherPlanting) => {
-    setSelectedMotherPlantingId(mp.id);
-    setSelectedMotherPlanting(mp);
-    setMotherPlantingSearch(mp.plantCode);
-    await autoFillFromMotherPlanting(mp);
-  };
 
   // 方案2.7: 过滤种源列表用于combogrid展示
   // 2026-06-12: 联动过滤版本下移到 availableProductionPlans 之后(避免 TDZ)
@@ -427,19 +345,7 @@ export function AddModal({
   };
 
   const handleSubmit = async () => {
-    // 2026-07-03 v5：母株来源=种植 时的校验
-    const isPlantingMother = formData.propagationMode === 'one_to_many' && motherSourceType === 'planting';
-    if (isPlantingMother && !selectedMotherPlantingId) {
-      await showAlert('请选择育种种植批次作为母株来源');
-      return;
-    }
-    if (isPlantingMother && !asexualMethod) {
-      await showAlert('请选择繁殖方式（扦插/嫁接/组培/压条/分株等）');
-      return;
-    }
-
-    // 种植母株来源时跳过关联种源校验
-    if (!isPlantingMother && !formData.sourceId) {
+    if (!formData.sourceId) {
       await showAlert('请先选择种源');
       return;
     }
@@ -560,36 +466,20 @@ export function AddModal({
       motherPlantCount: motherCountForBackend,  // 映射到后端 mother_plant_count
       expandedPlantCount: 0,
       scionCount: formData.propagationScionCount,
-      // 2026-07-03 v5：无性繁殖母株溯源
-      motherSourceType: isPlantingMother ? 'planting' : 'seed_source',
-      motherSourceId: isPlantingMother ? selectedMotherPlantingId : (formData.sourceId || null),
-      motherSourceCode: isPlantingMother ? (selectedMotherPlanting?.plantCode || '') : (sourceCode || ''),
-      propagationMethod: isPlantingMother ? asexualMethod : null,
-      inoculationCount: 0,
-      survivalCount: 0,
-      motherGeneration: isPlantingMother ? motherGeneration : null,
-      motherCropName: isPlantingMother ? (selectedMotherPlanting?.cropName || '') : null,
     };
 
-    // 保存育苗数据（内部种源：原子操作扣减 + 创建；外部种源：直接创建）
+    // 保存育苗数据：使用 /with-deduct 原子端点（扣减种源 + 创建育苗）
     let addedSeedlingId: string | null = null;
     try {
-      if (formData.sourceId) {
-        // 扣种源数量 = finalInitialCount（已统一按模式选取真实输入值）
-        const deductCount = finalInitialCount;
-        // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
-        const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
-        const result = await addSeedlingWithDeduct({
-          sourceId: formData.sourceId,
-          count: deductCount,
-          seedling: seedlingData,
-        });
-        addedSeedlingId = result.id;
-      } else {
-        // 种植母株来源：直接创建育苗记录，不扣减种源
-        const addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
-        addedSeedlingId = addedSeedling?.id || null;
-      }
+      const deductCount = finalInitialCount;
+      // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
+      const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
+      const result = await addSeedlingWithDeduct({
+        sourceId: formData.sourceId,
+        count: deductCount,
+        seedling: seedlingData,
+      });
+      addedSeedlingId = result.id;
     } catch (error) {
       // 2026-06-14: 透出真正的错误信息（后端校验失败、种源余量不足等）
       const msg = error instanceof Error ? error.message : String(error);
@@ -818,107 +708,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             ))}
           </div>
         </div>
-
-        {/* ========== 2026-07-03 v5：无性繁殖母株来源（仅 1:多 模式显示） ========== */}
-        {formData.propagationMode === 'one_to_many' && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <GitBranch className="w-4 h-4 text-teal-600" />
-            <h3 className="text-sm font-semibold text-teal-900">母株来源（无性繁殖）</h3>
-          </div>
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant={motherSourceType === 'seed_source' ? 'default' : 'secondary'}
-              size="sm"
-              onClick={() => { setMotherSourceType('seed_source'); setSelectedMotherPlanting(null); setSelectedMotherPlantingId(''); }}
-            >
-              来自种源
-            </Button>
-            <Button
-              variant={motherSourceType === 'planting' ? 'default' : 'secondary'}
-              size="sm"
-              onClick={() => setMotherSourceType('planting')}
-            >
-              来自种植母株
-            </Button>
-          </div>
-
-          {motherSourceType === 'planting' ? (
-            /* 种植母株搜索 */
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-900">搜索育种种植批次 <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    value={motherPlantingSearch}
-                    onChange={(e) => handleMotherSearchChange(e.target.value)}
-                    placeholder="输入种植批号或作物名称搜索..."
-                    className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full"
-                  />
-                </div>
-                {/* 搜索结果下拉 */}
-                {motherPlantings.length > 0 && motherPlantingSearch && !selectedMotherPlantingId && (
-                  <div className="mt-1 border border-gray-300 rounded-lg max-h-40 overflow-y-auto bg-white shadow">
-                    {motherPlantings.map(mp => (
-                      <div
-                        key={mp.id}
-                        onClick={() => handleSelectMotherPlanting(mp)}
-                        className="px-3 py-2 text-sm cursor-pointer hover:bg-emerald-50 border-b border-gray-100"
-                      >
-                        <span className="font-medium text-emerald-700">{mp.plantCode}</span>
-                        <span className="text-gray-500 ml-2">{mp.cropName} {mp.cropVariety}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedMotherPlanting && (
-                  <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-300 rounded-lg text-sm">
-                    <span className="font-medium text-emerald-700">{selectedMotherPlanting.plantCode}</span>
-                    <span className="text-gray-600">{selectedMotherPlanting.cropName} {selectedMotherPlanting.cropVariety}</span>
-                    <Button variant="ghost" size="icon" className="ml-auto" onClick={() => { setSelectedMotherPlanting(null); setSelectedMotherPlantingId(''); setMotherPlantingSearch(''); }}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Label className="text-gray-900">繁殖方式 <span className="text-red-500">*</span></Label>
-                <Select value={asexualMethod} onValueChange={setAsexualMethod}>
-                  <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="选择繁殖方式" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROPAGATION_METHOD_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* 自动填入的品种信息 */}
-              <div>
-                <Label className="text-gray-700">作物品种（自动填入）</Label>
-                <Input type="text" value={formData.cropName} readOnly className={`${deepInputClass} bg-gray-100`} />
-              </div>
-              <div>
-                <Label className="text-gray-700">母株世代（自动填入）</Label>
-                <Input type="text" value={motherGeneration} readOnly className={`${deepInputClass} bg-gray-100`} placeholder="从育种记录读取" />
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs text-gray-500">
-                  💡 选择育种种植批次作为母株来源后，系统将自动填入品种信息和世代。母株材料不扣减种源库存。
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* 种源来源提示（使用下方"关联种源信息"区块选择） */
-            <p className="text-xs text-gray-500">
-              💡 请在下方的"关联种源信息"区块中选择种源作为母株来源。
-            </p>
-          )}
-        </div>
-        )}
 
         {/* ========== 育苗批次号（最顶层） ========== */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">

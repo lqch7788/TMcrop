@@ -475,18 +475,6 @@ export interface Seedling {
   seedlingLossCount?: number;  // 小苗累计损耗
   harvestStockedCount?: number; // 采收入库累计
   customMultiple?: number;     // 自定义扩繁倍数
-  // 2026-07-03 v5：无性繁殖母株溯源（组培/扦插/嫁接/压条/分株从种植迁移至育苗）
-  motherSourceType?: 'planting' | 'seed_source'; // 母株来源类型
-  motherSourceId?: string;          // 母株来源ID（种植ID 或 种源ID）
-  motherSourceCode?: string;        // 母株来源编码（种植批号 或 种源代码）
-  propagationMethod?: string;       // 繁殖方式: cutting/grafting/tissue_culture/layering/division/bulb/tuber/runner
-  inoculationCount?: number;        // 接种数（插穗/接芽/外植体/球茎数量）
-  survivalCountAsexual?: number;    // 无性繁殖成活数（注意：与 survivalCount 语义不同，此为接种成活数）
-  motherGeneration?: string;        // 母株世代（从育种记录自动带入，如 F3/BC2）
-  motherCropName?: string;          // 母株品种名（自动带入）
-  motherPropagationMethod?: string; // 母株繁殖方式（冗余备份）
-  asexualPropagationNote?: string;  // 无性繁殖备注
-  // 2026-07-03 v5 end
 }
 
 // ========== 每日记录施肥/用药子表（2026-06-28） ==========

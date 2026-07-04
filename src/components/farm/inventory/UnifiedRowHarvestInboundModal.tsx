@@ -226,8 +226,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setHarvesterNames([])
       setOperator(currentUser?.realName || '')
       setRemarks('')
-      // 异常结束的补录：默认勾选且不能取消
-      setIsSupplementary(isSupplementaryForced ? true : false)
+      // 2026-07-04 v2：补录永远默认勾选且不可取消（与种植一致）
+      setIsSupplementary(true)
       setSupplementaryReason('')
       setUnitPrice(0)
       setUnit(sourceRecord.unit || '克')
@@ -346,11 +346,11 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const handleSubmit = async () => {
     setError(null)
 
-    // 2026-07-03：异常结束的补录模式必须填原因（用派生值）
-    const willSupplementary = isSupplementaryForced || isSupplementary
-    if (willSupplementary && (!supplementaryReason || !supplementaryReason.trim())) {
-      setError(isSupplementaryForced ? '异常结束补录模式：补录原因为必填项' : '勾选补录后必须填写补录原因')
-      showAlert(isSupplementaryForced ? '异常结束补录模式：补录原因为必填项' : '勾选补录后必须填写补录原因')
+    // 2026-07-04 v2：补录始终默认勾选且必填原因（与种植管理一致）
+    // 注意：UI 中补录控件一直 disabled+checked，永远 isSupplementary=true
+    if (!supplementaryReason || !supplementaryReason.trim()) {
+      setError('补录原因为必填项（补录记录会自动写入采收记录）')
+      showAlert('补录原因为必填项')
       return
     }
 
@@ -366,9 +366,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       harvesterNames,
       operator: operator || undefined,
       remarks: remarks || undefined,
-      // 2026-07-03：异常结束的补录强制传 isSupplementary=true
-      isSupplementary: (isSupplementaryForced || isSupplementary) || undefined,
-      supplementaryReason: (isSupplementaryForced || isSupplementary) ? supplementaryReason : undefined,
+      // 2026-07-04 v2：补录始终为 true（默认勾选+禁用+必填原因），与种植管理一致
+      // 后端 harvest_records 表新增列：is_supplementary / supplementary_reason
+      isSupplementary: true,
+      supplementaryReason: supplementaryReason.trim(),
       unitPrice: Number(unitPrice) || 0,
       unit,
       warehouseId,
@@ -778,28 +779,27 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </FormField>
         )}
 
-        {/* 补录 — 2026-07-03：仅异常结束（isSupplementaryForced）才显示此区域
-            普通采收（种源/育苗/种植进行中）不显示补录勾选字段 */}
-        {isSupplementaryForced && (
-        <div className="flex items-center gap-3 border-t pt-3">
-          <label className="flex items-center gap-2 text-sm">
+        {/* 补录 — 2026-07-03：默认勾选+强制禁用勾选+强制必填原因
+            用户无法主动勾选/取消补录，提交时 isSupplementary + supplementaryReason 一并写入 harvest_records
+            与种植管理 100% 一致：异常结束或系统触发的补录场景，全部走同一份逻辑 */}
+        <div className="flex items-start gap-3 border-t pt-3">
+          <label className="flex items-center gap-2 text-sm pt-1">
             <input
               type="checkbox"
               checked={true}
               disabled={true}
               readOnly
             />
-            补录（异常结束自动启用）
-            <span className="text-xs text-amber-600">（异常结束自动启用补录模式）</span>
+            补录
+            <span className="text-xs text-amber-600">（默认勾选且必填原因，已记录到采收记录）</span>
           </label>
           <Input
               value={supplementaryReason}
               onChange={(e) => setSupplementaryReason(e.target.value)}
-              placeholder={isSupplementaryForced ? '补录原因（异常结束必填）' : '补录原因（必填）'}
+              placeholder="补录原因（必填）"
               className={`${deepInputClass} flex-1`}
             />
         </div>
-        )}
 
         {/* 产品明细 */}
         <div className="border-t pt-3">
