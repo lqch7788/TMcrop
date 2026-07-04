@@ -81,7 +81,7 @@ export function RecordModal({
     operator: '',
     remarks: '',
   });
-  const [breedingForm, setBreedingForm] = useState<BreedingRecordInput & { reproductionMode?: 'sexual' | 'asexual' }>({
+  const [breedingForm, setBreedingForm] = useState<BreedingRecordInput>({
     recordDate: todayLocal(),
     operationType: 'cross',
     generation: '',
@@ -91,19 +91,11 @@ export function RecordModal({
     parentFemaleSource: 'free',
     operator: '',
     remarks: '',
-    // 2026-07-03：3 个通用专业字段
     targetTraits: [],
     fruitCount: 0,
     seedCount: 0,
-    // 2026-07-03 v2：授粉花数（计算结实率用）
     pollinatedFlowerCount: 0,
-    // 2026-07-03 v3：无性繁殖 4 字段
-    motherPlantCode: '',
-    propagationMethod: undefined,
-    inoculationCount: 0,
-    survivalCount: 0,
-    // 2026-07-03 v3：繁殖模式
-    reproductionMode: 'sexual',
+    // 2026-07-03 v5：无性繁殖已迁移至育苗，以下字段保留兼容历史数据
   });
   const [seedSavingForm, setSeedSavingForm] = useState<SeedSavingRecordInput & { preservationMode?: 'seed' | 'vegetative' }>({
     recordDate: todayLocal(),
@@ -162,12 +154,6 @@ export function RecordModal({
           fruitCount: 0,
           seedCount: 0,
           pollinatedFlowerCount: 0,
-          // 2026-07-03 v3：无性繁殖 4 字段
-          motherPlantCode: '',
-          propagationMethod: undefined,
-          inoculationCount: 0,
-          survivalCount: 0,
-          reproductionMode: 'sexual',
         });
       } else if (recordType === 'seed_saving') {
         setSeedSavingForm({
@@ -265,8 +251,6 @@ export function RecordModal({
       });
     } else if (recordType === 'breeding') {
       const br = record as BreedingRecord;
-      // 2026-07-03 v3：按后端 reproductionMode 推断，没有则按 operationType
-      const isAsexual = br.reproductionMode === 'asexual' || ASEXUAL_OPERATION_TYPES.includes(br.operationType)
       setBreedingForm({
         recordDate: br.recordDate,
         operationType: br.operationType,
@@ -277,18 +261,10 @@ export function RecordModal({
         parentFemaleSource: br.parentFemaleSource ?? 'free',
         operator: br.operator ?? '',
         remarks: br.remarks ?? '',
-        // 2026-07-03：3 个新通用字段
         targetTraits: br.targetTraits ?? [],
         fruitCount: br.fruitCount ?? 0,
         seedCount: br.seedCount ?? 0,
-        // 2026-07-03 v2：授粉花数
         pollinatedFlowerCount: br.pollinatedFlowerCount ?? 0,
-        // 2026-07-03 v3：无性繁殖 4 字段
-        motherPlantCode: br.motherPlantCode ?? '',
-        propagationMethod: br.propagationMethod ?? undefined,
-        inoculationCount: br.inoculationCount ?? 0,
-        survivalCount: br.survivalCount ?? 0,
-        reproductionMode: isAsexual ? 'asexual' : 'sexual',
       });
     } else {
       const sr = record as SeedSavingRecord;
@@ -359,40 +335,21 @@ export function RecordModal({
       return;
     }
     if (recordType === 'breeding') {
-      const data = (records as BreedingRecord[]).map((r) => {
-        const asexual = r.reproductionMode === 'asexual' || ASEXUAL_OPERATION_TYPES.includes(r.operationType)
-        // 2026-07-03 v3：模式自适应 — 有性行填父本/母本，无性行填母株；空字段留空
-        const base = {
-          '日期': r.recordDate,
-          '操作类型': OPERATION_TYPE_LABELS[r.operationType] || r.operationType,
-          '繁殖模式': asexual ? '无性' : '有性',
-          '世代': r.generation || '',
-          '操作人': r.operator || '',
-          '备注': r.remarks || '',
-        }
-        if (asexual) {
-          return {
-            ...base,
-            '母株编码': r.motherPlantCode || '',
-            '繁殖方式': r.propagationMethod ? (PROPAGATION_METHOD_LABELS[r.propagationMethod] || r.propagationMethod) : '',
-            '接种数': r.inoculationCount ?? '',
-            '成活数': r.survivalCount ?? '',
-            '繁殖系数': r.inoculationCount && r.inoculationCount > 0 ? `${(((r.survivalCount || 0) / r.inoculationCount) * 100).toFixed(1)}%` : '',
-          }
-        } else {
-          return {
-            ...base,
-            '父本编码': r.parentMaleCode || '',
-            '父本来源': r.parentMaleSource === 'seed_source' ? '种源库编码' : r.parentMaleSource === 'planting' ? '种植批号' : r.parentMaleSource || '自由填写',
-            '母本编码': r.parentFemaleCode || '',
-            '母本来源': r.parentFemaleSource === 'seed_source' ? '种源库编码' : r.parentFemaleSource === 'planting' ? '种植批号' : r.parentFemaleSource || '自由填写',
-            '结实数': r.fruitCount ?? '',
-            '收获种子数': r.seedCount ?? '',
-            '授粉花数': r.pollinatedFlowerCount ?? '',
-            '结实率': r.pollinatedFlowerCount && r.pollinatedFlowerCount > 0 ? `${(((r.fruitCount || 0) / r.pollinatedFlowerCount) * 100).toFixed(1)}%` : '',
-          }
-        }
-      });
+      const data = (records as BreedingRecord[]).map((r) => ({
+        '日期': r.recordDate,
+        '操作类型': OPERATION_TYPE_LABELS[r.operationType] || r.operationType,
+        '世代': r.generation || '',
+        '父本编码': r.parentMaleCode || '',
+        '父本来源': r.parentMaleSource === 'seed_source' ? '种源库编码' : r.parentMaleSource === 'planting' ? '种植批号' : r.parentMaleSource || '自由填写',
+        '母本编码': r.parentFemaleCode || '',
+        '母本来源': r.parentFemaleSource === 'seed_source' ? '种源库编码' : r.parentFemaleSource === 'planting' ? '种植批号' : r.parentFemaleSource || '自由填写',
+        '结实数': r.fruitCount ?? '',
+        '收获种子数': r.seedCount ?? '',
+        '授粉花数': r.pollinatedFlowerCount ?? '',
+        '结实率': r.pollinatedFlowerCount && r.pollinatedFlowerCount > 0 ? `${(((r.fruitCount || 0) / r.pollinatedFlowerCount) * 100).toFixed(1)}%` : '',
+        '操作人': r.operator || '',
+        '备注': r.remarks || '',
+      }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '育种记录');

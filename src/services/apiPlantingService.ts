@@ -467,6 +467,43 @@ export async function getPlantingMoveRecords(plantingId: string): Promise<any[]>
 }
 
 /**
+ * 2026-07-03 v5：搜索可作为无性繁殖母株的种植批次
+ * 返回 isBreeding=1、未结束的种植批次列表
+ */
+export interface MotherPlanting {
+  id: string
+  plantCode: string
+  cropName: string
+  cropVariety: string
+}
+
+export async function searchMotherPlantings(keyword: string): Promise<MotherPlanting[]> {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  const qs = params.toString()
+  const data = await enhancedApiClient.get<MotherPlanting[]>(
+    `/plantings/search-mothers${qs ? '?' + qs : ''}`
+  )
+  return Array.isArray(data) ? data : []
+}
+
+/**
+ * 获取母株种植批次的育种世代信息
+ */
+export interface MotherGeneration {
+  cropName: string
+  cropVariety: string
+  generation: string
+}
+
+export async function getMotherGeneration(plantingId: string): Promise<MotherGeneration | null> {
+  const data = await enhancedApiClient.get<MotherGeneration>(
+    `/plantings/${plantingId}/breeding-generation`
+  )
+  return data || null
+}
+
+/**
  * 生成种植单号
  * 数据流：API → SQLite DB
  */

@@ -72,12 +72,20 @@ export interface BreedingRecordInput {
   seedCount?: number | null;
   // 2026-07-03 v2：授粉花数（计算结实率用）
   pollinatedFlowerCount?: number | null;
-  // 2026-07-03 v3：无性繁殖专用字段
+  /**
+   * @deprecated 2026-07-03 v5：无性繁殖已迁移至育苗模块
+   * 这些字段在 BreedingRecordInput 中保留以兼容历史数据和旧 API，
+   * 但前端 UI 不再创建新的无性繁殖记录。
+   * 如需创建扦插/嫁接/组培/压条/分株，请走育苗新增弹窗 → 无性繁殖来源模式。
+   */
   motherPlantCode?: string | null;
+  /** @deprecated 使用育苗 propagation_method 字段替代 */
   propagationMethod?: PropagationMethod | null;
+  /** @deprecated 使用育苗 inoculation_count 字段替代 */
   inoculationCount?: number | null;
+  /** @deprecated 使用育苗 survival_count 字段替代 */
   survivalCount?: number | null;
-  // 2026-07-03 v3：繁殖模式
+  /** @deprecated 使用育苗 propagation_mode 字段替代 */
   reproductionMode?: ReproductionMode | null;
 }
 

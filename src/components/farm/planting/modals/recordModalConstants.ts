@@ -13,10 +13,20 @@ export const SEXUAL_OPERATION_TYPES: BreedingOperationType[] = [
   'cross', 'self', 'backcross', 'selection', 'marker', 'other',
 ]
 
+/**
+ * @deprecated 2026-07-03 v5：无性繁殖（组培/扦插/嫁接/压条/分株）已迁移至育苗模块
+ * 保留此数组用于历史记录展示和导出，前端 UI 不再创建新的无性繁殖记录
+ */
 export const ASEXUAL_OPERATION_TYPES: BreedingOperationType[] = [
   'clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division',
 ]
 
+/** 活跃的操作类型（仅有性，UI 使用） */
+export const ACTIVE_OPERATION_TYPES: BreedingOperationType[] = [...SEXUAL_OPERATION_TYPES]
+
+/**
+ * @deprecated 保留用于历史记录展示，新记录不再包含无性类型
+ */
 export const OPERATION_TYPES: BreedingOperationType[] = [
   ...SEXUAL_OPERATION_TYPES,
   ...ASEXUAL_OPERATION_TYPES,

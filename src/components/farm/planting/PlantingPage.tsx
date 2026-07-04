@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar, AlertTriangle } from 'lucide-react';
 // 2026-07-01 修复：endConfirm 弹窗里用了 <Button> 但未导入，触发 "Button is not defined"
 // 统一从 UI 库导入
@@ -148,6 +148,19 @@ export default function PlantingPage() {
   };
   const handleSeedSavingRecord = (record: Planting) => {
     setRecordModal({ open: true, recordType: 'seed_saving', record });
+  };
+  // 2026-07-03 v5：从育种种植跳转育苗创建无性扩繁批次
+  const navigate = useNavigate();
+  const handleCreateSeedlingFromBreeding = (record: Planting) => {
+    const params = new URLSearchParams({
+      new: '1',
+      motherType: 'planting',
+      motherId: record.id,
+      motherCode: record.plantCode,
+      motherCropName: record.cropName || '',
+      motherCropVariety: record.cropVariety || '',
+    });
+    navigate(`/crop/seedling?${params.toString()}`);
   };
   // 2026-06-28: 每日记录弹窗状态
   const [dailyRecordModal, setDailyRecordModal] = useState<{
@@ -607,6 +620,7 @@ export default function PlantingPage() {
         onViewMoveRecords={handleViewMoveRecords}
         onBreedingRecord={handleBreedingRecord}
         onSeedSavingRecord={handleSeedSavingRecord}
+        onCreateSeedlingFromBreeding={handleCreateSeedlingFromBreeding}
         onDailyRecord={handleDailyRecord}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}

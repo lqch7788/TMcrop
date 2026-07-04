@@ -417,6 +417,64 @@ router.get('/lookup', (req: Request, res: Response) => {
   }
 })
 
+/**
+ * 2026-07-03 v5：搜索可作为无性繁殖母株的种植批次
+ * GET /api/plantings/search-mothers?keyword=xxx
+ * 返回 isBreeding=1、status 不是 ended/cancelled 的种植批次
+ */
+router.get('/search-mothers', (req: Request, res: Response) => {
+  try {
+    const { keyword } = req.query
+    const db = getDatabase()
+    let sql = `SELECT id, planting_code AS plantCode, crop_name AS cropName, crop_variety AS cropVariety FROM plantings WHERE deleted_at IS NULL AND is_breeding = 1 AND status NOT IN ('ended', 'cancelled')`
+    const params: any[] = []
+    if (keyword && String(keyword).trim()) {
+      sql += ` AND (planting_code LIKE ? OR crop_name LIKE ? OR crop_variety LIKE ?)`
+      const kw = `%${String(keyword).trim()}%`
+      params.push(kw, kw, kw)
+    }
+    sql += ` ORDER BY create_time DESC LIMIT 50`
+    const rows = queryToObjects<any>(db, sql, params)
+    res.json({ success: true, data: rows })
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
+  }
+})
+
+/**
+ * 获取母株的育种世代信息
+ * GET /api/plantings/:id/breeding-generation
+ */
+router.get('/:id/breeding-generation', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const db = getDatabase()
+    // 从育种记录中读最新一条 generation
+    const rows = queryToObjects<any>(db,
+      `SELECT generation, crop_name AS cropName, crop_variety AS cropVariety FROM plantings WHERE id = ?`,
+      [id]
+    )
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, error: '种植批次不存在' })
+    }
+    // 再从育种记录取最新 generation
+    const brRow = queryToObjects<any>(db,
+      `SELECT generation FROM planting_breeding_records WHERE planting_id = ? ORDER BY record_date DESC, create_time DESC LIMIT 1`,
+      [id]
+    )
+    res.json({
+      success: true,
+      data: {
+        cropName: rows[0].cropName || '',
+        cropVariety: rows[0].cropVariety || '',
+        generation: brRow[0]?.generation || rows[0].generation || '',
+      }
+    })
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e?.message || '查询失败' })
+  }
+})
+
 router.post('/:id/move', async (req, res) => {
   const { id } = req.params;
   const db = getDatabase();
