@@ -370,6 +370,7 @@ export default function InventoryV3Page() {
           setDetailModalOpen(false);
           setDetailStock(null);
         }}
+        onNavigateToInstance={(id) => setDetailStock({ instanceId: id } as any)}
       />
 
       {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal） */}
