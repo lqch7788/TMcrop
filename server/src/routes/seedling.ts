@@ -1521,6 +1521,51 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
       } catch (e) { /* JSON 解析失败不影响 daily_records 插入 */ }
     }
 
+    // 2026-07-04 v3：状态机自动切换（合并 sown→in_progress 和 in_progress→transplant_ready）
+    // 规则 1：首次添加每日记录 → sown → in_progress
+    // 规则 2：累计产出 ≥ 目标成苗数 → in_progress → transplant_ready（优先于规则 1，避免状态来回切换）
+    // 失败不抛错：状态切换是"业务增强"，主流程（daily_records 写入）已成功
+    // 2026-07-04：用后端原生字符串字面量，不依赖前端 SeedlingStatus 枚举（避免跨层耦合）
+    const STATUS_SOWN = 'sown';
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_TRANSPLANT_READY = 'transplant_ready';
+    try {
+      const sStmt = db.prepare('SELECT expanded_plant_count, target_survival_count, status FROM seedlings WHERE id = ?');
+      sStmt.bind([id]);
+      let sRow: any = null;
+      if (sStmt.step()) sRow = sStmt.getAsObject();
+      sStmt.free();
+
+      if (sRow) {
+        const expanded = Number(sRow.expanded_plant_count) || 0;
+        const target = Number(sRow.target_survival_count) || 0;
+        const currentStatus = sRow.status;
+
+        // 规则 2 优先（如果已满足出圃条件，直接跳到 transplant_ready）
+        if (target > 0 && expanded >= target && currentStatus === STATUS_IN_PROGRESS) {
+          db.run(`UPDATE seedlings SET status = ?, update_time = ? WHERE id = ?`,
+            [STATUS_TRANSPLANT_READY, now, id]);
+          seedLog.info(`✓ 育苗状态自动切换：${currentStatus} → ${STATUS_TRANSPLANT_READY}（${(seedling as any).seedling_code} 累计产出 ${expanded} ≥ 目标 ${target}）`);
+        }
+        // 规则 1：首次添加每日记录
+        else if (currentStatus === STATUS_SOWN) {
+          const cntStmt = db.prepare(`SELECT COUNT(*) AS cnt FROM daily_records WHERE related_id = ? AND related_type = ?`);
+          cntStmt.bind([id, 'seedling']);
+          let firstCount = 0;
+          if (cntStmt.step()) firstCount = (cntStmt.getAsObject() as { cnt: number }).cnt;
+          cntStmt.free();
+          // 当前这次 INSERT 后，COUNT == 1 说明是首次（INSERT 前为 0）
+          if (firstCount === 1) {
+            db.run(`UPDATE seedlings SET status = ?, update_time = ? WHERE id = ?`,
+              [STATUS_IN_PROGRESS, now, id]);
+            seedLog.info(`✓ 育苗状态自动切换：sown → ${STATUS_IN_PROGRESS}（${(seedling as any).seedling_code} 首次添加每日记录）`);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[seedling daily-record] 状态自动切换失败（非致命）:', e);
+    }
+
     saveDatabase();
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
   } catch (error) {
