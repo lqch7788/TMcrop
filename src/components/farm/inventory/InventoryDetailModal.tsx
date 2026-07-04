@@ -207,7 +207,7 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
       <div className="border-b border-gray-200 -mx-4 sm:-mx-6 px-4 sm:px-6 flex items-center gap-1">
         <TabBtn current={tab} value="basic"   icon={<Info    className="w-4 h-4" />}    label="基本信息" count={null} onClick={setTab} />
         <TabBtn current={tab} value="history" icon={<History className="w-4 h-4" />}    label="操作历史" count={transactions.length} onClick={setTab} />
-        <TabBtn current={tab} value="trace"   icon={<GitBranch className="w-4 h-4" />} label="上下游追溯" count={upstream.length + downstream.length} onClick={setTab} />
+        <TabBtn current={tab} value="trace"   icon={<GitBranch className="w-4 h-4" />} label="上下游追溯" count={upstream.filter(u => (u.depth ?? 0) >= 1).length + downstream.length} onClick={setTab} />
       </div>
 
       {/* Error */}
