@@ -8,7 +8,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Package, Leaf, Sprout, History, GitBranch, Info,
   TrendingUp, TrendingDown, Snowflake, Lock, Unlock, Edit3,
-  RefreshCw, AlertCircle, HelpCircle,
+  RefreshCw, AlertCircle, HelpCircle, ArrowUpRight,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
@@ -682,22 +682,28 @@ function TraceTab({
           <div className="space-y-1">
             {downstream.map((item, idx) => {
               const depth = item.depth ?? 1;
+              const isOutboundTx = item.stockType === 'outbound';
               return (
                 <div
                   key={idx}
-                  className="relative pl-3 border-l-2 border-blue-300 hover:bg-blue-50 rounded-r cursor-pointer transition-colors"
+                  className={`relative pl-3 border-l-2 rounded-r transition-colors ${isOutboundTx ? 'border-orange-300 bg-orange-50/50' : 'border-blue-300 hover:bg-blue-50 cursor-pointer'}`}
                   style={{ marginLeft: `${(depth - 1) * 12}px` }}
-                  onClick={() => onSelectChild?.(item.instanceId)}
+                  onClick={() => !isOutboundTx && onSelectChild?.(item.instanceId)}
                 >
-                  <div className="absolute -left-[5px] top-3 w-2 h-2 rounded-full bg-blue-500" />
+                  <div className={`absolute -left-[5px] top-3 w-2 h-2 rounded-full ${isOutboundTx ? 'bg-orange-500' : 'bg-blue-500'}`} />
                   <div className="p-2">
                     <div className="flex items-center gap-2 mb-1">
-                      {getStockTypeIcon(item.stockType)}
-                      <span className="text-sm font-medium">{item.businessId}</span>
+                      {isOutboundTx ? <ArrowUpRight className="w-4 h-4 text-orange-500" /> : getStockTypeIcon(item.stockType)}
+                      <span className="text-sm font-medium">
+                        {isOutboundTx ? '出库消耗' : item.businessId}
+                      </span>
                       <span className="text-xs text-gray-400">第{depth}层</span>
+                      {isOutboundTx && <span className="text-xs text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">流水</span>}
                     </div>
                     <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
-                    <div className="text-xs text-gray-600 mt-1">出库: {item.outboundQuantity} · 日期: {item.outboundDate}</div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {isOutboundTx ? '出库数量' : '出库'}: {item.outboundQuantity} · 日期: {item.outboundDate}
+                    </div>
                   </div>
                 </div>
               );
