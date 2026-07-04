@@ -24,6 +24,17 @@ const PropagationRecordSchema = z.object({
   transplantPosition: z.string().optional().nullable(),
   operator: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
+  // 2026-07-04 v2：无性繁殖完整字段
+  operationType: z.string().optional().nullable(),
+  reproductionMode: z.enum(['sexual', 'asexual']).optional().nullable(),
+  motherPlantCode: z.string().optional().nullable(),
+  propagationMethod: z.string().optional().nullable(),
+  inoculationCount: z.number().int().min(0).optional().nullable(),
+  survivalCountAsexual: z.number().int().min(0).optional().nullable(),
+  targetTraits: z.array(z.string()).optional().nullable(),
+  generation: z.string().optional().nullable(),
+  parentMaleCode: z.string().optional().nullable(),
+  parentFemaleCode: z.string().optional().nullable(),
 });
 
 const UpdatePropagationRecordSchema = PropagationRecordSchema.partial();
@@ -51,6 +62,26 @@ function ensureSchema() {
     } catch {
       // 列已存在，跳过
     }
+    // 2026-07-04 v2：无性繁殖完整字段 — 与种植 BreedingFields 的 asexual 分支对齐
+    const newCols = [
+      { col: 'operation_type', type: 'TEXT' },         // cutting/grafting/layering/tissue/division/clonal
+      { col: 'reproduction_mode', type: 'TEXT' },     // 'sexual' | 'asexual'
+      { col: 'mother_plant_code', type: 'TEXT' },     // 母株编码
+      { col: 'propagation_method', type: 'TEXT' },    // 繁殖方式（同 operation_type 一致，冗余存）
+      { col: 'inoculation_count', type: 'INTEGER' },   // 接种数（插穗/接芽/外植体/球茎）
+      { col: 'survival_count_asexual', type: 'INTEGER' }, // 无性成活数（区别于 survival_rate）
+      { col: 'target_traits', type: 'TEXT' },         // 目标性状（JSON 数组）
+      { col: 'generation', type: 'TEXT' },            // 世代（F1/F2/BC1/S1 等）
+      { col: 'parent_male_code', type: 'TEXT' },      // 父本编码（有性记录冗余）
+      { col: 'parent_female_code', type: 'TEXT' },    // 母本编码（有性记录冗余）
+    ];
+    for (const { col, type } of newCols) {
+      try {
+        db.run(`ALTER TABLE propagation_records ADD COLUMN ${col} ${type}`);
+      } catch {
+        // 列已存在，跳过
+      }
+    }
     const idx = db.prepare(`CREATE INDEX IF NOT EXISTS idx_propagation_seedling ON propagation_records(seedling_id)`);
     idx.run();
     idx.free();
@@ -72,7 +103,11 @@ router.get('/:id/propagation-records', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     const stmt = db.prepare(
-      `SELECT id, seedling_id, record_date, temperature, humidity,
+      `SELECT id, seedling_id, record_date, operation_type, reproduction_mode,
+              mother_plant_code, propagation_method,
+              inoculation_count, survival_count_asexual, target_traits, generation,
+              parent_male_code, parent_female_code,
+              temperature, humidity,
               mother_plant_count, seedling_output, seedling_status,
               transplant_position, operator, remarks, create_time
        FROM propagation_records
@@ -116,13 +151,23 @@ router.post('/:id/propagation-records', (req: Request, res: Response) => {
     const recordId = generateRecordId('PR', data.recordDate);
     const ins = db.prepare(
       `INSERT INTO propagation_records (
-        id, seedling_id, record_date, temperature, humidity,
+        id, seedling_id, record_date,
+        operation_type, reproduction_mode, mother_plant_code, propagation_method,
+        inoculation_count, survival_count_asexual, target_traits, generation,
+        parent_male_code, parent_female_code,
+        temperature, humidity,
         mother_plant_count, seedling_output, seedling_status,
         transplant_position, operator, remarks, create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`
     );
     ins.run([
       recordId, id, data.recordDate,
+      data.operationType ?? null, data.reproductionMode ?? null,
+      data.motherPlantCode ?? null, data.propagationMethod ?? null,
+      data.inoculationCount ?? null, data.survivalCountAsexual ?? null,
+      data.targetTraits ? JSON.stringify(data.targetTraits) : null,
+      data.generation ?? null,
+      data.parentMaleCode ?? null, data.parentFemaleCode ?? null,
       data.temperature ?? null, data.humidity ?? null,
       data.motherPlantCount ?? null, data.seedlingOutput ?? null,
       data.seedlingStatus ?? null, data.transplantPosition ?? null,
@@ -168,6 +213,17 @@ router.put('/:id/propagation-records/:recordId', (req: Request, res: Response) =
     if (data.transplantPosition !== undefined) { fields.push('transplant_position = ?'); params.push(data.transplantPosition); }
     if (data.operator !== undefined) { fields.push('operator = ?'); params.push(data.operator); }
     if (data.remarks !== undefined) { fields.push('remarks = ?'); params.push(data.remarks); }
+    // 2026-07-04 v2：无性繁殖完整字段
+    if (data.operationType !== undefined) { fields.push('operation_type = ?'); params.push(data.operationType); }
+    if (data.reproductionMode !== undefined) { fields.push('reproduction_mode = ?'); params.push(data.reproductionMode); }
+    if (data.motherPlantCode !== undefined) { fields.push('mother_plant_code = ?'); params.push(data.motherPlantCode); }
+    if (data.propagationMethod !== undefined) { fields.push('propagation_method = ?'); params.push(data.propagationMethod); }
+    if (data.inoculationCount !== undefined) { fields.push('inoculation_count = ?'); params.push(data.inoculationCount); }
+    if (data.survivalCountAsexual !== undefined) { fields.push('survival_count_asexual = ?'); params.push(data.survivalCountAsexual); }
+    if (data.targetTraits !== undefined) { fields.push('target_traits = ?'); params.push(JSON.stringify(data.targetTraits)); }
+    if (data.generation !== undefined) { fields.push('generation = ?'); params.push(data.generation); }
+    if (data.parentMaleCode !== undefined) { fields.push('parent_male_code = ?'); params.push(data.parentMaleCode); }
+    if (data.parentFemaleCode !== undefined) { fields.push('parent_female_code = ?'); params.push(data.parentFemaleCode); }
     if (fields.length === 0) {
       return res.json({ success: true, data: { id: recordId, message: '无字段更新' } });
     }

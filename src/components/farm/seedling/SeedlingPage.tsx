@@ -13,6 +13,8 @@ import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
+// 2026-07-04：育苗无性繁殖记录弹窗（独立入口）
+import { SeedlingPropagationModal } from './modals/SeedlingPropagationModal';
 import { todayLocal } from '@/lib/dateUtils';
 import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
@@ -214,6 +216,8 @@ export default function SeedlingPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [dailyRecordModalOpen, setDailyRecordModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  // 2026-07-04：育苗无性繁殖记录弹窗状态
+  const [propagationModalOpen, setPropagationModalOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [labelManageOpen, setLabelManageOpen] = useState(false);
   const [labelManageRecord, setLabelManageRecord] = useState<Seedling | null>(null);
@@ -308,6 +312,12 @@ export default function SeedlingPage() {
   const handleDailyRecord = (record: Seedling) => {
     setCurrentRecord(record);
     setDailyRecordModalOpen(true);
+  };
+
+  // 2026-07-04：打开无性繁殖记录弹窗
+  const handlePropagation = (record: Seedling) => {
+    setCurrentRecord(record);
+    setPropagationModalOpen(true);
   };
 
   // 每日记录保存成功后刷新数据
@@ -662,6 +672,7 @@ export default function SeedlingPage() {
         onEdit={handleEdit}
         onDetail={handleDetail}
         onDailyRecord={handleDailyRecord}
+        onPropagation={handlePropagation}
         // 2026-06-28 方案B：移除 onPropagationRecord 引用 — 繁殖记录已合并到每日记录
         onPrint={handlePrint}
         onLabelManage={handleLabelManage}
@@ -725,6 +736,21 @@ export default function SeedlingPage() {
           onSuccess={handleDailyRecordSuccess}
           record={currentRecord}
           // 2026-07-03：已结束的育苗 → 只读模式（保留查看+导出）
+          readOnly={Boolean(
+            currentRecord.status === 'completed' || currentRecord.status === 'abnormal' ||
+            currentRecord.endType === 'normal' || currentRecord.endType === 'abnormal'
+          )}
+        />
+      )}
+
+      {/* 2026-07-04：育苗无性繁殖记录弹窗（独立入口） */}
+      {currentRecord && (
+        <SeedlingPropagationModal
+          isOpen={propagationModalOpen}
+          onClose={() => setPropagationModalOpen(false)}
+          onSuccess={loadItems}
+          record={currentRecord}
+          // 已结束的育苗 → 只读模式（保留查看+导出）
           readOnly={Boolean(
             currentRecord.status === 'completed' || currentRecord.status === 'abnormal' ||
             currentRecord.endType === 'normal' || currentRecord.endType === 'abnormal'

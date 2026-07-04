@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Download, Edit2, GitBranch, Image, MoveRight, Package, Plus, Printer, Sprout, StopCircle, Tag, Trash2, Wheat, X } from 'lucide-react';
+import { Calendar, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, StopCircle, Tag, Trash2, Wheat, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/cropVariety';
@@ -61,8 +61,6 @@ interface PlantingTableProps {
   // 2026-06-25 v3: 育种/留种记录回调
   onBreedingRecord?: (record: Planting) => void;
   onSeedSavingRecord?: (record: Planting) => void;
-  // 2026-07-03 v5: 从育种种植创建育苗扩繁批次（跳转育苗新增页）
-  onCreateSeedlingFromBreeding?: (record: Planting) => void;
   // 2026-06-28: 每日记录回调
   onDailyRecord?: (record: Planting) => void;
   // 权限控制
@@ -110,7 +108,6 @@ export function PlantingTable({
   onBreedingRecord,
   onSeedSavingRecord,
   onDailyRecord,
-  onCreateSeedlingFromBreeding,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -634,17 +631,6 @@ export function PlantingTable({
                   title={`育种记录${isEnded ? '（只读）' : ''}`}
                 >
                   <Sprout className="w-4 h-4" />
-                </Button>
-              )}
-              {/* 2026-07-03 v5：从育种种植跳转育苗创建无性扩繁批次 */}
-              {record.isBreeding && !isEnded && onCreateSeedlingFromBreeding && (
-                <Button
-                  variant="ghost" size="icon"
-                  onClick={() => onCreateSeedlingFromBreeding(record)}
-                  className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
-                  title="创建育苗扩繁批次（扦插/嫁接/组培/压条/分株）"
-                >
-                  <GitBranch className="w-4 h-4" />
                 </Button>
               )}
               {record.isSeedSaving && onSeedSavingRecord && (
