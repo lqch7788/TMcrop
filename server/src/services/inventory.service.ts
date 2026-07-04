@@ -432,24 +432,56 @@ export class InventoryService {
       visited.add(id);
 
       const stock = await inventoryStockRepository.findByInstanceId(id);
-      if (!stock) continue;
+      if (stock) {
+        // inventory_stock 节点：直接入结果
+        results.push({
+          instanceId: stock.instanceId,
+          stockType: stock.stockType,
+          businessType: stock.businessType,
+          businessId: stock.businessId,
+          cropName: stock.cropName,
+          varietyName: stock.varietyName,
+          quantity: stock.currentQuantity,
+          inboundDate: stock.inboundDate,
+          sourceInstanceId: stock.sourceInstanceId,
+          depth,
+          parentInstanceId: parentId,
+        });
+        if (stock.sourceInstanceId && !visited.has(stock.sourceInstanceId)) {
+          queue.push({ id: stock.sourceInstanceId, depth: depth + 1, parentId: stock.instanceId ?? null });
+        }
+      } else {
+        // 2026-07-04 修复：source_instance_id 可能指向 crop_instances 而非 inventory_stock
+        // 当 inventory_stock 查不到时，回退查 crop_instances 继续往上追溯
+        const db = getDatabase();
+        const ciStmt = db.prepare('SELECT * FROM crop_instances WHERE id = ?');
+        ciStmt.bind([id]);
+        let ciRow: any = null;
+        if (ciStmt.step()) ciRow = ciStmt.getAsObject();
+        ciStmt.free();
 
-      results.push({
-        instanceId: stock.instanceId,
-        stockType: stock.stockType,
-        businessType: stock.businessType,
-        businessId: stock.businessId,
-        cropName: stock.cropName,
-        varietyName: stock.varietyName,
-        quantity: stock.currentQuantity,
-        inboundDate: stock.inboundDate,
-        sourceInstanceId: stock.sourceInstanceId,
-        depth,
-        parentInstanceId: parentId,
-      });
-
-      if (stock.sourceInstanceId && !visited.has(stock.sourceInstanceId)) {
-        queue.push({ id: stock.sourceInstanceId, depth: depth + 1, parentId: stock.instanceId ?? null });
+        if (ciRow) {
+          // crop_instance → 作为虚拟节点插入结果
+          results.push({
+            instanceId: ciRow.id,
+            stockType: ciRow.business_type === 'planting' ? 'product'
+                     : ciRow.business_type === 'seedling' ? 'seedling'
+                     : ciRow.business_type === 'seed_source' ? 'seed'
+                     : 'unknown',
+            businessType: ciRow.business_type,
+            businessId: ciRow.business_id,
+            cropName: ciRow.crop_name,
+            varietyName: ciRow.crop_variety,
+            quantity: ciRow.current_quantity ?? 0,
+            inboundDate: ciRow.create_time ? ciRow.create_time.slice(0, 10) : '',
+            sourceInstanceId: ciRow.source_instance_id,
+            depth,
+            parentInstanceId: parentId,
+          });
+          if (ciRow.source_instance_id && !visited.has(ciRow.source_instance_id)) {
+            queue.push({ id: ciRow.source_instance_id, depth: depth + 1, parentId: ciRow.id ?? null });
+          }
+        }
       }
     }
 
@@ -485,17 +517,10 @@ export class InventoryService {
       // 查找所有以当前 instance 为 source 的下游库存
       const children = await inventoryStockRepository.findBySourceInstanceId(id);
       for (const child of children) {
-        // Phase 13.1.4 修复：outboundQuantity 从 inventory_transaction 的 outbound 流水取（绝对值）
-        // 之前 bug：误用 child.current_quantity（当前库存量 ≠ 出库量）
         const txs = await inventoryTransactionRepository.findByInstanceId(child.instance_id!);
         const inboundTx = txs.find(t => t.transaction_type === 'inbound');
         const outboundTxs = txs.filter(t => t.transaction_type === 'outbound');
-        // 出库量 = 所有 outbound 流水 quantity 绝对值之和
-        const outboundQuantity = outboundTxs.reduce(
-          (sum, t) => sum + Math.abs(t.quantity ?? 0),
-          0
-        );
-
+        const outboundQuantity = outboundTxs.reduce((sum, t) => sum + Math.abs(t.quantity ?? 0), 0);
         results.push({
           instanceId: child.instance_id,
           stockType: child.stock_type,
@@ -504,11 +529,41 @@ export class InventoryService {
           outboundQuantity,
           outboundDate: inboundTx?.operate_date ?? child.create_time ?? '',
           depth: depth + 1,
-          parentInstanceId: child.instance_id ? id : null,  // 当前节点 = 父
+          parentInstanceId: child.instance_id ? id : null,
         });
-
         if (child.instance_id && !visited.has(child.instance_id)) {
           queue.push({ id: child.instance_id, depth: depth + 1, parentId: id });
+        }
+      }
+
+      // 2026-07-04 修复：下游也查 crop_instances（source_instance_id 可能指向 CI 而非 inventory_stock）
+      const db = getDatabase();
+      const ciChildren = db.prepare('SELECT * FROM crop_instances WHERE source_instance_id = ?');
+      ciChildren.bind([id]);
+      const ciChildRows: any[] = [];
+      while (ciChildren.step()) ciChildRows.push(ciChildren.getAsObject());
+      ciChildren.free();
+
+      for (const ci of ciChildRows) {
+        // 用 crop_instance.id 查 inventory_stock（回链到库存表）
+        const stockChildren = await inventoryStockRepository.findBySourceInstanceId(ci.id);
+        for (const sc of stockChildren) {
+          const txs = await inventoryTransactionRepository.findByInstanceId(sc.instance_id!);
+          const outboundTxs = txs.filter(t => t.transaction_type === 'outbound');
+          const outboundQuantity = outboundTxs.reduce((sum, t) => sum + Math.abs(t.quantity ?? 0), 0);
+          results.push({
+            instanceId: sc.instance_id,
+            stockType: sc.stock_type,
+            businessType: sc.business_type,
+            businessId: sc.business_id,
+            outboundQuantity,
+            outboundDate: sc.create_time ? sc.create_time.slice(0, 10) : '',
+            depth: depth + 1,
+            parentInstanceId: id,
+          });
+          if (sc.instance_id && !visited.has(sc.instance_id)) {
+            queue.push({ id: sc.instance_id, depth: depth + 1, parentId: id });
+          }
         }
       }
     }
