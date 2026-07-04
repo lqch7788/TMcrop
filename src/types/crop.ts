@@ -39,11 +39,23 @@ export enum SeedType {
 }
 
 /** 育苗状态 */
+/**
+ * 2026-07-04 v2：育苗状态枚举（对齐 PlantingStatus 的 6 状态粒度）
+ * - 新建后：'sown'（已播种）
+ * - 生长中：'in_progress'
+ * - 苗可出圃：'transplant_ready'
+ * - 已出圃入库：'completed'
+ * - 已取消：'cancelled'
+ * - 异常：'abnormal'
+ * 老数据兼容：历史 'transplanted' 显示为「已出圃」（同 completed）
+ */
 export enum SeedlingStatus {
-  IN_PROGRESS = 'in_progress',      // 进行中
-  TRANSPLANT_READY = 'transplant_ready',  // 待定植
-  COMPLETED = 'completed',          // 已完成
-  ABNORMAL = 'abnormal'             // 异常
+  SOWN = 'sown',                      // 已播种（建档后默认）
+  IN_PROGRESS = 'in_progress',        // 苗床生长中
+  TRANSPLANT_READY = 'transplant_ready', // 待出圃
+  COMPLETED = 'completed',            // 已完成（已出圃入库）
+  CANCELLED = 'cancelled',            // 已取消
+  ABNORMAL = 'abnormal',              // 异常结束
 }
 
 /** 育苗计划类型 */

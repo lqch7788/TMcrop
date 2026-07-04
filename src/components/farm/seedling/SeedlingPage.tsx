@@ -123,17 +123,15 @@ export default function SeedlingPage() {
     });
   }, [dictionaries]);
 
-  // 育苗状态选项
-  const seedlingStatusOptions = useMemo(() => {
-    const items = getDictItems('seedling_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
-    // 去重
-    const seen = new Set<string>();
-    return items.filter(s => {
-      if (seen.has(s.value)) return false;
-      seen.add(s.value);
-      return true;
-    });
-  }, [dictionaries]);
+  // 2026-07-04 v2：6 状态筛选项（与种植对齐，不用字典）
+  const seedlingStatusOptions = useMemo(() => [
+    { value: SeedlingStatus.SOWN, label: '已播种' },
+    { value: SeedlingStatus.IN_PROGRESS, label: '生长中' },
+    { value: SeedlingStatus.TRANSPLANT_READY, label: '待出圃' },
+    { value: SeedlingStatus.COMPLETED, label: '已出圃' },
+    { value: SeedlingStatus.CANCELLED, label: '已取消' },
+    { value: SeedlingStatus.ABNORMAL, label: '异常' },
+  ], []);
 
   // 种植区域选项（用于定植操作）
   const areas = useMemo(() => {
@@ -285,17 +283,21 @@ export default function SeedlingPage() {
     });
   }, [seedlings, filters]);
 
-  // 统计卡片数据
+  // 2026-07-04 v2：6 状态统计（对齐种植）
   const statsData = useMemo(() => {
     const total = seedlings.length;
+    const sown = seedlings.filter(s => s.status === SeedlingStatus.SOWN).length;
     const inProgress = seedlings.filter(s => s.status === SeedlingStatus.IN_PROGRESS).length;
+    const transplantReady = seedlings.filter(s => s.status === SeedlingStatus.TRANSPLANT_READY).length;
     const completed = seedlings.filter(s => s.status === SeedlingStatus.COMPLETED).length;
+    const abnormal = seedlings.filter(s => s.status === SeedlingStatus.ABNORMAL).length;
+    const cancelled = seedlings.filter(s => s.status === SeedlingStatus.CANCELLED).length;
     const monthCount = seedlings.filter(s => {
       const date = new Date(s.createTime);
       const now = new Date();
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length;
-    return { total, inProgress, completed, monthCount };
+    return { total, sown, inProgress, transplantReady, completed, abnormal, cancelled, monthCount };
   }, [seedlings]);
 
   // 处理操作
@@ -562,7 +564,18 @@ export default function SeedlingPage() {
       '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, ((record.expandedPlantCount || 0) - (record.seedlingLossCount || 0))) / record.targetSurvivalCount * 100)}%` : '-',
       '损耗率': `${record.lossRate}%`,
       '育苗结束': record.isFinished ? '是' : '否',
-      '状态': record.status === SeedlingStatus.IN_PROGRESS ? '进行中' : record.status === SeedlingStatus.TRANSPLANT_READY ? '待定植' : record.status === SeedlingStatus.COMPLETED ? '已完成' : '异常',
+      // 状态（2026-07-04 v2：6 态对齐种植）
+      '状态': (() => {
+        switch (record.status) {
+          case 'sown': return '已播种';
+          case 'in_progress': return '生长中';
+          case 'transplant_ready': return '待出圃';
+          case 'completed': return '已出圃';
+          case 'cancelled': return '已取消';
+          case 'abnormal': return '异常';
+          default: return record.status || '-';
+        }
+      })(),
       '品质等级': record.qualityGrade || '',
       '创建人': record.createBy,
       '创建时间': record.createTime,
