@@ -1112,24 +1112,14 @@ export function PlantingTable({
                     })()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}>
-                        {statusMap[record.status as keyof typeof statusMap]?.label || record.status}
+                    <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}
+                        title={record.endTime ? `${record.endType === 'abnormal' ? '异常' : '正常'}结束于 ${record.endTime}` : undefined}>
+                        {(() => {
+                          // 2026-07-04 修复：旧数据(status=cancelled+endType=abnormal)兼容 → 显示"已结束(异常)"
+                          if (record.endType === 'abnormal') return '已结束(异常)';
+                          return statusMap[record.status as keyof typeof statusMap]?.label || record.status;
+                        })()}
                       </span>
-                      {/* 2026-06-05: 强结后显示"已结束"角标 */}
-                      {record.endTime && (
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            record.endType === 'abnormal'
-                              ? 'text-amber-600 bg-amber-50'
-                              : 'text-gray-500 bg-gray-100'
-                          }`}
-                          title={`${record.endType === 'abnormal' ? '异常' : '正常'}结束于 ${record.endTime}`}
-                        >
-                          {record.endType === 'abnormal' ? '已异常结束' : '已结束'}
-                        </span>
-                      )}
-                    </div>
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10 text-center">
