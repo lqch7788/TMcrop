@@ -360,7 +360,12 @@ export async function executeInboundFromSource(
         product.harvestQuantity, product.harvestQuantity,
         harvestRecordId, harvestCode,
         operator, operator, input.harvestDate,
-        `来源:${input.sourceModule}/${input.sourceRecordCode}`,
+        `来源:${
+            input.sourceModule === 'seed_source' ? '种源'
+            : input.sourceModule === 'seedling' ? '育苗'
+            : input.sourceModule === 'planting' ? '种植'
+            : input.sourceModule
+          }/${input.sourceRecordCode}`,
         now,
       ]);
       writtenTransactionIds.push(txId);
