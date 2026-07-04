@@ -659,7 +659,7 @@ function TraceTab({
                     <div className="flex items-center gap-2 mb-1">
                       {getStockTypeIcon(item.stockType)}
                       <span className="text-sm font-medium">{item.cropName}</span>
-                      <span className="text-xs text-gray-400">depth={depth}</span>
+                      <span className="text-xs text-gray-400">第{depth}层</span>
                     </div>
                     <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
                     <div className="text-xs text-gray-600 mt-1">数量: {item.quantity} · 入库: {item.inboundDate}</div>
@@ -694,7 +694,7 @@ function TraceTab({
                     <div className="flex items-center gap-2 mb-1">
                       {getStockTypeIcon(item.stockType)}
                       <span className="text-sm font-medium">{item.businessId}</span>
-                      <span className="text-xs text-gray-400">depth={depth}</span>
+                      <span className="text-xs text-gray-400">第{depth}层</span>
                     </div>
                     <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
                     <div className="text-xs text-gray-600 mt-1">出库: {item.outboundQuantity} · 日期: {item.outboundDate}</div>
