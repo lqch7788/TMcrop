@@ -566,6 +566,24 @@ export class InventoryService {
           }
         }
       }
+
+      // 2026-07-04：出库流水作为下游叶子节点（销售/消耗/领用等不会创建新 stock，但用户需要看到去向）
+      if (depth === 0) {
+        const outboundTxs = await inventoryTransactionRepository.findByInstanceId(id);
+        const outbounds = outboundTxs.filter(t => t.transaction_type === 'outbound');
+        for (const tx of outbounds) {
+          results.push({
+            instanceId: `TX-${tx.id}`,
+            stockType: 'outbound',
+            businessType: tx.business_type ?? tx.businessType ?? 'outbound',
+            businessId: tx.business_id ?? tx.businessId ?? '',
+            outboundQuantity: Math.abs(tx.quantity ?? 0),
+            outboundDate: tx.operate_date ?? tx.operateDate ?? '',
+            depth: depth + 1,
+            parentInstanceId: id,
+          });
+        }
+      }
     }
 
     return results;
