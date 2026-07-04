@@ -53,7 +53,7 @@ export function SeedlingStats({ data }: SeedlingStatsProps) {
       color: 'bg-green-500'
     },
     {
-      label: '异常',
+      label: '异常结束',
       value: data.abnormal,
       icon: AlertTriangle,
       color: 'bg-red-500'

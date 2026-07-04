@@ -130,7 +130,7 @@ export default function SeedlingPage() {
     { value: SeedlingStatus.TRANSPLANT_READY, label: '待出圃' },
     { value: SeedlingStatus.COMPLETED, label: '已出圃' },
     { value: SeedlingStatus.CANCELLED, label: '已取消' },
-    { value: SeedlingStatus.ABNORMAL, label: '异常' },
+    { value: SeedlingStatus.ABNORMAL, label: '异常结束' },
   ], []);
 
   // 种植区域选项（用于定植操作）
@@ -586,7 +586,7 @@ export default function SeedlingPage() {
           case 'transplant_ready': return '待出圃';
           case 'completed': return '已出圃';
           case 'cancelled': return '已取消';
-          case 'abnormal': return '异常';
+          case 'abnormal': return '异常结束';
           default: return record.status || '-';
         }
       })(),
