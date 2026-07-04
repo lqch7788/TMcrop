@@ -653,16 +653,18 @@ export function SeedlingTable({
                     {/* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
                         正常结束(status=completed 或 endType=normal) → 写操作全锁；读操作可用；补录关闭
                         异常结束(status=abnormal 或 endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
+                        已取消(status=cancelled) → 写操作全锁；读操作可用；补录关闭
                         进行中 → 全部可用 */}
                     {(() => {
                       const isNormalEnded = record.status === 'completed' || record.endType === 'normal'
                       const isAbnormalEnded = record.status === 'abnormal' || record.endType === 'abnormal'
-                      const isEnded = isNormalEnded || isAbnormalEnded
-                      const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
+                      const isCancelled = record.status === 'cancelled'
+                      const isEnded = isNormalEnded || isAbnormalEnded || isCancelled
+                      const lockReason = isCancelled ? '已取消，禁止编辑/新增' : isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
                       const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
                       const guardClick = (msg: string, action?: () => void) => {
-                        // 仅在"正常结束"或"被显式禁用的写操作"时弹提示；异常结束的写操作可正常通过
-                        if (isNormalEnded) {
+                        // 正常结束/已取消 → 弹提示并阻止；异常结束 → 写操作可正常通过
+                        if (isNormalEnded || isCancelled) {
                           showAlert(msg)
                           return
                         }
@@ -705,8 +707,8 @@ export function SeedlingTable({
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           )}
-                          {/* 出圃入库（onInbound）：进行中 + 异常结束都显示（补录标识） */}
-                          {onInbound && !record.isHarvestLocked && (
+                          {/* 出圃入库（onInbound）：进行中 + 异常结束显示；已取消不显示 */}
+                          {onInbound && !record.isHarvestLocked && !isCancelled && (
                             <Button
                               variant="ghost" size="icon"
                               onClick={() => onInbound(record)}
