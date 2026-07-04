@@ -647,19 +647,25 @@ function TraceTab({
           <div className="space-y-1">
             {upstreamFiltered.map((item, idx) => {
               const depth = item.depth ?? 1;
+              const isCINode = item.instanceId?.startsWith('CI');
               return (
                 <div
                   key={idx}
-                  className="relative pl-3 border-l-2 border-emerald-300 hover:bg-emerald-50 rounded-r cursor-pointer transition-colors"
+                  className={`relative pl-3 border-l-2 rounded-r transition-colors ${
+                    isCINode
+                      ? 'border-amber-300 bg-amber-50/30 cursor-default'
+                      : 'border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                  }`}
                   style={{ marginLeft: `${(depth - 1) * 12}px` }}
-                  onClick={() => onSelectChild?.(item.instanceId)}
+                  onClick={() => !isCINode && onSelectChild?.(item.instanceId)}
                 >
-                  <div className="absolute -left-[5px] top-3 w-2 h-2 rounded-full bg-emerald-500" />
+                  <div className={`absolute -left-[5px] top-3 w-2 h-2 rounded-full ${isCINode ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                   <div className="p-2">
                     <div className="flex items-center gap-2 mb-1">
                       {getStockTypeIcon(item.stockType)}
                       <span className="text-sm font-medium">{item.cropName}</span>
                       <span className="text-xs text-gray-400">第{depth}层</span>
+                      {isCINode && <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">来源</span>}
                     </div>
                     <div className="text-xs text-gray-700">
                       {item.businessCode || item.instanceId}
