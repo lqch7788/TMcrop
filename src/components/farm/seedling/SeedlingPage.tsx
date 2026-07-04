@@ -165,9 +165,9 @@ export default function SeedlingPage() {
     }
   }, [error, toast, clearError]);
 
-  // 2026-07-01: 结束确认弹窗状态（合并正常/异常为一个"结束"按钮）
-  const [endConfirm, setEndConfirm] = useState<{ record: Seedling | null; allowSupplemental: boolean }>({
-    record: null, allowSupplemental: false,
+  // 2026-07-04 v3: 结束确认弹窗 — 三选一（正常结束 / 异常结束 / 直接取消）
+  const [endConfirm, setEndConfirm] = useState<{ record: Seedling | null; endType: 'normal' | 'abnormal' | 'cancelled' }>({
+    record: null, endType: 'normal',
   });
 
   // 2026-06-23: 扫码跳转 — 解析 URL ?labelNumber= 参数，自动打开标签管理弹窗
@@ -384,30 +384,38 @@ export default function SeedlingPage() {
   }, [pendingDeleteIds, deleteItems]);
 
   // 处理结束计划
-  // 2026-07-01: 合并正常/异常结束 → 一个"结束"按钮 + 弹窗内勾选"保留补录通道"
+  // 2026-07-04 v3: 三选一（正常结束/异常结束/直接取消）
   const handleEnd = (record: Seedling) => {
     if (record.endTime) {
       showAlert('该育苗记录已结束，不能重复操作');
       return;
     }
-    setEndConfirm({ record, allowSupplemental: false });
+    setEndConfirm({ record, endType: 'normal' });
   };
 
   // 执行结束操作
   const executeEnd = async () => {
     const record = endConfirm.record;
     if (!record) return;
-    const allowSupplemental = endConfirm.allowSupplemental;
-    const endType = allowSupplemental ? 'abnormal' : 'normal';
-    const endStatus = allowSupplemental ? SeedlingStatus.ABNORMAL : SeedlingStatus.COMPLETED;
+    const endType = endConfirm.endType;
+    // 2026-07-04 v3: 三选一 → 3 个不同 endStatus
+    const endStatus =
+      endType === 'abnormal' ? SeedlingStatus.ABNORMAL :
+      endType === 'cancelled' ? SeedlingStatus.CANCELLED :
+      SeedlingStatus.COMPLETED;
     const planCode = record.productionPlanCode;
 
-    setEndConfirm({ record: null, allowSupplemental: false });
+    setEndConfirm({ record: null, endType: 'normal' });
 
-    if (!planCode || planCode.trim() === '') {
+    // 取消操作不允许"强结"（cancelled 是用户主动放弃，不与生产计划联动）
+    if (endType === 'cancelled' || !planCode || planCode.trim() === '') {
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert(allowSupplemental ? '育苗记录已异常结束（保留补录通道）' : '育苗记录已正常结束');
+        const tip =
+          endType === 'abnormal' ? '育苗记录已异常结束（保留补录通道）' :
+          endType === 'cancelled' ? '育苗记录已取消' :
+          '育苗记录已正常结束';
+        await showAlert(tip);
         await loadItems();
       } else {
         await showAlert('结束失败');
@@ -419,7 +427,10 @@ export default function SeedlingPage() {
     if (!batch) {
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert(allowSupplemental ? '育苗记录已异常结束（强结，保留补录通道）' : '育苗记录已正常结束（强结）');
+        const tip =
+          endType === 'abnormal' ? '育苗记录已异常结束（强结，保留补录通道）' :
+          '育苗记录已正常结束（强结）';
+        await showAlert(tip);
         await loadItems();
       } else {
         await showAlert('强结失败');
@@ -435,7 +446,10 @@ export default function SeedlingPage() {
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
       await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
-      await showAlert(allowSupplemental ? '生产计划已异常结束（保留补录通道）' : '生产计划已正常结束');
+      const tip =
+        endType === 'abnormal' ? '生产计划已异常结束（保留补录通道）' :
+        '生产计划已正常结束';
+      await showAlert(tip);
       loadItems();
     } else {
       await showAlert('结束失败');
@@ -839,7 +853,7 @@ export default function SeedlingPage() {
         onConfirm={handleDeleteConfirm}
       />
 
-      {/* 2026-07-01: 结束确认弹窗（合并正常/异常为一个按钮） */}
+      {/* 2026-07-04 v3: 结束确认弹窗 — 三选一（正常结束/异常结束/直接取消） */}
       {endConfirm.record && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
@@ -848,12 +862,13 @@ export default function SeedlingPage() {
                 <AlertTriangle className="w-5 h-5" /> 确认结束育苗记录
               </h3>
               <Button variant="ghost" size="icon" className="text-white hover:bg-red-700"
-                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                onClick={() => setEndConfirm({ record: null, endType: 'normal' })}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
             <div className="p-4 space-y-3">
-              {!endConfirm.allowSupplemental ? (
+              {/* 三选一提示框（根据 endType 动态切换） */}
+              {endConfirm.endType === 'normal' && (
                 <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
                   <div className="text-sm font-semibold text-red-800">⚠️ 正常结束 — 完成后将【锁定】</div>
                   <div className="text-xs text-red-700 mt-1">
@@ -861,7 +876,8 @@ export default function SeedlingPage() {
                     <span className="font-semibold">此操作不可撤销！</span>
                   </div>
                 </div>
-              ) : (
+              )}
+              {endConfirm.endType === 'abnormal' && (
                 <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="text-sm font-semibold text-amber-800">异常结束 — 保留补录通道</div>
                   <div className="text-xs text-amber-700 mt-1">
@@ -869,27 +885,74 @@ export default function SeedlingPage() {
                   </div>
                 </div>
               )}
-              <label className="flex items-center gap-2 px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={endConfirm.allowSupplemental}
-                  onChange={(e) => setEndConfirm({ ...endConfirm, allowSupplemental: e.target.checked })}
-                  className="w-4 h-4 text-amber-600 rounded"
-                />
-                <span className="text-sm text-gray-700">
-                  保留补录通道（勾选后状态为"异常结束"，可继续补录操作）
-                </span>
-              </label>
+              {endConfirm.endType === 'cancelled' && (
+                <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
+                  <div className="text-sm font-semibold text-gray-800">取消育苗 — 放弃此批次</div>
+                  <div className="text-xs text-gray-700 mt-1">
+                    标记为"已取消"，归档不再继续。不会联动生产计划结束。
+                  </div>
+                </div>
+              )}
+              {/* 三选一 RadioGroup */}
+              <div className="space-y-2">
+                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'normal' ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                  <input
+                    type="radio"
+                    name="endTypeChoice"
+                    checked={endConfirm.endType === 'normal'}
+                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'normal' })}
+                    className="mt-0.5 w-4 h-4 text-red-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">正常结束</div>
+                    <div className="text-xs text-gray-500">所有操作锁定，育苗归档为"已出圃"</div>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'abnormal' ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                  <input
+                    type="radio"
+                    name="endTypeChoice"
+                    checked={endConfirm.endType === 'abnormal'}
+                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'abnormal' })}
+                    className="mt-0.5 w-4 h-4 text-amber-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">异常结束（保留补录通道）</div>
+                    <div className="text-xs text-gray-500">归档为"异常"，可继续补录入库</div>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'cancelled' ? 'border-gray-400 bg-gray-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                  <input
+                    type="radio"
+                    name="endTypeChoice"
+                    checked={endConfirm.endType === 'cancelled'}
+                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'cancelled' })}
+                    className="mt-0.5 w-4 h-4 text-gray-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">直接取消</div>
+                    <div className="text-xs text-gray-500">放弃此批次育苗，归档为"已取消"</div>
+                  </div>
+                </label>
+              </div>
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <Button variant="secondary" size="sm"
-                onClick={() => setEndConfirm({ record: null, allowSupplemental: false })}>
+                onClick={() => setEndConfirm({ record: null, endType: 'normal' })}>
                 取消
               </Button>
               <Button variant="default" size="sm"
                 onClick={executeEnd}
-                className={endConfirm.allowSupplemental ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}>
-                确认{endConfirm.allowSupplemental ? '异常' : '正常'}结束
+                className={
+                  endConfirm.endType === 'abnormal' ? 'bg-amber-600 hover:bg-amber-700' :
+                  endConfirm.endType === 'cancelled' ? 'bg-gray-600 hover:bg-gray-700' :
+                  'bg-red-600 hover:bg-red-700'
+                }>
+                确认{
+                  endConfirm.endType === 'abnormal' ? '异常结束' :
+                  endConfirm.endType === 'cancelled' ? '取消育苗' :
+                  '正常结束'
+                }
               </Button>
             </div>
           </div>

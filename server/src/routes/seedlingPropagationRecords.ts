@@ -152,16 +152,18 @@ router.post('/:id/propagation-records', (req: Request, res: Response) => {
     const ins = db.prepare(
       `INSERT INTO propagation_records (
         id, seedling_id, record_date,
+        seed_source_id, stage,
         operation_type, reproduction_mode, mother_plant_code, propagation_method,
         inoculation_count, survival_count_asexual, target_traits, generation,
         parent_male_code, parent_female_code,
         temperature, humidity,
         mother_plant_count, seedling_output, seedling_status,
         transplant_position, operator, remarks, create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`
     );
     ins.run([
       recordId, id, data.recordDate,
+      id, 'seedling',  // seed_source_id 用 seedling_id 占位（NOT NULL 必填）；stage='seedling' 区分业务类型
       data.operationType ?? null, data.reproductionMode ?? null,
       data.motherPlantCode ?? null, data.propagationMethod ?? null,
       data.inoculationCount ?? null, data.survivalCountAsexual ?? null,

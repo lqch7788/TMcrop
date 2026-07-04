@@ -514,7 +514,18 @@ export function initializeDatabase() {
       -- 2026-06-16: 标记母株损耗历史脏数据是否已修复（防重复修复）
       mother_loss_fixed INTEGER DEFAULT 0,
       -- 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株）— 严格区分母株/小苗池子
-      replant_count INTEGER DEFAULT 0
+      replant_count INTEGER DEFAULT 0,
+      -- 2026-07-04 v3: 无性繁殖母株溯源（铁律 #8 同步 fixMissingSchema.ts ALTER TABLE）
+      mother_source_type TEXT,
+      mother_source_id TEXT,
+      mother_source_code TEXT,
+      propagation_method TEXT,
+      inoculation_count INTEGER DEFAULT 0,
+      survival_count INTEGER DEFAULT 0,
+      mother_generation TEXT,
+      mother_crop_name TEXT,
+      mother_propagation_method TEXT,
+      asexual_propagation_note TEXT
     )
   `);
 
@@ -3461,6 +3472,36 @@ export function initializeDatabase() {
     db.run('ALTER TABLE harvest_records ADD COLUMN supplementary_reason TEXT');
   } catch (e) {
     // 列已存在则忽略
+  }
+
+  // 2026-07-04：无性繁殖母株溯源列（seedling.ts INSERT 列表引用了这 10 列）
+  // 根因：fixMissingSchema 被启动白名单禁用，ALTER TABLE 必须放 initializeDatabase
+  // 性能优化：先 PRAGMA 查已有列，只 ALTER 真正缺的（避免每列都触发 wasm 异常链，10 列共省 5-8 秒）
+  {
+    const colStmt = db.prepare('PRAGMA table_info(seedlings)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    const seedlingNewCols: Array<[string, string]> = [
+      ['mother_source_type', 'TEXT'],
+      ['mother_source_id', 'TEXT'],
+      ['mother_source_code', 'TEXT'],
+      ['propagation_method', 'TEXT'],
+      ['inoculation_count', 'INTEGER DEFAULT 0'],
+      ['survival_count', 'INTEGER DEFAULT 0'],
+      ['mother_generation', 'TEXT'],
+      ['mother_crop_name', 'TEXT'],
+      ['mother_propagation_method', 'TEXT'],
+      ['asexual_propagation_note', 'TEXT'],
+    ];
+    for (const [col, type] of seedlingNewCols) {
+      if (!existing.has(col)) {
+        try { db.run(`ALTER TABLE seedlings ADD COLUMN ${col} ${type}`); } catch {}
+      }
+    }
   }
 }
 
