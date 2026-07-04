@@ -574,17 +574,18 @@ export class InventoryService {
       }
 
       // 2026-07-04：出库流水作为下游叶子节点（销售/消耗/领用等不会创建新 stock，但用户需要看到去向）
+      // 注意：findByInstanceId 返回 camelCase（mapToCamelCase 转换），不要用 snake_case
       if (depth === 0) {
         const outboundTxs = await inventoryTransactionRepository.findByInstanceId(id);
-        const outbounds = outboundTxs.filter(t => t.transaction_type === 'outbound');
+        const outbounds = outboundTxs.filter((t: any) => t.transactionType === 'outbound');
         for (const tx of outbounds) {
           results.push({
-            instanceId: `TX-${tx.id}`,
+            instanceId: `TX-${(tx as any).id}`,
             stockType: 'outbound',
-            businessType: tx.business_type ?? tx.businessType ?? 'outbound',
-            businessId: tx.business_id ?? tx.businessId ?? '',
-            outboundQuantity: Math.abs(tx.quantity ?? 0),
-            outboundDate: tx.operate_date ?? tx.operateDate ?? '',
+            businessType: (tx as any).businessType || 'outbound',
+            businessId: (tx as any).businessId || '',
+            outboundQuantity: Math.abs((tx as any).quantity ?? 0),
+            outboundDate: (tx as any).operateDate || '',
             depth: depth + 1,
             parentInstanceId: id,
           });
