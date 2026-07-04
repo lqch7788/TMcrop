@@ -20,7 +20,7 @@ import { Checkbox } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
-import { RotateCcw, Eye } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import {
   OutboundRow,
 } from '../../../stores/useInventoryTransactionStore';
@@ -195,7 +195,7 @@ export function OutboundRecordsTable({
     return OUTBOUND_BUSINESS_TYPE_META[normalized];
   };
 
-  const colSpan = (exportMode || deleteMode) ? 17 : 16;
+  const colSpan = (exportMode || deleteMode) ? 16 : 15;
   const allSelected = data.length > 0 && selectedRows.length === data.length;
   const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
 
@@ -238,7 +238,6 @@ export function OutboundRecordsTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出库人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">余额前→后</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作时间</th>
             </tr>
           </thead>
@@ -270,8 +269,14 @@ export function OutboundRecordsTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">
-                    {row.instanceId || '-'}
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => onViewDetail(row.instanceId)}
+                      className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
+                    >
+                      {row.instanceId}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm font-mono text-gray-900 whitespace-nowrap" title="系统自动生成，4 位顺序递增 (2026-06-08 V2.1)">
                     {row.id}
@@ -299,12 +304,6 @@ export function OutboundRecordsTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operatorName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap font-mono">
                     {row.balanceBefore} → {row.balanceAfter}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Button variant="link" size="sm" onClick={() => onViewDetail(row.instanceId)} className="text-blue-600 hover:text-blue-800" title="查看详情">
-                      <Eye className="w-4 h-4" />
-                      详情
-                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operatorDate || row.operateDate || '-'}</td>
                 </tr>
