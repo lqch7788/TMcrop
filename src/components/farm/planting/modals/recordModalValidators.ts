@@ -1,18 +1,26 @@
 /**
- * 2026-07-03 v3：RecordModal 校验器
- * - 前端 BreedingFormState 校验
- * - 后端数据校验函数（被 server 端 import 也可以）
+ * 2026-07-03 v5：RecordModal 校验器（仅有性繁殖）
+ * 无性繁殖（组培/扦插/嫁接/压条/分株）已迁移至育苗模块
  */
 
-import { ASEXUAL_OPERATION_TYPES } from './recordModalConstants'
 import type { BreedingOperationType, PropagationMethod } from '@/services/apiPlantingSubRecordService'
 
-/** 扩展 form 状态：包含繁殖模式 */
+/** 扩展 form 状态（v5 缩简：仅含有性字段） */
 export type BreedingFormState = {
   recordDate: string
   operationType: BreedingOperationType
+  generation?: string | null
   parentMaleCode?: string | null
   parentFemaleCode?: string | null
+  parentMaleSource?: string | null
+  parentFemaleSource?: string | null
+  operator?: string | null
+  remarks?: string | null
+  targetTraits?: string[] | null
+  fruitCount?: number | null
+  seedCount?: number | null
+  pollinatedFlowerCount?: number | null
+  /** @deprecated v5：保留字段兼容历史数据，UI 不再使用 */
   motherPlantCode?: string | null
   propagationMethod?: PropagationMethod | null
   inoculationCount?: number | null
@@ -21,7 +29,7 @@ export type BreedingFormState = {
 }
 
 /**
- * 育种表单前端校验（与后端 server/src/routes/plantingRecords.ts 校验逻辑对齐）
+ * 育种表单前端校验（仅有性繁殖）
  * @returns null = 通过；string = 错误信息
  */
 export function validateBreedingForm(form: BreedingFormState): string | null {
@@ -31,14 +39,6 @@ export function validateBreedingForm(form: BreedingFormState): string | null {
   }
   if (form.parentMaleCode && form.parentFemaleCode && form.parentMaleCode === form.parentFemaleCode) {
     return '父本编码不能与母本编码相同'
-  }
-  if (ASEXUAL_OPERATION_TYPES.includes(form.operationType) && !form.motherPlantCode) {
-    return '无性繁殖时母株编码必填'
-  }
-  if (!ASEXUAL_OPERATION_TYPES.includes(form.operationType)) {
-    if (form.motherPlantCode || form.propagationMethod || (form.inoculationCount && form.inoculationCount > 0) || (form.survivalCount && form.survivalCount > 0)) {
-      return '有性繁殖不应填写无性字段（母株/繁殖方式/接种数/成活数）'
-    }
   }
   return null
 }

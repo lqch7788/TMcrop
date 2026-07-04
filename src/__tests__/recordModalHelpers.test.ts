@@ -1,15 +1,13 @@
 /**
- * 2026-07-03 v3：recordModal 工具函数单元测试
- * - validateBreedingForm 校验器
- * - getRateColor 颜色阈值
- * - OPERATION_TYPES/SEXUAL/ASEXUAL 分类
+ * 2026-07-04 v5：recordModal 工具函数单元测试（仅有性繁殖）
+ * 无性繁殖（组培/扦插/嫁接/压条/分株）已迁移至育苗模块
  */
 
 import { describe, it, expect } from 'vitest'
 import { validateBreedingForm, type BreedingFormState } from '@/components/farm/planting/modals/recordModalValidators'
 import { getRateColor, OPERATION_TYPES, SEXUAL_OPERATION_TYPES, ASEXUAL_OPERATION_TYPES } from '@/components/farm/planting/modals/recordModalConstants'
 
-// ============ validateBreedingForm 测试 ============
+// ============ validateBreedingForm 测试（v5：仅有性） ============
 
 describe('validateBreedingForm', () => {
   const baseForm: BreedingFormState = {
@@ -45,30 +43,17 @@ describe('validateBreedingForm', () => {
     expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', parentFemaleCode: 'M1' })).toBe('父本编码不能与母本编码相同')
   })
 
-  it('失败：无性 asexual 缺母株', () => {
-    expect(validateBreedingForm({ ...baseForm, operationType: 'cutting' })).toBe('无性繁殖时母株编码必填')
-  })
-
-  it('通过：无性 asexual cutting 含母株', () => {
-    expect(validateBreedingForm({ ...baseForm, operationType: 'cutting', motherPlantCode: 'M_GRAPE_001' })).toBeNull()
-  })
-
-  it('通过：无性 asexual 6 种 op 全过', () => {
+  // v5: 无性繁殖（cutting/grafting/tissue 等）已迁移至育苗，校验不再拦截
+  it('v5通过：无性 op 不再拦截（UI 已移除无性入口）', () => {
     for (const op of ['clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division'] as const) {
-      expect(validateBreedingForm({ ...baseForm, operationType: op, motherPlantCode: 'M1' })).toBeNull()
+      expect(validateBreedingForm({ ...baseForm, operationType: op })).toBeNull()
     }
   })
 
-  it('失败：有性填了母株', () => {
-    expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', motherPlantCode: 'BAD' })).toBe('有性繁殖不应填写无性字段（母株/繁殖方式/接种数/成活数）')
-  })
-
-  it('失败：有性填了接种数 > 0', () => {
-    expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', inoculationCount: 10 })).toBe('有性繁殖不应填写无性字段（母株/繁殖方式/接种数/成活数）')
-  })
-
-  it('通过：有性 inoculationCount = 0 (不视为填了)', () => {
-    expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', inoculationCount: 0 })).toBeNull()
+  // v5: 废弃的无性字段不再触发校验（UI 已移除入口，仅兼容历史数据回显）
+  it('v5通过：废弃的母株/接种数字段不再拦截', () => {
+    expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', motherPlantCode: 'OLD_DATA' })).toBeNull()
+    expect(validateBreedingForm({ ...baseForm, parentMaleCode: 'M1', inoculationCount: 10 })).toBeNull()
   })
 })
 
@@ -112,7 +97,7 @@ describe('operation type classification', () => {
     expect(SEXUAL_OPERATION_TYPES).toContain('cross')
     expect(SEXUAL_OPERATION_TYPES).toContain('self')
   })
-  it('ASEXUAL_OPERATION_TYPES 包含 6 个无性 op', () => {
+  it('ASEXUAL_OPERATION_TYPES 包含 6 个无性 op（deprecated，保留兼容）', () => {
     expect(ASEXUAL_OPERATION_TYPES.length).toBe(6)
     expect(ASEXUAL_OPERATION_TYPES).toContain('cutting')
     expect(ASEXUAL_OPERATION_TYPES).toContain('grafting')

@@ -3126,6 +3126,41 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.skip('• 字典 unit 补单位:', e.message)
   }
+
+  // ============================================================
+  // 2026-07-03 v5：seedlings 表加无性繁殖母株溯源列
+  // 将组培/扦插/嫁接/压条/分株等无性繁殖从种植育种迁移到育苗
+  // 新增 10 列：母株溯源(3)+繁殖方式(1)+指标(2)+世代信息(2)+预留(2)
+  // ============================================================
+  try {
+    const seedlingAsexualCols = [
+      { col: 'mother_source_type', type: 'TEXT' },       // 'planting' | 'seed_source'
+      { col: 'mother_source_id', type: 'TEXT' },         // 种植ID 或 种源ID
+      { col: 'mother_source_code', type: 'TEXT' },       // 种植批号 或 种源代码
+      { col: 'propagation_method', type: 'TEXT' },       // cutting/grafting/tissue_culture/layering/division/bulb/tuber/runner
+      { col: 'inoculation_count', type: 'INTEGER' },     // 接种数（插穗/接芽/外植体/球茎）
+      { col: 'survival_count', type: 'INTEGER' },        // 成活数
+      { col: 'mother_generation', type: 'TEXT' },        // 母株世代（从育种记录读取）
+      { col: 'mother_crop_name', type: 'TEXT' },         // 母株品种名
+      { col: 'mother_propagation_method', type: 'TEXT' },// 母株繁殖方式（冗余备份）
+      { col: 'asexual_propagation_note', type: 'TEXT' }, // 无性繁殖备注
+    ]
+    let seedlingColsAdded = 0
+    for (const { col, type } of seedlingAsexualCols) {
+      try {
+        db.run(`ALTER TABLE seedlings ADD COLUMN ${col} ${type}`)
+        seedlingColsAdded++
+      } catch (_) { /* 列已存在，跳过 */ }
+    }
+    if (seedlingColsAdded > 0) {
+      saveDatabase()
+      seedLog.info(`✓ seedlings 表加 ${seedlingColsAdded} 列（无性繁殖母株溯源）`)
+    } else {
+      seedLog.skip('• seedlings 无性繁殖列全部已存在')
+    }
+  } catch (e: any) {
+    seedLog.skip('• seedlings 加无性繁殖列:', e.message)
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

@@ -289,6 +289,10 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       'source_deducted_quantity',
       'charge_person',
       'seedling_form',
+      // 2026-07-03 v5：无性繁殖母株溯源列
+      'mother_source_type', 'mother_source_id', 'mother_source_code',
+      'propagation_method', 'inoculation_count', 'survival_count',
+      'mother_generation', 'mother_crop_name', 'mother_propagation_method', 'asexual_propagation_note',
       'create_time', 'update_time',
     ];
     const insertValues = [
@@ -302,6 +306,17 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       safeCount,
       chargePerson,
       seedling.seedling_form || null, // 2026-06-27：种苗形态
+      // 2026-07-03 v5：无性繁殖母株溯源
+      seedling.mother_source_type || null,
+      seedling.mother_source_id || null,
+      seedling.mother_source_code || null,
+      seedling.propagation_method || null,
+      seedling.inoculation_count ?? 0,
+      seedling.survival_count ?? 0,
+      seedling.mother_generation || null,
+      seedling.mother_crop_name || null,
+      seedling.mother_propagation_method || null,
+      seedling.asexual_propagation_note || null,
       now, now,
     ];
     if (insertCols.length !== insertValues.length) {
@@ -977,6 +992,10 @@ router.post('/', (req: Request, res: Response) => {
       'charge_person',
       'seedling_form',
       'unit',
+      // 2026-07-03 v5：无性繁殖母株溯源列
+      'mother_source_type', 'mother_source_id', 'mother_source_code',
+      'propagation_method', 'inoculation_count', 'survival_count',
+      'mother_generation', 'mother_crop_name', 'mother_propagation_method', 'asexual_propagation_note',
       'create_time', 'update_time',
     ];
     const insertValues = [
@@ -990,6 +1009,17 @@ router.post('/', (req: Request, res: Response) => {
       chargePerson,
       seedling_form || null, // 2026-06-27：种苗形态
       seedlingUnit, // 2026-07-01: 单位
+      // 2026-07-03 v5：无性繁殖母株溯源
+      req.body.mother_source_type || null,
+      req.body.mother_source_id || null,
+      req.body.mother_source_code || null,
+      req.body.propagation_method || null,
+      req.body.inoculation_count ?? 0,
+      req.body.survival_count ?? 0,
+      req.body.mother_generation || null,
+      req.body.mother_crop_name || null,
+      req.body.mother_propagation_method || null,
+      req.body.asexual_propagation_note || null,
       now, now,
     ];
     if (insertCols.length !== insertValues.length) {
