@@ -214,7 +214,7 @@ export const SEEDLING_STATUS_MAP: Record<string, { label: string; color: string 
   in_progress: { label: '进行中', color: 'bg-blue-100 text-blue-700' },
   transplant_ready: { label: '待定植', color: 'bg-amber-100 text-amber-700' },
   completed: { label: '已完成', color: 'bg-emerald-100 text-emerald-700' },
-  abnormal: { label: '异常', color: 'bg-red-100 text-red-700' },
+  abnormal: { label: '异常结束', color: 'bg-red-100 text-red-700' },
 };
 
 // ========== 定植记录状态映射 ==========

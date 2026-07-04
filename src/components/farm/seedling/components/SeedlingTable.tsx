@@ -230,7 +230,7 @@ export function SeedlingTable({
     [SeedlingStatus.TRANSPLANT_READY]: { label: '待出圃', color: 'text-emerald-600 bg-emerald-50' },
     [SeedlingStatus.COMPLETED]: { label: '已出圃', color: 'text-green-600 bg-green-50' },
     [SeedlingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-100' },
-    [SeedlingStatus.ABNORMAL]: { label: '异常', color: 'text-red-600 bg-red-50' },
+    [SeedlingStatus.ABNORMAL]: { label: '异常结束', color: 'text-red-600 bg-red-50' },
     // 历史孤儿值兼容（不应再出现，但安全网）
     transplanted: { label: '已出圃', color: 'text-green-600 bg-green-50' },
   };
