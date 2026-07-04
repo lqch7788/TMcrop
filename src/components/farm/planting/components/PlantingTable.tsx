@@ -599,13 +599,14 @@ export function PlantingTable({
                   <Package className="w-4 h-4" />
                 </Button>
               )}
-              {/* 采收入库（补录）：仅异常结束显示 */}
-              {onInbound && isAbnormalEnded && (
+              {/* 采收入库（补录）：异常结束可用；已取消灰显禁用 */}
+              {onInbound && (isAbnormalEnded || isCancelled) && (
                 <Button
                   variant="ghost" size="icon"
-                  onClick={() => onInbound(record)}
-                  className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                  title="采收（补录）"
+                  onClick={() => isCancelled ? showAlert('已取消，禁止入库') : onInbound(record)}
+                  disabled={isCancelled}
+                  className={isCancelled ? writeClass : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
+                  title={isCancelled ? '已取消，禁止入库' : '采收（补录）'}
                 >
                   <Package className="w-4 h-4" />
                 </Button>
@@ -1177,13 +1178,14 @@ export function PlantingTable({
                               <Package className="w-4 h-4" />
                             </Button>
                           )}
-                          {/* 采收入库（补录）：仅异常结束显示 */}
-                          {onInbound && isAbnormalEnded && (
+                          {/* 采收入库（补录）：异常结束可用；已取消灰显禁用 */}
+                          {onInbound && (isAbnormalEnded || isCancelled) && (
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => onInbound(record)}
-                              className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                              title="采收（补录）"
+                              onClick={() => isCancelled ? showAlert('已取消，禁止入库') : onInbound(record)}
+                              disabled={isCancelled}
+                              className={isCancelled ? writeClass : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
+                              title={isCancelled ? '已取消，禁止入库' : '采收（补录）'}
                             >
                               <Package className="w-4 h-4" />
                             </Button>
