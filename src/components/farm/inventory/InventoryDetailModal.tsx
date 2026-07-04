@@ -42,6 +42,8 @@ interface InventoryDetailModalProps {
   isOpen: boolean;
   stock: InventoryStock | null;
   onClose: () => void;
+  /** 2026-07-04：点击上下游追溯节点时触发，父组件更新 stock 后自动刷新详情 */
+  onNavigateToInstance?: (instanceId: string) => void;
 }
 
 const getStockTypeIcon = (stockType: StockType | string) => {
@@ -82,7 +84,7 @@ const BUSINESS_TYPE_META: Record<string, { label: string; bg: string; text: stri
   other:       { label: '其他',     bg: 'bg-gray-100',     text: 'text-gray-700' },
 };
 
-export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetailModalProps) {
+export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInstance }: InventoryDetailModalProps) {
   const [tab, setTab] = useState<TabKey>('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,10 +251,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
           downstream={downstream}
           loading={loading}
           onSelectChild={(instanceId) => {
-            const child = (upstream.find((u) => u.instanceId === instanceId)
-              || downstream.find((d) => d.instanceId === instanceId)) as any
-            if (child && child.instanceId) {
-              showAlert(`已选中 instanceId: ${instanceId}，链式跳转待 useInventoryStore 实例化后实现`, { title: '链式跳转' })
+            if (onNavigateToInstance) {
+              onNavigateToInstance(instanceId);
             }
           }}
         />

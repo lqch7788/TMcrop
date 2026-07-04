@@ -260,6 +260,7 @@ export default function OutboundRecordsPage() {
         isOpen={detailOpen}
         stock={detailInstanceId ? ({ instanceId: detailInstanceId } as any) : null}
         onClose={() => setDetailOpen(false)}
+        onNavigateToInstance={(id) => setDetailInstanceId(id)}
       />
 
       {/* 导出格式选择弹窗（按 Materials.tsx 模式） */}
