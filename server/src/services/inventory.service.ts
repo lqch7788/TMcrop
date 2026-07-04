@@ -412,13 +412,14 @@ export class InventoryService {
     stockType: string;
     businessType: string;
     businessId: string;
+    businessCode?: string;    // 2026-07-04：批次号（育苗编码/种植编码/种源编码）
     cropName: string;
     varietyName?: string;
     quantity: number;
     inboundDate: string;
     sourceInstanceId?: string;
-    depth: number;            // Phase 13.1.5: BFS 深度，0 = 自己
-    parentInstanceId: string | null;  // Phase 13.1.5: 父节点 instanceId
+    depth: number;
+    parentInstanceId: string | null;
   }>> {
     const results: any[] = [];
     const visited = new Set<string>();
@@ -462,6 +463,10 @@ export class InventoryService {
 
         if (ciRow) {
           // crop_instance → 作为虚拟节点插入结果
+          const bizTypeLabel = ciRow.business_type === 'planting' ? '种植'
+            : ciRow.business_type === 'seedling' ? '育苗'
+            : ciRow.business_type === 'seed_source' ? '种源'
+            : ciRow.business_type;
           results.push({
             instanceId: ciRow.id,
             stockType: ciRow.business_type === 'planting' ? 'product'
@@ -470,6 +475,7 @@ export class InventoryService {
                      : 'unknown',
             businessType: ciRow.business_type,
             businessId: ciRow.business_id,
+            businessCode: ciRow.instance_code ? `${bizTypeLabel}批次: ${ciRow.instance_code}` : `来源: ${ciRow.business_id}`,
             cropName: ciRow.crop_name,
             varietyName: ciRow.crop_variety,
             quantity: ciRow.current_quantity ?? 0,

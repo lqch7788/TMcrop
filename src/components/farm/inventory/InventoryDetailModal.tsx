@@ -661,7 +661,9 @@ function TraceTab({
                       <span className="text-sm font-medium">{item.cropName}</span>
                       <span className="text-xs text-gray-400">第{depth}层</span>
                     </div>
-                    <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
+                    <div className="text-xs text-gray-700">
+                      {item.businessCode || item.instanceId}
+                    </div>
                     <div className="text-xs text-gray-600 mt-1">数量: {item.quantity} · 入库: {item.inboundDate}</div>
                   </div>
                 </div>

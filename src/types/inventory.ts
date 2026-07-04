@@ -305,6 +305,7 @@ export interface TraceResult {
   stockType: StockType;
   businessType: BusinessType;
   businessId: string;
+  businessCode?: string;    // 2026-07-04：批次号/来源描述（如"育苗批次: YM20260701-001"）
   cropName: string;
   varietyName?: string;
   quantity: number;
@@ -321,6 +322,7 @@ export interface DownstreamTraceResult {
   stockType: StockType;
   businessType: BusinessType;
   businessId: string;
+  businessCode?: string;    // 2026-07-04：批次号/来源描述
   outboundQuantity: number;
   outboundDate: string;
   targetInstanceId?: string;
