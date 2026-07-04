@@ -270,14 +270,8 @@ export function OutboundRecordsTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => onViewDetail(row.instanceId)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
-                    >
-                      {row.instanceId}
-                    </button>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">
+                    {row.instanceId || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm font-mono text-gray-900 whitespace-nowrap" title="系统自动生成，4 位顺序递增 (2026-06-08 V2.1)">
                     {row.id}
