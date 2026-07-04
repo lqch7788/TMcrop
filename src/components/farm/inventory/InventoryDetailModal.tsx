@@ -75,13 +75,28 @@ const TX_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color
 
 // 业务类型英文 → 中文映射
 const BUSINESS_TYPE_META: Record<string, { label: string; bg: string; text: string }> = {
-  seed_source: { label: '种源管理', bg: 'bg-lime-100',     text: 'text-lime-700' },
-  seedling:    { label: '育苗管理', bg: 'bg-green-100',    text: 'text-green-700' },
-  planting:    { label: '种植管理', bg: 'bg-teal-100',     text: 'text-teal-700' },
-  harvest:     { label: '采收入库', bg: 'bg-orange-100',   text: 'text-orange-700' },
-  purchase:    { label: '采购入库', bg: 'bg-blue-100',     text: 'text-blue-700' },
-  manual:      { label: '手动新建', bg: 'bg-slate-100',    text: 'text-slate-700' },
-  other:       { label: '其他',     bg: 'bg-gray-100',     text: 'text-gray-700' },
+  seed_source:        { label: '种源管理',   bg: 'bg-lime-100',     text: 'text-lime-700' },
+  seedling:           { label: '育苗管理',   bg: 'bg-green-100',    text: 'text-green-700' },
+  planting:           { label: '种植管理',   bg: 'bg-teal-100',     text: 'text-teal-700' },
+  harvest:            { label: '采收入库',   bg: 'bg-orange-100',   text: 'text-orange-700' },
+  purchase:           { label: '采购入库',   bg: 'bg-blue-100',     text: 'text-blue-700' },
+  manual:             { label: '手动新建',   bg: 'bg-slate-100',    text: 'text-slate-700' },
+  other:              { label: '其他',       bg: 'bg-gray-100',     text: 'text-gray-700' },
+  // 2026-07-04：补全出库流水业务类型
+  customer_sale:      { label: '客户销售',   bg: 'bg-rose-100',     text: 'text-rose-700' },
+  damage_loss:        { label: '损坏损耗',   bg: 'bg-red-100',      text: 'text-red-700' },
+  gift_sample:        { label: '赠送样品',   bg: 'bg-pink-100',     text: 'text-pink-700' },
+  internal_planting:  { label: '内部种植',   bg: 'bg-teal-100',     text: 'text-teal-700' },
+  order:              { label: '订单',       bg: 'bg-indigo-100',   text: 'text-indigo-700' },
+  return_inbound:     { label: '退货入库',   bg: 'bg-purple-100',   text: 'text-purple-700' },
+  transfer:           { label: '调拨',       bg: 'bg-cyan-100',     text: 'text-cyan-700' },
+  transfer_out:       { label: '调拨出库',   bg: 'bg-cyan-100',     text: 'text-cyan-700' },
+  inventory_transfer: { label: '库存调拨',   bg: 'bg-sky-100',      text: 'text-sky-700' },
+  inbound:            { label: '入库',       bg: 'bg-emerald-100',  text: 'text-emerald-700' },
+  outbound:           { label: '出库',       bg: 'bg-orange-100',   text: 'text-orange-700' },
+  freeze:             { label: '冻结',       bg: 'bg-blue-100',     text: 'text-blue-700' },
+  unfreeze:           { label: '解冻',       bg: 'bg-green-100',    text: 'text-green-700' },
+  inventory_adjust:   { label: '库存调整',   bg: 'bg-yellow-100',   text: 'text-yellow-700' },
 };
 
 export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInstance }: InventoryDetailModalProps) {
@@ -604,7 +619,7 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
                   </td>
                   <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{tx.operatorName || '-'}</td>
                   <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">
-                    {tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN') : '-'}
+                    {tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : (tx.createTime ? new Date(tx.createTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-')}
                   </td>
                   <td className="px-3 py-2 text-gray-600 text-xs max-w-xs truncate" title={tx.remarks || ''}>
                     {tx.remarks || '-'}
