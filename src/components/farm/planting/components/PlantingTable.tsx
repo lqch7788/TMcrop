@@ -556,19 +556,19 @@ export function PlantingTable({
         title: '操作',
         width: 280,
         render: (_: unknown, record: Planting) => {
-          /* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
-              正常结束(status=ended, endType!=abnormal) → 写操作全锁；读操作可用；补录关闭
-              异常结束(status=cancelled 或 endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
+          /* 2026-07-04 v3：写读分离 — 写操作在结束态灰显+禁用
+              正常结束(status=ended, endType=normal) → 写操作全锁；读操作可用
+              异常结束(status=ended, endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
+              已取消(status=cancelled) → 写操作全锁（含补录）；仅读操作可用
               进行中 → 全部可用 */
-          const isNormalEnded = record.status === 'ended' && record.endType !== 'abnormal'
-          const isAbnormalEnded = record.status === 'cancelled' || record.endType === 'abnormal'
-          const isEnded = isNormalEnded || isAbnormalEnded
-          const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
-          // 写操作统一灰显样式
+          const isNormalEnded = record.status === 'ended' && record.endType === 'normal'
+          const isAbnormalEnded = record.status === 'ended' && record.endType === 'abnormal'
+          const isCancelled = record.status === 'cancelled'
+          const isEnded = isNormalEnded || isAbnormalEnded || isCancelled
+          const lockReason = isCancelled ? '已取消，禁止编辑/新增' : isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
           const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
-          // 禁用态点击 → 弹提示（仅正常结束/显式禁用时弹；异常结束的写操作可正常通过，如 onInbound 补录）
           const guardClick = (msg: string, action?: () => void) => {
-            if (isNormalEnded) {
+            if (isNormalEnded || isCancelled) {
               showAlert(msg)
               return
             }
@@ -1138,14 +1138,15 @@ export function PlantingTable({
                         异常结束 → 写操作全锁（除补录）；读操作可用；补录保留
                         进行中 → 全部可用 */}
                     {(() => {
-                      const isNormalEnded = record.status === 'ended' && record.endType !== 'abnormal'
-                      const isAbnormalEnded = record.status === 'cancelled' || record.endType === 'abnormal'
-                      const isEnded = isNormalEnded || isAbnormalEnded
-                      const lockReason = isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
+                      const isNormalEnded = record.status === 'ended' && record.endType === 'normal'
+                      const isAbnormalEnded = record.status === 'ended' && record.endType === 'abnormal'
+                      const isCancelled = record.status === 'cancelled'
+                      const isEnded = isNormalEnded || isAbnormalEnded || isCancelled
+                      const lockReason = isCancelled ? '已取消，禁止编辑/新增' : isNormalEnded ? '已正常结束，禁止编辑/新增' : '已异常结束，禁止编辑/新增'
                       const writeClass = 'text-gray-400 cursor-not-allowed opacity-40'
-                      // 禁用态点击 → 弹提示（仅正常结束/显式禁用时弹；异常结束的写操作可正常通过，如 onInbound 补录）
+                      // 禁用态点击 → 弹提示（仅正常结束/已取消时弹；异常结束的写操作可正常通过，如 onInbound 补录）
                       const guardClick = (msg: string, action?: () => void) => {
-                        if (isNormalEnded) {
+                        if (isNormalEnded || isCancelled) {
                           showAlert(msg)
                           return
                         }

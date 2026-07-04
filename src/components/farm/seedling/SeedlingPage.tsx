@@ -763,8 +763,9 @@ export default function SeedlingPage() {
           onSuccess={handleDailyRecordSuccess}
           record={currentRecord}
           // 2026-07-03：已结束的育苗 → 只读模式（保留查看+导出）
+          // 2026-07-04 修复：补 cancelled 到只读判断
           readOnly={Boolean(
-            currentRecord.status === 'completed' || currentRecord.status === 'abnormal' ||
+            currentRecord.status === 'completed' || currentRecord.status === 'abnormal' || currentRecord.status === 'cancelled' ||
             currentRecord.endType === 'normal' || currentRecord.endType === 'abnormal'
           )}
         />
