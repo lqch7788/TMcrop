@@ -3,7 +3,9 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { getDatabase, saveDatabase } from '../db';
 import * as materialsDb from '../db/materials';
+import { upsertBatchInventory } from '../db/batchInventory';
 
 const router = Router();
 
@@ -100,9 +102,11 @@ router.post('/inbound', (req: Request, res: Response) => {
       status: record.status || 'pending',
       materials: record.materials || []
     });
-    // 入库即完成 → 自动同步物料库存
+    // 入库即完成 → 自动同步物料库存 + 批次库存（FEFO）
     if (record.status === 'completed' && record.materials?.length > 0) {
       materialsDb.syncInboundToMaterials(record.materials);
+      // V14.0: 写入批次库存表（按 material_code + batch_no 追踪剩余量）
+      upsertBatchInventory(record.materials, id);
     }
     // 返回完整记录（含解析后的 materials 数组，兼容旧字段名）
     const created = materialsDb.getInboundRecordById(id);
@@ -160,8 +164,9 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
         const oldRecord = materialsDb.getInboundRecordById(id);
         const wasCompleted = oldRecord?.status === 'completed';
         if (!wasCompleted) {
-          // pending → completed：触发库存同步
+          // pending → completed：触发库存同步 + 批次库存（FEFO）
           materialsDb.syncInboundToMaterials(updates.materials);
+          upsertBatchInventory(updates.materials, id);
         }
       }
       materialsDb.updateInboundRecord(id, sanitized);
@@ -181,6 +186,167 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('更新入库记录失败:', error);
     res.status(500).json({ error: '更新入库记录失败' });
+  }
+});
+
+// ==================== V14.0: 批次库存 & FEFO ====================
+
+/**
+ * FEFO 自动分配 — POST /api/materials/batch-allocate
+ * Body: { materialCode, quantity }
+ * 返回分配方案（按过期日期升序，早过期优先扣）
+ */
+router.post('/batch-allocate', (req: Request, res: Response) => {
+  try {
+    const { materialCode, quantity } = req.body;
+    if (!materialCode || !quantity || quantity <= 0) {
+      return res.status(400).json({ success: false, error: '请提供有效的物料编码和数量' });
+    }
+    const db = getDatabase();
+    const stmt = db.prepare(
+      `SELECT batch_no, expiry_date, remaining_quantity, unit
+       FROM batch_inventory
+       WHERE material_code = ? AND remaining_quantity > 0
+       ORDER BY CASE WHEN expiry_date IS NULL OR expiry_date = '' THEN 1 ELSE 0 END, expiry_date ASC, create_time ASC`
+    );
+    stmt.bind([materialCode]);
+    const rows: any[] = [];
+    while (stmt.step()) rows.push(stmt.getAsObject());
+    stmt.free();
+    const allocations: Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }> = [];
+    let remaining = quantity;
+    for (const row of rows) {
+      if (remaining <= 0) break;
+      const take = Math.min(row.remaining_quantity as number, remaining);
+      allocations.push({ batchNo: row.batch_no as string, expiryDate: (row.expiry_date as string) || '', quantity: take, unit: (row.unit as string) || '' });
+      remaining -= take;
+    }
+    res.json({ success: true, data: { allocations, fulfilled: quantity - remaining } });
+  } catch (error) {
+    console.error('FEFO 分配失败:', error);
+    res.status(500).json({ success: false, error: 'FEFO 分配失败' });
+  }
+});
+
+/**
+ * 扣减批次库存 — POST /api/materials/batch-deduct
+ */
+router.post('/batch-deduct', (req: Request, res: Response) => {
+  try {
+    const { allocations } = req.body;
+    if (!Array.isArray(allocations) || allocations.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供有效的扣减分配方案' });
+    }
+    const db = getDatabase();
+    const stmt = db.prepare(
+      `UPDATE batch_inventory SET remaining_quantity = remaining_quantity - ?, update_time = datetime('now','localtime')
+       WHERE material_code = ? AND batch_no = ? AND remaining_quantity >= ?`
+    );
+    for (const alloc of allocations) {
+      stmt.bind([alloc.quantity, alloc.materialCode, alloc.batchNo, alloc.quantity]);
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.free();
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('批次库存扣减失败:', error);
+    res.status(500).json({ success: false, error: '批次库存扣减失败' });
+  }
+});
+
+/**
+ * 恢复批次库存（退料用） — POST /api/materials/batch-restore
+ */
+router.post('/batch-restore', (req: Request, res: Response) => {
+  try {
+    const { returns } = req.body;
+    if (!Array.isArray(returns) || returns.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供有效的退料数据' });
+    }
+    const db = getDatabase();
+    const stmt = db.prepare(
+      `UPDATE batch_inventory SET remaining_quantity = remaining_quantity + ?, update_time = datetime('now','localtime')
+       WHERE material_code = ? AND batch_no = ?`
+    );
+    for (const ret of returns) {
+      stmt.bind([ret.quantity, ret.materialCode, ret.batchNo]);
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.free();
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('批次库存恢复失败:', error);
+    res.status(500).json({ success: false, error: '批次库存恢复失败' });
+  }
+});
+
+/**
+ * 强制回填批次库存（从 inbound_records 同步到 batch_inventory）— POST /api/materials/seed-batches
+ */
+router.post('/seed-batches', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const inboundRows = db.exec("SELECT id, materials FROM inbound_records WHERE status = 'completed'");
+    let count = 0;
+    if (inboundRows.length > 0) {
+      const checkStmt = db.prepare('SELECT id FROM batch_inventory WHERE material_code = ? AND batch_no = ?');
+      const insertStmt = db.prepare(
+        'INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, inbound_record_id) VALUES (?,?,?,?,?,?,?,?,?,?)'
+      );
+      for (const row of inboundRows[0].values) {
+        const recordId = row[0], materialsJson = row[1] as string;
+        if (!materialsJson) continue;
+        try {
+          const materials = JSON.parse(materialsJson);
+          for (const m of materials) {
+            const code = (m.code || m.materialCode || '').trim();
+            const batchNo = (m.batchNo || '').trim() || `DEFAULT-${code}-${recordId}`;
+            const qty = m.quantity || 0;
+            if (!code || qty <= 0) continue;
+            checkStmt.bind([code, batchNo]);
+            if (checkStmt.step()) { checkStmt.reset(); continue; }
+            checkStmt.reset();
+            const biId = `bi-${code}-${batchNo}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+            insertStmt.bind([biId, code, m.name || m.materialName || '', batchNo, m.productionDate || '', m.expiryDate || '', m.unit || '', qty, qty, recordId]);
+            insertStmt.step();
+            insertStmt.reset();
+            count++;
+          }
+        } catch { /* JSON parse error */ }
+      }
+      checkStmt.free();
+      insertStmt.free();
+    }
+    saveDatabase();
+    res.json({ success: true, data: { seeded: count } });
+  } catch (error) {
+    console.error('回填批次库存失败:', error);
+    res.status(500).json({ success: false, error: '回填批次库存失败' });
+  }
+});
+
+/**
+ * 查询物料批次库存 — GET /api/materials/batches/:code
+ */
+router.get('/batches/:code', (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const db = getDatabase();
+    const stmt = db.prepare(
+      `SELECT * FROM batch_inventory WHERE material_code = ? ORDER BY CASE WHEN expiry_date IS NULL OR expiry_date = '' THEN 1 ELSE 0 END, expiry_date ASC`
+    );
+    stmt.bind([code]);
+    const rows: any[] = [];
+    while (stmt.step()) rows.push(stmt.getAsObject());
+    stmt.free();
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('查询批次库存失败:', error);
+    res.status(500).json({ success: false, error: '查询批次库存失败' });
   }
 });
 

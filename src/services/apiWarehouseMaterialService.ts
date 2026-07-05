@@ -138,3 +138,39 @@ export async function deleteInboundRecord(id: number): Promise<boolean> {
   await enhancedApiClient.delete(`/materials/inbound/${id}`);
   return true;
 }
+
+// ========== V14.0: FEFO 批次库存 ==========
+
+export interface BatchAllocation {
+  batchNo: string;
+  expiryDate: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface FefoAllocationResult {
+  allocations: BatchAllocation[];
+  fulfilled: number;
+}
+
+/** FEFO 自动分配 */
+export async function fefoAllocate(materialCode: string, quantity: number): Promise<FefoAllocationResult> {
+  const res = await enhancedApiClient.post<any>('/materials/batch-allocate', { materialCode, quantity });
+  return (res.data ?? res) as FefoAllocationResult;
+}
+
+/** 扣减批次库存 */
+export async function batchDeduct(allocations: Array<{ materialCode: string; batchNo: string; quantity: number }>): Promise<void> {
+  await enhancedApiClient.post('/materials/batch-deduct', { allocations });
+}
+
+/** 恢复批次库存（退料） */
+export async function batchRestore(returns: Array<{ materialCode: string; batchNo: string; quantity: number }>): Promise<void> {
+  await enhancedApiClient.post('/materials/batch-restore', { returns });
+}
+
+/** 查询批次库存 */
+export async function getBatchStock(materialCode: string): Promise<any[]> {
+  const res = await enhancedApiClient.get<any>(`/materials/batches/${materialCode}`);
+  return Array.isArray(res) ? res : (res.data ?? []);
+}

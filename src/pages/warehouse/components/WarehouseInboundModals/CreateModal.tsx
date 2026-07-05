@@ -16,6 +16,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import type { Material } from '@/services/apiWarehouseMaterialService';
 import { todayLocal } from '@/lib/dateUtils';
 
@@ -430,22 +431,16 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
               />
             </div>
 
-            {/* 供应商 */}
+            {/* 供应商（搜索+下拉，可重选） */}
             <div>
               <Label className="text-xs text-emerald-700">供应商</Label>
-              <Input
-                type="text"
+              <SearchableSelect
                 value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                placeholder="选择或输入供应商名称"
-                list="supplier-list"
-                className="h-8 text-sm"
+                onChange={(val) => setFormData({ ...formData, supplier: val })}
+                options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                placeholder="搜索或选择供应商"
+                allowClear
               />
-              <datalist id="supplier-list">
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.name} />
-                ))}
-              </datalist>
             </div>
 
             {/* 操作员 */}
