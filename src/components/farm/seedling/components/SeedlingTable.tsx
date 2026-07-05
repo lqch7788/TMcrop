@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { ActionIconButton } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
@@ -674,59 +675,74 @@ export function SeedlingTable({
                         <div className="flex gap-1 justify-center">
                           {/* 读操作 — 始终可用 */}
                           {record.pictures && record.pictures.length > 0 && (
-                            <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
-                              <Image className="w-4 h-4" />
-                            </Button>
+                            <ActionIconButton
+                              variant="view"
+                              icon={<Image className="w-4 h-4" />}
+                              onClick={() => onImageClick(record.pictures)}
+                              title="查看图片"
+                            />
                           )}
                           {onDailyRecord && (
-                            <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title={`每日记录${isEnded ? '（只读）' : ''}`}>
-                              <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
-                            </Button>
+                            <ActionIconButton
+                              variant="record"
+                              icon={<Calendar className="w-4 h-4" />}
+                              onClick={() => onDailyRecord(record)}
+                              title={`每日记录${isEnded ? '（只读）' : ''}`}
+                              className={isEnded ? 'text-blue-400' : ''}
+                            />
                           )}
                           {/* 2026-07-04：无性繁殖记录 — 1:多模式可见，结束态变只读 */}
                           {onPropagation && record.propagationMode === 'one_to_many' && (
-                            <Button variant="ghost" size="icon" onClick={() => onPropagation(record)} title={`无性繁殖记录${isEnded ? '（只读）' : ''}`}>
-                              <GitBranch className={`w-4 h-4 ${isEnded ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                            </Button>
+                            <ActionIconButton
+                              variant="breeding"
+                              icon={<GitBranch className="w-4 h-4" />}
+                              onClick={() => onPropagation(record)}
+                              title={`无性繁殖记录${isEnded ? '（只读）' : ''}`}
+                              className={isEnded ? 'text-emerald-400' : ''}
+                            />
                           )}
                           {onLabelManage && (
-                            <Button variant="ghost" size="icon" onClick={() => onLabelManage(record)} title={`标签管理${isEnded ? '（只读）' : ''}`}>
-                              <Tag className="w-4 h-4" />
-                            </Button>
+                            <ActionIconButton
+                              variant="tag"
+                              icon={<Tag className="w-4 h-4" />}
+                              onClick={() => onLabelManage(record)}
+                              title={`标签管理${isEnded ? '（只读）' : ''}`}
+                            />
                           )}
 
                           {/* 写操作 — 结束态灰显+禁用 */}
                           {onEdit && (
-                            <Button
-                              variant="ghost" size="icon"
+                            <ActionIconButton
+                              variant="edit"
+                              icon={<Edit2 className="w-4 h-4" />}
                               onClick={() => guardClick(lockReason, () => onEdit(record))}
                               disabled={isEnded}
                               className={isEnded ? writeClass : ''}
                               title={isEnded ? lockReason : '编辑'}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
+                            />
                           )}
                           {/* 出圃入库（onInbound）：进行中+异常结束可用+已取消可查看 */}
                           {onInbound && !record.isHarvestLocked && (
-                            <Button
-                              variant="ghost" size="icon"
+                            <ActionIconButton
+                              variant="harvest"
+                              icon={<Package className="w-4 h-4" />}
                               onClick={() => onInbound(record)}
                               className={isAbnormalEnded
                                 ? 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
                                 : isCancelled
                                 ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
-                                : 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'}
+                                : ''}
                               title={isAbnormalEnded ? '出圃入库（补录）' : isCancelled ? '出圃入库（已取消，仅查看）' : '出圃入库 / 采收'}
-                            >
-                              <Package className="w-4 h-4" />
-                            </Button>
+                            />
                           )}
                           {/* 结束按钮：仅进行中显示 */}
                           {!isEnded && onEnd && (
-                            <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
-                              <StopCircle className="w-4 h-4" />
-                            </Button>
+                            <ActionIconButton
+                              variant="end"
+                              icon={<StopCircle className="w-4 h-4" />}
+                              onClick={() => onEnd(record)}
+                              title="结束"
+                            />
                           )}
                         </div>
                       )

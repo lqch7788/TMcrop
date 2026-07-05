@@ -80,3 +80,7 @@ export {
 // 标签类型选择器
 export { LabelTypeSelector } from './LabelTypeSelector'
 export type { LabelType } from './LabelTypeSelector'
+
+// 2026-07-05: 操作列图标按钮统一组件 — 用于种源/育苗/种植三表的操作列样式统一
+export { ActionIconButton } from './ActionIconButton'
+export type { ActionIconVariant } from '@/constants/actionIconTokens'
