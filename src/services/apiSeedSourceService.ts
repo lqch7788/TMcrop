@@ -815,8 +815,11 @@ export async function lookupAvailableSeedSources(
   return Array.isArray(rows) ? rows : []
 }
 
-/** 2026-06-30: 种源详情"调入种植"tab — 移入/移出履历 */
-export interface SeedSourceMoveRecord {
+/** 2026-06-30: 种源详情"使用记录"tab — 2026-07-05 由 SeedSourceMoveRecord 改名 SeedSourceUsageRecord
+ *  含义：种源被消耗/调拨出去的全部记录（被育苗使用 + 种植移入/移出）
+ *  原名 SeedSourceMoveRecord 容易误解为"调入种植"，实际覆盖范围含育苗环节，故改名
+ */
+export interface SeedSourceUsageRecord {
   id: string
   operationDate: string
   operationType: 'move_in' | 'move_out'
@@ -838,15 +841,16 @@ export interface SeedSourceMoveRecord {
 }
 
 /**
- * 2026-06-30: 获取某一种源的调入/调出种植履历
+ * 2026-06-30: 获取某一种源的使用记录（含被育苗使用 + 种植移入/移出）
  * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
+ * 2026-07-05: 函数名 getSeedSourceMoveRecords → getSeedSourceUsageRecords（与 Tab 改名对齐）
  */
-export async function getSeedSourceMoveRecords(
+export async function getSeedSourceUsageRecords(
   seedSourceId: string
-): Promise<SeedSourceMoveRecord[]> {
+): Promise<SeedSourceUsageRecord[]> {
   if (!seedSourceId) return []
-  const rows = await enhancedApiClient.get<SeedSourceMoveRecord[]>(
-    `/seed-sources/${seedSourceId}/move-records`
+  const rows = await enhancedApiClient.get<SeedSourceUsageRecord[]>(
+    `/seed-sources/${seedSourceId}/usage-records`
   )
   return Array.isArray(rows) ? rows : []
 }

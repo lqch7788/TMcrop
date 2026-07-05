@@ -228,34 +228,87 @@ router.get('/lookup', (req, res) => {
 })
 
 /**
- * 2026-06-30: 种源详情"调入种植"tab 数据源
- * GET /api/seed-sources/:id/move-records
+ * 2026-06-30: 种源详情"使用记录"tab 数据源（原"调入种植"，2026-07-05 改名）
+ * GET /api/seed-sources/:id/usage-records
  * 必须在 /:id 主路由之前注册，否则会被 /:id 匹配拦截
+ *
+ * 命名变更说明：
+ * - 原名 move-records / "调入种植" 容易误导（方向模糊 + 漏掉育苗环节）
+ * - 改名为 usage-records / "使用记录"：明确表达"种源被消耗/调拨出去的全部记录"
+ * - 覆盖范围：被育苗使用 + 种植移入/移出
+ *
+ * 2026-07-05 扩展：UNION ALL inventory_transaction 表
+ * 修复"种源详情弹窗看不到被育苗使用"问题 — 之前 inventory_transaction 的 outbound 流水
+ * （businessType='seedling'）只来自 seedling 路由写入，但 API 这里不查，
+ * 导致前端"操作历史" Tab 只显示 planting_move_records（种植移入移出），漏掉育苗使用
  */
-router.get('/:id/move-records', (req, res) => {
+router.get('/:id/usage-records', (req, res) => {
   try {
     const seedSourceId = String(req.params.id)
     const rows = queryToObjects<any>(
       getDatabase(),
-      `SELECT pmr.id, pmr.operation_date AS operationDate,
-              pmr.operation_type AS operationType, pmr.quantity,
-              pmr.source_id AS sourceId, pmr.source_code AS sourceCode,
-              pmr.planting_id AS plantingId, pmr.planting_code AS plantingCode,
-              pmr.to_area_id AS toAreaId, pmr.to_area_name AS toAreaName,
-              pmr.from_area_id AS fromAreaId, pmr.from_area_name AS fromAreaName,
-              pmr.operator_name AS operatorName, pmr.remarks,
-              pmr.create_time AS createTime,
-              ss.crop_name AS cropName, ss.crop_code AS cropCode,
-              ss.seed_form AS seedForm
-       FROM planting_move_records pmr
-       LEFT JOIN seed_sources ss ON ss.id = pmr.source_id
-       WHERE pmr.source_id = ? AND pmr.source_type = 'seed'
-       ORDER BY pmr.operation_date DESC, pmr.create_time DESC`,
-      [seedSourceId]
+      `SELECT id, operationDate, operationType, quantity,
+              sourceId, sourceCode,
+              plantingId, plantingCode,
+              toAreaId, toAreaName,
+              fromAreaId, fromAreaName,
+              operatorName, remarks,
+              createTime,
+              cropName, cropCode,
+              seedForm
+       FROM (
+         -- 第一部分：种植移入移出记录（已有）
+         SELECT pmr.id, pmr.operation_date AS operationDate,
+                pmr.operation_type AS operationType, pmr.quantity,
+                pmr.source_id AS sourceId, pmr.source_code AS sourceCode,
+                pmr.planting_id AS plantingId, pmr.planting_code AS plantingCode,
+                pmr.to_area_id AS toAreaId, pmr.to_area_name AS toAreaName,
+                pmr.from_area_id AS fromAreaId, pmr.from_area_name AS fromAreaName,
+                pmr.operator_name AS operatorName, pmr.remarks,
+                pmr.create_time AS createTime,
+                ss.crop_name AS cropName, ss.crop_code AS cropCode,
+                ss.seed_form AS seedForm
+         FROM planting_move_records pmr
+         LEFT JOIN seed_sources ss ON ss.id = pmr.source_id
+         WHERE pmr.source_id = ? AND pmr.source_type = 'seed'
+
+         UNION ALL
+
+         -- 第二部分：育苗使用种源的 outbound 流水（2026-07-05 扩展）
+         -- inventory_transaction 的 instance_id = 'seed_source:<id>'，
+         -- business_type='seedling' 表示被育苗使用，
+         -- business_id / business_code 指向育苗记录（SDxxx）
+         -- 操作类型映射：outbound → 'move_out'（种源被消耗/出库）
+         --
+         -- 字段补全策略（避免空列）：
+         --   - sourceCode/cropName/cropCode/seedForm ← LEFT JOIN seed_sources
+         --     （instance_id 去掉 'seed_source:' 前缀 = 种源 id）
+         --   - toAreaName ← LEFT JOIN seedlings（业务 greenhouse_name）
+         --   - plantingId/plantingCode ← business_id/business_code（已映射好）
+         --   - operatorName ← tx.operator_name（创建时已存 create_by）
+         SELECT tx.id, tx.operate_date AS operationDate,
+                'move_out' AS operationType, tx.quantity AS quantity,
+                ss.id AS sourceId, ss.source_code AS sourceCode,
+                tx.business_id AS plantingId, tx.business_code AS plantingCode,
+                '' AS toAreaId, s.greenhouse_name AS toAreaName,
+                '' AS fromAreaId, '' AS fromAreaName,
+                tx.operator_name AS operatorName, tx.remarks,
+                tx.create_time AS createTime,
+                ss.crop_name AS cropName, ss.crop_code AS cropCode,
+                ss.seed_form AS seedForm
+         FROM inventory_transaction tx
+         LEFT JOIN seed_sources ss ON ss.id = substr(tx.instance_id, 13)  -- 跳过 'seed_source:' 前缀
+         LEFT JOIN seedlings s ON s.id = tx.business_id
+         WHERE tx.instance_id = ?
+           AND tx.transaction_type = 'outbound'
+           AND tx.business_type = 'seedling'
+       )
+       ORDER BY operationDate DESC, createTime DESC`,
+      [seedSourceId, `seed_source:${seedSourceId}`]
     )
     res.json({ success: true, data: rows })
   } catch (e: any) {
-    console.error('[seed-sources/:id/move-records] error:', e)
+    console.error('[seed-sources/:id/usage-records] error:', e)
     res.status(500).json({ success: false, error: e?.message || '查询失败' })
   }
 })
