@@ -40,6 +40,31 @@ const ENTITY_TO_AUDIT_TYPE: Record<EntityType, string> = {
   planting: 'planting',
 };
 
+// ========== 2026-07-05 英文枚举 → 中文映射（修复种源详情弹窗显示 PROPAGATION/DISPOSAL/SALES 等） ==========
+/** crop_circulation_records.circulation_type → 中文 */
+const CIRCULATION_TYPE_CN: Record<string, string> = {
+  PROPAGATION: '繁殖回流',
+  DISPOSAL: '处置',
+  QUANTITY: '数量调整',
+};
+
+/** crop_circulation_records.disposition → 中文 */
+const DISPOSITION_CN: Record<string, string> = {
+  SALES: '销售',
+  DISPOSAL: '销毁',
+  REUSE: '再利用',
+  GIFT: '赠送',
+};
+
+/** crop_circulation_records / inventory_inbound_records.source_module → 中文 */
+const SOURCE_MODULE_CN: Record<string, string> = {
+  harvest: '采收',
+  planting: '种植',
+  seedling: '育苗',
+  inventory: '库存',
+  seed_source: '种源',
+};
+
 /**
  * 查询实体历史（按 business_id 关联的 3-4 表 UNION）
  */
@@ -103,9 +128,12 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         quantityDelta: qty,
         unit: String(r.unit || ''),
         refCode: String(r.source_code || ''),
-        refModule: String(r.source_module || ''),
+        refModule: SOURCE_MODULE_CN[String(r.source_module || '')] || String(r.source_module || ''),
         operatorName: String(r.operator_name || ''),
-        remarks: String(r.notes || ''),
+        remarks: [
+                r.notes,
+                r.disposition ? `处置方式：${DISPOSITION_CN[String(r.disposition)] || r.disposition}` : null,
+              ].filter(Boolean).join(' ｜ '),
         cropName: r.crop_name ? String(r.crop_name) : undefined,
         inboundSource: String(r.source_type || ''),
       });
@@ -178,11 +206,14 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           occurredAt: String(r.created_at || r.circulation_date || ''),
           source: 'entity',
           category: 'circulation',
-          action: String(r.circulation_type || '回流'),
+          action: CIRCULATION_TYPE_CN[String(r.circulation_type || '')] || String(r.circulation_type || '回流'),
           quantityDelta: qty,
           unit: String(r.unit || ''),
-          refModule: String(r.source_module || ''),
-          remarks: String(r.notes || ''),
+          refModule: SOURCE_MODULE_CN[String(r.source_module || '')] || String(r.source_module || ''),
+          remarks: [
+                r.notes,
+                r.disposition ? `处置方式：${DISPOSITION_CN[String(r.disposition)] || r.disposition}` : null,
+              ].filter(Boolean).join(' ｜ '),
         });
       }
       stmt.free();
