@@ -18,6 +18,7 @@ import { DictSelect } from '../../common/settings/DictSelect';
 
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore } from '@/stores';
+import { useGreenhouseStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 import type { CropVariety } from '@/types/cropVariety';
@@ -65,6 +66,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   const [submitting, setSubmitting] = useState(false);
   const [cropCode, setCropCode] = useState('');
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+  // Bug 修复: 独立追踪施肥量原始输入字符串（value={String(form.quantity)} 会把 "0."→0→"0"，吞掉小数点）
+  const [quantityInputText, setQuantityInputText] = useState('');
 
   // 2026-07-05 重构：合并种植/育苗为统一"关联业务"选择器
   // - bizType: 'planting' | 'seedling'，互斥
@@ -98,9 +101,20 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     return seedlings.filter((s: any) =>
       (s.seedlingCode || '').toLowerCase().includes(kw) ||
       (s.cropName || '').toLowerCase().includes(kw) ||
-      (s.greenhouseName || '').toLowerCase().includes(kw)
+      (s.siteName || '').toLowerCase().includes(kw)
     );
   }, [bizSearchKeyword, bizType]);
+
+  // 操作员选项（从系统设置→基地管理→温室负责人提取，去重排序）
+  const greenhouses = useGreenhouseStore(state => state.greenhouses);
+  const operatorOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return greenhouses
+      .map(g => (g.manager || '').trim())
+      .filter(name => name && !seen.has(name) && seen.add(name))
+      .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+      .map(name => ({ value: name, label: name }));
+  }, [greenhouses]);
 
   // 当前选中肥料的品牌名称
   const selectedFertilizerBrand = useMemo(() => {
@@ -150,9 +164,14 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       setBizSearchKeyword('');
       setSelectedBizLabel('');
       setBizType('planting');
+      setQuantityInputText('');
       // 加载种植和育苗记录列表
       usePlantingStore.getState().loadItems();
       useSeedlingStore.getState().loadItems();
+      // 加载温室数据（操作员下拉用温室负责人）
+      if (useGreenhouseStore.getState().greenhouses.length === 0) {
+        useGreenhouseStore.getState().loadGreenhouses();
+      }
     }
   }, [isOpen]);
 
@@ -170,7 +189,31 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
 
   // 提交表单
   const handleSubmit = async () => {
-    if (!form.fertilizerName.trim()) return; // 基本校验
+    // 前端必填校验（与后端 Zod schema 对齐，避免静默 400 错误）
+    if (!form.fertilizerName.trim()) {
+      await showAlert('请填写肥料名称');
+      return;
+    }
+    if (!form.fertilizerType) {
+      await showAlert('请选择肥料类型');
+      return;
+    }
+    if (!form.cropName.trim()) {
+      await showAlert('请选择作物品种（选择关联业务自动填充，或手动选择）');
+      return;
+    }
+    if (!form.greenhouseName.trim()) {
+      await showAlert('请填写区域位置（选择关联业务自动填充，或手动输入）');
+      return;
+    }
+    if (!form.dilutionRatio.trim()) {
+      await showAlert('请填写稀释比例');
+      return;
+    }
+    if (!form.fertilizeTime) {
+      await showAlert('请选择施肥时间');
+      return;
+    }
     // 方案5.1: 施肥日期不能大于当前时间
     if (form.fertilizeTime && !validateDateNotFuture(form.fertilizeTime)) {
       await showAlert('施肥日期不能大于当前时间');
@@ -204,7 +247,14 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       seedlingId: form.seedlingId,
       seedlingCode: form.seedlingCode,
     };
-    await store.createItem(payload);
+    const result = await store.createItem(payload);
+    if (!result) {
+      // createItem 失败：后端校验/网络错误/库存不足等，store.error 已有错误信息
+      setSubmitting(false);
+      const errMsg = useFertilizerStore.getState().error;
+      await showAlert(errMsg || '保存失败，请重试');
+      return;
+    }
     // G11 V1.1：创建成功后刷新肥料库库存（让 UI 立即看到扣减）
     if (form.selectedFertilizerId) {
       try { await fetchLibraryItems(); } catch { /* refetch 失败不影响主流程 */ }
@@ -292,7 +342,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                         value={bizSearchKeyword}
                         onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
                         onFocus={() => setShowBizSearch(true)}
-                        placeholder={bizType === 'planting' ? '搜索种植批号/作物/温室...' : '搜索育苗批号/作物/温室...'}
+                        placeholder={bizType === 'planting' ? '搜索种植批号/作物/温室...' : '搜索育苗批号/作物/区域...'}
                         className={`flex-1 ${deepInputClass} rounded-l-lg`}
                       />
                       <Button
@@ -426,7 +476,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                                 // 填 seedling 关联 + 自动填字段
                                 updateField('seedlingId', seedling.id);
                                 updateField('seedlingCode', seedling.seedlingCode);
-                                updateField('greenhouseName', seedling.greenhouseName || '');
+                                // 育苗记录用 siteName（育苗区域），非 greenhouseName（Seedling 类型无此字段）
+                                updateField('greenhouseName', seedling.siteName || '');
                                 updateField('cropName', seedling.cropName || '');
                                 // 施肥时间默认填当前时间
                                 const now = new Date();
@@ -442,7 +493,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                             >
                               <div>
                                 <p className="text-sm font-medium text-gray-800">{seedling.seedlingCode}</p>
-                                <p className="text-xs text-gray-500">{seedling.cropName || ''} · {seedling.greenhouseName || ''}</p>
+                                <p className="text-xs text-gray-500">{seedling.cropName || ''} · {seedling.siteName || ''}</p>
                               </div>
                               <span className={`text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600`}>
                                 育苗中
@@ -467,7 +518,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-900">
-                  温室位置
+                  区域位置
                   {(form.plantingId || form.seedlingId) && (
                     <span className="ml-2 text-xs text-gray-500">（已锁定）</span>
                   )}
@@ -637,10 +688,11 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={form.quantity !== undefined && form.quantity !== null ? String(form.quantity) : ''}
+                  value={quantityInputText}
                   onChange={(e) => {
                     const v = e.target.value;
-                    // 允许空（用户清空时不强制变 0，让 placeholder 显示）
+                    // 始终保留原始输入字符串（不通过 String(form.quantity) 反向转换，避免 "0."→0→"0" 吞小数点）
+                    setQuantityInputText(v);
                     if (v === '') {
                       updateField('quantity', 0);
                       return;
@@ -727,10 +779,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           </div>
         </div>
 
-        {/* Section 3: 时间 */}
-        <div>
-          <SectionTitle title="时间" icon="📅" />
-          <div className="space-y-3">
+        {/* 时间 + 操作员 + 备注（无分区标题，紧凑布局） */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-900">施肥时间</Label>
               <Input
@@ -740,33 +791,34 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 className={deepInputClass}
               />
             </div>
-          </div>
-        </div>
-
-        {/* Section 4: 操作与备注 */}
-        <div>
-          <SectionTitle title="操作与备注" icon="📝" />
-          <div className="space-y-3">
             <div>
               <Label className="text-gray-900">操作员</Label>
-              <Input
-                type="text"
-                value={form.operatorName}
-                onChange={(e) => updateField('operatorName', e.target.value)}
-                placeholder="请输入操作员名称"
-                className={deepInputClass}
-              />
+              <Select
+                value={form.operatorName || undefined}
+                onValueChange={(val) => updateField('operatorName', val)}
+              >
+                <SelectTrigger className={`w-full h-10 ${deepInputClass}`}>
+                  <SelectValue placeholder="选择操作员" />
+                </SelectTrigger>
+                <SelectContent>
+                  {operatorOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label className="text-gray-900">备注</Label>
-              <TextArea
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                placeholder="请输入备注信息"
-                rows={3}
-                className={`${deepInputClass} resize-none`}
-              />
-            </div>
+          </div>
+          <div>
+            <Label className="text-gray-900">备注</Label>
+            <TextArea
+              value={form.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              placeholder="请输入备注信息"
+              rows={3}
+              className={`${deepInputClass} resize-none`}
+            />
           </div>
         </div>
       </div>

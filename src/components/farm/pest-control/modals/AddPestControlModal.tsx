@@ -2,8 +2,8 @@
  * 新增病虫害防治记录弹窗
  * 防治类型选择（化学/生物/物理），各类型字段动态显示
  */
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Plus, Trash2, X, Search } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -14,8 +14,9 @@ import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 import { DictSelect } from '@/components/common/settings/DictSelect';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
-import { usePestControlStore, useGreenhouseStore, usePesticideLibraryStore, usePestDiseaseDictStore } from '@/stores';
+import { usePestControlStore, useGreenhouseStore, usePesticideLibraryStore, usePestDiseaseDictStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import type { CropVariety } from '@/types/cropVariety';
+import { showAlert } from '@/lib/dialogService';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -65,9 +66,14 @@ const defaultForm = {
   recordCode: '',
   sprayTime: '',
   cropName: '',
-  greenhouses: [] as string[],
+  greenhouseName: '',
   operatorName: '',
   controlType: 'chemical' as 'chemical' | 'bio' | 'physical',
+  // 关联业务字段
+  plantingId: '',
+  plantingCode: '',
+  seedlingId: '',
+  seedlingCode: '',
   // 化学防治专用（支持多个药剂）
   pesticides: [] as PesticideItem[],
   // 生物防治专用（支持多个制剂）
@@ -102,11 +108,49 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
   const [cropCode, setCropCode] = useState('');
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
-  // 温室选项
-  const greenhouseOptions = useMemo(() =>
-    greenhouses.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.name })),
-    [greenhouses]
-  );
+  // 2026-07-05: 关联业务选择器
+  const [bizSearchKeyword, setBizSearchKeyword] = useState('');
+  const [selectedBizLabel, setSelectedBizLabel] = useState('');
+  const [showBizSearch, setShowBizSearch] = useState(false);
+  const [bizType, setBizType] = useState<'planting' | 'seedling'>('planting');
+  const bizSearchRef = useRef<HTMLDivElement>(null);
+
+  // 种植记录列表
+  const plantingOptions = useMemo(() => {
+    if (bizType !== 'planting') return [];
+    const plantings = usePlantingStore.getState().items;
+    const activePlantings = plantings.filter((p: any) => !p.isHarvest);
+    if (!bizSearchKeyword.trim()) return activePlantings;
+    const kw = bizSearchKeyword.toLowerCase();
+    return activePlantings.filter((p: any) =>
+      (p.plantCode || '').toLowerCase().includes(kw) ||
+      (p.cropName || '').toLowerCase().includes(kw) ||
+      (p.rootName || '').toLowerCase().includes(kw)
+    );
+  }, [bizSearchKeyword, bizType]);
+
+  // 育苗记录列表
+  const seedlingOptions = useMemo(() => {
+    if (bizType !== 'seedling') return [];
+    const seedlings = useSeedlingStore.getState().items as any[];
+    if (!bizSearchKeyword.trim()) return seedlings;
+    const kw = bizSearchKeyword.toLowerCase();
+    return seedlings.filter((s: any) =>
+      (s.seedlingCode || '').toLowerCase().includes(kw) ||
+      (s.cropName || '').toLowerCase().includes(kw) ||
+      (s.siteName || '').toLowerCase().includes(kw)
+    );
+  }, [bizSearchKeyword, bizType]);
+
+  // 操作员选项（从温室负责人提取）
+  const operatorOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return greenhouses
+      .map(g => (g.manager || '').trim())
+      .filter(name => name && !seen.has(name) && seen.add(name))
+      .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+      .map(name => ({ value: name, label: name }));
+  }, [greenhouses]);
 
   // 药剂选项（用于搜索选择 - 化学防治用）
   const pesticideOptions = useMemo(() =>
@@ -159,31 +203,27 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
     if (greenhouses.length === 0) loadGreenhouses();
   }, [greenhouses.length, loadGreenhouses]);
 
-  // 弹窗打开时加载数据和生成编号
-  useEffect(() => {
-    if (isOpen) {
-      // 加载药剂库和病虫害字典数据
-      pesticideStore.fetchItems();
-      pestDiseaseStore.fetchItems();
-      // 生成记录编号
-      store.generateCode().then(code => {
-        if (code) setForm(prev => ({ ...prev, recordCode: code }));
-      });
-    }
-  }, [isOpen]);
-
-  // 重置表单
+  // 弹窗打开时：重置表单 + 加载数据 + 生成编号（合并为单 effect 避免竞态）
   useEffect(() => {
     if (isOpen) {
       setForm(defaultForm);
       setCropCode('');
       setSelectedCrop(null);
-      // 生成编号
+      setBizSearchKeyword('');
+      setSelectedBizLabel('');
+      setBizType('planting');
+      // 加载依赖数据
+      pesticideStore.fetchItems();
+      pestDiseaseStore.fetchItems();
+      usePlantingStore.getState().loadItems();
+      useSeedlingStore.getState().loadItems();
+      // 生成记录编号
       store.generateCode().then(code => {
         if (code) setForm(prev => ({ ...prev, recordCode: code }));
       });
     }
-  }, [isOpen, store]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // 作物选择处理
   const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {
@@ -197,6 +237,17 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
     }
   }, []);
 
+  // 点击外部关闭搜索下拉
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bizSearchRef.current && !bizSearchRef.current.contains(e.target as Node)) {
+        setShowBizSearch(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // 更新表单字段
   const updateField = useCallback((field: string, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -204,20 +255,29 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
 
   // 提交表单
   const handleSubmit = async () => {
-    if (!form.cropName.trim()) return;
+    // 前端必填校验（与后端对齐，避免静默 400）
+    if (!form.sprayTime) { await showAlert('请选择防治日期'); return; }
+    if (!form.cropName.trim()) { await showAlert('请选择作物品种（选择关联业务自动填充，或手动选择）'); return; }
+    if (!form.greenhouseName.trim()) { await showAlert('请填写区域位置（选择关联业务自动填充，或手动输入）'); return; }
+    if (!form.controlType) { await showAlert('请选择防治类型'); return; }
     setSubmitting(true);
 
     const payload: Record<string, any> = {
       recordCode: form.recordCode,
       sprayTime: form.sprayTime,
       cropName: form.cropName,
-      greenhouseName: form.greenhouses.length > 0 ? JSON.stringify(form.greenhouses) : '',
+      greenhouseName: form.greenhouseName,
       operatorName: form.operatorName,
       controlType: form.controlType,
       useLeafFertilizer: form.useLeafFertilizer,
       applicationMethod: form.applicationMethod,
       targetPest: form.targetPests.length > 0 ? JSON.stringify(form.targetPests) : '',
       description: form.description,
+      // 2026-07-05: 关联业务字段
+      plantingId: form.plantingId,
+      plantingCode: form.plantingCode,
+      seedlingId: form.seedlingId,
+      seedlingCode: form.seedlingCode,
     };
 
     // 根据防治类型添加专用字段
@@ -270,7 +330,13 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
       }
     }
 
-    await store.createItem(payload);
+    const result = await store.createItem(payload);
+    if (!result) {
+      setSubmitting(false);
+      const errMsg = usePestControlStore.getState().error;
+      await showAlert(errMsg || '保存失败，请重试');
+      return;
+    }
     setSubmitting(false);
     onSaved();
   };
@@ -359,16 +425,134 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                 </div>
               </div>
             </div>
+            {/* 2026-07-05: 关联业务选择器（对齐施肥管理） */}
+            <div className="grid grid-cols-1 gap-4">
+              <div ref={bizSearchRef} className="relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <Label className="text-gray-900 shrink-0">关联业务</Label>
+                  {!selectedBizLabel && (
+                    <>
+                      <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
+                        <button type="button" onClick={() => setBizType('planting')}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${bizType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                          种植
+                        </button>
+                        <button type="button" onClick={() => setBizType('seedling')}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${bizType === 'seedling' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                          育苗
+                        </button>
+                      </div>
+                      <Input type="text" value={bizSearchKeyword}
+                        onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
+                        onFocus={() => setShowBizSearch(true)}
+                        placeholder={bizType === 'planting' ? '搜索种植批号/作物/温室...' : '搜索育苗批号/作物/区域...'}
+                        className={`flex-1 ${deepInputClass} rounded-l-lg`} />
+                      <Button type="button" variant="secondary" size="sm"
+                        onClick={() => setShowBizSearch(!showBizSearch)}
+                        className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg">
+                        <Search className="w-4 h-4 text-gray-500" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+                {selectedBizLabel ? (
+                  <div className="p-2 border rounded-lg bg-emerald-50 border-emerald-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-emerald-800">{selectedBizLabel}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => {
+                        updateField('plantingId', ''); updateField('plantingCode', '');
+                        updateField('seedlingId', ''); updateField('seedlingCode', '');
+                        updateField('greenhouseName', ''); updateField('cropName', '');
+                        setCropCode(''); setSelectedCrop(null);
+                        setBizSearchKeyword(''); setSelectedBizLabel('');
+                      }}>
+                        <X className="w-4 h-4 text-emerald-600" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {showBizSearch && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => {
+                          updateField('plantingId', ''); updateField('plantingCode', '');
+                          updateField('seedlingId', ''); updateField('seedlingCode', '');
+                          updateField('greenhouseName', ''); updateField('cropName', '');
+                          setCropCode(''); setSelectedCrop(null);
+                          setBizSearchKeyword(''); setSelectedBizLabel('不关联任何业务');
+                          setShowBizSearch(false);
+                        }} className="w-full justify-start rounded-none border-b border-gray-100">
+                          <X className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">不关联任何业务</span>
+                        </Button>
+                        {bizType === 'planting' && plantingOptions.map((planting: any) => (
+                          <Button key={planting.id} type="button" variant="ghost" size="sm" onClick={() => {
+                            updateField('seedlingId', ''); updateField('seedlingCode', '');
+                            updateField('plantingId', planting.id);
+                            updateField('plantingCode', planting.plantCode);
+                            updateField('greenhouseName', planting.rootName || planting.areaName || '');
+                            updateField('cropName', planting.cropName || '');
+                            setCropCode(planting.cropCode || '');
+                            setBizSearchKeyword(planting.plantCode);
+                            setSelectedBizLabel(`种植 · ${planting.plantCode} · ${planting.cropName || ''}`);
+                            setShowBizSearch(false);
+                          }} className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{planting.plantCode}</p>
+                              <p className="text-xs text-gray-500">{planting.cropName || ''} · {planting.rootName || planting.areaName || ''}</p>
+                            </div>
+                          </Button>
+                        ))}
+                        {bizType === 'seedling' && seedlingOptions.map((seedling: any) => (
+                          <Button key={seedling.id} type="button" variant="ghost" size="sm" onClick={() => {
+                            updateField('plantingId', ''); updateField('plantingCode', '');
+                            updateField('seedlingId', seedling.id);
+                            updateField('seedlingCode', seedling.seedlingCode);
+                            updateField('greenhouseName', seedling.siteName || '');
+                            updateField('cropName', seedling.cropName || '');
+                            setCropCode(seedling.cropCode || '');
+                            setBizSearchKeyword(seedling.seedlingCode);
+                            setSelectedBizLabel(`育苗 · ${seedling.seedlingCode} · ${seedling.cropName || ''}`);
+                            setShowBizSearch(false);
+                          }} className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{seedling.seedlingCode}</p>
+                              <p className="text-xs text-gray-500">{seedling.cropName || ''} · {seedling.siteName || ''}</p>
+                            </div>
+                          </Button>
+                        ))}
+                        {((bizType === 'planting' && plantingOptions.length === 0) || (bizType === 'seedling' && seedlingOptions.length === 0)) && (
+                          <div className="p-4 text-center text-sm text-gray-400">无匹配的{bizType === 'planting' ? '种植' : '育苗'}记录</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 区域位置 + 作物品种（关联业务自动填充后锁定） */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-900">作物名称 <span className="text-red-500">*</span></Label>
-                <CropCodeSelector
-                  value={cropCode}
-                  onChange={handleCropCodeChange}
-                  placeholder="搜索或选择作物品种..."
-                  size="md"
-                  showFullPath={true}
-                />
+                <Label className="text-gray-900">
+                  区域位置
+                  {(form.plantingId || form.seedlingId) && <span className="ml-2 text-xs text-gray-500">（已锁定）</span>}
+                </Label>
+                <Input type="text" value={form.greenhouseName}
+                  onChange={(e) => updateField('greenhouseName', e.target.value)}
+                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请先选择关联业务或手动输入'}
+                  readOnly={!!(form.plantingId || form.seedlingId)}
+                  className={`${deepInputClass} ${form.plantingId || form.seedlingId ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
+              </div>
+              <div>
+                <Label className="text-gray-900">
+                  作物品种
+                  {(form.plantingId || form.seedlingId) && <span className="ml-2 text-xs text-gray-500">（已锁定）</span>}
+                </Label>
+                <CropCodeSelector value={cropCode} onChange={handleCropCodeChange}
+                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请先选择关联业务或手动选择'}
+                  size="md" showFullPath={true}
+                  disabled={!!(form.plantingId || form.seedlingId)} />
                 {selectedCrop && (
                   <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
                     <div className="text-emerald-700">
@@ -378,56 +562,22 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                   </div>
                 )}
               </div>
-              <div>
-                <Label className="text-gray-900">防治区域</Label>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value && !form.greenhouses.includes(e.target.value)) {
-                      updateField('greenhouses', [...form.greenhouses, e.target.value]);
-                    }
-                  }}
-                  className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                >
-                  <option value="">选择防治区域</option>
-                  {greenhouses
-                    .filter(g => g.status === 'active' && !form.greenhouses.includes(g.name))
-                    .map(g => (
-                      <option key={g.id} value={g.name}>{g.name}</option>
-                    ))}
-                </select>
-                {form.greenhouses.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {form.greenhouses.map((gh, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200"
-                      >
-                        {gh}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => updateField('greenhouses', form.greenhouses.filter((_, i) => i !== idx))}
-                          className="ml-1 h-4 w-4 text-emerald-500 hover:text-emerald-700"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <Label className="text-gray-900">操作人</Label>
-                <Input
-                  type="text"
-                  value={form.operatorName}
-                  onChange={(e) => updateField('operatorName', e.target.value)}
-                  placeholder="输入操作人"
-                  className={deepInputClass}
-                />
-              </div>
+            </div>
+
+            {/* 操作人（下拉菜单） */}
+            <div>
+              <Label className="text-gray-900">操作人</Label>
+              <Select value={form.operatorName || undefined}
+                onValueChange={(val) => updateField('operatorName', val)}>
+                <SelectTrigger className={`w-full h-10 ${deepInputClass}`}>
+                  <SelectValue placeholder="选择操作员" />
+                </SelectTrigger>
+                <SelectContent>
+                  {operatorOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 施用方法 & 目标病虫害 - 记录级别字段 */}

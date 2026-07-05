@@ -3076,6 +3076,11 @@ export function initializeDatabase() {
       operator_name TEXT,
       crop_name TEXT NOT NULL,
       greenhouse_name TEXT,
+      -- 2026-07-05: 关联业务（与种植/育苗二选一，互斥）
+      planting_id TEXT,
+      planting_code TEXT,
+      seedling_id TEXT,
+      seedling_code TEXT,
       control_type TEXT NOT NULL CHECK(control_type IN ('chemical', 'bio', 'physical')),
       pesticide_id TEXT,
       pesticide_name TEXT,
