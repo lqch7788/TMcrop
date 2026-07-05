@@ -59,6 +59,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeSelectedMaterialIndices, setExecuteSelectedMaterialIndices] = useState<Set<number>>(new Set());
   const [executeMaterialActualQuantities, setExecuteMaterialActualQuantities] = useState<Record<number, number>>({});
   const [executeMaterialPool, setExecuteMaterialPool] = useState<ExecuteMaterialItem[]>([]);
+  // V14.0: FEFO 分配预览（materialCode → 分配方案）
+  const [executeFefoMap, setExecuteFefoMap] = useState<Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>>({});
 
   // 编辑表单状态
   const [executeEditForm, setExecuteEditForm] = useState<ExecuteEditFormState>({
@@ -340,8 +342,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteMaterialPool(executeMaterialPool.filter((_, i) => i !== index));
   }, [executeMaterialPool]);
 
-  // 更新物料池中物料的实发数量
-  const handleUpdateMaterialPoolQuantity = useCallback((index: number, actualQuantity: number) => {
+  // 更新物料池中物料的实发数量 + 自动 FEFO
+  const handleUpdateMaterialPoolQuantity = useCallback(async (index: number, actualQuantity: number) => {
     const updatedPool = [...executeMaterialPool];
     updatedPool[index] = {
       ...updatedPool[index],
@@ -349,6 +351,18 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       remark: actualQuantity === updatedPool[index].requestedQuantity ? '正常出库' : '部分出库'
     };
     setExecuteMaterialPool(updatedPool);
+
+    // V14.0: 实发数量变更时自动获取 FEFO 分配预览
+    const material = updatedPool[index];
+    if (actualQuantity > 0 && material.materialCode) {
+      try {
+        const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
+        const result = await fefoAllocate(material.materialCode, actualQuantity);
+        setExecuteFefoMap(prev => ({ ...prev, [material.materialCode]: result.allocations }));
+      } catch {
+        // FEFO 分配失败不影响主流程
+      }
+    }
   }, [executeMaterialPool]);
 
   // 领料出库页面编辑
@@ -397,10 +411,30 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     showAlert('保存成功');
   }, [executeSelectedRecord, executeEditForm, executeStore]);
 
-  const handleExecuteSaveAdd = useCallback(() => {
+  const handleExecuteSaveAdd = useCallback(async () => {
     if (executeMaterialPool.length === 0) {
       showAlert('请先添加物料到物料池');
       return;
+    }
+
+    // V14.0: FEFO 自动分配批次（按过期日期先进先出）
+    const fefoAllocations: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
+    try {
+      const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
+      for (const m of executeMaterialPool) {
+        if (m.actualQuantity > 0 && m.materialCode) {
+          const result = await fefoAllocate(m.materialCode, m.actualQuantity);
+          if (result.allocations.length > 0) {
+            // 将 FEFO 分配写入物料批次字段
+            m.batchNo = result.allocations.map(a => `${a.batchNo}(${a.quantity}${a.unit})`).join(',');
+            for (const alloc of result.allocations) {
+              fefoAllocations.push({ materialCode: m.materialCode, batchNo: alloc.batchNo, quantity: alloc.quantity });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('FEFO 分配失败，继续出库:', e);
     }
 
     const sourceAppCodes = [...new Set(executeMaterialPool.map(m => m.applicationCode))];
@@ -423,7 +457,21 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     };
 
     // 保存到 Zustand Store（写操作走 Store action，V2.1 铁律：API 直连无缓存）
-    executeStore.createItem(newRecord);
+    const result = await executeStore.createItem(newRecord);
+    if (!result) {
+      showAlert('出库失败，请重试');
+      return;
+    }
+
+    // V14.0: 扣减批次库存
+    if (fefoAllocations.length > 0) {
+      try {
+        const { batchDeduct } = await import('@/services/apiWarehouseMaterialService');
+        await batchDeduct(fefoAllocations);
+      } catch (e) {
+        console.warn('批次库存扣减失败（不影响出库记录）:', e);
+      }
+    }
 
     setExecuteShowAddModal(false);
     setExecuteSelectedApplicationCode('');
@@ -580,6 +628,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteMaterialActualQuantities,
     executeMaterialPool,
     setExecuteMaterialPool,
+    // V14.0: FEFO 分配预览
+    executeFefoMap,
+    setExecuteFefoMap,
 
     // 编辑表单状态
     executeEditForm,

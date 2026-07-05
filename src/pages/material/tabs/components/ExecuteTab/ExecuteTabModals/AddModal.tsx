@@ -51,6 +51,8 @@ interface ExecuteAddModalProps {
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
   onMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: string | number) => void;
+  // V14.0: FEFO 批次分配预览
+  fefoMap?: Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>;
   // 操作
   onClose: () => void;
   onSave: () => void;
@@ -73,6 +75,7 @@ export function ExecuteAddModal({
   onAddMaterial,
   onRemoveMaterial,
   onMaterialChange,
+  fefoMap = {},
   onClose,
   onSave,
 }: ExecuteAddModalProps) {
@@ -343,40 +346,59 @@ export function ExecuteAddModal({
           <tbody className="divide-y divide-gray-200">
             {materialPool.map((material, idx) => {
               const diff = material.requestedQuantity - material.actualQuantity;
+              const allocs = fefoMap[material.materialCode];
               return (
-                <tr key={idx} className={diff > 0 ? 'bg-amber-50' : 'bg-emerald-50'}>
-                  <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.applicationCode}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.materialCode}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.materialName}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.batchNo || '-'}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.spec}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.unit}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.requestedQuantity}</td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      value={material.actualQuantity}
-                      onChange={(e) => onUpdateMaterialPoolQuantity(idx, Number(e.target.value))}
-                      className={`w-20 px-2 py-1 border rounded text-xs focus:outline-none focus:ring-1 ${
-                        diff > 0 ? 'border-amber-300 focus:ring-amber-500' : 'border-emerald-300 focus:ring-emerald-500'
-                      }`}
-                    />
-                  </td>
-                  <td className="px-2 py-2 text-xs">
-                    {diff > 0 ? (
-                      <span className="text-amber-600 font-medium">-{diff}</span>
-                    ) : diff < 0 ? (
-                      <span className="text-red-600 font-medium">+{Math.abs(diff)}</span>
-                    ) : (
-                      <span className="text-emerald-600">正常</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Button variant="ghost" size="icon" onClick={() => onRemoveFromMaterialPool(idx)}>
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                    </Button>
-                  </td>
-                </tr>
+                <React.Fragment key={idx}>
+                  <tr className={diff > 0 ? 'bg-amber-50' : 'bg-emerald-50'}>
+                    <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.applicationCode}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.materialCode}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700">{material.materialName}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.batchNo || '-'}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700">{material.spec}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700">{material.unit}</td>
+                    <td className="px-2 py-2 text-xs text-gray-700">{material.requestedQuantity}</td>
+                    <td className="px-2 py-2">
+                      <Input
+                        type="number"
+                        value={material.actualQuantity}
+                        onChange={(e) => onUpdateMaterialPoolQuantity(idx, Number(e.target.value))}
+                        className={`w-20 px-2 py-1 border rounded text-xs focus:outline-none focus:ring-1 ${
+                          diff > 0 ? 'border-amber-300 focus:ring-amber-500' : 'border-emerald-300 focus:ring-emerald-500'
+                        }`}
+                      />
+                    </td>
+                    <td className="px-2 py-2 text-xs">
+                      {diff > 0 ? (
+                        <span className="text-amber-600 font-medium">-{diff}</span>
+                      ) : diff < 0 ? (
+                        <span className="text-red-600 font-medium">+{Math.abs(diff)}</span>
+                      ) : (
+                        <span className="text-emerald-600">正常</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-2">
+                      <Button variant="ghost" size="icon" onClick={() => onRemoveFromMaterialPool(idx)}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </td>
+                  </tr>
+                  {/* V14.0: FEFO 批次分配明细 */}
+                  {allocs && allocs.length > 0 && (
+                    <tr className="bg-blue-50/30">
+                      <td colSpan={10} className="px-2 py-1">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-blue-600 font-medium">📦 FEFO:</span>
+                          {allocs.map((a, ai) => (
+                            <span key={ai} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 rounded text-blue-800">
+                              <span className="font-mono">{a.batchNo}</span>×{a.quantity}{a.unit}
+                              {a.expiryDate && <span className="text-gray-400">({a.expiryDate})</span>}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>

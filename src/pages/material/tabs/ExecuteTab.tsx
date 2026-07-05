@@ -96,6 +96,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     setExecuteMaterialActualQuantities,
     executeMaterialPool,
     setExecuteMaterialPool,
+    executeFefoMap,
 
     // 编辑表单状态
     executeEditForm,
@@ -222,6 +223,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onAddMaterial={handleExecuteAddAddMaterial}
         onRemoveMaterial={handleExecuteAddRemoveMaterial}
         onMaterialChange={handleExecuteAddMaterialChange}
+        fefoMap={executeFefoMap}
         onClose={handleExecuteCancelAdd}
         onSave={handleExecuteSaveAdd}
       />
