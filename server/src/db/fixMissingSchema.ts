@@ -1574,6 +1574,26 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2026-07-05: 为 pesticide_records 添加关联业务字段（与施肥管理对齐）
+  const pestBizCols = [
+    { col: 'planting_id', label: 'planting_id' },
+    { col: 'planting_code', label: 'planting_code' },
+    { col: 'seedling_id', label: 'seedling_id' },
+    { col: 'seedling_code', label: 'seedling_code' },
+  ];
+  for (const { col, label } of pestBizCols) {
+    try {
+      db.run(`ALTER TABLE pesticide_records ADD COLUMN ${col} TEXT`);
+      seedLog.info(`✓ pesticide_records 表添加 ${label} 列`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) {
+        seedLog.skip(`• pesticide_records.${label} 列已存在`);
+      } else {
+        seedLog.skip(`• pesticide_records.${label}:`, e.message);
+      }
+    }
+  }
+
   // V12.0: 药剂-病虫害关联表
   try {
     db.run(`

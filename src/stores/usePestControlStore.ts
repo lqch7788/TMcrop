@@ -13,6 +13,11 @@ export interface PestControlData {
   operatorName?: string;
   cropName: string;
   greenhouseName?: string;
+  // 2026-07-05: 关联业务（与种植/育苗二选一，互斥）
+  plantingId?: string;
+  plantingCode?: string;
+  seedlingId?: string;
+  seedlingCode?: string;
   controlType: 'chemical' | 'bio' | 'physical';
   pesticideId?: string;
   pesticideName?: string;
@@ -51,6 +56,11 @@ const FIELD_MAP: Record<string, string> = {
   operator_name: 'operatorName',
   crop_name: 'cropName',
   greenhouse_name: 'greenhouseName',
+  // 2026-07-05: 关联业务字段
+  planting_id: 'plantingId',
+  planting_code: 'plantingCode',
+  seedling_id: 'seedlingId',
+  seedling_code: 'seedlingCode',
   control_type: 'controlType',
   pesticide_id: 'pesticideId',
   pesticide_name: 'pesticideName',
@@ -152,8 +162,8 @@ export const usePestControlStore = create<PestControlState>()(
 
     createItem: async (item) => {
       try {
-        const body = denormalizePestControl(item);
-        const response = await enhancedApiClient.post<any>('/pest-records', body);
+        // 直接发 camelCase（后端路由已统一用 camelCase 读 body）
+        const response = await enhancedApiClient.post<any>('/pest-records', item);
         const newItem = (response.data ?? response) as PestControlData;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
@@ -165,8 +175,8 @@ export const usePestControlStore = create<PestControlState>()(
 
     updateItem: async (id, updates) => {
       try {
-        const body = denormalizePestControl(updates);
-        const response = await enhancedApiClient.put<any>(`/pest-records/${id}`, body);
+        // 直接发 camelCase（与 createItem 一致）
+        const response = await enhancedApiClient.put<any>(`/pest-records/${id}`, updates);
         const updated = (response.data ?? response) as PestControlData;
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? updated : i)),

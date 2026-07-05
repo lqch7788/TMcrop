@@ -74,7 +74,7 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const body = req.body;
-    if (!body.spray_time || !body.crop_name || !body.control_type) {
+    if (!body.sprayTime || !body.cropName || !body.controlType) {
       res.status(400).json({ success: false, error: '防治日期、作物名称、防治类型为必填项' });
       return;
     }
@@ -84,6 +84,7 @@ router.post('/', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO pesticide_records (
       id, record_code, spray_time, operator_id, operator_name, crop_name, greenhouse_name,
+      planting_id, planting_code, seedling_id, seedling_code,
       control_type, pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content,
       dosage, dosage_unit, dilution_ratio, target_pest, application_method,
       bio_agent_id, bio_agent_name, bio_agent_type,
@@ -91,17 +92,19 @@ router.post('/', (req: Request, res: Response) => {
       pesticide_list, bio_agent_list, equipment_list,
       use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
       description, photos, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.spray_time, body.operator_id || null, body.operator_name || null, body.crop_name,
-       body.greenhouse_name || null, body.control_type, body.pesticide_id || null, body.pesticide_name || null,
-       body.pesticide_type || null, body.spec_id || null, body.spec_content || null,
-       body.dosage || null, body.dosage_unit || null, body.dilution_ratio || null,
-       body.target_pest || null, body.application_method || null,
-       body.bio_agent_id || null, body.bio_agent_name || null, body.bio_agent_type || null,
-       body.equipment_name || null, body.equipment_count || null,
-       body.pesticide_list || null, body.bio_agent_list || null, body.equipment_list || null,
-       body.use_leaf_fertilizer || 'no', body.leaf_fertilizer_name || null,
-       body.leaf_fertilizer_dosage || null, body.leaf_fertilizer_unit || null,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, code, body.sprayTime, body.operatorId || null, body.operatorName || null, body.cropName,
+       body.greenhouseName || null,
+       body.plantingId || null, body.plantingCode || null, body.seedlingId || null, body.seedlingCode || null,
+       body.controlType, body.pesticideId || null, body.pesticideName || null,
+       body.pesticideType || null, body.specId || null, body.specContent || null,
+       body.dosage || null, body.dosageUnit || null, body.dilutionRatio || null,
+       body.targetPest || null, body.applicationMethod || null,
+       body.bioAgentId || null, body.bioAgentName || null, body.bioAgentType || null,
+       body.equipmentName || null, body.equipmentCount || null,
+       body.pesticideList || null, body.bioAgentList || null, body.equipmentList || null,
+       body.useLeafFertilizer || 'no', body.leafFertilizerName || null,
+       body.leafFertilizerDosage || null, body.leafFertilizerUnit || null,
        body.description || null, body.photos || null, body.status || 'completed', now, now]
     );
 
@@ -159,7 +162,9 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     db.run(`UPDATE pesticide_records SET
-      spray_time=?, operator_name=?, crop_name=?, greenhouse_name=?, control_type=?,
+      spray_time=?, operator_name=?, crop_name=?, greenhouse_name=?,
+      planting_id=?, planting_code=?, seedling_id=?, seedling_code=?,
+      control_type=?,
       pesticide_id=?, pesticide_name=?, pesticide_type=?, spec_id=?, spec_content=?,
       dosage=?, dosage_unit=?, dilution_ratio=?, target_pest=?, application_method=?,
       bio_agent_id=?, bio_agent_name=?, bio_agent_type=?,
@@ -169,6 +174,8 @@ router.put('/:id', (req: Request, res: Response) => {
       description=?, photos=?, update_time=? WHERE id=?`,
       [body.sprayTime ?? existing[0].spray_time, body.operatorName ?? existing[0].operator_name,
        body.cropName ?? existing[0].crop_name, body.greenhouseName ?? existing[0].greenhouse_name,
+       body.plantingId ?? existing[0].planting_id, body.plantingCode ?? existing[0].planting_code,
+       body.seedlingId ?? existing[0].seedling_id, body.seedlingCode ?? existing[0].seedling_code,
        body.controlType ?? existing[0].control_type,
        body.pesticideId ?? existing[0].pesticide_id, body.pesticideName ?? existing[0].pesticide_name,
        body.pesticideType ?? existing[0].pesticide_type, body.specId ?? existing[0].spec_id,

@@ -39,6 +39,37 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
     return item ? (item as any).dictLabel : code;
   };
 
+  // 解析 JSON 列表字段（多药剂/多制剂/多叶面肥/多设备存为 JSON 字符串）
+  const parseJsonArray = (jsonStr: string | null | undefined): any[] => {
+    if (!jsonStr) return [];
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // 叶面肥列表（支持新旧格式：JSON 数组 / 单字符串）
+  const leafFertilizerList = parseJsonArray(record.leafFertilizerName);
+  // 药剂列表
+  const pesticideList = parseJsonArray((record as any).pesticideList);
+  // 生物制剂列表
+  const bioAgentList = parseJsonArray((record as any).bioAgentList);
+  // 设备列表
+  const equipmentList = parseJsonArray((record as any).equipmentList);
+  // 目标病虫害列表
+  const parseTargetPests = (str: string | null | undefined): string[] => {
+    if (!str) return [];
+    try {
+      const parsed = JSON.parse(str);
+      return Array.isArray(parsed) ? parsed : [str];
+    } catch {
+      return [str];
+    }
+  };
+  const targetPestList = parseTargetPests(record.targetPest);
+
   const controlTypeInfo = CONTROL_TYPE_LABELS[record.controlType] || { label: record.controlType, color: 'text-gray-700', bg: 'bg-gray-100' };
 
   // 格式化日期时间
@@ -126,21 +157,43 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">叶面肥信息</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">叶面肥名称</span>
-                      <span className="text-sm text-gray-900">{record.leafFertilizerName || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">用量</span>
-                      <span className="text-sm text-gray-900">
-                        {record.leafFertilizerDosage ? `${record.leafFertilizerDosage} ${record.leafFertilizerUnit || ''}` : '-'}
-                      </span>
+                {/* 叶面肥信息（表格形式，支持多叶面肥） */}
+                {record.useLeafFertilizer === 'yes' && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">叶面肥信息</h4>
+                    <div className="overflow-hidden border border-gray-200 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-white">
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">#</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">名称</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">用量</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">稀释倍数</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {leafFertilizerList.length > 0 ? (
+                            leafFertilizerList.map((item: any, idx: number) => (
+                              <tr key={idx}>
+                                <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                                <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                                <td className="px-3 py-2 text-right text-gray-900">{item.dosage || '-'} {item.unit || ''}</td>
+                                <td className="px-3 py-2 text-right text-gray-900">{item.ratio || '-'}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td className="px-3 py-2 text-gray-500">1</td>
+                              <td className="px-3 py-2 font-medium text-gray-900">{record.leafFertilizerName || '-'}</td>
+                              <td className="px-3 py-2 text-right text-gray-900">{record.leafFertilizerDosage ? `${record.leafFertilizerDosage} ${record.leafFertilizerUnit || ''}` : '-'}</td>
+                              <td className="px-3 py-2 text-right text-gray-900">-</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* 右列 */}
@@ -183,113 +236,179 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
         {/* 防治详情标签页 */}
         {activeTab === 'detail' && (
           <div className="space-y-4">
-            {/* 化学防治详情 */}
+            {/* 防治信息总览表 */}
+            <div className="overflow-hidden border border-gray-200 rounded-lg">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="bg-gray-50">
+                    <td className="px-4 py-2.5 text-xs text-gray-500 w-24">防治类型</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${controlTypeInfo.bg} ${controlTypeInfo.color}`}>
+                        {controlTypeInfo.label}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5 text-xs text-gray-500">施用方法</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-900">{getDictLabel('application_method', record.applicationMethod || '') || '-'}</td>
+                  </tr>
+                  {targetPestList.length > 0 && (
+                    <tr>
+                      <td className="px-4 py-2.5 text-xs text-gray-500">目标病虫害</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {targetPestList.map((pest: string, idx: number) => (
+                            <span key={idx} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700 border border-orange-200">{pest}</span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 化学防治 — 药剂列表（表格形式） */}
             {record.controlType === 'chemical' && (
-              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  化学防治详情
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs text-red-600 block">药剂名称</span>
-                    <span className="text-sm font-medium text-gray-900">{record.pesticideName || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-red-600 block">药剂类型</span>
-                    <span className="text-sm font-medium text-gray-900">{getDictLabel('pesticide_type', record.pesticideType || '') || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-red-600 block">用药量</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {record.dosage ? `${record.dosage} ${record.dosageUnit || ''}` : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-red-600 block">稀释比例</span>
-                    <span className="text-sm font-medium text-gray-900">{record.dilutionRatio || '-'}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-xs text-red-600 block">施用方法</span>
-                    <span className="text-sm font-medium text-gray-900">{getDictLabel('application_method', record.applicationMethod || '') || '-'}</span>
-                  </div>
-                </div>
+              <div className="overflow-hidden border border-red-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-red-50">
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">药剂名称</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">药剂类型</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-red-700">用药量</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-red-700">稀释倍数</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-red-100">
+                    {pesticideList.length > 0 ? (
+                      pesticideList.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-red-50/50">
+                          <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                          <td className="px-3 py-2 text-gray-700">{getDictLabel('pesticide_type', item.type || '') || item.type || '-'}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.dosage || '-'} {item.unit || ''}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.ratio || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-3 py-2 text-gray-500">1</td>
+                        <td className="px-3 py-2 font-medium text-gray-900">{record.pesticideName || '-'}</td>
+                        <td className="px-3 py-2 text-gray-700">{getDictLabel('pesticide_type', record.pesticideType || '') || '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">{record.dosage ? `${record.dosage} ${record.dosageUnit || ''}` : '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">{record.dilutionRatio || '-'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
 
-            {/* 生物防治详情 */}
+            {/* 生物防治 — 制剂列表（表格形式） */}
             {record.controlType === 'bio' && (
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <h4 className="text-sm font-semibold text-green-700 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  生物防治详情
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs text-green-600 block">生物制剂名称</span>
-                    <span className="text-sm font-medium text-gray-900">{record.bioAgentName || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-green-600 block">制剂类型</span>
-                    <span className="text-sm font-medium text-gray-900">{getDictLabel('bio_agent_type', record.bioAgentType || '') || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-green-600 block">用量</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {record.dosage ? `${record.dosage} ${record.dosageUnit || ''}` : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-green-600 block">稀释比例</span>
-                    <span className="text-sm font-medium text-gray-900">{record.dilutionRatio || '-'}</span>
-                  </div>
-                </div>
+              <div className="overflow-hidden border border-green-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-green-50">
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">制剂名称</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">制剂类型</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-green-700">用量</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-green-700">稀释倍数</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-green-100">
+                    {bioAgentList.length > 0 ? (
+                      bioAgentList.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-green-50/50">
+                          <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                          <td className="px-3 py-2 text-gray-700">{getDictLabel('bio_agent_type', item.type || '') || item.type || '-'}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.dosage || '-'} {item.unit || ''}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.ratio || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-3 py-2 text-gray-500">1</td>
+                        <td className="px-3 py-2 font-medium text-gray-900">{record.bioAgentName || '-'}</td>
+                        <td className="px-3 py-2 text-gray-700">{getDictLabel('bio_agent_type', record.bioAgentType || '') || '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">{record.dosage ? `${record.dosage} ${record.dosageUnit || ''}` : '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">{record.dilutionRatio || '-'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
 
-            {/* 物理防治详情 */}
+            {/* 物理防治 — 设备列表（表格形式） */}
             {record.controlType === 'physical' && (
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <h4 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  物理防治详情
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs text-blue-600 block">防治设备/方式</span>
-                    <span className="text-sm font-medium text-gray-900">{record.equipmentName || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-blue-600 block">用量/次数</span>
-                    <span className="text-sm font-medium text-gray-900">{record.equipmentCount || '-'}</span>
-                  </div>
-                </div>
+              <div className="overflow-hidden border border-blue-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-blue-50">
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">设备/方式</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">用量/次数</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100">
+                    {equipmentList.length > 0 ? (
+                      equipmentList.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-blue-50/50">
+                          <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                          <td className="px-3 py-2 text-gray-900">{item.count || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-3 py-2 text-gray-500">1</td>
+                        <td className="px-3 py-2 font-medium text-gray-900">{record.equipmentName || '-'}</td>
+                        <td className="px-3 py-2 text-gray-900">{record.equipmentCount || '-'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
 
-            {/* 叶面肥详情 */}
+            {/* 叶面肥 — 列表（表格形式） */}
             {record.useLeafFertilizer === 'yes' && (
-              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
-                <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                  叶面肥联用详情
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <span className="text-xs text-emerald-600 block">叶面肥名称</span>
-                    <span className="text-sm font-medium text-gray-900">{record.leafFertilizerName || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-emerald-600 block">用量</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {record.leafFertilizerDosage ? `${record.leafFertilizerDosage} ${record.leafFertilizerUnit || ''}` : '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-emerald-600 block">单位</span>
-                    <span className="text-sm font-medium text-gray-900">{record.leafFertilizerUnit || '-'}</span>
-                  </div>
-                </div>
+              <div className="overflow-hidden border border-emerald-200 rounded-lg">
+                <div className="bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700">叶面肥联用</div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-emerald-50/50">
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">叶面肥名称</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">用量</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">稀释倍数</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-emerald-100">
+                    {leafFertilizerList.length > 0 ? (
+                      leafFertilizerList.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-emerald-50/50">
+                          <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.dosage || '-'} {item.unit || ''}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{item.ratio || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-3 py-2 text-gray-500">1</td>
+                        <td className="px-3 py-2 font-medium text-gray-900">{record.leafFertilizerName || '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">{record.leafFertilizerDosage ? `${record.leafFertilizerDosage} ${record.leafFertilizerUnit || ''}` : '-'}</td>
+                        <td className="px-3 py-2 text-right text-gray-900">-</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

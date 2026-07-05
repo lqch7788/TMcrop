@@ -14,6 +14,9 @@ export interface FertilizerData {
   productionPlanCode?: string;
   plantingId?: string;
   plantingCode?: string;
+  // 2026-07-05: seedling 关联（与 planting 二选一，互斥）
+  seedlingId?: string;
+  seedlingCode?: string;
   greenhouseId?: string;
   greenhouseName: string;
   areaName?: string;
@@ -151,8 +154,8 @@ export const useFertilizerStore = create<FertilizerState>()(
 
     createItem: async (item) => {
       try {
-        const body = denormalizeFertilizer(item);
-        const response = await enhancedApiClient.post('/fertilizer', body);
+        // 直接发 camelCase（后端 Zod schema 期望 camelCase，camelCaseRequestMiddleware 未注册）
+        const response = await enhancedApiClient.post('/fertilizer', item);
         const newItem = (response.data ?? response) as FertilizerData;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
@@ -164,8 +167,8 @@ export const useFertilizerStore = create<FertilizerState>()(
 
     updateItem: async (id, updates) => {
       try {
-        const body = denormalizeFertilizer(updates);
-        const response = await enhancedApiClient.put(`/fertilizer/${id}`, body);
+        // 直接发 camelCase（与 createItem 一致）
+        const response = await enhancedApiClient.put(`/fertilizer/${id}`, updates);
         const updated = (response.data ?? response) as FertilizerData;
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? updated : i)),
