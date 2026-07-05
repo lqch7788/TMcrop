@@ -2683,6 +2683,9 @@ export function initializeDatabase() {
       production_plan_code TEXT,
       planting_id TEXT,
       planting_code TEXT,
+      -- 2026-07-05: 关联育苗记录（与 planting_id 二选一，互斥；空值 = 不关联）
+      seedling_id TEXT,
+      seedling_code TEXT,
       greenhouse_id TEXT,
       greenhouse_name TEXT NOT NULL,
       area_name TEXT,

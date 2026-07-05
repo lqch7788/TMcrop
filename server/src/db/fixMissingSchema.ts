@@ -1028,6 +1028,28 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 34.2 2026-07-05: fertilizer_records 表添加 seedling_id / seedling_code 列（关联育苗记录，与 planting_id 二选一）
+  try {
+    db.run(`ALTER TABLE fertilizer_records ADD COLUMN seedling_id TEXT`);
+    seedLog.info('✓ fertilizer_records 表添加 seedling_id 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• fertilizer_records.seedling_id 列已存在');
+    } else {
+      seedLog.skip('• fertilizer_records.seedling_id:', e.message);
+    }
+  }
+  try {
+    db.run(`ALTER TABLE fertilizer_records ADD COLUMN seedling_code TEXT`);
+    seedLog.info('✓ fertilizer_records 表添加 seedling_code 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• fertilizer_records.seedling_code 列已存在');
+    } else {
+      seedLog.skip('• fertilizer_records.seedling_code:', e.message);
+    }
+  }
+
   // 35. production_plans 表添加 planting_area_unit 列（种植面积单位）
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN planting_area_unit TEXT DEFAULT 'm²'`);

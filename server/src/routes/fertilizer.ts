@@ -22,8 +22,13 @@ function toCamelResponse<T = any>(record: FertilizerRecord | null): T | null {
   return {
     ...record,
     fertilizerId: record.fertilizer_id,
+    // 2026-07-05: 加 seedling 关联字段的 camelCase 映射
+    seedlingId: record.seedling_id ?? null,
+    seedlingCode: record.seedling_code ?? null,
     // 让响应字段同时保留 snake 和 camel 兼容老 store
     fertilizer_id: record.fertilizer_id,
+    seedling_id: record.seedling_id ?? null,
+    seedling_code: record.seedling_code ?? null,
   } as T;
 }
 

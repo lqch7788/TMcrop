@@ -41,6 +41,9 @@ const createRecordSchema = z.object({
   productionPlanCode: z.string().nullish(),
   plantingId: z.string().nullish(),
   plantingCode: z.string().nullish(),
+  // 2026-07-05: 加 seedling 关联（与 planting 二选一，互斥）
+  seedlingId: z.string().nullish(),
+  seedlingCode: z.string().nullish(),
   greenhouseId: z.string().nullish(),
   greenhouseName: z.string().min(1, '温室名称必填'),
   areaName: z.string().nullish(),
@@ -213,6 +216,9 @@ export class FertilizerService {
         production_plan_code: data.productionPlanCode ?? null,
         planting_id: data.plantingId ?? null,
         planting_code: data.plantingCode ?? null,
+        // 2026-07-05: seedling 二选一关联
+        seedling_id: data.seedlingId ?? null,
+        seedling_code: data.seedlingCode ?? null,
         greenhouse_id: data.greenhouseId ?? null,
         greenhouse_name: data.greenhouseName,
         area_name: data.areaName ?? null,
