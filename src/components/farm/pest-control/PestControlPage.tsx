@@ -9,7 +9,6 @@ import { DeleteConfirmModal } from '@/components/ui';
 import { usePestControlStore, PestControlData, useToastStore } from '@/stores';
 import { PestControlFilter } from './PestControlFilter';
 import { PestControlTable } from './PestControlTable';
-import { PestControlStatsCards } from './PestControlStatsCards';
 import { AddPestControlModal } from './modals/AddPestControlModal';
 import { EditPestControlModal } from './modals/EditPestControlModal';
 import { PestControlDetailModal } from './modals/PestControlDetailModal';
@@ -190,8 +189,7 @@ export default function PestControlPage() {
         </div>
       </div>
 
-      {/* 2026-06-07: 移到 Filter 上方 - 用户要求统计卡片在搜索工具栏上方 */}
-      <PestControlStatsCards stats={stats} />
+      {/* 2026-07-05: 统计卡片已删除（user 要求） */}
 
       <PestControlFilter
         filters={filters}
