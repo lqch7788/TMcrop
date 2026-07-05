@@ -13,7 +13,6 @@ import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
 import { todayLocal } from '@/lib/dateUtils';
-import { FertilizerStatsPanel } from './FertilizerStatsPanel';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
 
@@ -32,7 +31,6 @@ export default function FertilizerPage() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [operationMode, setOperationMode] = useState<OperationMode>('normal');
-  const [showStats, setShowStats] = useState(false);
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
@@ -255,53 +253,7 @@ export default function FertilizerPage() {
         </div>
       </div>
 
-      {/* Stats summary bar - 2026-06-07: 移到 FilterBar 上方 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">总记录数</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900">{stats.totalQuantity.toLocaleString()} kg</p>
-              <p className="text-xs text-gray-500">施肥总量</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900">{stats.totalCost.toLocaleString()} 元</p>
-              <p className="text-xs text-gray-500">总成本</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900">{stats.iotCount}</p>
-              <p className="text-xs text-gray-500">IoT记录数</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 2026-07-05: 顶部统计卡片已删除（user 要求） */}
 
       {/* FilterBar */}
       <FertilizerFilter
@@ -337,12 +289,7 @@ export default function FertilizerPage() {
         onExportMode={handleExport}
         iotDevices={iotDevices}
         iotLoading={isLoading}
-        showStats={showStats}
-        onToggleStats={() => setShowStats(!showStats)}
       />
-
-      {/* Stats Panel (collapsible) */}
-      {showStats && <FertilizerStatsPanel filters={filters} />}
 
       {/* Modals */}
       {showAddModal && (
