@@ -637,7 +637,8 @@ describe('GET /api/seed-sources/lookup — SQL 行为（任务 2）', () => {
 })
 
 /**
- * 2026-06-30：任务 11 后端单测补充 — GET /api/seed-sources/:id/move-records 端点的 SQL 行为
+ * 2026-06-30：任务 11 后端单测补充 — GET /api/seed-sources/:id/usage-records 端点的 SQL 行为
+ * 2026-07-05: 端点路径 move-records → usage-records（命名变更）
  *
  * 核心断言：只返回 source_id = :id 且 source_type = 'seed' 的记录
  * - 调入 2 次同一种源（seed）→ 返回 2 条
@@ -645,9 +646,9 @@ describe('GET /api/seed-sources/lookup — SQL 行为（任务 2）', () => {
  *
  * SQL 与 routes/seedSource.ts:233-246 保持一致
  */
-describe('GET /api/seed-sources/:id/move-records — SQL 行为（任务 3）', () => {
+describe('GET /api/seed-sources/:id/usage-records — SQL 行为（任务 3）', () => {
   /**
-   * 与 routes/seedSource.ts:233-246 保持一致的 move-records SQL
+   * 与 routes/seedSource.ts:233-246 保持一致的 usage-records SQL
    * 注意：当前 schema 中 planting_move_records 没有 source_type 列
    * （schema.ts 历史原因），但 SQL 仍按 seedSource.ts 写法运行。
    * 本测试通过扩展 schema 加 source_type 列来匹配 SQL 真实行为。
@@ -673,7 +674,7 @@ describe('GET /api/seed-sources/:id/move-records — SQL 行为（任务 3）', 
     db.run(`ALTER TABLE planting_move_records ADD COLUMN source_code TEXT`)
   })
 
-  it('调入 2 次后查 move-records 返回 2 条', () => {
+  it('调入 2 次后查 usage-records 返回 2 条', () => {
     // 同一种源（S1）调入 2 次
     db.run(
       `INSERT INTO planting_move_records VALUES
@@ -718,7 +719,7 @@ describe('GET /api/seed-sources/:id/move-records — SQL 行为（任务 3）', 
   })
 
   it('move_out 操作类型也返回（SQL 不按 operation_type 过滤）', () => {
-    // 注意：move-records 端点只按 source_id + source_type 过滤，
+    // 注意：usage-records 端点只按 source_id + source_type 过滤，
     // 不按 operation_type 过滤（调入和调出都展示）
     db.run(
       `INSERT INTO planting_move_records VALUES

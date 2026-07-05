@@ -2,7 +2,8 @@
  * 种源详情弹窗（2026-07-02 重构）
  * 种源已退化为纯仓库角色，移除繁育种源相关字段。
  * 三入口模式：外购入库 / 库存调拨 / 种植留种
- * Tab：基本信息 / 来源详情（条件）/ 调拨来源（条件）/ 调入种植 / 操作历史
+ * Tab：基本信息 / 来源详情（条件）/ 调拨来源（条件）/ 使用记录 / 操作历史
+ * 2026-07-05: "调入种植" Tab 改名为 "使用记录"（更准确反映被育苗/种植使用两种场景）
  */
 
 import { useEffect, useState } from 'react';
@@ -13,7 +14,7 @@ import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
-import { getSeedSourceMoveRecords, type SeedSourceMoveRecord } from '@/services/apiSeedSourceService';
+import { getSeedSourceUsageRecords, type SeedSourceUsageRecord } from '@/services/apiSeedSourceService';
 
 /** 入库模式配置 — 三种入口各有不同的关联信息 */
 const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -252,12 +253,13 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
 }
 
 /**
- * 调入种植面板
- * 2026-06-30: 列示当前种源被调入/调出到种植单的全量履历。
- * 数据来源：GET /api/seed-sources/:id/move-records
+ * 使用记录面板
+ * 2026-06-30: 列示当前种源被消耗/调拨出去的全量记录。
+ * 2026-07-05: 改名为"使用记录"，覆盖被育苗使用 + 种植移入/移出。
+ * 数据来源：GET /api/seed-sources/:id/usage-records
  */
-function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
-  const [records, setRecords] = useState<SeedSourceMoveRecord[]>([])
+function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
+  const [records, setRecords] = useState<SeedSourceUsageRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -266,7 +268,7 @@ function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
     setLoading(true)
     setError(null)
     // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
-    getSeedSourceMoveRecords(seedSourceId)
+    getSeedSourceUsageRecords(seedSourceId)
       .then((data) => setRecords(Array.isArray(data) ? data : []))
       .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
       .finally(() => setLoading(false))
@@ -285,7 +287,7 @@ function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
   if (records.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg">
-        暂无调入种植记录
+        暂无使用记录
       </div>
     )
   }
@@ -295,7 +297,7 @@ function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
           <MoveRight className="w-4 h-4 text-emerald-600" />
-          调入种植记录（共 {records.length} 条）
+          使用记录（共 {records.length} 条）
         </h4>
         <Button
           size="sm"
@@ -318,9 +320,9 @@ function MoveToPlantingsPanel({ seedSourceId }: { seedSourceId: string }) {
             const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
             ws['!cols'] = headers.map(() => ({ wch: 16 }));
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '调入种植记录');
+            XLSX.utils.book_append_sheet(wb, ws, '使用记录');
             const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            XLSX.writeFile(wb, `调入种植记录_${today}_${records.length}条.xlsx`);
+            XLSX.writeFile(wb, `使用记录_${today}_${records.length}条.xlsx`);
           }}
         >
           <Download className="w-4 h-4 mr-1" />
@@ -406,13 +408,13 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     })
   }
 
-  // 调入种植 tab — 所有种源都显示
+  // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
   extraTabs.push({
     key: 'move-to-plantings',
-    label: '调入种植',
+    label: '使用记录',
     icon: <MoveRight className="w-4 h-4" />,
-    tooltip: '记录该种源被哪些种植批次调用过。种植管理页面"添加种源"时选择此批号，会在此生成一条调拨履历。',
-    content: <MoveToPlantingsPanel seedSourceId={record.id} />,
+    tooltip: '记录该种源被育苗/种植环节调用的全部流水。',
+    content: <UsageRecordsPanel seedSourceId={record.id} />,
   })
 
   const originKey = record.sourceOrigin || (record.transferredFromStockId ? 'transfer_from_inventory' : 'external');
