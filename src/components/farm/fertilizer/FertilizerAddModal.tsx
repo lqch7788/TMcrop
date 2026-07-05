@@ -17,11 +17,13 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { DictSelect } from '../../common/settings/DictSelect';
 
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
-import { useFertilizerStore, useProductionPlanStore, useFertilizerLibraryStore, usePlantingStore } from '@/stores';
+import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 import type { CropVariety } from '@/types/cropVariety';
 import { showAlert } from '@/lib/dialogService';
+// 2026-07-05: 单位换算工具（修复"1000克 > 100kg库存"误报 bug）
+import { toBaseUnit, isConvertibleUnit, getUnitCategory } from '@/lib/unitConversions';
 
 interface FertilizerAddModalProps {
   isOpen: boolean;
@@ -47,12 +49,12 @@ const defaultForm = {
   description: '',
   inputMode: 'library' as 'library' | 'manual',
   selectedFertilizerId: '',
-  // 关联种植记录
+  // 关联种植记录（与 seedling 二选一，互斥）
   plantingId: '',
   plantingCode: '',
-  // 关联生产计划（可选）
-  productionPlanId: '',
-  productionPlanCode: '',
+  // 关联育苗记录（与 planting 二选一，互斥）
+  seedlingId: '',
+  seedlingCode: '',
 };
 
 export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddModalProps) {
@@ -64,42 +66,41 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   const [cropCode, setCropCode] = useState('');
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
-  // 生产计划搜索状态
-  const [planSearchKeyword, setPlanSearchKeyword] = useState('');
-  const [selectedPlanLabel, setSelectedPlanLabel] = useState(''); // 选中显示文本
-  const [showPlanSearch, setShowPlanSearch] = useState(false);
-  const planSearchRef = useRef<HTMLDivElement>(null);
+  // 2026-07-05 重构：合并种植/育苗为统一"关联业务"选择器
+  // - bizType: 'planting' | 'seedling'，互斥
+  // - 选中后自动填 greenhouseName/cropName/关联单号，并锁定只读
+  const [bizSearchKeyword, setBizSearchKeyword] = useState('');
+  const [selectedBizLabel, setSelectedBizLabel] = useState('');
+  const [showBizSearch, setShowBizSearch] = useState(false);
+  const [bizType, setBizType] = useState<'planting' | 'seedling'>('planting');
+  const bizSearchRef = useRef<HTMLDivElement>(null);
 
-  // 种植记录搜索状态
-  const [plantingSearchKeyword, setPlantingSearchKeyword] = useState('');
-  const [selectedPlantingLabel, setSelectedPlantingLabel] = useState(''); // 选中显示文本
-  const [showPlantingSearch, setShowPlantingSearch] = useState(false);
-  const plantingSearchRef = useRef<HTMLDivElement>(null);
-
-  // 获取生产计划列表（过滤已完成）
-  const planOptions = useMemo(() => {
-    const plans = useProductionPlanStore.getState().batches as any[];
-    const activePlans = plans.filter(p => p.status !== 'completed');
-    if (!planSearchKeyword.trim()) return activePlans;
-    const kw = planSearchKeyword.toLowerCase();
-    return activePlans.filter(p =>
-      p.batchCode.toLowerCase().includes(kw) ||
-      (p.cropName || '').toLowerCase().includes(kw)
-    );
-  }, [planSearchKeyword]);
-
-  // 获取种植记录列表（过滤未采收）
+  // 种植记录列表（过滤未采收）
   const plantingOptions = useMemo(() => {
+    if (bizType !== 'planting') return [];
     const plantings = usePlantingStore.getState().items;
-    const activePlantings = plantings.filter(p => !p.isHarvest);
-    if (!plantingSearchKeyword.trim()) return activePlantings;
-    const kw = plantingSearchKeyword.toLowerCase();
-    return activePlantings.filter(p =>
+    const activePlantings = plantings.filter((p: any) => !p.isHarvest);
+    if (!bizSearchKeyword.trim()) return activePlantings;
+    const kw = bizSearchKeyword.toLowerCase();
+    return activePlantings.filter((p: any) =>
       (p.plantCode || '').toLowerCase().includes(kw) ||
       (p.cropName || '').toLowerCase().includes(kw) ||
       (p.rootName || '').toLowerCase().includes(kw)
     );
-  }, [plantingSearchKeyword]);
+  }, [bizSearchKeyword, bizType]);
+
+  // 育苗记录列表（2026-07-05 新增）
+  const seedlingOptions = useMemo(() => {
+    if (bizType !== 'seedling') return [];
+    const seedlings = useSeedlingStore.getState().items as any[];
+    if (!bizSearchKeyword.trim()) return seedlings;
+    const kw = bizSearchKeyword.toLowerCase();
+    return seedlings.filter((s: any) =>
+      (s.seedlingCode || '').toLowerCase().includes(kw) ||
+      (s.cropName || '').toLowerCase().includes(kw) ||
+      (s.greenhouseName || '').toLowerCase().includes(kw)
+    );
+  }, [bizSearchKeyword, bizType]);
 
   // 当前选中肥料的品牌名称
   const selectedFertilizerBrand = useMemo(() => {
@@ -110,11 +111,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   // 点击外部关闭搜索下拉
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (planSearchRef.current && !planSearchRef.current.contains(e.target as Node)) {
-        setShowPlanSearch(false);
-      }
-      if (plantingSearchRef.current && !plantingSearchRef.current.contains(e.target as Node)) {
-        setShowPlantingSearch(false);
+      if (bizSearchRef.current && !bizSearchRef.current.contains(e.target as Node)) {
+        setShowBizSearch(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -149,12 +147,12 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       setForm({ ...defaultForm, inputMode: 'library', selectedFertilizerId: '' });
       setCropCode('');
       setSelectedCrop(null);
-      setPlanSearchKeyword('');
-      setSelectedPlanLabel('');
-      setPlantingSearchKeyword('');
-      setSelectedPlantingLabel('');
-      // 加载种植记录列表
+      setBizSearchKeyword('');
+      setSelectedBizLabel('');
+      setBizType('planting');
+      // 加载种植和育苗记录列表
       usePlantingStore.getState().loadItems();
+      useSeedlingStore.getState().loadItems();
     }
   }, [isOpen]);
 
@@ -179,6 +177,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       return;
     }
     setSubmitting(true);
+    // 2026-07-05: 单位换算 — quantity 永远按基准单位（kg 或 L）提交
+    // 库存比较、后端扣减逻辑都按基准单位算（数据库约定 quantity 是 kg）
+    const quantityConverted = toBaseUnit(Number(form.quantity) || 0, form.unit);
     const payload: Record<string, any> = {
       fertilizerCode: form.fertilizerCode,
       fertilizerName: form.fertilizerName,
@@ -186,8 +187,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       cropName: form.cropName,
       greenhouseName: form.greenhouseName,
       dilutionRatio: form.dilutionRatio,
-      quantity: form.quantity,
-      unit: form.unit,
+      // quantity 转 kg；不可换算单位（如"包/袋"）保留原值 + warning
+      quantity: quantityConverted ? quantityConverted.baseQuantity : Number(form.quantity) || 0,
+      unit: form.unit,  // 保留用户原选单位，仅用于显示
       unitPrice: form.unitPrice,
       totalCost: form.totalCost,
       fertilizeTime: form.fertilizeTime,
@@ -196,8 +198,11 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       description: form.description,
       // G11 V1.1：肥料库 id（与后端 FIELD_MAP 配套）— 之前 selectedFertilizerId 被忽略
       fertilizerId: form.selectedFertilizerId || null,
+      // 关联业务：planting 和 seedling 二选一（互斥），前端表单已校验
       plantingId: form.plantingId,
       plantingCode: form.plantingCode,
+      seedlingId: form.seedlingId,
+      seedlingCode: form.seedlingCode,
     };
     await store.createItem(payload);
     // G11 V1.1：创建成功后刷新肥料库库存（让 UI 立即看到扣减）
@@ -218,7 +223,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       isOpen={isOpen}
       onClose={onClose}
       title="新增施肥记录"
-      size="xl"
+      // 2026-07-05: 弹窗宽度 +30%（xl → xxxl：max-w-4xl → max-w-6xl）
+      size="xxxl"
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
@@ -251,210 +257,146 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div ref={planSearchRef} className="relative">
-                <Label className="text-gray-900">关联生产计划</Label>
-                {/* 已选中计划（包括"不关联"选项） */}
-                {selectedPlanLabel ? (
-                  <div className={`p-2 border rounded-lg ${
-                    form.productionPlanCode
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium ${
-                        form.productionPlanCode ? 'text-blue-800' : 'text-gray-500'
-                      }`}>
-                        {selectedPlanLabel}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          updateField('productionPlanCode', '');
-                          updateField('productionPlanId', '');
-                          setPlanSearchKeyword('');
-                          setSelectedPlanLabel('');
-                        }}
-                      >
-                        <X className={`w-4 h-4 ${form.productionPlanCode ? 'text-blue-600' : 'text-gray-400'}`} />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex">
+              {/* 2026-07-05 重构：合并种植/育苗为统一"关联业务"选择器（二选一互斥）
+                  Tab + 搜索框 inline 同一行（更紧凑布局） */}
+              <div ref={bizSearchRef} className="relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <Label className="text-gray-900 shrink-0">
+                    关联业务 <span className="text-red-500">*</span>
+                  </Label>
+                  {/* 类型切换 Tab + 搜索框 inline */}
+                  {!selectedBizLabel && (
+                    <>
+                      <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setBizType('planting')}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                            bizType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          种植
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBizType('seedling')}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                            bizType === 'seedling' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          育苗
+                        </button>
+                      </div>
                       <Input
                         type="text"
-                        value={planSearchKeyword}
-                        onChange={(e) => { setPlanSearchKeyword(e.target.value); setShowPlanSearch(true); }}
-                        onFocus={() => setShowPlanSearch(true)}
-                        placeholder="搜索生产计划批次号..."
+                        value={bizSearchKeyword}
+                        onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
+                        onFocus={() => setShowBizSearch(true)}
+                        placeholder={bizType === 'planting' ? '搜索种植批号/作物/温室...' : '搜索育苗批号/作物/温室...'}
                         className={`flex-1 ${deepInputClass} rounded-l-lg`}
                       />
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
-                        onClick={() => setShowPlanSearch(!showPlanSearch)}
+                        onClick={() => setShowBizSearch(!showBizSearch)}
                         className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
                       >
                         <Search className="w-4 h-4 text-gray-500" />
                       </Button>
-                    </div>
-                    {/* 下拉选项 */}
-                    {showPlanSearch && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                        {/* 第一个选项：不关联 */}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            updateField('productionPlanCode', '');
-                            updateField('productionPlanId', '');
-                            setPlanSearchKeyword('');
-                            setSelectedPlanLabel('不关联生产计划');
-                            setShowPlanSearch(false);
-                          }}
-                          className="w-full justify-start rounded-none border-b border-gray-100"
-                        >
-                          <X className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">不关联生产计划</span>
-                        </Button>
-                        {planOptions.length > 0 ? (
-                          planOptions.map((plan) => (
-                            <Button
-                              key={plan.id}
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                updateField('productionPlanId', plan.id);
-                                updateField('productionPlanCode', plan.batchCode);
-                                setPlanSearchKeyword(plan.batchCode);
-                                setSelectedPlanLabel(plan.batchCode);
-                                setShowPlanSearch(false);
-                              }}
-                              className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0"
-                            >
-                              <div>
-                                <p className="text-sm font-medium text-gray-800">{plan.batchCode}</p>
-                                <p className="text-xs text-gray-500">{plan.cropName || ''} · {plan.greenhouseName || ''}</p>
-                              </div>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                plan.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
-                                plan.status === 'planned' ? 'bg-amber-100 text-amber-600' :
-                                'bg-gray-100 text-gray-500'
-                              }`}>
-                                {(plan as any).status === 'in_progress' ? '进行中' : (plan as any).status === 'planned' ? '计划中' : (plan as any).status}
-                              </span>
-                            </Button>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-sm text-gray-400">
-                            无匹配的生产计划
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-              <div ref={plantingSearchRef} className="relative">
-                <Label className="text-gray-900">关联种植记录</Label>
-                {/* 已选中记录 */}
-                {selectedPlantingLabel ? (
+                    </>
+                  )}
+                </div>
+                {/* 已选中业务 */}
+                {selectedBizLabel ? (
                   <div className={`p-2 border rounded-lg ${
-                    form.plantingId
-                      ? 'bg-purple-50 border-purple-200'
+                    form.plantingId || form.seedlingId
+                      ? 'bg-emerald-50 border-emerald-200'
                       : 'bg-gray-50 border-gray-200'
                   }`}>
                     <div className="flex items-center justify-between">
                       <span className={`text-sm font-medium ${
-                        form.plantingId ? 'text-purple-800' : 'text-gray-500'
+                        form.plantingId || form.seedlingId ? 'text-emerald-800' : 'text-gray-500'
                       }`}>
-                        {selectedPlantingLabel}
+                        {selectedBizLabel}
                       </span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => {
+                          // 清空全部关联字段
                           updateField('plantingId', '');
                           updateField('plantingCode', '');
+                          updateField('seedlingId', '');
+                          updateField('seedlingCode', '');
                           updateField('greenhouseName', '');
                           updateField('cropName', '');
+                          updateField('fertilizeTime', '');
                           setCropCode('');
                           setSelectedCrop(null);
-                          setPlantingSearchKeyword('');
-                          setSelectedPlantingLabel('');
+                          setBizSearchKeyword('');
+                          setSelectedBizLabel('');
                         }}
                       >
-                        <X className={`w-4 h-4 ${form.plantingId ? 'text-purple-600' : 'text-gray-400'}`} />
+                        <X className="w-4 h-4 text-emerald-600" />
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="flex">
-                      <Input
-                        type="text"
-                        value={plantingSearchKeyword}
-                        onChange={(e) => { setPlantingSearchKeyword(e.target.value); setShowPlantingSearch(true); }}
-                        onFocus={() => setShowPlantingSearch(true)}
-                        placeholder="搜索种植记录批号..."
-                        className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowPlantingSearch(!showPlantingSearch)}
-                        className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
-                      >
-                        <Search className="w-4 h-4 text-gray-500" />
-                      </Button>
-                    </div>
-                    {/* 下拉选项 */}
-                    {showPlantingSearch && (
+                    {/* 下拉选项 — 输入框已在上方 inline */}
+                    {showBizSearch && (
                       <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                        {/* 第一个选项：不关联 */}
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => {
+                            // 不关联任何业务（清空所有关联字段）
                             updateField('plantingId', '');
                             updateField('plantingCode', '');
+                            updateField('seedlingId', '');
+                            updateField('seedlingCode', '');
                             updateField('greenhouseName', '');
                             updateField('cropName', '');
+                            updateField('fertilizeTime', '');
                             setCropCode('');
                             setSelectedCrop(null);
-                            setPlantingSearchKeyword('');
-                            setSelectedPlantingLabel('不关联种植记录');
-                            setShowPlantingSearch(false);
+                            setBizSearchKeyword('');
+                            setSelectedBizLabel('不关联任何业务');
+                            setShowBizSearch(false);
                           }}
                           className="w-full justify-start rounded-none border-b border-gray-100"
                         >
                           <X className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">不关联种植记录</span>
+                          <span className="text-sm text-gray-500">不关联任何业务</span>
                         </Button>
-                        {plantingOptions.length > 0 ? (
-                          plantingOptions.map((planting) => (
+                        {bizType === 'planting' && plantingOptions.length > 0 && (
+                          plantingOptions.map((planting: any) => (
                             <Button
                               key={planting.id}
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => {
+                                // 互斥：清空 seedling 字段
+                                updateField('seedlingId', '');
+                                updateField('seedlingCode', '');
+                                // 填 planting 关联 + 自动填字段
                                 updateField('plantingId', planting.id);
                                 updateField('plantingCode', planting.plantCode);
                                 updateField('greenhouseName', planting.rootName || planting.areaName || '');
                                 updateField('cropName', planting.cropName || '');
-                                setPlantingSearchKeyword(planting.plantCode);
-                                setSelectedPlantingLabel(planting.plantCode);
-                                setShowPlantingSearch(false);
+                                // 施肥时间默认填当前时间（datetime-local 格式）
+                                const now = new Date();
+                                const tzOffset = now.getTimezoneOffset() * 60000;
+                                const localISO = new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+                                updateField('fertilizeTime', localISO);
+                                setCropCode(planting.cropCode || '');
+                                setBizSearchKeyword(planting.plantCode);
+                                setSelectedBizLabel(`${bizType === 'planting' ? '种植' : '育苗'} · ${planting.plantCode} · ${planting.cropName || ''}`);
+                                setShowBizSearch(false);
                               }}
                               className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0"
                             >
@@ -469,9 +411,49 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                               </span>
                             </Button>
                           ))
-                        ) : (
+                        )}
+                        {bizType === 'seedling' && seedlingOptions.length > 0 && (
+                          seedlingOptions.map((seedling: any) => (
+                            <Button
+                              key={seedling.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // 互斥：清空 planting 字段
+                                updateField('plantingId', '');
+                                updateField('plantingCode', '');
+                                // 填 seedling 关联 + 自动填字段
+                                updateField('seedlingId', seedling.id);
+                                updateField('seedlingCode', seedling.seedlingCode);
+                                updateField('greenhouseName', seedling.greenhouseName || '');
+                                updateField('cropName', seedling.cropName || '');
+                                // 施肥时间默认填当前时间
+                                const now = new Date();
+                                const tzOffset = now.getTimezoneOffset() * 60000;
+                                const localISO = new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+                                updateField('fertilizeTime', localISO);
+                                setCropCode(seedling.cropCode || '');
+                                setBizSearchKeyword(seedling.seedlingCode);
+                                setSelectedBizLabel(`育苗 · ${seedling.seedlingCode} · ${seedling.cropName || ''}`);
+                                setShowBizSearch(false);
+                              }}
+                              className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{seedling.seedlingCode}</p>
+                                <p className="text-xs text-gray-500">{seedling.cropName || ''} · {seedling.greenhouseName || ''}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600`}>
+                                育苗中
+                              </span>
+                            </Button>
+                          ))
+                        )}
+                        {((bizType === 'planting' && plantingOptions.length === 0) ||
+                          (bizType === 'seedling' && seedlingOptions.length === 0)) && (
                           <div className="p-4 text-center text-sm text-gray-400">
-                            无匹配的种植记录
+                            无匹配的{bizType === 'planting' ? '种植' : '育苗'}记录
                           </div>
                         )}
                       </div>
@@ -481,26 +463,38 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
             </div>
 
-            {/* 温室位置 + 作物品种 - 移动到关联种植记录后面 */}
+            {/* 2026-07-05 字段锁定：温室/作物选中关联后只读（避免溯源链断裂） */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-900">温室位置</Label>
+                <Label className="text-gray-900">
+                  温室位置
+                  {(form.plantingId || form.seedlingId) && (
+                    <span className="ml-2 text-xs text-gray-500">（已锁定）</span>
+                  )}
+                </Label>
                 <Input
                   type="text"
                   value={form.greenhouseName}
                   onChange={(e) => updateField('greenhouseName', e.target.value)}
-                  placeholder="请输入温室位置"
-                  className={deepInputClass}
+                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请先选择关联业务'}
+                  readOnly={!!(form.plantingId || form.seedlingId)}
+                  className={`${deepInputClass} ${form.plantingId || form.seedlingId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 />
               </div>
               <div>
-                <Label className="text-gray-900">作物品种</Label>
+                <Label className="text-gray-900">
+                  作物品种
+                  {(form.plantingId || form.seedlingId) && (
+                    <span className="ml-2 text-xs text-gray-500">（已锁定）</span>
+                  )}
+                </Label>
                 <CropCodeSelector
                   value={cropCode}
                   onChange={handleCropCodeChange}
-                  placeholder="搜索或选择作物品种..."
+                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请先选择关联业务'}
                   size="md"
                   showFullPath={true}
+                  disabled={!!(form.plantingId || form.seedlingId)}
                 />
                 {selectedCrop && (
                   <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
@@ -638,12 +632,25 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
               <div>
                 <Label className="text-gray-900">施肥量</Label>
+                {/* 2026-07-05: 改用 type="text" + inputMode="decimal"
+                    修复 type="number" 下"输入 0.1 时 0 丢失 + 0. 被截断"的浏览器 quirk */}
                 <Input
-                  type="number"
-                  value={form.quantity || ''}
-                  onChange={(e) => updateField('quantity', Number(e.target.value))}
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
+                  value={form.quantity !== undefined && form.quantity !== null ? String(form.quantity) : ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    // 允许空（用户清空时不强制变 0，让 placeholder 显示）
+                    if (v === '') {
+                      updateField('quantity', 0);
+                      return;
+                    }
+                    // 用 parseFloat 宽容处理 "0." / "0.1" / ".5" / "abc"
+                    const num = parseFloat(v);
+                    if (!isNaN(num) && num >= 0) {
+                      updateField('quantity', num);
+                    }
+                  }}
                   placeholder="0"
                   className={deepInputClass}
                 />
@@ -651,14 +658,39 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   if (form.inputMode !== 'library' || !form.selectedFertilizerId) return null;
                   const lib = fertilizerLibraryStore.items.find(i => i.id === form.selectedFertilizerId);
                   if (!lib || lib.currentStock == null) return null;
-                  if (form.quantity > lib.currentStock) {
-                    return (
-                      <div className="text-amber-600 text-sm mt-1" data-testid="stock-warning">
-                        ⚠ 施肥量 {form.quantity} 超过库存 {lib.currentStock}kg
+                  // 2026-07-05: 用 toBaseUnit 把用户输入换算成基准单位（kg 或 L）后比对库存
+                  const converted = toBaseUnit(Number(form.quantity) || 0, form.unit);
+                  // 换算预览（用户填了非基准单位时显示）
+                  let previewEl = null;
+                  if (converted && form.unit !== converted.baseUnit) {
+                    previewEl = (
+                      <div className="text-xs text-gray-500 mt-1" data-testid="unit-conversion-preview">
+                        = {converted.baseQuantity.toLocaleString(undefined, { maximumFractionDigits: 3 })} {converted.baseUnit}
+                      </div>
+                    );
+                  } else if (!isConvertibleUnit(form.unit) && form.unit) {
+                    previewEl = (
+                      <div className="text-xs text-amber-600 mt-1" data-testid="unit-conversion-warning">
+                        ⚠ 单位「{form.unit}」无法自动换算，库存校验仅供参考，请人工核对
                       </div>
                     );
                   }
-                  return null;
+                  // 库存校验：converted 存在时用基准值；不存在时用 number（参考）
+                  const compareQty = (converted?.baseQuantity ?? Number(form.quantity)) || 0;
+                  let warnEl = null;
+                  if (converted && compareQty > lib.currentStock) {
+                    warnEl = (
+                      <div className="text-amber-600 text-sm mt-1" data-testid="stock-warning">
+                        ⚠ 施肥量 {form.quantity} {form.unit}（≈ {compareQty.toLocaleString(undefined, { maximumFractionDigits: 3 })} {converted.baseUnit}）超过库存 {lib.currentStock}{converted.baseUnit}
+                      </div>
+                    );
+                  }
+                  return (
+                    <>
+                      {previewEl}
+                      {warnEl}
+                    </>
+                  );
                 })()}
               </div>
               <div>
