@@ -434,6 +434,8 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
         value: mode.label,
       }}
       extraTabs={extraTabs}
+      // 2026-07-05: 弹窗宽度 +30%（xl → xxxl：max-w-4xl → max-w-6xl）让"使用记录" Tab 字段完整展示
+      size="xxxl"
     />
   );
 }

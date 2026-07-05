@@ -48,6 +48,12 @@ interface EntityDetailModalProps {
   typeColumn?: TypeColumnConfig;
   /** 可选附加 Tab */
   extraTabs?: ExtraTab[];
+  /**
+   * 弹窗大小（2026-07-05 新增）
+   * - 默认 'xl'（max-w-4xl ≈ 896px）
+   * - 种源详情用 'xxxl'（max-w-6xl ≈ 1152px，+约 28%）让"使用记录" Tab 能完整展示字段
+   */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl' | 'full';
 }
 
 export function EntityDetailModal({
@@ -60,6 +66,7 @@ export function EntityDetailModal({
   entityCode,
   typeColumn,
   extraTabs = [],
+  size = 'xl',
 }: EntityDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('info');
 
@@ -68,7 +75,7 @@ export function EntityDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      size="xl"
+      size={size}
       showFooter={true}
       onSubmit={() => onClose()}
       submitText="关闭"
