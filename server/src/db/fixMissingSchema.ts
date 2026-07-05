@@ -3250,6 +3250,30 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.skip('• seedlings 状态迁移:', e.message)
   }
+
+  // V14.0: 批次库存表（FEFO 先进先出追踪）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS batch_inventory (
+        id TEXT PRIMARY KEY,
+        material_code TEXT NOT NULL,
+        material_name TEXT,
+        batch_no TEXT NOT NULL,
+        production_date TEXT,
+        expiry_date TEXT,
+        unit TEXT,
+        total_quantity REAL DEFAULT 0,
+        remaining_quantity REAL DEFAULT 0,
+        inbound_record_id INTEGER,
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        update_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    seedLog.info('✓ batch_inventory 表创建成功');
+  } catch (e: any) {
+    seedLog.error('batch_inventory:', e.message);
+  }
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_batch_fefo ON batch_inventory(material_code, expiry_date, batch_no)'); } catch {}
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

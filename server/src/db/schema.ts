@@ -3511,6 +3511,55 @@ export function initializeDatabase() {
       }
     }
   }
+
+  // ==================== V14.0: 批次库存表（FEFO 先进先出追踪） ====================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS batch_inventory (
+      id TEXT PRIMARY KEY,
+      material_code TEXT NOT NULL,
+      material_name TEXT,
+      batch_no TEXT NOT NULL,
+      production_date TEXT,
+      expiry_date TEXT,
+      unit TEXT,
+      total_quantity REAL DEFAULT 0,
+      remaining_quantity REAL DEFAULT 0,
+      inbound_record_id INTEGER,
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_batch_fefo ON batch_inventory(material_code, expiry_date, batch_no)'); } catch {}
+
+  // V14.0: 启动时从 inbound_records 回填 batch_inventory（幂等，不重复插入）
+  try {
+    const inboundRows = db.exec("SELECT id, materials FROM inbound_records WHERE status = 'completed'");
+    if (inboundRows.length > 0) {
+      for (const row of inboundRows[0].values) {
+        const recordId = row[0], materialsJson = row[1] as string;
+        if (!materialsJson) continue;
+        try {
+          const materials = JSON.parse(materialsJson);
+          for (const m of materials) {
+            const code = (m.code || m.materialCode || '').trim();
+            const batchNo = (m.batchNo || '').trim() || `DEFAULT-${code}-${recordId}`;
+            const qty = m.quantity || 0;
+            if (!code || qty <= 0) continue;
+            const ck = db.prepare('SELECT id FROM batch_inventory WHERE material_code = ? AND batch_no = ?');
+            ck.bind([code, batchNo]);
+            const hasExisting = ck.step();
+            ck.free();
+            if (hasExisting) continue;
+            const biId = `bi-${code}-${batchNo}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+            db.run(
+              'INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, inbound_record_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
+              [biId, code, m.name || m.materialName || '', batchNo, m.productionDate || '', m.expiryDate || '', m.unit || '', qty, qty, recordId]
+            );
+          }
+        } catch { /* JSON parse error, skip */ }
+      }
+    }
+  } catch { /* batch backfill non-critical */ }
 }
 
 export { createMaterialFlowLogTable };

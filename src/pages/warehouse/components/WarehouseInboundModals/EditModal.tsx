@@ -12,6 +12,7 @@ import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { showAlert } from '@/lib/dialogService';
 
@@ -150,22 +151,16 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               <div>
                 <span className="text-xs text-gray-500 block">供应商</span>
                 {record.status === 'pending' ? (
-                  <Input
-                    type="text"
+                  <SearchableSelect
                     value={editedSupplier}
-                    onChange={(e) => setEditedSupplier(e.target.value)}
-                    placeholder="选择或输入供应商名称"
-                    list="edit-supplier-list"
-                    className="h-7 text-sm"
+                    onChange={setEditedSupplier}
+                    options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                    placeholder="搜索或选择供应商"
+                    allowClear
                   />
                 ) : (
                   <span className="text-sm font-medium text-gray-900">{record.supplier}</span>
                 )}
-                <datalist id="edit-supplier-list">
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.name} />
-                  ))}
-                </datalist>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">操作员</span>

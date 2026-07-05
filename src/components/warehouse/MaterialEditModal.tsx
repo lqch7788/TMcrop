@@ -5,9 +5,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
-import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -171,36 +169,6 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
           />
         </div>
 
-        {/* 批次号 */}
-        <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">批次号</Label>
-          <Input
-            type="text"
-            value={form.batchNo}
-            onChange={(e) => handleChange('batchNo', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
-          />
-        </div>
-
-        {/* 生产日期 */}
-        <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
-          <DatePicker
-            selected={form.productionDate ? new Date(form.productionDate) : undefined}
-            onChange={(date) => handleChange('productionDate', todayLocal(date))}
-            placeholder="选择生产日期"
-          />
-        </div>
-
-        {/* 过期日期 */}
-        <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">过期日期</Label>
-          <DatePicker
-            selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
-            onChange={(date) => handleChange('expiryDate', todayLocal(date))}
-            placeholder="选择过期日期"
-          />
-        </div>
       </div>
     </UnifiedModal>
   );

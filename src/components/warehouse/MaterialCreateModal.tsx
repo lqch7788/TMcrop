@@ -197,9 +197,6 @@ export function MaterialCreateModal({
         supplier: form.supplier.trim(),
         location: form.location.trim(),
         barcode: form.barcode.trim(),
-        batchNo: '',
-        productionDate: '',
-        expiryDate: '',
         lastUpdateTime: new Date().toISOString(),
         dataStatus: form.dataStatus,
       };
