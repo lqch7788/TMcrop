@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeftRight, Download, Edit2, Plus, Printer, Tag, Trash2, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
+import { ActionIconButton } from '@/components/ui';
 import {SeedSource, SourceType} from '../../../../types/crop';
 import type { CropVariety } from '@/types/cropVariety';
 import * as cropVarietyService from '@/services/cropVarietyService';
@@ -297,27 +298,6 @@ export function SeedSourceTable({
                 <X className="w-4 h-4" /> 取消
               </Button>
             </>
-          ) : operationMode === 'edit' ? (
-            /* 编辑模式 */
-            <>
-              <span className="text-sm text-gray-500 mr-2">请在表格中选择一条记录</span>
-              <Button
-                variant="blue"
-                size="sm"
-                onClick={() => executeOperation('edit')}
-                disabled={selectedRows.length === 0}
-              >
-                <Edit2 className="w-4 h-4" />
-                确认编辑
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={cancelOperation}
-              >
-                <X className="w-4 h-4" /> 取消
-              </Button>
-            </>
           ) : operationMode === 'delete' ? (
             /* 删除模式 */
             <>
@@ -371,16 +351,6 @@ export function SeedSourceTable({
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </Button>
-              )}
-              {canEdit && (
-                <Button
-                  variant="blue"
-                  size="sm"
-                  onClick={() => onOperationModeChange('edit')}
-                >
-                  <Edit2 className="w-4 h-4" />
-                  编辑
                 </Button>
               )}
               {canDelete && (
@@ -605,48 +575,45 @@ export function SeedSourceTable({
                     <div className="flex gap-1">
                       {/* 2026-07-01: 标签管理 — 种源标签全生命周期管理 */}
                       {onLabelManage && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <ActionIconButton
+                          variant="tag"
+                          icon={<Tag className="w-4 h-4" />}
                           onClick={() => onLabelManage(record)}
-                          className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
                           title="标签管理"
-                        >
-                          <Tag className="w-4 h-4" />
-                        </Button>
+                        />
+                      )}
+                      {/* 2026-07-05: 编辑下放到行级 — 种源数据只有外购+调拨两种来源，无批量修改语义；行级按钮一步到位，与育苗/种植保持一致 */}
+                      {canEdit && (
+                        <ActionIconButton
+                          variant="edit"
+                          icon={<Edit2 className="w-4 h-4" />}
+                          onClick={() => onEdit(record)}
+                          title="编辑"
+                        />
                       )}
                       {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记 */}
                       {/* 调拨：从作物库存调入种源（追加模式 append_existing） */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <ActionIconButton
+                        variant="transfer"
+                        icon={<ArrowLeftRight className="w-4 h-4" />}
                         onClick={() => onTransfer(record)}
-                        className="text-gray-500 hover:text-emerald-600 hover:bg-emerald-50"
                         title="调拨入库（从作物库存追加）"
-                      >
-                        <ArrowLeftRight className="w-4 h-4" />
-                      </Button>
+                      />
                       {/* 商品种源入库：行级多次入库（同一仓库补货）；仅入商品种源池，不直接入本种源台账 */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <ActionIconButton
+                        variant="inbound"
+                        icon={<Plus className="w-4 h-4" />}
                         onClick={() => onInbound(record)}
-                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
                         title="商品种源入库（仅入商品种源池；如需入种源台账请用调拨入库）"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                      />
                       {/* 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records） */}
                       {onReturn && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <ActionIconButton
+                          variant="return_"
+                          icon={<Undo2 className="w-4 h-4" />}
                           onClick={() => onReturn(record)}
-                          className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
                           title="退库（退回原作物库存）"
-                        >
-                          <Undo2 className="w-4 h-4" />
-                        </Button>
+                        />
                       )}
                     </div>
                   </TableCell>
