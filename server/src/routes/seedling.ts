@@ -275,6 +275,34 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       // 步骤2：扣减种源
       db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
         [newAvailable, now, sourceId]);
+
+      // 2026-07-05 修复：写 inventory_transaction (outbound)
+      // 之前只写 material_flow_log（审计日志），但库存详情弹窗的 history/trace tab
+      // 完全不读 material_flow_log，导致种源的"追溯时间线"看不到"被育苗使用"记录
+      // 修复：同时写一条 outbound 流水，history/trace tab 才能查到
+      // business_type 用 'seedling'（与 crop_instances 的 business_type 对齐），
+      // 避免被 inventoryTransactions.ts 的 VALID_OUTBOUND_TYPES 白名单静默丢弃
+      // ID 格式与 seedSource.ts:415 样本对齐（Date.now + random）确保跨表唯一
+      const seedSourceInstanceId = `seed_source:${sourceId}`;
+      const useTxDateStr = now.replace(/[^0-9]/g, '').slice(0, 14);
+      const useTxId = `TXO-${useTxDateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const useTransactionId = `OUT-${useTxDateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const operatorName = create_by || 'system';  // HIGH#1: operator_name 不能再传空字符串（审计追溯断链）
+      db.run(
+        `INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
+        [
+          useTxId, useTransactionId, seedSourceInstanceId, 'seed',
+          -safeCount, current, newAvailable,
+          newId, seedling_code || '',
+          create_by || '', operatorName, now.slice(0, 10),
+          `种源被育苗使用 ${seedling_code || newId}（扣减 ${safeCount}）`,
+          now,
+        ]
+      );
     }
 
     // 步骤3：创建育苗记录（2026-06-15: 用数组列名 + 自动 ?，避免加列时占位符数错位导致 500）
@@ -1062,6 +1090,9 @@ router.post('/', (req: Request, res: Response) => {
     );
 
     // 2026-06-14: 内部种源时扣减种源 remaining_quantity（POST / 路径原本没扣，P1-B 补全）
+    // 注意：此 if 块不在事务内（POST / 路径整体无 BEGIN/COMMIT — line 1058 注释）。
+    // 即便 catch 改 throw 也无法回滚上方已提交的 INSERT seedlings / INSERT crop_instances。
+    // 这是已知架构限制，本次修复不在改动范围。
     if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
       try {
         const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [source_id]);
@@ -1069,6 +1100,35 @@ router.post('/', (req: Request, res: Response) => {
         if (remaining >= seedling_quantity) {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
             [seedling_quantity, now, source_id]);
+
+          // 2026-07-05 修复：写 inventory_transaction (outbound)
+          // 之前只写 material_flow_log（审计日志），但库存详情弹窗的 history/trace tab
+          // 完全不读 material_flow_log，导致种源的"追溯时间线"看不到"被育苗使用"记录
+          // 修复：在扣减成功后同 try 内追加一条 outbound 流水，history/trace tab 才能查到
+          // business_type 用 'seedling'（与 crop_instances 的 business_type 对齐），
+          // 避免被 inventoryTransactions.ts 的 VALID_OUTBOUND_TYPES 白名单静默丢弃
+          // ID 格式与 seedSource.ts:415 样本对齐（Date.now + random）确保跨表唯一
+          const seedSourceInstanceId2 = `seed_source:${source_id}`;
+          const useTxDateStr2 = now.replace(/[^0-9]/g, '').slice(0, 14);
+          const useTxId2 = `TXO-${useTxDateStr2}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const useTransactionId2 = `OUT-${useTxDateStr2}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const newRemaining2 = remaining - seedling_quantity;
+          const operatorName2 = create_by || 'system';  // HIGH#1: 同 with-deduct，不能传空字符串
+          db.run(
+            `INSERT INTO inventory_transaction (
+              id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+              balance_before, balance_after, business_id, business_type, business_code,
+              operator_id, operator_name, operate_date, remarks, create_time
+            ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
+            [
+              useTxId2, useTransactionId2, seedSourceInstanceId2, 'seed',
+              -seedling_quantity, remaining, newRemaining2,
+              newId, seedling_code || '',
+              create_by || '', operatorName2, now.slice(0, 10),
+              `种源被育苗使用 ${seedling_code || newId}（扣减 ${seedling_quantity}）`,
+              now,
+            ]
+          );
         } else {
           // 2026-07-01 P0-2 修复：超额直接抛 BusinessError，与 with-deduct 路由一致
           // 防止"未扣减却建档"的不一致
@@ -1078,6 +1138,11 @@ router.post('/', (req: Request, res: Response) => {
           );
         }
       } catch (e) {
+        // 2026-07-05 决策（code-reviewer HIGH#3）：保持原静默行为
+        // 原因：POST / 路由整体无 BEGIN/COMMIT，上方 INSERT seedlings/crop_instances 已落库，
+        //       catch 改 throw 会产生"孤儿 seedling + 500 报错"的新故障模式（用户刷新看到孤儿）
+        //       原行为（catch 静默 + 返回 201）虽然有数据不一致问题，但用户看到的是正常成功
+        //       本次修复核心目标（追溯链显示）已达成；事务原子性问题需要专门重构 POST / 路由
         if (e instanceof BusinessError) throw e;
         console.error('[seedling POST] 扣减种源失败:', e);
       }
