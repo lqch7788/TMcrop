@@ -288,6 +288,10 @@ export async function executeTransferToSource(
   const writtenCropInstanceIds: string[] = [];         // 新 crop_instances.id
   const writtenNewInventoryStockIds: string[] = [];    // 新 inventory_stock.id
   const writtenTxIds: string[] = [];                   // inventory_transaction.id
+  // 2026-07-06 Bug 16 修复：调拨入种源时补写 inventory_inbound_records，
+  // 让 listReturnableInboundRecords（种源退库前置查询）能查到此流水
+  // 不写则退库弹窗永远报「该种源没有可退的调拨入库流水（或已全部退完）」
+  const writtenInboundRecordIds: string[] = [];        // 新 inventory_inbound_records.id
   // 原始库存数量快照（用于精确回滚）
   const originalQuantities: Array<{ id: string | number; currentQty: number; availableQty: number; unit: string }> = [];
 
@@ -487,6 +491,38 @@ export async function executeTransferToSource(
       );
       writtenNewInventoryStockIds.push(newStockId);
 
+      // === 步骤 5c：写 inventory_inbound_records（退库前置流水）===
+      // 2026-07-06 Bug 16：调拨入种源必须写一条 source_module='inventory' 的入库记录，
+      // 否则 listReturnableInboundRecords 查不到 → 退库弹窗永远报「没有可退的调拨入库流水」
+      // source_id 指向新库存 STK ID（不是原库存），source_code 指向新种源批号
+      const inbRecordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenInboundRecordIds.length}`;
+      db.run(
+        `INSERT INTO inventory_inbound_records (
+          id, record_type, record_date, source_module, source_id, source_code,
+          stock_type, source_type, warehouse_id, warehouse_name,
+          crop_id, crop_code, crop_name, variety_name,
+          quantity, unit, unit_price, total_amount, quality_grade,
+          supplier_id, supplier_name, production_plan_code,
+          business_id, notes, operator_name, create_by, create_time, update_time
+        ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          inbRecordId, now.slice(0, 10),
+          newStockId, newCode,
+          sourceStock.stock_type, sourceStock.source_type || 'inventory_transfer',
+          sourceStock.warehouse_id || null, sourceStock.warehouse_name || null,
+          sourceStock.crop_id || null, sourceStock.crop_code || null, sourceStock.crop_name, sourceStock.variety_name || null,
+          item.transferQuantity, sourceUnit,
+          sourceStock.unit_price || 0, (sourceStock.unit_price || 0) * item.transferQuantity,
+          null,
+          sourceStock.supplier_id || null, sourceStock.supplier_name || null,
+          sourceStock.production_plan_code || null,
+          newSeedSourceId,
+          `从库存 ${sourceStock.instance_id} 调拨入种源 ${newCode}`,
+          operator.name, operator.name, now, now,
+        ]
+      );
+      writtenInboundRecordIds.push(inbRecordId);
+
       const inTxId = `TXN-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenTxIds.length}`;
       const inTransactionId = `TXID-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
       db.run(
@@ -532,6 +568,7 @@ export async function executeTransferToSource(
         writtenCropInstanceIds,
         writtenSeedSourceIds,
         originalQuantities,
+        writtenInboundRecordIds,
         now,
       );
     } catch (e) {
@@ -574,10 +611,17 @@ function rollbackTransfer(
   writtenCropInstanceIds: string[],
   writtenSeedSourceIds: string[],
   originalQuantities: Array<{ id: string | number; currentQty: number; availableQty: number; unit: string }>,
+  writtenInboundRecordIds: string[],
   now: string,
 ): boolean {
   let failed = false;
-  // 5b → 5a → 4 → 3 → 2 反序
+  // 5c → 5b → 5a → 4 → 3 → 2 反序
+  // 2026-07-06 Bug 16 修复：先删 inbound_records（依赖 5b 的 newStockId 作为 source_id，
+  // 删了 stock 后 inbound.source_id 变成悬空，但删 stock 不会级联删 inbound）
+  for (const id of writtenInboundRecordIds) {
+    try { db.run('DELETE FROM inventory_inbound_records WHERE id = ?', [id]); }
+    catch (e) { console.error('[rollback] delete inbound_record failed:', e); failed = true; }
+  }
   // 删除 transfer_in / transfer_out 流水（按 writtenTxIds 倒序）
   for (let i = writtenTxIds.length - 1; i >= 0; i--) {
     try { db.run('DELETE FROM inventory_transaction WHERE id = ?', [writtenTxIds[i]]); }

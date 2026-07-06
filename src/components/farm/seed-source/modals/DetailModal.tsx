@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package } from 'lucide-react';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
@@ -15,6 +15,7 @@ import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import { getSeedSourceUsageRecords, type SeedSourceUsageRecord } from '@/services/apiSeedSourceService';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 /** 入库模式配置 — 三种入口各有不同的关联信息 */
 const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -388,6 +389,165 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   )
 }
 
+// 2026-07-06 Bug 19：种源详情弹窗新增「入库记录」Tab
+// 数据源：GET /api/seed-sources/:id/history-inbound
+//   查 inventory_inbound_records 表 WHERE (source_id=? AND source_module='seed_source') OR business_id=?
+//   - 商品种源入库（SeedSourceInboundModal）→ inventoryInboundFromSource.service.ts 写 source_id=种源ID
+//   - 调拨入种源（executeTransferToSource）→ 写 business_id=种源ID, source_module='inventory'
+//   - 追加调拨入库（append-from-inventory）→ 写 business_id=种源ID, source_module='inventory'
+// 三条入库路径都覆盖，详情弹窗能完整看到所有入库流水
+interface InboundRecord {
+  id: string;
+  recordType?: string;
+  recordDate: string;
+  sourceModule?: string;
+  sourceType?: string;
+  sourceCode?: string;
+  stockType?: string;
+  warehouseName?: string;
+  cropName?: string;
+  varietyName?: string;
+  quantity: number;
+  unit?: string;
+  unitPrice?: number;
+  totalAmount?: number;
+  supplierName?: string;
+  operatorName?: string;
+  notes?: string;
+}
+
+function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
+  const [records, setRecords] = useState<InboundRecord[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!seedSourceId) return
+    setLoading(true)
+    setError(null)
+    // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
+    enhancedApiClient
+      .get<InboundRecord[]>(`/seed-sources/${seedSourceId}/history-inbound`)
+      .then((data) => setRecords(Array.isArray(data) ? data : []))
+      .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
+      .finally(() => setLoading(false))
+  }, [seedSourceId])
+
+  if (loading) {
+    return <div className="text-center py-8 text-gray-500">加载中…</div>
+  }
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )
+  }
+  if (records.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg">
+        暂无入库记录
+      </div>
+    )
+  }
+
+  // 来源模块中文映射（与 SeedSourceInboundModal 的 sourceModule 保持一致）
+  const SOURCE_MODULE_MAP: Record<string, string> = {
+    seed_source: '商品种源入库',
+    inventory: '库存调拨',
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <Package className="w-4 h-4 text-emerald-600" />
+          入库记录（共 {records.length} 条）
+        </h4>
+        <Button
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={() => {
+            const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '数量', '单价', '总金额', '供应商', '操作员', '备注'];
+            const data = records.map(r => [
+              r.recordDate || '',
+              SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '',
+              r.id || '',
+              r.cropName || '',
+              r.varietyName || '',
+              r.warehouseName || '',
+              r.quantity ?? 0,
+              r.unitPrice ?? 0,
+              r.totalAmount ?? 0,
+              r.supplierName || '',
+              r.operatorName || '',
+              r.notes || '',
+            ]);
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+            ws['!cols'] = headers.map(() => ({ wch: 16 }));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '入库记录');
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            XLSX.writeFile(wb, `入库记录_${today}_${records.length}条.xlsx`);
+          }}
+        >
+          <Download className="w-4 h-4 mr-1" />
+          导出 Excel
+        </Button>
+      </div>
+      <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead className="bg-blue-500 text-white sticky top-0">
+            <tr>
+              <th className="px-2 py-2 text-left">日期</th>
+              <th className="px-2 py-2 text-left">入库方式</th>
+              <th className="px-2 py-2 text-left">入库单号</th>
+              <th className="px-2 py-2 text-left">作物</th>
+              <th className="px-2 py-2 text-left">品种</th>
+              <th className="px-2 py-2 text-left">仓库</th>
+              <th className="px-2 py-2 text-right">数量</th>
+              <th className="px-2 py-2 text-right">单价</th>
+              <th className="px-2 py-2 text-right">总金额</th>
+              <th className="px-2 py-2 text-left">供应商</th>
+              <th className="px-2 py-2 text-left">操作员</th>
+              <th className="px-2 py-2 text-left">备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((r) => (
+              <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="px-2 py-1.5">{r.recordDate || '-'}</td>
+                <td className="px-2 py-1.5">
+                  <span className="px-1.5 py-0.5 bg-cyan-50 text-cyan-700 rounded text-xs">
+                    {SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '-'}
+                  </span>
+                </td>
+                <td className="px-2 py-1.5">
+                  <code className="text-xs">{r.id || '-'}</code>
+                </td>
+                <td className="px-2 py-1.5">{r.cropName || '-'}</td>
+                <td className="px-2 py-1.5">{r.varietyName || '-'}</td>
+                <td className="px-2 py-1.5">{r.warehouseName || '-'}</td>
+                <td className="px-2 py-1.5 text-right font-medium">{(r.quantity || 0).toLocaleString()}</td>
+                <td className="px-2 py-1.5 text-right">{(r.unitPrice || 0).toFixed(2)}</td>
+                <td className="px-2 py-1.5 text-right">{(r.totalAmount || 0).toFixed(2)}</td>
+                <td className="px-2 py-1.5">{r.supplierName || '-'}</td>
+                <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
+                <td
+                  className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
+                  title={r.notes || ''}
+                >
+                  {r.notes || '-'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   const hasTransferSource = !!record.transferredFromStockId;
 
@@ -407,6 +567,17 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       content: <TransferSourcePanel record={record} />,
     })
   }
+
+  // 2026-07-06 Bug 19：所有种源都显示「入库记录」Tab
+  // 商品种源入库（SeedSourceInboundModal）+ 调拨入种源（executeTransferToSource）+ 追加调拨入库（append-from-inventory）
+  // 三条入库路径都通过 /api/seed-sources/:id/history-inbound 端点查 inventory_inbound_records
+  extraTabs.push({
+    key: 'inbound-records',
+    label: '入库记录',
+    icon: <Package className="w-4 h-4" />,
+    tooltip: '所有入库流水（含外购入库、库存调拨、追加入库），来自 inventory_inbound_records 表。',
+    content: <InboundRecordsPanel seedSourceId={record.id} />,
+  })
 
   // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
   extraTabs.push({

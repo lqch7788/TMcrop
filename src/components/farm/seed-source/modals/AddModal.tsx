@@ -258,9 +258,9 @@ export function AddModal({
   };
 
   const handleSubmit = async (overrideItems?: import('../../../../services/seedSourceTransferService').TransferItem[]) => {
-    // 2026-07-01 P1-8：currentOperator 可能为 null（auth 失效时）
-    if (!currentOperator) {
-      showAlert('无法识别当前操作员，请先登录系统');
+    // 2026-07-01 P1-8：currentUser 可能为 null（auth 失效时），拒绝写入脏数据
+    if (!currentUser) {
+      await showAlert('无法识别当前操作员，请先登录系统');
       return;
     }
     // 2026-06-24: 库存调拨分支 — 完全独立的提交路径，绕过所有外购/育种字段校验
