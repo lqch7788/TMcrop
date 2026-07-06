@@ -1,6 +1,7 @@
 /**
  * 物料管理页面（物料类型定义）
  * 架构：组件 → useMaterialTypeStore (Zustand) → API
+ * 类别选项从 useMaterialCodeRuleStore 派生，禁用硬编码
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,15 +9,20 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronLeft, Edit, Loader2, Package, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { useMaterialTypeStore } from '../stores';
+import { useMaterialTypeStore, useMaterialCodeRuleStore } from '../stores';
 import type { MaterialType } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 
-const CATEGORY_OPTIONS = ['肥料', '农药', '农膜', '工具', '种子', '其他'];
-
 export default function MaterialManagement() {
   const { types, loading, error, loadTypes, addType, editType, removeType } = useMaterialTypeStore();
+  // 类别选项从 useMaterialCodeRuleStore 大类树派生（API 直连）
+  const codeRuleTree = useMaterialCodeRuleStore((s) => s.categories);
+  const loadCodeRules = useMaterialCodeRuleStore((s) => s.loadCategories);
+  const categoryOptions = useMemo(
+    () => codeRuleTree.map((b) => b.name),
+    [codeRuleTree]
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,7 +34,8 @@ export default function MaterialManagement() {
 
   useEffect(() => {
     loadTypes();
-  }, [loadTypes]);
+    loadCodeRules();
+  }, [loadTypes, loadCodeRules]);
 
   const filtered = useMemo(() => {
     return types.filter(item => {
@@ -154,7 +161,7 @@ export default function MaterialManagement() {
             <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
               className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <option>全部</option>
-              {CATEGORY_OPTIONS.map(c => <option key={c}>{c}</option>)}
+              {categoryOptions.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div className="flex gap-2">
@@ -236,7 +243,7 @@ export default function MaterialManagement() {
               <FormField label="类别" required error={errors.category}>
                 <select value={formData.category || ''} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <option value="">请选择</option>
-                  {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </FormField>
               <FormField label="单位" required error={errors.defaultUnit}>
