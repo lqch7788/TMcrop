@@ -44,9 +44,11 @@ export const AddModal: React.FC<AddModalProps> = ({
   onMaterialChange,
   onGenerateCode,
 }) => {
-  // 获取当前登录用户（优先从Store获取）
-  const storeUsers = useUserStore(state => state.users);
-  const currentOperator = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
+  // 获取当前登录用户（优先从Store获取，API 直连）
+  const storeUsers = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  useEffect(() => { if (isOpen) loadUsers(); }, [isOpen, loadUsers]);
+  const currentOperator = storeUsers[0]?.name || '当前用户';
   const isOtherBatch = addForm.productionBatchCode === '其他';
 
   // 仓库物料主数据（用于输入物料编码/名称时自动关联；数据源已统一从 useWarehouseMaterialStore 加载）
