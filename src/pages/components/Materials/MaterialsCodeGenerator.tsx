@@ -1,5 +1,6 @@
 /**
  * 物料编码生成器组件
+ * 大类列表从 useMaterialCodeRuleStore 注入，禁用硬编码
  */
 import { AlertCircle, Check, ChevronDown, ChevronUp, Copy, Wand2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
@@ -11,6 +12,8 @@ interface MaterialsCodeGeneratorProps {
   error: string;
   success: string;
   copySuccess: boolean;
+  /** 大类列表（来自 useMaterialCodeRuleStore，API 直连） */
+  bigCategories: { code: string; name: string }[];
   onCodeGenChange: (field: string, value: string) => void;
   onGenerate: () => void;
   onVerify: () => void;
@@ -20,23 +23,13 @@ interface MaterialsCodeGeneratorProps {
   getSubCategories: () => { code: string; name: string; prefix: string }[];
 }
 
-// 大类选项
-const BIG_CATEGORIES = [
-  { code: 'SP', name: '生产投入类' },
-  { code: 'EQ', name: '设施与装备类' },
-  { code: 'OP', name: '作业支持类' },
-  { code: 'PH', name: '采后处理与流通类' },
-  { code: 'IT', name: '数字化与管理类' },
-  { code: 'EC', name: '能源与通用耗材' },
-  { code: 'OT', name: '其他类' },
-];
-
 export default function MaterialsCodeGenerator({
   codeGen,
   collapsed,
   error,
   success,
   copySuccess,
+  bigCategories,
   onCodeGenChange,
   onGenerate,
   onVerify,
@@ -71,7 +64,7 @@ export default function MaterialsCodeGenerator({
                 className="w-full px-3 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
               >
                 <option value="">请选择</option>
-                {BIG_CATEGORIES.map(cat => (
+                {bigCategories.map(cat => (
                   <option key={cat.code} value={cat.code}>{cat.name}</option>
                 ))}
               </select>
