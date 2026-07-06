@@ -7,6 +7,7 @@ import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStor
 import { showAlert } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
+import { fefoAllocate, batchDeduct } from '@/services/apiWarehouseMaterialService';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -335,6 +336,17 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteSelectedMaterialIndices(new Set());
     setExecuteMaterialActualQuantities({});
     setExecuteSelectedApplicationCode('');
+
+    // V14.0: 加入物料池时自动获取 FEFO 分配预览
+    newMaterials.forEach(m => {
+      if (m.actualQuantity > 0 && m.materialCode) {
+        fefoAllocate(m.materialCode, m.actualQuantity).then(result => {
+          if (result.allocations?.length > 0) {
+            setExecuteFefoMap(prev => ({ ...prev, [m.materialCode]: result.allocations }));
+          }
+        }).catch(() => {});
+      }
+    });
   }, [executeSelectedApplicationCode, executeSelectedMaterialIndices, executeMaterialActualQuantities, executeMaterialPool, materialRequestStore.items]);
 
   // 从物料池移除物料
@@ -356,9 +368,16 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     const material = updatedPool[index];
     if (actualQuantity > 0 && material.materialCode) {
       try {
-        const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
         const result = await fefoAllocate(material.materialCode, actualQuantity);
-        setExecuteFefoMap(prev => ({ ...prev, [material.materialCode]: result.allocations }));
+        if (result.allocations && result.allocations.length > 0) {
+          setExecuteFefoMap(prev => ({ ...prev, [material.materialCode]: result.allocations }));
+          // 同时回填 batchNo 字段到物料池
+          updatedPool[index] = {
+            ...updatedPool[index],
+            batchNo: result.allocations.map(a => `${a.batchNo}(${a.quantity}${a.unit})`).join(',')
+          };
+          setExecuteMaterialPool(updatedPool);
+        }
       } catch {
         // FEFO 分配失败不影响主流程
       }
@@ -420,7 +439,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     // V14.0: FEFO 自动分配批次（按过期日期先进先出）
     const fefoAllocations: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
     try {
-      const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
       for (const m of executeMaterialPool) {
         if (m.actualQuantity > 0 && m.materialCode) {
           const result = await fefoAllocate(m.materialCode, m.actualQuantity);
@@ -466,7 +484,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     // V14.0: 扣减批次库存
     if (fefoAllocations.length > 0) {
       try {
-        const { batchDeduct } = await import('@/services/apiWarehouseMaterialService');
         await batchDeduct(fefoAllocations);
       } catch (e) {
         console.warn('批次库存扣减失败（不影响出库记录）:', e);
