@@ -133,6 +133,8 @@ export interface UseExecuteTabReturn {
   setExecuteMaterialActualQuantities: (quantities: Record<number, number>) => void;
   executeMaterialPool: ExecuteMaterialItem[];
   setExecuteMaterialPool: (pool: ExecuteMaterialItem[]) => void;
+  // V14.0: FEFO 批次分配预览
+  executeFefoMap: Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>;
 
   // 编辑表单状态
   executeEditForm: ExecuteEditFormState;
