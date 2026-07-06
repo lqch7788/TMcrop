@@ -10,7 +10,7 @@
 
 | File | Description |
 |------|-------------|
-| `WarehouseMaterialsPage.tsx` | 主页面容器，处理状态管理 |
+| ~~`WarehouseMaterialsPage.tsx`~~ | **已废弃（死代码）** — 实际主页面是 `src/pages/warehouse/WarehouseOverviewPage.tsx`，此文件已删除 |
 | `MaterialFilters.tsx` | 筛选器组件 |
 | `MaterialsTable.tsx` | 物料表格组件 |
 | `MaterialDetailModal.tsx` | 物料详情弹窗 |
@@ -28,7 +28,8 @@
 ## Component Pattern (组件模式)
 
 ### 状态管理
-- 主页面 `WarehouseMaterialsPage.tsx` 负责状态管理
+- 实际主页面是 `src/pages/warehouse/WarehouseOverviewPage.tsx`，使用 Zustand Store 走 enhancedApiClient（V2.1 架构）
+- 本目录下的 `MaterialFilters.tsx` / `MaterialsTable.tsx` / `MaterialInboundTab.tsx` 等子组件由父级 WarehouseOverviewPage 调用，自身无业务数据
 - 子组件通过 props 接收状态和回调
 
 ### Modal 组件命名规范
