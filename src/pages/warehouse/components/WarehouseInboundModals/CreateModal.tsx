@@ -35,9 +35,11 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   onGenerateCode,
   existingCodes,
 }) => {
-  // 获取当前用户信息（从 Zustand Store）
-  const storeUsers = useUserStore(state => state.users);
-  const currentUserName = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
+  // 获取当前用户信息（从 Zustand Store，API 直连）
+  const storeUsers = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  useEffect(() => { loadUsers(); }, [loadUsers, isOpen]);
+  const currentUserName = storeUsers[0]?.name || '当前用户';
   // 获取当天日期字符串
   const today = todayLocal();
 

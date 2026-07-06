@@ -1286,9 +1286,11 @@ interface InboundAddModalProps {
 }
 
 export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, existingCodes }: InboundAddModalProps) {
-  // 获取当前用户信息（从 Zustand Store）
-  const storeUsers = useUserStore(state => state.users);
-  const currentUserName = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
+  // 获取当前用户信息（从 Zustand Store，API 直连）
+  const storeUsers = useUserStore((state) => state.users);
+  const loadUsers = useUserStore((state) => state.loadUsers);
+  useEffect(() => { if (isOpen) loadUsers(); }, [isOpen, loadUsers]);
+  const currentUserName = storeUsers[0]?.name || '当前用户';
   // 获取当天日期字符串
   const today = todayLocal();
   const [formData, setFormData] = useState({
