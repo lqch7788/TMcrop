@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Edit, Eye, Plus, RotateCcw, Search, Tags } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { Pagination } from '@/components/ui';
+import { Button, Pagination } from '@/components/ui';
+import { useMaterialCodeRuleStore } from '@/stores/useMaterialCodeRuleStore';
 
 export interface MaterialCategory {
-  id: number;
+  id: string;
   code: string;
   name: string;
   level: string;
@@ -14,19 +14,72 @@ export interface MaterialCategory {
   description: string;
 }
 
-const materialCategories: MaterialCategory[] = [
-  { id: 1, code: 'M001', name: '种子种苗', level: '大类', parent: '-', prefix: 'ZZ', itemCount: 25, description: '各类农作物种子' },
-  { id: 2, code: 'M002', name: '肥料', level: '大类', parent: '-', prefix: 'FL', itemCount: 45, description: '化肥、有机肥等' },
-  { id: 3, code: 'M003', name: '农药', level: '大类', parent: '-', prefix: 'NJ', itemCount: 68, description: '杀虫剂、杀菌剂等' },
-  { id: 4, code: 'M004', name: '农膜', level: '大类', parent: '-', prefix: 'NM', itemCount: 15, description: '大棚膜、地膜等' },
-  { id: 5, code: 'M005', name: '包装材料', level: '大类', parent: '-', prefix: 'BZ', itemCount: 32, description: '包装箱、标签等' },
-];
-
 export function MaterialCategoryPage() {
   const [name, setName] = useState('');
   const [level, setLevel] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // V2.1 铁律：分类数据必须从 API 走，禁止硬编码 mock
+  const categories = useMaterialCodeRuleStore((s) => s.categories);
+  const isLoading = useMaterialCodeRuleStore((s) => s.isLoading);
+  const loadCategories = useMaterialCodeRuleStore((s) => s.loadCategories);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  // 把树形结构拍平成列表展示：每行展示一级（big/mid/sub），父级显示完整路径
+  const flatCategories: MaterialCategory[] = useMemo(() => {
+    const rows: MaterialCategory[] = [];
+    for (const big of categories) {
+      rows.push({
+        id: big.code,
+        code: big.code,
+        name: big.name,
+        level: '大类',
+        parent: '-',
+        prefix: big.code,
+        itemCount: big.midCategories.length,
+        description: big.nameEn || '',
+      });
+      for (const mid of big.midCategories) {
+        const parentKey = big.code + mid.code;
+        rows.push({
+          id: parentKey,
+          code: mid.code,
+          name: mid.name,
+          level: '中类',
+          parent: `${big.code} ${big.name}`,
+          prefix: parentKey,
+          itemCount: mid.subCategories.length,
+          description: '',
+        });
+        for (const sub of mid.subCategories) {
+          rows.push({
+            id: parentKey + sub.code,
+            code: sub.code,
+            name: sub.name,
+            level: '小类',
+            parent: `${parentKey} ${mid.name}`,
+            prefix: parentKey + sub.code,
+            itemCount: 0,
+            description: '',
+          });
+        }
+      }
+    }
+    return rows;
+  }, [categories]);
+
+  // 客户端筛选（保留原有交互）
+  const filtered = useMemo(() => {
+    return flatCategories.filter((c) => {
+      if (name && !c.name.includes(name)) return false;
+      if (level !== '全部' && c.level !== level) return false;
+      return true;
+    });
+  }, [flatCategories, name, level]);
 
   return (
     <div className="space-y-6">
@@ -68,8 +121,10 @@ export function MaterialCategoryPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="warning"><RotateCcw className="w-4 h-4" /> 重置</Button>
-            <Button>
+            <Button variant="warning" onClick={() => { setName(''); setLevel('全部'); }}>
+              <RotateCcw className="w-4 h-4" /> 重置
+            </Button>
+            <Button onClick={() => { setCurrentPage(1); }}>
               <Search className="w-4 h-4" />
               搜索
             </Button>
@@ -94,48 +149,57 @@ export function MaterialCategoryPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">级别</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">父级分类</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物资编码前缀</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">包含物资数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">包含子项数</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
-              {materialCategories.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((category) => (
-                <tr key={category.id} className="hover:bg-blue-100 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{category.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{category.name}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      category.level === '大类' ? 'bg-green-100 text-green-700' :
-                      category.level === '中类' ? 'bg-amber-100 text-amber-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {category.level}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{category.parent}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{category.prefix}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{category.itemCount}种</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{category.description}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" title="查看">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="编辑">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
+              {isLoading && filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">加载中...</td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">暂无数据</td>
+                </tr>
+              ) : (
+                filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((category) => (
+                  <tr key={category.id} className="hover:bg-blue-100 transition-colors">
+                    <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{category.code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{category.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        category.level === '大类' ? 'bg-green-100 text-green-700' :
+                        category.level === '中类' ? 'bg-amber-100 text-amber-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {category.level}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{category.parent}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-600">{category.prefix}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{category.itemCount}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{category.description}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" title="查看">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="编辑">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          {/* 分页 */}
           <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
             <Pagination
               currentPage={currentPage}
-              totalPages={Math.ceil(materialCategories.length / pageSize) || 1}
+              totalPages={Math.ceil(filtered.length / pageSize) || 1}
               onPageChange={setCurrentPage}
               pageSize={pageSize}
               onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
