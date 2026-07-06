@@ -77,7 +77,7 @@ export function executeReturnToInventory(
   // 注：sql.js 不支持事务回滚，任一步骤抛错即终止后续写入
   // 1. 锁定并读取目标种源
   const ssStmt = db.prepare(
-    `SELECT id, source_code, remaining_quantity, quantity, unit, crop_code
+    `SELECT id, source_code, remaining_quantity, quantity, unit, crop_code, transferred_from_stock_id
      FROM seed_sources WHERE id = ? AND deleted_at IS NULL`
   );
   ssStmt.bind([targetSeedSourceId]);
@@ -138,7 +138,18 @@ export function executeReturnToInventory(
     const irUnit = String(ir.unit || '');
     const irQuantity = Number(ir.quantity || 0);
     const irReturned = Number(ir.returned_quantity || 0);
-    const irSourceId = String(ir.source_id || '');
+
+    // 2026-07-06 P0 修复：ir.source_id 是调拨时新创建的种源库存 ID（不是原始作物库存），
+    // 用它更新会把退库数量加到种源库存而非原始库存，导致用户作物库存永远收不到退回数。
+    // 正确做法：从 seed_sources.transferred_from_stock_id 取原始调拨源库存 ID。
+    // 兜底：如果该字段为空（旧数据/手工建库），仍尝试用 ir.source_id 避免完全失败。
+    const originalStockId = String(ss.transferred_from_stock_id || ir.source_id || '');
+    const irSourceId = originalStockId;
+
+    // 2026-07-06 P0 修复 B：种源退库必须同时扣减新种源库存（ir.source_id 指向的新库存）。
+    // 此前只 +原库存、-种源表，未动新种源库存 → 库存层（22）和种源层（10）不一致。
+    // 2026-07-06 P0 修复 D：仅读取不写入 — 所有写入放在校验通过后，避免校验失败导致部分写入
+    const newSeedStockId = String(ir.source_id || '');
 
     // 4. 单位一致
     if (irUnit !== sourceUnit) {
@@ -171,7 +182,7 @@ export function executeReturnToInventory(
       );
     }
 
-    // 7. 锁定并读取原库存
+    // 7. 锁定并读取原库存（仅读取，不写入 — 所有写入放在校验通过后）
     const stockStmt = db.prepare(
       `SELECT id, instance_id, current_quantity, available_quantity, status
        FROM inventory_stock WHERE id = ?`
@@ -185,6 +196,31 @@ export function executeReturnToInventory(
         `原库存不存在: id=${irSourceId}`,
         410,
       );
+    }
+
+    // 7b. 读取新种源库存（仅读取）
+    let newSeedStockInstanceId = '';
+    let newSeedStockCurrent = 0;
+    let newSeedStockAvailable = 0;
+    if (newSeedStockId && newSeedStockId !== originalStockId) {
+      const nsStmt = db.prepare(
+        `SELECT instance_id, current_quantity, available_quantity FROM inventory_stock WHERE id = ?`
+      );
+      nsStmt.bind([newSeedStockId]);
+      if (nsStmt.step()) {
+        const ns = nsStmt.getAsObject() as Record<string, unknown>;
+        newSeedStockInstanceId = String(ns.instance_id || '');
+        newSeedStockCurrent = Number(ns.current_quantity || 0);
+        newSeedStockAvailable = Number(ns.available_quantity || 0);
+      }
+      nsStmt.free();
+      // 新种源库存可退量校验（防止退库超过种源库存）
+      if (item.quantity > newSeedStockCurrent) {
+        throw new SeedSourceReturnBusinessError(
+          SeedSourceReturnErrorCode.INSUFFICIENT_SOURCE_AVAILABLE,
+          `种源库存 ${newSeedStockCurrent}${irUnit} < 退库 ${item.quantity}${irUnit}`,
+        );
+      }
     }
 
     // 8. 更新流水 returned_quantity
@@ -208,16 +244,22 @@ export function executeReturnToInventory(
     );
 
     // 10. 扣减种源
+    // 2026-07-06：同步增加 used_quantity（退库是"使用过又退回"，属历史使用累计）
+    // 原因：保证守恒 quantity = used_quantity + remaining_quantity
+    // 之前只减 remaining 不加 used → 历史数据不一致（如 ZZ20260626-001 remaining 虚高）
     sourceRemaining -= item.quantity;
     sourceTotal -= item.quantity;
     db.run(
       `UPDATE seed_sources
-       SET remaining_quantity = ?, quantity = ?, update_time = ?
+       SET remaining_quantity = ?, quantity = ?, used_quantity = used_quantity + ?,
+           update_time = ?
        WHERE id = ?`,
-      [sourceRemaining, sourceTotal, now, targetSeedSourceId],
+      [sourceRemaining, sourceTotal, item.quantity, now, targetSeedSourceId],
     );
 
-    // 11. 写 inventory_transaction (transfer_in)
+    // 11. 写 inventory_transaction (transfer_in) — 原始库存被 +N
+    // 2026-07-06 P0 修复 A：business_id 改回种源 ID（之前是原库存 ID），
+    //   让种源详情 timeline 能查到退库流水（queryEntityHistory 用 business_id = 种源ID 过滤）
     const txId = `TX-RET-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     db.run(
       `INSERT INTO inventory_transaction (
@@ -233,7 +275,7 @@ export function executeReturnToInventory(
         item.quantity,
         oldCurrent,
         newCurrent,
-        irSourceId,
+        targetSeedSourceId,  // 2026-07-06 P0 修复 A：种源 ID（让 timeline 能查到）
         String(ir.source_code || ''),
         'system',
         'system',
@@ -242,6 +284,45 @@ export function executeReturnToInventory(
         now,
       ],
     );
+
+    // 12. 扣减新种源库存 + 写 transfer_out 流水（仅当新种源库存与原库存不同时）
+    // 2026-07-06 P0 修复 B：补齐新种源库存扣减 + 流水（否则库存层 + 种源层数据不一致）
+    if (newSeedStockId && newSeedStockId !== originalStockId && newSeedStockCurrent > 0) {
+      const newSeedCurrentAfter = newSeedStockCurrent - item.quantity;
+      const newSeedAvailableAfter = Math.max(0, newSeedStockAvailable - item.quantity);
+      const newSeedStatus = newSeedCurrentAfter <= 0 ? 'depleted' : 'in_stock';
+      db.run(
+        `UPDATE inventory_stock
+         SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
+         WHERE id = ?`,
+        [newSeedCurrentAfter, newSeedAvailableAfter, newSeedStatus, now, newSeedStockId]
+      );
+      // 写种源库存扣减的 transfer_out 流水
+      const txOutId = `TX-RET-OUT-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      db.run(
+        `INSERT INTO inventory_transaction (
+          id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+          balance_before, balance_after, business_id, business_type, business_code,
+          operator_id, operator_name, operate_date, remarks, create_time
+        ) VALUES (?, ?, ?, ?, 'transfer_out', ?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?)`,
+        [
+          txOutId, txOutId,
+          newSeedStockInstanceId,
+          String(ir.stock_type || ''),
+          item.quantity,
+          newSeedStockCurrent,
+          newSeedCurrentAfter,
+          targetSeedSourceId,
+          'inventory_transfer',
+          String(ss.source_code || ''),
+          'system',
+          'system',
+          dateStr,
+          `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}（扣减种源库存）`,
+          now,
+        ]
+      );
+    }
 
     totalReturned += item.quantity;
   }
