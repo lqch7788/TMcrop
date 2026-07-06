@@ -146,7 +146,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   // 3. inventory_transaction（transaction）
   try {
     const stmt = db.prepare(`
-      SELECT id, transaction_type, quantity, balance_before, balance_after,
+      SELECT id, transaction_type, business_type, quantity, balance_before, balance_after,
              operate_date, remarks, operator_name, create_time
       FROM inventory_transaction
       WHERE business_id = ?
@@ -156,9 +156,14 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
     while (stmt.step()) {
       const r = stmt.getAsObject() as Record<string, unknown>;
       const txnType = String(r.transaction_type || '');
+      const bizType = String(r.business_type || '');
       const qty = Number(r.quantity || 0);
+      // 2026-07-06 P0 修复：transfer_in 须用 business_type 区分调拨入 vs 退库入：
+      //   - business_type='transfer' → 调拨入种源（新种源库存被记 transfer_in，库存增加）
+      //   - business_type='inventory_transfer' → 退库（原始库存被记 transfer_in，恢复库存）
+      // 否则会把调拨入种源错标成"退库入库"，让用户困惑。
       const actionLabel = txnType === 'transfer_in'
-        ? '退库入库'
+        ? (bizType === 'inventory_transfer' ? '退库入库' : '调拨入库')
         : txnType === 'transfer_out'
           ? '调拨出库'
           : txnType === 'inbound'
