@@ -162,60 +162,11 @@ export const getCategoryByCode = (code: string): string => {
   return subCategoryInfo.name;
 };
 
-// 注意：部门选项现在通过 useDepartmentOptions hook 从 API 获取
-// 请在组件中使用: import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
-// 然后: const { options } = useDepartmentOptions({ includeAll: true });
-
-// 申请人选项
-export const APPLICANTS = [
-  '李建国',
-  '王建华',
-  '张建华',
-  '赵技术',
-  '陈技术',
-  '周管理员',
-  '吴主管',
-] as const;
-
-// 仓库位置选项
-export const WAREHOUSE_LOCATIONS = [
-  'A区-01',
-  'A区-02',
-  'A区-03',
-  'A区-04',
-  'B区-01',
-  'B区-02',
-  'B区-03',
-  'C区-01',
-  'C区-05',
-] as const;
-
-// 操作人选项
-export const OPERATORS = [
-  '郭靖',
-  '杨过',
-  '张无忌',
-  '令狐冲',
-  '段誉',
-  '萧峰',
-  '虚竹',
-  '胡斐',
-  '陈家洛',
-  '袁承志',
-] as const;
-
-// 审核人选项
-export const REVIEWERS = [
-  '黄药师',
-  '小龙女',
-  '周芷若',
-  '任盈盈',
-  '霍青桐',
-  '夏雪宜',
-  '程灵素',
-  '扫地僧',
-  '丁典',
-] as const;
+// 申请人 / 仓库位置 / 操作人 / 审核人 等运行时下拉选项已从硬编码迁移至 Store
+// 推荐：
+//   申请人 / 操作人 / 审核人：useUserStore（已加载的用户列表）
+//   仓库位置：useWarehouseStore（已加载的仓库列表）
+// 请避免在此文件中重新引入硬编码列表。
 
 // 退料类型选项
 export const RETURN_TYPES = [

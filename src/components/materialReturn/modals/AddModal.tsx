@@ -1,9 +1,9 @@
 import { Trash2, RefreshCw } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
-import { APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useUserStore } from '../../../stores/useUserStore';
+import { useWarehouseStore } from '../../../stores/useWarehouseStore';
 import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
@@ -36,8 +36,20 @@ export function AddModal({
 }: AddModalProps) {
   // 从 API 获取部门选项
   const { options: departmentOptions } = useDepartmentOptions();
-  // 从 Zustand Store 获取当前用户
-  const currentUserName = useUserStore(state => state.users[0]?.name) || localStorage.getItem('username') || '系统管理员';
+  // 从 Zustand Store 加载用户/仓库数据（API 直连）
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
+  const warehouses = useWarehouseStore((s) => s.warehouses);
+  const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
+  useEffect(() => { loadUsers(); loadWarehouses(); }, [loadUsers, loadWarehouses]);
+
+  // 当前操作人：Store 已有用户则取首位，否则回退到 useAuthStore 中的 username（认证信息例外）
+  const currentUserName = users[0]?.name || '当前用户';
+
+  // 申请人 / 审核人 / 操作人：从 useUserStore 派生的真实用户列表（去重）
+  const userNames = useMemo(() => Array.from(new Set(users.map((u) => u.name).filter(Boolean))), [users]);
+  const warehouseNames = useMemo(() => Array.from(new Set(warehouses.map((w) => (w as any).name || (w as any).warehouseName || '').filter(Boolean))), [warehouses]);
+
   // 来源领料单号列表：来自领料出库 Store（业务规则：只能基于已出库单据退料，保证数据闭环）
   // 仅展示有实际出库物料的记录，避免出现"选了单号但没物料可选"
   const executeItems = useExecuteDataStore(state => state.items);
@@ -93,7 +105,7 @@ export function AddModal({
             <span className="text-gray-500 w-20 shrink-0">申请人：</span>
             <SearchableSelect
               value={form.applicant}
-              options={APPLICANTS.map(v => ({ value: v, label: v }))}
+              options={userNames.map(v => ({ value: v, label: v }))}
               onChange={(val) => onFormChange('applicant', val)}
               placeholder="请选择"
               className="flex-1"
@@ -113,7 +125,7 @@ export function AddModal({
             <span className="text-gray-500 w-20 shrink-0">仓库位置：</span>
             <SearchableSelect
               value={form.warehouseLocation}
-              options={WAREHOUSE_LOCATIONS.map(v => ({ value: v, label: v }))}
+              options={warehouseNames.map(v => ({ value: v, label: v }))}
               onChange={(val) => onFormChange('warehouseLocation', val)}
               placeholder="请选择"
               className="flex-1"
@@ -132,7 +144,7 @@ export function AddModal({
             <span className="text-gray-500 w-20 shrink-0">审核人：</span>
             <SearchableSelect
               value={form.reviewer}
-              options={REVIEWERS.map(v => ({ value: v, label: v }))}
+              options={userNames.map(v => ({ value: v, label: v }))}
               onChange={(val) => onFormChange('reviewer', val)}
               placeholder="请选择"
               className="flex-1"
