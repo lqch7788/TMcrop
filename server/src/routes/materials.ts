@@ -330,6 +330,31 @@ router.post('/seed-batches', (_req: Request, res: Response) => {
 });
 
 /**
+ * 清理重复批次 + 重设 remaining=total — POST /api/materials/cleanup-batches
+ */
+router.post('/cleanup-batches', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    // 删除重复（保留 rowid 最小）
+    const dups = db.exec("SELECT material_code, batch_no, COUNT(*) as cnt, MIN(rowid) as keep_rid FROM batch_inventory GROUP BY material_code, batch_no HAVING cnt > 1");
+    let removed = 0;
+    if (dups.length > 0) {
+      for (const row of dups[0].values) {
+        removed += (row[2] as number) - 1;
+        db.run('DELETE FROM batch_inventory WHERE material_code = ? AND batch_no = ? AND rowid != ?', [row[0], row[1], row[3]]);
+      }
+    }
+    // 重设 remaining = total（修正之前扣减测试的副作用）
+    db.run('UPDATE batch_inventory SET remaining_quantity = total_quantity WHERE remaining_quantity != total_quantity');
+    saveDatabase();
+    const cnt = db.exec('SELECT COUNT(*) FROM batch_inventory');
+    res.json({ success: true, data: { removed, total: cnt[0]?.values[0]?.[0] || 0 } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: (e as Error).message });
+  }
+});
+
+/**
  * 查询物料批次库存 — GET /api/materials/batches/:code
  */
 router.get('/batches/:code', (req: Request, res: Response) => {

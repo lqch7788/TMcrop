@@ -32,17 +32,9 @@ export function upsertBatchInventory(materials: Array<{
   quantity?: number;
 }>, inboundRecordId: number): void {
   const db = getDatabase();
-  const stmt = db.prepare(`
-    INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, inbound_record_id, update_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
-    ON CONFLICT(material_code, batch_no) DO UPDATE SET
-      total_quantity = total_quantity + excluded.total_quantity,
-      remaining_quantity = remaining_quantity + excluded.total_quantity,
-      production_date = COALESCE(excluded.production_date, batch_inventory.production_date),
-      expiry_date = COALESCE(excluded.expiry_date, batch_inventory.expiry_date),
-      update_time = datetime('now','localtime')
-  `);
-  // 注意：sql.js 不支持 ON CONFLICT，用 SELECT + INSERT/UPDATE 替代
+  // sql.js 不支持 ON CONFLICT，用 SELECT(查重) + INSERT/UPDATE 手动 upsert
+
+  const checkStmt = db.prepare('SELECT id, total_quantity, remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?');
 
   for (const m of materials) {
     const code = (m.code || '').trim();
@@ -55,23 +47,19 @@ export function upsertBatchInventory(materials: Array<{
     if (!code || qty <= 0) continue;
 
     // 查是否已有该 material_code + batch_no 的记录
-    const check = db.exec(
-      `SELECT id, total_quantity, remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?`,
-      { bind: [code, batchNo] }
-    );
-
-    if (check.length > 0 && check[0].values.length > 0) {
-      // UPDATE：累加数量
-      const row = check[0].values[0];
-      const existingId = row[0] as string;
-      const newTotal = (row[1] as number) + qty;
-      const newRemain = (row[2] as number) + qty;
+    checkStmt.bind([code, batchNo]);
+    const exists = checkStmt.step();
+    if (exists) {
+      const row = checkStmt.getAsObject() as any;
+      const newTotal = (row.total_quantity as number) + qty;
+      const newRemain = (row.remaining_quantity as number) + qty;
       db.run(
         `UPDATE batch_inventory SET total_quantity = ?, remaining_quantity = ?, update_time = datetime('now','localtime') WHERE id = ?`,
-        [newTotal, newRemain, existingId]
+        [newTotal, newRemain, row.id as string]
       );
+      checkStmt.reset();
     } else {
-      // INSERT：新建批次
+      checkStmt.reset();
       const id = `bi-${code}-${batchNo}-${Date.now()}`;
       db.run(
         `INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, inbound_record_id)
@@ -80,7 +68,7 @@ export function upsertBatchInventory(materials: Array<{
       );
     }
   }
-  stmt.free();
+  checkStmt.free();
 }
 
 /** FEFO 分配：按过期日期升序返回分配方案 */
