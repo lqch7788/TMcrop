@@ -1,6 +1,7 @@
 /**
  * 仓库物料筛选器组件
  * 提供物料筛选和导出功能
+ * 分类列表改为 props 注入（从父级 useMaterialCodeRuleStore 派生），禁用硬编码
  */
 import { Button } from '../../../components/ui/button';
 import { Download, RotateCcw, X } from 'lucide-react';
@@ -21,6 +22,10 @@ interface MaterialsFiltersProps {
   selectedRows: number[];
   filteredMaterials: Material[];
   canExport: boolean;
+  /** 大类列表（来自 useMaterialCodeRuleStore，API 直连） */
+  bigCategories: { code: string; name: string }[];
+  /** 简单分类列表（来自 useMaterialCodeRuleStore 派生） */
+  simpleCategories: string[];
   onCodeChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
@@ -37,20 +42,6 @@ interface MaterialsFiltersProps {
   onSelectAll: () => void;
 }
 
-// 大类选项
-const BIG_CATEGORIES = [
-  { code: 'SP', name: '生产投入类' },
-  { code: 'EQ', name: '设施与装备类' },
-  { code: 'OP', name: '作业支持类' },
-  { code: 'PH', name: '采后处理与流通类' },
-  { code: 'IT', name: '数字化与管理类' },
-  { code: 'EC', name: '能源与通用耗材' },
-  { code: 'OT', name: '其他类' },
-];
-
-// 简单分类选项
-const SIMPLE_CATEGORIES = ['全部', '种子种苗', '肥料', '农药', '农膜'];
-
 export default function MaterialsFilters({
   code,
   name,
@@ -65,6 +56,8 @@ export default function MaterialsFilters({
   selectedRows,
   filteredMaterials,
   canExport,
+  bigCategories,
+  simpleCategories,
   onCodeChange,
   onNameChange,
   onCategoryChange,
@@ -131,7 +124,7 @@ export default function MaterialsFilters({
                 onChange={(e) => onCategoryChange(e.target.value)}
                 className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm"
               >
-                {SIMPLE_CATEGORIES.map(cat => (
+                {simpleCategories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -171,7 +164,7 @@ export default function MaterialsFilters({
               className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm"
             >
               <option value="">全部大类</option>
-              {BIG_CATEGORIES.map(cat => (
+              {bigCategories.map(cat => (
                 <option key={cat.code} value={cat.code}>{cat.name}</option>
               ))}
             </select>

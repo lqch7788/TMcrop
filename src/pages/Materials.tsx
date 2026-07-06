@@ -53,6 +53,7 @@ export default function Materials() {
     setInboundPage,
     setInboundPageSize,
     showAddModal,
+    setShowAddModal,
     exportMode,
     selectedRows,
     showExportModal,
@@ -91,6 +92,9 @@ export default function Materials() {
     canExport,
     filteredMaterials,
     lowStockCount,
+    inboundRecords,
+    bigCategories,
+    simpleCategories,
   } = useMaterials();
 
   // 处理低库存按钮点击
@@ -163,6 +167,8 @@ export default function Materials() {
             selectedRows={selectedRows}
             filteredMaterials={filteredMaterials}
             canExport={canExport}
+            bigCategories={bigCategories}
+            simpleCategories={simpleCategories}
             onCodeChange={setCode}
             onNameChange={setName}
             onCategoryChange={setCategory}
@@ -204,6 +210,7 @@ export default function Materials() {
             error={codeGenError}
             success={codeGenSuccess}
             copySuccess={copySuccess}
+            bigCategories={bigCategories}
             onCodeGenChange={handleCodeGenCategoryChange}
             onGenerate={handleCodeGen}
             onVerify={handleVerifyCode}
@@ -215,7 +222,7 @@ export default function Materials() {
 
           {/* 入库记录表格 */}
           <InboundTable
-            records={[]}
+            records={inboundRecords}
             currentPage={inboundPage}
             pageSize={inboundPageSize}
             canCreate={canCreate}
@@ -223,7 +230,7 @@ export default function Materials() {
             can={can}
             onPageChange={setInboundPage}
             onPageSizeChange={setInboundPageSize}
-            onAddClick={() => {}}
+            onAddClick={() => setShowAddModal(true)}
           />
         </>
       )}
