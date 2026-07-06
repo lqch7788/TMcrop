@@ -152,9 +152,8 @@ interface StatisticsState {
 // ==================== 第五步：获取月份汇总和明细（工具函数）============
 
 /**
- * 注：金额按分类汇总的 proportion 分摊到各月。
- * 后端 category_summary 已提供每分类的实际金额（amount，单位万元），
- * 此处按各月数量占比分摊，避免硬编码单价。
+ * 金额来源：后端 category_summary 已基于真实 unitPrice × qty 计算（单位：万元）。
+ * 月度金额按"该月数量占该分类全年数量的比例"从分类金额分摊，避免重复计算单价。
  */
 
 /** 获取月份汇总数据 */
@@ -191,6 +190,7 @@ export function getMonthDetails(month: string, trend: CategoryTrendItem[], categ
   const totalQty = monthData.total;
   return categories.map(cat => {
     const qty = (monthData as Record<string, number>)[cat.key] || 0;
+    // 用分类全年的 (qty, amount) 比例，分摊得到该月该分类的金额（amount 单位：万元）
     const catAmount = cat.value > 0 ? (qty / cat.value) * cat.amount : 0;
     return {
       month,

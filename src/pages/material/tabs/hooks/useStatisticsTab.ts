@@ -42,6 +42,37 @@ export function useStatisticsTab() {
   useEffect(() => { fetchStatistics(); }, [fetchStatistics]);
 
   // ============================================
+  // 从统计数据中聚合筛选选项（替代硬编码 mock 列表）
+  // ============================================
+  const filterOptions = useMemo(() => {
+    const departments = new Set<string>();
+    const categories = new Set<string>();
+    const suppliers = new Set<string>();
+    const batchCodes = new Set<string>();
+    const productionPlans = new Set<string>();
+    const usageAreas = new Set<string>();
+    const requisitioners = new Set<string>();
+    materialStatisticsData.forEach((item: MaterialStatItem) => {
+      if (item.requisitionDepartment) departments.add(item.requisitionDepartment);
+      if (item.category) categories.add(item.category);
+      if (item.supplier) suppliers.add(item.supplier);
+      if (item.batchCode) batchCodes.add(item.batchCode);
+      if (item.productionPlanBatchCode) productionPlans.add(item.productionPlanBatchCode);
+      if (item.usageArea) usageAreas.add(item.usageArea);
+      if (item.requisitioner) requisitioners.add(item.requisitioner);
+    });
+    return {
+      departments: Array.from(departments).sort(),
+      categories: Array.from(categories).sort(),
+      suppliers: Array.from(suppliers).sort(),
+      batchCodes: Array.from(batchCodes).sort(),
+      productionPlans: Array.from(productionPlans).sort(),
+      usageAreas: Array.from(usageAreas).sort(),
+      requisitioners: Array.from(requisitioners).sort(),
+    };
+  }, [materialStatisticsData]);
+
+  // ============================================
   // 主Tab状态
   // ============================================
   const [statActiveTab, setStatActiveTab] = useState<StatActiveTab>('monthly');
@@ -362,12 +393,23 @@ export function useStatisticsTab() {
       ? allData.reduce((sum: number, item: any) => sum + (item.differenceRate || 0), 0) / allData.length
       : 0;
 
+    // 计算同比变化：本年度总数量 vs 上一年度总数量（按当前年份筛选）
+    const yearTotal = monthlyStatisticsData
+      .filter((m: any) => m.year === statYearFilter)
+      .reduce((s: number, m: any) => s + (m.totalQuantity || 0), 0);
+    const lastYearTotal = monthlyStatisticsData
+      .filter((m: any) => m.year === String(Number(statYearFilter) - 1))
+      .reduce((s: number, m: any) => s + (m.totalQuantity || 0), 0);
+    const yearOnYearChange = lastYearTotal > 0
+      ? ((yearTotal - lastYearTotal) / lastYearTotal) * 100
+      : 0;
+
     return {
       requisitionCount: totalRequisitions,
       totalQuantity,
       totalAmount,
       avgDifferenceRate,
-      yearOnYearChange: 5.2,
+      yearOnYearChange,
     };
   };
 
@@ -802,6 +844,9 @@ export function useStatisticsTab() {
     statFieldFilter,
     statBatchFilter,
     statComparisonPeriod,
+
+    // 筛选选项（从真实数据派生）
+    filterOptions,
 
     // 过滤后的数据
     materialStatFilteredData,

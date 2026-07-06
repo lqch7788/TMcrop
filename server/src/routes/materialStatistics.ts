@@ -152,24 +152,27 @@ router.get('/', (_req: Request, res: Response) => {
       return e;
     });
 
-    // ------ 3. 分类汇总（饼图数据）------
-    const categoryMap = new Map<string, number>();
+    // ------ 3. 分类汇总（饼图数据 + 真实金额）------
+    const categoryMap = new Map<string, { qty: number; amount: number }>();
     for (const rec of records) {
       const mats = (rec.materials as any[]) || [];
       for (const m of mats) {
         const code = m.materialCode || m.code || '';
         const cat = getCategoryByCode(code);
         const qty = Number(m.requestedQuantity || m.quantity || 0);
-        categoryMap.set(cat, (categoryMap.get(cat) || 0) + qty);
+        const price = Number(m.unitPrice || 0);
+        const itemAmount = qty * price;
+        const existing = categoryMap.get(cat) || { qty: 0, amount: 0 };
+        categoryMap.set(cat, { qty: existing.qty + qty, amount: existing.amount + itemAmount });
       }
     }
-    const totalQty = Array.from(categoryMap.values()).reduce((s, v) => s + v, 0);
-    const categorySummary = Array.from(categoryMap.entries()).map(([name, value]) => {
-      const amount = Math.round(value * 30 / 10000 * 100) / 100; // 万元
-      const percentage = totalQty > 0 ? Math.round((value / totalQty) * 1000) / 10 : 0;
+    const totalQty = Array.from(categoryMap.values()).reduce((s, v) => s + v.qty, 0);
+    const categorySummary = Array.from(categoryMap.entries()).map(([name, { qty, amount }]) => {
+      const amountInWan = Math.round((amount / 10000) * 100) / 100; // 转为万元，保留两位小数
+      const percentage = totalQty > 0 ? Math.round((qty / totalQty) * 1000) / 10 : 0;
       const key = getCategoryKey(name);
       const colors = CATEGORY_COLORS[name] || { gradient: ['#9CA3AF', '#6B7280'], solid: '#9CA3AF' };
-      return { name, key, value, amount, percentage, ...colors };
+      return { name, key, value: qty, amount: amountInWan, percentage, ...colors };
     });
 
     // ------ 4. 分类趋势（月度堆叠柱状图）------

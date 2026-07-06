@@ -82,6 +82,7 @@ export default function StatisticsTab() {
             <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 mb-6 shadow-lg shadow-cyan-500/10">
               {/* 仪表盘主体 */}
               <MonthlyDashboard
+                yearFilter={hook.statYearFilter}
                 selectedMonth={hook.selectedMonth}
                 onMonthChange={hook.setSelectedMonth}
               />
@@ -117,6 +118,7 @@ export default function StatisticsTab() {
               usageAreaFilter={hook.statUsageAreaFilter}
               requisitionerFilter={hook.statRequisitionerFilter}
               quickFilterPeriod={hook.statQuickFilterPeriod}
+              filterOptions={hook.filterOptions}
               onMaterialSearchChange={hook.setStatMaterialSearch}
               onDepartmentChange={hook.setStatDepartmentFilter}
               onDateRangeChange={hook.setStatDateRange}

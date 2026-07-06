@@ -25,6 +25,16 @@ interface MaterialFiltersProps {
   requisitionerFilter: string[];
   /** 快捷筛选周期 */
   quickFilterPeriod: string;
+  /** 真实选项（从 API 数据派生） */
+  filterOptions: {
+    departments: string[];
+    categories: string[];
+    suppliers: string[];
+    batchCodes: string[];
+    productionPlans: string[];
+    usageAreas: string[];
+    requisitioners: string[];
+  };
   /** 设置物料搜索 */
   onMaterialSearchChange: (search: string) => void;
   /** 设置部门筛选 */
@@ -63,6 +73,7 @@ export function MaterialFilters({
   usageAreaFilter,
   requisitionerFilter,
   quickFilterPeriod,
+  filterOptions,
   onMaterialSearchChange,
   onDepartmentChange,
   onDateRangeChange,
@@ -89,14 +100,14 @@ export function MaterialFilters({
       usageAreaFilter={usageAreaFilter}
       requisitionerFilter={requisitionerFilter}
       quickFilterPeriod={quickFilterPeriod}
-      departmentOptions={['生产部', '技术部', '设备部', '后勤部', '采后处理部']}
-      categoryOptions={['肥料与土壤改良剂', '农药与植保产品', '种质资源', '劳保与防护用品', '农业机械', '采收容器', '监测设备']}
-      warehouseOptions={['仓库A区', '仓库B区', '仓库C区']}
-      supplierOptions={['有机肥供应商A', '化肥供应商B', '农药供应商C', '种子供应商D', '劳保用品供应商E', '农机供应商F', '包装材料供应商G', '监测设备供应商H']}
-      batchCodeOptions={['YC20260301', 'HF20260315', 'NY20260220', 'NY20260110', 'ZZ20260201', 'ZZ20260115', 'LB20260228', 'LB20260305', 'NJ20260120', 'NJ20260210', 'BZ20260320', 'JC20260105']}
-      productionPlanOptions={['ZZB2026-001', 'ZZB2026-002', 'ZZB2026-003', 'YMB2026-001', 'YMB2026-002', 'YMB2026-003', 'JZB2026-001', 'JZB2026-002']}
-      usageAreaOptions={['玻璃温室A区', '日光温室1号', '塑料大棚1号', '露天种植区', '大田A区', '玻璃温室B区', '全园区', '日光温室2号', '设备维修间', '滴灌系统', '采后处理车间', '监测室']}
-      requisitionerOptions={['张伟民', '李明轩', '王建国', '赵俊杰', '郑志远', '陈思远', '吴海龙', '孙晓峰', '郑志明', '周志刚']}
+      departmentOptions={filterOptions.departments}
+      categoryOptions={filterOptions.categories}
+      warehouseOptions={[]}
+      supplierOptions={filterOptions.suppliers}
+      batchCodeOptions={filterOptions.batchCodes}
+      productionPlanOptions={filterOptions.productionPlans}
+      usageAreaOptions={filterOptions.usageAreas}
+      requisitionerOptions={filterOptions.requisitioners}
       onMaterialSearchChange={onMaterialSearchChange}
       onDepartmentChange={onDepartmentChange}
       onDateRangeChange={onDateRangeChange}

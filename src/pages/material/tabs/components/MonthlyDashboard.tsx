@@ -5,27 +5,32 @@ import { useStatisticsStore, getMonthCategoryData, getMonthSummary } from '@/sto
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface MonthlyDashboardProps {
+  /** 选中的年份 */
+  yearFilter: string;
   /** 选中的月份 */
   selectedMonth: string;
   /** 设置选中月份 */
   onMonthChange: (month: string) => void;
 }
 
-export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashboardProps) {
+export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: MonthlyDashboardProps) {
   const categorySummaryData = useStatisticsStore((s) => s.categorySummary);
   const categoryTrendData = useStatisticsStore((s) => s.categoryTrend);
   const materialStatistics = useStatisticsStore((s) => s.materialStatistics);
 
+  // 仅统计当前选中年份的数据
+  const trendInYear = categoryTrendData.filter(d => d.month.startsWith(yearFilter));
+
   // 动态计算年度总数量和总金额
-  const yearTotal = categorySummaryData.reduce((sum, c) => sum + c.value, 0);
+  const yearTotal = trendInYear.reduce((sum, d) => sum + (d.total || 0), 0);
   const yearAmount = categorySummaryData.reduce((sum, c) => sum + c.amount, 0);
-  // 根据选中的月份计算当月总计
-  const monthTotal = selectedMonth !== 'all'
-    ? categoryTrendData.find(d => d.month === selectedMonth)?.total || 0
+  // 根据选中的月份计算当月总计（仅在选中月份属于当前年份时计算）
+  const monthTotal = selectedMonth !== 'all' && selectedMonth.startsWith(yearFilter)
+    ? trendInYear.find(d => d.month === selectedMonth)?.total || 0
     : yearTotal;
 
   // 动态年份和月份列表
-  const currentYear = new Date().getFullYear();
+  const currentYear = Number(yearFilter) || new Date().getFullYear();
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const m = String(i + 1).padStart(2, '0');
     return { value: `${currentYear}-${m}`, label: `${i + 1}月` };
@@ -118,7 +123,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
         {selectedMonth === 'all' && (
           <div className="h-[480px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={categoryTrendData}>
+              <ComposedChart data={trendInYear}>
                 <defs>
                   <linearGradient id="grad-production" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#06B6D4"/><stop offset="100%" stopColor="#0891B2" stopOpacity={0.7}/>
@@ -148,7 +153,7 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
                   tickFormatter={(v) => v.replace(/^\d{4}-/, '')+'月'}
                   tick={{ fontSize: 11, fill: '#64748B' }}
                 />
-                <YAxis tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, Math.ceil(Math.max(...categoryTrendData.map(d => d.total)) * 1.2 / 100) * 100]} />
+                <YAxis tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, Math.ceil(Math.max(...trendInYear.map(d => d.total)) * 1.2 / 100) * 100]} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(255,255,255,0.9)',
