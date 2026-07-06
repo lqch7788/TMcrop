@@ -105,24 +105,6 @@ export function EditModal({
         </Select>
       </div>
       <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">库存地点</Label>
-        <Select
-          value={editForm.warehouseLocation || 'none'}
-          onValueChange={(val) => onFormChange({ ...editForm, warehouseLocation: val === 'none' ? '' : val })}
-        >
-          <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <SelectValue placeholder="请选择" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="仓库A区">仓库A区</SelectItem>
-            <SelectItem value="仓库B区">仓库B区</SelectItem>
-            <SelectItem value="仓库C区">仓库C区</SelectItem>
-            <SelectItem value="仓库D区">仓库D区</SelectItem>
-            <SelectItem value="仓库E区">仓库E区</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">种植区域/用途</Label>
         <Input
           type="text"
@@ -175,7 +157,6 @@ export function EditModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
@@ -204,7 +185,6 @@ export function EditModal({
                         onMaterialChange(idx, 'unit', m.unit);
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
-                        onMaterialChange(idx, 'warehousePosition', m.location);
                       }}
                       placeholder="输入物料名称搜索"
                       className="w-full"
@@ -260,14 +240,6 @@ export function EditModal({
                   </td>
                   <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50">
                     {subtotal.toFixed(2)}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="text"
-                      value={material.warehousePosition || ''}
-                      onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
                   </td>
                   <td className="px-2 py-2">
                     <Input
@@ -441,24 +413,6 @@ export function AddModal({
         </Select>
       </div>
       <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">库存地点</Label>
-        <Select
-          value={addForm.warehouseLocation || 'none'}
-          onValueChange={(val) => onFormChange({ ...addForm, warehouseLocation: val === 'none' ? '' : val })}
-        >
-          <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <SelectValue placeholder="请选择" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="仓库A区">仓库A区</SelectItem>
-            <SelectItem value="仓库B区">仓库B区</SelectItem>
-            <SelectItem value="仓库C区">仓库C区</SelectItem>
-            <SelectItem value="仓库D区">仓库D区</SelectItem>
-            <SelectItem value="仓库E区">仓库E区</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">种植区域/用途</Label>
         <Input
           type="text"
@@ -511,7 +465,6 @@ export function AddModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
@@ -540,7 +493,6 @@ export function AddModal({
                         onMaterialChange(idx, 'unit', m.unit);
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
-                        onMaterialChange(idx, 'warehousePosition', m.location);
                       }}
                       placeholder="输入物料名称搜索"
                       className="w-full"
@@ -596,14 +548,6 @@ export function AddModal({
                   </td>
                   <td className="px-2 py-2 text-sm text-emerald-700 bg-gray-50 font-medium">
                     ¥{subtotal.toFixed(2)}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="text"
-                      value={material.warehousePosition || ''}
-                      onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
                   </td>
                   <td className="px-2 py-2">
                     <Input
