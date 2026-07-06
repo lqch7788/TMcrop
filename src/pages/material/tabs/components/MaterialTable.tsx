@@ -87,23 +87,15 @@ export function MaterialTable({
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">物料编号</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">物料名称</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">分类</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">规格型号</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">条形码</th>
               <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">单位</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">批次号</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">生产日期</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">有效期至</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">领料部门</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">用途/区域</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">领料人</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">领料时间</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">领料次数</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总数量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">实际数量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总金额(元)</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">主要仓库</th>
               {!exportMode && (
                 <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               )}
@@ -125,23 +117,15 @@ export function MaterialTable({
                   <td className="px-3 py-3 text-sm font-mono text-blue-600 whitespace-nowrap">{item.materialCode}</td>
                   <td className="px-3 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{item.materialName}</td>
                   <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.category}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.spec}</td>
-                  <td className="px-3 py-3 text-sm font-mono text-gray-500 whitespace-nowrap">{item.barcode}</td>
                   <td className="px-3 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{item.unit}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.supplier}</td>
-                  <td className="px-3 py-3 text-sm font-mono text-gray-500 whitespace-nowrap">{item.batchCode}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionDate}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expiryDate}</td>
                   <td className="px-3 py-3 text-sm font-mono text-cyan-600 whitespace-nowrap">{item.productionPlanBatchCode}</td>
                   <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.requisitionDepartment}</td>
                   <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.usageArea}</td>
                   <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.requisitioner}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.requisitionTime}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-blue-600 whitespace-nowrap">{item.requisitionCount}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.totalQuantity.toLocaleString()}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.actualQuantity.toLocaleString()}</td>
                   <td className="px-3 py-3 text-sm text-right font-bold text-emerald-600 whitespace-nowrap">¥{item.totalAmount.toLocaleString()}</td>
-                  <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{item.mainWarehouse}</td>
                   {!exportMode && (
                     <td className="px-3 py-3 text-center whitespace-nowrap">
                       <Button

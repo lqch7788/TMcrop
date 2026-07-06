@@ -51,7 +51,7 @@ export function StatCards({ data }: StatCardsProps) {
         </div>
       </div>
 
-      {/* 卡片4: 差异率 */}
+      {/* 卡片4: 出库/申领偏差 */}
       <div className={`bg-gradient-to-br rounded-lg p-3 border ${
         data.avgDifferenceRate < 0
           ? 'from-green-50 to-green-100/50 border-green-200/50'
@@ -64,7 +64,7 @@ export function StatCards({ data }: StatCardsProps) {
             <TrendingDown className={`w-4 h-4 text-white ${data.avgDifferenceRate >= 0 ? 'transform rotate-180' : ''}`} />
           </div>
           <div>
-            <div className={`text-xs ${data.avgDifferenceRate < 0 ? 'text-green-600/70' : 'text-red-600/70'}`}>差异率</div>
+            <div className={`text-xs ${data.avgDifferenceRate < 0 ? 'text-green-600/70' : 'text-red-600/70'}`}>出库/申领偏差</div>
             <div className={`text-xl font-bold ${data.avgDifferenceRate < 0 ? 'text-green-700' : 'text-red-700'}`}>
               {data.avgDifferenceRate.toFixed(1)}%
             </div>

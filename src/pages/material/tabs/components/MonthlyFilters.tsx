@@ -87,7 +87,7 @@ export function MonthlyFilters({
         <Button
           variant="warning"
           onClick={() => {
-            onYearChange('2025');
+            onYearChange(String(new Date().getFullYear()));
             onMonthChange('all');
             onExpandedMonthsChange(new Set());
             onPageChange(1);
