@@ -6,7 +6,7 @@
  * 2026-07-05: "调入种植" Tab 改名为 "使用记录"（更准确反映被育苗/种植使用两种场景）
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package } from 'lucide-react';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
@@ -408,6 +408,9 @@ interface InboundRecord {
   cropName?: string;
   varietyName?: string;
   quantity: number;
+  // 2026-07-06：入库记录的「已退数量」（退库时只 UPDATE 此字段，不新增行）
+  // 入库记录 Tab 现在顶部有汇总显示已退/可退，本字段也参与计算
+  returnedQuantity?: number;
   unit?: string;
   unitPrice?: number;
   totalAmount?: number;
@@ -432,6 +435,18 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
       .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
       .finally(() => setLoading(false))
   }, [seedSourceId])
+
+  // 2026-07-06：顶部统计汇总（原始/已退/可退 + 单位），让用户一眼看到退库累计
+  // ⚠️ 必须在所有 early return 之前调用 — React hooks 调用次数必须保持一致
+  // 之前放在 records.length===0 之后导致 "Rendered more hooks than during the previous render" 报错
+  const summary = useMemo(() => {
+    const totalOriginal = records.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const totalReturned = records.reduce((s, r) => s + (Number(r.returnedQuantity) || 0), 0);
+    const totalReturnable = totalOriginal - totalReturned;
+    // 取所有行的单位（通常一致，取第一个非空）
+    const unit = records.find(r => r.unit)?.unit || '';
+    return { totalOriginal, totalReturned, totalReturnable, unit, count: records.length };
+  }, [records]);
 
   if (loading) {
     return <div className="text-center py-8 text-gray-500">加载中…</div>
@@ -468,7 +483,7 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
           onClick={() => {
-            const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '数量', '单价', '总金额', '供应商', '操作员', '备注'];
+            const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '原始数量', '已退数量', '可退数量', '单价', '总金额', '供应商', '操作员', '备注'];
             const data = records.map(r => [
               r.recordDate || '',
               SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '',
@@ -477,6 +492,8 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
               r.varietyName || '',
               r.warehouseName || '',
               r.quantity ?? 0,
+              r.returnedQuantity ?? 0,
+              (r.quantity || 0) - (r.returnedQuantity || 0),
               r.unitPrice ?? 0,
               r.totalAmount ?? 0,
               r.supplierName || '',
@@ -495,6 +512,35 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
           导出 Excel
         </Button>
       </div>
+      {/* 顶部汇总条 — 让用户一眼看到退库累计（无需切换 Tab） */}
+      <div className="grid grid-cols-4 gap-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <div className="text-xs text-amber-700">入库条数</div>
+          <div className="text-lg font-semibold text-amber-900">{summary.count} <span className="text-xs font-normal">条</span></div>
+        </div>
+        <div>
+          <div className="text-xs text-amber-700">原始数量</div>
+          <div className="text-lg font-semibold text-amber-900">
+            {summary.totalOriginal.toLocaleString()} <span className="text-xs font-normal">{summary.unit}</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-amber-700">已退数量</div>
+          <div className="text-lg font-semibold text-amber-900">
+            {summary.totalReturned > 0 ? (
+              <span className="text-red-600">{summary.totalReturned.toLocaleString()} <span className="text-xs font-normal">{summary.unit}</span></span>
+            ) : (
+              <span className="text-gray-400 text-sm">—</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-amber-700">可退数量</div>
+          <div className="text-lg font-semibold text-amber-900">
+            {summary.totalReturnable.toLocaleString()} <span className="text-xs font-normal">{summary.unit}</span>
+          </div>
+        </div>
+      </div>
       <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
         <table className="w-full text-sm">
           <thead className="bg-blue-500 text-white sticky top-0">
@@ -505,7 +551,9 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
               <th className="px-2 py-2 text-left">作物</th>
               <th className="px-2 py-2 text-left">品种</th>
               <th className="px-2 py-2 text-left">仓库</th>
-              <th className="px-2 py-2 text-right">数量</th>
+              <th className="px-2 py-2 text-right">原始数量</th>
+              <th className="px-2 py-2 text-right">已退数量</th>
+              <th className="px-2 py-2 text-right">可退数量</th>
               <th className="px-2 py-2 text-right">单价</th>
               <th className="px-2 py-2 text-right">总金额</th>
               <th className="px-2 py-2 text-left">供应商</th>
@@ -514,33 +562,48 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
             </tr>
           </thead>
           <tbody>
-            {records.map((r) => (
-              <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-2 py-1.5">{r.recordDate || '-'}</td>
-                <td className="px-2 py-1.5">
-                  <span className="px-1.5 py-0.5 bg-cyan-50 text-cyan-700 rounded text-xs">
-                    {SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '-'}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5">
-                  <code className="text-xs">{r.id || '-'}</code>
-                </td>
-                <td className="px-2 py-1.5">{r.cropName || '-'}</td>
-                <td className="px-2 py-1.5">{r.varietyName || '-'}</td>
-                <td className="px-2 py-1.5">{r.warehouseName || '-'}</td>
-                <td className="px-2 py-1.5 text-right font-medium">{(r.quantity || 0).toLocaleString()}</td>
-                <td className="px-2 py-1.5 text-right">{(r.unitPrice || 0).toFixed(2)}</td>
-                <td className="px-2 py-1.5 text-right">{(r.totalAmount || 0).toFixed(2)}</td>
-                <td className="px-2 py-1.5">{r.supplierName || '-'}</td>
-                <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
-                <td
-                  className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
-                  title={r.notes || ''}
-                >
-                  {r.notes || '-'}
-                </td>
-              </tr>
-            ))}
+            {records.map((r) => {
+              const returnable = (r.quantity || 0) - (r.returnedQuantity || 0);
+              return (
+                <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-2 py-1.5">{r.recordDate || '-'}</td>
+                  <td className="px-2 py-1.5">
+                    <span className="px-1.5 py-0.5 bg-cyan-50 text-cyan-700 rounded text-xs">
+                      {SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '-'}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <code className="text-xs">{r.id || '-'}</code>
+                  </td>
+                  <td className="px-2 py-1.5">{r.cropName || '-'}</td>
+                  <td className="px-2 py-1.5">{r.varietyName || '-'}</td>
+                  <td className="px-2 py-1.5">{r.warehouseName || '-'}</td>
+                  <td className="px-2 py-1.5 text-right font-medium">{(r.quantity || 0).toLocaleString()}</td>
+                  <td className="px-2 py-1.5 text-right">
+                    {(r.returnedQuantity || 0) > 0 ? (
+                      <span className="text-amber-600 font-medium">{(r.returnedQuantity || 0).toLocaleString()}</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    <span className={returnable > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                      {returnable.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-right">{(r.unitPrice || 0).toFixed(2)}</td>
+                  <td className="px-2 py-1.5 text-right">{(r.totalAmount || 0).toFixed(2)}</td>
+                  <td className="px-2 py-1.5">{r.supplierName || '-'}</td>
+                  <td className="px-2 py-1.5">{r.operatorName || '-'}</td>
+                  <td
+                    className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]"
+                    title={r.notes || ''}
+                  >
+                    {r.notes || '-'}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

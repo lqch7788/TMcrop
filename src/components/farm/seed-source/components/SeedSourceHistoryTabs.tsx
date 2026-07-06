@@ -91,7 +91,17 @@ export function SeedSourceHistoryTabs({ seedSourceId }: SeedSourceHistoryTabsPro
                 { key: 'sourceCode', label: '来源编码' },
                 { key: 'sourceModule', label: '来源模块' },
                 { key: 'sourceType', label: '类型', render: (r) => TYPE_LABELS[r.sourceType] || r.sourceType },
-                { key: 'quantity', label: '数量', render: (r) => `${r.quantity ?? ''} ${r.unit ?? ''}` },
+                { key: 'quantity', label: '原始数量', render: (r) => `${r.quantity ?? ''} ${r.unit ?? ''}` },
+                // 2026-07-06：新增「已退数量」列，让用户能看到退库操作对原始流水的影响
+                { key: 'returnedQuantity', label: '已退数量', render: (r) => {
+                    const ret = Number(r.returnedQuantity ?? 0);
+                    const qty = Number(r.quantity ?? 0);
+                    if (ret > 0) {
+                      return <span className="text-amber-600 font-medium">{ret} {r.unit ?? ''}</span>;
+                    }
+                    return <span className="text-gray-400">—</span>;
+                  }
+                },
                 { key: 'warehouseName', label: '仓库' },
                 { key: 'operatorName', label: '操作员' },
               ]}
