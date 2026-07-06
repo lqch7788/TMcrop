@@ -5,7 +5,7 @@
  * 基于 InventoryInboundModal 模式扩展，承载原采收入库页 AddModal 全部 18 字段：
  * - harvestDate, greenhouseIds[], batchCode, harvesterIds[], auditor, remarks
  * - isSupplementary + supplementaryReason
- * - unitPrice, unit, warehouseId
+ * - unit, warehouseId (2026-07-06：单价字段已删除)
  * - products[] (种源/育苗 lock 1 条，种植 1..N)
  *
  * 弹窗 → submitUnifiedInbound → POST /api/inventory/inbound-from-source
@@ -152,7 +152,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [remarks, setRemarks] = useState<string>('')
   const [isSupplementary, setIsSupplementary] = useState<boolean>(false)
   const [supplementaryReason, setSupplementaryReason] = useState<string>('')
-  const [unitPrice, setUnitPrice] = useState<number | string>(0)
+  // 2026-07-06：删除单价字段（用户需求），后端 unit_price 默认为 0
   const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
   // 2026-06-19: 种源形态（仅种源行入库必填）— 2026-06-30 Bug 21 删：用户选 B，
   //   改为统一从产品明细 sourceForm（= inventory_stock.source_form）读形态
@@ -229,7 +229,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       // 2026-07-03：异常结束的补录：默认勾选且不能取消；正常结束保持 false
       setIsSupplementary(isSupplementaryForced ? true : false)
       setSupplementaryReason('')
-      setUnitPrice(0)
       setUnit(sourceRecord.unit || '克')
       setProducts([
         {
@@ -369,7 +368,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       // 2026-07-03：异常结束的补录强制传 isSupplementary=true
       isSupplementary: (isSupplementaryForced || isSupplementary) || undefined,
       supplementaryReason: (isSupplementaryForced || isSupplementary) ? supplementaryReason : undefined,
-      unitPrice: Number(unitPrice) || 0,
       unit,
       warehouseId,
       warehouseName: warehouseName || undefined,
@@ -476,7 +474,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // 2026-07-01: "产物名" → "作物名称"，"品种" → "作物品种"（与入库弹窗 label 一致）
   const EXCEL_HEADERS = [
     '采收日期', '入库单号', '来源编码', '采收形态', '产物序号', '作物编码', '作物名称',
-    '作物品种', '采收数量', '单位', '品质', '采收形态(产物)', '单价(元)',
+    '作物品种', '采收数量', '单位', '品质', '采收形态(产物)',
     '仓库', '采收员', '操作员', '补录', '补录原因', '备注', '创建时间',
   ] as const
 
@@ -523,7 +521,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       '单位': p.unit || '',
       '品质': gradeLabel(p.grade),  // 2026-07-01: 品质英→中
       '采收形态(产物)': p.sourceForm || p.productForm || '',
-      '单价(元)': r.unitPrice ?? '',
       '仓库': r.warehouseName || r.warehouseId || '',
       '采收员': harvesterNamesStr(r),
       '操作员': r.operator || r.operatorName || r.createBy || '',
@@ -629,8 +626,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </div>
         )}
 
-        {/* 基础字段单行布局：5 个字段（采收日期 / 目标仓库 / 单价 / 采收员 / 操作员）同行展示。
-            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 12。 */}
+        {/* 基础字段单行布局：4 个字段（采收日期 / 目标仓库 / 采收员 / 操作员）同行展示。
+            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 10。 */}
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-2">
             <FormField label="采收日期" required>
@@ -659,18 +656,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                   ))}
                 </SelectContent>
               </Select>
-            </FormField>
-          </div>
-          <div className="col-span-2">
-            <FormField label="单价（元）">
-              <NumberInput
-                value={unitPrice}
-                onChange={setUnitPrice}
-                min={0}
-                max={1000000}
-                step={0.01}
-                className={deepInputClass}
-              />
             </FormField>
           </div>
           <div className="col-span-4">

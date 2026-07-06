@@ -129,7 +129,9 @@ function getSubTypeLabel(sub: string | undefined): string {
 }
 
 export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: HarvestRecordModalProps) {
-  const [destination, setDestination] = useState<EndType | null>(null)
+  // 2026-07-06：去向默认值改为「采收入库」(harvest)，原为 null（用户手动选择）
+  // 理由：种植行操作列的"采收与结束"入口进入此弹窗，采收入库是最常见去向
+  const [destination, setDestination] = useState<EndType | null>('harvest')
   // 2026-07-03：删除错误信息（固定在弹窗内显示，不用 showAlert/toast 一闪而过）
   const [deleteError, setDeleteError] = useState<{
     message: string
@@ -149,12 +151,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [sourceForm, setSourceForm] = useState<string>('')
 
   // ============ 2026-06-19: 采收入库字段（参照行级采收入库弹窗 UnifiedRowHarvestInboundModal）============
-  // 字段集与行级"采收入库"图标弹窗一致：操作员/采收员多选/单价/产品明细(多产物) + 复用上方 6 字段
+  // 字段集与行级"采收入库"图标弹窗一致：操作员/采收员多选/产品明细(多产物) + 复用上方 6 字段（2026-07-06：单价字段已删除）
   const [operator, setOperator] = useState<string>('')               // 操作员
   const [harvesterIds, setHarvesterIds] = useState<string[]>([])     // 采收人员 ID
   const [harvesterNames, setHarvesterNames] = useState<string[]>([]) // 采收人员姓名
   const [harvesterPopoverOpen, setHarvesterPopoverOpen] = useState(false)
-  const [unitPrice, setUnitPrice] = useState<number | string>(0)     // 单价（元/单位）
+  // 2026-07-06：删除单价字段（用户需求：去除单价），后端 unit_price 默认为 0
   // 产品明细（多产物表，种植行允许多条：果实/种子/枝条/种苗等）
   const [products, setProducts] = useState<InboundProduct[]>([
     {
@@ -257,7 +259,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const disposeOverLimit = destination === 'dispose' && Number(quantity) > remainingDispose
 
   const resetForm = () => {
-    setDestination(null)
+    // 2026-07-06：与初始默认值保持一致，重置时仍回到「采收入库」
+    setDestination('harvest')
     setSubType('cutting')
     setQuantity(0)
     setWarehouseId('')
@@ -265,7 +268,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     // 2026-06-19: 采收入库字段重置
     setHarvesterIds([])
     setHarvesterNames([])
-    setUnitPrice(0)
     setProducts([{
       cropCode: record.cropCode || '',
       // 同上：交换品种/作物品种绑定（数据库语义与字段名反）
@@ -396,7 +398,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           harvesterNames,
           operator: operator || currentUser?.realName || 'system',
           remarks: notes || undefined,
-          unitPrice: Number(unitPrice) || 0,
           unit,
           warehouseId,
           warehouseName: warehouse?.name || warehouse?.warehouseName,
@@ -552,7 +553,13 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`采收 - ${record.plantCode}`}
+      // 2026-07-06：标题加上作物名+品种，方便用户选择"种植自留种"等去向时确认作物
+      // 字段语义（基于 schema 注释）：
+      //   cropName: 作物名称（最细化，如"满天星"、"红富士"）
+      //   cropVariety: 作物品种（上一级品种名）
+      // 注：record.cropName/cropVariety 在数据库里存在"字段名与值语义反"的旧 bug（见下方入库代码 swap），
+      //     这里直接显示两个字段以提供完整信息
+      title={`采收 - ${record.plantCode}（${record.cropName || ''} · ${record.cropVariety || ''}）`}
       size="xxxl"
       showFooter={true}
       onSubmit={handleAdd}
@@ -590,7 +597,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 // 2026-07-01 P0-3 修复：destination 切换时重置 harvest 专属字段
                 // 原因：避免上次填写的 sourceForm/products 残留到下次提交
                 setSourceForm('');
-                setUnitPrice(0);
               }}>
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择" />
@@ -823,7 +829,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             保证采收入库可保存到作物库存（用户核心诉求） */}
         {destination === 'harvest' && (
           <div className="space-y-3">
-            {/* 产品明细（单条锁死，种植行单一作物）— 列顺序与独立采收入库页面 AddModal 一致：作物编码/品种/作物品种/采收量/单位/品质/单价/备注
+            {/* 产品明细（单条锁死，种植行单一作物）— 列顺序与独立采收入库页面 AddModal 一致：作物编码/品种/作物品种/采收量/单位/品质/备注（2026-07-06：单价字段已删除）
                 顶部基础字段已选"采收形态"，此处不重复该列；不显示添加/删除按钮（单条固定） */}
             <div>
               <div className="space-y-2">
@@ -902,19 +908,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                           </SelectContent>
                         </Select>
                       </div>
-                      {/* 7. 单价（元/单位） */}
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">单价（元）</div>
-                        <NumberInput
-                          value={unitPrice}
-                          onChange={setUnitPrice}
-                          min={0}
-                          step={0.01}
-                          className={deepInputClass}
-                          placeholder="0"
-                        />
-                      </div>
-                      {/* 8. 备注 */}
+                      {/* 2026-07-06：单价字段已删除（用户需求）*/}
+                      {/* 7. 备注 */}
                       <div>
                         <div className="text-xs text-gray-500 mb-1">备注</div>
                         <Input
