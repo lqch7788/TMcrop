@@ -145,6 +145,7 @@ export function getInboundRecordById(id: number): any | null {
   const db = getDatabase();
   const stmt = db.prepare('SELECT * FROM inbound_records WHERE id = ?');
   stmt.bind([id]);
+  if (!stmt.step()) { stmt.free(); return null; }
   const item = stmt.getAsObject();
   stmt.free();
   return Object.keys(item).length > 0 ? item : null;
