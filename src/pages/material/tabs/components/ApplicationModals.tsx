@@ -74,7 +74,7 @@ export function EditModal({
           type="date"
           value={editForm.date}
           onChange={(e) => onFormChange({ ...editForm, date: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
       <div>
@@ -91,7 +91,7 @@ export function EditModal({
           value={editForm.department || 'none'}
           onValueChange={(val) => onFormChange({ ...editForm, department: val === 'none' ? '' : val })}
         >
-          <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <SelectValue placeholder="请选择部门" />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +111,7 @@ export function EditModal({
           value={editForm.plantArea}
           onChange={(e) => onFormChange({ ...editForm, plantArea: e.target.value })}
           placeholder="如：1号棚-叶菜区"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
       <div>
@@ -128,7 +128,7 @@ export function EditModal({
           type="text"
           value={editForm.productionBatchCode}
           onChange={(e) => onFormChange({ ...editForm, productionBatchCode: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
     </div>
@@ -145,7 +145,7 @@ export function EditModal({
         </Button>
       </div>
       {editForm.materials.length > 0 ? (
-        <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+        <table className="w-full border border-gray-400 rounded-lg overflow-hidden">
           <thead className="bg-emerald-100">
             <tr>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
@@ -172,7 +172,7 @@ export function EditModal({
                       type="text"
                       value={material.materialCode}
                       onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -195,7 +195,7 @@ export function EditModal({
                       type="text"
                       value={material.batchNo || ''}
                       onChange={(e) => onMaterialChange(idx, 'batchNo', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -203,7 +203,7 @@ export function EditModal({
                       type="text"
                       value={material.spec}
                       onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -211,7 +211,7 @@ export function EditModal({
                       type="text"
                       value={material.unit}
                       onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -219,7 +219,7 @@ export function EditModal({
                       type="number"
                       value={material.requestedQuantity}
                       onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                      className={`w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
+                      className={`w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -227,7 +227,7 @@ export function EditModal({
                       type="number"
                       value={material.stockQuantity || ''}
                       onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -235,7 +235,7 @@ export function EditModal({
                       type="number"
                       value={material.unitPrice || ''}
                       onChange={(e) => onMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50">
@@ -246,7 +246,7 @@ export function EditModal({
                       type="text"
                       value={material.remark || ''}
                       onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -264,7 +264,7 @@ export function EditModal({
           </tbody>
         </table>
       ) : (
-        <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
+        <div className="text-sm text-gray-500 italic border border-gray-400 rounded-lg p-4 text-center">
           暂无物料明细，请点击"添加物料"按钮添加
         </div>
       )}
@@ -369,7 +369,7 @@ export function AddModal({
             value={addForm.code}
             onChange={(e) => onFormChange({ ...addForm, code: e.target.value })}
             placeholder="系统自动生成"
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Button variant="secondary" onClick={onGenerateCode}>
             <Wand2 className="w-4 h-4" /> 生成
@@ -382,7 +382,7 @@ export function AddModal({
           type="date"
           value={addForm.date}
           onChange={(e) => onFormChange({ ...addForm, date: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
       <div>
@@ -399,7 +399,7 @@ export function AddModal({
           value={addForm.department || 'none'}
           onValueChange={(val) => onFormChange({ ...addForm, department: val === 'none' ? '' : val })}
         >
-          <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <SelectValue placeholder="请选择部门" />
           </SelectTrigger>
           <SelectContent>
@@ -419,7 +419,7 @@ export function AddModal({
           value={addForm.plantArea}
           onChange={(e) => onFormChange({ ...addForm, plantArea: e.target.value })}
           placeholder="如：1号棚-叶菜区"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
       <div>
@@ -436,7 +436,7 @@ export function AddModal({
           type="text"
           value={addForm.productionBatchCode}
           onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
     </div>
@@ -453,7 +453,7 @@ export function AddModal({
         </Button>
       </div>
       {addForm.materials.length > 0 ? (
-        <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+        <table className="w-full border border-gray-400 rounded-lg overflow-hidden">
           <thead className="bg-emerald-100">
             <tr>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
@@ -480,7 +480,7 @@ export function AddModal({
                       type="text"
                       value={material.materialCode}
                       onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -503,7 +503,7 @@ export function AddModal({
                       type="text"
                       value={material.batchNo || ''}
                       onChange={(e) => onMaterialChange(idx, 'batchNo', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -511,7 +511,7 @@ export function AddModal({
                       type="text"
                       value={material.spec}
                       onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -519,7 +519,7 @@ export function AddModal({
                       type="text"
                       value={material.unit}
                       onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -527,7 +527,7 @@ export function AddModal({
                       type="number"
                       value={material.requestedQuantity}
                       onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                      className={`w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
+                      className={`w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -535,7 +535,7 @@ export function AddModal({
                       type="number"
                       value={material.stockQuantity || ''}
                       onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -543,7 +543,7 @@ export function AddModal({
                       type="number"
                       value={material.unitPrice || ''}
                       onChange={(e) => onMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2 text-sm text-emerald-700 bg-gray-50 font-medium">
@@ -554,7 +554,7 @@ export function AddModal({
                       type="text"
                       value={material.remark || ''}
                       onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -572,7 +572,7 @@ export function AddModal({
           </tbody>
         </table>
       ) : (
-        <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
+        <div className="text-sm text-gray-500 italic border border-gray-400 rounded-lg p-4 text-center">
           暂无物料明细，请点击"添加物料"按钮添加
         </div>
       )}
