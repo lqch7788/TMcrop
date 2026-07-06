@@ -61,6 +61,14 @@ export interface InboundFromSourceInput {
   // 2026-06-19: 种源形态（仅种源行入库时必填）— 2026-06-30 Bug 21 删
   // 2026-06-27: 成品形态（仅种植行入库时可选，整株/花朵/果实/种子/块茎 等）
   harvestForm?: string;
+  // 2026-07-06：种源外购入库联动成本字段（仅 stockType=seed && inboundSourceType=external_purchase 时使用）
+  supplierId?: string;
+  supplierName?: string;
+  purchaserIds?: string[];
+  purchaserNames?: string[];
+  purchasePlanId?: string;                  // 关联现有 PR（未传则自动创建外购 PR）
+  purchasePrice?: number;
+  purchaseTotalAmount?: number;
 }
 
 export interface InboundFromSourceResult {
@@ -68,6 +76,9 @@ export interface InboundFromSourceResult {
   harvestCode: string;
   stockIds: string[];
   transactionIds: string[];
+  // 2026-07-06：种源外购入库联动 — 关联/自动创建的采购计划 ID 和物料成本 ID（非外购时为 null）
+  purchasePlanId: string | null;
+  materialCostId: string | null;
 }
 
 /**
@@ -215,6 +226,14 @@ export async function executeInboundFromSource(
       supplementary_reason: input.supplementaryReason || null,
       // 溯源字段（D11 决策）
       source_module: input.sourceModule,
+      // 2026-07-06：种源外购入库联动成本字段（区别于 unit_price "售价"语义）
+      supplier_id: input.supplierId || null,
+      supplier_name: input.supplierName || null,
+      purchaser_ids: input.purchaserIds ? JSON.stringify(input.purchaserIds) : null,
+      purchaser_names: input.purchaserNames ? JSON.stringify(input.purchaserNames) : null,
+      purchase_price: input.purchasePrice || 0,
+      purchase_total_amount: input.purchaseTotalAmount || 0,
+      purchase_plan_id: input.purchasePlanId || null,
       create_by: operator,
       create_time: now,
       update_time: now,
@@ -230,8 +249,11 @@ export async function executeInboundFromSource(
         status, inbound_type, batch_code, products,
         source_module, harvest_form,
         is_supplementary, supplementary_reason,
+        supplier_id, supplier_name,
+        purchaser_ids, purchaser_names,
+        purchase_price, purchase_total_amount, purchase_plan_id,
         create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       harvestRecord.id, harvestRecord.harvest_code, harvestRecord.source_id, harvestRecord.source_name,
       harvestRecord.harvest_date, harvestRecord.greenhouse_id, harvestRecord.greenhouse_name,
@@ -240,6 +262,9 @@ export async function executeInboundFromSource(
       harvestRecord.status, harvestRecord.inbound_type, harvestRecord.batch_code, harvestRecord.products,
       harvestRecord.source_module, harvestRecord.harvest_form || null,
       harvestRecord.is_supplementary, harvestRecord.supplementary_reason,
+      harvestRecord.supplier_id, harvestRecord.supplier_name,
+      harvestRecord.purchaser_ids, harvestRecord.purchaser_names,
+      harvestRecord.purchase_price, harvestRecord.purchase_total_amount, harvestRecord.purchase_plan_id,
       harvestRecord.create_by, harvestRecord.create_time, harvestRecord.update_time,
     ]);
     writtenRecordIds.push(harvestRecordId);
@@ -276,7 +301,11 @@ export async function executeInboundFromSource(
         inbound_date: input.harvestDate,
         quality_grade: product.grade || null,
         grade: product.grade || null,
-        unit_price: input.unitPrice || 0,
+        // 2026-07-06：种源外购入库 — unit_price 用采购价（区别于售价语义），supplier 信息写入
+        unit_price: input.purchasePrice || input.unitPrice || 0,
+        total_amount: input.purchaseTotalAmount || (input.purchasePrice || input.unitPrice || 0) * product.harvestQuantity,
+        supplier_id: input.supplierId || null,
+        supplier_name: input.supplierName || null,
         planting_mode: product.plantingMode || autoPlantingMode,
         greenhouse_name: input.greenhouseNames?.[0] || autoGreenhouseName,
         area_name: autoAreaName,
@@ -293,6 +322,7 @@ export async function executeInboundFromSource(
 
       // 写入 inventory_stock（种源/育苗/种植三入口统一落库）
       // 2026-06-30 Bug 21：列清单删除 propagation_form（统一走产品明细 sourceForm）
+      // 2026-07-06：种源外购入库 — 补 supplier_id/supplier_name/unit_price/total_amount 字段
       db.run(`
         INSERT INTO inventory_stock (
           id, instance_id, stock_type, business_id, business_type, business_code,
@@ -300,12 +330,13 @@ export async function executeInboundFromSource(
           crop_code, crop_name, variety_name,
           current_quantity, available_quantity, frozen_quantity, unit,
           warehouse_id, warehouse_name, inbound_date,
-          quality_grade, grade, unit_price,
+          quality_grade, grade, unit_price, total_amount,
+          supplier_id, supplier_name,
           planting_mode, greenhouse_name,
           product_form, source_form,
           area_name,
           status, version, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         stockRecord.id, stockRecord.instance_id, stockRecord.stock_type,
         stockRecord.business_id, stockRecord.business_type, stockRecord.business_code,
@@ -313,7 +344,8 @@ export async function executeInboundFromSource(
         stockRecord.crop_code, stockRecord.crop_name, stockRecord.variety_name,
         stockRecord.current_quantity, stockRecord.available_quantity, stockRecord.frozen_quantity, stockRecord.unit,
         stockRecord.warehouse_id, stockRecord.warehouse_name, stockRecord.inbound_date,
-        stockRecord.quality_grade, stockRecord.grade, stockRecord.unit_price,
+        stockRecord.quality_grade, stockRecord.grade, stockRecord.unit_price, stockRecord.total_amount,
+        stockRecord.supplier_id, stockRecord.supplier_name,
         stockRecord.planting_mode, stockRecord.greenhouse_name,
         stockRecord.product_form, stockRecord.source_form,
         stockRecord.area_name,
@@ -323,23 +355,28 @@ export async function executeInboundFromSource(
 
       // 步骤 3：写 inventory_inbound_records
       const recordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenRecordIds.length}`;
+      // 2026-07-06：种源外购入库 — unit_price/total_amount 用采购价；supplier_id/supplier_name 写入审计
+      const inboundUnitPrice = input.purchasePrice || input.unitPrice || 0;
+      const inboundTotalAmount = input.purchaseTotalAmount || inboundUnitPrice * product.harvestQuantity;
       db.run(`
         INSERT INTO inventory_inbound_records (
           id, record_type, record_date, source_module, source_id, source_code,
           stock_type, source_type, warehouse_id, warehouse_name,
           crop_code, crop_name, variety_name,
           quantity, unit, unit_price, total_amount, quality_grade,
+          supplier_id, supplier_name,
           business_id, notes, operator_name, create_by, create_time, update_time
-        ) VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        recordId, input.harvestDate,
+        recordId, 'inbound', input.harvestDate,
         input.sourceModule, input.sourceRecordId, input.sourceRecordCode,
         input.stockType, (input as any).inboundSourceType || input.sourceModule,
         input.warehouseId, input.warehouseName || null,
         product.cropCode || null, product.cropName, product.cropVariety || null,
         product.harvestQuantity, product.unit,
-        input.unitPrice || 0, (input.unitPrice || 0) * product.harvestQuantity,
+        inboundUnitPrice, inboundTotalAmount,
         product.grade || null,
+        input.supplierId || null, input.supplierName || null,
         harvestRecordId, product.remarks || input.remarks || null,
         operator, operator, now, now,
       ]);
@@ -354,11 +391,11 @@ export async function executeInboundFromSource(
           balance_before, balance_after, business_id, business_type, business_code,
           operator_id, operator_name, operate_date, remarks,
           create_time
-        ) VALUES (?, ?, ?, ?, 'inbound', ?, 0, ?, ?, 'harvest', ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        txId, transactionId, instanceId, input.stockType,
-        product.harvestQuantity, product.harvestQuantity,
-        harvestRecordId, harvestCode,
+        txId, transactionId, instanceId, input.stockType, 'inbound',
+        product.harvestQuantity, 0, product.harvestQuantity,
+        harvestRecordId, 'harvest', harvestCode,
         operator, operator, input.harvestDate,
         `来源:${
             input.sourceModule === 'seed_source' ? '种源'
@@ -371,6 +408,200 @@ export async function executeInboundFromSource(
       writtenTransactionIds.push(txId);
     }
 
+    // 2026-07-06：种源行级入库 — 回写 seed_sources 的 quantity 和 remaining_quantity
+    // 修复：行级入库与新建种源入库行为不一致。新建直接写 seed_sources，行级入库只写 inventory_stock。
+    // 现在统一：种源入库同时更新 seed_sources 数量。
+    let rolledBackSeedSourceQuantity = false;
+    if (input.sourceModule === 'seed_source') {
+      const totalInboundQty = input.products.reduce((s, p) => s + (p.harvestQuantity || 0), 0);
+      db.run(`
+        UPDATE seed_sources
+        SET quantity = quantity + ?,
+            remaining_quantity = remaining_quantity + ?,
+            update_time = ?
+        WHERE id = ? AND deleted_at IS NULL
+      `, [totalInboundQty, totalInboundQty, now, input.sourceRecordId]);
+      rolledBackSeedSourceQuantity = true;
+    }
+
+    // 2026-07-06：种源外购入库联动成本 — 第 5 步：自动创建/关联 purchase_plans，第 6 步：自动归集 material_costs
+    // 仅 stockType=seed && inboundSourceType=external_purchase 时触发
+    // 5/6 步单独包 try-catch：失败时回滚自身 + 重新抛错让外层 catch 处理 4 表回滚（严格事务）
+    let createdPurchasePlanId: string | null = input.purchasePlanId || null;
+    let createdMaterialCostId: string | null = null;
+    const isSeedExternalPurchase =
+      input.stockType === 'seed' && (input as any).inboundSourceType === 'external_purchase';
+
+    if (isSeedExternalPurchase && input.supplierId && input.purchaseTotalAmount && input.purchaseTotalAmount > 0) {
+      // 保存 5a PR 旧状态，用于回滚（避免 PR 状态永久残留）
+      let oldPRState: { execution_status: string; status: string; related_batch_code: string; total_amount: number } | null = null;
+
+      try {
+        // ==== 第 5 步：处理 purchase_plans（关联现有 / 自动创建外购 PR） ====
+        if (input.purchasePlanId) {
+          // 5a. 关联现有 PR — 先查旧状态用于回滚，再 UPDATE
+          const prStmt = db.prepare(`
+            SELECT execution_status, status, related_batch_code, total_amount
+            FROM purchase_plans WHERE id = ?
+          `);
+          prStmt.bind([input.purchasePlanId]);
+          if (prStmt.step()) {
+            const r = prStmt.getAsObject() as any;
+            oldPRState = {
+              execution_status: r.execution_status || 'pending_execution',
+              status: r.status || 'draft',
+              related_batch_code: r.related_batch_code || '',
+              total_amount: r.total_amount || 0,
+            };
+          }
+          prStmt.free();
+
+          // 执行 UPDATE
+          db.run(`
+            UPDATE purchase_plans
+            SET execution_status = 'completed',
+                status = 'completed',
+                related_batch_code = ?,
+                total_amount = ?,
+                update_time = ?
+            WHERE id = ?
+          `, [input.sourceRecordCode, input.purchaseTotalAmount, now, input.purchasePlanId]);
+        } else {
+          // 5b. 自动创建外购 PR（plan_type='seed_purchase'，区别于生产物资 'production'）
+          const purchasePlanId = `PP-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
+          // 生成 plan_code：PA + YYYYMM + 4位流水号（与现有 PR 单号规则一致）
+          // 加 timestamp 后缀防 UNIQUE 冲突（同一批种源多次入库场景）
+          const monthPattern = `${dateStr.slice(0, 6)}___`;
+          const codeStmt = db.prepare(`
+            SELECT plan_code FROM purchase_plans
+            WHERE plan_code LIKE ? AND LENGTH(plan_code) >= 13
+            ORDER BY plan_code DESC LIMIT 1
+          `);
+          codeStmt.bind([`PA${monthPattern}`]);
+          let maxSerial = 0;
+          if (codeStmt.step()) {
+            const r = codeStmt.getAsObject() as { plan_code: string };
+            const tail = r.plan_code.slice(-4);
+            const parsed = parseInt(tail, 10);
+            if (!isNaN(parsed)) maxSerial = parsed;
+          }
+          codeStmt.free();
+          const seq = String(maxSerial + 1).padStart(4, '0');
+          const tsSuffix = Date.now().toString(36).slice(-3); // 防冲突后缀（36进制时间戳）
+          const planCode = `PA${dateStr.slice(0, 6)}${seq}-${Math.random().toString(36).slice(2, 6)}`;
+          const productName = input.products[0]?.cropName || '种源';
+          const planTitle = `种源采购-${productName}-${input.sourceRecordCode}`;
+          db.run(`
+            INSERT INTO purchase_plans (
+              id, plan_code, plan_title, plan_type,
+              supplier_id, supplier_name,
+              applicant_id, applicant_name, apply_date,
+              total_amount, priority, status, approval_status, execution_status,
+              related_batch_code, create_by, create_time, update_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            purchasePlanId, planCode, planTitle, 'seed_purchase',
+            input.supplierId, input.supplierName || '',
+            input.operator || operator, input.operator || operator, input.harvestDate,
+            input.purchaseTotalAmount, 'medium', 'completed', 'auto_approved', 'completed',
+            input.sourceRecordCode,
+            operator, now, now,
+          ]);
+          createdPurchasePlanId = purchasePlanId;
+
+          // 回填到 harvest_records.purchase_plan_id（之前留 null）
+          db.run('UPDATE harvest_records SET purchase_plan_id = ? WHERE id = ?', [purchasePlanId, harvestRecordId]);
+        }
+
+        // ==== 第 6 步：自动归集 material_costs（去重：按 batch_code+supplier_id+cost_type） ====
+        const dupStmt = db.prepare(`
+          SELECT id FROM material_costs
+          WHERE batch_code = ? AND supplier_id = ? AND cost_type = 'seed'
+          LIMIT 1
+        `);
+        dupStmt.bind([input.sourceRecordCode, input.supplierId]);
+        const existing = dupStmt.step() ? (dupStmt.getAsObject() as any).id : null;
+        dupStmt.free();
+        if (!existing) {
+          // 反推 quantity = purchaseTotalAmount / purchasePrice（避免重复存 quantity）
+          const purchasePrice = input.purchasePrice || 0;
+          const totalQty = purchasePrice > 0
+            ? input.purchaseTotalAmount / purchasePrice
+            : (input.products.reduce((s, p) => s + (p.harvestQuantity || 0), 0));
+          const materialCostId = `MC-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
+          const costCode = `MC${dateStr}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+          const productName = input.products[0]?.cropName || '种源';
+          const productVariety = input.products[0]?.cropVariety || '';
+          const costName = productVariety ? `${productName}-${productVariety}` : productName;
+          const greenhouseName = input.greenhouseNames?.[0] || null;
+          db.run(`
+            INSERT INTO material_costs (
+              id, cost_code, cost_type, cost_name,
+              batch_id, batch_code,
+              greenhouse_name,
+              crop_name, material_name, unit,
+              quantity, unit_price, total_amount,
+              cost_date, supplier_id, supplier_name,
+              create_by, create_time, update_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            materialCostId, costCode, 'seed', costName,
+            input.sourceRecordId, input.sourceRecordCode,
+            greenhouseName,
+            productName, costName, input.unit,
+            totalQty, purchasePrice, input.purchaseTotalAmount,
+            input.harvestDate,
+            input.supplierId, input.supplierName || '',
+            operator, now, now,
+          ]);
+          createdMaterialCostId = materialCostId;
+        }
+      } catch (step56Err) {
+        // ==== 5/6 步失败 — 回滚自身已写入的记录 + 重新抛错让外层 catch 处理 4 表回滚 ====
+        console.error('[executeInboundFromSource] step 5/6 failed, rolling back purchase_plans/material_costs:', step56Err);
+        try {
+          // 回滚 seed_sources 数量（如已回写）
+          if (rolledBackSeedSourceQuantity) {
+            const totalQty = input.products.reduce((s: number, p: any) => s + (p.harvestQuantity || 0), 0);
+            try {
+              db.run(`
+                UPDATE seed_sources
+                SET quantity = MAX(0, quantity - ?),
+                    remaining_quantity = MAX(0, remaining_quantity - ?),
+                    update_time = ?
+                WHERE id = ? AND deleted_at IS NULL
+              `, [totalQty, totalQty, now, input.sourceRecordId]);
+            } catch (_) {}
+          }
+          // 回滚 material_costs（如已写入）
+          if (createdMaterialCostId) {
+            try { db.run('DELETE FROM material_costs WHERE id = ?', [createdMaterialCostId]); } catch (_) {}
+          }
+          // 回滚 harvest_records.purchase_plan_id 回填（无论 PR 是否已创建都尝试清空）
+          try { db.run('UPDATE harvest_records SET purchase_plan_id = NULL WHERE id = ?', [harvestRecordId]); } catch (_) {}
+          // 回滚 purchase_plans
+          if (input.purchasePlanId && oldPRState) {
+            // 5a 场景：恢复旧 PR 状态（防止 PR 永久残留 completed 状态指向已删除的记录）
+            try {
+              db.run(`
+                UPDATE purchase_plans
+                SET execution_status = ?, status = ?, related_batch_code = ?, total_amount = ?, update_time = ?
+                WHERE id = ?
+              `, [oldPRState.execution_status, oldPRState.status, oldPRState.related_batch_code, oldPRState.total_amount, now, input.purchasePlanId]);
+            } catch (_) {}
+          } else if (createdPurchasePlanId && !input.purchasePlanId) {
+            // 5b 场景：删除自动创建的 PR
+            try { db.run('DELETE FROM purchase_plans WHERE id = ?', [createdPurchasePlanId]); } catch (_) {}
+          }
+          saveDatabase();
+        } catch (rollbackErr) {
+          console.error('[executeInboundFromSource] step 5/6 rollback error:', rollbackErr);
+        }
+        // 重新抛错 → 外层 catch 处理 4 表回滚（严格事务）
+        throw step56Err;
+      }
+    }
+
     // 全部成功 — 提交 + 持久化
     saveDatabase();
     return {
@@ -378,11 +609,26 @@ export async function executeInboundFromSource(
       harvestCode,
       stockIds: writtenStockIds,
       transactionIds: writtenTransactionIds,
+      purchasePlanId: createdPurchasePlanId,        // 2026-07-06：外购 PR ID（外购时返回，否则 null）
+      materialCostId: createdMaterialCostId,        // 2026-07-06：物料成本 ID（外购时返回，否则 null）
     };
   } catch (err) {
     // 4 步回滚：反序 DELETE
     console.error('[executeInboundFromSource] failed, rolling back:', err);
     try {
+      // 回滚 seed_sources 数量（如已回写，比 4 步更后执行因此先回滚）
+      if (rolledBackSeedSourceQuantity) {
+        const totalQty = input.products.reduce((s: number, p: any) => s + (p.harvestQuantity || 0), 0);
+        try {
+          db.run(`
+            UPDATE seed_sources
+            SET quantity = MAX(0, quantity - ?),
+                remaining_quantity = MAX(0, remaining_quantity - ?),
+                update_time = ?
+            WHERE id = ? AND deleted_at IS NULL
+          `, [totalQty, totalQty, now, input.sourceRecordId]);
+        } catch (_) {}
+      }
       // 步骤 4 → 3 → 2 → 1 反序
       for (const txId of writtenTransactionIds) {
         try { db.run('DELETE FROM inventory_transaction WHERE id = ?', [txId]); } catch (_) {}

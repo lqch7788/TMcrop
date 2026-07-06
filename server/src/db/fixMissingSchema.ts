@@ -1234,6 +1234,14 @@ export async function fixMissingSchema(): Promise<void> {
     // 2026-07-03：补录标记（异常结束后补录的入库需留痕，弹窗历史表"补录"列依赖）
     { name: 'is_supplementary', sql: 'ALTER TABLE harvest_records ADD COLUMN is_supplementary INTEGER DEFAULT 0' },
     { name: 'supplementary_reason', sql: 'ALTER TABLE harvest_records ADD COLUMN supplementary_reason TEXT' },
+    // 2026-07-06：种源外购入库联动成本（区别于现有 unit_price/total_amount 的"售价"语义，新增"采购价"列）
+    { name: 'purchase_plan_id', sql: 'ALTER TABLE harvest_records ADD COLUMN purchase_plan_id TEXT' },           // 关联采购计划 ID（自动生成或前端传入）
+    { name: 'supplier_id', sql: 'ALTER TABLE harvest_records ADD COLUMN supplier_id TEXT' },                     // 供应商 ID（外购必填）
+    { name: 'supplier_name', sql: 'ALTER TABLE harvest_records ADD COLUMN supplier_name TEXT' },                 // 供应商名称（冗余，便于追溯）
+    { name: 'purchaser_ids', sql: 'ALTER TABLE harvest_records ADD COLUMN purchaser_ids TEXT' },                 // 采购员 ID 列表（JSON 字符串）
+    { name: 'purchaser_names', sql: 'ALTER TABLE harvest_records ADD COLUMN purchaser_names TEXT' },             // 采购员姓名列表（JSON 字符串）
+    { name: 'purchase_price', sql: 'ALTER TABLE harvest_records ADD COLUMN purchase_price REAL DEFAULT 0' },     // 采购单价（区别于 unit_price "售价"）
+    { name: 'purchase_total_amount', sql: 'ALTER TABLE harvest_records ADD COLUMN purchase_total_amount REAL DEFAULT 0' }, // 采购总额 = purchase_price × quantity
   ];
   for (const col of harvestColumnsToAdd) {
     try {

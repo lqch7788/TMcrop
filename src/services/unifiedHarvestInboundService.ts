@@ -57,6 +57,14 @@ export interface UnifiedInboundInput {
    * 由 UnifiedRowHarvestInboundModal 的"成品类型"下拉框传入
    */
   harvestForm?: string
+  // 2026-07-06：种源外购入库联动成本 — 仅种源行（stockType=seed）外购入库（inboundSourceType=external_purchase）时必填
+  supplierId?: string                  // 供应商 ID
+  supplierName?: string                // 供应商名称（冗余，便于追溯）
+  purchaserIds?: string[]              // 采购员 ID 列表
+  purchaserNames?: string[]            // 采购员姓名列表
+  purchasePlanId?: string              // 关联采购计划 ID（可选，未传则后端自动创建外购 PR）
+  purchasePrice?: number               // 采购单价（区别于 unitPrice "售价"语义）
+  purchaseTotalAmount?: number         // 采购总额 = purchasePrice × quantity
 }
 
 export interface UnifiedInboundResult {
@@ -64,6 +72,9 @@ export interface UnifiedInboundResult {
   harvestCode: string
   stockIds: string[]
   transactionIds: string[]
+  // 2026-07-06：种源外购入库联动 — 关联/自动创建的采购计划 ID 和物料成本 ID（非外购时为 null）
+  purchasePlanId?: string | null
+  materialCostId?: string | null
 }
 
 /**

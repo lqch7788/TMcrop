@@ -272,6 +272,16 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
           },
         ],
         operatorName: purchaserNames[0] || 'system',
+        // 2026-07-06：种源外购入库联动成本 — 补传供应商/采购员/采购价给后端
+        // 仅 external_purchase 时传真实值，其他类型传空（后端按需忽略）
+        supplierId: sourceType === 'external_purchase' ? (supplierId || undefined) : undefined,
+        supplierName: sourceType === 'external_purchase' ? (supplierName || undefined) : undefined,
+        purchaserIds: sourceType === 'external_purchase' ? purchaserIds : undefined,
+        purchaserNames: sourceType === 'external_purchase' ? purchaserNames : undefined,
+        purchasePrice: sourceType === 'external_purchase' ? (Number(unitPrice) || 0) : undefined,
+        purchaseTotalAmount: sourceType === 'external_purchase'
+          ? (Number(unitPrice) || 0) * (Number(quantity) || 0)
+          : undefined,
       });
 
       if ((result as any).success === false) {

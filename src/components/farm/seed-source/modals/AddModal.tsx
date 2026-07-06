@@ -102,7 +102,7 @@ export function AddModal({
     cropVariety: '',
     supplierId: '',
     supplierName: '',
-    purchaseDate: '',
+    purchaseDate: todayLocal(),  // 2026-07-06 fix: 默认今天
     quantity: 0,
     unit: '袋',
     unitPrice: 0,
@@ -250,9 +250,8 @@ export function AddModal({
       const d = new Date();
       return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
     };
-    const dateStr = formData.purchaseDate
-      ? formData.purchaseDate.replace(/-/g, '')
-      : todayLocal();
+    // 2026-07-06 fix: fallback 走 todayLocal() 后也要 strip dashes
+    const dateStr = (formData.purchaseDate || todayLocal()).replace(/-/g, '');
     const newCode = await generateSeedCode(dateStr);
     setSeedCode(newCode);
   };
