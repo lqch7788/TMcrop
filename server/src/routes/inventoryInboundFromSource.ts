@@ -72,6 +72,14 @@ const InboundFromSourceSchema = z.object({
   products: z.array(ProductSchema).min(1, { message: '至少需要 1 条产品明细' }),
   operatorName: z.string().optional(),
   // 2026-06-30 Bug 21：删除 propagationForm Zod 字段（统一走产品明细 sourceForm）
+  // 2026-07-06：种源外购入库联动成本字段（仅 stockType=seed && inboundSourceType=external_purchase 时使用）
+  supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
+  purchaserIds: z.array(z.string()).optional(),
+  purchaserNames: z.array(z.string()).optional(),
+  purchasePlanId: z.string().optional(),                                   // 关联现有 PR（未传则后端自动创建外购 PR）
+  purchasePrice: z.number().nonnegative({ message: '采购单价不能为负' }).optional(),
+  purchaseTotalAmount: z.number().nonnegative({ message: '采购总额不能为负' }).optional(),
 });
 
 /**

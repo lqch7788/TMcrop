@@ -73,10 +73,33 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, instance_code, order_id, order_code, crop_category, crop_name, crop_variety,
-            category_code, type_code, sub_code, source_origin, source_description,
-            initial_quantity, current_quantity, planted_quantity, harvested_quantity, status,
-            seed_entry_date, seedling_start_date, planting_date, harvest_date, source_instance_id, create_by } = req.body;
+    // 适配前端 createInstance 的驼峰嵌套结构 { cropInfo, sourceOrigin, initialQuantity, options }
+    const body = req.body || {};
+    const cropInfo = body.cropInfo || {};
+    const options = body.options || {};
+    const crop_category = cropInfo.cropCategory || body.crop_category || '';
+    const crop_name = cropInfo.cropName || body.crop_name || '';
+    const crop_variety = cropInfo.cropVariety || body.crop_variety || '';
+    const source_origin = body.sourceOrigin || body.source_origin || '';
+    const source_description = options.sourceDescription || body.source_description || '';
+    const initial_quantity = body.initialQuantity || body.initial_quantity || 0;
+    const id = body.id || '';
+    const instance_code = body.instanceCode || body.instance_code || '';
+    const order_id = options.orderId || body.order_id || '';
+    const order_code = options.orderCode || body.order_code || '';
+    const source_instance_id = options.sourceInstanceId || body.source_instance_id || null;
+    const create_by = body.createBy || body.create_by || '';
+    const current_quantity = initial_quantity; // 初始数量 = 当前数量
+    const planted_quantity = body.plantedQuantity || body.planted_quantity || 0;
+    const harvested_quantity = body.harvestedQuantity || body.harvested_quantity || 0;
+    const status = body.status || 'seedling';
+    const seed_entry_date = body.seedEntryDate || body.seed_entry_date || null;
+    const seedling_start_date = body.seedlingStartDate || body.seedling_start_date || null;
+    const planting_date = body.plantingDate || body.planting_date || null;
+    const harvest_date = body.harvestDate || body.harvest_date || null;
+    const category_code = cropInfo.categoryCode || body.category_code || '';
+    const type_code = cropInfo.typeCode || body.type_code || '';
+    const sub_code = cropInfo.subCode || body.sub_code || '';
 
     const newId = id || `CI${Date.now()}`;
     const now = new Date().toISOString();

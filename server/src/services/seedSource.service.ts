@@ -152,20 +152,49 @@ export class SeedSourceService {
       );
     }
 
-    // 2026-06-22 修复 8 处查重：POST 前查重 source_code（仅 active，软删可复用）
+    // 2026-06-22: POST 前查重 source_code（仅 active，软删可复用）
+    // 2026-07-06: 冲突时自动重试换号 — 不再抛错阻塞用户
     const db = getDatabase();
-    const dupStmt = db.prepare(`
-      SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
-    `);
-    dupStmt.bind([finalSourceCode]);
-    if (dupStmt.step()) {
+    let sourceCodeToUse = finalSourceCode;
+    const MAX_CODE_RETRIES = 100;
+
+    for (let retry = 0; retry < MAX_CODE_RETRIES; retry++) {
+      // 2026-07-06: UNIQUE 约束不认软删 — 查全部行（含 deleted_at IS NOT NULL）
+      const dupStmt = db.prepare(`
+        SELECT 1 FROM seed_sources WHERE source_code = ? LIMIT 1
+      `);
+      dupStmt.bind([sourceCodeToUse]);
+      const exists = dupStmt.step();
       dupStmt.free();
-      throw new BusinessError(
-        SeedSourceErrorCode.INVALID_DECREASE_COUNT,
-        `编号 ${finalSourceCode} 已存在`,
-      );
+
+      if (!exists) break; // 可用，跳出循环
+
+      // 冲突 → 自动生成下一个序号
+      if (retry === MAX_CODE_RETRIES - 1) {
+        throw new BusinessError(
+          SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+          `无法生成唯一种源批号（已尝试 ${MAX_CODE_RETRIES} 次）`,
+        );
+      }
+
+      // 从当前 code 提取日期 + 重试生成
+      const codeMatch = sourceCodeToUse.match(/^(ZZ\d{8})-(\d{3})$/);
+      if (codeMatch) {
+        const datePart = codeMatch[1];
+        const maxSerial = await this.repository.getTodayMaxSerial(datePart.slice(2)); // 去 ZZ 前缀
+        const nextSerial = maxSerial + 1 + retry;
+        sourceCodeToUse = `${datePart}-${nextSerial.toString().padStart(3, '0')}`;
+      } else {
+        // 非标准格式：直接用 generateCode 重新生成
+        const newCode = await this.generateCode(
+          sourceCodeToUse.replace(/-/g, '').slice(2, 10) || new Date().toISOString().slice(0, 10).replace(/-/g, '')
+        );
+        sourceCodeToUse = newCode || `${sourceCodeToUse}-RETRY${retry}`;
+      }
     }
-    dupStmt.free();
+
+    // 更新 record 使用最终确定的 source_code
+    record.source_code = sourceCodeToUse;
 
     // 返回 repository.create 的完整记录（含 create_time/update_time）
     return await this.repository.create(record);
@@ -311,10 +340,9 @@ export class SeedSourceService {
       // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
       const candidate = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
 
-      // 2026-06-24 修复: 加 deleted_at IS NULL 过滤，避免软删 code 被视为占用
-      // 之前没过滤，导致之前测试失败的 002/003/004（软删）占用了新序号空间
+      // 2026-07-06: UNIQUE 约束不认软删 — 查全部行，软删占位号永久消耗
       const stmt = db.prepare(`
-        SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
+        SELECT 1 FROM seed_sources WHERE source_code = ? LIMIT 1
       `);
       stmt.bind([candidate]);
       const exists = stmt.step();

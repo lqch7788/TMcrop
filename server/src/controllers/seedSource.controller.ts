@@ -141,6 +141,46 @@ export class SeedSourceController {
           created_by: (data as any).create_by || (data as any).createBy || '',
         });
       } catch (e) { console.error('[seedSource] writeFlowLog 失败:', (e as any)?.message || e); }
+      // 2026-07-06: 外购入库 → 补写 inventory_inbound_records（让种源详情历史 tabs 能看到入库记录）
+      try {
+        const sourceOrigin = (data as any).source_origin || (data as any).sourceOrigin || '';
+        const isExternalPurchase = sourceOrigin === 'external_purchase' || sourceOrigin === 'external_purchased';
+        if (isExternalPurchase) {
+          const { getDatabase, saveDatabase } = require('../db');
+          const db = getDatabase();
+          const now = new Date().toISOString();
+          const recordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-0`;
+          const seedCode = (data as any).seed_code || (data as any).seedCode || '';
+          const cropName = (data as any).crop_name || (data as any).cropName || '';
+          const cropVariety = (data as any).crop_variety || (data as any).cropVariety || '';
+          const quantity = (data as any).quantity || 0;
+          const unit = (data as any).unit || '袋';
+          const unitPrice = (data as any).unit_price || (data as any).unitPrice || (data as any).purchase_price || 0;
+          const totalAmount = (data as any).total_amount || (data as any).totalAmount || (unitPrice * quantity);
+          const supplierId = (data as any).supplier_id || (data as any).supplierId || '';
+          const supplierName = (data as any).supplier_name || (data as any).supplierName || '';
+          const operator = (data as any).create_by || (data as any).createBy || 'system';
+          const purchaseDate = (data as any).purchase_date || (data as any).purchaseDate || '';
+          db.run(`
+            INSERT INTO inventory_inbound_records (
+              id, record_type, record_date, source_module, source_id, source_code,
+              stock_type, source_type, warehouse_id, warehouse_name,
+              crop_name, variety_name,
+              quantity, unit, unit_price, total_amount,
+              supplier_id, supplier_name,
+              business_id, notes, operator_name, create_by, create_time, update_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            recordId, 'inbound', purchaseDate, 'seed_source', (result as any)?.id, seedCode,
+            'seed', 'external_purchase', '', '',
+            cropName, cropVariety,
+            quantity, unit, unitPrice, totalAmount,
+            supplierId, supplierName,
+            (result as any)?.id || '', '外购入库-新建种源', operator, operator, now, now,
+          ]);
+          saveDatabase();
+        }
+      } catch (e) { console.error('[seedSource] inventory_inbound_records 写入失败:', (e as any)?.message || e); }
       // 2026-06-26: 写审计日志
       this.writeAuditLog({
         seedSourceId: (result as any)?.id || '',

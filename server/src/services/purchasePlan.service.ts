@@ -28,6 +28,7 @@ export type PurchaseApprovalStatus = typeof PURCHASE_APPROVAL_STATUSES[number];
 /** 采购类型白名单 */
 export const PURCHASE_TYPES = [
   'production', 'urgent', 'routine', 'material', 'safety', 'equipment', 'other',
+  'seed_purchase',  // 2026-07-06：种源采购（种源外购入库自动生成）
 ] as const;
 export type PurchaseType = typeof PURCHASE_TYPES[number];
 
@@ -133,6 +134,7 @@ const PURCHASE_TYPE_TEXT: Record<string, string> = {
   material: '通用物资',
   equipment: '设备采购',
   other: '其他',
+  seed_purchase: '种源采购',  // 2026-07-06：种源外购入库自动生成
 };
 
 /** 允许删除的状态集合（草稿/待审批/已拒绝） */
