@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { ClipboardList, FileText, ClipboardCheck, BarChart3, DollarSign } from 'lucide-react';
+import { ClipboardList, FileText, ClipboardCheck, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui';
-
-// 成本核算Tab组件
-import CostTab from '../components/materialReceiving/tabs/CostTab';
 
 // 领料统计Tab组件
 import StatisticsTab from './material/tabs/StatisticsTab';
@@ -39,7 +36,6 @@ export default function MaterialReceiving() {
             { key: 'application', label: '申请领料', icon: FileText },
             { key: 'execute', label: '领料出库', icon: ClipboardCheck },
             { key: 'statistics', label: '领料统计', icon: BarChart3 },
-            { key: 'cost', label: '成本核算', icon: DollarSign },
           ].map((tab) => (
             <Button
               key={tab.key}
@@ -76,11 +72,6 @@ export default function MaterialReceiving() {
       {/* 领料统计 Tab内容 */}
       <div className={activeTab === 'statistics' ? '' : 'hidden'}>
         <StatisticsTab />
-      </div>
-
-      {/* 成本核算 Tab内容 */}
-      <div className={activeTab === 'cost' ? '' : 'hidden'}>
-        <CostTab />
       </div>
       </div>
     </div>
