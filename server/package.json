@@ -8,6 +8,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/db/seedData.ts",
+    "migrate:seed-inventory-stock": "tsx scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts",
+    "migrate:seed-inventory-stock:dry-run": "tsx scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts --dry-run",
+    "cleanup:seed-source-001-overapply": "tsx scripts/db-migrations/cleanupSeedSource001Overapply.ts",
+    "cleanup:seed-source-001-overapply:dry-run": "tsx scripts/db-migrations/cleanupSeedSource001Overapply.ts --dry-run",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"

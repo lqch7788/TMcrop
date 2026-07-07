@@ -28,6 +28,7 @@ import {
   DatePicker,
   NumberInput,
   Button,
+  Checkbox,
 } from '@/components/ui';
 import { Package, AlertCircle, X, ChevronDown, Sprout } from 'lucide-react';
 import { useWarehouseStore } from '@/stores';
@@ -37,6 +38,8 @@ import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert } from '@/lib/dialogService';
+import { SOURCE_TYPE_MAP } from '@/constants/cropConstants';
+import { SEED_FORM_OPTIONS } from '@/constants/seedFormDict';
 import {
   submitUnifiedInbound,
   type StockType,
@@ -61,18 +64,13 @@ const SOURCE_ORIGIN_OPTIONS = [
   { value: 'self_produced', label: '自产' },
 ];
 
-/** 种源形态（与 inventory_stock.propagation_form 对齐）— 种子的物理形态，独立于种源来源 */
-const PROPAGATION_FORM_OPTIONS = [
-  { value: '种子', label: '种子' },
-  { value: '种苗', label: '种苗' },
-  { value: '实生苗', label: '实生苗' },
-  { value: '扦插苗', label: '扦插苗' },
-  { value: '嫁接苗', label: '嫁接苗' },
-  { value: '组培苗', label: '组培苗' },
-  { value: '分株苗', label: '分株苗' },
-  { value: '种球', label: '种球' },
-  { value: '球根', label: '球根' },
-];
+/** 种源形态（已迁移至 src/constants/seedFormDict.ts — SEED_FORM_OPTIONS，2026-07-07）
+ *  - 旧 PROPAGATION_FORM_OPTIONS 10 项 = 新字典 19 项的子集
+ *  - 保留 `@deprecated` 字面量注释，将来如果再有添加项直接走字典
+ */
+// 2026-07-07：字面量已删除，参见 SEED_FORM_OPTIONS import 即可
+// 保留旧名常量指向字典，让下游 .map 调用不报错
+const PROPAGATION_FORM_OPTIONS = SEED_FORM_OPTIONS;
 
 /** 常用单位 fallback（字典未加载时使用） */
 const FALLBACK_UNITS = ['克', 'kg', '斤', '粒', '株', '枝', '袋', '包', '盒', '箱', '个', '块', '片', '颗'];
@@ -127,6 +125,10 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
   const [remarks, setRemarks] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 2026-07-07：auto-append 复选框 — 默认勾选（用户主诉求：1 步到位）
+  // 勾选时：入库成功后自动调 seedSourceTransferService.appendToExistingSeedSource
+  // 不勾选：先入作物库存池，用户可后续手动「调拨追加」
+  const [autoAppend, setAutoAppend] = useState<boolean>(true);
 
   // ---- Store hooks ----
   const warehouses = useWarehouseStore((s: any) => s.warehouses || []);
@@ -289,7 +291,26 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
         return;
       }
 
-      showAlert('入库成功');
+      // 2026-07-07：auto-append 流程调整
+      // 原设想：submitUnifiedInbound 后再调 appendToExistingSeedSource（库存/档案分层语义）
+      // 发现：inventoryInboundFromSource.service.ts:411-425 已经在入库事务内
+      //       直接 UPDATE seed_sources.quantity += qty（2026-07-06 commit 实现）
+      //       若前端的 auto-append 再 append 一次会导致 quantity × 2 重复叠加 bug
+      // 修复：移除 append 调拨逻辑，auto-append 复选框仅作 UI 提示
+      //       服务端入库时自动同步台账数量，用户体感等价"1 步到位"
+      //
+      // 复选框仍保留默认值，供未来灵活配置（例如：未来支持"仅入库存池不入台账"模式时启用）
+      const qty = Number(quantity) || 0;
+      if (autoAppend) {
+        showAlert(
+          `入库成功 ${qty} ${fixedUnit}，已自动累加到本种源台账的可入库与可用数量`,
+        );
+      } else {
+        showAlert(
+          `入库成功 ${qty} ${fixedUnit}（商品种源池已增加；因「自动累加」未勾选，未联动台账）`,
+        );
+      }
+
       onSuccess?.();
       onClose();
     } catch (e: any) {
@@ -312,21 +333,65 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
       }
       submitText={submitting ? '提交中...' : '确认入库'}
       cancelText="取消"
-      width={760}
+      width={990}
       height={680}
     >
       <div className="space-y-4">
-        {/* 顶部源记录信息（只读蓝色块） */}
+        {/* 2026-07-07：入库后是否自动调拨到本种源台账（默认勾选，1 步到位 UX） */}
+        <label className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer">
+          <Checkbox
+            checked={autoAppend}
+            onCheckedChange={(checked: boolean) => setAutoAppend(checked)}
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-blue-900">
+              入库完成自动调拨到本种源台账
+            </div>
+            <div className="text-xs text-blue-700 mt-0.5">
+              {autoAppend
+                ? `入库后会立即把 ${quantity || 0} ${fixedUnit} 同步累加到「种源台账」的可入库与可用数量`
+                : '仅入商品种源池，不动种源台账 — 后续可手动「调拨追加」选择具体批次'}
+            </div>
+          </div>
+        </label>
+
+        {/* 顶部源记录信息（只读蓝色块）
+            2026-07-07 增强：除 ID/作物名/品种/单位外，新增「种源类型 + 形态」详实信息
+            seedForm 通过 SOURCE_TYPE_MAP 翻译为中文（与种源列表形态列逻辑一致） */}
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-3">
-          <Package className="w-4 h-4 text-emerald-600" />
+          <Package className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <div className="flex-1 text-sm">
             <div className="font-medium text-emerald-900">
               源记录：{sourceRecord.code}
+              {sourceRecord.unit && (
+                <span className="ml-2 text-xs text-emerald-700">单位 {sourceRecord.unit}</span>
+              )}
             </div>
-            <div className="text-xs text-emerald-700">
-              {sourceRecord.cropName || '-'}
-              {sourceRecord.cropVariety ? ` (${sourceRecord.cropVariety})` : ''}
-              {sourceRecord.unit ? ` · 单位 ${sourceRecord.unit}` : ''}
+            <div className="text-xs text-emerald-700 space-x-2 mt-0.5">
+              <span>作物 ID：{sourceRecord.cropCode || '-'}</span>
+              <span>·</span>
+              <span>名称：{sourceRecord.cropName || '-'}</span>
+              {sourceRecord.cropVariety && (
+                <>
+                  <span>·</span>
+                  <span>品种：{sourceRecord.cropVariety}</span>
+                </>
+              )}
+              <span>·</span>
+              <span>
+                形态：
+                {(() => {
+                  // 2026-07-07: 复用 resolveForm 翻译逻辑，避免显示英文
+                  const resolveForm = (): string => {
+                    const sf = sourceRecord.seedForm;
+                    if (sf && SOURCE_TYPE_MAP[sf]) return SOURCE_TYPE_MAP[sf];
+                    const st = sourceRecord.sourceType;
+                    if (st && SOURCE_TYPE_MAP[st]) return SOURCE_TYPE_MAP[st];
+                    return '其他';
+                  };
+                  return resolveForm();
+                })()}
+              </span>
             </div>
           </div>
         </div>
@@ -348,7 +413,9 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
           </div>
         )}
 
-        {/* 基础信息 2 列：日期 + 种源来源 */}
+        {/* 2026-07-07 改造：每行 2 列布局
+            - 第一行：入库日期 + 种源来源
+            - 第二行：种源库 + 种源形态 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="入库日期" required>
             <DatePicker
@@ -358,46 +425,69 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
             />
           </FormField>
           <FormField label="种源来源" required>
-            <Select value={sourceType} onValueChange={setSourceType}>
+            <Select
+              value={sourceType}
+              onValueChange={(v) => {
+                setSourceType(v);
+                setPropagationForm('');
+              }}
+            >
               <SelectTrigger className={deepInputClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {SOURCE_ORIGIN_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FormField>
         </div>
 
-        {/* 种源仓库（自动锁定 seed_storage，UI 显示"种源库"统一称呼） */}
-        <FormField label="种源库" required>
-          <div className={`${deepInputClass} bg-gray-50 flex items-center justify-between`}>
-            <span className="text-sm text-gray-900">
-              {warehouseName || (seedWarehouses.length === 0 ? '（暂无种源库，请到【基础数据-仓库】创建 seed_storage 类型仓库）' : '加载中…')}
-            </span>
-            <span className="text-xs text-gray-400">自动锁死</span>
-          </div>
-        </FormField>
+        {/* 种源库 + 种源形态 行（2 列） */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* 种源仓库（自动锁定 seed_storage，UI 显示"种源库"统一称呼） */}
+          <FormField label="种源库" required>
+            <div className={`${deepInputClass} bg-gray-50 flex items-center justify-between`}>
+              <span className="text-sm text-gray-900">
+                {warehouseName || (seedWarehouses.length === 0 ? '（暂无种源库）' : '加载中…')}
+              </span>
+              <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                已锁定
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              {seedWarehouses.length === 0 ? (
+                <span className="text-red-600">系统未配置种子库，请到【基础数据 → 仓库】创建「种子库」类型仓库。</span>
+              ) : (
+                <>入库必须进「种子库」（系统自动取第一个种子库类型的仓库）。物料：种子/种苗/枝条等所有可作为种源的物料。</>
+              )}
+            </p>
+          </FormField>
+          <FormField label="种源形态" required>
+            <Select
+              value={propagationForm}
+              onValueChange={setPropagationForm}
+            >
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="选择种源形态" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROPAGATION_FORM_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        </div>
 
-        {/* 种源形态（独立于种源来源 — 物理形态必填） */}
-        <FormField label="种源形态" required>
-          <Select value={propagationForm} onValueChange={setPropagationForm}>
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="选择种子的物理形态" />
-            </SelectTrigger>
-            <SelectContent>
-              {PROPAGATION_FORM_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-
-        {/* 外购：供应商 + 采购员 */}
+        {/* 外购：供应商 + 采购员（同行 2 列） */}
         {sourceType === 'external_purchase' && (
-          <>
+          <div className="grid grid-cols-2 gap-4">
             <FormField label="供应商" required>
               {supplierName ? (
                 <div
@@ -503,12 +593,12 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
                 )}
               </div>
             </FormField>
-          </>
+          </div>
         )}
 
-        {/* 内部种源：来源单位（选填）+ 接收人（必填） */}
+        {/* 内部种源：来源单位（选填）+ 接收人（必填）同行 2 列 */}
         {sourceType === 'internal_seed' && (
-          <>
+          <div className="grid grid-cols-2 gap-4">
             <FormField label="来源单位">
               <Input
                 value={supplierName}
@@ -586,7 +676,7 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
                 )}
               </div>
             </FormField>
-          </>
+          </div>
         )}
 
         {/* 自产：保管员（默认当前用户，可改） */}

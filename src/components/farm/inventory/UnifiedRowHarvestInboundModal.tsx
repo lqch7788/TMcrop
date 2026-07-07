@@ -37,6 +37,8 @@ import { useHarvestRecordStore } from '@/stores/useHarvestRecordStore'
 import { usePlantingStore } from '@/stores/usePlantingStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert, showConfirm } from '@/lib/dialogService'
+// 2026-07-07：HARVEST_FORMS / SOURCE_FORMS 字面量迁移至统一字典 seedFormDict
+import { HARVEST_FORM_OPTIONS, SEED_FORM_OPTIONS } from '@/constants/seedFormDict'
 import {
   submitUnifiedInbound,
   validateUnifiedInboundInput,
@@ -68,38 +70,14 @@ const QUALITY_GRADES = [
 // "采收形态" sourceForm / inventory_stock.source_form；种源形态字段不再独立写入库存）
 
 /**
- * 2026-06-27：成品形态（种植行采收入库）
- * key 与后端 HARVEST_FORM_MAP / src/constants/cropConstants 一致
+ * 2026-07-07：HARVEST_FORMS 字面量已迁移至 src/constants/seedFormDict.HARVEST_FORM_OPTIONS
+ * 旧 11 项保留指向新字典（向下兼容），新字典提供 11+ 形态全列
  */
-const HARVEST_FORMS = [
-  { value: 'whole_plant', label: '整株' },
-  { value: 'flower', label: '花朵' },
-  { value: 'fruit', label: '果实' },
-  { value: 'seed', label: '种子' },
-  { value: 'tuber', label: '块茎' },
-  { value: 'bulb', label: '球根' },
-  { value: 'leaf', label: '叶片' },
-  { value: 'root', label: '根茎' },
-  { value: 'stem', label: '茎秆' },
-  { value: 'cutting', label: '枝条' },
-  { value: 'other', label: '其他' },
-]
+const HARVEST_FORMS = HARVEST_FORM_OPTIONS;
 
 // 2026-06-19: 采收形态（每条 product 必填，区分果实/籽/枝条等）
-const SOURCE_FORMS = [
-  { value: '果实', label: '果实' },
-  { value: '种子', label: '种子' },
-  { value: '种苗', label: '种苗' },
-  { value: '穗条', label: '穗条' },
-  { value: '枝条', label: '枝条' },
-  { value: '块根', label: '块根' },
-  { value: '块茎', label: '块茎' },
-  { value: '鳞茎', label: '鳞茎' },
-  { value: '叶片', label: '叶片' },
-  { value: '花朵', label: '花朵' },
-  { value: '整株', label: '整株' },
-  { value: '其他', label: '其他' },
-]
+// 2026-07-07: 原 12 项字面量已迁移至 SEED_FORM_OPTIONS; 保留同名引用指向字典
+const SOURCE_FORMS = SEED_FORM_OPTIONS
 
 const deepInputClass =
   'px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner'

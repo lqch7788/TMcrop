@@ -188,7 +188,6 @@ class ApprovalSubmitService {
       // 采收审批
       [ApprovalType.HARVEST_REQUEST]: 'HS',
       // 作物补录审批
-      [ApprovalType.SEED_SOURCE_SUPPLEMENTARY]: 'SB',
       [ApprovalType.SEEDLING_SUPPLEMENTARY]: 'YB',
       [ApprovalType.CROP_STORAGE_SUPPLEMENTARY]: 'CB',
       // 指标/公告审批
@@ -900,36 +899,6 @@ export async function submitHarvestRequestApproval(params: {
       type: 'harvest',
       requestId: params.harvestId,
       requestCode: params.harvestCode,
-    },
-  });
-}
-
-/**
- * 提交种源补录审批
- */
-export async function submitSeedSourceSupplementaryApproval(params: {
-  supplementaryId: string;
-  supplementaryCode: string;
-  seedSourceName: string;
-  supplementaryType: string;
-  quantity: number;
-  applicantId: string;
-  applicantName: string;
-  department: string;
-}): Promise<ApprovalSubmitResult> {
-  return approvalSubmitService.submitApproval({
-    id: params.supplementaryId,
-    code: params.supplementaryCode,
-    title: `种源补录: ${params.seedSourceName}`,
-    type: ApprovalType.SEED_SOURCE_SUPPLEMENTARY,
-    amount: 0,
-    applicantId: params.applicantId,
-    applicantName: params.applicantName,
-    applicantDepartment: params.department,
-    businessLink: {
-      type: 'seed_source',
-      requestId: params.supplementaryId,
-      requestCode: params.supplementaryCode,
     },
   });
 }

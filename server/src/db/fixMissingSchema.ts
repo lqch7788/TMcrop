@@ -1720,6 +1720,9 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• seed_sources.update_by:', e.message);
   }
 
+  // 注 2026-07-07: seed_sources.stock_instance_id 列已迁移至 server/scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts
+  //   原因: 启动白名单禁用了 fixMissingSchema（YELLOW 级），所有 schema 变更需走 scripts 路径
+
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
