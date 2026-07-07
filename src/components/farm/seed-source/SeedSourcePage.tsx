@@ -17,7 +17,6 @@ import { todayLocal } from '@/lib/dateUtils';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
 import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
-import { SeedSourceInboundModal } from './modals/SeedSourceInboundModal';
 import SeedSourceLabelManageModal from './modals/SeedSourceLabelManageModal';
 
 import { seedSourceTransferService } from '@/services/seedSourceTransferService';
@@ -38,9 +37,7 @@ import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
-import { useInventoryInboundStore } from '@/stores/useInventoryInboundStore';
-import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
-import type { InventoryInboundRecord } from '@/types/inventoryInbound';
+// 2026-07-07 V3.4：取消「入库登记（外购）」入口，删除 useInventoryInboundStore / InventoryInboundModal / InventoryInboundRecord import
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
@@ -104,27 +101,6 @@ export default function SeedSourcePage() {
     loadItems();
   }, [loadItems]);
 
-  // 2026-06-26 修复：种源列表加载完后，自动为每条种源拉取入库记录
-  // 之前只在用户点"入库登记"时才拉，子表一直显示 0 条
-  const items = useSeedSourceStore((s) => s.items);
-
-  useEffect(() => {
-    if (!items || items.length === 0) return;
-    // 当前页可见的种源都拉一次（limit 通常 10-20，并发安全）
-    const currentPageItems = items.slice(
-      (pagination.current - 1) * pagination.pageSize,
-      pagination.current * pagination.pageSize,
-    );
-    currentPageItems.forEach((it) => {
-      void loadInboundRecords(`seed_source:${it.id}`, {
-        sourceModule: 'seed_source',
-        sourceId: it.id,
-        limit: 100,
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, pagination.current, pagination.pageSize]);
-
   // 2026-06-06: R3 — 监听 store.loadItems 错误并弹 Toast（不修改 store 内部实现）
   // store 内部已在 catch 中 set({ error: msg })，此处仅做 UI 展示
   // 用 useRef 记录上次已展示的错误，避免同一错误重复弹 toast
@@ -182,39 +158,7 @@ export default function SeedSourcePage() {
   };
 
   // 2026-06-25 v3: 种源是纯仓库 — 移除繁殖过程/阶段推进/回流记录弹窗
-  // 2026-06-18: 任务 4 — 入库登记弹窗状态 + 入库记录子表数据
-  const [inboundModal, setInboundModal] = useState<{ open: boolean; record: SeedSource | null }>({
-    open: false,
-    record: null,
-  });
-  const inboundRecordsMap = useInventoryInboundStore((s) => s.recordsBySource);
-  const loadInboundRecords = useInventoryInboundStore((s) => s.loadRecords);
-
-  // 把 recordsBySource flat 成数组（按 createTime 倒序）
-  const allInboundRecords: InventoryInboundRecord[] = Object.values(inboundRecordsMap)
-    .flat()
-    .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
-
-  // 留种初始化数据（从种植页面跳转来）
-  const [seedSavingInit, setSeedSavingInit] = useState<{
-    linkedPlantingId?: string;
-    linkedPlantingCode?: string;
-    cropName?: string;
-  } | null>(null);
-
-  // 处理从种植页面跳转来的留种请求
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const action = params.get('action');
-    if (action === 'seed-saving') {
-      const plantingId = params.get('plantingId') || '';
-      const plantingCode = params.get('plantingCode') || '';
-      const cropName = params.get('cropName') || '';
-      setSeedSavingInit({ linkedPlantingId: plantingId, linkedPlantingCode: plantingCode, cropName });
-      setAddModalOpen(true);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
+  // 2026-07-07 V3.4：取消「入库登记（外购）」弹窗，删除 inboundModal state / 派生数组 / seedSavingInit / URL 参数 useEffect
 
   // 2026-06-06: M3 — 12 项过滤逻辑下沉到 useFilteredSeedSources Hook
   const filteredData = useFilteredSeedSources(seedSources, filters);
@@ -496,59 +440,7 @@ export default function SeedSourcePage() {
     [transferModal.record, currentUser, loadItems, toast]
   );
 
-  // 2026-06-18: 任务 4 — 入库登记入口 + 加载/导出辅助
-  const handleInbound = (record: SeedSource) => {
-    setInboundModal({ open: true, record });
-    // 打开弹窗时拉取该种源的入库记录（key 与 store 保持一致）
-    void loadInboundRecords(`seed_source:${record.id}`, {
-      sourceModule: 'seed_source',
-      sourceId: record.id,
-      limit: 100,
-    });
-  };
-
-  // 弹窗提交成功后刷新该种源数据 + 入库记录子表
-  // 2026-07-01 P1-6：商品种源入库（SeedSourceInboundModal）写入 inventory_stock 不影响 seed_sources 表
-  // loadItems() 仍保留（保守起见 — 如果未来调整逻辑，种源台账可能需要刷新）
-  const handleInboundSuccess = () => {
-    const rec = inboundModal.record;
-    if (!rec) return;
-    // 注：商品种源入库不修改 seed_sources，所以无需 loadItems
-    void loadInboundRecords(`seed_source:${rec.id}`, {
-      sourceModule: 'seed_source',
-      sourceId: rec.id,
-      limit: 100,
-    });
-    toast.success('入库成功');
-  };
-
-  // CSV 导出（UTF-8 BOM 防 Excel 乱码）
-  const exportInboundCSV = () => {
-    if (allInboundRecords.length === 0) {
-      showAlert('没有入库记录可导出');
-      return
-    }
-    const headers = ['入库日期', '来源编码', '来源模块', '仓库', '数量', '单位', '品质', '操作员', '备注']
-    const rows = allInboundRecords.map((r) => [
-      r.recordDate,
-      r.sourceCode || r.sourceId,
-      r.sourceModule,
-      r.warehouseName || r.warehouseId || '',
-      r.quantity.toString(),
-      r.unit,
-      r.qualityGrade || '',
-      r.operatorName || r.createBy || '',
-      r.notes || '',
-    ])
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `种源入库记录_${todayLocal()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  // 2026-07-07 V3.4：取消「入库登记（外购）」入口，删除 handleInbound / handleInboundSuccess / exportInboundCSV
 
   // 2026-06-25 v3: 移除 handlePropagationStage（阶段推进功能）
 
@@ -733,17 +625,15 @@ export default function SeedSourcePage() {
         canPrint={canPrint}
         onTransfer={handleTransfer}
         onReturn={handleReturn}
-        onInbound={handleInbound}
         onLabelManage={handleLabelManage}
       />
 
       {/* 弹窗 */}
       <AddModal
         isOpen={addModalOpen}
-        onClose={() => { setAddModalOpen(false); setSeedSavingInit(null); }}
-        onSuccess={() => { loadItems(); setSeedSavingInit(null); }}
+        onClose={() => { setAddModalOpen(false); }}
+        onSuccess={() => { loadItems(); }}
         units={units}
-        seedSavingInit={seedSavingInit}
       />
 
       {currentRecord && (
@@ -790,26 +680,7 @@ export default function SeedSourcePage() {
 
       {/* 繁殖途径弹窗 */}
       {/* 2026-06-25 v3: 移除 3 个 Modal — 繁殖过程记录 / 阶段推进 / 回流记录 */}
-
-      {/* 2026-06-26: 重构 — 替换 UnifiedRowHarvestInboundModal 为 SeedSourceInboundModal（采购语义） */}
-      {inboundModal.record && (
-        <SeedSourceInboundModal
-          isOpen={inboundModal.open}
-          onClose={() => setInboundModal({ open: false, record: null })}
-          onSuccess={handleInboundSuccess}
-          sourceRecord={{
-            id: inboundModal.record.id,
-            code: inboundModal.record.seedCode,
-            cropName: inboundModal.record.cropName || '',
-            cropVariety: inboundModal.record.cropVariety || '',
-            cropCode: inboundModal.record.cropCode || '',
-            unit: inboundModal.record.unit,
-            // 2026-07-07: 蓝色源记录块要展示形态 — 把 sourceType/seedForm 一起传过去
-            sourceType: (inboundModal.record as any).sourceType,
-            seedForm: (inboundModal.record as any).seedForm ?? null,
-          }}
-        />
-      )}
+      {/* 2026-07-07 V3.4：移除 SeedSourceInboundModal 渲染块（外购入库入口已关闭） */}
 
       {/* 2026-06-25 v3: 调拨入库弹窗（append_existing 模式 — 不创建新种源，追加到目标） */}
       {transferModal.record && (
