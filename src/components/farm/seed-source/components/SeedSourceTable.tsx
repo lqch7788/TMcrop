@@ -1,10 +1,10 @@
 /**
  * 种源数据表格组件
  * 右上角按钮逻辑：编辑/删除/导出 → 需要选择记录后确认
- * 行内按钮逻辑：查看详情/调拨/入库登记/打印/图片 → 直接执行
+ * 行内按钮逻辑：查看详情/调拨/退库/标签/打印/图片 → 直接执行
  *
- * 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记
- * 移除：过程记录 / 阶段推进 / 正常结束 / 异常结束 / 回流记录 / 外购提示
+ * 2026-06-25 v3: 种源是纯仓库 — 操作列只保留：调拨 / 退库 / 编辑 / 标签
+ * 2026-07-07 V3.4：取消「商品种源入库（外购）」入口（外购必须走作物库存 → 调拨入种源）
  */
 
 import React, { useState, useEffect } from 'react';
@@ -66,8 +66,7 @@ interface SeedSourceTableProps {
   // 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记
   // 调拨：从作物库存调入种源（追加模式，append_existing）
   onTransfer: (record: SeedSource) => void;
-  // 入库登记：行级多次入库（同一仓库补货）
-  onInbound: (record: SeedSource) => void;
+  // 2026-07-07 V3.4：取消「入库登记（外购）」入口（外购必须走作物库存 → 调拨入种源）
   // 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records）
   onReturn?: (record: SeedSource) => void;
   // 2026-07-01: 标签管理 — 种源标签全生命周期管理（打印/作废/履历/导出）
@@ -106,7 +105,6 @@ export function SeedSourceTable({
   onPrint,
   onImageClick,
   onTransfer,
-  onInbound,
   onReturn,
   onLabelManage,
   operationMode,
@@ -597,20 +595,14 @@ export function SeedSourceTable({
                           title="编辑"
                         />
                       )}
-                      {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留 2 个：调拨 + 入库登记 */}
+                      {/* 2026-06-25 v3: 种源是纯仓库 — 操作列只保留：调拨 / 退库 / 编辑 / 标签 */}
+                      {/* 2026-07-07 V3.4：取消「商品种源入库（外购）」入口 */}
                       {/* 调拨：从作物库存调入种源（追加模式 append_existing） */}
                       <ActionIconButton
                         variant="transfer"
                         icon={<ArrowLeftRight className="w-4 h-4" />}
                         onClick={() => onTransfer(record)}
                         title="调拨入库（从作物库存追加）"
-                      />
-                      {/* 商品种源入库：行级多次入库（同一仓库补货）；仅入商品种源池，不直接入本种源台账 */}
-                      <ActionIconButton
-                        variant="inbound"
-                        icon={<Plus className="w-4 h-4" />}
-                        onClick={() => onInbound(record)}
-                        title="商品种源入库（仅入商品种源池；如需入种源台账请用调拨入库）"
                       />
                       {/* 2026-06-26 Q1: 退库 — 把种源数量退回原作物库存（严格 1:1 关联 inventory_inbound_records） */}
                       {onReturn && (
