@@ -500,10 +500,16 @@ export function SeedSourceTable({
                     title={undefined}
                   >
                     {(() => {
-                      const form = record.seedForm
-                        || SOURCE_TYPE_MAP[record.sourceType]
-                        || record.sourceType
-                        || ''
+                      // 2026-07-07: seedForm 字段值若为英文（如 'seed'）也走 SOURCE_TYPE_MAP 翻译
+                      // 兜底永远是中文，禁止显示 'seed' / 'planting' 等原始字符串
+                      const resolveForm = (): string => {
+                        const sf = record.seedForm;
+                        if (sf && SOURCE_TYPE_MAP[sf]) return SOURCE_TYPE_MAP[sf];
+                        const st = record.sourceType;
+                        if (st && SOURCE_TYPE_MAP[st]) return SOURCE_TYPE_MAP[st];
+                        return '其他';
+                      };
+                      const form = resolveForm();
                       // 2026-06-30 Bug 16：用 inline span 替代 Badge variant=default
                       // 原因：Badge default 自带 bg-gray-900 + hover:bg-gray-900/80（黑底），
                       //       className 的 bg-emerald-100 被覆盖，鼠标悬停变黑底。

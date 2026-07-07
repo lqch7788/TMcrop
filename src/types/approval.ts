@@ -39,8 +39,7 @@ export enum ApprovalType {
   // ========== 采收审批（1种）==========
   HARVEST_REQUEST = 'harvest_request',       // 采收申请
 
-  // ========== 作物补录审批（3种）==========
-  SEED_SOURCE_SUPPLEMENTARY = 'seed_source_supplementary', // 种源补录
+  // ========== 作物补录审批（2种）==========
   SEEDLING_SUPPLEMENTARY = 'seedling_supplementary',     // 育苗补录
   CROP_STORAGE_SUPPLEMENTARY = 'crop_storage_supplementary', // 作物入库补录
 
@@ -369,8 +368,7 @@ export const getApprovalTypeName = (type: ApprovalType): string => {
     // ========== 采收审批（1种）==========
     [ApprovalType.HARVEST_REQUEST]: '采收申请',
 
-    // ========== 作物补录审批（3种）==========
-    [ApprovalType.SEED_SOURCE_SUPPLEMENTARY]: '种源补录',
+    // ========== 作物补录审批（2种）==========
     [ApprovalType.SEEDLING_SUPPLEMENTARY]: '育苗补录',
     [ApprovalType.CROP_STORAGE_SUPPLEMENTARY]: '作物入库补录',
 

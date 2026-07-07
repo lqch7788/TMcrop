@@ -14,8 +14,10 @@ export const SEED_SOURCE_STATUS_MAP: Record<string, { label: string; color: stri
   cancelled: { label: '已取消', color: 'bg-red-100 text-red-700' },
 };
 
-// ========== 种源类型映射 ==========
+// ========== 种源类型映射（@deprecated 2026-07-07 — 迁移至 src/constants/seedFormDict.ts）==========
+// 旧字典（保留向下兼容）；新代码请用 src/constants/seedFormDict.SEED_TYPE_OPTIONS / SEED_FORM_OPTIONS
 // key 与 src/types/crop.ts 的 SourceType 枚举值一一对应
+/** @deprecated 2026-07-07 use SEED_TYPE_OPTIONS from seedFormDict instead */
 export const SOURCE_TYPE_MAP: Record<string, string> = {
   seed: '种子',
   seedling: '种苗/实生苗',
@@ -28,9 +30,9 @@ export const SOURCE_TYPE_MAP: Record<string, string> = {
   other: '其他',
 };
 
-// ========== 种苗形态映射（2026-06-27 新增）==========
-// 区别于种源类型（source_type，描述种源本身），种苗形态描述种苗作为成品的状态
+// ========== 种苗形态映射（@deprecated 2026-07-07 — 迁移至 src/constants/seedFormDict.ts）==========
 // 应用场景：种苗详情弹窗的"种苗类型"列、种苗列表筛选、表单录入
+/** @deprecated 2026-07-07 use SEEDLING_FORM_OPTIONS from seedFormDict instead */
 export const SEEDLING_FORM_MAP: Record<string, string> = {
   flower: '花朵',
   branch: '枝条',
@@ -43,9 +45,9 @@ export const SEEDLING_FORM_MAP: Record<string, string> = {
   other: '其他',
 };
 
-// ========== 成品形态映射（2026-06-27 新增）==========
-// 描述作物种植采收后的成品状态（如整株、花朵、果实、种子、块茎等）
+// ========== 成品形态映射（@deprecated 2026-07-07 — 迁移至 src/constants/seedFormDict.ts）==========
 // 应用场景：种植详情弹窗的"成品类型"列、采收登记、库存入库
+/** @deprecated 2026-07-07 use HARVEST_FORM_OPTIONS from seedFormDict instead */
 export const HARVEST_FORM_MAP: Record<string, string> = {
   whole_plant: '整株',
   flower: '花朵',

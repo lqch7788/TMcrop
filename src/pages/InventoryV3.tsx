@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Boxes } from 'lucide-react';
+import { Boxes, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
 // 一次性动作（CSV 导出）保留直调 client-side
@@ -21,7 +22,7 @@ import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
-import { DeleteConfirmModal } from '@/components/ui';
+import { DeleteConfirmModal, Button } from '@/components/ui';
 
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
@@ -61,6 +62,9 @@ export default function InventoryV3Page() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+
+  // 2026-07-07：种源采购入口跳转
+  const navigate = useNavigate();
 
   // 跨页刷新：订阅 useInventoryStore.version
   // 任何写操作（采收入库 / 出库 / 冻结）成功后 store.notifyChange() 会触发这里自动重新加载
@@ -191,7 +195,9 @@ export default function InventoryV3Page() {
     const headers = ['实例ID', '类型', '作物', '品种', '数量', '可用', '冻结', '仓库', '来源', '状态', '入库日期'];
     const csvRows = [headers.join(',')];
     rowsToExport.forEach((s) => {
-      const stockTypeLabel = s.stockType === 'seed' ? '商品种源' : s.stockType === 'seedling' ? '种苗' : '成品';
+      const stockTypeLabel = s.stockType === 'seed'
+        ? `商品种源${s.businessType === 'seed_source' ? '（历史迁移）' : ''}`
+        : s.stockType === 'seedling' ? '种苗' : '成品';
       const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
       const sourceLabel = s.sourceType === 'self_produced' ? '自产' : '外购';
       csvRows.push([
@@ -284,6 +290,21 @@ export default function InventoryV3Page() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 2026-07-07：种源采购入口提示 banner（外购种子请到种源管理页面） */}
+      <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+        <div className="flex-1 text-sm text-amber-800">
+          <div className="font-medium">外购种子请到「种源管理」页面操作</div>
+          <div className="text-xs mt-0.5 text-amber-700">
+            作物库存页只展示种苗、成品两类（外购种源采购请到内部种源页面）。
+            历史已迁移到本表的历史种源数据会在下方列表显示「历史迁移」徽章。
+          </div>
+        </div>
+        <Button variant="default" size="sm" onClick={() => navigate('/crop/seed-source')}>
+          前往种源管理
+        </Button>
       </div>
 
       {/* 筛选工具栏（移到分类汇总上方，方便先过滤再看分类） */}

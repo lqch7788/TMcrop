@@ -1,7 +1,6 @@
 /**
  * 种源新增弹窗
  * 支持作物搜索和快速新增品种
- * V3.1: 支持补录申请功能, 使用 API 驱动的 DictSelect 组件
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -25,8 +24,6 @@ import { useAuthStore } from '../../../../stores/useAuthStore';
 import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { useSupplierStore } from '../../../../stores/useSupplierStore';
-import { useApprovalContext } from '../../../../contexts/ApprovalContext';
-import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 // 2026-06-24: 库存调拨入种源（新增弹窗第 5 选项）
@@ -55,9 +52,6 @@ export function AddModal({
   units,
   seedSavingInit,
 }: AddModalProps) {
-  // 使用审批Context
-  const { addApproval } = useApprovalContext();
-
   // P1 #5 修复: 改用订阅式读取 store，store 更新时组件自动重渲染
   const storeUsers = useUserStore((s) => s.users);
   const storePlans = useProductionPlanStore((s) => s.batches);
@@ -112,9 +106,6 @@ export function AddModal({
     // V3.0 新增字段
     productionPlanId: '',    // 关联生产计划ID
     productionPlanCode: '',   // 关联生产计划批次号
-    // V3.1 补录相关字段
-    isSupplementary: false,  // 是否补录
-    supplementaryReason: '',  // 补录原因
     // 繁殖途径字段
     propagationType: PropagationType.EXTERNAL as string,
     propagationMethod: '',
@@ -423,51 +414,6 @@ export function AddModal({
       // logger.error('创建作物实例失败:', error);
     }
 
-    // V3.1 补录申请：如果勾选了补录，创建审批记录
-    if (formData.isSupplementary) {
-      const approvalCode = `SS-SUP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-      const approval = {
-        id: 'APPROVAL-' + Date.now(),
-        code: approvalCode,
-        type: ApprovalType.SEED_SOURCE_SUPPLEMENTARY,
-        title: `种源补录申请 - ${seedCode}`,
-        description: `种源补录入库申请：${formData.cropName}，数量：${formData.quantity}${formData.unit}，补录原因：${formData.supplementaryReason}`,
-        status: ApprovalStatus.PENDING,
-        applicantId: currentUser.id,
-        applicantName: currentUser.name,
-        applicantDept: currentUser.department || '生产部',
-        createTime: new Date().toLocaleString('zh-CN'),
-        updateTime: new Date().toLocaleString('zh-CN'),
-        steps: [
-          {
-            id: 'STEP-001',
-            name: '生产主管',
-            status: 'pending' as const,
-            order: 1,
-          },
-          {
-            id: 'STEP-002',
-            name: '基地负责人',
-            status: 'pending' as const,
-            order: 2,
-          },
-        ],
-        currentStep: 1,
-        businessLink: {
-          type: 'seed_source' as const,
-          requestCode: seedCode,
-          requestId: newSeedSource.id,
-        },
-        supplementaryData: {
-          reason: formData.supplementaryReason,
-          quantity: formData.quantity,
-          unit: formData.unit,
-          cropName: formData.cropName,
-        },
-      };
-      addApproval(approval);
-    }
-
     // 重置表单
     resetForm();
     onClose();
@@ -493,9 +439,6 @@ export function AddModal({
       // V3.0 新增字段
       productionPlanId: '',
       productionPlanCode: '',
-      // V3.1 补录相关字段
-      isSupplementary: false,
-      supplementaryReason: '',
       // 繁殖途径字段
       propagationType: PropagationType.EXTERNAL as string,
       propagationMethod: '',
@@ -586,7 +529,13 @@ export function AddModal({
 
           {/* 种源批号 - 可点击生成 */}
           <div>
-            <Label className="text-gray-900">种源批号</Label>
+            <Label className="text-gray-900">
+              种源批号
+              {/* 格式说明用括号样式紧跟 Label 同行展示，保留原文 text-xs text-gray-400 颜色 */}
+              <span className="ml-2 text-xs font-normal text-gray-400 whitespace-nowrap">
+                格式：ZZ + 年月日(8位) + "-" + 流水号(3位)
+              </span>
+            </Label>
             <div className="flex gap-2">
               <Input
                 type="text"
@@ -604,7 +553,6 @@ export function AddModal({
                 生成
               </Button>
             </div>
-            <p className="mt-1 text-xs text-gray-400">格式：ZZ + 年月日(8位) + "-" + 流水号(3位)</p>
           </div>
 
           {/* ===== 库存调拨分支（2026-06-24）=====
@@ -622,7 +570,7 @@ export function AddModal({
             </div>
           )}
 
-          {/* 以下所有字段（作物选择 / 种源类型 / 供应商 / 数量 / 单价 / 图片 / 备注 / 补录）在 transfer 模式下都隐藏
+          {/* 以下所有字段（作物选择 / 种源类型 / 供应商 / 数量 / 单价 / 图片 / 备注）在 transfer 模式下都隐藏
               （库存调拨面板已包含这些信息，无需重复输入） */}
           {formData.propagationType !== PropagationType.TRANSFER_FROM_INVENTORY && (
           <>
@@ -854,7 +802,7 @@ export function AddModal({
             </>
           )}
 
-          {/* 以下所有字段（供应商 / 数量 / 单价 / 图片 / 备注 / 补录）在 transfer 模式下都隐藏。
+          {/* 以下所有字段（供应商 / 数量 / 单价 / 图片 / 备注）在 transfer 模式下都隐藏。
               使用 NOT TRANSFER 包裹替代逐个加条件（避免漏改）。 */}
 
           {/* 供应商 - 只在外购入库时显示 */}
@@ -1006,12 +954,19 @@ export function AddModal({
           <div>
             <Label className="text-gray-900">
               {formData.propagationType === PropagationType.EXTERNAL ? '采购数量' : '预估产量 / 计划数量'}
+              {/* 外购入库：备注用括号包裹，紧跟 Label 文字同行（不换行） */}
+              {formData.propagationType === PropagationType.EXTERNAL && (
+                <span className="ml-2 text-xs font-normal text-gray-500 whitespace-nowrap">
+                  (实际到货的数量，将作为初始库存写入)
+                </span>
+              )}
             </Label>
-            <p className="text-xs text-gray-500 mb-1">
-              {formData.propagationType === PropagationType.EXTERNAL
-                ? '实际到货的数量，将作为初始库存写入'
-                : '预估产量或计划数量，仅作记录。最终入库数量在「阶段管理 → 完成入库」中分批录入'}
-            </p>
+            {/* 育种/留种/无性：提示文字放在 Label 与输入框之间（占独立行） */}
+            {formData.propagationType !== PropagationType.EXTERNAL && (
+              <p className="text-xs text-gray-500 mb-1">
+                预估产量或计划数量，仅作记录。最终入库数量在「阶段管理 → 完成入库」中分批录入
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Input
                 type="number"
@@ -1102,33 +1057,6 @@ export function AddModal({
                            placeholder="请输入备注信息"
             />
           </div>
-
-          {/* V3.1 补录字段 - 占两列 */}
-          <div className="col-span-2">
-            <Label className="text-gray-900">是否补录</Label>
-            <DictSelect
-              category="is_supplementary"
-              value={formData.isSupplementary ? 'yes' : 'no'}
-              onChange={(value) => setFormData({ ...formData, isSupplementary: value === 'yes' })}
-              placeholder="选择是否补录"
-            />
-            <p className="mt-1 text-xs text-amber-500">选择"是"时，该入库记录将提交审批审核</p>
-          </div>
-
-          {/* V3.1 补录原因 */}
-          {formData.isSupplementary && (
-            <div className="col-span-2">
-              <Label className="text-gray-900">
-                补录原因 <span className="text-red-500">*</span>
-              </Label>
-              <TextArea
-                value={formData.supplementaryReason}
-                onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
-                rows={2}
-                               placeholder="请输入补录原因，说明为什么需要补录此入库记录"
-              />
-            </div>
-          )}
           </>
           )}
         </div>

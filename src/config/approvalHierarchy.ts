@@ -234,12 +234,6 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
 
   // ========== 作物补录审批 ==========
   {
-    type: ApprovalType.SEED_SOURCE_SUPPLEMENTARY,
-    forceStrict: true,
-    batchApprovalSupported: false,
-    remark: '种源补录，强制严格审批',
-  },
-  {
     type: ApprovalType.SEEDLING_SUPPLEMENTARY,
     forceStrict: true,
     batchApprovalSupported: false,

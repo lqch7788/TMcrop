@@ -95,4 +95,7 @@ export interface InboundSourceRecord {
   unit?: string
   productionPlanId?: string
   productionPlanCode?: string
+  // 2026-07-07: 蓝色源记录块要展示"形态详实" — 种源类型 + 种源形态（与种源列表形态列同源）
+  sourceType?: SourceType
+  seedForm?: string | null
 }

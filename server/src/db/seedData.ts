@@ -4682,8 +4682,7 @@ function seedApprovalTypeRules() {
     { type: 'issue_resolve', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '问题整改' },
     // 采收审批（1种）
     { type: 'harvest_request', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '采收申请' },
-    // 作物补录审批（3种）
-    { type: 'seed_source_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '种源补录，强制严格审批' },
+    // 作物补录审批（2种）
     { type: 'seedling_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '育苗补录，强制严格审批' },
     { type: 'crop_storage_supplementary', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '作物入库补录，强制严格审批' },
     // 指标/公告审批（2种）
