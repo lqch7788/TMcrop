@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors, ArrowLeftRight } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf, Dna, Sprout, Scissors, ArrowLeftRight } from 'lucide-react';
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -41,8 +41,6 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   units: Array<{ value: string; label: string }>;
-  /** 留种初始化数据（从种植页面跳转来） */
-  seedSavingInit?: { linkedPlantingId?: string; linkedPlantingCode?: string; cropName?: string; } | null;
 }
 
 export function AddModal({
@@ -50,7 +48,6 @@ export function AddModal({
   onClose,
   onSuccess,
   units,
-  seedSavingInit,
 }: AddModalProps) {
   // P1 #5 修复: 改用订阅式读取 store，store 更新时组件自动重渲染
   const storeUsers = useUserStore((s) => s.users);
@@ -107,7 +104,8 @@ export function AddModal({
     productionPlanId: '',    // 关联生产计划ID
     productionPlanCode: '',   // 关联生产计划批次号
     // 繁殖途径字段
-    propagationType: PropagationType.EXTERNAL as string,
+    // 2026-07-07 V3.4：取消外购入库 tab，默认改为库存调拨
+    propagationType: PropagationType.TRANSFER_FROM_INVENTORY as string,
     propagationMethod: '',
     parentMaleId: '', parentMaleCode: '',
     parentFemaleId: '', parentFemaleCode: '',
@@ -166,19 +164,7 @@ export function AddModal({
     return supplierSearchResults.filter(s => s.supplierType === targetSupplierType);
   }, [supplierSearchResults, formData.sourceType]);
 
-  // 留种初始化：从种植页面跳转时，自动切换到留种模式并填充信息
-  useEffect(() => {
-    if (isOpen && seedSavingInit) {
-      setFormData(prev => ({
-        ...prev,
-        propagationType: PropagationType.SEED_SAVING,
-        sourceOrigin: 'self_produced' as SourceOrigin,
-        linkedPlantingId: seedSavingInit.linkedPlantingId || '',
-        linkedPlantingCode: seedSavingInit.linkedPlantingCode || '',
-        cropName: seedSavingInit.cropName || prev.cropName,
-      }));
-    }
-  }, [isOpen, seedSavingInit]);
+  // 2026-07-07 V3.4：seedSavingInit useEffect 已删除（外购入库 + 留种回流转入全部从种植/育苗模块走）
 
   // 当种源类型改变时，清空已选供应商（类型不匹配）
   useEffect(() => {
@@ -440,7 +426,8 @@ export function AddModal({
       productionPlanId: '',
       productionPlanCode: '',
       // 繁殖途径字段
-      propagationType: PropagationType.EXTERNAL as string,
+      // 2026-07-07 V3.4：取消外购入库，默认改为库存调拨
+      propagationType: PropagationType.TRANSFER_FROM_INVENTORY as string,
       propagationMethod: '',
       parentMaleId: '', parentMaleCode: '',
       parentFemaleId: '', parentFemaleCode: '',
@@ -478,13 +465,15 @@ export function AddModal({
                 老数据（propagationType=breeding/seed_saving/asexual）的查看与编辑由 EditModal/DetailModal 继续支持
             */}
             <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              <b>新流程：</b>内部种源为内部仓库，仅支持 <b>外购入库</b> + <b>库存调拨</b>。
+              {/* 2026-07-07 V3.4：取消外购入库入口。外部采购必须先入库到作物库存，内部种源仅支持 库存调拨。 */}
+              <b>内部种源仅支持 库存调拨 入库。</b>
+              外部采购请通过「作物库存 → 新建入库」完成，再调拨入种源。
               自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。
             </div>
             <Label className="text-gray-900">入库方式</Label>
-            <div className="grid grid-cols-2 gap-2">
+            {/* 2026-07-07 V3.4：取消外购入库选项，仅保留库存调拨 */}
+            <div className="grid grid-cols-1 gap-2">
               {[
-                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '来自外部供应商的种子采购', Icon: ShoppingCart },
                 // 2026-06-24: 库存调拨 — 从作物库存 3 种 stock_type 调入种源（移动语义）
                 { value: PropagationType.TRANSFER_FROM_INVENTORY, label: '库存调拨', desc: '从作物库存调入', Icon: ArrowLeftRight },
               ].map((opt) => {
