@@ -5,8 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Boxes, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
 // 一次性动作（CSV 导出）保留直调 client-side
@@ -62,9 +61,6 @@ export default function InventoryV3Page() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-
-  // 2026-07-07：种源采购入口跳转
-  const navigate = useNavigate();
 
   // 跨页刷新：订阅 useInventoryStore.version
   // 任何写操作（采收入库 / 出库 / 冻结）成功后 store.notifyChange() 会触发这里自动重新加载
@@ -290,21 +286,6 @@ export default function InventoryV3Page() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 2026-07-07：种源采购入口提示 banner（外购种子请到种源管理页面） */}
-      <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-        <div className="flex-1 text-sm text-amber-800">
-          <div className="font-medium">外购种子请到「种源管理」页面操作</div>
-          <div className="text-xs mt-0.5 text-amber-700">
-            作物库存页只展示种苗、成品两类（外购种源采购请到内部种源页面）。
-            历史已迁移到本表的历史种源数据会在下方列表显示「历史迁移」徽章。
-          </div>
-        </div>
-        <Button variant="default" size="sm" onClick={() => navigate('/crop/seed-source')}>
-          前往种源管理
-        </Button>
       </div>
 
       {/* 筛选工具栏（移到分类汇总上方，方便先过滤再看分类） */}
