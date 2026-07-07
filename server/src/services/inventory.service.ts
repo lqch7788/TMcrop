@@ -6,6 +6,7 @@
 import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository, InventoryStock } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository, InventoryTransaction } from '../repositories/inventory-tx.repository';
+import { inventoryInboundRepository } from '../repositories/inventoryInbound.repository';
 import { queryToObjects } from '../utils/queryHelper';
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
@@ -13,7 +14,10 @@ import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 // 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"+ 格式契约：
 // 库存实例 ID:  ${prefix}-${YYYYMMDD}-${NNNN}  (17 字符)   例: INS-20260608-0001
 // 流水 ID:      TRX-${YYYYMMDD}-${NNNN}         (17 字符)   例: TRX-20260608-0001
-// 旧 4 字符 base36 随机数据（同样 17 字符）保留不动 —— 格式不变性
+// 2026-07-07 V3.2 扩展：库存主键 ID + 入库记录 ID 也走 4 位自增
+// 库存主键 ID:  STK-${YYYYMMDD}-${NNNN}        (17 字符)   例: STK-20260707-0001
+// 入库记录 ID:  INB-${YYYYMMDD}-${NNNN}        (17 字符)   例: INB-20260707-0001
+// 旧 Math.random() / Date.now() 数据保留不动 —— 格式不变性
 // 与种源/育苗 14 字符 3 位 NNN 不同：库存/流水业务量更大，4 位 NNNN 容量更安全（日上限 9999）
 
 const MAX_RETRY = 5;
@@ -38,6 +42,46 @@ async function generateTransactionId(dateStr: string): Promise<string> {
     return `TRX-${dateStr}-${String(serial).padStart(4, '0')}`;
   }
   throw new Error(`生成 transactionId 失败：${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
+}
+
+/**
+ * 2026-07-07 V3.2 新增：生成库存主键 ID
+ * 格式：STK-${YYYYMMDD}-${NNNN}  (17 字符)
+ * 例：STK-20260707-0001
+ * 替代业务代码中违反 [[code-generation-contract-rule]] 铁律的
+ * `STK-${Date.now()}-${Math.random()...}` 和
+ * `STK-${tsSuffix}-${count}` 反模式
+ */
+export async function generateStockId(dateStr: string): Promise<string> {
+  for (let i = 0; i < MAX_RETRY; i++) {
+    const max = await inventoryStockRepository.getStockIdMaxSerial(dateStr);
+    const serial = max + 1;
+    const id = `STK-${dateStr}-${String(serial).padStart(4, '0')}`;
+    // 二次查重：避免同日并发或旧 STK-1780... 数据残留导致的冲突
+    const existing = await inventoryStockRepository.findByStockId(id);
+    if (!existing) return id;
+  }
+  throw new Error(`生成 stockId 失败：${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
+}
+
+/**
+ * 2026-07-07 V3.2 新增：生成入库记录主键 ID
+ * 格式：INB-${YYYYMMDD}-${NNNN}  (17 字符)
+ * 例：INB-20260707-0001
+ * 替代业务代码中违反 [[code-generation-contract-rule]] 铁律的
+ * `INB-${Date.now()}-${Math.random()...}` 和
+ * `INB-${...}-${random}-${count}` 反模式
+ */
+export async function generateInboundRecordId(dateStr: string): Promise<string> {
+  for (let i = 0; i < MAX_RETRY; i++) {
+    const max = await inventoryInboundRepository.getInboundIdMaxSerial(dateStr);
+    const serial = max + 1;
+    const id = `INB-${dateStr}-${String(serial).padStart(4, '0')}`;
+    // 二次查重：避免同日并发或旧 INB-... 数据残留导致的冲突
+    const existing = await inventoryInboundRepository.findByRecordId(id);
+    if (!existing) return id;
+  }
+  throw new Error(`生成 inboundRecordId 失败：${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
 }
 
 export interface Inventory {

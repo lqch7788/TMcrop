@@ -130,6 +130,51 @@ export class InventoryStockRepository {
   }
 
   /**
+   * 获取当日 stockId（STK 主键）最大 4 位序号
+   * 2026-07-07 V3.2 重构：库存主键 ID 改用 4 位自增 STK-YYYYMMDD-NNNN，
+   * 替代旧的 Math.random() 随机（违反项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"）。
+   * 旧 STK-${Date.now()}-${random} 数据保留不动（格式不变性，由 db-migrations/migrateInventoryIdFormat.ts 迁移）。
+   * @param dateStr YYYYMMDD
+   * @returns 当日最大 4 位序号（0 表示当日尚无记录）
+   */
+  async getStockIdMaxSerial(dateStr: string): Promise<number> {
+    const db = getDatabase();
+    // STK-YYYYMMDD-NNNN = 17 字符（3 + 1 + 8 + 1 + 4）
+    // 2026-07-07：GLOB '[0-9][0-9][0-9][0-9]' 严格过滤掉旧 random 数据（修复前生成的 STK-1780...），
+    // 否则 random tail 数字排序时可能不一致，max 取错
+    const pattern = `STK-${dateStr}-____`;
+    const expectedLength = 3 + 1 + 8 + 1 + 4; // 17
+    const stmt = db.prepare(`
+      SELECT id FROM inventory_stock
+      WHERE id LIKE ?
+        AND LENGTH(id) = ?
+        AND SUBSTR(id, -4) GLOB '[0-9][0-9][0-9][0-9]'
+      ORDER BY SUBSTR(id, -4) DESC LIMIT 1
+    `);
+    stmt.bind([pattern, expectedLength]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { id: string };
+      const tail = row.id.slice(-4);
+      const n = parseInt(tail, 10);
+      maxSerial = isNaN(n) ? 0 : n;
+    }
+    stmt.free();
+    return maxSerial;
+  }
+
+  /**
+   * 根据 stockId（主键）查询
+   * 2026-07-07：用于 generateStockId 二次查重
+   */
+  async findByStockId(stockId: string): Promise<InventoryStock | null> {
+    const db = getDatabase();
+    const sql = `SELECT * FROM inventory_stock WHERE id = ?`;
+    const items = queryToObjects<InventoryStock>(db, sql, [stockId]);
+    return items.length > 0 ? items[0] : null;
+  }
+
+  /**
    * 创建库存记录
    */
   async create(data: Partial<InventoryStock>): Promise<InventoryStock> {

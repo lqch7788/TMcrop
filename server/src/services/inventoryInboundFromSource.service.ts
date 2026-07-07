@@ -15,7 +15,7 @@
 import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository } from '../repositories/inventoryTransaction.repository';
-import { generateInstanceId } from './inventory.service';
+import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
 
 export type StockType = 'seed' | 'seedling' | 'product';
 export type SourceModule = 'seed_source' | 'seedling' | 'planting';
@@ -275,8 +275,8 @@ export async function executeInboundFromSource(
       // 与 /end 路由（旧采收入库）保持一致；不再使用 INST- 前缀 + Date.now+random
       const prefix = input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR';
       const instanceId = await generateInstanceId(prefix, dateStr);
-      const tsSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const stockId = `STK-${tsSuffix}-${writtenStockIds.length}`;
+      // 2026-07-07 V3.2: 库存主键统一走 generateStockId，4 位自增替代 Math.random
+      const stockId = await generateStockId(dateStr);
 
       // 步骤 2：写 inventory_stock
       const stockRecord: any = {
@@ -354,7 +354,8 @@ export async function executeInboundFromSource(
       writtenStockIds.push(stockId);
 
       // 步骤 3：写 inventory_inbound_records
-      const recordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenRecordIds.length}`;
+      // 2026-07-07 V3.2: 入库记录主键统一走 generateInboundRecordId，4 位自增替代 Math.random
+      const recordId = await generateInboundRecordId(dateStr);
       // 2026-07-06：种源外购入库 — unit_price/total_amount 用采购价；supplier_id/supplier_name 写入审计
       const inboundUnitPrice = input.purchasePrice || input.unitPrice || 0;
       const inboundTotalAmount = input.purchaseTotalAmount || inboundUnitPrice * product.harvestQuantity;
