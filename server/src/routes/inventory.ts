@@ -15,6 +15,7 @@ import { Router, Request, Response } from 'express';
 import { inventoryController } from '../controllers/inventory.controller';
 import { checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
+import { generateStockId, generateInboundRecordId } from '../services/inventory.service';
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
@@ -173,14 +174,16 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     const productionPlanCode = input.productionPlanCode || source.productionPlanCode || null
     const now = new Date().toISOString()
     const recordDate = input.recordDate || now.slice(0, 10)
-    const stockId = `STK-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    // 2026-07-07 V3.2: 库存主键 + 入库记录主键统一走 generateStockId / generateInboundRecordId
+    // 替代违反 [[code-generation-contract-rule]] 铁律的 `STK-${Date.now()}-${random}` / `INB-${...}`
+    const dateStrInst = formatLocalDateYYYYMMDD()
+    const stockId = await generateStockId(dateStrInst)
     // 2026-06-19: 库存实例 ID 统一格式 ${prefix}-${YYYYMMDD}-${NNNN}（17 字符）
     // 与采收入库（inventoryInboundFromSource.service.ts）保持一致
-    const dateStrInst = formatLocalDateYYYYMMDD()
     const prefixInst = input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR'
     const maxInst = await inventoryStockRepository.getInstanceIdMaxSerial(prefixInst, dateStrInst)
     const instanceId = `${prefixInst}-${dateStrInst}-${String(maxInst + 1).padStart(4, '0')}`
-    const recordId = `INB-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const recordId = await generateInboundRecordId(dateStrInst)
 
     // 2. 写 inventory_stock
     // 2026-06-18: 修复大部分列为空的 bug

@@ -37,6 +37,13 @@ node_modules/
 dist/
 assets/
 
+# TypeScript 编译产物（2026-07-07 修正：之前 scripts/ 规则忽略整个目录，掩盖了这里需要单独 ignore 编译产物的事实）
+*.d.ts
+*.d.ts.map
+*.js.map
+# server/scripts/ 下的 .js 是 .ts 的 tsc 编译产物（项目用 tsx 跑 .ts，不需要 .js）
+server/scripts/**/*.js
+
 # 临时脚本
 *.tmp
 *.log
@@ -80,8 +87,8 @@ deliverables/
 参考数据/
 参考数据/
 
-# 临时辅助脚本
-scripts/
+# 临时辅助脚本（仅根目录 scripts/，2026-07-07 修正：之前 scripts/ 会误忽略 server/scripts/db-migrations/）
+/scripts/
 
 # 工具/规范目录（不提交）
 .codegraph/

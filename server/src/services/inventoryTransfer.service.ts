@@ -20,7 +20,7 @@
 
 import { getDatabase, saveDatabase } from '../db';
 import { seedSourceService } from './seedSource.service';
-import { generateInstanceId } from './inventory.service';
+import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
 
 // ============ 类型定义 ============
 
@@ -466,8 +466,8 @@ export async function executeTransferToSource(
 
       // === 步骤 5b：写新 inventory_stock（stock_type='seed'）+ transfer_in 流水 ===
       const newInstanceId = await generateInstanceId('INS', dateStr);
-      const tsSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const newStockId = `STK-${tsSuffix}-${writtenNewInventoryStockIds.length}`;
+      // 2026-07-07 V3.2: 库存主键统一走 generateStockId，4 位自增替代 Math.random
+      const newStockId = await generateStockId(dateStr);
 
       db.run(
         `INSERT INTO inventory_stock (
@@ -495,7 +495,8 @@ export async function executeTransferToSource(
       // 2026-07-06 Bug 16：调拨入种源必须写一条 source_module='inventory' 的入库记录，
       // 否则 listReturnableInboundRecords 查不到 → 退库弹窗永远报「没有可退的调拨入库流水」
       // source_id 指向新库存 STK ID（不是原库存），source_code 指向新种源批号
-      const inbRecordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenInboundRecordIds.length}`;
+      // 2026-07-07 V3.2: 入库记录主键统一走 generateInboundRecordId，4 位自增替代 Math.random
+      const inbRecordId = await generateInboundRecordId(dateStr);
       db.run(
         `INSERT INTO inventory_inbound_records (
           id, record_type, record_date, source_module, source_id, source_code,
