@@ -33,6 +33,8 @@ const router = Router();
  * - warehouseId 必填
  */
 const ProductSchema = z.object({
+  // 2026-07-08 T9：关联作物档案 ID（用于入库审计反向追溯），与 service InboundProduct.cropId 对齐
+  cropId: z.string().optional(),
   cropCode: z.string().optional(),
   cropName: z.string().min(1, { message: '产品名必填' }),
   cropVariety: z.string().optional(),
@@ -46,6 +48,11 @@ const ProductSchema = z.object({
   // 2026-06-19: 形态/类型字段
   productForm: z.string().optional(),  // 采收形态（果实/籽/枝条等）
   sourceForm: z.string().optional(),   // 育苗/种植产物类型
+  // 2026-07-08 T8.5：作物库存入库弹窗重设计 — 3 字段（与 product 关联的字段放子对象）
+  supplierPhone: z.string().optional(),  // 外购入库：供应商电话（product 维度）
+  giftFrom: z.string().optional(),       // 赠品入库：赠送方（product 维度）
+  baseId: z.string().optional(),         // 自产入库：基地 ID（product 维度）
+  baseName: z.string().optional(),       // 自产入库：基地名（product 维度）
 });
 
 const InboundFromSourceSchema = z.object({
@@ -80,6 +87,15 @@ const InboundFromSourceSchema = z.object({
   purchasePlanId: z.string().optional(),                                   // 关联现有 PR（未传则后端自动创建外购 PR）
   purchasePrice: z.number().nonnegative({ message: '采购单价不能为负' }).optional(),
   purchaseTotalAmount: z.number().nonnegative({ message: '采购总额不能为负' }).optional(),
+  // 2026-07-08 T9：作物库存入库弹窗重设计 — 入库审计补 production_plan 关联
+  productionPlanId: z.string().optional(),
+  productionPlanCode: z.string().optional(),
+  // 2026-07-08 T8.5：作物库存入库弹窗重设计 — 5 字段（顶级 schema）
+  consignor: z.string().optional(),          // 委托入库：委托方
+  sourceWarehouseName: z.string().optional(),// 调拨入库：源仓库名
+  stocktakeNo: z.string().optional(),        // 盘盈入库：盘点单号
+  plantingMode: z.string().optional(),       // 自产入库：种植模式（与 product.plantingMode 二选一）
+  greenhouseName: z.string().optional(),     // 自产入库：温室名
 });
 
 /**
@@ -168,4 +184,5 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+export { ProductSchema, InboundFromSourceSchema };
 export default router;

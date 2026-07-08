@@ -21,6 +21,7 @@ export type StockType = 'seed' | 'seedling' | 'product';
 export type SourceModule = 'seed_source' | 'seedling' | 'planting';
 
 export interface InboundProduct {
+  cropId?: string;          // 2026-07-08 T9：关联作物档案 ID（用于入库审计反向追溯）
   cropCode?: string;
   cropName: string;
   cropVariety?: string;
@@ -34,6 +35,11 @@ export interface InboundProduct {
   // 2026-06-19: 形态/类型字段
   productForm?: string;  // 采收形态（果实/籽/枝条等）
   sourceForm?: string;   // 育苗/种植产物类型（果实/籽/枝条等）
+  // 2026-07-08 T8.5：作物库存入库弹窗重设计 — product 维度 4 字段
+  supplierPhone?: string;  // 外购入库：供应商电话
+  giftFrom?: string;       // 赠品入库：赠送方
+  baseId?: string;         // 自产入库：基地 ID
+  baseName?: string;       // 自产入库：基地名
 }
 
 export interface InboundFromSourceInput {
@@ -69,6 +75,15 @@ export interface InboundFromSourceInput {
   purchasePlanId?: string;                  // 关联现有 PR（未传则自动创建外购 PR）
   purchasePrice?: number;
   purchaseTotalAmount?: number;
+  // 2026-07-08 T9：作物库存入库弹窗重设计 — 入库审计补 production_plan 关联
+  productionPlanId?: string;
+  productionPlanCode?: string;
+  // 2026-07-08 T8.5：作物库存入库弹窗重设计 — 顶级 5 字段
+  consignor?: string;          // 委托入库：委托方
+  sourceWarehouseName?: string;// 调拨入库：源仓库名
+  stocktakeNo?: string;        // 盘盈入库：盘点单号
+  plantingMode?: string;       // 自产入库：种植模式（与 product.plantingMode 二选一，顶级优先）
+  greenhouseName?: string;     // 自产入库：温室名
 }
 
 export interface InboundFromSourceResult {
@@ -359,21 +374,47 @@ export async function executeInboundFromSource(
       // 2026-07-06：种源外购入库 — unit_price/total_amount 用采购价；supplier_id/supplier_name 写入审计
       const inboundUnitPrice = input.purchasePrice || input.unitPrice || 0;
       const inboundTotalAmount = input.purchaseTotalAmount || inboundUnitPrice * product.harvestQuantity;
+      // 2026-07-08 T8.5：6 套字段矩阵补 9 列（顺序在 crop_id 之后、crop_code 之前，与 fixMissingSchema 对齐）
+      // product 维度的 4 字段（supplierPhone/giftFrom/baseId/baseName）从 product 取；其余 5 字段从 input 顶级取
+      const productAny = product as any;
+      const inputAny = input as any;
+      const supplierPhoneValue: string | null = inputAny.supplierPhone || productAny.supplierPhone || null;
+      const giftFromValue: string | null = inputAny.giftFrom || productAny.giftFrom || null;
+      const baseIdValue: string | null = inputAny.baseId || productAny.baseId || null;
+      const baseNameValue: string | null = inputAny.baseName || productAny.baseName || null;
       db.run(`
         INSERT INTO inventory_inbound_records (
           id, record_type, record_date, source_module, source_id, source_code,
           stock_type, source_type, warehouse_id, warehouse_name,
+          crop_id,
+          supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no,
+          base_id, base_name, planting_mode, greenhouse_name,
           crop_code, crop_name, variety_name,
+          production_plan_id, production_plan_code,
           quantity, unit, unit_price, total_amount, quality_grade,
           supplier_id, supplier_name,
           business_id, notes, operator_name, create_by, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         recordId, 'inbound', input.harvestDate,
         input.sourceModule, input.sourceRecordId, input.sourceRecordCode,
         input.stockType, (input as any).inboundSourceType || input.sourceModule,
         input.warehouseId, input.warehouseName || null,
+        // 2026-07-08 T9：入库审计补全 crop_id / production_plan 关联
+        product.cropId || null,
+        // 2026-07-08 T8.5：6 套字段矩阵补 9 字段值（顺序与列顺序一致）
+        supplierPhoneValue,
+        giftFromValue,
+        input.consignor || null,
+        input.sourceWarehouseName || null,
+        input.stocktakeNo || null,
+        baseIdValue,
+        baseNameValue,
+        // plantingMode 顶级优先，缺省用 product.plantingMode
+        input.plantingMode || product.plantingMode || null,
+        input.greenhouseName || null,
         product.cropCode || null, product.cropName, product.cropVariety || null,
+        input.productionPlanId || null, input.productionPlanCode || null,
         product.harvestQuantity, product.unit,
         inboundUnitPrice, inboundTotalAmount,
         product.grade || null,

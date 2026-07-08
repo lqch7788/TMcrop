@@ -12,6 +12,9 @@ export interface InventoryStockQuery {
   warehouseId?: string;
   cropName?: string;
   businessId?: string;
+  // T11（2026-07-08）：P0 过滤器 bug 修复 — repository 层真正消费 status / sourceType
+  status?: string;
+  sourceType?: string;
   page?: number;
   limit?: number;
 }
@@ -284,7 +287,8 @@ export class InventoryStockRepository {
    */
   async findAll(query: InventoryStockQuery): Promise<{ data: InventoryStock[]; total: number }> {
     const db = getDatabase();
-    const { stockType, warehouseId, cropName, page = 1, limit = 50 } = query;
+    // T11（2026-07-08）：从 query 解构 status / sourceType 供下面 WHERE 条件使用
+    const { stockType, warehouseId, cropName, status, sourceType, page = 1, limit = 50 } = query;
 
     let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
     const params: any[] = [];
@@ -305,6 +309,18 @@ export class InventoryStockRepository {
     if (cropName) {
       sql += ` AND crop_name LIKE ?`;
       params.push(`%${cropName}%`);
+    }
+
+    // T11（2026-07-08）：P0 过滤器 bug 修复 — SQL 层真正消费 status / sourceType
+    // 注意：必须放在 transferred 排除逻辑之后；与下面 if 顺序保持一致（params push 顺序）
+    if (status) {
+      sql += ` AND status = ?`;
+      params.push(status);
+    }
+
+    if (sourceType) {
+      sql += ` AND source_type = ?`;
+      params.push(sourceType);
     }
 
     // 获取总数

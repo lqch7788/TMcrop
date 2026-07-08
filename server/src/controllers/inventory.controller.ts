@@ -68,12 +68,25 @@ export class InventoryController {
    */
   async getList(req: Request, res: Response): Promise<void> {
     try {
-      const { stock_type, warehouse_id, crop_name, page = 1, limit = 50 } = req.query;
+      // T10 修复：req.query 是 snake_case（camelCaseRequestMiddleware 只转换 req.body），
+      // 此前只解构 stock_type / warehouse_id / crop_name / page / limit，
+      // 导致 status / source_type 过滤器被静默丢弃（前端筛选器失效的 P0 bug）。
+      const {
+        stock_type,
+        warehouse_id,
+        crop_name,
+        status,
+        source_type,
+        page = 1,
+        limit = 50,
+      } = req.query;
 
       const result = await inventoryService.getList({
         stockType: stock_type as string,
         warehouseId: warehouse_id as string,
         cropName: crop_name as string,
+        status: status as string,
+        sourceType: source_type as string,
         page: Number(page),
         limit: Number(limit),
       });

@@ -2845,6 +2845,16 @@ function fixApprovedProductionPlanStatus(): void {
         quality_grade TEXT,
         supplier_id TEXT,
         supplier_name TEXT,
+        -- 2026-07-08 T8.5：6 套字段矩阵补 8 字段（前 4 字段）
+        supplier_phone TEXT,            -- 外购入库：供应商电话
+        gift_from TEXT,                  -- 赠品入库：赠送方
+        consignor TEXT,                  -- 委托入库：委托方
+        source_warehouse_name TEXT,      -- 调拨入库：源仓库名
+        stocktake_no TEXT,               -- 盘盈入库：盘点单号
+        base_id TEXT,                    -- 自产入库：基地 ID
+        base_name TEXT,                  -- 自产入库：基地名
+        planting_mode TEXT,              -- 自产入库：种植模式
+        greenhouse_name TEXT,            -- 自产入库：温室名（与 inventory_stock 对齐）
         production_plan_id TEXT,
         production_plan_code TEXT,
         business_id TEXT,
@@ -2860,6 +2870,17 @@ function fixApprovedProductionPlanStatus(): void {
     db.run('CREATE INDEX IF NOT EXISTS idx_inbound_warehouse ON inventory_inbound_records (warehouse_id)');
     // 2026-06-26: 退库功能 — inventory_inbound_records 加 returned_quantity 列
     try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN returned_quantity REAL DEFAULT 0'); } catch (e: any) { /* duplicate column */ }
+    // 2026-07-08 T8.5：作物库存入库弹窗重设计补 8 字段（已存在列的 DB 自动跳过）
+    // 字段语义：见上面 CREATE TABLE 注释
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN supplier_phone TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN gift_from TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN consignor TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN source_warehouse_name TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN stocktake_no TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN base_id TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN base_name TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN planting_mode TEXT'); } catch (e: any) { /* duplicate column */ }
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN greenhouse_name TEXT'); } catch (e: any) { /* duplicate column */ }
     seedLog.info('  ✓ inventory_inbound_records 表 + 3 索引就绪');
   } catch (e: any) {
     seedLog.error('inventory_inbound_records 创建失败:', e.message);
