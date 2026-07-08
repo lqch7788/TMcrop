@@ -80,6 +80,9 @@ vi.mock('@/services/cropVarietyService', () => ({
   getCategoryOptions: () => [],
   getVarietyOptions: () => [],
   searchVarieties: () => [],
+  // T4：AddStockModal 的 crop-selector 字段已升级为 CropCodeSelector，
+  // 该组件会调用 getVarietyByCode(value) 解析当前选中的品种信息。
+  getVarietyByCode: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('@/services/addStockFormAdapter', () => ({
