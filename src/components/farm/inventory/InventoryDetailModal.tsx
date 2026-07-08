@@ -99,6 +99,15 @@ const BUSINESS_TYPE_META: Record<string, { label: string; bg: string; text: stri
   inventory_adjust:   { label: '库存调整',   bg: 'bg-yellow-100',   text: 'text-yellow-700' },
 };
 
+/**
+ * 货币格式化：null/undefined → "-"
+ * 2026-07-08 T7：财务信息"单价/总金额"专用
+ */
+function formatCurrency(value?: number | null): string {
+  if (value == null) return '-';
+  return `¥ ${value.toFixed(2)}`;
+}
+
 export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInstance }: InventoryDetailModalProps) {
   const [tab, setTab] = useState<TabKey>('basic');
   const [loading, setLoading] = useState(false);
@@ -438,6 +447,59 @@ function BasicTab({
         ['仓库',     stock.warehouseName || '-'],
         ['审核人',   stock.auditor || '-'],
         ['备注',     <span className="text-gray-600">{stock.remarks || '-'}</span>],
+      ],
+    },
+    // ========== 2026-07-08 T7：扩展信息 4 分组（在原有 5 分组之后追加） ==========
+    {
+      title: '💰 财务信息',
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-300',
+      text: 'text-yellow-700',
+      items: [
+        ['供应商',     stock.supplierName || '-'],
+        ['供应商电话', stock.supplierPhone || '-'],
+        ['单价',       formatCurrency(stock.unitPrice)],
+        ['总金额',     formatCurrency(stock.totalAmount)],
+        ['采购日期',   stock.purchaseDate || '-'],
+      ],
+    },
+    {
+      title: '🏷️ 审计信息',
+      bg: 'bg-indigo-50',
+      border: 'border-indigo-300',
+      text: 'text-indigo-700',
+      items: [
+        ['操作员',   stock.operatorName || '-'],
+        ['创建人',   stock.createBy || '-'],
+        ['创建时间', stock.createTime || '-'],
+        ['更新时间', stock.updateTime || '-'],
+      ],
+    },
+    {
+      title: '🏷️ 业务信息',
+      bg: 'bg-rose-50',
+      border: 'border-rose-300',
+      text: 'text-rose-700',
+      items: [
+        ['备注',     <span className="text-gray-600">{stock.remarks || '-'}</span>],
+        ['业务 ID',  stock.businessId || '-'],
+        ['业务类型', stock.businessType || '-'],
+        ['业务编码', stock.businessCode || stock.extensions?.businessCode || '-'],
+      ],
+    },
+    {
+      title: '🌱 来源专属',
+      bg: 'bg-orange-50',
+      border: 'border-orange-300',
+      text: 'text-orange-700',
+      items: [
+        ['赠方名称', stock.giftFrom || '-'],
+        ['委托方',   stock.consignor || '-'],
+        ['调出仓库', stock.sourceWarehouseName || '-'],
+        ['盘点单号', stock.stocktakeNo || '-'],
+        ['所属基地', stock.baseName || '-'],
+        ['种植模式', stock.plantingMode || '-'],
+        ['采收区域', stock.greenhouseName || '-'],
       ],
     },
   ];
