@@ -7,11 +7,14 @@
  * - 公共字段 + 来源专属字段均来自 AddStockModal.constants
  * - 校验统一走 validateBySourceType（声明式矩阵）
  * - 切换来源自动清空专属字段（fieldsToResetOnSourceTypeChange）
- * - crop-selector 字段 T3 暂渲染为 Input（T4 升级 CropCodeSelector）
- * - 操作人 T3 暂硬编码 'system'（T5 接 useAuthStore）
+ *
+ * 2026-07-08 T4 任务：crop-selector 字段升级为 CropCodeSelector 触发器
+ * - 选中品种后 handleCropChange 中等联动填 5 字段（cropSelector/cropCode/cropId/cropName/cropVariety）
+ * - 中等联动：仅当 qualityGrade 未填时填默认 'qualified'
+ * - 操作人 T3 暂硬编码 'system'（T5 接 useAuthStore，已在 65a1e6d9 完成）
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, FormField, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea, NumberInput } from '@/components/ui';
 import { Package, AlertCircle } from 'lucide-react';
 import {
@@ -26,6 +29,7 @@ import type {
   StockType as StockTypeLiteral,
   InboundSourceRecord,
 } from '../../../types/inventoryInbound';
+import type { CropVariety } from '../../../types/cropVariety';
 import { todayLocal } from '@/lib/dateUtils';
 import { showAlert } from '@/lib/dialogService';
 import {
@@ -37,6 +41,7 @@ import {
 } from './AddStockModal.constants';
 import { toPayload, buildOperatorInfo } from '@/services/addStockFormAdapter';
 import { useAuthStore } from '@/stores/useAuthStore';
+import CropCodeSelector from '../common/CropCodeSelector';
 
 // 业务推荐：用户主要诉求是"非采收/非采购"的其他入库途径
 // 顺序按"使用频率"排列：外购 > 赠送 > 委托 > 调拨 > 手动 > 自产（兜底）
@@ -89,7 +94,7 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 
 /**
  * 字段渲染：根据 FieldConfig.type 派发到对应 UI 组件。
- * crop-selector 类型 T3 暂用 Input 文本框（T4 任务再升级 CropCodeSelector）。
+ * crop-selector 类型在 T4 升级为 CropCodeSelector 触发器，由 ctx.onCropChange 处理联动。
  */
 function renderFieldByType(
   field: FieldConfig,
@@ -100,6 +105,7 @@ function renderFieldByType(
     suppliers: Array<{ id: string; name: string }>;
     bases: Array<{ id?: string; oid?: string; name: string }>;
     formData: Record<string, any>;
+    onCropChange: (code: string, variety: CropVariety | null) => void;
   },
 ): React.ReactNode {
   switch (field.type) {
@@ -206,13 +212,14 @@ function renderFieldByType(
         </Select>
       );
     case 'crop-selector':
-      // T3 暂用 Input 文本框（T4 升级 CropCodeSelector）
+      // T4 升级：从 Input 文本框升级为 CropCodeSelector 触发器
+      // 选中后通过 onCropChange 触发 4 字段中等联动（cropCode/cropId/cropName/cropVariety）
       return (
-        <Input
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="作物名称（T4 升级 CropCodeSelector）"
-          className={deepInputClass}
+        <CropCodeSelector
+          value={String(value || '')}
+          onChange={ctx.onCropChange}
+          placeholder="搜索或选择作物品种..."
+          showFullPath
         />
       );
     case 'textarea':
@@ -322,6 +329,48 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     }
   };
 
+  // ---- 作物选择 CropCodeSelector 选中后的中等联动 ----
+  // 选中品种 → 一次性填 5 字段（cropSelector/cropCode/cropId/cropName/cropVariety），
+  // 选清空 → 删除这 5 字段。
+  // 说明：cropSelector 字段 key 在 COMMON_FIELDS 中是 '作物选择' 字段的 key，承载 cropCode 值
+  //       （命名沿用历史 — T4 让 CropCodeSelector 直接读写 cropSelector 即可）。
+  // 中等联动：仅当 qualityGrade 未填时填默认 'qualified'（覆盖 buildInitialFormData 默认 'good'）。
+  // 注：CropVariety 类型暂无 unit 字段，预留扩展点（(variety as any).unit 读取）。
+  const handleCropChange = useCallback(
+    (code: string, variety: CropVariety | null) => {
+      setFormData((prev) => {
+        if (!variety) {
+          const next = { ...prev };
+          ['cropSelector', 'cropCode', 'cropId', 'cropName', 'cropVariety'].forEach((k) => {
+            delete next[k];
+          });
+          return next;
+        }
+        const next = { ...prev };
+        next.cropSelector = code; // 选中后回写到 cropSelector 字段（与 COMMON_FIELDS 对齐）
+        next.cropCode = code;
+        next.cropId = variety.id;
+        next.cropName = variety.subVariety1Name || variety.varietyName;
+        next.cropVariety =
+          variety.detailVarietyName || variety.subVariety1Name || variety.varietyName;
+        // 中等联动：仅当 qualityGrade 未填时填默认 'qualified'
+        if (!prev.qualityGrade) {
+          next.qualityGrade = 'qualified';
+        }
+        return next;
+      });
+      // 清空 cropSelector 相关字段的错误提示
+      setErrors((prev) => {
+        if (!prev.cropSelector && !prev.cropCode) return prev;
+        const next = { ...prev };
+        delete next.cropSelector;
+        delete next.cropCode;
+        return next;
+      });
+    },
+    [],
+  );
+
   // ---- 提交 ----
   const handleSubmit = async () => {
     setTopError(null);
@@ -361,6 +410,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     suppliers: supplierItems.map((s: any) => ({ id: String(s.id), name: s.name })),
     bases: bases as any,
     formData,
+    onCropChange: handleCropChange,
   };
 
   return (
@@ -465,6 +515,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 /**
  * 构造初始 formData：包含公共字段默认值 + 来源专属字段空值。
  * 包含 sourceRecord 的 cropName/cropVariety/cropCode 单位等预填。
+ *
+ * cropSelector 字段 key 在 T4 升级为 CropCodeSelector 后承载 cropCode 值
+ * （命名沿用历史，但语义现在是"选中的作物编码"）。
  */
 function buildInitialFormData(
   sourceType: SourceTypeLiteral,
@@ -472,10 +525,11 @@ function buildInitialFormData(
 ): Record<string, any> {
   const data: Record<string, any> = {
     recordDate: todayLocal(),
-    cropSelector: sourceRecord?.cropName ?? '',
+    cropSelector: sourceRecord?.cropCode ?? sourceRecord?.cropName ?? '',
     cropName: sourceRecord?.cropName ?? '',
     cropVariety: sourceRecord?.cropVariety ?? '',
     cropCode: sourceRecord?.cropCode ?? '',
+    cropId: '',
     warehouseId: '',
     quantity: '',
     unit: sourceRecord?.unit ?? '公斤',
