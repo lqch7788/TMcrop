@@ -651,27 +651,29 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       onClose={onClose}
       title="新增育苗"
       size="xl"
+      // 2026-07-08 V3.4：弹窗高度 +30%（xl 默认 600px → 780px）
+      // 注意：Modal 仅在 width+height 同时设置时使用 prop，否则 fall back 到 size 默认
+      width={900}
+      height={780}
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="保存"
       cancelText="取消"
     >
       <div className="space-y-6">
-        {/* ========== 2026-06-24: 新流程 Banner — 育苗吸收种源管理「无性繁殖」 ========== */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800">
-          <b>育苗</b>已吸收无性繁殖：选 <b>1:多</b> 模式可记录扦插 / 嫁接 / 分株 / 块茎 / 枝条 / 组培 / 匍匐茎等所有无性繁殖方式。
-          育苗成品同样通过「行级采收入库」入作物库存，再调拨入种源管理。
-        </div>
+        {/* ========== 2026-06-24: 新流程 Banner — 育苗吸收种源管理「无性繁殖」
+            2026-07-08 V3.4 UI 改造：前端隐藏 banner 文字（用户决定），仅保留代码注释说明业务背景
+            原显示文字：
+            育苗已吸收无性繁殖：选 1:多 模式可记录扦插 / 嫁接 / 分株 / 块茎 / 枝条 / 组培 / 匍匐茎等所有无性繁殖方式。
+            育苗成品同样通过「行级采收入库」入作物库存，再调拨入种源管理。 ========== */}
 
-        {/* ========== 2026-06-14: 繁殖模式选择（建档后锁定） ========== */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <RefreshCw className="w-4 h-4 text-indigo-600" />
-            <h3 className="text-sm font-semibold text-indigo-900">
-              繁殖模式 <span className="text-red-500">*</span>
-              <span className="text-xs text-gray-500 ml-2 font-normal">建档后不可修改，决定数量字段语义</span>
-            </h3>
-          </div>
+        {/* ========== 2026-06-14: 繁殖模式选择（建档后锁定） ==========
+            V3.4 UI 统一：去掉 indigo 背景色块，改为 h3 + 灰下边框分组（与种源/种植一致） */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">
+            繁殖模式 <span className="text-red-500">*</span>
+            <span className="text-xs text-gray-500 ml-2 font-normal">建档后不可修改，决定数量字段语义</span>
+          </h3>
           <div className="grid grid-cols-3 gap-3">
             {PROPAGATION_MODES.map(m => (
               <label
@@ -709,12 +711,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           </div>
         </div>
 
-        {/* ========== 育苗批次号（最顶层） ========== */}
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <RefreshCw className="w-4 h-4 text-purple-600" />
-            <h3 className="text-sm font-semibold text-purple-900">育苗批次号</h3>
-          </div>
+        {/* ========== 育苗批次号（最顶层） ==========
+            V3.4 UI 统一：去掉 purple 背景色块，改为 h3 + 灰下边框分组 */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">育苗批次号</h3>
           <div className="grid grid-cols-2 gap-4">
             {/* 育苗批次号 */}
             <div>
@@ -799,12 +799,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           </div>
         </div>
 
-        {/* ========== 关联种源信息区 ========== */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Link2 className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-semibold text-blue-900">关联种源信息</h3>
-          </div>
+        {/* ========== 关联种源信息区 ==========
+            V3.4 UI 统一：去掉 blue 背景色块，改为 h3 + 灰下边框分组 */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">关联种源信息</h3>
           <p className="text-xs text-gray-500 mb-3">种源必须先在种源管理中录入</p>
           {/* combogrid 种源选择器 */}
             <div className="grid grid-cols-2 gap-4">
@@ -988,12 +986,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             </div>
         </div>
 
-        {/* ========== 数量与品质区（2026-06-16: 移到批次号上方） ========== */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-900">数量与品质</h3>
-          </div>
+        {/* ========== 数量与品质区（2026-06-16: 移到批次号上方） ==========
+            V3.4 UI 统一：去掉 amber 背景色块，改为 h3 + 灰下边框分组 */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">数量与品质</h3>
 
           {/* 2026-06-16: 育苗计算模式取消 UI 选择（propagationMode 自动联动，避免前后矛盾）
               字段保留在 state 中（calculateMode）以兼容 EditModal/apiSeedlingService/历史数据 */}
@@ -1211,12 +1207,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
 
           {/* 2026-06-16: 负责人已迁移到"数量与品质"区与目标成苗数配对 */}
         </div>
-        {/* ========== 场地与计划区 ========== */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <MapPin className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-sm font-semibold text-emerald-900">场地与计划</h3>
-          </div>
+        {/* ========== 场地与计划区 ==========
+            V3.4 UI 统一：去掉 emerald 背景色块，改为 h3 + 灰下边框分组 */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">场地与计划</h3>
           <div className="grid grid-cols-2 gap-4">
             {/* 育苗区域 */}
             <div>
@@ -1366,12 +1360,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         </div>
 
 
-        {/* ========== 备注与附件区 ========== */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-900">备注与附件</h3>
-          </div>
+        {/* ========== 备注与附件区 ==========
+            V3.4 UI 统一：去掉 gray 背景色块，改为 h3 + 灰下边框分组 */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">备注与附件</h3>
           <div className="space-y-4">
             {/* 备注 */}
             <div>
