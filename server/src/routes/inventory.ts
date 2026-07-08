@@ -131,7 +131,7 @@ function fetchSourceRow(
   } else if (sourceModule === 'seedling') {
     sql = 'SELECT seedling_code, crop_id, crop_code, crop_name, crop_variety, production_plan_code, unit, greenhouse_name FROM seedlings WHERE id = ? AND deleted_at IS NULL'
   } else {
-    sql = 'SELECT planting_code, crop_code, crop_name, crop_variety, production_plan_id, production_plan_code, unit, greenhouse_name FROM plantings WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)'
+    sql = 'SELECT planting_code, crop_code, crop_name, crop_variety, production_plan_id, production_plan_code, unit, greenhouse_name FROM plantings WHERE id = ? AND deleted_at IS NULL'
   }
   const stmt = db.prepare(sql)
   stmt.bind([sourceId])
