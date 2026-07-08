@@ -194,6 +194,21 @@ export interface InventoryStock {
   // 产品明细"采收形态"sourceForm 字段 (果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他 12 选)
   // InventoryTable 形态列统一读 productForm → sourceForm（fallback）
   sourceForm?: string;
+  // ========== 2026-07-08 T7 扩展：详情弹窗扩展信息 4 分组字段 ==========
+  // 财务信息（外购入库专属）
+  supplierPhone?: string;       // 供应商联系电话
+  // 审计信息
+  operatorName?: string;        // 操作员（与 InventoryTransaction.operatorName 对齐）
+  createBy?: string;            // 创建人
+  createTime?: string;          // 创建时间
+  updateTime?: string;          // 更新时间
+  // 业务信息
+  businessCode?: string;        // 业务单号（从 extensions?.businessCode 提升为顶层字段）
+  // 来源专属
+  giftFrom?: string;            // 赠送来源（人/单位/备注）
+  consignor?: string;           // 委托方名称
+  sourceWarehouseName?: string; // 调拨源仓库
+  stocktakeNo?: string;         // 盘点单号
 }
 
 /**
