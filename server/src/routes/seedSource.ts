@@ -12,6 +12,9 @@ import { getDatabase, saveDatabase } from '../db';
 import { seedSourceRepository } from '../repositories/seedSource.repository';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+// 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
+// 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
+import { generateTransactionId } from '../services/inventory.service';
 import {
   executeReturnToInventory,
   listReturnableInboundRecords,
@@ -571,11 +574,11 @@ router.post('/append-from-inventory', async (req, res) => {
         writtenStockIds.push(item.sourceStockId);
 
         // 5. 写 inventory_transaction (outbound)
-        // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('TX') 与 inventory_stock.instance_id 跨表冲突
-        // 之前用 generateInstanceId('TX', dateStr) 只查 inventory_stock.instance_id 的 maxSerial，
-        // 不能避免与 inventory_transaction.transaction_id 的 UNIQUE 冲突
-        const outTxId = `TXO-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-        const outTransactionId = `OUT-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        // 2026-07-08 V3.4 流水号规范化：使用项目统一工具 generateTransactionId 生成 TRX-YYYYMMDD-NNNN 流水号
+        // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
+        // 之前 2026-06-26 修复的「跨表唯一」问题由 getTransactionIdMaxSerial 内部 LIKE + UNIQUE 约束保证
+        const outTxId = await generateTransactionId(dateStr);
+        const outTransactionId = await generateTransactionId(dateStr);
         const insTx = db.prepare(
           `INSERT INTO inventory_transaction (
             id, transaction_id, instance_id, stock_type, transaction_type, quantity,

@@ -10,6 +10,9 @@ import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { seedSourceService, BusinessError, SeedSourceErrorCode } from '../services/seedSource.service';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
+// 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
+// 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
+import { generateTransactionId } from '../services/inventory.service';
 import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
 import { seedLog } from '../lib/seedLogger';
 import { formatLocalDateISO } from '../utils/dateUtil';
@@ -282,11 +285,12 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       // 修复：同时写一条 outbound 流水，history/trace tab 才能查到
       // business_type 用 'seedling'（与 crop_instances 的 business_type 对齐），
       // 避免被 inventoryTransactions.ts 的 VALID_OUTBOUND_TYPES 白名单静默丢弃
-      // ID 格式与 seedSource.ts:415 样本对齐（Date.now + random）确保跨表唯一
+      // 2026-07-08 V3.4 流水号规范化：使用项目统一工具 generateTransactionId 生成 TRX-YYYYMMDD-NNNN 流水号
+      // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
       const seedSourceInstanceId = `seed_source:${sourceId}`;
-      const useTxDateStr = now.replace(/[^0-9]/g, '').slice(0, 14);
-      const useTxId = `TXO-${useTxDateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-      const useTransactionId = `OUT-${useTxDateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const useDateYmd = now.slice(0, 10).replace(/-/g, '');
+      const useTxId = await generateTransactionId(useDateYmd);
+      const useTransactionId = await generateTransactionId(useDateYmd);
       const operatorName = create_by || 'system';  // HIGH#1: operator_name 不能再传空字符串（审计追溯断链）
       db.run(
         `INSERT INTO inventory_transaction (
@@ -961,7 +965,7 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.post('/', (req: Request, res: Response) => {
+router.post('/', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
@@ -1107,11 +1111,12 @@ router.post('/', (req: Request, res: Response) => {
           // 修复：在扣减成功后同 try 内追加一条 outbound 流水，history/trace tab 才能查到
           // business_type 用 'seedling'（与 crop_instances 的 business_type 对齐），
           // 避免被 inventoryTransactions.ts 的 VALID_OUTBOUND_TYPES 白名单静默丢弃
-          // ID 格式与 seedSource.ts:415 样本对齐（Date.now + random）确保跨表唯一
+          // 2026-07-08 V3.4 流水号规范化：使用项目统一工具 generateTransactionId 生成 TRX-YYYYMMDD-NNNN 流水号
+          // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
           const seedSourceInstanceId2 = `seed_source:${source_id}`;
-          const useTxDateStr2 = now.replace(/[^0-9]/g, '').slice(0, 14);
-          const useTxId2 = `TXO-${useTxDateStr2}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          const useTransactionId2 = `OUT-${useTxDateStr2}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          const useDateYmd2 = now.slice(0, 10).replace(/-/g, '');
+          const useTxId2 = await generateTransactionId(useDateYmd2);
+          const useTransactionId2 = await generateTransactionId(useDateYmd2);
           const newRemaining2 = remaining - seedling_quantity;
           const operatorName2 = create_by || 'system';  // HIGH#1: 同 with-deduct，不能传空字符串
           db.run(
@@ -1195,7 +1200,7 @@ router.post('/', (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : String(error);
     res.status(500).json({ success: false, error: `创建育苗记录失败: ${msg}` });
   }
-});
+}));
 
 router.put('/:id', (req: Request, res: Response) => {
   try {

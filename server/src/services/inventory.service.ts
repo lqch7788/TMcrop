@@ -34,7 +34,7 @@ export async function generateInstanceId(prefix: string, dateStr: string): Promi
   throw new Error(`生成 instanceId 失败：${prefix} ${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
 }
 
-async function generateTransactionId(dateStr: string): Promise<string> {
+export async function generateTransactionId(dateStr: string): Promise<string> {
   for (let i = 0; i < MAX_RETRY; i++) {
     const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(dateStr);
     const serial = max + 1;
