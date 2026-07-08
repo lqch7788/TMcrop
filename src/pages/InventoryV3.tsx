@@ -375,12 +375,14 @@ export default function InventoryV3Page() {
         onNavigateToInstance={(id) => setDetailStock({ instanceId: id } as any)}
       />
 
-      {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal） */}
+      {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal）
+          2026-07-08 V3.4：传 impactHint 提示用户"删除作物库存会破坏追溯链"，谨慎删除 */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         selectedCount={selectedRows.length}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteModalConfirm}
+        impactHint="删除作物库存会破坏「采收入库 → 库存 → 出库」的完整追溯链。系统已拦截有出库/冻结的记录；如果通过校验，请确认该库存从未被出库使用过，且后续审计不需要追溯。"
       />
     </div>
   );

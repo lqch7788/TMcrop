@@ -1,5 +1,5 @@
 // 统一删除警告弹窗组件
-import { AlertTriangle, Check, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, Info, Trash2, X } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui';
 
@@ -11,6 +11,12 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
+  /**
+   * 2026-07-08 V3.4：影响提示（追溯链破坏风险等）
+   * 传入时，弹窗会在 description 下方显示一个 amber 色块提醒用户
+   * 业务影响。作物库存删除等"破坏性操作"应传入此 prop 提示用户谨慎删除。
+   */
+  impactHint?: string;
 }
 
 // 旧版接口类型1: show, onCancel, onConfirm
@@ -38,6 +44,7 @@ export function DeleteConfirmModal({
   onConfirm,
   title = '删除警告',
   description,
+  impactHint,
 }: DeleteConfirmModalProps) {
   if (!isOpen) return null;
 
@@ -78,6 +85,15 @@ export function DeleteConfirmModal({
               <p>确定要删除选中的 <strong>{selectedCount}</strong> 个项目吗？</p>
               <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
             </>
+          )}
+
+          {/* 2026-07-08 V3.4：业务影响提示（追溯链破坏风险等）
+              作物库存等"破坏性操作"调用方传入 impactHint 提醒用户谨慎删除 */}
+          {impactHint && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+              <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+              <span className="flex-1">{impactHint}</span>
+            </div>
           )}
         </div>
 
