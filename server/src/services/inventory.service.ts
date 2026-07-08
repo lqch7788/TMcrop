@@ -401,6 +401,8 @@ export class InventoryService {
     stockType?: string;
     warehouseId?: string;
     cropName?: string;
+    status?: string;       // T10 修复：透传 controller 的 status 过滤参数（T11 会在 repository 真正消费）
+    sourceType?: string;   // T10 修复：透传 controller 的 sourceType 过滤参数（T11 会在 repository 真正消费）
     page?: number;
     limit?: number;
   }): Promise<{ data: InventoryStock[]; total: number }> {

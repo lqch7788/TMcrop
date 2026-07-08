@@ -79,6 +79,26 @@ const InboundSchema = z.object({
   operatorName: z.string().optional(),
   recordDate: z.string().optional(),  // YYYY-MM-DD；默认今天
   warehouseName: z.string().optional(),
+  // 2026-07-08 T8：作物 ID（前端弹窗从来源记录带出，可覆盖）
+  cropId: z.string().optional(),
+  // 2026-07-08 T8.5：6 套字段矩阵补 8 字段
+  // - supplierPhone：外购入库 — 供应商电话（库存表已有 supplier_*，这里补 phone 补全）
+  // - giftFrom：赠品入库 — 赠送方
+  // - consignor：委托入库 — 委托方
+  // - sourceWarehouseName：调拨入库 — 源仓库名
+  // - stocktakeNo：盘盈入库 — 盘点单号
+  // - baseId / baseName：自产入库 — 基地 ID / 名
+  // - plantingMode：自产入库 — 种植模式
+  // - greenhouseName：自产入库 — 温室名
+  supplierPhone: z.string().optional(),
+  giftFrom: z.string().optional(),
+  consignor: z.string().optional(),
+  sourceWarehouseName: z.string().optional(),
+  stocktakeNo: z.string().optional(),
+  baseId: z.string().optional(),
+  baseName: z.string().optional(),
+  plantingMode: z.string().optional(),
+  greenhouseName: z.string().optional(),
 });
 
 /**
@@ -235,21 +255,39 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     ])
 
     // 3. 写 inventory_inbound_records
+    // 2026-07-08 T8：插入 crop_id 列（与 inventory_stock 表对齐），保持原有列顺序稳定
+    // 2026-07-08 T8.5：6 套字段矩阵补 9 列（supplier_phone/gift_from/consignor/source_warehouse_name/
+    //   stocktake_no/base_id/base_name/planting_mode/greenhouse_name），列顺序在 crop_id 之后、crop_code 之前
     db.run(`
       INSERT INTO inventory_inbound_records
       (id, record_type, record_date, source_module, source_id, source_code,
        stock_type, source_type, warehouse_id, warehouse_name,
+       crop_id,
+       supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no,
+       base_id, base_name, planting_mode, greenhouse_name,
        crop_code, crop_name, variety_name,
        quantity, unit, unit_price, total_amount, quality_grade,
        supplier_id, supplier_name,
        production_plan_id, production_plan_code,
        business_id, notes, operator_name, create_by, create_time, update_time)
-      VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       recordId, recordDate,
       input.sourceModule, input.sourceId, source.code,
       input.stockType, input.sourceType,
       input.warehouseId, input.warehouseName || null,
+      // crop_id 优先用前端传入的 cropId（人工覆盖），缺省回退到 source.cropId（育苗源记录）
+      source.cropId || input.cropId || null,
+      // 2026-07-08 T8.5：6 套字段矩阵补 9 字段值（顺序与列顺序一致）
+      input.supplierPhone || null,
+      input.giftFrom || null,
+      input.consignor || null,
+      input.sourceWarehouseName || null,
+      input.stocktakeNo || null,
+      input.baseId || null,
+      input.baseName || null,
+      input.plantingMode || null,
+      input.greenhouseName || null,
       source.cropCode, source.cropName, source.cropVariety,
       input.quantity, input.unit, input.unitPrice || 0, input.totalAmount || 0,
       input.qualityGrade || null,
