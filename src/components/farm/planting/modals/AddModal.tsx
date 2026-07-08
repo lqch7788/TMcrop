@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { X, Upload, RefreshCw, AlertTriangle, Search, ChevronDown } from 'lucide-react';
+import { X, Upload, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource } from '../../../../types/crop';
 import { getSeedSources, searchSeedSources } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
@@ -361,12 +361,20 @@ export function AddModal({
       onClose={onClose}
       title="新增种植"
       size="xl"
+      // 2026-07-08 V3.4：弹窗高度 +30%（xl 默认 600px → 780px）
+      // 注意：Modal 仅在 width+height 同时设置时使用 prop，否则 fall back 到 size 默认
+      width={900}
+      height={780}
       showFooter={true}
       onSubmit={handleSubmit}
       submitText="保存"
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {/* ========== V3.4 UI 统一：种植管理顶部 banner（与种源/育苗一致 emerald-50）
+            2026-07-08 V3.4 UI 改造：前端隐藏 banner 文字（用户决定），仅保留代码注释说明业务背景
+            原显示文字：
+            种植已吸收种源管理的「育种实验」和「种植留种」功能：可选开启后，采收的种子通过「行级采收入库」回到作物库存，再调拨入种源管理。 ========== */}
         {/* 种植批号 + 关联生产计划 — 同行排列 */}
         <div className="col-span-2 grid grid-cols-2 gap-x-6">
           <div>
@@ -482,169 +490,160 @@ export function AddModal({
         </div>
 
         {/* 2026-06-25: 育种计划设置（移到这里，在区域/数量之前，让用户先决定种植模式） */}
-        <div className="col-span-2">
-          <details className="group border border-emerald-200 rounded-lg">
-            <summary className="px-3 py-2 bg-emerald-50 cursor-pointer text-sm font-medium text-emerald-800 rounded-t-lg flex items-center justify-between gap-2 list-none">
-              <span className="flex items-center gap-2">
-                🌱 育种计划设置（可选）
-                {formData.isBreeding && (
-                  <Badge className="bg-emerald-600 text-white text-xs">已开启</Badge>
-                )}
-              </span>
-              {/* 2026-06-25: 自定义折叠箭头（替代浏览器默认 disclosure marker，更醒目） */}
-              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-open:rotate-180" />
-            </summary>
-            <div className="p-3 space-y-3 border-t border-emerald-200">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is-breeding"
-                  checked={formData.isBreeding}
-                  // 2026-06-25: 与「种植留种」互斥 — 选育种计划时自动取消留种（业务语义不同，不能并存）
-                  onCheckedChange={(v) => setFormData({ ...formData, isBreeding: !!v, isSeedSaving: !v ? false : formData.isSeedSaving })}
-                  disabled={formData.isSeedSaving}
-                />
-                <Label htmlFor="is-breeding" className="text-sm cursor-pointer">
-                  标记为育种计划（采收的种子可调拨入种源管理）
-                </Label>
-              </div>
+        {/* V3.4 UI 统一：去掉 details 折叠，改为 h3 + 灰下边框分组（与种源/育苗一致） */}
+        <div className="col-span-2 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">
+            育种计划设置（可选）
+            {formData.isBreeding && (
+              <Badge className="bg-emerald-600 text-white text-xs ml-2">已开启</Badge>
+            )}
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is-breeding"
+                checked={formData.isBreeding}
+                // 2026-06-25: 与「种植留种」互斥 — 选育种计划时自动取消留种（业务语义不同，不能并存）
+                onCheckedChange={(v) => setFormData({ ...formData, isBreeding: !!v, isSeedSaving: !v ? false : formData.isSeedSaving })}
+                disabled={formData.isSeedSaving}
+              />
+              <Label htmlFor="is-breeding" className="text-sm cursor-pointer">
+                标记为育种计划（采收的种子可调拨入种源管理）
+              </Label>
+            </div>
 
-              {formData.isBreeding && (
-                <>
-                  {/* 父母本 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-gray-900">
-                        <span className="text-red-500">*</span> 父本编码
-                      </Label>
-                      <Input
-                        value={formData.parentMaleCode}
-                        onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
-                        placeholder="例: ZZ20250601-001"
-                        className={deepInputClass}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-900">
-                        <span className="text-red-500">*</span> 母本编码
-                      </Label>
-                      <Input
-                        value={formData.parentFemaleCode}
-                        onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
-                        placeholder="例: ZZ20250515-002"
-                        className={deepInputClass}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 世代 + 育种方法 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-gray-900">
-                        <span className="text-red-500">*</span> 世代
-                      </Label>
-                      <Select
-                        value={formData.generation}
-                        onValueChange={(v) => setFormData({ ...formData, generation: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择世代" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="F1">F1（一代杂交）</SelectItem>
-                          <SelectItem value="F2">F2（二代）</SelectItem>
-                          <SelectItem value="F3">F3（三代）</SelectItem>
-                          <SelectItem value="BC1">BC1（回交一代）</SelectItem>
-                          <SelectItem value="BC2">BC2（回交二代）</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-gray-900">育种方法</Label>
-                      <Select
-                        value={formData.breedingMethod}
-                        onValueChange={(v) => setFormData({ ...formData, breedingMethod: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择育种方法" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="crossbreeding">杂交育种</SelectItem>
-                          <SelectItem value="selection">选择育种</SelectItem>
-                          <SelectItem value="backcross">回交</SelectItem>
-                          <SelectItem value="heterosis">杂种优势</SelectItem>
-                          <SelectItem value="open_pollination">开放授粉</SelectItem>
-                          <SelectItem value="mutation">诱变</SelectItem>
-                          <SelectItem value="other">其他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* 2026-06-25: 移除「育种地点」字段 — 与上方「种植区域」语义重叠，统一用种植区域表示 */}
-                  {/* 目标性状 */}
+            {formData.isBreeding && (
+              <>
+                {/* 父母本 */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-gray-900">目标性状</Label>
-                    <TextArea
-                      value={formData.targetTraits}
-                      onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
-                      rows={2}
-                      placeholder="例: 抗病性强 / 产量提高20% / 糖度提升"
-                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    <Label className="text-gray-900">
+                      <span className="text-red-500">*</span> 父本编码
+                    </Label>
+                    <Input
+                      value={formData.parentMaleCode}
+                      onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
+                      placeholder="例: ZZ20250601-001"
+                      className={deepInputClass}
                     />
                   </div>
+                  <div>
+                    <Label className="text-gray-900">
+                      <span className="text-red-500">*</span> 母本编码
+                    </Label>
+                    <Input
+                      value={formData.parentFemaleCode}
+                      onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
+                      placeholder="例: ZZ20250515-002"
+                      className={deepInputClass}
+                    />
+                  </div>
+                </div>
 
-                  <p className="text-xs text-amber-600">
-                    ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
-                  </p>
-                </>
-              )}
-            </div>
-          </details>
+                {/* 世代 + 育种方法 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-900">
+                      <span className="text-red-500">*</span> 世代
+                    </Label>
+                    <Select
+                      value={formData.generation}
+                      onValueChange={(v) => setFormData({ ...formData, generation: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择世代" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="F1">F1（一代杂交）</SelectItem>
+                        <SelectItem value="F2">F2（二代）</SelectItem>
+                        <SelectItem value="F3">F3（三代）</SelectItem>
+                        <SelectItem value="BC1">BC1（回交一代）</SelectItem>
+                        <SelectItem value="BC2">BC2（回交二代）</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-gray-900">育种方法</Label>
+                    <Select
+                      value={formData.breedingMethod}
+                      onValueChange={(v) => setFormData({ ...formData, breedingMethod: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择育种方法" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="crossbreeding">杂交育种</SelectItem>
+                        <SelectItem value="selection">选择育种</SelectItem>
+                        <SelectItem value="backcross">回交</SelectItem>
+                        <SelectItem value="heterosis">杂种优势</SelectItem>
+                        <SelectItem value="open_pollination">开放授粉</SelectItem>
+                        <SelectItem value="mutation">诱变</SelectItem>
+                        <SelectItem value="other">其他</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* 2026-06-25: 移除「育种地点」字段 — 与上方「种植区域」语义重叠，统一用种植区域表示 */}
+                {/* 目标性状 */}
+                <div>
+                  <Label className="text-gray-900">目标性状</Label>
+                  <TextArea
+                    value={formData.targetTraits}
+                    onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
+                    rows={2}
+                    placeholder="例: 抗病性强 / 产量提高20% / 糖度提升"
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  />
+                </div>
+
+                <p className="text-xs text-amber-600">
+                  ⚠ 标记为育种计划后，行级采收入库的种子将进入作物库存供后续调拨入种源管理。
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* 2026-06-25: 种植留种设置 — 种源管理「种植留种」吸收到种植管理 */}
-        <div className="col-span-2">
-          <details className="group border border-amber-200 rounded-lg">
-            <summary className="px-3 py-2 bg-amber-50 cursor-pointer text-sm font-medium text-amber-800 rounded-t-lg flex items-center justify-between gap-2 list-none">
-              <span className="flex items-center gap-2">
-                🌾 种植留种设置（可选）
-                {formData.isSeedSaving && (
-                  <Badge className="bg-amber-600 text-white text-xs">已开启</Badge>
-                )}
-              </span>
-              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-open:rotate-180" />
-            </summary>
-            <div className="p-3 space-y-3 border-t border-amber-200">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is-seed-saving"
-                  checked={formData.isSeedSaving}
-                  // 2026-06-25: 与「育种计划」互斥 — 选种植留种时自动取消育种计划
-                  onCheckedChange={(v) => setFormData({ ...formData, isSeedSaving: !!v, isBreeding: !v ? false : formData.isBreeding })}
-                  disabled={formData.isBreeding}
-                />
-                <Label htmlFor="is-seed-saving" className="text-sm cursor-pointer">
-                  本种植用于留种（采收时入种源库存而非产品库存）
-                </Label>
-              </div>
-
-              {formData.isSeedSaving && (
-                <div>
-                  <Label className="text-gray-900">留种株号/标记</Label>
-                  <Input
-                    value={formData.seedPlantMarker}
-                    onChange={(e) => setFormData({ ...formData, seedPlantMarker: e.target.value })}
-                    placeholder="例: A区第3排 / 标记#001-#050"
-                    className={deepInputClass}
-                  />
-                  <p className="text-xs text-amber-600 mt-2">
-                    ⚠ 标记为留种后，行级采收入库弹窗的「库存类型」默认选 <b>种源</b>。
-                    采收的种子入作物库存后，可调拨入种源管理。
-                  </p>
-                </div>
-              )}
+        {/* 2026-06-25: 种植留种设置 — 种源管理「种植留种」吸收到种植管理
+            V3.4 UI 统一：去掉 details 折叠，改为 h3 + 灰下边框分组（与种源/育苗一致） */}
+        <div className="col-span-2 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 pb-2 mb-3 border-b border-gray-200">
+            种植留种设置（可选）
+            {formData.isSeedSaving && (
+              <Badge className="bg-amber-600 text-white text-xs ml-2">已开启</Badge>
+            )}
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is-seed-saving"
+                checked={formData.isSeedSaving}
+                // 2026-06-25: 与「育种计划」互斥 — 选种植留种时自动取消育种计划
+                onCheckedChange={(v) => setFormData({ ...formData, isSeedSaving: !!v, isBreeding: !v ? false : formData.isBreeding })}
+                disabled={formData.isBreeding}
+              />
+              <Label htmlFor="is-seed-saving" className="text-sm cursor-pointer">
+                本种植用于留种（采收时入种源库存而非产品库存）
+              </Label>
             </div>
-          </details>
+
+            {formData.isSeedSaving && (
+              <div>
+                <Label className="text-gray-900">留种株号/标记</Label>
+                <Input
+                  value={formData.seedPlantMarker}
+                  onChange={(e) => setFormData({ ...formData, seedPlantMarker: e.target.value })}
+                  placeholder="例: A区第3排 / 标记#001-#050"
+                  className={deepInputClass}
+                />
+                <p className="text-xs text-amber-600 mt-2">
+                  ⚠ 标记为留种后，行级采收入库弹窗的「库存类型」默认选 <b>种源</b>。
+                  采收的种子入作物库存后，可调拨入种源管理。
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 种植区域 */}

@@ -449,6 +449,9 @@ export function AddModal({
         onClose={onClose}
         title="新增种源"
         size="xl"
+        // 2026-07-08 V3.4：弹窗整体 +30%（xl 默认 900×600 → 1170×780）
+        width={1170}
+        height={780}
         // 2026-06-24: 库存调拨模式下隐藏底部保存按钮 — 面板内「确认调拨」自动触发提交
         showFooter={formData.propagationType !== PropagationType.TRANSFER_FROM_INVENTORY}
         onSubmit={handleSubmit}
@@ -456,20 +459,15 @@ export function AddModal({
         cancelText="取消"
       >
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {/* 入库方式选择（占两列） */}
-          <div className="col-span-2">
-            {/* 2026-06-24: 移除 3 个老入库方式（育种/留种/无性繁殖），已迁移到种植/育苗管理
-                - 育种实验 → 种植管理 → 「育种实验设置」section
-                - 种植留种 → 种植管理 → 「种植留种设置」section
-                - 无性繁殖 → 育苗管理 → 1:多 模式（扦插/嫁接/分株/块茎/枝条）
-                老数据（propagationType=breeding/seed_saving/asexual）的查看与编辑由 EditModal/DetailModal 继续支持
-            */}
-            <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              {/* 2026-07-07 V3.4：取消外购入库入口。外部采购必须先入库到作物库存，内部种源仅支持 库存调拨。 */}
-              <b>内部种源仅支持 库存调拨 入库。</b>
+          {/* ========== 2026-07-07 V3.4 顶部提示条（占两列，emerald 主色，与育苗/种植一致）
+              2026-07-08 V3.4 UI 改造：前端隐藏 banner 文字（用户决定），仅保留代码注释说明业务背景
+              原显示文字：
+              内部种源仅支持 库存调拨 入库。
               外部采购请通过「作物库存 → 新建入库」完成，再调拨入种源。
-              自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。
-            </div>
+              自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。 ========== */}
+
+          {/* 入库方式 - 紧凑按钮（2026-07-08 V3.4 紧凑化），与种源批号同行 */}
+          <div>
             <Label className="text-gray-900">入库方式</Label>
             {/* 2026-07-07 V3.4：取消外购入库选项，仅保留库存调拨 */}
             <div className="grid grid-cols-1 gap-2">
@@ -497,18 +495,17 @@ export function AddModal({
                     }));
                     setSelectedSupplier(null);
                   }}
-                  className={`p-3 border-2 text-left w-full h-auto ${
+                  className={`p-2 border-2 text-left w-full h-auto ${
                     formData.propagationType === opt.value
                       ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-50'
                       : 'border-gray-200 bg-white hover:border-gray-400 hover:bg-white'
                   }`}
                 >
-                  <div className="flex flex-col items-start gap-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
-                      <span className="text-sm font-medium text-gray-900">{opt.label}</span>
-                    </div>
-                    <span className="text-xs text-gray-400 leading-tight">{opt.desc}</span>
+                  {/* 2026-07-08 V3.4 紧凑化：icon + label + desc 单行展示，去掉垂直堆叠 */}
+                  <div className="flex items-center gap-1.5">
+                    <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
+                    <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                    <span className="text-xs text-gray-400">· {opt.desc}</span>
                   </div>
                 </Button>
                 );
@@ -516,7 +513,7 @@ export function AddModal({
             </div>
           </div>
 
-          {/* 种源批号 - 可点击生成 */}
+          {/* 种源批号 - 可点击生成 - 与入库方式同行（2026-07-08 V3.4 布局调整） */}
           <div>
             <Label className="text-gray-900">
               种源批号
