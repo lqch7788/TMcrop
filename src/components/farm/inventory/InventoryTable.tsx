@@ -70,15 +70,15 @@ const getStockTypeBadge = (stockType: StockType | string) => {
   switch (stockType) {
     case StockType.SEED:
     case 'seed':
-      return <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">种源</span>;
+      return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">种源</span>;
     case StockType.SEEDLING:
     case 'seedling':
-      return <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] rounded-full">种苗</span>;
+      return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">种苗</span>;
     case StockType.PRODUCT:
     case 'product':
-      return <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-full">成品</span>;
+      return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">成品</span>;
     default:
-      return <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded-full">未知</span>;
+      return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">未知</span>;
   }
 };
 
@@ -86,22 +86,22 @@ const getStatusBadge = (status: InventoryStatus | string) => {
   switch (status) {
     case InventoryStatus.IN_STOCK:
     case 'in_stock':
-      return <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-full">库存中</span>;
+      return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">库存中</span>;
     case InventoryStatus.LOW_STOCK:
     case 'low_stock':
-      return <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">低库存</span>;
+      return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">低库存</span>;
     case InventoryStatus.FROZEN:
     case 'frozen':
-      return <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full">已冻结</span>;
+      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已冻结</span>;
     case InventoryStatus.OUTBOUND:
     case 'outbound':
-      return <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded-full">已出库</span>;
+      return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已出库</span>;
     case InventoryStatus.EMPTY:
     case 'empty':
-      return <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded-full">已用完</span>;
+      return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已用完</span>;
     case InventoryStatus.TRANSFERRED:
     case 'transferred':
-      return <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-[10px] rounded-full">已调拨</span>;
+      return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">已调拨</span>;
     default:
       return null;
   }
@@ -161,7 +161,7 @@ export function InventoryTable({
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
               {showCheckboxes && (
-                <th className="px-2.5 py-2 text-left text-xs font-semibold w-12 whitespace-nowrap">
+                <th className="px-4 py-3 text-left text-sm font-semibold w-12 whitespace-nowrap">
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={() => onSelectAll?.()}
@@ -169,22 +169,22 @@ export function InventoryTable({
                   />
                 </th>
               )}
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">实例ID</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">作物编码</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">类型</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">作物信息</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">品质</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">采收区域</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">形态</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">数量</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">可用</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">冻结</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">单位</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">仓库</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">来源</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">状态</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">入库日期</th>
-              <th className="px-2.5 py-2 text-left text-xs font-semibold whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实例ID</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物编码</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物信息</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">形态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">可用</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">冻结</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单位</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">仓库</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -212,7 +212,7 @@ export function InventoryTable({
                 return (
                   <tr key={stock.instanceId} className={`hover:bg-emerald-50 transition-colors ${isSelected ? 'bg-emerald-50/50' : ''}`}>
                     {showCheckboxes && (
-                      <td className="px-2.5 py-2">
+                      <td className="px-4 py-3">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => handleSelectRow(stock.instanceId)}
@@ -220,7 +220,7 @@ export function InventoryTable({
                         />
                       </td>
                     )}
-                    <td className="px-2.5 py-2 text-xs font-mono whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => onViewDetail(stock)}
@@ -230,19 +230,19 @@ export function InventoryTable({
                         {stock.instanceId}
                       </button>
                     </td>
-                    <td className="px-2.5 py-2 text-xs font-mono text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">
                       {stock.cropCode || cropCodeMap.get(stock.cropName || '') || '-'}
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {getStockTypeBadge(stock.stockType)}
                     </td>
-                    <td className="px-2.5 py-2">
-                      <div className="text-xs text-gray-900 truncate max-w-xs">{stock.cropName || '-'}</div>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900 truncate max-w-xs">{stock.cropName || '-'}</div>
                       <div className="text-xs text-gray-500 truncate max-w-xs" title={stock.varietyName}>
                         {stock.varietyName || '-'}
                       </div>
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {stock.grade ? (() => {
                         // 字典码（special/excellent/good/qualified/unqualified）→ 统一用 QUALITY_GRADE_MAP
                         // 兼容 A/B/C/D 老数据
@@ -259,7 +259,7 @@ export function InventoryTable({
                         };
                         const info = QUALITY_GRADE_BG[stock.grade];
                         return (
-                          <span className={`px-1.5 py-px text-[10px] rounded-full font-bold text-white shadow-sm ${
+                          <span className={`px-2.5 py-0.5 text-xs rounded-full font-bold text-white shadow-sm ${
                             info?.bg || 'bg-slate-600'
                           }`}>
                             {info?.label || stock.grade}
@@ -267,10 +267,10 @@ export function InventoryTable({
                         );
                       })() : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName || stock.areaName}>
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName || stock.areaName}>
                       {stock.greenhouseName || stock.areaName || '-'}
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {/* 2026-06-30 Bug 21 修复：库存形态列统一读产品明细「采收形态」sourceForm
                           后端仅写 source_form 列（统一写入字段）。
                           历史数据 productForm 的也保留作为 fallback（兼容老数据）。
@@ -278,7 +278,7 @@ export function InventoryTable({
                       {(() => {
                         const form = stock.sourceForm || stock.productForm || ''
                         return form ? (
-                          <span className="px-1.5 py-px bg-purple-100 text-purple-700 text-[10px] rounded-full font-medium" title={form}>
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium" title={form}>
                             {form}
                           </span>
                         ) : (
@@ -286,46 +286,46 @@ export function InventoryTable({
                         )
                       })()}
                     </td>
-                    <td className="px-2.5 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {stock.currentQuantity}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-emerald-600 font-medium whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
                       {available}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-blue-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-blue-600 whitespace-nowrap">
                       {stock.frozenQuantity}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {stock.unit || '-'}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-gray-600 whitespace-nowrap truncate max-w-xs" title={stock.warehouseName}>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs" title={stock.warehouseName}>
                       {stock.warehouseName || '-'}
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {stock.sourceType ? (() => {
                         const info = SOURCE_ORIGIN_MAP[stock.sourceType];
                         if (info) {
                           return (
-                            <span className={`px-1.5 py-0.5 ${info.bg} ${info.text} text-[10px] rounded-full font-medium`}>
+                            <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full font-medium`}>
                               {info.label}
                             </span>
                           );
                         }
                         // 未知来源码：fallback 显示原文
                         return (
-                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded-full">
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
                             {stock.sourceType}
                           </span>
                         );
                       })() : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {getStatusBadge(stock.status)}
                     </td>
-                    <td className="px-2.5 py-2 text-xs text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {stock.inboundDate ? new Date(stock.inboundDate).toLocaleDateString('zh-CN') : '-'}
                     </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {canOutbound && (
                           <Button
@@ -362,7 +362,7 @@ export function InventoryTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-2.5 py-2 border-t border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <Pagination
           currentPage={pagination.current}
           totalPages={Math.ceil(data.length / pagination.pageSize) || 1}
