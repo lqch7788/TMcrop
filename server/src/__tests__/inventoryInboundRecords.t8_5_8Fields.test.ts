@@ -124,13 +124,14 @@ describe('T8.5：inventory_inbound_records 补 9 列 + 2 个 INSERT 同步', () 
 
     it('POST /inbound-record 的 INSERT 含 9 个新列（snake_case）', () => {
       // /inbound-record 路由的 INSERT 块
+      // 2026-07-08 P0：路由加了 sourceId 必填豁免逻辑（约 100 字符），窗口 5000→6000
       const inboundRouteIdx = routesInventorySrc.indexOf("router.post('/inbound-record'")
       expect(inboundRouteIdx).toBeGreaterThan(0)
       // 在这个路由范围内找第一个 INSERT INTO inventory_inbound_records
-      const routeBlock = routesInventorySrc.slice(inboundRouteIdx, inboundRouteIdx + 5000)
+      const routeBlock = routesInventorySrc.slice(inboundRouteIdx, inboundRouteIdx + 6000)
       const insertStart = routeBlock.indexOf('INSERT INTO inventory_inbound_records')
       expect(insertStart).toBeGreaterThan(0)
-      const insertBlock = routeBlock.slice(insertStart, insertStart + 2500)
+      const insertBlock = routeBlock.slice(insertStart, insertStart + 3000)
       // 找到 VALUES 后的闭合括号
       const valuesStart = insertBlock.indexOf('VALUES')
       const closing = insertBlock.indexOf(')', valuesStart)
@@ -149,9 +150,9 @@ describe('T8.5：inventory_inbound_records 补 9 列 + 2 个 INSERT 同步', () 
     it('POST /inbound-record 的 INSERT 占位符数 = 列数（含 1 个 inbound literal）', () => {
       const inboundRouteIdx = routesInventorySrc.indexOf("router.post('/inbound-record'")
       expect(inboundRouteIdx).toBeGreaterThan(0)
-      const routeBlock = routesInventorySrc.slice(inboundRouteIdx, inboundRouteIdx + 5000)
+      const routeBlock = routesInventorySrc.slice(inboundRouteIdx, inboundRouteIdx + 6000)
       const insertStart = routeBlock.indexOf('INSERT INTO inventory_inbound_records')
-      const insertBlock = routeBlock.slice(insertStart, insertStart + 2500)
+      const insertBlock = routeBlock.slice(insertStart, insertStart + 3000)
       // 列
       const columnListMatch = insertBlock.match(/\(([\s\S]*?)\)\s*VALUES/)
       const columns = columnListMatch![1].split(',').map(s => s.trim()).filter(s => s)

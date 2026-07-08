@@ -58,8 +58,11 @@ router.use('/', inventoryTransferRouter);
  * - qualityGrade: 5 档品级
  */
 const InboundSchema = z.object({
-  sourceModule: z.enum(['seed_source', 'seedling', 'planting']),
-  sourceId: z.string().min(1, { message: '源记录 ID 必填' }),
+  // 2026-07-08 P0 修复：AddStockModal 页面级"新增"无 source 记录，加 'manual' 模块标识
+  //   - seed_source / seedling / planting：行级采收入库，必填 sourceId
+  //   - manual：页面级新增入库，sourceId 可空（fetchSourceRow 会短路返回空对象）
+  sourceModule: z.enum(['seed_source', 'seedling', 'planting', 'manual']),
+  sourceId: z.string().optional(),  // 页面级入库可空；行级入库由 Zod min(1) 改成 optional 后由 fetchSourceRow 兜底校验
   stockType: z.enum(['seed', 'seedling', 'product']),
   sourceType: z.enum([
     'external_purchased', 'gift', 'commissioned', 'transfer', 'manual', 'self_produced',
@@ -110,7 +113,7 @@ const InboundSchema = z.object({
 function fetchSourceRow(
   db: any,
   sourceModule: string,
-  sourceId: string,
+  sourceId: string | undefined,
 ): {
   code: string
   cropName: string
@@ -123,6 +126,11 @@ function fetchSourceRow(
   greenhouseName: string | null
   plantingMode: string | null
 } | null {
+  // 2026-07-08 P0 修复：页面级入库（sourceModule=manual 或无 sourceId）跳过源记录查找
+  // 返回 null 而不是空对象，下游 INSERT 写入的 source.* 字段会全部为 null
+  if (sourceModule === 'manual' || !sourceId) {
+    return null
+  }
   // ⚠️ 列名差异：种源没有 crop_id/greenhouse_name；种植没有 crop_id/planting_mode
   // 按表分别 SELECT 实际存在的列
   let sql = ''
@@ -184,11 +192,12 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     const input = parsed.data
     const db = getDatabase()
 
-    // 1. 校验 source 存在 + 取源数据
-    const source = fetchSourceRow(db, input.sourceModule, input.sourceId)
-    if (!source) {
-      return res.status(404).json({ success: false, error: '源记录不存在或已删除' })
-    }
+    // 1. 校验 source + 取源数据（2026-07-08 P0：页面级 manual/无 sourceId 跳过源记录查找）
+    const sourceRow = fetchSourceRow(db, input.sourceModule, input.sourceId)
+    if (!sourceRow && input.sourceModule !== 'manual' && input.sourceId) return res.status(404).json({ success: false, error: '源记录不存在或已删除' })
+    const source = sourceRow || { code: null, cropName: '', cropVariety: '', cropCode: '', cropId: null, productionPlanId: null, productionPlanCode: null, unit: null, greenhouseName: null, plantingMode: null }
+    // DB 列 source_id NOT NULL；manual 模式用 'manual' 占位，下游按 sourceModule 区分
+    const sourceIdForDb = input.sourceId || (input.sourceModule === 'manual' ? 'manual' : null) as any
 
     const productionPlanId = input.productionPlanId || source.productionPlanId || null
     const productionPlanCode = input.productionPlanCode || source.productionPlanCode || null
@@ -241,7 +250,7 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     `, [
       stockId, instanceId, input.stockType,
       input.businessId || stockId, input.businessId || stockId,
-      input.sourceModule, input.sourceId, input.sourceType,
+      input.sourceModule, sourceIdForDb, input.sourceType,
       source.cropId || null, source.cropCode || null, source.cropName || null, source.cropVariety || null,
       input.quantity, input.quantity, input.unit,
       input.warehouseId, input.warehouseName || null,
@@ -273,7 +282,7 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       recordId, recordDate,
-      input.sourceModule, input.sourceId, source.code,
+      input.sourceModule, sourceIdForDb, source.code,
       input.stockType, input.sourceType,
       input.warehouseId, input.warehouseName || null,
       // crop_id 优先用前端传入的 cropId（人工覆盖），缺省回退到 source.cropId（育苗源记录）
