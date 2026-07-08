@@ -12,6 +12,8 @@
     "migrate:seed-inventory-stock:dry-run": "tsx scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts --dry-run",
     "migrate:inventory-id-format": "tsx scripts/db-migrations/migrateInventoryIdFormat.ts",
     "migrate:inventory-id-format:dry-run": "tsx scripts/db-migrations/migrateInventoryIdFormat.ts --dry-run",
+    "migrate:tx-id-format": "tsx scripts/db-migrations/migrateTransactionIdFormat.ts",
+    "migrate:tx-id-format:dry-run": "tsx scripts/db-migrations/migrateTransactionIdFormat.ts --dry-run",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
