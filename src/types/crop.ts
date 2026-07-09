@@ -549,6 +549,8 @@ export interface PlantingHarvestRecord {
   recordDate: string                 // 采收日期 YYYY-MM-DD
   // 2026-06-29: 4 个去向减为 3 个（circulate + self_seed 合并为 planting_self_kept）
   // 老值 circulate / self_seed 保留作历史数据值
+  // 2026-07-09: dispose 已下线（与每日记录"损耗"语义重叠），新值不再允许
+  // 老值 dispose 保留作历史数据值（planting_harvest_records 表内历史记录仍可读取）
   destination: 'harvest' | 'planting_self_kept' | 'circulate' | 'self_seed' | 'dispose'
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
   // 2026-06-29: 种植自留种采收形态（仅 planting_self_kept 必有）
@@ -651,8 +653,12 @@ export interface Planting {
   residualToSourceUnit?: string        // 2026-06-19: 残株回种源最近单位
   selfSeedToSourceQty?: number         // 自交种子入种源累计（老字段，保留兼容）
   selfSeedToSourceUnit?: string        // 2026-06-19: 自交种子最近单位
-  disposeQty?: number                  // 直接废弃累计（2026-06-18 加；circulate_to_inventory 已去掉）
-  disposeUnit?: string                 // 2026-06-19: 直接废弃最近单位
+  // 2026-07-09: disposeQty / disposeUnit 已下线（dispose 功能移除，与每日记录"损耗"重叠）
+  // 保留字段定义作历史数据回显兼容，新代码不要再读这 2 个字段
+  /** @deprecated 2026-07-09 — dispose 功能已下线，列表/详情不再展示 */
+  disposeQty?: number
+  /** @deprecated 2026-07-09 — dispose 功能已下线 */
+  disposeUnit?: string
   // 2026-06-28：每日记录累加字段（活体剩余 = plantingCount + supplementCount - lossCount）
   lossCount?: number                   // 损耗累计
   supplementCount?: number             // 补栽累计

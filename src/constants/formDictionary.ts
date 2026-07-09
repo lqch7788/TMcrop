@@ -29,3 +29,23 @@ export function translateForm(value: string | null | undefined): string {
   if (!value) return '';
   return FORM_EN_TO_CN[value] || value;
 }
+
+/**
+ * 采收区域/area_name 英文码 → 中文映射
+ * 用途：兼容 inventory_stock 表 area_name 列历史脏数据
+ *   - seedling_greenhouse_A/B 是种苗入库时硬编码的英文区码
+ *   - SITE001/002 来源不明、查不到中文对照，保留原样不强行翻译
+ * 2026-07-09：列表 + 详情共用
+ */
+export const AREA_EN_TO_CN: Record<string, string> = {
+  seedling_greenhouse_A: '育苗温室A区',
+  seedling_greenhouse_B: '育苗温室B区',
+};
+
+/**
+ * 把 area_name 英文码翻译为中文；已是中文则原样返回
+ */
+export function translateArea(value: string | null | undefined): string {
+  if (!value) return '';
+  return AREA_EN_TO_CN[value] || value;
+}

@@ -2056,6 +2056,12 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'propagation_form', sql: "ALTER TABLE inventory_stock ADD COLUMN propagation_form TEXT" }, // 种源形态（种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）
     { name: 'source_form', sql: "ALTER TABLE inventory_stock ADD COLUMN source_form TEXT" },          // 育苗/种植产物类型
     { name: 'area_name', sql: "ALTER TABLE inventory_stock ADD COLUMN area_name TEXT" },              // 2026-06-19: 种植区域（反查 plantings.area_name）
+    // 2026-07-09 v5 阶段二（路径 B）：补录下沉到 inventory_stock 表
+    // "自产（兜底）"模式作为统一入库入口，4 字段记录补录审计
+    { name: 'is_supplementary', sql: "ALTER TABLE inventory_stock ADD COLUMN is_supplementary INTEGER DEFAULT 0" },  // 0=正常入库, 1=补录
+    { name: 'supplementary_reason', sql: "ALTER TABLE inventory_stock ADD COLUMN supplementary_reason TEXT" },
+    { name: 'supplementary_at', sql: "ALTER TABLE inventory_stock ADD COLUMN supplementary_at TEXT" },
+    { name: 'supplementary_by', sql: "ALTER TABLE inventory_stock ADD COLUMN supplementary_by TEXT" },
   ];
   for (const col of inventoryStockExtColumns) {
     try {
@@ -2426,6 +2432,12 @@ export async function fixMissingSchema(): Promise<void> {
   const plantingHarvestColumnsToAdd = [
     // 2026-06-19 unify-harvest-inbound-into-source-operations: 采收形态
     { name: 'source_form', sql: "ALTER TABLE planting_harvest_records ADD COLUMN source_form TEXT" },
+    // 2026-07-09 v5 阶段二（方案 E）：补录是采收记录的属性 — 不再依赖 planting.endType='abnormal' 字段
+    // 任何"已结束"种植/育苗行写采收记录时自动打标 is_supplementary=1，必填补录原因
+    { name: 'is_supplementary', sql: "ALTER TABLE planting_harvest_records ADD COLUMN is_supplementary INTEGER DEFAULT 0" },
+    { name: 'supplementary_reason', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_reason TEXT" },
+    { name: 'supplementary_at', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_at TEXT" },
+    { name: 'supplementary_by', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_by TEXT" },
   ]
   for (const col of plantingHarvestColumnsToAdd) {
     try {

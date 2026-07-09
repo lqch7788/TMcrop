@@ -11,7 +11,8 @@
  * 弹窗 → submitUnifiedInbound → POST /api/inventory/inbound-from-source
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import {
   Modal,
@@ -98,8 +99,9 @@ export interface UnifiedRowHarvestInboundModalProps {
     cropCode?: string
     unit?: string
     plantingMode?: string
-    /** 2026-07-03：源记录的 endType（异常结束时强制补录模式） */
-    endType?: string
+    // 2026-07-09 v6：恢复 endTime/status type（弹窗内"补录"按钮判断用）
+    endTime?: string
+    status?: string
   }
 }
 
@@ -109,10 +111,14 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   isOpen,
   onClose,
   onSuccess,
+  sourceRecord,
   stockType,
   sourceModule,
-  sourceRecord,
 }) => {
+  // 2026-07-09 v6：用户要求"必须有采收弹窗，弹窗内"补录"按钮跳转"
+  // 弹窗内"补录"按钮（仅已结束/已取消行可见）跳转到 AddStockModal
+  const navigate = useNavigate();
+
   // ---- 表单 state ----
   // 2026-06-19: harvestDate 用 YYYY-MM-DD string 存储（与 AddModal 采购日期字段同模式）
   const [harvestDate, setHarvestDate] = useState<string>(todayLocal())
@@ -128,8 +134,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const loadUsers = useUserStore((s) => s.loadUsers)
   const [harvesterPopoverOpen, setHarvesterPopoverOpen] = useState(false)
   const [remarks, setRemarks] = useState<string>('')
-  const [isSupplementary, setIsSupplementary] = useState<boolean>(false)
-  const [supplementaryReason, setSupplementaryReason] = useState<string>('')
+  // 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal，本弹窗不再处理补录
   // 2026-07-06：删除单价字段（用户需求），后端 unit_price 默认为 0
   const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
   // 2026-06-19: 种源形态（仅种源行入库必填）— 2026-06-30 Bug 21 删：用户选 B，
@@ -193,8 +198,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // 2026-06-19 修复：只从 false→true 切换时重置（用 ref 标记上一次 isOpen 状态），
   // 避免父组件 re-render 触发 sourceRecord 引用变化误重置已填字段
   const prevIsOpen = useRef(isOpen)
-  // 2026-07-03：异常结束的补录模式 — 强制勾选+禁用勾选框+必填补录原因
-  const isSupplementaryForced = sourceRecord?.endType === 'abnormal'
+  // 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal 统一入口
+  // 本弹窗（UnifiedRowHarvestInboundModal）不再处理补录场景，保留代码仅为历史查询兼容
+  // 实际行级入库请走：种植/育苗页 → navigate → 库存页 → 预填 sourceId + 黄色 banner + 必填补录原因
   useEffect(() => {
     if (isOpen && !prevIsOpen.current) {
       setHarvestDate(todayLocal())
@@ -204,9 +210,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setHarvesterNames([])
       setOperator(currentUser?.realName || '')
       setRemarks('')
-      // 2026-07-03：异常结束的补录：默认勾选且不能取消；正常结束保持 false
-      setIsSupplementary(isSupplementaryForced ? true : false)
-      setSupplementaryReason('')
       setUnit(sourceRecord.unit || '克')
       setProducts([
         {
@@ -323,13 +326,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const handleSubmit = async () => {
     setError(null)
 
-    // 2026-07-03：异常结束的补录模式必须填原因（用派生值）
-    const willSupplementary = isSupplementaryForced || isSupplementary
-    if (willSupplementary && (!supplementaryReason || !supplementaryReason.trim())) {
-      setError(isSupplementaryForced ? '异常结束补录模式：补录原因为必填项' : '勾选补录后必须填写补录原因')
-      showAlert(isSupplementaryForced ? '异常结束补录模式：补录原因为必填项' : '勾选补录后必须填写补录原因')
-      return
-    }
+    // 2026-07-09 v5 阶段三（路径 B）：补录校验已下沉到 AddStockModal.validateBySourceType
+    // 本弹窗不再处理补录校验
 
     const input = {
       stockType,
@@ -343,9 +341,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       harvesterNames,
       operator: operator || undefined,
       remarks: remarks || undefined,
-      // 2026-07-03：异常结束的补录强制传 isSupplementary=true
-      isSupplementary: (isSupplementaryForced || isSupplementary) || undefined,
-      supplementaryReason: (isSupplementaryForced || isSupplementary) ? supplementaryReason : undefined,
+      // 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal 统一入口
+      // 本弹窗不再传 isSupplementary / supplementaryReason（如需补录请走库存页）
       unit,
       warehouseId,
       warehouseName: warehouseName || undefined,
@@ -426,7 +423,38 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
 
   // ---- UI ----
   const meta = STOCK_TYPE_LABEL[stockType]
-  const titleText = `采收入库（${meta.label}）`
+  // 2026-07-09 v6：弹窗内"补录"按钮（仅已结束/已取消行可见）→ 跳转 AddStockModal
+  // 符合用户 v6 设计："必须有采收弹窗，弹窗内"补录"按钮跳转"
+  const isSourceEnded = !!sourceRecord?.endTime || sourceRecord?.status === 'cancelled'
+  const handleSupplementaryJump = () => {
+    if (!sourceRecord) return
+    const isSupp = !!sourceRecord.endTime || sourceRecord.status === 'cancelled'
+    const params = new URLSearchParams({
+      openStockModal: 'true',
+      sourceModule: sourceModule,
+      sourceId: sourceRecord.id,
+      sourceCode: sourceRecord.code || '',
+      stockType: stockType,
+      mode: isSupp ? 'supplementary' : 'normal',
+    })
+    navigate(`/crop-inventory?${params.toString()}`)
+  }
+  const titleText = (
+    <div className="flex items-center gap-3">
+      <span>采收入库（{meta.label}）</span>
+      {isSourceEnded && (
+        <Button
+          size="sm"
+          variant="default"
+          className="bg-amber-600 hover:bg-amber-700 text-white"
+          onClick={handleSupplementaryJump}
+          title={'跳转到统一库存页的「自产（兜底）」模式（已预填 sourceId）'}
+        >
+          🔼 补录入库
+        </Button>
+      )}
+    </div>
+  )
 
   // 2026-07-01: 弹窗底部"采收记录"历史表数据
   // recordKey = `${sourceModule}:${sourceRecord.id}`，对应 store 里的索引
@@ -741,28 +769,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </FormField>
         )}
 
-        {/* 补录 — 2026-07-03：仅异常结束（isSupplementaryForced）才显示此区域
-            普通采收（种源/育苗/种植进行中 + 正常结束）不显示补录勾选字段 */}
-        {isSupplementaryForced && (
-        <div className="flex items-start gap-3 border-t pt-3">
-          <label className="flex items-center gap-2 text-sm pt-1">
-            <input
-              type="checkbox"
-              checked={true}
-              disabled={true}
-              readOnly
-            />
-            补录（异常结束自动启用）
-            <span className="text-xs text-amber-600">（异常结束自动启用补录模式）</span>
-          </label>
-          <Input
-              value={supplementaryReason}
-              onChange={(e) => setSupplementaryReason(e.target.value)}
-              placeholder="补录原因（异常结束必填）"
-              className={`${deepInputClass} flex-1`}
-            />
-        </div>
-        )}
+        {/* 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal 统一入口
+            本弹窗不再有"补录原因"输入区（如需补录请走库存页 AddStockModal） */}
 
         {/* 产品明细 */}
         <div className="border-t pt-3">

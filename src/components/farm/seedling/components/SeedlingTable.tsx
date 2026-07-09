@@ -735,7 +735,7 @@ export function SeedlingTable({
                               title={isAbnormalEnded ? '出圃入库（补录）' : isCancelled ? '出圃入库（已取消，仅查看）' : '出圃入库 / 采收'}
                             />
                           )}
-                          {/* 结束按钮：仅进行中显示 */}
+                          {/* 2026-07-09 v5（方案 A 阶段一）：单态结束按钮 — 仅进行中显示 */}
                           {!isEnded && onEnd && (
                             <ActionIconButton
                               variant="end"

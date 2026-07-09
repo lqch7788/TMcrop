@@ -509,8 +509,7 @@ function toCamelStock(row: any): InventoryStock {
     consignor: row.consignor ?? null,
     sourceWarehouseName: row.source_warehouse_name ?? row.sourceWarehouseName ?? null,
     stocktakeNo: row.stocktake_no ?? row.stocktakeNo ?? null,
-    baseId: row.base_id ?? row.baseId ?? null,
-    baseName: row.base_name ?? row.baseName ?? null,
+    // baseId/baseName 已在行 471-472 定义（基础字段块），此处不再重复
     cropForm: row.crop_form ?? row.cropForm ?? null,
     // operatorName/createBy/createTime/updateTime 已在 InventoryStock 类型定义，但 toCamelStock 未映射
     operatorName: row.operator_name ?? row.operatorName ?? null,

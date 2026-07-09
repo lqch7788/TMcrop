@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
@@ -34,6 +35,20 @@ export default function InventoryV3Page() {
   const loading = useInventoryStore((s) => s.loading);
   const loadAll = useInventoryStore((s) => s.loadAll);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
+
+  // 2026-07-09 v5 阶段三（路径 B）：监听 URL 参数自动开 AddStockModal
+  // 来自种植/育苗页 navigate('/crop-inventory?openStockModal=true&...')
+  const [searchParams, setSearchParams] = useSearchParams();
+  const prefillFromUrl = useMemo(() => {
+    if (searchParams.get('openStockModal') !== 'true') return null;
+    return {
+      sourceModule: searchParams.get('sourceModule') || undefined,
+      sourceId: searchParams.get('sourceId') || undefined,
+      sourceCode: searchParams.get('sourceCode') || undefined,
+      stockType: searchParams.get('stockType') || undefined,
+      mode: searchParams.get('mode') || 'normal',  // 'supplementary' | 'normal'
+    };
+  }, [searchParams]);
 
   // 筛选
   const [filters, setFilters] = useState<InventoryFilterState>({
@@ -361,7 +376,16 @@ export default function InventoryV3Page() {
       {/* 新建入库弹窗（支持外购/赠送/委托/调拨/手动等） */}
       <AddStockModal
         isOpen={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
+        onClose={() => {
+          setAddModalOpen(false)
+          // 2026-07-09 v5 阶段三：关弹窗时清理 URL 参数（避免下次进来误开）
+          if (prefillFromUrl) setSearchParams({})
+        }}
+        // 2026-07-09 v5 阶段三（路径 B）：URL 预填的 sourceId/sourceModule 等
+        prefillSourceId={prefillFromUrl?.sourceId}
+        prefillSourceModule={prefillFromUrl?.sourceModule}
+        prefillStockType={prefillFromUrl?.stockType}
+        prefillMode={prefillFromUrl?.mode}
       />
 
       {/* 详情弹窗（合并原"追溯"功能） */}

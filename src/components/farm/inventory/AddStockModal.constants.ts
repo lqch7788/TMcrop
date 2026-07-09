@@ -107,11 +107,16 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],
   self_produced: [
+    // 2026-07-09 v5 阶段三（路径 B）：补录入口
+    // 用户从种植/育苗行 navigate 过来时，prefillSourceId 预填此字段
+    { key: 'sourceId', label: '源种植/育苗行', required: false, type: 'select-source-id' },
     { key: 'baseId', label: '所属基地', required: true, type: 'base-select' },
     { key: 'plantingMode', label: '种植模式', required: false, type: 'text' },
     { key: 'greenhouseName', label: '采收区域', required: false, type: 'text' },
     // 2026-07-08 T13 Bug 2
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
+    // 2026-07-09 v5 阶段三：补录原因（必填性在 AddStockModal 内根据 sourceId 动态决定）
+    { key: 'supplementaryReason', label: '补录原因', required: false, type: 'text' },
   ],
 };
 
@@ -150,6 +155,11 @@ export function validateBySourceType(
     if (field.required && isBlank(formData[field.key])) {
       errors[field.key] = '必填';
     }
+  }
+
+  // 2026-07-09 v5 阶段三（路径 B）：自产兜底模式 + 已选 sourceId → 视为补录，补录原因必填
+  if (sourceType === 'self_produced' && !isBlank(formData.sourceId) && isBlank(formData.supplementaryReason)) {
+    errors.supplementaryReason = '已绑定源 ID（补录模式），补录原因为必填';
   }
 
   return errors;

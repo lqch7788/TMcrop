@@ -17,6 +17,7 @@ import { DetailModal } from './modals/DetailModal';
 import { HarvestRecordModal } from './modals/HarvestRecordModal';
 import { RecordModal } from './modals/RecordModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
+// 2026-07-09 v6：恢复 UnifiedRowHarvestInboundModal import（行级弹窗恢复，弹窗内"补录"按钮跳转）
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
@@ -131,6 +132,7 @@ export default function PlantingPage() {
   const [harvestModalOpen, setHarvestModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   // 2026-06-19: 行级采收入库弹窗状态（unify-harvest-inbound-into-source-operations）
+  // 2026-07-09 v6：恢复 inboundUnifiedOpen / inboundUnifiedRecord 2 个 state（onInbound 改回弹窗）
   const [inboundUnifiedOpen, setInboundUnifiedOpen] = useState(false);
   const [inboundUnifiedRecord, setInboundUnifiedRecord] = useState<any>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -252,42 +254,40 @@ export default function PlantingPage() {
     setHarvestModalOpen(true);
   };
 
-  // 2026-07-04 v3: 结束确认弹窗 — 三选一（正常结束 / 异常结束 / 直接取消）
-  const [endConfirm, setEndConfirm] = useState<{ record: Planting | null; endType: 'normal' | 'abnormal' | 'cancelled' }>({
-    record: null, endType: 'normal',
+  // 2026-07-09 v4: 结束确认弹窗 — 二选一（正常结束 / 异常结束）
+  // 2026-07-09 v5（方案 A 阶段一）：单态结束弹窗
+  // 砍掉"异常结束"选项——补录不再是状态机的开关，而是采收记录的属性
+  // 历史 endType='abnormal' 数据保留兼容（PlantingTable 仍识别），但不再提供新建入口
+  const [endConfirm, setEndConfirm] = useState<{ record: Planting | null }>({
+    record: null,
   });
 
   const handleEnd = (record: Planting) => {
+    // 单态：任何已结束的行都拦截
     if (record.endTime) {
-      showAlert('该种植记录已结束，不能重复操作');
+      showAlert('该种植记录已结束，不能再次操作');
       return;
     }
-    setEndConfirm({ record, endType: 'normal' });
+    setEndConfirm({ record });
   };
 
   const executeEnd = async () => {
     const record = endConfirm.record;
     if (!record) return;
-    const endType = endConfirm.endType;
-    // 2026-07-04 v3: 三选一 → 3 个不同 endStatus
-    const endStatus =
-      endType === 'cancelled' ? PlantingStatus.CANCELLED :
-      PlantingStatus.ENDED;
+    // 2026-07-09 v5：单态结束 — 固定 endType='normal', isHarvestLocked=0（允许后续补录）
+    // 补录走 HarvestRecordModal 的补录模式（自动判断），不依赖 endType
+    const endStatus = PlantingStatus.ENDED;
 
-    setEndConfirm({ record: null, endType: 'normal' });
+    setEndConfirm({ record: null });
 
     const result = await updateItem(record.id, {
-      endType,
+      endType: 'normal',
       endTime: todayLocal(),
       status: endStatus,
-      isHarvestLocked: endType === 'normal',
+      isHarvestLocked: 0,
     } as Partial<Planting>);
     if (result) {
-      const tip =
-        endType === 'abnormal' ? '种植记录已异常结束（保留补录通道）' :
-        endType === 'cancelled' ? '种植记录已取消' :
-        '种植记录已正常结束';
-      await showAlert(tip);
+      await showAlert('种植记录已结束（仍可补录遗漏库存）');
       await loadItems();
     } else {
       await showAlert('结束失败');
@@ -593,6 +593,7 @@ export default function PlantingPage() {
         data={filteredData}
         onEndV2={handleEndV2}
         onEnd={handleEnd}
+        // 2026-07-09 v6：恢复 onInbound 弹窗模式（用户要求：必须打开采收弹窗，弹窗内"补录"按钮跳转）
         onInbound={(record) => {
           setInboundUnifiedRecord(record)
           setInboundUnifiedOpen(true)
@@ -667,7 +668,9 @@ export default function PlantingPage() {
         />
       )}
 
-      {/* 2026-07-04 v3: 结束确认弹窗 — 三选一（正常结束/异常结束/直接取消） */}
+      {/* 2026-07-09 v5（方案 A 阶段一）：单态结束弹窗（仅 1 个"结束"按钮）
+          2026-07-09 v4 历史：二选一（正常结束/异常结束）— v5 已合并
+          2026-07-04 v3 历史：三选一（正常结束/异常结束/直接取消）— v4 已合并 */}
       {endConfirm.record && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
@@ -676,108 +679,42 @@ export default function PlantingPage() {
                 <AlertTriangle className="w-5 h-5" /> 确认结束种植记录
               </h3>
               <Button variant="ghost" size="icon" className="text-white hover:bg-red-700"
-                onClick={() => setEndConfirm({ record: null, endType: 'normal' })}>
+                onClick={() => setEndConfirm({ record: null })}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
             <div className="p-4 space-y-3">
-              {/* 三选一提示框（根据 endType 动态切换） */}
-              {endConfirm.endType === 'normal' && (
-                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="text-sm font-semibold text-red-800">⚠️ 正常结束 — 完成后将【锁定】</div>
-                  <div className="text-xs text-red-700 mt-1">
-                    结束后禁止一切后续操作：入库、补录、修改均不可用。<br />
-                    <span className="font-semibold">此操作不可撤销！</span>
-                  </div>
+              {/* 2026-07-09 v5（方案 A 阶段一）：单态提示框 */}
+              <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <div className="text-sm font-semibold text-red-800">⚠️ 结束种植记录</div>
+                <div className="text-xs text-red-700 mt-1">
+                  结束后将锁定日常运维操作（补栽、损耗、搬运等）。<br />
+                  <span className="font-semibold">仍可补录遗漏的库存</span>（通过"采收入库"按钮，必填补录原因）。<br />
+                  <span className="font-semibold">此操作不可撤销！</span>
                 </div>
-              )}
-              {endConfirm.endType === 'abnormal' && (
-                <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="text-sm font-semibold text-amber-800">异常结束 — 保留补录通道</div>
-                  <div className="text-xs text-amber-700 mt-1">
-                    结束后可继续补录入库（需审核）。
-                  </div>
-                </div>
-              )}
-              {endConfirm.endType === 'cancelled' && (
-                <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
-                  <div className="text-sm font-semibold text-gray-800">取消种植 — 放弃此批次</div>
-                  <div className="text-xs text-gray-700 mt-1">
-                    标记为"已取消"，归档不再继续。
-                  </div>
-                </div>
-              )}
-              {/* 三选一 RadioGroup */}
-              <div className="space-y-2">
-                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'normal' ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <input
-                    type="radio"
-                    name="endTypeChoice"
-                    checked={endConfirm.endType === 'normal'}
-                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'normal' })}
-                    className="mt-0.5 w-4 h-4 text-red-600"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">正常结束</div>
-                    <div className="text-xs text-gray-500">所有操作锁定，种植归档为"已结束"</div>
-                  </div>
-                </label>
-                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'abnormal' ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <input
-                    type="radio"
-                    name="endTypeChoice"
-                    checked={endConfirm.endType === 'abnormal'}
-                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'abnormal' })}
-                    className="mt-0.5 w-4 h-4 text-amber-600"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">异常结束（保留补录通道）</div>
-                    <div className="text-xs text-gray-500">归档为"已结束"，可继续补录入库</div>
-                  </div>
-                </label>
-                <label className={`flex items-start gap-2 px-3 py-2 rounded border cursor-pointer ${endConfirm.endType === 'cancelled' ? 'border-gray-400 bg-gray-100' : 'border-gray-200 hover:bg-gray-50'}`}>
-                  <input
-                    type="radio"
-                    name="endTypeChoice"
-                    checked={endConfirm.endType === 'cancelled'}
-                    onChange={() => setEndConfirm({ ...endConfirm, endType: 'cancelled' })}
-                    className="mt-0.5 w-4 h-4 text-gray-600"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">直接取消</div>
-                    <div className="text-xs text-gray-500">放弃此批次种植，归档为"已取消"</div>
-                  </div>
-                </label>
               </div>
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <Button variant="secondary" size="sm"
-                onClick={() => setEndConfirm({ record: null, endType: 'normal' })}>
+                onClick={() => setEndConfirm({ record: null })}>
                 取消
               </Button>
               <Button variant="default" size="sm"
                 onClick={executeEnd}
-                className={
-                  endConfirm.endType === 'abnormal' ? 'bg-amber-600 hover:bg-amber-700' :
-                  endConfirm.endType === 'cancelled' ? 'bg-gray-600 hover:bg-gray-700' :
-                  'bg-red-600 hover:bg-red-700'
-                }>
-                确认{
-                  endConfirm.endType === 'abnormal' ? '异常结束' :
-                  endConfirm.endType === 'cancelled' ? '取消种植' :
-                  '正常结束'
-                }
+                className="bg-red-600 hover:bg-red-700">
+                确认结束
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations）
-          2026-06-25 v3: 移除 stockType='seed' 路径 — 留种采收也入产品库存，后续由种源库手动调拨入种源 */}
+      {/* 2026-07-09 v6：恢复 UnifiedRowHarvestInboundModal 行级弹窗
+          种植行点"采收入库" → 弹窗 → 弹窗内"补录"按钮跳转 AddStockModal
+          必须打开采收弹窗，弹窗内"补录"按钮才能跳转（用户 v6 设计） */}
       {inboundUnifiedRecord && (
         <UnifiedRowHarvestInboundModal
-          key={inboundUnifiedRecord.id}  // 2026-06-30 Bug 修复：强制 sourceRecord 变化时重 mount，避免 useState 复用旧值
+          key={inboundUnifiedRecord.id}
           isOpen={inboundUnifiedOpen}
           onClose={() => {
             setInboundUnifiedOpen(false)
@@ -794,8 +731,9 @@ export default function PlantingPage() {
             cropCode: inboundUnifiedRecord.cropCode || '',
             unit: inboundUnifiedRecord.unit,
             plantingMode: inboundUnifiedRecord.plantingMode,
-            // 2026-07-03：传 endType 让 modal 判断是否强制补录模式
-            endType: inboundUnifiedRecord.endType,
+            // 2026-07-09 v6：传 endTime/status 让弹窗显示"补录"按钮（仅已结束/已取消行）
+            endTime: inboundUnifiedRecord.endTime,
+            status: inboundUnifiedRecord.status,
           }}
         />
       )}

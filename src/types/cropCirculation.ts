@@ -21,6 +21,8 @@ export type CirculationDestination = 'seed_source' | 'inventory_stock'
 
 // 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）
 // 老值 circulate / self_seed 保留兼容历史数据
+// 2026-07-09: dispose 已下线（与每日记录"损耗"语义重叠），新值不再允许
+// 老值 dispose 保留兼容历史数据
 export type EndType = 'harvest' | 'planting_self_kept' | 'circulate' | 'self_seed' | 'dispose'
 
 export interface CirculationInput {

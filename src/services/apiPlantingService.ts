@@ -176,8 +176,11 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     residualToSourceUnit: String(item.residualToSourceUnit || ''),
     selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
     selfSeedToSourceUnit: String(item.selfSeedToSourceUnit || ''),
-    // 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
+    // 2026-07-09：disposeQty / disposeUnit 已下线（dispose 功能移除）
+    // 保留映射接收后端历史返回，新代码不要再读这 2 个字段
+    // @ts-expect-error - disposeQty 类型已 deprecated
     disposeQty: Number(item.disposeQty) || 0,
+    // @ts-expect-error - disposeUnit 类型已 deprecated
     disposeUnit: String(item.disposeUnit || ''),
     // 2026-06-24: 育种实验 + 种植留种字段（种源管理吸收功能）
     isBreeding: Boolean(item.isBreeding),
@@ -358,7 +361,8 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
  */
 export interface AddHarvestRecordInput {
   recordDate: string
-  destination: 'harvest' | 'planting_self_kept' | 'dispose'
+  // 2026-07-09: dispose 已下线，destination 只剩 harvest / planting_self_kept 两种
+  destination: 'harvest' | 'planting_self_kept'
   subType?: 'cutting' | 'seed_saving'
   seedForm?: '果实' | '种子' | '种苗' | '穗条' | '枝条' | '块根' | '块茎' | '鳞茎' | '叶片' | '花朵' | '整株' | '其他'
   warehouseId?: string
@@ -366,6 +370,8 @@ export interface AddHarvestRecordInput {
   quantity: number
   unit?: string
   notes?: string
+  // 2026-07-09 v5 阶段二（方案 E）：补录场景必填（后端基于 planting.status 自动判断补录模式）
+  supplementaryReason?: string
   operatorName?: string
   createBy?: string
   createById?: string
@@ -373,15 +379,16 @@ export interface AddHarvestRecordInput {
 
 /**
  * 种植结束（V2 软锁改造）
- * 4 种结束方式：harvest | circulate | self_seed | dispose
+ * 3 种结束方式：harvest | circulate | self_seed（2026-07-09 移除 dispose）
  * 数据流：API → SQLite DB
  *
  * 2026-06-17: 改造为 PUT /:id 设 is_harvest_locked=1
  * 之前是 POST /:id/end（专用路由），现在改用通用 PUT 走白名单列更新
  * 2026-06-18: 去掉 circulate_to_inventory（5 个 → 4 个）
+ * 2026-07-09: 去掉 dispose（4 个 → 3 个，与每日记录"损耗"语义重叠）
  */
 export interface EndPlantingInput {
-  endType: 'harvest' | 'circulate' | 'self_seed' | 'dispose';
+  endType: 'harvest' | 'circulate' | 'self_seed';
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound';
   warehouseId?: string;
   quantity?: number;

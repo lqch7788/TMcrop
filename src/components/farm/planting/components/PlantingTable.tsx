@@ -507,16 +507,7 @@ export function PlantingTable({
           )
         }
       },
-      {
-        title: '废弃量',
-        dataIndex: 'disposeQty',
-        width: 100,
-        render: (qty: number, record: Planting) => (
-          <span className={qty > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
-            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
-          </span>
-        )
-      },
+      // 2026-07-09：移除"废弃量"列 — dispose 功能已下线，列表不再展示
       {
         title: '完成比例',
         dataIndex: 'targetYield',
@@ -600,8 +591,9 @@ export function PlantingTable({
                   <Package className="w-4 h-4" />
                 </Button>
               )}
-              {/* 采收入库（补录）：异常结束可用；已取消可查看 */}
-              {onInbound && (isAbnormalEnded || isCancelled) && (
+              {/* 2026-07-09 v5 阶段一补漏：采收入库（补录）— 任何已结束/已取消行都可见
+                  之前 v4 条件 (isAbnormalEnded || isCancelled) 让"正常结束"行无法补录，与 v5 单态设计矛盾 */}
+              {onInbound && (isEnded || isCancelled) && (
                 <Button
                   variant="ghost" size="icon"
                   onClick={() => onInbound(record)}
@@ -644,9 +636,14 @@ export function PlantingTable({
                   <Wheat className="w-4 h-4" />
                 </Button>
               )}
-              {/* 结束按钮：仅进行中显示 */}
-              {!isEnded && !record.endTime && !record.isHarvestLocked && onEnd && (
-                <Button variant="ghost" size="icon" onClick={() => onEnd(record)} title="结束">
+              {/* 2026-07-09 v5（方案 A 阶段一）：单态结束按钮 — 仅进行中显示 */}
+              {!isEnded && onEnd && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEnd(record)}
+                  title="结束"
+                >
                   <StopCircle className="w-4 h-4" />
                 </Button>
               )}
@@ -955,7 +952,7 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">采收入库量</TableHead>
               {/* 2026-06-29: 合并残株回种源 + 自交种子入种源 + 种植自留种 为 1 列「种植自留种量」 */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="自留种入库到内部种源">种植自留种量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">废弃量</TableHead>
+              {/* 2026-07-09：移除"废弃量"表头（dispose 功能已下线） */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">状态</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
@@ -1092,11 +1089,7 @@ export function PlantingTable({
                       {record.selfKeptToSourceQty ? `${record.selfKeptToSourceQty.toLocaleString()}${record.selfKeptToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
-                    <span className={(record.disposeQty || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
-                      {record.disposeQty ? `${record.disposeQty.toLocaleString()}${record.disposeUnit || record.unit || ''}` : '-'}
-                    </span>
-                  </TableCell>
+                  {/* 2026-07-09：移除"废弃量"单元格（dispose 功能已下线） */}
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-center">
                     {(() => {
                       const harvestQty = record.harvestQuantity || 0;
@@ -1181,8 +1174,8 @@ export function PlantingTable({
                               title="采收"
                             />
                           )}
-                          {/* 采收入库（补录）：异常结束可用；已取消可查看 */}
-                          {onInbound && (isAbnormalEnded || isCancelled) && (
+                          {/* 2026-07-09 v5 阶段一补漏：任何已结束/已取消行都可见"采收入库"（补录）按钮 */}
+                          {onInbound && (isEnded || isCancelled) && (
                             <ActionIconButton
                               variant="harvest"
                               icon={<Package className="w-4 h-4" />}
@@ -1220,7 +1213,8 @@ export function PlantingTable({
                               title={`留种记录${isEnded ? '（只读）' : ''}`}
                             />
                           )}
-                          {!isEnded && !record.endTime && !record.isHarvestLocked && onEnd && (
+                          {/* 2026-07-09 v5（方案 A 阶段一）：单态结束按钮 — 仅进行中显示 */}
+                          {!isEnded && onEnd && (
                             <ActionIconButton
                               variant="end"
                               icon={<StopCircle className="w-4 h-4" />}

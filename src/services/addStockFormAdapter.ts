@@ -111,5 +111,12 @@ export function toPayload(
 
     notes: str(formData.notes),
     operatorName: operator.operatorName,
+
+    // 2026-07-09 v5 阶段三（路径 B）：补录字段（自产兜底模式 + 已选 sourceId 视为补录）
+    // 校验：validateBySourceType 已保证 sourceId 与 supplementaryReason 同在时 supplementaryReason 必填
+    isSupplementary: sourceType === 'self_produced' && !!str(formData.sourceId),
+    supplementaryReason: sourceType === 'self_produced' && !!str(formData.sourceId)
+      ? str(formData.supplementaryReason)
+      : undefined,
   };
 }

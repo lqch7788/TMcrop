@@ -18,7 +18,7 @@ import {
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
 import { SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
-import { translateForm } from '../../../constants/formDictionary';
+import { translateForm, translateArea } from '../../../constants/formDictionary';
 
 interface InventoryTableProps {
   data: InventoryStock[];
@@ -268,8 +268,8 @@ export function InventoryTable({
                         );
                       })() : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName || stock.areaName}>
-                      {stock.greenhouseName || stock.areaName || '-'}
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={translateArea(stock.greenhouseName) || translateArea(stock.areaName)}>
+                      {translateArea(stock.greenhouseName) || translateArea(stock.areaName) || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {/* 2026-06-30 Bug 21 修复：库存形态列统一读产品明细「采收形态」sourceForm
