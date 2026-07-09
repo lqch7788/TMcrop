@@ -91,13 +91,16 @@ export function toPayload(
     // 供应商 / 赠送 / 委托 / 调拨 / 手动 / 自产
     supplierId: str(formData.supplierId),
     supplierName: str(formData.supplierName),
-    supplierPhone: str(formData.supplierPhone),
+    // 2026-07-08 T13 Bug 3：移除 supplierPhone（弹窗不再收集，supplier 实体的电话字段在 supplier 表维护）
+    // supplierPhone: str(formData.supplierPhone),  // 删除
     giftFrom: str(formData.giftFrom),
     consignor: str(formData.consignor),
     sourceWarehouseName: str(formData.sourceWarehouseName),
     stocktakeNo: str(formData.stocktakeNo),
     baseId: str(formData.baseId),
     baseName: str(formData.baseName),
+    // 2026-07-08 T13 Bug 2：作物形态（crop_form）— 6 套 FIELD_CONFIG 都已加此字段
+    cropForm: str(formData.cropForm),
 
     // 行级弹窗联动溯源字段
     productionPlanId: str(formData.productionPlanId) ?? sourceRecord?.productionPlanId,

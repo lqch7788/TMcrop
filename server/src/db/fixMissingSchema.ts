@@ -2883,9 +2883,53 @@ function fixApprovedProductionPlanStatus(): void {
     try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN base_name TEXT'); } catch (e: any) { /* duplicate column */ }
     try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN planting_mode TEXT'); } catch (e: any) { /* duplicate column */ }
     try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN greenhouse_name TEXT'); } catch (e: any) { /* duplicate column */ }
+    // 2026-07-08 T13：作物形态字段（整株/果实/种子/叶片/花朵/其他）
+    try { db.run('ALTER TABLE inventory_inbound_records ADD COLUMN crop_form TEXT'); } catch (e: any) { /* duplicate column */ }
     seedLog.info('  ✓ inventory_inbound_records 表 + 3 索引就绪');
   } catch (e: any) {
     seedLog.error('inventory_inbound_records 创建失败:', e.message);
+  }
+
+  // 2026-07-08 T13：创建"作物形态"字典类别 + 6 个项目
+  // 在 inventory_inbound_records 表就绪后、planting_move_records 表创建前插入
+  // 字典语义：入库时记录作物形态（整株/果实/种子/叶片/花朵/其他），前端 AddStockModal 从字典加载
+  // 幂等：先用 SELECT 检查类别是否存在，避免 duplicate row 错误
+  try {
+    // better-sqlite3 标准 API：prepare(sql).get(...) / .all() / .run()
+    const catExists = !!db.prepare("SELECT id FROM dictionary_categories WHERE code = ?").get('crop_form');
+    if (!catExists) {
+      // category_code 必须唯一；时间戳保证幂等 id
+      const catId = `DC_CROP_FORM_${Date.now()}`;
+      db.run(
+        `INSERT INTO dictionary_categories (id, code, name, module, description, sort_order, status, created_at, updated_at)
+         VALUES (?, 'crop_form', '作物形态', 'crop', '入库时记录作物的形态，如整株/果实/种子/叶片/花朵/其他', 38, 'active', datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+        [catId],
+      );
+      // 6 个项目（顺序按业务常用度：果实 > 整株 > 种子 > 叶片 > 花朵 > 其他）
+      const cropFormItems: Array<[string, string]> = [
+        ['fruit', '果实'],
+        ['whole_plant', '整株'],
+        ['seed', '种子'],
+        ['leaf', '叶片'],
+        ['flower', '花朵'],
+        ['other', '其他'],
+      ];
+      const now = new Date().toISOString();
+      for (let i = 0; i < cropFormItems.length; i++) {
+        const [code, label] = cropFormItems[i];
+        // 用 item id 保证幂等（重复执行不会插第二份）
+        db.run(
+          `INSERT INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, display_name, created_at, updated_at)
+           VALUES (?, 'crop_form', ?, ?, ?, 'gray', ?, 0, 'active', ?, ?, ?)`,
+          [`CF_${i + 1}`, code, label, label, i + 1, label, now, now],
+        );
+      }
+      seedLog.info('  ✓ crop_form 字典类别 + 6 项目创建成功');
+    } else {
+      seedLog.skip('  • crop_form 字典类别已存在，跳过');
+    }
+  } catch (e: any) {
+    seedLog.skip(`  • crop_form 字典创建失败: ${e.message}`);
   }
 
   // 2026-06-19: 种植移入/移出履历表（整批级别，不依赖 plant_labels 单株粒度）
