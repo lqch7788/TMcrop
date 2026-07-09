@@ -261,11 +261,15 @@ export function checkInventoryStockDeletable(stockId: string): DeleteCheckResult
  * 获取某个 instance_id 的所有下游非 inbound 流水
  */
 function getBlockingTransactionsForInstance(db: any, instanceId: string): BlockingTransaction[] {
+  // 2026-07-09 修复：之前用 `transaction_type != 'inbound'` 误把 freeze/unfreeze/adjust 等
+  // 非消耗流水也当成"下游消耗"。实际下游消耗只应是 outbound/transfer/transfer_out
+  // （冻结/解冻/调整是临时状态变更，不消耗库存）
   const stmt = db.prepare(`
     SELECT id, transaction_type, ABS(quantity) AS qty, business_code, business_type,
            operator_name, operate_date
     FROM inventory_transaction
-    WHERE instance_id = ? AND transaction_type != 'inbound'
+    WHERE instance_id = ?
+      AND transaction_type IN ('outbound', 'transfer', 'transfer_out')
     ORDER BY operate_date DESC
   `);
   stmt.bind([instanceId]);

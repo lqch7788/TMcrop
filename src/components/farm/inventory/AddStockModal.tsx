@@ -101,6 +101,12 @@ function renderFieldByType(
     onCropChange: (code: string, variety: CropVariety | null) => void;
     unitOptions: Array<{ value: string; label: string }>;
     cropFormOptions: Array<{ value: string; label: string }>;
+    /**
+     * 2026-07-09：联动写入多个字段（解决供应商/基地只存 id 不存 name 的 bug）
+     * supplier-select 选完后同时写 supplierId + supplierName
+     * base-select 选完后同时写 baseId + baseName
+     */
+    onMultiFieldChange?: (updates: Record<string, any>) => void;
   },
 ): React.ReactNode {
   switch (field.type) {
@@ -131,8 +137,16 @@ function renderFieldByType(
         />
       );
     case 'select':
+      // 2026-07-09：入库仓库/调拨源仓库通用 select — 联动写 warehouseName（修复详情弹窗仓库名为空）
       return (
-        <Select value={value || ''} onValueChange={onChange}>
+        <Select value={value || ''} onValueChange={(v) => {
+          onChange(v)
+          const found = ctx.warehouses.find(w => String(w.id || w.oid || '') === v)
+          if (found && ctx.onMultiFieldChange) {
+            const updateKey = field.key === 'warehouseId' ? 'warehouseName' : 'sourceWarehouseName'
+            ctx.onMultiFieldChange({ [updateKey]: found.name })
+          }
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="请选择" />
           </SelectTrigger>
@@ -177,6 +191,22 @@ function renderFieldByType(
           </SelectContent>
         </Select>
       );
+    case 'select-warehouse-name':
+      // 2026-07-09：调出仓库下拉（与入库仓库同样 UI；value=name，适配后端 sourceWarehouseName 存仓库名）
+      return (
+        <Select value={value || ''} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="选择调出仓库" />
+          </SelectTrigger>
+          <SelectContent>
+            {ctx.warehouses.map((w) => (
+              <SelectItem key={w.id || w.oid || ''} value={w.name}>
+                {w.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
     case 'select-enum-quality':
       return (
         <Select value={value || ''} onValueChange={onChange}>
@@ -194,8 +224,15 @@ function renderFieldByType(
       );
     case 'supplier-select':
       // T3 简化版：使用 Select；T4 可升级为带搜索的下拉
+      // 2026-07-09：选完同时写 supplierId + supplierName（修复详情弹窗供应商字段为空）
       return (
-        <Select value={value || ''} onValueChange={onChange}>
+        <Select value={value || ''} onValueChange={(v) => {
+          onChange(v)
+          const found = ctx.suppliers.find(s => s.id === v)
+          if (found && ctx.onMultiFieldChange) {
+            ctx.onMultiFieldChange({ supplierId: v, supplierName: found.name })
+          }
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="选择供应商" />
           </SelectTrigger>
@@ -209,8 +246,15 @@ function renderFieldByType(
         </Select>
       );
     case 'base-select':
+      // 2026-07-09：选完同时写 baseId + baseName（修复详情弹窗所属基地字段为空）
       return (
-        <Select value={value || ''} onValueChange={onChange}>
+        <Select value={value || ''} onValueChange={(v) => {
+          onChange(v)
+          const found = ctx.bases.find(b => String(b.id || b.oid || '') === v)
+          if (found && ctx.onMultiFieldChange) {
+            ctx.onMultiFieldChange({ baseId: v, baseName: found.name })
+          }
+        }}>
           <SelectTrigger>
             <SelectValue placeholder="选择基地" />
           </SelectTrigger>
@@ -450,6 +494,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     // 2026-07-08 T13：把字典选项注入到 renderFieldByType 上下文
     unitOptions,
     cropFormOptions,
+    // 2026-07-09：supplier-select / base-select 联动写入多个字段（修复详情弹窗供应商/基地名为空）
+    onMultiFieldChange: (updates: Record<string, any>) => {
+      setFormData((prev) => ({ ...prev, ...updates }))
+    },
   };
 
   return (
@@ -529,7 +577,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         </div>
 
-        {/* 第 2 行：作物选择 + 作物形态（grid-cols-2 同行） */}
+        {/* 第 2 行：作物选择(50%) + 作物形态+品质等级(50% 合成块) */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="作物选择 *">
             <CropCodeSelector
@@ -540,30 +588,55 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             />
             {errors.cropSelector && <div className="text-xs text-red-500 mt-1">{errors.cropSelector}</div>}
           </FormField>
-          <FormField label="作物形态 *">
-            <Select
-              value={formData.cropForm || ''}
-              onValueChange={(v) => handleFieldChange('cropForm', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="请选择作物形态" />
-              </SelectTrigger>
-              <SelectContent>
-                {cropFormOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.cropForm && <div className="text-xs text-red-500 mt-1">{errors.cropForm}</div>}
-          </FormField>
+          {/* 作物形态 + 品质等级（占 50%，内部 flex-1 形态 + 140px 品质等级） */}
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <FormField label="作物形态 *">
+                <Select
+                  value={formData.cropForm || ''}
+                  onValueChange={(v) => handleFieldChange('cropForm', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="请选择作物形态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cropFormOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.cropForm && <div className="text-xs text-red-500 mt-1">{errors.cropForm}</div>}
+              </FormField>
+            </div>
+            <div className="w-[140px] flex-shrink-0">
+              <FormField label="品质等级">
+                <Select
+                  value={formData.qualityGrade || ''}
+                  onValueChange={(v) => handleFieldChange('qualityGrade', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="等级" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {QUALITY_GRADES.map((g) => (
+                      <SelectItem key={g.value} value={g.value}>
+                        {g.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.qualityGrade && <div className="text-xs text-red-500 mt-1">{errors.qualityGrade}</div>}
+              </FormField>
+            </div>
+          </div>
         </div>
 
         {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes')
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate')
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
@@ -579,9 +652,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             })}
         </div>
 
-        {/* 数量 + 单位（共享一个 grid 项，内部分两半：数量占 flex-1，单位占固定 120px） */}
+        {/* 数量+单位(50%) + 单价+总金额(50%) 同行（仅外购显示单价+总金额） */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2 flex gap-2 items-start">
+          {/* 左半：数量 + 单位（flex-1 + 120px） */}
+          <div className="flex gap-2 items-start">
             <div className="flex-1">
               <FormField label="数量 *">
                 <NumberInput
@@ -614,7 +688,47 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
               </FormField>
             </div>
           </div>
+          {/* 右半：单价 + 总金额（仅外购入库显示，flex-1 + 140px） */}
+          {sourceType === 'external_purchased' && (
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <FormField label="单价（元）">
+                  <NumberInput
+                    value={formData.unitPrice ?? 0}
+                    onChange={(v) => handleFieldChange('unitPrice', v)}
+                    min={0}
+                    className={deepInputClass}
+                  />
+                  {errors.unitPrice && <div className="text-xs text-red-500 mt-1">{errors.unitPrice}</div>}
+                </FormField>
+              </div>
+              <div className="w-[140px] flex-shrink-0">
+                <FormField label="总金额">
+                  <Input
+                    value={`¥ ${(Number(formData.quantity || 0) * Number(formData.unitPrice || 0)).toFixed(2)}`}
+                    disabled
+                    className={`${deepInputClass} bg-gray-100 font-mono text-emerald-700`}
+                  />
+                </FormField>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* 采购日期（仅外购入库显示，位于数量行下方，占 50% 宽度） */}
+        {sourceType === 'external_purchased' && (
+          <div className="w-1/2">
+            <FormField label="采购日期">
+              <Input
+                type="date"
+                value={formData.purchaseDate || ''}
+                onChange={(e) => handleFieldChange('purchaseDate', e.target.value)}
+                className={deepInputClass}
+              />
+              {errors.purchaseDate && <div className="text-xs text-red-500 mt-1">{errors.purchaseDate}</div>}
+            </FormField>
+          </div>
+        )}
 
         {/* 备注 — 弹窗最后单独一行（col-span-2 整行） */}
         <div className="grid grid-cols-2 gap-4">

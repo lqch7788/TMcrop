@@ -15,7 +15,7 @@ import { Router, Request, Response } from 'express';
 import { inventoryController } from '../controllers/inventory.controller';
 import { checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
-import { generateStockId, generateInboundRecordId } from '../services/inventory.service';
+import { generateStockId, generateInboundRecordId, generateTransactionId } from '../services/inventory.service';
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
@@ -86,6 +86,11 @@ const InboundSchema = z.object({
   warehouseName: z.string().optional(),
   // 2026-07-08 T8：作物 ID（前端弹窗从来源记录带出，可覆盖）
   cropId: z.string().optional(),
+  // 2026-07-09：作物编码 / 名称 / 品种名（修复前 InboundSchema 缺这三个字段，
+  // Zod 默认 strip → input.cropCode/cropName/varietyName 永远是 undefined → DB 写入 NULL）
+  cropCode: z.string().optional(),
+  cropName: z.string().optional(),
+  varietyName: z.string().optional(),
   // 2026-07-08 T8.5：6 套字段矩阵补 8 字段
   // - supplierPhone：外购入库 — 供应商电话（库存表已有 supplier_*，这里补 phone 补全）
   // - giftFrom：赠品入库 — 赠送方
@@ -225,38 +230,24 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     // 现在全量继承 source + 填齐 inventory_stock 关键字段
     db.run(`
       INSERT INTO inventory_stock
-      (id, instance_id, stock_type,
-       business_id, business_type, business_code,
-       source_module, source_id, source_type,
-       crop_id, crop_code, crop_name, variety_name,
-       current_quantity, available_quantity, unit,
-       warehouse_id, warehouse_name,
-       quality_grade, grade,
-       supplier_id, supplier_name,
-       unit_price, total_amount,
-       purchase_date, inbound_date,
-       production_plan_id, production_plan_code,
-       planting_mode, greenhouse_name,
-       notes, status, version, create_time, update_time)
-      VALUES (?, ?, ?,
-              ?, 'inbound', ?,
-              ?, ?, ?,
-              ?, ?, ?, ?,
-              ?, ?, ?,
-              ?, ?,
-              ?, ?,
-              ?, ?,
-              ?, ?,
-              ?, ?,
-              ?, ?,
-              ?, ?,
-              ?,
-              'active', 1, ?, ?)
+      (id, instance_id, stock_type, business_id, business_type, business_code,
+       source_module, source_id, source_type, crop_id, crop_code, crop_name, variety_name,
+       current_quantity, available_quantity, unit, warehouse_id, warehouse_name,
+       quality_grade, grade, supplier_id, supplier_name,
+       unit_price, total_amount, purchase_date, inbound_date,
+       production_plan_id, production_plan_code, planting_mode, greenhouse_name,
+       source_form, notes, status, version, create_time, update_time)
+      VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock', 1, ?, ?)
     `, [
       stockId, instanceId, input.stockType,
       input.businessId || stockId, input.businessId || stockId,
       input.sourceModule, sourceIdForDb, input.sourceType,
-      source.cropId || null, source.cropCode || null, source.cropName || null, source.cropVariety || null,
+      // 2026-07-09：作物字段优先 input.*（人工填写），缺省回退 source.*（行级联动）
+      // 之前全读 source.* 导致页面级手动入库（source 为空对象）所有作物字段 NULL
+      input.cropId || source.cropId || null,
+      input.cropCode || source.cropCode || null,
+      input.cropName || source.cropName || null,
+      input.varietyName || source.cropVariety || null,
       input.quantity, input.quantity, input.unit,
       input.warehouseId, input.warehouseName || null,
       input.qualityGrade || null, input.qualityGrade || null,  // quality_grade + grade 同时填
@@ -265,6 +256,8 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       recordDate, recordDate,  // purchase_date + inbound_date
       productionPlanId, productionPlanCode,
       source.plantingMode || null, source.greenhouseName || null,
+      // 2026-07-09：作物形态同步写到 source_form（前端 InventoryTable 列表"形态"列已读 stock.sourceForm）
+      input.cropForm || null,
       input.notes || null, now, now,
     ])
 
@@ -306,13 +299,35 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       input.greenhouseName || null,
       // 2026-07-08 T13：作物形态（crop_form 字段）
       input.cropForm || null,
-      source.cropCode, source.cropName, source.cropVariety,
+      // 2026-07-09：作物字段优先 input.*（人工填写），缺省回退 source.*（行级联动）
+      // 之前全读 source.* 导致页面级手动入库（source 为空对象）所有作物字段 NULL
+      input.cropCode || source.cropCode || null,
+      input.cropName || source.cropName || null,
+      input.varietyName || source.cropVariety || null,
       input.quantity, input.unit, input.unitPrice || 0, input.totalAmount || 0,
       input.qualityGrade || null,
       input.supplierId || null, input.supplierName || null,
       productionPlanId, productionPlanCode,
       input.businessId || stockId, input.notes || null,
       input.operatorName || 'system', input.operatorName || 'system', now, now,
+    ])
+
+    // 4. 写 inventory_transaction（操作历史 Tab 数据源）
+    // 2026-07-09 修复：之前 /inbound-record 路由缺 INSERT inventory_transaction，导致详情弹窗"操作历史" Tab 空白
+    const transactionId = await generateTransactionId(dateStrInst);
+    db.run(`
+      INSERT INTO inventory_transaction (
+        id, transaction_id, instance_id, stock_type, transaction_type, quantity,
+        balance_before, balance_after, business_id, business_type, business_code,
+        operator_name, operate_date, remarks, create_time
+      ) VALUES (?, ?, ?, ?, 'inbound', ?, 0, ?, ?, 'inbound', ?, ?, ?, ?, ?)
+    `, [
+      transactionId, transactionId, instanceId, input.stockType,
+      input.quantity, input.quantity,
+      recordId, recordId,
+      input.operatorName || 'system', recordDate,
+      '新增入库',
+      now,
     ])
 
     // 4. 补仓库名（如未传且 warehouses 表能查到）
@@ -895,22 +910,39 @@ router.get('/', (req: Request, res: Response) => {
     const { stock_type, crop_name, status, page = 1, limit = 50 } = req.query;
     const db = getDatabase();
 
-    let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
+    // 2026-07-09：LEFT JOIN inventory_inbound_records 补 10 个专属字段
+    //   （inventory_stock 表没有 consignor / giftFrom / sourceWarehouseName / stocktakeNo /
+    //    supplierPhone / baseId / baseName / plantingMode / greenhouseName / cropForm）
+    let sql = `
+      SELECT s.*,
+        ib.supplier_phone, ib.gift_from, ib.consignor, ib.source_warehouse_name, ib.stocktake_no,
+        ib.base_id AS ib_base_id, ib.base_name AS ib_base_name,
+        ib.planting_mode AS ib_planting_mode, ib.greenhouse_name AS ib_greenhouse_name,
+        ib.crop_form AS ib_crop_form
+      FROM inventory_stock s
+      LEFT JOIN inventory_inbound_records ib
+        ON ib.business_id = s.id AND ib.id = (
+          SELECT id FROM inventory_inbound_records WHERE business_id = s.id ORDER BY create_time DESC LIMIT 1
+        )
+      WHERE 1=1
+    `;
     const params: any[] = [];
     // 2026-06-24: 排除已调拨到种源管理的行（种源管理是内部专用库存，不与作物库存重叠）
-    sql += ` AND status != 'transferred'`;
-    if (stock_type) { sql += ` AND stock_type = ?`; params.push(stock_type); }
-    if (crop_name) { sql += ` AND crop_name LIKE ?`; params.push(`%${crop_name}%`); }
-    if (status) { sql += ` AND status = ?`; params.push(status); }
+    sql += ` AND s.status != 'transferred'`;
+    if (stock_type) { sql += ` AND s.stock_type = ?`; params.push(stock_type); }
+    if (crop_name) { sql += ` AND s.crop_name LIKE ?`; params.push(`%${crop_name}%`); }
+    if (status) { sql += ` AND s.status = ?`; params.push(status); }
 
     // 总数
-    const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as total');
-    const countResult = db.exec(countSql, params);
+    const countSql = sql.replace('SELECT s.*,', 'SELECT COUNT(*) as total FROM (SELECT s.*')
+      .replace(/LEFT JOIN[\s\S]*?LIMIT 1\)\)\s*$/m, ') sub')
+    // 简化：用独立 COUNT
+    const countResult = db.exec(`SELECT COUNT(*) AS total FROM inventory_stock WHERE 1=1 AND status != 'transferred'`, []);
     const total = countResult.length > 0 && countResult[0].values.length > 0
       ? Number(countResult[0].values[0][0]) || 0
       : 0;
 
-    sql += ` ORDER BY create_time DESC LIMIT ? OFFSET ?`;
+    sql += ` ORDER BY s.create_time DESC LIMIT ? OFFSET ?`;
     const offset = (Number(page) - 1) * Number(limit);
     params.push(Number(limit), offset);
 
@@ -920,8 +952,19 @@ router.get('/', (req: Request, res: Response) => {
     while (stmt.step()) {
       const r = stmt.getAsObject();
       // 字段映射：V3 stock → 老 ProduceInventory 期望
+      // 2026-07-09：10 个专属字段（inventory_inbound_records 表独有）注入到 stock 对象
       rows.push({
         ...r,
+        supplier_phone: r.supplier_phone || null,
+        gift_from: r.gift_from || null,
+        consignor: r.consignor || null,
+        source_warehouse_name: r.source_warehouse_name || null,
+        stocktake_no: r.stocktake_no || null,
+        base_id: r.ib_base_id || null,
+        base_name: r.ib_base_name || null,
+        planting_mode: r.planting_mode || r.ib_planting_mode || null,
+        greenhouse_name: r.greenhouse_name || r.ib_greenhouse_name || null,
+        crop_form: r.crop_form || r.ib_crop_form || null,
         product_code: r.business_code || `SKU-${r.instance_id}`,
         variety: r.variety_name || '',
         quantity: r.current_quantity || 0,
@@ -929,9 +972,6 @@ router.get('/', (req: Request, res: Response) => {
         storage_location: '',  // 老字段，V3 表没存
         harvest_date: r.inbound_date || '',
         storage_date: r.create_time || '',
-        greenhouse_name: '',
-        planting_mode: '',
-        expiration_date: '',
         batch_code: r.business_code || '',
       });
     }
@@ -961,10 +1001,30 @@ router.get('/:id', (req: Request, res: Response) => {
     }
     const r = stmt.getAsObject();
     stmt.free();
+    // 2026-07-09：JOIN inventory_inbound_records 补 5 个专属字段
+    // （giftFrom/consignor/sourceWarehouseName/stocktakeNo/supplierPhone 在 inbound_records 表里）
+    let inboundExtra: any = {};
+    try {
+      const ibStmt = db.prepare(`
+        SELECT supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no
+        FROM inventory_inbound_records
+        WHERE business_id = ?
+        ORDER BY create_time DESC LIMIT 1
+      `);
+      ibStmt.bind([r.id]);
+      if (ibStmt.step()) inboundExtra = ibStmt.getAsObject();
+      ibStmt.free();
+    } catch (_) { /* 容错 */ }
     res.json({
       success: true,
       data: {
         ...r,
+        // 2026-07-09：补 5 个专属字段（inventory_stock 表没有，从 inbound_records 注入）
+        supplier_phone: inboundExtra.supplier_phone || r.supplier_phone || null,
+        gift_from: inboundExtra.gift_from || r.gift_from || null,
+        consignor: inboundExtra.consignor || r.consignor || null,
+        source_warehouse_name: inboundExtra.source_warehouse_name || r.source_warehouse_name || null,
+        stocktake_no: inboundExtra.stocktake_no || r.stocktake_no || null,
         product_code: r.business_code || `SKU-${r.instance_id}`,
         variety: r.variety_name || '',
         quantity: r.current_quantity || 0,

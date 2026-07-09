@@ -3182,7 +3182,7 @@ export function initializeDatabase() {
 
   // 新增种苗库
   try {
-    db.run(`INSERT OR IGNORE INTO warehouses (id, oid, code, name, warehouse_type, location, status) VALUES ('WH-SEEDLING-001', 'ORG001', 'SM-001', '种苗库', 'seedling', '待定', 'active')`);
+    db.run(`INSERT OR IGNORE INTO warehouses (id, oid, code, name, warehouse_type, location, status) VALUES ('WH-SEEDLING-001', 'ORG001', 'SM-001', '种苗B库', 'seedling', '待定', 'active')`);
   } catch (e) {}
 
   console.log('库存中心表初始化完成');

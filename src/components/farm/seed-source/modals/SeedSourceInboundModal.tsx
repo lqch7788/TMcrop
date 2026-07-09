@@ -261,7 +261,10 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
         unit: fixedUnit,
         warehouseId,
         warehouseName,
-        propagationForm,  // 种源形态（必填）
+        // 2026-07-09：种源形态映射到 products[0].sourceForm（之前放在顶级 propagationForm 被 Zod strip）
+        // 让 inventoryInboundFromSource.service.ts 写入 inventory_stock.source_form，
+        // 列表"形态"列才能正常显示
+        propagationForm,  // 顶级仍传（向后兼容 + 后端可扩展读取）
         // 1 条产品明细（种源锁 1 条）
         products: [
           {
@@ -271,6 +274,8 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
             harvestQuantity: Number(quantity) || 0,
             unit: fixedUnit,
             grade: qualityGrade || undefined,
+            // 2026-07-09：种源形态直接映射（与 SeedFormDict 字典 value 同源）
+            sourceForm: propagationForm || undefined,
           },
         ],
         operatorName: purchaserNames[0] || 'system',

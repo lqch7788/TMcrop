@@ -34,7 +34,9 @@ import {
   INVENTORY_STATUS_MAP,
   getPlantingModeLabel,
   SOURCE_ORIGIN_MAP,
+  SOURCE_ORIGIN_LABEL_MAP,
 } from '../../../constants/cropConstants';
+import { translateForm } from '../../../constants/formDictionary';
 
 type TabKey = 'basic' | 'history' | 'trace';
 
@@ -179,7 +181,14 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   if (!isOpen || !stock) return null;
 
   const sourceInfo = SOURCE_ORIGIN_MAP[effectiveStock?.sourceType ?? ''];
-  const statusInfo = INVENTORY_STATUS_MAP[effectiveStock?.status ?? ''] || { label: effectiveStock?.status ?? '-', bg: 'bg-gray-500', text: 'text-white' };
+  // 2026-07-09：兜底不再显示原始英文 status（如 'in_stock'），统一显示"库存中"
+  // 兼容历史脏数据（status='active' 等已废弃值）
+  const statusInfo = INVENTORY_STATUS_MAP[effectiveStock?.status ?? ''] || INVENTORY_STATUS_MAP.in_stock;
+  // sourceType 兜底：未在 SOURCE_ORIGIN_MAP 映射时显示中文（避免英文原始值）
+  const sourceLabel = sourceInfo?.label
+    || (effectiveStock?.sourceType ? SOURCE_ORIGIN_LABEL_MAP[effectiveStock.sourceType] : null)
+    || effectiveStock?.sourceType
+    || '-';
   const gradeInfo = effectiveStock?.grade ? QUALITY_GRADE_MAP[effectiveStock.grade] : null;
   const available = (effectiveStock?.currentQuantity ?? 0) - (effectiveStock?.frozenQuantity ?? 0);
 
@@ -357,7 +366,7 @@ function BasicTab({
           if (info) return <span className={`px-2 py-0.5 ${info.bg} ${info.text} text-xs rounded font-medium`}>{info.label}</span>;
           return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{stock.businessType || '-'}</span>;
         })()],
-        ['业务编号',   stock.extensions?.businessCode || stock.remarks || '-'],
+        ['业务编号',   stock.businessCode || stock.extensions?.businessCode || '-'],
         ['状态',       <span className={`px-2 py-0.5 ${statusInfo.bg} ${statusInfo.text} text-xs rounded font-medium`}>{statusInfo.label}</span>],
         ['乐观锁版本', (
           <span className="inline-flex items-center gap-1">
@@ -388,9 +397,13 @@ function BasicTab({
       text: 'text-emerald-700',
       items: [
         ['库存类型', <span className="flex items-center gap-1">{getStockTypeIcon(stock.stockType)}{getStockTypeLabel(stock.stockType)}</span>],
+        // 2026-07-09：补作物ID（与 inventory_inbound_records.crop_id 对齐，溯源用）
+        ['作物ID',   <span className="font-mono text-xs text-gray-600">{stock.cropId || '-'}</span>],
         ['作物名称', stock.cropName || '-'],
         ['作物编码', <span className="font-mono text-emerald-600">{stock.cropCode || '-'}</span>],
         ['品种',     stock.varietyName || '-'],
+        // 2026-07-09：补形态字段（与列表"形态"列 + AddStockModal 作物形态字段对齐）
+        ['形态',     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">{translateForm(stock.sourceForm || stock.productForm) || '-'}</span>],
         ['种植模式', getPlantingModeLabel(stock.plantingMode) || '-'],
         ['采收区域', stock.greenhouseName || '-'],
         ['品质等级', gradeInfo
@@ -428,14 +441,17 @@ function BasicTab({
       items: [
         ['入库来源', sourceInfo
           ? <span className={`px-2 py-0.5 ${sourceInfo.bg} ${sourceInfo.text} text-xs rounded font-medium`}>{sourceInfo.label}</span>
-          : (stock.sourceType || '-')],
-        ['供应商',   stock.supplierName || '-'],
-        ['基地',     stock.baseName || '-'],
-        ['生产计划', stock.productionPlanCode || '-'],
-        ['上游实例', <span className="font-mono">{stock.sourceInstanceId || '-'}</span>],
-        ['入库日期', stock.inboundDate ? new Date(stock.inboundDate).toLocaleDateString('zh-CN') : '-'],
-        ['最后出库', stock.lastOutboundDate ? new Date(stock.lastOutboundDate).toLocaleDateString('zh-CN') : '-'],
-        ['过期日期', stock.expiryDate ? new Date(stock.expiryDate).toLocaleDateString('zh-CN') : '-'],
+          : <span className="text-gray-700">{sourceLabel}</span>],
+        // 2026-07-09：补上游业务 ID/类型（与 InventoryStock 类型对齐，溯源用）
+        ['上游业务ID',   <span className="font-mono text-xs">{stock.sourceBusinessId || '-'}</span>],
+        ['上游业务类型', stock.sourceBusinessType || '-'],
+        ['上游实例',     <span className="font-mono">{stock.sourceInstanceId || '-'}</span>],
+        ['生产计划',     stock.productionPlanCode || '-'],
+        ['入库日期',     stock.inboundDate ? new Date(stock.inboundDate).toLocaleDateString('zh-CN') : '-'],
+        // 2026-07-09：采购日期从财务组移到来源组（外购入库专属）
+        ['采购日期',     stock.purchaseDate || '-'],
+        ['最后出库',     stock.lastOutboundDate ? new Date(stock.lastOutboundDate).toLocaleDateString('zh-CN') : '-'],
+        ['过期日期',     stock.expiryDate ? new Date(stock.expiryDate).toLocaleDateString('zh-CN') : '-'],
       ],
     },
     {
@@ -451,7 +467,7 @@ function BasicTab({
     },
     // ========== 2026-07-08 T7：扩展信息 4 分组（在原有 5 分组之后追加） ==========
     {
-      title: '💰 财务信息',
+      title: '💰 财务与来源专属',
       bg: 'bg-yellow-50',
       border: 'border-yellow-300',
       text: 'text-yellow-700',
@@ -460,7 +476,12 @@ function BasicTab({
         ['供应商电话', stock.supplierPhone || '-'],
         ['单价',       formatCurrency(stock.unitPrice)],
         ['总金额',     formatCurrency(stock.totalAmount)],
-        ['采购日期',   stock.purchaseDate || '-'],
+        // 2026-07-09：所属基地 + 4 个来源专属字段从原"🌱 来源专属"组合并
+        ['所属基地',   stock.baseName || '-'],
+        ['赠方名称',   stock.giftFrom || '-'],
+        ['委托方',     stock.consignor || '-'],
+        ['调出仓库',   stock.sourceWarehouseName || '-'],
+        ['盘点单号',   stock.stocktakeNo || '-'],
       ],
     },
     {
@@ -475,33 +496,8 @@ function BasicTab({
         ['更新时间', stock.updateTime || '-'],
       ],
     },
-    {
-      title: '🏷️ 业务信息',
-      bg: 'bg-rose-50',
-      border: 'border-rose-300',
-      text: 'text-rose-700',
-      items: [
-        ['备注',     <span className="text-gray-600">{stock.remarks || '-'}</span>],
-        ['业务 ID',  stock.businessId || '-'],
-        ['业务类型', stock.businessType || '-'],
-        ['业务编码', stock.businessCode || stock.extensions?.businessCode || '-'],
-      ],
-    },
-    {
-      title: '🌱 来源专属',
-      bg: 'bg-orange-50',
-      border: 'border-orange-300',
-      text: 'text-orange-700',
-      items: [
-        ['赠方名称', stock.giftFrom || '-'],
-        ['委托方',   stock.consignor || '-'],
-        ['调出仓库', stock.sourceWarehouseName || '-'],
-        ['盘点单号', stock.stocktakeNo || '-'],
-        ['所属基地', stock.baseName || '-'],
-        ['种植模式', stock.plantingMode || '-'],
-        ['采收区域', stock.greenhouseName || '-'],
-      ],
-    },
+    // ========== 2026-07-09：移除"🏷️ 业务信息"组（业务ID/类型/编码已与"基础信息"组重复）==========
+    // ========== 2026-07-09：移除"🌱 来源专属"组（字段已分散到"💰 财务与来源专属" + "品种信息"组）==========
   ];
 
   return (

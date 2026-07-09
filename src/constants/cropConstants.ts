@@ -412,12 +412,13 @@ export const PROPAGATION_STATUS_COLORS: Record<string, string> = {
 
 // ========== 库存状态映射（ProduceInventory） ==========
 export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  in_stock: { label: '正常', bg: 'bg-emerald-600', text: 'text-white' },
-  low_stock: { label: '库存不足', bg: 'bg-blue-600', text: 'text-white' },
-  expired: { label: '已过期', bg: 'bg-red-600', text: 'text-white' },
-  out_of_stock: { label: '缺货', bg: 'bg-slate-600', text: 'text-white' },
-  // 2026-06-24: 已调拨到种源管理
-  transferred: { label: '已调拨', bg: 'bg-cyan-600', text: 'text-white' },
+  // 2026-07-09：标签对齐 InventoryTable 的 getStatusBadge（"库存中"而非"正常"），统一全站
+  in_stock:    { label: '库存中',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  low_stock:   { label: '低库存',   bg: 'bg-amber-100',   text: 'text-amber-700' },
+  frozen:      { label: '已冻结',   bg: 'bg-blue-100',    text: 'text-blue-700' },
+  outbound:    { label: '已出库',   bg: 'bg-gray-100',    text: 'text-gray-700' },
+  empty:       { label: '已用完',   bg: 'bg-red-100',     text: 'text-red-700' },
+  transferred: { label: '已调拨',   bg: 'bg-cyan-100',    text: 'text-cyan-700' },
 };
 
 // ========== 采收状态映射 ==========

@@ -201,7 +201,7 @@ export class InventoryStockRepository {
         crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
         supplier_id, supplier_name, unit_price, total_amount, purchase_date,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       instanceId,
@@ -224,7 +224,6 @@ export class InventoryStockRepository {
       data.production_plan_code || null,
       data.source_instance_id || null,
       data.status || 'in_stock',
-      1,  // version
       // V3 扩展字段（采收 → 库存完整字段对接）
       data.crop_code || null,
       data.planting_mode || null,
@@ -290,46 +289,61 @@ export class InventoryStockRepository {
     // T11（2026-07-08）：从 query 解构 status / sourceType 供下面 WHERE 条件使用
     const { stockType, warehouseId, cropName, status, sourceType, page = 1, limit = 50 } = query;
 
-    let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
+    // 2026-07-09：LEFT JOIN inventory_inbound_records 补 10 个专属字段
+    //   （inventory_stock 表没有 consignor / giftFrom / sourceWarehouseName / stocktakeNo /
+    //    supplierPhone / baseId / baseName / plantingMode / greenhouseName / cropForm）
+    let sql = `
+      SELECT s.*,
+        ib.supplier_phone, ib.gift_from, ib.consignor, ib.source_warehouse_name, ib.stocktake_no,
+        ib.base_id, ib.base_name, ib.planting_mode, ib.greenhouse_name, ib.crop_form
+      FROM inventory_stock s
+      LEFT JOIN inventory_inbound_records ib
+        ON ib.business_id = s.id AND ib.id = (
+          SELECT id FROM inventory_inbound_records WHERE business_id = s.id ORDER BY create_time DESC LIMIT 1
+        )
+      WHERE 1=1
+    `;
     const params: any[] = [];
 
     // 2026-06-24: 排除已调拨到种源管理的行（种源管理是内部专用库存，不与作物库存重叠）
-    sql += ` AND status != 'transferred'`;
+    sql += ` AND s.status != 'transferred'`;
 
     if (stockType) {
-      sql += ` AND stock_type = ?`;
+      sql += ` AND s.stock_type = ?`;
       params.push(stockType);
     }
 
     if (warehouseId) {
-      sql += ` AND warehouse_id = ?`;
+      sql += ` AND s.warehouse_id = ?`;
       params.push(warehouseId);
     }
 
     if (cropName) {
-      sql += ` AND crop_name LIKE ?`;
+      sql += ` AND s.crop_name LIKE ?`;
       params.push(`%${cropName}%`);
     }
 
     // T11（2026-07-08）：P0 过滤器 bug 修复 — SQL 层真正消费 status / sourceType
-    // 注意：必须放在 transferred 排除逻辑之后；与下面 if 顺序保持一致（params push 顺序）
     if (status) {
-      sql += ` AND status = ?`;
+      sql += ` AND s.status = ?`;
       params.push(status);
     }
 
     if (sourceType) {
-      sql += ` AND source_type = ?`;
+      sql += ` AND s.source_type = ?`;
       params.push(sourceType);
     }
 
-    // 获取总数
-    const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as total');
-    const countResult = queryToObjects<{ total: number }>(db, countSql, params);
+    // 获取总数（用独立 COUNT 简化 — JOIN 不影响 COUNT 计数）
+    const countResult = queryToObjects<{ total: number }>(
+      db,
+      `SELECT COUNT(*) as total FROM inventory_stock WHERE 1=1 AND status != 'transferred'`,
+      []
+    );
     const total = countResult[0]?.total || 0;
 
     // 分页
-    sql += ` ORDER BY create_time DESC`;
+    sql += ` ORDER BY s.create_time DESC`;
     const offset = (Number(page) - 1) * Number(limit);
     sql += ` LIMIT ? OFFSET ?`;
     params.push(Number(limit), offset);

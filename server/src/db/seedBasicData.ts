@@ -282,7 +282,7 @@ const defaultWarehouses: WarehouseSeed[] = [
   {
     id: 'W006',
     oid: 'WH006',
-    name: '种苗库',
+    name: '种苗A库',
     code: 'SM-001',
     location: 'A区',
     capacity: 500,

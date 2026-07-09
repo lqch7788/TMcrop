@@ -384,6 +384,9 @@ export class InventoryService {
 
   /**
    * 获取库存详情（含流水）
+   * 2026-07-09：JOIN inventory_inbound_records 取最新一条入库记录的 5 个来源专属字段
+   *   （supplierPhone/giftFrom/consignor/sourceWarehouseName/stocktakeNo），
+   *   因为 inventory_stock 表没有这 5 列（写在了 inventory_inbound_records 表）
    */
   async getDetail(instanceId: string): Promise<{
     stock: InventoryStock | null;
@@ -391,6 +394,32 @@ export class InventoryService {
   }> {
     const stock = await inventoryStockRepository.findByInstanceId(instanceId);
     const transactions = await inventoryTransactionRepository.findByInstanceId(instanceId);
+
+    // 补 5 个专属字段：取最新入库记录（business_id 与 stock.id 关联）
+    if (stock && (stock as any).id) {
+      try {
+        const db = getDatabase();
+        const stmt = db.prepare(`
+          SELECT supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no
+          FROM inventory_inbound_records
+          WHERE business_id = ?
+          ORDER BY create_time DESC LIMIT 1
+        `);
+        stmt.bind([(stock as any).id]);
+        if (stmt.step()) {
+          const row = stmt.getAsObject() as any;
+          (stock as any).supplierPhone = row.supplier_phone || stock.supplierPhone || null;
+          (stock as any).giftFrom = row.gift_from || stock.giftFrom || null;
+          (stock as any).consignor = row.consignor || stock.consignor || null;
+          (stock as any).sourceWarehouseName = row.source_warehouse_name || stock.sourceWarehouseName || null;
+          (stock as any).stocktakeNo = row.stocktake_no || stock.stocktakeNo || null;
+        }
+        stmt.free();
+      } catch (_) {
+        // inventory_inbound_records 缺失或列缺失时，容错继续
+      }
+    }
+
     return { stock, transactions };
   }
 

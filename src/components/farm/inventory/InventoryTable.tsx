@@ -18,6 +18,7 @@ import {
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
 import { SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
+import { translateForm } from '../../../constants/formDictionary';
 
 interface InventoryTableProps {
   data: InventoryStock[];
@@ -274,9 +275,11 @@ export function InventoryTable({
                       {/* 2026-06-30 Bug 21 修复：库存形态列统一读产品明细「采收形态」sourceForm
                           后端仅写 source_form 列（统一写入字段）。
                           历史数据 productForm 的也保留作为 fallback（兼容老数据）。
-                          全部空 → — */}
+                          2026-07-09：英文值（seed/seedling/plant/flower/fruit/leaf/...）翻译成中文 */}
                       {(() => {
-                        const form = stock.sourceForm || stock.productForm || ''
+                        const raw = stock.sourceForm || stock.productForm || ''
+                        // 2026-07-09：英文形态码 → 中文（兼容历史 seed_sources 表里英文字段值）
+                        const form = translateForm(raw)
                         return form ? (
                           <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium" title={form}>
                             {form}

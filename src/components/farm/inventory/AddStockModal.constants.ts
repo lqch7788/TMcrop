@@ -22,6 +22,7 @@ export type FieldType =
   | 'select'
   | 'select-dict-unit'
   | 'select-dict-crop-form'
+  | 'select-warehouse-name'
   | 'select-enum-quality'
   | 'supplier-select'
   | 'base-select'
@@ -95,7 +96,8 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],
   transfer: [
-    { key: 'sourceWarehouseName', label: '调出仓库', required: false, type: 'text' },
+    // 2026-07-09：调出仓库从 text 改为 select-warehouse-name（与入库仓库一致的下拉体验）
+    { key: 'sourceWarehouseName', label: '调出仓库', required: false, type: 'select-warehouse-name' },
     // 2026-07-08 T13 Bug 2
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],
