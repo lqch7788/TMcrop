@@ -501,37 +501,82 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </div>
         )}
 
+        {/* 第 1 行：库存类型 + 入库时间（grid-cols-2 同行） */}
         {/* 库存类型 — 不在 COMMON_FIELDS 里（决定 stockType），单独渲染 */}
-        <FormField label="库存类型 *">
-          <Select value={stockType} onValueChange={(v) => setStockType(v as StockTypeLiteral)}>
-            <SelectTrigger>
-              <SelectValue placeholder="请选择库存类型" />
-            </SelectTrigger>
-            <SelectContent>
-              {STOCK_TYPE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-
-        {/* 字段矩阵渲染：公共 + 来源专属 */}
         <div className="grid grid-cols-2 gap-4">
-          {fieldsToRender.map((field) => {
-            const value = formData[field.key];
-            const errMsg = errors[field.key];
-            return (
-              <FormField
-                key={field.key}
-                label={`${field.label}${field.required ? ' *' : ''}`}
-              >
-                {renderFieldByType(field, value, (v) => handleFieldChange(field.key, v), renderCtx)}
-                {errMsg && <div className="text-xs text-red-500 mt-1">{errMsg}</div>}
-              </FormField>
-            );
-          })}
+          <FormField label="库存类型 *">
+            <Select value={stockType} onValueChange={(v) => setStockType(v as StockTypeLiteral)}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择库存类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {STOCK_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="入库日期 *">
+            <Input
+              type="date"
+              value={formData.recordDate || ''}
+              onChange={(e) => handleFieldChange('recordDate', e.target.value)}
+              className={deepInputClass}
+            />
+            {errors.recordDate && <div className="text-xs text-red-500 mt-1">{errors.recordDate}</div>}
+          </FormField>
+        </div>
+
+        {/* 第 2 行：作物选择 + 作物形态（grid-cols-2 同行） */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="作物选择 *">
+            <CropCodeSelector
+              value={String(formData.cropSelector || '')}
+              onChange={handleCropChange}
+              placeholder="搜索或选择作物品种..."
+              showFullPath
+            />
+            {errors.cropSelector && <div className="text-xs text-red-500 mt-1">{errors.cropSelector}</div>}
+          </FormField>
+          <FormField label="作物形态 *">
+            <Select
+              value={formData.cropForm || ''}
+              onValueChange={(v) => handleFieldChange('cropForm', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="请选择作物形态" />
+              </SelectTrigger>
+              <SelectContent>
+                {cropFormOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.cropForm && <div className="text-xs text-red-500 mt-1">{errors.cropForm}</div>}
+          </FormField>
+        </div>
+
+        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector） */}
+        <div className="grid grid-cols-2 gap-4">
+          {fieldsToRender
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector')
+            .map((field) => {
+              const value = formData[field.key];
+              const errMsg = errors[field.key];
+              return (
+                <FormField
+                  key={field.key}
+                  label={`${field.label}${field.required ? ' *' : ''}`}
+                >
+                  {renderFieldByType(field, value, (v) => handleFieldChange(field.key, v), renderCtx)}
+                  {errMsg && <div className="text-xs text-red-500 mt-1">{errMsg}</div>}
+                </FormField>
+              );
+            })}
         </div>
 
         {/* 底部提示 */}

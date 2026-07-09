@@ -22,12 +22,14 @@ describe('FIELD_CONFIG 6 套矩阵', () => {
     expect(fields.find(f => f.key === 'baseId')).toBeUndefined();
   });
 
-  it('外购入库显示单价/采购日期/总金额/供应商电话', () => {
+  it('外购入库显示单价/采购日期/总金额/作物形态', () => {
     const keys = FIELD_CONFIG.external_purchased.map(f => f.key);
-    expect(keys).toContain('supplierPhone');
+    // 2026-07-08 T13：T13 修复移除 supplierPhone；新增 cropForm（与种植管理采收弹窗对齐）
+    expect(keys).not.toContain('supplierPhone');
     expect(keys).toContain('unitPrice');
     expect(keys).toContain('purchaseDate');
     expect(keys).toContain('totalAmount');
+    expect(keys).toContain('cropForm');
   });
 
   it('自产必填 baseId、不显示 supplierId', () => {
@@ -153,6 +155,7 @@ describe('validateBySourceType', () => {
         cropSelector: 'crop1',
         warehouseId: 'wh1',
         supplierId: 'sup1',
+        cropForm: '果实',  // 2026-07-08 T13：外购必填 cropForm
       },
       'external_purchased'
     );
@@ -176,7 +179,8 @@ describe('fieldsToResetOnSourceTypeChange', () => {
     const keys = fieldsToResetOnSourceTypeChange();
     expect(keys).toContain('supplierId');
     expect(keys).toContain('supplierName');
-    expect(keys).toContain('supplierPhone');
+    // 2026-07-08 T13：T13 修复移除 supplierPhone
+    expect(keys).not.toContain('supplierPhone');
     expect(keys).toContain('giftFrom');
     expect(keys).toContain('consignor');
     expect(keys).toContain('sourceWarehouseName');
