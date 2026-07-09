@@ -36,7 +36,7 @@ import {
   SOURCE_ORIGIN_MAP,
   SOURCE_ORIGIN_LABEL_MAP,
 } from '../../../constants/cropConstants';
-import { translateForm } from '../../../constants/formDictionary';
+import { translateForm, translateArea } from '../../../constants/formDictionary';
 
 type TabKey = 'basic' | 'history' | 'trace';
 
@@ -405,7 +405,7 @@ function BasicTab({
         // 2026-07-09：补形态字段（与列表"形态"列 + AddStockModal 作物形态字段对齐）
         ['形态',     <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">{translateForm(stock.sourceForm || stock.productForm) || '-'}</span>],
         ['种植模式', getPlantingModeLabel(stock.plantingMode) || '-'],
-        ['采收区域', stock.greenhouseName || '-'],
+        ['采收区域', translateArea(stock.greenhouseName) || translateArea(stock.areaName) || '-'],
         ['品质等级', gradeInfo
           ? <span className={`px-2 py-0.5 ${gradeInfo.bg} ${gradeInfo.text} text-xs rounded font-medium`}>{gradeInfo.label}</span>
           : (stock.grade || '-')],

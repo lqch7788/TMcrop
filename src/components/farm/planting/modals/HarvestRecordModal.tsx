@@ -27,6 +27,7 @@
  * ============================================================================
  */
 import React, { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Label } from '@/components/ui'
 import { UnifiedModal } from '@/components/ui'
 import { Input, TextArea, DatePicker } from '@/components/ui'
@@ -111,7 +112,9 @@ function getDestinationLabel(dest: string): string {
     // 老值保留兼容历史记录展示
     circulate: '残株回种源',
     self_seed: '自交种子入种源',
-    dispose: '直接废弃',
+    // 2026-07-09：dispose 功能已下线（与每日记录"损耗"语义重叠）。
+    // 此处仅保留标签映射，供历史 planting_harvest_records 记录展示用，新建/编辑入口已移除。
+    dispose: '直接废弃（已下线）',
   }
   return map[dest] || dest
 }
@@ -247,16 +250,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const isQuantityType = subType === 'quantity_refill'
   const isPropagationType = subType === 'cutting' || subType === 'seed_saving'
 
-  // 2026-06-29: dispose 剩余可废弃 = 活体剩余
-  // 活体剩余 = plantingCount + supplementCount - lossCount（与列表"剩余数量"列公式保持一致）
-  // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限（与列表权威源对齐）
-  // 修复 bug：旧公式只读 plantingCount，导致补栽后剩余数被低估
-  const remainingDispose = Math.max(0,
-    (record.plantingCount || 0)
-    + (record.supplementCount || 0)
-    - (record.lossCount || 0)
-  )
-  const disposeOverLimit = destination === 'dispose' && Number(quantity) > remainingDispose
+  // 2026-07-09：dispose 功能已下线（与每日记录"损耗"语义重叠），相关计算/校验全部移除
+  // 活体剩余公式仅在 DailyRecordModal 的损耗字段使用：
+  //   活体剩余 = plantingCount + supplementCount - lossCount
 
   const resetForm = () => {
     // 2026-07-06：与初始默认值保持一致，重置时仍回到「采收入库」
@@ -332,12 +328,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('请填写数量（> 0）')
       return
     }
-    // 2026-06-18: dispose 上限硬拦截（前端先挡，后端也会再挡）
-    if (destination === 'dispose' && qtyNum > remainingDispose) {
-      // 2026-06-29: 文案与后端 planting.ts dispose 校验保持一致（活体剩余，不扣 disposeQty）
-      showAlert(`直接废弃数量 ${qtyNum} 超过剩余可废弃 ${remainingDispose}（种植 ${record.plantingCount} + 补栽 ${record.supplementCount || 0} - 损耗 ${record.lossCount || 0}）`)
-      return
-    }
+    // 2026-07-09：dispose 上限校验移除（功能已下线）
     if (destination && destination !== 'harvest' && !unit) {
       showAlert('请选择单位')
       return
@@ -356,6 +347,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('种植自留种必须选择采收形态（果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他）')
       return
     }
+
+    // 2026-07-09 v5 阶段三（路径 B）：补录已下沉到库存页 AddStockModal 统一入口
+    // 种植/育苗行点"采收入库"按钮 → navigate → 库存页 → 预填 sourceId + 必填补录原因
+    // 本弹窗（HarvestRecordModal）只服务于"种植进行中"的正常采收场景，不再处理补录
 
     // 2026-06-19: 采收入库（destination='harvest'）走库存主链路 submitUnifiedInbound
     // 写入 harvest_records + inventory_stock + inventory_inbound_records + inventory_transaction 4 张表
@@ -445,10 +440,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       // - 老值（circulate/self_seed）作为历史值仍可被后端接受（编辑历史记录）
       // - 新建只能选 planting_self_kept
       // - subType 前端不再传（由后端基于 seedForm 派生）
+      // 2026-07-09：dispose 已下线，destination 只剩 harvest / planting_self_kept 两种
       const inputDestination: AddHarvestRecordInput['destination'] =
         destination === 'planting_self_kept' ? 'planting_self_kept'
-        : destination === 'harvest' ? 'harvest'
-        : 'dispose'
+        : 'harvest'
 
       const input: AddHarvestRecordInput = {
         recordDate,
@@ -549,6 +544,34 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     URL.revokeObjectURL(url)
   }
 
+  // 2026-07-09 v6：弹窗内"补录"按钮 → 跳转 AddStockModal
+  // 仅在已结束/已取消行显示（符合 v6 设计："必须有采收弹窗，弹窗内补录按钮跳转"）
+  const navigate = useNavigate();
+  const SupplementaryJumpButton = ({ record }: { record: Planting }) => {
+    const handleSupplementaryJump = () => {
+      const params = new URLSearchParams({
+        openStockModal: 'true',
+        sourceModule: 'planting',
+        sourceId: record.id,
+        sourceCode: record.plantCode || '',
+        stockType: 'product',
+        mode: 'supplementary',
+      })
+      navigate(`/crop-inventory?${params.toString()}`)
+    }
+    return (
+      <Button
+        size="sm"
+        variant="default"
+        className="bg-amber-600 hover:bg-amber-700 text-white"
+        onClick={handleSupplementaryJump}
+        title={'跳转到统一库存页的「自产（兜底）」模式（已预填 sourceId）'}
+      >
+        🔼 补录入库
+      </Button>
+    )
+  }
+
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -559,7 +582,17 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       //   cropVariety: 作物品种（上一级品种名）
       // 注：record.cropName/cropVariety 在数据库里存在"字段名与值语义反"的旧 bug（见下方入库代码 swap），
       //     这里直接显示两个字段以提供完整信息
-      title={`采收 - ${record.plantCode}（${record.cropName || ''} · ${record.cropVariety || ''}）`}
+      // 2026-07-09 v6：弹窗内"补录"按钮（仅已结束/已取消行可见）→ 跳转 AddStockModal
+      // 符合用户 v6 设计："必须有采收弹窗，弹窗内"补录"按钮跳转"
+      title={(() => {
+        const isSourceEnded = !!record.endTime || record.status === 'cancelled'
+        return (
+          <div className="flex items-center gap-3">
+            <span>{`采收 - ${record.plantCode}（${record.cropName || ''} · ${record.cropVariety || ''}）`}</span>
+            {isSourceEnded && <SupplementaryJumpButton record={record} />}
+          </div>
+        )
+      })()}
       size="xxxl"
       showFooter={true}
       onSubmit={handleAdd}
@@ -567,18 +600,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       cancelText="关闭"
     >
       <div className="space-y-4">
-        {/* 2026-07-01: 补录模式提示 — 已结束的记录再次采收即为补录 */}
-        {(record.status === 'cancelled' || record.endType === 'abnormal' || record.endTime) && (
-          <div className="px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-amber-800">补录模式</div>
-              <div className="text-xs text-amber-700 mt-0.5">
-                此种植记录已{record.endType === 'abnormal' ? '异常' : ''}结束（{record.endTime}），当前为补录操作，采收数据将记录为完成后的补充入库。
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 2026-07-09 v5 阶段三（路径 B）：补录模式已下沉到库存页 AddStockModal 统一入口
+            种植行点"采收入库" → navigate → 库存页 → 预填 sourceId + 黄色 banner + 必填补录原因
+            本弹窗（HarvestRecordModal）不再有补录模式 banner */}
+
         {/* 表单区 */}
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
@@ -609,9 +634,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <SelectItem value="planting_self_kept" disabled={!hasSeedSource}>
                     <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 种植自留种</span>
                   </SelectItem>
-                  <SelectItem value="dispose">
-                    <span className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> 直接废弃</span>
-                  </SelectItem>
+                  {/* 2026-07-09：移除"直接废弃"选项 — 与每日记录"损耗"语义重叠，统一走损耗通道 */}
                 </SelectContent>
               </Select>
               {!hasSeedSource && (
@@ -787,18 +810,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
                     min={0}
-                    className={`${deepInputClass} ${disposeOverLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
+                    className={deepInputClass}
                     placeholder="0"
                   />
-                  {/* 2026-06-18: dispose 选定时显示剩余可废弃上限（防超限） */}
-                  {destination === 'dispose' && (
-                    <p className={`mt-1 text-xs flex items-center gap-1 ${disposeOverLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-                      <AlertTriangle className={`w-3 h-3 ${disposeOverLimit ? 'text-red-600' : 'text-gray-400'}`} />
-                      剩余可废弃: <span className="font-semibold">{remainingDispose}</span> 株
-                      （种植 {record.plantingCount} + 补栽 {record.supplementCount || 0} - 损耗 {record.lossCount || 0}）
-                      {disposeOverLimit ? `，已超出 ${Number(quantity) - remainingDispose}` : ''}
-                    </p>
-                  )}
+                  {/* 2026-07-09：移除 dispose 剩余可废弃上限提示（dispose 功能已下线） */}
                 </div>
                 <div>
                   <Label>单位 *</Label>
@@ -1044,12 +1059,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 {(record.selfKeptToSourceQty || 0).toLocaleString()} {record.selfKeptToSourceUnit || record.unit || ''}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600">直接废弃：</span>
-              <span className="font-bold text-red-600">
-                {(record.disposeQty || 0).toLocaleString()} {record.unit || ''}
-              </span>
-            </div>
+            {/* 2026-07-09：移除"直接废弃"累计展示 — 功能已下线；历史 disposeQty 仍存在 plantings 数据中（不再显示） */}
           </div>
           {/* 2026-06-28: 移除"总结束（软锁）"按钮 — 与操作列"正常/异常结束"功能重复 */}
         </div>

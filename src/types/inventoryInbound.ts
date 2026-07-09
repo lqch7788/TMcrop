@@ -106,6 +106,9 @@ export interface InventoryInboundInput {
   businessId?: string
   notes?: string
   operatorName?: string
+  // 2026-07-09 v5 阶段三（路径 B）：补录字段（"自产（兜底）"模式绑定 sourceId 时标记）
+  isSupplementary?: boolean
+  supplementaryReason?: string
 }
 
 /**

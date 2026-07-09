@@ -84,6 +84,9 @@ const InboundSchema = z.object({
   operatorName: z.string().optional(),
   recordDate: z.string().optional(),  // YYYY-MM-DD；默认今天
   warehouseName: z.string().optional(),
+  // 2026-07-09 v5 阶段三（路径 B）：补录字段
+  isSupplementary: z.boolean().optional(),
+  supplementaryReason: z.string().optional(),
   // 2026-07-08 T8：作物 ID（前端弹窗从来源记录带出，可覆盖）
   cropId: z.string().optional(),
   // 2026-07-09：作物编码 / 名称 / 品种名（修复前 InboundSchema 缺这三个字段，
@@ -236,8 +239,10 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
        quality_grade, grade, supplier_id, supplier_name,
        unit_price, total_amount, purchase_date, inbound_date,
        production_plan_id, production_plan_code, planting_mode, greenhouse_name,
-       source_form, notes, status, version, create_time, update_time)
-      VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock', 1, ?, ?)
+       source_form, notes, status, version, create_time, update_time,
+       is_supplementary, supplementary_reason, supplementary_at, supplementary_by)
+      VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock', 1, ?, ?,
+              ?, ?, ?, ?)
     `, [
       stockId, instanceId, input.stockType,
       input.businessId || stockId, input.businessId || stockId,
@@ -259,6 +264,13 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       // 2026-07-09：作物形态同步写到 source_form（前端 InventoryTable 列表"形态"列已读 stock.sourceForm）
       input.cropForm || null,
       input.notes || null, now, now,
+      // 2026-07-09 v5 阶段三（路径 B）：补录字段
+      // 模式 = 自产兜底 + 已选 sourceId → 视为补录
+      // 后端自动写 at/by 审计字段
+      input.isSupplementary ? 1 : 0,
+      input.isSupplementary ? (input.supplementaryReason || null) : null,
+      input.isSupplementary ? now : null,
+      input.isSupplementary ? (input.operatorName || 'system') : null,
     ])
 
     // 3. 写 inventory_inbound_records

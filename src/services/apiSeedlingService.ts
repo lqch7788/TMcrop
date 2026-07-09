@@ -149,6 +149,11 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     qualityGrade: item.qualityGrade || '',
     printCount: item.printedCount || 0,
     remarks: item.remarks || '',
+    // 2026-07-09 v6：恢复 endTime/endType 映射（弹窗内"补录"按钮判断需要）
+    // v5 阶段三误删（路径 B 已回滚），恢复以让 UnifiedRowHarvestInboundModal.isSourceEnded 正常判断
+    endTime: item.endTime,
+    endType: item.endType,
+    // 补录已下沉到库存页 AddStockModal，本字段不再需要
     createBy: item.createBy || '',
     createTime: item.createTime ? item.createTime.split('T')[0] : '',
     updateTime: item.updateTime || '',

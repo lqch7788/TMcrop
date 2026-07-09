@@ -177,8 +177,8 @@ router.get('/', (req: Request, res: Response) => {
       -- 保留旧字段名供后端老代码兼容（前端不再使用）
       COALESCE(SUM(CASE WHEN phr.destination = 'circulate' THEN phr.quantity END), 0) AS residualToSourceQty,
       COALESCE(SUM(CASE WHEN phr.destination = 'self_seed' THEN phr.quantity END), 0) AS selfSeedToSourceQty,
-      -- 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
-      COALESCE(SUM(CASE WHEN phr.destination = 'dispose' THEN phr.quantity END), 0) AS disposeQty,
+      -- 2026-07-09: dispose 聚合移除（dispose 功能已下线，与每日记录"损耗"语义重叠）
+      -- 历史数据保留在 planting_harvest_records 表，列表不再聚合展示 disposeQty
       -- 2026-06-19: 最近一次"采收入库"记录的单位（用户实际入库时选择的单位）
       -- 解决"列表显示单位与入库单位不一致"的 bug（如入库 kg 但显示 株）
       (SELECT unit FROM planting_harvest_records
@@ -206,10 +206,8 @@ router.get('/', (req: Request, res: Response) => {
         ORDER BY record_date DESC, create_time DESC LIMIT 1) AS residualToSourceUnit,
       (SELECT unit FROM planting_harvest_records
         WHERE planting_id = p.id AND destination = 'self_seed'
-        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS selfSeedToSourceUnit,
-      (SELECT unit FROM planting_harvest_records
-        WHERE planting_id = p.id AND destination = 'dispose'
-        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS disposeUnit
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS selfSeedToSourceUnit
+      -- 2026-07-09: disposeUnit 子查询移除（dispose 功能已下线）
       -- 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）— 旧值保留作历史数据
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
@@ -468,9 +466,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     const planting = pStmt.step() ? pStmt.getAsObject() : null;
     pStmt.free();
     if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' });
-    if (planting.is_harvest_locked) {
-      return res.status(400).json({ success: false, error: '种植已结束，无法编辑采收记录' });
-    }
+    // 2026-07-09 v5 阶段一：删 is_harvest_locked 拦截 — 已结束行允许编辑采收记录（保持补录模式可改）
 
     // 校验记录存在
     const oldStmt = db.prepare('SELECT * FROM planting_harvest_records WHERE id = ? AND planting_id = ?');
@@ -483,9 +479,10 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' });
     // 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）
     // circulate / self_seed 保留作为历史数据值，不允许新建
-    const PUT_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept', 'dispose'];
+    // 2026-07-09: dispose 已下线（与每日记录"损耗"语义重叠），从白名单移除
+    const PUT_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept'];
     if (!PUT_ALLOWED_DESTINATIONS.includes(destination)) {
-      return res.status(400).json({ success: false, error: `destination 必须是 3 个之一: ${PUT_ALLOWED_DESTINATIONS.join(' / ')}` });
+      return res.status(400).json({ success: false, error: `destination 必须是 2 个之一: ${PUT_ALLOWED_DESTINATIONS.join(' / ')}` });
     }
     // 2026-06-29: planting_self_kept 必须传 seedForm（采收形态）
     if (destination === 'planting_self_kept') {
@@ -505,25 +502,10 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     if (destination === 'harvest' && !warehouseId) {
       return res.status(400).json({ success: false, error: '必须选择仓库' });
     }
-    if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
+    if (!quantity || quantity <= 0) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' });
     }
-    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 活体剩余
-    // 2026-06-29: 修复 — 之前漏算补栽/损耗，导致大量补栽后误判上限
-    // 活体剩余 = planting_quantity + supplement_count - loss_count（与前端弹窗 + 列表"剩余数量"列公式保持一致）
-    // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限
-    if (destination === 'dispose' && quantity && Number(quantity) > 0) {
-      const plantingQty = Number(planting.planting_quantity) || 0;
-      const supplementCount = Number(planting.supplement_count) || 0;
-      const lossCount = Number(planting.loss_count) || 0;
-      const remaining = plantingQty + supplementCount - lossCount;
-      if (Number(quantity) > remaining) {
-        return res.status(400).json({
-          success: false,
-          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} + 补栽 ${supplementCount} - 损耗 ${lossCount}）`
-        });
-      }
-    }
+    // 2026-07-09: dispose 上限校验移除（dispose 功能已下线）
     // 2026-07-01 修复：放宽 unit 校验，与 POST 路由一致（朵等单位可入库）
     if (unit && typeof unit !== 'string') {
       return res.status(400).json({ success: false, error: '单位类型错误' });
@@ -632,18 +614,6 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         null, null, 0, 0, null,
       ]);
       stockStmt.free();
-    } else if (destination === 'dispose') {
-      // DISPOSAL 不走 executeCirculation（与 POST 路由一致）
-      const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      try {
-        db.run(
-          `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
-          [circId, id, Number(quantity) || 0, unit || '', recordDate || now.split('T')[0], notes || '']
-        );
-        generatedCircId = circId;
-      } catch (e) {
-        console.error('[harvest-records PUT/dispose] write circulation failed:', e);
-      }
     } else if (destination === 'planting_self_kept') {
       // 2026-06-29: 合并 plant_self_kept 替代旧 circulate / self_seed
       if (!planting.source_id) {
@@ -741,15 +711,13 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
     const db = getDatabase();
     const now = formatLocalDateISO();
 
-    // 校验 planting 未锁定
-    const pStmt = db.prepare('SELECT is_harvest_locked FROM plantings WHERE id = ?');
+    // 校验 planting 存在
+    // 2026-07-09 v5 阶段一：删 is_harvest_locked 拦截 — 已结束行允许删除采收记录
+    const pStmt = db.prepare('SELECT id FROM plantings WHERE id = ?');
     pStmt.bind([id]);
     const p = pStmt.step() ? pStmt.getAsObject() : null;
     pStmt.free();
     if (!p) return res.status(404).json({ success: false, error: '种植记录不存在' });
-    if (p.is_harvest_locked) {
-      return res.status(400).json({ success: false, error: '种植已结束，无法删除' });
-    }
 
     // 读旧记录以反向补偿
     const oldStmt = db.prepare('SELECT harvest_record_id, inventory_stock_id, circulation_record_id FROM planting_harvest_records WHERE id = ? AND planting_id = ?');
@@ -867,7 +835,7 @@ router.get('/:id', (req: Request, res: Response) => {
       else if (dest === 'circulate') item.residualToSourceUnit = row.unit || '';
       else if (dest === 'self_seed') item.selfSeedToSourceUnit = row.unit || '';
       else if (dest === 'planting_self_kept') item.selfKeptToSourceUnit = row.unit || '';
-      else if (dest === 'dispose') item.disposeUnit = row.unit || '';
+      // 2026-07-09: disposeUnit 提取移除（dispose 功能已下线）
       seen.add(dest);
     }
 
@@ -1778,9 +1746,10 @@ router.post('/:id/harvest-records', async (req, res) => {
 
     if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' })
     // 2026-06-29: 4 个去向减为 3 个（合并 circulate + self_seed 为 planting_self_kept）
-    const POST_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept', 'dispose']
+    // 2026-07-09: dispose 已下线（与每日记录"损耗"语义重叠），从白名单移除
+    const POST_ALLOWED_DESTINATIONS = ['harvest', 'planting_self_kept']
     if (!POST_ALLOWED_DESTINATIONS.includes(destination)) {
-      return res.status(400).json({ success: false, error: `destination 必须是 3 个之一: ${POST_ALLOWED_DESTINATIONS.join(' / ')}` })
+      return res.status(400).json({ success: false, error: `destination 必须是 2 个之一: ${POST_ALLOWED_DESTINATIONS.join(' / ')}` })
     }
     // 2026-06-29: planting_self_kept 必须传 seedForm（采收形态）
     if (destination === 'planting_self_kept') {
@@ -1805,33 +1774,27 @@ router.post('/:id/harvest-records', async (req, res) => {
     const planting = stmt.step() ? stmt.getAsObject() : null
     stmt.free()
     if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' })
-    if (planting.is_harvest_locked) {
-      return res.status(400).json({ success: false, error: '种植已结束，无法添加采收记录' })
+    // 2026-07-09 v5 阶段二（方案 E）：删 is_harvest_locked 拦截 — 已结束的种植/育苗允许补录
+    // 补录判断改为 planting_harvest_records.is_supplementary（采收记录的属性）
+    // 判断条件：planting.status === 'ended' 或 'cancelled' → 自动标记 is_supplementary=1
+    // 补录原因（supplementaryReason）从 req.body 取，补录场景必填
+    const isSupplementary = planting.status === 'ended' || planting.status === 'cancelled';
+    const { supplementaryReason } = req.body || {};
+    if (isSupplementary && (!supplementaryReason || !String(supplementaryReason).trim())) {
+      return res.status(400).json({
+        success: false,
+        error: '补录模式必须填写补录原因（supplementaryReason 字段）',
+      });
     }
 
     // destination 必填字段校验（与设计文档 §4.1 对齐）
     if (destination === 'harvest' && !warehouseId) {
       return res.status(400).json({ success: false, error: '必须选择仓库' })
     }
-    if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
+    if (!quantity || quantity <= 0) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' })
     }
-    // 2026-06-18: dispose 上限校验 — 剩余可废弃 = 活体剩余
-    // 2026-06-29: 修复 — 之前漏算补栽/损耗，导致大量补栽后误判上限
-    // 活体剩余 = planting_quantity + supplement_count - loss_count（与前端弹窗 + 列表"剩余数量"列公式保持一致）
-    // 不扣 disposeQty — 已废弃是历史动作，不影响当前可处置上限
-    if (destination === 'dispose' && quantity && Number(quantity) > 0) {
-      const plantingQty = Number(planting.planting_quantity) || 0
-      const supplementCount = Number(planting.supplement_count) || 0
-      const lossCount = Number(planting.loss_count) || 0
-      const remaining = plantingQty + supplementCount - lossCount
-      if (Number(quantity) > remaining) {
-        return res.status(400).json({
-          success: false,
-          error: `直接废弃数量 ${quantity} 超过剩余可废弃 ${remaining}（种植 ${plantingQty} + 补栽 ${supplementCount} - 损耗 ${lossCount}）`
-        })
-      }
-    }
+    // 2026-07-09: dispose 上限校验移除（dispose 功能已下线）
     // 2026-07-01 修复：放宽 unit 校验，与 inventory/inbound-from-source 一致
     // 原因：inventory 入库允许"朵"等单位（仅 z.string().min(1) 校验），
     //       但 planting_harvest_records 仍用 UNIT_ENUM 强白名单，导致行级采收入库后
@@ -1889,25 +1852,12 @@ router.post('/:id/harvest-records', async (req, res) => {
       if (destination === 'harvest') {
         // 占位：保留分支结构对齐 dispose；实际不写下游表
       }
-      // === 副作用路由：dispose 分支（1:1 搬运行 1122-1140 /end 路由，Phase 1 不结束种植） ===
-      // DISPOSAL 不走 executeCirculation（Zod parentSourceId 必填），用 raw SQL 写记录
-      else if (destination === 'dispose') {
-        const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-        try {
-          db.run(
-            `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
-            [circId, plantingId, Number(quantity) || 0, unit || '', recordDate || now.split('T')[0], notes || '']
-          )
-          generatedCircId = circId
-        } catch (e) {
-          // 写 circulation 失败不阻断主流程
-          console.error('[harvest-records/dispose] write circulation record failed:', e)
-        }
-      }
+      // 2026-07-09: dispose 分支移除（dispose 功能已下线）
       // 注: circulate / self_seed 已在 BEGIN 之前完成 executeCirculation (避免与外层事务冲突)
 
       // INSERT planting_harvest_records（副作用审计记录）
       // 2026-07-01 修复：planting_self_kept 自动写"内部种源库"虚拟仓库（finalWarehouseId/Name 在 try 块外声明）
+      // 2026-07-09 v5 阶段二（方案 E）：补录字段写入（is_supplementary 等 4 字段）
       db.run(`
         INSERT INTO planting_harvest_records (
           id, record_type, record_date, planting_id, planting_code,
@@ -1915,8 +1865,9 @@ router.post('/:id/harvest-records', async (req, res) => {
           quantity, unit, notes, operator_name, create_by, create_by_id,
           create_time, update_time,
           harvest_record_id, inventory_stock_id, circulation_record_id,
-          source_form
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          source_form,
+          is_supplementary, supplementary_reason, supplementary_at, supplementary_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         harvestRecordId, 'planting', recordDate || now.split('T')[0], plantingId, planting.planting_code,
         destination, subType || null, finalWarehouseId, finalWarehouseName,
@@ -1928,6 +1879,11 @@ router.post('/:id/harvest-records', async (req, res) => {
         generatedCircId,
         // 2026-07-02: harvest 分支也写 source_form — 修复历史记录"形态"列为空
         (destination === 'planting_self_kept' || destination === 'harvest') ? (seedForm || null) : null,
+        // 2026-07-09 v5 阶段二：补录字段（is_supplementary 等）
+        isSupplementary ? 1 : 0,
+        isSupplementary ? String(supplementaryReason).trim() : null,
+        isSupplementary ? now : null,
+        isSupplementary ? (operatorName || createBy || 'system') : null,
       ])
 
       // UPDATE planting.status（标记为采收中，但未结束）
@@ -1989,7 +1945,8 @@ router.post('/:id/end', async (req, res) => {
 
     // 2026-07-01 P0-1 修复：补录通道契约
     // - 'abnormal'（异常结束） → is_harvest_locked = 0（保留补录通道，让 PUT /:id/harvest-records/:id 继续可写）
-    // - 'harvest'/'dispose'/其它 → is_harvest_locked = 1（正常锁，不再允许新增采收记录）
+    // - 'harvest' 等其它 → is_harvest_locked = 1（正常锁，不再允许新增采收记录）
+    // 2026-07-09: dispose 已下线，endType 列表减为 3 个（harvest/circulate/self_seed）
     const finalIsHarvestLocked = (endType === 'abnormal') ? 0 : 1
 
     // ========== 1. 采收入库：写 harvest_records + inventory_stock（库存实例） ==========
@@ -2078,8 +2035,9 @@ router.post('/:id/end', async (req, res) => {
 
       // 收尾：更新种植记录
       db.run(
-        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
-        [now, harvestQty, now, finalIsHarvestLocked, now, id]
+        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, is_harvest_locked = 0, update_time = ? WHERE id = ?`,
+        // 2026-07-09 v5 阶段一：is_harvest_locked 强制 0 — 已结束仍允许补录（补录标志走 planting_harvest_records.is_supplementary）
+        [now, harvestQty, now, now, id]
       )
       saveDatabase()
 
@@ -2137,26 +2095,9 @@ router.post('/:id/end', async (req, res) => {
       })
     }
 
-    // ========== 2. 直接废弃：不依赖种源，写 circulation 记录(无 parent_source_id) + 标记 cancelled ==========
-    if (endType === 'dispose') {
-      // DISPOSAL 不走 executeCirculation（Zod parentSourceId 必填），用 raw SQL 写记录
-      const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      try {
-        db.run(
-          `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
-          [circId, id, Number(quantity) || 0, unit || '', now, notes || '']
-        )
-      } catch (e) {
-        // 写 circulation 失败不阻断主流程
-        console.error('[end/dispose] write circulation record failed:', e)
-      }
-      db.run(
-        `UPDATE plantings SET status = 'cancelled', end_type = 'disposal', end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
-        [now, finalIsHarvestLocked, now, id]
-      )
-      saveDatabase()
-      return res.json({ success: true, data: { id, status: 'cancelled', endType: 'disposal', circulationId: circId } })
-    }
+    // 2026-07-09: 移除"直接废弃"分支（dispose 功能已下线，与每日记录"损耗"语义重叠）
+    // 历史 plantings.end_type='disposal' 记录保留 DB 兼容，新值不再创建
+    // 用户如需结束种植，请用「异常结束」(endType='abnormal')或走 harvest 通道
 
     // ========== 3-5. 回流类：必须有种源 ==========
     if (!planting.source_id) {
@@ -2193,8 +2134,9 @@ router.post('/:id/end', async (req, res) => {
 
     // 公共收尾：标记种植记录已结束
     db.run(
-      `UPDATE plantings SET status = 'ended', end_type = ?, end_time = ?, is_harvest_locked = ?, update_time = ? WHERE id = ?`,
-      [endType, now, finalIsHarvestLocked, now, id]
+      `UPDATE plantings SET status = 'ended', end_type = ?, end_time = ?, is_harvest_locked = 0, update_time = ? WHERE id = ?`,
+      // 2026-07-09 v5 阶段一：is_harvest_locked 强制 0 — 已结束仍允许补录
+      [endType, now, now, id]
     )
     saveDatabase()
     return res.json({ success: true, data: { id, status: 'ended', endType, ...result } })

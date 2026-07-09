@@ -40,7 +40,8 @@ interface PlantingState {
     id: string,
     options: {
       status: 'ended' | 'cancelled';
-      endType: 'harvest' | 'circulate' | 'self_seed' | 'dispose';
+      // 2026-07-09: dispose 已下线，endType 只剩 3 种
+      endType: 'harvest' | 'circulate' | 'self_seed';
       notes?: string;
     }
   ) => Promise<boolean>;
