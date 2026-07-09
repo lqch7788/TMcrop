@@ -560,10 +560,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         </div>
 
-        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm） */}
+        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm')
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'notes')
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
@@ -577,6 +577,22 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                 </FormField>
               );
             })}
+        </div>
+
+        {/* 备注 — 弹窗最后单独一行（col-span-2 整行） */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <FormField label="备注">
+              <TextArea
+                value={formData.notes || ''}
+                onChange={(e) => handleFieldChange('notes', e.target.value)}
+                placeholder="如入库批次说明、特殊情况备注等"
+                className={deepInputClass}
+                rows={3}
+              />
+              {errors.notes && <div className="text-xs text-red-500 mt-1">{errors.notes}</div>}
+            </FormField>
+          </div>
         </div>
 
         {/* 底部提示 */}
