@@ -24,6 +24,7 @@ import {
   useInventoryStore,
   useInventoryInboundStore,
 } from '../../../stores';
+import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore';
 import type {
   SourceType as SourceTypeLiteral,
   StockType as StockTypeLiteral,
@@ -60,18 +61,6 @@ const STOCK_TYPE_OPTIONS: Array<{ value: StockTypeLiteral; label: string }> = [
   { value: 'product',  label: '成品' },
 ];
 
-const UNIT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: '公斤', label: '公斤' },
-  { value: '克',   label: '克' },
-  { value: '吨',   label: '吨' },
-  { value: '株',   label: '株' },
-  { value: '袋',   label: '袋' },
-  { value: '箱',   label: '箱' },
-  { value: '个',   label: '个' },
-  { value: '盘',   label: '盘' },
-  { value: '组',   label: '组' },
-];
-
 const QUALITY_GRADES: Array<{ value: string; label: string }> = [
   { value: 'special',     label: '特优' },
   { value: 'excellent',   label: '优' },
@@ -95,6 +84,10 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 /**
  * 字段渲染：根据 FieldConfig.type 派发到对应 UI 组件。
  * crop-selector 类型在 T4 升级为 CropCodeSelector 触发器，由 ctx.onCropChange 处理联动。
+ *
+ * 2026-07-08 T13：
+ * - select-dict-unit 不再用硬编码 UNIT_OPTIONS，改用 ctx.unitOptions（字典加载）
+ * - 新增 select-dict-crop-form 分支（ctx.cropFormOptions 字典加载）
  */
 function renderFieldByType(
   field: FieldConfig,
@@ -106,6 +99,8 @@ function renderFieldByType(
     bases: Array<{ id?: string; oid?: string; name: string }>;
     formData: Record<string, any>;
     onCropChange: (code: string, variety: CropVariety | null) => void;
+    unitOptions: Array<{ value: string; label: string }>;
+    cropFormOptions: Array<{ value: string; label: string }>;
   },
 ): React.ReactNode {
   switch (field.type) {
@@ -151,15 +146,32 @@ function renderFieldByType(
         </Select>
       );
     case 'select-dict-unit':
+      // 2026-07-08 T13：从 ctx.unitOptions（字典加载，12 项）渲染
       return (
         <Select value={value || ''} onValueChange={onChange}>
           <SelectTrigger>
             <SelectValue placeholder="请选择单位" />
           </SelectTrigger>
           <SelectContent>
-            {UNIT_OPTIONS.map((u) => (
+            {ctx.unitOptions.map((u) => (
               <SelectItem key={u.value} value={u.value}>
                 {u.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    case 'select-dict-crop-form':
+      // 2026-07-08 T13：作物形态下拉（从 ctx.cropFormOptions 字典加载，6 项）
+      return (
+        <Select value={value || ''} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="请选择作物形态" />
+          </SelectTrigger>
+          <SelectContent>
+            {ctx.cropFormOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -268,6 +280,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   const notifyChange = useInventoryStore((s) => s.notifyChange);
   const submitInbound = useInventoryInboundStore((s) => s.submitInbound);
 
+  // 2026-07-08 T13：单位 + 作物形态从字典加载（不再硬编码 9 个 UNIT_OPTIONS）
+  const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries);
+  const dictionaryCount = useDictionaryStore((s) => s.dictionaries.length);
+  const [unitOptions, setUnitOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [cropFormOptions, setCropFormOptions] = useState<Array<{ value: string; label: string }>>([]);
+
   // ---- 表单状态（统一扁平 formData） ----
   // 初始来源：sourceRecord?.sourceType ?? 'self_produced'（默认自产兜底）
   const initialSourceType: SourceTypeLiteral =
@@ -282,13 +300,31 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   const [topError, setTopError] = useState<string | null>(null);
 
   // 加载供应商 + 仓库 + 基地
+  // 2026-07-08 T13：同步加载单位 + 作物形态字典
   useEffect(() => {
     if (isOpen) {
       if (warehouses.length === 0) void loadWarehouses();
       if (supplierItems.length === 0) void loadSuppliers();
       if (bases.length === 0) void loadBases();
+      // 字典可能跨页面共享，未加载则触发加载
+      if (dictionaryCount === 0) void loadDictionaries();
     }
   }, [isOpen]);
+
+  // 字典加载完成后切出 unit / crop_form 两类选项
+  useEffect(() => {
+    if (dictionaryCount === 0) return;
+    const unit = getDictItems('unit').map((d) => ({
+      value: d.dictValue || d.dictCode,
+      label: d.dictLabel || d.dictValue || d.dictCode,
+    }));
+    const cropForm = getDictItems('crop_form').map((d) => ({
+      value: d.dictValue || d.dictCode,
+      label: d.dictLabel || d.dictValue || d.dictCode,
+    }));
+    setUnitOptions(unit);
+    setCropFormOptions(cropForm);
+  }, [dictionaryCount]);
 
   // 弹窗打开时重置（保留 sourceRecord / stockType 上下文）
   useEffect(() => {
@@ -411,6 +447,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     bases: bases as any,
     formData,
     onCropChange: handleCropChange,
+    // 2026-07-08 T13：把字典选项注入到 renderFieldByType 上下文
+    unitOptions,
+    cropFormOptions,
   };
 
   return (

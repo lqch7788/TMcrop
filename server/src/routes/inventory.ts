@@ -32,7 +32,9 @@ router.post('/inbound', inventoryController.inbound.bind(inventoryController));
 //          新版入库走 /inbound-record（单数），GET 列表 /inbound-records（复数）。
 //          必须在 /:id 之前注册（line 190），否则会被通配截胡
 import { z } from 'zod';
-import { UNIT_ENUM } from './planting';
+// 2026-07-08 T13：单位 enum 直接内联定义（不再复用 planting.ts 的 7 个枚举）
+// 与字典 category_code='unit' 12 项对齐：袋/株/粒/千克/克/吨/亩/m²/公顷/块/片/朵
+const UNIT_ENUM = z.enum(['袋', '株', '粒', '千克', '克', '吨', '亩', 'm²', '公顷', '块', '片', '朵']);
 
 // ============================================================
 // Phase 2：行级采收入库（unify-harvest-inbound-into-source-operations）
@@ -102,6 +104,9 @@ const InboundSchema = z.object({
   baseName: z.string().optional(),
   plantingMode: z.string().optional(),
   greenhouseName: z.string().optional(),
+  // 2026-07-08 T13：作物形态字段（与前端 AddStockModal.constants 6 套 FIELD_CONFIG 对应）
+  // 字典 category_code='crop_form' 6 项：整株/果实/种子/叶片/花朵/其他
+  cropForm: z.string().optional(),
 });
 
 /**
@@ -267,6 +272,7 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     // 2026-07-08 T8：插入 crop_id 列（与 inventory_stock 表对齐），保持原有列顺序稳定
     // 2026-07-08 T8.5：6 套字段矩阵补 9 列（supplier_phone/gift_from/consignor/source_warehouse_name/
     //   stocktake_no/base_id/base_name/planting_mode/greenhouse_name），列顺序在 crop_id 之后、crop_code 之前
+    // 2026-07-08 T13：补 crop_form 列（作物形态：整株/果实/种子/叶片/花朵/其他）
     db.run(`
       INSERT INTO inventory_inbound_records
       (id, record_type, record_date, source_module, source_id, source_code,
@@ -274,12 +280,13 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
        crop_id,
        supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no,
        base_id, base_name, planting_mode, greenhouse_name,
+       crop_form,
        crop_code, crop_name, variety_name,
        quantity, unit, unit_price, total_amount, quality_grade,
        supplier_id, supplier_name,
        production_plan_id, production_plan_code,
        business_id, notes, operator_name, create_by, create_time, update_time)
-      VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       recordId, recordDate,
       input.sourceModule, sourceIdForDb, source.code,
@@ -297,6 +304,8 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       input.baseName || null,
       input.plantingMode || null,
       input.greenhouseName || null,
+      // 2026-07-08 T13：作物形态（crop_form 字段）
+      input.cropForm || null,
       source.cropCode, source.cropName, source.cropVariety,
       input.quantity, input.unit, input.unitPrice || 0, input.totalAmount || 0,
       input.qualityGrade || null,

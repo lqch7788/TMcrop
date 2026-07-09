@@ -6,7 +6,8 @@ import type { SourceType } from '../../../types/inventoryInbound';
  * - number: 数字输入
  * - date: 日期选择
  * - select: 通用下拉
- * - select-dict-unit: 单位字典下拉（来自 getDictItems('unit')）
+ * - select-dict-unit: 单位字典下拉（来自 getDictItems('unit')，12 项）
+ * - select-dict-crop-form: 作物形态字典下拉（来自 getDictItems('crop_form')，6 项）
  * - select-enum-quality: 品质等级下拉
  * - supplier-select: 供应商下拉（来自 useSupplierStore）
  * - base-select: 基地下拉（来自 useBaseStore）
@@ -20,6 +21,7 @@ export type FieldType =
   | 'date'
   | 'select'
   | 'select-dict-unit'
+  | 'select-dict-crop-form'
   | 'select-enum-quality'
   | 'supplier-select'
   | 'base-select'
@@ -69,9 +71,11 @@ export const COMMON_FIELDS: FieldConfig[] = [
 export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
   external_purchased: [
     { key: 'supplierId', label: '供应商', required: true, type: 'supplier-select' },
-    { key: 'supplierPhone', label: '供应商电话', required: false, type: 'text' },
+    // 2026-07-08 T13 Bug 3：移除 supplierPhone（供应商实体的电话号码字段已在 supplier 表维护，弹窗不重复收集）
     { key: 'unitPrice', label: '单价（元）', required: false, type: 'number' },
     { key: 'purchaseDate', label: '采购日期', required: false, type: 'date' },
+    // 2026-07-08 T13 Bug 2：所有 6 个来源都强制要求作物形态
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
     {
       key: 'totalAmount',
       label: '总金额',
@@ -80,16 +84,32 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
       derive: 'quantity * unitPrice',
     },
   ],
-  gift: [{ key: 'giftFrom', label: '赠方名称', required: false, type: 'text' }],
-  commissioned: [{ key: 'consignor', label: '委托方', required: true, type: 'text' }],
+  gift: [
+    { key: 'giftFrom', label: '赠方名称', required: false, type: 'text' },
+    // 2026-07-08 T13 Bug 2
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
+  ],
+  commissioned: [
+    { key: 'consignor', label: '委托方', required: true, type: 'text' },
+    // 2026-07-08 T13 Bug 2
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
+  ],
   transfer: [
     { key: 'sourceWarehouseName', label: '调出仓库', required: false, type: 'text' },
+    // 2026-07-08 T13 Bug 2
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],
-  manual: [{ key: 'stocktakeNo', label: '盘点单号', required: false, type: 'text' }],
+  manual: [
+    { key: 'stocktakeNo', label: '盘点单号', required: false, type: 'text' },
+    // 2026-07-08 T13 Bug 2
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
+  ],
   self_produced: [
     { key: 'baseId', label: '所属基地', required: true, type: 'base-select' },
     { key: 'plantingMode', label: '种植模式', required: false, type: 'text' },
     { key: 'greenhouseName', label: '采收区域', required: false, type: 'text' },
+    // 2026-07-08 T13 Bug 2
+    { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],
 };
 
@@ -136,12 +156,13 @@ export function validateBySourceType(
 /**
  * 切换 sourceType 时需要清空的所有非公共字段 key。
  * 用于：用户先选外购填了供应商，再切到自产，需要清空供应商避免残留。
+ *
+ * 2026-07-08 T13 Bug 3：移除 supplierPhone
  */
 export function fieldsToResetOnSourceTypeChange(): string[] {
   return [
     'supplierId',
     'supplierName',
-    'supplierPhone',
     'unitPrice',
     'totalAmount',
     'purchaseDate',
