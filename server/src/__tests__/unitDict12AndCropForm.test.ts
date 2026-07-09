@@ -105,8 +105,9 @@ describe('T13 修复 4 bug 源码审计', () => {
       expect(schemaSrc, '缺 dictionary_categories INSERT crop_form').toMatch(
         /INSERT INTO dictionary_categories[\s\S]*?crop_form/i,
       );
-      // 10 个项目（与种植管理采收弹窗的"形态"下拉一致）
-      const items = ['果实', '种子', '种苗', '穗条', '枝条', '块根', '块茎鳞茎', '叶片花朵', '整株', '其他'];
+      // 12 个项目（与种植管理采收弹窗 HarvestRecordModal.tsx:85-86 的"形态"下拉一致）
+      // 每项独立，不合并
+      const items = ['果实', '种子', '种苗', '穗条', '枝条', '块根', '块茎', '鳞茎', '叶片', '花朵', '整株', '其他'];
       for (const label of items) {
         const re = new RegExp(`(['"])${label}\\1`, 'g');
         expect(re.test(schemaSrc), `字典缺作物形态项：${label}`).toBe(true);
