@@ -501,6 +501,19 @@ function toCamelStock(row: any): InventoryStock {
     productForm: row.product_form ?? row.productForm ?? '',
     // 2026-06-30 Bug 21 修复：产品明细"采收形态"sourceForm（统一形态字段，inventory 列表读这列）
     sourceForm: row.source_form ?? row.sourceForm ?? '',
+    // ========== 2026-07-09：10 个来源专属字段（来自 inventory_inbound_records JOIN，详情弹窗用）==========
+    // 后端 inventoryStockRepository.findAll LEFT JOIN 后，camelCaseResponseMiddleware 转 camelCase
+    // 同时保留 snake_case 兼容（直接 SELECT * FROM inventory_stock 的接口）
+    supplierPhone: row.supplier_phone ?? row.supplierPhone ?? null,
+    giftFrom: row.gift_from ?? row.giftFrom ?? null,
+    consignor: row.consignor ?? null,
+    sourceWarehouseName: row.source_warehouse_name ?? row.sourceWarehouseName ?? null,
+    stocktakeNo: row.stocktake_no ?? row.stocktakeNo ?? null,
+    baseId: row.base_id ?? row.baseId ?? null,
+    baseName: row.base_name ?? row.baseName ?? null,
+    cropForm: row.crop_form ?? row.cropForm ?? null,
+    // operatorName/createBy/createTime/updateTime 已在 InventoryStock 类型定义，但 toCamelStock 未映射
+    operatorName: row.operator_name ?? row.operatorName ?? null,
   } as unknown as InventoryStock;
 }
 

@@ -79,7 +79,9 @@ export function toPayload(
     cropId: str(formData.cropId) ?? sourceRecord?.id,
     cropCode: str(formData.cropCode) ?? sourceRecord?.cropCode,
     cropName: str(formData.cropName) ?? sourceRecord?.cropName,
-    varietyName: str(formData.varietyName) ?? sourceRecord?.cropVariety,
+    // 2026-07-09：AddStockModal.handleCropChange 写的是 cropVariety（不是 varietyName），
+    // 之前读 formData.varietyName 永远 undefined → 列表"品种"列空
+    varietyName: str(formData.cropVariety) ?? sourceRecord?.cropVariety,
 
     // 数量 + 单位 + 价格
     quantity: num(formData.quantity),
