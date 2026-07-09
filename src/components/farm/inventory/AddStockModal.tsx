@@ -560,10 +560,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         </div>
 
-        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + notes） */}
+        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'notes')
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes')
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
@@ -577,6 +577,43 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                 </FormField>
               );
             })}
+        </div>
+
+        {/* 数量 + 单位（共享一个 grid 项，内部分两半：数量占 flex-1，单位占固定 120px） */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2 flex gap-2 items-start">
+            <div className="flex-1">
+              <FormField label="数量 *">
+                <NumberInput
+                  value={formData.quantity ?? 0}
+                  onChange={(v) => handleFieldChange('quantity', v)}
+                  min={0.01}
+                  className={deepInputClass}
+                />
+                {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
+              </FormField>
+            </div>
+            <div className="w-[120px] flex-shrink-0">
+              <FormField label="单位 *">
+                <Select
+                  value={formData.unit || ''}
+                  onValueChange={(v) => handleFieldChange('unit', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((u) => (
+                      <SelectItem key={u.value} value={u.value}>
+                        {u.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.unit && <div className="text-xs text-red-500 mt-1">{errors.unit}</div>}
+              </FormField>
+            </div>
+          </div>
         </div>
 
         {/* 备注 — 弹窗最后单独一行（col-span-2 整行） */}
