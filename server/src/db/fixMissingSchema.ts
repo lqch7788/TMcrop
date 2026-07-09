@@ -2902,16 +2902,21 @@ function fixApprovedProductionPlanStatus(): void {
       const catId = `DC_CROP_FORM_${Date.now()}`;
       db.run(
         `INSERT INTO dictionary_categories (id, code, name, module, description, sort_order, status, created_at, updated_at)
-         VALUES (?, 'crop_form', '作物形态', 'crop', '入库时记录作物的形态，如整株/果实/种子/叶片/花朵/其他', 38, 'active', datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+         VALUES (?, 'crop_form', '作物形态', 'crop', '入库时记录作物的形态，10 种与种植管理采收弹窗一致', 38, 'active', datetime('now', 'localtime'), datetime('now', 'localtime'))`,
         [catId],
       );
-      // 6 个项目（顺序按业务常用度：果实 > 整株 > 种子 > 叶片 > 花朵 > 其他）
+      // 10 个项目（顺序按业务常用度：果实 > 种子 > 种苗 > 穗条 > 枝条 > 块根 > 块茎鳞茎 > 叶片花朵 > 整株 > 其他）
+      // 与种植管理采收弹窗的"形态"下拉保持完全一致
       const cropFormItems: Array<[string, string]> = [
         ['fruit', '果实'],
-        ['whole_plant', '整株'],
         ['seed', '种子'],
-        ['leaf', '叶片'],
-        ['flower', '花朵'],
+        ['seedling', '种苗'],
+        ['spike', '穗条'],
+        ['branch', '枝条'],
+        ['root_tuber', '块根'],
+        ['tuber_bulb', '块茎鳞茎'],
+        ['leaf_flower', '叶片花朵'],
+        ['whole_plant', '整株'],
         ['other', '其他'],
       ];
       const now = new Date().toISOString();
@@ -2924,7 +2929,7 @@ function fixApprovedProductionPlanStatus(): void {
           [`CF_${i + 1}`, code, label, label, i + 1, label, now, now],
         );
       }
-      seedLog.info('  ✓ crop_form 字典类别 + 6 项目创建成功');
+      seedLog.info('  ✓ crop_form 字典类别 + 10 项目创建成功');
     } else {
       seedLog.skip('  • crop_form 字典类别已存在，跳过');
     }
