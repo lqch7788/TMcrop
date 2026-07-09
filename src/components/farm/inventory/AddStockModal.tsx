@@ -560,10 +560,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         </div>
 
-        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector） */}
+        {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector')
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm')
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
