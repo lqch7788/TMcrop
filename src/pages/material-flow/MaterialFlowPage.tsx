@@ -12,6 +12,7 @@ import { Button, Input, Label, Select, SelectTrigger, SelectValue, SelectContent
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
 import { useMaterialFlowStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
 import * as XLSX from 'xlsx';
 
@@ -396,10 +397,12 @@ export default function MaterialFlowPage() {
           loadTrace(seed);
         } else {
           // logs 还没拉过，临时拉第 1 条用作种子
+          // 2026-07-10 P0-6 修复：catch(() => {}) → catch(e) { console.error(...) }
+          // 2026-07-10 bugfix：补回 else 块闭合符（之前漏了导致 TS1128 编译错误）
           loadLogs({ page: 1, pageSize: 1 }).then(() => {
             const c = useMaterialFlowStore.getState().logs[0]?.sourceCode;
             if (c) { setTraceCode(c); loadTrace(c); }
-          }).catch(() => {});
+          }).catch((e) => { console.error('[MaterialFlowPage] 初始 logs 拉取失败:', e); });
         }
       }
     } else if (activeTab === 'seedling') {
@@ -501,7 +504,8 @@ export default function MaterialFlowPage() {
       title = STATS_TITLE[tk];
     }
 
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
+    const today = todayLocal().replace(/-/g, '');
     const ext = format === 'excel' ? 'xlsx' : format;
     const filename = `${title}_${today}_${exportSource.length}条.${ext}`;
 
@@ -533,6 +537,8 @@ export default function MaterialFlowPage() {
       const html = `<html><head><meta charset="utf-8"></head><body><h2>${title}</h2><table border="1"><tr>${headerRow.map(h => `<th>${h}</th>`).join('')}</tr>${data.map(r => `<tr>${headerRow.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       const w = window.open('', '_blank');
       if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); }
+      // 2026-07-10 P0-6 修复：浏览器拦截弹窗时 silent failure 加 console.warn
+      else { console.warn('[MaterialFlowPage] window.open 被浏览器拦截，PDF 导出失败'); }
     }
     setShowExportModal(false);
     cancelSelection();

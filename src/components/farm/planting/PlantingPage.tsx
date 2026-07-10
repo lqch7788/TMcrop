@@ -21,6 +21,12 @@ import { DailyRecordModal } from './modals/DailyRecordModal';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-2：抽取筛选 Hook
+import { useFilteredPlantings } from '@/hooks/useFilteredPlantings';
+// 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+// 2026-07-10 P1-1：抽取公共导出函数
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore } from '../../../stores';
@@ -134,7 +140,19 @@ export default function PlantingPage() {
   // 2026-06-19: 行级采收入库弹窗状态（unify-harvest-inbound-into-source-operations）
   // 2026-07-09 v6：恢复 inboundUnifiedOpen / inboundUnifiedRecord 2 个 state（onInbound 改回弹窗）
   const [inboundUnifiedOpen, setInboundUnifiedOpen] = useState(false);
-  const [inboundUnifiedRecord, setInboundUnifiedRecord] = useState<any>(null);
+  // 2026-07-10 P1-3：用 Planting 子集 interface 替代 any（弹窗只需要种植行 + 状态/单位子集）
+  interface InboundUnifiedRecord {
+    id: string;
+    plantingCode: string;
+    cropName?: string;
+    cropVariety?: string;
+    cropCode?: string;
+    unit?: string;
+    plantingMode?: string;
+    endTime?: string;
+    status?: string;
+  }
+  const [inboundUnifiedRecord, setInboundUnifiedRecord] = useState<InboundUnifiedRecord | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Planting | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
@@ -193,25 +211,8 @@ export default function PlantingPage() {
   const [printMode, setPrintMode] = useState(false);
   const [printRecords, setPrintRecords] = useState<Planting[]>([]);
 
-  // 筛选后的数据
-  const filteredData = useMemo(() => {
-    return plantings.filter(item => {
-      if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
-      if (filters.plantCode && !item.plantCode.includes(filters.plantCode)) return false;
-      if (filters.sourceCode && !item.sourceCode.includes(filters.sourceCode)) return false;
-      if (filters.areaName && !item.areaName.includes(filters.areaName)) return false;
-      if (filters.isHarvest && String(item.isHarvest) !== filters.isHarvest) return false;
-      if (filters.startDate && item.plantingDate < filters.startDate) return false;
-      if (filters.endDate && item.plantingDate > filters.endDate) return false;
-      if (filters.transplantDate && item.transplantDate !== filters.transplantDate) return false;
-      if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
-      // 方案3.3: 组织筛选 + 定植数量范围
-      if (filters.orgName && !(item as any).orgName?.includes(filters.orgName)) return false;
-      if (filters.countMin !== undefined && item.plantingCount < filters.countMin) return false;
-      if (filters.countMax !== undefined && item.plantingCount > filters.countMax) return false;
-      return true;
-    });
-  }, [plantings, filters]);
+  // 2026-07-10 P1-2：抽到 useFilteredPlantings Hook
+  const filteredData = useFilteredPlantings(plantings, filters);
 
   // 统计卡片数据
   const statsData = useMemo(() => {
@@ -367,9 +368,8 @@ export default function PlantingPage() {
     (async () => {
       try {
         const res: any = await enhancedApiClient.get(`/plant-labels/by-number/${encodeURIComponent(labelNumber)}`);
-        // enhancedApiClient 已解包 data，兼容 {success, data} 和直接返回
-        const payload = res?.data || res;
-        const label = payload?.label || payload;
+        // 2026-07-10 P0-4 修复：去除 res?.data 二次解包（enhancedApiClient 已自动解包 data），保留 label 兼容
+        const label = res?.label || res;
         if (!label || !label.plantingId) return;
         if (cancelled) return;
 
@@ -492,52 +492,24 @@ export default function PlantingPage() {
       '备注': record.remarks || ''
     }));
 
-    // 创建内容
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else if (exportFormat === 'word') {
-      content = `<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #4a90d9; color: white; }</style></head><body><table border="1"><tr>${headers.map(h => `<th style="background-color: #4a90d9; color: white;">${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-word;charset=utf-8';
-      extension = 'docx';
-    } else {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    }
-
-    const fileName = `种植管理_${todayLocal()}.${extension}`;
+    // 2026-07-10 P1-1：抽到底层公共函数
+    const ext = exportFormat === 'csv' ? 'csv' : exportFormat === 'word' ? 'doc' : 'xls';
+    const fileName = `种植管理_${todayLocal()}.${ext}`;
 
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
+      if (exportFormat === 'csv') {
+        await exportCsv({ filename: fileName, headers, rows: exportData });
+      } else if (exportFormat === 'word') {
+        await exportWord({ filename: fileName, headers, rows: exportData });
       } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        await exportXlsx({ filename: fileName, headers, rows: exportData });
       }
     } catch (err) {
-      // logger.error('Export failed:', err);
+      // 2026-07-10 P0-2：catch(e) + instanceof 守卫
+      console.warn('[PlantingPage] 导出失败，降级 Blob:', err instanceof Error ? err.message : String(err));
+      const { serializeCsv, serializeHtmlTable } = await import('@/services/exporters');
+      const content = exportFormat === 'csv' ? serializeCsv(headers, exportData) : serializeHtmlTable(headers, exportData);
+      const mimeType = exportFormat === 'csv' ? 'text/csv;charset=utf-8' : 'application/vnd.ms-excel;charset=utf-8';
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -584,7 +556,8 @@ export default function PlantingPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            {/* 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件 */}
+            <LoadingSpinner withText />
             <span className="text-gray-500">加载中...</span>
           </div>
         </div>

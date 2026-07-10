@@ -58,9 +58,11 @@ export const useHarvestRecordStore = create<HarvestRecordState>()((set) => ({
         recordsByKey: { ...s.recordsByKey, [key]: records },
         loadingByKey: { ...s.loadingByKey, [key]: false },
       }))
-    } catch (e: any) {
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      const msg = e instanceof Error ? e.message : '加载采收记录失败';
       set((s) => ({
-        errorByKey: { ...s.errorByKey, [key]: e?.message || '加载采收记录失败' },
+        errorByKey: { ...s.errorByKey, [key]: msg },
         loadingByKey: { ...s.loadingByKey, [key]: false },
       }))
     }
@@ -111,7 +113,8 @@ export const useHarvestRecordStore = create<HarvestRecordState>()((set) => ({
         return { recordsByKey: nextRecords, deletingIds: nextDeleting }
       })
       return true
-    } catch (e: any) {
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + console.error（保留 e 对象便于调试）
       console.error('[useHarvestRecordStore.deleteRecord]', e)
       set((s) => {
         const nextDeleting = { ...s.deletingIds }

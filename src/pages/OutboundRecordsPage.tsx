@@ -16,6 +16,7 @@ import { ClipboardList } from 'lucide-react';
 import { Button, DeleteConfirmModal } from '@/components/ui';
 import { useToast } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 import { exportOutboundCSV } from '@/services/inventoryTransactionService';
 import type { OutboundQuery as ServiceOutboundQuery, OutboundRow as ServiceOutboundRow, OutboundSummary as ServiceOutboundSummary } from '@/services/inventoryTransactionService';
@@ -169,26 +170,29 @@ export default function OutboundRecordsPage() {
     try {
       // 选中的行（按 row.id 过滤 — selectedRows 现在存的是 row.id 而非 instanceId）
       const selectedData = rows.filter(r => selectedRows.includes(r.id));
+      // 2026-07-10 P1-3：去掉 as unknown 双重断言（Store 与 Service 用相同 OutboundQuery/Row 类型）
       if (format === 'csv') {
         // CSV 走后端（保持一致性）
-        const blob = await exportOutboundCSV(query as unknown as ServiceOutboundQuery);
+        const blob = await exportOutboundCSV(query);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
+        // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
+        a.download = `outbound-${todayLocal()}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'xlsx') {
         // XLSX 走前端（按选中的行生成）
-        exportOutboundXLSX(selectedData as unknown as ServiceOutboundRow[], summary as unknown as ServiceOutboundSummary);
+        exportOutboundXLSX(selectedData, summary);
         toast.success(`XLSX 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'pdf') {
-        await exportOutboundPDF(selectedData as unknown as ServiceOutboundRow[], summary as unknown as ServiceOutboundSummary);
+        await exportOutboundPDF(selectedData, summary);
         toast.success(`PDF 下载已开始（共 ${selectedData.length} 条）`);
       }
-    } catch (e: any) {
-      toast.error(`${format.toUpperCase()} 导出失败：${e?.message || '未知错误'}`);
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      toast.error(`${format.toUpperCase()} 导出失败：${e instanceof Error ? e.message : '未知错误'}`);
     }
   }
 

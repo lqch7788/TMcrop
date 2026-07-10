@@ -21,6 +21,8 @@ import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { RotateCcw } from 'lucide-react';
+// 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
   OutboundRow,
 } from '../../../stores/useInventoryTransactionStore';
@@ -246,8 +248,8 @@ export function OutboundRecordsTable({
               <tr>
                 <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    <span>加载中...</span>
+                    {/* 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件 */}
+                    <LoadingSpinner withText />
                   </div>
                 </td>
               </tr>

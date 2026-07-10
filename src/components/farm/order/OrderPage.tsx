@@ -420,7 +420,7 @@ export default function OrderPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
             <span className="text-gray-500">加载中...</span>
           </div>
         </div>

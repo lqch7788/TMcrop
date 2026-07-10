@@ -94,9 +94,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
   };
 
   // 2026-06-28：施肥/用药子表辅助函数
+  // 2026-07-10 P0-5 修复：用 crypto.randomUUID() 替代 Date.now()+Math.random() 避免碰撞
   /** 生成前端唯一 ID（编辑时识别行） */
   const genFeedId = (prefix: 'fr' | 'pr') =>
-    `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
   /** 创建一行默认空记录 */
   const makeEmptyFeedRecord = (mode: 'fertilizer' | 'pesticide'): FeedRecordItem => ({
     id: genFeedId(mode === 'fertilizer' ? 'fr' : 'pr'),

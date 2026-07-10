@@ -95,7 +95,8 @@ export const FlowLogTab: React.FC<FlowLogTabProps> = ({ code, businessId }) => {
     setError(null);
     try {
       const res: any = await traceFlow(code);
-      let list: FlowLog[] = Array.isArray(res) ? res : (res?.data || []);
+      // 2026-07-10 P0-4 修复：去除 res?.data 二次解包（enhancedApiClient 已自动解包 data），保留 items 兼容
+      let list: FlowLog[] = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
       if (list.length === 0) {
         const [asSource, asTarget] = await Promise.all([
           getFlowLogs({ sourceCode: code, pageSize: 100 }),
@@ -112,8 +113,9 @@ export const FlowLogTab: React.FC<FlowLogTabProps> = ({ code, businessId }) => {
         list = list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       }
       setLogs(list);
-    } catch (e: any) {
-      setError(e?.message || '加载流转记录失败');
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      setError(e instanceof Error ? e.message : '加载流转记录失败');
     } finally {
       setLoading(false);
     }

@@ -21,6 +21,9 @@ import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-1：抽取公共导出函数
+import { exportCsv } from '@/services/exporters';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
 import { DeleteConfirmModal, Button } from '@/components/ui';
 
@@ -143,9 +146,11 @@ export default function InventoryV3Page() {
   };
 
   // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
+  // 2026-07-10 P1-3：类型直接从 useInventoryStore.deleteBatch 推断（Store 接口已补 blockingTransactions/blocked 字段）
   const handleDeleteModalConfirm = async () => {
     // 2026-06-04 V2.1 铁律改造：删除走 Store action（自动 notifyChange 跨页刷新）
-    const result: any = await deleteBatch(selectedRows);
+    // 2026-07-10 P1-3 bugfix：删 as unknown as 双断言（Store 接口补全 blockingTransactions/blocked）
+    const result = await deleteBatch(selectedRows);
     setShowDeleteModal(false);
     if (result.success) {
       showAlert(`已删除 ${result.deletedCount} 条记录`);
@@ -153,9 +158,9 @@ export default function InventoryV3Page() {
       setDeleteMode(false);
     } else {
       // 2026-07-03：用 alert 显示阻挡详情（showAlert 是居中弹窗不会消失）
-      const blockingTxs = (result as any).blockingTransactions || [];
-      const blockedList = (result as any).blocked || [];
-      const renderTxList = (txs: any[]) => txs.map((tx: any) => {
+      const blockingTxs = result.blockingTransactions || [];
+      const blockedList = result.blocked || [];
+      const renderTxList = (txs: BlockingTx[]) => txs.map((tx) => {
         const type = tx.txTypeLabel || tx.txType || '-';
         return `  · ${tx.txId || '-'}  [${type}]  ${tx.businessCode || '-'}  ×${tx.qty || 0}  ${tx.operatorName || '-'} ${tx.operateDate || '-'}`;
       }).join('\n');
@@ -194,7 +199,8 @@ export default function InventoryV3Page() {
     setExportMode(true);
   };
 
-  const handleConfirmExport = () => {
+  // 2026-07-10 P1-1 bugfix：原 () => {...} 内含 await 编译失败，改为 async
+  const handleConfirmExport = async () => {
     const rowsToExport = selectedRows.length > 0
       ? filteredStocks.filter(s => selectedRows.includes(s.instanceId))
       : filteredStocks;
@@ -202,29 +208,29 @@ export default function InventoryV3Page() {
       showAlert('没有可导出的数据');
       return;
     }
-    // 导出 CSV（UTF-8 BOM 防止 Excel 打开乱码）
+    // 2026-07-10 P1-1：抽到底层公共函数
     const headers = ['实例ID', '类型', '作物', '品种', '数量', '可用', '冻结', '仓库', '来源', '状态', '入库日期'];
-    const csvRows = [headers.join(',')];
-    rowsToExport.forEach((s) => {
+    const exportData = rowsToExport.map((s) => {
       const stockTypeLabel = s.stockType === 'seed'
         ? `商品种源${s.businessType === 'seed_source' ? '（历史迁移）' : ''}`
         : s.stockType === 'seedling' ? '种苗' : '成品';
       const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
       const sourceLabel = s.sourceType === 'self_produced' ? '自产' : '外购';
-      csvRows.push([
-        s.instanceId, stockTypeLabel, s.cropName, s.varietyName,
-        `${s.currentQuantity} ${s.unit}`, `${(s.currentQuantity ?? 0) - (s.frozenQuantity ?? 0)} ${s.unit}`,
-        `${s.frozenQuantity} ${s.unit}`, s.warehouseName, sourceLabel, statusLabel, s.inboundDate,
-      ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+      return {
+        '实例ID': s.instanceId,
+        '类型': stockTypeLabel,
+        '作物': s.cropName,
+        '品种': s.varietyName,
+        '数量': `${s.currentQuantity} ${s.unit}`,
+        '可用': `${(s.currentQuantity ?? 0) - (s.frozenQuantity ?? 0)} ${s.unit}`,
+        '冻结': `${s.frozenQuantity} ${s.unit}`,
+        '仓库': s.warehouseName,
+        '来源': sourceLabel,
+        '状态': statusLabel,
+        '入库日期': s.inboundDate,
+      };
     });
-    const csvContent = '﻿' + csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `作物库存_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await exportCsv({ filename: `作物库存_${todayLocal()}.csv`, headers, rows: exportData });
     showAlert(`已导出 ${rowsToExport.length} 条记录`);
     setSelectedRows([]);
     setExportMode(false);

@@ -318,8 +318,9 @@ export const SeedSourceInboundModal: React.FC<SeedSourceInboundModalProps> = ({
 
       onSuccess?.();
       onClose();
-    } catch (e: any) {
-      setError(e?.message || '提交失败');
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      setError(e instanceof Error ? e.message : '提交失败');
     } finally {
       setSubmitting(false);
     }

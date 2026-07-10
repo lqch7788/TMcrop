@@ -8,6 +8,8 @@ import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+// 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
   StockType,
   SourceType,
@@ -193,7 +195,8 @@ export function InventoryTable({
               <tr>
                 <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    {/* 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件 */}
+                    <LoadingSpinner withText />
                     <span>加载中...</span>
                   </div>
                 </td>

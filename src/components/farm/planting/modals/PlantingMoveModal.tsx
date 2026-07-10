@@ -370,11 +370,13 @@ export default function PlantingMoveModal({
         await onSubmit(input);
       }
       onClose();
-    } catch (e: any) {
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + narrowing 兼容 axios 风格错误
+      const err = e as { message?: string; response?: { data?: { error?: string } } }
       // 2026-06-30 Bug 修复：英文错误信息转中文兜底
       // 后端 enhancedApiClient 抛错格式：{ error: '...', status: xxx } 或 axios 异常 message
       // 兼容：rawMessage 提取 → 中英对照表 → 兜底通用提示
-      const rawMsg = String(e?.response?.data?.error || e?.message || '未知错误');
+      const rawMsg = String(err.response?.data?.error || err.message || '未知错误');
       const friendlyMsg = localizeError(rawMsg);
       setErrorMessage(friendlyMsg);
     } finally {

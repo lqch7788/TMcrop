@@ -371,9 +371,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         return
       }
       // 跨页通知
+      // 2026-07-10 P0-6 修复：catch(_) {} → catch(e) { console.warn(...) }（审核遗漏补全）
       try {
         useInventoryStore.getState().notifyChange?.()
-      } catch (_) {}
+      } catch (e) { console.warn('[UnifiedRowHarvestInboundModal] 跨页库存通知失败:', e) }
       showAlert(`入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`, {
         title: '成功',
       })
@@ -414,8 +415,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       }
       onSuccess?.()
       onClose()
-    } catch (e: any) {
-      setError(e?.message || '提交失败')
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      setError(e instanceof Error ? e.message : '提交失败')
     } finally {
       setSubmitting(false)
     }
@@ -569,15 +571,18 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         setDeleteError(null)
         showAlert('删除成功', { title: '成功' })
       }
-    } catch (e: any) {
-      const blockingRecords = e?.blockingRecords || []
-      const blockingTransactions = e?.blockingTransactions || []
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + 自定义属性 narrowing（API 错误对象）
+      const err = e as { message?: string; blockingRecords?: any[]; blockingTransactions?: any[] }
+      const blockingRecords = err.blockingRecords || []
+      const blockingTransactions = err.blockingTransactions || []
+      const baseMsg = err.message || '无法删除'
       if (blockingRecords.length > 0) {
-        setDeleteError({ message: e?.message || '无法删除', blockingRecords })
+        setDeleteError({ message: baseMsg, blockingRecords })
       } else if (blockingTransactions.length > 0) {
-        setDeleteError({ message: e?.message || '无法删除', blockingTransactions })
+        setDeleteError({ message: baseMsg, blockingTransactions })
       } else {
-        setDeleteError({ message: e?.message || '删除失败' })
+        setDeleteError({ message: baseMsg })
       }
     }
   }
@@ -958,7 +963,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                         ? JSON.parse((r as any).harvesterNames)
                         : (r as any).harvesterNames
                       harvesterStr = Array.isArray(arr) ? arr.join('、') : ''
-                    } catch { /* ignore */ }
+                    } catch (e) { console.warn('[UnifiedRowHarvestInboundModal] harvesterNames 解析失败:', e) }
                     const isDeleting = !!deletingIds[r.id]
                     // 没有 products 详情时也展示 1 行（汇总级）
                     if (products.length === 0) {

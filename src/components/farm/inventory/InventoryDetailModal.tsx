@@ -13,6 +13,9 @@ import {
 import { Button, Modal } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { showConfirm } from '@/lib/dialogService';
+// 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
   StockType,
   InventoryStock,
@@ -131,10 +134,12 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     const isIncomplete = !stock.cropName && !stock.stockType;
     if (isIncomplete) {
       setResolving(true);
+      // 2026-07-10 P0-6 修复：catch(() => {}) → catch(e) { console.error(...) }（之前失败时弹窗永远 skeleton）
       getInventoryByInstanceId(stock.instanceId).then((data) => {
         setResolvedStock(data);
         setResolving(false);
-      }).catch(() => {
+      }).catch((e) => {
+        console.error('[InventoryDetailModal] resolveStock 失败:', e);
         setResolving(false);
       });
     } else {
@@ -197,7 +202,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl p-8 shadow-xl flex items-center gap-3">
-          <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          {/* 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件 */}
+          <LoadingSpinner />
           <span className="text-gray-600">加载库存详情...</span>
         </div>
       </div>
@@ -230,6 +236,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
           size="icon"
           onClick={loadAllData}
           className="text-white hover:bg-emerald-500"
+          // 2026-07-10 P2-3：补 aria-label（键盘 + 屏幕阅读器可达，仅 title 不够）
+          aria-label="刷新库存详情"
           title="刷新"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -261,7 +269,9 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
           available={available}
           freezes={freezes}
           onUnfreeze={async (freezeId) => {
-            if (!confirm('确定要解冻该记录吗？解冻后对应数量将恢复为可用。')) return;
+            // 2026-07-10 P0-3 修复：原生 confirm/alert → showConfirm/showAlert（Electron 兼容 + 项目 UI 统一）
+            const ok = await showConfirm('确定要解冻该记录吗？解冻后对应数量将恢复为可用。');
+            if (!ok) return;
             try {
               const result = await unfreezeInventory(freezeId);
               if (result.success) {
@@ -269,10 +279,11 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
                 const { useInventoryStore } = await import('../../../stores/useInventoryStore');
                 useInventoryStore.getState().notifyChange();
               } else {
-                alert(result.error || '解冻失败');
+                showAlert(result.error || '解冻失败');
               }
-            } catch (e: any) {
-              alert(e?.message || '解冻失败');
+            } catch (e) {
+              // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+              showAlert(e instanceof Error ? e.message : '解冻失败');
             }
           }}
         />
@@ -307,7 +318,14 @@ interface TabBtnProps {
 function TabBtn({ current, value, icon, label, count, onClick }: TabBtnProps) {
   const active = current === value;
   return (
+    // 2026-07-10 P2-4：补 role/aria-selected/aria-controls（键盘 + 屏幕阅读器可达）
+    // 2026-07-10 P2-3：补 aria-label（icon + 文字混合的 Tab 仍需 label 给屏读）
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-controls={`tabpanel-${value}`}
+      aria-label={label}
       onClick={() => onClick(value)}
       className={`px-4 py-3 text-sm font-medium flex items-center gap-1.5 border-b-2 transition-colors ${
         active

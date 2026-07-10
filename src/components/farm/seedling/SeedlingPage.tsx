@@ -16,6 +16,12 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 // 2026-07-04：育苗无性繁殖记录弹窗（独立入口）
 import { SeedlingPropagationModal } from './modals/SeedlingPropagationModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-2：抽取筛选 Hook（与 useFilteredSeedSources 对齐）
+import { useFilteredSeedlings } from '@/hooks/useFilteredSeedlings';
+// 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+// 2026-07-10 P1-1：抽取公共导出函数
+import { exportCsv, exportXlsx } from '@/services/exporters';
 import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
@@ -181,9 +187,8 @@ export default function SeedlingPage() {
     (async () => {
       try {
         const res: any = await enhancedApiClient.get(`/plant-labels/by-number/${encodeURIComponent(labelNumber)}`);
-        // enhancedApiClient 已解包 data，兼容 {success, data} 和直接返回
-        const payload = res?.data || res;
-        const label = payload?.label || payload;
+        // 2026-07-10 P0-4 修复：去除 res?.data 二次解包（enhancedApiClient 已自动解包 data），保留 label 兼容
+        const label = res?.label || res;
         if (!label || !label.seedlingId) return;
         if (cancelled) return;
 
@@ -247,43 +252,8 @@ export default function SeedlingPage() {
     record: null,
   });
 
-  // 筛选后的数据
-  const filteredData = useMemo(() => {
-    return seedlings.filter(item => {
-      // 2026-07-01 P1-2 修复：cropName 筛选统一用 includes，与 PlantingPage 一致
-      // 原因：startsWith 要求前缀匹配，但 cropName 可能是 subVariety1Name（如"红树莓"），
-      //       而筛选下拉显示父类（如"树莓"）时 startsWith 会过滤掉
-      if (filters.cropName && filters.cropName !== '__all__' && !item.cropName.includes(filters.cropName)) return false;
-      if (filters.seedlingCode && !item.seedlingCode.startsWith(filters.seedlingCode)) return false;
-      if (filters.sourceCode && !item.sourceCode.startsWith(filters.sourceCode)) return false;
-      if (filters.siteName && filters.siteName !== '__all__' && item.siteName !== filters.siteName) return false;
-      if (filters.seedlingType && filters.seedlingType !== '__all__' && item.seedlingType !== filters.seedlingType) return false;
-      if (filters.status && filters.status !== '__all__' && item.status !== filters.status) return false;
-      if (filters.startDate && item.startDate < filters.startDate) return false;
-      if (filters.endDate && item.startDate > filters.endDate) return false;
-      if (filters.createBy && !item.createBy.startsWith(filters.createBy)) return false;
-      // 更多筛选条件（新增）
-      if (filters.initialCountMin !== undefined && item.initialCount < filters.initialCountMin) return false;
-      if (filters.initialCountMax !== undefined && item.initialCount > filters.initialCountMax) return false;
-      if (filters.survivalCountMin !== undefined && item.survivalCount < filters.survivalCountMin) return false;
-      if (filters.survivalCountMax !== undefined && item.survivalCount > filters.survivalCountMax) return false;
-      if (filters.lossCountMin !== undefined && item.lossCount < filters.lossCountMin) return false;
-      if (filters.lossCountMax !== undefined && item.lossCount > filters.lossCountMax) return false;
-      // 现存数量 = 小苗剩余 = 产出 - 损耗 - 采收入库（2026-06-28：彻底移除已定植统计）
-      const surplus = Math.max(0,
-        (item.expandedPlantCount || 0)
-        - (item.seedlingLossCount || 0)
-        - (item.harvestStockedCount || 0)
-      );
-      if (filters.surplusMin !== undefined && surplus < filters.surplusMin) return false;
-      if (filters.surplusMax !== undefined && surplus > filters.surplusMax) return false;
-      if (filters.survivalRateMin !== undefined && item.survivalRate < filters.survivalRateMin) return false;
-      if (filters.survivalRateMax !== undefined && item.survivalRate > filters.survivalRateMax) return false;
-      if (filters.lossRateMin !== undefined && item.lossRate < filters.lossRateMin) return false;
-      if (filters.lossRateMax !== undefined && item.lossRate > filters.lossRateMax) return false;
-      return true;
-    });
-  }, [seedlings, filters]);
+  // 2026-07-10 P1-2：抽到 useFilteredSeedlings Hook（与 useFilteredSeedSources 对齐）
+  const filteredData = useFilteredSeedlings(seedlings, filters);
 
   // 2026-07-04 v2：6 状态统计（对齐种植）
   const statsData = useMemo(() => {
@@ -590,44 +560,22 @@ export default function SeedlingPage() {
     let mimeType = '';
     let extension = '';
 
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    }
-
-    const fileName = `育苗管理_${todayLocal()}.${extension}`;
+    // 2026-07-10 P1-1：抽到底层公共函数（保留 showSaveFilePicker 支持在 exporters/shared.ts）
+    const fileName = `育苗管理_${todayLocal()}.${exportFormat === 'csv' ? 'csv' : 'xls'}`;
 
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
+      if (exportFormat === 'csv') {
+        await exportCsv({ filename: fileName, headers, rows: exportData });
       } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        await exportXlsx({ filename: fileName, headers, rows: exportData });
       }
     } catch (err) {
-      // logger.error('Export failed:', err);
-      const blob = new Blob([content], { type: mimeType });
+      // 2026-07-10 P0-2：catch(e) + instanceof 守卫
+      console.warn('[SeedlingPage] 导出失败，降级 Blob:', err instanceof Error ? err.message : String(err));
+      // 降级到 Blob 下载（保留原有行为）
+      const { serializeCsv, serializeHtmlTable } = await import('@/services/exporters');
+      const content = exportFormat === 'csv' ? serializeCsv(headers, exportData) : serializeHtmlTable(headers, exportData);
+      const blob = new Blob([content], { type: exportFormat === 'csv' ? 'text/csv;charset=utf-8' : 'application/vnd.ms-excel;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -674,7 +622,8 @@ export default function SeedlingPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            {/* 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件 */}
+            <LoadingSpinner withText />
             <span className="text-gray-500">加载中...</span>
           </div>
         </div>

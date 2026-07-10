@@ -13,6 +13,8 @@ import { AddPestControlModal } from './modals/AddPestControlModal';
 import { EditPestControlModal } from './modals/EditPestControlModal';
 import { PestControlDetailModal } from './modals/PestControlDetailModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-1：抽取公共导出函数
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { PestControlExportModal } from './modals/PestControlExportModal';
 
 type OperationMode = 'normal' | 'delete' | 'export';
@@ -120,7 +122,8 @@ export default function PestControlPage() {
     setShowExportModal(true);
   }, []);
 
-  const handleExportConfirm = useCallback((format: 'csv' | 'xlsx' | 'word') => {
+  // 2026-07-10 P1-1 bugfix：原 useCallback((format) => {...}) 内含 await 编译失败，改为 async
+  const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'word') => {
     const toExport = selectedIds.length > 0
       ? items.filter((it) => selectedIds.includes(it.id))
       : items;
@@ -134,28 +137,26 @@ export default function PestControlPage() {
       it.dosage ? `${it.dosage}${it.dosageUnit || ''}` : '', it.dilutionRatio || '', it.targetPest || '', it.operatorName || '',
     ]);
 
+    // 2026-07-10 P1-1：抽到底层公共函数
+    const exportData = rows.map((r) => ({
+      '记录编号': r[0],
+      '防治日期': r[1],
+      '防治类型': r[2],
+      '作物': r[3],
+      '温室': r[4],
+      '药剂名称': r[5],
+      '用药量': r[6],
+      '稀释比例': r[7],
+      '防治对象': r[8],
+      '操作员': r[9],
+    }));
+    const filename = `病虫害防治记录_${todayLocal()}`;
     if (format === 'csv') {
-      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `病虫害防治记录_${todayLocal()}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } else if (format === 'xlsx' || format === 'word') {
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>病虫害防治记录</title>
-<style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#059669;color:#fff}</style>
-</head><body><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-<tbody>${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-      const blob = new Blob(['﻿' + html], { type: format === 'xlsx' ? 'application/vnd.ms-excel' : 'application/msword' });
-      const ext = format === 'xlsx' ? '.xls' : '.doc';
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `病虫害防治记录_${todayLocal()}${ext}`;
-      link.click();
-      URL.revokeObjectURL(url);
+      await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
+    } else if (format === 'xlsx') {
+      await exportXlsx({ filename: `${filename}.xls`, headers, rows: exportData });
+    } else {
+      await exportWord({ filename: `${filename}.doc`, headers, rows: exportData });
     }
     setShowExportModal(false);
     setSelectedIds([]);

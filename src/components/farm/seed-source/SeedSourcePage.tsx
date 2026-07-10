@@ -14,6 +14,8 @@ import { DetailModal } from './modals/DetailModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-1：抽取公共导出函数（替代原内联 csv/xls 分支）
+import { exportCsv, exportXlsx } from '@/services/exporters';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { InventoryTransferPanel } from './modals/InventoryTransferPanel';
 import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
@@ -250,8 +252,9 @@ export default function SeedSourcePage() {
         } else {
           conflicted.push({ id, references: res.references });
         }
-      } catch (e: any) {
-        const msg = e?.message || String(e);
+      } catch (e) {
+        // 2026-07-10 P0-2 修复：catch(e: any) → catch(e) (TS 默认 unknown) + instanceof 守卫
+        const msg = e instanceof Error ? e.message : String(e);
         errored.push({ id, error: msg });
         // 2026-06-06: R4 — 检查失败不阻止删除
         deletable.push(id);
@@ -267,8 +270,9 @@ export default function SeedSourcePage() {
         if (errored.length > 0) {
           toast.warning(`已删除 ${deletable.length} 个种源（${errored.length} 个引用检查失败，已强行删除）`);
         }
-      } catch (e: any) {
-        await showAlert(`删除失败：${e?.message || String(e)}`);
+      } catch (e) {
+        // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+        await showAlert(`删除失败：${e instanceof Error ? e.message : String(e)}`);
       }
       return;
     }
@@ -304,8 +308,9 @@ export default function SeedSourcePage() {
       await deleteItems(deletable);
       setSelectedRows([]);
       toast.success(`已删除 ${deletable.length} 个，跳过 ${conflicted.length} 个有冲突的`);
-    } catch (e: any) {
-      await showAlert(`删除失败：${e?.message || String(e)}`);
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      await showAlert(`删除失败：${e instanceof Error ? e.message : String(e)}`);
     }
   }, [selectedRows, checkDeletable, deleteItems, showAlert, showConfirm, toast]);
 
@@ -519,37 +524,17 @@ export default function SeedSourcePage() {
           }
         });
       } else if (exportFormat === 'csv') {
-        const content = headers.join(',') + '\n' + exportData.map(row =>
-          headers.map(h => `"${typeof row[h] === 'string' ? row[h].replace(/"/g, '""') : row[h] || ''}"`).join(',')
-        ).join('\n');
-        const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        // 2026-07-10 P1-1：抽到底层公共函数
+        await exportCsv({ filename: fileName, headers, rows: exportData });
       } else {
-        const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName.replace('xlsx', 'xls');
-        a.click();
-        URL.revokeObjectURL(url);
+        // xls fallback（保持原有行为：application/vnd.ms-excel 假装 xls，P2-5 待修）
+        await exportXlsx({ filename: fileName.replace('xlsx', 'xls'), headers, rows: exportData });
       }
     } catch (err) {
-      // logger.error('Export failed:', err);
-      // 降级：xls格式
-      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `内部种源_${todayLocal()}.xls`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // 2026-07-10 P1-1：catch 改 await exportXlsx；保留原降级行为（xls 格式）
+      // 2026-07-10 P0-2：catch(e) + instanceof 守卫
+      console.warn('[SeedSourcePage] 导出失败，降级为 xls:', err instanceof Error ? err.message : String(err));
+      await exportXlsx({ filename: `内部种源_${todayLocal()}.xls`, headers, rows: exportData });
     }
 
     setBatchOp({ mode: 'normal' });
