@@ -2988,6 +2988,8 @@ export function initializeDatabase() {
       target_pests TEXT,
       ingredient TEXT,
       mechanism TEXT,
+      -- 2026-07-10：药剂类型（关联 pesticide_type 字典：杀虫剂/杀菌剂/除草剂/杀螨剂/杀线虫剂 等）
+      pesticide_type TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime'))

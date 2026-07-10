@@ -39,7 +39,7 @@ function generatePesticideCode(db: any, controlType: string): string {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { control_type, pesticide_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { control_type, pesticide_type, pesticide_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
@@ -47,6 +47,8 @@ router.get('/', (req: Request, res: Response) => {
     const params: any[] = [];
 
     if (control_type) { conditions.push('control_type = ?'); params.push(control_type); }
+    // 2026-07-10：支持按 pesticide_type 字典过滤（杀虫剂/杀菌剂/除草剂等）
+    if (pesticide_type) { conditions.push('pesticide_type = ?'); params.push(pesticide_type); }
     // 支持 keyword 或 pesticide_name 参数
     const nameFilter = keyword || pesticide_name;
     if (nameFilter) { conditions.push("pesticide_name LIKE '%' || ? || '%'"); params.push(nameFilter); }
@@ -87,13 +89,15 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const id = `pl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    // 2026-07-10：加 pesticide_type 字段写入
     db.run(`INSERT INTO pesticide_library (
       id, pesticide_code, pesticide_name, control_type, function_desc, taboo_desc,
-      target_pests, ingredient, mechanism, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      target_pests, ingredient, mechanism, pesticide_type, status, create_time, update_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.pesticide_name, body.control_type, body.function_desc || null,
        body.taboo_desc || null, body.target_pests || null, body.ingredient || null,
-       body.mechanism || null, body.status || 'active', now, now]
+       body.mechanism || null, body.pesticide_type || null,
+       body.status || 'active', now, now]
     );
 
     const items = queryToObjects(db, `SELECT * FROM pesticide_library WHERE pesticide_code = ?`, [code]);
@@ -128,12 +132,14 @@ router.put('/:id', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '药剂不存在' }); return; }
 
     const now = new Date().toISOString();
+    // 2026-07-10：加 pesticide_type 字段更新
     db.run(`UPDATE pesticide_library SET pesticide_name=?, control_type=?, function_desc=?,
-      taboo_desc=?, target_pests=?, ingredient=?, mechanism=?, status=?, update_time=? WHERE id=?`,
+      taboo_desc=?, target_pests=?, ingredient=?, mechanism=?, pesticide_type=?, status=?, update_time=? WHERE id=?`,
       [body.pesticide_name ?? existing[0].pesticide_name, body.control_type ?? existing[0].control_type,
        body.function_desc ?? existing[0].function_desc, body.taboo_desc ?? existing[0].taboo_desc,
        body.target_pests ?? existing[0].target_pests, body.ingredient ?? existing[0].ingredient,
-       body.mechanism ?? existing[0].mechanism, body.status ?? existing[0].status, now, id]
+       body.mechanism ?? existing[0].mechanism, body.pesticide_type ?? existing[0].pesticide_type,
+       body.status ?? existing[0].status, now, id]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_library WHERE id = ?`, [id]);
     saveDatabase();

@@ -463,7 +463,7 @@ export function PestControlTable({
                               </div>
                             </div>
 
-                            {/* 右侧：叶面肥联用 */}
+                            {/* 右侧：肥料联用 */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                               {record.useLeafFertilizer === 'yes' ? (
                                 <div className="overflow-x-auto">
@@ -495,7 +495,7 @@ export function PestControlTable({
                                   </table>
                                 </div>
                               ) : (
-                                <div className="px-3 py-4 text-sm text-gray-400 text-center">未启用叶面肥联用</div>
+                                <div className="px-3 py-4 text-sm text-gray-400 text-center">未启用肥料联用</div>
                               )}
                             </div>
                           </div>

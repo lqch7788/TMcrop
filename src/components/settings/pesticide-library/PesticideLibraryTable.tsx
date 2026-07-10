@@ -6,6 +6,7 @@
 import React from 'react';
 import { Eye, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { PesticideLibrary } from '@/stores';
+import { useDictionaryStore } from '@/stores/useDictionaryStore';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -23,6 +24,7 @@ interface PesticideLibraryTableProps {
   onSelectAll?: () => void;
 }
 
+// 2026-07-10：药剂类型列显示中文 label（useDictionaryStore 必须移到组件内调用）
 // 防治类型 Badge 颜色
 const getControlTypeBadge = (type: string) => {
   switch (type) {
@@ -64,6 +66,13 @@ export function PesticideLibraryTable({
   onSelectRow,
   onSelectAll,
 }: PesticideLibraryTableProps) {
+  // 2026-07-10：药剂类型列字典查表（useDictionaryStore 必须在组件内）
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
+  const getDictLabel = (category: string, code: string) => {
+    if (!code) return '';
+    const item = dictionaries.find((d: any) => d.categoryCode === category && d.dictCode === code);
+    return item?.dictLabel || code;
+  };
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
@@ -121,6 +130,8 @@ export function PesticideLibraryTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂成分</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作用机制</TableHead>
+              {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典） */}
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
@@ -132,7 +143,7 @@ export function PesticideLibraryTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
                   暂无药剂记录
                 </TableCell>
               </TableRow>
@@ -192,6 +203,10 @@ export function PesticideLibraryTable({
                     {/* 作用机制 */}
                     <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[100px] truncate">
                       {record.mechanism || '-'}
+                    </TableCell>
+                    {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典） */}
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {getDictLabel('pesticide_type', record.pesticideType || '') || '-'}
                     </TableCell>
                     {/* 防治类型 - Badge */}
                     <TableCell className="px-4 py-3 whitespace-nowrap">

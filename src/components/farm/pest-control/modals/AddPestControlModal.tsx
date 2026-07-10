@@ -80,7 +80,7 @@ const defaultForm = {
   bioAgents: [] as BioAgentItem[],
   // 物理防治专用（支持多个设备/方式）
   equipment: [] as EquipmentItem[],
-  // 叶面肥联用
+  // 肥料联用
   useLeafFertilizer: 'no' as 'yes' | 'no',
   leafFertilizers: [] as LeafFertilizerItem[],  // 叶面肥列表（支持多个）
   // 记录级别字段
@@ -153,6 +153,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
   }, [greenhouses]);
 
   // 药剂选项（用于搜索选择 - 化学防治用）
+  // 2026-07-10：保留 pesticideType 字段供按类型过滤使用
   const pesticideOptions = useMemo(() =>
     pesticideStore.items
       .filter(p => p.controlType === 'chemical')
@@ -160,6 +161,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
         value: p.pesticideName,
         label: p.pesticideName,
         searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+        pesticideType: p.pesticideType,  // 透传用于按类型过滤
       })),
     [pesticideStore.items]
   );
@@ -172,6 +174,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
         value: p.pesticideName,
         label: p.pesticideName,
         searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+        pesticideType: p.pesticideType,  // 透传用于按类型过滤
       })),
     [pesticideStore.items]
   );
@@ -319,7 +322,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
       }
     }
 
-    // 叶面肥联用
+    // 肥料联用
     if (form.useLeafFertilizer === 'yes') {
       // 多个叶面肥存储为JSON字符串
       if (form.leafFertilizers.length > 0) {
@@ -664,6 +667,20 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                 form.pesticides.map((item, index) => (
                   <div key={index} className="grid grid-cols-6 gap-2 items-end">
                     <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">药剂类型</Label>
+                      <DictSelect
+                        category="pesticide_type"
+                        value={item.type}
+                        onChange={(val) => {
+                          // 2026-07-10：类型变化时清空名称（强制重新选择，避免类型不匹配）
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, type: val, name: '' };
+                          updateField('pesticides', newList);
+                        }}
+                        placeholder="先选类型"
+                      />
+                    </div>
+                    <div>
                       <Label className="text-gray-700 text-xs mb-1 block">药剂名称</Label>
                       <SearchableSelect
                         value={item.name}
@@ -673,20 +690,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           updateField('pesticides', newList);
                         }}
                         options={pesticideOptions}
-                        placeholder="选择药剂"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 text-xs mb-1 block">药剂类型</Label>
-                      <DictSelect
-                        category="pesticide_type"
-                        value={item.type}
-                        onChange={(val) => {
-                          const newList = [...form.pesticides];
-                          newList[index] = { ...item, type: val };
-                          updateField('pesticides', newList);
-                        }}
-                        placeholder="类型"
+                        placeholder={item.type ? '选择药剂' : '请先选药剂类型'}
                       />
                     </div>
                     <div>
@@ -780,6 +784,20 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                 form.bioAgents.map((item, index) => (
                   <div key={index} className="grid grid-cols-6 gap-2 items-end">
                     <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">制剂类型</Label>
+                      <DictSelect
+                        category="bio_agent_type"
+                        value={item.type}
+                        onChange={(val) => {
+                          // 2026-07-10：类型变化时清空名称（强制重新选择，避免类型不匹配）
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, type: val, name: '' };
+                          updateField('bioAgents', newList);
+                        }}
+                        placeholder="先选类型"
+                      />
+                    </div>
+                    <div>
                       <Label className="text-gray-700 text-xs mb-1 block">制剂名称</Label>
                       <SearchableSelect
                         value={item.name}
@@ -788,21 +806,9 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           newList[index] = { ...item, name: val };
                           updateField('bioAgents', newList);
                         }}
-                        options={bioAgentOptions}
-                        placeholder="选择制剂"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 text-xs mb-1 block">制剂类型</Label>
-                      <DictSelect
-                        category="bio_agent_type"
-                        value={item.type}
-                        onChange={(val) => {
-                          const newList = [...form.bioAgents];
-                          newList[index] = { ...item, type: val };
-                          updateField('bioAgents', newList);
-                        }}
-                        placeholder="类型"
+                        // 2026-07-10：按 item.type 过滤制剂名称选项（未选类型时显示全部）
+                        options={bioAgentOptions.filter(p => !item.type || p.pesticideType === item.type)}
+                        placeholder={item.type ? '选择制剂' : '请先选制剂类型'}
                       />
                     </div>
                     <div>
@@ -944,10 +950,10 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
           </div>
         )}
 
-        {/* 叶面肥联用 - 仅化学防治显示 */}
+        {/* 肥料联用 - 仅化学防治显示 */}
         {form.controlType === 'chemical' && (
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-            <SectionTitle title="叶面肥联用" icon="🌿" />
+            <SectionTitle title="肥料联用" icon="🌿" />
           <div className="space-y-3">
             <div className="flex items-center gap-4">
               <Label className="text-gray-900">是否联用叶面肥</Label>

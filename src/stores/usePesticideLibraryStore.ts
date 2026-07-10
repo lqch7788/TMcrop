@@ -30,6 +30,9 @@ export interface PesticideLibrary {
   targetPests?: string;
   ingredient?: string; // 药剂成分
   mechanism?: string; // 作用机制
+  // 2026-07-10：药剂类型（关联 pesticide_type 字典：杀虫剂/杀菌剂/除草剂/杀螨剂/杀线虫剂 等）
+  // 用于病虫害防治弹窗按类型过滤药剂名称选项
+  pesticideType?: string;
   status: string;
   createTime: string;
   updateTime: string;
@@ -65,7 +68,10 @@ interface PesticideLibraryState {
 const FIELD_MAP: Record<string, string> = {
   id: 'id', pesticide_code: 'pesticideCode', pesticide_name: 'pesticideName',
   control_type: 'controlType', function_desc: 'functionDesc', taboo_desc: 'tabooDesc',
-  target_pests: 'targetPests', ingredient: 'ingredient', mechanism: 'mechanism', status: 'status', create_time: 'createTime', update_time: 'updateTime',
+  target_pests: 'targetPests', ingredient: 'ingredient', mechanism: 'mechanism',
+  // 2026-07-10：pesticide_type 字段映射
+  pesticide_type: 'pesticideType',
+  status: 'status', create_time: 'createTime', update_time: 'updateTime',
 };
 
 const SPEC_FIELD_MAP: Record<string, string> = {

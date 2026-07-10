@@ -691,6 +691,8 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'PT005', categoryCode: 'pesticide_type', dictCode: 'protective', dictLabel: '保护剂', dictValue: 'protective', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'PT006', categoryCode: 'pesticide_type', dictCode: 'adjuvant', dictLabel: '助剂', dictValue: 'adjuvant', color: 'pink', sortOrder: 6, isDefault: 0, status: 'active' },
   { id: 'PT007', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 7, isDefault: 0, status: 'active' },
+  // 2026-07-10：补全杀线虫剂（用户要求全分类）
+  { id: 'PT008', categoryCode: 'pesticide_type', dictCode: 'nematicide', dictLabel: '杀线虫剂', dictValue: 'nematicide', color: 'purple', sortOrder: 8, isDefault: 0, status: 'active' },
   // 施用方法（V12.0新增）
   { id: 'AM001', categoryCode: 'application_method', dictCode: 'spray', dictLabel: '喷雾', dictValue: 'spray', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'AM002', categoryCode: 'application_method', dictCode: 'drench', dictLabel: '灌根', dictValue: 'drench', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },

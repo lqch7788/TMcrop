@@ -74,7 +74,7 @@ const defaultForm = {
   bioAgents: [] as BioAgentItem[],
   // 物理防治专用（支持多个设备/方式）
   equipment: [] as EquipmentItem[],
-  // 叶面肥联用
+  // 肥料联用
   useLeafFertilizer: 'no' as 'yes' | 'no',
   leafFertilizers: [] as LeafFertilizerItem[],
   // 记录级别字段
@@ -262,7 +262,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
           }
           return [];
         })(),
-        // 叶面肥联用
+        // 肥料联用
         useLeafFertilizer: record.useLeafFertilizer || 'no',
         leafFertilizers: (() => {
           if (!record.leafFertilizerName) return [];
@@ -361,7 +361,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
       }
     }
 
-    // 叶面肥联用
+    // 肥料联用
     if (form.useLeafFertilizer === 'yes') {
       if (form.leafFertilizers.length > 0) {
         const validFertilizers = form.leafFertilizers.filter(f => f.name.trim());
@@ -873,9 +873,9 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
           </div>
         )}
 
-        {/* 叶面肥联用 */}
+        {/* 肥料联用 */}
         <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-          <SectionTitle title="叶面肥联用" icon="🌿" />
+          <SectionTitle title="肥料联用" icon="🌿" />
           <div className="space-y-3">
             <div className="flex items-center gap-4">
               <Label className="text-gray-900">是否联用叶面肥</Label>

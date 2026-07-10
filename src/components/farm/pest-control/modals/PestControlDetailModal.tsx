@@ -131,7 +131,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                   <span className="text-sm font-medium text-gray-900">{formatDateTime(record.sprayTime)}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-emerald-600 block font-medium">叶面肥联用</span>
+                  <span className="text-xs text-emerald-600 block font-medium">肥料联用</span>
                   <span className={`inline-block px-2 py-1 text-sm rounded-full ${record.useLeafFertilizer === 'yes' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {record.useLeafFertilizer === 'yes' ? '是' : '否'}
                   </span>
@@ -379,7 +379,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
             {/* 叶面肥 — 列表（表格形式） */}
             {record.useLeafFertilizer === 'yes' && (
               <div className="overflow-hidden border border-emerald-200 rounded-lg">
-                <div className="bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700">叶面肥联用</div>
+                <div className="bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700">肥料联用</div>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-emerald-50/50">
