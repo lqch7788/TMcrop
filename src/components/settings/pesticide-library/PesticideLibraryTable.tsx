@@ -6,7 +6,8 @@
 import React from 'react';
 import { Eye, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { PesticideLibrary } from '@/stores';
-import { useDictionaryStore } from '@/stores/useDictionaryStore';
+// 2026-07-10：用 store 内置的 getDictLabel（兼容多种字段名 + 模糊匹配）
+import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -66,13 +67,8 @@ export function PesticideLibraryTable({
   onSelectRow,
   onSelectAll,
 }: PesticideLibraryTableProps) {
-  // 2026-07-10：药剂类型列字典查表（useDictionaryStore 必须在组件内）
-  const dictionaries = useDictionaryStore((s) => s.dictionaries);
-  const getDictLabel = (category: string, code: string) => {
-    if (!code) return '';
-    const item = dictionaries.find((d: any) => d.categoryCode === category && d.dictCode === code);
-    return item?.dictLabel || code;
-  };
+  // 2026-07-10：触发字典加载（store 内置 getDictLabel 会在字典未加载时返回原值）
+  useDictionaryStore((s) => s.dictionaries);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
@@ -204,7 +200,7 @@ export function PesticideLibraryTable({
                     <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[100px] truncate">
                       {record.mechanism || '-'}
                     </TableCell>
-                    {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典） */}
+                    {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典，用 store 内置 getDictLabel 自动转中文） */}
                     <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {getDictLabel('pesticide_type', record.pesticideType || '') || '-'}
                     </TableCell>
