@@ -257,7 +257,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     }
     // G11 V1.1：创建成功后刷新肥料库库存（让 UI 立即看到扣减）
     if (form.selectedFertilizerId) {
-      try { await fetchLibraryItems(); } catch { /* refetch 失败不影响主流程 */ }
+      // 2026-07-10 P0-6 修复：catch {} → catch(e) { console.warn(...) }（用户感知不到 refetch 失败时至少有日志）
+      try { await fetchLibraryItems(); } catch (e) { console.warn('[FertilizerAddModal] 刷新肥料库库存失败:', e) }
     }
     setSubmitting(false);
     onSaved();

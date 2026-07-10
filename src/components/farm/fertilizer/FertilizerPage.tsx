@@ -13,6 +13,8 @@ import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-07-10 P1-1：抽取公共导出函数
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
 
@@ -174,7 +176,8 @@ export default function FertilizerPage() {
     setShowExportModal(true);
   }, [items, selectedIds]);
 
-  const handleExportConfirm = useCallback((format: 'csv' | 'xlsx' | 'word') => {
+  // 2026-07-10 P1-1 bugfix：原 useCallback((format) => {...}) 内含 await 编译失败，改为 async
+  const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'word') => {
     const toExport = selectedIds.length > 0
       ? items.filter((it) => selectedIds.includes(it.id))
       : items;
@@ -194,29 +197,27 @@ export default function FertilizerPage() {
       it.operatorName || '',
     ]);
 
+    // 2026-07-10 P1-1：抽到底层公共函数
+    const exportData = rows.map((r) => ({
+      '施肥编号': r[0],
+      '肥料名称': r[1],
+      '肥料类型': r[2],
+      '作物品种': r[3],
+      '温室位置': r[4],
+      '稀释比例': r[5],
+      '施肥量(kg)': r[6],
+      '总成本': r[7],
+      '施肥时间': r[8],
+      '数据来源': r[9],
+      '操作员': r[10],
+    }));
+    const filename = `施肥记录_${todayLocal()}`;
     if (format === 'csv') {
-      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `施肥记录_${todayLocal()}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } else if (format === 'xlsx' || format === 'word') {
-      // 生成简单的 HTML 表格，能被 Excel/Word 打开
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>施肥记录</title>
-<style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#059669;color:#fff}</style>
-</head><body><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-<tbody>${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-      const blob = new Blob(['﻿' + html], { type: format === 'xlsx' ? 'application/vnd.ms-excel' : 'application/msword' });
-      const ext = format === 'xlsx' ? '.xls' : '.doc';
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `施肥记录_${todayLocal()}${ext}`;
-      link.click();
-      URL.revokeObjectURL(url);
+      await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
+    } else if (format === 'xlsx') {
+      await exportXlsx({ filename: `${filename}.xls`, headers, rows: exportData });
+    } else {
+      await exportWord({ filename: `${filename}.doc`, headers, rows: exportData });
     }
 
     setShowExportModal(false);

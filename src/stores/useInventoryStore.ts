@@ -58,7 +58,14 @@ interface InventoryState {
    * 2026-06-04 V2.1 铁律改造：批量删除（写操作走 Store action）
    * 薄包装 inventoryService.deleteInventoryBatch，写后 notifyChange 跨页刷新
    */
-  deleteBatch: (ids: string[]) => Promise<{ success: boolean; deletedCount: number; error?: string }>;
+  // 2026-07-10 P1-3 bugfix：返回类型补 blockingTransactions/blocked（让 InventoryV3 类型安全访问）
+  deleteBatch: (ids: string[]) => Promise<{
+    success: boolean;
+    deletedCount: number;
+    error?: string;
+    blockingTransactions?: { txId?: string; txType?: string; txTypeLabel?: string; businessCode?: string; qty?: number; operatorName?: string; operateDate?: string }[];
+    blocked?: { stockId: string; blockingTransactions?: { txId?: string; txType?: string; txTypeLabel?: string; businessCode?: string; qty?: number; operatorName?: string; operateDate?: string }[] }[];
+  }>;
 }
 
 export const useInventoryStore = create<InventoryState>()((set, get) => ({

@@ -405,7 +405,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         if (result.success) {
           showAlert(`采收入库成功！\n入库单号：${result.data?.harvestCode}\n入库库存：${result.data?.stockIds.length} 条`)
           // 跨页通知库存订阅者
-          try { useInventoryStore.getState().notifyChange?.() } catch (_) {}
+          // 2026-07-10 P0-6 修复：catch(_) {} → catch(e) { console.warn(...) }（避免静默吞错）
+          try { useInventoryStore.getState().notifyChange?.() } catch (e) { console.warn('[HarvestRecordModal] 跨页库存通知失败:', e) }
           // 同步写入 planting_harvest_records（保留去向累计）
           // harvest 分支顶部 unit 为空（由产品明细承担），此处取 products[0].unit 兜底
           const totalQty = products.reduce((s, p) => s + (Number(p.harvestQuantity) || 0), 0)
@@ -426,8 +427,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         } else {
           showAlert(result.error || '采收入库失败')
         }
-      } catch (e: any) {
-        showAlert(parseErrorMessage(e?.message || '采收入库失败'))
+      } catch (e) {
+        // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫（parseErrorMessage 接收 string 参数）
+        showAlert(parseErrorMessage(e instanceof Error ? e.message : '采收入库失败'))
       } finally {
         setSubmitting(false)
       }
@@ -466,15 +468,17 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         // 2026-06-29: 种植自留种 提交后跨页通知种源列表刷新
         // 否则新种源不会在 SeedSourcePage 立即出现（用户需要手动刷新）
         if (requiresSelfKept) {
-          try { await useSeedSourceStore.getState().loadItems() } catch (_) {}
+          // 2026-07-10 P0-6 修复：catch(_) {} → catch(e) { console.warn(...) }
+          try { await useSeedSourceStore.getState().loadItems() } catch (e) { console.warn('[HarvestRecordModal] 刷新种源列表失败:', e) }
         }
         resetForm()
         onSuccess?.()
       } else {
         showAlert('添加失败')
       }
-    } catch (e: any) {
-      showAlert(parseErrorMessage(e?.message))
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      showAlert(parseErrorMessage(e instanceof Error ? e.message : ''))
     } finally {
       setSubmitting(false)
     }
@@ -490,16 +494,19 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         setDeleteError(null)
         onSuccess?.()
       }
-    } catch (e: any) {
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + 自定义属性 narrowing
+      const err = e as { message?: string; blockingRecords?: any[]; blockingTransactions?: any[] }
       // 2026-07-03：固定在弹窗内显示阻挡详情（替代 showAlert/toast 一闪而过）
-      const blockingRecords = e?.blockingRecords || []
-      const blockingTransactions = e?.blockingTransactions || []
+      const blockingRecords = err.blockingRecords || []
+      const blockingTransactions = err.blockingTransactions || []
+      const baseMsg = err.message || '无法删除'
       if (blockingRecords.length > 0) {
-        setDeleteError({ message: e?.message || '无法删除', blockingRecords })
+        setDeleteError({ message: baseMsg, blockingRecords })
       } else if (blockingTransactions.length > 0) {
-        setDeleteError({ message: e?.message || '无法删除', blockingTransactions })
+        setDeleteError({ message: baseMsg, blockingTransactions })
       } else {
-        setDeleteError({ message: e?.message || '删除失败' })
+        setDeleteError({ message: baseMsg })
       }
     }
   }

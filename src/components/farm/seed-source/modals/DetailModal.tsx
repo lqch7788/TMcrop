@@ -322,7 +322,8 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
             ws['!cols'] = headers.map(() => ({ wch: 16 }));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '使用记录');
-            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
+            const today = todayLocal().replace(/-/g, '');
             XLSX.writeFile(wb, `使用记录_${today}_${records.length}条.xlsx`);
           }}
         >
@@ -504,7 +505,8 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
             ws['!cols'] = headers.map(() => ({ wch: 16 }));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, '入库记录');
-            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
+            const today = todayLocal().replace(/-/g, '');
             XLSX.writeFile(wb, `入库记录_${today}_${records.length}条.xlsx`);
           }}
         >

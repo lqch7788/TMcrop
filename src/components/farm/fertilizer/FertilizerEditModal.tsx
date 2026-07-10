@@ -248,7 +248,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       return;
     }
     if (form.selectedFertilizerId) {
-      try { await fetchLibraryItems(); } catch { /* ignore */ }
+      // 2026-07-10 P0-6 修复：catch {} → catch(e) { console.warn(...) }
+      try { await fetchLibraryItems(); } catch (e) { console.warn('[FertilizerEditModal] 刷新肥料库库存失败:', e) }
     }
     setSubmitting(false);
     onSaved();

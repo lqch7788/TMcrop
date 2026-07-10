@@ -45,8 +45,9 @@ export default function PlantingMoveRecordsModal({ isOpen, onClose, planting }: 
     try {
       const data = await getPlantingMoveRecords(planting.id);
       setRecords(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      await showAlert(`加载移入/移出记录失败：${e?.message || '未知错误'}`);
+    } catch (e) {
+      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
+      await showAlert(`加载移入/移出记录失败：${e instanceof Error ? e.message : '未知错误'}`);
     } finally {
       setLoading(false);
     }

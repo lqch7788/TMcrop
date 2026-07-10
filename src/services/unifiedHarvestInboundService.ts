@@ -145,13 +145,17 @@ export async function submitUnifiedInbound(
     // 跨页通知库存订阅者（与 HarvestPage.handleCreateRecord 行为一致）
     try {
       useInventoryStore.getState().notifyChange?.()
-    } catch (_) {
+    } catch (e) {
+      // 2026-07-10 P0-6 修复：catch(_) → catch(e) { console.warn(...) }
       // store 可能没实现 notifyChange，忽略
+      console.warn('[unifiedHarvestInboundService] notifyChange 失败:', e)
     }
 
     return { success: true, data: result }
-  } catch (e: any) {
-    const msg = e?.response?.data?.error || e?.message || '行级采收入库失败'
+  } catch (e) {
+    // 2026-07-10 P0-2 修复：catch(e) + narrowing 兼容 axios 错误
+    const err = e as { message?: string; response?: { data?: { error?: string } } }
+    const msg = err.response?.data?.error || err.message || '行级采收入库失败'
     return { success: false, error: msg }
   }
 }

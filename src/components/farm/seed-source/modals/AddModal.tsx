@@ -315,7 +315,8 @@ export function AddModal({
     // 2026-06-04: status 改为实时计算，AddModal 不再计算 status 传给 store
 
     // 生成溯源码
-    const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
+    // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug（中国早 0:00-8:00 生成的溯源码会带前一天日期）
+    const traceabilityCode = 'TR' + todayLocal().replace(/-/g, '') + formData.cropName.substring(0, 2);
 
     // 创建种源记录（添加 await 确保数据保存完成）
     let newSeedSource;

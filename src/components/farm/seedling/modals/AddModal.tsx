@@ -524,9 +524,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
 
     // V3.1 补录申请：如果勾选了补录，创建审批记录
     if (formData.isSupplementary) {
-      const approvalCode = `YM-SUP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      // 2026-07-10 P0-5 修复：用 crypto.randomUUID() 替代 Math.random()/Date.now() 避免并发碰撞
+      // （业务 ID 必须唯一，Math.random 1/1000 碰撞 + Date.now 毫秒并发都不可接受）
+      const approvalSuffix = crypto.randomUUID().slice(0, 8);
+      const approvalCode = `YM-SUP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${approvalSuffix}`;
       const approval = {
-        id: 'APPROVAL-' + Date.now(),
+        id: `APPROVAL-${approvalSuffix}`,
         code: approvalCode,
         type: ApprovalType.SEEDLING_SUPPLEMENTARY,
         title: `育苗补录申请 - ${formData.seedlingCode}`,

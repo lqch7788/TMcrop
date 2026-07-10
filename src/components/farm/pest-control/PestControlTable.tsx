@@ -39,15 +39,11 @@ const getControlTypeBadgeColor = (type: string): string => {
   return colors[type] || 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-// 防治类型显示名
-const getControlTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    'chemical': '化学防治',
-    'bio': '生物防治',
-    'physical': '物理防治',
-  };
-  return labels[type] || type;
-};
+// 2026-07-10 P1-6：抽到 constants/cropEnums.ts 共享（替代 3 处 inline 定义）
+// 保留函数名 getControlTypeLabel 以兼容现有调用
+import { CONTROL_TYPE_OPTIONS, lookupEnumLabel } from '@/constants/cropEnums';
+const getControlTypeLabel = (type: string): string =>
+  lookupEnumLabel(CONTROL_TYPE_OPTIONS, type, type);
 
 // 解析 JSON 列表
 function parseJsonList(jsonStr: string | null | undefined): any[] {
