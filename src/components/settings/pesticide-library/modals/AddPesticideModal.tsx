@@ -17,6 +17,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui';
 import { usePesticideLibraryStore, usePestDiseaseDictStore, PesticideSpec } from '@/stores';
 import { PesticideSpecEditor, PesticideSpecItem } from '../PesticideSpecEditor';
 import { showAlert } from '@/lib/dialogService';
+// 2026-07-10：药剂类型字段（关联 pesticide_type 字典）
+import { DictSelect } from '@/components/farm/common/settings/DictSelect';
 
 interface AddPesticideModalProps {
   isOpen: boolean;
@@ -33,6 +35,8 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
   const [form, setForm] = useState({
     pesticideCode: '',
     pesticideName: '',
+    // 2026-07-10：药剂类型（关联 pesticide_type 字典）
+    pesticideType: '',
     ingredient: '',
     mechanism: '',
     functionDesc: '',
@@ -63,6 +67,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       setForm({
         pesticideCode: '',
         pesticideName: '',
+        pesticideType: '',  // 2026-07-10：药剂类型重置
         ingredient: '',
         mechanism: '',
         functionDesc: '',
@@ -141,6 +146,8 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       pesticideCode: form.pesticideCode,
       pesticideName: form.pesticideName,
       controlType: localControlType as 'chemical' | 'bio' | 'physical',
+      // 2026-07-10：提交 pesticideType
+      pesticideType: form.pesticideType || null,
       ingredient: form.ingredient,
       mechanism: form.mechanism,
       functionDesc: form.functionDesc,
@@ -241,7 +248,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {/* 药剂成分 */}
               <div>
                 <Label className="text-gray-900">药剂成分</Label>
@@ -262,6 +269,16 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                   onChange={(e) => updateField('mechanism', e.target.value)}
                   placeholder="如 触杀、胃毒、熏蒸"
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              {/* 2026-07-10：药剂类型字段（关联 pesticide_type 字典） */}
+              <div>
+                <Label className="text-gray-900">药剂类型</Label>
+                <DictSelect
+                  category="pesticide_type"
+                  value={form.pesticideType}
+                  onChange={(val) => updateField('pesticideType', val)}
+                  placeholder="选择类型"
                 />
               </div>
             </div>

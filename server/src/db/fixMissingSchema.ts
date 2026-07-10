@@ -1430,6 +1430,16 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• mechanism 列添加: ' + e.message);
   }
 
+  // 2026-07-10：为 pesticide_library 表添加 pesticide_type 字段（关联 pesticide_type 字典）
+  // 用途：病虫害防治弹窗按药剂类型过滤药剂名称选项
+  try {
+    db.run(`ALTER TABLE pesticide_library ADD COLUMN pesticide_type TEXT`);
+    seedLog.info('✓ pesticide_library 表添加 pesticide_type 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• pesticide_type 列已存在');
+    else seedLog.skip('• pesticide_type 列添加: ' + e.message);
+  }
+
   // 为 pesticide_specs 表添加备注字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN remark TEXT`);
