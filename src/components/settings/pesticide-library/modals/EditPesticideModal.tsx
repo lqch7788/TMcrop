@@ -18,7 +18,7 @@ import { usePesticideLibraryStore, usePestDiseaseDictStore, PesticideLibrary, Pe
 import { PesticideSpecEditor, PesticideSpecItem } from '../PesticideSpecEditor';
 import { showAlert } from '@/lib/dialogService';
 // 2026-07-10：药剂类型字段（关联 pesticide_type 字典）
-import { DictSelect } from '@/components/farm/common/settings/DictSelect';
+import { DictSelect } from '@/components/common/settings/DictSelect';
 
 interface EditPesticideModalProps {
   isOpen: boolean;
