@@ -1,6 +1,6 @@
 /**
  * 病虫害防治记录表格组件
- * V12.0 新增 - 折叠形式展示多药剂/多制剂/多叶面肥详情
+ * V12.0 新增 - 折叠形式展示多药剂/多制剂/多肥料详情
  * 列：勾选框、编号、防治日期、防治类型（彩色Badge）、作物、防治区域、操作人、操作（展开/编辑/删除）
  * 2026-06-21: 删除操作列"查看"按钮（与点击编号重复，统一通过编号查看详情）
  */
@@ -163,7 +163,7 @@ export function PestControlTable({
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-gray-900">防治记录列表</h3>
-          <span className="text-sm text-gray-500">（点击展开查看多药剂/叶面肥详情）</span>
+          <span className="text-sm text-gray-500">（点击展开查看多药剂/肥料详情）</span>
         </div>
         {/* 批量删除模式：显示确认栏 */}
         {operationMode === 'delete' && selectedIds.length > 0 ? (
@@ -478,7 +478,7 @@ export function PestControlTable({
                                     <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
                                       <tr>
                                         <th className="px-3 py-2 text-left font-bold whitespace-nowrap">序号</th>
-                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">叶面肥名称</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">肥料名称</th>
                                         <th className="px-3 py-2 text-left font-bold whitespace-nowrap">用量</th>
                                         <th className="px-3 py-2 text-left font-bold whitespace-nowrap">单位</th>
                                         <th className="px-3 py-2 text-left font-bold whitespace-nowrap">稀释倍数</th>

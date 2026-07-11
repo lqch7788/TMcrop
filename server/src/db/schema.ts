@@ -3103,6 +3103,8 @@ export function initializeDatabase() {
       leaf_fertilizer_name TEXT,
       leaf_fertilizer_dosage REAL,
       leaf_fertilizer_unit TEXT,
+      -- 2026-07-11：肥料池（JSON 数组），支持多行叶面肥联用
+      leaf_fertilizer_list TEXT,
       pesticide_list TEXT,
       bio_agent_list TEXT,
       equipment_list TEXT,
@@ -3512,6 +3514,14 @@ export function initializeDatabase() {
         try { db.run(`ALTER TABLE seedlings ADD COLUMN ${col} ${type}`); } catch {}
       }
     }
+  }
+
+  // 2026-07-11：肥料池字段（JSON 数组，支持多肥料联用）
+  // 启动白名单禁用了 fixMissingSchema，所以这里同步补列
+  try {
+    db.run('ALTER TABLE pesticide_records ADD COLUMN leaf_fertilizer_list TEXT');
+  } catch (e) {
+    // 列已存在则忽略
   }
 
   // ==================== V14.0: 批次库存表（FEFO 先进先出追踪） ====================

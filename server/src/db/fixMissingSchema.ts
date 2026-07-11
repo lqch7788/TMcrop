@@ -1634,6 +1634,18 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2026-07-11：肥料池字段（JSON 数组，支持多肥料联用）
+  try {
+    db.run(`ALTER TABLE pesticide_records ADD COLUMN leaf_fertilizer_list TEXT`);
+    seedLog.info('✓ pesticide_records 表添加 leaf_fertilizer_list 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• pesticide_records.leaf_fertilizer_list 列已存在');
+    } else {
+      seedLog.skip('• pesticide_records.leaf_fertilizer_list:', e.message);
+    }
+  }
+
   // 2026-07-05: 为 pesticide_records 添加关联业务字段（与施肥管理对齐）
   const pestBizCols = [
     { col: 'planting_id', label: 'planting_id' },

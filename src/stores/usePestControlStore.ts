@@ -42,6 +42,8 @@ export interface PestControlData {
   leafFertilizerName?: string;
   leafFertilizerDosage?: number;
   leafFertilizerUnit?: string;
+  // 2026-07-11：肥料池（JSON 字符串），支持多肥料
+  leafFertilizerList?: string;
   description?: string;
   photos?: string;
   status: string;
@@ -85,6 +87,7 @@ const FIELD_MAP: Record<string, string> = {
   leaf_fertilizer_name: 'leafFertilizerName',
   leaf_fertilizer_dosage: 'leafFertilizerDosage',
   leaf_fertilizer_unit: 'leafFertilizerUnit',
+  leaf_fertilizer_list: 'leafFertilizerList',
   description: 'description',
   photos: 'photos',
   status: 'status',
