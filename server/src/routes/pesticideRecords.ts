@@ -104,8 +104,9 @@ router.post('/', (req: Request, res: Response) => {
       equipment_name, equipment_count,
       pesticide_list, bio_agent_list, equipment_list,
       use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
+      leaf_fertilizer_list,
       description, photos, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.sprayTime, body.operatorId || null, body.operatorName || null, body.cropName,
        body.greenhouseName || null,
        body.plantingId || null, body.plantingCode || null, body.seedlingId || null, body.seedlingCode || null,
@@ -118,6 +119,7 @@ router.post('/', (req: Request, res: Response) => {
        body.pesticideList || null, body.bioAgentList || null, body.equipmentList || null,
        body.useLeafFertilizer || 'no', body.leafFertilizerName || null,
        body.leafFertilizerDosage || null, body.leafFertilizerUnit || null,
+       body.leafFertilizerList || null,
        body.description || null, body.photos || null, body.status || 'completed', now, now]
     );
 
@@ -192,6 +194,7 @@ router.put('/:id', (req: Request, res: Response) => {
       equipment_name=?, equipment_count=?,
       pesticide_list=?, bio_agent_list=?, equipment_list=?,
       use_leaf_fertilizer=?, leaf_fertilizer_name=?, leaf_fertilizer_dosage=?, leaf_fertilizer_unit=?,
+      leaf_fertilizer_list=?,
       description=?, photos=?, update_time=? WHERE id=?`,
       [body.sprayTime ?? existing[0].spray_time, body.operatorName ?? existing[0].operator_name,
        body.cropName ?? existing[0].crop_name, body.greenhouseName ?? existing[0].greenhouse_name,
@@ -213,6 +216,7 @@ router.put('/:id', (req: Request, res: Response) => {
        body.leafFertilizerName ?? existing[0].leaf_fertilizer_name,
        body.leafFertilizerDosage ?? existing[0].leaf_fertilizer_dosage,
        body.leafFertilizerUnit ?? existing[0].leaf_fertilizer_unit,
+       body.leafFertilizerList ?? existing[0].leaf_fertilizer_list,
        body.description ?? existing[0].description, body.photos ?? existing[0].photos,
        now, id]
     );

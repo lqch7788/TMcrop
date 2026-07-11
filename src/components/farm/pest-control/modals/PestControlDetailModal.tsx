@@ -198,7 +198,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
 
                 {record.useLeafFertilizer === 'yes' && (
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">叶面肥信息</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">肥料信息</h4>
                     <div className="overflow-hidden border border-gray-200 rounded-lg">
                       <table className="w-full text-sm">
                         <thead>
@@ -339,7 +339,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
               </table>
             </div>
 
-            {/* 叶面肥列表（保留） */}
+            {/* 肥料列表 */}
             {record.useLeafFertilizer === 'yes' && (
               <div className="overflow-hidden border border-emerald-200 rounded-lg">
                 <div className="bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700">肥料联用</div>
@@ -347,7 +347,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                   <thead>
                     <tr className="bg-emerald-50/50">
                       <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">叶面肥名称</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">肥料名称</th>
                       <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">用量</th>
                       <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">稀释倍数</th>
                     </tr>

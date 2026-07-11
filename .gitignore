@@ -27,6 +27,9 @@ node_modules/.vite/
 # Playwright MCP 测试产物
 .playwright-mcp/
 
+# 浏览器验证截图（根目录临时产物，pest-*.png 等）
+pest-*.png
+
 # Trae AI 文档
 .trae/
 
