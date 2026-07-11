@@ -90,7 +90,8 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       p.pesticideCode.toLowerCase().includes(searchLower) ||
       (p.functionDesc && p.functionDesc.toLowerCase().includes(searchLower)) ||
       (p.ingredient && p.ingredient.toLowerCase().includes(searchLower));
-    const matchesType = pesticideTypeFilter === 'all' || p.controlType === pesticideTypeFilter;
+    // 2026-07-10：controlType 已删除，pesticideTypeFilter 改为按 pesticideTypes[] 包含判断
+    const matchesType = pesticideTypeFilter === 'all' || (p.pesticideTypes || []).includes(pesticideTypeFilter);
     return matchesSearch && matchesType;
   });
 

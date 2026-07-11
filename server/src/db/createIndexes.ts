@@ -352,14 +352,15 @@ export function createIndexes() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_plant_marks_aid ON plant_marks(mark_aid)`);
 
   // ========== V12.0: 病虫害防治管理索引 ==========
+  // 2026-07-10：取消 chemical/bio/physical 分类，删除 idx_pesticide_control_type 和 idx_pest_records_type
   db.run(`CREATE INDEX IF NOT EXISTS idx_pesticide_code ON pesticide_library(pesticide_code)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_pesticide_control_type ON pesticide_library(control_type)`);
+  // db.run(`CREATE INDEX IF NOT EXISTS idx_pesticide_control_type ON pesticide_library(control_type)`); // 2026-07-10：取消 control_type 字段后废弃
   db.run(`CREATE INDEX IF NOT EXISTS idx_pesticide_specs_pesticide_id ON pesticide_specs(pesticide_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_dict_type ON pest_disease_dict(dict_type)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_dict_code ON pest_disease_dict(dict_code)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_code ON pesticide_records(record_code)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_time ON pesticide_records(spray_time)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_type ON pesticide_records(control_type)`);
+  // db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_type ON pesticide_records(control_type)`); // 2026-07-10：取消 control_type 字段后废弃
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_crop ON pesticide_records(crop_name)`);
 
   // ========== N. 采购计划表索引（含 UNIQUE 防重）==========

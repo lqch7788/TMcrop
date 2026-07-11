@@ -117,6 +117,8 @@ export interface DictionarySeed {
   sortOrder: number;
   isDefault: number;
   status: string;
+  // 2026-07-10：字典层级化（杀虫剂→咀嚼式/刺吸式 等）
+  parentId?: string | null;
 }
 
 /**
@@ -691,8 +693,23 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'PT005', categoryCode: 'pesticide_type', dictCode: 'protective', dictLabel: '保护剂', dictValue: 'protective', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'PT006', categoryCode: 'pesticide_type', dictCode: 'adjuvant', dictLabel: '助剂', dictValue: 'adjuvant', color: 'pink', sortOrder: 6, isDefault: 0, status: 'active' },
   { id: 'PT007', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 7, isDefault: 0, status: 'active' },
-  // 2026-07-10：补全杀线虫剂（用户要求全分类）
-  { id: 'PT008', categoryCode: 'pesticide_type', dictCode: 'nematicide', dictLabel: '杀线虫剂', dictValue: 'nematicide', color: 'purple', sortOrder: 8, isDefault: 0, status: 'active' },
+  // 2026-07-10：移除「杀线虫剂」（PT008）— 用户要求去掉该分类
+  // 2026-07-10：药剂类型层级化（parent_id 关联一级条目，杀虫剂→咀嚼式/刺吸式 等）
+  // 杀虫剂子类（parent=PT001 杀虫剂）
+  { id: 'PT009', categoryCode: 'pesticide_type', dictCode: 'insecticide_chewing', parentId: 'PT001', dictLabel: '杀虫剂-咀嚼式', dictValue: 'insecticide_chewing', color: 'red', sortOrder: 11, isDefault: 0, status: 'active' },
+  { id: 'PT010', categoryCode: 'pesticide_type', dictCode: 'insecticide_sucking', parentId: 'PT001', dictLabel: '杀虫剂-刺吸式', dictValue: 'insecticide_sucking', color: 'red', sortOrder: 12, isDefault: 0, status: 'active' },
+  // 杀螨剂子类（parent=PT004 杀螨剂）
+  { id: 'PT011', categoryCode: 'pesticide_type', dictCode: 'acaricide_mite', parentId: 'PT004', dictLabel: '杀螨剂-螨类', dictValue: 'acaricide_mite', color: 'orange', sortOrder: 13, isDefault: 0, status: 'active' },
+  // 杀菌剂子类（parent=PT002 杀菌剂，针对真菌/细菌/病毒）
+  { id: 'PT012', categoryCode: 'pesticide_type', dictCode: 'fungicide_fungi', parentId: 'PT002', dictLabel: '杀菌剂-真菌', dictValue: 'fungicide_fungi', color: 'blue', sortOrder: 14, isDefault: 0, status: 'active' },
+  { id: 'PT013', categoryCode: 'pesticide_type', dictCode: 'fungicide_bacteria', parentId: 'PT002', dictLabel: '杀菌剂-细菌', dictValue: 'fungicide_bacteria', color: 'blue', sortOrder: 15, isDefault: 0, status: 'active' },
+  { id: 'PT014', categoryCode: 'pesticide_type', dictCode: 'fungicide_virus', parentId: 'PT002', dictLabel: '杀菌剂-病毒', dictValue: 'fungicide_virus', color: 'blue', sortOrder: 16, isDefault: 0, status: 'active' },
+  // 保护剂子类（parent=PT005 保护剂）
+  { id: 'PT015', categoryCode: 'pesticide_type', dictCode: 'protective_contact', parentId: 'PT005', dictLabel: '保护剂-接触式', dictValue: 'protective_contact', color: 'cyan', sortOrder: 17, isDefault: 0, status: 'active' },
+  { id: 'PT016', categoryCode: 'pesticide_type', dictCode: 'protective_systemic', parentId: 'PT005', dictLabel: '保护剂-系统性', dictValue: 'protective_systemic', color: 'cyan', sortOrder: 18, isDefault: 0, status: 'active' },
+  // 助剂子类（parent=PT006 助剂）
+  { id: 'PT017', categoryCode: 'pesticide_type', dictCode: 'adjuvant_penetration', parentId: 'PT006', dictLabel: '助剂-渗透剂', dictValue: 'adjuvant_penetration', color: 'pink', sortOrder: 19, isDefault: 0, status: 'active' },
+  { id: 'PT018', categoryCode: 'pesticide_type', dictCode: 'adjuvant_synergist', parentId: 'PT006', dictLabel: '助剂-增效剂', dictValue: 'adjuvant_synergist', color: 'pink', sortOrder: 20, isDefault: 0, status: 'active' },
   // 施用方法（V12.0新增）
   { id: 'AM001', categoryCode: 'application_method', dictCode: 'spray', dictLabel: '喷雾', dictValue: 'spray', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'AM002', categoryCode: 'application_method', dictCode: 'drench', dictLabel: '灌根', dictValue: 'drench', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
@@ -1380,10 +1397,11 @@ export function seedDictionaries() {
 
     // 插入新条目；若ID冲突（极罕见），自动生成唯一ID回退
     try {
+      // 2026-07-10：INSERT 增加 parent_id 字段（支持层级化）
       db.run(`
         INSERT INTO dictionaries
-        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at, parent_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         dict.id,
         dict.categoryCode,
@@ -1395,15 +1413,17 @@ export function seedDictionaries() {
         dict.isDefault,
         dict.status,
         new Date().toISOString(),
-        new Date().toISOString()
+        new Date().toISOString(),
+        dict.parentId ?? null
       ]);
     } catch {
       // ID冲突回退：生成唯一ID
       const fallbackId = `${dict.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      // 2026-07-10：fallback INSERT 也加 parent_id
       db.run(`
         INSERT INTO dictionaries
-        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, category_code, dict_code, dict_label, dict_value, color, sort_order, is_default, status, created_at, updated_at, parent_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         fallbackId,
         dict.categoryCode,
@@ -1415,7 +1435,8 @@ export function seedDictionaries() {
         dict.isDefault,
         dict.status,
         new Date().toISOString(),
-        new Date().toISOString()
+        new Date().toISOString(),
+        dict.parentId ?? null
       ]);
     }
     inserted++;

@@ -1440,6 +1440,48 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• pesticide_type 列添加: ' + e.message);
   }
 
+  // 2026-07-10：药剂库重构（取消 chemical/bio/physical 分类），删除 control_type 列
+  // 注意：DROP COLUMN 需要 SQLite ≥ 3.35.0（sql.js 应已支持）
+  try {
+    db.run(`ALTER TABLE pesticide_library DROP COLUMN control_type`);
+    seedLog.info('✓ pesticide_library 表删除 control_type 列成功');
+  } catch (e: any) {
+    if (e.message.includes('no such column')) seedLog.skip('• control_type 列不存在（已删除或从未添加）');
+    else seedLog.skip('• control_type 列删除: ' + e.message);
+  }
+
+  // 2026-07-10：pesticide_records 表删除 control_type 列（同上）
+  try {
+    db.run(`ALTER TABLE pesticide_records DROP COLUMN control_type`);
+    seedLog.info('✓ pesticide_records 表删除 control_type 列成功');
+  } catch (e: any) {
+    if (e.message.includes('no such column')) seedLog.skip('• pesticide_records.control_type 列不存在');
+    else seedLog.skip('• pesticide_records.control_type 列删除: ' + e.message);
+  }
+
+  // 2026-07-10：删除 control_type 相关索引（如果存在）
+  try {
+    db.run(`DROP INDEX IF EXISTS idx_pesticide_control_type`);
+    seedLog.info('✓ idx_pesticide_control_type 索引已删除');
+  } catch (e: any) {
+    seedLog.skip('• idx_pesticide_control_type 索引删除: ' + e.message);
+  }
+  try {
+    db.run(`DROP INDEX IF EXISTS idx_pest_records_type`);
+    seedLog.info('✓ idx_pest_records_type 索引已删除');
+  } catch (e: any) {
+    seedLog.skip('• idx_pest_records_type 索引删除: ' + e.message);
+  }
+
+  // 2026-07-10：dictionaries 表新增 parent_id 字段（支持层级化：杀虫剂→咀嚼式/刺吸式）
+  try {
+    db.run(`ALTER TABLE dictionaries ADD COLUMN parent_id TEXT`);
+    seedLog.info('✓ dictionaries 表添加 parent_id 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• dictionaries.parent_id 列已存在');
+    else seedLog.skip('• dictionaries.parent_id 列添加: ' + e.message);
+  }
+
   // 为 pesticide_specs 表添加备注字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN remark TEXT`);

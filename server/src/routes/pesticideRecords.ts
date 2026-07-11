@@ -42,14 +42,18 @@ router.get('/generate-code', (req: Request, res: Response) => {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { control_type, crop_name, greenhouse_name, start_date, end_date, operator_name, page = '1', limit = '20' } = req.query as Record<string, string>;
+    // 2026-07-10：移除 control_type 过滤；新增 pesticide_type 过滤（JSON 数组）
+    const { pesticide_type, crop_name, greenhouse_name, start_date, end_date, operator_name, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (control_type) { conditions.push('control_type = ?'); params.push(control_type); }
+    if (pesticide_type) {
+      conditions.push(`EXISTS (SELECT 1 FROM json_each(pesticide_records.pesticide_type) WHERE json_each.value = ?)`);
+      params.push(pesticide_type);
+    }
     if (crop_name) { conditions.push("crop_name LIKE '%' || ? || '%'"); params.push(crop_name); }
     if (greenhouse_name) { conditions.push("greenhouse_name LIKE '%' || ? || '%'"); params.push(greenhouse_name); }
     if (start_date) { conditions.push('spray_time >= ?'); params.push(start_date); }
@@ -74,30 +78,39 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const body = req.body;
-    if (!body.sprayTime || !body.cropName || !body.controlType) {
-      res.status(400).json({ success: false, error: '防治日期、作物名称、防治类型为必填项' });
+    // 2026-07-10：取消 control_type 必填，仅校验防治日期 + 作物名称
+    if (!body.sprayTime || !body.cropName) {
+      res.status(400).json({ success: false, error: '防治日期、作物名称为必填项' });
       return;
+    }
+    // pesticideType 支持数组/字符串/JSON
+    let pesticideTypeValue: string | null = null;
+    if (Array.isArray(body.pesticideType) && body.pesticideType.length > 0) {
+      pesticideTypeValue = JSON.stringify(body.pesticideType);
+    } else if (typeof body.pesticideType === 'string' && body.pesticideType.trim()) {
+      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
     }
     const code = generateRecordCode(db);
     const now = new Date().toISOString();
     const id = `pr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    // 2026-07-10：移除 control_type 列写入
     db.run(`INSERT INTO pesticide_records (
       id, record_code, spray_time, operator_id, operator_name, crop_name, greenhouse_name,
       planting_id, planting_code, seedling_id, seedling_code,
-      control_type, pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content,
+      pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content,
       dosage, dosage_unit, dilution_ratio, target_pest, application_method,
       bio_agent_id, bio_agent_name, bio_agent_type,
       equipment_name, equipment_count,
       pesticide_list, bio_agent_list, equipment_list,
       use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
       description, photos, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.sprayTime, body.operatorId || null, body.operatorName || null, body.cropName,
        body.greenhouseName || null,
        body.plantingId || null, body.plantingCode || null, body.seedlingId || null, body.seedlingCode || null,
-       body.controlType, body.pesticideId || null, body.pesticideName || null,
-       body.pesticideType || null, body.specId || null, body.specContent || null,
+       body.pesticideId || null, body.pesticideName || null,
+       pesticideTypeValue, body.specId || null, body.specContent || null,
        body.dosage || null, body.dosageUnit || null, body.dilutionRatio || null,
        body.targetPest || null, body.applicationMethod || null,
        body.bioAgentId || null, body.bioAgentName || null, body.bioAgentType || null,
@@ -128,9 +141,11 @@ router.get('/stats', (req: Request, res: Response) => {
     if (crop_name) { conditions.push('crop_name = ?'); params.push(crop_name); }
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // 2026-07-10：移除 control_type 字段；按 pesticide_type（JSON 数组）展开后分组统计
     const items = queryToObjects(db,
-      `SELECT control_type as label, COUNT(*) as record_count
-       FROM pesticide_records ${whereClause} GROUP BY control_type ORDER BY record_count DESC`, params
+      `SELECT json_each.value as label, COUNT(DISTINCT pesticide_records.id) as record_count
+       FROM pesticide_records, json_each(pesticide_records.pesticide_type)
+       ${whereClause} GROUP BY json_each.value ORDER BY record_count DESC`, params
     );
     res.json({ success: true, data: items });
   } catch (error) {
@@ -161,10 +176,16 @@ router.put('/:id', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
 
     const now = new Date().toISOString();
+    // 2026-07-10：移除 control_type 列；pesticideType 支持数组/字符串
+    let pesticideTypeValue: string | null | undefined = undefined;
+    if (Array.isArray(body.pesticideType)) {
+      pesticideTypeValue = body.pesticideType.length > 0 ? JSON.stringify(body.pesticideType) : null;
+    } else if (typeof body.pesticideType === 'string') {
+      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
+    }
     db.run(`UPDATE pesticide_records SET
       spray_time=?, operator_name=?, crop_name=?, greenhouse_name=?,
       planting_id=?, planting_code=?, seedling_id=?, seedling_code=?,
-      control_type=?,
       pesticide_id=?, pesticide_name=?, pesticide_type=?, spec_id=?, spec_content=?,
       dosage=?, dosage_unit=?, dilution_ratio=?, target_pest=?, application_method=?,
       bio_agent_id=?, bio_agent_name=?, bio_agent_type=?,
@@ -176,9 +197,9 @@ router.put('/:id', (req: Request, res: Response) => {
        body.cropName ?? existing[0].crop_name, body.greenhouseName ?? existing[0].greenhouse_name,
        body.plantingId ?? existing[0].planting_id, body.plantingCode ?? existing[0].planting_code,
        body.seedlingId ?? existing[0].seedling_id, body.seedlingCode ?? existing[0].seedling_code,
-       body.controlType ?? existing[0].control_type,
        body.pesticideId ?? existing[0].pesticide_id, body.pesticideName ?? existing[0].pesticide_name,
-       body.pesticideType ?? existing[0].pesticide_type, body.specId ?? existing[0].spec_id,
+       pesticideTypeValue !== undefined ? pesticideTypeValue : existing[0].pesticide_type,
+       body.specId ?? existing[0].spec_id,
        body.specContent ?? existing[0].spec_content,
        body.dosage ?? existing[0].dosage, body.dosageUnit ?? existing[0].dosage_unit,
        body.dilutionRatio ?? existing[0].dilution_ratio, body.targetPest ?? existing[0].target_pest,

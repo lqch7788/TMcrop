@@ -1,6 +1,7 @@
 /**
  * 快速新增药剂弹窗
  * 简化的药剂新增表单，用于病虫害防治记录时快速添加
+ * 2026-07-10：取消防治类型分类，默认给药剂类型 ["insecticide"]（杀虫剂）
  */
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
@@ -24,10 +25,11 @@ interface QuickAddPesticideModalProps {
 export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPesticideModalProps) {
   const store = usePesticideLibraryStore();
 
+  // 2026-07-10：取消 controlType 字段，pesticideTypes 默认 ['insecticide']（杀虫剂），后续可在药剂库编辑修改
   const [form, setForm] = useState({
     pesticideName: '',
     pesticideCode: '',
-    controlType: 'chemical' as 'chemical' | 'bio' | 'physical',
+    pesticideTypes: ['insecticide'] as string[],
     functionDesc: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -44,19 +46,18 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
 
     setSubmitting(true);
     try {
-      // 生成编码
-      let code = form.pesticideCode;
-      if (!code) {
-        code = await store.fetchNextCode();
-      }
-
-      const newItem = await store.createItem({
-        pesticideCode: code,
+      // 2026-07-10：编码可由用户填，不填则后端生成
+      const payload: Record<string, unknown> = {
         pesticideName: form.pesticideName,
-        controlType: form.controlType,
+        pesticideTypes: form.pesticideTypes,
         functionDesc: form.functionDesc,
         status: 'active',
-      });
+      };
+      if (form.pesticideCode.trim()) {
+        payload.pesticideCode = form.pesticideCode.trim();
+      }
+
+      const newItem = await store.createItem(payload as Partial<typeof store.items[number]>);
 
       if (newItem) {
         onSaved(newItem.id, newItem.pesticideName);
@@ -73,7 +74,7 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
     setForm({
       pesticideName: '',
       pesticideCode: '',
-      controlType: 'chemical',
+      pesticideTypes: ['insecticide'],
       functionDesc: '',
     });
     onClose();
@@ -105,34 +106,14 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
             type="text"
             value={form.pesticideCode}
             onChange={(e) => updateField('pesticideCode', e.target.value)}
-            placeholder="留空自动生成"
+            placeholder="留空由后端自动生成"
             className={deepInputClass}
           />
         </div>
 
-        <div>
-          <Label className="text-gray-900">防治类型</Label>
-          <div className="flex gap-4">
-            {[
-              { value: 'chemical', label: '化学' },
-              { value: 'bio', label: '生物' },
-              { value: 'physical', label: '物理' },
-            ].map(opt => (
-              <div
-                key={opt.value}
-                onClick={() => updateField('controlType', opt.value)}
-                className={`
-                  px-4 py-2 rounded-lg border-2 cursor-pointer transition-all text-sm
-                  ${form.controlType === opt.value
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                    : 'border-gray-200 hover:border-emerald-300 text-gray-600'
-                  }
-                `}
-              >
-                {opt.label}
-              </div>
-            ))}
-          </div>
+        {/* 2026-07-10：药剂类型默认「杀虫剂」，保存后可在药剂库编辑修改 */}
+        <div className="text-xs text-gray-500 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          💡 药剂类型默认为「杀虫剂」，如需调整请到药剂库编辑修改。
         </div>
 
         <div>

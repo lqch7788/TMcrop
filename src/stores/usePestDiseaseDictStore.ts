@@ -19,7 +19,8 @@ export interface PesticideForRelation {
   id: string;
   pesticideCode: string;
   pesticideName: string;
-  controlType: 'chemical' | 'bio' | 'physical';
+  // 2026-07-10：移除 controlType；新增 pesticideTypes 数组（关联药剂类型）
+  pesticideTypes?: string[];
 }
 
 interface PestDiseaseDictState {
@@ -148,7 +149,22 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
       try {
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict/${pestId}/relations`);
         const items = Array.isArray(response) ? response : response?.data ?? [];
-        return items as PesticideForRelation[];
+        // 2026-07-10：兼容后端返回的 pesticide_type 字段（snake_case JSON 字符串），前端统一为 pesticideTypes[]
+        return items.map((item: Record<string, unknown>) => {
+          if (Array.isArray(item.pesticideTypes)) return item as PesticideForRelation;
+          let arr: string[] = [];
+          if (Array.isArray(item.pesticide_types)) {
+            arr = (item.pesticide_types as string[]).filter((v): v is string => typeof v === 'string');
+          } else if (typeof item.pesticide_type === 'string' && item.pesticide_type.trim()) {
+            try {
+              const parsed = JSON.parse(item.pesticide_type);
+              arr = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+            } catch {
+              arr = item.pesticide_type ? [item.pesticide_type] : [];
+            }
+          }
+          return { ...item, pesticideTypes: arr } as PesticideForRelation;
+        });
       } catch {
         return [];
       }

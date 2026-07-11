@@ -18,10 +18,11 @@ export interface PestControlData {
   plantingCode?: string;
   seedlingId?: string;
   seedlingCode?: string;
-  controlType: 'chemical' | 'bio' | 'physical';
+  // 2026-07-10：取消 controlType 字段（化学/生物/物理防治分类），改为药剂类型数组
   pesticideId?: string;
   pesticideName?: string;
-  pesticideType?: string;
+  // 药剂类型 JSON 数组（如 ['insecticide','fungicide_fungi']）
+  pesticideTypes?: string[];
   specId?: string;
   specContent?: string;
   dosage?: number;
@@ -61,10 +62,10 @@ const FIELD_MAP: Record<string, string> = {
   planting_code: 'plantingCode',
   seedling_id: 'seedlingId',
   seedling_code: 'seedlingCode',
-  control_type: 'controlType',
+  // 2026-07-10：移除 control_type；pesticide_type → pesticideTypes
   pesticide_id: 'pesticideId',
   pesticide_name: 'pesticideName',
-  pesticide_type: 'pesticideType',
+  pesticide_type: 'pesticideTypes',
   spec_id: 'specId',
   spec_content: 'specContent',
   dosage: 'dosage',
@@ -91,10 +92,31 @@ const FIELD_MAP: Record<string, string> = {
   update_time: 'updateTime',
 };
 
+/**
+ * 2026-07-10：JSON 数组 ↔ 字符串数组转换
+ */
+function parsePesticideTypes(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string');
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+    } catch {
+      return value ? [value] : [];
+    }
+  }
+  return [];
+}
+
 function normalizePestControl(db: Record<string, unknown>): PestControlData {
   const result: Record<string, unknown> = {};
   for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
-    result[camelKey] = db[dbKey] ?? null;
+    // 2026-07-10：pesticideTypes 特殊处理（JSON 数组 → string[]）
+    if (camelKey === 'pesticideTypes') {
+      result[camelKey] = parsePesticideTypes(db[dbKey]);
+    } else {
+      result[camelKey] = db[dbKey] ?? null;
+    }
   }
   return result as unknown as PestControlData;
 }
@@ -107,7 +129,13 @@ function denormalizePestControl(item: Partial<PestControlData>): Record<string, 
   }
   for (const [camelKey, value] of Object.entries(item)) {
     const dbKey = reverseMap[camelKey] ?? camelKey;
-    result[dbKey] = value;
+    // 2026-07-10：pesticideTypes 特殊处理（string[] → JSON 字符串）
+    if (camelKey === 'pesticideTypes') {
+      const arr = value as string[] | undefined | null;
+      result[dbKey] = arr && arr.length > 0 ? JSON.stringify(arr) : null;
+    } else {
+      result[dbKey] = value;
+    }
   }
   return result;
 }
@@ -162,8 +190,9 @@ export const usePestControlStore = create<PestControlState>()(
 
     createItem: async (item) => {
       try {
-        // 直接发 camelCase（后端路由已统一用 camelCase 读 body）
-        const response = await enhancedApiClient.post<any>('/pest-records', item);
+        // 2026-07-10：pesticideTypes 数组转 JSON 字符串（后端路由已支持两种格式）
+        const body = denormalizePestControl(item);
+        const response = await enhancedApiClient.post<any>('/pest-records', body);
         const newItem = (response.data ?? response) as PestControlData;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
@@ -175,8 +204,8 @@ export const usePestControlStore = create<PestControlState>()(
 
     updateItem: async (id, updates) => {
       try {
-        // 直接发 camelCase（与 createItem 一致）
-        const response = await enhancedApiClient.put<any>(`/pest-records/${id}`, updates);
+        const body = denormalizePestControl(updates);
+        const response = await enhancedApiClient.put<any>(`/pest-records/${id}`, body);
         const updated = (response.data ?? response) as PestControlData;
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? updated : i)),

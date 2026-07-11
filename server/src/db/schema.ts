@@ -345,7 +345,9 @@ export function initializeDatabase() {
       is_default INTEGER DEFAULT 0,
       status TEXT DEFAULT 'active',
       created_at TEXT,
-      updated_at TEXT
+      updated_at TEXT,
+      -- 2026-07-10：字典层级化（杀虫剂→咀嚼式/刺吸式）
+      parent_id TEXT
     )
   `);
 
@@ -2982,13 +2984,12 @@ export function initializeDatabase() {
       id TEXT PRIMARY KEY,
       pesticide_code TEXT NOT NULL UNIQUE,
       pesticide_name TEXT NOT NULL,
-      control_type TEXT NOT NULL CHECK(control_type IN ('chemical', 'bio', 'physical')),
       function_desc TEXT,
       taboo_desc TEXT,
       target_pests TEXT,
       ingredient TEXT,
       mechanism TEXT,
-      -- 2026-07-10：药剂类型（关联 pesticide_type 字典：杀虫剂/杀菌剂/除草剂/杀螨剂/杀线虫剂 等）
+      -- 2026-07-10：药剂类型 JSON 数组字符串（如 '["insecticide","fungicide_fungi"]'），支持多值 + 层级化（关联 pesticide_type 字典：杀虫剂/杀菌剂-真菌 等）
       pesticide_type TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
       create_time TEXT DEFAULT (datetime('now','localtime')),
@@ -3083,7 +3084,6 @@ export function initializeDatabase() {
       planting_code TEXT,
       seedling_id TEXT,
       seedling_code TEXT,
-      control_type TEXT NOT NULL CHECK(control_type IN ('chemical', 'bio', 'physical')),
       pesticide_id TEXT,
       pesticide_name TEXT,
       pesticide_type TEXT,

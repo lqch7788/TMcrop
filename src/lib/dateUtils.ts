@@ -18,3 +18,12 @@ export function yearMonthLocal(): string {
   const d = new Date();
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/**
+ * 2026-07-10：本地时区的 HH:MM:SS（用于表单时间字段）
+ * @example currentTimeLocal() // "14:35:22"
+ */
+export function currentTimeLocal(date?: Date | string): string {
+  const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+}

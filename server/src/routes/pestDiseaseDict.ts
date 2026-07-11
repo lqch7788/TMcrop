@@ -196,8 +196,9 @@ router.get('/:id/relations', (req: Request, res: Response) => {
     const db = getDatabase();
     const { id } = req.params;
 
+    // 2026-07-10：移除 control_type 字段，新增 pesticide_type 字段返回（药剂类型 JSON 数组）
     const rows = queryToObjects(db, `
-      SELECT pl.id, pl.pesticide_code, pl.pesticide_name, pl.control_type
+      SELECT pl.id, pl.pesticide_code, pl.pesticide_name, pl.pesticide_type
       FROM pesticide_library pl
       JOIN pesticide_pest_relation r ON pl.id = r.pesticide_id
       WHERE r.pest_id = ?
