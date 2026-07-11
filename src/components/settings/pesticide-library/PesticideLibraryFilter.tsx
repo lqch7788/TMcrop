@@ -1,12 +1,14 @@
 /**
  * 药剂知识库筛选工具栏组件
- * 筛选字段：药剂名称、生产厂家
+ * 筛选字段：药剂名称、生产厂家、药剂类型（2026-07-10 新增）
  */
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
+// 2026-07-10：药剂类型下拉（用 DictSelect 字典选择器）
+import { DictSelect } from '@/components/common/settings/DictSelect';
 
 interface PesticideLibraryFilterProps {
   filters: Record<string, string>;
@@ -50,6 +52,17 @@ export function PesticideLibraryFilter({
             onChange={(e) => updateFilter('manufacturer', e.target.value)}
             placeholder="请输入生产厂家"
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
+          />
+        </div>
+
+        {/* 2026-07-10：药剂类型下拉过滤（按一级 + 二级 dictCode 精确匹配） */}
+        <div className="flex-1 min-w-[160px]">
+          <Label className="text-gray-700">药剂类型</Label>
+          <DictSelect
+            category="pesticide_type"
+            value={filters.pesticideType || ''}
+            onChange={(val) => updateFilter('pesticideType', val)}
+            placeholder="全部类型"
           />
         </div>
 

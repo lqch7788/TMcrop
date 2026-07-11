@@ -16,6 +16,8 @@ import { todayLocal } from '@/lib/dateUtils';
 // 2026-07-10 P1-1：抽取公共导出函数
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { PestControlExportModal } from './modals/PestControlExportModal';
+// 2026-07-10：导出时把 pesticideTypes 转中文
+import { getDictLabel } from '@/stores/useDictionaryStore';
 
 type OperationMode = 'normal' | 'delete' | 'export';
 
@@ -51,13 +53,9 @@ export default function PestControlPage() {
     }
   }, [error, toast, clearError]);
 
-  // 统计数据
+  // 2026-07-10：取消 controlType 分类，stats 简化为只统计 total（按需扩展）
   const stats = useMemo(() => {
-    const total = items.length;
-    const chemical = items.filter((it) => it.controlType === 'chemical').length;
-    const bio = items.filter((it) => it.controlType === 'bio').length;
-    const physical = items.filter((it) => it.controlType === 'physical').length;
-    return { total, chemical, bio, physical };
+    return { total: items.length };
   }, [items]);
 
   const handleSearch = useCallback(() => {
@@ -128,12 +126,14 @@ export default function PestControlPage() {
       ? items.filter((it) => selectedIds.includes(it.id))
       : items;
     if (toExport.length === 0) return;
-    // 导出逻辑
-    const headers = ['记录编号', '防治日期', '防治类型', '作物', '温室', '药剂名称', '用药量', '稀释比例', '防治对象', '操作员'];
+    // 2026-07-10：导出表头删除「防治类型」列（controlType 字段已删除）
+    const headers = ['记录编号', '防治日期', '药剂类型', '作物', '温室', '药剂名称', '用药量', '稀释比例', '防治对象', '操作员'];
     const rows = toExport.map((it) => [
       it.recordCode, it.sprayTime,
-      it.controlType === 'chemical' ? '化学防治' : it.controlType === 'bio' ? '生物防治' : '物理防治',
-      it.cropName, it.greenhouseName || '', it.pesticideName || it.bioAgentName || it.equipmentName || '',
+      // 药剂类型多值
+      (it.pesticideTypes || []).map(t => getDictLabel('pesticide_type', t) || t).join('、'),
+      it.cropName, it.greenhouseName || '',
+      it.pesticideName || it.bioAgentName || it.equipmentName || '',
       it.dosage ? `${it.dosage}${it.dosageUnit || ''}` : '', it.dilutionRatio || '', it.targetPest || '', it.operatorName || '',
     ]);
 

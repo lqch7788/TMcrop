@@ -135,7 +135,8 @@ export type { Department } from '../services/apiBasicDataService';
 export { usePositionStore, getPositionByOid, getPositionsByDepartment, getActivePositions } from './usePositionStore';
 export type { Position } from '../services/apiBasicDataService';
 
-export { useDictionaryStore, getDictItems, getDictItemName, getDictionaryCategories } from './useDictionaryStore';
+// 2026-07-10：补 getDictLabel 别名（兼容药剂库模块引用）
+export { useDictionaryStore, getDictItems, getDictItemName, getDictLabel, getDictionaryCategories } from './useDictionaryStore';
 export type { Dictionary } from '../services/apiBasicDataService';
 
 export { useGreenhouseStore, getGreenhouseByOid, getGreenhousesByBase, getActiveGreenhouses } from './useGreenhouseStore';

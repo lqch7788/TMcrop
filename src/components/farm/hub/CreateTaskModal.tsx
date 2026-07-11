@@ -98,10 +98,10 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   // 病虫害防治专用：目标病虫害
   const [targetPests, setTargetPests] = useState<string[]>([]);
 
-  // 药剂选项（化学防治用）
+  // 2026-07-10：controlType 已删除，改为按 pesticideTypes 包含「化学类」（杀虫剂/杀菌剂/除草剂等所有药剂类型）做兜底
   const pesticideOptions = useMemo(() =>
     pesticideStore.items
-      .filter(p => p.controlType === 'chemical')
+      .filter(p => (p.pesticideTypes || []).some(t => ['insecticide', 'fungicide', 'herbicide', 'acaricide', 'protective', 'adjuvant', 'nematicide'].includes(t)))
       .map(p => ({
         value: p.pesticideName,
         label: p.pesticideName,

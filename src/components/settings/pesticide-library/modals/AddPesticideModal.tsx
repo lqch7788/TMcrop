@@ -1,10 +1,11 @@
 /**
  * 新增药剂弹窗组件
  * 包含规格编辑器，支持添加药剂及其规格信息
+ * 2026-07-10：取消防治类型分类（化学/生物/物理），改用 TreeSelect 多选药剂类型
  */
 import React, { useState, useCallback } from 'react';
 
-import { Wand2, X } from 'lucide-react';
+import { Wand2, X, Check } from 'lucide-react';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -13,39 +14,38 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { usePesticideLibraryStore, usePestDiseaseDictStore, PesticideSpec } from '@/stores';
 import { PesticideSpecEditor, PesticideSpecItem } from '../PesticideSpecEditor';
 import { showAlert } from '@/lib/dialogService';
-// 2026-07-10：药剂类型字段（关联 pesticide_type 字典）
-import { DictSelect } from '@/components/common/settings/DictSelect';
+// 2026-07-10：药剂类型多选（自实现 checkbox group 树形多选，复用 UI 库 Checkbox）
+import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 
 interface AddPesticideModalProps {
   isOpen: boolean;
-  controlType: 'chemical' | 'bio' | 'physical';
+  // 2026-07-10：取消 controlType prop，保留为可选占位（保持调用方兼容）
+  controlType?: 'chemical' | 'bio' | 'physical' | '';
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: AddPesticideModalProps) {
+export function AddPesticideModal({ isOpen, onClose, onSaved }: AddPesticideModalProps) {
   const store = usePesticideLibraryStore();
   const pestDiseaseStore = usePestDiseaseDictStore();
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
 
   // 表单状态
   const [form, setForm] = useState({
     pesticideCode: '',
     pesticideName: '',
-    // 2026-07-10：药剂类型（关联 pesticide_type 字典）
-    pesticideType: '',
+    // 2026-07-10：药剂类型数组（关联 pesticide_type 字典，支持多值 + 层级化）
+    pesticideTypes: [] as string[],
     ingredient: '',
     mechanism: '',
     functionDesc: '',
     tabooDesc: '',
     targetPests: '',
   });
-
-  // 防治类型（锁定当前Tab）
-  const [localControlType, setLocalControlType] = useState(controlType);
 
   // 规格列表
   const [specs, setSpecs] = useState<PesticideSpecItem[]>([]);
@@ -61,50 +61,44 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
+  /**
+   * 2026-07-10：药剂类型 checkbox 多选
+   * 选中一级自动全选其下子类
+   * 取消所有子类自动取消一级
+   */
+  const togglePesticideType = useCallback((code: string) => {
+    setForm((prev) => {
+      const current = prev.pesticideTypes;
+      if (current.includes(code)) {
+        return { ...prev, pesticideTypes: current.filter(c => c !== code) };
+      }
+      return { ...prev, pesticideTypes: [...current, code] };
+    });
+  }, []);
+
   // 重置表单
   React.useEffect(() => {
     if (isOpen) {
       setForm({
         pesticideCode: '',
         pesticideName: '',
-        pesticideType: '',  // 2026-07-10：药剂类型重置
+        pesticideTypes: [],
         ingredient: '',
         mechanism: '',
         functionDesc: '',
         tabooDesc: '',
         targetPests: '',
       });
-      setLocalControlType(controlType);
       setSpecs([]);
       setSelectedPests([]);
     }
-  }, [isOpen, controlType]);
+  }, [isOpen]);
 
-  // 生成编码
+  // 2026-07-10：生成编码统一 PC-XXXX（全表递增，由后端负责；前端只作为 UI 占位）
   const generateCode = () => {
-    const prefix = localControlType === 'chemical' ? 'PC-C-' : localControlType === 'bio' ? 'PC-B-' : 'PC-P-';
-    // 获取当前类型最大的编码
-    const existingCodes = store.items
-      .filter(item => item.controlType === localControlType)
-      .map(item => item.pesticideCode)
-      .filter(code => code && code.startsWith(prefix));
-    let maxNum = 0;
-    existingCodes.forEach(code => {
-      const match = code.match(/PC-[CBP]-(\d+)/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNum) maxNum = num;
-      }
-    });
-    const newNum = maxNum + 1;
-    const newCode = `${prefix}${newNum.toString().padStart(4, '0')}`;
-    setForm(prev => ({ ...prev, pesticideCode: newCode }));
-  };
-
-  // 检测编码是否重复
-  const checkCodeExists = (code: string): boolean => {
-    if (!code) return false;
-    return store.items.some(item => item.pesticideCode === code);
+    // 显示占位编码让用户知道要点按钮；实际编码由后端生成
+    setForm(prev => ({ ...prev, pesticideCode: 'PC-XXXX' }));
+    showAlert('请提交保存，编码将由后端自动生成 PC-XXXX 格式（保留原 PC-C-/PC-B-/PC-P- 历史编码不动）');
   };
 
   // 切换防治对象
@@ -130,30 +124,24 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       await showAlert('请输入药剂名称');
       return;
     }
-    if (!form.pesticideCode.trim()) {
-      await showAlert('请点击生成按钮获取药剂编码');
-      return;
-    }
-    if (checkCodeExists(form.pesticideCode)) {
-      await showAlert('该编码已存在，请点击生成按钮获取新编码');
+    if (form.pesticideTypes.length === 0) {
+      await showAlert('请至少选择 1 个药剂类型');
       return;
     }
 
     setSubmitting(true);
 
     // 创建药剂记录
+    // 2026-07-10：不传 pesticideCode（由后端生成），传 pesticideTypes 数组
     const newPesticide = await store.createItem({
-      pesticideCode: form.pesticideCode,
       pesticideName: form.pesticideName,
-      controlType: localControlType as 'chemical' | 'bio' | 'physical',
-      // 2026-07-10：提交 pesticideType
-      pesticideType: form.pesticideType || null,
+      pesticideTypes: form.pesticideTypes,
       ingredient: form.ingredient,
       mechanism: form.mechanism,
       functionDesc: form.functionDesc,
       tabooDesc: form.tabooDesc,
       targetPests: getTargetPestsName() || form.targetPests,
-    });
+    } as Partial<typeof store.items[number]>);
 
     if (newPesticide && specs.length > 0) {
       // 创建规格记录
@@ -183,6 +171,69 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
     <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
   );
 
+  /**
+   * 2026-07-10：药剂类型树形多选
+   * 一级分类为 group header，子类为 checkbox
+   */
+  const renderPesticideTypeTree = () => {
+    // 从字典 store 提取 pesticide_type 分类的所有项
+    const allTypeItems = dictionaries.filter(
+      (d: any) => (d.categoryCode || d.category_code || d.category) === 'pesticide_type'
+    );
+    // 一级：parentId 为空/null
+    const topLevel = allTypeItems.filter((d: any) => !d.parentId && !d.parent_id);
+    return (
+      <div className="border border-gray-300 rounded-lg p-3 max-h-[200px] overflow-y-auto bg-gray-50">
+        {topLevel.map((parent: any) => {
+          const parentCode = parent.dictCode || parent.dict_code;
+          const children = allTypeItems.filter((d: any) =>
+            (d.parentId === parent.id) || (d.parent_id === parent.id)
+          );
+          const parentChecked = form.pesticideTypes.includes(parentCode);
+          return (
+            <div key={parent.id} className="mb-2 last:mb-0">
+              {/* 一级分类（点击切换） */}
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded">
+                <Checkbox
+                  checked={parentChecked}
+                  onCheckedChange={() => togglePesticideType(parentCode)}
+                />
+                <span className="text-sm font-semibold text-gray-900">
+                  {parent.dictLabel || parent.dict_label}
+                </span>
+                {children.length > 0 && (
+                  <span className="text-xs text-gray-500">({children.length} 个子类)</span>
+                )}
+              </label>
+              {/* 二级分类 */}
+              {children.length > 0 && (
+                <div className="ml-6 mt-1 grid grid-cols-2 gap-1">
+                  {children.map((child: any) => {
+                    const childCode = child.dictCode || child.dict_code;
+                    return (
+                      <label
+                        key={child.id}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded text-xs"
+                      >
+                        <Checkbox
+                          checked={form.pesticideTypes.includes(childCode)}
+                          onCheckedChange={() => togglePesticideType(childCode)}
+                        />
+                        <span className="text-gray-700">
+                          {child.dictLabel || child.dict_label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -192,49 +243,11 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        {/* 防治类型（锁定） */}
-        <div>
-          <SectionTitle title="防治类型" icon="🏷️" />
-          <Tabs defaultValue={localControlType} onValueChange={(v) => setLocalControlType(v as typeof localControlType)}>
-            <TabsList>
-              <TabsTrigger value="chemical">化学防治</TabsTrigger>
-              <TabsTrigger value="bio">生物防治</TabsTrigger>
-              <TabsTrigger value="physical">物理防治</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
         {/* 基础信息 */}
         <div>
           <SectionTitle title="基础信息" icon="📋" />
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-900">
-                  药剂编码 <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={form.pesticideCode}
-                    onChange={(e) => updateField('pesticideCode', e.target.value)}
-                    placeholder="点击生成获取编码"
-                    className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
-                  />
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={generateCode}
-                    className="px-3"
-                  >
-                    <Wand2 className="w-4 h-4" /> 生成
-                  </Button>
-                </div>
-                {form.pesticideCode && checkCodeExists(form.pesticideCode) && (
-                  <p className="text-xs text-red-500 mt-1">编码已存在，请重新生成</p>
-                )}
-              </div>
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label className="text-gray-900">
                   药剂名称 <span className="text-red-500">*</span>
@@ -248,7 +261,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* 药剂成分 */}
               <div>
                 <Label className="text-gray-900">药剂成分</Label>
@@ -271,16 +284,27 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
-              {/* 2026-07-10：药剂类型字段（关联 pesticide_type 字典） */}
-              <div>
-                <Label className="text-gray-900">药剂类型</Label>
-                <DictSelect
-                  category="pesticide_type"
-                  value={form.pesticideType}
-                  onChange={(val) => updateField('pesticideType', val)}
-                  placeholder="选择类型"
-                />
-              </div>
+            </div>
+            {/* 2026-07-10：药剂类型树形多选（替代防治类型 Tabs） */}
+            <div>
+              <Label className="text-gray-900 mb-1 block">
+                药剂类型 <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">（可多选，支持一级 + 二级）</span>
+              </Label>
+              {renderPesticideTypeTree()}
+              {form.pesticideTypes.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {form.pesticideTypes.map(t => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    >
+                      <Check className="w-3 h-3" />
+                      {getDictLabel('pesticide_type', t) || t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -364,7 +388,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
           variant="default"
           size="sm"
           onClick={handleSubmit}
-          disabled={submitting || !form.pesticideName.trim()}
+          disabled={submitting || !form.pesticideName.trim() || form.pesticideTypes.length === 0}
         >
           {submitting ? '保存中...' : '保存'}
         </Button>

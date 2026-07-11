@@ -1,7 +1,7 @@
 /**
  * 病虫害防治记录筛选工具栏组件
  * V12.0 新增
- * 筛选字段：防治类型、作物名称、防治区域、目标病虫害、日期范围
+ * 筛选字段：药剂类型（2026-07-10 替代防治类型）、作物名称、防治区域、目标病虫害、日期范围
  */
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { DictSelect } from '@/components/common/settings/DictSelect';
 import { todayLocal } from '@/lib/dateUtils';
 
 interface PestControlFilterProps {
@@ -18,13 +18,6 @@ interface PestControlFilterProps {
   onSearch: () => void;
   onReset: () => void;
 }
-
-// 防治类型选项
-const CONTROL_TYPE_OPTIONS = [
-  { value: 'chemical', label: '化学防治' },
-  { value: 'bio', label: '生物防治' },
-  { value: 'physical', label: '物理防治' },
-];
 
 export function PestControlFilter({
   filters,
@@ -39,24 +32,15 @@ export function PestControlFilter({
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
-        {/* 防治类型 */}
-        <div className="min-w-[140px]">
-          <Label className="text-gray-700">防治类型</Label>
-          <Select
-            value={filters.controlType || ''}
-            onValueChange={(val) => updateFilter('controlType', val)}
-          >
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-              <SelectValue placeholder="全部" />
-            </SelectTrigger>
-            <SelectContent>
-              {CONTROL_TYPE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* 2026-07-10：药剂类型下拉（替代原防治类型，关联 pesticide_type 字典） */}
+        <div className="min-w-[160px]">
+          <Label className="text-gray-700">药剂类型</Label>
+          <DictSelect
+            category="pesticide_type"
+            value={filters.pesticideType || ''}
+            onChange={(val) => updateFilter('pesticideType', val)}
+            placeholder="全部"
+          />
         </div>
 
         {/* 作物名称 */}

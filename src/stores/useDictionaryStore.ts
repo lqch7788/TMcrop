@@ -125,6 +125,9 @@ export const getDictItemName = (category: string, code: string): string => {
   return (item as any).name || item.dictLabel || item.dictCode || code;
 };
 
+// 2026-07-10：getDictLabel 别名（兼容其他组件 import 旧名）
+export const getDictLabel = getDictItemName;
+
 // 获取字典分类列表
 export const getDictionaryCategories = (): string[] => {
   const dicts = useDictionaryStore.getState().dictionaries;

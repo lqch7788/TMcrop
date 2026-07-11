@@ -236,7 +236,7 @@ export function PestControlTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={showCheckbox ? 12 : 11} className="px-4 py-12 text-center text-gray-400">
                   暂无防治记录
                 </TableCell>
               </TableRow>
@@ -295,11 +295,18 @@ export function PestControlTable({
                       <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                         {record.sprayTime ? record.sprayTime.slice(0, 16) : '-'}
                       </TableCell>
-                      {/* 防治类型 */}
-                      <TableCell className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${getControlTypeBadgeColor(record.controlType)}`}>
-                          {getControlTypeLabel(record.controlType)}
-                        </span>
+                      {/* 2026-07-10：药剂类型多值 chips 展示（替代原防治类型 Badge） */}
+                      <TableCell className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {(record.pesticideTypes || []).map(t => (
+                            <span
+                              key={t}
+                              className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            >
+                              {getDictLabel('pesticide_type', t) || t}
+                            </span>
+                          ))}
+                        </div>
                       </TableCell>
                       {/* 作物 */}
                       <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
@@ -372,7 +379,7 @@ export function PestControlTable({
                     {/* 折叠的详情行 */}
                     {expanded && (
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableCell colSpan={showCheckbox ? 13 : 12} className="px-6 py-4">
+                        <TableCell colSpan={showCheckbox ? 12 : 11} className="px-6 py-4">
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {/* 左侧：防治详情表格 */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">

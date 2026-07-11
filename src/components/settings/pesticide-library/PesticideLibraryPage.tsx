@@ -18,8 +18,84 @@ import { PesticideDetailModal } from './modals/PesticideDetailModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { showAlert } from '@/lib/dialogService';
 import * as XLSX from 'xlsx';
+// 2026-07-10：导出时把 pesticideTypes 转中文
+import { getDictLabel, useDictionaryStore } from '@/stores/useDictionaryStore';
 
-type ControlType = 'chemical' | 'bio' | 'physical';
+/**
+ * 2026-07-10：树形剪枝 + 中文 label 渲染（导出用）
+ * 一级被二级覆盖时隐藏一级，例如 ["fungicide","fungicide_fungi"] → "杀菌剂-真菌"
+ */
+function renderPesticideTypeLabelsExport(
+  types: string[] | undefined,
+  getLabel: (cat: string, code: string) => string,
+  dictionaries: any[]
+): string {
+  if (!types || types.length === 0) return '';
+  const topLevelCodes = new Set<string>();
+  const childrenByParent = new Map<string, Set<string>>();
+  for (const d of dictionaries) {
+    const cat = d.categoryCode || d.category_code || d.category;
+    if (cat !== 'pesticide_type') continue;
+    const code = d.dictCode || d.dict_code;
+    const parentId = d.parentId || d.parent_id;
+    if (!parentId) {
+      topLevelCodes.add(code);
+    } else {
+      const parent = dictionaries.find((x: any) => x.id === parentId);
+      if (parent) {
+        const parentCode = parent.dictCode || parent.dict_code;
+        if (!childrenByParent.has(parentCode)) childrenByParent.set(parentCode, new Set());
+        childrenByParent.get(parentCode)!.add(code);
+      }
+    }
+  }
+  const filtered = types.filter(t => {
+    if (topLevelCodes.has(t)) {
+      const children = childrenByParent.get(t);
+      if (children) {
+        for (const c of children) {
+          if (types.includes(c)) return false;
+        }
+      }
+    }
+    return true;
+  });
+  return filtered.map(t => getLabel('pesticide_type', t) || t).join('、');
+}
+
+// 2026-07-10：取消 ControlType 分类，改用 pesticideType 字典项 dictCode
+// 保留类型别名但不使用，改用 Tabs 显示药剂类型一级分类
+// type ControlType = 'chemical' | 'bio' | 'physical';
+
+/**
+ * 2026-07-10：把后端返回的 pesticideType（camelCase 单数 + JSON 字符串）解析为 pesticideTypes 数组
+ * 同时也支持已经是数组的情况
+ */
+function parsePesticideTypeField(row: any): string[] {
+  // 优先 pesticideTypes（已经是数组）
+  if (Array.isArray(row.pesticideTypes)) return row.pesticideTypes;
+  // 兼容 pesticide_type（snake_case JSON 字符串）
+  if (typeof row.pesticide_type === 'string' && row.pesticide_type.trim()) {
+    try {
+      const parsed = JSON.parse(row.pesticide_type);
+      return Array.isArray(parsed) ? parsed : [row.pesticide_type];
+    } catch {
+      return [row.pesticide_type];
+    }
+  }
+  // 兼容 pesticideType（camelCase 单数 JSON 字符串）
+  if (typeof row.pesticideType === 'string' && row.pesticideType.trim()) {
+    try {
+      const parsed = JSON.parse(row.pesticideType);
+      return Array.isArray(parsed) ? parsed : [row.pesticideType];
+    } catch {
+      return [row.pesticideType];
+    }
+  }
+  // 兼容 pesticideType 已经是数组（camelCase 中间件没把数组转字符串）
+  if (Array.isArray(row.pesticideType)) return row.pesticideType;
+  return [];
+}
 
 export default function PesticideLibraryPage() {
   // ========== 导航 ==========
@@ -27,11 +103,16 @@ export default function PesticideLibraryPage() {
 
   // ========== Store ==========
   const store = usePesticideLibraryStore();
+  // 2026-07-10：导出树形剪枝需要 dictionaries（用于判断一级是否被二级覆盖）
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
   const { items, isLoading, error } = store;
 
   // ========== 本地状态 ==========
-  const [activeTab, setActiveTab] = useState<ControlType>('chemical');
+  // 2026-07-10：activeTab 改为药剂类型 dictCode（杀虫剂/杀菌剂/...）；'' 表示全部
+  const [activeTab, setActiveTab] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string>>({});
+  // 2026-07-10：tab 过滤用本地 items 状态，绕开 store 状态机
+  const [localItems, setLocalItems] = useState<PesticideLibrary[]>([]);
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
@@ -46,21 +127,40 @@ export default function PesticideLibraryPage() {
 
   // ========== 数据加载 ==========
   useEffect(() => {
-    const controlTypeFilter = { ...filters, control_type: activeTab };
-    store.fetchItems(controlTypeFilter);
+    // 2026-07-10：tab 切换用 useState setter 直接 set items（绕开 store 内部状态机）
+    const qs = new URLSearchParams();
+    qs.append('limit', '10000');
+    if (activeTab) qs.append('pesticide_type', activeTab);
+    const rawUrl = `/api/pesticide-library?${qs.toString()}`;
+    console.log("[FX] before fetch, url=", rawUrl);
+    console.log('[PesticideLibraryPage] tab change → direct fetch, activeTab=', JSON.stringify(activeTab));
+    fetch(rawUrl)
+      .then(r => { console.log("[FX] fetch resolved, status=", r.status); return r.json(); })
+      .then(resp => {
+        const rawList = resp?.data ?? [];
+        // 2026-07-10：把后端返回的 pesticideType（camelCase 单数）解析为 pesticideTypes（复数数组）
+        const list: PesticideLibrary[] = rawList.map((row: any) => ({
+          ...row,
+          pesticideTypes: parsePesticideTypeField(row),
+        }));
+        console.log('[PesticideLibraryPage] → setLocalItems, count:', list.length);
+        setLocalItems(list);
+        (usePesticideLibraryStore as any).setState({ items: list, isLoading: false });
+      })
+      .catch(e => console.error("[PesticideLibraryPage] fetch error:", e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // 首次加载
+  }, [activeTab]);
 
   // ========== 筛选处理 ==========
   const handleSearch = useCallback(() => {
     const keyword = filters.pesticideName || '';
-    const controlTypeFilter = { ...filters, control_type: activeTab, keyword };
-    store.fetchItems(controlTypeFilter);
+    const tabFilter = activeTab ? { ...filters, pesticide_type: activeTab, keyword } : { ...filters, keyword };
+    store.fetchItems(tabFilter);
   }, [filters, activeTab, store]);
 
   const handleReset = useCallback(() => {
     setFilters({});
-    store.fetchItems({ control_type: activeTab });
+    store.fetchItems(activeTab ? { pesticide_type: activeTab } : {});
   }, [activeTab, store]);
 
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
@@ -101,14 +201,16 @@ export default function PesticideLibraryPage() {
     // 获取选中的数据
     const selectedData = items.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头
-    const headers = ['药剂编码', '药剂名称', '防治类型', '功能说明', '使用禁忌', '防治对象'];
+    // 2026-07-10：导出表头改为药剂类型多值（关联 pesticide_type 字典）
+    const headers = ['药剂编码', '药剂名称', '药剂类型', '功能说明', '使用禁忌', '防治对象'];
 
     // 生成导出数据（数组格式）
+    // 2026-07-10：树形剪枝——一级被二级覆盖时隐藏一级
     const rows = selectedData.map(record => [
       record.pesticideCode || '',
       record.pesticideName || '',
-      record.controlType === 'chemical' ? '化学防治' : record.controlType === 'bio' ? '生物防治' : '物理防治',
+      // 多个药剂类型用顿号分隔
+      renderPesticideTypeLabelsExport(record.pesticideTypes, getDictLabel, dictionaries),
       record.functionDesc || '',
       record.tabooDesc || '',
       record.targetPests || '',
@@ -166,17 +268,19 @@ export default function PesticideLibraryPage() {
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    store.fetchItems({ control_type: activeTab, ...filters });
+    const tabFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
+    store.fetchItems(tabFilter);
   }, [activeTab, filters, store]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    store.fetchItems({ control_type: activeTab, ...filters });
+    const tabFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
+    store.fetchItems(tabFilter);
   }, [activeTab, filters, store]);
 
   // ========== Tab切换时重新加载 ==========
   const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab as ControlType);
+    setActiveTab(tab);
   }, []);
 
   // ========== 渲染 ==========
@@ -206,16 +310,25 @@ export default function PesticideLibraryPage() {
         </div>
       </div>
 
-      {/* Tabs: 化学防治 / 生物防治 / 物理防治 */}
-      <Tabs defaultValue="chemical" onValueChange={handleTabChange}>
+      {/* 2026-07-10：Tabs 改为按药剂类型一级分类（杀虫剂/杀菌剂/...），不再有化学/生物/物理 */}
+      <Tabs defaultValue="" onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="chemical">化学防治</TabsTrigger>
-          <TabsTrigger value="bio">生物防治</TabsTrigger>
-          <TabsTrigger value="physical">物理防治</TabsTrigger>
+          <TabsTrigger value="">全部</TabsTrigger>
+          <TabsTrigger value="insecticide">杀虫剂</TabsTrigger>
+          <TabsTrigger value="fungicide">杀菌剂</TabsTrigger>
+          <TabsTrigger value="herbicide">除草剂</TabsTrigger>
+          <TabsTrigger value="acaricide">杀螨剂</TabsTrigger>
+          <TabsTrigger value="protective">保护剂</TabsTrigger>
+          <TabsTrigger value="adjuvant">助剂</TabsTrigger>
+          {/* 2026-07-10：移除「杀线虫剂」tab（按用户要求） */}
+          <TabsTrigger value="other">其他</TabsTrigger>
         </TabsList>
+      </Tabs>
 
-        <TabsContent value="chemical">
-          {/* 筛选器 */}
+      {/* 2026-07-10：内容提到 Tabs 外面，避免 TabsContent value="" 不渲染导致 Table 消失 */}
+      <div className="space-y-4">
+        {/* 2026-07-10：移除 TabsContent 包装，Table 必须在 Tabs 外避免 selectedValue 切换时消失 */}
+        {/* 筛选器 */}
           <PesticideLibraryFilter
             filters={filters}
             onChange={handleFilterChange}
@@ -264,7 +377,7 @@ export default function PesticideLibraryPage() {
 
           {/* 表格 */}
           <PesticideLibraryTable
-            data={items}
+            data={localItems.length > 0 ? localItems : items}
             isLoading={isLoading}
             onDetail={handleDetail}
             onEdit={handleEdit}
@@ -274,132 +387,13 @@ export default function PesticideLibraryPage() {
             onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
             onSelectAll={handleExportSelectAll}
           />
-        </TabsContent>
-
-        <TabsContent value="bio">
-          <PesticideLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">药剂列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增药剂
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <PesticideLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="physical">
-          <PesticideLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">药剂列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增药剂
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <PesticideLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Modals */}
       {showAddModal && (
         <AddPesticideModal
           isOpen={showAddModal}
-          controlType={activeTab}
+          controlType=""
           onClose={() => setShowAddModal(false)}
           onSaved={handleAddSaved}
         />

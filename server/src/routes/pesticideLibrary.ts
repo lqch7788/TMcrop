@@ -8,14 +8,14 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
-/** 生成药剂编码 PC+类型标识+4位流水号 */
-function generatePesticideCode(db: any, controlType: string): string {
-  const typeMap: Record<string, string> = { chemical: 'C', bio: 'B', physical: 'P' };
-  const prefix = `PC-${typeMap[controlType] || 'X'}-`;
-
-  // Use raw query to get snake_case field names (queryToObjects applies camelCase mapping)
-  const stmt = db.prepare('SELECT pesticide_code FROM pesticide_library WHERE control_type = ?');
-  stmt.bind([controlType]);
+/**
+ * 生成药剂编码（2026-07-10 重构：取消 chemical/bio/physical 分类，统一 PC-XXXX 前缀，全表递增）
+ * 保留 PC-C-/PC-B-/PC-P- 历史编码不动，仅对新生成的编码使用 PC- 前缀
+ */
+function generatePesticideCode(db: any): string {
+  // 取全表所有编码，找到 PC-XXXX（4 位数字）格式的最大值
+  const stmt = db.prepare('SELECT pesticide_code FROM pesticide_library');
+  stmt.bind([]);
   const codes: string[] = [];
   while (stmt.step()) {
     const obj = stmt.getAsObject() as { pesticide_code?: string };
@@ -27,28 +27,33 @@ function generatePesticideCode(db: any, controlType: string): string {
 
   let maxSeq = 0;
   for (const code of codes) {
-    if (code.startsWith(prefix)) {
-      const seq = parseInt(code.split('-').pop() || '0', 10);
+    // 只匹配 PC-XXXX 格式（4 位数字），不匹配 PC-C-/PC-B-/PC-P-
+    const match = code.match(/^PC-(\d{4,})$/);
+    if (match) {
+      const seq = parseInt(match[1], 10);
       if (seq > maxSeq) maxSeq = seq;
     }
   }
-  return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
+  return `PC-${String(maxSeq + 1).padStart(4, '0')}`;
 }
 
 /** GET /api/pesticide-library — 分页查询 */
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { control_type, pesticide_type, pesticide_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
+    // 2026-07-10：移除 control_type 过滤（已删除字段），pesticide_type 改 JSON 数组查询
+    const { pesticide_type, pesticide_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (control_type) { conditions.push('control_type = ?'); params.push(control_type); }
-    // 2026-07-10：支持按 pesticide_type 字典过滤（杀虫剂/杀菌剂/除草剂等）
-    if (pesticide_type) { conditions.push('pesticide_type = ?'); params.push(pesticide_type); }
+    // pesticide_type 现在是 JSON 数组，用 json_each 展开后匹配 dictCode
+    if (pesticide_type) {
+      conditions.push(`EXISTS (SELECT 1 FROM json_each(pesticide_library.pesticide_type) WHERE json_each.value = ?)`);
+      params.push(pesticide_type);
+    }
     // 支持 keyword 或 pesticide_name 参数
     const nameFilter = keyword || pesticide_name;
     if (nameFilter) { conditions.push("pesticide_name LIKE '%' || ? || '%'"); params.push(nameFilter); }
@@ -81,22 +86,41 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const body = req.body;
-    if (!body.pesticide_name || !body.control_type) {
-      res.status(400).json({ success: false, error: '药剂名称和防治类型为必填项' });
+    // 2026-07-10：取消 control_type 必填校验，药剂名称 + 药剂类型（pesticideType 数组）为必填
+    if (!body.pesticide_name) {
+      res.status(400).json({ success: false, error: '药剂名称为必填项' });
       return;
     }
-    const code = generatePesticideCode(db, body.control_type);
+    // pesticideType 支持两种格式：数组 ['insecticide','fungicide'] 或 JSON 字符串 '["insecticide"]'
+    let pesticideTypeValue: string | null = null;
+    if (Array.isArray(body.pesticideType) && body.pesticideType.length > 0) {
+      pesticideTypeValue = JSON.stringify(body.pesticideType);
+    } else if (typeof body.pesticideType === 'string' && body.pesticideType.trim()) {
+      // 兼容旧的 snake_case 字段 pesticide_type
+      if (body.pesticideType.trim().startsWith('[')) {
+        pesticideTypeValue = body.pesticideType;
+      } else {
+        // 单值字符串也包装为数组
+        pesticideTypeValue = JSON.stringify([body.pesticideType]);
+      }
+    } else if (body.pesticide_type) {
+      // 兼容 snake_case 字段
+      const v = body.pesticide_type;
+      pesticideTypeValue = v.trim().startsWith('[') ? v : JSON.stringify([v]);
+    }
+
+    const code = generatePesticideCode(db);
     const now = new Date().toISOString();
     const id = `pl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    // 2026-07-10：加 pesticide_type 字段写入
+    // 2026-07-10：移除 control_type 字段写入
     db.run(`INSERT INTO pesticide_library (
-      id, pesticide_code, pesticide_name, control_type, function_desc, taboo_desc,
+      id, pesticide_code, pesticide_name, function_desc, taboo_desc,
       target_pests, ingredient, mechanism, pesticide_type, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.pesticide_name, body.control_type, body.function_desc || null,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, code, body.pesticide_name, body.function_desc || null,
        body.taboo_desc || null, body.target_pests || null, body.ingredient || null,
-       body.mechanism || null, body.pesticide_type || null,
+       body.mechanism || null, pesticideTypeValue,
        body.status || 'active', now, now]
     );
 
@@ -131,14 +155,26 @@ router.put('/:id', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM pesticide_library WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '药剂不存在' }); return; }
 
+    // 2026-07-10：移除 control_type 字段；pesticideType 支持数组/字符串两种格式
+    let pesticideTypeValue: string | null | undefined = undefined;
+    if (Array.isArray(body.pesticideType)) {
+      pesticideTypeValue = body.pesticideType.length > 0 ? JSON.stringify(body.pesticideType) : null;
+    } else if (typeof body.pesticideType === 'string') {
+      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
+    } else if (body.pesticide_type !== undefined) {
+      const v = body.pesticide_type;
+      if (v === null) pesticideTypeValue = null;
+      else pesticideTypeValue = typeof v === 'string' && v.trim().startsWith('[') ? v : JSON.stringify([v]);
+    }
+
     const now = new Date().toISOString();
-    // 2026-07-10：加 pesticide_type 字段更新
-    db.run(`UPDATE pesticide_library SET pesticide_name=?, control_type=?, function_desc=?,
+    db.run(`UPDATE pesticide_library SET pesticide_name=?, function_desc=?,
       taboo_desc=?, target_pests=?, ingredient=?, mechanism=?, pesticide_type=?, status=?, update_time=? WHERE id=?`,
-      [body.pesticide_name ?? existing[0].pesticide_name, body.control_type ?? existing[0].control_type,
+      [body.pesticide_name ?? existing[0].pesticide_name,
        body.function_desc ?? existing[0].function_desc, body.taboo_desc ?? existing[0].taboo_desc,
        body.target_pests ?? existing[0].target_pests, body.ingredient ?? existing[0].ingredient,
-       body.mechanism ?? existing[0].mechanism, body.pesticide_type ?? existing[0].pesticide_type,
+       body.mechanism ?? existing[0].mechanism,
+       pesticideTypeValue !== undefined ? pesticideTypeValue : existing[0].pesticide_type,
        body.status ?? existing[0].status, now, id]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_library WHERE id = ?`, [id]);

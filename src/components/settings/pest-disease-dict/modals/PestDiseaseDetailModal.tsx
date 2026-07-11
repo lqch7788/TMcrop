@@ -8,6 +8,8 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
+// 2026-07-10：pesticideTypes 多值 label 翻译
+import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict, PesticideForRelation } from '@/stores';
 
 interface PestDiseaseDetailModalProps {
@@ -143,8 +145,16 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
                   <div className="font-medium text-gray-900">{pesticide.pesticideName}</div>
                   <div className="text-sm text-gray-500 font-mono">{pesticide.pesticideCode}</div>
                 </div>
-                <div className="ml-4">
-                  {getPesticideTypeBadge(pesticide.controlType)}
+                // 2026-07-10：controlType 已删除，改为 pesticideTypes 多值 chips 展示
+                <div className="ml-4 flex flex-wrap gap-1">
+                  {(pesticide.pesticideTypes || []).map(t => (
+                    <span
+                      key={t}
+                      className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200"
+                    >
+                      {getDictLabel('pesticide_type', t) || t}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}

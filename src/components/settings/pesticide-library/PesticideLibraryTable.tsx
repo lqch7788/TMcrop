@@ -25,7 +25,7 @@ interface PesticideLibraryTableProps {
   onSelectAll?: () => void;
 }
 
-// 2026-07-10：药剂类型列显示中文 label（useDictionaryStore 必须移到组件内调用）
+// 2026-07-10：药剂类型列显示中文 label（多值用顿号分隔）
 // 防治类型 Badge 颜色
 const getControlTypeBadge = (type: string) => {
   switch (type) {
@@ -56,6 +56,61 @@ const getControlTypeBadge = (type: string) => {
   }
 };
 
+/**
+ * 2026-07-10：药剂类型多值 label 渲染（树形剪枝：一级被二级覆盖时隐藏一级）
+ * - 接收 string[]（pesticideTypes）
+ * - 调 getDictLabel 转中文
+ * - 多个用顿号「、」分隔
+ * - 树形剪枝：如果一级分类（如 fungicide）的某个二级子类（如 fungicide_fungi）也在列表中，
+ *   则隐藏该一级（因为有更具体的子类被选中）
+ *
+ * @example 输入 ["fungicide","fungicide_fungi","fungicide_bacteria"]
+ *          输出 "杀菌剂-真菌、杀菌剂-细菌"（隐藏了父级"杀菌剂"）
+ */
+function renderPesticideTypeLabels(
+  types: string[] | undefined,
+  getLabel: (cat: string, code: string) => string,
+  dictionaries: any[]
+) {
+  if (!types || types.length === 0) return '-';
+  // 2026-07-10：树形剪枝——一级被二级覆盖时隐藏一级
+  // 1. 找出所有「一级分类」的 dictCode
+  const topLevelCodes = new Set<string>();
+  // 2. 找出每个一级分类下的所有子类的 dictCode
+  const childrenByParent = new Map<string, Set<string>>();
+  for (const d of dictionaries) {
+    const cat = d.categoryCode || d.category_code || d.category;
+    if (cat !== 'pesticide_type') continue;
+    const code = d.dictCode || d.dict_code;
+    const parentId = d.parentId || d.parent_id;
+    if (!parentId) {
+      topLevelCodes.add(code);
+    } else {
+      // 找父级 code
+      const parent = dictionaries.find((x: any) => x.id === parentId);
+      if (parent) {
+        const parentCode = parent.dictCode || parent.dict_code;
+        if (!childrenByParent.has(parentCode)) childrenByParent.set(parentCode, new Set());
+        childrenByParent.get(parentCode)!.add(code);
+      }
+    }
+  }
+  // 3. 过滤：跳过被二级覆盖的一级
+  const filtered = types.filter(t => {
+    if (topLevelCodes.has(t)) {
+      const children = childrenByParent.get(t);
+      if (children) {
+        // 检查是否有子类在 types 列表中
+        for (const c of children) {
+          if (types.includes(c)) return false; // 跳过一级
+        }
+      }
+    }
+    return true;
+  });
+  return filtered.map(t => getLabel('pesticide_type', t) || t).join('、');
+}
+
 export function PesticideLibraryTable({
   data,
   isLoading,
@@ -68,7 +123,7 @@ export function PesticideLibraryTable({
   onSelectAll,
 }: PesticideLibraryTableProps) {
   // 2026-07-10：触发字典加载（store 内置 getDictLabel 会在字典未加载时返回原值）
-  useDictionaryStore((s) => s.dictionaries);
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
@@ -126,9 +181,8 @@ export function PesticideLibraryTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂成分</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作用机制</TableHead>
-              {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典） */}
+              {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典，多值用顿号分隔） */}
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂类型</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
               {!exportMode && (
@@ -200,13 +254,11 @@ export function PesticideLibraryTable({
                     <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[100px] truncate">
                       {record.mechanism || '-'}
                     </TableCell>
-                    {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典，用 store 内置 getDictLabel 自动转中文） */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {getDictLabel('pesticide_type', record.pesticideType || '') || '-'}
-                    </TableCell>
-                    {/* 防治类型 - Badge */}
-                    <TableCell className="px-4 py-3 whitespace-nowrap">
-                      {getControlTypeBadge(record.controlType)}
+                    {/* 2026-07-10：药剂类型列（多值用顿号分隔，关联 pesticide_type 字典） */}
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[220px]">
+                      <div className="line-clamp-2" title={renderPesticideTypeLabels(record.pesticideTypes, getDictLabel, dictionaries)}>
+                        {renderPesticideTypeLabels(record.pesticideTypes, getDictLabel, dictionaries)}
+                      </div>
                     </TableCell>
                     {/* 功能说明 */}
                     <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
