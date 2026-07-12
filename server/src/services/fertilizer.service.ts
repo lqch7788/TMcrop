@@ -197,26 +197,33 @@ export class FertilizerService {
           `生成施肥编号失败（重试 10 次仍冲突），请稍后重试`,
         );
       }
-      // 1) 若传了 fertilizerId，先校验库存在 + 库存够
+      // 1) 若传了 fertilizerId（实际为 spec id，V2026-07-12 扁平化），先校验存在 + 库存够
+      let specSnapshot: { brandName: string; unitPrice: number; batchNumber: string } | null = null;
       if (data.fertilizerId) {
-        const lib = this.repository.findLibraryById(data.fertilizerId);
-        if (!lib) {
+        const spec = this.repository.findSpecById(data.fertilizerId);
+        if (!spec) {
           db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
-            `肥料库不存在: ${data.fertilizerId}`,
+            `肥料规格不存在: ${data.fertilizerId}`,
             404,
           );
         }
-        if (qty > 0 && (lib.currentStock ?? 0) < qty) {
+        if (qty > 0 && (spec.stockQuantity ?? 0) < qty) {
           db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.INSUFFICIENT_STOCK,
-            `${lib.fertilizerName} 库存不足：当前 ${lib.currentStock ?? 0}，需 ${qty}`,
+            `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需 ${qty}`,
           );
         }
         // 2) 扣库存
         if (qty > 0) this.repository.decreaseStock(data.fertilizerId, qty, now);
+        // 快照 spec 关键字段（spec 删除后仍能查"当时用了什么"）
+        specSnapshot = {
+          brandName: spec.brandName || '',
+          unitPrice: spec.unitPrice || 0,
+          batchNumber: spec.batchNumber || '',
+        };
       }
 
       // 3) 写记录
@@ -274,6 +281,11 @@ export class FertilizerService {
         fertilizer_id: data.fertilizerId ?? null,
         // 2026-07-12：施肥区域池 JSON
         fertilization_pool: data.fertilizationPool ?? null,
+        // 2026-07-12：spec 快照字段（spec 删除后仍能查"当时用了什么"）
+        spec_id: data.fertilizerId ?? null,
+        spec_brand_name: specSnapshot?.brandName ?? null,
+        spec_unit_price_snapshot: specSnapshot?.unitPrice ?? null,
+        spec_batch_number: specSnapshot?.batchNumber ?? null,
       };
       this.repository.insert(record);
 
@@ -308,23 +320,23 @@ export class FertilizerService {
 
     db.exec('BEGIN');
     try {
-      // 处理 quantity delta（若 fertilizer_id 已绑定）
+      // 处理 quantity delta（若 fertilizer_id 已绑定 — 实际为 spec id）
       if (fid && newQty !== oldQty) {
         const delta = newQty - oldQty;
-        const lib = this.repository.findLibraryById(fid);
-        if (!lib) {
+        const spec = this.repository.findSpecById(fid);
+        if (!spec) {
           db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
-            `肥料库不存在: ${fid}`,
+            `肥料规格不存在: ${fid}`,
             404,
           );
         }
-        if (delta > 0 && (lib.currentStock ?? 0) < delta) {
+        if (delta > 0 && (spec.stockQuantity ?? 0) < delta) {
           db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.INSUFFICIENT_STOCK,
-            `${lib.fertilizerName} 库存不足：当前 ${lib.currentStock ?? 0}，需追加 ${delta}`,
+            `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需追加 ${delta}`,
           );
         }
         if (delta > 0) this.repository.decreaseStock(fid, delta, now);
@@ -457,12 +469,18 @@ export class FertilizerService {
         );
         if (dups.length > 0) { skipped++; continue; }
 
-        // 若传 fertilizerId，校验库存
+        // 若传 fertilizerId（实际为 spec id），校验库存
+        let iotSpec: { brandName?: string; unitPrice?: number; batchNumber?: string } | null = null;
         if (r.fertilizerId) {
-          const lib = this.repository.findLibraryById(r.fertilizerId);
-          if (!lib) { skipped++; continue; }
-          if ((lib.currentStock ?? 0) < r.quantity) { skipped++; continue; }
+          const spec = this.repository.findSpecById(r.fertilizerId);
+          if (!spec) { skipped++; continue; }
+          if ((spec.stockQuantity ?? 0) < r.quantity) { skipped++; continue; }
           this.repository.decreaseStock(r.fertilizerId, r.quantity, now);
+          iotSpec = {
+            brandName: spec.brandName,
+            unitPrice: spec.unitPrice,
+            batchNumber: spec.batchNumber,
+          };
         }
 
         const code = this.generateCode();
@@ -499,6 +517,12 @@ export class FertilizerService {
           create_time: now,
           update_time: now,
           fertilizer_id: r.fertilizerId ?? null,
+          fertilization_pool: null,
+          // 2026-07-12：spec 快照字段（spec 删除后仍能查"当时用了什么"）
+          spec_id: r.fertilizerId ?? null,
+          spec_brand_name: iotSpec?.brandName ?? null,
+          spec_unit_price_snapshot: iotSpec?.unitPrice ?? null,
+          spec_batch_number: iotSpec?.batchNumber ?? null,
         };
         this.repository.insert(recordRow);
         inserted++;
