@@ -19,6 +19,8 @@ export interface FertilizerSpec {
   batchNumber?: string;
   productionDate?: string;
   expirationDate?: string;
+  // 2026-07-12：单规格当前库存（kg），主表肥料库存 = sum(specs.stockQuantity)
+  stockQuantity?: number;
   status: string;
   createTime: string;
 }
@@ -75,6 +77,8 @@ const SPEC_FIELD_MAP: Record<string, string> = {
   batch_number: 'batchNumber',
   production_date: 'productionDate',
   expiration_date: 'expirationDate',
+  // 2026-07-12：单规格库存（主表库存 = sum）
+  stock_quantity: 'stockQuantity',
   status: 'status',
   create_time: 'createTime',
 };

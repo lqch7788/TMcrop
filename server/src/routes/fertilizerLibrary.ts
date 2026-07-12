@@ -49,13 +49,18 @@ router.get('/', (req: Request, res: Response) => {
       [...params, limitNum, offset]
     );
 
-    // 为每个肥料查询对应的规格数据
+    // 为每个肥料查询对应的规格数据 + 用 sum(specs.stockQuantity) 覆盖 currentStock
     for (const item of items) {
       const specs = queryToObjects(db,
         `SELECT * FROM fertilizer_specs WHERE fertilizer_id = ? ORDER BY create_time DESC`,
         [item.id]
       );
       item.specs = specs;
+      // 2026-07-12：主表"当前库存" = 各规格 stockQuantity 之和（替代之前硬编码）
+      // 注意：queryToObjects 已转 camelCase，所以直接用 camelCase key 写入
+      item.currentStock = (specs || []).reduce(
+        (sum: number, s: any) => sum + (Number(s.stockQuantity) || 0), 0
+      );
     }
 
     res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
@@ -115,7 +120,11 @@ router.get('/:id', (req: Request, res: Response) => {
     const fertilizer = queryToObjects(db, `SELECT * FROM fertilizer_library WHERE id = ?`, [id]);
     if (fertilizer.length === 0) { res.status(404).json({ success: false, error: '肥料不存在' }); return; }
     const specs = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE fertilizer_id = ? ORDER BY create_time DESC`, [id]);
-    res.json({ success: true, data: { ...fertilizer[0], specs } });
+    // 2026-07-12：主表"当前库存" = sum(specs.stockQuantity)
+    const totalStock = (specs || []).reduce(
+      (sum: number, s: any) => sum + (Number(s.stockQuantity) || 0), 0
+    );
+    res.json({ success: true, data: { ...fertilizer[0], currentStock: totalStock, specs } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -181,9 +190,9 @@ router.post('/:id/specs', (req: Request, res: Response) => {
     db.run(`INSERT INTO fertilizer_specs (
       id, fertilizer_id, brand_name, spec_content, manufacturer,
       suggested_dosage, suggested_ratio, dosage_unit, remark, unit_price,
-      batch_number, production_date, expiration_date,
+      batch_number, production_date, expiration_date, stock_quantity,
       status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [specId, id, body.brand_name || null, body.spec_content || null, body.manufacturer || null,
        body.suggested_dosage || null, body.suggested_ratio || null,
        body.dosage_unit || null, body.remark || null,
@@ -191,6 +200,7 @@ router.post('/:id/specs', (req: Request, res: Response) => {
        body.batch_number || null,   // 2026-07-12：产品批次
        body.production_date || null, // 2026-07-12：生产日期
        body.expiration_date || null, // 2026-07-12：过期日期
+       Number(body.stock_quantity) || 0, // 2026-07-12：单规格库存（主表库存 = sum）
        body.status || 'active', now]
     );
 
@@ -213,7 +223,7 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
 
     db.run(`UPDATE fertilizer_specs SET brand_name=?, spec_content=?, manufacturer=?,
       suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?, unit_price=?,
-      batch_number=?, production_date=?, expiration_date=?,
+      batch_number=?, production_date=?, expiration_date=?, stock_quantity=?,
       status=? WHERE id=?`,
       [body.brand_name ?? existing[0].brand_name,
        body.spec_content ?? existing[0].spec_content,
@@ -226,6 +236,7 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
        body.batch_number ?? existing[0].batch_number,    // 2026-07-12：产品批次
        body.production_date ?? existing[0].production_date, // 2026-07-12：生产日期
        body.expiration_date ?? existing[0].expiration_date, // 2026-07-12：过期日期
+       body.stock_quantity != null ? Number(body.stock_quantity) : (existing[0].stock_quantity || 0), // 2026-07-12：单规格库存
        body.status ?? existing[0].status, specId]
     );
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [specId]);

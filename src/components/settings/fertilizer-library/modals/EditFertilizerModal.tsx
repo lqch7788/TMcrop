@@ -106,6 +106,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         batchNumber: spec.batchNumber || '',
         productionDate: spec.productionDate || '',
         expirationDate: spec.expirationDate || '',
+        stockQuantity: spec.stockQuantity || 0,  // 2026-07-12：单规格库存
       }));
       setSpecs(existingSpecs);
       setNewSpecs([]);
@@ -127,6 +128,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       batchNumber: '',  // 2026-07-12：批次
       productionDate: '',  // 2026-07-12：生产日期
       expirationDate: '',  // 2026-07-12：过期日期
+      stockQuantity: 0,  // 2026-07-12：单规格库存
     };
     setNewSpecs([...newSpecs, newSpec]);
   };
@@ -211,6 +213,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
             batchNumber: spec.batchNumber || '',  // 2026-07-12：批次
             productionDate: spec.productionDate || '',  // 2026-07-12：生产日期
             expirationDate: spec.expirationDate || '',  // 2026-07-12：过期日期
+            stockQuantity: Number(spec.stockQuantity) || 0,  // 2026-07-12：单规格库存
           } as Partial<FertilizerSpec>);
         }
       }
@@ -232,7 +235,8 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         (updated.unitPrice || 0) !== (original.unitPrice || 0) ||  // 2026-07-12：单价变化检测
         (updated.batchNumber || '') !== (original.batchNumber || '') ||  // 2026-07-12：批次变化检测
         (updated.productionDate || '') !== (original.productionDate || '') ||  // 2026-07-12：生产日期变化检测
-        (updated.expirationDate || '') !== (original.expirationDate || '')  // 2026-07-12：过期日期变化检测
+        (updated.expirationDate || '') !== (original.expirationDate || '') ||  // 2026-07-12：过期日期变化检测
+        (updated.stockQuantity || 0) !== (original.stockQuantity || 0)  // 2026-07-12：单规格库存变化检测
       )) {
         await store.updateSpec(original.id!, {
           brandName: updated.brandName,
@@ -246,6 +250,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           batchNumber: updated.batchNumber || '',  // 2026-07-12：批次
           productionDate: updated.productionDate || '',  // 2026-07-12：生产日期
           expirationDate: updated.expirationDate || '',  // 2026-07-12：过期日期
+          stockQuantity: Number(updated.stockQuantity) || 0,  // 2026-07-12：单规格库存
         } as Partial<FertilizerSpec>);
       }
     }
@@ -453,8 +458,8 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                         </div>
                       </div>
 
-                      {/* 第二行：备注 + 单价 + 批次追溯三列 */}
-                      <div className="grid grid-cols-5 gap-2">
+                      {/* 第二行：备注 + 单价 + 批次追溯三列 + 单规格库存 */}
+                      <div className="grid grid-cols-6 gap-2">
                         {/* 备注 */}
                         <div>
                           <Label className="text-xs text-gray-500">备注</Label>
@@ -511,6 +516,20 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                             type="date"
                             value={spec.expirationDate || ''}
                             onChange={(e) => handleSpecChange(index, 'expirationDate', e.target.value, spec.isNew || false)}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+
+                        {/* 2026-07-12：单规格当前库存（kg）— 主表库存 = sum 各规格 */}
+                        <div>
+                          <Label className="text-xs text-gray-500">库存量 (kg)</Label>
+                          <Input
+                            type="number"
+                            value={spec.stockQuantity || ''}
+                            onChange={(e) => handleSpecChange(index, 'stockQuantity', e.target.value, spec.isNew || false)}
+                            placeholder="如 100"
+                            step="0.01"
+                            min="0"
                             className="h-9 text-sm"
                           />
                         </div>
