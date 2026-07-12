@@ -328,6 +328,9 @@ export type { PestDiseaseDict } from './usePestDiseaseDictStore';
 export { useFertilizerLibraryStore } from './useFertilizerLibraryStore';
 export type { FertilizerLibrary, FertilizerSpec } from './useFertilizerLibraryStore';
 
+// 2026-07-12：肥料库扁平化重构别名（新名字 useFertilizerSpecStore 指向同一 hook）
+export { useFertilizerLibraryStore as useFertilizerSpecStore } from './useFertilizerLibraryStore';
+
 // 2026-06-18: 库存入库审计 Store（按模块下沉入库）
 export { useInventoryInboundStore } from './useInventoryInboundStore';
 export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord } from '../types/inventoryInbound';
