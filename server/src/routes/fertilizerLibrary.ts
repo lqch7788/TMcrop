@@ -180,12 +180,17 @@ router.post('/:id/specs', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO fertilizer_specs (
       id, fertilizer_id, brand_name, spec_content, manufacturer,
-      suggested_dosage, suggested_ratio, dosage_unit, remark, unit_price, status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      suggested_dosage, suggested_ratio, dosage_unit, remark, unit_price,
+      batch_number, production_date, expiration_date,
+      status, create_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [specId, id, body.brand_name || null, body.spec_content || null, body.manufacturer || null,
        body.suggested_dosage || null, body.suggested_ratio || null,
        body.dosage_unit || null, body.remark || null,
        Number(body.unit_price) || 0,  // 2026-07-12：单价（施肥时自动取）
+       body.batch_number || null,   // 2026-07-12：产品批次
+       body.production_date || null, // 2026-07-12：生产日期
+       body.expiration_date || null, // 2026-07-12：过期日期
        body.status || 'active', now]
     );
 
@@ -207,7 +212,9 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '规格不存在' }); return; }
 
     db.run(`UPDATE fertilizer_specs SET brand_name=?, spec_content=?, manufacturer=?,
-      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?, unit_price=?, status=? WHERE id=?`,
+      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?, unit_price=?,
+      batch_number=?, production_date=?, expiration_date=?,
+      status=? WHERE id=?`,
       [body.brand_name ?? existing[0].brand_name,
        body.spec_content ?? existing[0].spec_content,
        body.manufacturer ?? existing[0].manufacturer,
@@ -216,6 +223,9 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
        body.dosage_unit ?? existing[0].dosage_unit,
        body.remark ?? existing[0].remark,
        body.unit_price != null ? Number(body.unit_price) : (existing[0].unit_price || 0),  // 2026-07-12
+       body.batch_number ?? existing[0].batch_number,    // 2026-07-12：产品批次
+       body.production_date ?? existing[0].production_date, // 2026-07-12：生产日期
+       body.expiration_date ?? existing[0].expiration_date, // 2026-07-12：过期日期
        body.status ?? existing[0].status, specId]
     );
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [specId]);

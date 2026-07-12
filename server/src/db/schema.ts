@@ -3050,6 +3050,10 @@ export function initializeDatabase() {
       dosage_unit TEXT,
       remark TEXT,
       unit_price REAL DEFAULT 0,  -- 2026-07-12：单价（施肥时自动取，用户不用填）
+      -- 2026-07-12：批次追溯字段（产品批次 / 生产日期 / 过期日期）
+      batch_number TEXT,
+      production_date TEXT,
+      expiration_date TEXT,
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
@@ -3535,6 +3539,23 @@ export function initializeDatabase() {
   // 2026-07-12：肥料规格子表加单价列（施肥时自动取，用户无需填）
   try {
     db.run('ALTER TABLE fertilizer_specs ADD COLUMN unit_price REAL DEFAULT 0');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+
+  // 2026-07-12：肥料规格子表加批次追溯三列（产品批次 / 生产日期 / 过期日期）
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN batch_number TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN production_date TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN expiration_date TEXT');
   } catch (e) {
     // 列已存在则忽略
   }
