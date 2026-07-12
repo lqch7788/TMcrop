@@ -2710,9 +2710,16 @@ export function initializeDatabase() {
       status TEXT DEFAULT 'completed',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime')),
-      -- G11 V1.1：关联肥料库（库选择追溯用；老数据可空）
+      -- 2026-07-12：关联肥料规格（扁平化后用 spec 关联，spec_id 为新代码主路径）
+      spec_id TEXT,
+      -- 2026-07-12：3 个快照字段（spec 删除后仍能查"当时用了什么"）
+      spec_brand_name TEXT,
+      spec_unit_price_snapshot REAL,
+      spec_batch_number TEXT,
+      -- 老字段保留（写新数据时不写，老数据回退兼容）；FK 也指向 fertilizer_specs
       fertilizer_id TEXT,
-      FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE SET NULL
+      FOREIGN KEY (spec_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL,
+      FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL
     )
   `);
 
@@ -3016,49 +3023,34 @@ export function initializeDatabase() {
     )
   `);
 
-  // 肥料库主表
+  // 肥料规格表（V2026-07-12：扁平化，原 fertilizer_library + fertilizer_specs 合并；库概念下沉为「规格」）
   db.run(`
-    CREATE TABLE IF NOT EXISTS fertilizer_library (
+    CREATE TABLE IF NOT EXISTS fertilizer_specs (
       id TEXT PRIMARY KEY,
       fertilizer_code TEXT NOT NULL UNIQUE,
       fertilizer_name TEXT NOT NULL,
-      fertilizer_type TEXT CHECK(fertilizer_type IN ('organic', 'inorganic', 'water_soluble', 'compound', 'bio', 'slow_release', 'trace')),
+      fertilizer_type TEXT,
       application_timing TEXT,
       function_desc TEXT,
       taboo_desc TEXT,
       shelf_life TEXT,
       storage_condition TEXT,
       supplier_info TEXT,
-      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
-      -- G11 V1.1：当前库存（千克），施肥时事务扣减，删除/编辑时回滚
-      current_stock REAL DEFAULT 0,
-      create_time TEXT DEFAULT (datetime('now','localtime')),
-      update_time TEXT DEFAULT (datetime('now','localtime'))
-    )
-  `);
-
-  // 肥料规格子表
-  db.run(`
-    CREATE TABLE IF NOT EXISTS fertilizer_specs (
-      id TEXT PRIMARY KEY,
-      fertilizer_id TEXT NOT NULL,
       brand_name TEXT,
       spec_content TEXT,
       manufacturer TEXT,
       suggested_dosage TEXT,
       suggested_ratio TEXT,
-      dosage_unit TEXT,
+      dosage_unit TEXT DEFAULT 'kg/亩',
       remark TEXT,
-      unit_price REAL DEFAULT 0,  -- 2026-07-12：单价（施肥时自动取，用户不用填）
-      -- 2026-07-12：批次追溯字段（产品批次 / 生产日期 / 过期日期）
+      unit_price REAL DEFAULT 0,
       batch_number TEXT,
       production_date TEXT,
       expiration_date TEXT,
-      -- 2026-07-12：单规格当前库存（kg），主表的当前库存 = sum(specs.stock_quantity)
       stock_quantity REAL DEFAULT 0,
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
-      FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
+      update_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
 
@@ -3568,6 +3560,21 @@ export function initializeDatabase() {
   } catch (e) {
     // 列已存在则忽略
   }
+
+  // 2026-07-12：肥料规格子表加 5 个扁平化字段（同步 CREATE TABLE 中的新结构）
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN fertilizer_type TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN function_desc TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN taboo_desc TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN shelf_life TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN storage_condition TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN supplier_info TEXT"); } catch (e) {}
+  try { db.run("ALTER TABLE fertilizer_specs ADD COLUMN update_time TEXT DEFAULT (datetime('now','localtime'))"); } catch (e) {}
+
+  // 2026-07-12：fertilizer_records 加 spec_id + 3 个快照字段（spec 删除后仍能查"当时用了什么"）
+  try { db.run('ALTER TABLE fertilizer_records ADD COLUMN spec_id TEXT'); } catch (e) {}
+  try { db.run('ALTER TABLE fertilizer_records ADD COLUMN spec_brand_name TEXT'); } catch (e) {}
+  try { db.run('ALTER TABLE fertilizer_records ADD COLUMN spec_unit_price_snapshot REAL'); } catch (e) {}
+  try { db.run('ALTER TABLE fertilizer_records ADD COLUMN spec_batch_number TEXT'); } catch (e) {}
 
   // ==================== V14.0: 批次库存表（FEFO 先进先出追踪） ====================
   db.run(`
