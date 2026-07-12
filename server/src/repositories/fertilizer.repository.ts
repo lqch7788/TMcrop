@@ -71,6 +71,11 @@ export interface FertilizerRecord {
   fertilizer_id: string | null;
   // 2026-07-12：施肥区域池（JSON 字符串），每条独立区域+用量+单位+稀释倍数
   fertilization_pool: string | null;
+  // 2026-07-12：spec 快照字段（spec 删除后仍能查"当时用了什么"）
+  spec_id: string | null;
+  spec_brand_name: string | null;
+  spec_unit_price_snapshot: number | null;
+  spec_batch_number: string | null;
   // 注意：运行时通过 queryToObjects 获取的对象会自动转 camelCase
   // 这里用 [key: string]: any 让 service 端可用 camelCase 字段而不报错
   [key: string]: any;
@@ -111,8 +116,9 @@ export class FertilizerRepository {
         quantity, unit, unit_price, total_cost, fertilize_time,
         operator_id, operator_name, data_source, iot_device_id, iot_record_id,
         description, status, create_time, update_time, fertilizer_id,
-        fertilization_pool
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        fertilization_pool,
+        spec_id, spec_brand_name, spec_unit_price_snapshot, spec_batch_number
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `, [
       record.id, record.fertilizer_code, record.farm_task_id, record.production_plan_id,
       record.production_plan_code, record.planting_id, record.planting_code,
@@ -124,6 +130,11 @@ export class FertilizerRepository {
       record.description, record.status, record.create_time, record.update_time,
       record.fertilizer_id,
       record.fertilization_pool ?? null,
+      // 2026-07-12：spec 快照字段（spec 删除后仍能查"当时用了什么"）
+      record.spec_id ?? null,
+      record.spec_brand_name ?? null,
+      record.spec_unit_price_snapshot ?? null,
+      record.spec_batch_number ?? null,
     ]);
   }
 
@@ -182,10 +193,10 @@ export class FertilizerRepository {
    * 查询单条 spec（替代原 findLibraryById）
    * 注意：queryToObjects 已转 camelCase，所以返回字段是 camelCase
    */
-  findSpecById(specId: string): { id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string } | null {
+  findSpecById(specId: string): { id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string } | null {
     const db = getDatabase();
-    const rows = queryToObjects<{ id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string }>(db,
-      `SELECT id, fertilizer_code, fertilizer_name, brand_name, stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
+    const rows = queryToObjects<{ id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string }>(db,
+      `SELECT id, fertilizer_code, fertilizer_name, brand_name, unit_price, batch_number, stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
     return rows[0] ?? null;
   }
 
