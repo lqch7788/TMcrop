@@ -52,7 +52,7 @@ const createRecordSchema = z.object({
   fertilizerName: z.string().min(1, '肥料名称必填'),
   // 2026-07-12：fertilizerType 已不再是顶层必填（迁到池的每个肥料行；老数据保留兼容）
   fertilizerType: z.string().nullish(),
-  dilutionRatio: z.string().min(1, '稀释比例必填'),
+  dilutionRatio: z.string().optional(),
   quantity: z.number().nonnegative('数量必须非负').max(1e7, '数量过大'),
   unit: z.string().optional(),
   unitPrice: z.number().nonnegative().default(0),

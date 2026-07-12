@@ -130,8 +130,9 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
 
     fetchItemById: async (id: string) => {
       try {
-        const response: FertilizerSpec | { data: FertilizerSpec } = await enhancedApiClient.get(`/fertilizer-specs/${id}`) as FertilizerSpec | { data: FertilizerSpec };
-        return ((response as { data: FertilizerSpec }).data ?? response) as FertilizerSpec;
+        // enhancedApiClient 已解包 .data 并返回 camelCase 对象，直接使用
+        const response: any = await enhancedApiClient.get(`/fertilizer-specs/${id}`);
+        return ((response as any)?.data ?? response) as FertilizerSpec;
       } catch {
         return null;
       }
@@ -140,8 +141,9 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
     createItem: async (item) => {
       try {
         const body = denormalize(item, FIELD_MAP);
-        const response = await enhancedApiClient.post('/fertilizer-specs', body);
-        const newItem = normalize((response.data ?? response) as Record<string, unknown>, FIELD_MAP) as FertilizerSpec;
+        const response: any = await enhancedApiClient.post('/fertilizer-specs', body);
+        // enhancedApiClient 已解包 .data 并返回 camelCase 对象，直接使用
+        const newItem = (response?.data ?? response) as FertilizerSpec;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
       } catch (err) {
@@ -153,8 +155,9 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
     updateItem: async (id, updates) => {
       try {
         const body = denormalize(updates, FIELD_MAP);
-        const response = await enhancedApiClient.put(`/fertilizer-specs/${id}`, body);
-        const updated = normalize((response.data ?? response) as Record<string, unknown>, FIELD_MAP) as FertilizerSpec;
+        const response: any = await enhancedApiClient.put(`/fertilizer-specs/${id}`, body);
+        // enhancedApiClient 已解包 .data 并返回 camelCase 对象，直接使用
+        const updated = (response?.data ?? response) as FertilizerSpec;
         set((state) => ({ items: state.items.map((i) => (i.id === id ? { ...i, ...updated } : i)) }));
         return updated;
       } catch (err) {

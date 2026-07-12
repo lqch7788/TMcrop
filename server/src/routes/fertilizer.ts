@@ -104,7 +104,7 @@ router.get('/', (req: Request, res: Response) => {
     const total = execCount(db, `SELECT * FROM fertilizer_records ${whereClause}`, params);
     const offset = (pageNum - 1) * limitNum;
     const items = queryToObjects(db,
-      `SELECT * FROM fertilizer_records ${whereClause} ORDER BY fertilize_time DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM fertilizer_records ${whereClause} ORDER BY create_time DESC, fertilize_time DESC LIMIT ? OFFSET ?`,
       [...params, limitNum, offset]
     );
     res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
