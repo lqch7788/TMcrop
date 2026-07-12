@@ -112,8 +112,8 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 </TableCell>
               </TableRow>
             ) : currentData.map((record) => (
+              <React.Fragment key={record.id}>
               <TableRow
-                key={record.id}
                 className={`hover:bg-amber-50 transition-colors ${selectedRows.includes(record.id) ? 'bg-amber-50' : ''}`}
               >
                 {exportMode && (
@@ -206,6 +206,48 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                   </TableCell>
                 )}
               </TableRow>
+              {/* 详情行 — 始终展开（spec 字段），保证扁平化后所有列明细仍可见 */}
+              <TableRow className="bg-blue-50/40 hover:bg-blue-50/60">
+                <TableCell colSpan={9} className="px-4 py-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-x-4 gap-y-1 text-xs">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">成份：</span>
+                      <span className="text-gray-900 truncate">{record.specContent || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">厂家：</span>
+                      <span className="text-gray-900 truncate">{record.manufacturer || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">建议用量：</span>
+                      <span className="text-gray-900 truncate">
+                        {record.suggestedDosage || '-'} {getDictItemName('dosage_unit', record.dosageUnit || '') || record.dosageUnit}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">稀释：</span>
+                      <span className="text-gray-900 truncate">{record.suggestedRatio || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">批次：</span>
+                      <span className="text-gray-900 font-mono truncate">{record.batchNumber || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">生产日期：</span>
+                      <span className="text-gray-900 truncate">{record.productionDate || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-gray-500 shrink-0">过期日期：</span>
+                      <span className="text-gray-900 truncate">{record.expirationDate || '-'}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 md:col-span-2 xl:col-span-2">
+                      <span className="text-gray-500 shrink-0">备注：</span>
+                      <span className="text-gray-900 truncate">{record.remark || '-'}</span>
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+              </React.Fragment>
             ))}
           </TableBody>
         </Table>
