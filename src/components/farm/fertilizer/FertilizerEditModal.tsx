@@ -58,6 +58,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
   const [quantityInputText, setQuantityInputText] = useState('');
 
   // 2026-07-12：施肥区域多选 record（同一次施肥同种作物+多区域不同用量；参考病虫害多区域模式）
+  // 2026-07-12：增加 spec 追溯字段（specId/specBrandName/specUnitPrice/specBatchNumber）— 直接从肥料库 spec 联动
   // 接口（与 AddModal 保持一致，便于反向解析）
   interface FertilizationPoolItemForEdit {
     type: 'planting' | 'seedling';
@@ -72,6 +73,21 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     fertilizationMethod: string;
     fertilizerName: string;
     unitPrice: number;  // 2026-07-12：每行独立单价（自动从库取，可手改）
+    // 2026-07-12：spec 精确追溯字段（与新增弹窗保持一致，便于回溯具体规格）
+    fertilizerSpecId?: string;
+    specBrandName?: string;
+    specUnitPrice?: number;
+    specBatchNumber?: string;
+  }
+
+  // 2026-07-12：肥料种类选项（从肥料库选择时携带 spec 信息）
+  interface FertilizerChoice {
+    id: string;
+    name: string;
+    brandName?: string;
+    unitPrice?: number;
+    batchNumber?: string;
+    stockQuantity?: number;
   }
 
   // 关联业务选择器（2026-07-12 重构为多区域多选）
@@ -81,7 +97,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
   const [bizTabType, setBizTabType] = useState<'planting' | 'seedling'>('planting');
   const bizSearchRef = useRef<HTMLDivElement>(null);
   // 2026-07-12：肥料种类多选（从池的 fertilizerName 反向推；编辑模式下无需再次勾选）
-  const [selectedFertilizers, setSelectedFertilizers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFertilizers, setSelectedFertilizers] = useState<FertilizerChoice[]>([]);
 
   // 种植记录列表
   const plantingOptions = useMemo(() => {
@@ -196,6 +212,10 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 fertilizationMethod: String(it.fertilizationMethod || ''),
                 fertilizerName: String(it.fertilizerName || ''),
                 unitPrice: Number(it.unitPrice) || 0,  // 2026-07-12：单价（自动从库取，可手改）
+                fertilizerSpecId: it.fertilizerSpecId ? String(it.fertilizerSpecId) : undefined,
+                specBrandName: it.specBrandName ? String(it.specBrandName) : undefined,
+                specUnitPrice: Number(it.specUnitPrice) || 0,
+                specBatchNumber: it.specBatchNumber ? String(it.specBatchNumber) : undefined,
               }));
           }
         } catch {
@@ -218,6 +238,10 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
             fertilizationMethod: '',
             fertilizerName: record.fertilizerName || '',
             unitPrice: record.unitPrice || 0,
+            fertilizerSpecId: (record as any).fertilizerId || undefined,
+            specBrandName: (record as any).specBrandName || undefined,
+            specUnitPrice: Number((record as any).specUnitPrice) || Number(record.unitPrice) || 0,
+            specBatchNumber: (record as any).specBatchNumber || undefined,
           }];
         } else if (hasSeedling && (record as any).seedlingId) {
           parsedPool = [{
@@ -233,19 +257,31 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
             fertilizationMethod: '',
             fertilizerName: record.fertilizerName || '',
             unitPrice: record.unitPrice || 0,
+            fertilizerSpecId: (record as any).fertilizerId || undefined,
+            specBrandName: (record as any).specBrandName || undefined,
+            specUnitPrice: Number((record as any).specUnitPrice) || Number(record.unitPrice) || 0,
+            specBatchNumber: (record as any).specBatchNumber || undefined,
           }];
         }
       }
       setSelectedBizRecords(parsedPool);
 
-      // 2026-07-12：从池去重出肥料种类（用于池行 select 选项）
-      const fertSet = new Set<string>();
+      // 2026-07-12：从池去重出肥料种类（用于池行 select 选项），并保留 spec 追溯信息
+      const fertilizerChoices: FertilizerChoice[] = [];
       for (const r of parsedPool) {
-        if (r.fertilizerName) fertSet.add(r.fertilizerName);
+        if (!r.fertilizerName) continue;
+        const choiceId = r.fertilizerSpecId || `pool-${fertilizerChoices.length}`;
+        if (fertilizerChoices.some((f) => f.id === choiceId || (!r.fertilizerSpecId && f.name === r.fertilizerName))) continue;
+        fertilizerChoices.push({
+          id: choiceId,
+          name: r.fertilizerName,
+          brandName: r.specBrandName || '',
+          unitPrice: Number(r.specUnitPrice || r.unitPrice) || 0,
+          batchNumber: r.specBatchNumber || '',
+          stockQuantity: 0,
+        });
       }
-      setSelectedFertilizers(
-        Array.from(fertSet).map((name, idx) => ({ id: `pool-${idx}`, name }))
-      );
+      setSelectedFertilizers(fertilizerChoices);
 
       // 加载下拉数据
       usePlantingStore.getState().loadItems();
@@ -288,8 +324,13 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         unit: '千克',
         dilutionRatio: '',
         fertilizationMethod: '',
-        fertilizerName: '',
-        unitPrice: 0,  // 2026-07-12：单价（施肥时从库取，可手改）
+        // 2026-07-12：新增区域时默认带入已选第一种肥料及其 spec 快照
+        fertilizerName: selectedFertilizers[0]?.name || '',
+        unitPrice: Number(selectedFertilizers[0]?.unitPrice) || 0,
+        fertilizerSpecId: selectedFertilizers[0]?.id,
+        specBrandName: selectedFertilizers[0]?.brandName || '',
+        specUnitPrice: Number(selectedFertilizers[0]?.unitPrice) || 0,
+        specBatchNumber: selectedFertilizers[0]?.batchNumber || '',
       };
       return [...prev, newItem];
     });
@@ -316,8 +357,55 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       dilutionRatio: '',
       fertilizationMethod: '',
       unitPrice: 0,
+      // 2026-07-12：spec 字段一并清空，等用户选新肥时自动联动
+      fertilizerSpecId: undefined,
+      specBrandName: undefined,
+      specUnitPrice: undefined,
+      specBatchNumber: undefined,
     };
     setSelectedBizRecords((prev) => [...prev, newRow]);
+  };
+
+  // 2026-07-12：肥料库选择以 spec.id 为唯一 key，并携带品牌/单价/批次/库存快照
+  const toggleFertilizerFromLibrary = (spec: any) => {
+    const exists = selectedFertilizers.find(f => f.id === spec.id);
+    if (exists) {
+      setSelectedFertilizers(selectedFertilizers.filter(f => f.id !== spec.id));
+    } else {
+      setSelectedFertilizers([...selectedFertilizers, {
+        id: spec.id,
+        name: spec.fertilizerName,
+        brandName: spec.brandName || '',
+        unitPrice: Number(spec.unitPrice) || 0,
+        batchNumber: spec.batchNumber || '',
+        stockQuantity: Number(spec.stockQuantity) || 0,
+      }]);
+    }
+  };
+
+  // 2026-07-12：移除已选肥料时同步清空引用该 spec 的池行，避免保存失效引用
+  const removeFertilizer = (id: string) => {
+    let removedName = '';
+    setSelectedFertilizers((prev) => {
+      const removed = prev.find((f) => f.id === id);
+      removedName = removed?.name || '';
+      return prev.filter((f) => f.id !== id);
+    });
+    setSelectedBizRecords((prev) =>
+      prev.map((r) => (
+        r.fertilizerSpecId === id || (removedName && r.fertilizerName === removedName && !r.fertilizerSpecId)
+          ? {
+              ...r,
+              fertilizerName: '',
+              unitPrice: 0,
+              fertilizerSpecId: undefined,
+              specBrandName: undefined,
+              specUnitPrice: undefined,
+              specBatchNumber: undefined,
+            }
+          : r
+      ))
+    );
   };
 
   const handleSubmit = async () => {
@@ -347,6 +435,11 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     const enrichedPool = selectedBizRecords.map((r) => ({
       ...r,
       dilutionRatio: r.dilutionRatio || '',
+      // 2026-07-12：spec 字段兜底（空值统一为空串/0，避免后端校验失败）
+      specBrandName: r.specBrandName || '',
+      specBatchNumber: r.specBatchNumber || '',
+      specUnitPrice: Number(r.specUnitPrice) || 0,
+      fertilizerSpecId: r.fertilizerSpecId || '',
     }));
     const areas = Array.from(new Set(enrichedPool.map((r) => r.area))).filter(Boolean);
     // 总成本按行 sum（每行 quantity × unitPrice — 多肥各自价）
@@ -354,6 +447,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       (sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
       0
     );
+    const firstSpecRow = enrichedPool.find((r) => r.fertilizerSpecId);
     const payload: Record<string, any> = {
       fertilizerCode: form.fertilizerCode,
       // 顶层兼容：首条肥料名（向后兼容；新客户端读 pool.fertilizerName）
@@ -373,6 +467,11 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       plantingCode: selectedBizRecords.find((r) => r.type === 'planting')?.code || '',
       seedlingId: selectedBizRecords.find((r) => r.type === 'seedling')?.id || '',
       seedlingCode: selectedBizRecords.find((r) => r.type === 'seedling')?.code || '',
+      // 2026-07-12：顶层 spec 快照字段用于后端/旧列表兼容；池 JSON 保留每行精确 spec
+      fertilizerSpecId: firstSpecRow?.fertilizerSpecId || '',
+      specBrandName: firstSpecRow?.specBrandName || '',
+      specUnitPrice: Number(firstSpecRow?.specUnitPrice) || 0,
+      specBatchNumber: firstSpecRow?.specBatchNumber || '',
       // 2026-07-12：施肥区域池整池 JSON
       fertilizationPool: JSON.stringify(enrichedPool),
     };
@@ -526,6 +625,70 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
               )}
             </div>
 
+            {/* 2026-07-12：肥料种类多选（与新增弹窗保持一致；池行从已选 spec 中选择） */}
+            <div className="mb-3 p-2 border border-amber-200 bg-amber-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-amber-900">🧪 肥料种类（多选；池行使用以下种类）</span>
+                <span className="text-xs text-amber-700">已选 {selectedFertilizers.length} 种</span>
+              </div>
+              {selectedFertilizers.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedFertilizers.map((f) => (
+                    <span key={f.id} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-amber-300 text-amber-900 text-sm">
+                      🧪 {f.name}
+                      {f.brandName && <span className="text-xs text-amber-700">·{f.brandName}</span>}
+                      <span className="text-xs text-amber-700">¥{Number(f.unitPrice || 0).toFixed(2)}</span>
+                      {!isIot && (
+                        <button
+                          type="button"
+                          onClick={() => removeFertilizer(f.id)}
+                          className="ml-1 text-amber-700 hover:text-red-600"
+                          title="移除该肥料"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {fertilizerLibraryStore.items.filter((it: any) => it.status === 'active').length > 0 && !isIot && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-amber-700 hover:text-amber-900 select-none">
+                    从肥料库选（点击展开 {fertilizerLibraryStore.items.filter((it: any) => it.status === 'active').length} 项）
+                  </summary>
+                  <div className="mt-2 max-h-40 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-1">
+                    {fertilizerLibraryStore.items
+                      .filter((it: any) => it.status === 'active')
+                      .map((it: any) => {
+                        const checked = selectedFertilizers.some((f) => f.id === it.id);
+                        return (
+                          <label
+                            key={it.id}
+                            className={`flex flex-col gap-0.5 px-2 py-1 rounded cursor-pointer border ${
+                              checked ? 'bg-amber-100 border-amber-400' : 'bg-white border-amber-200'
+                            } hover:bg-amber-50`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleFertilizerFromLibrary(it)}
+                                className="w-3 h-3"
+                              />
+                              <span className="truncate font-medium">{it.fertilizerName}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 truncate pl-4">
+                              {it.brandName || '主品牌'} · ¥{Number(it.unitPrice || 0).toFixed(2)}/单位 · 库存 {Number(it.stockQuantity || 0).toFixed(0)}kg
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </details>
+              )}
+            </div>
+
             {/* 已选池（每行独立 [区域, 肥料名, 用量, 单位, 稀释, 方式]） */}
             {selectedBizRecords.length > 0 && (
               <div className="space-y-2 mb-3">
@@ -545,13 +708,35 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                       {/* 2026-07-12：肥料名下拉选择（选项来自 selectedFertilizers — 由池反向推出） */}
                       <select
                         value={r.fertilizerName}
-                        onChange={(e) => updateBizRecordField(`${r.type}-${r.id}-${r.fertilizerName || '-'}`, 'fertilizerName', e.target.value)}
+                        onChange={(e) => {
+                          const newName = e.target.value;
+                          const compositeKey = `${r.type}-${r.id}-${r.fertilizerName || '-'}`;
+                          const choice = selectedFertilizers.find((f) => f.name === newName);
+                          if (choice) {
+                            // 2026-07-12：切换肥料时同步 spec 快照，确保编辑保存后仍能追溯具体规格
+                            updateBizRecordField(compositeKey, 'fertilizerName', newName);
+                            updateBizRecordField(compositeKey, 'fertilizerSpecId', choice.id);
+                            updateBizRecordField(compositeKey, 'specBrandName', choice.brandName || '');
+                            updateBizRecordField(compositeKey, 'specUnitPrice', Number(choice.unitPrice) || 0);
+                            updateBizRecordField(compositeKey, 'specBatchNumber', choice.batchNumber || '');
+                            updateBizRecordField(compositeKey, 'unitPrice', Number(choice.unitPrice) || 0);
+                          } else {
+                            updateBizRecordField(compositeKey, 'fertilizerName', '');
+                            updateBizRecordField(compositeKey, 'fertilizerSpecId', undefined);
+                            updateBizRecordField(compositeKey, 'specBrandName', undefined);
+                            updateBizRecordField(compositeKey, 'specUnitPrice', undefined);
+                            updateBizRecordField(compositeKey, 'specBatchNumber', undefined);
+                            updateBizRecordField(compositeKey, 'unitPrice', 0);
+                          }
+                        }}
                         disabled={isIot}
                         className="w-full h-8 px-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 bg-white"
                       >
                         <option value="">请选择肥料…</option>
                         {selectedFertilizers.map((f) => (
-                          <option key={f.id} value={f.name}>🧪 {f.name}</option>
+                          <option key={f.id} value={f.name}>
+                            🧪 {f.name}{f.brandName ? ` · ${f.brandName}` : ''}
+                          </option>
                         ))}
                       </select>
                     </div>
