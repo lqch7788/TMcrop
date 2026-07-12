@@ -1896,8 +1896,8 @@ export function seedIndicatorEvaluations() {
 function seedFertilizerLibrary() {
   const db = getDatabase();
 
-  // 检查是否已有数据
-  const existing = db.exec('SELECT COUNT(*) FROM fertilizer_library WHERE fertilizer_type IN (\'organic\', \'inorganic\')');
+  // 检查是否已有数据（肥料规格表，扁平化结构）
+  const existing = db.exec('SELECT COUNT(*) FROM fertilizer_specs WHERE fertilizer_type IN (\'organic\', \'inorganic\')');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
     seedLog.skip(`肥料知识库有机肥/无机肥已存在 (${count}条)，跳过导入`);
@@ -1928,14 +1928,36 @@ function seedFertilizerLibrary() {
 
   let codeIndex = 1;
   for (const fert of fertilizers) {
-    const id = `fl-seed-${Date.now()}-${codeIndex}`;
+    // 肥料规格表扁平化结构（25 列）：每条记录即一个具体规格（产品）
+    const id = `fs-seed-${Date.now()}-${codeIndex}`;
     const code = `FG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${String(codeIndex).padStart(4, '0')}`;
     db.run(`
-      INSERT INTO fertilizer_library
+      INSERT INTO fertilizer_specs
       (id, fertilizer_code, fertilizer_name, fertilizer_type, application_timing,
-       function_desc, taboo_desc, shelf_life, storage_condition, status, current_stock, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, code, fert.name, fert.type, fert.timing, fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage, 'active', 100, now, now]);
+       function_desc, taboo_desc, shelf_life, storage_condition, supplier_info,
+       brand_name, spec_content, manufacturer, suggested_dosage, suggested_ratio, dosage_unit,
+       remark, unit_price, batch_number, production_date, expiration_date, stock_quantity,
+       status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id, code, fert.name, fert.type, fert.timing,
+      fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage,
+      '',           // supplier_info (无种子数据，留空)
+      '主品牌',     // brand_name
+      '',           // spec_content
+      '',           // manufacturer
+      '',           // suggested_dosage
+      '',           // suggested_ratio
+      'kg/亩',      // dosage_unit
+      '',           // remark
+      0,            // unit_price
+      '',           // batch_number
+      '',           // production_date
+      '',           // expiration_date
+      100,          // stock_quantity (测试数据默认值)
+      'active',     // status
+      now, now      // create_time, update_time
+    ]);
     codeIndex++;
   }
 
