@@ -487,6 +487,8 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC026', code: 'application_method', name: '施用方法', module: 'pest', description: '农药/防治施用方法', sortOrder: 26, status: 'active' },
   { id: 'DC027', code: 'bio_agent_type', name: '生物制剂类型', module: 'pest', description: '生物防治制剂类型', sortOrder: 27, status: 'active' },
   { id: 'DC028', code: 'dosage_unit', name: '用量单位', module: 'pest', description: '药剂/肥料用量单位', sortOrder: 28, status: 'active' },
+  // 2026-07-12：施肥方式字典（与「施用方法」分开——病虫害侧重喷洒/熏蒸/注射，施肥侧重水肥一体/撒施/沟施）
+  { id: 'DC029', code: 'fertilization_method', name: '施肥方式', module: 'fertilization', description: '施肥方式（每区域独立，可维护扩展）', sortOrder: 29, status: 'active' },
   // ============================================
   // 生产汇总表配置分类（V8.0新增）
   // ============================================
@@ -717,6 +719,19 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'AM004', categoryCode: 'application_method', dictCode: 'broadcast', dictLabel: '撒施', dictValue: 'broadcast', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'AM005', categoryCode: 'application_method', dictCode: 'irrigation', dictLabel: '灌施', dictValue: 'irrigation', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'AM006', categoryCode: 'application_method', dictCode: 'injection', dictLabel: '注射', dictValue: 'injection', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 2026-07-12：施肥方式字典（与「施用方法」分开；侧重水肥一体/撒施/沟施等）
+  { id: 'FM001', categoryCode: 'fertilization_method', dictCode: 'foliar_spray', dictLabel: '叶面喷施', dictValue: 'foliar_spray', color: 'emerald', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'FM002', categoryCode: 'fertilization_method', dictCode: 'fertigation', dictLabel: '水肥一体化（滴灌/喷灌随水）', dictValue: 'fertigation', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'FM003', categoryCode: 'fertilization_method', dictCode: 'broadcast', dictLabel: '撒施', dictValue: 'broadcast', color: 'yellow', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'FM004', categoryCode: 'fertilization_method', dictCode: 'furrow', dictLabel: '条施（沟施）', dictValue: 'furrow', color: 'amber', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'FM005', categoryCode: 'fertilization_method', dictCode: 'hole', dictLabel: '穴施', dictValue: 'hole', color: 'orange', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'FM006', categoryCode: 'fertilization_method', dictCode: 'drench', dictLabel: '灌根', dictValue: 'drench', color: 'green', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'FM007', categoryCode: 'fertilization_method', dictCode: 'drip', dictLabel: '滴灌', dictValue: 'drip', color: 'cyan', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'FM008', categoryCode: 'fertilization_method', dictCode: 'sprinkler', dictLabel: '喷灌', dictValue: 'sprinkler', color: 'sky', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'FM009', categoryCode: 'fertilization_method', dictCode: 'flush', dictLabel: '冲施（随水冲入）', dictValue: 'flush', color: 'indigo', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'FM010', categoryCode: 'fertilization_method', dictCode: 'trunk_injection', dictLabel: '树干注射', dictValue: 'trunk_injection', color: 'purple', sortOrder: 10, isDefault: 0, status: 'active' },
+  { id: 'FM011', categoryCode: 'fertilization_method', dictCode: 'fog', dictLabel: '气雾（弥雾）', dictValue: 'fog', color: 'pink', sortOrder: 11, isDefault: 0, status: 'active' },
+  { id: 'FM012', categoryCode: 'fertilization_method', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 12, isDefault: 0, status: 'active' },
   // 生物制剂类型（V12.0新增）
   { id: 'BT001', categoryCode: 'bio_agent_type', dictCode: 'predatory_mite', dictLabel: '捕食螨', dictValue: 'predatory_mite', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'BT002', categoryCode: 'bio_agent_type', dictCode: 'parasitic_wasp', dictLabel: '寄生蜂', dictValue: 'parasitic_wasp', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },

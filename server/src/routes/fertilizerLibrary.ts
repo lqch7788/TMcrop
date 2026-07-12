@@ -180,11 +180,13 @@ router.post('/:id/specs', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO fertilizer_specs (
       id, fertilizer_id, brand_name, spec_content, manufacturer,
-      suggested_dosage, suggested_ratio, dosage_unit, remark, status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      suggested_dosage, suggested_ratio, dosage_unit, remark, unit_price, status, create_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [specId, id, body.brand_name || null, body.spec_content || null, body.manufacturer || null,
        body.suggested_dosage || null, body.suggested_ratio || null,
-       body.dosage_unit || null, body.remark || null, body.status || 'active', now]
+       body.dosage_unit || null, body.remark || null,
+       Number(body.unit_price) || 0,  // 2026-07-12：单价（施肥时自动取）
+       body.status || 'active', now]
     );
 
     const specs = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [specId]);
@@ -205,7 +207,7 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '规格不存在' }); return; }
 
     db.run(`UPDATE fertilizer_specs SET brand_name=?, spec_content=?, manufacturer=?,
-      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?, status=? WHERE id=?`,
+      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?, unit_price=?, status=? WHERE id=?`,
       [body.brand_name ?? existing[0].brand_name,
        body.spec_content ?? existing[0].spec_content,
        body.manufacturer ?? existing[0].manufacturer,
@@ -213,6 +215,7 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
        body.suggested_ratio ?? existing[0].suggested_ratio,
        body.dosage_unit ?? existing[0].dosage_unit,
        body.remark ?? existing[0].remark,
+       body.unit_price != null ? Number(body.unit_price) : (existing[0].unit_price || 0),  // 2026-07-12
        body.status ?? existing[0].status, specId]
     );
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [specId]);

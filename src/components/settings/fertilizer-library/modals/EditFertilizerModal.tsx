@@ -101,6 +101,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         suggestedRatio: spec.suggestedRatio || '',
         dosageUnit: spec.dosageUnit || 'kg/亩',
         remark: spec.remark || '',
+        unitPrice: spec.unitPrice || 0,  // 2026-07-12：单价
       }));
       setSpecs(existingSpecs);
       setNewSpecs([]);
@@ -118,6 +119,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       suggestedRatio: '',
       dosageUnit: 'kg/亩',
       remark: '',
+      unitPrice: 0,  // 2026-07-12：单价
     };
     setNewSpecs([...newSpecs, newSpec]);
   };
@@ -198,6 +200,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
             suggestedRatio: spec.suggestedRatio,
             dosageUnit: spec.dosageUnit,
             remark: spec.remark,
+            unitPrice: Number(spec.unitPrice) || 0,  // 2026-07-12：单价
           } as Partial<FertilizerSpec>);
         }
       }
@@ -215,7 +218,8 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         updated.suggestedDosage !== (original.suggestedDosage || '') ||
         updated.suggestedRatio !== (original.suggestedRatio || '') ||
         updated.dosageUnit !== (original.dosageUnit || '') ||
-        updated.remark !== (original.remark || '')
+        updated.remark !== (original.remark || '') ||
+        (updated.unitPrice || 0) !== (original.unitPrice || 0)  // 2026-07-12：单价变化检测
       )) {
         await store.updateSpec(original.id!, {
           brandName: updated.brandName,
@@ -225,6 +229,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           suggestedRatio: updated.suggestedRatio,
           dosageUnit: updated.dosageUnit,
           remark: updated.remark,
+          unitPrice: Number(updated.unitPrice) || 0,  // 2026-07-12：单价
         } as Partial<FertilizerSpec>);
       }
     }
@@ -358,7 +363,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                     className="flex gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 items-end"
                   >
                     {/* 输入字段区域 - 自动填充剩余宽度 */}
-                    <div className="flex-1 grid grid-cols-7 gap-2">
+                    <div className="flex-1 grid grid-cols-8 gap-2">
                       {/* 品牌名称 */}
                       <div>
                         <Label className="text-xs text-gray-500">品牌名称</Label>
@@ -437,6 +442,20 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                           value={spec.remark}
                           onChange={(e) => handleSpecChange(index, 'remark', e.target.value, spec.isNew || false)}
                           placeholder="备注"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* 2026-07-12：单价（元/基准单位）— 施肥时自动取 */}
+                      <div>
+                        <Label className="text-xs text-gray-500">单价 (元/单位)</Label>
+                        <Input
+                          type="number"
+                          value={spec.unitPrice || ''}
+                          onChange={(e) => handleSpecChange(index, 'unitPrice', e.target.value, spec.isNew || false)}
+                          placeholder="如 25"
+                          step="0.01"
+                          min="0"
                           className="h-9 text-sm"
                         />
                       </div>
