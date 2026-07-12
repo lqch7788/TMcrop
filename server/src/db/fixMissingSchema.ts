@@ -1320,31 +1320,6 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.error('pesticide_specs:', e.message);
   }
 
-  // V12.0: 肥料库表（如果从旧版本升级）
-  try {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS fertilizer_library (
-        id TEXT PRIMARY KEY,
-        fertilizer_code TEXT NOT NULL UNIQUE,
-        fertilizer_name TEXT NOT NULL,
-        fertilizer_type TEXT CHECK(fertilizer_type IN ('organic', 'inorganic', 'water_soluble', 'compound', 'bio', 'slow_release', 'trace')),
-        application_timing TEXT,
-        function_desc TEXT,
-        taboo_desc TEXT,
-        shelf_life TEXT,
-        storage_condition TEXT,
-        supplier_info TEXT,
-        status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
-        create_time TEXT DEFAULT (datetime('now','localtime')),
-        update_time TEXT DEFAULT (datetime('now','localtime'))
-      )
-    `);
-    seedLog.info('✓ fertilizer_library 表创建成功');
-  } catch (e: any) {
-    if (e.message.includes('already exists')) seedLog.skip('• fertilizer_library 已存在');
-    else seedLog.error('fertilizer_library:', e.message);
-  }
-
   try {
     db.run(`
       CREATE TABLE IF NOT EXISTS fertilizer_specs (
@@ -1376,15 +1351,6 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• brand_name 列添加: ' + e.message);
   }
 
-  // V12.0: 为 fertilizer_library 表添加 application_timing 字段（替换 fertilizer_category）
-  try {
-    db.run(`ALTER TABLE fertilizer_library ADD COLUMN application_timing TEXT`);
-    seedLog.info('✓ fertilizer_library 表添加 application_timing 列成功');
-  } catch (e: any) {
-    if (e.message.includes('duplicate column')) seedLog.skip('• application_timing 列已存在');
-    else seedLog.skip('• application_timing 列添加: ' + e.message);
-  }
-
   // 2026-07-12：为 fertilizer_specs 表添加 unit_price（施肥时自动带价）
   try {
     db.run('ALTER TABLE fertilizer_specs ADD COLUMN unit_price REAL DEFAULT 0');
@@ -1392,15 +1358,6 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('duplicate column')) seedLog.skip('• unit_price 列已存在');
     else seedLog.skip('• unit_price 列添加: ' + e.message);
-  }
-
-  // G11 V1.1: 为 fertilizer_library 表添加 current_stock 字段（当前库存，千克）
-  try {
-    db.run(`ALTER TABLE fertilizer_library ADD COLUMN current_stock REAL DEFAULT 0`);
-    seedLog.info('✓ fertilizer_library 表添加 current_stock 列成功');
-  } catch (e: any) {
-    if (e.message.includes('duplicate column')) seedLog.skip('• current_stock 列已存在');
-    else seedLog.skip('• current_stock 列添加: ' + e.message);
   }
 
   // 为 pesticide_specs 表添加作用机制字段
@@ -2060,18 +2017,6 @@ export async function fixMissingSchema(): Promise<void> {
         seedLog.skip(`• crop_orders.${fieldName}: ${e.message}`);
       }
     }
-  }
-
-  // G11 V1.1 数据修复：把所有肥料库 current_stock 初始化为 100（已有库/新装库通用）
-  try {
-    const now = new Date().toISOString();
-    const updated = db.run(
-      `UPDATE fertilizer_library SET current_stock = 100, update_time = ? WHERE current_stock IS NULL OR current_stock = 0`,
-      [now],
-    );
-    seedLog.info(`✓ 肥料库初始库存 100kg：${db.getRowsModified()} 条更新`);
-  } catch (fixErr: any) {
-    seedLog.skip('• 肥料库库存初始化跳过:', fixErr.message);
   }
 
   // G12 2026-06-22: plant_label_resume 加 image_base64 列（履历拍照存证）
