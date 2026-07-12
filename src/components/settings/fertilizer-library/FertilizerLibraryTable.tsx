@@ -1,6 +1,8 @@
 /**
  * 肥料库表格组件（扁平化 2026-07-12）
- * 列：编码 / 肥料名称 / 品牌 / 肥料类型 / 施肥时期 / 当前库存 / 单价 / 功能说明 / 操作
+ * 单行 18 列：编码 / 肥料名称 / 品牌 / 肥料类型 / 施肥时期 / 当前库存 / 单价 / 功能说明 /
+ *          成份与含量 / 生产厂家 / 建议用量 / 单位 / 稀释比例 / 产品批次 / 生产日期 / 过期日期 / 备注 / 操作
+ * 容器 overflow-x-auto，超宽时底部出现横向滚动条
  * 每条记录 = 一条 spec，含所有下沉字段
  */
 import React from 'react';
@@ -21,6 +23,10 @@ interface FertilizerLibraryTableProps {
   onSelectRow?: (id: string) => void;
   onSelectAll?: () => void;
 }
+
+// 列数常量（用于 colSpan）
+// 非导出模式：18 列（含操作）；导出模式：17 列（不含操作）+ 1 列 checkbox = 18
+const TOTAL_COLS = 18;
 
 const getApplicationTimingBadge = (timing: string) => {
   switch (timing) {
@@ -77,8 +83,9 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
+      {/* 横向滚动容器：列数 18，超宽时底部自动出滚动条 */}
+      <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
+        <Table style={{ minWidth: '1800px' }}>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow className="hover:bg-transparent">
               {exportMode && (
@@ -96,24 +103,33 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">品牌</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥时期</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">当前库存 (kg)</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">单价 (元/单位)</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">当前库存 (kg)</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">单价 (元/单位)</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">成份与含量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产厂家</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">建议用量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">单位</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">稀释比例</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">产品批次</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产日期</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">过期日期</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">备注</TableHead>
               {!exportMode && (
-                <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
+                <TableHead className="py-3 font-semibold text-white whitespace-nowrap sticky right-0 bg-blue-600 z-10">操作</TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={TOTAL_COLS} className="px-4 py-12 text-center text-gray-400">
                   暂无肥料记录
                 </TableCell>
               </TableRow>
             ) : currentData.map((record) => (
-              <React.Fragment key={record.id}>
               <TableRow
+                key={record.id}
                 className={`hover:bg-amber-50 transition-colors ${selectedRows.includes(record.id) ? 'bg-amber-50' : ''}`}
               >
                 {exportMode && (
@@ -126,6 +142,7 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                     />
                   </TableCell>
                 )}
+                {/* 1. 编码 */}
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   <Button
                     variant="link"
@@ -137,19 +154,24 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                     {record.fertilizerCode || '-'}
                   </Button>
                 </TableCell>
+                {/* 2. 肥料名称 */}
                 <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
                   {record.fertilizerName || '-'}
                 </TableCell>
+                {/* 3. 品牌 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.brandName || '主品牌'}
                 </TableCell>
+                {/* 4. 肥料类型 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {getFertilizerTypeLabel(record.fertilizerType || '')}
                 </TableCell>
+                {/* 5. 施肥时期 */}
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   {getTimingBadges(record.applicationTiming || '')}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                {/* 6. 当前库存 */}
+                <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-right font-mono">
                   {(() => {
                     const stock = record.stockQuantity ?? 0;
                     const colorClass = stock === 0
@@ -159,21 +181,60 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                         : 'text-emerald-600 font-semibold';
                     return (
                       <span className={colorClass} title={stock === 0 ? '库存为零' : stock < 50 ? '库存偏低' : '库存充足'}>
-                        {stock.toFixed(2)} kg
+                        {stock.toFixed(2)}
                       </span>
                     );
                   })()}
                 </TableCell>
+                {/* 7. 单价 */}
                 <TableCell className="px-4 py-3 text-sm text-right font-mono whitespace-nowrap">
                   {record.unitPrice != null && record.unitPrice > 0
                     ? Number(record.unitPrice).toFixed(2)
                     : <span className="text-gray-400">-</span>}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
+                {/* 8. 功能说明 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate" title={record.functionDesc || ''}>
                   {record.functionDesc || '-'}
                 </TableCell>
+                {/* 9. 成份与含量 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.specContent || ''}>
+                  {record.specContent || '-'}
+                </TableCell>
+                {/* 10. 生产厂家 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.manufacturer || ''}>
+                  {record.manufacturer || '-'}
+                </TableCell>
+                {/* 11. 建议用量 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
+                  {record.suggestedDosage || '-'}
+                </TableCell>
+                {/* 12. 单位 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {getDictItemName('dosage_unit', record.dosageUnit || '') || record.dosageUnit || '-'}
+                </TableCell>
+                {/* 13. 稀释比例 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
+                  {record.suggestedRatio || '-'}
+                </TableCell>
+                {/* 14. 产品批次 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono" title={record.batchNumber || ''}>
+                  {record.batchNumber || '-'}
+                </TableCell>
+                {/* 15. 生产日期 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.productionDate || '-'}
+                </TableCell>
+                {/* 16. 过期日期 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.expirationDate || '-'}
+                </TableCell>
+                {/* 17. 备注 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={record.remark || ''}>
+                  {record.remark || '-'}
+                </TableCell>
+                {/* 18. 操作（粘性列，水平滚动时锁定右侧） */}
                 {!exportMode && (
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap sticky right-0 bg-white z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.05)]">
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -206,48 +267,6 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                   </TableCell>
                 )}
               </TableRow>
-              {/* 详情行 — 始终展开（spec 字段），保证扁平化后所有列明细仍可见 */}
-              <TableRow className="bg-blue-50/40 hover:bg-blue-50/60">
-                <TableCell colSpan={9} className="px-4 py-2">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-x-4 gap-y-1 text-xs">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">成份：</span>
-                      <span className="text-gray-900 truncate">{record.specContent || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">厂家：</span>
-                      <span className="text-gray-900 truncate">{record.manufacturer || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">建议用量：</span>
-                      <span className="text-gray-900 truncate">
-                        {record.suggestedDosage || '-'} {getDictItemName('dosage_unit', record.dosageUnit || '') || record.dosageUnit}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">稀释：</span>
-                      <span className="text-gray-900 truncate">{record.suggestedRatio || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">批次：</span>
-                      <span className="text-gray-900 font-mono truncate">{record.batchNumber || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">生产日期：</span>
-                      <span className="text-gray-900 truncate">{record.productionDate || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-gray-500 shrink-0">过期日期：</span>
-                      <span className="text-gray-900 truncate">{record.expirationDate || '-'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1 md:col-span-2 xl:col-span-2">
-                      <span className="text-gray-500 shrink-0">备注：</span>
-                      <span className="text-gray-900 truncate">{record.remark || '-'}</span>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-              </React.Fragment>
             ))}
           </TableBody>
         </Table>
