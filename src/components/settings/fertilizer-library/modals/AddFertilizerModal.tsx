@@ -39,7 +39,7 @@ const APPLICATION_TIMING_OPTIONS = [
   { value: 'foliar', label: '叶面肥' },
 ];
 
-// 表单默认值常量（单一扁平 spec，25 字段）
+// 表单默认值常量（单一扁平 spec，26 字段，含 2026-07-12 包装规格）
 const INITIAL_FORM = {
   fertilizerName: '',
   fertilizerType: 'organic',
@@ -61,6 +61,7 @@ const INITIAL_FORM = {
   productionDate: '',
   expirationDate: '',
   stockQuantity: 0,
+  packageSpec: '',
 };
 
 export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerModalProps) {
@@ -113,6 +114,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
         productionDate: form.productionDate,
         expirationDate: form.expirationDate,
         stockQuantity: Number(form.stockQuantity) || 0,
+        packageSpec: form.packageSpec,
       });
 
       if (newSpec) {
@@ -293,6 +295,17 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                   placeholder="如 100"
                   step="0.01"
                   min="0"
+                  className="h-9 text-sm"
+                />
+              </div>
+              {/* 2026-07-12：包装规格（如 50kg/包、5kg/桶） */}
+              <div>
+                <Label className="text-xs text-gray-500">包装规格</Label>
+                <Input
+                  type="text"
+                  value={form.packageSpec}
+                  onChange={(e) => updateField('packageSpec', e.target.value)}
+                  placeholder="如 50kg/包、5kg/桶"
                   className="h-9 text-sm"
                 />
               </div>

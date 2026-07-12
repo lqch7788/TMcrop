@@ -69,8 +69,8 @@ router.post('/', (req: Request, res: Response) => {
       function_desc, taboo_desc, shelf_life, storage_condition, supplier_info,
       brand_name, spec_content, manufacturer, suggested_dosage, suggested_ratio, dosage_unit,
       remark, unit_price, batch_number, production_date, expiration_date, stock_quantity,
-      status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      package_spec, status, create_time, update_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.fertilizer_name, body.fertilizer_type || null, body.application_timing || null,
        body.function_desc || null, body.taboo_desc || null, body.shelf_life || null,
        body.storage_condition || null, body.supplier_info || null,
@@ -79,7 +79,7 @@ router.post('/', (req: Request, res: Response) => {
        body.dosage_unit || 'kg/亩', body.remark || null,
        Number(body.unit_price) || 0, body.batch_number || null,
        body.production_date || null, body.expiration_date || null,
-       Number(body.stock_quantity) || 0,
+       Number(body.stock_quantity) || 0, body.package_spec || null,
        body.status || 'active', now, now]
     );
 
@@ -118,6 +118,7 @@ router.put('/:id', (req: Request, res: Response) => {
       function_desc=?, taboo_desc=?, shelf_life=?, storage_condition=?, supplier_info=?,
       brand_name=?, spec_content=?, manufacturer=?, suggested_dosage=?, suggested_ratio=?, dosage_unit=?,
       remark=?, unit_price=?, batch_number=?, production_date=?, expiration_date=?, stock_quantity=?,
+      package_spec=?,
       status=?, update_time=? WHERE id=?`,
       [body.fertilizer_name ?? existing[0].fertilizer_name,
        body.fertilizer_type ?? existing[0].fertilizer_type,
@@ -139,6 +140,7 @@ router.put('/:id', (req: Request, res: Response) => {
        body.production_date ?? existing[0].production_date,
        body.expiration_date ?? existing[0].expiration_date,
        body.stock_quantity != null ? Number(body.stock_quantity) : (existing[0].stock_quantity || 0),
+       body.package_spec ?? existing[0].package_spec,
        body.status ?? existing[0].status,
        new Date().toISOString(), id]
     );

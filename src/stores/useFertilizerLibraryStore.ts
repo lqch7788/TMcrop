@@ -30,6 +30,8 @@ export interface FertilizerSpec {
   productionDate?: string;
   expirationDate?: string;
   stockQuantity?: number;
+  // 2026-07-12：包装规格（如 50kg/包、5kg/桶）
+  packageSpec?: string;
   status: string;
   createTime: string;
   updateTime: string;
@@ -59,6 +61,7 @@ const FIELD_MAP: Record<string, string> = {
   production_date: 'productionDate',
   expiration_date: 'expirationDate',
   stock_quantity: 'stockQuantity',
+  package_spec: 'packageSpec',  // 2026-07-12：包装规格
   status: 'status',
   create_time: 'createTime',
   update_time: 'updateTime',
