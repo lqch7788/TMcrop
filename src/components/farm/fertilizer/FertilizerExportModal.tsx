@@ -1,68 +1,72 @@
 /**
- * 施肥管理 - 导出格式选择弹窗
- * 支持 CSV / Excel / Word 三种格式
+ * 施肥管理 - 导出格式选择弹窗 (V2 改造 2026-07-12)
+ * 对齐作物库存 OutboundExportModal 的设计模式
  */
-import React, { useState } from 'react';
-import { Download, File, FileSpreadsheet, FileText, X } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { useState } from 'react';
+import { UnifiedModal } from '@/components/ui';
+import { FileText, FileSpreadsheet, FileType } from 'lucide-react';
 
 interface FertilizerExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (format: 'csv' | 'xlsx' | 'word') => void;
-  selectedCount: number;
+  rowCount: number;
+  onConfirm: (format: 'csv' | 'xlsx' | 'pdf') => void;
 }
 
-const FORMATS = [
-  { key: 'csv' as const, label: 'CSV', description: '逗号分隔文本，通用性最好', icon: <FileText className="w-8 h-8" /> },
-  { key: 'xlsx' as const, label: 'Excel', description: 'Microsoft Excel 表格格式', icon: <FileSpreadsheet className="w-8 h-8" /> },
-  { key: 'word' as const, label: 'Word', description: '可直接打印的文档格式', icon: <File className="w-8 h-8" /> },
+const exportFormats = [
+  { value: 'csv' as const, label: 'CSV (.csv)', desc: '后端生成，适用于数据交换', icon: FileText },
+  { value: 'xlsx' as const, label: 'Excel (.xlsx)', desc: '前端生成，明细 + 汇总双 sheet', icon: FileSpreadsheet },
+  { value: 'pdf' as const, label: 'PDF (.pdf)', desc: '前端 jspdf 生成，限 ≤ 2000 行', icon: FileType },
 ];
 
-export default function FertilizerExportModal({ isOpen, onClose, onConfirm, selectedCount }: FertilizerExportModalProps) {
-  const [format, setFormat] = useState<'csv' | 'xlsx' | 'word'>('xlsx');
-
-  if (!isOpen) return null;
+export default function FertilizerExportModal({ isOpen, onClose, rowCount, onConfirm }: FertilizerExportModalProps) {
+  const [format, setFormat] = useState<'csv' | 'xlsx' | 'pdf'>('csv');
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl">
-          <h3 className="text-lg font-semibold text-white">导出格式选择</h3>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-emerald-700">
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="p-4">
-          <p className="text-sm text-gray-500 mb-4">已选择 <span className="font-semibold text-emerald-600">{selectedCount}</span> 条记录</p>
-          <div className="space-y-3">
-            {FORMATS.map((f) => (
-              <div
-                key={f.key}
-                onClick={() => setFormat(f.key)}
-                className={`p-3 rounded-lg border-2 cursor-pointer transition-all flex items-center gap-3
-                  ${format === f.key ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300'}`}
-              >
-                <div className={`${format === f.key ? 'text-emerald-600' : 'text-gray-400'}`}>{f.icon}</div>
-                <div>
-                  <div className="font-medium text-sm text-gray-800">{f.label}</div>
-                  <div className="text-xs text-gray-500">{f.description}</div>
-                </div>
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="选择导出格式"
+      size="md"
+      showFooter
+      onSubmit={() => onConfirm(format)}
+      submitText="导出"
+      cancelText="取消"
+      showMaximize={false}
+      enableDrag={false}
+      enableResize={false}
+    >
+      <p className="text-sm text-gray-500 mb-4">
+        当前筛选条件下共 <span className="font-semibold text-gray-900">{rowCount.toLocaleString()}</span> 条施肥记录
+      </p>
+      <div className="space-y-3">
+        {exportFormats.map((f) => {
+          const Icon = f.icon;
+          const selected = format === f.value;
+          return (
+            <label
+              key={f.value}
+              className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                selected ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              <input
+                type="radio"
+                name="fertilizerExportFormat"
+                value={f.value}
+                checked={selected}
+                onChange={() => setFormat(f.value)}
+                className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+              />
+              <Icon className={`ml-3 w-5 h-5 ${selected ? 'text-emerald-600' : 'text-gray-400'}`} />
+              <div className="ml-2">
+                <span className="block text-sm font-medium text-gray-900">{f.label}</span>
+                <span className="block text-xs text-gray-500">{f.desc}</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={onClose}>
-            <X className="w-4 h-4" /> 取消
-          </Button>
-          <Button variant="default" size="sm" onClick={() => onConfirm(format)}>
-            <Download className="w-4 h-4" /> 确认导出
-          </Button>
-        </div>
+            </label>
+          );
+        })}
       </div>
-    </div>
+    </UnifiedModal>
   );
 }

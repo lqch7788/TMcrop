@@ -13,8 +13,9 @@ import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
 import { todayLocal } from '@/lib/dateUtils';
-// 2026-07-10 P1-1：抽取公共导出函数
-import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
+import { exportCsv, exportXlsx } from '@/services/exporters';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
 
@@ -168,50 +169,56 @@ export default function FertilizerPage() {
   }, [selectedIds, filters, store, toast]);
 
   // ========== 导出处理 ==========
+  const exportCount = selectedIds.length > 0 ? selectedIds.length : items.length;
+
   const handleExport = useCallback(() => {
-    const toExport = selectedIds.length > 0
-      ? items.filter((it) => selectedIds.includes(it.id))
-      : items;
-    if (toExport.length === 0) return;
+    if (exportCount === 0) return;
     setShowExportModal(true);
-  }, [items, selectedIds]);
+  }, [exportCount]);
 
-  // 2026-07-10 P1-1 bugfix：原 useCallback((format) => {...}) 内含 await 编译失败，改为 async
-  const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'word') => {
+  const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'pdf') => {
     const toExport = selectedIds.length > 0
       ? items.filter((it) => selectedIds.includes(it.id))
       : items;
 
-    const headers = ['施肥编号', '施肥时间', '作物', '温室', '区域数', '肥料种类', '总用量', '总成本', '操作员', '数据来源', '肥料明细(名称/区域/用量/稀释)'];
+    // 解析池数据生成导出行
     const rows = toExport.map((it) => {
-      let poolDetail = '';
-      try {
-        const pool = JSON.parse((it as any).fertilizationPool || '[]');
-        if (Array.isArray(pool) && pool.length > 0) {
-          poolDetail = pool.map((r: any) => `${r.fertilizerName||''} | ${r.area||''} | ${r.quantity}${r.unit||'kg'} | 1:${r.dilutionRatio||'-'}`).join('; ');
-        }
-      } catch {}
+      let pool: any[] = [];
+      try { pool = JSON.parse((it as any).fertilizationPool || '[]'); } catch {}
       const areas = new Set<string>();
       const ferts = new Set<string>();
-      try {
-        JSON.parse((it as any).fertilizationPool||'[]').forEach((r:any)=>{if(r.area)areas.add(r.area);if(r.fertilizerName)ferts.add(r.fertilizerName);});
-      } catch {}
-      return [it.fertilizerCode, it.fertilizeTime, it.cropName, it.greenhouseName,
-        String(areas.size||1), String(ferts.size||1),
-        String(it.quantity||0)+' '+it.unit, '¥'+(it.totalCost||0),
-        it.operatorName||'', it.dataSource==='auto_iot'?'IoT自动':'手动',
-        poolDetail];
+      pool.forEach((r: any) => { if (r.area) areas.add(r.area); if (r.fertilizerName) ferts.add(r.fertilizerName); });
+      const poolDetail = pool.length > 0
+        ? pool.map((r: any) => `${r.fertilizerName||''}|${r.area||''}|${r.quantity}${r.unit||'kg'}|${r.dilutionRatio||'-'}`).join('; ')
+        : '';
+      return {
+        施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName,
+        温室: it.greenhouseName, 区域数: String(areas.size || 1), 肥料种类: String(ferts.size || 1),
+        总用量: `${it.quantity||0} ${it.unit||'kg'}`, 总成本: `¥${it.totalCost||0}`,
+        操作员: it.operatorName||'', 数据来源: it.dataSource==='auto_iot'?'IoT自动':'手动', 肥料明细: poolDetail,
+      };
     });
 
-    const exportData = rows.map((r) => ({
-      '施肥编号': r[0], '施肥时间': r[1], '作物': r[2], '温室': r[3],
-      '区域数': r[4], '肥料种类': r[5], '总用量': r[6], '总成本': r[7],
-      '操作员': r[8], '数据来源': r[9], '肥料明细': r[10],
-    }));
     const filename = `施肥记录_${todayLocal()}`;
-    if (format === 'csv') await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
-    else if (format === 'xlsx') await exportXlsx({ filename: `${filename}.xls`, headers, rows: exportData });
-    else await exportWord({ filename: `${filename}.doc`, headers, rows: exportData });
+
+    if (format === 'csv') {
+      const headers = Object.keys(rows[0] || {});
+      const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
+      const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${filename}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === 'xlsx') {
+      await exportXlsx({ filename: `${filename}.xlsx`, headers: Object.keys(rows[0]||{}), rows });
+    } else if (format === 'pdf') {
+      const doc = new jsPDF('l', 'mm', 'a4');
+      const headers = [Object.keys(rows[0] || {})];
+      const data = rows.map((r) => Object.values(r).map(String));
+      (doc as any).autoTable({ head: headers, body: data, startY: 15, styles: { fontSize: 7 }, headStyles: { fillColor: [16, 185, 129] } });
+      doc.save(`${filename}.pdf`);
+    }
+
     setShowExportModal(false); setSelectedIds([]); setOperationMode('normal');
   }, [items, selectedIds]);
 
@@ -309,7 +316,7 @@ export default function FertilizerPage() {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleExportConfirm}
-        selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length}
+        rowCount={selectedIds.length > 0 ? selectedIds.length : items.length}
       />
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录一致） */}
       <DeleteConfirmModal
