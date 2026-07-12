@@ -1,12 +1,11 @@
 /**
- * 编辑肥料弹窗组件
- * 包含规格编辑器，支持编辑肥料及其规格信息
+ * 编辑肥料弹窗（扁平化 2026-07-12）
+ * 单一 spec 编辑表单，所有 25 字段直接展示
+ * 通过 change detection 只更新有变化的字段
  */
 import React, { useState, useCallback, useEffect } from 'react';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-import { Plus, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -14,25 +13,17 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { UnitDictSelect } from '../../../common/settings/UnitDictSelect';
-import { useFertilizerLibraryStore, FertilizerLibrary, FertilizerSpec } from '@/stores';
+import { useFertilizerLibraryStore, FertilizerSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
-import { AddFertilizerModal, FertilizerSpecItem } from './AddFertilizerModal';
 
 interface EditFertilizerModalProps {
   isOpen: boolean;
-  record: FertilizerLibrary;
+  record: FertilizerSpec;
   onClose: () => void;
   onSaved: () => void;
 }
 
-// 施肥时期选项
-const APPLICATION_TIMING_OPTIONS = [
-  { value: 'base', label: '底肥' },
-  { value: 'dressing', label: '追肥' },
-  { value: 'foliar', label: '叶面肥' },
-];
-
-// 肥料类型选项
+// 肥料类型选项（按化学性质分类）
 const FERTILIZER_TYPE_OPTIONS = [
   { value: 'organic', label: '有机肥' },
   { value: 'inorganic', label: '无机肥' },
@@ -43,243 +34,150 @@ const FERTILIZER_TYPE_OPTIONS = [
   { value: 'trace', label: '微量元素肥' },
 ];
 
+// 施肥时期选项
+const APPLICATION_TIMING_OPTIONS = [
+  { value: 'base', label: '底肥' },
+  { value: 'dressing', label: '追肥' },
+  { value: 'foliar', label: '叶面肥' },
+];
+
+// 单条 spec 表单字段（25 字段）
+type SpecForm = {
+  fertilizerName: string;
+  fertilizerType: string;
+  applicationTiming: string;
+  functionDesc: string;
+  tabooDesc: string;
+  shelfLife: string;
+  storageCondition: string;
+  supplierInfo: string;
+  brandName: string;
+  specContent: string;
+  manufacturer: string;
+  suggestedDosage: string;
+  suggestedRatio: string;
+  dosageUnit: string;
+  remark: string;
+  unitPrice: number;
+  batchNumber: string;
+  productionDate: string;
+  expirationDate: string;
+  stockQuantity: number;
+};
+
+const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
+  fertilizerName: record.fertilizerName || '',
+  fertilizerType: record.fertilizerType || 'organic',
+  applicationTiming: record.applicationTiming || '',
+  functionDesc: record.functionDesc || '',
+  tabooDesc: record.tabooDesc || '',
+  shelfLife: record.shelfLife || '',
+  storageCondition: record.storageCondition || '',
+  supplierInfo: record.supplierInfo || '',
+  brandName: record.brandName || '主品牌',
+  specContent: record.specContent || '',
+  manufacturer: record.manufacturer || '',
+  suggestedDosage: record.suggestedDosage || '',
+  suggestedRatio: record.suggestedRatio || '',
+  dosageUnit: record.dosageUnit || 'kg/亩',
+  remark: record.remark || '',
+  unitPrice: record.unitPrice || 0,
+  batchNumber: record.batchNumber || '',
+  productionDate: record.productionDate || '',
+  expirationDate: record.expirationDate || '',
+  stockQuantity: record.stockQuantity || 0,
+});
+
 export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFertilizerModalProps) {
   const store = useFertilizerLibraryStore();
 
-  // 表单状态
-  const [form, setForm] = useState({
-    fertilizerCode: '',
-    fertilizerName: '',
-    applicationTiming: 'base',
-    fertilizerType: '',
-    functionDesc: '',
-    tabooDesc: '',
-    shelfLife: '',
-    storageCondition: '',
-    supplierInfo: '',
-  });
-
-  // 规格列表
-  const [specs, setSpecs] = useState<FertilizerSpecItem[]>([]);
-
-  // 新增的规格（未保存到服务器）
-  const [newSpecs, setNewSpecs] = useState<FertilizerSpecItem[]>([]);
-
-  // 已删除的规格ID列表（从服务器端删除）
-  const [deletedSpecIds, setDeletedSpecIds] = useState<string[]>([]);
-
-  // 提交状态
+  const [form, setForm] = useState<SpecForm>(buildInitialForm(record));
+  const [original, setOriginal] = useState<SpecForm>(buildInitialForm(record));
   const [submitting, setSubmitting] = useState(false);
 
-  // 更新字段
-  const updateField = useCallback((field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }, []);
-
-  // 初始化表单数据
+  // 弹窗打开时初始化表单
   useEffect(() => {
     if (isOpen && record) {
-      setForm({
-        fertilizerCode: record.fertilizerCode || '',
-        fertilizerName: record.fertilizerName || '',
-        applicationTiming: record.applicationTiming || 'base',
-        fertilizerType: record.fertilizerType || '',
-        functionDesc: record.functionDesc || '',
-        tabooDesc: record.tabooDesc || '',
-        shelfLife: record.shelfLife || '',
-        storageCondition: record.storageCondition || '',
-        supplierInfo: record.supplierInfo || '',
-      });
-
-      // 转换已有规格
-      const existingSpecs: FertilizerSpecItem[] = (record.specs || []).map((spec: FertilizerSpec) => ({
-        id: spec.id,
-        brandName: spec.brandName || '',
-        specContent: spec.specContent || '',
-        manufacturer: spec.manufacturer || '',
-        suggestedDosage: spec.suggestedDosage || '',
-        suggestedRatio: spec.suggestedRatio || '',
-        dosageUnit: spec.dosageUnit || 'kg/亩',
-        remark: spec.remark || '',
-        unitPrice: spec.unitPrice || 0,  // 2026-07-12：单价
-        // 2026-07-12：批次追溯三列
-        batchNumber: spec.batchNumber || '',
-        productionDate: spec.productionDate || '',
-        expirationDate: spec.expirationDate || '',
-        stockQuantity: spec.stockQuantity || 0,  // 2026-07-12：单规格库存
-      }));
-      setSpecs(existingSpecs);
-      setNewSpecs([]);
-      setDeletedSpecIds([]);
+      const initForm = buildInitialForm(record);
+      setForm(initForm);
+      setOriginal(initForm);
     }
   }, [isOpen, record]);
 
-  // 添加规格行
-  const handleAddSpec = () => {
-    const newSpec: FertilizerSpecItem = {
-      brandName: '',
-      specContent: '',
-      manufacturer: '',
-      suggestedDosage: '',
-      suggestedRatio: '',
-      dosageUnit: 'kg/亩',
-      remark: '',
-      unitPrice: 0,  // 2026-07-12：单价
-      batchNumber: '',  // 2026-07-12：批次
-      productionDate: '',  // 2026-07-12：生产日期
-      expirationDate: '',  // 2026-07-12：过期日期
-      stockQuantity: 0,  // 2026-07-12：单规格库存
-    };
-    setNewSpecs([...newSpecs, newSpec]);
-  };
+  // 更新字段
+  const updateField = useCallback((field: keyof SpecForm, value: string | number) => {
+    setForm((prev) => ({ ...prev, [field]: value as any }));
+  }, []);
 
-  // 删除规格行
-  const handleDeleteSpec = (index: number, isNew: boolean) => {
-    if (isNew) {
-      setNewSpecs(newSpecs.filter((_, i) => i !== index));
-    } else {
-      const specToDelete = specs[index];
-      if (specToDelete.id) {
-        setDeletedSpecIds(prev => [...prev, specToDelete.id!]);
-      }
-      setSpecs(specs.filter((_, i) => i !== index));
-    }
-  };
-
-  // 更新规格行字段
-  const handleSpecChange = (index: number, field: keyof FertilizerSpecItem, value: string, isNew: boolean) => {
-    if (isNew) {
-      const updated = newSpecs.map((spec, i) => {
-        if (i === index) {
-          return { ...spec, [field]: value };
-        }
-        return spec;
-      });
-      setNewSpecs(updated);
-    } else {
-      const updated = specs.map((spec, i) => {
-        if (i === index) {
-          return { ...spec, [field]: value };
-        }
-        return spec;
-      });
-      setSpecs(updated);
-    }
-  };
-
-  // 合并规格列表（包括已有和新增的）
-  const getAllSpecs = (): (FertilizerSpecItem & { isNew?: boolean })[] => {
-    return [
-      ...specs.map(s => ({ ...s, isNew: false })),
-      ...newSpecs.map(s => ({ ...s, isNew: true })),
+  // 检测变更
+  const hasChanges = (): boolean => {
+    const fields: (keyof SpecForm)[] = [
+      'fertilizerName', 'fertilizerType', 'applicationTiming', 'functionDesc',
+      'tabooDesc', 'shelfLife', 'storageCondition', 'supplierInfo',
+      'brandName', 'specContent', 'manufacturer', 'suggestedDosage',
+      'suggestedRatio', 'dosageUnit', 'remark', 'unitPrice', 'batchNumber',
+      'productionDate', 'expirationDate', 'stockQuantity',
     ];
+    return fields.some((f) => form[f] !== original[f]);
   };
 
-  // 提交表单
+  // 提交
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim()) {
       await showAlert('请输入肥料名称');
       return;
     }
 
+    if (!hasChanges()) {
+      await showAlert('未检测到任何修改');
+      return;
+    }
+
     setSubmitting(true);
+    try {
+      await store.updateItem(record.id, {
+        fertilizerName: form.fertilizerName,
+        fertilizerType: form.fertilizerType as any,
+        applicationTiming: form.applicationTiming,
+        functionDesc: form.functionDesc,
+        tabooDesc: form.tabooDesc,
+        shelfLife: form.shelfLife,
+        storageCondition: form.storageCondition,
+        supplierInfo: form.supplierInfo,
+        brandName: form.brandName,
+        specContent: form.specContent,
+        manufacturer: form.manufacturer,
+        suggestedDosage: form.suggestedDosage,
+        suggestedRatio: form.suggestedRatio,
+        dosageUnit: form.dosageUnit,
+        remark: form.remark,
+        unitPrice: Number(form.unitPrice) || 0,
+        batchNumber: form.batchNumber,
+        productionDate: form.productionDate,
+        expirationDate: form.expirationDate,
+        stockQuantity: Number(form.stockQuantity) || 0,
+      });
 
-    // 更新肥料记录
-    await store.updateItem(record.id, {
-      fertilizerCode: form.fertilizerCode,
-      fertilizerName: form.fertilizerName,
-      applicationTiming: form.applicationTiming as 'base' | 'dressing' | 'foliar',
-      fertilizerType: form.fertilizerType,
-      functionDesc: form.functionDesc,
-      tabooDesc: form.tabooDesc,
-      shelfLife: form.shelfLife,
-      storageCondition: form.storageCondition,
-      supplierInfo: form.supplierInfo,
-    });
-
-    // 保存新增的规格
-    if (newSpecs.length > 0) {
-      for (const spec of newSpecs) {
-        if (spec.specContent || spec.manufacturer || spec.brandName) {
-          await store.createSpec(record.id, {
-            brandName: spec.brandName,
-            specContent: spec.specContent,
-            manufacturer: spec.manufacturer,
-            suggestedDosage: spec.suggestedDosage,
-            suggestedRatio: spec.suggestedRatio,
-            dosageUnit: spec.dosageUnit,
-            remark: spec.remark,
-            unitPrice: Number(spec.unitPrice) || 0,  // 2026-07-12：单价
-            batchNumber: spec.batchNumber || '',  // 2026-07-12：批次
-            productionDate: spec.productionDate || '',  // 2026-07-12：生产日期
-            expirationDate: spec.expirationDate || '',  // 2026-07-12：过期日期
-            stockQuantity: Number(spec.stockQuantity) || 0,  // 2026-07-12：单规格库存
-          } as Partial<FertilizerSpec>);
-        }
-      }
+      onSaved();
+    } catch (err) {
+      await showAlert('保存出错：' + (err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
-
-    // 更新现有规格（检测变化）
-    const originalSpecs = record.specs || [];
-    for (let i = 0; i < specs.length; i++) {
-      const updated = specs[i];
-      const original = originalSpecs[i];
-      if (original && (
-        updated.brandName !== (original.brandName || '') ||
-        updated.specContent !== (original.specContent || '') ||
-        updated.manufacturer !== (original.manufacturer || '') ||
-        updated.suggestedDosage !== (original.suggestedDosage || '') ||
-        updated.suggestedRatio !== (original.suggestedRatio || '') ||
-        updated.dosageUnit !== (original.dosageUnit || '') ||
-        updated.remark !== (original.remark || '') ||
-        (updated.unitPrice || 0) !== (original.unitPrice || 0) ||  // 2026-07-12：单价变化检测
-        (updated.batchNumber || '') !== (original.batchNumber || '') ||  // 2026-07-12：批次变化检测
-        (updated.productionDate || '') !== (original.productionDate || '') ||  // 2026-07-12：生产日期变化检测
-        (updated.expirationDate || '') !== (original.expirationDate || '') ||  // 2026-07-12：过期日期变化检测
-        (updated.stockQuantity || 0) !== (original.stockQuantity || 0)  // 2026-07-12：单规格库存变化检测
-      )) {
-        await store.updateSpec(original.id!, {
-          brandName: updated.brandName,
-          specContent: updated.specContent,
-          manufacturer: updated.manufacturer,
-          suggestedDosage: updated.suggestedDosage,
-          suggestedRatio: updated.suggestedRatio,
-          dosageUnit: updated.dosageUnit,
-          remark: updated.remark,
-          unitPrice: Number(updated.unitPrice) || 0,  // 2026-07-12：单价
-          batchNumber: updated.batchNumber || '',  // 2026-07-12：批次
-          productionDate: updated.productionDate || '',  // 2026-07-12：生产日期
-          expirationDate: updated.expirationDate || '',  // 2026-07-12：过期日期
-          stockQuantity: Number(updated.stockQuantity) || 0,  // 2026-07-12：单规格库存
-        } as Partial<FertilizerSpec>);
-      }
-    }
-
-    // 删除已移除的规格
-    if (deletedSpecIds.length > 0) {
-      for (const specId of deletedSpecIds) {
-        await store.deleteSpec(specId);
-      }
-    }
-
-    setSubmitting(false);
-    onSaved();
   };
+
+  if (!record) return null;
 
   // 区域标题
   const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
     <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
   );
 
-  if (!record) return null;
-
-  const allSpecs = getAllSpecs();
-
   return (
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title="编辑肥料"
+      title={`编辑肥料：${record.fertilizerCode || record.fertilizerName}`}
       size="xl"
       showFooter={false}
     >
@@ -289,16 +187,6 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           <SectionTitle title="基础信息" icon="📋" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-900">肥料编码</Label>
-                <Input
-                  type="text"
-                  value={form.fertilizerCode}
-                  onChange={(e) => updateField('fertilizerCode', e.target.value)}
-                  placeholder="肥料编码"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                />
-              </div>
               <div>
                 <Label className="text-gray-900">
                   肥料名称 <span className="text-red-500">*</span>
@@ -311,28 +199,6 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {/* 施肥时期 */}
-              <div>
-                <Label className="text-gray-900">施肥时期</Label>
-                <Select
-                  value={form.applicationTiming}
-                  onValueChange={(value) => updateField('applicationTiming', value)}
-                >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    <SelectValue placeholder="选择施肥时期" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {APPLICATION_TIMING_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* 肥料类型 */}
               <div>
                 <Label className="text-gray-900">肥料类型</Label>
                 <Select
@@ -352,207 +218,164 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                 </Select>
               </div>
             </div>
+            <div>
+              <Label className="text-gray-900">施肥时期（可多选）</Label>
+              <div className="flex gap-2 mt-1">
+                {APPLICATION_TIMING_OPTIONS.map((opt) => {
+                  const current = form.applicationTiming
+                    ? form.applicationTiming.split(',').map((t) => t.trim()).filter(Boolean)
+                    : [];
+                  const checked = current.includes(opt.value);
+                  return (
+                    <label
+                      key={opt.value}
+                      className="flex items-center gap-1 px-3 py-1 border rounded cursor-pointer hover:bg-amber-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const newSet = new Set(current);
+                          if (e.target.checked) newSet.add(opt.value);
+                          else newSet.delete(opt.value);
+                          updateField('applicationTiming', Array.from(newSet).join(','));
+                        }}
+                      />
+                      <span className="text-sm">{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 规格信息 */}
+        {/* 规格信息（单条 spec） */}
         <div>
           <SectionTitle title="规格信息" icon="📦" />
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-900 font-medium">规格列表</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddSpec}
-                className="bg-green-500 hover:bg-green-600 text-white border-green-500 hover:border-green-600"
-              >
-                <Plus className="w-4 h-4" /> + 新增
-              </Button>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs text-gray-500">品牌名称</Label>
+                <Input
+                  type="text"
+                  value={form.brandName}
+                  onChange={(e) => updateField('brandName', e.target.value)}
+                  placeholder="品牌名称"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">成份与含量</Label>
+                <Input
+                  type="text"
+                  value={form.specContent}
+                  onChange={(e) => updateField('specContent', e.target.value)}
+                  placeholder="如 N-P2O5-K2O 15-15-15"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">生产厂家</Label>
+                <Input
+                  type="text"
+                  value={form.manufacturer}
+                  onChange={(e) => updateField('manufacturer', e.target.value)}
+                  placeholder="生产厂家"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">建议用量</Label>
+                <Input
+                  type="text"
+                  value={form.suggestedDosage}
+                  onChange={(e) => updateField('suggestedDosage', e.target.value)}
+                  placeholder="如 100"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">单位</Label>
+                <UnitDictSelect
+                  value={form.dosageUnit}
+                  onChange={(value) => updateField('dosageUnit', value)}
+                  placeholder="选择单位"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">稀释比例</Label>
+                <Input
+                  type="text"
+                  value={form.suggestedRatio}
+                  onChange={(e) => updateField('suggestedRatio', e.target.value)}
+                  placeholder="如 1:100"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">单价 (元/单位)</Label>
+                <Input
+                  type="number"
+                  value={form.unitPrice || ''}
+                  onChange={(e) => updateField('unitPrice', e.target.value)}
+                  placeholder="如 25"
+                  step="0.01"
+                  min="0"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">库存量 (kg)</Label>
+                <Input
+                  type="number"
+                  value={form.stockQuantity || ''}
+                  onChange={(e) => updateField('stockQuantity', e.target.value)}
+                  placeholder="如 100"
+                  step="0.01"
+                  min="0"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">产品批次</Label>
+                <Input
+                  type="text"
+                  value={form.batchNumber}
+                  onChange={(e) => updateField('batchNumber', e.target.value)}
+                  placeholder="如 BATCH-2026-001"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">生产日期</Label>
+                <Input
+                  type="date"
+                  value={form.productionDate}
+                  onChange={(e) => updateField('productionDate', e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">过期日期</Label>
+                <Input
+                  type="date"
+                  value={form.expirationDate}
+                  onChange={(e) => updateField('expirationDate', e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="col-span-3">
+                <Label className="text-xs text-gray-500">备注</Label>
+                <Input
+                  type="text"
+                  value={form.remark}
+                  onChange={(e) => updateField('remark', e.target.value)}
+                  placeholder="备注"
+                  className="h-9 text-sm"
+                />
+              </div>
             </div>
-
-            {allSpecs.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm border border-dashed border-gray-300 rounded-lg">
-                暂无规格，点击"+新增"添加
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {allSpecs.map((spec, index) => (
-                  <div
-                    key={spec.id || `new-${index}`}
-                    className="flex gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 items-start"
-                  >
-                    {/* 输入字段区域 - 自动填充剩余宽度 */}
-                    <div className="flex-1 space-y-2">
-                      {/* 第一行：6 个核心字段 */}
-                      <div className="grid grid-cols-6 gap-2">
-                        {/* 品牌名称 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">品牌名称</Label>
-                          <Input
-                            type="text"
-                            value={spec.brandName}
-                            onChange={(e) => handleSpecChange(index, 'brandName', e.target.value, spec.isNew || false)}
-                            placeholder="品牌名称"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 成份与含量 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">成份与含量</Label>
-                          <Input
-                            type="text"
-                            value={spec.specContent}
-                            onChange={(e) => handleSpecChange(index, 'specContent', e.target.value, spec.isNew || false)}
-                            placeholder="如 N-P2O5-K2O 15-15-15"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 生产厂家 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">生产厂家</Label>
-                          <Input
-                            type="text"
-                            value={spec.manufacturer}
-                            onChange={(e) => handleSpecChange(index, 'manufacturer', e.target.value, spec.isNew || false)}
-                            placeholder="生产厂家"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 建议用量 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">建议用量</Label>
-                          <Input
-                            type="text"
-                            value={spec.suggestedDosage}
-                            onChange={(e) => handleSpecChange(index, 'suggestedDosage', e.target.value, spec.isNew || false)}
-                            placeholder="如 100"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 单位 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">单位</Label>
-                          <UnitDictSelect
-                            value={spec.dosageUnit}
-                            onChange={(value) => handleSpecChange(index, 'dosageUnit', value, spec.isNew || false)}
-                            placeholder="选择单位"
-                          />
-                        </div>
-
-                        {/* 稀释比例 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">稀释比例</Label>
-                          <Input
-                            type="text"
-                            value={spec.suggestedRatio}
-                            onChange={(e) => handleSpecChange(index, 'suggestedRatio', e.target.value, spec.isNew || false)}
-                            placeholder="如 1:100"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {/* 第二行：备注 + 单价 + 批次追溯三列 + 单规格库存 */}
-                      <div className="grid grid-cols-6 gap-2">
-                        {/* 备注 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">备注</Label>
-                          <Input
-                            type="text"
-                            value={spec.remark}
-                            onChange={(e) => handleSpecChange(index, 'remark', e.target.value, spec.isNew || false)}
-                            placeholder="备注"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 2026-07-12：单价（元/基准单位）— 施肥时自动取 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">单价 (元/单位)</Label>
-                          <Input
-                            type="number"
-                            value={spec.unitPrice || ''}
-                            onChange={(e) => handleSpecChange(index, 'unitPrice', e.target.value, spec.isNew || false)}
-                            placeholder="如 25"
-                            step="0.01"
-                            min="0"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 2026-07-12：产品批次 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">产品批次</Label>
-                          <Input
-                            type="text"
-                            value={spec.batchNumber || ''}
-                            onChange={(e) => handleSpecChange(index, 'batchNumber', e.target.value, spec.isNew || false)}
-                            placeholder="如 BATCH-2026-001"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 2026-07-12：生产日期 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">生产日期</Label>
-                          <Input
-                            type="date"
-                            value={spec.productionDate || ''}
-                            onChange={(e) => handleSpecChange(index, 'productionDate', e.target.value, spec.isNew || false)}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 2026-07-12：过期日期 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">过期日期</Label>
-                          <Input
-                            type="date"
-                            value={spec.expirationDate || ''}
-                            onChange={(e) => handleSpecChange(index, 'expirationDate', e.target.value, spec.isNew || false)}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* 2026-07-12：单规格当前库存（kg）— 主表库存 = sum 各规格 */}
-                        <div>
-                          <Label className="text-xs text-gray-500">库存量 (kg)</Label>
-                          <Input
-                            type="number"
-                            value={spec.stockQuantity || ''}
-                            onChange={(e) => handleSpecChange(index, 'stockQuantity', e.target.value, spec.isNew || false)}
-                            placeholder="如 100"
-                            step="0.01"
-                            min="0"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 删除操作 - 固定在最后 */}
-                    <div className="flex justify-center items-center pb-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteSpec(index, spec.isNew || false)}
-                        className="w-9 h-9 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        title="删除此规格"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -583,7 +406,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           </div>
         </div>
 
-        {/* 存储与供应链信息 */}
+        {/* 存储与供应链 */}
         <div>
           <SectionTitle title="存储与供应链" icon="🏪" />
           <div className="space-y-3">
@@ -636,7 +459,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           variant="default"
           size="sm"
           onClick={handleSubmit}
-          disabled={submitting || !form.fertilizerName.trim()}
+          disabled={submitting || !hasChanges() || !form.fertilizerName.trim()}
         >
           {submitting ? '保存中...' : '保存'}
         </Button>
