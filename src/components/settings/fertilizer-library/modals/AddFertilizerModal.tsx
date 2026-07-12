@@ -55,6 +55,8 @@ export interface FertilizerSpecItem {
   batchNumber?: string;
   productionDate?: string;
   expirationDate?: string;
+  // 2026-07-12：单规格库存（主表库存 = sum）
+  stockQuantity?: number;
 }
 
 export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerModalProps) {
@@ -142,6 +144,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
       batchNumber: '',
       productionDate: '',
       expirationDate: '',
+      stockQuantity: 0,
     };
     setSpecs([...specs, newSpec]);
   };
@@ -209,6 +212,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
             batchNumber: spec.batchNumber || '',  // 2026-07-12：批次
             productionDate: spec.productionDate || '',  // 2026-07-12：生产日期
             expirationDate: spec.expirationDate || '',  // 2026-07-12：过期日期
+            stockQuantity: Number(spec.stockQuantity) || 0,  // 2026-07-12：单规格库存
           } as Partial<FertilizerSpec>);
         }
       }
@@ -421,8 +425,8 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                         </div>
                       </div>
 
-                      {/* 第二行：备注 + 单价 + 批次追溯三列 */}
-                      <div className="grid grid-cols-5 gap-2">
+                      {/* 第二行：备注 + 单价 + 批次追溯三列 + 单规格库存 */}
+                      <div className="grid grid-cols-6 gap-2">
                         {/* 备注 */}
                         <div>
                           <Label className="text-xs text-gray-500">备注</Label>
@@ -479,6 +483,20 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                             type="date"
                             value={spec.expirationDate || ''}
                             onChange={(e) => handleSpecChange(index, 'expirationDate', e.target.value)}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+
+                        {/* 2026-07-12：单规格当前库存（kg）— 主表库存 = sum 各规格 */}
+                        <div>
+                          <Label className="text-xs text-gray-500">库存量 (kg)</Label>
+                          <Input
+                            type="number"
+                            value={spec.stockQuantity || ''}
+                            onChange={(e) => handleSpecChange(index, 'stockQuantity', e.target.value)}
+                            placeholder="如 100"
+                            step="0.01"
+                            min="0"
                             className="h-9 text-sm"
                           />
                         </div>

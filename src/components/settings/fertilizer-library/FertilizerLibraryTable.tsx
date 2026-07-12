@@ -285,6 +285,7 @@ export function FertilizerLibraryTable({
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">产品批次</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">生产日期</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">过期日期</th>
+                                  <th className="px-3 py-2 text-right text-sm font-semibold text-amber-800">库存量 (kg)</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">备注</th>
                                   <th className="px-3 py-2 text-right text-sm font-semibold text-amber-800">单价 (元/单位)</th>
                                 </tr>
@@ -301,6 +302,17 @@ export function FertilizerLibraryTable({
                                     <td className="px-3 py-2 text-sm text-amber-700 font-mono">{(spec as any).batchNumber || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-amber-700">{(spec as any).productionDate || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-amber-700">{(spec as any).expirationDate || '-'}</td>
+                                    <td className="px-3 py-2 text-sm text-right font-mono text-amber-900 font-semibold">
+                                      {(() => {
+                                        const q = Number((spec as any).stockQuantity || 0);
+                                        const colorClass = q === 0
+                                          ? 'text-red-600'
+                                          : q < 50
+                                            ? 'text-amber-600'
+                                            : 'text-emerald-600';
+                                        return <span className={colorClass}>{q.toFixed(2)}</span>;
+                                      })()}
+                                    </td>
                                     <td className="px-3 py-2 text-sm text-amber-700">{spec.remark || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-right font-mono text-amber-900 font-semibold">
                                       {(spec as any).unitPrice != null && (spec as any).unitPrice > 0

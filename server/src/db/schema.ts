@@ -3054,6 +3054,8 @@ export function initializeDatabase() {
       batch_number TEXT,
       production_date TEXT,
       expiration_date TEXT,
+      -- 2026-07-12：单规格当前库存（kg），主表的当前库存 = sum(specs.stock_quantity)
+      stock_quantity REAL DEFAULT 0,
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
@@ -3556,6 +3558,13 @@ export function initializeDatabase() {
   }
   try {
     db.run('ALTER TABLE fertilizer_specs ADD COLUMN expiration_date TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+
+  // 2026-07-12：单规格当前库存（主表的当前库存 = sum(specs.stock_quantity)）
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN stock_quantity REAL DEFAULT 0');
   } catch (e) {
     // 列已存在则忽略
   }
