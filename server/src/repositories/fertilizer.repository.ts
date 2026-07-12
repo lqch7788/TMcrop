@@ -34,6 +34,7 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'operator_name',
   'description',
   'update_time',
+  'fertilization_pool',
 ]);
 
 export interface FertilizerRecord {
@@ -68,6 +69,8 @@ export interface FertilizerRecord {
   update_time: string;
   /** G11 V1.1：关联肥料库 id（外键到 fertilizer_library.id），老数据可空 */
   fertilizer_id: string | null;
+  // 2026-07-12：施肥区域池（JSON 字符串），每条独立区域+用量+单位+稀释倍数
+  fertilization_pool: string | null;
   // 注意：运行时通过 queryToObjects 获取的对象会自动转 camelCase
   // 这里用 [key: string]: any 让 service 端可用 camelCase 字段而不报错
   [key: string]: any;
@@ -107,8 +110,9 @@ export class FertilizerRepository {
         crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
         quantity, unit, unit_price, total_cost, fertilize_time,
         operator_id, operator_name, data_source, iot_device_id, iot_record_id,
-        description, status, create_time, update_time, fertilizer_id
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        description, status, create_time, update_time, fertilizer_id,
+        fertilization_pool
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `, [
       record.id, record.fertilizer_code, record.farm_task_id, record.production_plan_id,
       record.production_plan_code, record.planting_id, record.planting_code,
@@ -119,6 +123,7 @@ export class FertilizerRepository {
       record.data_source, record.iot_device_id, record.iot_record_id,
       record.description, record.status, record.create_time, record.update_time,
       record.fertilizer_id,
+      record.fertilization_pool ?? null,
     ]);
   }
 

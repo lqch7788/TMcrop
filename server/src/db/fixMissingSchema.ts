@@ -1385,6 +1385,15 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• application_timing 列添加: ' + e.message);
   }
 
+  // 2026-07-12：为 fertilizer_specs 表添加 unit_price（施肥时自动带价）
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN unit_price REAL DEFAULT 0');
+    seedLog.info('✓ fertilizer_specs 表添加 unit_price 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• unit_price 列已存在');
+    else seedLog.skip('• unit_price 列添加: ' + e.message);
+  }
+
   // G11 V1.1: 为 fertilizer_library 表添加 current_stock 字段（当前库存，千克）
   try {
     db.run(`ALTER TABLE fertilizer_library ADD COLUMN current_stock REAL DEFAULT 0`);

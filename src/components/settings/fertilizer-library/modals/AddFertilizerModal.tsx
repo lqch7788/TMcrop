@@ -50,6 +50,7 @@ export interface FertilizerSpecItem {
   suggestedRatio: string;
   dosageUnit: string;
   remark: string;
+  unitPrice?: number;  // 2026-07-12：单价（元/kg 或 元/L 等基准单位）
 }
 
 export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerModalProps) {
@@ -133,6 +134,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
       suggestedRatio: '',
       dosageUnit: 'kg/亩',
       remark: '',
+      unitPrice: 0,
     };
     setSpecs([...specs, newSpec]);
   };
@@ -196,6 +198,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
             suggestedRatio: spec.suggestedRatio,
             dosageUnit: spec.dosageUnit,
             remark: spec.remark,
+            unitPrice: Number(spec.unitPrice) || 0,  // 2026-07-12：单价
           } as Partial<FertilizerSpec>);
         }
       }
@@ -334,7 +337,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                     className="flex gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 items-end"
                   >
                     {/* 输入字段区域 - 自动填充剩余宽度 */}
-                    <div className="flex-1 grid grid-cols-7 gap-2">
+                    <div className="flex-1 grid grid-cols-8 gap-2">
                       {/* 品牌名称 */}
                       <div>
                         <Label className="text-xs text-gray-500">品牌名称</Label>
@@ -413,6 +416,20 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                           value={spec.remark}
                           onChange={(e) => handleSpecChange(index, 'remark', e.target.value)}
                           placeholder="备注"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* 2026-07-12：单价（元/基准单位）— 施肥时自动取 */}
+                      <div>
+                        <Label className="text-xs text-gray-500">单价 (元/单位)</Label>
+                        <Input
+                          type="number"
+                          value={spec.unitPrice || ''}
+                          onChange={(e) => handleSpecChange(index, 'unitPrice', e.target.value)}
+                          placeholder="如 25"
+                          step="0.01"
+                          min="0"
                           className="h-9 text-sm"
                         />
                       </div>

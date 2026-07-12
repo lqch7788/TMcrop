@@ -50,7 +50,8 @@ const createRecordSchema = z.object({
   cropName: z.string().min(1, '作物名称必填'),
   cropVariety: z.string().nullish(),
   fertilizerName: z.string().min(1, '肥料名称必填'),
-  fertilizerType: z.string().min(1, '肥料类型必填'),
+  // 2026-07-12：fertilizerType 已不再是顶层必填（迁到池的每个肥料行；老数据保留兼容）
+  fertilizerType: z.string().nullish(),
   dilutionRatio: z.string().min(1, '稀释比例必填'),
   quantity: z.number().nonnegative('数量必须非负').max(1e7, '数量过大'),
   unit: z.string().optional(),
@@ -61,6 +62,8 @@ const createRecordSchema = z.object({
   description: z.string().nullish(),
   /** G11 V1.1：肥料库 id（可选 — 老数据无库可空） */
   fertilizerId: z.string().nullish(),
+  // 2026-07-12：施肥区域池（JSON 字符串，每条独立 [区域, 用量, 单位, 稀释倍数]）
+  fertilizationPool: z.string().nullish(),
 });
 
 /** IoT ingest 单条记录 schema（H3：补业务校验） */
@@ -156,6 +159,31 @@ export class FertilizerService {
     const id = `fer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const qty = data.quantity;
     const price = data.unitPrice ?? 0;
+    // 2026-07-12：总成本从 fertilizationPool 解开，按每行 (quantity × unitPrice) 求和（多肥各自定价）
+    let totalCost = (qty || 0) * price;
+    if (data.fertilizationPool && typeof data.fertilizationPool === 'string') {
+      try {
+        const pool = JSON.parse(data.fertilizationPool);
+        if (Array.isArray(pool)) {
+          totalCost = pool.reduce(
+            (sum: number, r: any) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
+            0
+          );
+        }
+      } catch { /* ignore */ }
+    }
+
+    // 2026-07-12：池首行单价 fallback（兼容老 schema 顶层 unit_price 字段）
+    function poolFirstUnitPrice(jsonStr: string | null | undefined): number | null {
+      if (!jsonStr || typeof jsonStr !== 'string') return null;
+      try {
+        const pool = JSON.parse(jsonStr);
+        if (Array.isArray(pool) && pool.length > 0) {
+          return Number(pool[0].unitPrice) || 0;
+        }
+      } catch { /* ignore */ }
+      return null;
+    }
 
     // 开启事务：INSERT record + UPDATE stock 必须原子
     db.exec('BEGIN');
@@ -225,12 +253,14 @@ export class FertilizerService {
         crop_name: data.cropName,
         crop_variety: data.cropVariety ?? null,
         fertilizer_name: data.fertilizerName,
-        fertilizer_type: data.fertilizerType,
+        // 2026-07-12：fertilizerType 已不再必填；null/undefined 转为 '' 兼容 NOT NULL
+        fertilizer_type: data.fertilizerType ?? '',
         dilution_ratio: data.dilutionRatio,
         quantity: qty,
         unit: data.unit ?? '千克',
-        unit_price: price,
-        total_cost: qty * price,
+        // 2026-07-12：顶层 unit_price 取池首行（兼容老 schema；总成本按池行 sum 精确计算）
+        unit_price: price || (poolFirstUnitPrice(data.fertilizationPool) ?? 0),
+        total_cost: totalCost,  // 2026-07-12：多肥按行 sum（兼容老 data：单肥 qty × price）
         fertilize_time: data.fertilizeTime,
         operator_id: data.operatorId ?? null,
         operator_name: data.operatorName ?? null,
@@ -242,6 +272,8 @@ export class FertilizerService {
         create_time: now,
         update_time: now,
         fertilizer_id: data.fertilizerId ?? null,
+        // 2026-07-12：施肥区域池 JSON
+        fertilization_pool: data.fertilizationPool ?? null,
       };
       this.repository.insert(record);
 

@@ -14,6 +14,7 @@ export interface FertilizerSpec {
   suggestedRatio?: string;
   dosageUnit?: string;
   remark?: string;
+  unitPrice?: number;  // 2026-07-12：单价（施肥时自动取）
   status: string;
   createTime: string;
 }
@@ -65,6 +66,7 @@ const SPEC_FIELD_MAP: Record<string, string> = {
   suggested_ratio: 'suggestedRatio',
   dosage_unit: 'dosageUnit',
   remark: 'remark',
+  unit_price: 'unitPrice',  // 2026-07-12：单价（施肥时自动带）
   status: 'status',
   create_time: 'createTime',
 };

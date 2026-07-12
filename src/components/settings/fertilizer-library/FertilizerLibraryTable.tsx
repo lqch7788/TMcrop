@@ -283,6 +283,7 @@ export function FertilizerLibraryTable({
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">单位</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">稀释比例</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-amber-800">备注</th>
+                                  <th className="px-3 py-2 text-right text-sm font-semibold text-amber-800">单价 (元/单位)</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-amber-100">
@@ -295,6 +296,11 @@ export function FertilizerLibraryTable({
                                     <td className="px-3 py-2 text-sm text-amber-700">{getDictItemName('dosage_unit', spec.dosageUnit || '') || spec.dosageUnit || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-amber-700">{spec.suggestedRatio || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-amber-700">{spec.remark || '-'}</td>
+                                    <td className="px-3 py-2 text-sm text-right font-mono text-amber-900 font-semibold">
+                                      {(spec as any).unitPrice != null && (spec as any).unitPrice > 0
+                                        ? `${Number((spec as any).unitPrice).toFixed(2)}`
+                                        : <span className="text-amber-400">-</span>}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>

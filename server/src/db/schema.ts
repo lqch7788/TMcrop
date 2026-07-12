@@ -3049,6 +3049,7 @@ export function initializeDatabase() {
       suggested_ratio TEXT,
       dosage_unit TEXT,
       remark TEXT,
+      unit_price REAL DEFAULT 0,  -- 2026-07-12：单价（施肥时自动取，用户不用填）
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
@@ -3520,6 +3521,20 @@ export function initializeDatabase() {
   // 启动白名单禁用了 fixMissingSchema，所以这里同步补列
   try {
     db.run('ALTER TABLE pesticide_records ADD COLUMN leaf_fertilizer_list TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+
+  // 2026-07-12：施肥池字段（JSON 数组，每条 {area, quantity, unit, dilutionRatio}，支持多区域不同用量）
+  try {
+    db.run('ALTER TABLE fertilizer_records ADD COLUMN fertilization_pool TEXT');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+
+  // 2026-07-12：肥料规格子表加单价列（施肥时自动取，用户无需填）
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN unit_price REAL DEFAULT 0');
   } catch (e) {
     // 列已存在则忽略
   }

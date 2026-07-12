@@ -41,6 +41,8 @@ export interface FertilizerData {
   updateTime: string;
   /** G11 V1.1：关联肥料库 id（外键到 fertilizer_library.id），老数据可空 */
   fertilizerId?: string | null;
+  // 2026-07-12：施肥区域池（JSON 字符串，每条独立 [type, code, area, quantity, unit, dilutionRatio]）
+  fertilizationPool?: string;
 }
 
 // ========== FIELD_MAP ==========
@@ -75,6 +77,8 @@ const FIELD_MAP: Record<string, string> = {
   update_time: 'updateTime',
   // G11 V1.1：关联肥料库 id 映射
   fertilizer_id: 'fertilizerId',
+  // 2026-07-12：施肥区域池
+  fertilization_pool: 'fertilizationPool',
 };
 
 // ========== 转换函数 ==========
