@@ -15,6 +15,10 @@ export interface FertilizerSpec {
   dosageUnit?: string;
   remark?: string;
   unitPrice?: number;  // 2026-07-12：单价（施肥时自动取）
+  // 2026-07-12：批次追溯三列（产品批次 / 生产日期 / 过期日期）
+  batchNumber?: string;
+  productionDate?: string;
+  expirationDate?: string;
   status: string;
   createTime: string;
 }
@@ -67,6 +71,10 @@ const SPEC_FIELD_MAP: Record<string, string> = {
   dosage_unit: 'dosageUnit',
   remark: 'remark',
   unit_price: 'unitPrice',  // 2026-07-12：单价（施肥时自动带）
+  // 2026-07-12：批次追溯三列映射
+  batch_number: 'batchNumber',
+  production_date: 'productionDate',
+  expiration_date: 'expirationDate',
   status: 'status',
   create_time: 'createTime',
 };
