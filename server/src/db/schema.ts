@@ -2985,7 +2985,56 @@ export function initializeDatabase() {
   console.log('数据库表初始化完成');
 
   // ========== V12.0: 病虫害防治管理 ==========
-  // 药剂知识库主表
+  // 2026-07-12：药剂库扁平化 — 原 pesticide_library（主表）+ pesticide_specs（子表）合并为单一扁平 pesticide_specs
+  // 每条记录 = 一个完整药剂规格（含主表字段 + 子表字段 + 库存字段）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pesticide_specs (
+      id TEXT PRIMARY KEY,
+      pesticide_code TEXT NOT NULL UNIQUE,
+      pesticide_name TEXT NOT NULL,
+      -- 2026-07-10：药剂类型 JSON 数组字符串（如 '["insecticide","fungicide_fungi"]'）
+      pesticide_type TEXT,
+      ingredient TEXT,
+      mechanism TEXT,
+      function_desc TEXT,
+      taboo_desc TEXT,
+      target_pests TEXT,
+      spec_content TEXT,
+      formulation TEXT,
+      manufacturer TEXT,
+      brand_name TEXT,
+      suggested_dosage TEXT,
+      suggested_ratio TEXT,
+      dosage_unit TEXT,
+      remark TEXT,
+      -- 2026-07-12：库存字段（对齐肥料库）
+      stock_quantity REAL DEFAULT 0,
+      stock_unit TEXT DEFAULT 'kg',
+      unit_price REAL DEFAULT 0,
+      batch_number TEXT,
+      production_date TEXT,
+      expiration_date TEXT,
+      package_spec TEXT,
+      status TEXT DEFAULT 'active',
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 药剂入库记录表（2026-07-12：审计追溯）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pesticide_stock_in_records (
+      id TEXT PRIMARY KEY,
+      spec_id TEXT NOT NULL,
+      pesticide_code TEXT,
+      pesticide_name TEXT,
+      quantity REAL NOT NULL,
+      remark TEXT,
+      create_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 旧药剂知识库主表（保留兼容，2026-07-12 扁平化后不再使用）
   db.run(`
     CREATE TABLE IF NOT EXISTS pesticide_library (
       id TEXT PRIMARY KEY,
@@ -2996,7 +3045,6 @@ export function initializeDatabase() {
       target_pests TEXT,
       ingredient TEXT,
       mechanism TEXT,
-      -- 2026-07-10：药剂类型 JSON 数组字符串（如 '["insecticide","fungicide_fungi"]'），支持多值 + 层级化（关联 pesticide_type 字典：杀虫剂/杀菌剂-真菌 等）
       pesticide_type TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
       create_time TEXT DEFAULT (datetime('now','localtime')),
@@ -3004,9 +3052,9 @@ export function initializeDatabase() {
     )
   `);
 
-  // 药剂规格子表
+  // 旧药剂规格子表（保留兼容，2026-07-12 扁平化后不再使用）
   db.run(`
-    CREATE TABLE IF NOT EXISTS pesticide_specs (
+    CREATE TABLE IF NOT EXISTS pesticide_specs_old (
       id TEXT PRIMARY KEY,
       pesticide_id TEXT NOT NULL,
       spec_content TEXT,
@@ -3018,8 +3066,7 @@ export function initializeDatabase() {
       brand_name TEXT,
       remark TEXT,
       status TEXT DEFAULT 'active',
-      create_time TEXT DEFAULT (datetime('now','localtime')),
-      FOREIGN KEY (pesticide_id) REFERENCES pesticide_library(id) ON DELETE CASCADE
+      create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
 

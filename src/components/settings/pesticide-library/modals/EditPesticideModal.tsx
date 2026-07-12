@@ -1,83 +1,173 @@
 /**
- * 编辑药剂弹窗组件
- * 包含规格编辑器，支持编辑药剂及其规格信息
- * 2026-07-10：取消防治类型分类，药剂类型改为 TreeSelect 多选
+ * 编辑药剂弹窗（V2 扁平化 2026-07-12）
+ * 单一 PesticideSpec 编辑表单，所有 26 字段直接展示
+ * 匹配 AddPesticideModal 的布局模式，预填 record 数据
  */
 import React, { useState, useCallback, useEffect } from 'react';
 
 import { X, Check } from 'lucide-react';
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
-import { usePesticideLibraryStore, usePestDiseaseDictStore, PesticideLibrary, PesticideSpec } from '@/stores';
-import { PesticideSpecEditor, PesticideSpecItem } from '../PesticideSpecEditor';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
+import { usePesticideLibraryStore, PesticideSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
-// 2026-07-10：药剂类型多选（自实现 checkbox group 树形多选）
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
+// 农药剂型选项（完整列表）
+const FORMULATION_OPTIONS = [
+  { value: '可湿性粉剂', label: '可湿性粉剂 (WP)' },
+  { value: '水分散粒剂', label: '水分散粒剂 (WDG)' },
+  { value: '悬浮剂', label: '悬浮剂 (SC)' },
+  { value: '乳油', label: '乳油 (EC)' },
+  { value: '水剂', label: '水剂 (AS)' },
+  { value: '可溶性粉剂', label: '可溶性粉剂 (SP)' },
+  { value: '颗粒剂', label: '颗粒剂 (GR)' },
+  { value: '微胶囊悬浮剂', label: '微胶囊悬浮剂 (CS)' },
+  { value: '油剂', label: '油剂 (OL)' },
+  { value: '粉剂', label: '粉剂 (DP)' },
+  { value: '片剂', label: '片剂 (WT)' },
+  { value: '烟剂', label: '烟剂 (FU)' },
+  { value: '气雾剂', label: '气雾剂 (AE)' },
+  { value: '蚊香', label: '蚊香 (CO)' },
+  { value: '饵剂', label: '饵剂 (RB)' },
+  { value: '胶饵', label: '胶饵 (GL)' },
+  { value: '悬浮种衣剂', label: '悬浮种衣剂 (FS)' },
+  { value: '种子处理悬浮剂', label: '种子处理悬浮剂 (SS)' },
+  { value: '泡腾片剂', label: '泡腾片剂 (EB)' },
+  { value: '水乳剂', label: '水乳剂 (EW)' },
+  { value: '微乳剂', label: '微乳剂 (ME)' },
+  { value: '悬乳剂', label: '悬乳剂 (SE)' },
+  { value: '可分散油悬浮剂', label: '可分散油悬浮剂 (OD)' },
+  { value: '乳粒剂', label: '乳粒剂 (EG)' },
+  { value: '缓释剂', label: '缓释剂 (BR)' },
+  { value: '可分散液剂', label: '可分散液剂 (DC)' },
+  { value: '可湿性粒剂', label: '可湿性粒剂 (WG)' },
+  { value: '可溶液剂', label: '可溶液剂 (SL)' },
+  { value: '膏剂', label: '膏剂 (PA)' },
+  { value: '其他', label: '其他' },
+];
+
+// 库存单位选项
+const STOCK_UNIT_OPTIONS = [
+  { value: 'kg', label: '千克 (kg)' },
+  { value: 'g', label: '克 (g)' },
+  { value: 'L', label: '升 (L)' },
+  { value: 'mL', label: '毫升 (mL)' },
+  { value: '包', label: '包' },
+  { value: '瓶', label: '瓶' },
+  { value: '桶', label: '桶' },
+  { value: '袋', label: '袋' },
+];
+
+// 表单字段类型（26 个可编辑字段）
+type SpecForm = {
+  pesticideCode: string;
+  pesticideName: string;
+  pesticideTypes: string[];
+  ingredient: string;
+  mechanism: string;
+  functionDesc: string;
+  tabooDesc: string;
+  targetPests: string;
+  specContent: string;
+  formulation: string;
+  manufacturer: string;
+  brandName: string;
+  suggestedDosage: string;
+  suggestedRatio: string;
+  dosageUnit: string;
+  remark: string;
+  stockQuantity: number;
+  stockUnit: string;
+  unitPrice: number;
+  batchNumber: string;
+  productionDate: string;
+  expirationDate: string;
+  packageSpec: string;
+};
+
+/** 从 record 构建初始表单 */
+function buildInitialForm(record: PesticideSpec): SpecForm {
+  // 2026-07-12：兼容旧 pesticideType 字符串字段
+  let initialTypes: string[] = [];
+  if (Array.isArray(record.pesticideTypes)) {
+    initialTypes = record.pesticideTypes;
+  } else if (typeof (record as any).pesticideType === 'string' && (record as any).pesticideType) {
+    try {
+      const parsed = JSON.parse((record as any).pesticideType);
+      initialTypes = Array.isArray(parsed) ? parsed : [(record as any).pesticideType];
+    } catch {
+      initialTypes = [(record as any).pesticideType];
+    }
+  }
+
+  return {
+    pesticideCode: record.pesticideCode || '',
+    pesticideName: record.pesticideName || '',
+    pesticideTypes: initialTypes,
+    ingredient: record.ingredient || '',
+    mechanism: record.mechanism || '',
+    functionDesc: record.functionDesc || '',
+    tabooDesc: record.tabooDesc || '',
+    targetPests: record.targetPests || '',
+    specContent: record.specContent || '',
+    formulation: record.formulation || '',
+    manufacturer: record.manufacturer || '',
+    brandName: record.brandName || '',
+    suggestedDosage: record.suggestedDosage || '',
+    suggestedRatio: record.suggestedRatio || '',
+    dosageUnit: record.dosageUnit || 'g/L',
+    remark: record.remark || '',
+    stockQuantity: record.stockQuantity || 0,
+    stockUnit: record.stockUnit || 'kg',
+    unitPrice: record.unitPrice || 0,
+    batchNumber: record.batchNumber || '',
+    productionDate: record.productionDate || '',
+    expirationDate: record.expirationDate || '',
+    packageSpec: record.packageSpec || '',
+  };
+}
 
 interface EditPesticideModalProps {
   isOpen: boolean;
-  record: PesticideLibrary;
+  record: PesticideSpec;
   onClose: () => void;
   onSaved: () => void;
 }
 
 export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPesticideModalProps) {
   const store = usePesticideLibraryStore();
-  const pestDiseaseStore = usePestDiseaseDictStore();
   const dictionaries = useDictionaryStore((s) => s.dictionaries);
 
-  // 表单状态
-  const [form, setForm] = useState({
-    pesticideCode: '',
-    pesticideName: '',
-    // 2026-07-10：药剂类型数组
-    pesticideTypes: [] as string[],
-    ingredient: '',
-    mechanism: '',
-    functionDesc: '',
-    tabooDesc: '',
-    targetPests: '',
-  });
-
-  // 规格列表
-  const [specs, setSpecs] = useState<PesticideSpecItem[]>([]);
-
-  // 新增的规格（未保存到服务器）
-  const [newSpecs, setNewSpecs] = useState<PesticideSpecItem[]>([]);
-
-  // 已删除的规格ID列表（从服务器端删除）
-  const [deletedSpecIds, setDeletedSpecIds] = useState<string[]>([]);
-
-  // 选中的防治对象
-  const [selectedPests, setSelectedPests] = useState<string[]>([]);
-
-  // 防治对象搜索和过滤
-  const [pestSearchKeyword, setPestSearchKeyword] = useState('');
-  const [pestTypeFilter, setPestTypeFilter] = useState<'all' | 'pest' | 'disease'>('all');
-
-  // 过滤后的病虫害列表
-  const filteredPests = pestDiseaseStore.items.filter((pest) => {
-    const matchesSearch =
-      pestSearchKeyword === '' ||
-      pest.dictName.includes(pestSearchKeyword) ||
-      pest.dictCode.includes(pestSearchKeyword);
-    const matchesType = pestTypeFilter === 'all' || pest.dictType === pestTypeFilter;
-    return matchesSearch && matchesType;
-  });
-
-  // 提交状态
+  const [form, setForm] = useState<SpecForm>(buildInitialForm(record));
+  const [original, setOriginal] = useState<SpecForm>(buildInitialForm(record));
   const [submitting, setSubmitting] = useState(false);
 
-  // 更新字段
-  const updateField = useCallback((field: string, value: string) => {
+  // 弹窗打开时初始化表单
+  useEffect(() => {
+    if (isOpen && record) {
+      const initForm = buildInitialForm(record);
+      setForm(initForm);
+      setOriginal(initForm);
+    }
+  }, [isOpen, record]);
+
+  // 更新字段（字符串字段）
+  const updateField = useCallback(<K extends keyof SpecForm>(field: K, value: SpecForm[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  // 更新数值字段
+  const updateNumberField = useCallback((field: 'stockQuantity' | 'unitPrice', value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value === '' ? 0 : Number(value) }));
   }, []);
 
   /**
@@ -93,77 +183,21 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
     });
   }, []);
 
-  // 初始化表单数据
-  useEffect(() => {
-    if (isOpen && record) {
-      // 2026-07-10：pesticideTypes 数组回填（兼容旧 pesticideType 字符串字段）
-      let initialTypes: string[] = [];
-      if (Array.isArray(record.pesticideTypes)) {
-        initialTypes = record.pesticideTypes;
-      } else if (typeof (record as any).pesticideType === 'string' && (record as any).pesticideType) {
-        try {
-          const parsed = JSON.parse((record as any).pesticideType);
-          initialTypes = Array.isArray(parsed) ? parsed : [(record as any).pesticideType];
-        } catch {
-          initialTypes = [(record as any).pesticideType];
-        }
-      }
-      setForm({
-        pesticideCode: record.pesticideCode || '',
-        pesticideName: record.pesticideName || '',
-        pesticideTypes: initialTypes,
-        ingredient: record.ingredient || '',
-        mechanism: record.mechanism || '',
-        functionDesc: record.functionDesc || '',
-        tabooDesc: record.tabooDesc || '',
-        targetPests: record.targetPests || '',
-      });
-
-      // 转换已有规格
-      const existingSpecs: PesticideSpecItem[] = (record.specs || []).map((spec: PesticideSpec) => ({
-        id: spec.id,
-        specContent: spec.specContent || '',
-        formulation: spec.formulation || '',
-        manufacturer: spec.manufacturer || '',
-        suggestedDosage: spec.suggestedDosage || '',
-        suggestedRatio: spec.suggestedRatio || '',
-        dosageUnit: spec.dosageUnit || 'g/L',
-        mechanism: spec.mechanism || '',
-        brandName: spec.brandName || '',
-        remark: spec.remark || '',
-      }));
-      setSpecs(existingSpecs);
-      setNewSpecs([]);
-
-      // 加载关联的病虫害
-      const loadRelations = async () => {
-        const pests = await store.fetchRelatedPests(record.id);
-        setSelectedPests(pests.map((p) => p.id));
-      };
-      loadRelations();
-    }
-  }, [isOpen, record, pestDiseaseStore.items]);
-
-  // 切换防治对象
-  const togglePest = (pestId: string) => {
-    setSelectedPests((prev) =>
-      prev.includes(pestId)
-        ? prev.filter((id) => id !== pestId)
-        : [...prev, pestId]
-    );
-  };
-
-  // 获取选中的防治对象名称
-  const getTargetPestsName = () => {
-    return selectedPests
-      .map((id) => pestDiseaseStore.items.find((p) => p.id === id)?.dictName)
-      .filter(Boolean)
-      .join(', ');
-  };
-
-  // 合并规格列表（包括已有和新增的）
-  const getAllSpecs = (): PesticideSpecItem[] => {
-    return [...specs, ...newSpecs];
+  // 检测是否有变更
+  const hasChanges = (): boolean => {
+    const fields: (keyof SpecForm)[] = [
+      'pesticideName', 'ingredient', 'mechanism',
+      'functionDesc', 'tabooDesc', 'targetPests',
+      'specContent', 'formulation', 'manufacturer', 'brandName',
+      'suggestedDosage', 'suggestedRatio', 'dosageUnit', 'remark',
+      'stockQuantity', 'stockUnit', 'unitPrice', 'batchNumber',
+      'productionDate', 'expirationDate', 'packageSpec',
+    ];
+    // pesticideTypes: 数组比较
+    const typesChanged =
+      JSON.stringify(form.pesticideTypes.sort()) !== JSON.stringify(original.pesticideTypes.sort());
+    if (typesChanged) return true;
+    return fields.some((f) => form[f] !== original[f]);
   };
 
   // 提交表单
@@ -176,99 +210,46 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
       await showAlert('请至少选择 1 个药剂类型');
       return;
     }
+    if (!hasChanges()) {
+      await showAlert('未检测到任何修改');
+      return;
+    }
 
     setSubmitting(true);
-
-    // 更新药剂记录
-    await store.updateItem(record.id, {
-      pesticideName: form.pesticideName,
-      pesticideTypes: form.pesticideTypes,
-      ingredient: form.ingredient,
-      mechanism: form.mechanism,
-      functionDesc: form.functionDesc,
-      tabooDesc: form.tabooDesc,
-      targetPests: getTargetPestsName() || form.targetPests,
-    });
-
-    // 保存新增的规格
-    if (newSpecs.length > 0) {
-      for (const spec of newSpecs) {
-        if (spec.specContent || spec.formulation || spec.manufacturer) {
-          await store.createSpec(record.id, {
-            specContent: spec.specContent,
-            formulation: spec.formulation,
-            manufacturer: spec.manufacturer,
-            suggestedDosage: spec.suggestedDosage,
-            suggestedRatio: spec.suggestedRatio,
-            dosageUnit: spec.dosageUnit,
-            mechanism: spec.mechanism,
-            brandName: spec.brandName,
-            remark: spec.remark,
-          } as Partial<PesticideSpec>);
-        }
-      }
+    try {
+      await store.updateItem(record.id, {
+        pesticideName: form.pesticideName,
+        pesticideTypes: form.pesticideTypes,
+        ingredient: form.ingredient,
+        mechanism: form.mechanism,
+        functionDesc: form.functionDesc,
+        tabooDesc: form.tabooDesc,
+        targetPests: form.targetPests,
+        specContent: form.specContent,
+        formulation: form.formulation,
+        manufacturer: form.manufacturer,
+        brandName: form.brandName,
+        suggestedDosage: form.suggestedDosage,
+        suggestedRatio: form.suggestedRatio,
+        dosageUnit: form.dosageUnit,
+        remark: form.remark,
+        stockQuantity: Number(form.stockQuantity) || 0,
+        stockUnit: form.stockUnit,
+        unitPrice: Number(form.unitPrice) || 0,
+        batchNumber: form.batchNumber,
+        productionDate: form.productionDate,
+        expirationDate: form.expirationDate,
+        packageSpec: form.packageSpec,
+      });
+      onSaved();
+    } catch (err) {
+      await showAlert('保存出错：' + (err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
-
-    // 更新现有规格（检测变化）
-    const originalSpecs = record.specs || [];
-    for (let i = 0; i < specs.length; i++) {
-      const updated = specs[i];
-      const original = originalSpecs[i];
-      if (original && (
-        updated.specContent !== (original.specContent || '') ||
-        updated.formulation !== (original.formulation || '') ||
-        updated.manufacturer !== (original.manufacturer || '') ||
-        updated.suggestedDosage !== (original.suggestedDosage || '') ||
-        updated.suggestedRatio !== (original.suggestedRatio || '') ||
-        updated.dosageUnit !== (original.dosageUnit || '') ||
-        updated.mechanism !== (original.mechanism || '') ||
-        updated.brandName !== (original.brandName || '') ||
-        updated.remark !== (original.remark || '')
-      )) {
-        await store.updateSpec(original.id!, {
-          specContent: updated.specContent,
-          formulation: updated.formulation,
-          manufacturer: updated.manufacturer,
-          suggestedDosage: updated.suggestedDosage,
-          suggestedRatio: updated.suggestedRatio,
-          dosageUnit: updated.dosageUnit,
-          mechanism: updated.mechanism,
-          brandName: updated.brandName,
-          remark: updated.remark,
-        } as Partial<PesticideSpec>);
-      }
-    }
-
-    // 删除已移除的规格
-    if (deletedSpecIds.length > 0) {
-      for (const specId of deletedSpecIds) {
-        await store.deleteSpec(specId);
-      }
-    }
-
-    // 更新关联的病虫害
-    await store.updateRelations(record.id, selectedPests);
-
-    setSubmitting(false);
-    onSaved();
   };
 
-  // 处理规格变化（区分已有规格和新规格）
-  const handleSpecsChange = (updatedSpecs: PesticideSpecItem[]) => {
-    const existingCount = specs.length;
-    const updatedExisting = updatedSpecs.slice(0, existingCount);
-    const updatedNew = updatedSpecs.slice(existingCount);
-
-    const existingIds = specs.map(s => s.id).filter(Boolean);
-    const updatedExistingIds = updatedExisting.map(s => s.id).filter(Boolean);
-    const deletedIds = existingIds.filter(id => !updatedExistingIds.includes(id));
-    if (deletedIds.length > 0) {
-      setDeletedSpecIds(prev => [...prev, ...deletedIds]);
-    }
-
-    setSpecs(updatedExisting);
-    setNewSpecs(updatedNew);
-  };
+  if (!record) return null;
 
   // 区域标题
   const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
@@ -284,7 +265,8 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
     );
     const topLevel = allTypeItems.filter((d: any) => !d.parentId && !d.parent_id);
     return (
-      <div className="border border-gray-300 rounded-lg p-3 max-h-[200px] overflow-y-auto bg-gray-50">
+      <div className="border border-gray-300 rounded-lg p-3 max-h-[240px] overflow-y-auto bg-gray-50">
+        <div className="grid grid-cols-2 gap-3">
         {topLevel.map((parent: any) => {
           const parentCode = parent.dictCode || parent.dict_code;
           const children = allTypeItems.filter((d: any) =>
@@ -292,8 +274,8 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
           );
           const parentChecked = form.pesticideTypes.includes(parentCode);
           return (
-            <div key={parent.id} className="mb-2 last:mb-0">
-              <label className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded">
+            <div key={parent.id} className="flex items-center gap-1.5 flex-wrap py-1 px-2 hover:bg-white rounded">
+              <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                 <Checkbox
                   checked={parentChecked}
                   onCheckedChange={() => togglePesticideType(parentCode)}
@@ -301,46 +283,41 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 <span className="text-sm font-semibold text-gray-900">
                   {parent.dictLabel || parent.dict_label}
                 </span>
-                {children.length > 0 && (
-                  <span className="text-xs text-gray-500">({children.length} 个子类)</span>
-                )}
               </label>
-              {children.length > 0 && (
-                <div className="ml-6 mt-1 grid grid-cols-2 gap-1">
-                  {children.map((child: any) => {
-                    const childCode = child.dictCode || child.dict_code;
-                    return (
-                      <label
-                        key={child.id}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded text-xs"
-                      >
-                        <Checkbox
-                          checked={form.pesticideTypes.includes(childCode)}
-                          onCheckedChange={() => togglePesticideType(childCode)}
-                        />
-                        <span className="text-gray-700">
-                          {child.dictLabel || child.dict_label}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+              {children.length > 0 && <span className="text-gray-300 shrink-0 select-none">|</span>}
+              {children.map((child: any) => {
+                const childCode = child.dictCode || child.dict_code;
+                return (
+                  <label
+                    key={child.id}
+                    className="flex items-center gap-1 cursor-pointer text-xs shrink-0"
+                  >
+                    <Checkbox
+                      checked={form.pesticideTypes.includes(childCode)}
+                      onCheckedChange={() => togglePesticideType(childCode)}
+                    />
+                    <span className="text-gray-600">
+                      {child.dictLabel || child.dict_label}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           );
         })}
+        </div>
       </div>
     );
   };
-
-  if (!record) return null;
 
   return (
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title="编辑药剂"
+      title={/*template*/'编辑药剂：' + (record.pesticideCode || record.pesticideName)}
       size="xl"
+      width={1170}
+      height={780}
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
@@ -348,15 +325,14 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
         <div>
           <SectionTitle title="基础信息" icon="📋" />
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label className="text-gray-900">药剂编码</Label>
                 <Input
                   type="text"
                   value={form.pesticideCode}
-                  onChange={(e) => updateField('pesticideCode', e.target.value)}
-                  placeholder="药剂编码"
-                  className={deepInputClass}
+                  readOnly
+                  className={deepInputClass + ' bg-gray-100 cursor-not-allowed'}
                 />
               </div>
               <div>
@@ -371,8 +347,6 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                   className={deepInputClass}
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-900">药剂成分</Label>
                 <Input
@@ -394,7 +368,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 />
               </div>
             </div>
-            {/* 2026-07-10：药剂类型树形多选 */}
+            {/* 药剂类型树形多选 */}
             <div>
               <Label className="text-gray-900 mb-1 block">
                 药剂类型 <span className="text-red-500">*</span>
@@ -420,21 +394,182 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
 
         {/* 规格信息 */}
         <div>
-          <PesticideSpecEditor specs={getAllSpecs()} onChange={handleSpecsChange} />
+          <SectionTitle title="规格信息" icon="🧪" />
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs text-gray-500">含量/规格</Label>
+                <Input
+                  type="text"
+                  value={form.specContent}
+                  onChange={(e) => updateField('specContent', e.target.value)}
+                  placeholder="如 50%"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">剂型</Label>
+                <Select
+                  value={form.formulation}
+                  onValueChange={(value) => updateField('formulation', value)}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="选择剂型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FORMULATION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">生产厂家</Label>
+                <Input
+                  type="text"
+                  value={form.manufacturer}
+                  onChange={(e) => updateField('manufacturer', e.target.value)}
+                  placeholder="生产厂家"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">品牌名称</Label>
+                <Input
+                  type="text"
+                  value={form.brandName}
+                  onChange={(e) => updateField('brandName', e.target.value)}
+                  placeholder="品牌名称"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">建议用量</Label>
+                <Input
+                  type="text"
+                  value={form.suggestedDosage}
+                  onChange={(e) => updateField('suggestedDosage', e.target.value)}
+                  placeholder="如 100"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">用量单位</Label>
+                <UnitDictSelect
+                  value={form.dosageUnit}
+                  onChange={(value) => updateField('dosageUnit', value)}
+                  placeholder="选择单位"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">稀释比例</Label>
+                <Input
+                  type="text"
+                  value={form.suggestedRatio}
+                  onChange={(e) => updateField('suggestedRatio', e.target.value)}
+                  placeholder="如 1:100"
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 库存与供应链 */}
+        <div>
+          <SectionTitle title="库存与供应链" icon="📦" />
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-xs text-gray-500">库存量</Label>
+              <Input
+                type="number"
+                value={form.stockQuantity || ''}
+                onChange={(e) => updateNumberField('stockQuantity', e.target.value)}
+                placeholder="如 100"
+                step="0.01"
+                min="0"
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">库存单位</Label>
+              <Select value={form.stockUnit} onValueChange={(v) => updateField('stockUnit', v)}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="选择单位" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STOCK_UNIT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">单价 (元/单位)</Label>
+              <Input
+                type="number"
+                value={form.unitPrice || ''}
+                onChange={(e) => updateNumberField('unitPrice', e.target.value)}
+                placeholder="如 25"
+                step="0.01"
+                min="0"
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">产品批次</Label>
+              <Input
+                type="text"
+                value={form.batchNumber}
+                onChange={(e) => updateField('batchNumber', e.target.value)}
+                placeholder="如 BATCH-2026-001"
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">包装规格</Label>
+              <Input
+                type="text"
+                value={form.packageSpec}
+                onChange={(e) => updateField('packageSpec', e.target.value)}
+                placeholder="如 50kg/桶、10ml/袋"
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">生产日期</Label>
+              <Input
+                type="date"
+                value={form.productionDate}
+                onChange={(e) => updateField('productionDate', e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">过期日期</Label>
+              <Input
+                type="date"
+                value={form.expirationDate}
+                onChange={(e) => updateField('expirationDate', e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 功能与禁忌 */}
         <div>
           <SectionTitle title="功能与禁忌" icon="📝" />
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-900">功能说明</Label>
               <TextArea
                 value={form.functionDesc}
                 onChange={(e) => updateField('functionDesc', e.target.value)}
                 placeholder="请输入功能说明"
-                rows={3}
-                className={`${deepInputClass} resize-none`}
+                rows={4}
+                className={deepInputClass + ' resize-none'}
               />
             </div>
             <div>
@@ -443,80 +578,36 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 value={form.tabooDesc}
                 onChange={(e) => updateField('tabooDesc', e.target.value)}
                 placeholder="请输入使用禁忌"
-                rows={2}
-                className={`${deepInputClass} resize-none`}
+                rows={4}
+                className={deepInputClass + ' resize-none'}
               />
             </div>
           </div>
         </div>
 
-        {/* 防治对象 - 左右布局 */}
-        <div>
-          <SectionTitle title="防治对象" icon="🐛" />
-          <div className="grid grid-cols-2 gap-4">
-            {/* 左侧：可选列表 */}
+        {/* 防治对象 + 备注（并排） */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <SectionTitle title="防治对象" icon="🐛" />
             <div>
-              <Label className="text-gray-700 text-xs mb-2 block">可选病虫害</Label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  type="text"
-                  value={pestSearchKeyword}
-                  onChange={(e) => setPestSearchKeyword(e.target.value)}
-                  placeholder="搜索名称或编码..."
-                  className="flex-1 h-8 text-sm"
-                />
-              </div>
-              <div className="flex gap-1 mb-2">
-                <Button size="xs" variant={pestTypeFilter === 'all' ? 'default' : 'secondary'} onClick={() => setPestTypeFilter('all')}>全部</Button>
-                <Button size="xs" variant={pestTypeFilter === 'pest' ? 'default' : 'secondary'} onClick={() => setPestTypeFilter('pest')}>虫害</Button>
-                <Button size="xs" variant={pestTypeFilter === 'disease' ? 'default' : 'secondary'} onClick={() => setPestTypeFilter('disease')}>病害</Button>
-              </div>
-              <div className="max-h-[150px] overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-                {filteredPests.length === 0 ? (
-                  <div className="text-center text-gray-400 py-4 text-sm">无匹配病虫害</div>
-                ) : (
-                  filteredPests.map((pest) => (
-                    <button
-                      key={pest.id}
-                      type="button"
-                      onClick={() => togglePest(pest.id)}
-                      className={`w-full text-left px-2 py-1 rounded text-sm ${
-                        selectedPests.includes(pest.id)
-                          ? 'bg-green-100 text-green-700'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      {pest.dictName}
-                    </button>
-                  ))
-                )}
-              </div>
+              <TextArea
+                value={form.targetPests}
+                onChange={(e) => updateField('targetPests', e.target.value)}
+                placeholder="请输入防治对象，多个用逗号分隔"
+                rows={3}
+                className={deepInputClass + ' resize-none'}
+              />
             </div>
-            {/* 右侧：已选列表 */}
-            <div>
-              <Label className="text-gray-700 text-xs mb-2 block">已选病虫害 ({selectedPests.length})</Label>
-              <div className="max-h-[200px] overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-                {selectedPests.length === 0 ? (
-                  <div className="text-center text-gray-400 py-4 text-sm">请从左侧选择</div>
-                ) : (
-                  selectedPests.map((id) => {
-                    const pest = pestDiseaseStore.items.find((p) => p.id === id);
-                    return pest ? (
-                      <div key={id} className="flex items-center justify-between px-2 py-1 bg-green-50 rounded">
-                        <span className="text-sm text-green-700">{pest.dictName}</span>
-                        <button
-                          type="button"
-                          onClick={() => togglePest(id)}
-                          className="text-green-500 hover:text-green-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : null;
-                  })
-                )}
-              </div>
-            </div>
+          </div>
+          <div>
+            <SectionTitle title="备注" icon="💬" />
+            <TextArea
+              value={form.remark}
+              onChange={(e) => updateField('remark', e.target.value)}
+              placeholder="备注"
+              rows={3}
+              className={deepInputClass + ' resize-none'}
+            />
           </div>
         </div>
       </div>

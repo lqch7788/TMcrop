@@ -1,5 +1,6 @@
 /**
  * 药剂知识库种子数据
+ * V12.0 扁平化重构：单表 pesticide_specs
  * 基于网络搜索的蔬菜水果病虫害防治药剂大全
  * 化学防治、生物防治、物理防治三大类
  * 草莓病虫害防治数据来源：
@@ -14,33 +15,41 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** 生成药剂编码 */
-function generateCode(controlType: string, index: number): string {
-  const typeMap: Record<string, string> = { chemical: 'C', bio: 'B', physical: 'P' };
-  const prefix = `PC-${typeMap[controlType] || 'X'}`;
-  return `${prefix}-${String(index).padStart(4, '0')}`;
+/** 生成药剂编码：PC-XXXX（全局自增，不分类型） */
+function generateCode(index: number): string {
+  return `PC-${String(index).padStart(4, '0')}`;
 }
 
+/** controlType → pesticide_type JSON 映射 */
+const PESTICIDE_TYPE_MAP: Record<string, string> = {
+  chemical: '["insecticide"]',
+  bio: '["bio_pesticide"]',
+  physical: '["physical_control"]',
+};
+
 /**
- * 导入药剂知识库数据
+ * 导入药剂知识库种子数据到扁平 pesticide_specs 表
  */
 export function seedPesticideLibrary() {
   const db = getDatabase();
 
-  // 检查是否已有数据（只在表为空时导入，避免清除用户数据）
-  const existingResult = db.exec('SELECT COUNT(*) as cnt FROM pesticide_library');
+  // 检查是否已有数据（只在表为空时导入）
+  const existingResult = db.exec('SELECT COUNT(*) as cnt FROM pesticide_specs');
   const existingCount = existingResult.length > 0 && existingResult[0].values.length > 0 ? Number(existingResult[0].values[0][0]) : 0;
   if (existingCount > 0) {
-    console.log(`[seedPesticideLibrary] 药剂知识库已有 ${existingCount} 条数据，跳过导入`);
+    console.log(`[seedPesticideLibrary] 药剂库已有 ${existingCount} 条记录，跳过导入`);
     return;
   }
 
   console.log('[seedPesticideLibrary] 开始导入药剂知识库种子数据...');
 
-  const now = new Date().toISOString();
-  let codeIndex = 1;
+  // 查询当前最大编码序号（兼容已有数据）
+  const maxResult = db.exec("SELECT MAX(CAST(SUBSTR(pesticide_code, 4) AS INTEGER)) FROM pesticide_specs");
+  let codeIndex = 0;
+  if (maxResult.length > 0 && maxResult[0].values.length > 0 && maxResult[0].values[0][0] !== null) {
+    codeIndex = Number(maxResult[0].values[0][0]);
+  }
 
-  // ==================== 化学防治药剂 ====================
   const chemicalPesticides = [
     // ===== 杀菌剂 - 霜霉病/晚疫病 =====
     { name: '代森锰锌', controlType: 'chemical', ingredient: '代森锰锌（Mancozeb）', mechanism: '抑制病原菌孢子萌发和菌丝生长，保护性杀菌剂', functionDesc: '广谱保护性杀菌剂，抑制病原菌孢子萌发。对霜霉病、炭疽病，叶斑病有良好预防效果。', tabooDesc: '不可与铜制剂和碱性农药混用。对豆类、莴苣等敏感作物可能产生药害。', targetPests: '霜霉病、炭疽病，叶斑病、疫病', specs: [
@@ -315,7 +324,6 @@ export function seedPesticideLibrary() {
     ]},
   ];
 
-  // ==================== 生物防治药剂 ====================
   const bioPesticides = [
     // ===== 微生物杀菌剂 =====
     { name: '枯草芽孢杆菌', controlType: 'bio', ingredient: '枯草芽孢杆菌（Bacillus subtilis）', mechanism: '竞争性抑制病原菌，产生抗生素提高植物免疫力', functionDesc: '细菌性生物杀菌剂，抑制病原菌生长。产生抗生素提高植物免疫力。对白粉病、灰霉病、炭疽病有效。', tabooDesc: '不能与杀菌剂混用。建议与哈茨木霉菌复配使用。', targetPests: '白粉病、灰霉病、炭疽病、枯萎病', specs: [
@@ -415,7 +423,6 @@ export function seedPesticideLibrary() {
     ]},
   ];
 
-  // ==================== 物理防治 ====================
   const physicalPesticides = [
     { name: '防虫网', controlType: 'physical', ingredient: '尼龙网/聚乙烯网', mechanism: '物理隔离，阻止害虫接触作物', functionDesc: '人工隔离屏障，阻止害虫进入。40目可阻蝴蝶，60目可阻蚜虫粉虱。', tabooDesc: '目数过大影响通风。根据害虫种类选择合适目数。', targetPests: '菜青虫、小菜蛾、蚜虫，白粉虱、斑潜蝇', specs: [
       { spec: '40目尼龙网', manufacturer: '通用', dosage: '全覆盖', unit: '覆盖' },
@@ -474,72 +481,69 @@ export function seedPesticideLibrary() {
     ]},
   ];
 
-  // 导入所有药剂
+
+
+  // 拼接所有药剂
   const allPesticides = [
     ...chemicalPesticides.map(p => ({ ...p, controlType: 'chemical' })),
     ...bioPesticides.map(p => ({ ...p, controlType: 'bio' })),
     ...physicalPesticides.map(p => ({ ...p, controlType: 'physical' })),
   ];
 
+  // 逐行扁平写入 pesticide_specs（每个 specs[] 条目为独立行）
   let insertedCount = 0;
-  const insertedIds: Record<string, string> = {};
-
   for (const pesticide of allPesticides) {
-    const pesticideId = generateId('pl');
-    const pesticideCode = generateCode(pesticide.controlType, codeIndex++);
+    const pesticideType = PESTICIDE_TYPE_MAP[pesticide.controlType] || null;
+    const specs = pesticide.specs || [];
 
-    // 插入主表
-    db.run(`
-      INSERT INTO pesticide_library (
-        id, pesticide_code, pesticide_name, control_type, function_desc, taboo_desc,
-        target_pests, ingredient, mechanism, status, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        pesticideId,
-        pesticideCode,
-        pesticide.name,
-        pesticide.controlType,
-        pesticide.functionDesc,
-        pesticide.tabooDesc,
-        pesticide.targetPests,
-        pesticide.ingredient,
-        pesticide.mechanism,
-        'active',
-        now,
-        now
-      ]
-    );
-
-    insertedIds[pesticide.name] = pesticideId;
-    insertedCount++;
-
-    // 插入规格子表
-    if (pesticide.specs && pesticide.specs.length > 0) {
-      for (const spec of pesticide.specs) {
-        const specId = generateId('ps');
+    if (specs.length === 0) {
+      // 没有规格的药剂，写一条不含规格的基本记录
+      codeIndex++;
+      const id = generateId('ps');
+      const code = generateCode(codeIndex);
+      db.run(`
+        INSERT INTO pesticide_specs (
+          id, pesticide_code, pesticide_name, pesticide_type,
+          ingredient, mechanism, function_desc, taboo_desc, target_pests,
+          spec_content, manufacturer, suggested_dosage, dosage_unit,
+          stock_quantity, stock_unit, unit_price, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, code, pesticide.name, pesticideType,
+          pesticide.ingredient, pesticide.mechanism, pesticide.functionDesc,
+          pesticide.tabooDesc, pesticide.targetPests,
+          null, null, null, null,
+          0, 'kg', 0, 'active'
+        ]
+      );
+      insertedCount++;
+    } else {
+      for (const spec of specs) {
+        codeIndex++;
+        const id = generateId('ps');
+        const code = generateCode(codeIndex);
         db.run(`
           INSERT INTO pesticide_specs (
-            id, pesticide_id, spec_content, formulation, manufacturer,
-            suggested_dosage, dosage_unit, status, create_time
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, pesticide_code, pesticide_name, pesticide_type,
+            ingredient, mechanism, function_desc, taboo_desc, target_pests,
+            spec_content, manufacturer, suggested_dosage, dosage_unit,
+            stock_quantity, stock_unit, unit_price, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            specId,
-            pesticideId,
-            spec.spec,
-            null,
-            spec.manufacturer,
-            spec.dosage,
-            spec.unit,
-            'active',
-            now
+            id, code, pesticide.name, pesticideType,
+            pesticide.ingredient, pesticide.mechanism, pesticide.functionDesc,
+            pesticide.tabooDesc, pesticide.targetPests,
+            spec.spec, spec.manufacturer, spec.dosage, spec.unit,
+            0, 'kg', 0, 'active'
           ]
         );
+        insertedCount++;
       }
     }
   }
 
   saveDatabase();
-  console.log(`药剂知识库种子数据导入完成：${insertedCount}种药剂`);
+  console.log(`药剂知识库种子数据导入完成：${insertedCount} 条规格记录`);
 }
 
 /**

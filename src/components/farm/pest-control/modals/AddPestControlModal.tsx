@@ -222,8 +222,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     });
   }, [pesticideTypeItems]);
 
-  // 2026-07-11：按"规格"展开的过滤列表（每个规格一行，支持精确选择）
-  // - 返回结构：{ pesticide, spec }[]，渲染时一行一项规格
+  // 2026-07-12：扁平化后每个 item 本身就是规格，不再需要展开 specs[]
+  // - 返回结构：{ pesticide, spec }[]，其中 spec === pesticide（扁平后每条即完整规格）
   const filteredSpecs = useMemo(() => {
     const items = (pesticideStore.items as any[]).filter(
       (p) => p.status === 'active' || !p.status
@@ -235,28 +235,23 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         (p.pesticideTypes || []).some((t: string) => selectedTypes.includes(t))
       );
     }
-    // 2. 关键字筛选（按药剂名/编码/规格含量/厂家/品牌）
+    // 2. 关键字筛选（按药剂名/编码/含量/厂家/品牌）
     const kw = pesticideSearchKeyword.trim().toLowerCase();
-    // 3. 展开所有规格为单条记录
+    // 3. 扁平化后每条即完整规格，直接映射
     const rows: { pesticide: any; spec: any }[] = [];
     for (const p of pool) {
-      const specs = Array.isArray(p.specs) && p.specs.length > 0
-        ? p.specs
-        : [null]; // 无规格时也展示药剂名（兜底）
-      for (const spec of specs) {
-        if (kw) {
-          const hay = [
-            p.pesticideName,
-            p.pesticideCode,
-            p.ingredient,
-            spec?.specContent,
-            spec?.manufacturer,
-            spec?.brandName,
-          ].filter(Boolean).join(' ').toLowerCase();
-          if (!hay.includes(kw)) continue;
-        }
-        rows.push({ pesticide: p, spec });
+      if (kw) {
+        const hay = [
+          p.pesticideName,
+          p.pesticideCode,
+          p.ingredient,
+          p.specContent,
+          p.manufacturer,
+          p.brandName,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(kw)) continue;
       }
+      rows.push({ pesticide: p, spec: p }); // 扁平化：pesticide 和 spec 是同一个对象
     }
     return rows;
   }, [selectedTypes, pesticideSearchKeyword, pesticideStore.items]);

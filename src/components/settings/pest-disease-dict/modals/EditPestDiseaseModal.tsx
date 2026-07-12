@@ -14,7 +14,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict, PesticideLibrary } from '@/stores';
+import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict } from '@/stores';
 
 interface EditPestDiseaseModalProps {
   isOpen: boolean;
