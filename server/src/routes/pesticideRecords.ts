@@ -78,21 +78,30 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const body = req.body;
+    // 2026-07-12：项目契约是「前端 store 的 denormalize 已把 body 转 snake_case」，
+    // 后端必须按 snake_case 读 body（不能读 camelCase，否则所有字段都是 undefined）。
+    // curl 直测 / 本地调试时可手动传 camelCase 不经 denormalize，所以兼容两种命名。
+    const sprayTime = body.spray_time ?? body.sprayTime;
+    const cropName = body.crop_name ?? body.cropName;
     // 2026-07-10：取消 control_type 必填，仅校验防治日期 + 作物名称
-    if (!body.sprayTime || !body.cropName) {
+    if (!sprayTime || !cropName) {
       res.status(400).json({ success: false, error: '防治日期、作物名称为必填项' });
       return;
     }
-    // pesticideType 支持数组/字符串/JSON
+    // pesticide_type 支持数组/字符串/JSON
     let pesticideTypeValue: string | null = null;
-    if (Array.isArray(body.pesticideType) && body.pesticideType.length > 0) {
-      pesticideTypeValue = JSON.stringify(body.pesticideType);
-    } else if (typeof body.pesticideType === 'string' && body.pesticideType.trim()) {
-      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
+    const pesticideTypeRaw = body.pesticide_type ?? body.pesticideType;
+    if (Array.isArray(pesticideTypeRaw) && pesticideTypeRaw.length > 0) {
+      pesticideTypeValue = JSON.stringify(pesticideTypeRaw);
+    } else if (typeof pesticideTypeRaw === 'string' && pesticideTypeRaw.trim()) {
+      pesticideTypeValue = pesticideTypeRaw.trim().startsWith('[') ? pesticideTypeRaw : JSON.stringify([pesticideTypeRaw]);
     }
     const code = generateRecordCode(db);
     const now = new Date().toISOString();
     const id = `pr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // 2026-07-12：所有 body 字段按 snake_case 读，兼容 camelCase（curl 调试）
+    const get = (snake: string, camel: string) => body[snake] ?? body[camel];
 
     // 2026-07-10：移除 control_type 列写入
     db.run(`INSERT INTO pesticide_records (
@@ -107,20 +116,30 @@ router.post('/', (req: Request, res: Response) => {
       leaf_fertilizer_list,
       description, photos, status, create_time, update_time
     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.sprayTime, body.operatorId || null, body.operatorName || null, body.cropName,
-       body.greenhouseName || null,
-       body.plantingId || null, body.plantingCode || null, body.seedlingId || null, body.seedlingCode || null,
-       body.pesticideId || null, body.pesticideName || null,
-       pesticideTypeValue, body.specId || null, body.specContent || null,
-       body.dosage || null, body.dosageUnit || null, body.dilutionRatio || null,
-       body.targetPest || null, body.applicationMethod || null,
-       body.bioAgentId || null, body.bioAgentName || null, body.bioAgentType || null,
-       body.equipmentName || null, body.equipmentCount || null,
-       body.pesticideList || null, body.bioAgentList || null, body.equipmentList || null,
-       body.useLeafFertilizer || 'no', body.leafFertilizerName || null,
-       body.leafFertilizerDosage || null, body.leafFertilizerUnit || null,
-       body.leafFertilizerList || null,
-       body.description || null, body.photos || null, body.status || 'completed', now, now]
+      [id, code, sprayTime,
+       get('operator_id', 'operatorId') || null, get('operator_name', 'operatorName') || null,
+       cropName, get('greenhouse_name', 'greenhouseName') || null,
+       get('planting_id', 'plantingId') || null, get('planting_code', 'plantingCode') || null,
+       get('seedling_id', 'seedlingId') || null, get('seedling_code', 'seedlingCode') || null,
+       get('pesticide_id', 'pesticideId') || null, get('pesticide_name', 'pesticideName') || null,
+       pesticideTypeValue,
+       get('spec_id', 'specId') || null, get('spec_content', 'specContent') || null,
+       get('dosage', 'dosage') || null, get('dosage_unit', 'dosageUnit') || null,
+       get('dilution_ratio', 'dilutionRatio') || null,
+       get('target_pest', 'targetPest') || null, get('application_method', 'applicationMethod') || null,
+       get('bio_agent_id', 'bioAgentId') || null, get('bio_agent_name', 'bioAgentName') || null,
+       get('bio_agent_type', 'bioAgentType') || null,
+       get('equipment_name', 'equipmentName') || null, get('equipment_count', 'equipmentCount') || null,
+       get('pesticide_list', 'pesticideList') || null,
+       get('bio_agent_list', 'bioAgentList') || null,
+       get('equipment_list', 'equipmentList') || null,
+       get('use_leaf_fertilizer', 'useLeafFertilizer') || 'no',
+       get('leaf_fertilizer_name', 'leafFertilizerName') || null,
+       get('leaf_fertilizer_dosage', 'leafFertilizerDosage') || null,
+       get('leaf_fertilizer_unit', 'leafFertilizerUnit') || null,
+       get('leaf_fertilizer_list', 'leafFertilizerList') || null,
+       get('description', 'description') || null, get('photos', 'photos') || null,
+       get('status', 'status') || 'completed', now, now]
     );
 
     const items = queryToObjects(db, `SELECT * FROM pesticide_records WHERE record_code = ?`, [code]);
@@ -178,12 +197,15 @@ router.put('/:id', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
 
     const now = new Date().toISOString();
-    // 2026-07-10：移除 control_type 列；pesticideType 支持数组/字符串
+    // 2026-07-12：snake_case 优先，兼容 camelCase（curl 调试）
+    const get = (snake: string, camel: string) => body[snake] ?? body[camel];
+    // 2026-07-10：移除 control_type 列；pesticide_type 支持数组/字符串
     let pesticideTypeValue: string | null | undefined = undefined;
-    if (Array.isArray(body.pesticideType)) {
-      pesticideTypeValue = body.pesticideType.length > 0 ? JSON.stringify(body.pesticideType) : null;
-    } else if (typeof body.pesticideType === 'string') {
-      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
+    const pesticideTypeRaw = body.pesticide_type ?? body.pesticideType;
+    if (Array.isArray(pesticideTypeRaw)) {
+      pesticideTypeValue = pesticideTypeRaw.length > 0 ? JSON.stringify(pesticideTypeRaw) : null;
+    } else if (typeof pesticideTypeRaw === 'string') {
+      pesticideTypeValue = pesticideTypeRaw.trim().startsWith('[') ? pesticideTypeRaw : JSON.stringify([pesticideTypeRaw]);
     }
     db.run(`UPDATE pesticide_records SET
       spray_time=?, operator_name=?, crop_name=?, greenhouse_name=?,
@@ -196,28 +218,39 @@ router.put('/:id', (req: Request, res: Response) => {
       use_leaf_fertilizer=?, leaf_fertilizer_name=?, leaf_fertilizer_dosage=?, leaf_fertilizer_unit=?,
       leaf_fertilizer_list=?,
       description=?, photos=?, update_time=? WHERE id=?`,
-      [body.sprayTime ?? existing[0].spray_time, body.operatorName ?? existing[0].operator_name,
-       body.cropName ?? existing[0].crop_name, body.greenhouseName ?? existing[0].greenhouse_name,
-       body.plantingId ?? existing[0].planting_id, body.plantingCode ?? existing[0].planting_code,
-       body.seedlingId ?? existing[0].seedling_id, body.seedlingCode ?? existing[0].seedling_code,
-       body.pesticideId ?? existing[0].pesticide_id, body.pesticideName ?? existing[0].pesticide_name,
+      [get('spray_time', 'sprayTime') ?? existing[0].spray_time,
+       get('operator_name', 'operatorName') ?? existing[0].operator_name,
+       get('crop_name', 'cropName') ?? existing[0].crop_name,
+       get('greenhouse_name', 'greenhouseName') ?? existing[0].greenhouse_name,
+       get('planting_id', 'plantingId') ?? existing[0].planting_id,
+       get('planting_code', 'plantingCode') ?? existing[0].planting_code,
+       get('seedling_id', 'seedlingId') ?? existing[0].seedling_id,
+       get('seedling_code', 'seedlingCode') ?? existing[0].seedling_code,
+       get('pesticide_id', 'pesticideId') ?? existing[0].pesticide_id,
+       get('pesticide_name', 'pesticideName') ?? existing[0].pesticide_name,
        pesticideTypeValue !== undefined ? pesticideTypeValue : existing[0].pesticide_type,
-       body.specId ?? existing[0].spec_id,
-       body.specContent ?? existing[0].spec_content,
-       body.dosage ?? existing[0].dosage, body.dosageUnit ?? existing[0].dosage_unit,
-       body.dilutionRatio ?? existing[0].dilution_ratio, body.targetPest ?? existing[0].target_pest,
-       body.applicationMethod ?? existing[0].application_method,
-       body.bioAgentId ?? existing[0].bio_agent_id, body.bioAgentName ?? existing[0].bio_agent_name,
-       body.bioAgentType ?? existing[0].bio_agent_type,
-       body.equipmentName ?? existing[0].equipment_name, body.equipmentCount ?? existing[0].equipment_count,
-       body.pesticideList ?? existing[0].pesticide_list, body.bioAgentList ?? existing[0].bio_agent_list,
-       body.equipmentList ?? existing[0].equipment_list,
-       body.useLeafFertilizer ?? existing[0].use_leaf_fertilizer,
-       body.leafFertilizerName ?? existing[0].leaf_fertilizer_name,
-       body.leafFertilizerDosage ?? existing[0].leaf_fertilizer_dosage,
-       body.leafFertilizerUnit ?? existing[0].leaf_fertilizer_unit,
-       body.leafFertilizerList ?? existing[0].leaf_fertilizer_list,
-       body.description ?? existing[0].description, body.photos ?? existing[0].photos,
+       get('spec_id', 'specId') ?? existing[0].spec_id,
+       get('spec_content', 'specContent') ?? existing[0].spec_content,
+       get('dosage', 'dosage') ?? existing[0].dosage,
+       get('dosage_unit', 'dosageUnit') ?? existing[0].dosage_unit,
+       get('dilution_ratio', 'dilutionRatio') ?? existing[0].dilution_ratio,
+       get('target_pest', 'targetPest') ?? existing[0].target_pest,
+       get('application_method', 'applicationMethod') ?? existing[0].application_method,
+       get('bio_agent_id', 'bioAgentId') ?? existing[0].bio_agent_id,
+       get('bio_agent_name', 'bioAgentName') ?? existing[0].bio_agent_name,
+       get('bio_agent_type', 'bioAgentType') ?? existing[0].bio_agent_type,
+       get('equipment_name', 'equipmentName') ?? existing[0].equipment_name,
+       get('equipment_count', 'equipmentCount') ?? existing[0].equipment_count,
+       get('pesticide_list', 'pesticideList') ?? existing[0].pesticide_list,
+       get('bio_agent_list', 'bioAgentList') ?? existing[0].bio_agent_list,
+       get('equipment_list', 'equipmentList') ?? existing[0].equipment_list,
+       get('use_leaf_fertilizer', 'useLeafFertilizer') ?? existing[0].use_leaf_fertilizer,
+       get('leaf_fertilizer_name', 'leafFertilizerName') ?? existing[0].leaf_fertilizer_name,
+       get('leaf_fertilizer_dosage', 'leafFertilizerDosage') ?? existing[0].leaf_fertilizer_dosage,
+       get('leaf_fertilizer_unit', 'leafFertilizerUnit') ?? existing[0].leaf_fertilizer_unit,
+       get('leaf_fertilizer_list', 'leafFertilizerList') ?? existing[0].leaf_fertilizer_list,
+       get('description', 'description') ?? existing[0].description,
+       get('photos', 'photos') ?? existing[0].photos,
        now, id]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_records WHERE id = ?`, [id]);

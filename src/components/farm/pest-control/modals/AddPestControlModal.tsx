@@ -73,6 +73,15 @@ interface FertilizerPoolItem {
   remarks?: string;
 }
 
+// 2026-07-12：防治区域多选 — 每条选中的种植/育苗记录（含批次、区域、作物）
+interface SelectedBizRecord {
+  type: 'planting' | 'seedling';
+  id: string;
+  code: string;
+  cropName: string;
+  area: string;       // 种植用 rootName/areaName，育苗用 siteName
+}
+
 export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   isOpen: boolean;
   onClose: () => void;
@@ -95,11 +104,6 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     // 2026-07-11：改为多选数组，从病虫害词典加载（兼容旧 schema 用空格 join 提交）
     targetPests: [] as string[],
     description: '',
-    // 关联业务
-    plantingId: '',
-    plantingCode: '',
-    seedlingId: '',
-    seedlingCode: '',
   });
 
   // 2026-07-11：药剂池（每个条目是一个药剂 + 内联用量/单位/稀释/方法/备注）
@@ -117,13 +121,11 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
 
   const [submitting, setSubmitting] = useState(false);
 
-  // 2026-07-11：合并种植/育苗为统一"关联业务"选择器（与施肥管理新增弹窗一致）
-  // - bizType: 'planting' | 'seedling'，互斥
-  // - 选中后自动填 greenhouseName / cropName，并锁定只读
+  // 2026-07-12：防治区域多选 — 选项按 Tab 分种植/育苗（可同时多选 record；同一次只允许同一作物）
+  const [bizTabType, setBizTabType] = useState<'planting' | 'seedling'>('planting');
+  const [selectedBizRecords, setSelectedBizRecords] = useState<SelectedBizRecord[]>([]);
   const [bizSearchKeyword, setBizSearchKeyword] = useState('');
-  const [selectedBizLabel, setSelectedBizLabel] = useState('');
   const [showBizSearch, setShowBizSearch] = useState(false);
-  const [bizType, setBizType] = useState<'planting' | 'seedling'>('planting');
   const bizSearchRef = useRef<HTMLDivElement>(null);
 
   // 2026-07-11：目标病虫害多选（病害/虫害 Tab 切换 + 搜索下拉）
@@ -149,12 +151,11 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     }
   }, [isOpen]);
 
-  // 种植记录列表（过滤已采收）
+  // 2026-07-12：种植记录选项（按 Tab 过滤 + 搜索）
   const plantingOptions = useMemo(() => {
-    if (bizType !== 'planting') return [];
     const plantings = plantingStore.items as any[];
     const activePlantings = plantings.filter((p: any) => !p.isHarvest);
-    if (!bizSearchKeyword.trim()) return activePlantings;
+    if (!bizSearchKeyword.trim() || bizTabType !== 'planting') return bizTabType === 'planting' ? activePlantings : [];
     const kw = bizSearchKeyword.toLowerCase();
     return activePlantings.filter((p: any) =>
       (p.plantCode || '').toLowerCase().includes(kw) ||
@@ -162,20 +163,19 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       (p.rootName || '').toLowerCase().includes(kw) ||
       (p.areaName || '').toLowerCase().includes(kw)
     );
-  }, [bizSearchKeyword, bizType, plantingStore.items]);
+  }, [bizSearchKeyword, bizTabType, plantingStore.items]);
 
-  // 育苗记录列表
+  // 2026-07-12：育苗记录选项（按 Tab 过滤 + 搜索）
   const seedlingOptions = useMemo(() => {
-    if (bizType !== 'seedling') return [];
     const seedlings = seedlingStore.items as any[];
-    if (!bizSearchKeyword.trim()) return seedlings;
+    if (!bizSearchKeyword.trim() || bizTabType !== 'seedling') return bizTabType === 'seedling' ? seedlings : [];
     const kw = bizSearchKeyword.toLowerCase();
     return seedlings.filter((s: any) =>
       (s.seedlingCode || '').toLowerCase().includes(kw) ||
       (s.cropName || '').toLowerCase().includes(kw) ||
       (s.siteName || '').toLowerCase().includes(kw)
     );
-  }, [bizSearchKeyword, bizType, seedlingStore.items]);
+  }, [bizSearchKeyword, bizTabType, seedlingStore.items]);
 
   // 点击外部关闭搜索下拉
   useEffect(() => {
@@ -352,10 +352,6 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         operatorName: '',
         targetPests: [],
         description: '',
-        plantingId: '',
-        plantingCode: '',
-        seedlingId: '',
-        seedlingCode: '',
       });
       // 药剂池重置
       setPesticidePool([]);
@@ -364,11 +360,11 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       setShowPesticideDropdown(false);
       setUseFertilizer(false);
       setFertilizerPool([]);
-      // 关联业务选择器重置
+      // 2026-07-12：防治区域多选重置
+      setSelectedBizRecords([]);
       setBizSearchKeyword('');
-      setSelectedBizLabel('');
-      setBizType('planting');
       setShowBizSearch(false);
+      setBizTabType('planting');
       // 目标病虫害选择器重置
       setPestSearchKeyword('');
       setPestTabType('pest');
@@ -384,60 +380,46 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   // 2026-07-11：移除原 PesticideItem 多卡片相关函数（addPesticideItem/removePesticideItem/updatePesticideItem/togglePesticideTypeInItem/renderPesticideTypeSelector）
 // 改为统一的药剂池（toggleTypeFilter/addToPool/removeFromPool/updatePoolField）
 
-  // 2026-07-11：选择种植业务（与施肥管理一致）
-  const handleSelectPlanting = (planting: any) => {
-    // 互斥：清空 seedling 字段
-    updateForm('seedlingId', '');
-    updateForm('seedlingCode', '');
-    // 填 planting 关联 + 自动填字段
-    updateForm('plantingId', planting.id);
-    updateForm('plantingCode', planting.plantCode || '');
-    updateForm('greenhouseName', planting.rootName || planting.areaName || '');
-    updateForm('cropName', planting.cropName || '');
-    setBizSearchKeyword(planting.plantCode || '');
-    setSelectedBizLabel(`种植 · ${planting.plantCode || ''} · ${planting.cropName || ''}`);
-    setShowBizSearch(false);
+  // 2026-07-12：多选勾选一条种植/育苗记录 + 作物一致性校验
+  const handleToggleBizRecord = (kind: 'planting' | 'seedling', record: any, area: string) => {
+    const recordId = record.id;
+    const cropName = record.cropName || '';
+    const code = kind === 'planting' ? record.plantCode : record.seedlingCode;
+    setSelectedBizRecords((prev) => {
+      const isSelected = prev.some((r) => r.type === kind && r.id === recordId);
+      if (isSelected) {
+        const next = prev.filter((r) => !(r.type === kind && r.id === recordId));
+        // 同步作物：若还剩已选，取首个 cropName；全部清空则不动 cropName 让用户保留或自填
+        if (next.length > 0 && !form.cropName) {
+          updateForm('cropName', next[0].cropName);
+        }
+        // 同步 greenhouseName：去重按区域排序 join
+        const areas = Array.from(new Set(next.map((r) => r.area))).filter(Boolean);
+        updateForm('greenhouseName', areas.join(','));
+        return next;
+      }
+      // 新增：与已选作物一致性校验（混合作物拒绝）
+      if (prev.length > 0 && prev[0].cropName && cropName && prev[0].cropName !== cropName) {
+        showAlert(`同一次防治记录只能针对同一作物。已选作物：${prev[0].cropName}，该区域作物：${cropName}`);
+        return prev;
+      }
+      const nextItem: SelectedBizRecord = { type: kind, id: recordId, code: code || '', cropName, area };
+      const next = [...prev, nextItem];
+      // 自动填入作物：仅在用户尚未手动改过 cropName 时
+      if (next.length === 1 && cropName && !form.cropName) {
+        updateForm('cropName', cropName);
+      }
+      // 同步 greenhouseName：去重按区域排序 join
+      const areas = Array.from(new Set(next.map((r) => r.area))).filter(Boolean);
+      updateForm('greenhouseName', areas.join(','));
+      return next;
+    });
   };
 
-  // 2026-07-11：选择育苗业务（与施肥管理一致）
-  const handleSelectSeedling = (seedling: any) => {
-    // 互斥：清空 planting 字段
-    updateForm('plantingId', '');
-    updateForm('plantingCode', '');
-    // 填 seedling 关联 + 自动填字段
-    updateForm('seedlingId', seedling.id);
-    updateForm('seedlingCode', seedling.seedlingCode || '');
-    // 育苗用 siteName
-    updateForm('greenhouseName', seedling.siteName || '');
-    updateForm('cropName', seedling.cropName || '');
-    setBizSearchKeyword(seedling.seedlingCode || '');
-    setSelectedBizLabel(`育苗 · ${seedling.seedlingCode || ''} · ${seedling.cropName || ''}`);
-    setShowBizSearch(false);
-  };
-
-  // 2026-07-11：清除关联业务
-  const handleClearBiz = () => {
-    updateForm('plantingId', '');
-    updateForm('plantingCode', '');
-    updateForm('seedlingId', '');
-    updateForm('seedlingCode', '');
+  // 2026-07-12：清除全部已选
+  const handleClearBizRecords = () => {
+    setSelectedBizRecords([]);
     updateForm('greenhouseName', '');
-    updateForm('cropName', '');
-    setBizSearchKeyword('');
-    setSelectedBizLabel('');
-  };
-
-  // 2026-07-11：标记为不关联任何业务（清空字段并锁定不重选）
-  const handleUnlinkBiz = () => {
-    updateForm('plantingId', '');
-    updateForm('plantingCode', '');
-    updateForm('seedlingId', '');
-    updateForm('seedlingCode', '');
-    updateForm('greenhouseName', '');
-    updateForm('cropName', '');
-    setBizSearchKeyword('');
-    setSelectedBizLabel('不关联任何业务');
-    setShowBizSearch(false);
   };
 
   // 提交
@@ -493,10 +475,6 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         // 目标病虫害多选用空格 join（兼容旧 schema 显示）
         targetPest: form.targetPests.join(' '),
         description: form.description,
-        plantingId: form.plantingId,
-        plantingCode: form.plantingCode,
-        seedlingId: form.seedlingId,
-        seedlingCode: form.seedlingCode,
         pesticideTypes: allTypes,
         // 兼容老字段（取池中第一个药剂）
         pesticideName: first.pesticideName,
@@ -530,7 +508,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     }
   };
 
-  // 关联业务选项（已在 useMemo 中计算：plantingOptions / seedlingOptions）
+  // 2026-07-12：选项按 Tab 类别计算为 plantingOptions / seedlingOptions
 
   return (
     <UnifiedModal
@@ -590,184 +568,200 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
               </div>
             </div>
 
-            {/* 2026-07-11：关联业务放在作物名称字段前面（与施肥管理新增弹窗一致） */}
+            {/* 2026-07-12：防治区域多选 — Tab 切换种植/育苗 + record 列表多选；同一次防治仅同一作物 */}
             <div ref={bizSearchRef} className="relative">
               <div className="flex items-center gap-2 mb-1">
                 <Label className="text-gray-900 shrink-0">
-                  🔗 关联业务 <span className="text-gray-500 text-xs">（选填，与种植/育苗二选一）</span>
+                  📍 防治区域 <span className="text-gray-500 text-xs">（可多选；同一次防治记录只能针对同一作物）</span>
                 </Label>
-                {/* 类型切换 Tab + 搜索框 inline（未选中时才显示） */}
-                {!selectedBizLabel && (
-                  <>
-                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setBizType('planting')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          bizType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        种植
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBizType('seedling')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          bizType === 'seedling' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        育苗
-                      </button>
-                    </div>
-                    <Input
-                      type="text"
-                      value={bizSearchKeyword}
-                      onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
-                      onFocus={() => setShowBizSearch(true)}
-                      placeholder={bizType === 'planting' ? '搜索种植批号/作物/温室...' : '搜索育苗批号/作物/区域...'}
-                      className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowBizSearch(!showBizSearch)}
-                      className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
-                    >
-                      <Search className="w-4 h-4 text-gray-500" />
-                    </Button>
-                  </>
-                )}
-              </div>
-              {/* 已选中业务 chip（带 X 按钮清除） */}
-              {selectedBizLabel ? (
-                <div className={`p-2 border rounded-lg ${
-                  form.plantingId || form.seedlingId
-                    ? 'bg-emerald-50 border-emerald-200'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-medium ${
-                      form.plantingId || form.seedlingId ? 'text-emerald-800' : 'text-gray-500'
-                    }`}>
-                      {selectedBizLabel}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleClearBiz}
-                    >
-                      <X className="w-4 h-4 text-emerald-600" />
-                    </Button>
-                  </div>
+                {/* Tab 切换 */}
+                <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setBizTabType('planting'); setShowBizSearch(true); }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      bizTabType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🌱 种植
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBizTabType('seedling'); setShowBizSearch(true); }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      bizTabType === 'seedling' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🌿 育苗
+                  </button>
                 </div>
-              ) : (
-                <>
-                  {/* 下拉选项列表 */}
-                  {showBizSearch && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      <Button
+                {/* 搜索框 */}
+                <Input
+                  type="text"
+                  value={bizSearchKeyword}
+                  onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
+                  onFocus={() => setShowBizSearch(true)}
+                  placeholder={bizTabType === 'planting' ? '搜索种植批号/作物/区域...' : '搜索育苗批号/作物/区域...'}
+                  className={`flex-1 ${deepInputClass} rounded-l-lg`}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowBizSearch(!showBizSearch)}
+                  className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
+                >
+                  <Search className="w-4 h-4 text-gray-500" />
+                </Button>
+              </div>
+              {/* 已选记录 chips + 清除全部 */}
+              {selectedBizRecords.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 p-2 border border-emerald-200 bg-emerald-50 rounded-lg mb-1">
+                  {selectedBizRecords.map((r) => (
+                    <span
+                      key={`${r.type}-${r.id}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-emerald-300 text-emerald-800 text-sm"
+                    >
+                      <span className="text-xs">{r.type === 'planting' ? '🌱' : '🌿'}</span>
+                      <span className="font-mono text-xs">{r.code}</span>
+                      <span className="text-emerald-500">·</span>
+                      <span>{r.area}</span>
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleUnlinkBiz}
-                        className="w-full justify-start rounded-none border-b border-gray-100"
+                        onClick={() => handleToggleBizRecord(r.type, { id: r.id, cropName: r.cropName, plantCode: r.code, seedlingCode: r.code }, r.area)}
+                        className="ml-1 text-emerald-600 hover:text-red-600"
+                        title="移除该区域"
                       >
-                        <X className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">不关联任何业务</span>
-                      </Button>
-                      {bizType === 'planting' && plantingOptions.length > 0 && (
-                        plantingOptions.map((planting: any) => (
-                          <Button
-                            key={planting.id}
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSelectPlanting(planting)}
-                            className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="text-left">
-                              <p className="text-sm font-medium text-gray-800">{planting.plantCode}</p>
-                              <p className="text-xs text-gray-500">
-                                {planting.cropName || ''} · {planting.rootName || planting.areaName || ''}
-                              </p>
-                            </div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 ${
-                              planting.isHarvest ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearBizRecords}
+                    className="text-gray-500 hover:text-red-600"
+                  >
+                    <X className="w-3 h-3 mr-1" />清除全部
+                  </Button>
+                </div>
+              )}
+              {/* 下拉选项列表 */}
+              {showBizSearch && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {bizTabType === 'planting' && plantingOptions.length > 0 && (
+                    plantingOptions.map((p: any) => {
+                      const checked = selectedBizRecords.some((r) => r.type === 'planting' && r.id === p.id);
+                      return (
+                        <Button
+                          key={p.id}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleBizRecord('planting', p, p.rootName || p.areaName || '')}
+                          className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="flex items-center gap-2 text-left">
+                            <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                              checked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white'
                             }`}>
-                              {planting.isHarvest ? '已采收' : '种植中'}
+                              {checked && <span className="text-xs">✓</span>}
                             </span>
-                          </Button>
-                        ))
-                      )}
-                      {bizType === 'seedling' && seedlingOptions.length > 0 && (
-                        seedlingOptions.map((seedling: any) => (
-                          <Button
-                            key={seedling.id}
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSelectSeedling(seedling)}
-                            className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="text-left">
-                              <p className="text-sm font-medium text-gray-800">{seedling.seedlingCode}</p>
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{p.plantCode}</p>
                               <p className="text-xs text-gray-500">
-                                {seedling.cropName || ''} · {seedling.siteName || ''}
+                                {p.cropName || ''} · {p.rootName || p.areaName || ''}
                               </p>
                             </div>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 shrink-0 ml-2">
-                              育苗中
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 ${
+                            p.isHarvest ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                          }`}>
+                            {p.isHarvest ? '已采收' : '种植中'}
+                          </span>
+                        </Button>
+                      );
+                    })
+                  )}
+                  {bizTabType === 'seedling' && seedlingOptions.length > 0 && (
+                    seedlingOptions.map((s: any) => {
+                      const checked = selectedBizRecords.some((r) => r.type === 'seedling' && r.id === s.id);
+                      return (
+                        <Button
+                          key={s.id}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleBizRecord('seedling', s, s.siteName || '')}
+                          className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="flex items-center gap-2 text-left">
+                            <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                              checked ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 bg-white'
+                            }`}>
+                              {checked && <span className="text-xs">✓</span>}
                             </span>
-                          </Button>
-                        ))
-                      )}
-                      {((bizType === 'planting' && plantingOptions.length === 0) ||
-                        (bizType === 'seedling' && seedlingOptions.length === 0)) && (
-                        <div className="p-4 text-center text-sm text-gray-400">
-                          无匹配的{bizType === 'planting' ? '种植' : '育苗'}记录
-                        </div>
-                      )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{s.seedlingCode}</p>
+                              <p className="text-xs text-gray-500">
+                                {s.cropName || ''} · {s.siteName || ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 shrink-0 ml-2">
+                            育苗中
+                          </span>
+                        </Button>
+                      );
+                    })
+                  )}
+                  {((bizTabType === 'planting' && plantingOptions.length === 0) ||
+                    (bizTabType === 'seedling' && seedlingOptions.length === 0)) && (
+                    <div className="p-4 text-center text-sm text-gray-400">
+                      无匹配的{bizTabType === 'planting' ? '种植' : '育苗'}记录
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
 
-            {/* 作物名称 + 防治区域（关联后只读锁定） */}
+            {/* 作物名称（由所选首个 record 反填，可手改）+ 防治区域显示（多 chip，区域名去重） */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-900">
                   作物名称 <span className="text-red-500">*</span>
-                  {(form.plantingId || form.seedlingId) && (
-                    <span className="ml-2 text-xs text-gray-500">（已锁定）</span>
+                  {selectedBizRecords.length > 0 && (
+                    <span className="ml-2 text-xs text-emerald-600">
+                      （由所选批次反填：{selectedBizRecords[0].cropName || '-'}，可手改）
+                    </span>
                   )}
                 </Label>
                 <Input
                   type="text"
                   value={form.cropName}
                   onChange={(e) => updateForm('cropName', e.target.value)}
-                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请输入或选择上方关联业务'}
-                  readOnly={!!(form.plantingId || form.seedlingId)}
-                  className={`${deepInputClass} ${form.plantingId || form.seedlingId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  placeholder={selectedBizRecords.length > 0 ? '由所选批次反填' : '请输入作物名称'}
+                  className={deepInputClass}
                 />
               </div>
               <div>
                 <Label className="text-gray-900">
-                  防治区域（温室）
-                  {(form.plantingId || form.seedlingId) && (
-                    <span className="ml-2 text-xs text-gray-500">（已锁定）</span>
-                  )}
+                  防治区域明细（已选，去重）
                 </Label>
-                <Input
-                  type="text"
-                  value={form.greenhouseName}
-                  onChange={(e) => updateForm('greenhouseName', e.target.value)}
-                  placeholder={form.plantingId || form.seedlingId ? '由关联业务自动填充' : '请先选择关联业务'}
-                  readOnly={!!(form.plantingId || form.seedlingId)}
-                  className={`${deepInputClass} ${form.plantingId || form.seedlingId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                />
+                <div className={`${deepInputClass} min-h-[42px] flex flex-wrap items-center gap-1.5 px-2 py-1`}>
+                  {(() => {
+                    const areas = Array.from(new Set(selectedBizRecords.map((r) => r.area))).filter(Boolean);
+                    return areas.length > 0 ? areas.map((area) => (
+                      <span
+                        key={area}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs"
+                      >
+                        📍 {area}
+                      </span>
+                    )) : <span className="text-gray-400 text-sm">尚未选择区域</span>;
+                  })()}
+                </div>
               </div>
             </div>
 
