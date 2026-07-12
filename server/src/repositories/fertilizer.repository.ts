@@ -179,44 +179,43 @@ export class FertilizerRepository {
   }
 
   /**
-   * 查询肥料库记录（用于库存检查）
-   * 注意：queryToObjects 自动转 camelCase，所以 current_stock → currentStock
-   * @param fertilizerId 肥料库 id
+   * 查询单条 spec（替代原 findLibraryById）
+   * 注意：queryToObjects 已转 camelCase，所以返回字段是 camelCase
    */
-  findLibraryById(fertilizerId: string): { id: string; fertilizerName: string; currentStock: number } | null {
+  findSpecById(specId: string): { id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string } | null {
     const db = getDatabase();
-    const rows = queryToObjects<{ id: string; fertilizerName: string; currentStock: number }>(db,
-      `SELECT id, fertilizer_name, current_stock FROM fertilizer_library WHERE id = ?`, [fertilizerId]);
+    const rows = queryToObjects<{ id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string }>(db,
+      `SELECT id, fertilizer_code, fertilizer_name, brand_name, stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
     return rows[0] ?? null;
   }
 
   /**
-   * 扣减肥料库库存（用于事务内调用）
+   * 扣减 spec 库存（spec 级精确扣减，替代原主表聚合）
    * @returns 更新后库存数（负数表示扣成负数，不允许 — 调用方需校验）
    */
-  decreaseStock(fertilizerId: string, quantity: number, now: string): number {
+  decreaseStock(specId: string, quantity: number, now: string): number {
     const db = getDatabase();
     db.run(
-      `UPDATE fertilizer_library SET current_stock = current_stock - ?, update_time = ? WHERE id = ?`,
-      [quantity, now, fertilizerId],
+      `UPDATE fertilizer_specs SET stock_quantity = stock_quantity - ?, update_time = ? WHERE id = ?`,
+      [quantity, now, specId],
     );
-    const rows = queryToObjects<{ currentStock: number }>(db,
-      `SELECT current_stock FROM fertilizer_library WHERE id = ?`, [fertilizerId]);
-    return rows[0]?.currentStock ?? 0;
+    const rows = queryToObjects<{ stockQuantity: number }>(db,
+      `SELECT stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
+    return rows[0]?.stockQuantity ?? 0;
   }
 
   /**
-   * 恢复肥料库库存（DELETE 记录时调用）
+   * 恢复 spec 库存（DELETE 记录时调用）
    */
-  increaseStock(fertilizerId: string, quantity: number, now: string): number {
+  increaseStock(specId: string, quantity: number, now: string): number {
     const db = getDatabase();
     db.run(
-      `UPDATE fertilizer_library SET current_stock = current_stock + ?, update_time = ? WHERE id = ?`,
-      [quantity, now, fertilizerId],
+      `UPDATE fertilizer_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`,
+      [quantity, now, specId],
     );
-    const rows = queryToObjects<{ currentStock: number }>(db,
-      `SELECT current_stock FROM fertilizer_library WHERE id = ?`, [fertilizerId]);
-    return rows[0]?.currentStock ?? 0;
+    const rows = queryToObjects<{ stockQuantity: number }>(db,
+      `SELECT stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
+    return rows[0]?.stockQuantity ?? 0;
   }
 
   /**
