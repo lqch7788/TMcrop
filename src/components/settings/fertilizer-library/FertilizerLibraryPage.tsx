@@ -1,16 +1,17 @@
 /**
- * 肥料知识库页面组件
- * 布局：PageHeader → Tabs(有机肥/无机肥/水溶肥/复合肥/生物肥/缓释肥/微量元素肥) → FilterBar → Table → Modals
+ * 肥料知识库页面组件（2026-07-12 布局重构）
+ * 布局：PageHeader → [Tabs(分类) + 搜索框/重置/搜索 同行] → 表格 + 工具栏 → Modals
+ * 搜索框 + 重置 + 搜索按键移到与 tab 同一行（tab 按键之后）
  * 所有数据通过 useFertilizerLibraryStore 管理
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Download, Leaf, Plus, X } from 'lucide-react';
+import { ArrowLeft, Download, Leaf, Plus, X, Search, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { useFertilizerLibraryStore, FertilizerLibrary, useToastStore } from '@/stores';
-import { FertilizerLibraryFilter } from './FertilizerLibraryFilter';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
 import { AddFertilizerModal } from './modals/AddFertilizerModal';
 import { EditFertilizerModal } from './modals/EditFertilizerModal';
@@ -28,7 +29,6 @@ export default function FertilizerLibraryPage() {
   // ========== Store ==========
   const store = useFertilizerLibraryStore();
   const { items, isLoading, error, clearError } = store;
-  // 2026-06-06: 监听 store 错误并弹 Toast
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
 
@@ -52,9 +52,8 @@ export default function FertilizerLibraryPage() {
     const typeFilter = { ...filters, fertilizer_type: activeTab };
     store.fetchItems(typeFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]); // 首次加载
+  }, [activeTab]);
 
-  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
       lastShownErrorRef.current = error;
@@ -75,8 +74,8 @@ export default function FertilizerLibraryPage() {
     store.fetchItems({ fertilizer_type: activeTab });
   }, [activeTab, store]);
 
-  const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
-    setFilters(newFilters);
+  const updateFilter = useCallback((key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   // ========== CRUD 处理 ==========
@@ -97,7 +96,7 @@ export default function FertilizerLibraryPage() {
     if (selectedRows.length === items.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(items.map(item => item.id));
+      setSelectedRows(items.map((item) => item.id));
     }
   }, [items, selectedRows]);
 
@@ -110,13 +109,10 @@ export default function FertilizerLibraryPage() {
   }, [selectedRows]);
 
   const handleConfirmExport = useCallback(() => {
-    // 获取选中的数据
-    const selectedData = items.filter(item => selectedRows.includes(item.id));
+    const selectedData = items.filter((item) => selectedRows.includes(item.id));
 
-    // 导出表头
     const headers = ['肥料编码', '肥料名称', '肥料类型', '分类', '功能说明', '使用禁忌', '保质期', '存储条件', '供应商信息'];
 
-    // 分类映射
     const categoryMap: Record<string, string> = {
       base: '底肥',
       top_dressing: '追肥',
@@ -124,8 +120,7 @@ export default function FertilizerLibraryPage() {
       special: '特殊肥',
     };
 
-    // 生成导出数据（数组格式）
-    const rows = selectedData.map(record => [
+    const rows = selectedData.map((record) => [
       record.fertilizerCode || '',
       record.fertilizerName || '',
       record.fertilizerType || '',
@@ -140,25 +135,22 @@ export default function FertilizerLibraryPage() {
     const fileName = `肥料知识库_${todayLocal()}`;
 
     if (exportFormat === 'csv') {
-      // CSV 格式
-      const csvContent = [headers, ...rows].map(row =>
-        row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')
-      ).join('\n');
+      const csvContent = [headers, ...rows]
+        .map((row) => row.map((cell) => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+        .join('\n');
       const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `${fileName}.csv`;
       link.click();
     } else if (exportFormat === 'word') {
-      // Word 格式（HTML 表格）
-      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       const blob = new Blob([content], { type: 'application/msword' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `${fileName}.doc`;
       link.click();
     } else {
-      // Excel 格式，使用 xlsx 库
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, '肥料知识库');
@@ -170,21 +162,28 @@ export default function FertilizerLibraryPage() {
     setSelectedRows([]);
   }, [items, selectedRows, exportFormat]);
 
-  const handleEdit = useCallback(async (record: FertilizerLibrary) => {
-    // 获取完整的肥料数据（含规格），因为列表数据不包含规格
-    const fullRecord = await store.fetchItemById(record.id);
-    setEditTarget(fullRecord || record);
-  }, [store]);
+  const handleEdit = useCallback(
+    async (record: FertilizerLibrary) => {
+      const fullRecord = await store.fetchItemById(record.id);
+      setEditTarget(fullRecord || record);
+    },
+    [store],
+  );
 
-  const handleDetail = useCallback(async (record: FertilizerLibrary) => {
-    // 获取完整的肥料数据（含规格）
-    const fullRecord = await store.fetchItemById(record.id);
-    setDetailTarget(fullRecord || record);
-  }, [store]);
+  const handleDetail = useCallback(
+    async (record: FertilizerLibrary) => {
+      const fullRecord = await store.fetchItemById(record.id);
+      setDetailTarget(fullRecord || record);
+    },
+    [store],
+  );
 
-  const handleDelete = useCallback((id: string) => {
-    store.deleteItem(id);
-  }, [store]);
+  const handleDelete = useCallback(
+    (id: string) => {
+      store.deleteItem(id);
+    },
+    [store],
+  );
 
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
@@ -197,10 +196,52 @@ export default function FertilizerLibraryPage() {
     store.fetchItems({ fertilizer_type: activeTab, ...filters });
   }, [activeTab, filters, store]);
 
-  // ========== Tab切换时重新加载 ==========
+  // ========== Tab 切换 ==========
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab as FertilizerType);
   }, []);
+
+  // ========== 表头工具栏 ==========
+  const renderToolbar = () => (
+    <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
+        <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {!exportMode ? (
+          <>
+            <Button variant="default" size="sm" onClick={handleAdd}>
+              <Plus className="w-4 h-4" />
+              新增肥料
+            </Button>
+            <Button variant="default" size="sm" onClick={handleExportClick}>
+              <Download className="w-4 h-4" />
+              导出
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" onClick={handleExportConfirm}>
+              <Download className="w-4 h-4" />
+              确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExportCancel}>
+              <X className="w-4 h-4" /> 取消选择
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // ========== 错误提示 ==========
+  const renderError = () =>
+    error && (
+      <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+        加载出错：{error}
+      </div>
+    );
 
   // ========== 渲染 ==========
   return (
@@ -229,67 +270,48 @@ export default function FertilizerLibraryPage() {
         </div>
       </div>
 
-      {/* Tabs: 有机肥 / 无机肥 / 水溶肥 / 复合肥 / 生物肥 / 缓释肥 / 微量元素肥 */}
-      <Tabs defaultValue="organic" onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="organic">有机肥</TabsTrigger>
-          <TabsTrigger value="inorganic">无机肥</TabsTrigger>
-          <TabsTrigger value="water_soluble">水溶肥</TabsTrigger>
-          <TabsTrigger value="compound">复合肥</TabsTrigger>
-          <TabsTrigger value="bio">生物肥</TabsTrigger>
-          <TabsTrigger value="slow_release">缓释肥</TabsTrigger>
-          <TabsTrigger value="trace">微量元素肥</TabsTrigger>
-        </TabsList>
+      {/* Tabs + 搜索框（同行布局） */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          {/* Tab 按键 */}
+          <TabsList>
+            <TabsTrigger value="organic">有机肥</TabsTrigger>
+            <TabsTrigger value="inorganic">无机肥</TabsTrigger>
+            <TabsTrigger value="water_soluble">水溶肥</TabsTrigger>
+            <TabsTrigger value="compound">复合肥</TabsTrigger>
+            <TabsTrigger value="bio">生物肥</TabsTrigger>
+            <TabsTrigger value="slow_release">缓释肥</TabsTrigger>
+            <TabsTrigger value="trace">微量元素肥</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="organic">
-          {/* 筛选器 */}
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {/* 错误提示 */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
+          {/* 搜索框 + 重置 + 搜索按键（tab 按键之后） */}
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-[280px] max-w-[480px]">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                value={filters.fertilizerName || ''}
+                onChange={(e) => updateFilter('fertilizerName', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="搜索肥料名称"
+                className="w-full h-10 pl-10 pr-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
+              />
             </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
+            <Button variant="warning" size="sm" onClick={handleReset}>
+              <RotateCcw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button variant="default" size="sm" onClick={handleSearch}>
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
           </div>
+        </div>
 
-          {/* 表格 */}
+        {/* 单一 TabsContent 区域（受控渲染，按 activeTab 显示） */}
+        <TabsContent value={activeTab} forceMount>
+          {renderError()}
+          {renderToolbar()}
           <FertilizerLibraryTable
             data={items}
             isLoading={isLoading}
@@ -298,358 +320,9 @@ export default function FertilizerLibraryPage() {
             onDelete={handleDelete}
             exportMode={exportMode}
             selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="inorganic">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="water_soluble">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="compound">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="bio">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="slow_release">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
-            onSelectAll={handleExportSelectAll}
-          />
-        </TabsContent>
-
-        <TabsContent value="trace">
-          <FertilizerLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-              加载出错：{error}
-            </div>
-          )}
-
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">肥料列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {!exportMode ? (
-                <>
-                  <Button variant="default" size="sm" onClick={handleAdd}>
-                    <Plus className="w-4 h-4" />
-                    新增肥料
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleExportClick}>
-                    <Download className="w-4 h-4" />
-                    导出
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button size="sm" onClick={handleExportConfirm}>
-                    <Download className="w-4 h-4" />
-                    确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    <X className="w-4 h-4" /> 取消选择
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <FertilizerLibraryTable
-            data={items}
-            isLoading={isLoading}
-            onDetail={handleDetail}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            exportMode={exportMode}
-            selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
+            onSelectRow={(id) =>
+              setSelectedRows((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]))
+            }
             onSelectAll={handleExportSelectAll}
           />
         </TabsContent>
