@@ -85,7 +85,7 @@ import farmTaskSchedulesRouter from './farmTaskSchedules';
 import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
 import pestRecordsRouter from './pesticideRecords';
 import pesticideLibraryRouter from './pesticideLibrary';
-import fertilizerLibraryRouter from './fertilizerLibrary';
+import fertilizerSpecsRouter from './fertilizerSpecs';
 import pestDiseaseDictRouter from './pestDiseaseDict';
 import userBasePermissionsRouter from './userBasePermissions';
 import codeGeneratorRouter from './codeGenerator';
@@ -342,7 +342,7 @@ router.use('/device-distributions', requireAuth, deviceDistributionRouter);
 // 病虫害防治管理路由 - V12.0
 router.use('/pest-records', requireAuth, pestRecordsRouter);
 router.use('/pesticide-library', requireAuth, pesticideLibraryRouter);
-router.use('/fertilizer-library', requireAuth, fertilizerLibraryRouter);
+router.use('/fertilizer-specs', requireAuth, fertilizerSpecsRouter);
 router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
 
 // 用户基地权限管理路由
