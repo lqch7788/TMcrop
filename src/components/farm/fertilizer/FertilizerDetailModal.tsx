@@ -1,137 +1,104 @@
 /**
- * 施肥详情查看弹窗组件
- * 只读视图，以网格形式展示所有字段，IoT记录显示绿色标识
+ * 施肥详情弹窗（V2 改造 2026-07-12）
+ * 展示基本信息 + 施肥方案池明细（按肥料分组）
  */
 import React from 'react';
 import { X } from 'lucide-react';
-
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { FertilizerData } from '@/stores';
-import { getDictItemName } from '@/stores/useDictionaryStore';
+import { FertilizerData, getDictItemName } from '@/stores';
 
-interface FertilizerDetailModalProps {
-  isOpen: boolean;
-  record: FertilizerData;
-  onClose: () => void;
+function parsePool(json: string|null|undefined): any[] {
+  if (!json) return [];
+  try { const a=JSON.parse(json); return Array.isArray(a)?a.filter((it:any)=>it).map((it:any)=>({...it,quantity:Number(it.quantity)||0,unitPrice:Number(it.unitPrice)||0})):[]; } catch { return []; }
 }
 
-export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDetailModalProps) {
+export function FertilizerDetailModal({ isOpen, record, onClose }: {
+  isOpen: boolean; record: FertilizerData; onClose: () => void;
+}) {
   if (!record) return null;
+  const pool = parsePool((record as any).fertilizationPool);
+  const areaNames = [...new Set(pool.map((p:any)=>p.area).filter(Boolean))];
+  const fertGroups = new Map<string,any[]>();
+  pool.forEach((p:any)=>{ const k=p.fertilizerName||'未知'; if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
 
-  const isIot = record.dataSource === 'auto_iot';
-
-  // 详情字段定义
   const fields = [
-    { label: '施肥编号', value: record.fertilizerCode || '-', mono: true },
-    { label: '肥料名称', value: record.fertilizerName || '-', bold: true },
-    {
-      label: '肥料类型',
-      value: getDictItemName('fertilizer_type', record.fertilizerType) || record.fertilizerType || '-',
-      badge: true,
-      badgeColor: 'bg-emerald-100 text-emerald-700',
-    },
-    { label: '作物品种', value: record.cropName || '-' },
-    { label: '温室位置', value: record.greenhouseName || '-' },
-    { label: '稀释比例', value: record.dilutionRatio || '-' },
-    { label: '施肥量', value: `${record.quantity?.toLocaleString() || '0'} kg`, highlight: 'text-emerald-600 font-bold' },
-    { label: '单价', value: `${record.unitPrice?.toLocaleString() || '0'} 元/kg` },
-    { label: '总成本', value: `${record.totalCost?.toLocaleString() || '0'} 元`, highlight: 'text-amber-600 font-bold' },
-    { label: '施肥时间', value: record.fertilizeTime || '-' },
-    {
-      label: '数据来源',
-      value: isIot ? 'IoT自动' : '手动',
-    },
-    { label: '操作员', value: record.operatorName || '-' },
-    { label: '关联生产计划', value: record.productionPlanCode || '-' },
-    { label: '关联种植记录', value: record.plantingCode || '-' },
-    { label: '关联农事任务', value: record.farmTaskId || '-' },
-    { label: '备注', value: record.description || '-', full: true },
-    { label: '创建时间', value: record.createTime || '-' },
-    { label: '更新时间', value: record.updateTime || '-' },
+    { label: '施肥编号', value: <span className="font-mono">{record.fertilizerCode||'-'}</span> },
+    { label: '施肥时间', value: record.fertilizeTime||'-' },
+    { label: '作物', value: <span className="font-bold">{record.cropName||'-'}</span> },
+    { label: '温室位置', value: record.greenhouseName||'-' },
+    { label: '操作员', value: record.operatorName||'-' },
+    { label: '数据来源', value: record.dataSource==='auto_iot'?'IoT自动':'手动录入' },
+    { label: '关联生产计划', value: record.productionPlanCode||'-' },
+    { label: '关联种植批号', value: record.plantingCode||'-' },
+    { label: '关联育苗批号', value: (record as any).seedlingCode||'-' },
+    { label: '备注', value: record.description||'-', full: true },
   ];
 
   return (
-    <UnifiedModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        <div className="flex items-center gap-2">
-          <span>施肥详情</span>
-          {isIot && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              IoT自动
-            </span>
-          )}
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="施肥记录详情" size="xxl" showFooter={false}>
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        {/* 头部 */}
+        <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-100">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-mono text-emerald-700 font-bold text-lg">{record.fertilizerCode}</span>
+            <span className="text-gray-300">|</span>
+            <span className="font-bold text-gray-800">{record.cropName}</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-sm text-gray-500">总用量 {record.quantity?.toLocaleString()} {record.unit||'kg'}</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-sm font-medium text-amber-600">¥{record.totalCost?.toLocaleString()}</span>
+          </div>
         </div>
-      }
-      size="lg"
-      showFooter={false}
-    >
-      {/* 编号头部 */}
-      <div className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-lg p-4 mb-4 border border-blue-100">
-        <div className="text-xs text-gray-500 mb-1">施肥编号</div>
-        <div className="text-xl font-mono font-bold text-blue-700">{record.fertilizerCode || '-'}</div>
-        <div className="text-sm text-gray-500 mt-1">
-          {record.fertilizerName} | {record.greenhouseName || '未知位置'}
-        </div>
-      </div>
 
-      {/* 详情网格 */}
-      <div className="grid grid-cols-2 gap-4">
-        {fields.map((field, idx) => {
-          // 全宽字段（如备注）
-          if (field.full) {
-            return (
-              <div key={idx} className="col-span-2">
-                <Label className="text-xs text-gray-500">{field.label}</Label>
-                <div className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3 min-h-[40px]">
-                  {field.value}
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div key={idx}>
-              <Label className="text-xs text-gray-500">{field.label}</Label>
-              <div className={`text-sm ${field.highlight || 'text-gray-900'}`}>
-                {field.mono ? (
-                  <span className="font-mono">{field.value}</span>
-                ) : field.bold ? (
-                  <span className="font-bold">{field.value}</span>
-                ) : field.badge ? (
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${field.badgeColor}`}>
-                    {field.value}
-                  </span>
-                ) : field.label === '数据来源' ? (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    isIot ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isIot ? 'bg-green-500' : 'bg-blue-500'}`} />
-                    {field.value}
-                  </span>
-                ) : (
-                  field.value
-                )}
-              </div>
+        {/* 基本信息网格 */}
+        <div className="grid grid-cols-3 gap-3">
+          {fields.map((f,i)=>(
+            <div key={i} className={f.full?'col-span-full':''}>
+              <Label className="text-sm text-gray-500">{f.label}</Label>
+              <div className="text-base rounded-lg p-3 min-h-[40px] border border-gray-300 text-gray-800">{f.value}</div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
 
-      {/* 底部关闭按钮 */}
-      <div className="mt-6 flex justify-end">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onClose}
-        >
-          <X className="w-4 h-4" /> 关闭
-        </Button>
+        {/* 施肥方案池明细 */}
+        {pool.length > 0 && (
+          <div>
+            <h3 className="text-base font-bold text-gray-900 mb-3">🧪 施肥方案明细 · {fertGroups.size} 种肥料 / {areaNames.length} 个区域</h3>
+            <div className="space-y-3">
+              {Array.from(fertGroups.entries()).map(([fName,rows])=>{
+                const subQty = rows.reduce((s,r)=>s+r.quantity,0);
+                const subCost = rows.reduce((s,r)=>s+r.quantity*r.unitPrice,0);
+                return (
+                  <div key={fName} className="bg-white rounded-lg border border-emerald-200 overflow-hidden">
+                    <div className="px-3 py-2 bg-emerald-50 text-emerald-900 text-sm font-bold border-b border-emerald-200">
+                      🌱 {fName}
+                      <span className="ml-2 text-xs font-normal text-emerald-600">用量 {subQty.toLocaleString()} {rows[0]?.unit} · 小计 ¥{subCost.toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
+                        <tr><th className="px-3 py-2 text-left">区域</th><th className="px-3 py-2 text-right">用量</th><th className="px-3 py-2 text-left">稀释</th><th className="px-3 py-2 text-left">方式</th><th className="px-3 py-2 text-right">单价</th><th className="px-3 py-2 text-right">小计</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {rows.map((r,i)=>(<tr key={i} className="hover:bg-emerald-50/40">
+                          <td className="px-3 py-2 text-gray-800 font-medium">{r.area}</td>
+                          <td className="px-3 py-2 text-right font-bold text-emerald-600">{r.quantity} {r.unit}</td>
+                          <td className="px-3 py-2 text-gray-600">{r.dilutionRatio||'-'}</td>
+                          <td className="px-3 py-2 text-gray-600">{r.fertilizationMethod?getDictItemName('fertilization_method',r.fertilizationMethod):'-'}</td>
+                          <td className="px-3 py-2 text-right text-gray-600">{r.unitPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                          <td className="px-3 py-2 text-right font-bold text-amber-600">{(r.quantity*r.unitPrice).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                        </tr>))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+      <div className="mt-6 flex justify-end"><Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4"/>关闭</Button></div>
     </UnifiedModal>
   );
 }

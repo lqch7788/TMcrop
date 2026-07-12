@@ -182,47 +182,37 @@ export default function FertilizerPage() {
       ? items.filter((it) => selectedIds.includes(it.id))
       : items;
 
-    const headers = ['施肥编号', '肥料名称', '肥料类型', '作物品种', '温室位置', '稀释比例', '施肥量(kg)', '总成本', '施肥时间', '数据来源', '操作员'];
-    const rows = toExport.map((it) => [
-      it.fertilizerCode,
-      it.fertilizerName,
-      it.fertilizerType,
-      it.cropName,
-      it.greenhouseName,
-      it.dilutionRatio,
-      it.quantity,
-      it.totalCost,
-      it.fertilizeTime,
-      it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
-      it.operatorName || '',
-    ]);
+    const headers = ['施肥编号', '施肥时间', '作物', '温室', '区域数', '肥料种类', '总用量', '总成本', '操作员', '数据来源', '肥料明细(名称/区域/用量/稀释)'];
+    const rows = toExport.map((it) => {
+      let poolDetail = '';
+      try {
+        const pool = JSON.parse((it as any).fertilizationPool || '[]');
+        if (Array.isArray(pool) && pool.length > 0) {
+          poolDetail = pool.map((r: any) => `${r.fertilizerName||''} | ${r.area||''} | ${r.quantity}${r.unit||'kg'} | 1:${r.dilutionRatio||'-'}`).join('; ');
+        }
+      } catch {}
+      const areas = new Set<string>();
+      const ferts = new Set<string>();
+      try {
+        JSON.parse((it as any).fertilizationPool||'[]').forEach((r:any)=>{if(r.area)areas.add(r.area);if(r.fertilizerName)ferts.add(r.fertilizerName);});
+      } catch {}
+      return [it.fertilizerCode, it.fertilizeTime, it.cropName, it.greenhouseName,
+        String(areas.size||1), String(ferts.size||1),
+        String(it.quantity||0)+' '+it.unit, '¥'+(it.totalCost||0),
+        it.operatorName||'', it.dataSource==='auto_iot'?'IoT自动':'手动',
+        poolDetail];
+    });
 
-    // 2026-07-10 P1-1：抽到底层公共函数
     const exportData = rows.map((r) => ({
-      '施肥编号': r[0],
-      '肥料名称': r[1],
-      '肥料类型': r[2],
-      '作物品种': r[3],
-      '温室位置': r[4],
-      '稀释比例': r[5],
-      '施肥量(kg)': r[6],
-      '总成本': r[7],
-      '施肥时间': r[8],
-      '数据来源': r[9],
-      '操作员': r[10],
+      '施肥编号': r[0], '施肥时间': r[1], '作物': r[2], '温室': r[3],
+      '区域数': r[4], '肥料种类': r[5], '总用量': r[6], '总成本': r[7],
+      '操作员': r[8], '数据来源': r[9], '肥料明细': r[10],
     }));
     const filename = `施肥记录_${todayLocal()}`;
-    if (format === 'csv') {
-      await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
-    } else if (format === 'xlsx') {
-      await exportXlsx({ filename: `${filename}.xls`, headers, rows: exportData });
-    } else {
-      await exportWord({ filename: `${filename}.doc`, headers, rows: exportData });
-    }
-
-    setShowExportModal(false);
-    setSelectedIds([]);
-    setOperationMode('normal');
+    if (format === 'csv') await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
+    else if (format === 'xlsx') await exportXlsx({ filename: `${filename}.xls`, headers, rows: exportData });
+    else await exportWord({ filename: `${filename}.doc`, headers, rows: exportData });
+    setShowExportModal(false); setSelectedIds([]); setOperationMode('normal');
   }, [items, selectedIds]);
 
   // ========== 编辑保存后刷新 ==========
