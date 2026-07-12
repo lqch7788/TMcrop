@@ -25,8 +25,8 @@ interface FertilizerLibraryTableProps {
 }
 
 // 列数常量（用于 colSpan）
-// 非导出模式：18 列（含操作）；导出模式：17 列（不含操作）+ 1 列 checkbox = 18
-const TOTAL_COLS = 18;
+// 非导出模式：19 列（含操作 + 包装规格）；导出模式：18 列 + 1 checkbox = 19
+const TOTAL_COLS = 19;
 
 const getApplicationTimingBadge = (timing: string) => {
   switch (timing) {
@@ -85,7 +85,7 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 横向滚动容器：列数 18，超宽时底部自动出滚动条 */}
       <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-        <Table style={{ minWidth: '1800px' }}>
+        <Table style={{ minWidth: '1900px' }}>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow className="hover:bg-transparent">
               {exportMode && (
@@ -107,6 +107,7 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">单价 (元/单位)</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">成份与含量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">包装规格</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产厂家</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">建议用量</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">单位</TableHead>
@@ -200,39 +201,43 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.specContent || ''}>
                   {record.specContent || '-'}
                 </TableCell>
-                {/* 10. 生产厂家 */}
+                {/* 10. 包装规格（2026-07-12 新增：成品包装，如 50kg/包） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={(record as any).packageSpec || ''}>
+                  {(record as any).packageSpec || '-'}
+                </TableCell>
+                {/* 11. 生产厂家 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.manufacturer || ''}>
                   {record.manufacturer || '-'}
                 </TableCell>
-                {/* 11. 建议用量 */}
+                {/* 12. 建议用量 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
                   {record.suggestedDosage || '-'}
                 </TableCell>
-                {/* 12. 单位 */}
+                {/* 13. 单位 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {getDictItemName('dosage_unit', record.dosageUnit || '') || record.dosageUnit || '-'}
                 </TableCell>
-                {/* 13. 稀释比例 */}
+                {/* 14. 稀释比例 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
                   {record.suggestedRatio || '-'}
                 </TableCell>
-                {/* 14. 产品批次 */}
+                {/* 15. 产品批次 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono" title={record.batchNumber || ''}>
                   {record.batchNumber || '-'}
                 </TableCell>
-                {/* 15. 生产日期 */}
+                {/* 16. 生产日期 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.productionDate || '-'}
                 </TableCell>
-                {/* 16. 过期日期 */}
+                {/* 17. 过期日期 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.expirationDate || '-'}
                 </TableCell>
-                {/* 17. 备注 */}
+                {/* 18. 备注 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={record.remark || ''}>
                   {record.remark || '-'}
                 </TableCell>
-                {/* 18. 操作（粘性列，水平滚动时锁定右侧） */}
+                {/* 19. 操作（粘性列，水平滚动时锁定右侧） */}
                 {!exportMode && (
                   <TableCell className="px-4 py-3 whitespace-nowrap sticky right-0 bg-white z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.05)]">
                     <div className="flex gap-1">

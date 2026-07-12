@@ -41,7 +41,7 @@ const APPLICATION_TIMING_OPTIONS = [
   { value: 'foliar', label: '叶面肥' },
 ];
 
-// 单条 spec 表单字段（25 字段）
+// 单条 spec 表单字段（26 字段，含 2026-07-12 包装规格）
 type SpecForm = {
   fertilizerName: string;
   fertilizerType: string;
@@ -63,6 +63,7 @@ type SpecForm = {
   productionDate: string;
   expirationDate: string;
   stockQuantity: number;
+  packageSpec: string;
 };
 
 const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
@@ -86,6 +87,7 @@ const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
   productionDate: record.productionDate || '',
   expirationDate: record.expirationDate || '',
   stockQuantity: record.stockQuantity || 0,
+  packageSpec: (record as any).packageSpec || '',
 });
 
 export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFertilizerModalProps) {
@@ -116,7 +118,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       'tabooDesc', 'shelfLife', 'storageCondition', 'supplierInfo',
       'brandName', 'specContent', 'manufacturer', 'suggestedDosage',
       'suggestedRatio', 'dosageUnit', 'remark', 'unitPrice', 'batchNumber',
-      'productionDate', 'expirationDate', 'stockQuantity',
+      'productionDate', 'expirationDate', 'stockQuantity', 'packageSpec',
     ];
     return fields.some((f) => form[f] !== original[f]);
   };
@@ -156,6 +158,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         productionDate: form.productionDate,
         expirationDate: form.expirationDate,
         stockQuantity: Number(form.stockQuantity) || 0,
+        packageSpec: form.packageSpec,
       });
 
       onSaved();
@@ -334,6 +337,17 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                   placeholder="如 100"
                   step="0.01"
                   min="0"
+                  className="h-9 text-sm"
+                />
+              </div>
+              {/* 2026-07-12：包装规格（如 50kg/包、5kg/桶） */}
+              <div>
+                <Label className="text-xs text-gray-500">包装规格</Label>
+                <Input
+                  type="text"
+                  value={form.packageSpec}
+                  onChange={(e) => updateField('packageSpec', e.target.value)}
+                  placeholder="如 50kg/包、5kg/桶"
                   className="h-9 text-sm"
                 />
               </div>

@@ -3048,6 +3048,8 @@ export function initializeDatabase() {
       production_date TEXT,
       expiration_date TEXT,
       stock_quantity REAL DEFAULT 0,
+      -- 2026-07-12：包装规格（如 50kg/包、5kg/桶 等成品包装描述）
+      package_spec TEXT,
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime'))
@@ -3557,6 +3559,13 @@ export function initializeDatabase() {
   // 2026-07-12：单规格当前库存（主表的当前库存 = sum(specs.stock_quantity)）
   try {
     db.run('ALTER TABLE fertilizer_specs ADD COLUMN stock_quantity REAL DEFAULT 0');
+  } catch (e) {
+    // 列已存在则忽略
+  }
+
+  // 2026-07-12：包装规格列（成品包装，如 50kg/包）
+  try {
+    db.run('ALTER TABLE fertilizer_specs ADD COLUMN package_spec TEXT');
   } catch (e) {
     // 列已存在则忽略
   }
