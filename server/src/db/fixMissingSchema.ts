@@ -1476,13 +1476,179 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• dictionaries.parent_id 列添加: ' + e.message);
   }
 
-  // 为 pesticide_specs 表添加备注字段
+  // 2026-07-12：药剂库扁平化迁移 — 检查旧表结构并迁移到新扁平表
+  // 检测条件：pesticide_specs 存在 pesticide_id 列（旧 FK 结构）且不存在 stock_quantity（新扁平结构）
+  let needsPesticideMigration = false;
   try {
-    db.run(`ALTER TABLE pesticide_specs ADD COLUMN remark TEXT`);
-    seedLog.info('✓ pesticide_specs 表添加 remark 列成功');
+    db.run(`ALTER TABLE pesticide_specs ADD COLUMN stock_quantity REAL DEFAULT 0`);
+    // 如果上面成功了，说明表不存在或要加列；但如果是旧表则列已存在
+    seedLog.info('✓ pesticide_specs 表添加 stock_quantity 列');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) seedLog.skip('• remark 列已存在');
-    else seedLog.skip('• remark 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• pesticide_specs.stock_quantity 列已存在（可能已扁平化）');
+    } else if (e.message.includes('no such table')) {
+      needsPesticideMigration = true;
+      seedLog.info('→ pesticide_specs 表不存在，将创建新扁平表');
+    } else {
+      seedLog.skip('• pesticide_specs.stock_quantity: ' + e.message);
+    }
+  }
+
+  // 二次检测：用 PRAGMA table_info 检查旧 FK 列是否存在（兼容 sql.js 和 better-sqlite3）
+  try {
+    const tableInfo = db.exec("PRAGMA table_info(pesticide_specs)");
+    if (tableInfo.length > 0 && tableInfo[0].values) {
+      const columns = tableInfo[0].values.map((row: any[]) => row[1]); // column name is index 1
+      if (columns.includes('pesticide_id')) {
+        needsPesticideMigration = true;
+        seedLog.info('→ 检测到旧版 pesticide_specs（含 pesticide_id FK），需要扁平化迁移');
+      }
+    }
+  } catch {}
+
+  if (needsPesticideMigration) {
+    seedLog.info('→ 开始药剂库扁平化迁移...');
+    try {
+      // 步骤 1：用 queryToObjects 读旧数据（兼容 sql.js）
+      const { queryToObjects: qto } = require('../utils/queryHelper');
+      const oldSpecs = qto(db, 'SELECT * FROM pesticide_specs', []);
+      const oldLibrary = qto(db, 'SELECT * FROM pesticide_library', []);
+
+      seedLog.info(`  已读取旧数据: ${oldSpecs.length} 条 specs, ${oldLibrary.length} 条 library`);
+
+      // 步骤 2：删除旧表（先删子表再删主表，避免 FK 约束问题）
+      db.run('DROP TABLE IF EXISTS pesticide_specs');
+      seedLog.info('  已删除旧 pesticide_specs 表');
+
+      // 步骤 3：创建新扁平表
+      db.run(`
+        CREATE TABLE pesticide_specs (
+          id TEXT PRIMARY KEY,
+          pesticide_code TEXT NOT NULL UNIQUE,
+          pesticide_name TEXT NOT NULL,
+          pesticide_type TEXT,
+          ingredient TEXT,
+          mechanism TEXT,
+          function_desc TEXT,
+          taboo_desc TEXT,
+          target_pests TEXT,
+          spec_content TEXT,
+          formulation TEXT,
+          manufacturer TEXT,
+          brand_name TEXT,
+          suggested_dosage TEXT,
+          suggested_ratio TEXT,
+          dosage_unit TEXT,
+          remark TEXT,
+          stock_quantity REAL DEFAULT 0,
+          stock_unit TEXT DEFAULT 'kg',
+          unit_price REAL DEFAULT 0,
+          batch_number TEXT,
+          production_date TEXT,
+          expiration_date TEXT,
+          package_spec TEXT,
+          status TEXT DEFAULT 'active',
+          create_time TEXT DEFAULT (datetime('now','localtime')),
+          update_time TEXT DEFAULT (datetime('now','localtime'))
+        )
+      `);
+      seedLog.info('  ✓ 新扁平 pesticide_specs 表已创建');
+
+      // 步骤 4：迁移数据 — 为每个旧 spec 行生成新编码（PC-XXXX 全表递增）
+      const libMap = new Map<string, any>();
+      for (const row of oldLibrary) {
+        libMap.set(row.id, row);
+      }
+
+      let codeSeq = 0;
+      const now = new Date().toISOString();
+
+      // 4a：迁移有 spec 的记录
+      for (const specRow of oldSpecs) {
+        const specId = specRow.id;
+        const pesticideId = specRow.pesticide_id;
+        const libRow = libMap.get(pesticideId);
+
+        codeSeq++;
+        const newCode = `PC-${String(codeSeq).padStart(4, '0')}`;
+
+        db.run(`INSERT INTO pesticide_specs (
+          id, pesticide_code, pesticide_name, pesticide_type, ingredient, mechanism,
+          function_desc, taboo_desc, target_pests,
+          spec_content, formulation, manufacturer, brand_name,
+          suggested_dosage, suggested_ratio, dosage_unit, remark,
+          stock_quantity, stock_unit, unit_price, status, create_time, update_time
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            specId, newCode,
+            libRow?.pesticide_name || '未知药剂',
+            libRow?.pesticide_type || null,
+            libRow?.ingredient || null,
+            libRow?.mechanism || null,
+            libRow?.function_desc || null,
+            libRow?.taboo_desc || null,
+            libRow?.target_pests || null,
+            specRow.spec_content || null,
+            specRow.formulation || null,
+            specRow.manufacturer || null,
+            specRow.brand_name || null,
+            specRow.suggested_dosage || null,
+            specRow.suggested_ratio || null,
+            specRow.dosage_unit || null,
+            specRow.remark || null,
+            0, 'kg', 0,
+            libRow?.status || 'active',
+            specRow.create_time || now,
+            now
+          ]
+        );
+      }
+
+      // 4b：为没有 spec 的主表行创建占位行
+      const specIds = new Set(oldSpecs.map((s: any) => s.pesticide_id));
+      for (const libRow of oldLibrary) {
+        if (!specIds.has(libRow.id)) {
+          codeSeq++;
+          const newCode = `PC-${String(codeSeq).padStart(4, '0')}`;
+          const newId = `ps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          db.run(`INSERT INTO pesticide_specs (
+            id, pesticide_code, pesticide_name, pesticide_type, ingredient, mechanism,
+            function_desc, taboo_desc, target_pests,
+            stock_quantity, stock_unit, unit_price, status, create_time, update_time
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [newId, newCode, libRow.pesticide_name, libRow.pesticide_type,
+             libRow.ingredient, libRow.mechanism,
+             libRow.function_desc, libRow.taboo_desc, libRow.target_pests,
+             0, 'kg', 0, libRow.status || 'active', libRow.create_time || now, now]
+          );
+        }
+      }
+
+      seedLog.info(`  ✓ 已迁移 ${codeSeq} 条记录到新扁平表`);
+      saveDatabase();
+      seedLog.info('✓ 药剂库扁平化迁移完成');
+    } catch (e: any) {
+      seedLog.error('药剂库扁平化迁移失败: ' + e.message);
+    }
+  }
+
+  // 2026-07-12：创建药剂入库记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pesticide_stock_in_records (
+        id TEXT PRIMARY KEY,
+        spec_id TEXT NOT NULL,
+        pesticide_code TEXT,
+        pesticide_name TEXT,
+        quantity REAL NOT NULL,
+        remark TEXT,
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    seedLog.info('✓ pesticide_stock_in_records 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) seedLog.skip('• pesticide_stock_in_records 已存在');
+    else seedLog.error('pesticide_stock_in_records:', e.message);
   }
 
   // 为 plantings 表添加缺失的列

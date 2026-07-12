@@ -1,82 +1,64 @@
 /**
- * 药剂知识库表格组件
- * 列：编码、药剂名称、防治类型Badge、规格数、生产厂家、功能说明、操作（编辑/删除）
- * 支持折叠展开规格明细
+ * 药剂库表格组件（V2 扁平化 2026-07-12）
+ * 单行 24 列：编码 / 药剂名称 / 药剂成分 / 含量 / 品牌 / 药剂类型(chips) / 剂型 / 功能说明 /
+ *          使用禁忌 / 包装规格 / 库存量 / 库存单位 / 单价 / 生产厂家 / 建议用量 / 单位 / 稀释比例 /
+ *          产品批次 / 生产日期 / 过期日期 / 药剂成分 / 作用机制 / 防治对象 / 备注 / 操作
+ * 容器 overflow-x-auto，超宽时底部出现横向滚动条
+ * 每条记录 = 一条完整 spec，无折叠展开
  */
 import React from 'react';
-import { Eye, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { PesticideLibrary } from '@/stores';
-// 2026-07-10：用 store 内置的 getDictLabel（兼容多种字段名 + 模糊匹配）
-import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
-import { Button } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Edit2, Trash2, Package } from 'lucide-react';
+import { PesticideSpec } from '@/stores';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { getDictLabel, useDictionaryStore } from '@/stores/useDictionaryStore';
 
 interface PesticideLibraryTableProps {
-  data: PesticideLibrary[];
+  data: PesticideSpec[];
   isLoading: boolean;
-  onDetail: (record: PesticideLibrary) => void;
-  onEdit: (record: PesticideLibrary) => void;
+  onDetail: (record: PesticideSpec) => void;
+  onEdit: (record: PesticideSpec) => void;
   onDelete: (id: string) => void;
-  // 导出模式相关
+  onStockIn?: (record: PesticideSpec) => void;
   exportMode?: boolean;
   selectedRows?: string[];
   onSelectRow?: (id: string) => void;
   onSelectAll?: () => void;
 }
 
-// 2026-07-10：药剂类型列显示中文 label（多值用顿号分隔）
-// 防治类型 Badge 颜色
-const getControlTypeBadge = (type: string) => {
-  switch (type) {
-    case 'chemical':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-          化学防治
-        </span>
-      );
-    case 'bio':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-          生物防治
-        </span>
-      );
-    case 'physical':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-          物理防治
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-          {type}
-        </span>
-      );
-  }
-};
+// 列数常量（用于 colSpan）
+// 非导出模式：24 列（含操作）；导出模式：23 列 + 1 checkbox = 24
+const TOTAL_COLS = 24;
 
 /**
- * 2026-07-10：药剂类型多值 label 渲染（树形剪枝：一级被二级覆盖时隐藏一级）
+ * 药剂类型多值 label 渲染（树形剪枝：一级被二级覆盖时隐藏一级）
  * - 接收 string[]（pesticideTypes）
  * - 调 getDictLabel 转中文
  * - 多个用顿号「、」分隔
  * - 树形剪枝：如果一级分类（如 fungicide）的某个二级子类（如 fungicide_fungi）也在列表中，
  *   则隐藏该一级（因为有更具体的子类被选中）
- *
- * @example 输入 ["fungicide","fungicide_fungi","fungicide_bacteria"]
- *          输出 "杀菌剂-真菌、杀菌剂-细菌"（隐藏了父级"杀菌剂"）
  */
-function renderPesticideTypeLabels(
-  types: string[] | undefined,
+function renderPesticideTypeChips(
+  rawTypes: any,
   getLabel: (cat: string, code: string) => string,
   dictionaries: any[]
-) {
-  if (!types || types.length === 0) return '-';
-  // 2026-07-10：树形剪枝——一级被二级覆盖时隐藏一级
-  // 1. 找出所有「一级分类」的 dictCode
+): React.ReactNode {
+  // 2026-07-12：兼容多种输入格式 — Store 应已解析为数组，但兜底处理 JSON 字符串和单个字符串
+  let typeArray: string[] = [];
+  if (Array.isArray(rawTypes)) {
+    typeArray = rawTypes;
+  } else if (typeof rawTypes === 'string' && rawTypes.trim()) {
+    try {
+      const parsed = JSON.parse(rawTypes);
+      typeArray = Array.isArray(parsed) ? parsed : [rawTypes];
+    } catch {
+      typeArray = [rawTypes]; // 单个字符串值
+    }
+  }
+  if (typeArray.length === 0) return <span className="text-gray-400">-</span>;
+
+  // 树形剪枝——一级被二级覆盖时隐藏一级
   const topLevelCodes = new Set<string>();
-  // 2. 找出每个一级分类下的所有子类的 dictCode
   const childrenByParent = new Map<string, Set<string>>();
   for (const d of dictionaries) {
     const cat = d.categoryCode || d.category_code || d.category;
@@ -86,7 +68,6 @@ function renderPesticideTypeLabels(
     if (!parentId) {
       topLevelCodes.add(code);
     } else {
-      // 找父级 code
       const parent = dictionaries.find((x: any) => x.id === parentId);
       if (parent) {
         const parentCode = parent.dictCode || parent.dict_code;
@@ -95,20 +76,44 @@ function renderPesticideTypeLabels(
       }
     }
   }
-  // 3. 过滤：跳过被二级覆盖的一级
-  const filtered = types.filter(t => {
+
+  // 过滤：跳过被二级覆盖的一级
+  const filtered = typeArray.filter(t => {
     if (topLevelCodes.has(t)) {
       const children = childrenByParent.get(t);
       if (children) {
-        // 检查是否有子类在 types 列表中
         for (const c of children) {
-          if (types.includes(c)) return false; // 跳过一级
+          if (typeArray.includes(c)) return false;
         }
       }
     }
     return true;
   });
-  return filtered.map(t => getLabel('pesticide_type', t) || t).join('、');
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {filtered.map((t, i) => {
+        const label = getLabel('pesticide_type', t) || t;
+        const colors: Record<string, string> = {
+          // 一级分类
+          insecticide: 'bg-red-100 text-red-700',
+          fungicide: 'bg-blue-100 text-blue-700',
+          herbicide: 'bg-amber-100 text-amber-700',
+          plant_regulator: 'bg-purple-100 text-purple-700',
+          // 二级子类默认用灰色
+        };
+        const colorClass = colors[t] || 'bg-gray-100 text-gray-700';
+        return (
+          <span
+            key={i}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
+          >
+            {label}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export function PesticideLibraryTable({
@@ -117,43 +122,29 @@ export function PesticideLibraryTable({
   onDetail,
   onEdit,
   onDelete,
+  onStockIn,
   exportMode = false,
   selectedRows = [],
   onSelectRow,
   onSelectAll,
 }: PesticideLibraryTableProps) {
-  // 2026-07-10：触发字典加载（store 内置 getDictLabel 会在字典未加载时返回原值）
+  // 触发字典加载（store 内置 getDictLabel 会在字典未加载时返回原值）
   const dictionaries = useDictionaryStore((s) => s.dictionaries);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
-  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
 
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const startIdx = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIdx, startIdx + pageSize);
 
-  // 切换页面时重置
   React.useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(1);
   }, [data.length, totalPages, currentPage]);
 
-  // 切换展开/折叠
-  const toggleExpand = (id: string) => {
-    setExpandedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
-        <div className="animate-spin w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full mx-auto mb-2" />
+        <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
         加载中...
       </div>
     );
@@ -161,9 +152,9 @@ export function PesticideLibraryTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 表格 */}
-      <div className="overflow-x-auto">
-        <Table>
+      {/* 横向滚动容器：列数 20，超宽时底部自动出滚动条 */}
+      <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
+        <Table style={{ minWidth: '2200px' }}>
           <TableHeader className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
             <TableRow className="hover:bg-transparent">
               {exportMode && (
@@ -176,178 +167,208 @@ export function PesticideLibraryTable({
                   />
                 </TableHead>
               )}
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap w-8"></TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">编码</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂成分</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作用机制</TableHead>
-              {/* 2026-07-10：药剂类型列（关联 pesticide_type 字典，多值用顿号分隔） */}
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">含量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">品牌</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂类型</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">剂型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">使用禁忌</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">包装规格</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">库存量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">库存单位</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">单价</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产厂家</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">建议用量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">单位</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">稀释比例</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">产品批次</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产日期</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">过期日期</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作用机制</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治对象</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">备注</TableHead>
               {!exportMode && (
-                <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
+                <TableHead className="py-3 font-semibold text-white whitespace-nowrap sticky right-0 bg-green-600 z-10">
+                  操作
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={TOTAL_COLS} className="px-4 py-12 text-center text-gray-400">
                   暂无药剂记录
                 </TableCell>
               </TableRow>
-            ) : (
-              currentData.map((record) => (
-                <React.Fragment key={record.id}>
-                  {/* 主数据行 */}
-                  <TableRow
-                    className={`hover:bg-emerald-50 transition-colors ${selectedRows.includes(record.id) ? 'bg-emerald-50' : ''}`}
+            ) : currentData.map((record) => (
+              <TableRow
+                key={record.id}
+                className={`hover:bg-emerald-50 transition-colors ${selectedRows.includes(record.id) ? 'bg-emerald-50' : ''}`}
+              >
+                {exportMode && (
+                  <TableCell className="px-4 py-3 whitespace-nowrap w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(record.id)}
+                      onChange={() => onSelectRow?.(record.id)}
+                      className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
+                    />
+                  </TableCell>
+                )}
+                {/* 1. 编码 */}
+                <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => onDetail(record)}
+                    className="font-mono p-0 h-auto text-blue-600"
+                    title="查看详情"
                   >
-                    {exportMode && (
-                      <TableCell className="px-4 py-3 whitespace-nowrap w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(record.id)}
-                          onChange={() => onSelectRow?.(record.id)}
-                          className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
-                        />
-                      </TableCell>
-                    )}
-                    {/* 展开/折叠按钮 */}
-                    <TableCell className="px-4 py-3 whitespace-nowrap w-8">
+                    {record.pesticideCode || '-'}
+                  </Button>
+                </TableCell>
+                {/* 2. 药剂名称 */}
+                <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
+                  {record.pesticideName || '-'}
+                </TableCell>
+                {/* 3. 药剂成分 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={record.ingredient || ''}>
+                  {record.ingredient || '-'}
+                </TableCell>
+                {/* 4. 含量 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.specContent || ''}>
+                  {record.specContent || '-'}
+                </TableCell>
+                {/* 5. 品牌 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.brandName || '-'}
+                </TableCell>
+                {/* 6. 药剂类型（中文 chips，树形剪枝） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 min-w-[220px] max-w-[320px]">
+                  {renderPesticideTypeChips(record.pesticideTypes || (record as any).pesticideType, getDictLabel, dictionaries)}
+                </TableCell>
+                {/* 6. 剂型（formulation） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.formulation || '-'}
+                </TableCell>
+                {/* 8. 功能说明 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.functionDesc || ''}>
+                  {record.functionDesc || '-'}
+                </TableCell>
+                {/* 9. 使用禁忌 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.tabooDesc || ''}>
+                  {record.tabooDesc || '-'}
+                </TableCell>
+                {/* 10. 包装规格 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.packageSpec || ''}>
+                  {record.packageSpec || '-'}
+                </TableCell>
+                {/* 9. 库存量（颜色编码） */}
+                <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-right font-mono">
+                  {(() => {
+                    const stock = record.stockQuantity ?? 0;
+                    const colorClass = stock === 0
+                      ? 'text-red-600 font-semibold'
+                      : stock < 50
+                        ? 'text-amber-600 font-semibold'
+                        : 'text-emerald-600 font-semibold';
+                    return (
+                      <span className={colorClass} title={stock === 0 ? '库存为零' : stock < 50 ? '库存偏低' : '库存充足'}>
+                        {stock}
+                      </span>
+                    );
+                  })()}
+                </TableCell>
+                {/* 10. 库存单位 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.stockUnit || '-'}
+                </TableCell>
+                {/* 11. 单价 */}
+                <TableCell className="px-4 py-3 text-sm text-right font-mono whitespace-nowrap">
+                  {record.unitPrice != null && record.unitPrice > 0
+                    ? Number(record.unitPrice).toFixed(2)
+                    : <span className="text-gray-400">-</span>}
+                </TableCell>
+                {/* 12. 生产厂家 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.manufacturer || ''}>
+                  {record.manufacturer || '-'}
+                </TableCell>
+                {/* 13. 建议用量 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
+                  {record.suggestedDosage || '-'}
+                </TableCell>
+                {/* 15. 单位（用量单位） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.dosageUnit || '-'}
+                </TableCell>
+                {/* 16. 稀释比例 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono">
+                  {record.suggestedRatio || '-'}
+                </TableCell>
+                {/* 17. 产品批次 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono" title={record.batchNumber || ''}>
+                  {record.batchNumber || '-'}
+                </TableCell>
+                {/* 16. 生产日期 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.productionDate || '-'}
+                </TableCell>
+                {/* 17. 过期日期 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.expirationDate || '-'}
+                </TableCell>
+                {/* 19. 作用机制 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.mechanism || ''}>
+                  {record.mechanism || '-'}
+                </TableCell>
+                {/* 20. 防治对象 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={record.targetPests || ''}>
+                  {record.targetPests || '-'}
+                </TableCell>
+                {/* 21. 备注 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={record.remark || ''}>
+                  {record.remark || '-'}
+                </TableCell>
+                {/* 20. 操作（粘性列，水平滚动时锁定右侧） */}
+                {!exportMode && (
+                  <TableCell className="px-4 py-3 whitespace-nowrap sticky right-0 bg-white z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.05)]">
+                    <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => toggleExpand(record.id)}
-                        className="text-gray-500 hover:text-emerald-600"
-                        title={expandedRows.has(record.id) ? '收起' : '展开'}
+                        onClick={() => onStockIn?.(record)}
+                        className="text-gray-500 hover:text-blue-600"
+                        title="入库"
                       >
-                        {expandedRows.has(record.id) ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
+                        <Package className="w-4 h-4" />
                       </Button>
-                    </TableCell>
-                    {/* 编码 */}
-                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => onDetail(record)}
-                        className="font-mono p-0 h-auto text-blue-600"
-                        title="查看详情"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(record)}
+                        className="text-gray-500 hover:text-amber-600"
+                        title="编辑"
                       >
-                        {record.pesticideCode || '-'}
+                        <Edit2 className="w-4 h-4" />
                       </Button>
-                    </TableCell>
-                    {/* 药剂名称 - 加粗 */}
-                    <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
-                      {record.pesticideName || '-'}
-                    </TableCell>
-                    {/* 药剂成分 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
-                      {record.ingredient || '-'}
-                    </TableCell>
-                    {/* 作用机制 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[100px] truncate">
-                      {record.mechanism || '-'}
-                    </TableCell>
-                    {/* 2026-07-10：药剂类型列（多值用顿号分隔，关联 pesticide_type 字典） */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[220px]">
-                      <div className="line-clamp-2" title={renderPesticideTypeLabels(record.pesticideTypes, getDictLabel, dictionaries)}>
-                        {renderPesticideTypeLabels(record.pesticideTypes, getDictLabel, dictionaries)}
-                      </div>
-                    </TableCell>
-                    {/* 功能说明 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
-                      {record.functionDesc || '-'}
-                    </TableCell>
-                    {/* 规格数 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {record.specs?.length || 0}
-                    </TableCell>
-                    {!exportMode && (
-                      /* 操作区 */
-                      <TableCell className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDetail(record)}
-                            className="text-gray-500 hover:text-blue-600"
-                            title="查看详情"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEdit(record)}
-                            className="text-gray-500 hover:text-amber-600"
-                            title="编辑"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDelete(record.id)}
-                            className="text-gray-500 hover:text-red-600"
-                            title="删除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                  {/* 展开行 - 规格明细 */}
-                  {expandedRows.has(record.id) && (
-                    <TableRow key={`${record.id}-expanded`} className="bg-emerald-50/50">
-                      <TableCell colSpan={9} className="px-4 py-3">
-                        <div className="text-sm">
-                          <div className="font-semibold text-emerald-800 mb-2">规格明细</div>
-                          {(record.specs && record.specs.length > 0) ? (
-                            <table className="w-full border border-emerald-200 rounded-lg overflow-hidden">
-                              <thead className="bg-[#ECFDF5]">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">品牌名称</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">含量</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">剂型</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">生产厂家</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">建议用量</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">单位</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">稀释比例</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">备注</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-emerald-100">
-                                {record.specs.map((spec, idx) => (
-                                  <tr key={idx} className="hover:bg-emerald-100/30">
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.brandName || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.specContent || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.formulation || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.manufacturer || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.suggestedDosage || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.dosageUnit || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.suggestedRatio || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.remark || '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="text-emerald-600 text-center py-4">暂无规格明细</div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))
-            )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(record.id)}
+                        className="text-gray-500 hover:text-red-600"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

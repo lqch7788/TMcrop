@@ -319,7 +319,7 @@ export { usePestControlStore } from './usePestControlStore';
 export type { PestControlData } from './usePestControlStore';
 
 export { usePesticideLibraryStore } from './usePesticideLibraryStore';
-export type { PesticideLibrary, PesticideSpec } from './usePesticideLibraryStore';
+export type { PesticideSpec } from './usePesticideLibraryStore';
 
 export { usePestDiseaseDictStore } from './usePestDiseaseDictStore';
 export type { PestDiseaseDict } from './usePestDiseaseDictStore';

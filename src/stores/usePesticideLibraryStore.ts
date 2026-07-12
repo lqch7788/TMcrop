@@ -1,97 +1,88 @@
 /**
- * 药剂知识库 Store (V12.0)
+ * 药剂知识库 Store（V2 扁平化 2026-07-12）
+ * 从「主表 PesticideLibrary + 嵌套 specs[]」重构为单一扁平 PesticideSpec（26 字段）
+ * 对齐肥料库 FertilizerSpec 扁平模式
+ * API 路径：/api/pesticide-library（后端已重写为扁平 CRUD）
  */
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 
+// 扁平药剂规格（单一实体，26 字段），取代旧的主表 + 嵌套 spec 两层结构
 export interface PesticideSpec {
-  id: string;
-  pesticideId: string;
-  specContent?: string;
-  formulation?: string;
-  manufacturer?: string;
-  suggestedDosage?: string;
-  suggestedRatio?: string;
-  dosageUnit?: string;
-  mechanism?: string; // 作用机制
-  brandName?: string; // 品牌名称
-  remark?: string; // 备注
-  status: string;
-  createTime: string;
-}
-
-export interface PesticideLibrary {
   id: string;
   pesticideCode: string;
   pesticideName: string;
-  functionDesc?: string;
-  tabooDesc?: string;
-  targetPests?: string;
-  ingredient?: string; // 药剂成分
-  mechanism?: string; // 作用机制
-  // 2026-07-10：药剂类型数组（关联 pesticide_type 字典：杀虫剂/杀菌剂/除草剂/杀螨剂/杀线虫剂 等）
-  // 支持多值 + 层级化：同一药剂可同时属于多种类型，如 ["insecticide","fungicide_fungi"]
-  pesticideTypes?: string[];
+  pesticideTypes?: string[];       // 药剂类型 JSON 数组（如 ["insecticide","fungicide"]）
+  ingredient?: string;             // 药剂成分
+  mechanism?: string;              // 作用机制
+  functionDesc?: string;           // 功能说明
+  tabooDesc?: string;              // 使用禁忌
+  targetPests?: string;            // 防治对象
+  specContent?: string;            // 含量（如 "50%"）
+  formulation?: string;            // 剂型
+  manufacturer?: string;           // 生产厂家
+  brandName?: string;              // 品牌名称
+  suggestedDosage?: string;        // 建议用量
+  suggestedRatio?: string;         // 稀释比例
+  dosageUnit?: string;             // 用量单位
+  remark?: string;                 // 备注
+  // 2026-07-12：库存字段（对齐肥料库）
+  stockQuantity?: number;
+  stockUnit?: string;
+  unitPrice?: number;
+  batchNumber?: string;
+  productionDate?: string;
+  expirationDate?: string;
+  packageSpec?: string;
   status: string;
   createTime: string;
   updateTime: string;
-  specs?: PesticideSpec[];
 }
 
-export interface PestDiseaseForRelation {
-  id: string;
-  dictCode: string;
-  dictName: string;
-  dictType: 'pest' | 'disease';
-  targetCrops?: string;
-  description?: string;
-}
-
-interface PesticideLibraryState {
-  items: PesticideLibrary[];
-  isLoading: boolean;
-  error: string | null;
-  fetchItems: (filters?: Record<string, string>) => Promise<void>;
-  fetchItemById: (id: string) => Promise<PesticideLibrary | null>;
-  createItem: (item: Partial<PesticideLibrary>) => Promise<PesticideLibrary | null>;
-  updateItem: (id: string, updates: Partial<PesticideLibrary>) => Promise<PesticideLibrary | null>;
-  deleteItem: (id: string) => Promise<boolean>;
-  createSpec: (pesticideId: string, spec: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
-  updateSpec: (specId: string, spec: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
-  deleteSpec: (specId: string) => Promise<boolean>;
-  fetchRelatedPests: (pesticideId: string) => Promise<PestDiseaseForRelation[]>;
-  updateRelations: (pesticideId: string, pestIds: string[]) => Promise<boolean>;
-  removeRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
-}
-
+// 字段映射表（后端 snake_case → 前端 camelCase），覆盖全部 26 字段
 const FIELD_MAP: Record<string, string> = {
-  id: 'id', pesticide_code: 'pesticideCode', pesticide_name: 'pesticideName',
-  function_desc: 'functionDesc', taboo_desc: 'tabooDesc',
-  target_pests: 'targetPests', ingredient: 'ingredient', mechanism: 'mechanism',
-  // 2026-07-10：pesticide_type → pesticideTypes（JSON 数组，normalize/denormalize 中处理）
+  id: 'id',
+  pesticide_code: 'pesticideCode',
+  pesticide_name: 'pesticideName',
   pesticide_type: 'pesticideTypes',
-  status: 'status', create_time: 'createTime', update_time: 'updateTime',
+  ingredient: 'ingredient',
+  mechanism: 'mechanism',
+  function_desc: 'functionDesc',
+  taboo_desc: 'tabooDesc',
+  target_pests: 'targetPests',
+  spec_content: 'specContent',
+  formulation: 'formulation',
+  manufacturer: 'manufacturer',
+  brand_name: 'brandName',
+  suggested_dosage: 'suggestedDosage',
+  suggested_ratio: 'suggestedRatio',
+  dosage_unit: 'dosageUnit',
+  remark: 'remark',
+  stock_quantity: 'stockQuantity',
+  stock_unit: 'stockUnit',
+  unit_price: 'unitPrice',
+  batch_number: 'batchNumber',
+  production_date: 'productionDate',
+  expiration_date: 'expirationDate',
+  package_spec: 'packageSpec',
+  status: 'status',
+  create_time: 'createTime',
+  update_time: 'updateTime',
 };
 
 /**
- * 2026-07-10：JSON 数组 ↔ 字符串数组转换
+ * JSON 数组 ↔ 字符串数组转换
  * - DB 中 pesticide_type 是 JSON 字符串如 '["insecticide","fungicide_fungi"]'
  * - 前端用 string[] 形式
  */
-// 2026-07-10：JSON 数组 ↔ 字符串数组转换
-// - DB 中 pesticide_type 是 JSON 字符串如 '["insecticide","fungicide_fungi"]'
-// - 前端用 string[] 形式
-// - camelCase 中间件可能把 pesticide_type 转成 pesticideType（旧名），都兼容
-function parsePesticideTypes(value: unknown, fallbackValue?: unknown): string[] {
-  // 优先用 fallbackValue（可能是 pesticideType camelCase 单数字段名）
-  const v = value !== undefined && value !== null ? value : fallbackValue;
-  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
-  if (typeof v === 'string' && v.trim()) {
+function parsePesticideTypes(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((x): x is string => typeof x === 'string');
+  if (typeof value === 'string' && value.trim()) {
     try {
-      const parsed = JSON.parse(v);
+      const parsed = JSON.parse(value);
       return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
     } catch {
-      return v ? [v] : [];
+      return value ? [value] : [];
     }
   }
   return [];
@@ -102,34 +93,26 @@ function stringifyPesticideTypes(types: string[] | undefined | null): string | n
   return JSON.stringify(types);
 }
 
-const SPEC_FIELD_MAP: Record<string, string> = {
-  id: 'id', pesticide_id: 'pesticideId', spec_content: 'specContent',
-  formulation: 'formulation', manufacturer: 'manufacturer', suggested_dosage: 'suggestedDosage',
-  suggested_ratio: 'suggestedRatio', dosage_unit: 'dosageUnit', mechanism: 'mechanism',
-  brand_name: 'brandName', remark: 'remark', status: 'status', create_time: 'createTime',
-};
-
-function normalize(data: Record<string, unknown>, fieldMap: Record<string, string>): Record<string, unknown> {
+// 规范化：DB 行 → 前端对象
+function normalize(row: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const [dbKey, camelKey] of Object.entries(fieldMap)) {
-    // 2026-07-10：pesticideTypes 特殊处理（JSON 数组 → string[]）
-    // 兼容后端 camelCase 中间件用 'pesticideType' 单数的情况
+  for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
     if (camelKey === 'pesticideTypes') {
-      result[camelKey] = parsePesticideTypes(data[dbKey], (data as any).pesticideType);
+      result[camelKey] = parsePesticideTypes(row[dbKey]);
     } else {
-      result[camelKey] = data[dbKey] ?? null;
+      result[camelKey] = row[dbKey] ?? null;
     }
   }
   return result;
 }
 
-function denormalize(item: Partial<PesticideLibrary>, fieldMap: Record<string, string>): Record<string, unknown> {
+// 反规范化：前端对象 → DB 行
+function denormalize(item: Partial<PesticideSpec>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const reverseMap: Record<string, string> = {};
-  for (const [dbKey, camelKey] of Object.entries(fieldMap)) reverseMap[camelKey] = dbKey;
+  for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) reverseMap[camelKey] = dbKey;
   for (const [camelKey, value] of Object.entries(item)) {
     const dbKey = reverseMap[camelKey] ?? camelKey;
-    // 2026-07-10：pesticideTypes 特殊处理（string[] → JSON 字符串）
     if (camelKey === 'pesticideTypes') {
       result[dbKey] = stringifyPesticideTypes(value as string[] | undefined | null);
     } else {
@@ -139,48 +122,64 @@ function denormalize(item: Partial<PesticideLibrary>, fieldMap: Record<string, s
   return result;
 }
 
+interface PesticideLibraryState {
+  items: PesticideSpec[];
+  isLoading: boolean;
+  error: string | null;
+  /** 手动清空 error 状态 */
+  clearError: () => void;
+  fetchItems: (filters?: Record<string, string>) => Promise<void>;
+  fetchItemById: (id: string) => Promise<PesticideSpec | null>;
+  createItem: (item: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
+  updateItem: (id: string, updates: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
+  deleteItem: (id: string) => Promise<boolean>;
+  /** 入库：增加指定 spec 的库存量 */
+  stockIn: (id: string, quantity: number, remark?: string) => Promise<number | null>;
+}
+
 export const usePesticideLibraryStore = create<PesticideLibraryState>()(
   (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
 
+    clearError: () => set({ error: null }),
+
     fetchItems: async (filters = {}) => {
       set({ isLoading: true, error: null });
       try {
         const params = new URLSearchParams();
-        params.append('limit', '10000'); // 获取所有数据
+        params.append('limit', '10000');
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
-        const url = `/pesticide-library?${params.toString()}`;
-        console.log('[usePesticideLibraryStore] fetchItems URL:', url);
-        const response = await enhancedApiClient.get<any>(url);
-        const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-        console.log('[usePesticideLibraryStore] rawItems count:', rawItems.length, 'first:', rawItems[0]);
-        // 2026-07-10：normalize 在 store 层确保 pesticideTypes 始终是数组
-        // 兼容 snake_case (pesticide_type) + camelCase 单数 (pesticideType) 两种字段名
-        const normalized = (rawItems as Record<string, unknown>[]).map((row) => {
-          if (!Array.isArray(row.pesticideTypes)) {
-            row.pesticideTypes = parsePesticideTypes(row.pesticide_type, row.pesticideType);
+        const response = await enhancedApiClient.get<PesticideSpec[] | { data: PesticideSpec[] }>(
+          `/pesticide-library?${params.toString()}`
+        );
+        const rawItems: PesticideSpec[] = Array.isArray(response)
+          ? response
+          : (response as { data: PesticideSpec[] })?.data ?? [];
+        // camelCase 中间件把 pesticide_type 转成 pesticideType（单数），需兼容
+        const normalized = rawItems.map((row: any) => {
+          const rawType = row.pesticideType || row.pesticide_type;
+          if (!Array.isArray(row.pesticideTypes) && rawType) {
+            row.pesticideTypes = parsePesticideTypes(rawType);
           }
-          return row as PesticideLibrary;
+          return row as PesticideSpec;
         });
-        console.log('[usePesticideLibraryStore] set items, count:', normalized.length);
         set({ items: normalized, isLoading: false });
       } catch (err) {
-        console.error('[usePesticideLibraryStore] fetchItems error:', err);
         set({ error: (err as Error).message, isLoading: false });
       }
     },
 
     fetchItemById: async (id: string) => {
       try {
-        const response = await enhancedApiClient.get<any>(`/pesticide-library/${id}`);
-        const item = (response.data ?? response) as Record<string, unknown>;
-        // 2026-07-10：兼容 camelCase 中间件可能没转 pesticide_type → pesticideTypes 的情况
-        if (item.pesticide_type !== undefined && !Array.isArray(item.pesticideTypes)) {
-          item.pesticideTypes = parsePesticideTypes(item.pesticide_type);
+        const response: any = await enhancedApiClient.get(`/pesticide-library/${id}`);
+        const item = (response?.data ?? response) as Record<string, unknown>;
+        const rawType = item.pesticideType || item.pesticide_type;
+        if (!Array.isArray(item.pesticideTypes) && rawType) {
+          item.pesticideTypes = parsePesticideTypes(rawType);
         }
-        return item as PesticideLibrary;
+        return item as PesticideSpec;
       } catch {
         return null;
       }
@@ -188,9 +187,10 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
 
     createItem: async (item) => {
       try {
-        const body = denormalize(item, FIELD_MAP);
-        const response = await enhancedApiClient.post('/pesticide-library', body);
-        const newItem = normalize((response.data ?? response) as Record<string, unknown>, FIELD_MAP) as PesticideLibrary;
+        const body = denormalize(item);
+        const response: any = await enhancedApiClient.post('/pesticide-library', body);
+        // enhancedApiClient 已解包 .data 并返回 camelCase，直接使用
+        const newItem = (response?.data ?? response) as PesticideSpec;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
       } catch (err) {
@@ -201,10 +201,13 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
 
     updateItem: async (id, updates) => {
       try {
-        const body = denormalize(updates, FIELD_MAP);
-        const response = await enhancedApiClient.put(`/pesticide-library/${id}`, body);
-        const updated = normalize((response.data ?? response) as Record<string, unknown>, FIELD_MAP) as PesticideLibrary;
-        set((state) => ({ items: state.items.map((i) => (i.id === id ? { ...i, ...updated } : i)) }));
+        const body = denormalize(updates);
+        const response: any = await enhancedApiClient.put(`/pesticide-library/${id}`, body);
+        // enhancedApiClient 已解包 .data 并返回 camelCase，直接使用
+        const updated = (response?.data ?? response) as PesticideSpec;
+        set((state) => ({
+          items: state.items.map((i) => (i.id === id ? { ...i, ...updated } : i)),
+        }));
         return updated;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -223,82 +226,25 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
       }
     },
 
-    createSpec: async (pesticideId, spec) => {
+    stockIn: async (id, quantity, remark) => {
       try {
-        const body = denormalize(spec, SPEC_FIELD_MAP);
-        const response = await enhancedApiClient.post(`/pesticide-library/${pesticideId}/specs`, body);
-        const newSpec = normalize((response.data ?? response) as Record<string, unknown>, SPEC_FIELD_MAP) as PesticideSpec;
-        set((state) => ({
-          items: state.items.map((i) =>
-            i.id === pesticideId ? { ...i, specs: [...(i.specs || []), newSpec] } : i
-          ),
-        }));
-        return newSpec;
+        const response = await enhancedApiClient.post<{ newStock?: number }>(
+          `/pesticide-library/${id}/stock-in`,
+          { quantity, remark }
+        );
+        // enhancedApiClient 已解包 .data
+        const newStock = response?.newStock;
+        if (newStock != null) {
+          set((state) => ({
+            items: state.items.map((i) =>
+              i.id === id ? { ...i, stockQuantity: newStock } : i
+            ),
+          }));
+        }
+        return newStock;
       } catch (err) {
         set({ error: (err as Error).message });
         return null;
-      }
-    },
-
-    updateSpec: async (specId, spec) => {
-      try {
-        const body = denormalize(spec, SPEC_FIELD_MAP);
-        const response = await enhancedApiClient.put(`/pesticide-library/specs/${specId}`, body);
-        const updated = normalize((response.data ?? response) as Record<string, unknown>, SPEC_FIELD_MAP) as PesticideSpec;
-        set((state) => ({
-          items: state.items.map((i) => ({
-            ...i,
-            specs: i.specs?.map((s) => (s.id === specId ? updated : s)) || [],
-          })),
-        }));
-        return updated;
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return null;
-      }
-    },
-
-    deleteSpec: async (specId) => {
-      try {
-        await enhancedApiClient.delete(`/pesticide-library/specs/${specId}`);
-        set((state) => ({
-          items: state.items.map((i) => ({
-            ...i,
-            specs: i.specs?.filter((s) => s.id !== specId) || [],
-          })),
-        }));
-        return true;
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return false;
-      }
-    },
-
-    fetchRelatedPests: async (pesticideId) => {
-      try {
-        const response = await enhancedApiClient.get<any>(`/pesticide-library/${pesticideId}/relations`);
-        const items = Array.isArray(response) ? response : response?.data ?? [];
-        return items as PestDiseaseForRelation[];
-      } catch {
-        return [];
-      }
-    },
-
-    updateRelations: async (pesticideId, pestIds) => {
-      try {
-        await enhancedApiClient.put(`/pesticide-library/${pesticideId}/relations`, { pestIds });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-
-    removeRelation: async (pesticideId, pestId) => {
-      try {
-        await enhancedApiClient.delete(`/pesticide-library/${pesticideId}/relations/${pestId}`);
-        return true;
-      } catch {
-        return false;
       }
     },
   })

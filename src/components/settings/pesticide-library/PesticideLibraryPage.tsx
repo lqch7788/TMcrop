@@ -1,31 +1,30 @@
 /**
- * 药剂知识库页面组件
- * 布局：PageHeader → Tabs(化学防治/生物防治/物理防治) → FilterBar → Table → Modals
- * 所有数据通过 usePesticideLibraryStore 管理
+ * 药剂知识库页面组件（V2 扁平化 2026-07-12）
+ * 布局：PageHeader → Tabs(按药剂类型) + 搜索框 → 工具栏 → Table → Modals
+ * 对齐肥料库 FertilizerLibraryPage 模式
+ * 每个 item = 一条完整的药剂规格，无折叠/展开
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bug, Download, Plus, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft, Bug, Download, Plus, X, Search, RotateCcw, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { Button, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
-import { usePesticideLibraryStore, PesticideLibrary } from '@/stores';
+import { usePesticideLibraryStore, useToastStore, PesticideSpec } from '@/stores';
+import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { PesticideLibraryFilter } from './PesticideLibraryFilter';
 import { PesticideLibraryTable } from './PesticideLibraryTable';
 import { AddPesticideModal } from './modals/AddPesticideModal';
 import { EditPesticideModal } from './modals/EditPesticideModal';
 import { PesticideDetailModal } from './modals/PesticideDetailModal';
+import { PesticideStockInModal } from './modals/PesticideStockInModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import * as XLSX from 'xlsx';
-// 2026-07-10：导出时把 pesticideTypes 转中文
-import { getDictLabel, useDictionaryStore } from '@/stores/useDictionaryStore';
 
 /**
- * 2026-07-10：树形剪枝 + 中文 label 渲染（导出用）
- * 一级被二级覆盖时隐藏一级，例如 ["fungicide","fungicide_fungi"] → "杀菌剂-真菌"
+ * 药剂类型中文 label 渲染（树形剪枝 + 多值用顿号分隔）
  */
-function renderPesticideTypeLabelsExport(
+function renderPesticideTypeLabels(
   types: string[] | undefined,
   getLabel: (cat: string, code: string) => string,
   dictionaries: any[]
@@ -63,61 +62,25 @@ function renderPesticideTypeLabelsExport(
   return filtered.map(t => getLabel('pesticide_type', t) || t).join('、');
 }
 
-// 2026-07-10：取消 ControlType 分类，改用 pesticideType 字典项 dictCode
-// 保留类型别名但不使用，改用 Tabs 显示药剂类型一级分类
-// type ControlType = 'chemical' | 'bio' | 'physical';
-
-/**
- * 2026-07-10：把后端返回的 pesticideType（camelCase 单数 + JSON 字符串）解析为 pesticideTypes 数组
- * 同时也支持已经是数组的情况
- */
-function parsePesticideTypeField(row: any): string[] {
-  // 优先 pesticideTypes（已经是数组）
-  if (Array.isArray(row.pesticideTypes)) return row.pesticideTypes;
-  // 兼容 pesticide_type（snake_case JSON 字符串）
-  if (typeof row.pesticide_type === 'string' && row.pesticide_type.trim()) {
-    try {
-      const parsed = JSON.parse(row.pesticide_type);
-      return Array.isArray(parsed) ? parsed : [row.pesticide_type];
-    } catch {
-      return [row.pesticide_type];
-    }
-  }
-  // 兼容 pesticideType（camelCase 单数 JSON 字符串）
-  if (typeof row.pesticideType === 'string' && row.pesticideType.trim()) {
-    try {
-      const parsed = JSON.parse(row.pesticideType);
-      return Array.isArray(parsed) ? parsed : [row.pesticideType];
-    } catch {
-      return [row.pesticideType];
-    }
-  }
-  // 兼容 pesticideType 已经是数组（camelCase 中间件没把数组转字符串）
-  if (Array.isArray(row.pesticideType)) return row.pesticideType;
-  return [];
-}
-
 export default function PesticideLibraryPage() {
-  // ========== 导航 ==========
   const navigate = useNavigate();
 
   // ========== Store ==========
   const store = usePesticideLibraryStore();
-  // 2026-07-10：导出树形剪枝需要 dictionaries（用于判断一级是否被二级覆盖）
+  const { items, isLoading, error, clearError } = store;
+  const toast = useToastStore((s) => s.toast);
   const dictionaries = useDictionaryStore((s) => s.dictionaries);
-  const { items, isLoading, error } = store;
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // ========== 本地状态 ==========
-  // 2026-07-10：activeTab 改为药剂类型 dictCode（杀虫剂/杀菌剂/...）；'' 表示全部
   const [activeTab, setActiveTab] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string>>({});
-  // 2026-07-10：tab 过滤用本地 items 状态，绕开 store 状态机
-  const [localItems, setLocalItems] = useState<PesticideLibrary[]>([]);
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editTarget, setEditTarget] = useState<PesticideLibrary | null>(null);
-  const [detailTarget, setDetailTarget] = useState<PesticideLibrary | null>(null);
+  const [editTarget, setEditTarget] = useState<PesticideSpec | null>(null);
+  const [detailTarget, setDetailTarget] = useState<PesticideSpec | null>(null);
+  const [stockInTarget, setStockInTarget] = useState<PesticideSpec | null>(null);
 
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
@@ -127,35 +90,26 @@ export default function PesticideLibraryPage() {
 
   // ========== 数据加载 ==========
   useEffect(() => {
-    // 2026-07-10：tab 切换用 useState setter 直接 set items（绕开 store 内部状态机）
-    const qs = new URLSearchParams();
-    qs.append('limit', '10000');
-    if (activeTab) qs.append('pesticide_type', activeTab);
-    const rawUrl = `/api/pesticide-library?${qs.toString()}`;
-    console.log("[FX] before fetch, url=", rawUrl);
-    console.log('[PesticideLibraryPage] tab change → direct fetch, activeTab=', JSON.stringify(activeTab));
-    fetch(rawUrl)
-      .then(r => { console.log("[FX] fetch resolved, status=", r.status); return r.json(); })
-      .then(resp => {
-        const rawList = resp?.data ?? [];
-        // 2026-07-10：把后端返回的 pesticideType（camelCase 单数）解析为 pesticideTypes（复数数组）
-        const list: PesticideLibrary[] = rawList.map((row: any) => ({
-          ...row,
-          pesticideTypes: parsePesticideTypeField(row),
-        }));
-        console.log('[PesticideLibraryPage] → setLocalItems, count:', list.length);
-        setLocalItems(list);
-        (usePesticideLibraryStore as any).setState({ items: list, isLoading: false });
-      })
-      .catch(e => console.error("[PesticideLibraryPage] fetch error:", e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const typeFilter = activeTab
+      ? { ...filters, pesticide_type: activeTab }
+      : filters;
+    store.fetchItems(typeFilter);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载药剂库数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // ========== 筛选处理 ==========
   const handleSearch = useCallback(() => {
-    const keyword = filters.pesticideName || '';
-    const tabFilter = activeTab ? { ...filters, pesticide_type: activeTab, keyword } : { ...filters, keyword };
-    store.fetchItems(tabFilter);
+    const typeFilter = activeTab
+      ? { ...filters, pesticide_type: activeTab }
+      : filters;
+    store.fetchItems(typeFilter);
   }, [filters, activeTab, store]);
 
   const handleReset = useCallback(() => {
@@ -163,12 +117,57 @@ export default function PesticideLibraryPage() {
     store.fetchItems(activeTab ? { pesticide_type: activeTab } : {});
   }, [activeTab, store]);
 
-  const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
-    setFilters(newFilters);
+  const updateFilter = useCallback((key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   // ========== CRUD 处理 ==========
   const handleAdd = useCallback(() => setShowAddModal(true), []);
+
+  const handleEdit = useCallback(async (record: PesticideSpec) => {
+    const fullRecord = await store.fetchItemById(record.id);
+    setEditTarget(fullRecord || record);
+  }, [store]);
+
+  const handleDetail = useCallback(async (record: PesticideSpec) => {
+    const fullRecord = await store.fetchItemById(record.id);
+    setDetailTarget(fullRecord || record);
+  }, [store]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    const confirmed = await showConfirm('确认删除该药剂记录？此操作不可恢复。');
+    if (confirmed) {
+      store.deleteItem(id);
+    }
+  }, [store]);
+
+  const handleStockIn = useCallback((record: PesticideSpec) => {
+    setStockInTarget(record);
+  }, []);
+
+  // ========== 编辑保存后刷新 ==========
+  const handleEditSaved = useCallback(() => {
+    setEditTarget(null);
+    const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
+    store.fetchItems(typeFilter);
+  }, [activeTab, filters, store]);
+
+  const handleAddSaved = useCallback(() => {
+    setShowAddModal(false);
+    const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
+    store.fetchItems(typeFilter);
+  }, [activeTab, filters, store]);
+
+  const handleStockInSaved = useCallback(() => {
+    setStockInTarget(null);
+    const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
+    store.fetchItems(typeFilter);
+  }, [activeTab, filters, store]);
+
+  // ========== Tab 切换 ==========
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+  }, []);
 
   // ========== 导出处理 ==========
   const handleExportClick = useCallback(() => {
@@ -185,7 +184,7 @@ export default function PesticideLibraryPage() {
     if (selectedRows.length === items.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(items.map(item => item.id));
+      setSelectedRows(items.map((item) => item.id));
     }
   }, [items, selectedRows]);
 
@@ -198,46 +197,59 @@ export default function PesticideLibraryPage() {
   }, [selectedRows]);
 
   const handleConfirmExport = useCallback(() => {
-    // 获取选中的数据
-    const selectedData = items.filter(item => selectedRows.includes(item.id));
+    const selectedData = items.filter((item) => selectedRows.includes(item.id));
 
-    // 2026-07-10：导出表头改为药剂类型多值（关联 pesticide_type 字典）
-    const headers = ['药剂编码', '药剂名称', '药剂类型', '功能说明', '使用禁忌', '防治对象'];
+    const headers = [
+      '药剂编码', '药剂名称', '药剂成分', '含量', '品牌', '药剂类型', '剂型', '功能说明',
+      '使用禁忌', '包装规格', '库存量', '库存单位', '单价', '生产厂家', '建议用量', '单位',
+      '稀释比例', '产品批次', '生产日期', '过期日期', '作用机制', '防治对象', '备注',
+    ];
 
-    // 生成导出数据（数组格式）
-    // 2026-07-10：树形剪枝——一级被二级覆盖时隐藏一级
-    const rows = selectedData.map(record => [
+    const rows = selectedData.map((record) => [
       record.pesticideCode || '',
       record.pesticideName || '',
-      // 多个药剂类型用顿号分隔
-      renderPesticideTypeLabelsExport(record.pesticideTypes, getDictLabel, dictionaries),
+      record.ingredient || '',
+      record.specContent || '',
+      record.brandName || '',
+      renderPesticideTypeLabels(record.pesticideTypes, getDictLabel, dictionaries),
+      record.formulation || '',
       record.functionDesc || '',
       record.tabooDesc || '',
+      record.packageSpec || '',
+      record.stockQuantity?.toFixed(2) ?? '',
+      record.stockUnit || 'kg',
+      record.unitPrice?.toFixed(2) ?? '',
+      record.manufacturer || '',
+      record.suggestedDosage || '',
+      record.dosageUnit || '',
+      record.suggestedRatio || '',
+      record.batchNumber || '',
+      record.productionDate || '',
+      record.expirationDate || '',
+      record.mechanism || '',
       record.targetPests || '',
+      record.remark || '',
     ]);
 
     const fileName = `药剂知识库_${todayLocal()}`;
 
     if (exportFormat === 'csv') {
-      // CSV 格式
-      const csvContent = [headers, ...rows].map(row =>
-        row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')
-      ).join('\n');
+      const csvContent = [headers, ...rows]
+        .map((row) => row.map((cell) => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+        .join('\n');
       const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `${fileName}.csv`;
       link.click();
     } else if (exportFormat === 'word') {
-      // Word 格式（HTML 表格）
-      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       const blob = new Blob([content], { type: 'application/msword' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `${fileName}.doc`;
       link.click();
     } else {
-      // Excel 格式，使用 xlsx 库
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, '药剂知识库');
@@ -247,41 +259,7 @@ export default function PesticideLibraryPage() {
     setShowExportModal(false);
     setExportMode(false);
     setSelectedRows([]);
-  }, [items, selectedRows, exportFormat]);
-
-  const handleEdit = useCallback(async (record: PesticideLibrary) => {
-    // 获取完整的药剂数据（含规格），因为列表数据不包含规格
-    const fullRecord = await store.fetchItemById(record.id);
-    setEditTarget(fullRecord || record);
-  }, [store]);
-
-  const handleDetail = useCallback(async (record: PesticideLibrary) => {
-    // 获取完整的药剂数据（含规格）
-    const fullRecord = await store.fetchItemById(record.id);
-    setDetailTarget(fullRecord || record);
-  }, [store]);
-
-  const handleDelete = useCallback((id: string) => {
-    store.deleteItem(id);
-  }, [store]);
-
-  // ========== 编辑保存后刷新 ==========
-  const handleEditSaved = useCallback(() => {
-    setEditTarget(null);
-    const tabFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
-    store.fetchItems(tabFilter);
-  }, [activeTab, filters, store]);
-
-  const handleAddSaved = useCallback(() => {
-    setShowAddModal(false);
-    const tabFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
-    store.fetchItems(tabFilter);
-  }, [activeTab, filters, store]);
-
-  // ========== Tab切换时重新加载 ==========
-  const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
-  }, []);
+  }, [items, selectedRows, exportFormat, dictionaries]);
 
   // ========== 渲染 ==========
   return (
@@ -304,38 +282,51 @@ export default function PesticideLibraryPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">药剂库</h1>
-              <p className="text-gray-500">管理药剂信息、规格参数和生产厂家</p>
+              <p className="text-gray-500">管理药剂信息、规格参数和库存信息</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2026-07-10：Tabs 改为按药剂类型一级分类（杀虫剂/杀菌剂/...），不再有化学/生物/物理 */}
-      <Tabs defaultValue="" onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="">全部</TabsTrigger>
-          <TabsTrigger value="insecticide">杀虫剂</TabsTrigger>
-          <TabsTrigger value="fungicide">杀菌剂</TabsTrigger>
-          <TabsTrigger value="herbicide">除草剂</TabsTrigger>
-          <TabsTrigger value="acaricide">杀螨剂</TabsTrigger>
-          <TabsTrigger value="protective">保护剂</TabsTrigger>
-          <TabsTrigger value="adjuvant">助剂</TabsTrigger>
-          {/* 2026-07-10：移除「杀线虫剂」tab（按用户要求） */}
-          <TabsTrigger value="other">其他</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Tabs + 搜索框（同行布局，对齐肥料库） */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          <TabsList selectedValue={activeTab} onValueChange={handleTabChange}>
+            <TabsTrigger value="">全部</TabsTrigger>
+            <TabsTrigger value="insecticide">杀虫剂</TabsTrigger>
+            <TabsTrigger value="fungicide">杀菌剂</TabsTrigger>
+            <TabsTrigger value="herbicide">除草剂</TabsTrigger>
+            <TabsTrigger value="acaricide">杀螨剂</TabsTrigger>
+            <TabsTrigger value="protective">保护剂</TabsTrigger>
+            <TabsTrigger value="adjuvant">助剂</TabsTrigger>
+            <TabsTrigger value="other">其他</TabsTrigger>
+          </TabsList>
 
-      {/* 2026-07-10：内容提到 Tabs 外面，避免 TabsContent value="" 不渲染导致 Table 消失 */}
-      <div className="space-y-4">
-        {/* 2026-07-10：移除 TabsContent 包装，Table 必须在 Tabs 外避免 selectedValue 切换时消失 */}
-        {/* 筛选器 */}
-          <PesticideLibraryFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
+          {/* 搜索框 + 重置 + 搜索按键 */}
+          <div className="flex items-center gap-2 flex-1 justify-end min-w-[280px] max-w-[480px]">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                value={filters.pesticideName || ''}
+                onChange={(e) => updateFilter('pesticideName', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="搜索药剂名称"
+                className="w-full h-10 pl-10 pr-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <Button variant="warning" size="sm" onClick={handleReset}>
+              <RotateCcw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button variant="default" size="sm" onClick={handleSearch}>
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
+          </div>
+        </div>
 
+        <TabsContent value={activeTab} forceMount>
           {/* 错误提示 */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
@@ -377,23 +368,28 @@ export default function PesticideLibraryPage() {
 
           {/* 表格 */}
           <PesticideLibraryTable
-            data={localItems.length > 0 ? localItems : items}
+            data={items}
             isLoading={isLoading}
             onDetail={handleDetail}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onStockIn={handleStockIn}
             exportMode={exportMode}
             selectedRows={selectedRows}
-            onSelectRow={(id) => setSelectedRows(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id])}
+            onSelectRow={(id) =>
+              setSelectedRows((prev) =>
+                prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+              )
+            }
             onSelectAll={handleExportSelectAll}
           />
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Modals */}
       {showAddModal && (
         <AddPesticideModal
           isOpen={showAddModal}
-          controlType=""
           onClose={() => setShowAddModal(false)}
           onSaved={handleAddSaved}
         />
@@ -411,6 +407,14 @@ export default function PesticideLibraryPage() {
           isOpen={!!detailTarget}
           record={detailTarget}
           onClose={() => setDetailTarget(null)}
+        />
+      )}
+      {stockInTarget && (
+        <PesticideStockInModal
+          isOpen={!!stockInTarget}
+          record={stockInTarget}
+          onClose={() => setStockInTarget(null)}
+          onSaved={handleStockInSaved}
         />
       )}
 
