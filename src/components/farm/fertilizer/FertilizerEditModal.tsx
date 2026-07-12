@@ -368,19 +368,20 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
 
   // 2026-07-12：肥料库选择以 spec.id 为唯一 key，并携带品牌/单价/批次/库存快照
   const toggleFertilizerFromLibrary = (spec: any) => {
-    const exists = selectedFertilizers.find(f => f.id === spec.id);
-    if (exists) {
-      setSelectedFertilizers(selectedFertilizers.filter(f => f.id !== spec.id));
-    } else {
-      setSelectedFertilizers([...selectedFertilizers, {
+    setSelectedFertilizers((prev) => {
+      const exists = prev.some((f) => f.id === spec.id);
+      if (exists) {
+        return prev.filter((f) => f.id !== spec.id);
+      }
+      return [...prev, {
         id: spec.id,
         name: spec.fertilizerName,
         brandName: spec.brandName || '',
         unitPrice: Number(spec.unitPrice) || 0,
         batchNumber: spec.batchNumber || '',
         stockQuantity: Number(spec.stockQuantity) || 0,
-      }]);
-    }
+      }];
+    });
   };
 
   // 2026-07-12：移除已选肥料时同步清空引用该 spec 的池行，避免保存失效引用
@@ -422,6 +423,18 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       await showAlert('施肥区域用量总和必须大于 0');
       return;
     }
+    // 2026-07-12：仅校验有实际用量的池行，避免保存空肥料或空稀释倍数
+    const activeRows = selectedBizRecords.filter((r) => (Number(r.quantity) || 0) > 0);
+    const missingFertilizer = activeRows.find((r) => !r.fertilizerName.trim());
+    if (missingFertilizer) {
+      await showAlert(`区域「${missingFertilizer.area}」用量 > 0 但肥料名未填写`);
+      return;
+    }
+    const missingDilution = activeRows.find((r) => !r.dilutionRatio.trim());
+    if (missingDilution) {
+      await showAlert(`区域「${missingDilution.area}」（肥料：${missingDilution.fertilizerName}）稀释倍数未填写`);
+      return;
+    }
     if (!form.fertilizeTime) { await showAlert('请选择施肥时间'); return; }
     if (form.fertilizeTime && !validateDateNotFuture(form.fertilizeTime)) {
       await showAlert('施肥日期不能大于当前时间');
@@ -430,8 +443,11 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
 
     setSubmitting(true);
     // 2026-07-12：record.quantity = 池各区域用量总和，单位按首行
-    const firstPoolUnit = selectedBizRecords[0].unit || '千克';
+    const firstActiveRow = activeRows[0];
+    const firstPoolUnit = firstActiveRow?.unit || '千克';
     const quantityConverted = toBaseUnit(totalQuantity, firstPoolUnit);
+    const legacyFertilizerName = firstActiveRow?.fertilizerName || '';
+    const legacyDilutionRatio = firstActiveRow?.dilutionRatio || '';
     const enrichedPool = selectedBizRecords.map((r) => ({
       ...r,
       dilutionRatio: r.dilutionRatio || '',
@@ -447,14 +463,14 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       (sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
       0
     );
-    const firstSpecRow = enrichedPool.find((r) => r.fertilizerSpecId);
+    const firstSpecRow = activeRows.find((r) => r.fertilizerSpecId);
     const payload: Record<string, any> = {
       fertilizerCode: form.fertilizerCode,
-      // 顶层兼容：首条肥料名（向后兼容；新客户端读 pool.fertilizerName）
-      fertilizerName: enrichedPool.find((r) => r.fertilizerName)?.fertilizerName || '',
+      // 顶层兼容：首条有效肥料名（向后兼容；新客户端读 pool.fertilizerName）
+      fertilizerName: legacyFertilizerName,
       cropName: form.cropName,
       greenhouseName: areas.join(','),
-      dilutionRatio: enrichedPool.find((r) => r.dilutionRatio)?.dilutionRatio || '',
+      dilutionRatio: legacyDilutionRatio,
       quantity: quantityConverted ? quantityConverted.baseQuantity : totalQuantity,
       unit: firstPoolUnit,
       // 2026-07-12：unitPrice 已迁到池行，顶层不再维护
