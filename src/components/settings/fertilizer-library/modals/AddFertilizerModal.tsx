@@ -4,7 +4,7 @@
  */
 import React, { useState, useCallback } from 'react';
 
-import { Plus, Trash2, Wand2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -12,32 +12,15 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { UnitDictSelect } from '../../../common/settings/UnitDictSelect';
-import { useFertilizerLibraryStore, FertilizerSpec } from '@/stores';
+import { useFertilizerLibraryStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS, APPLICATION_TIMING_OPTIONS } from '../constants';
 
 interface AddFertilizerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
-
-// 肥料类型选项（按化学性质分类）
-const FERTILIZER_TYPE_OPTIONS = [
-  { value: 'organic', label: '有机肥' },
-  { value: 'inorganic', label: '无机肥' },
-  { value: 'water_soluble', label: '水溶肥' },
-  { value: 'compound', label: '复合肥' },
-  { value: 'bio', label: '生物肥' },
-  { value: 'slow_release', label: '缓释肥' },
-  { value: 'trace', label: '微量元素肥' },
-];
-
-// 施肥时期选项（可多选）
-const APPLICATION_TIMING_OPTIONS = [
-  { value: 'base', label: '底肥' },
-  { value: 'dressing', label: '追肥' },
-  { value: 'foliar', label: '叶面肥' },
-];
 
 // 表单默认值常量（单一扁平 spec，26 字段，含 2026-07-12 包装规格）
 const INITIAL_FORM = {
@@ -62,6 +45,7 @@ const INITIAL_FORM = {
   expirationDate: '',
   stockQuantity: 0,
   packageSpec: '',
+  stockUnit: 'kg',
 };
 
 export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerModalProps) {
@@ -95,7 +79,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
     try {
       const newSpec = await store.createItem({
         fertilizerName: form.fertilizerName,
-        fertilizerType: form.fertilizerType as any,
+        fertilizerType: form.fertilizerType,
         applicationTiming: form.applicationTiming,
         functionDesc: form.functionDesc,
         tabooDesc: form.tabooDesc,
@@ -115,6 +99,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
         expirationDate: form.expirationDate,
         stockQuantity: Number(form.stockQuantity) || 0,
         packageSpec: form.packageSpec,
+        stockUnit: form.stockUnit,
       });
 
       if (newSpec) {
@@ -287,7 +272,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">库存量 (kg)</Label>
+                <Label className="text-xs text-gray-500">库存量</Label>
                 <Input
                   type="number"
                   value={form.stockQuantity || ''}
@@ -297,6 +282,19 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                   min="0"
                   className="h-9 text-sm"
                 />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">库存单位</Label>
+                <Select value={form.stockUnit} onValueChange={(v) => updateField('stockUnit', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="选择单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STOCK_UNIT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {/* 2026-07-12：包装规格（如 50kg/包、5kg/桶） */}
               <div>

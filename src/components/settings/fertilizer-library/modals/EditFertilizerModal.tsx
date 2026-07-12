@@ -5,7 +5,7 @@
  */
 import React, { useState, useCallback, useEffect } from 'react';
 
-import { Trash2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -15,6 +15,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { UnitDictSelect } from '../../../common/settings/UnitDictSelect';
 import { useFertilizerLibraryStore, FertilizerSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS, APPLICATION_TIMING_OPTIONS } from '../constants';
 
 interface EditFertilizerModalProps {
   isOpen: boolean;
@@ -22,24 +23,6 @@ interface EditFertilizerModalProps {
   onClose: () => void;
   onSaved: () => void;
 }
-
-// 肥料类型选项（按化学性质分类）
-const FERTILIZER_TYPE_OPTIONS = [
-  { value: 'organic', label: '有机肥' },
-  { value: 'inorganic', label: '无机肥' },
-  { value: 'water_soluble', label: '水溶肥' },
-  { value: 'compound', label: '复合肥' },
-  { value: 'bio', label: '生物肥' },
-  { value: 'slow_release', label: '缓释肥' },
-  { value: 'trace', label: '微量元素肥' },
-];
-
-// 施肥时期选项
-const APPLICATION_TIMING_OPTIONS = [
-  { value: 'base', label: '底肥' },
-  { value: 'dressing', label: '追肥' },
-  { value: 'foliar', label: '叶面肥' },
-];
 
 // 单条 spec 表单字段（26 字段，含 2026-07-12 包装规格）
 type SpecForm = {
@@ -64,6 +47,7 @@ type SpecForm = {
   expirationDate: string;
   stockQuantity: number;
   packageSpec: string;
+  stockUnit: string;
 };
 
 const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
@@ -87,7 +71,8 @@ const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
   productionDate: record.productionDate || '',
   expirationDate: record.expirationDate || '',
   stockQuantity: record.stockQuantity || 0,
-  packageSpec: (record as any).packageSpec || '',
+  packageSpec: record.packageSpec || '',
+  stockUnit: record.stockUnit || 'kg',
 });
 
 export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFertilizerModalProps) {
@@ -107,8 +92,8 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
   }, [isOpen, record]);
 
   // 更新字段
-  const updateField = useCallback((field: keyof SpecForm, value: string | number) => {
-    setForm((prev) => ({ ...prev, [field]: value as any }));
+  const updateField = useCallback(<K extends keyof SpecForm>(field: K, value: SpecForm[K]) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   // 检测变更
@@ -119,6 +104,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       'brandName', 'specContent', 'manufacturer', 'suggestedDosage',
       'suggestedRatio', 'dosageUnit', 'remark', 'unitPrice', 'batchNumber',
       'productionDate', 'expirationDate', 'stockQuantity', 'packageSpec',
+      'stockUnit',
     ];
     return fields.some((f) => form[f] !== original[f]);
   };
@@ -139,7 +125,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
     try {
       await store.updateItem(record.id, {
         fertilizerName: form.fertilizerName,
-        fertilizerType: form.fertilizerType as any,
+        fertilizerType: form.fertilizerType,
         applicationTiming: form.applicationTiming,
         functionDesc: form.functionDesc,
         tabooDesc: form.tabooDesc,
@@ -159,6 +145,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         expirationDate: form.expirationDate,
         stockQuantity: Number(form.stockQuantity) || 0,
         packageSpec: form.packageSpec,
+        stockUnit: form.stockUnit,
       });
 
       onSaved();
@@ -329,7 +316,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">库存量 (kg)</Label>
+                <Label className="text-xs text-gray-500">库存量</Label>
                 <Input
                   type="number"
                   value={form.stockQuantity || ''}
@@ -339,6 +326,19 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                   min="0"
                   className="h-9 text-sm"
                 />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">库存单位</Label>
+                <Select value={form.stockUnit} onValueChange={(v) => updateField('stockUnit', v)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="选择单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STOCK_UNIT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {/* 2026-07-12：包装规格（如 50kg/包、5kg/桶） */}
               <div>

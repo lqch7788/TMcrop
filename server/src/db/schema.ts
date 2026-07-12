@@ -3050,9 +3050,24 @@ export function initializeDatabase() {
       stock_quantity REAL DEFAULT 0,
       -- 2026-07-12：包装规格（如 50kg/包、5kg/桶 等成品包装描述）
       package_spec TEXT,
+      -- 2026-07-12：库存单位（kg/g/t/L/mL/袋/包/桶/瓶/块 等）
+      stock_unit TEXT DEFAULT 'kg',
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 肥料入库记录表（2026-07-12：审计追溯）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS fertilizer_stock_in_records (
+      id TEXT PRIMARY KEY,
+      spec_id TEXT NOT NULL,
+      fertilizer_code TEXT,
+      fertilizer_name TEXT,
+      quantity REAL NOT NULL,
+      remark TEXT,
+      create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
 

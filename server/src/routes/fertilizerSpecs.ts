@@ -69,8 +69,8 @@ router.post('/', (req: Request, res: Response) => {
       function_desc, taboo_desc, shelf_life, storage_condition, supplier_info,
       brand_name, spec_content, manufacturer, suggested_dosage, suggested_ratio, dosage_unit,
       remark, unit_price, batch_number, production_date, expiration_date, stock_quantity,
-      package_spec, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      package_spec, stock_unit, status, create_time, update_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.fertilizer_name, body.fertilizer_type || null, body.application_timing || null,
        body.function_desc || null, body.taboo_desc || null, body.shelf_life || null,
        body.storage_condition || null, body.supplier_info || null,
@@ -80,12 +80,51 @@ router.post('/', (req: Request, res: Response) => {
        Number(body.unit_price) || 0, body.batch_number || null,
        body.production_date || null, body.expiration_date || null,
        Number(body.stock_quantity) || 0, body.package_spec || null,
-       body.status || 'active', now, now]
+       body.stock_unit || 'kg', body.status || 'active', now, now]
     );
 
     const items = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE fertilizer_code = ?`, [code]);
     saveDatabase();
     res.status(201).json({ success: true, data: items[0] || null });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** POST /api/fertilizer-specs/:id/stock-in — 入库增加库存 */
+router.post('/:id/stock-in', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { quantity, remark } = req.body as { quantity?: number; remark?: string };
+
+    if (!quantity || quantity <= 0) {
+      res.status(400).json({ success: false, error: '入库数量必须大于 0' });
+      return;
+    }
+
+    const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [id]);
+    if (existing.length === 0) { res.status(404).json({ success: false, error: '肥料不存在' }); return; }
+
+    const now = new Date().toISOString();
+    const spec = existing[0];
+
+    // 原子更新库存（避免并发读-改-写竞态）
+    db.run(`UPDATE fertilizer_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`, [quantity, now, id]);
+
+    // 写入库记录（审计追溯）
+    const recordId = `fsi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    db.run(`INSERT INTO fertilizer_stock_in_records (
+      id, spec_id, fertilizer_code, fertilizer_name, quantity, remark, create_time
+    ) VALUES (?,?,?,?,?,?,?)`,
+      [recordId, id, spec.fertilizerCode, spec.fertilizerName, quantity, remark || null, now]
+    );
+
+    const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [id]);
+    saveDatabase();
+    const result = updated[0] || {};
+    result.newStock = spec.stockQuantity + quantity;
+    res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -118,7 +157,7 @@ router.put('/:id', (req: Request, res: Response) => {
       function_desc=?, taboo_desc=?, shelf_life=?, storage_condition=?, supplier_info=?,
       brand_name=?, spec_content=?, manufacturer=?, suggested_dosage=?, suggested_ratio=?, dosage_unit=?,
       remark=?, unit_price=?, batch_number=?, production_date=?, expiration_date=?, stock_quantity=?,
-      package_spec=?,
+      package_spec=?, stock_unit=?,
       status=?, update_time=? WHERE id=?`,
       [body.fertilizer_name ?? existing[0].fertilizer_name,
        body.fertilizer_type ?? existing[0].fertilizer_type,
@@ -141,6 +180,7 @@ router.put('/:id', (req: Request, res: Response) => {
        body.expiration_date ?? existing[0].expiration_date,
        body.stock_quantity != null ? Number(body.stock_quantity) : (existing[0].stock_quantity || 0),
        body.package_spec ?? existing[0].package_spec,
+       body.stock_unit ?? existing[0].stock_unit ?? 'kg',
        body.status ?? existing[0].status,
        new Date().toISOString(), id]
     );

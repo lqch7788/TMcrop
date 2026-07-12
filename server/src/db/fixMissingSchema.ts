@@ -1360,6 +1360,34 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• unit_price 列添加: ' + e.message);
   }
 
+  // 2026-07-12：肥料库存单位（支持液体/颗粒/块状等不同形态）
+  try {
+    db.run("ALTER TABLE fertilizer_specs ADD COLUMN stock_unit TEXT DEFAULT 'kg'");
+    seedLog.info('✓ fertilizer_specs 表添加 stock_unit 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• stock_unit 列已存在');
+    else seedLog.skip('• stock_unit 列添加: ' + e.message);
+  }
+
+  // 2026-07-12：肥料入库记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS fertilizer_stock_in_records (
+        id TEXT PRIMARY KEY,
+        spec_id TEXT NOT NULL,
+        fertilizer_code TEXT,
+        fertilizer_name TEXT,
+        quantity REAL NOT NULL,
+        remark TEXT,
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    seedLog.info('✓ fertilizer_stock_in_records 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) seedLog.skip('• fertilizer_stock_in_records 已存在');
+    else seedLog.error('fertilizer_stock_in_records:', e.message);
+  }
+
   // 为 pesticide_specs 表添加作用机制字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN mechanism TEXT`);

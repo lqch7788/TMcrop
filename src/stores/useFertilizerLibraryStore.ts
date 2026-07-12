@@ -1,6 +1,6 @@
 /**
  * 肥料知识库 Store（V2 扁平结构）
- * 2026-07-12：从「主表 FertilizerLibrary + 嵌套 specs[]」重构为单一扁平 FertilizerSpec（25 字段）
+ * 2026-07-12：从「主表 FertilizerLibrary + 嵌套 specs[]」重构为单一扁平 FertilizerSpec（28 字段）
  * API 路径：/api/fertilizer-specs
  */
 import { create } from 'zustand';
@@ -32,6 +32,8 @@ export interface FertilizerSpec {
   stockQuantity?: number;
   // 2026-07-12：包装规格（如 50kg/包、5kg/桶）
   packageSpec?: string;
+  // 2026-07-12：库存单位（kg/g/t/L/mL/袋/包/桶/瓶/块 等）
+  stockUnit?: string;
   status: string;
   createTime: string;
   updateTime: string;
@@ -62,6 +64,7 @@ const FIELD_MAP: Record<string, string> = {
   expiration_date: 'expirationDate',
   stock_quantity: 'stockQuantity',
   package_spec: 'packageSpec',  // 2026-07-12：包装规格
+  stock_unit: 'stockUnit',      // 2026-07-12：库存单位
   status: 'status',
   create_time: 'createTime',
   update_time: 'updateTime',
@@ -99,6 +102,8 @@ interface FertilizerLibraryState {
   createItem: (item: Partial<FertilizerSpec>) => Promise<FertilizerSpec | null>;
   updateItem: (id: string, updates: Partial<FertilizerSpec>) => Promise<FertilizerSpec | null>;
   deleteItem: (id: string) => Promise<boolean>;
+  /** 入库：增加指定 spec 的库存量 */
+  stockIn: (id: string, quantity: number, remark?: string) => Promise<number | null>;
 }
 
 export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
@@ -115,9 +120,9 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
         const params = new URLSearchParams();
         params.append('limit', '10000');
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
-        const response = await enhancedApiClient.get<any>(`/fertilizer-specs?${params.toString()}`);
-        const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-        set({ items: rawItems as FertilizerSpec[], isLoading: false });
+        const response = await enhancedApiClient.get<FertilizerSpec[] | { data: FertilizerSpec[] }>(`/fertilizer-specs?${params.toString()}`);
+        const rawItems: FertilizerSpec[] = Array.isArray(response) ? response : (response as { data: FertilizerSpec[] })?.data ?? [];
+        set({ items: rawItems, isLoading: false });
       } catch (err) {
         set({ error: (err as Error).message, isLoading: false });
       }
@@ -125,8 +130,8 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
 
     fetchItemById: async (id: string) => {
       try {
-        const response = await enhancedApiClient.get<any>(`/fertilizer-specs/${id}`);
-        return (response.data ?? response) as FertilizerSpec;
+        const response: FertilizerSpec | { data: FertilizerSpec } = await enhancedApiClient.get(`/fertilizer-specs/${id}`) as FertilizerSpec | { data: FertilizerSpec };
+        return ((response as { data: FertilizerSpec }).data ?? response) as FertilizerSpec;
       } catch {
         return null;
       }
@@ -166,6 +171,26 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
       } catch (err) {
         set({ error: (err as Error).message });
         return false;
+      }
+    },
+
+    stockIn: async (id, quantity, remark) => {
+      try {
+        const response = await enhancedApiClient.post<{ newStock?: number }>(`/fertilizer-specs/${id}/stock-in`, { quantity, remark });
+        // enhancedApiClient 已解包 .data，response 即为 spec 对象 + newStock
+        const newStock = response?.newStock;
+        // 更新本地列表中的库存
+        if (newStock != null) {
+          set((state) => ({
+            items: state.items.map((i) =>
+              i.id === id ? { ...i, stockQuantity: newStock } : i
+            ),
+          }));
+        }
+        return newStock;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return null;
       }
     },
   })

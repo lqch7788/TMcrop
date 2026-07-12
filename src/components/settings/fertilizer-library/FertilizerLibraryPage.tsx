@@ -11,16 +11,16 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
-import { useFertilizerLibraryStore, FertilizerLibrary, useToastStore } from '@/stores';
+import { useFertilizerLibraryStore, useToastStore } from '@/stores';
+import { FertilizerType } from './constants';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
 import { AddFertilizerModal } from './modals/AddFertilizerModal';
 import { EditFertilizerModal } from './modals/EditFertilizerModal';
 import { FertilizerDetailModal } from './modals/FertilizerDetailModal';
+import { FertilizerStockInModal } from './modals/FertilizerStockInModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import * as XLSX from 'xlsx';
-
-type FertilizerType = 'organic' | 'inorganic' | 'water_soluble' | 'compound' | 'bio' | 'slow_release' | 'trace';
 
 export default function FertilizerLibraryPage() {
   // ========== 导航 ==========
@@ -40,6 +40,8 @@ export default function FertilizerLibraryPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTarget, setEditTarget] = useState<FertilizerLibrary | null>(null);
   const [detailTarget, setDetailTarget] = useState<FertilizerLibrary | null>(null);
+  // 入库弹窗
+  const [stockInTarget, setStockInTarget] = useState<FertilizerLibrary | null>(null);
 
   // 导出状态
   const [exportMode, setExportMode] = useState(false);
@@ -111,25 +113,31 @@ export default function FertilizerLibraryPage() {
   const handleConfirmExport = useCallback(() => {
     const selectedData = items.filter((item) => selectedRows.includes(item.id));
 
-    const headers = ['肥料编码', '肥料名称', '肥料类型', '分类', '功能说明', '使用禁忌', '保质期', '存储条件', '供应商信息'];
-
-    const categoryMap: Record<string, string> = {
-      base: '底肥',
-      top_dressing: '追肥',
-      foliar: '叶面肥',
-      special: '特殊肥',
-    };
+    const headers = [
+      '肥料编码', '肥料名称', '品牌', '肥料类型', '成份与含量', '功能说明',
+      '包装规格', '库存量', '库存单位', '单价', '生产厂家', '建议用量', '单位',
+      '稀释比例', '产品批次', '生产日期', '过期日期', '备注',
+    ];
 
     const rows = selectedData.map((record) => [
       record.fertilizerCode || '',
       record.fertilizerName || '',
+      record.brandName || '',
       record.fertilizerType || '',
-      categoryMap[record.fertilizerCategory || ''] || '',
+      record.specContent || '',
       record.functionDesc || '',
-      record.tabooDesc || '',
-      record.shelfLife || '',
-      record.storageCondition || '',
-      record.supplierInfo || '',
+      record.packageSpec || '',
+      record.stockQuantity?.toFixed(2) ?? '',
+      record.stockUnit || 'kg',
+      record.unitPrice?.toFixed(2) ?? '',
+      record.manufacturer || '',
+      record.suggestedDosage || '',
+      record.dosageUnit || '',
+      record.suggestedRatio || '',
+      record.batchNumber || '',
+      record.productionDate || '',
+      record.expirationDate || '',
+      record.remark || '',
     ]);
 
     const fileName = `肥料知识库_${todayLocal()}`;
@@ -178,9 +186,22 @@ export default function FertilizerLibraryPage() {
     [store],
   );
 
+  // 入库
+  const handleStockIn = useCallback((record: FertilizerLibrary) => {
+    setStockInTarget(record);
+  }, []);
+
+  const handleStockInSaved = useCallback(() => {
+    setStockInTarget(null);
+    store.fetchItems({ fertilizer_type: activeTab, ...filters });
+  }, [activeTab, filters, store]);
+
   const handleDelete = useCallback(
-    (id: string) => {
-      store.deleteItem(id);
+    async (id: string) => {
+      const confirmed = await showConfirm('确认删除该肥料记录？此操作不可恢复。');
+      if (confirmed) {
+        store.deleteItem(id);
+      }
     },
     [store],
   );
@@ -274,7 +295,7 @@ export default function FertilizerLibraryPage() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
           {/* Tab 按键 */}
-          <TabsList>
+          <TabsList selectedValue={activeTab} onValueChange={handleTabChange}>
             <TabsTrigger value="organic">有机肥</TabsTrigger>
             <TabsTrigger value="inorganic">无机肥</TabsTrigger>
             <TabsTrigger value="water_soluble">水溶肥</TabsTrigger>
@@ -318,6 +339,7 @@ export default function FertilizerLibraryPage() {
             onDetail={handleDetail}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onStockIn={handleStockIn}
             exportMode={exportMode}
             selectedRows={selectedRows}
             onSelectRow={(id) =>
@@ -349,6 +371,14 @@ export default function FertilizerLibraryPage() {
           isOpen={!!detailTarget}
           record={detailTarget}
           onClose={() => setDetailTarget(null)}
+        />
+      )}
+      {stockInTarget && (
+        <FertilizerStockInModal
+          isOpen={!!stockInTarget}
+          record={stockInTarget}
+          onClose={() => setStockInTarget(null)}
+          onSaved={handleStockInSaved}
         />
       )}
 

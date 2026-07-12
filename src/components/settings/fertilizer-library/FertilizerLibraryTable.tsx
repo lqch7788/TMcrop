@@ -1,12 +1,12 @@
 /**
  * 肥料库表格组件（扁平化 2026-07-12）
- * 单行 18 列：编码 / 肥料名称 / 品牌 / 肥料类型 / 施肥时期 / 当前库存 / 单价 / 功能说明 /
- *          成份与含量 / 生产厂家 / 建议用量 / 单位 / 产品批次 / 生产日期 / 过期日期 / 备注 / 操作
+ * 单行 18 列：编码 / 肥料名称 / 品牌 / 肥料类型 / 成份与含量 / 功能说明 / 包装规格 /
+ *          库存量 / 库存单位 / 单价 / 生产厂家 / 建议用量 / 单位 / 产品批次 / 生产日期 / 过期日期 / 备注 / 操作
  * 容器 overflow-x-auto，超宽时底部出现横向滚动条
  * 每条记录 = 一条 spec，含所有下沉字段
  */
 import React from 'react';
-import { Eye, Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Package } from 'lucide-react';
 import { FertilizerSpec } from '@/stores';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -18,6 +18,7 @@ interface FertilizerLibraryTableProps {
   onDetail: (record: FertilizerSpec) => void;
   onEdit: (record: FertilizerSpec) => void;
   onDelete: (id: string) => void;
+  onStockIn?: (record: FertilizerSpec) => void;
   exportMode?: boolean;
   selectedRows?: string[];
   onSelectRow?: (id: string) => void;
@@ -25,9 +26,9 @@ interface FertilizerLibraryTableProps {
 }
 
 // 列数常量（用于 colSpan）
-// 非导出模式：17 列（含操作）；导出模式：16 列 + 1 checkbox = 17
-// 2026-07-12：移除「施肥时期」和「稀释比例」两列
-const TOTAL_COLS = 17;
+// 非导出模式：18 列（含操作）；导出模式：17 列 + 1 checkbox = 18
+// 2026-07-12：移除「施肥时期」和「稀释比例」两列；新增库存单位列
+const TOTAL_COLS = 18;
 
 const getFertilizerTypeLabel = (type: string) => {
   if (!type) return '-';
@@ -35,7 +36,7 @@ const getFertilizerTypeLabel = (type: string) => {
   return label || type;
 };
 
-export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDelete, exportMode = false, selectedRows = [], onSelectRow, onSelectAll }: FertilizerLibraryTableProps) {
+export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDelete, onStockIn, exportMode = false, selectedRows = [], onSelectRow, onSelectAll }: FertilizerLibraryTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
@@ -60,7 +61,7 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* 横向滚动容器：列数 18，超宽时底部自动出滚动条 */}
       <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-        <Table style={{ minWidth: '1700px' }}>
+        <Table style={{ minWidth: '1800px' }}>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow className="hover:bg-transparent">
               {exportMode && (
@@ -77,11 +78,12 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">品牌</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料类型</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">当前库存 (kg)</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">单价 (元/单位)</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">成份与含量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">包装规格</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">库存量</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">库存单位</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap text-right">单价 (元/单位)</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产厂家</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">建议用量</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">单位</TableHead>
@@ -140,7 +142,19 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {getFertilizerTypeLabel(record.fertilizerType || '')}
                 </TableCell>
-                {/* 5. 当前库存 */}
+                {/* 5. 成份与含量 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.specContent || ''}>
+                  {record.specContent || '-'}
+                </TableCell>
+                {/* 6. 功能说明 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate" title={record.functionDesc || ''}>
+                  {record.functionDesc || '-'}
+                </TableCell>
+                {/* 7. 包装规格 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.packageSpec || ''}>
+                  {record.packageSpec || '-'}
+                </TableCell>
+                {/* 8. 库存量 */}
                 <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-right font-mono">
                   {(() => {
                     const stock = record.stockQuantity ?? 0;
@@ -156,23 +170,15 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                     );
                   })()}
                 </TableCell>
-                {/* 7. 单价 */}
+                {/* 9. 库存单位 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {record.stockUnit || 'kg'}
+                </TableCell>
+                {/* 10. 单价 */}
                 <TableCell className="px-4 py-3 text-sm text-right font-mono whitespace-nowrap">
                   {record.unitPrice != null && record.unitPrice > 0
                     ? Number(record.unitPrice).toFixed(2)
                     : <span className="text-gray-400">-</span>}
-                </TableCell>
-                {/* 8. 功能说明 */}
-                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate" title={record.functionDesc || ''}>
-                  {record.functionDesc || '-'}
-                </TableCell>
-                {/* 9. 成份与含量 */}
-                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={record.specContent || ''}>
-                  {record.specContent || '-'}
-                </TableCell>
-                {/* 10. 包装规格（2026-07-12 新增：成品包装，如 50kg/包） */}
-                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={(record as any).packageSpec || ''}>
-                  {(record as any).packageSpec || '-'}
                 </TableCell>
                 {/* 11. 生产厂家 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={record.manufacturer || ''}>
@@ -186,34 +192,34 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {getDictItemName('dosage_unit', record.dosageUnit || '') || record.dosageUnit || '-'}
                 </TableCell>
-                {/* 13. 产品批次 */}
+                {/* 14. 产品批次 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap font-mono" title={record.batchNumber || ''}>
                   {record.batchNumber || '-'}
                 </TableCell>
-                {/* 14. 生产日期 */}
+                {/* 15. 生产日期 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.productionDate || '-'}
                 </TableCell>
-                {/* 17. 过期日期 */}
+                {/* 16. 过期日期 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.expirationDate || '-'}
                 </TableCell>
-                {/* 18. 备注 */}
+                {/* 17. 备注 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={record.remark || ''}>
                   {record.remark || '-'}
                 </TableCell>
-                {/* 19. 操作（粘性列，水平滚动时锁定右侧） */}
+                {/* 18. 操作（粘性列，水平滚动时锁定右侧） */}
                 {!exportMode && (
                   <TableCell className="px-4 py-3 whitespace-nowrap sticky right-0 bg-white z-10 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.05)]">
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onDetail(record)}
+                        onClick={() => onStockIn?.(record)}
                         className="text-gray-500 hover:text-blue-600"
-                        title="查看详情"
+                        title="入库"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Package className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
