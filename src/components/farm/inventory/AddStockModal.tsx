@@ -14,7 +14,7 @@
  * - 操作人 T3 暂硬编码 'system'（T5 接 useAuthStore，已在 65a1e6d9 完成）
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Modal, FormField, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea, NumberInput } from '@/components/ui';
 import { Package, AlertCircle } from 'lucide-react';
 import {
@@ -677,34 +677,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       height={800}
     >
       <div className="space-y-4">
-        {/* 2026-07-13 方案 B：紫色提示 banner（补录模式下显示，建议填写补录原因） */}
-        {isSupplementaryMode && (
-          <div className="px-4 py-3 bg-purple-50 border border-purple-300 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-purple-800">⚙️ 补录模式</div>
-              <div className="text-xs text-purple-700 mt-0.5">
-                {formData.sourceCode
-                  ? `已绑定源记录（${formData.sourceCode}），`
-                  : '请从下方"源种植/育苗行"下拉中选择要补录的行，'}
-                建议填写"补录原因"，提交后将写入 inventory_stock.is_supplementary=1。
-              </div>
-            </div>
-          </div>
-        )}
-        {/* 2026-07-09 v5 阶段三（路径 B）：补录模式 banner（自产兜底 + 已选 sourceId 时显示） */}
-        {sourceType === 'self_produced' && formData.sourceId && (
-          <div className="px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-amber-800">补录模式</div>
-              <div className="text-xs text-amber-700 mt-0.5">
-                已绑定源种植/育苗行（{formData.sourceCode || formData.sourceId}），
-                此为"事后修正"入库，"补录原因"为必填项，提交后将写入 inventory_stock.is_supplementary。
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 2026-07-13：删除紫色 + 黄色"补录模式"banner（用户要求简化 UI）
+            校验逻辑保留：validateBySourceType 仍校验 self_produced + sourceId 有值时 supplementaryReason 必填 */}
         {/* 来源类型 - 顶部置顶，醒目 */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm font-semibold text-gray-700 mb-2">

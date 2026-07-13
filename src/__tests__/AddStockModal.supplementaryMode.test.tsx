@@ -118,16 +118,16 @@ describe('AddStockModal 方案 B 补录模式', () => {
     unmount();
   });
 
-  it('supplementaryMode=true → 紫色补录模式 banner 显示', async () => {
+  it('supplementaryMode=true → 不显示补录模式 banner（用户要求简化 UI）', async () => {
     mockGet.mockResolvedValue([]);
     const { container, unmount } = renderModal({ supplementaryMode: true });
     await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    expect(container.innerHTML).toContain('补录模式');
-    expect(container.innerHTML).toContain('请从下方');
+    // 2026-07-13：用户要求删除紫色 + 黄色补录模式 banner（UI 简化）
+    expect(container.innerHTML).not.toContain('补录模式');
     unmount();
   });
 
-  it('supplementaryMode=false → 紫色补录 banner 不显示', async () => {
+  it('supplementaryMode=false → 不显示补录模式 banner', async () => {
     mockGet.mockResolvedValue([]);
     const { container, unmount } = renderModal({ supplementaryMode: false });
     await act(async () => { await new Promise(r => setTimeout(r, 30)); });
