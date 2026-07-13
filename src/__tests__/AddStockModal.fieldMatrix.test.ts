@@ -5,6 +5,7 @@ import {
   validateBySourceType,
   fieldsToResetOnSourceTypeChange,
 } from '../components/farm/inventory/AddStockModal.constants';
+import type { FieldType } from '../components/farm/inventory/AddStockModal.constants';
 import type { SourceType } from '../types/inventoryInbound';
 
 describe('FIELD_CONFIG 6 套矩阵', () => {
@@ -196,5 +197,30 @@ describe('fieldsToResetOnSourceTypeChange', () => {
     expect(keys).not.toContain('unit');
     expect(keys).not.toContain('warehouseId');
     expect(keys).not.toContain('notes');
+  });
+});
+
+// 2026-07-13 v6：补录模式 FieldType 和字段升级
+describe('FieldType 联合类型（v6 补录模式）', () => {
+  it('包含 select-source-id', () => {
+    const t: FieldType = 'select-source-id';
+    expect(t).toBe('select-source-id');
+  });
+
+  it('包含 supplementary-reason', () => {
+    const t: FieldType = 'supplementary-reason';
+    expect(t).toBe('supplementary-reason');
+  });
+});
+
+describe('self_produced supplementaryReason 字段升级', () => {
+  it('type 应为 supplementary-reason', () => {
+    const field = FIELD_CONFIG.self_produced.find(f => f.key === 'supplementaryReason');
+    expect(field?.type).toBe('supplementary-reason');
+  });
+
+  it('required 仍为 false（运行时根据 sourceId 动态校验）', () => {
+    const field = FIELD_CONFIG.self_produced.find(f => f.key === 'supplementaryReason');
+    expect(field?.required).toBe(false);
   });
 });
