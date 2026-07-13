@@ -314,4 +314,21 @@ describe('AddStockModal 补录模式锁定', () => {
     }
     unmount();
   });
+
+  it('补录模式 → 补录原因字段由 SupplementaryReasonInput 渲染（下拉 combobox）', async () => {
+    mockApiClient.get.mockResolvedValue({ data: { items: [] } });
+    const { container, unmount } = renderInContainer({
+      prefillSourceId: 'p1',
+      prefillSourceModule: 'planting',
+      prefillStockType: 'product',
+      prefillMode: 'supplementary',
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    // 至少 2 个 combobox role（库存类型 + 补录原因）
+    const comboboxes = container.querySelectorAll('[role="combobox"]');
+    expect(comboboxes.length).toBeGreaterThanOrEqual(2);
+    unmount();
+  });
 });

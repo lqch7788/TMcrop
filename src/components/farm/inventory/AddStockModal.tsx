@@ -43,6 +43,8 @@ import {
 import { toPayload, buildOperatorInfo } from '@/services/addStockFormAdapter';
 import { useAuthStore } from '@/stores/useAuthStore';
 import CropCodeSelector from '../common/CropCodeSelector';
+// 2026-07-13 v6：补录原因复合组件（下拉 + "其他"时自定义文本框）
+import { SupplementaryReasonInput } from './SupplementaryReasonInput';
 
 // 业务推荐：用户主要诉求是"非采收/非采购"的其他入库途径
 // 顺序按"使用频率"排列：外购 > 赠送 > 委托 > 调拨 > 手动 > 自产（兜底）
@@ -228,6 +230,14 @@ function renderFieldByType(
             ))}
           </SelectContent>
         </Select>
+      );
+    case 'supplementary-reason':
+      // 2026-07-13 v6：补录原因下拉 + 自定义复合组件
+      return (
+        <SupplementaryReasonInput
+          value={String(value || '')}
+          onChange={(v) => onChange(v)}
+        />
       );
     case 'select-source-id':
       // 2026-07-09 v5 阶段三（路径 B）：自产（兜底）模式加 sourceId 下拉
