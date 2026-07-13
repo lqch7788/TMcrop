@@ -27,7 +27,7 @@
  * ============================================================================
  */
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+// 2026-07-13 方案 B：删除 useNavigate import（补录跳转已废除）
 import { Label } from '@/components/ui'
 import { UnifiedModal } from '@/components/ui'
 import { Input, TextArea, DatePicker } from '@/components/ui'
@@ -551,33 +551,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     URL.revokeObjectURL(url)
   }
 
-  // 2026-07-09 v6：弹窗内"补录"按钮 → 跳转 AddStockModal
-  // 仅在已结束/已取消行显示（符合 v6 设计："必须有采收弹窗，弹窗内补录按钮跳转"）
-  const navigate = useNavigate();
-  const SupplementaryJumpButton = ({ record }: { record: Planting }) => {
-    const handleSupplementaryJump = () => {
-      const params = new URLSearchParams({
-        openStockModal: 'true',
-        sourceModule: 'planting',
-        sourceId: record.id,
-        sourceCode: record.plantCode || '',
-        stockType: 'product',
-        mode: 'supplementary',
-      })
-      navigate(`/crop-inventory?${params.toString()}`)
-    }
-    return (
-      <Button
-        size="sm"
-        variant="default"
-        className="bg-amber-600 hover:bg-amber-700 text-white"
-        onClick={handleSupplementaryJump}
-        title={'跳转到统一库存页的「自产（兜底）」模式（已预填 sourceId）'}
-      >
-        🔼 补录入库
-      </Button>
-    )
-  }
+  // 2026-07-13 方案 B：删除补录跳转（统一在 InventoryV3 "补录入库"按钮内实现）
+  // 保留 isSourceEnded 判定但不再渲染 SupplementaryJumpButton
 
   return (
     <UnifiedModal
@@ -596,7 +571,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         return (
           <div className="flex items-center gap-3">
             <span>{`采收 - ${record.plantCode}（${record.cropName || ''} · ${record.cropVariety || ''}）`}</span>
-            {isSourceEnded && <SupplementaryJumpButton record={record} />}
           </div>
         )
       })()}
