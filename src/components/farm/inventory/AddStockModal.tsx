@@ -449,8 +449,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       try {
         const { enhancedApiClient } = await import('@/lib/apiClient');
         const query = new URLSearchParams({ page: '1', pageSize: '200' }).toString();
-        const [seedRes, seedlingRes, plantingRes] = await Promise.all([
-          enhancedApiClient.get<any[]>(`/seed-sources?${query}`),
+        // 2026-07-13 v7：补录只针对已结束的育苗/种植行（种源不能采收，不入补录范围）
+        // 前端过滤 status==='ended' || status==='cancelled'（行级流程已关闭）
+        const [seedlingRes, plantingRes] = await Promise.all([
           enhancedApiClient.get<any[]>(`/seedlings?${query}`),
           enhancedApiClient.get<any[]>(`/plantings?${query}`),
         ]);
@@ -458,21 +459,13 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         const extractItems = (res: any): any[] =>
           Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
 
+        // 过滤：只保留已结束的（ended/cancelled）
+        const isEnded = (it: any) => it.status === 'ended' || it.status === 'cancelled';
+
         const options: typeof sourceIdOptions = [];
 
-        // 种源（字段：seedCode）
-        for (const it of extractItems(seedRes)) {
-          options.push({
-            value: String(it.id),
-            label: `[种源] ${it.seedCode || it.code || it.id} - ${it.cropName || ''}`,
-            module: 'seed-source',
-            code: it.seedCode || it.code,
-            cropName: it.cropName,
-            cropCode: it.cropCode,
-          });
-        }
         // 育苗（字段：seedlingCode）
-        for (const it of extractItems(seedlingRes)) {
+        for (const it of extractItems(seedlingRes).filter(isEnded)) {
           options.push({
             value: String(it.id),
             label: `[育苗] ${it.seedlingCode || it.code || it.id} - ${it.cropName || ''}`,
@@ -483,7 +476,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           });
         }
         // 种植（字段：plantCode）
-        for (const it of extractItems(plantingRes)) {
+        for (const it of extractItems(plantingRes).filter(isEnded)) {
           options.push({
             value: String(it.id),
             label: `[种植] ${it.plantCode || it.code || it.id} - ${it.cropName || ''}`,
