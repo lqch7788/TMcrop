@@ -47,14 +47,15 @@ import CropCodeSelector from '../common/CropCodeSelector';
 import { SupplementaryReasonInput } from './SupplementaryReasonInput';
 
 // 业务推荐：用户主要诉求是"非采收/非采购"的其他入库途径
-// 顺序按"使用频率"排列：外购 > 赠送 > 委托 > 调拨 > 手动 > 自产（兜底）
+// 顺序按"使用频率"排列：外购 > 赠送 > 委托 > 调拨 > 手动 > 补录入库
+// 2026-07-13 方案 D：自产（兜底）→ 补录入库（语义统一：选它=进入补录模式，sourceId+supplementaryReason 必填）
 const SOURCE_OPTIONS: Array<{ value: SourceTypeLiteral; label: string; color: string; hint: string }> = [
   { value: 'external_purchased', label: '外购入库', color: 'text-blue-600', hint: '从外部市场采购入库' },
   { value: 'gift',             label: '赠送/受赠', color: 'text-purple-600', hint: '他人或单位赠送的作物' },
   { value: 'commissioned',     label: '委托生产', color: 'text-amber-600', hint: '委托他方生产后交付' },
   { value: 'transfer',         label: '调拨入库', color: 'text-emerald-600', hint: '从其他基地/仓库调入' },
   { value: 'manual',           label: '手动录入', color: 'text-slate-600', hint: '盘点/期初/其他' },
-  { value: 'self_produced',    label: '自产（兜底）', color: 'text-orange-600', hint: '建议走"采收入库"页' },
+  { value: 'self_produced',    label: '补录入库', color: 'text-orange-600', hint: '为种植/育苗/种源行做补录入库' },
 ];
 
 const STOCK_TYPE_OPTIONS: Array<{ value: StockTypeLiteral; label: string }> = [
@@ -79,10 +80,8 @@ interface AddStockModalProps {
   sourceRecord?: InboundSourceRecord | null;
   /** 库存类型；不传则默认 product */
   stockType?: StockTypeLiteral;
-  // 2026-07-13 方案 B：删除 prefillSource*/prefillMode props
-  // 补录统一从 InventoryV3 "补录入库" 按钮进入（supplementaryMode=true）
-  /** 补录模式：true → sourceType 强制 self_produced + 显示紫色 banner + sourceId 必填 */
-  supplementaryMode?: boolean;
+  // 2026-07-13 方案 D：删除 supplementaryMode prop
+  // 补录入口统一在弹窗内"补录入库"来源按钮（6 来源里的 self_produced 选项）
 }
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -242,8 +241,10 @@ function renderFieldByType(
         />
       );
     case 'select-source-id':
-      // 2026-07-13 方案 B：sourceId 下拉 + 搜索框
+      // 2026-07-13 方案 D：sourceId 下拉 + 搜索框
       // 三类源记录（种源/育苗/种植）合并到一个下拉，按 label/code/cropName 模糊搜索
+      // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector
+      // （cropSelector 联动让下方"作物选择"字段自动显示已选，无需用户重复选择）
       return (
         <div className="space-y-2">
           <Input
@@ -263,6 +264,8 @@ function renderFieldByType(
                   sourceCode: found.code,
                   cropName: found.cropName,
                   cropCode: found.cropCode,
+                  // 2026-07-13 v6+：联动写入 cropSelector，让"作物选择"字段显示已选
+                  cropSelector: found.cropCode,
                 });
               }
             }
@@ -378,7 +381,6 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   onSuccess,
   sourceRecord = null,
   stockType: stockTypeProp,
-  supplementaryMode = false,
 }) => {
   // ---- Store 数据 ----
   const warehouses = useWarehouseStore((s) => s.warehouses);
@@ -527,17 +529,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   const sourceInfo = SOURCE_OPTIONS.find((s) => s.value === sourceType);
 
-  // 2026-07-13 方案 B：补录模式判定
-  // - supplementaryMode=true（从 InventoryV3 "补录入库"按钮进入）→ 显示紫色 banner + 强制 sourceType=self_produced
-  // - formData.sourceId 有值（行级入库选中）→ 也算补录（保留原有判定）
-  const isSupplementaryMode = supplementaryMode || !!formData.sourceId;
-
-  // 补录模式下：弹窗打开即强制 sourceType=self_produced（用户仍可手动切换，但 banner 提示建议保留）
-  useEffect(() => {
-    if (isOpen && isSupplementaryMode && sourceType !== 'self_produced') {
-      setSourceType('self_produced');
-    }
-  }, [isOpen, isSupplementaryMode, sourceType]);
+  // 2026-07-13 方案 D：补录入口统一在 6 来源里的"补录入库"按钮（value=self_produced）
+  // 用户点"补录入库"按钮即进入补录模式（sourceType=self_produced）
+  // 无需内部 supplementaryMode state、banner、强制 useEffect
+  // 校验：validateBySourceType 已保证 self_produced + sourceId 有值时 supplementaryReason 必填
 
   // ---- 切换来源：清空专属字段，避免残留 ----
   const handleSourceTypeChange = (newSource: SourceTypeLiteral) => {
@@ -739,6 +734,20 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         </div>
 
+        {/* 2026-07-13 方案 D：补录模式（self_produced）下，源行选择放在作物选择前面
+            选完源行后自动联动填作物字段，作物选择自动显示已选状态无需用户操作 */}
+        {sourceType === 'self_produced' && (
+          <FormField label="源种植/育苗行 *">
+            {renderFieldByType(
+              FIELD_CONFIG.self_produced.find(f => f.key === 'sourceId')!,
+              formData.sourceId,
+              (v) => handleFieldChange('sourceId', v),
+              renderCtx,
+            )}
+            {errors.sourceId && <div className="text-xs text-red-500 mt-1">{errors.sourceId}</div>}
+          </FormField>
+        )}
+
         {/* 第 2 行：作物选择(50%) + 作物形态+品质等级(50% 合成块) */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="作物选择 *">
@@ -798,7 +807,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate')
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId')  // 2026-07-13 方案 D：sourceId 在补录模式下独立渲染（作物选择上方）
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];

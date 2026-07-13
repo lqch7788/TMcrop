@@ -219,8 +219,8 @@ describe('self_produced supplementaryReason 字段升级', () => {
     expect(field?.type).toBe('supplementary-reason');
   });
 
-  it('required 仍为 false（运行时根据 sourceId 动态校验）', () => {
+  it('required 应为 true（2026-07-13 方案 D：自产=补录，强制必填）', () => {
     const field = FIELD_CONFIG.self_produced.find(f => f.key === 'supplementaryReason');
-    expect(field?.required).toBe(false);
+    expect(field?.required).toBe(true);
   });
 });

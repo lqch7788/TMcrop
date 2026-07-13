@@ -1,12 +1,12 @@
 /**
- * AddStockModal 方案 B 补录模式测试
+ * AddStockModal 方案 D 测试 — 自产（兜底）= 补录入库
  * 2026-07-13
  *
  * 验证点：
- * - supplementaryMode=true → 弹窗 open 时并行加载 3 个 sourceId 列表（种源/育苗/种植）
- * - supplementaryMode=true → 紫色补录模式 banner 显示
- * - supplementaryMode=false → 紫色 banner 不显示
- * - supplementaryMode=true → sourceType 强制 self_produced
+ * - SOURCE_OPTIONS 中 "自产（兜底）" 重命名为 "补录入库"
+ * - select "补录入库" 后，sourceType 切换为 self_produced
+ * - supplementaryReason 必填（FIELD_CONFIG.required=true）
+ * - 不显示任何紫色/黄色补录模式 banner
  */
 
 import React from 'react';
@@ -71,6 +71,10 @@ vi.mock('@/lib/dialogService', () => ({
 }));
 
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
+import {
+  FIELD_CONFIG,
+  validateBySourceType,
+} from '../components/farm/inventory/AddStockModal.constants';
 
 const mockGet = (globalThis as any).__mockApiClient.get as ReturnType<typeof vi.fn>;
 
@@ -90,78 +94,118 @@ function renderModal(props: any = {}) {
   };
 }
 
-describe('AddStockModal 方案 B 补录模式', () => {
+describe('AddStockModal 方案 D：自产（兜底）= 补录入库', () => {
   beforeEach(() => {
     mockGet.mockReset();
     mockGet.mockResolvedValue([]);
   });
 
-  it('supplementaryMode=true → 弹窗 open 时加载 3 个 sourceId 列表', async () => {
-    mockGet.mockImplementation(async (url: string) => {
-      if (url.includes('/seed-sources')) {
-        return [{ id: 's1', seedCode: 'ZY001', cropName: '种源作物' }];
-      }
-      if (url.includes('/seedlings')) {
-        return [{ id: 'y1', seedlingCode: 'YM001', cropName: '育苗作物' }];
-      }
-      if (url.includes('/plantings')) {
-        return [{ id: 'p1', plantCode: 'P001', cropName: '种植作物' }];
-      }
-      return [];
+  describe('6 来源按钮渲染（DOM 验证）', () => {
+    it('弹窗显示"补录入库"按钮（替代旧的"自产（兜底）"）', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      const buttons = Array.from(container.querySelectorAll('button')).map(b => b.textContent?.trim());
+      expect(buttons.some(t => t?.includes('补录入库'))).toBe(true);
+      // 不再有"自产（兜底）"
+      expect(buttons.some(t => t?.includes('自产（兜底）'))).toBe(false);
+      unmount();
     });
-    const { unmount } = renderModal({ supplementaryMode: true });
-    await act(async () => { await new Promise(r => setTimeout(r, 80)); });
-    const calls = mockGet.mock.calls.map((c: any) => c[0]);
-    expect(calls).toEqual(expect.arrayContaining([expect.stringMatching(/\/seed-sources/)]));
-    expect(calls).toEqual(expect.arrayContaining([expect.stringMatching(/\/seedlings/)]));
-    expect(calls).toEqual(expect.arrayContaining([expect.stringMatching(/\/plantings/)]));
-    unmount();
+
+    it('"补录入库"按钮的 hint 文案正确', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      expect(container.innerHTML).toContain('为种植/育苗/种源行做补录入库');
+      unmount();
+    });
   });
 
-  it('supplementaryMode=true → 不显示补录模式 banner（用户要求简化 UI）', async () => {
-    mockGet.mockResolvedValue([]);
-    const { container, unmount } = renderModal({ supplementaryMode: true });
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    // 2026-07-13：用户要求删除紫色 + 黄色补录模式 banner（UI 简化）
-    expect(container.innerHTML).not.toContain('补录模式');
-    unmount();
+  describe('FIELD_CONFIG 必填校验', () => {
+    it('self_produced.sourceId 必填', () => {
+      const f = FIELD_CONFIG.self_produced.find(x => x.key === 'sourceId');
+      expect(f?.required).toBe(true);
+    });
+
+    it('self_produced.supplementaryReason 必填（方案 D：自产=补录，强制必填）', () => {
+      const f = FIELD_CONFIG.self_produced.find(x => x.key === 'supplementaryReason');
+      expect(f?.required).toBe(true);
+    });
+
+    it('validateBySourceType: self_produced + sourceId 为空 → 报 sourceId 必填', () => {
+      const errs = validateBySourceType(
+        { quantity: 1, unit: '克', recordDate: '2026-07-13', cropSelector: 'c1', warehouseId: 'w1', baseId: 'b1', supplementaryReason: '采收时漏登' },
+        'self_produced',
+      );
+      expect(errs.sourceId).toBe('必填');
+    });
+
+    it('validateBySourceType: self_produced + sourceId 有值 + supplementaryReason 为空 → 报 supplementaryReason 必填', () => {
+      const errs = validateBySourceType(
+        { quantity: 1, unit: '克', recordDate: '2026-07-13', cropSelector: 'c1', warehouseId: 'w1', baseId: 'b1', sourceId: 'p1' },
+        'self_produced',
+      );
+      expect(errs.supplementaryReason).toBe('必填');
+    });
+
+    it('validateBySourceType: self_produced + 全部必填齐 → 不报错', () => {
+      const errs = validateBySourceType(
+        {
+          quantity: 1, unit: '克', recordDate: '2026-07-13', cropSelector: 'c1', warehouseId: 'w1',
+          baseId: 'b1', sourceId: 'p1', supplementaryReason: '采收时漏登', cropForm: '果实',
+        },
+        'self_produced',
+      );
+      expect(Object.keys(errs)).toHaveLength(0);
+    });
   });
 
-  it('supplementaryMode=false → 不显示补录模式 banner', async () => {
-    mockGet.mockResolvedValue([]);
-    const { container, unmount } = renderModal({ supplementaryMode: false });
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    expect(container.innerHTML).not.toContain('补录模式');
-    unmount();
-  });
+  describe('弹窗渲染', () => {
+    it('弹窗显示 6 个来源按钮（含"补录入库"）', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      const buttons = Array.from(container.querySelectorAll('button')).map(b => b.textContent?.trim());
+      expect(buttons.some(t => t?.includes('补录入库'))).toBe(true);
+      // 不应再有"自产（兜底）"按钮
+      expect(buttons.some(t => t?.includes('自产（兜底）'))).toBe(false);
+      unmount();
+    });
 
-  it('supplementaryMode=true → sourceType 强制 self_produced', async () => {
-    mockGet.mockResolvedValue([]);
-    const { container, unmount } = renderModal({ supplementaryMode: true });
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    // 自产（兜底）按钮被选中（蓝边框 + 白底）
-    const selfProdBtn = Array.from(container.querySelectorAll('button')).find((b: any) =>
-      b.textContent?.includes('自产（兜底）'),
-    );
-    expect(selfProdBtn?.className).toContain('border-blue-500');
-    unmount();
-  });
+    it('默认显示外购入库（不变）', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      const html = container.innerHTML;
+      expect(html).toContain('外购入库');
+      unmount();
+    });
 
-  it('supplementaryMode=true → 源行下拉显示搜索框', async () => {
-    mockGet.mockResolvedValue([]);
-    const { container, unmount } = renderModal({ supplementaryMode: true });
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    const searchInput = container.querySelector('input[placeholder*="搜索源记录"]');
-    expect(searchInput).toBeTruthy();
-    unmount();
-  });
+    it('点击"补录入库"按钮 → 切到 self_produced（蓝边框选中）', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      const btn = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('补录入库'));
+      expect(btn).toBeTruthy();
+      act(() => { (btn as HTMLButtonElement).click(); });
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      // 该按钮应被选中（蓝边框）
+      const btnAfter = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('补录入库'));
+      expect(btnAfter?.className).toContain('border-blue-500');
+      unmount();
+    });
 
-  it('sourceId 加载失败 → console.warn 不抛错', async () => {
-    mockGet.mockRejectedValue(new Error('network error'));
-    const { container, unmount } = renderModal({ supplementaryMode: true });
-    await act(async () => { await new Promise(r => setTimeout(r, 30)); });
-    // 弹窗仍正常渲染（无错误边界触发）
-    expect(container.innerHTML).toContain('新建入库');
-    unmount();
+    it('弹窗内不显示任何"补录模式"标题（用户要求简化）', async () => {
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      // 弹窗底部"自产来源建议走采收入库页"是帮助文案（非补录 banner），允许 bg-amber-50
+      // 关键断言：紫色 banner（bg-purple-50）和"补录模式"标题文字不存在
+      expect(container.innerHTML).not.toContain('bg-purple-50');
+      expect(container.innerHTML).not.toContain('补录模式');
+      unmount();
+    });
+
+    it('sourceId 加载失败 → console.warn 不抛错（不影响弹窗渲染）', async () => {
+      mockGet.mockRejectedValue(new Error('network error'));
+      const { container, unmount } = renderModal();
+      await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+      expect(container.innerHTML).toContain('新建入库');
+      unmount();
+    });
   });
 });
