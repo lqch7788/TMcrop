@@ -111,7 +111,8 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
   self_produced: [
     // 2026-07-09 v5 阶段三（路径 B）：补录入口
     // 用户从种植/育苗行 navigate 过来时，prefillSourceId 预填此字段
-    { key: 'sourceId', label: '源种植/育苗行', required: false, type: 'select-source-id' },
+    // 2026-07-13 方案 B：required 改为 true（弹窗搜索 + 必填校验保持一致）
+    { key: 'sourceId', label: '源种植/育苗行', required: true, type: 'select-source-id' },
     { key: 'baseId', label: '所属基地', required: true, type: 'base-select' },
     { key: 'plantingMode', label: '种植模式', required: false, type: 'text' },
     { key: 'greenhouseName', label: '采收区域', required: false, type: 'text' },
