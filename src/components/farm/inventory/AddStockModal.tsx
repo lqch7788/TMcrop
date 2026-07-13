@@ -417,7 +417,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     if (sourceIdOptions.length > 0) return;
     (async () => {
       try {
-        const enhancedApiClient = (await import('@/lib/apiClient')).default;
+        // 2026-07-13 v7：增强 API 是 named export，dynamic import 必须解构 .enhancedApiClient
+        // v6 用 .default 是错的，导致 runtime "Cannot read properties of undefined (reading 'get')"
+        const { enhancedApiClient } = await import('@/lib/apiClient');
         // 按 prefillStockType 选 endpoint（兜底 product）
         const stockType = prefillStockType || 'product';
         const endpoint = stockType === 'seed'
@@ -438,10 +440,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           stockType === 'seed' ? 'seed-source' : stockType === 'seedling' ? 'seedling' : 'planting';
         const prefix = stockType === 'seed' ? '种源' : stockType === 'seedling' ? '育苗' : '种植';
 
-        const res = await enhancedApiClient.get<{ data: any[] }>(
+        const res = await enhancedApiClient.get<any[]>(
           `${endpoint}?${new URLSearchParams({ page: '1', pageSize: '200' }).toString()}`,
         );
-        const items = (res as any)?.data?.items || (res as any)?.data || [];
+        // 2026-07-13 v7 修复：enhancedApiClient 已自动解包 result.data（api-client-response-unwrapping 铁律）
+        // 所以 res 直接是数组，不再是 {data: [...]} 包装
+        const items: any[] = Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
         const options: typeof sourceIdOptions = items.map((it: any) => ({
           value: String(it.id),
           label: `[${prefix}] ${it[codeField] || it.code || it.id} - ${it.cropName || ''}`,
