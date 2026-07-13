@@ -400,44 +400,47 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     }
   }, [isOpen]);
 
-  // 2026-07-09 v5 阶段三（路径 B）：加载种植/育苗列表作为 sourceId 下拉选项
+  // 2026-07-13 v6：sourceId 按 stockType 动态加载（种源/育苗/种植 三选一）
+  // 历史版本 v5 同时拉种植+育苗两个列表 — 现改为按 prefillStockType 选 endpoint
   useEffect(() => {
     if (!isOpen) return;
     if (sourceIdOptions.length > 0) return;
     (async () => {
       try {
         const enhancedApiClient = (await import('@/lib/apiClient')).default;
-        const [plantingsRes, seedlingsRes] = await Promise.all([
-          enhancedApiClient.get<{ data: any[] }>('/plantings', { params: { page: 1, pageSize: 200 } }),
-          enhancedApiClient.get<{ data: any[] }>('/seedlings', { params: { page: 1, pageSize: 200 } }),
-        ]);
-        const options: typeof sourceIdOptions = [];
-        const plantings = plantingsRes?.data?.items || plantingsRes?.data || [];
-        const seedlings = seedlingsRes?.data?.items || seedlingsRes?.data || [];
-        for (const p of plantings) {
-          options.push({
-            value: p.id,
-            label: `[种植] ${p.plantingCode || p.id} - ${p.cropName || ''}`,
-            module: 'planting',
-            code: p.plantingCode,
-            cropName: p.cropName,
-            cropCode: p.cropCode,
-          });
-        }
-        for (const s of seedlings) {
-          options.push({
-            value: s.id,
-            label: `[育苗] ${s.seedlingCode || s.id} - ${s.cropName || ''}`,
-            module: 'seedling',
-            code: s.seedlingCode,
-            cropName: s.cropName,
-            cropCode: s.cropCode,
-          });
-        }
-        setSourceIdOptions(options)
+        // 按 prefillStockType 选 endpoint（兜底 product）
+        const stockType = prefillStockType || 'product';
+        const endpoint = stockType === 'seed'
+          ? '/seed-sources'
+          : stockType === 'seedling'
+          ? '/seedlings'
+          : '/plantings';
+        // 三类源记录的 code 字段命名不同：seed → sourceCode；seedling → seedlingCode；planting → plantingCode
+        const codeField = stockType === 'seed'
+          ? 'sourceCode'
+          : stockType === 'seedling'
+          ? 'seedlingCode'
+          : 'plantingCode';
+        const moduleValue: 'seed-source' | 'seedling' | 'planting' =
+          stockType === 'seed' ? 'seed-source' : stockType === 'seedling' ? 'seedling' : 'planting';
+        const prefix = stockType === 'seed' ? '种源' : stockType === 'seedling' ? '育苗' : '种植';
+
+        const res = await enhancedApiClient.get<{ data: any[] }>(endpoint, {
+          params: { page: 1, pageSize: 200 },
+        });
+        const items = (res as any)?.data?.items || (res as any)?.data || [];
+        const options: typeof sourceIdOptions = items.map((it: any) => ({
+          value: String(it.id),
+          label: `[${prefix}] ${it[codeField] || it.code || it.id} - ${it.cropName || ''}`,
+          module: moduleValue,
+          code: it[codeField] || it.code,
+          cropName: it.cropName,
+          cropCode: it.cropCode,
+        }));
+        setSourceIdOptions(options);
         // 加载完立即预填（如果 URL 携带 prefillSourceId）
         if (prefillSourceId) {
-          const found = options.find((o) => o.value === prefillSourceId)
+          const found = options.find((o) => o.value === prefillSourceId);
           if (found) {
             setFormData((prev) => ({
               ...prev,
@@ -446,15 +449,15 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
               sourceCode: prefillSourceCode || found.code,
               cropName: found.cropName,
               cropCode: found.cropCode,
-            }))
+            }));
           }
         }
       } catch (e) {
         // 加载失败不影响主流程
-        console.warn('[AddStockModal] 加载 sourceId 列表失败:', e)
+        console.warn('[AddStockModal] 加载 sourceId 列表失败:', e);
       }
-    })()
-  }, [isOpen, prefillSourceId, prefillSourceCode, prefillSourceModule])
+    })();
+  }, [isOpen, prefillSourceId, prefillSourceCode, prefillSourceModule, prefillStockType])
 
   // 字典加载完成后切出 unit / crop_form 两类选项
   useEffect(() => {
