@@ -323,8 +323,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const handleSubmit = async () => {
     setError(null)
 
-    // 2026-07-09 v5 阶段三（路径 B）：补录校验已下沉到 AddStockModal.validateBySourceType
-    // 本弹窗不再处理补录校验
+    // 2026-07-13：只读模式下禁止提交（防御性校验，UI 已隐藏提交按钮）
 
     const input = {
       stockType,
@@ -422,10 +421,11 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
 
   // ---- UI ----
   const meta = STOCK_TYPE_LABEL[stockType]
-  // 2026-07-13 方案 B：删除补录跳转 UI（补录统一在 InventoryV3 实现）
+  // 2026-07-13：已结束/已取消/已完成/已移植的行 → 只读模式（仅查看采收记录+导出，不能入库）
+  const isReadOnly = !!(sourceRecord.status && ['ended', 'cancelled', 'completed', 'transplanted'].includes(sourceRecord.status))
   const titleText = (
     <div className="flex items-center gap-3">
-      <span>采收入库（{meta.label}）</span>
+      <span>采收入库（{meta.label}）{isReadOnly && <span className="text-amber-600 text-sm font-normal">— 只读</span>}</span>
     </div>
   )
 
@@ -572,8 +572,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             onClick={onClose}
             disabled={submitting}
           >
-            取消
+            {isReadOnly ? '关闭' : '取消'}
           </Button>
+          {!isReadOnly && (
           <Button
             variant="default"
             size="sm"
@@ -582,6 +583,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           >
             {submitting ? '提交中...' : '确认入库'}
           </Button>
+          )}
         </div>
       }
     >
@@ -608,8 +610,21 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           </div>
         )}
 
+        {/* 2026-07-13：只读模式提示 — 该行已结束，入库功能已屏蔽，仅可查看/导出采收记录 */}
+        {isReadOnly && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+            <div className="text-sm text-amber-800">
+              <span className="font-semibold">只读模式</span> — 该行已结束，不能进行采收入库操作。如需补录，请到「作物库存 → 新建入库 → 补录入库」。
+            </div>
+          </div>
+        )}
+
         {/* 基础字段单行布局：4 个字段（采收日期 / 目标仓库 / 采收员 / 操作员）同行展示。
-            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 10。 */}
+            采收员占 4 列（多选 chip 区域需要更宽），其他各占 2 列，合计 10。
+            2026-07-13：只读模式下隐藏所有表单字段，仅显示采收历史记录。 */}
+        {!isReadOnly && (
+        <>
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-2">
             <FormField label="采收日期" required>
@@ -872,6 +887,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             className={deepInputClass}
           />
         </FormField>
+        </>
+        )}
 
         {/* 2026-07-01: 弹窗底部"采收记录"历史表（仿照种植 HarvestRecordModal 样式）
             数据来自 harvest_records 表按 (source_module, source_id) 过滤

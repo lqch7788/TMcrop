@@ -178,6 +178,14 @@ export interface InventoryStock {
   auditor?: string;
   /** 备注 */
   remarks?: string;
+  /** 2026-07-13：补录入库标记 */
+  isSupplementary?: number;
+  /** 2026-07-13：补录原因 */
+  supplementaryReason?: string;
+  /** 2026-07-13：补录来源模块（planting/seedling） */
+  sourceModule?: string;
+  /** 2026-07-13：补录来源记录ID */
+  sourceRecordId?: string;
   /** 采收区域（多个时用、分隔） */
   greenhouseName?: string;
   /** 种植区域（plantings.area_name） */

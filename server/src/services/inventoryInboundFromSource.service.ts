@@ -353,6 +353,10 @@ export async function executeInboundFromSource(
         // 移除 propagation_form 写入 — 种源入库的 seedForm 走 seed_sources 表独立链路
         product_form: product.productForm || null,        // 采收形态（product 行用）
         source_form: product.sourceForm || null,          // 育苗/种植产物类型（统一形态字段）
+        // 2026-07-13：补录入库字段（写入 inventory_stock 表，让库存列表/详情可展示补录标记）
+        is_supplementary: input.isSupplementary ? 1 : 0,
+        supplementary_reason: input.supplementaryReason || null,
+        source_module: input.sourceModule || null,
         status: 'in_stock',
         version: 1,
         create_time: now,
@@ -362,6 +366,7 @@ export async function executeInboundFromSource(
       // 写入 inventory_stock（种源/育苗/种植三入口统一落库）
       // 2026-06-30 Bug 21：列清单删除 propagation_form（统一走产品明细 sourceForm）
       // 2026-07-06：种源外购入库 — 补 supplier_id/supplier_name/unit_price/total_amount 字段
+      // 2026-07-13：补录入库字段（is_supplementary / supplementary_reason / source_module）
       db.run(`
         INSERT INTO inventory_stock (
           id, instance_id, stock_type, business_id, business_type, business_code,
@@ -374,8 +379,9 @@ export async function executeInboundFromSource(
           planting_mode, greenhouse_name,
           product_form, source_form,
           area_name,
+          is_supplementary, supplementary_reason, source_module,
           status, version, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         stockRecord.id, stockRecord.instance_id, stockRecord.stock_type,
         stockRecord.business_id, stockRecord.business_type, stockRecord.business_code,
@@ -388,6 +394,7 @@ export async function executeInboundFromSource(
         stockRecord.planting_mode, stockRecord.greenhouse_name,
         stockRecord.product_form, stockRecord.source_form,
         stockRecord.area_name,
+        stockRecord.is_supplementary, stockRecord.supplementary_reason, stockRecord.source_module,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
       writtenStockIds.push(stockId);

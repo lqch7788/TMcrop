@@ -591,14 +591,14 @@ export function PlantingTable({
                   <Package className="w-4 h-4" />
                 </Button>
               )}
-              {/* 2026-07-09 v5 阶段一补漏：采收入库（补录）— 任何已结束/已取消行都可见
-                  之前 v4 条件 (isAbnormalEnded || isCancelled) 让"正常结束"行无法补录，与 v5 单态设计矛盾 */}
+              {/* 2026-07-13：已结束/已取消行显示"采收记录"按钮（只读），用于查看历史采收记录和导出。
+                  入库操作已屏蔽，补录统一走「作物库存→新建入库→补录入库」。 */}
               {onInbound && (isEnded || isCancelled) && (
                 <Button
                   variant="ghost" size="icon"
                   onClick={() => onInbound(record)}
-                  className={isCancelled ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50' : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
-                  title={isCancelled ? '采收（已取消，仅查看）' : '采收（补录）'}
+                  className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                  title="采收记录（只读）"
                 >
                   <Package className="w-4 h-4" />
                 </Button>
@@ -1174,16 +1174,14 @@ export function PlantingTable({
                               title="采收"
                             />
                           )}
-                          {/* 2026-07-09 v5 阶段一补漏：任何已结束/已取消行都可见"采收入库"（补录）按钮 */}
+                          {/* 2026-07-13：已结束/已取消行显示"采收记录"按钮（只读），用于查看历史采收记录和导出。 */}
                           {onInbound && (isEnded || isCancelled) && (
                             <ActionIconButton
                               variant="harvest"
                               icon={<Package className="w-4 h-4" />}
                               onClick={() => onInbound(record)}
-                              className={isCancelled
-                                ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
-                                : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'}
-                              title={isCancelled ? '采收（已取消，仅查看）' : '采收（补录）'}
+                              className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                              title="采收记录（只读）"
                             />
                           )}
                           {onMove && !record.isHarvest && (
