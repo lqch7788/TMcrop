@@ -65,8 +65,14 @@ export function toPayload(
     // 来源信息（行级弹窗从 sourceRecord，页面级弹窗默认 'manual' 标识 + 空 sourceId）
     // 2026-07-08 P0 修复：原 'planting' 兜底会让后端 InboundSchema 误判为"行级种植入库"并要求 sourceId
     //                  改为 'manual' 标识 + 空 sourceId 后，后端 fetchSourceRow 短路返回 null
-    sourceModule: sourceRecord?.module ?? 'manual',
-    sourceId: sourceRecord?.id ?? '',
+    // 2026-07-13 修复：补录入库（self_produced）的 sourceId/sourceModule 从 formData 读取（用户在下拉菜单中选中），
+    //                  不再从 sourceRecord（页面级始终为 null）读取，否则 sourceId 始终为空、sourceModule 始终为 'manual'
+    sourceModule: (sourceType === 'self_produced' && str(formData.sourceModule))
+      ? str(formData.sourceModule)!
+      : (sourceRecord?.module ?? 'manual'),
+    sourceId: (sourceType === 'self_produced' && str(formData.sourceId))
+      ? str(formData.sourceId)!
+      : (sourceRecord?.id ?? ''),
     sourceType,
     stockType: extra.stockType,
 

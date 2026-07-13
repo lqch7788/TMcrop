@@ -309,11 +309,11 @@ export function InventoryTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        {/* 2026-07-13：补录标记徽章（仅 is_supplementary=1 显示） */}
-                        {((stock as any).isSupplementary === 1 || (stock as any).is_supplementary === 1) && (
+                        {/* 2026-07-13：补录标记徽章（仅 isSupplementary=1 显示） */}
+                        {stock.isSupplementary === 1 && (
                           <span
                             className="px-2 py-1 bg-purple-600 text-white text-xs rounded-full font-medium"
-                            title={(stock as any).supplementaryReason || (stock as any).supplementary_reason || '补录入库'}
+                            title={stock.supplementaryReason || '补录入库'}
                           >
                             ⚙️ 补录
                           </span>
