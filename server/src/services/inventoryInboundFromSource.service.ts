@@ -284,6 +284,30 @@ export async function executeInboundFromSource(
     ]);
     writtenRecordIds.push(harvestRecordId);
 
+    // 2026-07-13：回写源记录的 harvest_to_inventory_qty 字段（让种植/育苗列表"已入库量"包含补录量）
+    // 之前补录入库只往 inventory_inbound_records 写 is_supplementary=1，但源记录的 harvest_to_inventory_qty 不更新
+    // 导致种植/育苗列表显示的"已入库量"遗漏了补录部分
+    // 注意：仅在 sourceModule='planting'/'seedling' 且 isSupplementary=true 时回写（种源不入库，无此字段）
+    if (input.isSupplementary && (input.sourceModule === 'planting' || input.sourceModule === 'seedling')) {
+      // 计算本次入库总量（跨所有 products）
+      const totalQuantity = (input.products || []).reduce(
+        (sum, p) => sum + (Number(p.harvestQuantity) || 0),
+        0,
+      );
+      if (totalQuantity > 0) {
+        const tableName = input.sourceModule === 'planting' ? 'plantings' : 'seedlings';
+        const updateStmt = db.prepare(
+          `UPDATE ${tableName} SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?, update_time = ? WHERE id = ?`,
+        );
+        updateStmt.bind([totalQuantity, new Date().toISOString(), input.sourceRecordId]);
+        updateStmt.step();
+        updateStmt.free();
+        console.log(
+          `[补录回写] ${tableName}[${input.sourceRecordId}].harvest_to_inventory_qty += ${totalQuantity}`,
+        );
+      }
+    }
+
     // 步骤 2-4：为每条 product 写 inventory_stock + inventory_inbound_records + inventory_transaction
     for (const product of input.products) {
       // 2026-06-19: 库存实例 ID 统一格式 ${prefix}-${YYYYMMDD}-${NNNN}（17 字符）
