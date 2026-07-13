@@ -438,9 +438,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           stockType === 'seed' ? 'seed-source' : stockType === 'seedling' ? 'seedling' : 'planting';
         const prefix = stockType === 'seed' ? '种源' : stockType === 'seedling' ? '育苗' : '种植';
 
-        const res = await enhancedApiClient.get<{ data: any[] }>(endpoint, {
-          params: { page: 1, pageSize: 200 },
-        });
+        const res = await enhancedApiClient.get<{ data: any[] }>(
+          `${endpoint}?${new URLSearchParams({ page: '1', pageSize: '200' }).toString()}`,
+        );
         const items = (res as any)?.data?.items || (res as any)?.data || [];
         const options: typeof sourceIdOptions = items.map((it: any) => ({
           value: String(it.id),
@@ -501,16 +501,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   const sourceInfo = SOURCE_OPTIONS.find((s) => s.value === sourceType);
 
-  // 2026-07-13 v6：补录模式判定（prefillMode=supplementary 或 formData.sourceId 有值）
-  // 补录模式下：1) 强制 sourceType=self_produced；2) 锁定 stockType + sourceType 不让用户改
+  // 2026-07-13 v7：补录模式判定（prefillMode=supplementary 或 formData.sourceId 有值）
+  // v7 简化：不强制锁定 stockType/sourceType，让用户通过"自产兜底+选sourceId+填原因"自然完成补录
+  // 校验仍由 validateBySourceType 保证：self_produced + sourceId 有值时 supplementaryReason 必填
   const isSupplementaryMode = prefillMode === 'supplementary' || !!formData.sourceId;
-
-  // 强制 sourceType=self_produced（补录模式下不允许其他来源）
-  useEffect(() => {
-    if (isSupplementaryMode && sourceType !== 'self_produced') {
-      setSourceType('self_produced');
-    }
-  }, [isSupplementaryMode, sourceType]);
 
   // ---- 切换来源：清空专属字段，避免残留 ----
   const handleSourceTypeChange = (newSource: SourceTypeLiteral) => {
@@ -647,15 +641,15 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       height={800}
     >
       <div className="space-y-4">
-        {/* 2026-07-13 v6：紫色锁定 banner（补录模式下显示，提示 stockType/sourceType 已锁定） */}
+        {/* 2026-07-13 v7：紫色提示 banner（补录模式下显示，建议填写补录原因） */}
         {isSupplementaryMode && (
           <div className="px-4 py-3 bg-purple-50 border border-purple-300 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
             <div>
               <div className="text-sm font-semibold text-purple-800">⚙️ 补录模式</div>
               <div className="text-xs text-purple-700 mt-0.5">
-                库存类型与来源已锁定为关联的源记录（{formData.sourceCode || formData.sourceId || '未知'}）。
-                如需变更请联系管理员。
+                已绑定源记录（{formData.sourceCode || formData.sourceId || '未知'}）。
+                建议填写"补录原因"，提交后将写入 inventory_stock.is_supplementary=1。
               </div>
             </div>
           </div>
@@ -683,12 +677,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
               <button
                 key={opt.value}
                 type="button"
-                disabled={isSupplementaryMode}
                 onClick={() => handleSourceTypeChange(opt.value)}
                 className={`text-left p-3 rounded border-2 transition-all ${
-                  isSupplementaryMode
-                    ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                    : sourceType === opt.value
+                  sourceType === opt.value
                     ? 'border-blue-500 bg-white shadow-sm'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -712,12 +703,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         {/* 库存类型 — 不在 COMMON_FIELDS 里（决定 stockType），单独渲染 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="库存类型 *">
-            <Select
-              value={stockType}
-              onValueChange={(v) => setStockType(v as StockTypeLiteral)}
-              disabled={isSupplementaryMode}
-            >
-              <SelectTrigger className={isSupplementaryMode ? 'bg-gray-100 cursor-not-allowed' : ''}>
+            <Select value={stockType} onValueChange={(v) => setStockType(v as StockTypeLiteral)}>
+              <SelectTrigger>
                 <SelectValue placeholder="请选择库存类型" />
               </SelectTrigger>
               <SelectContent>

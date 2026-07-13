@@ -698,7 +698,7 @@ export default function PlantingPage() {
           sourceModule="planting"
           sourceRecord={{
             id: inboundUnifiedRecord.id,
-            code: inboundUnifiedRecord.plantingCode,
+            code: inboundUnifiedRecord.plantCode,
             cropName: inboundUnifiedRecord.cropName || '',
             cropVariety: inboundUnifiedRecord.cropVariety || '',
             cropCode: inboundUnifiedRecord.cropCode || '',

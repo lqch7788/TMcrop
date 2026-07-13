@@ -216,7 +216,7 @@ describe('AddStockModal 补录模式锁定', () => {
     vi.clearAllMocks();
   });
 
-  it('prefillMode=supplementary + prefillSourceId → 显示紫色锁定 banner', async () => {
+  it('prefillMode=supplementary + prefillSourceId → 显示紫色提示 banner', async () => {
     mockApiClient.get.mockResolvedValue({
       data: { items: [{ id: 'p1', plantCode: 'YY2025-001', cropName: '苹果', cropCode: '010203' }] },
     });
@@ -232,14 +232,15 @@ describe('AddStockModal 补录模式锁定', () => {
       await new Promise((r) => setTimeout(r, 50));
     });
     const html = container.innerHTML;
-    // 紫色锁定 banner
+    // 紫色提示 banner（v7：建议填写补录原因，不锁定）
     expect(html).toContain('bg-purple-50');
     expect(html).toContain('补录模式');
     expect(html).toContain('YY2025-001');
+    expect(html).toContain('建议填写');
     unmount();
   });
 
-  it('补录模式 → 6 个来源按钮全部 disabled', async () => {
+  it('补录模式 → 6 个来源按钮可点击（v7 不锁定）', async () => {
     mockApiClient.get.mockResolvedValue({ data: { items: [] } });
     const { container, unmount } = renderInContainer({
       prefillSourceId: 'p1',
@@ -250,7 +251,6 @@ describe('AddStockModal 补录模式锁定', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));
     });
-    // 检查 6 个来源按钮（外购/赠送/委托/调拨/手动/自产）全部 disabled
     const allButtons = container.querySelectorAll('button[type="button"]');
     const sourceButtons = Array.from(allButtons).filter((b) =>
       ['外购入库', '赠送/受赠', '委托生产', '调拨入库', '手动录入', '自产（兜底）'].some((label) =>
@@ -259,12 +259,13 @@ describe('AddStockModal 补录模式锁定', () => {
     );
     expect(sourceButtons.length).toBeGreaterThanOrEqual(6);
     for (const btn of sourceButtons) {
-      expect((btn as HTMLButtonElement).disabled).toBe(true);
+      // v7：补录模式下用户可自由切换来源（建议保持 self_produced，但允许切换）
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
     }
     unmount();
   });
 
-  it('补录模式 → 库存类型 Select disabled', async () => {
+  it('补录模式 → 库存类型 Select 可点击（v7 不锁定）', async () => {
     mockApiClient.get.mockResolvedValue({ data: { items: [] } });
     const { container, unmount } = renderInContainer({
       prefillSourceId: 'p1',
@@ -275,18 +276,14 @@ describe('AddStockModal 补录模式锁定', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));
     });
-    // 找第一个 combobox role（库存类型 Select trigger）
     const comboboxes = container.querySelectorAll('[role="combobox"]');
     expect(comboboxes.length).toBeGreaterThan(0);
     const stockTypeCombobox = comboboxes[0] as HTMLElement;
-    // Radix Select disabled 时 trigger 元素上无 data-disabled，但 SelectTrigger 内部 button 有 disabled 属性
-    // 检查 trigger 是否包含 disabled 子 button 或 trigger 本身有 disabled
     const innerButton = stockTypeCombobox.querySelector('button') || (stockTypeCombobox.tagName === 'BUTTON' ? stockTypeCombobox : null);
     if (innerButton) {
-      expect((innerButton as HTMLButtonElement).disabled).toBe(true);
+      expect((innerButton as HTMLButtonElement).disabled).toBe(false);
     } else {
-      // fallback：trigger 本身
-      expect(stockTypeCombobox.hasAttribute('disabled')).toBe(true);
+      expect(stockTypeCombobox.hasAttribute('disabled')).toBe(false);
     }
     unmount();
   });
