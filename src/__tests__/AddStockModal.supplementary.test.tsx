@@ -210,3 +210,108 @@ describe('AddStockModal sourceId 按 stockType 动态加载', () => {
     unmount();
   });
 });
+
+describe('AddStockModal 补录模式锁定', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('prefillMode=supplementary + prefillSourceId → 显示紫色锁定 banner', async () => {
+    mockApiClient.get.mockResolvedValue({
+      data: { items: [{ id: 'p1', plantingCode: 'YY2025-001', cropName: '苹果', cropCode: '010203' }] },
+    });
+    const { container, unmount } = renderInContainer({
+      prefillSourceId: 'p1',
+      prefillSourceCode: 'YY2025-001',
+      prefillSourceModule: 'planting',
+      prefillStockType: 'product',
+      prefillMode: 'supplementary',
+    });
+    // 等待异步 effect 完成（sourceId 预填）
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    const html = container.innerHTML;
+    // 紫色锁定 banner
+    expect(html).toContain('bg-purple-50');
+    expect(html).toContain('补录模式');
+    expect(html).toContain('YY2025-001');
+    unmount();
+  });
+
+  it('补录模式 → 6 个来源按钮全部 disabled', async () => {
+    mockApiClient.get.mockResolvedValue({ data: { items: [] } });
+    const { container, unmount } = renderInContainer({
+      prefillSourceId: 'p1',
+      prefillSourceModule: 'planting',
+      prefillStockType: 'product',
+      prefillMode: 'supplementary',
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    // 检查 6 个来源按钮（外购/赠送/委托/调拨/手动/自产）全部 disabled
+    const allButtons = container.querySelectorAll('button[type="button"]');
+    const sourceButtons = Array.from(allButtons).filter((b) =>
+      ['外购入库', '赠送/受赠', '委托生产', '调拨入库', '手动录入', '自产（兜底）'].some((label) =>
+        b.textContent?.includes(label),
+      ),
+    );
+    expect(sourceButtons.length).toBeGreaterThanOrEqual(6);
+    for (const btn of sourceButtons) {
+      expect((btn as HTMLButtonElement).disabled).toBe(true);
+    }
+    unmount();
+  });
+
+  it('补录模式 → 库存类型 Select disabled', async () => {
+    mockApiClient.get.mockResolvedValue({ data: { items: [] } });
+    const { container, unmount } = renderInContainer({
+      prefillSourceId: 'p1',
+      prefillSourceModule: 'planting',
+      prefillStockType: 'product',
+      prefillMode: 'supplementary',
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    // 找第一个 combobox role（库存类型 Select trigger）
+    const comboboxes = container.querySelectorAll('[role="combobox"]');
+    expect(comboboxes.length).toBeGreaterThan(0);
+    const stockTypeCombobox = comboboxes[0] as HTMLElement;
+    // Radix Select disabled 时 trigger 元素上无 data-disabled，但 SelectTrigger 内部 button 有 disabled 属性
+    // 检查 trigger 是否包含 disabled 子 button 或 trigger 本身有 disabled
+    const innerButton = stockTypeCombobox.querySelector('button') || (stockTypeCombobox.tagName === 'BUTTON' ? stockTypeCombobox : null);
+    if (innerButton) {
+      expect((innerButton as HTMLButtonElement).disabled).toBe(true);
+    } else {
+      // fallback：trigger 本身
+      expect(stockTypeCombobox.hasAttribute('disabled')).toBe(true);
+    }
+    unmount();
+  });
+
+  it('非补录模式 → 不显示紫色锁定 banner，6 来源按钮可点', async () => {
+    mockApiClient.get.mockResolvedValue({ data: { items: [] } });
+    const { container, unmount } = renderInContainer({
+      // 不传 prefillMode 和 prefillSourceId
+      prefillStockType: 'product',
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    const html = container.innerHTML;
+    expect(html).not.toContain('bg-purple-50');
+    // 来源按钮 disabled 应为 false
+    const allButtons = container.querySelectorAll('button[type="button"]');
+    const sourceButtons = Array.from(allButtons).filter((b) =>
+      ['外购入库', '赠送/受赠', '委托生产', '调拨入库', '手动录入', '自产（兜底）'].some((label) =>
+        b.textContent?.includes(label),
+      ),
+    );
+    for (const btn of sourceButtons) {
+      expect((btn as HTMLButtonElement).disabled).toBe(false);
+    }
+    unmount();
+  });
+});
