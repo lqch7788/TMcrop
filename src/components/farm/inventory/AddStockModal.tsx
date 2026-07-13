@@ -488,6 +488,17 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   const sourceInfo = SOURCE_OPTIONS.find((s) => s.value === sourceType);
 
+  // 2026-07-13 v6：补录模式判定（prefillMode=supplementary 或 formData.sourceId 有值）
+  // 补录模式下：1) 强制 sourceType=self_produced；2) 锁定 stockType + sourceType 不让用户改
+  const isSupplementaryMode = prefillMode === 'supplementary' || !!formData.sourceId;
+
+  // 强制 sourceType=self_produced（补录模式下不允许其他来源）
+  useEffect(() => {
+    if (isSupplementaryMode && sourceType !== 'self_produced') {
+      setSourceType('self_produced');
+    }
+  }, [isSupplementaryMode, sourceType]);
+
   // ---- 切换来源：清空专属字段，避免残留 ----
   const handleSourceTypeChange = (newSource: SourceTypeLiteral) => {
     if (newSource === sourceType) return;
@@ -623,6 +634,19 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       height={800}
     >
       <div className="space-y-4">
+        {/* 2026-07-13 v6：紫色锁定 banner（补录模式下显示，提示 stockType/sourceType 已锁定） */}
+        {isSupplementaryMode && (
+          <div className="px-4 py-3 bg-purple-50 border border-purple-300 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="text-sm font-semibold text-purple-800">⚙️ 补录模式</div>
+              <div className="text-xs text-purple-700 mt-0.5">
+                库存类型与来源已锁定为关联的源记录（{formData.sourceCode || formData.sourceId || '未知'}）。
+                如需变更请联系管理员。
+              </div>
+            </div>
+          </div>
+        )}
         {/* 2026-07-09 v5 阶段三（路径 B）：补录模式 banner（自产兜底 + 已选 sourceId 时显示） */}
         {sourceType === 'self_produced' && formData.sourceId && (
           <div className="px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
@@ -646,9 +670,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
               <button
                 key={opt.value}
                 type="button"
+                disabled={isSupplementaryMode}
                 onClick={() => handleSourceTypeChange(opt.value)}
                 className={`text-left p-3 rounded border-2 transition-all ${
-                  sourceType === opt.value
+                  isSupplementaryMode
+                    ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                    : sourceType === opt.value
                     ? 'border-blue-500 bg-white shadow-sm'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -672,8 +699,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         {/* 库存类型 — 不在 COMMON_FIELDS 里（决定 stockType），单独渲染 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="库存类型 *">
-            <Select value={stockType} onValueChange={(v) => setStockType(v as StockTypeLiteral)}>
-              <SelectTrigger>
+            <Select
+              value={stockType}
+              onValueChange={(v) => setStockType(v as StockTypeLiteral)}
+              disabled={isSupplementaryMode}
+            >
+              <SelectTrigger className={isSupplementaryMode ? 'bg-gray-100 cursor-not-allowed' : ''}>
                 <SelectValue placeholder="请选择库存类型" />
               </SelectTrigger>
               <SelectContent>
