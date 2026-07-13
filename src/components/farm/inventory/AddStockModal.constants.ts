@@ -27,6 +27,8 @@ export type FieldType =
   | 'supplier-select'
   | 'base-select'
   | 'crop-selector'
+  | 'select-source-id'
+  | 'supplementary-reason'
   | 'textarea'
   | 'derived';
 
@@ -116,7 +118,8 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
     // 2026-07-08 T13 Bug 2
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
     // 2026-07-09 v5 阶段三：补录原因（必填性在 AddStockModal 内根据 sourceId 动态决定）
-    { key: 'supplementaryReason', label: '补录原因', required: false, type: 'text' },
+    // 2026-07-13 v6：type 从 'text' 升级为 'supplementary-reason'，由 SupplementaryReasonInput 复合组件渲染
+    { key: 'supplementaryReason', label: '补录原因', required: false, type: 'supplementary-reason' },
   ],
 };
 
