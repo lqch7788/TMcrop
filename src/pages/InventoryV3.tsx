@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Boxes, Edit3 } from 'lucide-react';
+import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
 // 一次性动作（CSV 导出）保留直调 client-side
@@ -59,18 +59,11 @@ export default function InventoryV3Page() {
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
   const [selectedFreezeStock, setSelectedFreezeStock] = useState<InventoryStock | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  // 2026-07-13 方案 B：补录模式 state（控制 AddStockModal 显示紫色 banner + 强制 sourceType=self_produced）
-  const [supplementaryMode, setSupplementaryMode] = useState(false);
+  // 2026-07-13 方案 D：删除 supplementaryMode state（补录入口统一在 AddStockModal 内"补录入库"来源按钮）
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
   // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  // 2026-07-13 方案 B：点击"补录入库"按钮 → 打开 AddStockModal 并启用补录模式
-  const handleSupplementary = () => {
-    setSupplementaryMode(true);
-    setAddModalOpen(true);
-  };
 
   // 批量操作状态（与 ActionToolbar 协同）
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -317,18 +310,6 @@ export default function InventoryV3Page() {
         loading={loading}
       />
 
-      {/* 2026-07-13 方案 B：补录入库按钮（在 ActionToolbar 上方，独立入口） */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSupplementary}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          <Edit3 className="w-4 h-4 mr-1" /> 补录入库
-        </Button>
-      </div>
-
       {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
       <ActionToolbar
         title="库存列表"
@@ -396,10 +377,7 @@ export default function InventoryV3Page() {
         isOpen={addModalOpen}
         onClose={() => {
           setAddModalOpen(false);
-          setSupplementaryMode(false);  // 重置补录模式
         }}
-        // 2026-07-13 方案 B：补录模式（true → 紫色 banner + 强制 sourceType=self_produced）
-        supplementaryMode={supplementaryMode}
       />
 
       {/* 详情弹窗（合并原"追溯"功能） */}
