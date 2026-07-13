@@ -114,8 +114,8 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
     // 2026-07-13 方案 B：required 改为 true（弹窗搜索 + 必填校验保持一致）
     { key: 'sourceId', label: '源种植/育苗行', required: true, type: 'select-source-id' },
     // 2026-07-13 v8：删除"所属基地"字段（基地信息已隐含在源记录中）
-    // 2026-07-13 v8：种植模式 + 采收区域从下方移到"作物选择"字段后面（紧跟视觉关联）
-    { key: 'plantingMode', label: '种植模式', required: false, type: 'text' },
+    // 2026-07-13 v9：删除"种植模式"字段（种植表 DB 未存 plantingMode，无数据可填）
+    // 2026-07-13 v9：采收区域仍保留并自动填（从源记录读 greenhouseName）
     { key: 'greenhouseName', label: '采收区域', required: false, type: 'text' },
     // 2026-07-08 T13 Bug 2
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },

@@ -39,10 +39,10 @@ describe('FIELD_CONFIG 6 套矩阵', () => {
     expect(fields.find(f => f.key === 'supplierId')).toBeUndefined();
   });
 
-  it('自产显示种植模式/采收区域（v8：从 fieldsToRender 排除但仍存在 FIELD_CONFIG）', () => {
+  it('自产显示采收区域（v9：种植模式已删除，DB 未存 plantingMode）', () => {
     const keys = FIELD_CONFIG.self_produced.map(f => f.key);
-    expect(keys).toContain('plantingMode');
     expect(keys).toContain('greenhouseName');
+    expect(keys).not.toContain('plantingMode');
   });
 
   it('调拨入库不显示种植模式/采收区域/供应商', () => {
