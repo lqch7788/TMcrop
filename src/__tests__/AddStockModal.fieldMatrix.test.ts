@@ -33,13 +33,13 @@ describe('FIELD_CONFIG 6 套矩阵', () => {
     expect(keys).toContain('cropForm');
   });
 
-  it('自产必填 baseId、不显示 supplierId', () => {
+  it('自产不显示 baseId/supplierId（2026-07-13 v8：baseId 已删除）', () => {
     const fields = FIELD_CONFIG.self_produced;
-    expect(fields.find(f => f.key === 'baseId')?.required).toBe(true);
+    expect(fields.find(f => f.key === 'baseId')).toBeUndefined();
     expect(fields.find(f => f.key === 'supplierId')).toBeUndefined();
   });
 
-  it('自产显示种植模式/采收区域', () => {
+  it('自产显示种植模式/采收区域（v8：从 fieldsToRender 排除但仍存在 FIELD_CONFIG）', () => {
     const keys = FIELD_CONFIG.self_produced.map(f => f.key);
     expect(keys).toContain('plantingMode');
     expect(keys).toContain('greenhouseName');
@@ -111,9 +111,9 @@ describe('validateBySourceType', () => {
     expect(errors.consignor).toBe('必填');
   });
 
-  it('自产不填 baseId 报错', () => {
+  it('自产不填 sourceId 报错（2026-07-13 v8：baseId 已删，sourceId 替代）', () => {
     const errors = validateBySourceType({ quantity: 1, unit: '克' }, 'self_produced');
-    expect(errors.baseId).toBe('必填');
+    expect(errors.sourceId).toBe('必填');
   });
 
   it('委托不填 consignor 报错', () => {

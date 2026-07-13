@@ -113,7 +113,8 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
     // 用户从种植/育苗行 navigate 过来时，prefillSourceId 预填此字段
     // 2026-07-13 方案 B：required 改为 true（弹窗搜索 + 必填校验保持一致）
     { key: 'sourceId', label: '源种植/育苗行', required: true, type: 'select-source-id' },
-    { key: 'baseId', label: '所属基地', required: true, type: 'base-select' },
+    // 2026-07-13 v8：删除"所属基地"字段（基地信息已隐含在源记录中）
+    // 2026-07-13 v8：种植模式 + 采收区域从下方移到"作物选择"字段后面（紧跟视觉关联）
     { key: 'plantingMode', label: '种植模式', required: false, type: 'text' },
     { key: 'greenhouseName', label: '采收区域', required: false, type: 'text' },
     // 2026-07-08 T13 Bug 2
