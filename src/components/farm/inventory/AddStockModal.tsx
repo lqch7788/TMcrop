@@ -79,11 +79,10 @@ interface AddStockModalProps {
   sourceRecord?: InboundSourceRecord | null;
   /** 库存类型；不传则默认 product */
   stockType?: StockTypeLiteral;
-  // 2026-07-09 v5 阶段三（路径 B）：从 URL 预填的字段
-  prefillSourceId?: string;
-  prefillSourceModule?: string;
-  prefillStockType?: string;
-  prefillMode?: 'supplementary' | 'normal';
+  // 2026-07-13 方案 B：删除 prefillSource*/prefillMode props
+  // 补录统一从 InventoryV3 "补录入库" 按钮进入（supplementaryMode=true）
+  /** 补录模式：true → sourceType 强制 self_produced + 显示紫色 banner + sourceId 必填 */
+  supplementaryMode?: boolean;
 }
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -110,6 +109,9 @@ function renderFieldByType(
     cropFormOptions: Array<{ value: string; label: string }>;
     // 2026-07-09 v5 阶段三（路径 B）：源 ID 下拉选项（自产兜底模式）
     sourceIdOptions?: Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string }>;
+    // 2026-07-13 方案 B：sourceId 搜索框输入值 + 变化回调
+    sourceIdSearch?: string;
+    onSourceIdSearchChange?: (v: string) => void;
     /**
      * 2026-07-09：联动写入多个字段（解决供应商/基地只存 id 不存 name 的 bug）
      * supplier-select 选完后同时写 supplierId + supplierName
@@ -240,35 +242,50 @@ function renderFieldByType(
         />
       );
     case 'select-source-id':
-      // 2026-07-09 v5 阶段三（路径 B）：自产（兜底）模式加 sourceId 下拉
-      // 选项由 ctx.sourceIdOptions 传入（动态加载 planting + seedling 列表）
+      // 2026-07-13 方案 B：sourceId 下拉 + 搜索框
+      // 三类源记录（种源/育苗/种植）合并到一个下拉，按 label/code/cropName 模糊搜索
       return (
-        <Select value={value || ''} onValueChange={(v) => {
-          onChange(v)
-          if (ctx.onMultiFieldChange) {
-            const found = ctx.sourceIdOptions?.find((o: any) => o.value === v)
-            if (found) {
-              ctx.onMultiFieldChange({
-                sourceId: v,
-                sourceModule: found.module,
-                sourceCode: found.code,
-                cropName: found.cropName,
-                cropCode: found.cropCode,
-              })
+        <div className="space-y-2">
+          <Input
+            value={ctx.sourceIdSearch || ''}
+            onChange={(e) => ctx.onSourceIdSearchChange?.(e.target.value)}
+            placeholder="搜索源记录（按编码或作物名）..."
+            className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          />
+          <Select value={value || ''} onValueChange={(v) => {
+            onChange(v);
+            if (ctx.onMultiFieldChange) {
+              const found = ctx.sourceIdOptions?.find((o: any) => o.value === v);
+              if (found) {
+                ctx.onMultiFieldChange({
+                  sourceId: v,
+                  sourceModule: found.module,
+                  sourceCode: found.code,
+                  cropName: found.cropName,
+                  cropCode: found.cropCode,
+                });
+              }
             }
-          }
-        }}>
-          <SelectTrigger>
-            <SelectValue placeholder="选择源种植/育苗行（补录/绑定用）" />
-          </SelectTrigger>
-          <SelectContent>
-            {(ctx.sourceIdOptions || []).map((o: any) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          }}>
+            <SelectTrigger>
+              <SelectValue placeholder={
+                ctx.sourceIdOptions && ctx.sourceIdOptions.length > 0
+                  ? '选择源种植/育苗/种源行'
+                  : '正在加载...'
+              } />
+            </SelectTrigger>
+            <SelectContent>
+              {(ctx.sourceIdOptions || []).map((o: any) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+              {ctx.sourceIdOptions && ctx.sourceIdOptions.length === 0 && (
+                <div className="px-3 py-2 text-sm text-gray-500">无数据，请稍候</div>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       );
     case 'supplier-select':
       // T3 简化版：使用 Select；T4 可升级为带搜索的下拉
@@ -361,11 +378,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   onSuccess,
   sourceRecord = null,
   stockType: stockTypeProp,
-  prefillSourceId,
-  prefillSourceModule,
-  prefillSourceCode,
-  prefillStockType,
-  prefillMode = 'normal',
+  supplementaryMode = false,
 }) => {
   // ---- Store 数据 ----
   const warehouses = useWarehouseStore((s) => s.warehouses);
@@ -384,6 +397,19 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   const [cropFormOptions, setCropFormOptions] = useState<Array<{ value: string; label: string }>>([]);
   // 2026-07-09 v5 阶段三（路径 B）：自产（兜底）模式 sourceId 下拉选项
   const [sourceIdOptions, setSourceIdOptions] = useState<Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string }>>([]);
+  // 2026-07-13 方案 B：sourceId 搜索框输入
+  const [sourceIdSearch, setSourceIdSearch] = useState('');
+  // 搜索过滤后的 options（按 label/code/cropName 模糊匹配）
+  const filteredSourceIdOptions = useMemo(() => {
+    if (!sourceIdSearch) return sourceIdOptions;
+    const lower = sourceIdSearch.toLowerCase();
+    return sourceIdOptions.filter(
+      (o) =>
+        o.label.toLowerCase().includes(lower) ||
+        (o.code || '').toLowerCase().includes(lower) ||
+        (o.cropName || '').toLowerCase().includes(lower),
+    );
+  }, [sourceIdOptions, sourceIdSearch]);
 
   // ---- 表单状态（统一扁平 formData） ----
   // 初始来源：sourceRecord?.sourceType ?? 'self_produced'（默认自产兜底）
@@ -412,69 +438,65 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   // 2026-07-13 v6：sourceId 按 stockType 动态加载（种源/育苗/种植 三选一）
   // 历史版本 v5 同时拉种植+育苗两个列表 — 现改为按 prefillStockType 选 endpoint
+  // 2026-07-13 方案 B：弹窗 open 时无条件并行加载 三类源记录（合并到一个下拉）
+  // 依赖 only isOpen — 弹窗关闭重新打开会重新加载（用户场景罕见，正常不会重复开）
   useEffect(() => {
     if (!isOpen) return;
     if (sourceIdOptions.length > 0) return;
     (async () => {
       try {
-        // 2026-07-13 v7：增强 API 是 named export，dynamic import 必须解构 .enhancedApiClient
-        // v6 用 .default 是错的，导致 runtime "Cannot read properties of undefined (reading 'get')"
         const { enhancedApiClient } = await import('@/lib/apiClient');
-        // 按 prefillStockType 选 endpoint（兜底 product）
-        const stockType = prefillStockType || 'product';
-        const endpoint = stockType === 'seed'
-          ? '/seed-sources'
-          : stockType === 'seedling'
-          ? '/seedlings'
-          : '/plantings';
-        // 三类源记录的 code 字段命名（已 curl 后端确认 2026-07-13）：
-        // - seed-sources API → seedCode（DB 字段 source_code）
-        // - seedlings API → seedlingCode
-        // - plantings API → plantCode（DB 字段 plant_code，注意不是 plantingCode！）
-        const codeField = stockType === 'seed'
-          ? 'seedCode'
-          : stockType === 'seedling'
-          ? 'seedlingCode'
-          : 'plantCode';
-        const moduleValue: 'seed-source' | 'seedling' | 'planting' =
-          stockType === 'seed' ? 'seed-source' : stockType === 'seedling' ? 'seedling' : 'planting';
-        const prefix = stockType === 'seed' ? '种源' : stockType === 'seedling' ? '育苗' : '种植';
+        const query = new URLSearchParams({ page: '1', pageSize: '200' }).toString();
+        const [seedRes, seedlingRes, plantingRes] = await Promise.all([
+          enhancedApiClient.get<any[]>(`/seed-sources?${query}`),
+          enhancedApiClient.get<any[]>(`/seedlings?${query}`),
+          enhancedApiClient.get<any[]>(`/plantings?${query}`),
+        ]);
+        // enhancedApiClient 已自动解包 result.data（per memory api-client-response-unwrapping）
+        const extractItems = (res: any): any[] =>
+          Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
 
-        const res = await enhancedApiClient.get<any[]>(
-          `${endpoint}?${new URLSearchParams({ page: '1', pageSize: '200' }).toString()}`,
-        );
-        // 2026-07-13 v7 修复：enhancedApiClient 已自动解包 result.data（api-client-response-unwrapping 铁律）
-        // 所以 res 直接是数组，不再是 {data: [...]} 包装
-        const items: any[] = Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
-        const options: typeof sourceIdOptions = items.map((it: any) => ({
-          value: String(it.id),
-          label: `[${prefix}] ${it[codeField] || it.code || it.id} - ${it.cropName || ''}`,
-          module: moduleValue,
-          code: it[codeField] || it.code,
-          cropName: it.cropName,
-          cropCode: it.cropCode,
-        }));
-        setSourceIdOptions(options);
-        // 加载完立即预填（如果 URL 携带 prefillSourceId）
-        if (prefillSourceId) {
-          const found = options.find((o) => o.value === prefillSourceId);
-          if (found) {
-            setFormData((prev) => ({
-              ...prev,
-              sourceId: prefillSourceId,
-              sourceModule: prefillSourceModule || found.module,
-              sourceCode: prefillSourceCode || found.code,
-              cropName: found.cropName,
-              cropCode: found.cropCode,
-            }));
-          }
+        const options: typeof sourceIdOptions = [];
+
+        // 种源（字段：seedCode）
+        for (const it of extractItems(seedRes)) {
+          options.push({
+            value: String(it.id),
+            label: `[种源] ${it.seedCode || it.code || it.id} - ${it.cropName || ''}`,
+            module: 'seed-source',
+            code: it.seedCode || it.code,
+            cropName: it.cropName,
+            cropCode: it.cropCode,
+          });
         }
+        // 育苗（字段：seedlingCode）
+        for (const it of extractItems(seedlingRes)) {
+          options.push({
+            value: String(it.id),
+            label: `[育苗] ${it.seedlingCode || it.code || it.id} - ${it.cropName || ''}`,
+            module: 'seedling',
+            code: it.seedlingCode || it.code,
+            cropName: it.cropName,
+            cropCode: it.cropCode,
+          });
+        }
+        // 种植（字段：plantCode）
+        for (const it of extractItems(plantingRes)) {
+          options.push({
+            value: String(it.id),
+            label: `[种植] ${it.plantCode || it.code || it.id} - ${it.cropName || ''}`,
+            module: 'planting',
+            code: it.plantCode || it.code,
+            cropName: it.cropName,
+            cropCode: it.cropCode,
+          });
+        }
+        setSourceIdOptions(options);
       } catch (e) {
-        // 加载失败不影响主流程
         console.warn('[AddStockModal] 加载 sourceId 列表失败:', e);
       }
     })();
-  }, [isOpen, prefillSourceId, prefillSourceCode, prefillSourceModule, prefillStockType])
+  }, [isOpen])
 
   // 字典加载完成后切出 unit / crop_form 两类选项
   useEffect(() => {
@@ -505,10 +527,17 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   const sourceInfo = SOURCE_OPTIONS.find((s) => s.value === sourceType);
 
-  // 2026-07-13 v7：补录模式判定（prefillMode=supplementary 或 formData.sourceId 有值）
-  // v7 简化：不强制锁定 stockType/sourceType，让用户通过"自产兜底+选sourceId+填原因"自然完成补录
-  // 校验仍由 validateBySourceType 保证：self_produced + sourceId 有值时 supplementaryReason 必填
-  const isSupplementaryMode = prefillMode === 'supplementary' || !!formData.sourceId;
+  // 2026-07-13 方案 B：补录模式判定
+  // - supplementaryMode=true（从 InventoryV3 "补录入库"按钮进入）→ 显示紫色 banner + 强制 sourceType=self_produced
+  // - formData.sourceId 有值（行级入库选中）→ 也算补录（保留原有判定）
+  const isSupplementaryMode = supplementaryMode || !!formData.sourceId;
+
+  // 补录模式下：弹窗打开即强制 sourceType=self_produced（用户仍可手动切换，但 banner 提示建议保留）
+  useEffect(() => {
+    if (isOpen && isSupplementaryMode && sourceType !== 'self_produced') {
+      setSourceType('self_produced');
+    }
+  }, [isOpen, isSupplementaryMode, sourceType]);
 
   // ---- 切换来源：清空专属字段，避免残留 ----
   const handleSourceTypeChange = (newSource: SourceTypeLiteral) => {
@@ -625,7 +654,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       setFormData((prev) => ({ ...prev, ...updates }))
     },
     // 2026-07-09 v5 阶段三（路径 B）：源 ID 下拉选项（动态加载种植/育苗列表）
-    sourceIdOptions: sourceIdOptions,
+    // 2026-07-13 方案 B：使用过滤后的 options + 搜索状态
+    sourceIdOptions: filteredSourceIdOptions,
+    sourceIdSearch: sourceIdSearch,
+    onSourceIdSearchChange: setSourceIdSearch,
   };
 
   return (
@@ -645,14 +677,16 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       height={800}
     >
       <div className="space-y-4">
-        {/* 2026-07-13 v7：紫色提示 banner（补录模式下显示，建议填写补录原因） */}
+        {/* 2026-07-13 方案 B：紫色提示 banner（补录模式下显示，建议填写补录原因） */}
         {isSupplementaryMode && (
           <div className="px-4 py-3 bg-purple-50 border border-purple-300 rounded-lg flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
             <div>
               <div className="text-sm font-semibold text-purple-800">⚙️ 补录模式</div>
               <div className="text-xs text-purple-700 mt-0.5">
-                已绑定源记录（{formData.sourceCode || formData.sourceId || '未知'}）。
+                {formData.sourceCode
+                  ? `已绑定源记录（${formData.sourceCode}），`
+                  : '请从下方"源种植/育苗行"下拉中选择要补录的行，'}
                 建议填写"补录原因"，提交后将写入 inventory_stock.is_supplementary=1。
               </div>
             </div>
