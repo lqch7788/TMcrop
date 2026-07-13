@@ -459,13 +459,19 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         const extractItems = (res: any): any[] =>
           Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
 
-        // 过滤：只保留已结束的（ended/cancelled）
-        const isEnded = (it: any) => it.status === 'ended' || it.status === 'cancelled';
+        // 过滤：只保留已结束的（行级流程已关闭）
+        // - 种植：status in ['ended', 'cancelled']
+        // - 育苗：status in ['completed', 'transplanted']（育苗表枚举与种植不同）
+        // - 种源：已从加载列表移除（种源不能采收）
+        const isEnded = (it: any, module: string) =>
+          module === 'seedling'
+            ? (it.status === 'completed' || it.status === 'transplanted')
+            : (it.status === 'ended' || it.status === 'cancelled');
 
         const options: typeof sourceIdOptions = [];
 
         // 育苗（字段：seedlingCode）
-        for (const it of extractItems(seedlingRes).filter(isEnded)) {
+        for (const it of extractItems(seedlingRes).filter((it) => isEnded(it, 'seedling'))) {
           options.push({
             value: String(it.id),
             label: `[育苗] ${it.seedlingCode || it.code || it.id} - ${it.cropName || ''}`,
@@ -476,7 +482,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           });
         }
         // 种植（字段：plantCode）
-        for (const it of extractItems(plantingRes).filter(isEnded)) {
+        for (const it of extractItems(plantingRes).filter((it) => isEnded(it, 'planting'))) {
           options.push({
             value: String(it.id),
             label: `[种植] ${it.plantCode || it.code || it.id} - ${it.cropName || ''}`,
