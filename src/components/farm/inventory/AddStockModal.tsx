@@ -243,8 +243,11 @@ function renderFieldByType(
     case 'select-source-id':
       // 2026-07-13 方案 D：sourceId 搜索框 + 下拉菜单同一行（各占一半）
       // 三类源记录（种源/育苗/种植）合并到一个下拉，按 label/code/cropName 模糊搜索
-      // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector
-      // （cropSelector 联动让下方"作物选择"字段自动显示已选，无需用户重复选择）
+      // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector + plantingMode + greenhouseName
+      // （cropSelector 联动让"作物选择"字段显示已选；plantingMode/greenhouseName 从源记录读，自动填到下面"种植模式"和"采收区域"字段）
+      // ⚠️ 源记录字段映射：
+      //   - 种植表（plantings）: 有 greenhouseName，plantingMode 字段不存在（DB 没存）
+      //   - 育苗表（seedlings）: 有 greenhouseName 和 propagationMode（"one_to_one" 等）
       return (
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -258,6 +261,12 @@ function renderFieldByType(
             if (ctx.onMultiFieldChange) {
               const found = ctx.sourceIdOptions?.find((o: any) => o.value === v);
               if (found) {
+                // 2026-07-13 v8：从源记录读种植模式/采收区域（按 module 区分）
+                const src = found.raw;
+                const plantingMode = src
+                  ? (src.propagationMode || src.plantingMode || '')
+                  : '';
+                const greenhouseName = src?.greenhouseName || '';
                 ctx.onMultiFieldChange({
                   sourceId: v,
                   sourceModule: found.module,
@@ -266,6 +275,9 @@ function renderFieldByType(
                   cropCode: found.cropCode,
                   // 2026-07-13 v6+：联动写入 cropSelector，让"作物选择"字段显示已选
                   cropSelector: found.cropCode,
+                  // 2026-07-13 v8：联动写入种植模式 + 采收区域（从源记录读）
+                  plantingMode,
+                  greenhouseName,
                 });
               }
             }
@@ -479,6 +491,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             code: it.seedlingCode || it.code,
             cropName: it.cropName,
             cropCode: it.cropCode,
+            // 2026-07-13 v8：保存完整源记录供 select 时联动读 propagationMode/greenhouseName
+            raw: it,
           });
         }
         // 种植（字段：plantCode）
@@ -490,6 +504,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             code: it.plantCode || it.code,
             cropName: it.cropName,
             cropCode: it.cropCode,
+            raw: it,
           });
         }
         setSourceIdOptions(options);
@@ -803,10 +818,33 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </div>
         </div>
 
+        {/* 2026-07-13 v8：补录模式（self_produced）下，种植模式 + 采收区域紧跟"作物选择"字段
+            选源行后自动联动填这两个字段（从源记录读） */}
+        {sourceType === 'self_produced' && (
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="种植模式">
+              <Input
+                value={String(formData.plantingMode || '')}
+                onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
+                placeholder="选源行后自动填"
+                className="px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              />
+            </FormField>
+            <FormField label="采收区域">
+              <Input
+                value={String(formData.greenhouseName || '')}
+                onChange={(e) => handleFieldChange('greenhouseName', e.target.value)}
+                placeholder="选源行后自动填"
+                className="px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              />
+            </FormField>
+          </div>
+        )}
+
         {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId')  // 2026-07-13 方案 D：sourceId 在补录模式下独立渲染（作物选择上方）
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId' && field.key !== 'plantingMode' && field.key !== 'greenhouseName')  // 2026-07-13 v8：sourceId/plantingMode/greenhouseName 补录模式下独立渲染（按视觉顺序）
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
