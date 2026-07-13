@@ -243,11 +243,8 @@ function renderFieldByType(
     case 'select-source-id':
       // 2026-07-13 方案 D：sourceId 搜索框 + 下拉菜单同一行（各占一半）
       // 三类源记录（种源/育苗/种植）合并到一个下拉，按 label/code/cropName 模糊搜索
-      // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector + plantingMode + greenhouseName
-      // （cropSelector 联动让"作物选择"字段显示已选；plantingMode/greenhouseName 从源记录读，自动填到下面"种植模式"和"采收区域"字段）
-      // ⚠️ 源记录字段映射：
-      //   - 种植表（plantings）: 有 greenhouseName，plantingMode 字段不存在（DB 没存）
-      //   - 育苗表（seedlings）: 有 greenhouseName 和 propagationMode（"one_to_one" 等）
+      // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector + greenhouseName
+      // （cropSelector 联动让"作物选择"字段显示已选；greenhouseName 从源记录读，自动填到"采收区域"字段）
       return (
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -261,11 +258,8 @@ function renderFieldByType(
             if (ctx.onMultiFieldChange) {
               const found = ctx.sourceIdOptions?.find((o: any) => o.value === v);
               if (found) {
-                // 2026-07-13 v8：从源记录读种植模式/采收区域（按 module 区分）
+                // 2026-07-13 v9：从源记录读采收区域（greenhouseName）
                 const src = found.raw;
-                const plantingMode = src
-                  ? (src.propagationMode || src.plantingMode || '')
-                  : '';
                 const greenhouseName = src?.greenhouseName || '';
                 ctx.onMultiFieldChange({
                   sourceId: v,
@@ -273,11 +267,8 @@ function renderFieldByType(
                   sourceCode: found.code,
                   cropName: found.cropName,
                   cropCode: found.cropCode,
-                  // 2026-07-13 v6+：联动写入 cropSelector，让"作物选择"字段显示已选
-                  cropSelector: found.cropCode,
-                  // 2026-07-13 v8：联动写入种植模式 + 采收区域（从源记录读）
-                  plantingMode,
-                  greenhouseName,
+                  cropSelector: found.cropCode,  // 联动"作物选择"字段显示已选
+                  greenhouseName,  // 联动"采收区域"字段
                 });
               }
             }
@@ -818,18 +809,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </div>
         </div>
 
-        {/* 2026-07-13 v8：补录模式（self_produced）下，种植模式 + 采收区域紧跟"作物选择"字段
-            选源行后自动联动填这两个字段（从源记录读） */}
+        {/* 2026-07-13 v9：补录模式（self_produced）下，"采收区域"与"数量+单位"同一行（grid-cols-2 各占 50%）
+            选源行后"采收区域"自动联动填（从源记录读 greenhouseName）
+            2026-07-13 v9 简化：删除"种植模式"字段（种植表 DB 未存 plantingMode，无数据可填） */}
         {sourceType === 'self_produced' && (
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="种植模式">
-              <Input
-                value={String(formData.plantingMode || '')}
-                onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
-                placeholder="选源行后自动填"
-                className="px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
-              />
-            </FormField>
+            {/* 左半 50%：采收区域 */}
             <FormField label="采收区域">
               <Input
                 value={String(formData.greenhouseName || '')}
@@ -838,13 +823,47 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                 className="px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               />
             </FormField>
+            {/* 右半 50%：数量 + 单位（flex-1 + 120px） */}
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <FormField label="数量 *">
+                  <NumberInput
+                    value={formData.quantity ?? 0}
+                    onChange={(v) => handleFieldChange('quantity', v)}
+                    min={0.01}
+                    className={deepInputClass}
+                  />
+                  {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
+                </FormField>
+              </div>
+              <div className="w-[120px] flex-shrink-0">
+                <FormField label="单位 *">
+                  <Select
+                    value={formData.unit || ''}
+                    onValueChange={(v) => handleFieldChange('unit', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="单位" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.unit && <div className="text-xs text-red-500 mt-1">{errors.unit}</div>}
+                </FormField>
+              </div>
+            </div>
           </div>
         )}
 
         {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId' && field.key !== 'plantingMode' && field.key !== 'greenhouseName')  // 2026-07-13 v8：sourceId/plantingMode/greenhouseName 补录模式下独立渲染（按视觉顺序）
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId' && field.key !== 'plantingMode' && field.key !== 'greenhouseName')  // 2026-07-13 v9：sourceId/greenhouseName 补录模式下独立渲染（plantingMode 已删除但保留在 filter 中以防误判）
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
@@ -860,68 +879,72 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             })}
         </div>
 
-        {/* 数量+单位(50%) + 单价+总金额(50%) 同行（仅外购显示单价+总金额） */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* 左半：数量 + 单位（flex-1 + 120px） */}
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
-              <FormField label="数量 *">
-                <NumberInput
-                  value={formData.quantity ?? 0}
-                  onChange={(v) => handleFieldChange('quantity', v)}
-                  min={0.01}
-                  className={deepInputClass}
-                />
-                {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
-              </FormField>
-            </div>
-            <div className="w-[120px] flex-shrink-0">
-              <FormField label="单位 *">
-                <Select
-                  value={formData.unit || ''}
-                  onValueChange={(v) => handleFieldChange('unit', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="单位" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>
-                        {u.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.unit && <div className="text-xs text-red-500 mt-1">{errors.unit}</div>}
-              </FormField>
-            </div>
-          </div>
-          {/* 右半：单价 + 总金额（仅外购入库显示，flex-1 + 140px） */}
-          {sourceType === 'external_purchased' && (
+        {/* 数量+单位 + 单价+总金额（仅外购显示单价+总金额）
+            2026-07-13 v9：补录模式（self_produced）下数量+单位已在上方"采收区域"行渲染，这里跳过
+            其他来源：数量+单位 50% + 单价+总金额 50% 同行 */}
+        {sourceType !== 'self_produced' && (
+          <div className="grid grid-cols-2 gap-4">
+            {/* 左半：数量 + 单位（flex-1 + 120px） */}
             <div className="flex gap-2 items-start">
               <div className="flex-1">
-                <FormField label="单价（元）">
+                <FormField label="数量 *">
                   <NumberInput
-                    value={formData.unitPrice ?? 0}
-                    onChange={(v) => handleFieldChange('unitPrice', v)}
-                    min={0}
+                    value={formData.quantity ?? 0}
+                    onChange={(v) => handleFieldChange('quantity', v)}
+                    min={0.01}
                     className={deepInputClass}
                   />
-                  {errors.unitPrice && <div className="text-xs text-red-500 mt-1">{errors.unitPrice}</div>}
+                  {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
                 </FormField>
               </div>
-              <div className="w-[140px] flex-shrink-0">
-                <FormField label="总金额">
-                  <Input
-                    value={`¥ ${(Number(formData.quantity || 0) * Number(formData.unitPrice || 0)).toFixed(2)}`}
-                    disabled
-                    className={`${deepInputClass} bg-gray-100 font-mono text-emerald-700`}
-                  />
+              <div className="w-[120px] flex-shrink-0">
+                <FormField label="单位 *">
+                  <Select
+                    value={formData.unit || ''}
+                    onValueChange={(v) => handleFieldChange('unit', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="单位" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.unit && <div className="text-xs text-red-500 mt-1">{errors.unit}</div>}
                 </FormField>
               </div>
             </div>
-          )}
-        </div>
+            {/* 右半：单价 + 总金额（仅外购入库显示，flex-1 + 140px） */}
+            {sourceType === 'external_purchased' && (
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <FormField label="单价（元）">
+                    <NumberInput
+                      value={formData.unitPrice ?? 0}
+                      onChange={(v) => handleFieldChange('unitPrice', v)}
+                      min={0}
+                      className={deepInputClass}
+                    />
+                    {errors.unitPrice && <div className="text-xs text-red-500 mt-1">{errors.unitPrice}</div>}
+                  </FormField>
+                </div>
+                <div className="w-[140px] flex-shrink-0">
+                  <FormField label="总金额">
+                    <Input
+                      value={`¥ ${(Number(formData.quantity || 0) * Number(formData.unitPrice || 0)).toFixed(2)}`}
+                      disabled
+                      className={`${deepInputClass} bg-gray-100 font-mono text-emerald-700`}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 采购日期（仅外购入库显示，位于数量行下方，占 50% 宽度） */}
         {sourceType === 'external_purchased' && (
