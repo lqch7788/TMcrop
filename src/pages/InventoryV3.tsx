@@ -93,6 +93,14 @@ export default function InventoryV3Page() {
     });
   }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, loadAll]);
 
+  // 2026-07-13 v6：URL 携带 openStockModal=true → 自动打开 AddStockModal
+  // 来自种植/育苗行 "🔼 补录入库" 按钮 navigate 跳转
+  useEffect(() => {
+    if (prefillFromUrl) {
+      setAddModalOpen(true);
+    }
+  }, [prefillFromUrl]);
+
   // 关键字过滤（前端）+ 低库存过滤
   const filteredStocks = useMemo(() => {
     let result = stocks;
@@ -388,8 +396,10 @@ export default function InventoryV3Page() {
           if (prefillFromUrl) setSearchParams({})
         }}
         // 2026-07-09 v5 阶段三（路径 B）：URL 预填的 sourceId/sourceModule 等
+        // 2026-07-13 v6：补传 prefillSourceCode（AddStockModal 用于 banner 显示）
         prefillSourceId={prefillFromUrl?.sourceId}
         prefillSourceModule={prefillFromUrl?.sourceModule}
+        prefillSourceCode={prefillFromUrl?.sourceCode}
         prefillStockType={prefillFromUrl?.stockType}
         prefillMode={prefillFromUrl?.mode}
       />
