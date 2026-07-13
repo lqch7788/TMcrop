@@ -514,6 +514,27 @@ function BasicTab({
         ['更新时间', stock.updateTime || '-'],
       ],
     },
+    // 2026-07-13：补录信息区块（仅 is_supplementary=1 的记录显示）
+    // 紫色高亮，让用户一眼看出"该记录是补录入库的"及来源行
+    ...((stock as any).isSupplementary === 1 || (stock as any).is_supplementary === 1
+      ? [{
+          title: '⚙️ 补录信息',
+          bg: 'bg-purple-50',
+          border: 'border-purple-300',
+          text: 'text-purple-700',
+          items: [
+            ['补录标记', <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded font-medium">⚙️ 补录入库</span>],
+            ['补录原因', <span className="text-purple-900 font-medium">{(stock as any).supplementaryReason || (stock as any).supplementary_reason || '-'}</span>],
+            ['来源类型', (() => {
+              const m = (stock as any).sourceModule || (stock as any).source_module;
+              const labelMap: Record<string, string> = { planting: '种植行', seedling: '育苗行', 'seed-source': '种源' };
+              return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{labelMap[m] || m || '-'}</span>;
+            })()],
+            ['来源行ID', <span className="font-mono text-xs">{(stock as any).sourceId || (stock as any).source_id || '-'}</span>],
+            ['来源行编码', <span className="font-mono text-xs">{(stock as any).sourceCode || (stock as any).source_code || '-'}</span>],
+          ],
+        }]
+      : []),
     // ========== 2026-07-09：移除"🏷️ 业务信息"组（业务ID/类型/编码已与"基础信息"组重复）==========
     // ========== 2026-07-09：移除"🌱 来源专属"组（字段已分散到"💰 财务与来源专属" + "品种信息"组）==========
   ];
@@ -521,7 +542,9 @@ function BasicTab({
   return (
     <div className="space-y-4">
       {sections.map((sec, i) => (
-        <React.Fragment key={i}>
+        // 2026-07-13：原 <React.Fragment key={i}> 因 vite-plugin-source-identifier 注入 data-matrix-id 触发 React 警告
+        // 改用 <div key={i}>（不影响布局，Fragment 本身无视觉）
+        <div key={i}>
           <div className={`${sec.bg} rounded-lg p-4 border ${sec.border.replace('border-', 'border-').replace('-300', '-200')}`}>
             <h4 className={`text-sm font-semibold ${sec.text} mb-3 border-b ${sec.border} pb-1.5`}>
               {sec.title}
@@ -538,7 +561,7 @@ function BasicTab({
 
           {/* 冻结明细（数量信息卡片下方展开） */}
           {sec.title === '数量信息' && showFreezeDetail && freezesCount > 0 && (
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-2">
               <h4 className="text-sm font-semibold text-blue-700 mb-2">冻结明细</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -594,7 +617,7 @@ function BasicTab({
               </div>
             </div>
           )}
-        </React.Fragment>
+        </div>
       ))}
     </div>
   );

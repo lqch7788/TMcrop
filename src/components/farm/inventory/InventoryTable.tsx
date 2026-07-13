@@ -308,22 +308,33 @@ export function InventoryTable({
                       {stock.warehouseName || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {stock.sourceType ? (() => {
-                        const info = SOURCE_ORIGIN_MAP[stock.sourceType];
-                        if (info) {
+                      <div className="flex items-center gap-1.5">
+                        {/* 2026-07-13：补录标记徽章（仅 is_supplementary=1 显示） */}
+                        {((stock as any).isSupplementary === 1 || (stock as any).is_supplementary === 1) && (
+                          <span
+                            className="px-2 py-1 bg-purple-600 text-white text-xs rounded-full font-medium"
+                            title={(stock as any).supplementaryReason || (stock as any).supplementary_reason || '补录入库'}
+                          >
+                            ⚙️ 补录
+                          </span>
+                        )}
+                        {stock.sourceType ? (() => {
+                          const info = SOURCE_ORIGIN_MAP[stock.sourceType];
+                          if (info) {
+                            return (
+                              <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full font-medium`}>
+                                {info.label}
+                              </span>
+                            );
+                          }
+                          // 未知来源码：fallback 显示原文
                           return (
-                            <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full font-medium`}>
-                              {info.label}
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                              {stock.sourceType}
                             </span>
                           );
-                        }
-                        // 未知来源码：fallback 显示原文
-                        return (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                            {stock.sourceType}
-                          </span>
-                        );
-                      })() : <span className="text-gray-400">-</span>}
+                        })() : <span className="text-gray-400">-</span>}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {getStatusBadge(stock.status)}
