@@ -12,6 +12,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { inventoryController } from '../controllers/inventory.controller';
 import { checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
@@ -116,6 +117,28 @@ const InboundSchema = z.object({
   // 字典 category_code='crop_form' 6 项：整株/果实/种子/叶片/花朵/其他
   cropForm: z.string().optional(),
 });
+
+/**
+ * 2026-07-13：生成 harvest_code（HS + YYYYMMDD + 3位当日自增）
+ * 与 inventoryInboundFromSource.service.ts 的 generateHarvestCode 保持一致
+ */
+function generateHarvestCode(db: any, dateStr: string): string {
+  const pattern = `HS${dateStr}___`;
+  const stmt = db.prepare(`
+    SELECT harvest_code FROM harvest_records
+    WHERE harvest_code LIKE ? AND LENGTH(harvest_code) = 13
+    ORDER BY harvest_code DESC LIMIT 1
+  `);
+  stmt.bind([pattern]);
+  let maxSerial = 0;
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { harvest_code: string };
+    maxSerial = parseInt(row.harvest_code.slice(-3), 10) || 0;
+  }
+  stmt.free();
+  const seq = String(maxSerial + 1).padStart(3, '0');
+  return `HS${dateStr}${seq}`;
+}
 
 /**
  * 辅助函数：按 sourceModule 查源记录（sql.js 标准 prepare/bind/step/getAsObject/free 模式）
@@ -342,6 +365,54 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
       now,
     ])
 
+    // 4.5 补录入库同步写 harvest_records（2026-07-13）
+    // 让已结束行的采收记录弹窗（只读模式）也能看到补录记录，且 is_supplementary 列显示"是"
+    let harvestCode: string | null = null;
+    if (input.isSupplementary
+      && (input.sourceModule === 'planting' || input.sourceModule === 'seedling')
+      && input.sourceId
+      && input.sourceId !== 'manual') {
+      try {
+        harvestCode = generateHarvestCode(db, dateStrInst);
+        const harvestRecordId = randomUUID();
+        // 构造 products JSON 数组（补录只有 1 个 product）
+        const productsJson = JSON.stringify([{
+          cropName: input.cropName || source.cropName || '',
+          cropVariety: input.varietyName || source.cropVariety || '',
+          harvestQuantity: input.quantity,
+          unit: input.unit,
+          grade: input.qualityGrade || 'good',
+        }]);
+        // 注意：harvest_records 表没有 warehouse_name 列（查询时通过 LEFT JOIN warehouses 获取）
+        db.run(`
+          INSERT INTO harvest_records (
+            id, harvest_code, source_module, source_id, source_name,
+            harvest_date, warehouse_id,
+            products, harvest_form, unit,
+            is_supplementary, supplementary_reason,
+            status, inbound_type,
+            create_by, create_time, update_time
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', 'supplementary', ?, ?, ?)
+        `, [
+          harvestRecordId, harvestCode,
+          input.sourceModule, input.sourceId,
+          input.cropName || source.cropName || '',
+          recordDate,
+          input.warehouseId,
+          productsJson,
+          input.cropForm || null,
+          input.unit,
+          1,  // is_supplementary
+          input.supplementaryReason || null,
+          input.operatorName || 'system', now, now,
+        ]);
+        console.log(`[补录反填] harvest_records ← ${harvestCode} (sourceModule=${input.sourceModule}, sourceId=${input.sourceId})`);
+      } catch (e: any) {
+        // harvest_records 写入失败不阻断主流程（库存已正确入库）
+        console.error('[补录反填] harvest_records 写入失败（不阻断主流程）:', e?.message || e);
+      }
+    }
+
     // 4. 补仓库名（如未传且 warehouses 表能查到）
     if (!input.warehouseName) {
       try {
@@ -361,7 +432,7 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
     }
 
     saveDatabase()
-    res.json({ success: true, data: { stockId, recordId } })
+    res.json({ success: true, data: { stockId, recordId, harvestCode } })
   } catch (e: any) {
     console.error('[POST /inventory/inbound-record]', e)
     res.status(500).json({ success: false, error: e?.message || '入库失败' })
@@ -930,7 +1001,8 @@ router.get('/', (req: Request, res: Response) => {
         ib.supplier_phone, ib.gift_from, ib.consignor, ib.source_warehouse_name, ib.stocktake_no,
         ib.base_id AS ib_base_id, ib.base_name AS ib_base_name,
         ib.planting_mode AS ib_planting_mode, ib.greenhouse_name AS ib_greenhouse_name,
-        ib.crop_form AS ib_crop_form
+        ib.crop_form AS ib_crop_form,
+        ib.source_code AS ib_source_code
       FROM inventory_stock s
       LEFT JOIN inventory_inbound_records ib
         ON ib.business_id = s.id AND ib.id = (
@@ -977,6 +1049,7 @@ router.get('/', (req: Request, res: Response) => {
         planting_mode: r.planting_mode || r.ib_planting_mode || null,
         greenhouse_name: r.greenhouse_name || r.ib_greenhouse_name || null,
         crop_form: r.crop_form || r.ib_crop_form || null,
+        source_code: r.ib_source_code || null,
         product_code: r.business_code || `SKU-${r.instance_id}`,
         variety: r.variety_name || '',
         quantity: r.current_quantity || 0,
@@ -1018,7 +1091,7 @@ router.get('/:id', (req: Request, res: Response) => {
     let inboundExtra: any = {};
     try {
       const ibStmt = db.prepare(`
-        SELECT supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no
+        SELECT supplier_phone, gift_from, consignor, source_warehouse_name, stocktake_no, source_code
         FROM inventory_inbound_records
         WHERE business_id = ?
         ORDER BY create_time DESC LIMIT 1
@@ -1037,6 +1110,8 @@ router.get('/:id', (req: Request, res: Response) => {
         consignor: inboundExtra.consignor || r.consignor || null,
         source_warehouse_name: inboundExtra.source_warehouse_name || r.source_warehouse_name || null,
         stocktake_no: inboundExtra.stocktake_no || r.stocktake_no || null,
+        // 2026-07-13：补录来源行编码（从 inbound_records 注入，供详情弹窗"来源行编码"显示）
+        source_code: inboundExtra.source_code || r.source_code || null,
         product_code: r.business_code || `SKU-${r.instance_id}`,
         variety: r.variety_name || '',
         quantity: r.current_quantity || 0,
