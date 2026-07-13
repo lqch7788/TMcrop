@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Boxes } from 'lucide-react';
+import { Boxes, Edit3 } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
 // 一次性动作（CSV 导出）保留直调 client-side
@@ -39,19 +39,10 @@ export default function InventoryV3Page() {
   const loadAll = useInventoryStore((s) => s.loadAll);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
 
-  // 2026-07-09 v5 阶段三（路径 B）：监听 URL 参数自动开 AddStockModal
-  // 来自种植/育苗页 navigate('/crop-inventory?openStockModal=true&...')
-  const [searchParams, setSearchParams] = useSearchParams();
-  const prefillFromUrl = useMemo(() => {
-    if (searchParams.get('openStockModal') !== 'true') return null;
-    return {
-      sourceModule: searchParams.get('sourceModule') || undefined,
-      sourceId: searchParams.get('sourceId') || undefined,
-      sourceCode: searchParams.get('sourceCode') || undefined,
-      stockType: searchParams.get('stockType') || undefined,
-      mode: searchParams.get('mode') || 'normal',  // 'supplementary' | 'normal'
-    };
-  }, [searchParams]);
+  // 2026-07-13 方案 B：删除 URL 参数监听（补录统一在 InventoryV3 入口）
+  // 保留 useSearchParams 仅供未来扩展（如深链跳转）；目前不使用
+  const [searchParams] = useSearchParams();
+  void searchParams;
 
   // 筛选
   const [filters, setFilters] = useState<InventoryFilterState>({
@@ -68,10 +59,18 @@ export default function InventoryV3Page() {
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
   const [selectedFreezeStock, setSelectedFreezeStock] = useState<InventoryStock | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  // 2026-07-13 方案 B：补录模式 state（控制 AddStockModal 显示紫色 banner + 强制 sourceType=self_produced）
+  const [supplementaryMode, setSupplementaryMode] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
   // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // 2026-07-13 方案 B：点击"补录入库"按钮 → 打开 AddStockModal 并启用补录模式
+  const handleSupplementary = () => {
+    setSupplementaryMode(true);
+    setAddModalOpen(true);
+  };
 
   // 批量操作状态（与 ActionToolbar 协同）
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -93,14 +92,7 @@ export default function InventoryV3Page() {
     });
   }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, loadAll]);
 
-  // 2026-07-13 v6：URL 携带 openStockModal=true → 自动打开 AddStockModal
-  // 来自种植/育苗行 "🔼 补录入库" 按钮 navigate 跳转
-  useEffect(() => {
-    if (prefillFromUrl) {
-      setAddModalOpen(true);
-    }
-  }, [prefillFromUrl]);
-
+  // 2026-07-13 方案 B：删除 URL 自动开弹窗 useEffect（补录走内部按钮）
   // 关键字过滤（前端）+ 低库存过滤
   const filteredStocks = useMemo(() => {
     let result = stocks;
@@ -325,6 +317,18 @@ export default function InventoryV3Page() {
         loading={loading}
       />
 
+      {/* 2026-07-13 方案 B：补录入库按钮（在 ActionToolbar 上方，独立入口） */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSupplementary}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          <Edit3 className="w-4 h-4 mr-1" /> 补录入库
+        </Button>
+      </div>
+
       {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
       <ActionToolbar
         title="库存列表"
@@ -391,17 +395,11 @@ export default function InventoryV3Page() {
       <AddStockModal
         isOpen={addModalOpen}
         onClose={() => {
-          setAddModalOpen(false)
-          // 2026-07-09 v5 阶段三：关弹窗时清理 URL 参数（避免下次进来误开）
-          if (prefillFromUrl) setSearchParams({})
+          setAddModalOpen(false);
+          setSupplementaryMode(false);  // 重置补录模式
         }}
-        // 2026-07-09 v5 阶段三（路径 B）：URL 预填的 sourceId/sourceModule 等
-        // 2026-07-13 v6：补传 prefillSourceCode（AddStockModal 用于 banner 显示）
-        prefillSourceId={prefillFromUrl?.sourceId}
-        prefillSourceModule={prefillFromUrl?.sourceModule}
-        prefillSourceCode={prefillFromUrl?.sourceCode}
-        prefillStockType={prefillFromUrl?.stockType}
-        prefillMode={prefillFromUrl?.mode}
+        // 2026-07-13 方案 B：补录模式（true → 紫色 banner + 强制 sourceType=self_produced）
+        supplementaryMode={supplementaryMode}
       />
 
       {/* 详情弹窗（合并原"追溯"功能） */}
