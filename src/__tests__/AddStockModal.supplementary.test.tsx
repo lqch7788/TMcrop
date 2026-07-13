@@ -141,7 +141,7 @@ describe('AddStockModal sourceId 按 stockType 动态加载', () => {
 
   it('prefillStockType=product → 调 /plantings，不调 /seedlings', async () => {
     mockApiClient.get.mockResolvedValue({
-      data: { items: [{ id: 'p1', plantingCode: 'P001', cropName: '苹果', cropCode: '010203' }] },
+      data: { items: [{ id: 'p1', plantCode: 'P001', cropName: '苹果', cropCode: '010203' }] },
     });
     const { unmount } = renderInContainer({
       prefillSourceId: 'p1',
@@ -181,7 +181,7 @@ describe('AddStockModal sourceId 按 stockType 动态加载', () => {
 
   it('prefillStockType=seed → 调 /seed-sources', async () => {
     mockApiClient.get.mockResolvedValue({
-      data: { items: [{ id: 'ss1', sourceCode: 'ZY001', cropName: '葡萄枝条', cropCode: '0305' }] },
+      data: { items: [{ id: 'ss1', seedCode: 'ZY001', cropName: '葡萄枝条', cropCode: '0305' }] },
     });
     const { unmount } = renderInContainer({
       prefillSourceId: 'ss1',
@@ -218,7 +218,7 @@ describe('AddStockModal 补录模式锁定', () => {
 
   it('prefillMode=supplementary + prefillSourceId → 显示紫色锁定 banner', async () => {
     mockApiClient.get.mockResolvedValue({
-      data: { items: [{ id: 'p1', plantingCode: 'YY2025-001', cropName: '苹果', cropCode: '010203' }] },
+      data: { items: [{ id: 'p1', plantCode: 'YY2025-001', cropName: '苹果', cropCode: '010203' }] },
     });
     const { container, unmount } = renderInContainer({
       prefillSourceId: 'p1',

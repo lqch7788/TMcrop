@@ -425,12 +425,15 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           : stockType === 'seedling'
           ? '/seedlings'
           : '/plantings';
-        // 三类源记录的 code 字段命名不同：seed → sourceCode；seedling → seedlingCode；planting → plantingCode
+        // 三类源记录的 code 字段命名（已 curl 后端确认 2026-07-13）：
+        // - seed-sources API → seedCode（DB 字段 source_code）
+        // - seedlings API → seedlingCode
+        // - plantings API → plantCode（DB 字段 plant_code，注意不是 plantingCode！）
         const codeField = stockType === 'seed'
-          ? 'sourceCode'
+          ? 'seedCode'
           : stockType === 'seedling'
           ? 'seedlingCode'
-          : 'plantingCode';
+          : 'plantCode';
         const moduleValue: 'seed-source' | 'seedling' | 'planting' =
           stockType === 'seed' ? 'seed-source' : stockType === 'seedling' ? 'seedling' : 'planting';
         const prefix = stockType === 'seed' ? '种源' : stockType === 'seedling' ? '育苗' : '种植';
