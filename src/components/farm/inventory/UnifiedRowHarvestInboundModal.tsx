@@ -12,7 +12,6 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import {
   Modal,
@@ -115,10 +114,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   stockType,
   sourceModule,
 }) => {
-  // 2026-07-09 v6：用户要求"必须有采收弹窗，弹窗内"补录"按钮跳转"
-  // 弹窗内"补录"按钮（仅已结束/已取消行可见）跳转到 AddStockModal
-  const navigate = useNavigate();
-
+  // 2026-07-13 方案 B：删除补录跳转逻辑
+  // 补录功能统一在 InventoryV3 "补录入库"按钮内实现，不在行级弹窗内跳转
   // ---- 表单 state ----
   // 2026-06-19: harvestDate 用 YYYY-MM-DD string 存储（与 AddModal 采购日期字段同模式）
   const [harvestDate, setHarvestDate] = useState<string>(todayLocal())
@@ -425,36 +422,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
 
   // ---- UI ----
   const meta = STOCK_TYPE_LABEL[stockType]
-  // 2026-07-09 v6：弹窗内"补录"按钮（仅已结束/已取消行可见）→ 跳转 AddStockModal
-  // 符合用户 v6 设计："必须有采收弹窗，弹窗内"补录"按钮跳转"
-  const isSourceEnded = !!sourceRecord?.endTime || sourceRecord?.status === 'cancelled'
-  const handleSupplementaryJump = () => {
-    if (!sourceRecord) return
-    const isSupp = !!sourceRecord.endTime || sourceRecord.status === 'cancelled'
-    const params = new URLSearchParams({
-      openStockModal: 'true',
-      sourceModule: sourceModule,
-      sourceId: sourceRecord.id,
-      sourceCode: sourceRecord.code || '',
-      stockType: stockType,
-      mode: isSupp ? 'supplementary' : 'normal',
-    })
-    navigate(`/crop-inventory?${params.toString()}`)
-  }
+  // 2026-07-13 方案 B：删除补录跳转 UI（补录统一在 InventoryV3 实现）
   const titleText = (
     <div className="flex items-center gap-3">
       <span>采收入库（{meta.label}）</span>
-      {isSourceEnded && (
-        <Button
-          size="sm"
-          variant="default"
-          className="bg-amber-600 hover:bg-amber-700 text-white"
-          onClick={handleSupplementaryJump}
-          title={'跳转到统一库存页的「自产（兜底）」模式（已预填 sourceId）'}
-        >
-          🔼 补录入库
-        </Button>
-      )}
     </div>
   )
 
