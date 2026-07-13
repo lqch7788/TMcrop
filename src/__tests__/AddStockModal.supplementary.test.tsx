@@ -19,14 +19,24 @@ import { act } from 'react-dom/test-utils';
 
 // ---- mock 依赖（与 AddStockModal.fieldRender.test.tsx 保持一致）----
 
-vi.mock('@/lib/apiClient', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
+vi.mock('@/lib/apiClient', () => {
+  // 工厂内创建 vi.fn() 实例（vi.mock 被 hoist，外部 const 引用会 TDZ）
+  const sharedGet = vi.fn();
+  const sharedPost = vi.fn();
+  const sharedPut = vi.fn();
+  const sharedDelete = vi.fn();
+  // 把实例挂到全局以便测试访问（违反 vi.mock 工厂无副作用规范，但本项目 vite 配置允许）
+  (globalThis as any).__mockApiClient = {
+    get: sharedGet,
+    post: sharedPost,
+    put: sharedPut,
+    delete: sharedDelete,
+  };
+  return {
+    default: { get: sharedGet, post: sharedPost, put: sharedPut, delete: sharedDelete },
+    enhancedApiClient: { get: sharedGet, post: sharedPost, put: sharedPut, delete: sharedDelete },
+  };
+});
 
 vi.mock('@/stores/useAuthStore', () => ({
   useAuthStore: () => ({ currentUser: { name: '测试员A', realName: '测试员A' } }),
@@ -81,6 +91,17 @@ vi.mock('@/stores/useBaseStore', () => ({
   },
 }));
 
+vi.mock('@/stores/useDictionaryStore', () => ({
+  useDictionaryStore: Object.assign(
+    (sel?: any) => {
+      const state = { dictionaries: [], loadDictionaries: vi.fn() };
+      return sel ? sel(state) : state;
+    },
+    { getState: () => ({ dictionaries: [], loadDictionaries: vi.fn() }) },
+  ),
+  getDictItems: () => [], // 2026-07-13 v7：测试不依赖字典
+}));
+
 vi.mock('@/services/cropVarietyService', () => ({
   initVarieties: vi.fn(),
   getVarietyByName: vi.fn().mockReturnValue(null),
@@ -105,8 +126,8 @@ vi.mock('@/lib/dialogService', () => ({
 // ---- import 被测组件 + mock apiClient ----
 
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
-import apiClient from '@/lib/apiClient';
-const mockApiClient = apiClient as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
+// 2026-07-13 v7：从 globalThis 拿共享 mock 实例（vi.mock 工厂内创建，外部引用会 TDZ）
+const mockApiClient = (globalThis as any).__mockApiClient as { get: ReturnType<typeof vi.fn> };
 
 // ---- 工具 ----
 
@@ -326,6 +347,35 @@ describe('AddStockModal 补录模式锁定', () => {
     // 至少 2 个 combobox role（库存类型 + 补录原因）
     const comboboxes = container.querySelectorAll('[role="combobox"]');
     expect(comboboxes.length).toBeGreaterThanOrEqual(2);
+    unmount();
+  });
+
+  it('完整补录流程：URL 参数 → AddStockModal 加载 sourceId 列表 → 预填 formData.sourceCode/sourceId', async () => {
+    // 模拟后端返回 sourceId 列表
+    mockApiClient.get.mockResolvedValue({
+      data: {
+        items: [
+          { id: 'PL1783342405058', plantCode: 'ZZ20260706-001', cropName: '郁金香', cropCode: 'FL010400000' },
+        ],
+      },
+    });
+    const { container, unmount } = renderInContainer({
+      prefillSourceId: 'PL1783342405058',
+      prefillSourceCode: 'ZZ20260706-001', // 来自 URL（PlantingPage 修复后 plantCode）
+      prefillSourceModule: 'planting',
+      prefillStockType: 'product',
+      prefillMode: 'supplementary',
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+    const html = container.innerHTML;
+    // 紫色 banner 显示 sourceCode（不是"未知"）
+    expect(html).toContain('ZZ20260706-001');
+    expect(html).not.toContain('已绑定源记录（未知）');
+    expect(html).not.toContain('已绑定源记录（PL1783342405058）'); // 应优先显示 code
+    // 黄色补录 banner 显示
+    expect(html).toContain('事后修正');
     unmount();
   });
 });
