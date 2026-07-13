@@ -241,16 +241,16 @@ function renderFieldByType(
         />
       );
     case 'select-source-id':
-      // 2026-07-13 方案 D：sourceId 下拉 + 搜索框
+      // 2026-07-13 方案 D：sourceId 搜索框 + 下拉菜单同一行（各占一半）
       // 三类源记录（种源/育苗/种植）合并到一个下拉，按 label/code/cropName 模糊搜索
       // 选中后自动联动：sourceId + sourceModule + sourceCode + cropCode + cropName + cropSelector
       // （cropSelector 联动让下方"作物选择"字段自动显示已选，无需用户重复选择）
       return (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           <Input
             value={ctx.sourceIdSearch || ''}
             onChange={(e) => ctx.onSourceIdSearchChange?.(e.target.value)}
-            placeholder="搜索源记录（按编码或作物名）..."
+            placeholder="搜索源记录..."
             className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
           <Select value={value || ''} onValueChange={(v) => {
@@ -273,8 +273,8 @@ function renderFieldByType(
             <SelectTrigger>
               <SelectValue placeholder={
                 ctx.sourceIdOptions && ctx.sourceIdOptions.length > 0
-                  ? '选择源种植/育苗/种源行'
-                  : '正在加载...'
+                  ? '选择源行'
+                  : '加载中...'
               } />
             </SelectTrigger>
             <SelectContent>
