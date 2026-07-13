@@ -184,8 +184,10 @@ export interface InventoryStock {
   supplementaryReason?: string;
   /** 2026-07-13：补录来源模块（planting/seedling） */
   sourceModule?: string;
-  /** 2026-07-13：补录来源记录ID */
+  /** 2026-07-13：补录来源记录ID（数据库主键） */
   sourceRecordId?: string;
+  /** 2026-07-13：补录来源记录业务编码（种子/育苗/种植编码，如 YM20260705-003） */
+  sourceCode?: string;
   /** 采收区域（多个时用、分隔） */
   greenhouseName?: string;
   /** 种植区域（plantings.area_name） */

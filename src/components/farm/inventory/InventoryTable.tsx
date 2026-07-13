@@ -313,7 +313,7 @@ export function InventoryTable({
                         {stock.isSupplementary === 1 && (
                           <span
                             className="px-2 py-1 bg-purple-600 text-white text-xs rounded-full font-medium"
-                            title={stock.supplementaryReason || '补录入库'}
+                            title={`补录原因：${stock.supplementaryReason || '-'}\n来源行：${stock.sourceCode || stock.sourceRecordId || '-'}`}
                           >
                             ⚙️ 补录
                           </span>

@@ -516,6 +516,7 @@ function BasicTab({
     },
     // 2026-07-13：补录信息区块（仅 isSupplementary=1 的记录显示）
     // 紫色高亮，让用户一眼看出"该记录是补录入库的"及来源行
+    // 注意：此处在 BasicTab 组件内，stock 已由父组件传入（= effectiveStock）
     ...(stock.isSupplementary === 1
       ? [{
           title: '⚙️ 补录信息',
@@ -530,6 +531,7 @@ function BasicTab({
               return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{labelMap[stock.sourceModule || ''] || stock.sourceModule || '-'}</span>;
             })()],
             ['来源行ID', <span className="font-mono text-xs">{stock.sourceRecordId || '-'}</span>],
+            ['来源行编码', <span className="font-mono text-xs font-semibold">{stock.sourceCode || '-'}</span>],
           ],
         }]
       : []),

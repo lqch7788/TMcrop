@@ -295,7 +295,8 @@ export class InventoryStockRepository {
     let sql = `
       SELECT s.*,
         ib.supplier_phone, ib.gift_from, ib.consignor, ib.source_warehouse_name, ib.stocktake_no,
-        ib.base_id, ib.base_name, ib.planting_mode, ib.greenhouse_name, ib.crop_form
+        ib.base_id, ib.base_name, ib.planting_mode, ib.greenhouse_name, ib.crop_form,
+        ib.source_code
       FROM inventory_stock s
       LEFT JOIN inventory_inbound_records ib
         ON ib.business_id = s.id AND ib.id = (
@@ -470,3 +471,4 @@ export class InventoryStockRepository {
 
 // 导出单例
 export const inventoryStockRepository = new InventoryStockRepository();
+

@@ -513,13 +513,15 @@ function toCamelStock(row: any): InventoryStock {
     cropForm: row.crop_form ?? row.cropForm ?? null,
     // operatorName/createBy/createTime/updateTime 已在 InventoryStock 类型定义，但 toCamelStock 未映射
     operatorName: row.operator_name ?? row.operatorName ?? null,
-    // ========== 2026-07-13：补录入库字段（is_supplementary / supplementary_reason / source_module / source_id）==========
+    // ========== 2026-07-13：补录入库字段（is_supplementary / supplementary_reason / source_module / source_id / source_code）==========
     isSupplementary: Number(row.is_supplementary ?? row.isSupplementary ?? 0),
     supplementaryReason: row.supplementary_reason ?? row.supplementaryReason ?? null,
     sourceModule: row.source_module ?? row.sourceModule ?? null,
     // source_id 在 inventory_stock 表中存的是源记录 ID（种植行ID/育苗行ID），映射为 sourceRecordId
     // 注意：camelCaseResponseMiddleware 已把 source_id → sourceId，所以先读 camelCase 再 fallback snake_case
     sourceRecordId: row.sourceId ?? row.source_id ?? row.sourceRecordId ?? null,
+    // source_code 来自 inventory_inbound_records JOIN，是源记录的业务编码（如 YM20260705-003）
+    sourceCode: row.sourceCode ?? row.source_code ?? row.ib_source_code ?? null,
   } as unknown as InventoryStock;
 }
 
