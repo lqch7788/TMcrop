@@ -12,6 +12,8 @@ import { getDatabase, saveDatabase } from '../db';
 import { seedSourceRepository } from '../repositories/seedSource.repository';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+// 2026-07-14：方案 C — 调拨后重算 status
+import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 // 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
 // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
 import { generateTransactionId } from '../services/inventory.service';
@@ -454,14 +456,16 @@ router.post('/append-from-inventory', async (req, res) => {
         // 4. 扣减源库存
         const newSourceCurrent = sourceCurrent - item.transferQuantity;
         const newSourceAvailable = Math.max(0, sourceAvailable - item.transferQuantity);
-        const newSourceStatus = newSourceCurrent === 0 ? 'depleted' : sourceStatus;
+        // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算（recompute 会处理 transferred 状态）
         const updStock = db.prepare(
           `UPDATE inventory_stock
-           SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
+           SET current_quantity = ?, available_quantity = ?, update_time = ?
            WHERE id = ? AND current_quantity >= ?`
         );
-        updStock.run([newSourceCurrent, newSourceAvailable, newSourceStatus, now, item.sourceStockId, item.transferQuantity]);
+        updStock.run([newSourceCurrent, newSourceAvailable, now, item.sourceStockId, item.transferQuantity]);
         updStock.free();
+        // 重算 status（调拨后数量可能变 0 → empty，或 < 10 → low_stock）
+        recomputeAndUpdateStockStatus(getDatabase(), item.sourceStockId);
         writtenStockIds.push(item.sourceStockId);
 
         // 5. 写 inventory_transaction (outbound)
@@ -587,13 +591,16 @@ router.post('/append-from-inventory', async (req, res) => {
           d.free();
         }
         for (const snap of originalStockSnapshot) {
+          // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算
           const u = db.prepare(
             `UPDATE inventory_stock
-             SET current_quantity = ?, available_quantity = ?, status = 'in_stock', update_time = ?
+             SET current_quantity = ?, available_quantity = ?, update_time = ?
              WHERE id = ?`
           );
           u.run([snap.current_quantity, snap.available_quantity, now, snap.id]);
           u.free();
+          // 重算 status（回滚后可能 in_stock / low_stock）
+          recomputeAndUpdateStockStatus(getDatabase(), snap.id);
         }
         saveDatabase();
       } catch (rollbackErr) {

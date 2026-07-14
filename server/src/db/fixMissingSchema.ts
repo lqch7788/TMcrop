@@ -8,6 +8,8 @@ import { getDatabase, saveDatabase, initDatabase } from './index';
 import { seedLog } from '../lib/seedLogger';
 import { createMaterialFlowLogTable } from './materialFlowLog';
 import { createPlantingAreaStocksTable, migrateToAreaStocks } from './plantingAreaStocks';
+// 2026-07-14：方案 C — 启动时批量重算 inventory_stock.status
+import { recomputeAllStockStatus } from '../lib/inventoryStockStatus';
 
 /**
  * 修复数据库结构 - 添加缺失的列和表
@@ -3548,6 +3550,20 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('batch_inventory:', e.message);
   }
   try { db.run('CREATE INDEX IF NOT EXISTS idx_batch_fefo ON batch_inventory(material_code, expiry_date, batch_no)'); } catch {}
+
+  // ========== 2026-07-14：迁移 — 批量重算 inventory_stock.status ==========
+  // 方案 C：status 改为基于 current_quantity/frozen_quantity 自动计算
+  // 启动时执行一次，修复历史脏数据（status 与实际数量不一致）
+  try {
+    const result = recomputeAllStockStatus(db);
+    if (result.updated > 0) {
+      seedLog.info(`✓ inventory_stock.status 批量重算：${result.updated}/${result.total} 条已更新`);
+    } else {
+      seedLog.skip(`• inventory_stock.status 批量重算：无需更新（${result.total} 条全部一致）`);
+    }
+  } catch (e: any) {
+    seedLog.error('inventory_stock.status 批量重算失败:', e.message);
+  }
 
   // ========== 2026-07-14：迁移 — 删除 harvest_inbounds 表 ==========
   // 独立采收入库页面已下线，所有入库走 inventory_* 表（行级弹窗）。

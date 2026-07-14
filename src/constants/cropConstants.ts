@@ -411,14 +411,17 @@ export const PROPAGATION_STATUS_COLORS: Record<string, string> = {
 };
 
 // ========== 库存状态映射（ProduceInventory） ==========
+// 2026-07-14：区分全部冻结 vs 部分冻结
 export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  // 2026-07-09：标签对齐 InventoryTable 的 getStatusBadge（"库存中"而非"正常"），统一全站
-  in_stock:    { label: '库存中',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  low_stock:   { label: '低库存',   bg: 'bg-amber-100',   text: 'text-amber-700' },
-  frozen:      { label: '已冻结',   bg: 'bg-blue-100',    text: 'text-blue-700' },
-  outbound:    { label: '已出库',   bg: 'bg-gray-100',    text: 'text-gray-700' },
-  empty:       { label: '已用完',   bg: 'bg-red-100',     text: 'text-red-700' },
-  transferred: { label: '已调拨',   bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  in_stock:       { label: '库存中',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  low_stock:      { label: '低库存',   bg: 'bg-amber-100',   text: 'text-amber-700' },
+  // 兼容历史数据
+  frozen:         { label: '部分冻结', bg: 'bg-blue-100',    text: 'text-blue-700' },
+  frozen_full:    { label: '全部冻结', bg: 'bg-blue-200',    text: 'text-blue-800' },
+  frozen_partial: { label: '部分冻结', bg: 'bg-blue-100',    text: 'text-blue-700' },
+  outbound:       { label: '已出库',   bg: 'bg-gray-100',    text: 'text-gray-700' },
+  empty:          { label: '已用完',   bg: 'bg-red-100',     text: 'text-red-700' },
+  transferred:    { label: '已调拨',   bg: 'bg-cyan-100',    text: 'text-cyan-700' },
 };
 
 // ========== 采收状态映射 ==========

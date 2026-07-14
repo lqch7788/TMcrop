@@ -19,6 +19,8 @@ import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { generateStockId, generateInboundRecordId, generateTransactionId } from '../services/inventory.service';
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+// 2026-07-14：方案 C — 写操作后自动重算 status（冻结/解冻/出库/调拨等）
+import { recomputeAndUpdateStockStatus, recomputeAllStockStatus } from '../lib/inventoryStockStatus';
 
 const router = Router();
 
@@ -735,6 +737,8 @@ router.post('/freeze', async (req: Request, res: Response) => {
         'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
         [newFrozen, now, body.instanceId]
       );
+      // 2026-07-14：方案 C — 冻结后重算 status（frozen_quantity > 0 → 'frozen'）
+      recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
 
       // 4c. INSERT inventory_transaction (freeze流水)
       const txDateStr = formatLocalDateYYYYMMDD(new Date());
@@ -748,7 +752,8 @@ router.post('/freeze', async (req: Request, res: Response) => {
       `, [
         txId, txId, body.instanceId, stock.stock_type,
         -body.freezeQuantity, currentQty, currentQty,
-        body.orderId || null, body.freezeType === 'order' ? 'order' : 'manual', orderCode || null,
+        // 2026-07-14：freeze 流水统一业务类型为 'other'，businessCode 用 orderCode 兜底
+        body.orderId || null, 'other', orderCode || (body.orderId || null),
         body.operatorId || null, body.operatorName || null, freezeDate,
         body.remarks || `冻结${body.freezeQuantity}(${body.freezeType === 'order' ? '订单关联' : '手动'})`,
         now,
@@ -870,6 +875,8 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
         'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
         [newFrozen, now, freeze.instance_id]
       );
+      // 2026-07-14：方案 C — 解冻后重算 status（frozen_quantity=0 → 检查数量 → in_stock/low_stock/empty）
+      recomputeAndUpdateStockStatus(getDatabase(), String(freeze.instance_id));
 
       // 3c. INSERT inventory_transaction (unfreeze流水)
       const txId = `TRX-${formatLocalDateYYYYMMDD(new Date())}-${String(Date.now() % 10000).padStart(4, '0')}`;
@@ -882,7 +889,8 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
       `, [
         txId, txId, freeze.instance_id, stock.stock_type,
         unfreezeQty, Number(stock.current_quantity) || 0, Number(stock.current_quantity) || 0,
-        freeze.order_id || null, freeze.freeze_type || 'manual', freeze.order_code || null,
+        // 2026-07-14：解冻流水统一业务类型为 'other'，businessCode 用 orderCode 兜底
+        freeze.order_id || null, 'other', freeze.order_code || (freeze.order_id || null),
         body.operatorId || null, body.operatorName || null, unfreezeDate,
         body.remarks || `解冻${unfreezeQty}`,
         now,
@@ -1181,6 +1189,26 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/inventory/recompute-status
+ * 2026-07-14：方案 C — 批量重算所有 inventory_stock.status
+ * 用于修复历史脏数据（status 与 current_quantity/frozen_quantity 不一致）
+ * 不接受任何参数，全表扫描
+ * @returns { updated, total } 实际更新条数和总条数
+ */
+router.post('/recompute-status', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const result = recomputeAllStockStatus(db);
+    saveDatabase();
+    console.log(`[inventory.recompute-status] 重算完成: 更新 ${result.updated}/${result.total} 条`);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[inventory] recompute-status 失败:', error);
+    res.status(500).json({ success: false, error: '批量重算状态失败' });
+  }
+});
+
 /** PUT /api/inventory/:id 兼容老更新 */
 router.put('/:id', (req: Request, res: Response) => {
   try {
@@ -1210,10 +1238,17 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.json({ success: true, data: { id, noop: true } });
     }
     fields.push('update_time = ?', 'version = version + 1');
-    values.push(new Date().toISOString(), id);
+    values.push(new Date().toISOString());
     db.run(`UPDATE inventory_stock SET ${fields.join(', ')} WHERE id = ? OR instance_id = ?`,
       [...values, id, id]);
     saveDatabase();
+
+    // 2026-07-14：方案 C — 如果修改了数量/冻结字段，重算 status
+    const needRecompute = fields.some(f => f.startsWith('current_quantity') || f.startsWith('frozen_quantity'));
+    if (needRecompute) {
+      recomputeAndUpdateStockStatus(getDatabase(), id);
+    }
+
     res.json({ success: true, data: { id } });
   } catch (error) {
     console.error('[inventory] 兼容 PUT /:id 失败:', error);
