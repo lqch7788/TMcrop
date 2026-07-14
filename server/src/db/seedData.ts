@@ -3119,7 +3119,7 @@ function seedAuthorityData() {
     { id: 'proc-seed-source', oid: 'PROC_SEED_SOURCE', parent_oid: 'PROC_CROP', code: 'seed-source', name: '种源管理', route: '/crop/seed-source', app_type: 0, is_hidden: 0, sort_number: 1 },
     { id: 'proc-seedling', oid: 'PROC_SEEDLING', parent_oid: 'PROC_CROP', code: 'seedling', name: '育苗管理', route: '/crop/seedling', app_type: 0, is_hidden: 0, sort_number: 2 },
     { id: 'proc-planting', oid: 'PROC_PLANTING', parent_oid: 'PROC_CROP', code: 'planting', name: '种植管理', route: '/crop/planting', app_type: 0, is_hidden: 0, sort_number: 3 },
-    { id: 'proc-crop-harvest', oid: 'PROC_CROP_HARVEST', parent_oid: 'PROC_CROP', code: 'crop-harvest', name: '采收入库', route: '/crop/harvest', app_type: 0, is_hidden: 0, sort_number: 4 },
+    // 2026-07-14：移除 proc-crop-harvest（采收入库独立页已下线，行级弹窗接管）
     { id: 'proc-crop-inventory', oid: 'PROC_CROP_INVENTORY', parent_oid: 'PROC_CROP', code: 'crop-inventory', name: '作物库存', route: '/crop-inventory', app_type: 0, is_hidden: 0, sort_number: 5 },
     { id: 'proc-crop-instance', oid: 'PROC_CROP_INSTANCE', parent_oid: 'PROC_CROP', code: 'crop-instance', name: '实例追溯', route: '/crop/instance', app_type: 0, is_hidden: 0, sort_number: 6 },
 
