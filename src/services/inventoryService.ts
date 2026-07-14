@@ -26,19 +26,9 @@ import {
   TraceResult,
   DownstreamTraceResult,
   InventoryStats,
-  CropInventoryAggregation,
   SourceType,
   TransactionType,
 } from '../types/inventory';
-
-// ============================================
-// 辅助方法
-// ============================================
-
-/** 计算可用数量（前端展示用） */
-export function calculateAvailableQuantity(stock: InventoryStock): number {
-  return Math.max(0, (stock.currentQuantity ?? 0) - (stock.frozenQuantity ?? 0));
-}
 
 // ============================================
 // 核心 API 方法
@@ -391,26 +381,6 @@ export async function traceDownstream(
     `/inventory/trace/downstream/${encodeURIComponent(instanceId)}?maxDepth=${maxDepth}`
   );
   return data || [];
-}
-
-// ============================================
-// 作物聚合查询
-// ============================================
-
-/**
- * 按作物名称聚合查询库存（多形态搜索）
- * 调用后端 GET /api/inventory/aggregate/by-crop
- */
-export async function searchInventoryByCropName(
-  cropName?: string
-): Promise<CropInventoryAggregation> {
-  const params = new URLSearchParams();
-  if (cropName) params.append('crop_name', cropName);
-  const query = params.toString();
-
-  return await enhancedApiClient.get<CropInventoryAggregation>(
-    `/inventory/aggregate/by-crop${query ? `?${query}` : ''}`
-  );
 }
 
 // ============================================

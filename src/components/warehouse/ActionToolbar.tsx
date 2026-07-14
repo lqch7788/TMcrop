@@ -6,7 +6,8 @@ interface ActionToolbarProps {
   batchEditMode: boolean;
   deleteMode: boolean;
   exportMode: boolean;
-  selectedRows: number[];
+  /** 已选行 ID（string 表示实例 ID/UUID；number 是历史形态的兼容保留） */
+  selectedRows: Array<string | number>;
   lowStockCount: number;
   filters: { showLowStock: boolean };
   onLowStockToggle: () => void;

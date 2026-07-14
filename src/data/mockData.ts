@@ -63,7 +63,7 @@ export {
 // 重新导出类型定义（保持原有接口可用）
 import { User, CropBatch, Task, Material, MaterialRequest, Greenhouse, IoTSensor, InspectionRecord, HarvestRecord, DashboardStats, CropType, Process, Department, TempTask, Worker, Equipment, Infrastructure, Position } from '../types';
 import type { Approval } from '../types/approval';
-import type { ProduceInventory, StockType } from '../types/inventory';
+import type { StockType } from '../types/inventory';
 import type { PlanType } from '../types';
 
 // 重新导出类型
@@ -93,7 +93,7 @@ export type {
 };
 
 export type { Approval };
-export type { ProduceInventory, StockType };
+export type { StockType };
 export type { PlanType };
 
 // 当前登录用户 - 从farmData的users中获取默认用户

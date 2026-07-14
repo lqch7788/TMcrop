@@ -428,8 +428,9 @@ router.post('/inbound-record', async (req: Request, res: Response) => {
           }
         }
         wstmt.free()
-      } catch (_e) {
-        // 仓库名补全失败不阻断主流程
+      } catch (e) {
+        // 2026-07-14：原 catch(_e) 静默吞错，加 console.warn 标记位置（CLAUDE.md Fail Loud 铁律）
+        console.warn('[POST /inventory/inbound-record] 仓库名补全失败（不阻断主流程）:', e);
       }
     }
 
@@ -609,7 +610,9 @@ router.get('/freezes/:instanceId', (req: Request, res: Response) => {
           });
         }
         txStmt.free();
-      } catch (_) {
+      } catch (fallbackErr) {
+        // 2026-07-14：原 catch(_) 静默吞错，加 console.warn 标记位置（CLAUDE.md Fail Loud 铁律）
+        console.warn('[GET /inventory/freezes] inventory_transaction fallback 失败:', fallbackErr);
         freezes = [];
       }
     }
@@ -709,7 +712,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
     }
 
     // 4. 事务：写 freeze + 更新 stock + 写 transaction + 写 flow_log
-    const { randomUUID } = await import('crypto');
+    // 2026-07-14：移除重复 await import('crypto')（line 14 已顶层导入 randomUUID）
     const freezeId = randomUUID();
     const now = new Date().toISOString();
     const freezeDate = formatLocalDateYYYYMMDD(new Date());
@@ -1149,10 +1152,11 @@ router.post('/', async (req: Request, res: Response) => {
       planting_mode, production_plan_code, expiration_date, status = 'in_stock',
     } = req.body || {};
 
-    const id = `STK-${Date.now()}`;
+    // 2026-07-14：原 `STK-${Date.now()}` 违反 [[code-generation-contract-rule]] 铁律，改用 generateStockId
+    const dateStr = formatLocalDateYYYYMMDD();
+    const id = await generateStockId(dateStr);
     // 2026-06-08 V2.1：4 位自增（替代 Math.random），对齐项目 [[code-generation-contract-rule]] 铁律
     // 2026-06-09 修复：用本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
-    const dateStr = formatLocalDateYYYYMMDD();
     const prefix = stock_type === 'seed' ? 'INS' : stock_type === 'seedling' ? 'ISE' : 'IPR';
     const max = await inventoryStockRepository.getInstanceIdMaxSerial(prefix, dateStr);
     const instanceId = `${prefix}-${dateStr}-${String(max + 1).padStart(4, '0')}`;
@@ -1216,7 +1220,8 @@ router.put('/:id', (req: Request, res: Response) => {
     const updates = req.body || {};
     const db = getDatabase();
     // 白名单（V3 stock 实际列）
-    const allowed = ['crop_name', 'variety_name', 'current_quantity', 'frozen_quantity',
+    // 2026-07-14：frozen_quantity 移除白名单（只能通过 /freeze /unfreeze 调整，避免审计链断裂）
+    const allowed = ['crop_name', 'variety_name', 'current_quantity',
       'available_quantity', 'unit', 'warehouse_id', 'warehouse_name',
       'inbound_date', 'production_plan_code', 'status'];
     const fields: string[] = [];

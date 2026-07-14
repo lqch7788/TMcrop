@@ -8,17 +8,12 @@ import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake, Edit2 } from 'lucide-r
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
-// 2026-07-14：操作列编辑按钮 + 编辑弹窗
-import { InventoryEditModal } from './InventoryEditModal';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
   StockType,
-  SourceType,
   InventoryStatus,
   InventoryStock,
-  TraceResult,
-  DownstreamTraceResult,
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
 import { SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
@@ -418,6 +413,3 @@ export function InventoryTable({
     </div>
   );
 }
-
-// 辅助类型导出（供其他组件使用）
-export type { InventoryStock, TraceResult, DownstreamTraceResult };

@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Boxes } from 'lucide-react';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
@@ -33,6 +32,17 @@ import { InventoryDetailModal } from '../components/farm/inventory/InventoryDeta
 // 2026-07-14：操作列编辑弹窗
 import { InventoryEditModal } from '../components/farm/inventory/InventoryEditModal';
 
+/** 删除拦截明细——与 useInventoryStore.deleteBatch 返回类型对齐 */
+interface BlockingTx {
+  txId?: string;
+  txType?: string;
+  txTypeLabel?: string;
+  businessCode?: string;
+  qty?: number;
+  operatorName?: string;
+  operateDate?: string;
+}
+
 export default function InventoryV3Page() {
   // 持久化数据：list/stats/loading 全部从 useInventoryStore 读取
   const stocks = useInventoryStore((s) => s.items);
@@ -40,11 +50,6 @@ export default function InventoryV3Page() {
   const loading = useInventoryStore((s) => s.loading);
   const loadAll = useInventoryStore((s) => s.loadAll);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
-
-  // 2026-07-13 方案 B：删除 URL 参数监听（补录统一在 InventoryV3 入口）
-  // 保留 useSearchParams 仅供未来扩展（如深链跳转）；目前不使用
-  const [searchParams] = useSearchParams();
-  void searchParams;
 
   // 筛选
   const [filters, setFilters] = useState<InventoryFilterState>({
@@ -338,7 +343,7 @@ export default function InventoryV3Page() {
         batchEditMode={batchEditMode}
         deleteMode={deleteMode}
         exportMode={exportMode}
-        selectedRows={selectedRows as unknown as number[]}
+        selectedRows={selectedRows}
         lowStockCount={lowStockCount}
         filters={{ showLowStock: showLowStockOnly }}
         onLowStockToggle={() => setShowLowStockOnly(v => !v)}
@@ -406,7 +411,9 @@ export default function InventoryV3Page() {
 
       {/* 2026-07-14：编辑弹窗 */}
       {editModalOpen && editStock && (
+        // 2026-07-14：key={stock.instanceId} 强制 remount 防止切 stock 时字段 stale
         <InventoryEditModal
+          key={editStock.instanceId}
           isOpen={editModalOpen}
           stock={editStock}
           onClose={() => {

@@ -554,28 +554,6 @@ export interface FreezeRecord {
   remarks?: string;
 }
 
-/** 预警信息 */
-export interface AlertInfo {
-  type: 'storage_time' | 'low_stock' | 'high_stock' | 'expiration';
-  level: 'info' | 'warning' | 'critical';
-  instanceId: string;
-  message: string;
-  threshold: number;
-  currentValue: number;
-}
-
-/** 预警设置 */
-export interface AlertSettings {
-  enableStorageTimeAlert: boolean;
-  storageTimeThreshold: number;
-  enableQuantityAlert: boolean;
-  minQuantityThreshold: number;
-  maxQuantityThreshold: number;
-  minStock: number;
-  maxStock: number;
-  expirationDays: number;
-}
-
 /** 采收产品库存（兼容V2.0） */
 export interface ProduceInventory {
   id: string;
@@ -595,34 +573,10 @@ export interface ProduceInventory {
   harvestDate: string;
   storageDate: string;
   expirationDate: string;
-  alertSettings: AlertSettings;
   batchCode: string;
   greenhouseName: string;
   plantingMode: string;
   status: InventoryStatus;
   inboundRecords: InventoryTransaction[];
   outboundRecords: InventoryTransaction[];
-}
-
-/** 作物库存聚合查询结果 */
-export interface CropInventoryAggregation {
-  cropName: string;
-  seed: ProduceInventory[];
-  seedling: ProduceInventory[];
-  product: ProduceInventory[];
-  total: number;
-  totalQuantity: {
-    seed: number;
-    seedling: number;
-    product: number;
-  };
-}
-
-/** 预警统计 */
-export interface AlertStats {
-  totalAlerts: number;
-  storageTimeAlerts: number;
-  lowStockAlerts: number;
-  highStockAlerts: number;
-  expirationAlerts: number;
 }

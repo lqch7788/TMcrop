@@ -14,7 +14,6 @@ import { logger } from '../lib/logger';
 import {
   getInventoryList,
   getInventoryStats,
-  searchInventoryByCropName,
 } from '../services/inventoryService';
 import {
   InventoryStock,
@@ -49,7 +48,6 @@ interface InventoryState {
   loadItems: (filters?: InventoryFilters) => Promise<void>;
   loadStats: () => Promise<void>;
   loadAll: (filters?: InventoryFilters) => Promise<void>;
-  searchByCrop: (cropName: string) => Promise<void>;
   /** 通知一次变更（写操作成功后调用） */
   notifyChange: () => void;
   /** 重置 store */
@@ -119,22 +117,6 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
       set({ items, stats, loading: false });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '加载库存失败', loading: false });
-    }
-  },
-
-  searchByCrop: async (cropName: string) => {
-    set({ loading: true, error: null });
-    try {
-      const data = await searchInventoryByCropName(cropName);
-      // 把 product/seed/seedling 三种类型的库存合并到 items
-      const items: InventoryStock[] = [
-        ...(data.product as unknown as InventoryStock[]),
-        ...(data.seed as unknown as InventoryStock[]),
-        ...(data.seedling as unknown as InventoryStock[]),
-      ];
-      set({ items, loading: false });
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : '按作物查询失败', loading: false });
     }
   },
 
