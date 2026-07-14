@@ -66,27 +66,33 @@ export default function ActionToolbar({
 }: ActionToolbarProps) {
   return (
     <div className={`flex items-center justify-between ${noCard ? '' : 'bg-white rounded-xl p-4 shadow-sm'}`}>
-      <h2 className={`font-semibold text-gray-900 ${noCard ? 'text-base' : 'text-lg'}`}>{title}</h2>
+      <div className="flex items-center gap-3">
+        <h2 className={`font-semibold text-gray-900 ${noCard ? 'text-base' : 'text-lg'}`}>{title}</h2>
+        {/* 2026-07-14：库存不足按钮移到标题后面 */}
+        {showLowStockButton && !batchEditMode && !deleteMode && !exportMode && (
+          <Button
+            size="sm"
+            // 2026-07-14：未激活浅橙，激活深橙底白字 + 阴影，明显区分
+            className={filters.showLowStock
+              ? 'bg-orange-500 text-white hover:bg-orange-600 font-bold shadow-md ring-2 ring-orange-300'
+              : 'bg-orange-50 text-orange-800 hover:bg-orange-100 font-semibold'}
+            onClick={onLowStockToggle}
+          >
+            {lowStockCount > 0 && (
+              <span className="bg-orange-700 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-sm">{lowStockCount}</span>
+            )}
+            库存不足
+          </Button>
+        )}
+      </div>
       <div className="flex gap-2">
-        {/* 默认模式：新增、库存不足、编辑、删除、导出 */}
+        {/* 默认模式：新增、编辑、删除、导出 */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
             {canCreate && onAdd && (
               <Button size="sm" onClick={onAdd}>
                 <Plus className="w-4 h-4" />
                 新增
-              </Button>
-            )}
-            {showLowStockButton && (
-              <Button
-                size="sm"
-                variant={filters.showLowStock ? 'destructive' : 'secondary'}
-                onClick={onLowStockToggle}
-              >
-                {lowStockCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{lowStockCount}</span>
-                )}
-                库存不足
               </Button>
             )}
             {canEdit && (
