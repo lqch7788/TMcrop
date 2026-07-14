@@ -30,6 +30,8 @@ import { DeleteConfirmModal, Button } from '@/components/ui';
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
 import { InventoryDetailModal } from '../components/farm/inventory/InventoryDetailModal';
+// 2026-07-14：操作列编辑弹窗
+import { InventoryEditModal } from '../components/farm/inventory/InventoryEditModal';
 
 export default function InventoryV3Page() {
   // 持久化数据：list/stats/loading 全部从 useInventoryStore 读取
@@ -60,6 +62,9 @@ export default function InventoryV3Page() {
   const [selectedFreezeStock, setSelectedFreezeStock] = useState<InventoryStock | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   // 2026-07-13 方案 D：删除 supplementaryMode state（补录入口统一在 AddStockModal 内"补录入库"来源按钮）
+  // 2026-07-14：编辑弹窗状态
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editStock, setEditStock] = useState<InventoryStock | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
   // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
@@ -291,6 +296,12 @@ export default function InventoryV3Page() {
     useInventoryStore.getState().notifyChange();
   };
 
+  // 2026-07-14：打开编辑弹窗
+  const handleEdit = (stock: InventoryStock) => {
+    setEditStock(stock);
+    setEditModalOpen(true);
+  };
+
   // 打开详情弹窗（合并原"追溯"功能）
   const handleViewDetail = (stock: InventoryStock) => {
     setDetailStock(stock);
@@ -359,6 +370,8 @@ export default function InventoryV3Page() {
         onOutbound={handleOpenOutbound}
         onFreeze={handleOpenFreeze}
         onViewDetail={handleViewDetail}
+        // 2026-07-14：操作列编辑
+        onEdit={handleEdit}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         showCheckboxes={batchEditMode || deleteMode || exportMode}
@@ -390,6 +403,21 @@ export default function InventoryV3Page() {
           setAddModalOpen(false);
         }}
       />
+
+      {/* 2026-07-14：编辑弹窗 */}
+      {editModalOpen && editStock && (
+        <InventoryEditModal
+          isOpen={editModalOpen}
+          stock={editStock}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditStock(null);
+          }}
+          onSuccess={() => {
+            useInventoryStore.getState().notifyChange();
+          }}
+        />
+      )}
 
       {/* 详情弹窗（合并原"追溯"功能） */}
       <InventoryDetailModal

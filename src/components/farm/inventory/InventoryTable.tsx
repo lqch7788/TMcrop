@@ -3,11 +3,13 @@
  * 样式与 OrderTable 保持一致（gradient header / sticky / hover emerald-50）
  */
 
-import React, { useMemo } from 'react';
-import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+// 2026-07-14：操作列编辑按钮 + 编辑弹窗
+import { InventoryEditModal } from './InventoryEditModal';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
@@ -35,6 +37,8 @@ interface InventoryTableProps {
   onSelectionChange?: (instanceIds: string[]) => void;
   showCheckboxes?: boolean;
   onSelectAll?: () => void;
+  // 2026-07-14：操作列编辑
+  onEdit?: (stock: InventoryStock) => void;
 }
 
 const getStockTypeIcon = (stockType: StockType | string) => {
@@ -93,9 +97,13 @@ const getStatusBadge = (status: InventoryStatus | string) => {
     case InventoryStatus.LOW_STOCK:
     case 'low_stock':
       return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">低库存</span>;
+    // 2026-07-14：区分全部冻结 vs 部分冻结
     case InventoryStatus.FROZEN:
     case 'frozen':
-      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已冻结</span>;
+    case 'frozen_full':
+      return <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full font-semibold">全部冻结</span>;
+    case 'frozen_partial':
+      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">部分冻结</span>;
     case InventoryStatus.OUTBOUND:
     case 'outbound':
       return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已出库</span>;
@@ -118,6 +126,7 @@ export function InventoryTable({
   onOutbound,
   onFreeze,
   onViewDetail,
+  onEdit,
   selectedRows = [],
   onSelectionChange,
   showCheckboxes = false,
@@ -210,8 +219,14 @@ export function InventoryTable({
             ) : (
               paginatedData.map((stock) => {
                 const available = (stock.currentQuantity ?? 0) - (stock.frozenQuantity ?? 0);
-                const canOutbound = stock.status === InventoryStatus.IN_STOCK || stock.status === InventoryStatus.LOW_STOCK
-                  || stock.status === 'in_stock' || stock.status === 'low_stock';
+                // 2026-07-14：适配新状态枚举（frozen_full/frozen_partial/empty/outbound/transferred）
+                // 可出库：库存中 + 低库存 + 部分冻结（剩余可用部分可出）+ 全部冻结（不允许）
+                const status = stock.status;
+                const canOutbound = status === InventoryStatus.IN_STOCK
+                  || status === InventoryStatus.LOW_STOCK
+                  || status === 'in_stock' || status === 'low_stock'
+                  || status === 'frozen_partial'
+                  || (status as any) === 'frozen' /* 兼容历史 */;
                 const isSelected = selectedRows.includes(stock.instanceId);
                 return (
                   <tr key={stock.instanceId} className={`hover:bg-emerald-50 transition-colors ${isSelected ? 'bg-emerald-50/50' : ''}`}>
@@ -344,28 +359,38 @@ export function InventoryTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
+                        {/* 2026-07-14：操作列按钮（仅图标，无文字） */}
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(stock)}
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            title="编辑"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        )}
                         {canOutbound && (
                           <Button
-                            variant="link"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onOutbound(stock)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             title="出库"
                           >
                             <ArrowUpCircle className="w-4 h-4" />
-                            出库
                           </Button>
                         )}
                         {canOutbound && onFreeze && (
                           <Button
-                            variant="link"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onFreeze(stock)}
-                            className="text-blue-600 hover:text-blue-700"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             title="冻结"
                           >
                             <Snowflake className="w-4 h-4" />
-                            冻结
                           </Button>
                         )}
                       </div>
