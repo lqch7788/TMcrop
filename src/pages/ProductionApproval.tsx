@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, ChevronRight, Clock, Download, Eye, FileText, Package, RefreshCw, Search, ShoppingCart, Sprout, Square, Warehouse, X, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, ChevronRight, Clock, Download, Eye, FileText, Package, RefreshCw, Search, ShoppingCart, Sprout, Square, X, XCircle } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
@@ -36,7 +36,7 @@ export default function ProductionApproval() {
   }, []); // 只在挂载时加载一次
 
   const [activeTab, setActiveTab] = useState<
-    'tech' | 'plan' | 'purchase' | 'harvest'
+    'tech' | 'plan' | 'purchase'
   >('plan');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
@@ -134,12 +134,11 @@ export default function ProductionApproval() {
     setDetailModal({ show: false, approval: null, purchasePlanDetail: null, productionPlanDetail: null });
   };
 
-  // Tab配置 - 生产类审批
+  // Tab配置 - 生产类审批（2026-07-14：移除"采收申请审批"tab — 功能暂时不用）
   const tabs = [
     { key: 'plan', label: '生产计划审批', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
     { key: 'tech', label: '技术方案审批', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
     { key: 'purchase', label: '采购计划审批', icon: ShoppingCart, path: '/purchase-plan', types: [ApprovalType.PURCHASE_REQUEST] },
-    { key: 'harvest', label: '采收申请审批', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
   ] as const;
 
   // 根据Tab类型筛选数据
@@ -262,7 +261,7 @@ export default function ProductionApproval() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">生产审批</h1>
-              <p className="text-gray-500">技术方案、生产计划、采收申请审批管理</p>
+              <p className="text-gray-500">技术方案、生产计划审批管理</p>
             </div>
           </div>
         </div>
