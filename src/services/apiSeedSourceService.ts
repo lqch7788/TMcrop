@@ -854,3 +854,33 @@ export async function getSeedSourceUsageRecords(
   )
   return Array.isArray(rows) ? rows : []
 }
+
+/**
+ * 2026-07-14：种源入库历史（封装给 DetailModal 用，避免组件直调 enhancedApiClient）
+ */
+export interface SeedSourceInboundHistoryRecord {
+  id: string;
+  record_date: string;
+  source_module?: string;
+  source_id?: string;
+  source_type?: string;
+  quantity?: number;
+  unit?: string;
+  unit_price?: number;
+  total_amount?: number;
+  warehouse_name?: string;
+  supplier_name?: string;
+  notes?: string;
+  operator_name?: string;
+  create_time?: string;
+}
+
+export async function getSeedSourceInboundHistory(
+  seedSourceId: string
+): Promise<SeedSourceInboundHistoryRecord[]> {
+  if (!seedSourceId) return [];
+  const rows = await enhancedApiClient.get<SeedSourceInboundHistoryRecord[]>(
+    `/seed-sources/${seedSourceId}/history-inbound`
+  );
+  return Array.isArray(rows) ? rows : [];
+}

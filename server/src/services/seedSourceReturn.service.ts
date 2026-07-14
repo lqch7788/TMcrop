@@ -27,15 +27,10 @@ export const SeedSourceReturnErrorCode = {
   EMPTY_ITEMS: 'SEED_SRC_RETURN_EMPTY_ITEMS',
 } as const;
 
-export class SeedSourceReturnBusinessError extends Error {
-  code: string;
-  httpStatus: number;
-  constructor(code: string, message: string, httpStatus = 400) {
-    super(message);
-    this.code = code;
-    this.httpStatus = httpStatus;
-  }
-}
+// 2026-07-14：业务错误基类统一——别名 re-export 给 SeedSourceReturnBusinessError（与 routes/seedSource.ts AppendBusinessError 共用 BusinessError）
+import { BusinessError } from './seedSource.service';
+export const SeedSourceReturnBusinessError = BusinessError;
+type SeedSourceReturnBusinessError = BusinessError;
 
 export interface ReturnItem {
   inboundRecordId: string;
@@ -74,7 +69,13 @@ export function executeReturnToInventory(
   const dateStr = formatLocalDateISO();
   let totalReturned = 0;
 
-  // 注：sql.js 不支持事务回滚，任一步骤抛错即终止后续写入
+  // 2026-07-14：开启事务（sql.js 支持 SQLite 原生 BEGIN/COMMIT/ROLLBACK）
+  // 任一步骤失败则整体回滚，避免半成品退库导致库存/种源数据不一致
+  db.exec('BEGIN TRANSACTION');
+
+  try {
+
+  // 1. 锁定并读取目标种源
   // 1. 锁定并读取目标种源
   const ssStmt = db.prepare(
     `SELECT id, source_code, remaining_quantity, quantity, unit, crop_code, transferred_from_stock_id
@@ -260,7 +261,9 @@ export function executeReturnToInventory(
     // 11. 写 inventory_transaction (transfer_in) — 原始库存被 +N
     // 2026-07-06 P0 修复 A：business_id 改回种源 ID（之前是原库存 ID），
     //   让种源详情 timeline 能查到退库流水（queryEntityHistory 用 business_id = 种源ID 过滤）
-    const txId = `TX-RET-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    // 2026-07-14：流水 ID 改用 crypto.randomUUID()（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
+      const { randomUUID } = require('crypto');
+      const txId = `TX-RET-${dateStr}-${randomUUID()}`;
     db.run(
       `INSERT INTO inventory_transaction (
         id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -298,7 +301,7 @@ export function executeReturnToInventory(
         [newSeedCurrentAfter, newSeedAvailableAfter, newSeedStatus, now, newSeedStockId]
       );
       // 写种源库存扣减的 transfer_out 流水
-      const txOutId = `TX-RET-OUT-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const txOutId = `TX-RET-OUT-${dateStr}-${randomUUID()}`;
       db.run(
         `INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -327,6 +330,9 @@ export function executeReturnToInventory(
     totalReturned += item.quantity;
   }
 
+  // 2026-07-14：所有 SQL 成功 → 提交事务
+  db.exec('COMMIT');
+
   saveDatabase();
 
   return {
@@ -334,6 +340,14 @@ export function executeReturnToInventory(
     newSourceRemaining: sourceRemaining,
     newSourceTotal: sourceTotal,
   };
+
+  } catch (err) {
+    // 2026-07-14：失败回滚（已 COMMIT 之外的任意步骤抛错）
+    try { db.exec('ROLLBACK'); } catch (rbErr) {
+      console.error('[seedSourceReturn] ROLLBACK 失败:', rbErr);
+    }
+    throw err;
+  }
 }
 
 /**

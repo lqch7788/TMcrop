@@ -9,7 +9,7 @@
  * - 80 行结束分支下沉到 endSeedSource action（M2）
  */
 import { create } from 'zustand';
-import { SeedSource, PropagationRecord, PropagationStatus } from '../types/crop';
+import { SeedSource } from '../types/crop';
 import * as seedSourceService from '../services/apiSeedSourceService';
 import type { CheckDeletableResult, DeletableReference } from '../services/apiSeedSourceService';
 import { seedSourceTransferService, type TransferItem, type TransferResult } from '../services/seedSourceTransferService';
@@ -53,14 +53,9 @@ interface SeedSourceState {
   endSeedSource: (id: string, params: EndSeedSourceParams) => Promise<{ mode: 'batch' | 'force' }>;
 
   // ===== 繁殖过程 =====
-  addPropagationRecord: (seedSourceId: string, data: Partial<PropagationRecord>) => Promise<PropagationRecord>;
-  loadPropagationRecords: (seedSourceId: string) => Promise<PropagationRecord[]>;
-  /** 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑 */
-  updatePropagationRecord: (seedSourceId: string, recordId: string, updates: Partial<PropagationRecord>) => Promise<PropagationRecord>;
-  /** 2026-06-13: 与育苗每日记录对齐，操作列支持删除 */
-  deletePropagationRecord: (seedSourceId: string, recordId: string) => Promise<void>;
-  updatePropagationStage: (seedSourceId: string, newStage: PropagationStatus) => Promise<void>;
-  completePropagation: (seedSourceId: string, quantity: number) => Promise<void>;
+// 2026-07-14：删除 addPropagationRecord/loadPropagationRecords/updatePropagationRecord/
+//   deletePropagationRecord/updatePropagationStage/completePropagation 6 个方法
+//   （grep 全项目无外部调用——前端 v3 改造已移除繁殖过程功能入口）
 
   // ===== 库存调拨入种源（2026-06-24）=====
   /**
@@ -140,21 +135,15 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
 
   endSeedSource: async (id, params) => {
     // 2026-06-06: M2 — 把 SeedSourcePage.handleEnd 80 行分支逻辑下沉到 Store
-    // 业务规则：
-    //   1. 有 productionPlanId → 走 cropBatch 结束流程（外部依赖，不在此引入以免循环依赖，调用方注入）
-    //   2. 没有 / 找不到 → 强结种源本身（写 endType/endTime，清空 productionPlanCode）
-    //
+    // 2026-07-14：删除 productionPlanId 死分支（注释承认"调用方应当已走完 cropBatch 结束流程；
+    //   此处仅记录结束标记作为兜底"——但实际什么都没做，直接 return，行为无意义）
     // 注：cropBatch 结束流程涉及另一个 service（apiCropBatchService），由调用方通过 opts 注入，
     //      保持 Store 单职责（只管种源表 + 必要的本地缓存修改）。
     const current = get().items.find((it) => it.id === id);
     if (!current) {
       throw new Error(`种源记录不存在：${id}`);
     }
-    if (params.productionPlanId) {
-      // 调用方应当已走完 cropBatch 结束流程；此处仅记录结束标记作为兜底
-      return { mode: 'batch' as const };
-    }
-    // 强结分支
+    // 强结分支（原本 params.productionPlanId 分支已删除）
     await get().updateItem(id, {
       endType: params.endType,
       endTime: todayLocal(),
@@ -164,47 +153,8 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
     return { mode: 'force' as const };
   },
 
-  addPropagationRecord: async (seedSourceId, data) => {
-    return await seedSourceService.addPropagationRecord(seedSourceId, data);
-  },
-
-  loadPropagationRecords: async (seedSourceId) => {
-    return await seedSourceService.getPropagationRecords(seedSourceId);
-  },
-
-  // 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑/删除
-  updatePropagationRecord: async (seedSourceId, recordId, updates) => {
-    return await seedSourceService.updatePropagationRecord(seedSourceId, recordId, updates);
-  },
-
-  deletePropagationRecord: async (seedSourceId, recordId) => {
-    await seedSourceService.deletePropagationRecord(seedSourceId, recordId);
-  },
-
-  updatePropagationStage: async (seedSourceId, newStage) => {
-    await seedSourceService.updatePropagationStage(seedSourceId, newStage);
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.id === seedSourceId ? { ...item, propagationStatus: newStage } : item
-      ),
-    }));
-  },
-
-  completePropagation: async (seedSourceId, quantity) => {
-    await seedSourceService.completePropagation(seedSourceId, quantity);
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.id === seedSourceId
-          ? {
-              ...item,
-              propagationStatus: PropagationStatus.COMPLETED,
-              availableCount: item.availableCount + quantity,
-              quantity: item.quantity + quantity,
-            }
-          : item
-      ),
-    }));
-  },
+  // 2026-07-14：删除 6 个繁殖过程死方法实现（addPropagationRecord/loadPropagationRecords/
+//   updatePropagationRecord/deletePropagationRecord/updatePropagationStage/completePropagation）
 
   // 2026-06-24: 库存调拨入种源 — 多选调拨 → 后端事务 → 触发跨页刷新
   // P0-2 修复：operator 参数完整透传到 service（之前签名只接 items，operator 静默丢失）

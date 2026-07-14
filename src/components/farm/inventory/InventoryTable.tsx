@@ -8,6 +8,8 @@ import { Package, Leaf, Sprout, ArrowUpCircle, Snowflake, Edit2 } from 'lucide-r
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+// 2026-07-14：复用 cropConstants.PAGE_SIZE_OPTIONS 共享常量
+import { PAGE_SIZE_OPTIONS } from '../../../constants/cropConstants';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import {
@@ -406,7 +408,8 @@ export function InventoryTable({
           onPageChange={(page) => onChange({ ...pagination, current: page })}
           pageSize={pagination.pageSize}
           onPageSizeChange={(size) => onChange({ pageSize: size, current: 1 })}
-          pageSizeOptions={[10, 20, 50]}
+          // 2026-07-14：pageSize 选项改用 cropConstants.PAGE_SIZE_OPTIONS 共享常量
+          pageSizeOptions={PAGE_SIZE_OPTIONS as unknown as number[]}
           showPageSize
         />
       </div>

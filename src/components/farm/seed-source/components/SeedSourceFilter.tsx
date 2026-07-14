@@ -63,8 +63,8 @@ export function SeedSourceFilter({
         <div className="min-w-[100px] flex-shrink-0">
           <Label className="text-gray-700">来源</Label>
           <Select
-            value={(filters as any).sourceOrigin || '__all__'}
-            onValueChange={(val) => onChange({ ...filters, sourceOrigin: val === '__all__' ? '' : val } as any)}
+            value={filters.sourceOrigin || '__all__'}
+            onValueChange={(val) => onChange({ ...filters, sourceOrigin: val === '__all__' ? '' : val })}
           >
             <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />

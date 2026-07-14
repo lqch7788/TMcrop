@@ -1,8 +1,8 @@
 /**
  * 种源管理模块导出
+ * 2026-07-14：删除 SeedSourceStats.tsx / SeedSourceHistoryTabs.tsx 文件级死代码（无人引用）
  */
 export { default } from './SeedSourcePage';
-export { SeedSourceStats } from './components/SeedSourceStats';
 export { SeedSourceFilter } from './components/SeedSourceFilter';
 export { SeedSourceTable } from './components/SeedSourceTable';
 export { AddModal } from './modals/AddModal';

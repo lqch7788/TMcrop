@@ -22,18 +22,10 @@ import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-
-/** 种源类型 → 供应商类型 级联映射 */
-const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
-  seed: 'SP',
-  seedling: 'SP',
-  cutting: 'SP',
-  grafting: 'SP',
-  tissue_culture: 'SP',
-  split: 'SP',
-  bulb: 'SP',
-  other: null,
-};
+// 2026-07-14：复用 seedSourceDict 共享常量（与 AddModal 合并重复定义）
+import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE as SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
+// 2026-07-14：V2.1 铁律合规——改用 useSupplierStore 订阅（替代 supplierService.getAllSuppliers() 内部 localStorage 同步缓存）
+import { useSupplierStore } from '../../../../stores/useSupplierStore';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -113,30 +105,30 @@ export function EditModal({
     }
   }, [isOpen, record.id]);
 
+  // 2026-07-14：V2.1 铁律合规——订阅 useSupplierStore（响应式更新，无需手动同步）
+  const allSuppliersFromStore = useSupplierStore((s) => s.items);
   // 种源类型→供应商类型级联过滤
   const filteredSuppliers = useMemo(() => {
     const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
     if (!targetType) return suppliers; // null = 展示全部
-    const allSuppliers = supplierService.getAllSuppliers();
     const validIds = new Set(
-      allSuppliers.filter(s => s.supplierType === targetType).map(s => String(s.id))
+      allSuppliersFromStore.filter(s => s.supplierType === targetType).map(s => String(s.id))
     );
     return suppliers.filter(s => validIds.has(s.value));
-  }, [formData.sourceType, suppliers]);
+  }, [formData.sourceType, suppliers, allSuppliersFromStore]);
 
   // 种源类型改变时，清空类型不匹配的已选供应商
   useEffect(() => {
     if (formData.supplierId) {
       const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
       if (targetType) {
-        const allSuppliers = supplierService.getAllSuppliers();
-        const currentSupplier = allSuppliers.find(s => String(s.id) === formData.supplierId);
+        const currentSupplier = allSuppliersFromStore.find(s => String(s.id) === formData.supplierId);
         if (currentSupplier && currentSupplier.supplierType !== targetType) {
           setFormData(prev => ({ ...prev, supplierId: '', supplierName: '' }));
         }
       }
     }
-  }, [formData.sourceType]);
+  }, [formData.sourceType, allSuppliersFromStore, formData.supplierId]);
 
   // 处理作物编码选择
   const handleCropCodeChange = (code: string, varietyInfo: CropVariety | null) => {
@@ -226,7 +218,8 @@ export function EditModal({
         generation: formData.generation,
       });
     } catch (error) {
-      // logger.error('更新种源失败:', error);
+      // 2026-07-14：补充 console.error（CLAUDE.md Fail Loud 铁律）
+      console.error('[EditModal] 更新种源失败:', error);
       await showAlert('更新失败，请重试');
       return;
     }

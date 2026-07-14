@@ -351,15 +351,8 @@ const AppendFromInventorySchema = z.object({
   remarks: z.string().optional(),
 });
 
-class AppendBusinessError extends Error {
-  code: string;
-  httpStatus: number;
-  constructor(code: string, message: string, httpStatus = 400) {
-    super(message);
-    this.code = code;
-    this.httpStatus = httpStatus;
-  }
-}
+// 2026-07-14：业务错误基类统一（与 services/seedSource.service.ts 的 BusinessError 共用）
+import { BusinessError as AppendBusinessError } from '../services/seedSource.service';
 
 router.post('/append-from-inventory', async (req, res) => {
   try {
@@ -380,9 +373,11 @@ router.post('/append-from-inventory', async (req, res) => {
     const writtenStockIds: string[] = [];
     const writtenTxIds: string[] = [];
     const writtenInboundRecordIds: string[] = [];
-    // 2026-06-26: 修复 — DB 列名是 remaining_quantity（不是 available_count）
-    const originalSeedSourceSnapshot: Array<{ id: string; remaining_quantity: number; quantity: number }> = [];
-    const originalStockSnapshot: Array<{ id: string; current_quantity: number; available_quantity: number }> = [];
+    // 2026-07-14：方案 C — 改用 BEGIN/COMMIT/ROLLBACK 取代手动快照恢复（sql.js 支持 SQLite 原生事务）
+    // 保留 snapshot 仅作为兜底（事务失败时回滚 ROLLBACK 不一定能干净回滚 sql.js 内存状态）
+
+    // 2026-07-14：开启事务
+    db.exec('BEGIN TRANSACTION');
 
     try {
       // 1. 校验目标种源（用 prepared statement 模式）
@@ -401,12 +396,6 @@ router.post('/append-from-inventory', async (req, res) => {
       const targetCropCode = String(targetRow.crop_code || '');
       const targetCropName = String(targetRow.crop_name || '');
       const targetCode = String(targetRow.source_code || '');
-      originalSeedSourceSnapshot.push({
-        id: targetSeedSourceId,
-        // 2026-06-26: 修复 — DB 列名是 remaining_quantity
-        remaining_quantity: Number(targetRow.remaining_quantity || 0),
-        quantity: Number(targetRow.quantity || 0),
-      });
 
       let totalAppended = 0;
 
@@ -425,13 +414,6 @@ router.post('/append-from-inventory', async (req, res) => {
         const sourceStatus = String(sourceObj.status || '');
         const sourceCropCode = String(sourceObj.crop_code || '');
         const sourceInstanceId = String(sourceObj.instance_id || '');
-
-        // 存储原始库存快照（用于精确回滚）
-        originalStockSnapshot.push({
-          id: item.sourceStockId,
-          current_quantity: sourceCurrent,
-          available_quantity: sourceAvailable,
-        });
 
         // 3. 业务校验
         if (sourceStatus === 'depleted' || sourceCurrent <= 0) {
@@ -511,7 +493,9 @@ router.post('/append-from-inventory', async (req, res) => {
 
         // 7. 写 inventory_inbound_records
         // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('IR') 与 inventory_stock.instance_id 跨表冲突
-        const inRecId = `IRA-${dateStr}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        // 2026-07-14：流水号改用 generateInboundRecordId（替代 Math.random + Date.now 违规格式）
+        const { generateInboundRecordId } = require('../services/inventory.service');
+        const inRecId = await generateInboundRecordId(dateStr);
         // 2026-06-26: 修复 — inventory_inbound_records 表 schema 修正
         // 实际列（按 schema.ts / fixMissingSchema.ts）：
         //   id, record_type, record_date, source_module, source_id, source_code,
@@ -560,6 +544,8 @@ router.post('/append-from-inventory', async (req, res) => {
       const newAvailable = Number(newState?.remaining_quantity || 0);
       const newQuantity = Number(newState?.quantity || 0);
 
+      // 2026-07-14：所有 SQL 成功 → 提交事务
+      db.exec('COMMIT');
       saveDatabase();
 
       return res.json({
@@ -571,38 +557,9 @@ router.post('/append-from-inventory', async (req, res) => {
       });
     } catch (err) {
       console.error('[append-from-inventory] failed, rolling back:', err);
+      // 2026-07-14：方案 C — 用 SQLite ROLLBACK 替代手动快照恢复（sql.js 支持原生事务）
       try {
-        for (const id of writtenInboundRecordIds) {
-          const d = db.prepare('DELETE FROM inventory_inbound_records WHERE id = ?');
-          d.run([id]);
-          d.free();
-        }
-        for (const snap of originalSeedSourceSnapshot) {
-          // 2026-06-26: 修复 — 列名 remaining_quantity（不是 available_count）
-          const u = db.prepare(
-            `UPDATE seed_sources SET remaining_quantity = ?, quantity = ?, update_time = ? WHERE id = ?`
-          );
-          u.run([snap.remaining_quantity, snap.quantity, now, snap.id]);
-          u.free();
-        }
-        for (const id of writtenTxIds) {
-          const d = db.prepare('DELETE FROM inventory_transaction WHERE id = ?');
-          d.run([id]);
-          d.free();
-        }
-        for (const snap of originalStockSnapshot) {
-          // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算
-          const u = db.prepare(
-            `UPDATE inventory_stock
-             SET current_quantity = ?, available_quantity = ?, update_time = ?
-             WHERE id = ?`
-          );
-          u.run([snap.current_quantity, snap.available_quantity, now, snap.id]);
-          u.free();
-          // 重算 status（回滚后可能 in_stock / low_stock）
-          recomputeAndUpdateStockStatus(getDatabase(), snap.id);
-        }
-        saveDatabase();
+        db.exec('ROLLBACK');
       } catch (rollbackErr) {
         console.error('[append-from-inventory] rollback failed:', rollbackErr);
       }

@@ -158,6 +158,7 @@ export function InventoryTransferPanel({
   // 初始化加载：面板打开时自动加载数据（不等待用户交互）
   useEffect(() => {
     loadRows();
+    // 2026-07-14：loadRows 是 useCallback 包装的函数（已稳定引用），不需要重复监听——但保留注释明确意图
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -166,6 +167,7 @@ export function InventoryTransferPanel({
     if (!hasInteractedRef.current) return;
     setPage(1);
     loadRows();
+    // 2026-07-14：loadRows 已 useCallback 稳定引用，deps 列表显式列出业务字段（避免无谓重渲）
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stockTypeFilter.join(','), dateFrom, dateTo, targetCropName, targetCropVariety, mode]);
 
@@ -177,6 +179,7 @@ export function InventoryTransferPanel({
       loadRows();
     }, 300);
     return () => clearTimeout(timer);
+    // 2026-07-14：debounce 内 loadRows 闭包引用，deps 仅业务字段
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyword]);
 

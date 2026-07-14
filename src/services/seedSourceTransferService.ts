@@ -109,33 +109,34 @@ export const seedSourceTransferService = {
    * GET /api/inventory/transferable-sources
    */
   async listTransferableSources(filters: ListTransferableFilters = {}): Promise<TransferableSourceRow[]> {
-    const params: string[] = [];
+    // 2026-07-14：改用 URLSearchParams（替代手动字符串拼接，自动处理空值与编码）
+    const params = new URLSearchParams();
     if (filters.stockType && filters.stockType.length > 0) {
-      params.push(`stockType=${filters.stockType.join(',')}`);
+      params.set('stockType', filters.stockType.join(','));
     }
     if (filters.keyword) {
-      params.push(`keyword=${encodeURIComponent(filters.keyword)}`);
+      params.set('keyword', filters.keyword);
     }
     if (filters.dateFrom) {
-      params.push(`dateFrom=${filters.dateFrom}`);
+      params.set('dateFrom', filters.dateFrom);
     }
     if (filters.dateTo) {
-      params.push(`dateTo=${filters.dateTo}`);
+      params.set('dateTo', filters.dateTo);
     }
     if (filters.limit != null) {
-      params.push(`limit=${filters.limit}`);
+      params.set('limit', String(filters.limit));
     }
     if (filters.offset != null) {
-      params.push(`offset=${filters.offset}`);
+      params.set('offset', String(filters.offset));
     }
     // 2026-06-26 修复：追加模式作物过滤参数
     if (filters.cropName) {
-      params.push(`cropName=${encodeURIComponent(filters.cropName)}`);
+      params.set('cropName', filters.cropName);
     }
     if (filters.cropVariety) {
-      params.push(`cropVariety=${encodeURIComponent(filters.cropVariety)}`);
+      params.set('cropVariety', filters.cropVariety);
     }
-    const qs = params.length > 0 ? `?${params.join('&')}` : '';
+    const qs = params.toString() ? `?${params.toString()}` : '';
     // 修复：enhancedApiClient 已自动解包 data 字段（apiClient.ts:223），service 不应再 .data 二层访问
     const rows = await enhancedApiClient.get<TransferableSourceRow[]>(
       `/inventory/transferable-sources${qs}`

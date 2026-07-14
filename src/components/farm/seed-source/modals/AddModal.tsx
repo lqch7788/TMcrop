@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { X, Upload, RefreshCw, Search, Check, Leaf, Dna, Sprout, Scissors, ArrowLeftRight } from 'lucide-react';
-import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
+import { SeedSource, SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { todayLocal } from '@/lib/dateUtils';
@@ -82,8 +82,8 @@ export function AddModal({
     ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
     : [];
 
-  // 表单数据
-  const [formData, setFormData] = useState({
+  // 2026-07-14：表单初始值抽常量（与 resetForm 共享，避免字段漂移）
+  const INITIAL_FORM_DATA = {
     sourceType: SourceType.SEED,
     sourceOrigin: 'external_purchase' as SourceOrigin,
     cropCategory: '',
@@ -93,17 +93,15 @@ export function AddModal({
     cropVariety: '',
     supplierId: '',
     supplierName: '',
-    purchaseDate: todayLocal(),  // 2026-07-06 fix: 默认今天
+    purchaseDate: todayLocal(),
     quantity: 0,
     unit: '袋',
     unitPrice: 0,
     pictures: [] as string[],
     remarks: '',
-    createBy: currentUser?.name || '', // 默认当前登录用户
-    // V3.0 新增字段
-    productionPlanId: '',    // 关联生产计划ID
-    productionPlanCode: '',   // 关联生产计划批次号
-    // 繁殖途径字段
+    createBy: currentUser?.name || '',
+    productionPlanId: '',
+    productionPlanCode: '',
     // 2026-07-07 V3.4：取消外购入库 tab，默认改为库存调拨
     propagationType: PropagationType.TRANSFER_FROM_INVENTORY as string,
     propagationMethod: '',
@@ -113,7 +111,10 @@ export function AddModal({
     linkedPlantingId: '', linkedPlantingCode: '',
     propagationStartDate: '', expectedHarvestDate: '',
     breedingLocation: '', targetTraits: '', generation: '',
-  });
+  };
+
+  // 表单数据
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
   // 作物编码
   const [cropCode, setCropCode] = useState('');
@@ -222,11 +223,8 @@ export function AddModal({
 
   // 生成种源批号
   const handleGenerateSeedCode = async () => {
+    // 2026-07-14：移除内嵌 todayLocal 函数（与 line 13 导入同名遮蔽）
     // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
-    const todayLocal = () => {
-      const d = new Date();
-      return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-    };
     // 2026-07-06 fix: fallback 走 todayLocal() 后也要 strip dashes
     const dateStr = (formData.purchaseDate || todayLocal()).replace(/-/g, '');
     const newCode = await generateSeedCode(dateStr);
@@ -319,7 +317,8 @@ export function AddModal({
     const traceabilityCode = 'TR' + todayLocal().replace(/-/g, '') + formData.cropName.substring(0, 2);
 
     // 创建种源记录（添加 await 确保数据保存完成）
-    let newSeedSource;
+    // 2026-07-14：补显式类型（避免隐式 any）
+    let newSeedSource: SeedSource | null = null;
     try {
       const baseData: any = {
         seedCode: seedCode,
@@ -375,7 +374,8 @@ export function AddModal({
         return;
       }
     } catch (error) {
-      // logger.error('创建种源失败:', error);
+      // 2026-07-14：补充 console.error（CLAUDE.md Fail Loud 铁律——之前只 showAlert，未留日志）
+      console.error('[AddModal] 创建种源失败:', error);
       await showAlert('创建失败，请重试');
       return;
     }
@@ -398,7 +398,9 @@ export function AddModal({
         useSeedSourceStore.getState().updateItem(String(newSeedSource.id), { instanceId: instance.id });
       }
     } catch (error) {
-      // logger.error('创建作物实例失败:', error);
+      // 2026-07-14：补充 console.warn（CLAUDE.md Fail Loud 铁律——之前完全静默吞错）
+      // 设计意图：作物实例创建失败不阻断主流程（种源已创建），但需要日志便于排查
+      console.warn('[AddModal] 创建作物实例失败（不阻断主流程）:', error);
     }
 
     // 重置表单
@@ -484,8 +486,8 @@ export function AddModal({
                   size="sm"
                   onClick={() => {
                     // 2026-06-24: sourceOrigin 简化为只跟 propagationType 走（去掉 self_produced 分支）
-                    const newSourceOrigin: SourceOrigin =
-                      opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'inventory_transfer';
+                    // 2026-07-14：opt 数组只有 TRANSFER_FROM_INVENTORY，三元永远走 else 分支 → 直接赋值
+                    const newSourceOrigin: SourceOrigin = 'inventory_transfer';
                     setFormData(prev => ({
                       ...prev,
                       propagationType: opt.value,
@@ -621,173 +623,8 @@ export function AddModal({
           </div>
 
           {/* ===== 育种计划产出字段 ===== */}
-          {formData.propagationType === PropagationType.BREEDING && (
-            <>
-              <div>
-                <Label className="text-gray-900">育种方法</Label>
-                <Select
-                  value={formData.propagationMethod}
-                  onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
-                >
-                  <SelectTrigger className="">
-                    <SelectValue placeholder="选择育种方法" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={BreedingMethod.CROSSBREEDING}>杂交育种</SelectItem>
-                    <SelectItem value={BreedingMethod.SELECTION}>选择育种</SelectItem>
-                    <SelectItem value={BreedingMethod.BACKCROSS}>回交育种</SelectItem>
-                    <SelectItem value={BreedingMethod.HYBRID}>杂交优势</SelectItem>
-                    <SelectItem value={BreedingMethod.OPEN_POLLINATION}>开放授粉</SelectItem>
-                    <SelectItem value={BreedingMethod.MUTATION}>诱变育种</SelectItem>
-                    <SelectItem value={BreedingMethod.OTHER}>其他</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-gray-900">父本编号</Label>
-                <Input
-                  type="text"
-                  value={formData.parentMaleCode}
-                  onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
-                  placeholder="♂ 父本种源批号"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">母本编号</Label>
-                <Input
-                  type="text"
-                  value={formData.parentFemaleCode}
-                  onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
-                  placeholder="♀ 母本种源批号"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">世代</Label>
-                <Select
-                  value={formData.generation}
-                  onValueChange={(val) => setFormData({ ...formData, generation: val })}
-                >
-                  <SelectTrigger className="">
-                    <SelectValue placeholder="选择世代" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="F1">F1</SelectItem>
-                    <SelectItem value="F2">F2</SelectItem>
-                    <SelectItem value="F3">F3</SelectItem>
-                    <SelectItem value="BC1">BC1</SelectItem>
-                    <SelectItem value="BC2">BC2</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-gray-900">育种地点</Label>
-                <Input
-                  type="text"
-                  value={formData.breedingLocation}
-                  onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
-                  placeholder="育种基地/温室"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">目标性状</Label>
-                <Input
-                  type="text"
-                  value={formData.targetTraits}
-                  onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
-                  placeholder="如：抗病、高产、早熟"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">预计采收日期</Label>
-                <DatePicker className="w-full"
-                  selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
-                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: todayLocal(date) })}
-                />
-              </div>
-            </>
-          )}
-
-          {/* ===== 种植留种字段 ===== */}
-          {formData.propagationType === PropagationType.SEED_SAVING && (
-            <>
-              <div>
-                <Label className="text-gray-900">关联种植记录</Label>
-                <Input
-                  type="text"
-                  value={formData.linkedPlantingCode}
-                  onChange={(e) => setFormData({ ...formData, linkedPlantingCode: e.target.value })}
-                  placeholder="种植批次号"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">留种株标识</Label>
-                <Input
-                  type="text"
-                  value={formData.linkedPlantingId}
-                  onChange={(e) => setFormData({ ...formData, linkedPlantingId: e.target.value })}
-                  placeholder="留种株编号"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">预计采收日期</Label>
-                <DatePicker className="w-full"
-                  selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
-                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: todayLocal(date) })}
-                />
-              </div>
-            </>
-          )}
-
-          {/* ===== 无性繁殖字段 ===== */}
-          {formData.propagationType === PropagationType.ASEXUAL && (
-            <>
-              <div>
-                <Label className="text-gray-900">繁殖方式</Label>
-                <Select
-                  value={formData.propagationMethod}
-                  onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
-                >
-                  <SelectTrigger className="">
-                    <SelectValue placeholder="选择繁殖方式" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={AsexualMethod.CUTTING}>扦插</SelectItem>
-                    <SelectItem value={AsexualMethod.GRAFTING}>嫁接</SelectItem>
-                    <SelectItem value={AsexualMethod.DIVISION}>分株</SelectItem>
-                    <SelectItem value={AsexualMethod.TISSUE_CULTURE}>组培</SelectItem>
-                    <SelectItem value={AsexualMethod.BULB}>种球/球根</SelectItem>
-                    <SelectItem value={AsexualMethod.LAYERING}>压条</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-gray-900">母株编号</Label>
-                <Input
-                  type="text"
-                  value={formData.motherPlantCode}
-                  onChange={(e) => setFormData({ ...formData, motherPlantCode: e.target.value })}
-                  placeholder="母株种源批号"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">母株ID</Label>
-                <Input
-                  type="text"
-                  value={formData.motherPlantId}
-                  onChange={(e) => setFormData({ ...formData, motherPlantId: e.target.value })}
-                  placeholder="母株记录ID"
-                                 />
-              </div>
-              <div>
-                <Label className="text-gray-900">预计产出种苗数</Label>
-                <Input
-                  type="number"
-                  value={formData.quantity || ''}
-                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                                 />
-              </div>
-            </>
-          )}
+          {/* 2026-07-14：删除 BREEDING / SEED_SAVING / ASEXUAL 三个繁殖死分支
+            propagationType 默认强制为 TRANSFER_FROM_INVENTORY，这三个分支永远走不到 */}
 
           {/* 以下所有字段（供应商 / 数量 / 单价 / 图片 / 备注）在 transfer 模式下都隐藏。
               使用 NOT TRANSFER 包裹替代逐个加条件（避免漏改）。 */}
@@ -887,42 +724,7 @@ export function AddModal({
             </div>
           )}
 
-          {/* V3.0 生产计划关联 - 只在育种计划产出时显示 */}
-          {formData.propagationType === PropagationType.BREEDING && (
-            <div>
-            <Label className="text-gray-900">关联生产计划</Label>
-            <Select
-              value={formData.productionPlanId || '__none__'}
-              onValueChange={(val) => {
-                if (val === '__none__') {
-                  setFormData(prev => ({ ...prev, productionPlanId: '', productionPlanCode: '' }));
-                  return;
-                }
-                const plan = cropBatches.find(b => b.id === val);
-                setFormData(prev => ({
-                  ...prev,
-                  productionPlanId: val,
-                  productionPlanCode: plan?.batchCode || '',
-                }));
-              }}
-            >
-              <SelectTrigger className="">
-                <SelectValue placeholder="不关联" />
-              </SelectTrigger>
-              <SelectContent>
-                {cropBatches.filter(b =>
-                  b.batchStatus === 'in_progress' &&
-                  b.planType === PlanType.SEED_BREEDING
-                ).map(batch => (
-                  <SelectItem key={batch.id} value={batch.id}>
-                    [{batch.planTypeName || '育种计划'}] {batch.batchCode} - {batch.cropName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-xs text-gray-400">只显示执行中的育种计划</p>
-          </div>
-          )}
+          {/* 2026-07-14：删除 BREEDING 生产计划关联死分支（propagationType 默认 TRANSFER_FROM_INVENTORY） */}
 
           {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
           <div>
