@@ -31,7 +31,6 @@ const processRouteMap: Record<string, string> = {
   // 作物管理子菜单
   '/crop/seedling': 'PROC_SEEDLING',
   '/crop/planting': 'PROC_PLANTING',
-  '/crop/harvest': 'PROC_CROP_HARVEST',
   '/crop-inventory': 'PROC_CROP_INVENTORY',
 
   // 农事管理子菜单
