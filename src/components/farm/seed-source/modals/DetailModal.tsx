@@ -276,7 +276,7 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
     // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
     getSeedSourceUsageRecords(seedSourceId)
       .then((data) => setRecords(Array.isArray(data) ? data : []))
-      .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
+      .catch((e) => { console.error('[DetailModal] 使用记录加载失败:', e); setError((e && (e as { message?: string }).message) || '加载失败'); })
       .finally(() => setLoading(false))
   }, [seedSourceId])
 
@@ -395,6 +395,13 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   )
 }
 
+// 来源模块中文映射（与 SeedSourceInboundModal 的 sourceModule 保持一致）
+// 2026-07-14：移到模块顶层（避免 InboundRecordsPanel 每次 render 重建）
+const SOURCE_MODULE_MAP: Record<string, string> = {
+  seed_source: '商品种源入库',
+  inventory: '库存调拨',
+};
+
 // 2026-07-06 Bug 19：种源详情弹窗新增「入库记录」Tab
 // 数据源：GET /api/seed-sources/:id/history-inbound
 //   查 inventory_inbound_records 表 WHERE (source_id=? AND source_module='seed_source') OR business_id=?
@@ -402,6 +409,7 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
 //   - 调拨入种源（executeTransferToSource）→ 写 business_id=种源ID, source_module='inventory'
 //   - 追加调拨入库（append-from-inventory）→ 写 business_id=种源ID, source_module='inventory'
 // 三条入库路径都覆盖，详情弹窗能完整看到所有入库流水
+// 2026-07-14：InboundRecord 接口移到模块顶层
 interface InboundRecord {
   id: string;
   recordType?: string;
@@ -437,7 +445,7 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
     // 2026-07-14：改用 service 函数（替代 enhancedApiClient 直调，架构铁律合规）
     getSeedSourceInboundHistory(seedSourceId)
       .then((data) => setRecords(Array.isArray(data) ? (data as unknown as InboundRecord[]) : []))
-      .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
+      .catch((e) => { console.error('[DetailModal] 入库记录加载失败:', e); setError((e && (e as { message?: string }).message) || '加载失败'); })
       .finally(() => setLoading(false))
   }, [seedSourceId])
 
@@ -469,12 +477,6 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
         暂无入库记录
       </div>
     )
-  }
-
-  // 来源模块中文映射（与 SeedSourceInboundModal 的 sourceModule 保持一致）
-  const SOURCE_MODULE_MAP: Record<string, string> = {
-    seed_source: '商品种源入库',
-    inventory: '库存调拨',
   }
 
   return (

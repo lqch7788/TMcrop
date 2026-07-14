@@ -210,7 +210,9 @@ export default function SeedSourceLabelManageModal({
         setSelectedLabelId(null);
       }
     } catch (e) {
-      showAlert('网络错误：' + (e as Error).message);
+      console.error('[SeedSourceLabelManageModal] 批量作废失败:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      showAlert('网络错误：' + msg);
     } finally {
       setBatchVoiding(false);
     }
@@ -360,7 +362,9 @@ export default function SeedSourceLabelManageModal({
         showAlert('生成失败，请重试');
       }
     } catch (e) {
-      showAlert('网络错误：' + (e as Error).message);
+      console.error('[SeedSourceLabelManageModal] 补充生成失败:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      showAlert('网络错误：' + msg);
     } finally {
       setBatchGenerating(false);
     }

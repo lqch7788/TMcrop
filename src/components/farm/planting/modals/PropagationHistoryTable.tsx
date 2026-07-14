@@ -5,7 +5,7 @@
 
 import { Edit2, Trash2 } from 'lucide-react'
 import { Button, Badge } from '@/components/ui'
-import type { PropagationRecord } from '@/services/apiSeedlingPropagationService'
+import type { SeedlingSeedlingPropagationRecord } from '@/services/apiSeedlingPropagationService'
 
 const SEEDLING_STATUS_LABELS: Record<string, string> = {
   healthy: '健康',
@@ -14,9 +14,9 @@ const SEEDLING_STATUS_LABELS: Record<string, string> = {
 }
 
 interface PropagationHistoryTableProps {
-  records: PropagationRecord[]
+  records: SeedlingPropagationRecord[]
   editingId: string | null
-  onEdit: (record: PropagationRecord) => void
+  onEdit: (record: SeedlingPropagationRecord) => void
   onDelete: (recordId: string) => void
 }
 

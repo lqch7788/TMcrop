@@ -42,14 +42,27 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
-  // 记录错误日志
+  // 2026-07-14 安全加固：记录日志前净化敏感字段
+  const sensitiveKeys = ['password', 'token', 'secret', 'apiKey', 'authorization', 'credit_card', 'ssn', 'idCard'];
+  const sanitize = (obj: any) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const sanitized = { ...obj };
+    for (const key of Object.keys(sanitized)) {
+      if (sensitiveKeys.some(f => key.toLowerCase().includes(f))) {
+        sanitized[key] = '[REDACTED]';
+      }
+    }
+    return sanitized;
+  };
+
+  // 记录错误日志（已净化敏感数据）
   logger.error({
     message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
-    body: req.body,
-    query: req.query,
+    body: sanitize(req.body),
+    query: sanitize(req.query),
   });
 
   // 如果响应已经发送，不再处理

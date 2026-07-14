@@ -3,6 +3,7 @@
  * 所有方法直接操作 SQLite 库存中心表（inventory_stock / inventory_transaction）
  */
 
+import { randomUUID } from 'crypto';
 import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository, InventoryStock } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository, InventoryTransaction } from '../repositories/inventory-tx.repository';
@@ -148,6 +149,10 @@ export class InventoryService {
    * 采收入库
    */
   async inbound(request: InboundDTO): Promise<InboundResult> {
+    // 变量用于回滚追踪
+    let createdInstanceId: string | null = null;
+    let createdTransactionId: string | null = null;
+
     try {
       // 1. 校验仓库
       const db = getDatabase();
@@ -179,6 +184,7 @@ export class InventoryService {
       const instanceId = await generateInstanceId(prefix, dateStr);
 
       // 4. 创建库存记录
+      createdInstanceId = instanceId;
       const stock = await inventoryStockRepository.create({
         instance_id: instanceId,
         stock_type: request.stockType,
@@ -200,7 +206,6 @@ export class InventoryService {
         production_plan_code: request.productionPlanCode,
         source_instance_id: request.sourceInstanceId,
         status: 'in_stock',
-        // V3 扩展字段（采收入库完整对接）
         crop_code: request.cropCode,
         planting_mode: request.plantingMode,
         target_yield: request.targetYield,
@@ -208,7 +213,6 @@ export class InventoryService {
         auditor: request.auditor,
         remarks: request.remarks,
         greenhouse_name: request.greenhouseName,
-        // 采购信息（外购入库财务字段）
         supplier_id: request.supplierId,
         supplier_name: request.supplierName,
         unit_price: request.unitPrice,
@@ -216,8 +220,9 @@ export class InventoryService {
         purchase_date: request.purchaseDate,
       });
 
-      // 5. 创建入库流水（V2.1：4 位自增，替代 Math.random）
+      // 5. 创建入库流水
       const transactionId = await generateTransactionId(dateStr);
+      createdTransactionId = transactionId;
       await inventoryTransactionRepository.create({
         transaction_id: transactionId,
         instance_id: instanceId,
@@ -246,6 +251,17 @@ export class InventoryService {
       };
     } catch (error) {
       console.error('[InventoryService] inbound 失败:', error);
+      // 回滚：清除步骤 4 创建的库存记录（如果步骤 5 失败但步骤 4 已写入）
+      if (createdInstanceId) {
+        try {
+          const db = getDatabase();
+          db.run('DELETE FROM inventory_stock WHERE instance_id = ?', [createdInstanceId]);
+          db.run('DELETE FROM inventory_transaction WHERE instance_id = ?', [createdInstanceId]);
+          console.log('[InventoryService] 已回滚库存记录:', createdInstanceId);
+        } catch (rollbackErr) {
+          console.error('[InventoryService] 回滚失败:', rollbackErr);
+        }
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : '入库失败'
@@ -604,20 +620,18 @@ export const InboundFromSourceInputSchema = z.object({
 
 export type InboundFromSourceInput = z.infer<typeof InboundFromSourceInputSchema>
 
-function generateId8(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
-
 /**
- * 库存入库 (复用 inventory_stock 三件套)
+ * 库存入库 (复用 inventory_stock 三件套) — 仅测试用
  * - 实际有数据: businessType='harvest' (采收入库) | 'circulation' (回流后入库存)
  * - 路由代码保留: businessType='seedling' | 'seed' (本期无调用方, 扩展预留)
+ * - 生产路径走 inventoryInboundFromSource.service.ts（使用 generateStockId 等 4 位自增 ID）
+ * - 2026-07-14：Math.random → crypto.randomUUID（代码生成契约铁律合规，此函数仅测试调用故不用 4 位自增）
  */
 export function inboundFromSource(rawInput: unknown): { stockId: string } {
   const input = InboundFromSourceInputSchema.parse(rawInput)
   const db = getDatabase()
-  const stockId = generateId8('STK')
-  const instanceId = generateId8('INST')
+  const stockId = `STK-${randomUUID().slice(0, 8)}`
+  const instanceId = `INST-${randomUUID().slice(0, 8)}`
   db.run(`
     INSERT INTO inventory_stock
     (id, instance_id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)

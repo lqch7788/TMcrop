@@ -9,7 +9,7 @@
  * 4. 错误消息清晰
  */
 import { describe, it, expect } from 'vitest'
-import { CreateSeedlingSchema, validateCreateSeedling } from '../../services/seedling.service'
+import { CreateSeedlingSchema, validateCreateSeedling } from '../../validators/seedlingValidator'
 
 describe('CreateSeedlingSchema source_id 必填', () => {
   it('缺失 source_id 应校验失败', () => {

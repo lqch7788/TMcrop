@@ -656,6 +656,6 @@ function rollbackTransfer(
       );
     } catch (e) { console.error('[rollback] restore stock failed:', e); failed = true; }
   }
-  try { saveDatabase(); } catch { /* saveDatabase 失败不阻断 */ }
+  try { saveDatabase(); } catch (e) { console.error('[rollback] saveDatabase failed:', e); }
   return failed;
 }

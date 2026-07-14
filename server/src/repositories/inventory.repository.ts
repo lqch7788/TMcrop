@@ -344,13 +344,31 @@ export class InventoryStockRepository {
       params.push(sourceType);
     }
 
-    // 获取总数（用独立 COUNT 简化 — JOIN 不影响 COUNT 计数）
-    const countResult = queryToObjects<{ total: number }>(
-      db,
-      `SELECT COUNT(*) as total FROM inventory_stock WHERE 1=1 AND status != 'transferred'`,
-      []
-    );
-    const total = countResult[0]?.total || 0;
+    // 获取过滤后的总数（用与主查询相同的 WHERE 条件计数）
+    let countSql = `SELECT COUNT(*) as total FROM inventory_stock s WHERE 1=1 AND s.status != 'transferred'`;
+    const countSqlParams: any[] = [];
+    if (stockType) {
+      countSql += ` AND s.stock_type = ?`;
+      countSqlParams.push(stockType);
+    }
+    if (warehouseId) {
+      countSql += ` AND s.warehouse_id = ?`;
+      countSqlParams.push(warehouseId);
+    }
+    if (cropName) {
+      countSql += ` AND s.crop_name LIKE ?`;
+      countSqlParams.push(`%${cropName}%`);
+    }
+    if (status) {
+      countSql += ` AND s.status = ?`;
+      countSqlParams.push(status);
+    }
+    if (sourceType) {
+      countSql += ` AND s.source_type = ?`;
+      countSqlParams.push(sourceType);
+    }
+    const countRows = queryToObjects<{ total: number }>(db, countSql, countSqlParams);
+    const total = countRows[0]?.total || 0;
 
     // 分页
     sql += ` ORDER BY s.create_time DESC`;

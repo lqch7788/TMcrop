@@ -4,6 +4,7 @@
  * 数据流：V2.1 铁律 — 无缓存降级
  */
 
+import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
@@ -42,9 +43,8 @@ const UpdatePropagationRecordSchema = PropagationRecordSchema.partial();
 // ============ Helpers ============
 
 function generateRecordId(prefix: string, dateStr: string): string {
-  const ts = Date.now().toString().slice(-6);
-  const rand = Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${dateStr}-${ts}${rand}`;
+  // 2026-07-14：改用 crypto.randomUUID 替代 Math.random（代码生成契约铁律合规）
+  return `${prefix}-${dateStr}-${randomUUID().slice(0, 8)}`;
 }
 
 // ============ 启动时加列 + 索引 ============
@@ -87,8 +87,10 @@ function ensureSchema() {
     idx.free();
     saveDatabase();
     schemaInitialized = true;
-  } catch {
-    // DB 尚未就绪，延迟初始化
+  } catch (e) {
+    // 2026-07-14：添加日志（修复 H14：此前完全静默吞错）
+    // "duplicate column" 等预期异常跳过，其他异常需记录
+    console.warn('[seedlingPropagationRecords] ensureSchema 失败（可能 DB 未就绪）:', e);
   }
 }
 

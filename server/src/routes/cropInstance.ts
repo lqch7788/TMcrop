@@ -131,18 +131,26 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
-    }
+    // 2026-07-14：字段白名单（修复 H4：此前任意字段名可直接注入 SQL 列名）
+    const ALLOWED_FIELDS = new Set([
+      'crop_name', 'crop_variety', 'initial_quantity', 'current_quantity',
+      'planted_quantity', 'harvested_quantity', 'status', 'seedling_start_date',
+      'source_instance_id', 'business_id', 'business_type', 'create_by',
+    ]);
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
+    if (safeKeys.length === 0) {
+      return res.status(400).json({ success: false, error: '没有有效的更新字段' });
+    }
+    const fields = safeKeys.map(k => `${k} = ?`).join(', ');
+    const values = safeKeys.map(k => updates[k]);
     values.push(now, id);
 
     db.run(`UPDATE crop_instances SET ${fields}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
+    console.error('[cropInstance] PUT 失败:', error);
     res.status(500).json({ success: false, error: '更新作物实例失败' });
   }
 });

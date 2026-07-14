@@ -21,9 +21,9 @@ import {
   SOURCE_TYPE_MAP,
   SOURCE_ORIGIN_MAP,
 } from '../../../../constants/cropConstants';
-import { computeStockStatus, getCompletionRate, getStatusColorClass, LOW_THRESHOLD_RATIO } from '../../../../lib/stockStatus';
+import { computeStockStatus, LOW_THRESHOLD_RATIO } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
-import {SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip} from '@/components/ui';
+import { Tooltip } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';

@@ -142,6 +142,7 @@ export function InventoryTransferPanel({
       });
       setRows(data);
     } catch (err) {
+      console.error('[InventoryTransferPanel] 加载可调拨库存失败:', err);
       const msg = err instanceof Error ? err.message : '加载可调拨库存失败';
       setError(msg);
       // 2026-07-01 P2-17：去掉 toast.error，保留 Alert 即可（避免双重展示）

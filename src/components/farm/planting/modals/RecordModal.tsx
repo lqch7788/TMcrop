@@ -23,7 +23,7 @@ import {
 } from '@/services/apiPlantingSubRecordService';
 import {
   apiSeedlingPropagationService,
-  type PropagationRecord,
+  type SeedlingPropagationRecord,
   type PropagationRecordInput,
 } from '@/services/apiSeedlingPropagationService';
 import { OPERATION_TYPE_LABELS, ASEXUAL_OPERATION_TYPES, PROPAGATION_METHOD_LABELS } from './recordModalConstants'
@@ -65,7 +65,7 @@ export function RecordModal({
   recordType,
   parentRecord,
 }: RecordModalProps) {
-  const [records, setRecords] = useState<BreedingRecord[] | SeedSavingRecord[] | PropagationRecord[]>([]);
+  const [records, setRecords] = useState<BreedingRecord[] | SeedSavingRecord[] | SeedlingPropagationRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -234,10 +234,10 @@ export function RecordModal({
   };
 
   // 编辑（行内）
-  const handleStartEdit = (record: BreedingRecord | SeedSavingRecord | PropagationRecord) => {
+  const handleStartEdit = (record: BreedingRecord | SeedSavingRecord | SeedlingPropagationRecord) => {
     setEditingId(record.id);
     if (recordType === 'propagation') {
-      const pr = record as PropagationRecord;
+      const pr = record as SeedlingPropagationRecord;
       setPropagationForm({
         recordDate: pr.recordDate,
         temperature: pr.temperature,
@@ -385,7 +385,7 @@ export function RecordModal({
       XLSX.utils.book_append_sheet(wb, ws, '留种记录');
       XLSX.writeFile(wb, `留种记录_${parentRecord.plantCode ?? ''}.xlsx`);
     } else {
-      const data = (records as PropagationRecord[]).map((r) => ({
+      const data = (records as SeedlingPropagationRecord[]).map((r) => ({
         '日期': r.recordDate,
         '温度(℃)': r.temperature ?? '',
         '湿度(%)': r.humidity ?? '',
@@ -466,7 +466,7 @@ export function RecordModal({
             <div className="text-center py-8 text-gray-500">暂无记录</div>
           ) : recordType === 'propagation' ? (
             <PropagationHistoryTable
-              records={records as PropagationRecord[]}
+              records={records as SeedlingPropagationRecord[]}
               editingId={editingId}
               onEdit={handleStartEdit}
               onDelete={handleDelete}
