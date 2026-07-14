@@ -22,7 +22,6 @@ const approvalTypeOptions: { value: any; label: string }[] = [
   { value: ApprovalType.MATERIAL_REQUEST, label: '领料单' },
   { value: ApprovalType.PURCHASE_REQUEST, label: '采购申请' },
   { value: ApprovalType.PRODUCTION_PLAN, label: '生产计划' },
-  { value: ApprovalType.HARVEST_REQUEST, label: '采收申请' },
   { value: ApprovalType.RETURN_MATERIAL, label: '退料单' },
   { value: ApprovalType.LEAVE, label: '请假' },
   { value: ApprovalType.OVERTIME, label: '加班' },

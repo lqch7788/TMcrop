@@ -319,7 +319,6 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
       [ApprovalType.MATERIAL_REQUEST]: '领料单',
       [ApprovalType.PURCHASE_REQUEST]: '采购申请',
       [ApprovalType.PRODUCTION_PLAN]: '生产计划',
-      [ApprovalType.HARVEST_REQUEST]: '采收申请',
       [ApprovalType.RETURN_MATERIAL]: '退料单',
       [ApprovalType.LEAVE]: '请假',
       [ApprovalType.OVERTIME]: '加班',

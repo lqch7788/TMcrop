@@ -185,8 +185,6 @@ class ApprovalSubmitService {
       [ApprovalType.TASK_CHANGE]: 'RG',
       [ApprovalType.INSPECTION_ISSUE]: 'XC',
       [ApprovalType.ISSUE_RESOLVE]: 'ZG',
-      // 采收审批
-      [ApprovalType.HARVEST_REQUEST]: 'HS',
       // 作物补录审批
       [ApprovalType.SEEDLING_SUPPLEMENTARY]: 'YB',
       [ApprovalType.CROP_STORAGE_SUPPLEMENTARY]: 'CB',
@@ -869,36 +867,6 @@ export async function submitIssueResolveApproval(params: {
       type: 'issue_resolve',
       requestId: params.resolveId,
       inspectionCode: params.issueCode,
-    },
-  });
-}
-
-/**
- * 提交采收申请审批
- */
-export async function submitHarvestRequestApproval(params: {
-  harvestId: string;
-  harvestCode: string;
-  cropName: string;
-  quantity: number;
-  estimatedYield: number;
-  applicantId: string;
-  applicantName: string;
-  department: string;
-}): Promise<ApprovalSubmitResult> {
-  return approvalSubmitService.submitApproval({
-    id: params.harvestId,
-    code: params.harvestCode,
-    title: `采收申请: ${params.cropName}`,
-    type: ApprovalType.HARVEST_REQUEST,
-    amount: 0,
-    applicantId: params.applicantId,
-    applicantName: params.applicantName,
-    applicantDepartment: params.department,
-    businessLink: {
-      type: 'harvest',
-      requestId: params.harvestId,
-      requestCode: params.harvestCode,
     },
   });
 }

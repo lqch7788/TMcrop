@@ -225,13 +225,6 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
     remark: '问题整改',
   },
 
-  // ========== 采收审批 ==========
-  {
-    type: ApprovalType.HARVEST_REQUEST,
-    batchApprovalSupported: false,
-    remark: '采收申请',
-  },
-
   // ========== 作物补录审批 ==========
   {
     type: ApprovalType.SEEDLING_SUPPLEMENTARY,
