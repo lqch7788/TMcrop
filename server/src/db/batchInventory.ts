@@ -82,7 +82,7 @@ export function fefoAllocate(
      FROM batch_inventory
      WHERE material_code = ? AND remaining_quantity > 0
      ORDER BY expiry_date ASC NULLS LAST, create_time ASC`,
-    { bind: [materialCode] }
+    [materialCode]
   );
 
   const allocations: Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }> = [];
@@ -127,7 +127,7 @@ export function restoreBatchInventory(
   for (const ret of returns) {
     const check = db.exec(
       `SELECT id FROM batch_inventory WHERE material_code = ? AND batch_no = ?`,
-      { bind: [ret.materialCode, ret.batchNo] }
+      [ret.materialCode, ret.batchNo]
     );
     if (check.length > 0 && check[0].values.length > 0) {
       db.run(
@@ -145,7 +145,7 @@ export function getBatchStock(materialCode: string): BatchInventoryItem[] {
   const db = getDatabase();
   const results = db.exec(
     `SELECT * FROM batch_inventory WHERE material_code = ? ORDER BY expiry_date ASC NULLS LAST`,
-    { bind: [materialCode] }
+    [materialCode]
   );
   if (results.length === 0) return [];
   const { columns, values } = results[0];

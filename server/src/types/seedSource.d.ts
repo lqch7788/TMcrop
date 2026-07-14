@@ -190,4 +190,7 @@ export interface UpdateSeedSourceDTO {
   remaining_quantity?: number;
   status?: string;
   remarks?: string;
+  // 2026-07-14：审计字段（P0-6 update_by 自动注入，operatorName 兼容旧客户端）
+  operatorName?: string;
+  updateBy?: string;
 }

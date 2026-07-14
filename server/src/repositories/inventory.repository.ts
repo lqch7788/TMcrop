@@ -62,6 +62,12 @@ export interface InventoryStock {
   unit_price?: number;
   total_amount?: number;
   purchase_date?: string;
+  // 2026-07-14：补齐详情/展示用字段（用于详情弹窗和列表扩展）
+  supplier_phone?: string;
+  gift_from?: string;
+  consignor?: string;
+  source_warehouse_name?: string;
+  stocktake_no?: string;
 
   // camelCase 别名（find/findBy 返回的格式，queryToObjects 自动转换）
   instanceId?: string;
@@ -88,6 +94,11 @@ export interface InventoryStock {
   plantingMode?: string;
   targetYield?: number;
   greenhouseName?: string;
+  // 2026-07-14：详情/展示字段 camelCase 别名（与 snake_case 字段一一对应）
+  supplierPhone?: string;
+  giftFrom?: string;
+  sourceWarehouseName?: string;
+  stocktakeNo?: string;
 }
 
 /**

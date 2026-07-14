@@ -262,7 +262,7 @@ export class FertilizerService {
         fertilizer_name: data.fertilizerName,
         // 2026-07-12：fertilizerType 已不再必填；null/undefined 转为 '' 兼容 NOT NULL
         fertilizer_type: data.fertilizerType ?? '',
-        dilution_ratio: data.dilutionRatio,
+        dilution_ratio: data.dilutionRatio ?? '',
         quantity: qty,
         unit: data.unit ?? '千克',
         // 2026-07-12：顶层 unit_price 取池首行（兼容老 schema；总成本按池行 sum 精确计算）
