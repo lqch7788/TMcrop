@@ -226,7 +226,8 @@ export class InventoryStockRepository {
       data.variety_name || null,
       data.current_quantity || 0,
       data.frozen_quantity || 0,
-      data.current_quantity || 0,  // available_quantity = current_quantity
+      // 2026-07-14 修复：available_quantity 应为 current - frozen（之前漏算 frozen，导致初始值不准）
+      (data.current_quantity || 0) - (data.frozen_quantity || 0),
       data.unit || null,
       data.warehouse_id || null,
       data.warehouse_name || null,
@@ -252,9 +253,6 @@ export class InventoryStockRepository {
       now,
       now
     ]);
-    // 调试：打印 params 实际长度
-    const params: unknown[] = [];  // 2026-06-29: 移除 params cast 后的死代码（之前误用 any[] cast）
-    console.log('[InventoryStockRepository.create] params.length:', params.length);
 
     saveDatabase();
 
@@ -363,56 +361,6 @@ export class InventoryStockRepository {
     const items = queryToObjects<InventoryStock>(db, sql, params);
 
     return { data: items, total };
-  }
-
-  /**
-   * 更新库存数量（带乐观锁）
-   */
-  async updateQuantity(instanceId: string, newQuantity: number, version: number): Promise<boolean> {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    // 乐观锁检查
-    const existing = await this.findByInstanceId(instanceId);
-    if (!existing) return false;
-    if (existing.version !== version) {
-      throw new Error(`乐观锁冲突：期望版本 ${version}，实际版本 ${existing.version}`);
-    }
-
-    db.run(`
-      UPDATE inventory_stock
-      SET current_quantity = ?, available_quantity = ?, version = version + 1, update_time = ?
-      WHERE instance_id = ?
-    `, [newQuantity, newQuantity, now, instanceId]);
-
-    saveDatabase();
-    return true;
-  }
-
-  /**
-   * 更新冻结数量（带乐观锁）
-   */
-  async updateFrozenQuantity(instanceId: string, newFrozenQty: number, version: number): Promise<boolean> {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    // 乐观锁检查
-    const existing = await this.findByInstanceId(instanceId);
-    if (!existing) return false;
-    if (existing.version !== version) {
-      throw new Error(`乐观锁冲突：期望版本 ${version}，实际版本 ${existing.version}`);
-    }
-
-    const availableQty = (existing.current_quantity ?? 0) - newFrozenQty;
-
-    db.run(`
-      UPDATE inventory_stock
-      SET frozen_quantity = ?, available_quantity = ?, version = version + 1, update_time = ?
-      WHERE instance_id = ?
-    `, [newFrozenQty, availableQty, now, instanceId]);
-
-    saveDatabase();
-    return true;
   }
 
   /**

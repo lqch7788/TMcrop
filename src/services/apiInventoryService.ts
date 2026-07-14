@@ -5,7 +5,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import type { ProduceInventory, InventoryStatus } from '../types/inventory';
+import type { InventoryStatus } from '../types/inventory';
 
 // 库存记录类型
 export interface InventoryRecord {

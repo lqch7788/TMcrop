@@ -39,6 +39,8 @@ export function FreezeModal({ isOpen, stock, onClose, onSuccess }: FreezeModalPr
   // 订单关联状态
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+  // 2026-07-14：订单加载失败时显示具体错误（之前失败时无任何提示）
+  const [ordersLoadError, setOrdersLoadError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const selectedOrder = activeOrders.find(o => o.id === selectedOrderId);
 
@@ -52,10 +54,15 @@ export function FreezeModal({ isOpen, stock, onClose, onSuccess }: FreezeModalPr
       setError('');
       setSelectedOrderId('');
       setOrdersLoading(true);
+      setOrdersLoadError(null);
       getActiveOrders().then(orders => {
         setActiveOrders(orders);
         setOrdersLoading(false);
-      }).catch(() => setOrdersLoading(false));
+      }).catch((e) => {
+        console.error('[FreezeModal] 加载活跃订单失败:', e);
+        setOrdersLoadError(e instanceof Error ? e.message : '加载订单列表失败');
+        setOrdersLoading(false);
+      });
     }
   }, [isOpen]);
 
@@ -185,6 +192,11 @@ export function FreezeModal({ isOpen, stock, onClose, onSuccess }: FreezeModalPr
                 <div className="flex items-center gap-2 py-2 text-gray-500 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   加载活跃订单中...
+                </div>
+              ) : ordersLoadError ? (
+                <div className="text-sm text-red-600 flex items-start gap-1">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  加载订单失败：{ordersLoadError}
                 </div>
               ) : activeOrders.length === 0 ? (
                 <div className="text-sm text-amber-600 flex items-start gap-1">

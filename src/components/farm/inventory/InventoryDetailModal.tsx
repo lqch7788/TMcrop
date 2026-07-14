@@ -40,6 +40,7 @@ import {
   SOURCE_ORIGIN_LABEL_MAP,
 } from '../../../constants/cropConstants';
 import { translateForm, translateArea } from '../../../constants/formDictionary';
+import { useInventoryStore } from '../../../stores/useInventoryStore';
 
 type TabKey = 'basic' | 'history' | 'trace';
 
@@ -130,6 +131,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   // 当 stock prop 不完整时（如从出库记录页仅传 instanceId），自动加载完整数据
   const [resolvedStock, setResolvedStock] = useState<InventoryStock | null>(null);
   const [resolving, setResolving] = useState(false);
+  // 2026-07-14：加载失败时显示具体错误（之前失败时弹窗永远 skeleton）
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen || !stock?.instanceId) return;
@@ -138,15 +141,18 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     if (isIncomplete) {
       setResolving(true);
       // 2026-07-10 P0-6 修复：catch(() => {}) → catch(e) { console.error(...) }（之前失败时弹窗永远 skeleton）
+      // 2026-07-14 修复：失败时设置 resolveError 状态，让 UI 不再永远 skeleton
       getInventoryByInstanceId(stock.instanceId).then((data) => {
         setResolvedStock(data);
         setResolving(false);
       }).catch((e) => {
         console.error('[InventoryDetailModal] resolveStock 失败:', e);
+        setResolveError(e instanceof Error ? e.message : '加载库存详情失败');
         setResolving(false);
       });
     } else {
       setResolvedStock(null); // 使用 prop 数据
+      setResolveError(null);
     }
   }, [isOpen, stock?.instanceId, stock?.cropName, stock?.stockType]);
 
@@ -179,12 +185,15 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     }
   }, [stock?.instanceId]);
 
+  // 2026-07-14：订阅 inventoryVersion 触发跨页刷新（如编辑保存后弹窗自动 reload）
+  const inventoryVersion = useInventoryStore((s) => s.version);
   useEffect(() => {
     if (isOpen && stock?.instanceId) {
       setTab('basic');
       loadAllData();
     }
-  }, [isOpen, stock?.instanceId, loadAllData]);
+    // inventoryVersion 加入依赖：写操作触发 notifyChange() 后弹窗自动重载
+  }, [isOpen, stock?.instanceId, loadAllData, inventoryVersion]);
 
   if (!isOpen || !stock) return null;
 
@@ -199,6 +208,41 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     || '-';
   const gradeInfo = effectiveStock?.grade ? QUALITY_GRADE_MAP[effectiveStock.grade] : null;
   const available = (effectiveStock?.currentQuantity ?? 0) - (effectiveStock?.frozenQuantity ?? 0);
+
+  // 数据加载失败占位（2026-07-14：之前失败时弹窗永远 skeleton）
+  if (resolveError) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-6 shadow-xl max-w-md">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-red-600 text-xl">⚠</span>
+            <h3 className="text-lg font-semibold text-gray-900">加载失败</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">{resolveError}</p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              onClick={onClose}
+            >
+              关闭
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={() => {
+                setResolveError(null);
+                // 重置 stock prop 让 useEffect 重新触发加载
+                setResolvedStock(null);
+              }}
+            >
+              重试
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 数据加载中占位
   if (resolving) {
