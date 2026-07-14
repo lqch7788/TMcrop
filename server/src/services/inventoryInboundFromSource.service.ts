@@ -141,7 +141,8 @@ function findSourceInstanceId(db: any, sourceModule: SourceModule, sourceId: str
     }
     stmt.free();
     return instanceId;
-  } catch {
+  } catch (e) {
+    console.warn('[findSourceInstanceId] 查询失败，返回 null:', e);
     return null;
   }
 }

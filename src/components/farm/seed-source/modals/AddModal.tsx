@@ -6,10 +6,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { X, Upload, RefreshCw, Search, Check, Leaf, Dna, Sprout, Scissors, ArrowLeftRight } from 'lucide-react';
-import { SeedSource, SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
+import { X, Upload, RefreshCw, Search, Check, Leaf, ArrowLeftRight } from 'lucide-react';
+import { SeedSource, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
-import { PlanType } from '../../../../types';
 import { todayLocal } from '@/lib/dateUtils';
 import { generateSeedCode, checkSourceCodeExists } from '../../../../services/apiSeedSourceService';
 // 2026-06-04: status 改为实时计算，AddModal 不再调用 computeStockStatus
@@ -21,7 +20,6 @@ import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { useUserStore } from '../../../../stores/useUserStore';
 import { useAuthStore } from '../../../../stores/useAuthStore';
-import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { useSupplierStore } from '../../../../stores/useSupplierStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -32,7 +30,6 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
 import { showAlert } from '@/lib/dialogService';
 
@@ -51,7 +48,6 @@ export function AddModal({
 }: AddModalProps) {
   // P1 #5 修复: 改用订阅式读取 store，store 更新时组件自动重渲染
   const storeUsers = useUserStore((s) => s.users);
-  const storePlans = useProductionPlanStore((s) => s.batches);
   // P2 #16 修复: 当前用户从 useAuthStore.currentUser 读取（认证已登录的用户），不再用 localStorage
   const authCurrentUser = useAuthStore((s) => s.currentUser);
   // 2026-06-05: 修复创建人显示"未知用户"/空白
@@ -78,9 +74,6 @@ export function AddModal({
 
   // 2026-07-01 P1-8：currentUser 拿不到时拒绝写入（在 handleSubmit 里判断，不在此处早返回避免 hooks 顺序错乱）
   const canSubmit = currentUser !== null;
-  const cropBatches = storePlans.length > 0
-    ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
-    : [];
 
   // 2026-07-14：表单初始值抽常量（与 resetForm 共享，避免字段漂移）
   const INITIAL_FORM_DATA = {
@@ -409,36 +402,9 @@ export function AddModal({
     onSuccess?.();
   };
 
-  // 重置表单
+  // 重置表单（2026-07-14：改用 INITIAL_FORM_DATA 避免字段漂移——之前 resetForm 和 INITIAL_FORM_DATA 有 4 个字段不同）
   const resetForm = () => {
-    setFormData({
-      sourceType: SourceType.SEED,
-      sourceOrigin: 'external_purchase' as SourceOrigin,
-      cropCategory: '',
-      cropName: '',
-      cropVariety: '',
-      supplierId: '',
-      supplierName: '',
-      purchaseDate: '',
-      quantity: 0,
-      unit: '袋',
-      unitPrice: 0,
-      pictures: [],
-      remarks: '',
-      // V3.0 新增字段
-      productionPlanId: '',
-      productionPlanCode: '',
-      // 繁殖途径字段
-      // 2026-07-07 V3.4：取消外购入库，默认改为库存调拨
-      propagationType: PropagationType.TRANSFER_FROM_INVENTORY as string,
-      propagationMethod: '',
-      parentMaleId: '', parentMaleCode: '',
-      parentFemaleId: '', parentFemaleCode: '',
-      motherPlantId: '', motherPlantCode: '',
-      linkedPlantingId: '', linkedPlantingCode: '',
-      propagationStartDate: '', expectedHarvestDate: '',
-      breedingLocation: '', targetTraits: '', generation: '',
-    });
+    setFormData({ ...INITIAL_FORM_DATA });
     setCropCode('');
     setSeedCode('');
     setSelectedCrop(null);

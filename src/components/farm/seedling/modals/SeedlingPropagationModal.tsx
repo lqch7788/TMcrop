@@ -21,8 +21,8 @@ import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import {
   apiSeedlingPropagationService,
-  type PropagationRecord,
-  type PropagationRecordInput,
+  type SeedlingSeedlingPropagationRecord,
+  type SeedlingPropagationRecordInput,
   type AsexualOperationType,
   type ReproductionMode,
 } from '@/services/apiSeedlingPropagationService';
@@ -51,7 +51,7 @@ interface SeedlingPropagationModalProps {
 // 继承 BreedingFields 的 deepInputClass 样式
 const deepInputClass = inputClass;
 
-const EMPTY_FORM: PropagationRecordInput = {
+const EMPTY_FORM: SeedlingPropagationRecordInput = {
   recordDate: todayLocal(),
   operationType: 'cutting',
   reproductionMode: 'asexual',
@@ -76,10 +76,10 @@ export function SeedlingPropagationModal({
   record,
   readOnly = false,
 }: SeedlingPropagationModalProps) {
-  const [records, setRecords] = useState<PropagationRecord[]>([]);
+  const [records, setRecords] = useState<SeedlingPropagationRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<PropagationRecordInput>(EMPTY_FORM);
+  const [form, setForm] = useState<SeedlingPropagationRecordInput>(EMPTY_FORM);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -123,7 +123,7 @@ export function SeedlingPropagationModal({
     }
   };
 
-  const handleStartEdit = (r: PropagationRecord) => {
+  const handleStartEdit = (r: SeedlingPropagationRecord) => {
     if (readOnly) return;
     setEditingId(r.id);
     setForm({

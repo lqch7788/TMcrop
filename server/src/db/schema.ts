@@ -531,6 +531,24 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-07-14：创建定植历史表（修复 S1：此前表不存在导致所有写入静默失败并返回虚假的 201）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS transplant_history (
+      id TEXT PRIMARY KEY,
+      seedling_id TEXT NOT NULL,
+      label_number TEXT NOT NULL,
+      status TEXT,
+      to_area TEXT,
+      to_location TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // 创建种植表
   db.run(`
     CREATE TABLE IF NOT EXISTS plantings (

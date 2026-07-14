@@ -92,6 +92,19 @@ export function createIndexes() {
     CREATE INDEX IF NOT EXISTS idx_seedlings_status
     ON seedlings(status, expected_finish_date)
   `);
+  // 2026-07-14：添加育苗高频查询列索引
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_seedlings_code
+    ON seedlings(seedling_code)
+  `);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_seedlings_create_time
+    ON seedlings(create_time DESC)
+  `);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_seedlings_active
+    ON seedlings(deleted_at) WHERE deleted_at IS NULL
+  `);
 
   // ========== 4. 种植表索引 ==========
   db.run(`

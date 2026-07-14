@@ -14,7 +14,6 @@ import { useAuthStore } from '../../../../stores/useAuthStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
-import * as supplierService from '../../../../services/supplierService';
 import { Input } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { Label } from '@/components/ui';

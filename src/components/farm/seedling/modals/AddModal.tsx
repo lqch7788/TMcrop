@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
-import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
+import { X, Upload, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';

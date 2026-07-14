@@ -71,9 +71,9 @@ export function SeedSourceReturnModal({
       const data = await seedSourceTransferService.listReturnableInboundRecords(targetSeedSourceId);
       setRows(data);
     } catch (err) {
+      console.error('[SeedSourceReturnModal] 加载可退库流水失败:', err);
       const msg = err instanceof Error ? err.message : '加载可退库流水失败';
       setError(msg);
-      toast.error(msg);
     } finally {
       setLoading(false);
     }

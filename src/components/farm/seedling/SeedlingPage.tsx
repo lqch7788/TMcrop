@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, X, Sprout, Download, AlertTriangle } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
 import { AddModal } from './modals/AddModal';
@@ -22,7 +22,6 @@ import { useFilteredSeedlings } from '@/hooks/useFilteredSeedlings';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 // 2026-07-10 P1-1：抽取公共导出函数
 import { exportCsv, exportXlsx } from '@/services/exporters';
-import * as XLSX from 'xlsx';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 // 2026-06-28 方案B：移除 RecordModal import — 繁殖记录已合并到每日记录弹窗
@@ -32,7 +31,7 @@ import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 // 2026-07-01 P2-8 修复：useAuthPermission 是死代码（已 hardcode 全部 true），删除
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
@@ -60,8 +59,6 @@ export default function SeedlingPage() {
     }
   }, [dictionaries.length, loadDictionaries]);
 
-  // 产品编码生成器状态
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
   const [filters, setFilters] = useState<SeedlingFilters>({
     cropName: '',
     seedlingCode: '',
@@ -256,22 +253,6 @@ export default function SeedlingPage() {
   const filteredData = useFilteredSeedlings(seedlings, filters);
 
   // 2026-07-04 v2：6 状态统计（对齐种植）
-  const statsData = useMemo(() => {
-    const total = seedlings.length;
-    const sown = seedlings.filter(s => s.status === SeedlingStatus.SOWN).length;
-    const inProgress = seedlings.filter(s => s.status === SeedlingStatus.IN_PROGRESS).length;
-    const transplantReady = seedlings.filter(s => s.status === SeedlingStatus.TRANSPLANT_READY).length;
-    const completed = seedlings.filter(s => s.status === SeedlingStatus.COMPLETED).length;
-    const abnormal = seedlings.filter(s => s.status === SeedlingStatus.ABNORMAL).length;
-    const cancelled = seedlings.filter(s => s.status === SeedlingStatus.CANCELLED).length;
-    const monthCount = seedlings.filter(s => {
-      const date = new Date(s.createTime);
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
-    return { total, sown, inProgress, transplantReady, completed, abnormal, cancelled, monthCount };
-  }, [seedlings]);
-
   // 处理操作
   const handleEdit = (record: Seedling) => {
     setCurrentRecord(record);

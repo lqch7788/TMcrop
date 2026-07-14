@@ -7,14 +7,15 @@
 import { enhancedApiClient } from '../lib/apiClient';
 import type { PropagationMethod } from '@/services/apiPlantingSubRecordService';
 
-export type SeedlingStatus = 'healthy' | 'weak' | 'diseased';
+export type SeedlingHealthStatus = 'healthy' | 'weak' | 'diseased';
 /** 7 个有性 + 6 个无性 = 13 种繁殖操作类型 */
 export type AsexualOperationType = 'clonal' | 'cutting' | 'grafting' | 'layering' | 'tissue' | 'division';
 export type SexualOperationType = 'cross' | 'self' | 'backcross' | 'selection' | 'marker' | 'other';
 export type PropagationOperationType = SexualOperationType | AsexualOperationType;
 export type ReproductionMode = 'sexual' | 'asexual';
 
-export interface PropagationRecord {
+// 2026-07-14：重命名避免与 crop.ts 的 SeedlingPropagationRecord（种源繁殖记录）冲突
+export interface SeedlingPropagationRecord {
   id: string;
   seedlingId: string;
   recordDate: string;
@@ -24,7 +25,7 @@ export interface PropagationRecord {
   // 数量
   motherPlantCount: number | null;
   seedlingOutput: number | null;
-  seedlingStatus: SeedlingStatus | null;
+  seedlingStatus: SeedlingHealthStatus | null;
   transplantPosition: string | null;
   operator: string | null;
   remarks: string | null;
@@ -48,7 +49,7 @@ export interface PropagationRecordInput {
   humidity?: number | null;
   motherPlantCount?: number | null;
   seedlingOutput?: number | null;
-  seedlingStatus?: SeedlingStatus | null;
+  seedlingStatus?: SeedlingHealthStatus | null;
   transplantPosition?: string | null;
   operator?: string | null;
   remarks?: string | null;
@@ -69,7 +70,7 @@ export interface PropagationRecordInput {
  * 关键服务端响应字段映射：服务端用 snake_case（record_date、mother_plant_count），
  * 前端 camelCase。enhancedApiClient 自动解包 data，但字段名需手工转换。
  */
-function rowToRecord(row: any): PropagationRecord {
+function rowToRecord(row: any): SeedlingPropagationRecord {
   // 2026-07-04 修复：camelCaseResponseMiddleware 已把所有 snake_case → camelCase
   // rowToRecord 必须读 camelCase 键，不能读 snake_case（铁律 #12：错误映射导致所有列为空）
   // targetTraits 在 DB 中是 JSON 字符串，中间件把它转成了 camelCase 键 "targetTraits"
@@ -110,7 +111,7 @@ function rowToRecord(row: any): PropagationRecord {
 }
 
 export const apiSeedlingPropagationService = {
-  async list(seedlingId: string | number): Promise<PropagationRecord[]> {
+  async list(seedlingId: string | number): Promise<SeedlingPropagationRecord[]> {
     const data = await enhancedApiClient.get<unknown>(
       `/seedlings/${seedlingId}/propagation-records`
     );

@@ -3,6 +3,7 @@
  * 端口: 3001
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from './middleware/cors';
 import { requestLogger } from './middleware/logger';
@@ -214,6 +215,19 @@ async function start() {
       console.error('[uncaughtException] 捕获未捕获异常:', err.message);
       // 不调 saveDatabase！直接退出
       gracefulExit('uncaughtException');
+    });
+
+    // 2026-07-14 安全加固：手动安全响应头（防点击劫持/MIME嗅探/HSTS/XSS）
+    app.use((_req, res, next) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'");
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+      if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+      }
+      next();
     });
 
     // 中间件

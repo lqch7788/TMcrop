@@ -4,7 +4,6 @@
 
 import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
 interface ImageLightboxModalProps {

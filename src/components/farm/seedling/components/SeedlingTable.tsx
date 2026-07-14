@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package, GitBranch } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus, Calendar, StopCircle, Tag, X, Package, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';

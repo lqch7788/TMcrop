@@ -1,24 +1,31 @@
 /**
  * JWT 认证中间件
  * 验证请求头中的 Authorization: Bearer <token>
+ *
+ * 2026-07-14 安全加固：
+ * - DEMO_MODE 改为显式 opt-in（不再默认启用）
+ * - 演示模式下使用 crypto.randomBytes 生成随机密钥（每次重启后旧 token 失效）
+ * - 生产模式强制要求 JWT_SECRET 环境变量
  */
 
+import { randomBytes } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 
 // JWT 密钥配置
-// 演示模式（默认）：如果未设置 DEMO_MODE 或 DEMO_MODE != 'false'，则启用演示模式
-// 生产模式：设置 DEMO_MODE=false 且必须配置 JWT_SECRET 环境变量
-const DEMO_MODE = process.env.DEMO_MODE === 'false' ? false : true; // 默认为演示模式
+// 演示模式：需显式设置 DEMO_MODE=true（推荐仅开发/测试环境使用）
+// 生产模式：设置 JWT_SECRET 环境变量
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
 let JWT_SECRET: string;
 if (DEMO_MODE) {
-  // 演示模式：使用默认密钥（用于陆启闯等演示账号）
-  JWT_SECRET = process.env.JWT_SECRET || 'yuanxingtu-secret-key-2026';
+  // 演示模式：使用环境变量或启动时生成随机密钥（防止硬编码密钥被外部利用）
+  JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
+  console.warn('[auth] ⚠️ 演示模式已启用 — JWT 密钥为启动时随机生成，重启后所有旧 token 失效，需重新登录');
 } else {
   // 生产模式：必须设置 JWT_SECRET
   if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET 环境变量必须设置（非演示模式）');
+    throw new Error('JWT_SECRET 环境变量必须设置。生产环境请通过环境变量注入密钥，开发环境请设置 DEMO_MODE=true');
   }
   JWT_SECRET = process.env.JWT_SECRET;
 }
@@ -79,7 +86,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (!authHeader) {
     // 演示模式下，白名单用户可以不带 token 访问
     if (DEMO_MODE) {
-      // 为演示用户设置默认信息
+      // 演示模式：为未认证请求设置默认用户信息
       req.user = {
         userId: 'demo_user',
         aid: 'demo_aid',
@@ -104,6 +111,17 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const payload = verifyToken(token);
 
   if (!payload) {
+    // 2026-07-14：演示模式下 JWT 验证失败不拒绝请求（服务器重启后密钥变化导致旧 token 无效）
+    if (DEMO_MODE) {
+      req.user = {
+        userId: 'demo_user',
+        aid: 'demo_aid',
+        name: '陆启闯',
+        role: 'admin'
+      };
+      next();
+      return;
+    }
     res.status(401).json({ error: '认证令牌无效或已过期' });
     return;
   }

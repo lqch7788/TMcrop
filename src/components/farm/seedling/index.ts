@@ -2,7 +2,6 @@
  * 育苗管理模块导出
  */
 export { default } from './SeedlingPage';
-export { SeedlingStats } from './components/SeedlingStats';
 export { SeedlingFilter } from './components/SeedlingFilter';
 export { SeedlingTable } from './components/SeedlingTable';
 export { AddModal } from './modals/AddModal';

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Trash2, Package, Download } from 'lucide-react';
+import { Package } from 'lucide-react';
 // 2026-07-14：移除 useNavigate import（入库汇总入口已删除）
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
@@ -22,7 +22,7 @@ import { SeedSourceReturnModal } from './modals/SeedSourceReturnModal';
 import SeedSourceLabelManageModal from './modals/SeedSourceLabelManageModal';
 
 import { seedSourceTransferService } from '@/services/seedSourceTransferService';
-import { Button, DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
+import { DeleteConfirmModal, UnifiedModal } from '../../../components/ui';
 import {
   cropCategories,
   suppliers,
@@ -30,14 +30,16 @@ import {
   seedSourceStatusOptions
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
-// 2026-07-14：移除 cropBatchService/useAuthPermission 死 import（未使用）
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
+import { useSeedSourceDelete } from '@/hooks/useSeedSourceDelete';
+// 2026-07-14：筛选默认值 + 导出表头抽到共享常量（避免组件内重复定义）
+import { SEED_SOURCE_FILTER_DEFAULTS, SEED_SOURCE_EXPORT_HEADERS } from '../../../constants/seedSourceDict';
 
 /**
  * 2026-07-14：5 种批量操作模式——normal/edit/delete/export/print（之前散在 3 个独立 state，合并为 discriminated union）
@@ -65,15 +67,14 @@ export default function SeedSourcePage() {
     items: seedSources,
     isLoading,
     loadItems,
-    deleteItems,
-    checkDeletable,
-    endSeedSource,
     error: storeError,
     clearError,
   } = useSeedSourceStore();
 
   // Toast 通知
   const toast = useToastStore((s) => s.toast);
+  // 2026-07-14：提取删除逻辑到 useSeedSourceDelete hook（~77行 → 独立文件）
+  const { handleDeleteConfirm: doDelete } = useSeedSourceDelete();
   // 2026-06-25 v3: 获取当前用户信息（用于调拨操作的操作人记录）
   const authCurrentUser = useAuthStore((s) => s.currentUser);
   const currentUser = authCurrentUser
@@ -81,24 +82,7 @@ export default function SeedSourcePage() {
     : null;
 
   // 状态
-  const [filters, setFilters] = useState<SeedSourceFilters>({
-    cropCategory: '',
-    cropName: '',
-    seedCode: '',
-    sourceType: '',
-    supplierName: '',
-    startDate: '',
-    endDate: '',
-    status: '',
-    createBy: '',
-    cropType: '',
-    orgId: '',
-    recorderId: '',
-    surplusMin: undefined,
-    surplusMax: undefined,
-    propagationType: undefined,
-    propagationStatus: undefined
-  });
+  const [filters, setFilters] = useState<SeedSourceFilters>({ ...SEED_SOURCE_FILTER_DEFAULTS });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
@@ -173,24 +157,7 @@ export default function SeedSourcePage() {
 
   // 处理重置
   const handleReset = () => {
-    setFilters({
-      cropCategory: '',
-      cropName: '',
-      seedCode: '',
-      sourceType: '',
-      supplierName: '',
-      startDate: '',
-      endDate: '',
-      status: '',
-      createBy: '',
-      cropType: '',
-      orgId: '',
-      recorderId: '',
-      surplusMin: undefined,
-      surplusMax: undefined,
-      propagationType: undefined,
-      propagationStatus: undefined
-    });
+    setFilters({ ...SEED_SOURCE_FILTER_DEFAULTS });
     setPagination({ ...pagination, current: 1 });
   };
 
@@ -226,93 +193,18 @@ export default function SeedSourcePage() {
     setLightboxOpen(true);
   };
 
-  // 2026-06-09 改造：单条/批量删除入口（仅弹 DeleteConfirmModal，不再直接删除）
-  // 删除前引用检查 + Store action 在 handleDeleteConfirm 里执行
-  // 2026-07-14：handleDelete 是冗余 wrapper，直接把 setSelectedIdsFromCaller 传给 onDelete
+  // 2026-07-14：删除逻辑已提取到 useSeedSourceDelete hook
+  // setSelectedIdsFromCaller 包装 setSelectedRows 同步弹模态
 
-  // 弹窗回调：真正执行删除（含引用检查）
-  // 2026-07-01 P0-5 修复：先全部预检，列出所有有冲突的种源，再由用户选择"删除可删的"或"取消"
+  // 弹窗回调：调用 hook 执行删除 + 关闭弹窗 + 清空选择
   const handleDeleteConfirm = useCallback(async () => {
     const ids = [...selectedRows];
-    if (ids.length === 0) return;
-
-    // 1. 全部预检，区分"可删除"和"有冲突"
-    const deletable: string[] = [];
-    const conflicted: Array<{ id: string; references: any[] }> = [];
-    const errored: Array<{ id: string; error: string }> = [];
-
-    for (const id of ids) {
-      try {
-        const res = await checkDeletable(id);
-        if (res.deletable) {
-          deletable.push(id);
-        } else {
-          conflicted.push({ id, references: res.references });
-        }
-      } catch (e) {
-        // 2026-07-10 P0-2 修复：catch(e: any) → catch(e) (TS 默认 unknown) + instanceof 守卫
-        const msg = e instanceof Error ? e.message : String(e);
-        errored.push({ id, error: msg });
-        // 2026-06-06: R4 — 检查失败不阻止删除
-        deletable.push(id);
-      }
-    }
-
-    // 2. 如果全部可删，直接执行
-    if (conflicted.length === 0) {
-      setShowDeleteModal(false);
-      try {
-        await deleteItems(deletable);
-        setSelectedRows([]);
-        if (errored.length > 0) {
-          toast.warning(`已删除 ${deletable.length} 个种源（${errored.length} 个引用检查失败，已强行删除）`);
-        }
-      } catch (e) {
-        // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
-        await showAlert(`删除失败：${e instanceof Error ? e.message : String(e)}`);
-      }
-      return;
-    }
-
-    // 3. 有冲突 — 列出所有冲突项，问用户"只删可删的"还是"取消"
-    const sections: string[] = [];
-    conflicted.forEach((c) => {
-      const refCount = c.references.length;
-      const refSummary = c.references.slice(0, 3).map((r) => {
-        const target = (r as any).targetCode || (r as any).targetId || r.code;
-        return `「${target}」`;
-      }).join('、');
-      sections.push(`• 种源 [${c.id}] 被 ${refCount} 条引用：${refSummary}${c.references.length > 3 ? '…' : ''}`);
-    });
-
-    const confirmed = await showConfirm(
-      `⚠️ 批量删除检测：\n\n` +
-      `• 可删除：${deletable.length} 个\n` +
-      `• 有冲突：${conflicted.length} 个（详见下方）\n` +
-      (errored.length > 0 ? `• 检查失败：${errored.length} 个（将强行删除）\n` : '') +
-      `\n${sections.join('\n')}\n\n` +
-      `点击「确定」删除可删除的 ${deletable.length} 个，跳过有冲突的。\n` +
-      `点击「取消」放弃全部删除。`
-    );
-    if (!confirmed) return;
-
     setShowDeleteModal(false);
-    if (deletable.length === 0) {
-      toast.warning(`全部 ${conflicted.length} 个都有冲突，未删除任何记录`);
-      return;
-    }
-    try {
-      await deleteItems(deletable);
-      setSelectedRows([]);
-      toast.success(`已删除 ${deletable.length} 个，跳过 ${conflicted.length} 个有冲突的`);
-    } catch (e) {
-      // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
-      await showAlert(`删除失败：${e instanceof Error ? e.message : String(e)}`);
-    }
-  }, [selectedRows, checkDeletable, deleteItems, showAlert, showConfirm, toast]);
+    const ok = await doDelete(ids);
+    if (ok) setSelectedRows([]);
+  }, [selectedRows, doDelete]);
 
-  // 弹窗入口：单条删除走 handleDelete(ids: [id])；
-  // setSelectedIdsFromCaller 包装 setSelectedRows 同步弹模态
+  // 弹窗入口：单条/批量删除
   const setSelectedIdsFromCaller = useCallback((ids: string[]) => {
     setSelectedRows(ids);
     setShowDeleteModal(true);
@@ -399,6 +291,7 @@ export default function SeedSourcePage() {
         handleReturnClose();
         await loadItems();
       } catch (e) {
+        console.error('[SeedSourcePage] 退库失败:', e);
         const msg = e instanceof Error ? e.message : String(e);
         await showAlert(`退库失败：${msg}`);
       }
@@ -442,9 +335,8 @@ export default function SeedSourcePage() {
   const handleConfirmExport = async () => {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头（含图片列）
-    // 2026-06-06: L7 对齐表格列名 — 表格「作物品种」实际为 cropVariety||cropName，拆为「最细化」+「细分品种」两列
-    const headers = ['种源图片（链接）', '种源批号', '种源类型', '作物类别', '作物品种（最细化）', '作物品种（细分品种）', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
+    // 2026-07-14：导出表头改用共享常量 SEED_SOURCE_EXPORT_HEADERS
+    const headers = [...SEED_SOURCE_EXPORT_HEADERS];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({

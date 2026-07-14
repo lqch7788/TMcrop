@@ -100,21 +100,28 @@ router.delete('/:id', (req: Request, res: Response) => {
       });
     }
 
-    // 级联清理 4 张表
-    // 1. 删 inventory_transaction（流水；该表有 business_id + business_type）
-    db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [id]);
-    // 2. 删 inventory_stock（库存实例；有 business_id + business_type）
-    db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [id]);
-    // 3. 删 inventory_inbound_records（入库审计；该表只有 business_id，没有 business_type，按 business_id 删即可）
-    db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [id]);
-    // 4. 删 harvest_records（主单）
-    db.run('DELETE FROM harvest_records WHERE id = ?', [id]);
+    // 2026-07-14：4 表级联删除用事务包裹（修复 S7：此前无事务，DELETE 部分成功时数据不一致）
+    try {
+      db.run('BEGIN TRANSACTION');
+      db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [id]);
+      db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [id]);
+      db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [id]);
+      db.run('DELETE FROM harvest_records WHERE id = ?', [id]);
+      db.run('COMMIT');
+    } catch (txErr) {
+      try { db.run('ROLLBACK'); } catch (_) { /* rollback 失败忽略 */ }
+      console.error('[harvest] 级联删除事务失败:', txErr);
+      return res.status(500).json({ success: false, error: '删除失败，数据已回滚' });
+    }
 
     // 持久化到磁盘
     try {
       const { saveDatabase } = require('../db');
       saveDatabase();
-    } catch (_) { /* noop — 测试环境可能未注册 saveDatabase */ }
+    } catch (saveErr) {
+      console.error('[harvest] saveDatabase 失败:', saveErr);
+      // 事务已提交，仅记录日志（不影响客户端响应）
+    }
 
     res.json({ success: true, data: { id } });
   } catch (e: any) {

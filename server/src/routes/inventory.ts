@@ -21,8 +21,11 @@ import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 // 2026-07-14：方案 C — 写操作后自动重算 status（冻结/解冻/出库/调拨等）
 import { recomputeAndUpdateStockStatus, recomputeAllStockStatus } from '../lib/inventoryStockStatus';
+// 2026-07-14：添加认证中间件（与 seedSource.ts 对齐——演示模式自动放行，生产模式需 JWT token）
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 // ========== V3.0 写入操作（必须在 /:id 之前） ==========
 router.post('/inbound', inventoryController.inbound.bind(inventoryController));

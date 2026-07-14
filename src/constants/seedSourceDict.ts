@@ -1,11 +1,10 @@
 /**
- * 种源管理 UI 字典
- * 任务 12: Phase 3 UI 流程
+ * 种源管理 UI 字典 & 共享配置
  *
- * 2026-07-14：删除 SEED_SOURCE_CATEGORIES / SeedSourceCategory / SOURCE_ORIGIN_TO_CATEGORY
- *   （grep 全项目无引用）
  * - SOURCE_ORIGINS: 9 枚举 source_origin 中文标签
  * - SOURCE_TYPES: 9 枚举 source_type 中文标签
+ * - SEED_SOURCE_FILTER_DEFAULTS: 筛选栏初始值（SeedSourcePage + handleReset 共用）
+ * - SEED_SOURCE_EXPORT_HEADERS: 导出 Excel 表头（SeedSourcePage 用）
  */
 
 /**
@@ -69,3 +68,31 @@ export const PROPAGATION_FORM_LABELS: Record<string, string> = {
   whole_plant: '整株',
   other: '其他',
 };
+
+// 2026-07-14：筛选默认值抽到共享常量（SeedSourcePage useState + handleReset 共用，避免字段漂移）
+export const SEED_SOURCE_FILTER_DEFAULTS = {
+  cropCategory: '',
+  cropName: '',
+  seedCode: '',
+  sourceType: '',
+  supplierName: '',
+  startDate: '',
+  endDate: '',
+  status: '',
+  createBy: '',
+  cropType: '',
+  orgId: '',
+  recorderId: '',
+  surplusMin: undefined as number | undefined,
+  surplusMax: undefined as number | undefined,
+  propagationType: undefined as string | undefined,
+  propagationStatus: undefined as string | undefined,
+};
+
+// 2026-07-14：导出 Excel 表头抽到共享常量（避免硬编码在组件内）
+export const SEED_SOURCE_EXPORT_HEADERS = [
+  '种源图片（链接）', '种源批号', '种源类型', '作物类别',
+  '作物品种（最细化）', '作物品种（细分品种）', '品种路径',
+  '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)',
+  '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注',
+] as const;

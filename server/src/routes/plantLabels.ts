@@ -73,11 +73,11 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       });
     }
 
+    saveDatabase();
     res.status(201).json({
       success: true,
       data: { labels, totalPrinted: existingCount + count },
     });
-    saveDatabase();
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -288,6 +288,7 @@ router.post('/batch-create', (req: Request, res: Response) => {
       insertedIds.push(maxId - i);
     }
 
+    saveDatabase();
     res.status(201).json({
       success: true,
       data: {
@@ -297,8 +298,8 @@ router.post('/batch-create', (req: Request, res: Response) => {
         insertedIds,
       },
     });
-    saveDatabase();
   } catch (error) {
+    console.error('[plantLabels] 补充生成失败:', error);
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });

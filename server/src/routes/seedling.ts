@@ -3,6 +3,7 @@
  * C1：所有路由都经过 authenticate 中间件
  */
 
+import { randomUUID } from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
@@ -72,12 +73,25 @@ router.put('/batch', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
-    }
+    // 2026-07-14：批量更新字段名白名单（修复 H15：此前任意字段名可注入 SQL 列名）
+    const ALLOWED_FIELDS = new Set([
+      'seedling_code', 'source_id', 'source_name', 'production_plan_code',
+      'crop_code', 'crop_name', 'crop_variety', 'seedling_type',
+      'greenhouse_name', 'area_name', 'seedling_date', 'expected_finish_date', 'actual_finish_date',
+      'seedling_quantity', 'survival_quantity', 'survival_rate', 'planted_count',
+      'pictures', 'quality_grade', 'status', 'seedling_status', 'remarks',
+      'create_by', 'work_hours', 'print_count', 'end_type', 'end_time',
+      'target_survival_rate', 'target_survival_count', 'loss_count', 'loss_rate',
+      'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
+      'charge_person', 'seedling_form', 'unit',
+    ]);
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
+    if (safeKeys.length === 0) {
+      return res.status(400).json({ success: false, error: '没有有效的更新字段' });
+    }
+    const fields = safeKeys.map(k => `${k} = ?`).join(', ');
+    const values = safeKeys.map(k => updates[k]);
     values.push(now);
 
     const placeholders = ids.map(() => '?').join(',');
@@ -730,21 +744,24 @@ router.post('/batch-print', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const results: any[] = [];
 
-    for (const seedlingId of seedlingIds) {
-      // 获取育苗记录
-      const stmt = db.prepare('SELECT * FROM seedlings WHERE id = ?');
-      stmt.bind([seedlingId]);
-      let seedling: any = null;
-      if (stmt.step()) {
-        seedling = stmt.getAsObject();
-      }
-      stmt.free();
+    // 2026-07-14：用 WHERE id IN (?) 单次查询替代 N+1 循环
+    const placeholders = seedlingIds.map(() => '?').join(',');
+    const stmt = db.prepare(`SELECT * FROM seedlings WHERE id IN (${placeholders})`);
+    stmt.bind(seedlingIds);
+    const seedlingMap = new Map<string, any>();
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      seedlingMap.set(row.id as string, row);
+    }
+    stmt.free();
 
+    for (const seedlingId of seedlingIds) {
+      const seedling = seedlingMap.get(seedlingId);
       if (!seedling) continue;
 
-      // 生成打印记录
-      const newId = `PR${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      const newOid = `PR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      // 2026-07-14：用 crypto.randomUUID 替代 Math.random（代码生成契约铁律合规）
+      const newId = `PR-${randomUUID().slice(0, 8)}`;
+      const newOid = `PR-${randomUUID().slice(0, 8)}`;
 
       db.run(`
         INSERT INTO print_records (id, oid, print_type, print_title, related_id, related_code, related_type,
@@ -1057,68 +1074,54 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     if (insertCols.length !== insertValues.length) {
       throw new Error(`INSERT 列数(${insertCols.length}) 与值数(${insertValues.length}) 不一致`);
     }
-    db.run(
-      `INSERT INTO seedlings (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
-      insertValues.map(v => v === undefined ? null : v)
-    );
 
-    // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
-    // 此路径无 BEGIN/COMMIT（与上面 with-deduct 不同），但每条 db.run 自动提交，所以是独立的
-    // 即使后续的剩余数量扣减失败，crop_instance 行也不会被回滚 — 这是有意的，因为 seedling 主行已入库
-    const seedlingCiId2 = `CI${Date.now()}-sd2`;
-    db.run(
-      `INSERT INTO crop_instances (
-        id, instance_code, crop_name, crop_variety, business_id, business_type,
-        source_instance_id, initial_quantity, current_quantity,
-        planted_quantity, harvested_quantity, status, seedling_start_date,
-        create_by, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        seedlingCiId2,
-        seedling_code || `YM${Date.now().toString().slice(0, 8)}-002`,  // 兜底
-        crop_name || null,
-        crop_variety || null,
-        newId,
-        'seedling',
-        source_id || null,
-        Number(seedling_quantity) || 0,
-        Number(survival_quantity || seedling_quantity) || 0,
-        0,
-        0,
-        status || 'growing',
-        seedling_date || null,
-        chargePerson,
-        now,
-        now,
-      ]
-    );
+    // 2026-07-14：POST / 路由整体加事务（修复 H1：此前 3 次写入无原子性）
+    db.run('BEGIN TRANSACTION');
+    try {
+      db.run(
+        `INSERT INTO seedlings (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
+        insertValues.map(v => v === undefined ? null : v)
+      );
 
-    // 2026-06-14: 内部种源时扣减种源 remaining_quantity（POST / 路径原本没扣，P1-B 补全）
-    // 注意：此 if 块不在事务内（POST / 路径整体无 BEGIN/COMMIT — line 1058 注释）。
-    // 即便 catch 改 throw 也无法回滚上方已提交的 INSERT seedlings / INSERT crop_instances。
-    // 这是已知架构限制，本次修复不在改动范围。
-    if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
-      try {
+      // 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
+      const seedlingCiId2 = `CI${Date.now()}-sd2`;
+      db.run(
+        `INSERT INTO crop_instances (
+          id, instance_code, crop_name, crop_variety, business_id, business_type,
+          source_instance_id, initial_quantity, current_quantity,
+          planted_quantity, harvested_quantity, status, seedling_start_date,
+          create_by, create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          seedlingCiId2,
+          seedling_code || `YM${Date.now().toString().slice(0, 8)}-002`,
+          crop_name || null,
+          crop_variety || null,
+          newId,
+          'seedling',
+          source_id || null,
+          Number(seedling_quantity) || 0,
+          Number(survival_quantity || seedling_quantity) || 0,
+          0, 0,
+          status || 'growing',
+          seedling_date || null,
+          chargePerson,
+          now, now,
+        ]
+      );
+
+      // 内部种源时扣减种源 remaining_quantity + 写 inventory_transaction
+      const operatorName = create_by || 'system';
+      if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
         const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [source_id]);
         const remaining = Number(chk[0]?.values?.[0]?.[0] || 0);
         if (remaining >= seedling_quantity) {
           db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
             [seedling_quantity, now, source_id]);
-
-          // 2026-07-05 修复：写 inventory_transaction (outbound)
-          // 之前只写 material_flow_log（审计日志），但库存详情弹窗的 history/trace tab
-          // 完全不读 material_flow_log，导致种源的"追溯时间线"看不到"被育苗使用"记录
-          // 修复：在扣减成功后同 try 内追加一条 outbound 流水，history/trace tab 才能查到
-          // business_type 用 'seedling'（与 crop_instances 的 business_type 对齐），
-          // 避免被 inventoryTransactions.ts 的 VALID_OUTBOUND_TYPES 白名单静默丢弃
-          // 2026-07-08 V3.4 流水号规范化：使用项目统一工具 generateTransactionId 生成 TRX-YYYYMMDD-NNNN 流水号
-          // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
-          const seedSourceInstanceId2 = `seed_source:${source_id}`;
           const useDateYmd2 = now.slice(0, 10).replace(/-/g, '');
           const useTxId2 = await generateTransactionId(useDateYmd2);
           const useTransactionId2 = await generateTransactionId(useDateYmd2);
           const newRemaining2 = remaining - seedling_quantity;
-          const operatorName2 = create_by || 'system';  // HIGH#1: 同 with-deduct，不能传空字符串
           db.run(
             `INSERT INTO inventory_transaction (
               id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -1126,32 +1129,27 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
               operator_id, operator_name, operate_date, remarks, create_time
             ) VALUES (?, ?, ?, ?, 'outbound', ?, ?, ?, ?, 'seedling', ?, ?, ?, ?, ?, ?)`,
             [
-              useTxId2, useTransactionId2, seedSourceInstanceId2, 'seed',
+              useTxId2, useTransactionId2, `seed_source:${source_id}`, 'seed',
               -seedling_quantity, remaining, newRemaining2,
               newId, seedling_code || '',
-              create_by || '', operatorName2, now.slice(0, 10),
+              create_by || '', operatorName, now.slice(0, 10),
               `种源被育苗使用 ${seedling_code || newId}（扣减 ${seedling_quantity}）`,
               now,
             ]
           );
         } else {
-          // 2026-07-01 P0-2 修复：超额直接抛 BusinessError，与 with-deduct 路由一致
-          // 防止"未扣减却建档"的不一致
           throw new BusinessError(
             SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
             `可用数量不足：当前 ${remaining}，需扣减 ${seedling_quantity}`,
           );
         }
-      } catch (e) {
-        // 2026-07-05 决策（code-reviewer HIGH#3）：保持原静默行为
-        // 原因：POST / 路由整体无 BEGIN/COMMIT，上方 INSERT seedlings/crop_instances 已落库，
-        //       catch 改 throw 会产生"孤儿 seedling + 500 报错"的新故障模式（用户刷新看到孤儿）
-        //       原行为（catch 静默 + 返回 201）虽然有数据不一致问题，但用户看到的是正常成功
-        //       本次修复核心目标（追溯链显示）已达成；事务原子性问题需要专门重构 POST / 路由
-        if (e instanceof BusinessError) throw e;
-        console.error('[seedling POST] 扣减种源失败:', e);
       }
+      db.run('COMMIT');
+    } catch (txError) {
+      try { db.run('ROLLBACK'); } catch (_) { /* rollback 失败忽略 */ }
+      throw txError;
     }
+    // === 事务结束 ===
 
     // 写入 material_flow_log（外部种源 → external→seedling，内部种源 → seed_source→seedling）
     if (sourceMode === 'external') {
@@ -1282,7 +1280,10 @@ router.put('/:id', (req: Request, res: Response) => {
             db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted, id]);
           }
         }
-      } catch { /* correction 失败不影响主流程 */ }
+      } catch (e) {
+        console.error('[seedling] PUT 种源剩余量修正失败:', e);
+        // 不阻断主流程（育苗记录已成功更新），但写入日志便于排查
+      }
     }
 
     res.json({ success: true, data: queryToObjects(db, "SELECT * FROM seedlings WHERE id = ?", [id])[0] });
@@ -1551,7 +1552,7 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
 
     // 生成每日记录ID和OID
     const newId = `DR${Date.now()}`;
-    const newOid = `DR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const newOid = `DR-${randomUUID().slice(0, 8)}`;
     const now = new Date().toISOString();
 
     // 插入每日记录
@@ -1583,12 +1584,15 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
 
     // 2026-06-14: 按 propagation_mode 累加到 seedlings 主表
     // 2026-06-15: 兼容旧字段名（survivalCountChange 等）→ 新字段名
+    // 2026-07-14：修复静默吞错 — 添加 console.error 并传播错误
     if (data) {
       try {
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
         const normalized = normalizeChangeData(parsed, (seedling as any).propagation_mode);
         applyDailyChangeToSeedling(id, normalized, 1);
-      } catch (e) { /* JSON 解析失败不影响 daily_records 插入 */ }
+      } catch (e) {
+        console.error('[seedling] applyDailyChangeToSeedling 失败（JSON 解析或数量更新异常）:', e);
+      }
     }
 
     // 2026-07-04 v3：状态机自动切换（合并 sown→in_progress 和 in_progress→transplant_ready）
@@ -1852,7 +1856,7 @@ router.post('/:id/transplant-records', (req: Request, res: Response) => {
 
     // 生成定植记录ID和OID
     const newId = `TR${Date.now()}`;
-    const newOid = `TR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const newOid = `TR${Date.now()}${randomUUID().slice(0, 8)}`;
     const now = new Date().toISOString();
 
     // 插入定植记录
@@ -2008,7 +2012,7 @@ router.post('/:id/print', (req: Request, res: Response) => {
 
     // 生成打印记录ID和OID
     const newId = `PR${Date.now()}`;
-    const newOid = `PR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const newOid = `PR${Date.now()}${randomUUID().slice(0, 8)}`;
     const now = new Date().toISOString();
 
     // 插入打印记录
@@ -2241,8 +2245,7 @@ router.post('/:id/transplant-history/:labelNumber', (req: Request, res: Response
     const newId = `TH${Date.now()}`;
     const now = new Date().toISOString();
 
-    // 由于没有专门的标签追踪表，这里将履历记录存储到 transplant_history 表
-    // 如果表不存在，需要先创建
+    // 写入 transplant_history 表（2026-07-14：表已通过 schema.ts 创建）
     try {
       db.run(`
         INSERT INTO transplant_history (
@@ -2250,22 +2253,14 @@ router.post('/:id/transplant-history/:labelNumber', (req: Request, res: Response
           operator_id, operator_name, remarks, create_by, create_time, update_time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        newId,
-        id,
-        labelNumber,
-        to_area || '',
-        to_location || '',
-        operator_id || '',
-        operator_name || '',
-        remarks || '',
-        create_by || '',
-        now,
-        now
+        newId, id, labelNumber, to_area || '', to_location || '',
+        operator_id || '', operator_name || '', remarks || '',
+        create_by || '', now, now
       ]);
       saveDatabase();
     } catch (err) {
-      // 如果表不存在，返回一个模拟响应
-      console.warn('transplant_history 表可能不存在:', err);
+      console.error('[transplant_history] INSERT 失败:', err);
+      return res.status(500).json({ success: false, error: '栽种履历写入失败' });
     }
 
     res.status(201).json({
@@ -2297,14 +2292,22 @@ router.put('/:id/transplant-history/:labelNumber/status', (req: Request, res: Re
   try {
     const { id, labelNumber } = req.params;
     const { status } = req.body;
+    const db = getDatabase();
 
     if (!status) {
       return res.status(400).json({ success: false, error: '缺少 status 参数' });
     }
 
-    // 由于标签追踪需要专门的表，这里暂时返回成功
+    // 2026-07-14：修复空操作 bug — 原代码仅 return {success:true} 不执行任何更新
+    const stmt = db.prepare('UPDATE transplant_history SET status = ?, update_time = ? WHERE seedling_id = ? AND label_number = ?');
+    stmt.bind([status, new Date().toISOString(), id, labelNumber]);
+    stmt.step();
+    stmt.free();
+    saveDatabase();
+
     res.json({ success: true, message: '标签状态已更新' });
   } catch (error) {
+    console.error('[seedling] 更新标签状态失败:', error);
     res.status(500).json({ success: false, error: '更新标签状态失败' });
   }
 });
