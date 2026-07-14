@@ -712,6 +712,7 @@ export interface SeedSourceFilters {
   cropName: string;      // 作物名称
   seedCode: string;      // 种源批号
   sourceType: string;    // 来源类型
+  sourceOrigin?: string; // 来源途径（9 枚举 source_origin 筛选，2026-07-14 补字段）
   supplierName: string;  // 供应商名称
   startDate: string;     // 开始日期
   endDate: string;       // 结束日期

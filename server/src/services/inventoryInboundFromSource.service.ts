@@ -156,7 +156,9 @@ export async function executeInboundFromSource(
   const now = new Date().toISOString();
   const dateStr = input.harvestDate.replace(/-/g, '').slice(0, 8); // YYYYMMDD
   const harvestCode = generateHarvestCode(db, dateStr);
-  const harvestRecordId = `HV${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
+  // 2026-07-14：harvestRecordId 改用 crypto.randomUUID()（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
+  const { randomUUID } = require('crypto');
+  const harvestRecordId = `HV${randomUUID()}`;
   const operator = input.operatorName || 'system';
 
   // 校验
@@ -458,8 +460,10 @@ export async function executeInboundFromSource(
       writtenRecordIds.push(recordId);
 
       // 步骤 4：写 inventory_transaction 流水
-      const txId = `TXN-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenTransactionIds.length}`;
-      const transactionId = `TXID-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
+      // 2026-07-14：流水 ID 改用 generateTransactionId（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
+      const { generateTransactionId } = require('./inventory.service');
+      const transactionId = await generateTransactionId(dateStr);
+      const txId = transactionId;
       db.run(`
         INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -543,7 +547,8 @@ export async function executeInboundFromSource(
           `, [input.sourceRecordCode, input.purchaseTotalAmount, now, input.purchasePlanId]);
         } else {
           // 5b. 自动创建外购 PR（plan_type='seed_purchase'，区别于生产物资 'production'）
-          const purchasePlanId = `PP-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
+          // 2026-07-14：PR ID 改用 crypto.randomUUID()（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
+          const purchasePlanId = `PP-${randomUUID()}`;
           // 生成 plan_code：PA + YYYYMM + 4位流水号（与现有 PR 单号规则一致）
           // 加 timestamp 后缀防 UNIQUE 冲突（同一批种源多次入库场景）
           const monthPattern = `${dateStr.slice(0, 6)}___`;
@@ -563,7 +568,8 @@ export async function executeInboundFromSource(
           codeStmt.free();
           const seq = String(maxSerial + 1).padStart(4, '0');
           const tsSuffix = Date.now().toString(36).slice(-3); // 防冲突后缀（36进制时间戳）
-          const planCode = `PA${dateStr.slice(0, 6)}${seq}-${Math.random().toString(36).slice(2, 6)}`;
+          // 2026-07-14：planCode 改用 crypto.randomUUID()（替代 Math.random 违规）
+          const planCode = `PA${dateStr.slice(0, 6)}${seq}-${randomUUID().slice(0, 6)}`;
           const productName = input.products[0]?.cropName || '种源';
           const planTitle = `种源采购-${productName}-${input.sourceRecordCode}`;
           db.run(`
@@ -603,8 +609,10 @@ export async function executeInboundFromSource(
           const totalQty = purchasePrice > 0
             ? input.purchaseTotalAmount / purchasePrice
             : (input.products.reduce((s, p) => s + (p.harvestQuantity || 0), 0));
-          const materialCostId = `MC-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}`;
-          const costCode = `MC${dateStr}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+          // 2026-07-14：MC ID 改用 crypto.randomUUID()（替代 Math.random 违规）
+          const materialCostId = `MC-${randomUUID()}`;
+          // 2026-07-14：costCode 改用 crypto.randomUUID()（替代 Math.random 违规）
+          const costCode = `MC${dateStr}${randomUUID().slice(0, 3).toUpperCase()}`;
           const productName = input.products[0]?.cropName || '种源';
           const productVariety = input.products[0]?.cropVariety || '';
           const costName = productVariety ? `${productName}-${productVariety}` : productName;

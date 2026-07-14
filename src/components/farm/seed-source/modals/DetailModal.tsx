@@ -14,8 +14,13 @@ import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus } from '../../../../lib/stockStatus';
-import { getSeedSourceUsageRecords, type SeedSourceUsageRecord } from '@/services/apiSeedSourceService';
-import { enhancedApiClient } from '@/lib/apiClient';
+import {
+  getSeedSourceUsageRecords,
+  getSeedSourceInboundHistory,
+  type SeedSourceUsageRecord,
+  type SeedSourceInboundHistoryRecord,
+} from '@/services/apiSeedSourceService';
+// 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
 
 /** 入库模式配置 — 三种入口各有不同的关联信息 */
 const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -429,10 +434,9 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
     if (!seedSourceId) return
     setLoading(true)
     setError(null)
-    // 错误向上抛：捕获后在面板本地展示，不吞默认空数组（保持可观测）
-    enhancedApiClient
-      .get<InboundRecord[]>(`/seed-sources/${seedSourceId}/history-inbound`)
-      .then((data) => setRecords(Array.isArray(data) ? data : []))
+    // 2026-07-14：改用 service 函数（替代 enhancedApiClient 直调，架构铁律合规）
+    getSeedSourceInboundHistory(seedSourceId)
+      .then((data) => setRecords(Array.isArray(data) ? (data as unknown as InboundRecord[]) : []))
       .catch((e) => setError((e && (e as { message?: string }).message) || '加载失败'))
       .finally(() => setLoading(false))
   }, [seedSourceId])

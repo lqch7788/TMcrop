@@ -2296,6 +2296,10 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'idx_inventory_tx_type_date', sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_type_date ON inventory_transaction(transaction_type, operate_date DESC)' },
     { name: 'idx_inventory_tx_instance',  sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_instance  ON inventory_transaction(instance_id)' },
     { name: 'idx_inventory_tx_business',  sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_business  ON inventory_transaction(business_type)' },
+    // 2026-07-14：补 FK 列索引——inventory_inbound_records.business_id 高频在 history-inbound 查询
+    { name: 'idx_inbound_business', sql: 'CREATE INDEX IF NOT EXISTS idx_inbound_business ON inventory_inbound_records(business_id)' },
+    // 2026-07-14：补 FK 列索引——propagation_records.seed_source_id 高频按种源查询
+    { name: 'idx_propagation_seed_source', sql: 'CREATE INDEX IF NOT EXISTS idx_propagation_seed_source ON propagation_records(seed_source_id)' },
   ];
   for (const idx of outboundRecordIndexes) {
     try {

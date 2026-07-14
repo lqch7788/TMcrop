@@ -6,8 +6,21 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { seedSourceService, SeedSourceService, BusinessError } from '../services/seedSource.service';
+// 2026-07-14：时区铁律合规——业务日期严禁用 toISOString()（中国早上 0-8 点会带前一天日期）
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
 import { AppError } from '../middleware/errorHandler';
+
+/**
+ * 2026-07-14：snake/camel 双字段读取 helper（替代 `data as any` 强转 30+ 处）
+ * 历史 DTO 兼容：前端可能传 snake_case（数据库行）或 camelCase（驼峰 API 包装）
+ */
+function pickField(obj: any, snakeName: string, camelName?: string): any {
+  if (!obj) return undefined;
+  if (obj[snakeName] != null) return obj[snakeName];
+  if (camelName && obj[camelName] != null) return obj[camelName];
+  return undefined;
+}
 
 /**
  * 把业务错误消息映射成 HTTP 状态码（H9 辅助函数）
@@ -98,7 +111,9 @@ export class SeedSourceController {
     try {
       const { getDatabase } = require('../db');
       const db = getDatabase();
-      const id = `AUD-SS-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      // 2026-07-14：审计日志 ID 改用 crypto.randomUUID()（替代 Math.random，违反 [[code-generation-contract-rule]] 铁律）
+      const { randomUUID } = require('crypto');
+      const id = `AUD-SS-${randomUUID()}`;
       const now = new Date().toISOString();
       db.run(
         `INSERT INTO audit_logs (id, business_type, business_id, action, operator_id, operator_name, opinion, created_at)
@@ -122,11 +137,11 @@ export class SeedSourceController {
       try {
         const { writeFlowLog } = require('../services/flowLogService');
         const { mapPropagationToCategory } = require('../lib/sourceCategoryMapper');
-        const propagationType = (data as any).propagation_type || (data as any).propagationType || '';
+        const propagationType = pickField(data, 'propagation_type', 'propagationType') || '';
         writeFlowLog({
           flow_type: 'plan→seed_source',
-          crop_name: (data as any).crop_name || (data as any).cropName || '',
-          crop_variety: (data as any).crop_variety || (data as any).cropVariety || '',
+          crop_name: pickField(data, 'crop_name', 'cropName') || '',
+          crop_variety: pickField(data, 'crop_variety', 'cropVariety') || '',
           source_type: null,
           source_id: null,
           source_code: null,
@@ -134,33 +149,36 @@ export class SeedSourceController {
           source_category: mapPropagationToCategory(propagationType),
           target_type: 'seed_source',
           target_id: (result as any)?.id || '',
-          target_code: (data as any).seed_code || (data as any).seedCode || '',
-          target_quantity: (data as any).quantity || 0,
-          target_unit: (data as any).unit || '袋',
-          business_code: (data as any).seed_code || (data as any).seedCode || '',
-          created_by: (data as any).create_by || (data as any).createBy || '',
+          target_code: pickField(data, 'seed_code', 'seedCode') || '',
+          target_quantity: pickField(data, 'quantity') || 0,
+          target_unit: pickField(data, 'unit') || '袋',
+          business_code: pickField(data, 'seed_code', 'seedCode') || '',
+          created_by: pickField(data, 'create_by', 'createBy') || '',
         });
       } catch (e) { console.error('[seedSource] writeFlowLog 失败:', (e as any)?.message || e); }
       // 2026-07-06: 外购入库 → 补写 inventory_inbound_records（让种源详情历史 tabs 能看到入库记录）
       try {
-        const sourceOrigin = (data as any).source_origin || (data as any).sourceOrigin || '';
+        const sourceOrigin = pickField(data, 'source_origin', 'sourceOrigin') || '';
         const isExternalPurchase = sourceOrigin === 'external_purchase' || sourceOrigin === 'external_purchased';
         if (isExternalPurchase) {
           const { getDatabase, saveDatabase } = require('../db');
           const db = getDatabase();
           const now = new Date().toISOString();
-          const recordId = `INB-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-0`;
-          const seedCode = (data as any).seed_code || (data as any).seedCode || '';
-          const cropName = (data as any).crop_name || (data as any).cropName || '';
-          const cropVariety = (data as any).crop_variety || (data as any).cropVariety || '';
-          const quantity = (data as any).quantity || 0;
-          const unit = (data as any).unit || '袋';
-          const unitPrice = (data as any).unit_price || (data as any).unitPrice || (data as any).purchase_price || 0;
-          const totalAmount = (data as any).total_amount || (data as any).totalAmount || (unitPrice * quantity);
-          const supplierId = (data as any).supplier_id || (data as any).supplierId || '';
-          const supplierName = (data as any).supplier_name || (data as any).supplierName || '';
-          const operator = (data as any).create_by || (data as any).createBy || 'system';
-          const purchaseDate = (data as any).purchase_date || (data as any).purchaseDate || '';
+          // 2026-07-14：流水号改用 generateInboundRecordId（替代 Math.random + Date.now 违规格式）
+          const { generateInboundRecordId } = require('../services/inventory.service');
+          // 时区铁律：业务日期用本地日期，不用 ISO（中国早上 0-8 点会带前一天日期）
+          const recordId = await generateInboundRecordId(formatLocalDateYYYYMMDD());
+          const seedCode = pickField(data, 'seed_code', 'seedCode') || '';
+          const cropName = pickField(data, 'crop_name', 'cropName') || '';
+          const cropVariety = pickField(data, 'crop_variety', 'cropVariety') || '';
+          const quantity = pickField(data, 'quantity') || 0;
+          const unit = pickField(data, 'unit') || '袋';
+          const unitPrice = pickField(data, 'unit_price', 'unitPrice') || pickField(data, 'purchase_price') || 0;
+          const totalAmount = pickField(data, 'total_amount', 'totalAmount') || (unitPrice * quantity);
+          const supplierId = pickField(data, 'supplier_id', 'supplierId') || '';
+          const supplierName = pickField(data, 'supplier_name', 'supplierName') || '';
+          const operator = pickField(data, 'create_by', 'createBy') || 'system';
+          const purchaseDate = pickField(data, 'purchase_date', 'purchaseDate') || '';
           db.run(`
             INSERT INTO inventory_inbound_records (
               id, record_type, record_date, source_module, source_id, source_code,
@@ -185,8 +203,8 @@ export class SeedSourceController {
       this.writeAuditLog({
         seedSourceId: (result as any)?.id || '',
         action: 'create',
-        opinion: `创建种源 ${(data as any).seed_code || (data as any).seedCode || ''} (${(data as any).crop_name || (data as any).cropName || ''})`,
-        operatorName: (data as any).create_by || (data as any).createBy || '',
+        opinion: `创建种源 ${pickField(data, 'seed_code', 'seedCode') || ''} (${pickField(data, 'crop_name', 'cropName') || ''})`,
+        operatorName: pickField(data, 'create_by', 'createBy') || '',
       });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
@@ -219,11 +237,11 @@ export class SeedSourceController {
       try { oldRecord = await this.service.getById(id); } catch (_) { /* 不存在时 update 会失败 */ }
       const result = await this.service.update(id, data);
       // 数量变更时写 correction
-      if ((data as any).quantity !== undefined) {
+      if (pickField(data, 'quantity') !== undefined) {
         try {
           const { writeCorrection } = require('../services/flowLogService');
-          const oldQty = (oldRecord as any)?.quantity || 0;
-          const newQty = (data as any).quantity || 0;
+          const oldQty = pickField(oldRecord, 'quantity') || 0;
+          const newQty = pickField(data, 'quantity') || 0;
           const delta = newQty - oldQty;
           if (Math.abs(delta) > 0.001) {
             writeCorrection({
@@ -231,9 +249,9 @@ export class SeedSourceController {
               target_type: 'seed_source',
               target_id: id,
               source_quantity_delta: delta,
-              source_unit: (data as any).unit || '袋',
-              crop_name: (oldRecord as any)?.crop_name || (oldRecord as any)?.cropName || '',
-              crop_variety: (oldRecord as any)?.crop_variety || (oldRecord as any)?.cropVariety || '',
+              source_unit: pickField(data, 'unit') || '袋',
+              crop_name: pickField(oldRecord, 'crop_name', 'cropName') || '',
+              crop_variety: pickField(oldRecord, 'crop_variety', 'cropVariety') || '',
             });
           }
         } catch (e) { /* correction 写入失败不影响主流程 */ }

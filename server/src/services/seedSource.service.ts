@@ -6,6 +6,8 @@
 import { z } from 'zod';
 import { seedSourceRepository, SeedSourceRepository } from '../repositories/seedSource.repository';
 import { getDatabase } from '../db';
+// 2026-07-14：时区铁律合规——业务日期严禁用 toISOString()（中国早上 0-8 点会带前一天日期）
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import {
   SeedSourceQuery,
   CreateSeedSourceDTO,
@@ -34,6 +36,14 @@ export class BusinessError extends Error {
     this.httpStatus = httpStatus;
   }
 }
+
+// 2026-07-14：繁殖状态常量（替代硬编码 'failed' 字符串）
+export const PropagationStatusValue = {
+  PENDING: 'pending',
+  GROWING: 'growing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
 
 /** 错误码常量（前端用此码展示对应文案） */
 export const SeedSourceErrorCode = {
@@ -96,7 +106,8 @@ export class SeedSourceService {
       meta: {
         total,
         page: query.page || 1,
-        limit: query.limit || 50
+        // 2026-07-14：默认 limit 与 controller 1000 对齐（避免前端"分页消失"）
+        limit: query.limit || 1000
       }
     };
   }
@@ -187,7 +198,7 @@ export class SeedSourceService {
       } else {
         // 非标准格式：直接用 generateCode 重新生成
         const newCode = await this.generateCode(
-          sourceCodeToUse.replace(/-/g, '').slice(2, 10) || new Date().toISOString().slice(0, 10).replace(/-/g, '')
+          sourceCodeToUse.replace(/-/g, '').slice(2, 10) || formatLocalDateYYYYMMDD()
         );
         sourceCodeToUse = newCode || `${sourceCodeToUse}-RETRY${retry}`;
       }
@@ -282,7 +293,7 @@ export class SeedSourceService {
     }
 
     // L3: 拒绝 FAILED 状态扣减
-    if (existing.propagationStatus === 'failed') {
+    if (existing.propagationStatus === PropagationStatusValue.FAILED) {
       throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
     }
 
@@ -385,7 +396,8 @@ export class SeedSourceService {
    * 入参约定：snake_case 字段名（与 addPropagationRecord / 前端 PUT body 一致）
    * 校验：种源存在 + 记录归属该种源
    */
-  async updatePropagationRecord(seedSourceId: string, recordId: string, data: Record<string, any>) {
+  // 2026-07-14：data 改用 Partial<Record<string, unknown>>（更严格类型，但仍兼容前端 snake_case 入参）
+  async updatePropagationRecord(seedSourceId: string, recordId: string, data: Partial<Record<string, unknown>>) {
     const existing = await this.repository.findById(seedSourceId);
     if (!existing) {
       throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);

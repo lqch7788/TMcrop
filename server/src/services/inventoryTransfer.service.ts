@@ -20,7 +20,7 @@
 
 import { getDatabase, saveDatabase } from '../db';
 import { seedSourceService } from './seedSource.service';
-import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
+import { generateInstanceId, generateStockId, generateInboundRecordId, generateTransactionId } from './inventory.service';
 
 // ============ 类型定义 ============
 
@@ -370,8 +370,9 @@ export async function executeTransferToSource(
       writtenStockIds.push(item.sourceStockId);
 
       // === 步骤 3：写 transfer_out 流水 ===
-      const outTxId = `TXN-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenTxIds.length}`;
-      const outTransactionId = `TXID-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
+      // 2026-07-14：流水 ID 改用 generateTransactionId（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
+      const outTransactionId = await generateTransactionId(dateStr);
+      const outTxId = outTransactionId;
       db.run(
         `INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -524,8 +525,9 @@ export async function executeTransferToSource(
       );
       writtenInboundRecordIds.push(inbRecordId);
 
-      const inTxId = `TXN-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenTxIds.length}`;
-      const inTransactionId = `TXID-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
+      // 2026-07-14：流水 ID 改用 generateTransactionId（替代 Math.random 违规）
+      const inTransactionId = await generateTransactionId(dateStr);
+      const inTxId = inTransactionId;
       db.run(
         `INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,

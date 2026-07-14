@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Package, Download } from 'lucide-react';
+import { Trash2, Package, Download } from 'lucide-react';
 // 2026-07-14：移除 useNavigate import（入库汇总入口已删除）
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
@@ -30,8 +30,7 @@ import {
   seedSourceStatusOptions
 } from '../../../data/cropData';
 import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../../types/crop';
-import * as cropBatchService from '../../../services/apiCropBatchService';
-import { useAuthPermission } from '../../../hooks/usePermission';
+// 2026-07-14：移除 cropBatchService/useAuthPermission 死 import（未使用）
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
 import { useToastStore } from '../../../stores/useToastStore';
@@ -39,8 +38,17 @@ import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
-// 2026-07-07 V3.4：取消「入库登记（外购）」入口，删除 useInventoryInboundStore / InventoryInboundModal / InventoryInboundRecord import
-// 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
+
+/**
+ * 2026-07-14：5 种批量操作模式——normal/edit/delete/export/print（之前散在 3 个独立 state，合并为 discriminated union）
+ * 提升到模块顶层避免每次组件 re-render 重建类型
+ */
+type BatchOpState =
+  | { mode: 'normal' }
+  | { mode: 'edit' }
+  | { mode: 'delete' }
+  | { mode: 'export' }
+  | { mode: 'print' };
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -93,7 +101,6 @@ export default function SeedSourcePage() {
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -131,12 +138,7 @@ export default function SeedSourcePage() {
 
   // 2026-06-06: 合并 3 个独立 state 为 BatchOpState discriminated union
   // 原 operationMode + exportMode(bool) + printMode(bool) → 一个 state 决定 5 种批量操作模式
-  type BatchOpState =
-    | { mode: 'normal' }
-    | { mode: 'edit' }
-    | { mode: 'delete' }
-    | { mode: 'export' }
-    | { mode: 'print' };
+  // 2026-07-14：BatchOpState 类型已上移至模块顶层
   const [batchOp, setBatchOp] = useState<BatchOpState>({ mode: 'normal' });
 
   // 派生标志（供 SeedSourceTable 保持向后兼容的 props 形态）
@@ -226,9 +228,7 @@ export default function SeedSourcePage() {
 
   // 2026-06-09 改造：单条/批量删除入口（仅弹 DeleteConfirmModal，不再直接删除）
   // 删除前引用检查 + Store action 在 handleDeleteConfirm 里执行
-  const handleDelete = useCallback((ids: string[]) => {
-    setSelectedIdsFromCaller(ids);
-  }, []);
+  // 2026-07-14：handleDelete 是冗余 wrapper，直接把 setSelectedIdsFromCaller 传给 onDelete
 
   // 弹窗回调：真正执行删除（含引用检查）
   // 2026-07-01 P0-5 修复：先全部预检，列出所有有冲突的种源，再由用户选择"删除可删的"或"取消"
@@ -318,14 +318,7 @@ export default function SeedSourcePage() {
     setShowDeleteModal(true);
   }, []);
 
-  // 处理批量删除（兼容老入口，校验后弹模态）
-  const handleBatchDelete = useCallback(() => {
-    if (selectedRows.length === 0) {
-      toast.warning('请先选择要删除的记录');
-      return;
-    }
-    setShowDeleteModal(true);
-  }, [selectedRows, toast]);
+  // 2026-07-14：移除 handleBatchDelete 死函数（表格行级删除入口已改为 setSelectedIdsFromCaller）
 
   // 2026-06-25 v3: 种源是纯仓库 — 移除 handleEnd（正常/异常结束）
 
@@ -580,7 +573,7 @@ export default function SeedSourcePage() {
         onEdit={handleEdit}
         onDetail={handleDetail}
         onPrint={handlePrint}
-        onDelete={handleDelete}
+        onDelete={setSelectedIdsFromCaller}
         onImageClick={handleImageClick}
         onAdd={handleAdd}
         operationMode={operationMode}
