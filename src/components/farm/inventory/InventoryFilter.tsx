@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -25,11 +25,11 @@ export interface InventoryFilterState {
 interface InventoryFilterProps {
   filters: InventoryFilterState;
   onChange: (filters: InventoryFilterState) => void;
-  onRefresh: () => void;
-  loading?: boolean;
+  // 2026-07-14：搜索栏后按钮由"刷新"改为"重置"（与种植管理页面 UI 一致）
+  onReset: () => void;
 }
 
-export function InventoryFilter({ filters, onChange, onRefresh, loading }: InventoryFilterProps) {
+export function InventoryFilter({ filters, onChange, onReset }: InventoryFilterProps) {
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
       <div className="flex items-end gap-4 flex-wrap">
@@ -106,16 +106,15 @@ export function InventoryFilter({ filters, onChange, onRefresh, loading }: Inven
           </Select>
         </div>
 
-        {/* 刷新按钮 */}
+        {/* 重置按钮（与种植管理 PlantingFilter 重置按钮 UI 完全一致） */}
         <Button
-          size="default"
-          variant="secondary"
-          onClick={onRefresh}
-          disabled={loading}
+          variant="warning"
+          onClick={onReset}
+          size="sm"
           className="shrink-0"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          刷新
+          <RotateCcw className="w-4 h-4" />
+          重置
         </Button>
       </div>
     </div>

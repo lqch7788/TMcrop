@@ -252,6 +252,18 @@ export default function InventoryV3Page() {
     [stocks]
   );
 
+  // 重置筛选条件（与种植管理 handleReset 风格一致）
+  // 2026-07-14：原"刷新"按钮改为"重置"，筛选清空后 useEffect 自动 loadAll 重新加载
+  const handleReset = () => {
+    setFilters({
+      stockType: '',
+      status: '',
+      sourceType: '',
+      keyword: '',
+    });
+    setPagination({ ...pagination, current: 1 });
+  };
+
   // 打开冻结弹窗
   const handleOpenFreeze = (stock: InventoryStock) => {
     if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
@@ -306,8 +318,7 @@ export default function InventoryV3Page() {
       <InventoryFilter
         filters={filters}
         onChange={setFilters}
-        onRefresh={loadAll}
-        loading={loading}
+        onReset={handleReset}
       />
 
       {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
