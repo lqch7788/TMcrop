@@ -512,8 +512,8 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     }
 
     // === 反向补偿：删除旧的下游副作用（2026-07-03 v3：兼容老数据兜底查找） ===
-    let effHarvestId = old.harvest_record_id || null;
-    let effStockId = old.inventory_stock_id || null;
+    let effHarvestId: string | null = (old.harvest_record_id as string | null) || null;
+    let effStockId: string | null = (old.inventory_stock_id as string | null) || null;
     if (!effHarvestId) {
       const fs = db.prepare(`
         SELECT hr.id AS hid, ist.id AS sid
@@ -525,7 +525,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
       fs.bind([id]);
       const frow = fs.step() ? fs.getAsObject() as any : null;
       fs.free();
-      if (frow) { effHarvestId = frow.hid || null; effStockId = effStockId || frow.sid || null; }
+      if (frow) { effHarvestId = (frow.hid as string) || null; effStockId = effStockId || (frow.sid as string) || null; }
     }
     if (effHarvestId) {
       const check = checkHarvestRecordDeletable(effHarvestId);
@@ -666,30 +666,34 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     // 写入 material_flow_log（P0 修复 — 编辑采收记录时补链）
     if (destination === 'harvest' && generatedHarvestId && generatedStockId) {
       try {
-        const plantCode = old.planting_code || id;
+        // 2026-07-14：dateStr / harvestUnit 在上面 if (destination === 'harvest') 块内声明，
+        // 在此独立 if 块中不可见；按相同逻辑重新声明以满足 TS 块作用域
+        const dateStr = recordDate || now.split('T')[0];
+        const harvestUnit = unit || old.unit || 'g';
+        const plantCode = String(old.planting_code || id);
         const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`;
         const instanceId = `IPR${dateStr}-${String(Date.now()).slice(-4)}`;
         writeFlowLog({
           flow_type: 'planting→harvest',
-          crop_name: old.crop_name || '',
-          crop_variety: old.crop_variety || '',
+          crop_name: String(old.crop_name || ''),
+          crop_variety: String(old.crop_variety || ''),
           source_type: 'planting', source_id: id, source_code: plantCode,
-          source_quantity: quantity, source_unit: unit || harvestUnit,
+          source_quantity: Number(quantity), source_unit: String(unit || harvestUnit),
           source_category: 'planting',
           target_type: 'harvest', target_id: generatedHarvestId, target_code: harvestCode,
-          target_quantity: quantity, target_unit: unit || harvestUnit,
-          business_code: harvestCode, created_by: old.create_by || 'system',
+          target_quantity: Number(quantity), target_unit: String(unit || harvestUnit),
+          business_code: harvestCode, created_by: String(old.create_by || 'system'),
         });
         writeFlowLog({
           flow_type: 'harvest→inventory',
-          crop_name: old.crop_name || '',
-          crop_variety: old.crop_variety || '',
+          crop_name: String(old.crop_name || ''),
+          crop_variety: String(old.crop_variety || ''),
           source_type: 'harvest', source_id: generatedHarvestId, source_code: harvestCode,
-          source_quantity: quantity, source_unit: unit || harvestUnit,
+          source_quantity: Number(quantity), source_unit: String(unit || harvestUnit),
           source_category: 'self_produced',
           target_type: 'inventory_stock', target_id: generatedStockId, target_code: instanceId,
-          target_quantity: quantity, target_unit: unit || harvestUnit,
-          business_code: harvestCode, created_by: old.create_by || 'system',
+          target_quantity: Number(quantity), target_unit: String(unit || harvestUnit),
+          business_code: harvestCode, created_by: String(old.create_by || 'system'),
         });
       } catch (e) { console.error('[planting] writeFlowLog 失败:', (e as any)?.message || e); }
     }
@@ -728,8 +732,8 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
 
     // 反向补偿：删除下游副作用（2026-07-03：补齐 transaction 级联清理）
     // 2026-07-03 v3：兼容老数据（harvest_record_id 为 null 时，通过 planting_id 反向查找）
-    let effectiveHarvestId = old.harvest_record_id || null;
-    let effectiveStockId = old.inventory_stock_id || null;
+    let effectiveHarvestId: string | null = (old.harvest_record_id as string | null) || null;
+    let effectiveStockId: string | null = (old.inventory_stock_id as string | null) || null;
 
     // 如果 harvest_record_id 为 null（老数据未关联），通过 planting_id 反向查找
     if (!effectiveHarvestId) {
@@ -745,8 +749,8 @@ router.delete('/:id/harvest-records/:recordId', (req, res) => {
       const found = findStmt.step() ? findStmt.getAsObject() as any : null;
       findStmt.free();
       if (found) {
-        effectiveHarvestId = found.hid || null;
-        effectiveStockId = effectiveStockId || found.sid || null;
+        effectiveHarvestId = (found.hid as string) || null;
+        effectiveStockId = effectiveStockId || (found.sid as string) || null;
       }
     }
 
@@ -2046,38 +2050,38 @@ router.post('/:id/end', async (req, res) => {
         // 链 1：种植 → 采收
         writeFlowLog({
           flow_type: 'planting→harvest',
-          crop_name: planting.crop_name || '',
-          crop_variety: planting.crop_variety || '',
+          crop_name: String(planting.crop_name || ''),
+          crop_variety: String(planting.crop_variety || ''),
           source_type: 'planting',
           source_id: id,
-          source_code: planting.planting_code || id,
+          source_code: String(planting.planting_code || id),
           source_quantity: harvestQty,
-          source_unit: harvestUnit,
+          source_unit: String(harvestUnit),
           source_category: 'planting',
           target_type: 'harvest',
           target_id: harvestId,
           target_code: harvestCode,
           target_quantity: harvestQty,
-          target_unit: harvestUnit,
+          target_unit: String(harvestUnit),
           business_code: harvestCode,
           created_by: operator,
         });
         // 链 2：采收 → 入库
         writeFlowLog({
           flow_type: 'harvest→inventory',
-          crop_name: planting.crop_name || '',
-          crop_variety: planting.crop_variety || '',
+          crop_name: String(planting.crop_name || ''),
+          crop_variety: String(planting.crop_variety || ''),
           source_type: 'harvest',
           source_id: harvestId,
           source_code: harvestCode,
           source_quantity: harvestQty,
-          source_unit: harvestUnit,
+          source_unit: String(harvestUnit),
           source_category: 'self_produced',
           target_type: 'inventory_stock',
           target_id: stockId,
           target_code: instanceId,
           target_quantity: harvestQty,
-          target_unit: harvestUnit,
+          target_unit: String(harvestUnit),
           business_code: harvestCode,
           created_by: operator,
         });

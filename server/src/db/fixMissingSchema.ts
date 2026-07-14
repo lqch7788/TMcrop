@@ -3120,7 +3120,7 @@ function fixApprovedProductionPlanStatus(): void {
   // 幂等：先用 SELECT 检查类别是否存在，避免 duplicate row 错误
   try {
     // better-sqlite3 标准 API：prepare(sql).get(...) / .all() / .run()
-    const catExists = !!db.prepare("SELECT id FROM dictionary_categories WHERE code = ?").get('crop_form');
+    const catExists = !!db.prepare("SELECT id FROM dictionary_categories WHERE code = ?").get('crop_form' as any);
     if (!catExists) {
       // category_code 必须唯一；时间戳保证幂等 id
       const catId = `DC_CROP_FORM_${Date.now()}`;
@@ -3287,43 +3287,8 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('PROPAGATION 数量补全失败:', e.message);
   }
 
-  // ========== V13.0: 采收入库表 + 审计日志表 ==========
-  try {
-    seedLog.info('检查 harvest_inbounds 表...');
-    db.run(`CREATE TABLE IF NOT EXISTS harvest_inbounds (
-      id TEXT PRIMARY KEY,
-      inbound_code TEXT UNIQUE NOT NULL,
-      source_type TEXT NOT NULL,
-      source_id TEXT,
-      source_code TEXT,
-      crop_name TEXT NOT NULL,
-      variety_name TEXT,
-      inbound_date TEXT NOT NULL,
-      quantity REAL DEFAULT 0,
-      unit TEXT DEFAULT '公斤',
-      warehouse_id TEXT,
-      warehouse_name TEXT,
-      batch_code TEXT,
-      status TEXT DEFAULT 'pending',
-      auditor_id TEXT,
-      auditor_name TEXT,
-      audit_opinion TEXT,
-      audit_time TEXT,
-      operator_id TEXT,
-      operator_name TEXT,
-      remarks TEXT,
-      is_deleted INTEGER DEFAULT 0,
-      created_at TEXT,
-      updated_at TEXT
-    )`);
-    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_code ON harvest_inbounds(inbound_code)'); } catch (e) {}
-    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_status ON harvest_inbounds(status)'); } catch (e) {}
-    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_source_type ON harvest_inbounds(source_type)'); } catch (e) {}
-    seedLog.info('  harvest_inbounds 表初始化完成');
-  } catch (e: any) {
-    seedLog.error('harvest_inbounds 表创建失败:', e.message);
-  }
-
+  // ========== V13.0: 审计日志表 ==========
+  // 2026-07-14：移除 harvest_inbounds 表（独立采收入库页面已下线，row-level 弹窗使用 inventory_* 表）
   try {
     seedLog.info('检查 audit_logs 表...');
     db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
@@ -3583,6 +3548,20 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('batch_inventory:', e.message);
   }
   try { db.run('CREATE INDEX IF NOT EXISTS idx_batch_fefo ON batch_inventory(material_code, expiry_date, batch_no)'); } catch {}
+
+  // ========== 2026-07-14：迁移 — 删除 harvest_inbounds 表 ==========
+  // 独立采收入库页面已下线，所有入库走 inventory_* 表（行级弹窗）。
+  // 一次性 DROP，下次启动自动跳过（IF EXISTS 保护）。
+  try {
+    db.run('DROP INDEX IF EXISTS idx_harvest_inbounds_code');
+    db.run('DROP INDEX IF EXISTS idx_harvest_inbounds_status');
+    db.run('DROP INDEX IF EXISTS idx_harvest_inbounds_source_type');
+    db.run('DROP INDEX IF EXISTS idx_harvest_inbounds_date');
+    db.run('DROP TABLE IF EXISTS harvest_inbounds');
+    seedLog.info('✓ harvest_inbounds 表已清理（独立采收入库页面下线）');
+  } catch (e: any) {
+    seedLog.error('harvest_inbounds 清理失败:', e.message);
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

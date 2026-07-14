@@ -211,6 +211,8 @@ export async function executeInboundFromSource(
   const writtenTransactionIds: string[] = [];
   const writtenRecordIds: string[] = [];
   const writtenHarvestId: string | null = null;
+  // 2026-07-14：提到 try 外，让外层 catch 的回滚块也能访问
+  let rolledBackSeedSourceQuantity = false;
 
   try {
     // 步骤 1：写 harvest_records 主单
@@ -484,7 +486,7 @@ export async function executeInboundFromSource(
     // 2026-07-06：种源行级入库 — 回写 seed_sources 的 quantity 和 remaining_quantity
     // 修复：行级入库与新建种源入库行为不一致。新建直接写 seed_sources，行级入库只写 inventory_stock。
     // 现在统一：种源入库同时更新 seed_sources 数量。
-    let rolledBackSeedSourceQuantity = false;
+    // 2026-07-14：rolledBackSeedSourceQuantity 已在 try 块外声明（line 215 附近），供 catch 回滚块访问
     if (input.sourceModule === 'seed_source') {
       const totalInboundQty = input.products.reduce((s, p) => s + (p.harvestQuantity || 0), 0);
       db.run(`
