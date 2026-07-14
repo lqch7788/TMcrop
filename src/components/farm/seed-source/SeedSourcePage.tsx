@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Package, Download, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Edit2, Trash2, Printer, Eye, Image, Package, Download } from 'lucide-react';
+// 2026-07-14：移除 useNavigate import（入库汇总入口已删除）
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
@@ -43,9 +43,6 @@ import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
-  // 2026-07-07：路由跳转 — 跳转至入库汇总报表页
-  const navigate = useNavigate();
-
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   // 种源模块权限 - 已取消，直接设置为 true
@@ -556,14 +553,6 @@ export default function SeedSourcePage() {
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
           </div>
-          {/* 2026-07-07：入库汇总跳转入口 — 按品种聚合所有外购入库 */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/crop/seed-source/inbound-summary')}
-          >
-            <BarChart3 className="w-4 h-4 mr-1" /> 入库汇总
-          </Button>
         </div>
       </div>
 
