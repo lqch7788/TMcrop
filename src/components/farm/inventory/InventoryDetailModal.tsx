@@ -70,12 +70,15 @@ const getStockTypeLabel = (stockType: StockType | string) => {
 };
 
 const TX_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  inbound:  { label: '入库',  icon: <TrendingUp className="w-3.5 h-3.5" />, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  outbound: { label: '出库',  icon: <TrendingDown className="w-3.5 h-3.5" />, color: 'text-red-600 bg-red-50 border-red-200' },
-  freeze:   { label: '冻结',  icon: <Snowflake className="w-3.5 h-3.5" />, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-  unfreeze: { label: '解冻',  icon: <Unlock className="w-3.5 h-3.5" />, color: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
-  transfer: { label: '调拨',  icon: <GitBranch className="w-3.5 h-3.5" />, color: 'text-purple-600 bg-purple-50 border-purple-200' },
-  adjust:   { label: '调整',  icon: <Edit3 className="w-3.5 h-3.5" />, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  inbound:       { label: '入库',  icon: <TrendingUp className="w-3.5 h-3.5" />,   color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  outbound:      { label: '出库',  icon: <TrendingDown className="w-3.5 h-3.5" />,  color: 'text-red-600 bg-red-50 border-red-200' },
+  freeze:        { label: '冻结',  icon: <Snowflake className="w-3.5 h-3.5" />,      color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  unfreeze:      { label: '解冻',  icon: <Unlock className="w-3.5 h-3.5" />,         color: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
+  transfer:      { label: '调拨',  icon: <GitBranch className="w-3.5 h-3.5" />,     color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  // 2026-07-14：补全 transfer_in / transfer_out（数据库有 42+36 条记录）
+  transfer_in:   { label: '调入',  icon: <TrendingUp className="w-3.5 h-3.5" />,    color: 'text-teal-600 bg-teal-50 border-teal-200' },
+  transfer_out:  { label: '调出',  icon: <TrendingDown className="w-3.5 h-3.5" />,  color: 'text-orange-600 bg-orange-50 border-orange-200' },
+  adjust:        { label: '调整',  icon: <Edit3 className="w-3.5 h-3.5" />,         color: 'text-amber-600 bg-amber-50 border-amber-200' },
 };
 
 // 业务类型英文 → 中文映射
@@ -186,8 +189,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   if (!isOpen || !stock) return null;
 
   const sourceInfo = SOURCE_ORIGIN_MAP[effectiveStock?.sourceType ?? ''];
-  // 2026-07-09：兜底不再显示原始英文 status（如 'in_stock'），统一显示"库存中"
-  // 兼容历史脏数据（status='active' 等已废弃值）
+  // 2026-07-14：兜底不再显示原始英文 status（如 'in_stock'、'depleted'），统一显示"库存中"
+  // 兼容历史脏数据（status='active' / 'depleted' 等已废弃值）
   const statusInfo = INVENTORY_STATUS_MAP[effectiveStock?.status ?? ''] || INVENTORY_STATUS_MAP.in_stock;
   // sourceType 兜底：未在 SOURCE_ORIGIN_MAP 映射时显示中文（避免英文原始值）
   const sourceLabel = sourceInfo?.label
@@ -382,7 +385,8 @@ function BasicTab({
         ['业务类型',   (() => {
           const info = BUSINESS_TYPE_META[stock.businessType];
           if (info) return <span className={`px-2 py-0.5 ${info.bg} ${info.text} text-xs rounded font-medium`}>{info.label}</span>;
-          return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{stock.businessType || '-'}</span>;
+          // 2026-07-14：未知 business_type 不显示原始英文，改用"其他"兜底
+          return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{stock.businessType ? '其他' : '-'}</span>;
         })()],
         ['业务编号',   stock.businessCode || stock.extensions?.businessCode || '-'],
         ['状态',       <span className={`px-2 py-0.5 ${statusInfo.bg} ${statusInfo.text} text-xs rounded font-medium`}>{statusInfo.label}</span>],
@@ -681,7 +685,8 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
       <div className="text-xs text-gray-500">共 {transactions.length} 条操作记录（按时间倒序）</div>
       <div className="overflow-x-auto border border-gray-200 rounded-lg">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+          {/* 2026-07-14：表头渐变蓝背景色（与作物库存列表表头一致） */}
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
             <tr>
               <th className="px-3 py-2 text-left whitespace-nowrap">类型</th>
               <th className="px-3 py-2 text-right whitespace-nowrap">数量</th>
@@ -694,9 +699,11 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
               <th className="px-3 py-2 text-left">备注</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          {/* 2026-07-14：数据行分割线加深为 gray-300 */}
+          <tbody className="divide-y divide-gray-300">
             {transactions.map((tx) => {
-              const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType, color: 'text-gray-600 bg-gray-50 border-gray-200' };
+              // 2026-07-14：未知 transaction_type 不显示原始英文，改用"未知"兜底
+              const meta = TX_TYPE_META[tx.transactionType] || { label: `未知(${tx.transactionType})`, color: 'text-gray-600 bg-gray-50 border-gray-200' };
               const isOut = tx.transactionType === 'outbound' || tx.transactionType === 'unfreeze' || (tx.transactionType === 'adjust' && tx.quantity < 0);
               return (
                 <tr key={tx.id} className="hover:bg-gray-50">
@@ -711,14 +718,36 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
                   <td className="px-3 py-2 text-right text-gray-500 font-mono whitespace-nowrap">{tx.balanceBefore}</td>
                   <td className="px-3 py-2 text-right text-gray-700 font-mono whitespace-nowrap">{tx.balanceAfter}</td>
                   <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                    {BUSINESS_TYPE_META[tx.businessType]?.label || tx.businessType || '-'}
+                    {// 2026-07-14：business_type 不存在映射时不显示原始英文，改用"其他"
+                BUSINESS_TYPE_META[tx.businessType]?.label || (tx.businessType ? '其他' : '-')}
                   </td>
                   <td className="px-3 py-2 text-gray-700 font-mono text-xs whitespace-nowrap">
                     {tx.businessCode || '-'}
                   </td>
                   <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{tx.operatorName || '-'}</td>
                   <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">
-                    {tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : (tx.createTime ? new Date(tx.createTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-')}
+                    {(() => {
+                      // 2026-07-14：容错处理 — operateDate 可能是 '20260702' 格式（Invalid Date）
+                      // 尝试解析，失败则回退到 createTime，再失败显示 '-'
+                      if (tx.operateDate) {
+                        const d = new Date(tx.operateDate);
+                        if (!isNaN(d.getTime())) {
+                          return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        }
+                        // 尝试 'YYYYMMDD' 格式
+                        const m = String(tx.operateDate).match(/^(\d{4})(\d{2})(\d{2})$/);
+                        if (m) {
+                          return `${m[1]}-${m[2]}-${m[3]}`;
+                        }
+                      }
+                      if (tx.createTime) {
+                        const d = new Date(tx.createTime);
+                        if (!isNaN(d.getTime())) {
+                          return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        }
+                      }
+                      return '-';
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-gray-600 text-xs max-w-xs truncate" title={tx.remarks || ''}>
                     {tx.remarks || '-'}
