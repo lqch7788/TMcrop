@@ -13,6 +13,8 @@ import { Router, Request, Response } from 'express';
 import { inventoryTransactionService } from '../services/inventoryTransaction.service';
 import { inventoryTransactionRepository } from '../repositories/inventory-tx.repository';
 import { getDatabase, saveDatabase } from '../db';
+// 2026-07-14：方案 C — 写操作后自动重算 status
+import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 import { authenticate } from '../middleware/auth';
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
@@ -198,6 +200,10 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       });
     }
 
+    // 2026-07-14：方案 C — 出库后重算 status（数量=0 → empty，< 10 → low_stock）
+    // 取代原来的 hardcode 'empty' 块
+    recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
+
     // 5. 写老表 inventory_transaction
     // 2026-06-08 V2.1：4 位自增 ID（TRX + YYYYMMDD + NNNN），替代 Math.random 4 字符 base36
     // 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"
@@ -236,15 +242,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 
     saveDatabase();
 
-    // 6. 状态更新（出库后数量为 0 → empty）
-    if (newQty === 0) {
-      const statusStmt = db.prepare(
-        "UPDATE inventory_stock SET status = 'empty', update_time = ? WHERE instance_id = ?"
-      );
-      statusStmt.run([nowIso, body.instanceId]);
-      statusStmt.free();
-      saveDatabase();
-    }
+    // 6. 状态更新（2026-07-14：方案 C — 已被乐观锁后的 recompute 替代，删除 hardcode 块）
 
     // 8. 写入 material_flow_log（按 businessType 白名单）
     try {
@@ -346,11 +344,12 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
         const currentQty = Number(stock.current_quantity) || 0;
         const frozenQty = Number(stock.frozen_quantity) || 0;
         const restoredQty = currentQty + Math.abs(txQty);
-        // 回填数量（不超过合理范围），同时更新状态
-        const newStatus = restoredQty > 0 ? 'in_stock' : 'empty';
-        const updateStmt = db.prepare('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ? WHERE instance_id = ?');
-        updateStmt.run([restoredQty, restoredQty - frozenQty, newStatus, new Date().toISOString(), instanceId]);
+        // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算
+        const updateStmt = db.prepare('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE instance_id = ?');
+        updateStmt.run([restoredQty, restoredQty - frozenQty, new Date().toISOString(), instanceId]);
         updateStmt.free();
+        // 重算 status（撤销出库后可能变成 in_stock / low_stock / frozen）
+        recomputeAndUpdateStockStatus(getDatabase(), instanceId);
       }
       stockStmt.free();
     }
