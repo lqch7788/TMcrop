@@ -333,28 +333,8 @@ export function FeedRecordCard({
             </div>
           )}
 
-          {/* 第 2 行：稀释方式 + 稀释比例 + 施肥方式 + 备注（2026-07-15：施用→施肥，用字典选项） */}
-          <div className="grid grid-cols-4 gap-2">
-            <div>
-              <Label className="text-xs text-gray-600 mb-1">稀释方式</Label>
-              <Select
-                value={value.dilutionType || 'dilute'}
-                onValueChange={(v) =>
-                  onChange({ ...value, dilutionType: v as 'dilute' | 'dry' })
-                }
-              >
-                <SelectTrigger className="h-8 text-sm border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(DILUTION_TYPE_MAP).map(([k, label]) => (
-                    <SelectItem key={k} value={k}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* 第 2 行：稀释比例 + 施肥方式 + 备注（2026-07-15：删除稀释方式字段，施用→施肥） */}
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-xs text-gray-600 mb-1">
                 稀释比例 {value.dilutionType === 'dry' && <span className="text-gray-400">（干施不需要）</span>}
