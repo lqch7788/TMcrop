@@ -59,15 +59,26 @@ interface SyncContext {
  * 应用方法 dict_code → 中文 label
  */
 const FALLBACK_APP_METHOD_LABELS: Record<string, string> = {
-  foliar_spray: '叶面喷雾',
+  // 2026-07-15：补齐常用方法，防止 FeedRecordCard 错用施肥字典时回退到原码
   spray: '喷雾',
   drench: '灌根',
   fumigation: '熏蒸',
   broadcast: '撒施',
   irrigation: '灌施',
   injection: '注射',
+  foliar_spray: '叶面喷雾',
   soil_drench: '土壤浇灌',
   trunk_injection: '树干注射',
+  drip_irrigation: '滴灌',
+  flood_irrigation: '冲施/漫灌',
+  spread: '撒施',
+  buried: '埋施/穴施',
+  base: '基施/底肥',
+  top_dressing: '追肥',
+  mist_spray: '弥雾',
+  dusting: '喷粉',
+  seed_dressing: '拌种',
+  bait: '诱杀',
 };
 const FALLBACK_FERT_METHOD_LABELS: Record<string, string> = {
   foliar_spray: '叶面喷施',
@@ -78,9 +89,14 @@ const FALLBACK_FERT_METHOD_LABELS: Record<string, string> = {
   injection: '注射施肥',
   base: '基施/底肥',
   top_dressing: '追肥',
+  spray: '叶面喷施',
+  drench: '浇根',
+  fumigation: '土壤熏蒸',
+  broadcast: '撒施',
+  irrigation: '随水冲施',
 };
 
-/** dict_code → 中文 label 查询（dictionaries 表 + 内置兜底） */
+/** dict_code → 中文 label 查询（dictionaries 表 + 内置兜底 + 跨字典兜底） */
 function translateDictCode(db: any, categoryCode: string, dictCode: string | undefined): string {
   if (!dictCode) return '';
   // 1. 优先查 DB 字典
@@ -99,6 +115,19 @@ function translateDictCode(db: any, categoryCode: string, dictCode: string | und
       ? FALLBACK_FERT_METHOD_LABELS
       : null;
   if (fallback && fallback[dictCode]) return fallback[dictCode];
+  // 3. 跨字典兜底：drip_irrigation 等可能在另一个字典里有 label
+  //    解决"前端用了 fertilization_method 字典，但 ptt 写到 application_method 列"的场景
+  const other = categoryCode === 'application_method' ? 'fertilization_method' : 'application_method';
+  if (other) {
+    try {
+      const r2 = db.exec(
+        `SELECT dict_label FROM dictionaries WHERE category_code = ? AND dict_code = ? LIMIT 1`,
+        [other, dictCode]
+      );
+      const label2 = r2?.[0]?.values?.[0]?.[0];
+      if (label2) return label2 as string;
+    } catch { /* 忽略 */ }
+  }
   return dictCode;  // 都没找到回退原值
 }
 
@@ -456,7 +485,7 @@ export async function syncPesticideRecords(
       unit: item.unit || 'L',
       ratio: formatDilution(item),                              // 兼容 dilutionRatio 别名
       dilutionRatio: formatDilution(item),
-      applicationMethod: methodCode,                           // 存 dict_code（显示层翻译）
+      applicationMethod: methodLabel,                           // 2026-07-15：存中文 label（与列保持一致，详情展开也直接显示中文）
       targetPest: item.targetPest || '',
       safetyInterval: item.safetyInterval || 0,
       remarks: item.notes || '',

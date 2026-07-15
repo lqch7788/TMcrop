@@ -22,8 +22,13 @@ import { useFertilizerLibraryStore, usePesticideLibraryStore, useDictionaryStore
 // 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
 import { FERTILIZER_TYPE_OPTIONS } from '../../../settings/fertilizer-library/constants'
 
-// 施肥方式字典 key（与 FertilizerPoolEditor 一致）
-const METHOD_DICT_KEY = 'fertilization_method'
+// 2026-07-15：mode 决定 method 字段对应哪个字典
+// - fertilizer → fertilization_method（施肥方式：滴灌/喷施等）
+// - pesticide  → application_method（施用方法：喷雾/灌根等）
+// 之前写死 fertilization_method，导致用药模式也选施肥字典，
+// 里面的 drip_irrigation 落到 pesticide_records.application_method 列查不到中文标签
+const METHOD_DICT_KEY_FERT = 'fertilization_method'
+const METHOD_DICT_KEY_PEST = 'application_method'
 
 // 通用行卡 item（兼容施肥和用药的并集类型）
 export interface FeedRecordItem {
@@ -95,10 +100,12 @@ export function FeedRecordCard({
     dictStore.refreshDictionaries?.()
   }, [])
 
-  // 施肥方式字典（与 FertilizerPoolEditor 一致）
+  // 2026-07-15：按 mode 决定用哪本字典
+  //   fertilizer → fertilization_method；pesticide → application_method
+  const methodDictKey = mode === 'pesticide' ? METHOD_DICT_KEY_PEST : METHOD_DICT_KEY_FERT
   const methodItems = useMemo(() =>
-    dictStore.dictionaries.filter((d: any) => (d.categoryCode || d.category) === METHOD_DICT_KEY),
-  [dictStore.dictionaries])
+    dictStore.dictionaries.filter((d: any) => (d.categoryCode || d.category) === methodDictKey),
+  [dictStore.dictionaries, methodDictKey])
 
   // 当前模式对应的库
   const libraryItems = mode === 'fertilizer' ? (fertLibStore.items || []) : (pestLibStore.items || [])
