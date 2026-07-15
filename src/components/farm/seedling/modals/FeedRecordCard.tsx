@@ -35,9 +35,13 @@ export interface FeedRecordItem {
   dilutionType: 'dilute' | 'dry'
   applicationMethod: string
   notes?: string
-  // 2026-07-15：选择库中肥料后自动填充品牌 + 单价（用于费用统计）
+  // 2026-07-15：选择库中肥料后自动填充完整信息（用于折叠头部显示 + 费用统计）
   brandName?: string
   unitPrice?: number
+  fertilizerCode?: string
+  specContent?: string
+  stockQuantity?: number
+  stockUnit?: string
   // 药剂特有
   safetyInterval?: number
   targetPest?: string
@@ -126,7 +130,7 @@ export function FeedRecordCard({
     return items
   }, [libraryItems, value.category, nameSearch, mode])
 
-  // 选择名称后自动填充（名称 + 单位 + 品牌 + 单价）— 2026-07-15 加入品牌/单价用于费用统计
+  // 选择名称后自动填充（名称 + 单位 + 完整库信息）— 2026-07-15 参照施肥管理弹窗
   const handleSelectName = useCallback((item: any) => {
     const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
     onChange({
@@ -134,9 +138,13 @@ export function FeedRecordCard({
       name,
       // 自动填充单位（保留用户已选手动值优先）
       unit: value.unit || item.dosageUnit || item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L'),
-      // 自动填充品牌 + 单价（用于费用 = 用量 × 单价）
+      // 自动填充完整库信息（用于折叠头部显示 + 费用统计）
       brandName: item.brandName || undefined,
       unitPrice: item.unitPrice || undefined,
+      fertilizerCode: mode === 'fertilizer' ? (item.fertilizerCode || undefined) : undefined,
+      specContent: mode === 'fertilizer' ? (item.specContent || undefined) : undefined,
+      stockQuantity: item.stockQuantity || undefined,
+      stockUnit: item.stockUnit || undefined,
     })
     setNameSearch('')
     setShowNameDropdown(false)
@@ -153,25 +161,54 @@ export function FeedRecordCard({
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  const summary = `${value.name || '（未命名）'} · ${categoryMap[value.category] || value.category || '未分类'}`
+  // 折叠头部摘要（2026-07-15：选中肥料后显示完整信息，参照施肥管理弹窗）
+  const summary = (() => {
+    if (!value.name) return '（未命名）'
+    if (mode === 'fertilizer' && value.fertilizerCode) {
+      // 施肥模式：多行显示完整信息
+      return value.name
+    }
+    return `${value.name} · ${categoryMap[value.category] || value.category || '未分类'}`
+  })()
 
   return (
     <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
-      {/* 折叠/展开头部 */}
+      {/* 折叠/展开头部（选中肥料后显示完整信息） */}
       <div
-        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+        className="flex items-start gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? (
-          <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+          <ChevronDown className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
         )}
-        <span className="text-sm text-gray-700 flex-1 truncate" title={summary}>
-          {summary}
-        </span>
+        <div className="flex-1 min-w-0">
+          {mode === 'fertilizer' && value.fertilizerCode ? (
+            // 施肥模式：折叠态多行完整信息（名称+编码+类型+品牌规格+单价+库存）
+            <div className="space-y-0.5">
+              <div className="font-medium text-sm text-gray-800">{value.name}</div>
+              <div className="text-xs text-gray-400">{value.fertilizerCode}</div>
+              <div className="text-xs text-gray-500">
+                {categoryMap[value.category] || value.category || ''}
+                {value.brandName && ` · ${value.brandName}`}
+                {value.specContent && ` · ${value.specContent}`}
+              </div>
+              <div className="text-xs">
+                {value.unitPrice > 0 && <span className="text-amber-600 mr-2">¥{Number(value.unitPrice).toFixed(2)}</span>}
+                <span className={Number(value.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}>
+                  库存 {Number(value.stockQuantity || 0).toFixed(1)} {value.stockUnit || 'kg'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-700 truncate block" title={summary}>
+              {summary}
+            </span>
+          )}
+        </div>
         {value.amount != null && value.amount > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
             {value.amount} {FEED_UNIT_MAP[value.unit] || value.unit}
             {value.dilutionType === 'dilute' && value.dilution ? ` × ${value.dilution}倍` : ''}
           </span>
