@@ -381,7 +381,8 @@ export async function executeTransferToSource(
         ) VALUES (?, ?, ?, ?, 'transfer_out', ?, ?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)`,
         [
           outTxId, outTransactionId, sourceStock.instance_id, sourceStock.stock_type,
-          item.transferQuantity, sourceCurrentQty, newSourceQty,
+          // 2026-07-15：transfer_out 应写负数（库存被扣减），与 inventory_transaction.quantity 约定一致
+          -item.transferQuantity, sourceCurrentQty, newSourceQty,
           String(item.sourceStockId), sourceStock.instance_id,
           operator.id || '', operator.name, now.slice(0, 10),
           `调拨到种源: ${sourceStock.instance_id} ${item.transferQuantity}${sourceUnit}`,

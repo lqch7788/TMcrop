@@ -3569,6 +3569,52 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('inventory_stock.status 批量重算失败:', e.message);
   }
 
+  // ========== 2026-07-15：迁移 — 修复历史正数 transfer_out / outbound 流水 ==========
+  // 历史 bug：inventoryTransfer.service.ts 写 transfer_out 时未取负，inventoryService.writeFlowLog 写 outbound 时也错
+  // 修复：扣减类业务（outbound/transfer_out/unfreeze）quantity > 0 的记录批量取负
+  try {
+    const stmt = db.prepare(`
+      SELECT id, balance_before, balance_after
+      FROM inventory_transaction
+      WHERE transaction_type IN ('outbound', 'transfer_out', 'unfreeze')
+        AND quantity > 0
+    `);
+    const toFix: Array<{ id: string; oldBefore: number; oldAfter: number }> = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject() as any;
+      toFix.push({
+        id: String(row.id),
+        oldBefore: Number(row.balance_before) || 0,
+        oldAfter: Number(row.balance_after) || 0,
+      });
+    }
+    stmt.free();
+
+    if (toFix.length > 0) {
+      const updStmt = db.prepare(`
+        UPDATE inventory_transaction
+        SET quantity = -quantity,
+            balance_before = ?,
+            balance_after = ?,
+            operate_date = ?
+        WHERE id = ?
+      `);
+      for (const r of toFix) {
+        // 反转 balance_before/balance_after：扣减前的余额 = 扣减后的余额（这一笔之前）
+        // 注意：inventory_transaction 表没有 update_time 列，用 operate_date（同前面的 transfer_out INSERT）
+        const today = new Date().toISOString().slice(0, 10);
+        updStmt.run([r.oldAfter, r.oldBefore, today, r.id]);
+      }
+      updStmt.free();
+      saveDatabase();
+      seedLog.info(`✓ inventory_transaction 扣减流水符号修复：${toFix.length} 条已取负 + balance 对调`);
+    } else {
+      seedLog.skip('• inventory_transaction 扣减流水符号修复：无需更新');
+    }
+  } catch (e: any) {
+    seedLog.error('inventory_transaction 扣减流水符号修复失败:', e.message);
+  }
+
   // ========== 2026-07-14：迁移 — 删除 harvest_inbounds 表 ==========
   // 独立采收入库页面已下线，所有入库走 inventory_* 表（行级弹窗）。
   // 一次性 DROP，下次启动自动跳过（IF EXISTS 保护）。
