@@ -185,22 +185,24 @@ export function FeedRecordCard({
         )}
         <div className="flex-1 min-w-0">
           {mode === 'fertilizer' && value.fertilizerCode ? (
-            // 施肥模式：折叠态多行完整信息（名称+编码+类型+品牌规格+单价+库存）
-            <div className="space-y-0.5">
-              <div className="font-medium text-sm text-gray-800">{value.name}</div>
-              <div className="text-xs text-gray-400">{value.fertilizerCode}</div>
-              <div className="text-xs text-gray-500">
-                {categoryMap[value.category] || value.category || ''}
-                {value.brandName && ` · ${value.brandName}`}
-                {value.specContent && ` · ${value.specContent}`}
-              </div>
-              <div className="text-xs">
-                {value.unitPrice > 0 && <span className="text-amber-600 mr-2">¥{Number(value.unitPrice).toFixed(2)}</span>}
-                <span className={Number(value.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}>
-                  库存 {Number(value.stockQuantity || 0).toFixed(1)} {value.stockUnit || 'kg'}
-                </span>
-              </div>
-            </div>
+            // 2026-07-15：施肥模式折叠态单行完整信息（名称·编码·类型·品牌·单价·库存）
+            <span className="text-xs text-gray-700 truncate block" title={[
+              value.name, value.fertilizerCode, categoryMap[value.category] || '',
+              [value.brandName, value.specContent].filter(Boolean).join(' '),
+              value.unitPrice > 0 ? `¥${Number(value.unitPrice).toFixed(2)}` : '',
+              `库存${Number(value.stockQuantity || 0).toFixed(1)}${value.stockUnit || 'kg'}`
+            ].filter(Boolean).join(' · ')}>
+              <span className="font-medium text-sm text-gray-800">{value.name}</span>
+              <span className="text-gray-400 mx-1.5">{value.fertilizerCode}</span>
+              <span className="text-gray-500">{categoryMap[value.category] || ''}</span>
+              {[value.brandName, value.specContent].filter(Boolean).length > 0 && (
+                <span className="text-gray-500 mx-1.5">{[value.brandName, value.specContent].filter(Boolean).join(' ')}</span>
+              )}
+              {value.unitPrice > 0 && <span className="text-amber-600 mx-1.5">¥{Number(value.unitPrice).toFixed(2)}</span>}
+              <span className={`mx-1.5 ${Number(value.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}`}>
+                库存{Number(value.stockQuantity || 0).toFixed(1)}{value.stockUnit || 'kg'}
+              </span>
+            </span>
           ) : (
             <span className="text-sm text-gray-700 truncate block" title={summary}>
               {summary}
