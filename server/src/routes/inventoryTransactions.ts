@@ -15,10 +15,12 @@ import { inventoryTransactionRepository } from '../repositories/inventory-tx.rep
 import { getDatabase, saveDatabase } from '../db';
 // 2026-07-14：方案 C — 写操作后自动重算 status
 import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
+// 2026-07-15：显式挂载认证中间件（统一所有 GET/POST/PUT/DELETE 都走 auth）
 import { authenticate } from '../middleware/auth';
 import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
+router.use(authenticate);
 
 /** 出库业务类型合法值（与前端 src/constants/outboundConstants.ts 的 OutboundBusinessType 同步） */
 const VALID_OUTBOUND_TYPES = new Set([

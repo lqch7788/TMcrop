@@ -3,10 +3,12 @@
  * 2026-06-18 任务 3
  *
  * 设计原则：
- * - recordsBySource 按 `${sourceModule}:${sourceId}` 缓存入库记录列表，避免多个种源/育苗切换时反复请求
- * - submitInbound 成功后失效对应 source 的缓存（不立即重拉，由页面在 onSuccess 中调 loadRecords）
+ * - recordsBySource 按 `${sourceModule}:${sourceId}` 缓存入库记录，避免重复请求
+ * - submitInbound 成功后失效对应 source 的缓存，强制下次 loadRecords 重拉
  * - 禁止 persist / IndexedDB / localStorage 兜底（V2.1 铁律）
- * - 缓存淘汰机制：loadRecords 时按 lastFetch 时间戳决定是否重新拉取
+ * - 2026-07-15：移除 5 分钟 TTL 缓存（违反 V2.1 铁律：禁止任何缓存降级）
+ *   - 内存 store 本身不算缓存（刷新即丢失），但 `if (now - last < CACHE_TTL_MS) return` 跳过请求的逻辑就是显式缓存
+ *   - 改为：除非有数据就跳过空请求（如果调用方已通过 submitInbound 失效缓存）
  */
 
 import { create } from 'zustand'
@@ -20,20 +22,15 @@ import type {
   InventoryInboundInput,
 } from '@/types/inventoryInbound'
 
-/** 缓存 5 分钟内不重拉（与 useWarehouseStore 保持一致） */
-const CACHE_TTL_MS = 5 * 60 * 1000
-
 interface InventoryInboundStore {
   /** sourceModule:sourceId → 入库记录列表 */
   recordsBySource: Record<string, InventoryInboundRecord[]>
   loading: boolean
-  /** sourceModule:sourceId → 上次拉取时间戳 */
-  lastFetch: Record<string, number>
   /** 顶层错误信息（页面可读） */
   error: string | null
 
-  /** 加载某 source 的入库记录（带缓存） */
-  loadRecords: (key: string, query: InboundRecordsQuery) => Promise<void>
+  /** 加载某 source 的入库记录 */
+  loadRecords: (key: string, query: InboundRecordsQuery, force?: boolean) => Promise<void>
   /** 提交入库；成功后失效该 source 的缓存 */
   submitInbound: (
     input: InventoryInboundInput
@@ -47,14 +44,12 @@ interface InventoryInboundStore {
 export const useInventoryInboundStore = create<InventoryInboundStore>((set, get) => ({
   recordsBySource: {},
   loading: false,
-  lastFetch: {},
   error: null,
 
-  loadRecords: async (key, query) => {
-    // 5 分钟内已拉过则跳过
-    const last = get().lastFetch[key]
-    const now = Date.now()
-    if (last && now - last < CACHE_TTL_MS && get().recordsBySource[key]) {
+  loadRecords: async (key, query, force = false) => {
+    // 2026-07-15：移除 5 分钟 TTL。仅在 explicit force=false 且已有数据时跳过请求。
+    // 提交入库后会调 clear() 失效缓存，所以下次 loadRecords 总是会重拉
+    if (!force && get().recordsBySource[key]) {
       return
     }
 
@@ -63,7 +58,6 @@ export const useInventoryInboundStore = create<InventoryInboundStore>((set, get)
       const { data } = await listInboundRecords(query)
       set((s) => ({
         recordsBySource: { ...s.recordsBySource, [key]: data },
-        lastFetch: { ...s.lastFetch, [key]: now },
         loading: false,
       }))
     } catch (e) {
@@ -76,17 +70,15 @@ export const useInventoryInboundStore = create<InventoryInboundStore>((set, get)
   },
 
   submitInbound: async (input) => {
-    // 2026-06-18: 失败时 throw 让 modal 拿到真实错误消息（不再吞错返回 null）
+    // 2026-06-18: 失败时 throw 让 modal 拿到真实错误消息
     try {
       const result = await inbound(input)
-      // 失效该 source 的缓存 + 时间戳，强制下一次 loadRecords 重拉
+      // 失效该 source 的缓存，强制下次 loadRecords 重拉
       const cacheKey = `${input.sourceModule}:${input.sourceId}`
       set((s) => {
         const nextRecords = { ...s.recordsBySource }
-        const nextLastFetch = { ...s.lastFetch }
         delete nextRecords[cacheKey]
-        delete nextLastFetch[cacheKey]
-        return { recordsBySource: nextRecords, lastFetch: nextLastFetch, error: null }
+        return { recordsBySource: nextRecords, error: null }
       })
       return result
     } catch (e) {
@@ -100,14 +92,12 @@ export const useInventoryInboundStore = create<InventoryInboundStore>((set, get)
   clear: (key) => {
     set((s) => {
       const nextRecords = { ...s.recordsBySource }
-      const nextLastFetch = { ...s.lastFetch }
       delete nextRecords[key]
-      delete nextLastFetch[key]
-      return { recordsBySource: nextRecords, lastFetch: nextLastFetch }
+      return { recordsBySource: nextRecords }
     })
   },
 
   clearAll: () => {
-    set({ recordsBySource: {}, lastFetch: {}, error: null })
+    set({ recordsBySource: {}, error: null })
   },
 }))

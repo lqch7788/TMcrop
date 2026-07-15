@@ -259,7 +259,8 @@ export async function getAvailableQuantity(
     return await enhancedApiClient.get<AvailableQuantityResult>(
       `/inventory/available/${encodeURIComponent(instanceId)}`
     );
-  } catch {
+  } catch (e) {
+    console.warn('[getAvailableQuantity] 请求失败，返回 null:', e);
     return null;
   }
 }
@@ -276,7 +277,8 @@ export async function getInventoryByInstanceId(
       `/inventory/${encodeURIComponent(instanceId)}`
     );
     return data ? toCamelStock(data) : null;
-  } catch {
+  } catch (e) {
+    console.warn('[inventoryService] 查询失败，返回 null:', e);
     return null;
   }
 }
@@ -293,7 +295,8 @@ export async function getInventoryByBusinessId(
       `/inventory/by-business/${encodeURIComponent(businessId)}`
     );
     return data ? toCamelStock(data) : null;
-  } catch {
+  } catch (e) {
+    console.warn('[inventoryService] 查询失败，返回 null:', e);
     return null;
   }
 }
@@ -346,7 +349,8 @@ export async function getFreezes(instanceId: string): Promise<unknown[]> {
       `/inventory/freezes/${encodeURIComponent(instanceId)}`
     );
     return data || [];
-  } catch {
+  } catch (e) {
+    console.warn('[getFreezes] 请求失败，返回空数组:', e);
     return [];
   }
 }
@@ -405,12 +409,14 @@ export interface ActiveOrder {
   remarks?: string;
 }
 
-/** 获取活跃订单列表（用于冻结弹窗下拉选择） */
+/** 获取活跃订单列表（用于冻结弹窗下拉选择）
+ * 2026-07-15：enhancedApiClient 已自动解包 data，直接返回 ActiveOrder[]
+ */
 export async function getActiveOrders(): Promise<ActiveOrder[]> {
   try {
-    const result = await enhancedApiClient.get<{ success: boolean; data: ActiveOrder[] }>('/crop-orders/active');
-    return (result as any)?.data || (result as any) || [];
-  } catch {
+    return await enhancedApiClient.get<ActiveOrder[]>('/crop-orders/active') || [];
+  } catch (e) {
+    console.warn('[inventoryService] getActiveOrders 失败:', e);
     return [];
   }
 }

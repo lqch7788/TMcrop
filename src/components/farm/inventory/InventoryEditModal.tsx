@@ -62,8 +62,7 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       return;
     }
     try {
-      // 2026-07-14：用 instanceId 作为路由参数（列表数据里没有 id 字段）
-      // 注意：apiClient baseURL 已含 /api 前缀，这里不要再加 /api
+      // 用 instanceId 作为路由参数（列表数据里没有 id 字段）
       // 注意：enhancedApiClient 已自动解包 response.data — success=true 时返回 data 内容，success=false 时 throw
       await enhancedApiClient.put<{ id: string }>(`/inventory/${stock.instanceId}`, {
         current_quantity: qty,
