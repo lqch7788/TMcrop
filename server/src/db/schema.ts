@@ -2736,6 +2736,10 @@ export function initializeDatabase() {
       spec_batch_number TEXT,
       -- 老字段保留（写新数据时不写，老数据回退兼容）；FK 也指向 fertilizer_specs
       fertilizer_id TEXT,
+      -- 2026-07-15：每日记录同步溯源（source_daily_record_id + source_item_id 做幂等）
+      source_daily_record_id TEXT,
+      source_item_id TEXT,
+      source_type TEXT DEFAULT 'manual',
       FOREIGN KEY (spec_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL,
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL
     )
@@ -3193,7 +3197,11 @@ export function initializeDatabase() {
       photos TEXT,
       status TEXT DEFAULT 'completed',
       create_time TEXT DEFAULT (datetime('now','localtime')),
-      update_time TEXT DEFAULT (datetime('now','localtime'))
+      update_time TEXT DEFAULT (datetime('now','localtime')),
+      -- 2026-07-15：每日记录同步溯源（与 fertilizer_records 一致）
+      source_daily_record_id TEXT,
+      source_item_id TEXT,
+      source_type TEXT DEFAULT 'manual'
     )
   `);
 
