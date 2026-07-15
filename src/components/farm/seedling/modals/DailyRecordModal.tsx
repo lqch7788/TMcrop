@@ -811,7 +811,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
               open={false}
             >
               <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
-                <span>▼ 母株/小苗数量统计</span>
+                <span>▼ 数量统计</span>
                 <span className="text-xs text-gray-500 font-normal">
                   {(formData.motherLossCount || 0) > 0 ? '母株损耗 ' + formData.motherLossCount : ''}
                   {(formData.replantCount || 0) > 0 ? ' 补苗 ' + formData.replantCount : ''}

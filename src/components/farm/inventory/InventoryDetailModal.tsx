@@ -748,7 +748,11 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
             {transactions.map((tx) => {
               // 2026-07-14：未知 transaction_type 不显示原始英文，改用"未知"兜底
               const meta = TX_TYPE_META[tx.transactionType] || { label: `未知(${tx.transactionType})`, color: 'text-gray-600 bg-gray-50 border-gray-200' };
-              const isOut = tx.transactionType === 'outbound' || tx.transactionType === 'unfreeze' || (tx.transactionType === 'adjust' && tx.quantity < 0);
+              // 2026-07-15：补 transfer_out（后端 label 是"调出"，库存被扣减）
+              const isOut = tx.transactionType === 'outbound'
+                || tx.transactionType === 'unfreeze'
+                || tx.transactionType === 'transfer_out'
+                || (tx.transactionType === 'adjust' && tx.quantity < 0);
               return (
                 <tr key={tx.id} className="hover:bg-gray-50">
                   <td className="px-3 py-2 whitespace-nowrap">
@@ -757,7 +761,8 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
                     </span>
                   </td>
                   <td className={`px-3 py-2 text-right font-mono font-semibold whitespace-nowrap ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {tx.quantity > 0 && !isOut ? '+' : ''}{tx.quantity}
+                    {/* 2026-07-15：后端已写正负号，前端不再加 +；保留格式化 (始终显示符号 + 颜色) */}
+                    {tx.quantity > 0 ? '+' : ''}{tx.quantity}
                   </td>
                   <td className="px-3 py-2 text-right text-gray-500 font-mono whitespace-nowrap">{tx.balanceBefore}</td>
                   <td className="px-3 py-2 text-right text-gray-700 font-mono whitespace-nowrap">{tx.balanceAfter}</td>
