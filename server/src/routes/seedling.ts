@@ -1648,14 +1648,30 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
         const pestItems: any[] = parsed?.pesticideRecords || [];
         if (fertItems.length > 0 || pestItems.length > 0) {
           const { syncFertilizerRecords, syncPesticideRecords } = require('../lib/syncDailyRecords');
-          // 同步调用（fire-and-forget，内部已 catch）
+          // 2026-07-15：从 JWT 取操作人；primaryMethod/primaryTargetPest 取首条 item
+          const jwtUser3 = (req as any).user;
+          const operatorId3 = (req as any).body?.operatorId || jwtUser3?.aid || jwtUser3?.userId || '';
+          // 2026-07-15：兼容多种字段名（operatorName / createBy / create_by）+ JWT
+          const operatorName3 = (req as any).body?.operatorName
+            || (req as any).body?.createBy
+            || (req as any).body?.create_by
+            || jwtUser3?.name
+            || '';
+          const primaryFertMethod3 = fertItems.find((it: any) => it.applicationMethod)?.applicationMethod || '';
+          const primaryPestMethod3 = pestItems.find((it: any) => it.applicationMethod)?.applicationMethod || '';
+          const primaryTargetPest3 = pestItems.find((it: any) => it.targetPest)?.targetPest || '';
           if (fertItems.length > 0) {
             syncFertilizerRecords(db, newId, fertItems, {
               relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
               recordDate: record_date || formatLocalDateISO(),
               cropName: crop_name || (seedling as any).crop_name || '',
               cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              greenhouseName: greenhouse_name || (seedling as any).greenhouse_name || '',
+              // 2026-07-15：area_name 优先（用户实际用的"区域"），greenhouse_name 回退
+              greenhouseName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              areaId: (seedling as any).area_id || '',
+              areaName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              operatorId: operatorId3, operatorName: operatorName3,
+              primaryMethod: primaryFertMethod3,
             });
           }
           if (pestItems.length > 0) {
@@ -1664,7 +1680,12 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               recordDate: record_date || formatLocalDateISO(),
               cropName: crop_name || (seedling as any).crop_name || '',
               cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              greenhouseName: greenhouse_name || (seedling as any).greenhouse_name || '',
+              greenhouseName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              areaId: (seedling as any).area_id || '',
+              areaName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              operatorId: operatorId3, operatorName: operatorName3,
+              primaryMethod: primaryPestMethod3,
+              primaryTargetPest: primaryTargetPest3,
             });
           }
         }
@@ -1833,6 +1854,19 @@ router.delete('/:id/daily-records/:recordId', (req: Request, res: Response) => {
       'DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?',
       [recordId, id, 'seedling']
     );
+
+    // 2026-07-15：恢复同步扣减的库存
+    try {
+      const { adjustFertilizerStock, adjustPesticideStock, getOldFertilizerSync, getOldPesticideSync } = require('../lib/syncDailyRecords');
+      const oldFert = getOldFertilizerSync(db, recordId);
+      const oldPest = getOldPesticideSync(db, recordId);
+      for (const o of oldFert) adjustFertilizerStock(db, o.code, o.qty);
+      for (const o of oldPest) adjustPesticideStock(db, o.code, o.qty);
+      db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
+      db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+    } catch (e) {
+      console.error('[seedling daily-records DELETE] 恢复库存失败（不影响主流程）:', (e as Error)?.message || e);
+    }
 
     // 反向累加（用 -1 把之前 +1 的变更抵消）
     if (oldData && Object.keys(oldData).length > 0) {

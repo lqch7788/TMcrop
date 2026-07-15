@@ -8,6 +8,7 @@
  * - 受控组件：value + onChange 由父组件管理（便于父组件序列化到 JSON）
  */
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
@@ -79,7 +80,9 @@ export function FeedRecordCard({
   const [expanded, setExpanded] = useState(defaultExpanded || !value.name)
   const [showNameDropdown, setShowNameDropdown] = useState(false)
   const [nameSearch, setNameSearch] = useState('')
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
   const nameDropdownRef = useRef<HTMLDivElement>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const categoryMap = CATEGORY_MAP[mode]
 
   // 加载肥料库 / 药剂库（挂载时加载）
@@ -133,6 +136,7 @@ export function FeedRecordCard({
   // 选择名称后自动填充（名称 + 单位 + 完整库信息）— 2026-07-15 参照施肥管理弹窗
   const handleSelectName = useCallback((item: any) => {
     const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
+    const code = mode === 'fertilizer' ? item.fertilizerCode : item.pesticideCode
     onChange({
       ...value,
       name,
@@ -141,8 +145,8 @@ export function FeedRecordCard({
       // 自动填充完整库信息（用于折叠头部显示 + 费用统计）
       brandName: item.brandName || undefined,
       unitPrice: item.unitPrice || undefined,
-      fertilizerCode: mode === 'fertilizer' ? (item.fertilizerCode || undefined) : undefined,
-      specContent: mode === 'fertilizer' ? (item.specContent || undefined) : undefined,
+      fertilizerCode: code || undefined,  // 施肥存 fertilizerCode，用药存 pesticideCode（统一字段名）
+      specContent: item.specContent || undefined,
       stockQuantity: item.stockQuantity || undefined,
       stockUnit: item.stockUnit || undefined,
     })
@@ -150,16 +154,27 @@ export function FeedRecordCard({
     setShowNameDropdown(false)
   }, [mode, value, onChange])
 
-  // 点击外部关闭
+  // 计算下拉框在 document.body 中的绝对位置（2026-07-15：用 Portal 脱离 overflow:hidden 父容器）
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (nameDropdownRef.current && !nameDropdownRef.current.contains(e.target as Node)) {
-        setShowNameDropdown(false)
-      }
+    if (showNameDropdown && nameInputRef.current) {
+      const rect = nameInputRef.current.getBoundingClientRect()
+      setDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+  }, [showNameDropdown, filteredNames.length])
+
+  // 点击外部关闭（2026-07-15：改用 click，避免 mousedown 早于 button click 触发）
+  useEffect(() => {
+    if (!showNameDropdown) return
+    const h = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // 不关闭：点击名称输入框 / 点击 Portal 内的任何元素（data-dropdown 属性标记）
+      if (nameInputRef.current?.contains(target)) return
+      if (target.closest('[data-feed-dropdown]')) return
+      setShowNameDropdown(false)
+    }
+    document.addEventListener('click', h, true)
+    return () => document.removeEventListener('click', h, true)
+  }, [showNameDropdown])
 
   // 折叠头部摘要（2026-07-15：选中肥料后显示完整信息，参照施肥管理弹窗）
   const summary = (() => {
@@ -184,24 +199,21 @@ export function FeedRecordCard({
           <ChevronRight className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
-          {mode === 'fertilizer' && value.fertilizerCode ? (
-            // 2026-07-15：施肥模式折叠态单行完整信息（名称·编码·类型·品牌·单价·库存）
-            <span className="text-xs text-gray-700 truncate block" title={[
+          {value.fertilizerCode ? (
+            <span className="truncate block px-2 py-1 rounded bg-blue-500 text-xs text-white" title={[
               value.name, value.fertilizerCode, categoryMap[value.category] || '',
               [value.brandName, value.specContent].filter(Boolean).join(' '),
               value.unitPrice > 0 ? `¥${Number(value.unitPrice).toFixed(2)}` : '',
               `库存${Number(value.stockQuantity || 0).toFixed(1)}${value.stockUnit || 'kg'}`
-            ].filter(Boolean).join(' · ')}>
-              <span className="font-medium text-sm text-gray-800">{value.name}</span>
-              <span className="text-gray-400 mx-1.5">{value.fertilizerCode}</span>
-              <span className="text-gray-500">{categoryMap[value.category] || ''}</span>
+            ].filter(Boolean).join(' | ')}>
+              <span className="font-medium text-white">{value.name}</span>
+              <span className="text-blue-100"> | {value.fertilizerCode}</span>
+              <span className="text-blue-100"> | {categoryMap[value.category] || ''}</span>
               {[value.brandName, value.specContent].filter(Boolean).length > 0 && (
-                <span className="text-gray-500 mx-1.5">{[value.brandName, value.specContent].filter(Boolean).join(' ')}</span>
+                <span className="text-blue-100"> | {[value.brandName, value.specContent].filter(Boolean).join(' ')}</span>
               )}
-              {value.unitPrice > 0 && <span className="text-amber-600 mx-1.5">¥{Number(value.unitPrice).toFixed(2)}</span>}
-              <span className={`mx-1.5 ${Number(value.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}`}>
-                库存{Number(value.stockQuantity || 0).toFixed(1)}{value.stockUnit || 'kg'}
-              </span>
+              {value.unitPrice > 0 && <span className="text-amber-200"> | ¥{Number(value.unitPrice).toFixed(2)}</span>}
+              {value.stockQuantity !== undefined && <span className="text-emerald-200"> | 库存{Number(value.stockQuantity || 0).toFixed(1)}{value.stockUnit || 'kg'}</span>}
             </span>
           ) : (
             <span className="text-sm text-gray-700 truncate block" title={summary}>
@@ -231,8 +243,8 @@ export function FeedRecordCard({
       {/* 展开态：完整表单（2026-06-28：4 字段一行布局，与数量统计面板一致） */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30 relative" style={{ overflow: 'visible' }}>
-          {/* 第 1 行：类型 + 名称 + 用量 + 单位（2026-07-15：类型移到名称前面，名称改为下拉选择） */}
-          <div className="grid grid-cols-4 gap-2" style={{ overflow: 'visible' }}>
+          {/* 第 1 行：类型 + 名称 + 用量/单位（2026-07-15：保持每行 3 列对齐，用量+单位合并为一列） */}
+          <div className="grid grid-cols-3 gap-2" style={{ overflow: 'visible' }}>
             <div>
               <Label className="text-xs text-gray-600 mb-1">
                 {mode === 'fertilizer' ? '肥料类型' : '药剂类型'}
@@ -253,13 +265,15 @@ export function FeedRecordCard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="relative" ref={nameDropdownRef} style={{ zIndex: 50 }}>
+            {/* 名称输入 + 下拉（Portal 渲染到 body，避免 overflow:hidden 裁剪） */}
+            <div className="relative" ref={nameDropdownRef}>
               <Label className="text-xs text-gray-600 mb-1">
                 {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
                 <Input
+                  ref={nameInputRef}
                   value={showNameDropdown ? nameSearch : value.name}
                   onChange={(e) => { setNameSearch(e.target.value); setShowNameDropdown(true) }}
                   onFocus={() => { setNameSearch(''); setShowNameDropdown(true) }}
@@ -267,84 +281,45 @@ export function FeedRecordCard({
                   className="h-8 pl-7 text-sm border-gray-300"
                 />
                 {value.name && !showNameDropdown && (
-                  <button onClick={() => { onChange({ ...value, name: '' }); setShowNameDropdown(true) }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    <X className="w-3 h-3" />
-                  </button>
+                  <X className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => { onChange({ ...value, name: '' }); setShowNameDropdown(true) }} />
                 )}
               </div>
-              {/* 名称下拉 — z-50 防止被下方字段遮挡 */}
-              {showNameDropdown && filteredNames.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                  {filteredNames.map((item: any) => {
-                    const id = item.id
-                    const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
-                    return (
-                      <button
-                        key={id}
-                        onClick={() => handleSelectName(item)}
-                        className="w-full text-left px-3 py-2 hover:bg-amber-50 border-b border-gray-50 last:border-b-0 text-xs"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-gray-800 truncate">{name}</span>
-                          {item.brandName && (
-                            <span className="text-gray-500 shrink-0">{item.brandName}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {item.unitPrice > 0 && (
-                            <span className="text-amber-600">¥{Number(item.unitPrice).toFixed(2)}</span>
-                          )}
-                          <span className={Number(item.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}>
-                            库存 {Number(item.stockQuantity || 0).toFixed(1)} {item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L')}
-                          </span>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {showNameDropdown && nameSearch && filteredNames.length === 0 && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl px-3 py-2 text-xs text-gray-500">
-                  无匹配项，可手动在详细中输入
-                </div>
-              )}
             </div>
             <div>
               <Label className="text-xs text-gray-600 mb-1">
-                用量 <span className="text-red-500">*</span>
+                用量 / 单位
               </Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={value.amount ?? ''}
-                onChange={(e) =>
-                  onChange({
-                    ...value,
-                    amount: e.target.value ? Number(e.target.value) : undefined,
-                  })
-                }
-                placeholder="如：10"
-                className="h-8 text-sm border-gray-300"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-600 mb-1">单位</Label>
-              <Select
-                value={value.unit || 'g'}
-                onValueChange={(v) => onChange({ ...value, unit: v })}
-              >
-                <SelectTrigger className="h-8 text-sm border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FEED_UNIT_MAP).map(([k, label]) => (
-                    <SelectItem key={k} value={k}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-1">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={value.amount ?? ''}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      amount: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  placeholder="10"
+                  className="h-8 text-sm border-gray-300 flex-1 min-w-0"
+                />
+                <Select
+                  value={value.unit || 'g'}
+                  onValueChange={(v) => onChange({ ...value, unit: v })}
+                >
+                  <SelectTrigger className="h-8 w-32 text-sm border-gray-300 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(FEED_UNIT_MAP).map(([k, label]) => (
+                      <SelectItem key={k} value={k}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -395,7 +370,7 @@ export function FeedRecordCard({
               />
             </div>
             <div>
-              <Label className="text-xs text-gray-600 mb-1">施肥方式</Label>
+              <Label className="text-xs text-gray-600 mb-1">{mode === 'fertilizer' ? '施肥方式' : '使用方法'}</Label>
               <Select
                 value={value.applicationMethod || (methodItems[0]?.dictCode || methodItems[0]?.dict_code || '')}
                 onValueChange={(v) => onChange({ ...value, applicationMethod: v })}
@@ -464,6 +439,55 @@ export function FeedRecordCard({
             </div>
           )}
         </div>
+      )}
+
+      {/* 2026-07-15：名称下拉通过 Portal 渲染到 document.body，避免父级 overflow:hidden 裁剪 */}
+      {showNameDropdown && dropdownRect && createPortal(
+        <div
+          data-feed-dropdown
+          style={{
+            position: 'fixed',
+            top: dropdownRect.top,
+            left: dropdownRect.left,
+            width: dropdownRect.width,
+            zIndex: 9999,
+          }}
+          className="bg-white border border-gray-200 rounded-lg shadow-2xl max-h-56 overflow-y-auto"
+        >
+          {filteredNames.length > 0 ? (
+            filteredNames.map((item: any) => {
+              const id = item.id
+              const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleSelectName(item)}
+                  className="w-full text-left px-3 py-2 hover:bg-amber-50 border-b border-gray-50 last:border-b-0 text-xs"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-gray-800 truncate">{name}</span>
+                    {item.brandName && (
+                      <span className="text-gray-500 shrink-0">{item.brandName}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {item.unitPrice > 0 && (
+                      <span className="text-amber-600">¥{Number(item.unitPrice).toFixed(2)}</span>
+                    )}
+                    <span className={Number(item.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}>
+                      库存 {Number(item.stockQuantity || 0).toFixed(1)} {item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L')}
+                    </span>
+                  </div>
+                </button>
+              )
+            })
+          ) : (
+            <div className="px-3 py-2 text-xs text-gray-500">
+              {nameSearch ? '无匹配项' : '请先选择类型'}
+            </div>
+          )}
+        </div>,
+        document.body
       )}
     </div>
   )

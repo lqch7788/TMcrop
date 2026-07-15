@@ -1594,7 +1594,10 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               recordDate: recordDate || formatLocalDateISO(),
               cropName: (planting as any).crop_name || '',
               cropVariety: (planting as any).crop_variety || '',
-              greenhouseName: (planting as any).greenhouse_name || '',
+              // 2026-07-15：area_name 优先（用户实际用的"区域"），greenhouse_name 回退
+              greenhouseName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              areaId: (planting as any).area_id || '',
+              areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
               operatorId: operatorId2, operatorName: operatorName2,
               primaryMethod: primaryFertMethod,
             });
@@ -1605,7 +1608,9 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               recordDate: recordDate || formatLocalDateISO(),
               cropName: (planting as any).crop_name || '',
               cropVariety: (planting as any).crop_variety || '',
-              greenhouseName: (planting as any).greenhouse_name || '',
+              greenhouseName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              areaId: (planting as any).area_id || '',
+              areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
               operatorId: operatorId2, operatorName: operatorName2,
               primaryMethod: primaryPestMethod,
               primaryTargetPest,

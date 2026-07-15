@@ -2740,6 +2740,11 @@ export function initializeDatabase() {
       source_daily_record_id TEXT,
       source_item_id TEXT,
       source_type TEXT DEFAULT 'manual',
+      -- 2026-07-15：库中真实 code（用于 DELETE 时恢复库存；fertilizer_code 存 syncId 不可关联）
+      real_fertilizer_code TEXT,
+      -- 2026-07-15：区域字段（关联种植的 area_name，修复同步后 area 为空 bug）
+      area_id TEXT,
+      area_name TEXT,
       FOREIGN KEY (spec_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL,
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL
     )
@@ -3201,7 +3206,12 @@ export function initializeDatabase() {
       -- 2026-07-15：每日记录同步溯源（与 fertilizer_records 一致）
       source_daily_record_id TEXT,
       source_item_id TEXT,
-      source_type TEXT DEFAULT 'manual'
+      source_type TEXT DEFAULT 'manual',
+      -- 2026-07-15：库中真实 code（用于 DELETE 时恢复库存；record_code 存 syncId 不可关联）
+      real_pesticide_code TEXT,
+      -- 2026-07-15：区域字段（关联种植/育苗的 area_name，修复同步后 area 为空 bug）
+      area_id TEXT,
+      area_name TEXT
     )
   `);
 
