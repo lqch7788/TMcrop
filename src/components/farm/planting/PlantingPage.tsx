@@ -180,9 +180,10 @@ export default function PlantingPage() {
   const closeDailyRecord = () => {
     setDailyRecordModal({ open: false, record: null });
   };
+  // 2026-07-15：仅刷新数据，不关闭弹窗（add/delete 后用户应继续在弹窗里操作）
   const handleDailyRecordSuccess = () => {
-    closeDailyRecord();
     // Store action 内部已 await loadItems()，列表会实时刷新
+    // 不调用 closeDailyRecord — 弹窗只在用户主动关闭（X/取消/保存）时才关闭
   };
   const closeRecordModal = () => {
     setRecordModal({ open: false, recordType: 'breeding', record: null });
