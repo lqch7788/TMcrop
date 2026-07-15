@@ -1640,6 +1640,39 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
       console.error('[seedling daily-record] 状态自动切换失败（非致命）:', e);
     }
 
+    // 2026-07-15：同步施肥/用药子记录到施肥/病虫害管理页（失败不影响主记录）
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const fertItems: any[] = parsed?.fertilizerRecords || [];
+        const pestItems: any[] = parsed?.pesticideRecords || [];
+        if (fertItems.length > 0 || pestItems.length > 0) {
+          const { syncFertilizerRecords, syncPesticideRecords } = require('../lib/syncDailyRecords');
+          // 同步调用（fire-and-forget，内部已 catch）
+          if (fertItems.length > 0) {
+            syncFertilizerRecords(db, newId, fertItems, {
+              relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
+              recordDate: record_date || formatLocalDateISO(),
+              cropName: crop_name || (seedling as any).crop_name || '',
+              cropVariety: crop_variety || (seedling as any).crop_variety || '',
+              greenhouseName: greenhouse_name || (seedling as any).greenhouse_name || '',
+            });
+          }
+          if (pestItems.length > 0) {
+            syncPesticideRecords(db, newId, pestItems, {
+              relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
+              recordDate: record_date || formatLocalDateISO(),
+              cropName: crop_name || (seedling as any).crop_name || '',
+              cropVariety: crop_variety || (seedling as any).crop_variety || '',
+              greenhouseName: greenhouse_name || (seedling as any).greenhouse_name || '',
+            });
+          }
+        }
+      } catch (syncErr) {
+        console.error('[seedling daily-records] 施肥/用药同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+      }
+    }
+
     saveDatabase();
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
   } catch (error) {

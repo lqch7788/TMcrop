@@ -2778,6 +2778,28 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.error('seed_form 回填失败：', e.message);
   }
 
+  // 2026-07-15：每日记录同步溯源列（fertilizer_records / pesticide_records 加 source 字段）
+  const syncSourceColumns = [
+    { table: 'fertilizer_records', col: 'source_daily_record_id', sql: 'ALTER TABLE fertilizer_records ADD COLUMN source_daily_record_id TEXT' },
+    { table: 'fertilizer_records', col: 'source_item_id', sql: 'ALTER TABLE fertilizer_records ADD COLUMN source_item_id TEXT' },
+    { table: 'fertilizer_records', col: 'source_type', sql: "ALTER TABLE fertilizer_records ADD COLUMN source_type TEXT DEFAULT 'manual'" },
+    { table: 'pesticide_records', col: 'source_daily_record_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN source_daily_record_id TEXT' },
+    { table: 'pesticide_records', col: 'source_item_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN source_item_id TEXT' },
+    { table: 'pesticide_records', col: 'source_type', sql: "ALTER TABLE pesticide_records ADD COLUMN source_type TEXT DEFAULT 'manual'" },
+  ];
+  for (const { table, col, sql } of syncSourceColumns) {
+    try {
+      db.run(sql);
+      seedLog.info(`✓ ${table} 添加 ${col} 列（每日记录同步溯源）`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) {
+        seedLog.skip(`• ${table}.${col} 列已存在`);
+      } else {
+        seedLog.error(`• ${table}.${col} 失败:`, e.message);
+      }
+    }
+  }
+
   saveDatabase();
 }
 
@@ -2888,6 +2910,123 @@ export function deduplicateDictionaries(): void {
  *       表现：前端生产计划下拉只显示 1 条（React key 重复丢渲染）或全部不显示。
  * 修复：按 id 顺序为 B201/B202/B203 补 plan_code = YMB2026-001/002/003。
  */
+// 2026-07-15：存量每日记录施肥/用药子记录同步到施肥/病虫害管理页（一次性迁移）
+// 幂等设计：检查 source_daily_record_id 存在则跳过
+export function backfillDailyFertilPesticide(): void {
+  const db = getDatabase();
+
+  // 安全检查：列存在才执行
+  try {
+    db.exec('SELECT source_daily_record_id FROM fertilizer_records LIMIT 0');
+    db.exec('SELECT source_daily_record_id FROM pesticide_records LIMIT 0');
+  } catch (e: any) {
+    seedLog.skip('• 每日记录同步溯源列不存在，跳过存量补录');
+    return;
+  }
+
+  let fertCount = 0;
+  let pestCount = 0;
+
+  try {
+    const rows = db.exec(
+      `SELECT id, record_type, related_id, record_date, data
+       FROM daily_records
+       WHERE record_type IN ('planting', 'seedling')
+         AND data IS NOT NULL AND data != ''`
+    );
+    if (!rows || rows.length === 0 || !rows[0].values || rows[0].values.length === 0) {
+      seedLog.info('• 每日记录为空，跳过存量补录');
+      return;
+    }
+
+    const cols = rows[0].columns;
+    const dataIdx = cols.indexOf('data');
+    const idIdx = cols.indexOf('id');
+    const typeIdx = cols.indexOf('record_type');
+    const relatedIdx = cols.indexOf('related_id');
+    const dateIdx = cols.indexOf('record_date');
+
+    for (const row of rows[0].values) {
+      const dailyRecordId = row[idIdx] as string;
+      const recordType = row[typeIdx] as string;
+      const relatedId = row[relatedIdx] as string;
+      const recordDate = row[dateIdx] as string;
+      const dataJson = row[dataIdx] as string;
+
+      if (!dataJson) continue;
+      let parsed: any;
+      try { parsed = JSON.parse(dataJson); } catch { continue; }
+
+      // 施肥
+      const fertItems: any[] = parsed?.fertilizerRecords || [];
+      if (fertItems.length > 0) {
+        for (const item of fertItems) {
+          if (!item.name || !item.amount) continue;
+          // 幂等检查
+          const existing = db.exec(
+            `SELECT id FROM fertilizer_records WHERE source_daily_record_id = ? AND source_item_id = ?`,
+            [dailyRecordId, item.id]
+          );
+          if (existing?.[0]?.values?.length) continue;
+
+          const itemId = `FR-${dailyRecordId.slice(-6)}-${item.id}`;
+          const dil = item.dilutionType === 'dilute' && item.dilution ? `1:${item.dilution}` : 'dry';
+          // 2026-07-15：存量补录也带上 relatedCode 便于溯源
+          const relatedCode = (() => {
+            try {
+              const stmt = db.prepare(`SELECT ${recordType === 'planting' ? 'planting_code' : 'seedling_code'} FROM ${recordType === 'planting' ? 'plantings' : 'seedlings'} WHERE id = ?`);
+              stmt.bind([relatedId]);
+              if (stmt.step()) return stmt.getAsObject()[0] as string || '';
+            } catch { /* ignore */ }
+            return '';
+          })();
+          db.run(
+            `INSERT IGNORE INTO fertilizer_records (id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit, fertilize_time, description, data_source, source_type, source_daily_record_id, source_item_id, create_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?)`,
+            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode : null, '', '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'kg', recordDate, item.notes || item.applicationMethod || '', dailyRecordId, item.id, new Date().toISOString()]
+          );
+          fertCount++;
+        }
+      }
+
+      // 用药
+      const pestItems: any[] = parsed?.pesticideRecords || [];
+      if (pestItems.length > 0) {
+        for (const item of pestItems) {
+          if (!item.name || !item.amount) continue;
+          const existing = db.exec(
+            `SELECT id FROM pesticide_records WHERE source_daily_record_id = ? AND source_item_id = ?`,
+            [dailyRecordId, item.id]
+          );
+          if (existing?.[0]?.values?.length) continue;
+
+          const itemId = `PR-${dailyRecordId.slice(-6)}-${item.id}`;
+          const dil = item.dilutionType === 'dilute' && item.dilution ? `1:${item.dilution}` : 'dry';
+          const relatedCode2 = (() => {
+            try {
+              const stmt = db.prepare(`SELECT ${recordType === 'planting' ? 'planting_code' : 'seedling_code'} FROM ${recordType === 'planting' ? 'plantings' : 'seedlings'} WHERE id = ?`);
+              stmt.bind([relatedId]);
+              if (stmt.step()) return stmt.getAsObject()[0] as string || '';
+            } catch { /* ignore */ }
+            return '';
+          })();
+          db.run(
+            `INSERT IGNORE INTO pesticide_records (id, record_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, pesticide_name, pesticide_type, dilution_ratio, dosage, dosage_unit, target_pest, safety_interval, description, source_type, source_daily_record_id, source_item_id, spray_time, create_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?)`,
+            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode2 : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode2 : null, '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'L', item.targetPest || '', item.safetyInterval || null, item.notes || item.applicationMethod || '', dailyRecordId, item.id, recordDate, new Date().toISOString()]
+          );
+          pestCount++;
+        }
+      }
+    }
+
+    saveDatabase();
+    seedLog.info(`✓ 存量补录完成: ${fertCount} 条施肥 + ${pestCount} 条用药`);
+  } catch (e: any) {
+    seedLog.error('• 存量补录失败（不影响其他迁移）:', e.message);
+  }
+}
+
 function fixProductionPlanSeedlingPlanCode(): void {
   const db = getDatabase();
   const codeMap: Record<string, string> = {
@@ -3628,6 +3767,9 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('harvest_inbounds 清理失败:', e.message);
   }
+
+  // ========== 2026-07-15：存量每日记录施肥/用药子记录同步到施肥/病虫害管理页 ==========
+  backfillDailyFertilPesticide();
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
