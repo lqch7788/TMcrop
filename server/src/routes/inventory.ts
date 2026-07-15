@@ -747,8 +747,9 @@ router.post('/freeze', async (req: Request, res: Response) => {
       recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
 
       // 4c. INSERT inventory_transaction (freeze流水)
+      // 2026-07-15：改用 generateTransactionId（4位自增），替代 Date.now() % 10000（违反代码生成契约铁律）
       const txDateStr = formatLocalDateYYYYMMDD(new Date());
-      const txId = `TRX-${txDateStr}-${String(Date.now() % 10000).padStart(4, '0')}`;
+      const txId = await generateTransactionId(txDateStr);
       db.run(`
         INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -885,7 +886,7 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
       recomputeAndUpdateStockStatus(getDatabase(), String(freeze.instance_id));
 
       // 3c. INSERT inventory_transaction (unfreeze流水)
-      const txId = `TRX-${formatLocalDateYYYYMMDD(new Date())}-${String(Date.now() % 10000).padStart(4, '0')}`;
+      const txId = await generateTransactionId(formatLocalDateYYYYMMDD(new Date()));
       db.run(`
         INSERT INTO inventory_transaction (
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,

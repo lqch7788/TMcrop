@@ -176,6 +176,16 @@ export function createIndexes() {
     ON inventory(harvest_record_id, status)
   `);
 
+  // 2026-07-15：V3 库存主表（inventory_stock）关键索引 — 修复 Seq Scan
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_stock_status ON inventory_stock(status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_stock_source_type ON inventory_stock(source_type)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_stock_create_time ON inventory_stock(create_time DESC)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_stock_crop_name ON inventory_stock(crop_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_stock_source_instance ON inventory_stock(source_instance_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_inbound_create_time ON inventory_inbound_records(create_time DESC)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_freeze_instance ON inventory_freeze(instance_id, status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_freeze_order ON inventory_freeze(order_id)`);
+
   // ========== 9. 审批表索引 ==========
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_approvals_applicant

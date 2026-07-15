@@ -252,11 +252,13 @@ export class InventoryService {
     } catch (error) {
       console.error('[InventoryService] inbound 失败:', error);
       // 回滚：清除步骤 4 创建的库存记录（如果步骤 5 失败但步骤 4 已写入）
+      // 2026-07-15：必须调用 saveDatabase() 持久化 DELETE（修复 silent-rollback bug）
       if (createdInstanceId) {
         try {
           const db = getDatabase();
           db.run('DELETE FROM inventory_stock WHERE instance_id = ?', [createdInstanceId]);
           db.run('DELETE FROM inventory_transaction WHERE instance_id = ?', [createdInstanceId]);
+          saveDatabase();
           console.log('[InventoryService] 已回滚库存记录:', createdInstanceId);
         } catch (rollbackErr) {
           console.error('[InventoryService] 回滚失败:', rollbackErr);

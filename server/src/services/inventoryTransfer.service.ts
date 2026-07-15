@@ -399,7 +399,23 @@ export async function executeTransferToSource(
         );
       }
 
-      const newSeedSourceId = `SS${Date.now()}${String(writtenSeedSourceIds.length).padStart(2, '0')}`;
+      // 2026-07-15：seed_sources.id — 自定义 4 位自增查 max serial
+      // 不能用 generateStockId（那函数查的是 inventory_stock 表，与 seed_sources 不同源）
+      const seedMaxStmt = db.prepare(`
+        SELECT id FROM seed_sources
+        WHERE id LIKE ?
+        ORDER BY LENGTH(id) DESC, id DESC LIMIT 1
+      `);
+      const ssPrefix = `SS${dateStr}-`;
+      seedMaxStmt.bind([ssPrefix + '%']);
+      let seedSerial = 1;
+      if (seedMaxStmt.step()) {
+        const lastId = String(seedMaxStmt.getAsObject().id);
+        seedSerial = parseInt(lastId.slice(ssPrefix.length), 10) + 1;
+        if (isNaN(seedSerial)) seedSerial = 1;
+      }
+      seedMaxStmt.free();
+      const newSeedSourceId = `${ssPrefix}${String(seedSerial).padStart(4, '0')}`;
       // 2026-06-30 Bug 13：调拨入种源时自动从源库存 product_form 复制形态
       // （不暴露给前端 UI 简化 — 调拨形态 ≈ 源库存形态 = 入库时定的形态，传递是有意义的）
       const transferSeedForm = sourceStock.product_form || null;
@@ -449,7 +465,24 @@ export async function executeTransferToSource(
       writtenSeedSourceIds.push(newSeedSourceId);
 
       // === 步骤 5a：写 crop_instances ===
-      const newCropInstanceId = `CI${Date.now()}${String(writtenCropInstanceIds.length).padStart(2, '0')}`;
+      // 2026-07-15：crop_instances.id — 自定义 4 位自增查 max serial
+      // 不能用 generateInstanceId（那函数查的是 inventory_stock.instance_id，与 crop_instances.id 不同源）
+      // 注意：上方步骤已使用同一个 db，此处不重复声明
+      const ciMaxStmt = db.prepare(`
+        SELECT id FROM crop_instances
+        WHERE id LIKE ?
+        ORDER BY LENGTH(id) DESC, id DESC LIMIT 1
+      `);
+      const ciPrefix = `CI${dateStr}-`;
+      ciMaxStmt.bind([ciPrefix + '%']);
+      let ciSerial = 1;
+      if (ciMaxStmt.step()) {
+        const lastId = String(ciMaxStmt.getAsObject().id);
+        ciSerial = parseInt(lastId.slice(ciPrefix.length), 10) + 1;
+        if (isNaN(ciSerial)) ciSerial = 1;
+      }
+      ciMaxStmt.free();
+      const newCropInstanceId = `${ciPrefix}${String(ciSerial).padStart(4, '0')}`;
       db.run(
         `INSERT INTO crop_instances (
           id, instance_code, business_id, business_type, crop_name,

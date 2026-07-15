@@ -22,8 +22,11 @@ import {
   type TransferInput,
   type TransferStockType,
 } from '../services/inventoryTransfer.service';
+// 2026-07-15：显式挂载认证中间件（不再隐式依赖父路由的 router.use(authenticate)）
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 // ============ Zod Schemas ============
 

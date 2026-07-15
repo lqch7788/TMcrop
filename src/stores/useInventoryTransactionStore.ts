@@ -55,16 +55,16 @@ export interface OutboundRow {
   updatedAt?: string;
 }
 
+/** 库存出库统计汇总 — 2026-07-15 移除 [key: string]: any 索引签名 */
 export interface OutboundSummary {
   totalQuantity: number;
   totalAmount: number;
   count: number;
-  // 兼容字段（OutboundRecordsComponents 使用 — 2026-06-30 tsc 兼容）
+  /** 兼容字段（OutboundRecordsComponents 使用 — 2026-06-30 tsc 兼容） */
   totalCount?: number;
   todayCount?: number;
-  byStockType?: any[];
-  byHour?: any[];
-  [key: string]: any;
+  byStockType?: Record<string, { count: number; quantity: number }>;
+  byHour?: Record<string, { count: number; quantity: number }>;
 }
 
 export interface OutboundQuery {
@@ -162,8 +162,11 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
       await enhancedApiClient.delete(`/inventory-transactions/${id}`);
       set((s) => ({ rows: s.rows.filter(r => r.id !== id), total: Math.max(0, s.total - 1) }));
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      // 2026-07-15：改成 throw true message（与 addTransaction 风格一致），不再吞错返回 false
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('[useInventoryTransactionStore.deleteTransaction] 删除失败', err);
+      throw new Error(message);
     }
   },
 

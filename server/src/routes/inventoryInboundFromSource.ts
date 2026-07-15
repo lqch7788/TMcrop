@@ -17,8 +17,11 @@ import {
   type StockType,
   type SourceModule,
 } from '../services/inventoryInboundFromSource.service';
+// 2026-07-15：显式挂载认证中间件（不再隐式依赖父路由的 router.use(authenticate)）
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 /**
  * Zod 校验 schema

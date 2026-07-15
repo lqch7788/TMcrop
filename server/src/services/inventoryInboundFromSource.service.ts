@@ -655,14 +655,14 @@ export async function executeInboundFromSource(
                     update_time = ?
                 WHERE id = ? AND deleted_at IS NULL
               `, [totalQty, totalQty, now, input.sourceRecordId]);
-            } catch (_) {}
+            } catch (e) { console.warn('[rollback] restore seed_source quantity failed:', e); }
           }
           // 回滚 material_costs（如已写入）
           if (createdMaterialCostId) {
-            try { db.run('DELETE FROM material_costs WHERE id = ?', [createdMaterialCostId]); } catch (_) {}
+            try { db.run('DELETE FROM material_costs WHERE id = ?', [createdMaterialCostId]); } catch (e) { console.warn('[rollback] delete material_cost failed:', e); }
           }
           // 回滚 harvest_records.purchase_plan_id 回填（无论 PR 是否已创建都尝试清空）
-          try { db.run('UPDATE harvest_records SET purchase_plan_id = NULL WHERE id = ?', [harvestRecordId]); } catch (_) {}
+          try { db.run('UPDATE harvest_records SET purchase_plan_id = NULL WHERE id = ?', [harvestRecordId]); } catch (e) { console.warn('[rollback] clear harvest.purchase_plan_id failed:', e); }
           // 回滚 purchase_plans
           if (input.purchasePlanId && oldPRState) {
             // 5a 场景：恢复旧 PR 状态（防止 PR 永久残留 completed 状态指向已删除的记录）
@@ -672,10 +672,10 @@ export async function executeInboundFromSource(
                 SET execution_status = ?, status = ?, related_batch_code = ?, total_amount = ?, update_time = ?
                 WHERE id = ?
               `, [oldPRState.execution_status, oldPRState.status, oldPRState.related_batch_code, oldPRState.total_amount, now, input.purchasePlanId]);
-            } catch (_) {}
+            } catch (e) { console.warn('[rollback] restore purchase_plan failed:', e); }
           } else if (createdPurchasePlanId && !input.purchasePlanId) {
             // 5b 场景：删除自动创建的 PR
-            try { db.run('DELETE FROM purchase_plans WHERE id = ?', [createdPurchasePlanId]); } catch (_) {}
+            try { db.run('DELETE FROM purchase_plans WHERE id = ?', [createdPurchasePlanId]); } catch (e) { console.warn('[rollback] delete purchase_plan failed:', e); }
           }
           saveDatabase();
         } catch (rollbackErr) {
@@ -711,17 +711,17 @@ export async function executeInboundFromSource(
                 update_time = ?
             WHERE id = ? AND deleted_at IS NULL
           `, [totalQty, totalQty, now, input.sourceRecordId]);
-        } catch (_) {}
+        } catch (e) { console.warn('[rollback] restore seed_source quantity failed:', e); }
       }
       // 步骤 4 → 3 → 2 → 1 反序
       for (const txId of writtenTransactionIds) {
-        try { db.run('DELETE FROM inventory_transaction WHERE id = ?', [txId]); } catch (_) {}
+        try { db.run('DELETE FROM inventory_transaction WHERE id = ?', [txId]); } catch (e) { console.warn('[rollback] delete inventory_transaction failed:', e); }
       }
       for (const recordId of writtenRecordIds) {
-        try { db.run('DELETE FROM inventory_inbound_records WHERE id = ?', [recordId]); } catch (_) {}
+        try { db.run('DELETE FROM inventory_inbound_records WHERE id = ?', [recordId]); } catch (e) { console.warn('[rollback] delete inventory_inbound_records failed:', e); }
       }
       for (const stockId of writtenStockIds) {
-        try { db.run('DELETE FROM inventory_stock WHERE id = ?', [stockId]); } catch (_) {}
+        try { db.run('DELETE FROM inventory_stock WHERE id = ?', [stockId]); } catch (e) { console.warn('[rollback] delete inventory_stock failed:', e); }
       }
       saveDatabase();
     } catch (rollbackErr) {
