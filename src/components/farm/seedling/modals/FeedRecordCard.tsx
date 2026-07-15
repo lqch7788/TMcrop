@@ -7,11 +7,11 @@
  * - 行卡内联编辑，不嵌套弹窗（操作深度最浅）
  * - 受控组件：value + onChange 由父组件管理（便于父组件序列化到 JSON）
  */
-import React, { useState } from 'react'
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
-import { ChevronDown, ChevronRight, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, X, Search } from 'lucide-react'
 import {
   FERTILIZER_CATEGORY_MAP,
   PESTICIDE_CATEGORY_MAP,
@@ -19,6 +19,7 @@ import {
   DILUTION_TYPE_MAP,
   FEED_UNIT_MAP,
 } from '@/constants/cropConstants'
+import { useFertilizerLibraryStore, usePesticideLibraryStore } from '@/stores'
 
 // 通用行卡 item（兼容施肥和用药的并集类型）
 export interface FeedRecordItem {
@@ -62,7 +63,63 @@ export function FeedRecordCard({
   defaultExpanded = false,
 }: FeedRecordCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded || !value.name)
+  const [showNameDropdown, setShowNameDropdown] = useState(false)
+  const [nameSearch, setNameSearch] = useState('')
+  const nameDropdownRef = useRef<HTMLDivElement>(null)
   const categoryMap = CATEGORY_MAP[mode]
+
+  // 加载肥料库 / 药剂库（挂载时加载）
+  const fertLibStore = useFertilizerLibraryStore()
+  const pestLibStore = usePesticideLibraryStore()
+  useEffect(() => {
+    fertLibStore.fetchItems?.()
+    pestLibStore.fetchItems?.()
+  }, [])
+
+  // 当前模式对应的库
+  const libraryItems = mode === 'fertilizer' ? (fertLibStore.items || []) : (pestLibStore.items || [])
+
+  // 按类型过滤后的名称列表
+  const filteredNames = useMemo(() => {
+    let items = libraryItems.filter((s: any) => s.status === 'active' || !s.status)
+    if (value.category) {
+      items = items.filter((s: any) => s.fertilizerType === value.category || s.pesticideType === value.category)
+    }
+    const kw = nameSearch.trim().toLowerCase()
+    if (kw) {
+      items = items.filter((s: any) =>
+        (s.fertilizerName || '').toLowerCase().includes(kw) ||
+        (s.pesticideName || '').toLowerCase().includes(kw) ||
+        ((s.brandName || '') || '').toLowerCase().includes(kw)
+      )
+    }
+    return items
+  }, [libraryItems, value.category, nameSearch, mode])
+
+  // 选择名称后自动填充
+  const handleSelectName = useCallback((item: any) => {
+    const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
+    onChange({
+      ...value,
+      name,
+      // 自动填充单位
+      unit: value.unit || item.dosageUnit || item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L'),
+    })
+    setNameSearch('')
+    setShowNameDropdown(false)
+  }, [mode, value, onChange])
+
+  // 点击外部关闭
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (nameDropdownRef.current && !nameDropdownRef.current.contains(e.target as Node)) {
+        setShowNameDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
   const summary = `${value.name || '（未命名）'} · ${categoryMap[value.category] || value.category || '未分类'}`
 
   return (
@@ -102,7 +159,7 @@ export function FeedRecordCard({
       {/* 展开态：完整表单（2026-06-28：4 字段一行布局，与数量统计面板一致） */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30">
-          {/* 第 1 行：类型 + 名称 + 用量 + 单位（2026-07-15：类型移到名称前面，裂隙字段改名） */}
+          {/* 第 1 行：类型 + 名称 + 用量 + 单位（2026-07-15：类型移到名称前面，名称改为下拉选择） */}
           <div className="grid grid-cols-4 gap-2">
             <div>
               <Label className="text-xs text-gray-600 mb-1">
@@ -110,7 +167,7 @@ export function FeedRecordCard({
               </Label>
               <Select
                 value={value.category || Object.keys(categoryMap)[0]}
-                onValueChange={(v) => onChange({ ...value, category: v })}
+                onValueChange={(v) => onChange({ ...value, category: v, name: '', unit: mode === 'fertilizer' ? 'kg' : 'L' })}
               >
                 <SelectTrigger className="h-8 text-sm border-gray-300">
                   <SelectValue />
@@ -124,16 +181,53 @@ export function FeedRecordCard({
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="relative" ref={nameDropdownRef}>
               <Label className="text-xs text-gray-600 mb-1">
                 {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
               </Label>
-              <Input
-                value={value.name}
-                onChange={(e) => onChange({ ...value, name: e.target.value })}
-                placeholder={mode === 'fertilizer' ? '如：绿叶青叶面肥' : '如：多菌灵'}
-                className="h-8 text-sm border-gray-300"
-              />
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                <Input
+                  value={showNameDropdown ? nameSearch : value.name}
+                  onChange={(e) => { setNameSearch(e.target.value); setShowNameDropdown(true) }}
+                  onFocus={() => { setNameSearch(''); setShowNameDropdown(true) }}
+                  placeholder={mode === 'fertilizer' ? '搜索肥料名称' : '搜索药剂名称'}
+                  className="h-8 pl-7 text-sm border-gray-300"
+                />
+                {value.name && !showNameDropdown && (
+                  <button onClick={() => { onChange({ ...value, name: '' }); setShowNameDropdown(true) }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              {showNameDropdown && filteredNames.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredNames.map((item: any) => {
+                    const id = item.id
+                    const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => handleSelectName(item)}
+                        className="w-full text-left px-3 py-1.5 hover:bg-amber-50 border-b border-gray-50 last:border-b-0 text-xs"
+                      >
+                        <span className="font-medium text-gray-800">{name}</span>
+                        {item.brandName && (
+                          <>
+                            <span className="text-gray-400 mx-1">·</span>
+                            <span className="text-gray-500">{item.brandName}</span>
+                          </>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {showNameDropdown && nameSearch && filteredNames.length === 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500">
+                  无匹配项，可手动在详细中输入
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs text-gray-600 mb-1">
