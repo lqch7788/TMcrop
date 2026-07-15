@@ -515,7 +515,10 @@ export async function executeTransferToSource(
           create_time, update_time
         ) VALUES (?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'transferred', 1, ?, ?)`,
         [
-          newStockId, newInstanceId, sourceStock.stock_type, newSeedSourceId, newCode,
+          // 2026-07-15：调拨入种源后，新库存 stock_type 强制为 'seed'（不是原 stock_type 如 'product'）
+          // 业务语义：种源页面只关心 seed 类型，调拨来源是 seed/seedling/product 都标准化为 seed
+          // sourceStock.stock_type 通过 seed_sources.original_stock_type 字段保留（业务追溯用）
+          newStockId, newInstanceId, 'seed', newSeedSourceId, newCode,
           'inventory_transfer', newCropInstanceId,
           sourceStock.crop_code || '', sourceStock.crop_name, sourceStock.variety_id, sourceStock.variety_name,
           item.transferQuantity, item.transferQuantity, 0, sourceUnit,
@@ -544,7 +547,9 @@ export async function executeTransferToSource(
         [
           inbRecordId, now.slice(0, 10),
           newStockId, newCode,
-          sourceStock.stock_type, sourceStock.source_type || 'inventory_transfer',
+          // 2026-07-15：与 inventory_stock 同步 — 调拨入种源后 stock_type 强制 'seed'，
+          // 保留原 stock_type 在 notes 里（业务追溯）
+          'seed', sourceStock.source_type || 'inventory_transfer',
           sourceStock.warehouse_id || null, sourceStock.warehouse_name || null,
           sourceStock.crop_id || null, sourceStock.crop_code || null, sourceStock.crop_name, sourceStock.variety_name || null,
           item.transferQuantity, sourceUnit,

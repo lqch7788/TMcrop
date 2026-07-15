@@ -35,13 +35,13 @@ import {
 import {
   QUALITY_GRADE_MAP,
 } from '../../../constants/cropConstants';
+// 2026-07-15：从常量复用 STOCK_TYPE_LABEL（之前硬编码在组件内）
+import { STOCK_TYPE_LABEL } from '../../../constants/outboundConstants';
+
+// 2026-07-15：表格最大高度 = 视口 - 280px（Header 64 + 筛选条 100 + 分页器 56 + padding 60 = 280）
+const TABLE_MAX_HEIGHT = 'calc(100vh-280px)';
 
 // ============ 1. 6 维筛选 ============
-const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: string }> = {
-  seed:     { label: '种源', color: 'bg-amber-500',   icon: '🌱' },
-  seedling: { label: '种苗', color: 'bg-green-500',   icon: '🌿' },
-  product:  { label: '成品', color: 'bg-emerald-500', icon: '📦' },
-};
 
 
 interface OutboundRecordsFilterProps {
@@ -214,7 +214,7 @@ export function OutboundRecordsTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-auto max-h-[calc(100vh-280px)]">
+      <div className="overflow-auto" style={{ maxHeight: TABLE_MAX_HEIGHT }}>
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>

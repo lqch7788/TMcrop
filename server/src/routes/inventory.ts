@@ -989,7 +989,8 @@ router.get('/transactions/export', async (req: Request, res: Response) => {
     };
     const list = await inventoryTransactionService.listOutbound(query);
     const csv = toCSV(list.rows);
-    const filename = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
+    // 2026-07-15：改用本地日期（避免 UTC 在中国时区 0-8 点显示昨天）
+const filename = `outbound-${formatLocalDateYYYYMMDD(new Date())}.csv`;
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.send(csv);

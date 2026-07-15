@@ -103,6 +103,10 @@ export type { SourceModule } from './useHarvestRecordStore';
 export { useInventoryStore } from './useInventoryStore';
 export type { InventoryFilters } from './useInventoryStore';
 
+// 2026-07-15：补导出 useInventoryTransactionStore（之前未导出，调用方需深路径 import）
+export { useInventoryTransactionStore } from './useInventoryTransactionStore';
+export type { OutboundRow, OutboundSummary, OutboundQuery, OutboundListResult } from './useInventoryTransactionStore';
+
 export { useWarehouseMaterialStore } from './useWarehouseMaterialStore';
 export { useInboundStore } from './useInboundStore';
 export { useSupplierStore } from './useSupplierStore';

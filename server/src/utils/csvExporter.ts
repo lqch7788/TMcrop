@@ -44,6 +44,15 @@ export function toCSV(rows: OutboundRow[]): string {
 }
 
 function csvEscape(s: string): string {
+  // 2026-07-15：CSV 注入防护（OWASP 规范）
+  // Excel/Sheets/Numbers 等电子表格软件会将首字符为 = + - @ \t \r 的字段解释为公式
+  // → 攻击者可借此执行任意命令、读取本地文件、发起网络请求
+  // → 防御：命中上述首字符时前置单引号 ' 强制转义为纯文本
+  const formulaChars = ['=', '+', '-', '@', '\t', '\r'];
+  if (formulaChars.includes(s.charAt(0))) {
+    s = "'" + s;
+  }
+  // 标准 CSV 转义：包含逗号/引号/换行的字段用双引号包裹，内部双引号双写
   if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`;
   }
