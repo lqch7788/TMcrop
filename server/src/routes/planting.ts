@@ -1524,7 +1524,9 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
     // 生成 ID（与育苗保持一致格式：DR + 时间戳）
     const newId = `DR${Date.now()}`;
     const newOid = `DR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-    const now = formatLocalDateISO();
+    // 2026-07-15：用完整时间戳（含时分秒毫秒），保证同日多次添加的记录 create_time 唯一
+    // → 列表 ORDER BY record_date DESC, create_time DESC 时新记录正确排在最前
+    const now = new Date().toISOString();
 
     // 写入 daily_records 通用表
     db.run(
@@ -1573,6 +1575,18 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
         const pestItems: any[] = parsed?.pesticideRecords || [];
         if (fertItems.length > 0 || pestItems.length > 0) {
           const { syncFertilizerRecords, syncPesticideRecords } = require('../lib/syncDailyRecords');
+          // 2026-07-15：从 JWT 取操作人；primaryMethod/primaryTargetPest 取首条 item
+          const jwtUser2 = (req as any).user;
+          const operatorId2 = (req as any).body?.operatorId || jwtUser2?.aid || jwtUser2?.userId || '';
+          // 2026-07-15：兼容多种字段名（operatorName / createBy / create_by）+ JWT
+          const operatorName2 = (req as any).body?.operatorName
+            || (req as any).body?.createBy
+            || (req as any).body?.create_by
+            || jwtUser2?.name
+            || '';
+          const primaryFertMethod = fertItems.find((it: any) => it.applicationMethod)?.applicationMethod || '';
+          const primaryPestMethod = pestItems.find((it: any) => it.applicationMethod)?.applicationMethod || '';
+          const primaryTargetPest = pestItems.find((it: any) => it.targetPest)?.targetPest || '';
           // 同步调用（fire-and-forget，内部已 catch）
           if (fertItems.length > 0) {
             syncFertilizerRecords(db, newId, fertItems, {
@@ -1581,6 +1595,8 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               cropName: (planting as any).crop_name || '',
               cropVariety: (planting as any).crop_variety || '',
               greenhouseName: (planting as any).greenhouse_name || '',
+              operatorId: operatorId2, operatorName: operatorName2,
+              primaryMethod: primaryFertMethod,
             });
           }
           if (pestItems.length > 0) {
@@ -1590,6 +1606,9 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               cropName: (planting as any).crop_name || '',
               cropVariety: (planting as any).crop_variety || '',
               greenhouseName: (planting as any).greenhouse_name || '',
+              operatorId: operatorId2, operatorName: operatorName2,
+              primaryMethod: primaryPestMethod,
+              primaryTargetPest,
             });
           }
         }
@@ -1740,6 +1759,21 @@ router.delete('/:id/daily-records/:recordId', (req, res) => {
       id,
       'planting',
     ]);
+
+    // 2026-07-15：恢复同步扣减的库存（先查旧值 → 恢复 → 再删同步行）
+    try {
+      const { adjustFertilizerStock, adjustPesticideStock, getOldFertilizerSync, getOldPesticideSync } = require('../lib/syncDailyRecords');
+      const oldFert = getOldFertilizerSync(db, recordId);
+      const oldPest = getOldPesticideSync(db, recordId);
+      // 恢复库存（delta > 0）
+      for (const o of oldFert) adjustFertilizerStock(db, o.code, o.qty);
+      for (const o of oldPest) adjustPesticideStock(db, o.code, o.qty);
+      // 删除同步行
+      db.run('DELETE FROM fertilizer_records WHERE source_daily_record_id = ?', [recordId]);
+      db.run('DELETE FROM pesticide_records WHERE source_daily_record_id = ?', [recordId]);
+    } catch (e) {
+      console.error('[planting daily-records DELETE] 恢复库存失败（不影响主流程）:', (e as Error)?.message || e);
+    }
 
     // 反向累加（-1 把之前 +1 的变更抵消）
     if (oldData && Object.keys(oldData).length > 0) {
