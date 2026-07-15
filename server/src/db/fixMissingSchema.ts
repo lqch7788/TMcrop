@@ -3779,6 +3779,113 @@ function fixApprovedProductionPlanStatus(): void {
 
   // ========== 2026-07-15：存量每日记录施肥/用药子记录同步到施肥/病虫害管理页 ==========
   backfillDailyFertilPesticide();
+
+  // ========== 2026-07-15：迁移 — 历史脏数据 method 字段翻译回中文 ==========
+  // 历史 bug：daily record 同步时（修复前）application_method 列存了 raw English code（如 drip_irrigation）
+  // 现在 translateDictCode 已支持 DB + fallback + 跨字典，把历史脏数据按当前规则重新翻译回中文 label
+  // 幂等设计：用 schema_migrations 记录只跑一次
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)`);
+    const checkStmt = db.prepare(`SELECT id FROM schema_migrations WHERE id = ?`);
+    checkStmt.bind(['daily_method_label_translation_v1']);
+    const alreadyApplied = checkStmt.step();
+    checkStmt.free();
+    if (alreadyApplied) {
+      seedLog.skip('• 历史 method 字段翻译：已执行过，跳过');
+    } else {
+      // 安全检查：先 PRAGMA 查 application_method 列是否存在（兼容老 DB）
+      const pestCols = db.exec(`PRAGMA table_info(pesticide_records)`);
+      const hasCol = pestCols[0]?.values?.some(v => v[1] === 'application_method');
+      if (!hasCol) {
+        seedLog.skip('• pesticide_records.application_method 列不存在，跳过迁移');
+      } else {
+        // 内置兜底（同步 syncDailyRecords.FALLBACK_APP_METHOD_LABELS，避免循环依赖）
+        const FALLBACK: Record<string, string> = {
+          spray: '喷雾', drench: '灌根', fumigation: '熏蒸', broadcast: '撒施',
+          irrigation: '灌施', injection: '注射', foliar_spray: '叶面喷雾',
+          soil_drench: '土壤浇灌', trunk_injection: '树干注射',
+          drip_irrigation: '滴灌', flood_irrigation: '冲施/漫灌',
+          spread: '撒施', buried: '埋施/穴施', base: '基施/底肥',
+          top_dressing: '追肥', mist_spray: '弥雾', dusting: '喷粉',
+          seed_dressing: '拌种', bait: '诱杀',
+        };
+
+        const pestStmt = db.prepare(`SELECT id, application_method, pesticide_list FROM pesticide_records WHERE pesticide_list IS NOT NULL AND pesticide_list != ''`);
+        let pestFixed = 0;
+        const updateStmt = db.prepare(`UPDATE pesticide_records SET application_method = ? WHERE id = ?`);
+        const updateJsonStmt = db.prepare(`UPDATE pesticide_records SET pesticide_list = ? WHERE id = ?`);
+        while (pestStmt.step()) {
+          const row = pestStmt.getAsObject() as any;
+          const id = row.id;
+          const rawCol = String(row.application_method || '');
+          // 翻译 ①：列 application_method（仅当不是中文时）
+          if (rawCol && !/[一-龥]/.test(rawCol)) {
+            const r1 = db.exec(`SELECT dict_label FROM dictionaries WHERE category_code = 'application_method' AND dict_code = ? LIMIT 1`, [rawCol]);
+            let label = r1?.[0]?.values?.[0]?.[0] as string | undefined;
+            if (!label) {
+              const r2 = db.exec(`SELECT dict_label FROM dictionaries WHERE category_code = 'fertilization_method' AND dict_code = ? LIMIT 1`, [rawCol]);
+              label = r2?.[0]?.values?.[0]?.[0] as string | undefined;
+            }
+            if (!label) label = FALLBACK[rawCol];
+            if (label && label !== rawCol) {
+              updateStmt.bind([label, id]);
+              updateStmt.step();
+              updateStmt.reset();
+              pestFixed++;
+            }
+          }
+
+          // 翻译 ②：JSON pool 内的 applicationMethod
+          const listRaw = String(row.pesticide_list || '');
+          if (listRaw) {
+            try {
+              const arr = JSON.parse(listRaw);
+              let changed = false;
+              for (const item of Array.isArray(arr) ? arr : []) {
+                if (!item || typeof item !== 'object') continue;
+                const m = item.applicationMethod;
+                if (typeof m !== 'string' || /[一-龥]/.test(m)) continue;
+                let itemLabel: string | undefined;
+                const rr1 = db.exec(`SELECT dict_label FROM dictionaries WHERE category_code = 'application_method' AND dict_code = ? LIMIT 1`, [m]);
+                itemLabel = rr1?.[0]?.values?.[0]?.[0] as string | undefined;
+                if (!itemLabel) {
+                  const rr2 = db.exec(`SELECT dict_label FROM dictionaries WHERE category_code = 'fertilization_method' AND dict_code = ? LIMIT 1`, [m]);
+                  itemLabel = rr2?.[0]?.values?.[0]?.[0] as string | undefined;
+                }
+                if (!itemLabel) itemLabel = FALLBACK[m];
+                if (itemLabel && itemLabel !== m) {
+                  item.applicationMethod = itemLabel;
+                  changed = true;
+                  pestFixed++;
+                }
+              }
+              if (changed) {
+                updateJsonStmt.bind([JSON.stringify(arr), id]);
+                updateJsonStmt.step();
+                updateJsonStmt.reset();
+              }
+            } catch { /* 跳过非法 JSON */ }
+          }
+        }
+        pestStmt.free();
+        updateStmt.free();
+        updateJsonStmt.free();
+
+        if (pestFixed > 0) {
+          saveDatabase();
+          const ins = db.prepare(`INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)`);
+          ins.bind(['daily_method_label_translation_v1', new Date().toISOString()]);
+          ins.step();
+          ins.free();
+          seedLog.info(`✓ 历史 method 字段翻译：pesticide_records ${pestFixed} 条已更新为中文`);
+        } else {
+          seedLog.skip('• 历史 method 字段翻译：无需更新（已全是中文）');
+        }
+      }
+    }
+  } catch (e: any) {
+    seedLog.error('历史 method 字段翻译失败:', e.message);
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
