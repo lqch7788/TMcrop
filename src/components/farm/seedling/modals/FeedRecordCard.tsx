@@ -14,13 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, ChevronRight, X, Search } from 'lucide-react'
 import {
   PESTICIDE_CATEGORY_MAP,
-  APPLICATION_METHOD_MAP,
   DILUTION_TYPE_MAP,
   FEED_UNIT_MAP,
 } from '@/constants/cropConstants'
-import { useFertilizerLibraryStore, usePesticideLibraryStore } from '@/stores'
+import { useFertilizerLibraryStore, usePesticideLibraryStore, useDictionaryStore } from '@/stores'
 // 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
 import { FERTILIZER_TYPE_OPTIONS } from '../../../settings/fertilizer-library/constants'
+
+// 施肥方式字典 key（与 FertilizerPoolEditor 一致）
+const METHOD_DICT_KEY = 'fertilization_method'
 
 // 通用行卡 item（兼容施肥和用药的并集类型）
 export interface FeedRecordItem {
@@ -33,6 +35,9 @@ export interface FeedRecordItem {
   dilutionType: 'dilute' | 'dry'
   applicationMethod: string
   notes?: string
+  // 2026-07-15：选择库中肥料后自动填充品牌 + 单价（用于费用统计）
+  brandName?: string
+  unitPrice?: number
   // 药剂特有
   safetyInterval?: number
   targetPest?: string
@@ -76,10 +81,17 @@ export function FeedRecordCard({
   // 加载肥料库 / 药剂库（挂载时加载）
   const fertLibStore = useFertilizerLibraryStore()
   const pestLibStore = usePesticideLibraryStore()
+  const dictStore = useDictionaryStore()
   useEffect(() => {
     fertLibStore.fetchItems?.()
     pestLibStore.fetchItems?.()
+    dictStore.refreshDictionaries?.()
   }, [])
+
+  // 施肥方式字典（与 FertilizerPoolEditor 一致）
+  const methodItems = useMemo(() =>
+    dictStore.dictionaries.filter((d: any) => (d.categoryCode || d.category) === METHOD_DICT_KEY),
+  [dictStore.dictionaries])
 
   // 当前模式对应的库
   const libraryItems = mode === 'fertilizer' ? (fertLibStore.items || []) : (pestLibStore.items || [])
@@ -114,14 +126,17 @@ export function FeedRecordCard({
     return items
   }, [libraryItems, value.category, nameSearch, mode])
 
-  // 选择名称后自动填充
+  // 选择名称后自动填充（名称 + 单位 + 品牌 + 单价）— 2026-07-15 加入品牌/单价用于费用统计
   const handleSelectName = useCallback((item: any) => {
     const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
     onChange({
       ...value,
       name,
-      // 自动填充单位
+      // 自动填充单位（保留用户已选手动值优先）
       unit: value.unit || item.dosageUnit || item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L'),
+      // 自动填充品牌 + 单价（用于费用 = 用量 × 单价）
+      brandName: item.brandName || undefined,
+      unitPrice: item.unitPrice || undefined,
     })
     setNameSearch('')
     setShowNameDropdown(false)
@@ -176,16 +191,16 @@ export function FeedRecordCard({
 
       {/* 展开态：完整表单（2026-06-28：4 字段一行布局，与数量统计面板一致） */}
       {expanded && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30">
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30 relative" style={{ overflow: 'visible' }}>
           {/* 第 1 行：类型 + 名称 + 用量 + 单位（2026-07-15：类型移到名称前面，名称改为下拉选择） */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2" style={{ overflow: 'visible' }}>
             <div>
               <Label className="text-xs text-gray-600 mb-1">
                 {mode === 'fertilizer' ? '肥料类型' : '药剂类型'}
               </Label>
               <Select
                 value={value.category || Object.keys(categoryMap)[0]}
-                onValueChange={(v) => onChange({ ...value, category: v, name: '', unit: mode === 'fertilizer' ? 'kg' : 'L' })}
+                onValueChange={(v) => onChange({ ...value, category: v, name: '', unit: mode === 'fertilizer' ? 'kg' : 'L', brandName: undefined, unitPrice: undefined })}
               >
                 <SelectTrigger className="h-8 text-sm border-gray-300">
                   <SelectValue />
@@ -199,7 +214,7 @@ export function FeedRecordCard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="relative" ref={nameDropdownRef}>
+            <div className="relative" ref={nameDropdownRef} style={{ zIndex: 50 }}>
               <Label className="text-xs text-gray-600 mb-1">
                 {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
               </Label>
@@ -218,8 +233,9 @@ export function FeedRecordCard({
                   </button>
                 )}
               </div>
+              {/* 名称下拉 — z-50 防止被下方字段遮挡 */}
               {showNameDropdown && filteredNames.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                   {filteredNames.map((item: any) => {
                     const id = item.id
                     const name = mode === 'fertilizer' ? item.fertilizerName : item.pesticideName
@@ -249,7 +265,7 @@ export function FeedRecordCard({
                 </div>
               )}
               {showNameDropdown && nameSearch && filteredNames.length === 0 && (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-500">
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl px-3 py-2 text-xs text-gray-500">
                   无匹配项，可手动在详细中输入
                 </div>
               )}
@@ -293,7 +309,31 @@ export function FeedRecordCard({
             </div>
           </div>
 
-          {/* 第 2 行：稀释方式 + 稀释比例 + 施用方式 + 备注（4 字段一行） */}
+          {/* 第 1.5 行：品牌 + 单价 + 费用（2026-07-15：选择肥料后自动显示，支持费用统计） */}
+          {mode === 'fertilizer' && value.name && (
+            <div className="grid grid-cols-3 gap-2 bg-amber-50/50 border border-amber-100 rounded-lg px-3 py-2">
+              <div className="text-xs">
+                <span className="text-gray-500">品牌：</span>
+                <span className="text-gray-800 font-medium">{value.brandName || '-'}</span>
+              </div>
+              <div className="text-xs">
+                <span className="text-gray-500">单价：</span>
+                <span className="text-amber-700 font-medium">
+                  {value.unitPrice ? `¥${Number(value.unitPrice).toFixed(2)}` : '-'}
+                </span>
+              </div>
+              <div className="text-xs">
+                <span className="text-gray-500">费用：</span>
+                <span className="text-emerald-700 font-bold">
+                  {value.amount && value.unitPrice
+                    ? `¥${(value.amount * value.unitPrice).toFixed(2)}`
+                    : '-'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 第 2 行：稀释方式 + 稀释比例 + 施肥方式 + 备注（2026-07-15：施用→施肥，用字典选项） */}
           <div className="grid grid-cols-4 gap-2">
             <div>
               <Label className="text-xs text-gray-600 mb-1">稀释方式</Label>
@@ -336,20 +376,24 @@ export function FeedRecordCard({
               />
             </div>
             <div>
-              <Label className="text-xs text-gray-600 mb-1">施用方式</Label>
+              <Label className="text-xs text-gray-600 mb-1">施肥方式</Label>
               <Select
-                value={value.applicationMethod || 'spray'}
+                value={value.applicationMethod || (methodItems[0]?.dictCode || methodItems[0]?.dict_code || '')}
                 onValueChange={(v) => onChange({ ...value, applicationMethod: v })}
               >
                 <SelectTrigger className="h-8 text-sm border-gray-300">
-                  <SelectValue />
+                  <SelectValue placeholder="选择方式" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(APPLICATION_METHOD_MAP).map(([k, label]) => (
-                    <SelectItem key={k} value={k}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  {methodItems.length > 0 ? (
+                    methodItems.map((m: any) => (
+                      <SelectItem key={m.dictCode || m.dict_code} value={m.dictCode || m.dict_code}>
+                        {m.dictLabel || m.dict_label}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="spray">喷施</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
