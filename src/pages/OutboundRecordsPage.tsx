@@ -31,7 +31,7 @@ import {
 import { OutboundExportModal } from '@/components/farm/inventory/OutboundExportModal';
 import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
 import { exportOutboundPDF, exportOutboundXLSX } from '@/utils/outboundPdfExporter';
-import ActionToolbar from '@/components/warehouse/ActionToolbar';
+// 2026-07-15：移除 ActionToolbar import（改为直接渲染按钮组）
 
 /** 默认本月 1 号到今天（V3.1 关键：useEffect 同步设值避免 400） */
 export function getThisMonthRange(): { from: string; to: string } {
@@ -109,36 +109,22 @@ export default function OutboundRecordsPage() {
     }
   };
 
-  // 3. 取消导出模式
-  const handleExportCancel = () => {
-    setExportMode(false);
-    setSelectedRows([]);
-  };
+  // 3. 取消导出模式 — 2026-07-15 删除（ActionToolbar 简化后无调用方）
 
   // ===== 删除：参照作物库存模式（先选行 deleteMode，再确认弹窗） =====
-  // 1. 点 ActionToolbar "删除" → 进入 deleteMode
+  // 2026-07-15：点直接删除按钮（不再走 ActionToolbar）→ 选中 0 条直接跳过，否则弹 DeleteConfirmModal
   const handleDeleteClick = () => {
-    setDeleteMode(true);
-    setSelectedRows([]);
+    if (selectedRows.length === 0) {
+      showAlert('请先勾选要删除的出库记录');
+      return;
+    }
+    setShowDeleteModal(true);
   };
 
   // 2. 全选/取消全选（复用导出模式的 selectAll 逻辑）
   //    — 已在 handleExportSelectAll 中实现（共用 selectedRows）
 
-  // 3. 取消删除模式
-  const handleDeleteCancel = () => {
-    setDeleteMode(false);
-    setSelectedRows([]);
-  };
-
-  // 4. 校验 selectedRows 不空 → 弹 DeleteConfirmModal（与"技术方案"流程一致）
-  const handleDeleteConfirm = () => {
-    if (selectedRows.length === 0) {
-      showAlert('请先选择要删除的出库记录');
-      return;
-    }
-    setShowDeleteModal(true);
-  };
+  // 3. 取消删除模式 + 4. 校验 — 2026-07-15 合并到 handleDeleteClick 直接走弹窗
 
   // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
   const handleDeleteModalConfirm = async () => {
@@ -153,14 +139,7 @@ export default function OutboundRecordsPage() {
     }
   };
 
-  // 4. 校验 selectedRows 不空 → 弹格式选择弹窗
-  const handleExportClickConfirm = () => {
-    if (selectedRows.length === 0) {
-      toast.error('请先选择要导出的数据（点表格左侧 checkbox）');
-      return;
-    }
-    setExportOpen(true);
-  };
+  // 2026-07-15：删除 handleExportClickConfirm 死代码（ActionToolbar 移除后无调用方，handleExportClick 直接弹窗）
 
   // 5. 弹窗选中格式后实际导出（**只导出选中行**，不是全表）
   async function handleExportConfirm(format: 'csv' | 'xlsx' | 'pdf') {
@@ -216,33 +195,31 @@ export default function OutboundRecordsPage() {
       {/* 6 维筛选 */}
       <OutboundRecordsFilter value={query as unknown as ServiceOutboundQuery} onChange={handleFilterChange} onReset={handleReset} />
 
-      {/* 工具栏：复用 ActionToolbar（对齐订单管理 OrderPage 模式：title + 导出/批量/删除等按钮） */}
-      <ActionToolbar
-        title="出库记录列表"
-        batchEditMode={false}
-        deleteMode={deleteMode}
-        exportMode={exportMode}
-        selectedRows={selectedRows as any}
-        lowStockCount={0}
-        filters={{ showLowStock: false }}
-        onLowStockToggle={() => {}}
-        onBatchEdit={() => {}}
-        onDelete={handleDeleteClick}
-        onExport={handleExportClick}
-        onConfirmBatchEdit={() => {}}
-        onCancelBatchEdit={() => {}}
-        onConfirmDelete={handleDeleteConfirm}
-        onCancelDelete={handleDeleteCancel}
-        onConfirmExport={handleExportClickConfirm}
-        onCancelExport={handleExportCancel}
-        canCreate={false}
-        canEdit={false}
-        canDelete={true}
-        canExport={true}
-        showLowStockButton={false}
-        showCustomerButton={false}
-        noCard={true}
-      />
+      {/* 工具栏：2026-07-15 简化为直接渲染按钮组（之前 ActionToolbar 传 13 个空函数硬塞组件，与出库业务不适配） */}
+      <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 mb-3">
+        <h2 className="text-base font-semibold text-gray-900">出库记录列表</h2>
+        <div className="flex items-center gap-2">
+          {selectedRows.length > 0 && (
+            <span className="text-sm text-gray-600 mr-2">已选 {selectedRows.length} 条</span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportClick}
+            disabled={loading || total === 0}
+          >
+            导出
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDeleteClick}
+            disabled={loading || selectedRows.length === 0}
+          >
+            删除 ({selectedRows.length})
+          </Button>
+        </div>
+      </div>
 
       {/* 数据表格 */}
       <OutboundRecordsTable
@@ -267,11 +244,14 @@ export default function OutboundRecordsPage() {
         onNavigateToInstance={(id) => setDetailInstanceId(id)}
       />
 
-      {/* 导出格式选择弹窗（按 Materials.tsx 模式） */}
+      {/* 导出格式选择弹窗（按 Materials.tsx 模式）
+          2026-07-15：rowCount 区分选中/全表（之前 total 总是显示总数误导用户）
+      */}
       <OutboundExportModal
         isOpen={exportOpen}
         onClose={() => setExportOpen(false)}
         rowCount={total}
+        selectedCount={selectedRows.length}
         onConfirm={handleExportConfirm}
       />
 

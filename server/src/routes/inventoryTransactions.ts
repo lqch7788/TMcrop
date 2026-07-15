@@ -22,9 +22,12 @@ import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 const router = Router();
 router.use(authenticate);
 
-/** 出库业务类型合法值（与前端 src/constants/outboundConstants.ts 的 OutboundBusinessType 同步） */
+/** 出库业务类型合法值（与前端 src/constants/outboundConstants.ts 的 OutboundBusinessType 同步）
+ *  2026-07-15：补全 INTERNAL_SEEDLING / INTERNAL_SEED_SOURCE — 否则前端下拉这 2 项提交全 400
+ */
 const VALID_OUTBOUND_TYPES = new Set([
   'customer_sale', 'transfer_out', 'damage_loss', 'internal_planting',
+  'internal_seedling', 'internal_seed_source',
   'gift_sample', 'return_inbound', 'inventory_adjust', 'other',
 ]);
 
@@ -160,6 +163,11 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '出库数量必须大于 0' });
     }
 
+    // 2026-07-15：操作员从 JWT 取（之前硬编码 '系统操作员'）
+    const jwtUser = (req as any).user;
+    const operatorId = body.operatorId || jwtUser?.aid || jwtUser?.userId || '';
+    const operatorName = body.operatorName || jwtUser?.name || '';
+
     // 3. 查库存
     const db = getDatabase();
     const stockStmt = db.prepare('SELECT * FROM inventory_stock WHERE instance_id = ?');
@@ -206,7 +214,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     // 取代原来的 hardcode 'empty' 块
     recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
 
-    // 5. 写老表 inventory_transaction
+    // 5. 写老表 inventory_transaction（含原子性保护 — sql.js 无 BEGIN/COMMIT，手动 try/catch + 反向回滚）
     // 2026-06-08 V2.1：4 位自增 ID（TRX + YYYYMMDD + NNNN），替代 Math.random 4 字符 base36
     // 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"
     // 2026-06-09 修复：用本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
@@ -222,24 +230,44 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     const insertParams = (txId: string) => [
       txId, txId, body.instanceId, stock.stock_type, 'outbound',
       -body.quantity, currentQty, newQty, body.businessId || null, body.businessType, body.businessCode || null,
-      body.operatorId || null, body.operatorName || '系统操作员', formatLocalDateISO(now),
+      operatorId || null, operatorName || '', formatLocalDateISO(now),
       body.remarks || '出库', nowIso,
     ];
     let txId: string | null = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
-      const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;
-      const stmt = db.prepare(insertSql);
-      try {
-        stmt.run(insertParams(candidate));
-        stmt.free();
-        txId = candidate;
-        break;
-      } catch (err) {
-        stmt.free();
-        if (attempt === 4) throw err; // 最后一次重试失败抛错
-        // 否则下一轮重查 max 跳过已存在的序号
+    try {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
+        const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;
+        const stmt = db.prepare(insertSql);
+        try {
+          stmt.run(insertParams(candidate));
+          stmt.free();
+          txId = candidate;
+          break;
+        } catch (err) {
+          stmt.free();
+          if (attempt === 4) throw err; // 最后一次重试失败抛错
+          // 否则下一轮重查 max 跳过已存在的序号
+        }
       }
+    } catch (txErr) {
+      // 2026-07-15：原子性保护 — INSERT 流水失败必须反向回滚库存
+      // 否则库存已扣减但无流水 → 永久数据漂移
+      console.error('[inventoryTransactions POST] 流水写入失败，反向回滚库存:', txErr);
+      try {
+        const rollbackStmt = db.prepare(
+          'UPDATE inventory_stock SET current_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ?'
+        );
+        rollbackStmt.run([currentQty, nowIso, body.instanceId]);
+        rollbackStmt.free();
+        // 重算 status（恢复到原值）
+        recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
+        saveDatabase();
+      } catch (rollbackErr) {
+        console.error('[inventoryTransactions POST] 库存回滚也失败:', rollbackErr);
+        // 必须抛错让客户端知道（Fail Loud）
+      }
+      throw txErr;
     }
 
     saveDatabase();
@@ -286,8 +314,8 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       businessId: body.businessId,
       businessType: body.businessType,
       businessCode: body.businessCode,
-      operatorId: body.operatorId,
-      operatorName: body.operatorName || '系统操作员',
+      operatorId,
+      operatorName,
       operateDate: formatLocalDateISO(now),
       createTime: nowIso,
       updateTime: nowIso,
@@ -333,11 +361,15 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
     if (!exists || !txRow) {
       return res.status(404).json({ success: false, error: `出库记录 ${id} 不存在` });
     }
-    // 2026-07-03：如果是出库/调拨类流水（quantity < 0），回填库存数量
+    // 2026-07-03 + 2026-07-15：删除回填按业务类型白名单收敛
+    // 仅 outbound 类业务才回填库存（之前只看 quantity<0 太宽，可能误恢复调拨入库流水）
     const txQty = Number(txRow.quantity) || 0;
     const txType = txRow.transaction_type || txRow.transactionType;
+    const txBusinessType = txRow.business_type || txRow.businessType || '';
     const instanceId = txRow.instance_id || txRow.instanceId;
-    if (txQty < 0 && instanceId) {
+    // 白名单：仅出库/调拨/损耗/退货/调整/赠送/其他 等 VALID_OUTBOUND_TYPES 才回填
+    const shouldRollback = txQty < 0 && VALID_OUTBOUND_TYPES.has(txBusinessType) && instanceId;
+    if (shouldRollback) {
       // 出库是负数，回填 = 当前数量 + |出库数量|
       const stockStmt = db.prepare('SELECT id, current_quantity, frozen_quantity FROM inventory_stock WHERE instance_id = ?');
       stockStmt.bind([instanceId]);
@@ -347,8 +379,9 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
         const frozenQty = Number(stock.frozen_quantity) || 0;
         const restoredQty = currentQty + Math.abs(txQty);
         // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算
+        // 2026-07-15：用 Math.max 兜底防止 frozenQty > restoredQty 算出负数 available
         const updateStmt = db.prepare('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE instance_id = ?');
-        updateStmt.run([restoredQty, restoredQty - frozenQty, new Date().toISOString(), instanceId]);
+        updateStmt.run([restoredQty, Math.max(0, restoredQty - frozenQty), new Date().toISOString(), instanceId]);
         updateStmt.free();
         // 重算 status（撤销出库后可能变成 in_stock / low_stock / frozen）
         recomputeAndUpdateStockStatus(getDatabase(), instanceId);
@@ -360,7 +393,7 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
     delStmt.run([id]);
     delStmt.free();
     saveDatabase();
-    return res.json({ success: true, data: { id, deleted: true, rolledBack: txQty < 0 } });
+    return res.json({ success: true, data: { id, deleted: true, rolledBack: shouldRollback } });
   } catch (error) {
     console.error('[inventoryTransactions DELETE] 失败:', error);
     return res.status(500).json({

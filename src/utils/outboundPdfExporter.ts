@@ -13,6 +13,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { OutboundRow, OutboundSummary } from '../services/inventoryTransactionService';
+// 2026-07-15：本地日期工具（避免 toISOString 在中国 0-8 点显示昨天）
+import { todayLocal } from '../lib/dateUtils';
 
 const MAX_PDF_ROWS = 2000;
 
@@ -31,7 +33,8 @@ export async function exportOutboundPDF(rows: OutboundRow[], summary: OutboundSu
 
   // 汇总
   doc.setFontSize(10);
-  const today = new Date().toISOString().slice(0, 10);
+  // 2026-07-15：改用本地日期（避免 UTC 在中国时区 0-8 点显示昨天）
+  const today = todayLocal();
   const sumText = summary
     ? `Generated: ${today}  |  Total: ${summary.totalCount}  |  Quantity: ${summary.totalQuantity}  |  Today: ${summary.todayCount}`
     : `Generated: ${today}  |  Total: ${rows.length}`;
@@ -116,6 +119,7 @@ export function exportOutboundXLSX(rows: OutboundRow[], summary: OutboundSummary
   }
 
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const today = new Date().toISOString().slice(0, 10);
+  // 2026-07-15：改用本地日期（避免 UTC 在中国时区 0-8 点显示昨天）
+  const today = todayLocal();
   saveAs(new Blob([wbout], { type: 'application/octet-stream' }), `outbound-${today}.xlsx`);
 }

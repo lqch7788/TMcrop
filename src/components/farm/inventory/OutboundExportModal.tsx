@@ -19,7 +19,10 @@ import { FileText, FileSpreadsheet, FileType } from 'lucide-react';
 interface OutboundExportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 全表行数（无选中时显示） */
   rowCount: number;
+  /** 选中行数（> 0 时显示选中数 + 全表数）— 2026-07-15 补，区分选中 vs 全表 */
+  selectedCount?: number;
   /** 选择格式后调起，format='csv'|'xlsx'|'pdf' */
   onConfirm: (format: 'csv' | 'xlsx' | 'pdf') => void;
 }
@@ -47,8 +50,14 @@ const exportFormats = [
   },
 ];
 
-export function OutboundExportModal({ isOpen, onClose, rowCount, onConfirm }: OutboundExportModalProps) {
+export function OutboundExportModal({ isOpen, onClose, rowCount, selectedCount, onConfirm }: OutboundExportModalProps) {
   const [format, setFormat] = useState<'csv' | 'xlsx' | 'pdf'>('csv');
+  // 2026-07-15：区分显示文案 — 有选中显示选中数，无选中显示全表
+  const hasSelection = (selectedCount ?? 0) > 0;
+  const displayCount = hasSelection ? (selectedCount as number) : rowCount;
+  const displayText = hasSelection
+    ? `将导出选中的 ${displayCount.toLocaleString()} 条（全表共 ${rowCount.toLocaleString()} 条）`
+    : `当前筛选条件下共 ${rowCount.toLocaleString()} 条出库记录`;
 
   return (
     <UnifiedModal
@@ -65,7 +74,11 @@ export function OutboundExportModal({ isOpen, onClose, rowCount, onConfirm }: Ou
       enableResize={false}
     >
       <p className="text-sm text-gray-500 mb-4">
-        当前筛选条件下共 <span className="font-semibold text-gray-900">{rowCount.toLocaleString()}</span> 条出库记录
+        {displayText.split(/(\d[\d,]*)/).map((part, i) =>
+          /\d/.test(part)
+            ? <span key={i} className="font-semibold text-gray-900">{part}</span>
+            : <span key={i}>{part}</span>
+        )}
       </p>
       <div className="space-y-3">
         {exportFormats.map((f) => {

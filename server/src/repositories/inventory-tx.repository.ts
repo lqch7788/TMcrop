@@ -70,10 +70,13 @@ export class InventoryTransactionRepository {
    */
   async create(data: Partial<InventoryTransaction>): Promise<InventoryTransaction> {
     const db = getDatabase();
-    const newId = data.id || `TXN-${Date.now()}`;
+    // 2026-07-15：删 Date.now() 兜底分支（违反"业务 ID 禁 Date.now"铁律）
+    // service / route 层必传 id 和 transaction_id（4位自增格式），否则直接抛错
+    const newId = data.id;
     const now = new Date().toISOString();
-    // 2026-06-08 V2.1：transaction_id 必传（service / route 层负责生成，4位自增格式），
-    // 此处不再 random 兜底
+    if (!newId) {
+      throw new Error('id 必传（请使用 generateTransactionId 生成 4 位自增 ID）');
+    }
     const transactionId = data.transaction_id;
     if (!transactionId) {
       throw new Error('transaction_id 必传（请使用 generateTransactionId 生成 4 位自增 ID）');

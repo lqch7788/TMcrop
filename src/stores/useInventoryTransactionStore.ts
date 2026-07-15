@@ -33,6 +33,9 @@ export interface OutboundRow {
   // 操作
   operatorId?: string;
   operatorName?: string;
+  /** 2026-07-15：统一字段名 operateDate（之前 Store 缺这字段，PDF/XLSX 导出时 undefined → 全空白）
+   *  operatorDate / outboundDate 仍保留为别名（兼容老代码） */
+  operateDate?: string;
   operatorDate?: string;
   outboundDate?: string;
   createdAt: string;
@@ -64,6 +67,8 @@ export interface OutboundSummary {
   totalCount?: number;
   todayCount?: number;
   byStockType?: Record<string, { count: number; quantity: number }>;
+  /** 2026-07-15：补 byBusinessType（导出 PDF/XLSX 用 — 之前 Store 版缺这字段 outboundPdfExporter 会 TypeError） */
+  byBusinessType?: Record<string, { count: number; quantity: number }>;
   byHour?: Record<string, { count: number; quantity: number }>;
 }
 
@@ -72,6 +77,12 @@ export interface OutboundQuery {
   to?: string;
   cropName?: string;
   warehouseId?: string;
+  /** 2026-07-15：补 stockType（service 层一直有，Store 版缺这字段） */
+  stockType?: string;
+  /** 2026-07-15：补 businessType（service 层一直有，Store 版缺这字段） */
+  businessType?: string;
+  /** 2026-07-15：补 operatorName（service 层一直有，Store 版缺这字段） */
+  operatorName?: string;
   type?: string;
   page?: number;
   limit?: number;
@@ -94,7 +105,7 @@ interface InventoryTransactionState {
   setQuery: (q: Partial<OutboundQuery>) => void;
   loadOutbound: (q?: Partial<OutboundQuery>) => Promise<void>;
   addTransaction: (payload: Partial<OutboundRow>) => Promise<OutboundRow | null>;
-  deleteTransaction: (id: string) => Promise<boolean>;
+  // 2026-07-15：删除单条版 deleteTransaction（死代码 — UI 只用批量版 deleteTransactions）
   /** 批量删除（V2.1 铁律：写操作走 Store action，自动 notifyChange 跨页刷新） */
   deleteTransactions: (ids: string[]) => Promise<{ success: boolean; deletedCount: number; error?: string }>;
 }
@@ -124,8 +135,14 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
       const qs = params.toString();
       const url = qs ? `/inventory/transactions?${qs}` : '/inventory/transactions';
       const data = await enhancedApiClient.get<OutboundListResult>(url);
+      // 2026-07-15：统一字段名 operateDate — 后端 transformRow 已有 operateDate，
+      // 但有些老数据走 service 层不带 transform，需要兜底（取 operatorDate / outboundDate / createdAt）
+      const rows = (data?.rows || []).map((r) => ({
+        ...r,
+        operateDate: r.operateDate || r.operatorDate || r.outboundDate || r.createdAt,
+      }));
       set({
-        rows: data?.rows || [],
+        rows,
         total: data?.total || 0,
         summary: data?.summary || null,
         loading: false,
@@ -157,17 +174,10 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     }
   },
 
-  deleteTransaction: async (id) => {
-    try {
-      await enhancedApiClient.delete(`/inventory-transactions/${id}`);
-      set((s) => ({ rows: s.rows.filter(r => r.id !== id), total: Math.max(0, s.total - 1) }));
-      return true;
-    } catch (err) {
-      // 2026-07-15：改成 throw true message（与 addTransaction 风格一致），不再吞错返回 false
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error('[useInventoryTransactionStore.deleteTransaction] 删除失败', err);
-      throw new Error(message);
-    }
+  deleteTransaction: async (_id) => {
+    // 2026-07-15：保留接口（部分外部代码可能引用）但标记为 deprecated，
+    // 实际删除走 deleteTransactions 批量版（含跨页 notifyChange 刷新）
+    throw new Error('请使用 deleteTransactions 批量删除');
   },
 
   deleteTransactions: async (ids) => {

@@ -42,3 +42,11 @@ export function mapLegacyBusinessType(legacy: string | null | undefined): Outbou
   if (OUTBOUND_TYPE_SET.has(legacy)) return legacy as OutboundBusinessType;
   return OutboundBusinessType.OTHER;
 }
+
+// 2026-07-15：库存类型 meta — 从 OutboundRecordsComponents 抽出复用
+// （之前硬编码在组件内，多处颜色风格不一致：组件用实色，这里用浅底深字与其他 meta 统一）
+export const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: string }> = {
+  seed:     { label: '种源', color: 'bg-amber-100 text-amber-700',  icon: '🌱' },
+  seedling: { label: '种苗', color: 'bg-green-100 text-green-700',  icon: '🌿' },
+  product:  { label: '成品', color: 'bg-emerald-100 text-emerald-700', icon: '📦' },
+};
