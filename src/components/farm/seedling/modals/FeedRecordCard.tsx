@@ -13,13 +13,14 @@ import { Label } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 import { ChevronDown, ChevronRight, X, Search } from 'lucide-react'
 import {
-  FERTILIZER_CATEGORY_MAP,
   PESTICIDE_CATEGORY_MAP,
   APPLICATION_METHOD_MAP,
   DILUTION_TYPE_MAP,
   FEED_UNIT_MAP,
 } from '@/constants/cropConstants'
 import { useFertilizerLibraryStore, usePesticideLibraryStore } from '@/stores'
+// 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
+import { FERTILIZER_TYPE_OPTIONS } from '@/settings/fertilizer-library/constants'
 
 // 通用行卡 item（兼容施肥和用药的并集类型）
 export interface FeedRecordItem {
@@ -50,8 +51,12 @@ interface FeedRecordCardProps {
   defaultExpanded?: boolean
 }
 
+// 2026-07-15: 施肥类型改用 FERTILIZER_TYPE_OPTIONS（与 fertilizer_specs.fertilizer_type 对齐）
+const FERTILIZER_TYPE_MAP: Record<string, string> = Object.fromEntries(
+  FERTILIZER_TYPE_OPTIONS.map(({ value, label }) => [value, label])
+)
 const CATEGORY_MAP = {
-  fertilizer: FERTILIZER_CATEGORY_MAP,
+  fertilizer: FERTILIZER_TYPE_MAP,
   pesticide: PESTICIDE_CATEGORY_MAP,
 }
 
@@ -79,11 +84,24 @@ export function FeedRecordCard({
   // 当前模式对应的库
   const libraryItems = mode === 'fertilizer' ? (fertLibStore.items || []) : (pestLibStore.items || [])
 
-  // 按类型过滤后的名称列表
+  // 按类型过滤后的名称列表（2026-07-15：fertilizerType 单值匹配 / pesticideType JSON 数组包含匹配）
   const filteredNames = useMemo(() => {
     let items = libraryItems.filter((s: any) => s.status === 'active' || !s.status)
     if (value.category) {
-      items = items.filter((s: any) => s.fertilizerType === value.category || s.pesticideType === value.category)
+      items = items.filter((s: any) => {
+        if (mode === 'fertilizer') {
+          return s.fertilizerType === value.category
+        }
+        // 2026-07-15：pesticide_type 可能是 JSON 数组/单值/逗号串，统一解析为数组
+        let types: string[] = []
+        const pt = s.pesticideType
+        if (Array.isArray(pt)) types = pt
+        else if (typeof pt === 'string') {
+          try { types = JSON.parse(pt) } catch { types = pt.split(',').map((t: string) => t.trim()).filter(Boolean) }
+        }
+        // 匹配：类型以 category 开头（如 insecticide 匹配 insecticide_sucking）
+        return types.some((t: string) => t === value.category || t.startsWith(value.category))
+      })
     }
     const kw = nameSearch.trim().toLowerCase()
     if (kw) {
@@ -209,15 +227,22 @@ export function FeedRecordCard({
                       <button
                         key={id}
                         onClick={() => handleSelectName(item)}
-                        className="w-full text-left px-3 py-1.5 hover:bg-amber-50 border-b border-gray-50 last:border-b-0 text-xs"
+                        className="w-full text-left px-3 py-2 hover:bg-amber-50 border-b border-gray-50 last:border-b-0 text-xs"
                       >
-                        <span className="font-medium text-gray-800">{name}</span>
-                        {item.brandName && (
-                          <>
-                            <span className="text-gray-400 mx-1">·</span>
-                            <span className="text-gray-500">{item.brandName}</span>
-                          </>
-                        )}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-gray-800 truncate">{name}</span>
+                          {item.brandName && (
+                            <span className="text-gray-500 shrink-0">{item.brandName}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {item.unitPrice > 0 && (
+                            <span className="text-amber-600">¥{Number(item.unitPrice).toFixed(2)}</span>
+                          )}
+                          <span className={Number(item.stockQuantity || 0) > 0 ? 'text-emerald-600' : 'text-red-400'}>
+                            库存 {Number(item.stockQuantity || 0).toFixed(1)} {item.stockUnit || (mode === 'fertilizer' ? 'kg' : 'L')}
+                          </span>
+                        </div>
                       </button>
                     )
                   })}
