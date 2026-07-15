@@ -23,6 +23,8 @@ interface FertilizerLibraryTableProps {
   selectedRows?: string[];
   onSelectRow?: (id: string) => void;
   onSelectAll?: () => void;
+  /** 每次新搜索时由父组件自增，用于把表格分页重置到第 1 页（保证"搜索定位"可见） */
+  searchKey?: number;
 }
 
 // 列数常量（用于 colSpan）
@@ -36,13 +38,19 @@ const getFertilizerTypeLabel = (type: string) => {
   return label || type;
 };
 
-export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDelete, onStockIn, exportMode = false, selectedRows = [], onSelectRow, onSelectAll }: FertilizerLibraryTableProps) {
+export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDelete, onStockIn, exportMode = false, selectedRows = [], onSelectRow, onSelectAll, searchKey }: FertilizerLibraryTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const startIdx = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIdx, startIdx + pageSize);
+
+  // 每次新搜索（父组件 searchKey 自增）时，把分页重置到第 1 页
+  // 修复：跨 tab 搜索后结果落在第 N 页，用户看不到的 bug
+  React.useEffect(() => {
+    if (searchKey !== undefined && searchKey > 0) setCurrentPage(1);
+  }, [searchKey]);
 
   React.useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(1);

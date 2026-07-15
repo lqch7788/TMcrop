@@ -37,7 +37,18 @@ router.get('/', (req: Request, res: Response) => {
     const conditions: string[] = [];
     const params: any[] = [];
     if (fertilizer_type) { conditions.push('fertilizer_type = ?'); params.push(fertilizer_type); }
-    if (keyword) { conditions.push("(fertilizer_name LIKE '%' || ? || '%' OR brand_name LIKE '%' || ? || '%')"); params.push(keyword, keyword); }
+    if (keyword) {
+      // 关键字模糊匹配：肥料名称 / 品牌 / 肥料编码 / 生产厂家 / 成分含量
+      // 修复"按编码或厂家搜不到"的 bug（用户常常用编码搜索）
+      conditions.push(
+        "(fertilizer_name LIKE '%' || ? || '%' " +
+        "OR brand_name LIKE '%' || ? || '%' " +
+        "OR fertilizer_code LIKE '%' || ? || '%' " +
+        "OR manufacturer LIKE '%' || ? || '%' " +
+        "OR spec_content LIKE '%' || ? || '%')"
+      );
+      params.push(keyword, keyword, keyword, keyword, keyword);
+    }
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = execCount(db, `SELECT * FROM fertilizer_specs ${whereClause}`, params);
     const offset = (pageNum - 1) * limitNum;

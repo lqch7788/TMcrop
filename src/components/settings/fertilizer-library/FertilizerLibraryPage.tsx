@@ -35,6 +35,9 @@ export default function FertilizerLibraryPage() {
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<FertilizerType>('organic');
   const [filters, setFilters] = useState<Record<string, string>>({});
+  // 搜索触发计数器：每次新搜索时 +1，传给表格用于将分页重置到第 1 页
+  // （修复"跨 tab 搜索结果被分页隐藏"导致用户看不到的 bug）
+  const [searchKey, setSearchKey] = useState(0);
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,7 +54,13 @@ export default function FertilizerLibraryPage() {
 
   // ========== 数据加载 ==========
   useEffect(() => {
-    const typeFilter = { ...filters, fertilizer_type: activeTab };
+    // 注意：activeTab 切换后需要保留关键字（肥料名称）作为后端 keyword 查询条件，
+    // 否则 useEffect 拉的全 tab 列表会覆盖掉搜索结果，导致用户看不到匹配行。
+    const typeFilter = {
+      ...filters,
+      fertilizer_type: activeTab,
+      keyword: (filters.fertilizerName || '').trim(),
+    };
     store.fetchItems(typeFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -65,14 +74,28 @@ export default function FertilizerLibraryPage() {
   }, [error, toast, clearError]);
 
   // ========== 筛选处理 ==========
-  const handleSearch = useCallback(() => {
-    const keyword = filters.fertilizerName || '';
-    const typeFilter = { ...filters, fertilizer_type: activeTab, keyword };
-    store.fetchItems(typeFilter);
+  const handleSearch = useCallback(async () => {
+    const keyword = (filters.fertilizerName || '').trim();
+    setSearchKey((k) => k + 1);
+    if (keyword) {
+      // 输入了关键字时：全局搜索（不按 tab 过滤），让用户能跨类型找到肥料
+      await store.fetchItems({ ...filters, keyword });
+      // 取首条命中 → 自动切到该肥料所在的 tab，保证"输入名称即可定位"
+      const firstMatch = useFertilizerLibraryStore.getState().items[0];
+      if (firstMatch?.fertilizerType && firstMatch.fertilizerType !== activeTab) {
+        const newTab = firstMatch.fertilizerType as FertilizerType;
+        setActiveTab(newTab);
+        // useEffect on [activeTab] 会自动按新 tab + 当前 keyword 重新拉取
+      }
+    } else {
+      // 无关键字时按当前 tab 过滤
+      await store.fetchItems({ ...filters, fertilizer_type: activeTab });
+    }
   }, [filters, activeTab, store]);
 
   const handleReset = useCallback(() => {
     setFilters({});
+    setSearchKey((k) => k + 1);
     store.fetchItems({ fertilizer_type: activeTab });
   }, [activeTab, store]);
 
@@ -346,6 +369,7 @@ export default function FertilizerLibraryPage() {
               setSelectedRows((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]))
             }
             onSelectAll={handleExportSelectAll}
+            searchKey={searchKey}
           />
         </TabsContent>
       </Tabs>
