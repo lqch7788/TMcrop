@@ -2786,6 +2786,15 @@ export async function fixMissingSchema(): Promise<void> {
     { table: 'pesticide_records', col: 'source_daily_record_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN source_daily_record_id TEXT' },
     { table: 'pesticide_records', col: 'source_item_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN source_item_id TEXT' },
     { table: 'pesticide_records', col: 'source_type', sql: "ALTER TABLE pesticide_records ADD COLUMN source_type TEXT DEFAULT 'manual'" },
+    // 2026-07-15：真实 code 列（用于 DELETE 恢复库存时关联 fertilizer_specs / pesticide_specs）
+    // 因为 fertilizer_code / record_code 存 syncId 是 UNIQUE 的，无法用真实 code 重复
+    { table: 'fertilizer_records', col: 'real_fertilizer_code', sql: 'ALTER TABLE fertilizer_records ADD COLUMN real_fertilizer_code TEXT' },
+    { table: 'pesticide_records', col: 'real_pesticide_code', sql: 'ALTER TABLE pesticide_records ADD COLUMN real_pesticide_code TEXT' },
+    // 2026-07-15：区域字段（修复同步后 greenhouse_name 为空 — 改用 area_name 优先）
+    { table: 'fertilizer_records', col: 'area_id', sql: 'ALTER TABLE fertilizer_records ADD COLUMN area_id TEXT' },
+    { table: 'fertilizer_records', col: 'area_name', sql: 'ALTER TABLE fertilizer_records ADD COLUMN area_name TEXT' },
+    { table: 'pesticide_records', col: 'area_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN area_id TEXT' },
+    { table: 'pesticide_records', col: 'area_name', sql: 'ALTER TABLE pesticide_records ADD COLUMN area_name TEXT' },
   ];
   for (const { table, col, sql } of syncSourceColumns) {
     try {
