@@ -20,7 +20,7 @@ import {
 } from '@/constants/cropConstants'
 import { useFertilizerLibraryStore, usePesticideLibraryStore } from '@/stores'
 // 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
-import { FERTILIZER_TYPE_OPTIONS } from '../../../components/settings/fertilizer-library/constants'
+import { FERTILIZER_TYPE_OPTIONS } from '../../../settings/fertilizer-library/constants'
 
 // 通用行卡 item（兼容施肥和用药的并集类型）
 export interface FeedRecordItem {
