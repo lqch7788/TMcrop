@@ -102,21 +102,12 @@ export function FeedRecordCard({
       {/* 展开态：完整表单（2026-06-28：4 字段一行布局，与数量统计面板一致） */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100 bg-gray-50/30">
-          {/* 第 1 行：名称 + 类型 + 用量 + 单位（4 字段一行） */}
+          {/* 第 1 行：类型 + 名称 + 用量 + 单位（2026-07-15：类型移到名称前面，裂隙字段改名） */}
           <div className="grid grid-cols-4 gap-2">
             <div>
               <Label className="text-xs text-gray-600 mb-1">
-                {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
+                {mode === 'fertilizer' ? '肥料类型' : '药剂类型'}
               </Label>
-              <Input
-                value={value.name}
-                onChange={(e) => onChange({ ...value, name: e.target.value })}
-                placeholder={mode === 'fertilizer' ? '如：绿叶青叶面肥' : '如：多菌灵'}
-                className="h-8 text-sm border-gray-300"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-600 mb-1">类型</Label>
               <Select
                 value={value.category || Object.keys(categoryMap)[0]}
                 onValueChange={(v) => onChange({ ...value, category: v })}
@@ -132,6 +123,17 @@ export function FeedRecordCard({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1">
+                {mode === 'fertilizer' ? '肥料名称' : '药剂名称'} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={value.name}
+                onChange={(e) => onChange({ ...value, name: e.target.value })}
+                placeholder={mode === 'fertilizer' ? '如：绿叶青叶面肥' : '如：多菌灵'}
+                className="h-8 text-sm border-gray-300"
+              />
             </div>
             <div>
               <Label className="text-xs text-gray-600 mb-1">
