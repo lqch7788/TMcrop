@@ -98,7 +98,9 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       isOpen={isOpen}
       onClose={handleClose}
       title="出库操作"
+      // 2026-07-16：默认宽度缩窄 30%（1350 → 945），高度保持
       size="xxxl"
+      width={945}
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
