@@ -3,7 +3,8 @@
  * 数据源：useSummaryDataStore.batchItems（Zustand Store）
  * 架构：Component → Store → enhancedApiClient → Backend API（单向不可逆）
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Link,
   Layers,
@@ -21,22 +22,22 @@ import {
 } from 'lucide-react';
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '@/components/ui';
-import { useSummaryDataStore, type BatchStatItem, type ChainStageStat } from '../../stores/useSummaryDataStore';
+import { useSummaryDataStore, type BatchStatItem, type ChainStageStat, type ChainStageKey, type BatchStatus } from '../../stores/useSummaryDataStore';
 
 // ========== 常量 ==========
 
-/** 6个追溯环节 */
+/** 6个追溯环节（bgHex 用于内联 style 直接取 hex，避免用 Tailwind class 字符串嗅探反查颜色） */
 const CHAIN_STAGES = [
-  { key: 'plan', label: '生产计划', icon: <ClipboardList className="w-5 h-5" />, color: 'from-blue-500 to-blue-700', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
-  { key: 'seed', label: '种源管理', icon: <Sprout className="w-5 h-5" />, color: 'from-emerald-500 to-emerald-700', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700' },
-  { key: 'seedling', label: '育苗管理', icon: <Sprout className="w-5 h-5" />, color: 'from-teal-500 to-teal-700', bgColor: 'bg-teal-50', textColor: 'text-teal-700' },
-  { key: 'planting', label: '种植管理', icon: <Leaf className="w-5 h-5" />, color: 'from-green-500 to-green-700', bgColor: 'bg-green-50', textColor: 'text-green-700' },
-  { key: 'harvest', label: '采收入库', icon: <Package className="w-5 h-5" />, color: 'from-amber-500 to-amber-700', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
-  { key: 'inventory', label: '库存管理', icon: <Warehouse className="w-5 h-5" />, color: 'from-purple-500 to-purple-700', bgColor: 'bg-purple-50', textColor: 'text-purple-700' },
+  { key: 'plan',      label: '生产计划', icon: <ClipboardList className="w-5 h-5" />, color: 'from-blue-500 to-blue-700',     bgColor: 'bg-blue-50',    textColor: 'text-blue-700',    bgHex: '#eff6ff' },
+  { key: 'seed',      label: '种源管理', icon: <Sprout className="w-5 h-5" />,         color: 'from-emerald-500 to-emerald-700', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', bgHex: '#ecfdf5' },
+  { key: 'seedling',  label: '育苗管理', icon: <Sprout className="w-5 h-5" />,         color: 'from-teal-500 to-teal-700',     bgColor: 'bg-teal-50',    textColor: 'text-teal-700',    bgHex: '#f0fdfa' },
+  { key: 'planting',  label: '种植管理', icon: <Leaf className="w-5 h-5" />,           color: 'from-green-500 to-green-700',   bgColor: 'bg-green-50',   textColor: 'text-green-700',   bgHex: '#f0fdf4' },
+  { key: 'harvest',   label: '采收入库', icon: <Package className="w-5 h-5" />,        color: 'from-amber-500 to-amber-700',   bgColor: 'bg-amber-50',   textColor: 'text-amber-700',   bgHex: '#fffbeb' },
+  { key: 'inventory', label: '库存管理', icon: <Warehouse className="w-5 h-5" />,      color: 'from-purple-500 to-purple-700', bgColor: 'bg-purple-50',  textColor: 'text-purple-700',  bgHex: '#faf5ff' },
 ];
 
-/** 状态映射 */
-const STATUS_STYLE: Record<string, string> = {
+/** 状态映射（强类型 Record<BatchStatus, ...> 避免 status: string 漏检） */
+const STATUS_STYLE: Record<BatchStatus, string> = {
   draft: 'bg-gray-100 text-gray-600',
   planning: 'bg-gray-100 text-gray-700',
   published: 'bg-blue-100 text-blue-600',
@@ -45,7 +46,7 @@ const STATUS_STYLE: Record<string, string> = {
   overdue: 'bg-red-100 text-red-700',
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<BatchStatus, string> = {
   draft: '草稿',
   planning: '规划中',
   published: '已发布',
@@ -55,7 +56,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /** 确定批次处于哪个追溯环节（按种源→育苗→种植→采收→库存 优先级由后往前判断） */
-function getBatchStage(batch: BatchStatItem): string {
+function getBatchStage(batch: BatchStatItem): ChainStageKey {
   if (batch.status === 'completed') return 'inventory';
   if (batch.actualQuantity > 0) return 'harvest';
   if (batch.hasPlanting) return 'planting';
@@ -135,7 +136,7 @@ function StageDetailPanel({
   const hasContent = stage.batches.length > 0 || items.length > 0;
 
   return (
-    <div className={`rounded-xl border p-5 border-opacity-30`} style={{ backgroundColor: stage.bgColor.includes('blue') ? '#eff6ff' : stage.bgColor.includes('emerald') ? '#ecfdf5' : stage.bgColor.includes('teal') ? '#f0fdfa' : stage.bgColor.includes('green') ? '#f0fdf4' : stage.bgColor.includes('amber') ? '#fffbeb' : '#faf5ff' }}>
+    <div className={`rounded-xl border p-5 border-opacity-30`} style={{ backgroundColor: stage.bgHex }}>
       <div className="flex items-center gap-2 mb-3">
         <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
           <div className="text-white">{stage.icon}</div>
@@ -192,8 +193,8 @@ function StageDetailPanel({
               </div>
               {item.status && (
                 <div className="mt-1.5">
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[item.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {STATUS_LABEL[item.status] || item.status}
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${(STATUS_STYLE as Record<string, string>)[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {(STATUS_LABEL as Record<string, string>)[item.status] || item.status}
                   </span>
                 </div>
               )}
@@ -217,12 +218,28 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
   const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
   const fetchChainOverview = useSummaryDataStore((s) => s.fetchChainOverview);
 
-  const [selectedBatch, setSelectedBatch] = useState<BatchStatItem | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // 2026-07-16：抽屉状态升级到 URL deep link（?batchId=xxx）
+  // 理由：跨页分享、刷新保持、浏览器后退/前进 — 符合 url-deep-link-modal-pattern 铁律
+  const [searchParams, setSearchParams] = useSearchParams();
+  const batchIdFromUrl = searchParams.get('batchId');
+  const drawerOpen = !!batchIdFromUrl;
+  const selectedBatch = useMemo(
+    () => (batchIdFromUrl ? batchItems.find((b) => String(b.id) === batchIdFromUrl) ?? null : null),
+    [batchIdFromUrl, batchItems]
+  );
 
-  // ========== 分页状态 ==========
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // ========== 分页状态同步 URL（?page=&pageSize=） ==========
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const pageSize = Number(searchParams.get('pageSize')) || 10;
+
+  const setDrawerOpen = (open: boolean) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (open && selectedBatch) next.set('batchId', String(selectedBatch.id));
+      else next.delete('batchId');
+      return next;
+    }, { replace: true });
+  };
 
   useEffect(() => {
     fetchBatchStats({});
@@ -260,19 +277,30 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
     return batchItems.slice(start, end);
   }, [batchItems, currentPage, pageSize]);
 
-  // 分页变化处理
+  // 分页变化处理（同步到 URL）
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('page', String(page));
+      return next;
+    }, { replace: true });
   };
 
   const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('pageSize', String(size));
+      next.delete('page'); // 重置到第 1 页
+      return next;
+    }, { replace: true });
   };
 
   const handleViewBatch = (batch: BatchStatItem) => {
-    setSelectedBatch(batch);
-    setDrawerOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('batchId', String(batch.id));
+      return next;
+    });
   };
 
   return (
@@ -311,7 +339,7 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
         <KpiCard
           icon={<Link className="w-4 h-4 text-white" />}
           label="追溯环节"
-          value={6}
+          value={CHAIN_STAGES.length}
           colorScheme="purple"
           compact
         />
@@ -453,7 +481,7 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
             {(() => {
               const stage = CHAIN_STAGES.find((s) => s.key === getBatchStage(selectedBatch));
               return stage ? (
-                <div className={`rounded-xl p-4 border`} style={{ backgroundColor: stage.bgColor.includes('blue') ? '#eff6ff' : '#f0fdfa' }}>
+                <div className={`rounded-xl p-4 border`} style={{ backgroundColor: stage.bgHex }}>
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
                       <div className="text-white">{stage.icon}</div>

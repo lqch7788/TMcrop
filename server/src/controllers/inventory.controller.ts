@@ -207,8 +207,14 @@ export class InventoryController {
   async traceUpstream(req: Request, res: Response): Promise<void> {
     try {
       const { instanceId } = req.params;
-      const maxDepth = Number(req.query.maxDepth) || 10;
+      // 2026-07-16：maxDepth 硬上限 20（service 层会再次兜底），防止 maxDepth=999/Infinity DoS
+      const rawDepth = Number(req.query.maxDepth);
+      const maxDepth = Number.isFinite(rawDepth) && rawDepth > 0
+        ? Math.min(20, Math.floor(rawDepth))
+        : 10;
       const data = await inventoryService.traceUpstream(instanceId, maxDepth);
+      // 2026-07-16：追溯审计（成功也记录），用于"谁查询了哪个批次"
+      console.log(`[audit] trace/upstream instance=${instanceId} depth=${maxDepth} returned=${data.length} by user=${req.user?.userId ?? 'anon'}`);
       res.json({ success: true, data });
     } catch (error) {
       console.error('[InventoryController] traceUpstream 错误:', error);
@@ -223,8 +229,14 @@ export class InventoryController {
   async traceDownstream(req: Request, res: Response): Promise<void> {
     try {
       const { instanceId } = req.params;
-      const maxDepth = Number(req.query.maxDepth) || 10;
+      // 2026-07-16：maxDepth 硬上限 20（service 层会再次兜底），防止 maxDepth=999/Infinity DoS
+      const rawDepth = Number(req.query.maxDepth);
+      const maxDepth = Number.isFinite(rawDepth) && rawDepth > 0
+        ? Math.min(20, Math.floor(rawDepth))
+        : 10;
       const data = await inventoryService.traceDownstream(instanceId, maxDepth);
+      // 2026-07-16：追溯审计
+      console.log(`[audit] trace/downstream instance=${instanceId} depth=${maxDepth} returned=${data.length} by user=${req.user?.userId ?? 'anon'}`);
       res.json({ success: true, data });
     } catch (error) {
       console.error('[InventoryController] traceDownstream 错误:', error);

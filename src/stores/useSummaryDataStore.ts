@@ -114,17 +114,22 @@ export interface ChainStageItem {
   totalAmount?: number;
   qualityGrade?: string;
   warehouseName?: string;
-  [key: string]: unknown;
 }
+
+/** 全链条追溯阶段 key 字面量联合（与 ChainTraceability 的 CHAIN_STAGES 对齐） */
+export type ChainStageKey = 'plan' | 'seed' | 'seedling' | 'planting' | 'harvest' | 'inventory';
 
 /** 全链条追溯阶段统计 */
 export interface ChainStageStat {
-  key: string;
+  key: ChainStageKey | string;
   label: string;
   count: number;
   detail?: Record<string, unknown> | Array<Record<string, unknown>>;
   items?: ChainStageItem[];
 }
+
+/** 批次状态字面量联合（与 STATUS_STYLE / STATUS_LABEL 字典对齐） */
+export type BatchStatus = 'draft' | 'planning' | 'published' | 'in_progress' | 'completed' | 'overdue';
 
 /** 批次汇总统计项（queryToObjects返回驼峰命名） */
 export interface BatchStatItem {
@@ -139,7 +144,7 @@ export interface BatchStatItem {
   actualQuantity: number;
   harvestQuantity: number;
   completionRate: number;
-  status: string;
+  status: BatchStatus;
   plantingDate: string;
   expectedHarvestDate: string;
   actualHarvestDate: string;
@@ -150,12 +155,12 @@ export interface BatchStatItem {
   totalWorkHours: number;
   laborCost: number;
   remainingYield: number;
-  /** 是否有种源数据（全链条追溯） */
-  hasSeedSource?: number;
+  /** 是否有种源数据（全链条追溯，SQL count(*) > 0 表达为 0/1） */
+  hasSeedSource?: boolean;
   /** 是否有育苗数据（全链条追溯） */
-  hasSeedling?: number;
+  hasSeedling?: boolean;
   /** 是否有种植数据（全链条追溯） */
-  hasPlanting?: number;
+  hasPlanting?: boolean;
 }
 
 /** 问题每日汇总项（来自 /api/problems/daily-summary） */
@@ -416,7 +421,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, overview: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取概览失败:', error);
+          console.warn('[SummaryDataStore] 获取概览失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -445,7 +450,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, yieldStats: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取产量统计失败:', error);
+          console.warn('[SummaryDataStore] 获取产量统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -497,7 +502,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, costStats: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取成本统计失败:', error);
+          console.warn('[SummaryDataStore] 获取成本统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -531,7 +536,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, laborStats: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取人工统计失败:', error);
+          console.warn('[SummaryDataStore] 获取人工统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -560,7 +565,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, batchStats: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取批次统计失败:', error);
+          console.warn('[SummaryDataStore] 获取批次统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -580,7 +585,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, chainOverview: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取全链条概览失败:', error);
+          console.warn('[SummaryDataStore] 获取全链条概览失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -600,7 +605,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
 
           const query = queryParams.toString();
           const url = `/problems/daily-summary${query ? `?${query}` : ''}`;
-          const data = await enhancedApiClient.get<ProblemDailyItem[]>(url);
+          const data = await enhancedApiClient.get<Record<string, unknown>[]>(url);
 
           const items = Array.isArray(data) ? data.map(mapProblemItem) : [];
           set({
@@ -609,7 +614,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, problems: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取问题统计失败:', error);
+          console.warn('[SummaryDataStore] 获取问题统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -638,7 +643,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, indicators: Date.now() },
           });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] 获取生产指标失败:', error);
+          console.warn('[SummaryDataStore] 获取生产指标失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -661,7 +666,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           ]);
           set({ isLoading: false });
         } catch (error) {
-          // logger.warn('[SummaryDataStore] fetchAll 部分请求失败:', error);
+          console.warn('[SummaryDataStore] fetchAll 部分请求失败:', error);
           set({ isLoading: false });
         }
       },

@@ -584,11 +584,13 @@ router.get('/freezes/:instanceId', (req: Request, res: Response) => {
     } catch (_e) {
       // inventory_freeze 表可能不存在，从 transaction 流水兜底
       try {
+        // 2026-07-16：硬上限 100 条，长生命周期产品避免 OOM
         const txStmt = db.prepare(`
           SELECT id, instance_id, transaction_type, quantity, business_code, operator_name, operate_date, remarks
           FROM inventory_transaction
           WHERE instance_id = ? AND transaction_type IN ('freeze', 'unfreeze')
           ORDER BY operate_date DESC
+          LIMIT 100
         `);
         txStmt.bind([instanceId]);
         while (txStmt.step()) {

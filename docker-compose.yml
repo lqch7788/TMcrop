@@ -22,8 +22,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - JWT_SECRET=${JWT_SECRET:-yuanxingtu-secret-key-2026}
-      - DEMO_MODE=${DEMO_MODE:-true}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 必须通过环境变量显式注入，生产模式不允许默认值}
+      - DEMO_MODE=${DEMO_MODE:-false}
       - DB_PATH=/app/data/yuanxingtu.db
     volumes:
       - ./server/data:/app/data
