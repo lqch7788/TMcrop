@@ -81,7 +81,12 @@ export function Modal({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Resize state - 使用自定义尺寸或预设尺寸
-  const defaultSize = width && height ? { width, height } : sizeDefaults[size];
+  // 2026-07-16：放宽为 width || height 任一传即可生效，未传的 fallback 到 sizeDefaults[size]
+  // （之前用 && 要求二者全传，否则整体 fallback，导致只传 width 看不到效果 — OutboundModal 踩过坑）
+  const explicitSize = (width !== undefined || height !== undefined)
+    ? { width: width ?? sizeDefaults[size].width, height: height ?? sizeDefaults[size].height }
+    : sizeDefaults[size];
+  const defaultSize = explicitSize;
   const [modalSize, setModalSize] = useState(defaultSize);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState('');
@@ -107,7 +112,10 @@ export function Modal({
   // Initialize position when modal opens
   useEffect(() => {
     if (isOpen && !isMaximized) {
-      const defaultSize = width && height ? { width, height } : sizeDefaults[size];
+      // 2026-07-16：与 useState 同根因修复 — width || height 任一传即生效
+      const defaultSize = (width !== undefined || height !== undefined)
+        ? { width: width ?? sizeDefaults[size].width, height: height ?? sizeDefaults[size].height }
+        : sizeDefaults[size];
       setModalSize(defaultSize);
       // Center the modal
       const centerX = (window.innerWidth - defaultSize.width) / 2;
