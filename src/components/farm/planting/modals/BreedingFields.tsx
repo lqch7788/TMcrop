@@ -99,7 +99,7 @@ export function BreedingFields({ form, onChange, deepInputClass }: BreedingField
         </div>
         {/* 父本/母本编码（有性繁殖专用） */}
         <div>
-          <Label className="text-gray-700">父本编码 <span className="text-red-500">*</span>（杂交/回交必填）</Label>
+          <Label className="text-gray-700">父本编码</Label>
           <Input
             value={form.parentMaleCode ?? ''}
             onChange={(e) => onChange({ ...form, parentMaleCode: e.target.value })}

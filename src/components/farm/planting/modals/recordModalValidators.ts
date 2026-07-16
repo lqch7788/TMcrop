@@ -34,9 +34,6 @@ export type BreedingFormState = {
  */
 export function validateBreedingForm(form: BreedingFormState): string | null {
   if (!form.recordDate) return '请选择记录日期'
-  if ((form.operationType === 'cross' || form.operationType === 'backcross') && !form.parentMaleCode) {
-    return '杂交/回交时父本编码必填'
-  }
   if (form.parentMaleCode && form.parentFemaleCode && form.parentMaleCode === form.parentFemaleCode) {
     return '父本编码不能与母本编码相同'
   }
