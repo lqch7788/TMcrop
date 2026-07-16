@@ -92,7 +92,7 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
             {current.length===0 ? (
               <TableRow><TableCell colSpan={showCb?12:11} className="px-4 py-12 text-center text-gray-400">暂无施肥记录</TableCell></TableRow>
             ) : current.map((rec) => {
-              const pool = parseFertilizationPool((rec as any).fertilizationPool);
+              const pool = parseFertilizationPool(rec.fertilizationPool);
               const areaNames = [...new Set(pool.map(p=>String(p.area??'')))];
               const fertNames = [...new Set(pool.map(p=>String(p.fertilizerName??'')))];
               const totalQty = pool.reduce((s,r)=>s+Number(r.quantity),0)||rec.quantity||0;

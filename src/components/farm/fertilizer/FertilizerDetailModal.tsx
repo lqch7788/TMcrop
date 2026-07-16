@@ -14,7 +14,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: {
   isOpen: boolean; record: FertilizerData; onClose: () => void;
 }) {
   if (!record) return null;
-  const pool = parseFertilizationPool((record as any).fertilizationPool);
+  const pool = parseFertilizationPool(record.fertilizationPool);
   const areaNames = [...new Set(pool.map((p:FertilizationPoolRow)=>String(p.area??'')).filter(Boolean))];
   const fertGroups = new Map<string,FertilizationPoolRow[]>();
   pool.forEach((p:FertilizationPoolRow)=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
