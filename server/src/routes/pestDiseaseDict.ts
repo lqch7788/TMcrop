@@ -1,12 +1,39 @@
 /**
  * 病虫害字典 API 路由
  * V12.0 新增
+ * 2026-07-16 审核加固：错误脱敏（handleError）+ images 服务端校验
  */
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
+
+/**
+ * 统一错误处理（5xx 脱敏 — 不向客户端泄露 SQLite 错误原文/表结构）
+ */
+function handleError(res: Response, error: unknown, logTag: string, fallback: string): void {
+  console.error(`[pestDiseaseDict:${logTag}]`, error);
+  res.status(500).json({ success: false, error: fallback });
+}
+
+/**
+ * images 服务端校验（2026-07-16 审核修复：零校验可存外链 URL 跟踪信标）
+ * - 仅接受 data:image/(png|jpeg|jpg|webp|gif);base64,... 格式
+ * - 单张 base64 最长 ~1.4MB（1MB 原图膨胀 1.37x）
+ * - 最多 5 张
+ */
+const IMAGE_DATA_URL_RE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+const MAX_IMAGE_B64_LEN = 1_500_000;
+function sanitizeImages(raw: unknown): string | null {
+  if (!Array.isArray(raw)) return null;
+  const valid = raw
+    .slice(0, 5)
+    .filter((s): s is string =>
+      typeof s === 'string' && s.length <= MAX_IMAGE_B64_LEN && IMAGE_DATA_URL_RE.test(s)
+    );
+  return valid.length > 0 ? JSON.stringify(valid) : null;
+}
 
 /** GET /api/pest-disease-dict/next-code — 获取下一个可用编码 */
 router.get('/next-code', (req: Request, res: Response) => {
@@ -23,7 +50,8 @@ router.get('/next-code', (req: Request, res: Response) => {
   const stmt = db.prepare(
     `SELECT MAX(dict_code) AS max_code FROM pest_disease_dict WHERE dict_type = ? AND dict_code LIKE ?`
   );
-  stmt.bind([type, `${prefix}%`]);
+  // 2026-07-16 审核修复：String(type) 显式转换（ParsedQs union 类型 → bind 类型报错）
+  stmt.bind([String(type), `${prefix}%`]);
   let lastCode = '';
   if (stmt.step()) {
     const row = stmt.getAsObject() as { max_code: string | null };
@@ -46,21 +74,25 @@ router.get('/next-code', (req: Request, res: Response) => {
   );
   let candidateNum = nextNum;
   const MAX_RETRIES = 20;
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    const candidate = `${prefix}${candidateNum.toString().padStart(4, '0')}`;
-    checkStmt.bind([candidate]);
-    const exists = checkStmt.step();
-    checkStmt.reset();
-    if (!exists) {
-      // 找到空闲编码，返回（前端 INSERT 时 dict_code 还有 UNIQUE 约束兜底）
-      res.json({ nextCode: candidate });
-      return;
+  try {
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      const candidate = `${prefix}${candidateNum.toString().padStart(4, '0')}`;
+      checkStmt.bind([candidate]);
+      const exists = checkStmt.step();
+      checkStmt.reset();
+      if (!exists) {
+        // 找到空闲编码，返回（前端 INSERT 时 dict_code 还有 UNIQUE 约束兜底）
+        res.json({ nextCode: candidate });
+        return;
+      }
+      candidateNum++;
     }
-    candidateNum++;
+    // 重试耗尽仍冲突（极罕见）
+    res.status(500).json({ error: `生成编码冲突，已重试 ${MAX_RETRIES} 次仍冲突，请联系管理员` });
+  } finally {
+    // 2026-07-16 审核修复：checkStmt 必须 free（原成功/失败路径都泄漏 wasm 语句对象）
+    checkStmt.free();
   }
-
-  // 重试耗尽仍冲突（极罕见）
-  res.status(500).json({ error: `生成编码冲突，已重试 ${MAX_RETRIES} 次仍冲突，请联系管理员` });
 });
 
 /** 生成字典编码 PD-P-/PD-D-+4位流水号 */
@@ -104,7 +136,7 @@ router.get('/', (req: Request, res: Response) => {
     );
     res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -121,8 +153,8 @@ router.post('/', (req: Request, res: Response) => {
     const code = body.dict_code || generateDictCode(db, body.dict_type);
     const now = new Date().toISOString();
     const id = `pdd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    // 2026-07-16：images 字段 — base64 data URL 数组的 JSON 字符串
-    const imagesJson = Array.isArray(body.images) ? JSON.stringify(body.images.slice(0, 5)) : null;
+    // 2026-07-16：images 字段 — 走 sanitizeImages 校验（格式白名单 + 大小上限 + 最多 5 张）
+    const imagesJson = sanitizeImages(body.images);
 
     db.run(`INSERT INTO pest_disease_dict (
       id, dict_code, dict_name, dict_type, target_crops, description, status, create_time, images
@@ -135,7 +167,7 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
     res.status(201).json({ success: true, data: items[0] || null });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -148,7 +180,7 @@ router.get('/:id', (req: Request, res: Response) => {
     if (items.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
     res.json({ success: true, data: items[0] });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -161,8 +193,8 @@ router.put('/:id', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM pest_disease_dict WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
 
-    // 2026-07-16：images 更新逻辑 — 数组转 JSON，未传则保留原值
-    const newImages = Array.isArray(body.images) ? JSON.stringify(body.images.slice(0, 5)) : (body.images === null ? null : undefined);
+    // 2026-07-16：images 更新 — 数组走校验，null 清空，未传保留原值
+    const newImages = Array.isArray(body.images) ? sanitizeImages(body.images) : (body.images === null ? null : undefined);
 
     db.run(`UPDATE pest_disease_dict SET dict_name=?, dict_type=?, target_crops=?,
       description=?, status=?, images=? WHERE id=?`,
@@ -176,7 +208,7 @@ router.put('/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, data: updated[0] || null });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -199,7 +231,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -214,7 +246,7 @@ router.get('/by-crop/:cropName', (req: Request, res: Response) => {
     );
     res.json({ success: true, data: items });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -234,7 +266,7 @@ router.get('/:id/relations', (req: Request, res: Response) => {
 
     res.json({ success: true, data: rows });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -265,7 +297,7 @@ router.post('/:pestId/relations', (req: Request, res: Response) => {
       throw e;
     }
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 
@@ -280,7 +312,7 @@ router.delete('/:pestId/relations/:pesticideId', (req: Request, res: Response) =
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'route', '操作失败，请稍后重试');
   }
 });
 

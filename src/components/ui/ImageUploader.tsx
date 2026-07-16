@@ -68,6 +68,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error('[ImageUploader] 文件读取失败:', err)
+        // 2026-07-16 审核修复：用户可见反馈（原来只有 console 用户完全无感知）
+        window.alert('部分图片读取失败，请检查文件是否损坏后重试')
       })
 
     if (inputRef.current) {

@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { fertilizerRepository, FertilizerRepository, FertilizerRecord } from '../repositories/fertilizer.repository';
-import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
 /**
  * 2026-07-16：本地时间字符串（替换 toISOString）—— UTC 跨天错位 bug 修复
@@ -207,7 +206,6 @@ export class FertilizerService {
       // generateCode 在事务内（避免并发 UNIQUE 冲突）
       const code = this.generateCode();
       if (!code) {
-        db.exec('ROLLBACK');
         throw new BusinessError(
           FertilizerErrorCode.INVALID_QUANTITY,
           `生成施肥编号失败（重试 10 次仍冲突），请稍后重试`,
@@ -218,7 +216,6 @@ export class FertilizerService {
       if (data.fertilizerId) {
         const spec = this.repository.findSpecById(data.fertilizerId);
         if (!spec) {
-          db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
             `肥料规格不存在: ${data.fertilizerId}`,
@@ -226,7 +223,6 @@ export class FertilizerService {
           );
         }
         if (qty > 0 && (spec.stockQuantity ?? 0) < qty) {
-          db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.INSUFFICIENT_STOCK,
             `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需 ${qty}`,
@@ -236,7 +232,6 @@ export class FertilizerService {
         if (qty > 0) {
           const newStock = this.repository.decreaseStock(data.fertilizerId, qty, now);
           if (newStock === null) {
-            db.exec('ROLLBACK');
             throw new BusinessError(
               FertilizerErrorCode.INSUFFICIENT_STOCK,
               `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足（其他事务正在扣减），请重试`,
@@ -260,7 +255,6 @@ export class FertilizerService {
       dupStmt.bind([code]);
       if (dupStmt.step()) {
         dupStmt.free();
-        db.exec('ROLLBACK');
         throw new BusinessError(
           FertilizerErrorCode.INVALID_QUANTITY,
           `编号 ${code} 已存在`,
@@ -336,16 +330,20 @@ export class FertilizerService {
     if (!existing) {
       throw new BusinessError(FertilizerErrorCode.NOT_FOUND, '施肥记录不存在', 404);
     }
-    if (existing.data_source === 'auto_iot') {
+    // 2026-07-16 审核修复：queryToObjects 转 camelCase — findById 结果必须按 camelCase 读
+    // （原 existing.data_source/fertilizer_id 恒 undefined → IoT 保护失效 + 库存不调整）
+    const ex = existing as unknown as Record<string, any>;
+    if (ex.dataSource === 'auto_iot') {
       throw new BusinessError(FertilizerErrorCode.IOT_READONLY, 'IoT 自动记录不可编辑', 403);
     }
 
     const db = getDatabase();
     const now = nowLocalTimestamp();
-    const oldQty = existing.quantity;
-    const newQty = updates.quantity ?? oldQty;
-    // findById 经 queryToObjects 转 camelCase：尝试两种 key
-    const fid = existing.fertilizer_id;
+    const oldQty = Number(ex.quantity) || 0;
+    // updates 来自路由层 req.body（前端发 camelCase）— 双 key 兼容
+    const upd = updates as Record<string, any>;
+    const newQty = upd.quantity ?? oldQty;
+    const fid = ex.fertilizerId ?? null;
 
     db.exec('BEGIN');
     try {
@@ -354,7 +352,6 @@ export class FertilizerService {
         const delta = newQty - oldQty;
         const spec = this.repository.findSpecById(fid);
         if (!spec) {
-          db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
             `肥料规格不存在: ${fid}`,
@@ -362,7 +359,6 @@ export class FertilizerService {
           );
         }
         if (delta > 0 && (spec.stockQuantity ?? 0) < delta) {
-          db.exec('ROLLBACK');
           throw new BusinessError(
             FertilizerErrorCode.INSUFFICIENT_STOCK,
             `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需追加 ${delta}`,
@@ -371,7 +367,6 @@ export class FertilizerService {
         if (delta > 0) {
           const newStock = this.repository.decreaseStock(fid, delta, now);
           if (newStock === null) {
-            db.exec('ROLLBACK');
             throw new BusinessError(
               FertilizerErrorCode.INSUFFICIENT_STOCK,
               `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足（其他事务正在扣减），请重试`,
@@ -382,13 +377,14 @@ export class FertilizerService {
         }
       }
 
-      // 同步 total_cost
-      if (updates.quantity !== undefined || updates.unit_price !== undefined) {
-        const finalQty = updates.quantity ?? existing.quantity;
-        const finalPrice = updates.unit_price ?? existing.unit_price;
-        updates.total_cost = finalQty * finalPrice;
+      // 同步 total_cost（2026-07-16 审核修复：camelCase/snake_case 双 key 兼容，防 NaN）
+      const updPrice = upd.unitPrice ?? upd.unit_price;
+      if (upd.quantity !== undefined || updPrice !== undefined) {
+        const finalQty = Number(upd.quantity ?? ex.quantity) || 0;
+        const finalPrice = Number(updPrice ?? ex.unitPrice) || 0;
+        upd.total_cost = finalQty * finalPrice;
       }
-      updates.update_time = now;
+      upd.update_time = now;
       this.repository.update(id, updates);
 
       db.exec('COMMIT');
@@ -412,7 +408,9 @@ export class FertilizerService {
     if (!existing) {
       throw new BusinessError(FertilizerErrorCode.NOT_FOUND, '施肥记录不存在', 404);
     }
-    if (existing.data_source === 'auto_iot') {
+    // 2026-07-16 审核修复：camelCase 读取（原 snake_case 读取恒 undefined → IoT 保护 + 库存回补全失效）
+    const ex = existing as unknown as Record<string, any>;
+    if (ex.dataSource === 'auto_iot') {
       throw new BusinessError(FertilizerErrorCode.IOT_READONLY, 'IoT 自动记录不可删除', 403);
     }
 
@@ -421,9 +419,10 @@ export class FertilizerService {
 
     db.exec('BEGIN');
     try {
-      const fid = existing.fertilizer_id;
-      if (fid && existing.quantity > 0) {
-        this.repository.increaseStock(fid, existing.quantity, now);
+      const fid = ex.fertilizerId ?? null;
+      const qty = Number(ex.quantity) || 0;
+      if (fid && qty > 0) {
+        this.repository.increaseStock(fid, qty, now);
       }
       this.repository.deleteById(id);
       db.exec('COMMIT');
@@ -464,10 +463,12 @@ export class FertilizerService {
     db.exec('BEGIN');
     try {
       // 对每条 deletable 记录，恢复库存后删除
+      // 2026-07-16 审核修复：camelCase 读取（原 rec.fertilizer_id 恒 undefined → 批量删除不回补库存）
       for (const id of deletable) {
-        const rec = this.repository.findById(id);
-        if (rec && rec.fertilizer_id && rec.quantity > 0) {
-          this.repository.increaseStock(rec.fertilizer_id, rec.quantity, now);
+        const rec = this.repository.findById(id) as unknown as Record<string, any> | null;
+        const recQty = Number(rec?.quantity) || 0;
+        if (rec && rec.fertilizerId && recQty > 0) {
+          this.repository.increaseStock(rec.fertilizerId, recQty, now);
         }
         this.repository.deleteById(id);
       }
@@ -513,11 +514,10 @@ export class FertilizerService {
         }
         const r = parsed.data;
 
-        // 去重（repository.findByIotRecordId 替代内联 SQL）
-        const dups = this.repository.findAll({
-          iot_record_id: r.iotRecordId,
-        }, 1, 1);
-        if (dups.rows.length > 0 && dups.rows[0]?.iot_device_id === deviceId) {
+        // 去重（2026-07-16 审核修复：findAll 白名单不含 iot_record_id 导致过滤被静默忽略，
+        // 改用专用 findByIotRecordId — 精确匹配 + 走索引；结果字段 camelCase）
+        const dups = this.repository.findByIotRecordId(r.iotRecordId) as unknown as Record<string, any>[];
+        if (dups.some((d) => d.iotDeviceId === deviceId)) {
           skipped++;
           continue;
         }
@@ -548,6 +548,9 @@ export class FertilizerService {
           production_plan_code: null,
           planting_id: null,
           planting_code: null,
+          // 2026-07-16 审核修复：FertilizerRecord 补声明后 IoT 行同步补齐
+          seedling_id: null,
+          seedling_code: null,
           greenhouse_id: null,
           greenhouse_name: r.greenhouseName,
           area_name: r.areaName ?? null,

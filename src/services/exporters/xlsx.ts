@@ -21,21 +21,35 @@ export interface ExportXlsxOptions {
 // 2026-07-16：防范 Excel 公式注入（CWE-1236）
 // 攻击场景：作物名/备注 = "=cmd|'/c calc'!A1" → 用户打开 XLSX 立即触发公式执行
 // 修复：单元格以 = / + / - / @ 开头的，前置 ' 让电子表格当作纯文本
+// 2026-07-16 审核修复：纯数字（含负数/小数）白名单跳过 — 避免 -5 被转成 '-5 文本
 const FORMULA_LEADING_CHARS = /^[=+\-@\t\r]/;
-function escapeFormula(value: string): string {
+const PURE_NUMBER_RE = /^-?\d+(\.\d+)?$/;
+export function escapeFormula(value: string): string {
+  if (PURE_NUMBER_RE.test(value)) return value;
   return FORMULA_LEADING_CHARS.test(value) ? `'${value}` : value;
+}
+
+// 2026-07-16 审核修复：HTML 转义（该导出实际是 HTML 表格伪装 .xls）
+// 攻击场景：字段含 <script>/外链 <img> → 文件被浏览器打开时执行/外泄
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function cellToString(value: unknown): string {
   if (value == null) return '';
-  return escapeFormula(String(value));
+  // 先公式转义，再 HTML 转义（顺序不能反：HTML转义后 = 前缀检测仍准确因 = 不在转义集）
+  return escapeHtml(escapeFormula(String(value)));
 }
 
 /**
  * 序列化为 HTML 表格字符串（Excel 兼容）
  */
 export function serializeHtmlTable(headers: string[], rows: Array<Record<string, unknown>>): string {
-  const headerRow = headers.map((h) => `<th>${h}</th>`).join('');
+  const headerRow = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
   const bodyRows = rows
     .map((row) => `<tr>${headers.map((h) => `<td>${cellToString(row[h])}</td>`).join('')}</tr>`)
     .join('');

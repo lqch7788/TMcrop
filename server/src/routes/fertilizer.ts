@@ -9,7 +9,7 @@
  * - GET /、/stats、/:id 路由改用 service + repository，不再直写 SQL
  * - 9 处 catch 块抽 handleError helper：BusinessError 友好错误 + 5xx 脱敏
  */
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { iotAuth } from '../middleware/iotAuth';
 import { iotIngestSchema } from '../validation/iotIngest';
 import { fertilizerService, BusinessError } from '../services/fertilizer.service';
@@ -26,22 +26,6 @@ function handleError(res: Response, error: unknown, logTag: string, fallback: st
     return;
   }
   res.status(500).json({ success: false, error: fallback });
-}
-
-/**
- * Zod 校验包装器（修阶段 12：routes 缺 Zod schema）
- */
-function validateOrFail<T>(schema: any, body: unknown, res: Response): T | null {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    res.status(400).json({
-      success: false,
-      error: `请求格式错误：${issue?.path?.join('.') || '?'} ${issue?.message || ''}`,
-    });
-    return null;
-  }
-  return parsed.data as T;
 }
 
 /** GET /api/fertilizer/generate-code — 调 service.generateCode（消除与 service 重复实现） */

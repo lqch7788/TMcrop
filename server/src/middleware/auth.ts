@@ -16,10 +16,14 @@ import * as jwt from 'jsonwebtoken';
 // 演示模式：需显式设置 DEMO_MODE=true（推荐仅开发/测试环境使用）
 // 生产模式：设置 JWT_SECRET 环境变量
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
-// 2026-07-16：拒绝 DEMO_MODE 旁路（即使 DEMO_MODE=true，生产模式下也强制 JWT 验证）
-// 防止攻击者通过伪造 NODE_ENV 缺失 + DEMO_MODE=true 拿到无鉴权 token
+// 2026-07-16：显式 NODE_ENV=production 时强制禁用 demo 旁路（保护生产）
+// 未设置 NODE_ENV 视为开发环境（本项目 dev 脚本 tsx watch 不设 NODE_ENV，fail-closed 会打断本地开发）
+// 生产部署必须显式设置 NODE_ENV=production — 启动日志会给出提示
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const DEMO_BYPASS_ALLOWED = DEMO_MODE && !IS_PRODUCTION;
+if (DEMO_MODE && !process.env.NODE_ENV) {
+  console.warn('[auth] ⚠️ DEMO_MODE=true 且 NODE_ENV 未设置 — 视为开发环境放行 demo 旁路。生产部署务必设置 NODE_ENV=production！');
+}
 
 let JWT_SECRET: string;
 if (DEMO_MODE) {

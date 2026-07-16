@@ -2819,6 +2819,9 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'idx_fertilizer_records_crop_name', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_crop_name ON fertilizer_records(crop_name)' },
     { name: 'idx_fertilizer_specs_fertilizer_code', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_specs_fertilizer_code ON fertilizer_specs(fertilizer_code)' },
     { name: 'idx_fertilizer_specs_status', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_specs_status ON fertilizer_specs(status)' },
+    // 2026-07-16 审核补充：generateCode LIKE 前缀查询 + IoT 去重高频索引
+    { name: 'idx_fertilizer_records_fertilizer_code', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_fertilizer_code ON fertilizer_records(fertilizer_code)' },
+    { name: 'idx_fertilizer_records_iot_record_id', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_iot_record_id ON fertilizer_records(iot_record_id)' },
   ];
   for (const idx of fertilizerIndexes) {
     try {
@@ -3010,7 +3013,7 @@ export function backfillDailyFertilPesticide(): void {
             return '';
           })();
           db.run(
-            `INSERT IGNORE INTO fertilizer_records (id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit, fertilize_time, description, data_source, source_type, source_daily_record_id, source_item_id, create_time)
+            `INSERT OR IGNORE INTO fertilizer_records (id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit, fertilize_time, description, data_source, source_type, source_daily_record_id, source_item_id, create_time)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?)`,
             [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode : null, '', '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'kg', recordDate, item.notes || item.applicationMethod || '', dailyRecordId, item.id, new Date().toISOString()]
           );
@@ -3040,7 +3043,7 @@ export function backfillDailyFertilPesticide(): void {
             return '';
           })();
           db.run(
-            `INSERT IGNORE INTO pesticide_records (id, record_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, pesticide_name, pesticide_type, dilution_ratio, dosage, dosage_unit, target_pest, safety_interval, description, source_type, source_daily_record_id, source_item_id, spray_time, create_time)
+            `INSERT OR IGNORE INTO pesticide_records (id, record_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, pesticide_name, pesticide_type, dilution_ratio, dosage, dosage_unit, target_pest, safety_interval, description, source_type, source_daily_record_id, source_item_id, spray_time, create_time)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?)`,
             [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode2 : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode2 : null, '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'L', item.targetPest || '', item.safetyInterval || null, item.notes || item.applicationMethod || '', dailyRecordId, item.id, recordDate, new Date().toISOString()]
           );
