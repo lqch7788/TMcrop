@@ -12,6 +12,16 @@ import { createPlantingAreaStocksTable, migrateToAreaStocks } from './plantingAr
 import { recomputeAllStockStatus } from '../lib/inventoryStockStatus';
 
 /**
+ * 2026-07-17 审核修复：本地时间戳（替代 toISOString 的 UTC 错位 — utc-timezone-id-bug 教训）
+ * 用于 backfill 补录的 create_time，与 datetime('now','localtime') 行为一致
+ */
+function nowLocalTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
  * 修复数据库结构 - 添加缺失的列和表
  */
 export async function fixMissingSchema(): Promise<void> {
@@ -3015,7 +3025,7 @@ export function backfillDailyFertilPesticide(): void {
           db.run(
             `INSERT OR IGNORE INTO fertilizer_records (id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit, fertilize_time, description, data_source, source_type, source_daily_record_id, source_item_id, create_time)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?)`,
-            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode : null, '', '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'kg', recordDate, item.notes || item.applicationMethod || '', dailyRecordId, item.id, new Date().toISOString()]
+            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode : null, '', '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'kg', recordDate, item.notes || item.applicationMethod || '', dailyRecordId, item.id, nowLocalTimestamp()]
           );
           fertCount++;
         }
@@ -3045,7 +3055,7 @@ export function backfillDailyFertilPesticide(): void {
           db.run(
             `INSERT OR IGNORE INTO pesticide_records (id, record_code, planting_id, planting_code, seedling_id, seedling_code, greenhouse_name, crop_name, pesticide_name, pesticide_type, dilution_ratio, dosage, dosage_unit, target_pest, safety_interval, description, source_type, source_daily_record_id, source_item_id, spray_time, create_time)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?)`,
-            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode2 : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode2 : null, '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'L', item.targetPest || '', item.safetyInterval || null, item.notes || item.applicationMethod || '', dailyRecordId, item.id, recordDate, new Date().toISOString()]
+            [itemId, itemId, recordType === 'planting' ? relatedId : null, recordType === 'planting' ? relatedCode2 : null, recordType === 'seedling' ? relatedId : null, recordType === 'seedling' ? relatedCode2 : null, '', '', item.name, item.category || '', dil, item.amount || 0, item.unit || 'L', item.targetPest || '', item.safetyInterval || null, item.notes || item.applicationMethod || '', dailyRecordId, item.id, recordDate, nowLocalTimestamp()]
           );
           pestCount++;
         }
