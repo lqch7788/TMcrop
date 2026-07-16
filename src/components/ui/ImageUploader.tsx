@@ -115,10 +115,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           </div>
         )}
 
-        {/* 唯一操作入口：明显的「+ 添加图片」文字按钮 */}
+        {/* 唯一操作入口：明显的「+ 添加图片」文字按钮 — 蓝色背景白字 */}
         <Button
           type="button"
-          variant="secondary"
+          variant="blue"
           size="sm"
           disabled={isDisabled}
           onClick={() => inputRef.current?.click()}
@@ -126,7 +126,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         >
           <Plus className="w-4 h-4" />
           {value.length === 0 ? '添加图片' : '继续添加图片'}
-          <span className="text-xs text-gray-500 ml-1">
+          <span className="text-xs text-white/80 ml-1">
             ({value.length}/{maxCount})
           </span>
         </Button>
