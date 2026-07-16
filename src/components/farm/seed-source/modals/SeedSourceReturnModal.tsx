@@ -238,7 +238,8 @@ export function SeedSourceReturnModal({
                     </TableCell>
                     <TableCell>
                       <Badge className="whitespace-nowrap bg-blue-100 text-blue-700">
-                        {row.stockType === 'seedling' ? '种苗' : row.stockType === 'seed' ? '种源' : row.stockType === 'product' ? '成品' : row.stockType}
+                        {/* 2026-07-16：stockType fallback 加 '其他' 兜底，避免显示未知英文值 */}
+                        {row.stockType === 'seedling' ? '种苗' : row.stockType === 'seed' ? '种源' : row.stockType === 'product' ? '成品' : '其他'}
                       </Badge>
                     </TableCell>
                     <TableCell>

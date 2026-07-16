@@ -464,10 +464,11 @@ export function InventoryTransferPanel({
                       </div>
                     </TableCell>
                     {/* 2026-06-30 Bug 13：形态列 — 调拨面板列出作物形态方便挑选；调拨入种源时此形态自动复制到 seed_sources.seed_form */}
+                    {/* 2026-07-16 修复：兜底 sourceForm（种源/育苗库存的形态字段，DB product_form=null 时仍能显示） */}
                     <TableCell>
-                      {row.productForm ? (
+                      {row.productForm || row.sourceForm ? (
                         <Badge className="bg-emerald-100 text-emerald-800 text-xs whitespace-nowrap">
-                          {row.productForm}
+                          {row.productForm || row.sourceForm}
                         </Badge>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>

@@ -149,10 +149,13 @@ export async function listTransferableSources(filters: {
       ist.unit_price, ist.supplier_id, ist.supplier_name,
       ist.production_plan_code,
       ist.warehouse_id, ist.warehouse_name,
-      ist.product_form  -- 2026-06-30 Bug 13：列表展示形态 + 调拨入种源时自动复制形态
+      ist.product_form,  -- 2026-06-30 Bug 13：列表展示形态 + 调拨入种源时自动复制形态
+      ist.source_form    -- 2026-07-16：种源/育苗库存形态字段（fixMissingSchema 注释：source_form=育苗/种植产物类型）
     FROM inventory_stock ist
     WHERE ist.stock_type IN (${placeholders})
       AND ist.current_quantity > 0
+      -- 2026-07-16 修复：与作物库存列表对齐，过滤已调拨的库存（status='transferred' 视为已消耗）
+      AND (ist.status IS NULL OR ist.status != 'transferred')
   `;
   // 注意：生产 inventory_stock 表没有 deleted_at 列（2026-06-24 排查确认），
   //       软删除逻辑由其他表维护，这里不过滤 deleted_at
@@ -229,7 +232,10 @@ export async function listTransferableSources(filters: {
       supplierName: obj.supplier_name,
       productionPlanCode: obj.production_plan_code,
       // 2026-06-30 Bug 13：调拨面板列表展示形态字段（前端 UI 显示 + 调拨时自动复制到 seed_sources.seed_form）
-      productForm: obj.product_form || '',
+      // 2026-07-16 修复：product_form 仅采收形态（产品行才用），种源/育苗库存形态写在 source_form
+      //   兜底顺序：product_form → source_form，前端 UI 任一有值就能显示
+      productForm: obj.product_form || obj.source_form || '',
+      sourceForm: obj.source_form || '',
       // harvest_record_id 字段不在生产 inventory_stock schema 中，移除引用
       warehouseId: obj.warehouse_id,
       warehouseName: obj.warehouse_name,

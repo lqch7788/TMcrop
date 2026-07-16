@@ -222,7 +222,7 @@ export function checkInventoryStockDeletable(stockId: string): DeleteCheckResult
   // 1. 查找 stock 记录（同时获取作物信息）
   const stockStmt = db.prepare(`
     SELECT id, instance_id, crop_name, variety_name, current_quantity, unit,
-           frozen_quantity, COALESCE(warehouse_name, '') AS warehouse_name
+           frozen_quantity, status, COALESCE(warehouse_name, '') AS warehouse_name
     FROM inventory_stock WHERE id = ? OR instance_id = ?
   `);
   stockStmt.bind([stockId, stockId]);
@@ -235,6 +235,17 @@ export function checkInventoryStockDeletable(stockId: string): DeleteCheckResult
   // 2. 校验无冻结
   if ((stockRow.frozen_quantity ?? 0) > 0) {
     return { ok: false, error: `库存 ${stockRow.instance_id} 还有冻结数量（${stockRow.frozen_quantity}），请先解冻再删除` };
+  }
+
+  // 2026-07-16：白名单——已用完/已调拨走的"僵尸"库存（quantity=0 + status in transferred/depleted/empty）
+  //   允许物理删除，绕过下游流水校验
+  //   原因：种源退库产生的新种源库存（quantity=0）即使被标记为 transferred/depleted，
+  //   仍会有 TX-RET-OUT 流水关联，导致无法清理；这些记录本身已是无效状态，无追溯价值
+  const currentQty = Number(stockRow.current_quantity || 0);
+  const stockStatus = String(stockRow.status || '');
+  const isZombie = currentQty === 0 && ['transferred', 'depleted', 'empty'].includes(stockStatus);
+  if (isZombie) {
+    return { ok: true };
   }
 
   // 3. 找下游出库/调拨流水

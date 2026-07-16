@@ -8,7 +8,7 @@
 import React from 'react';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
-import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
+import { SEEDLING_FORM_MAP, SEEDLING_TYPE_MAP, QUALITY_GRADE_MAP } from '../../../../constants/cropConstants';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -61,7 +61,9 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">育苗方式：</span>
-            <span className="text-sm text-gray-900">{record.seedlingType}</span>
+            {/* 2026-07-16 修复：seedlingType 是育苗方式（plug/direct/cutting/grafting 等），
+                走 SEEDLING_TYPE_MAP（12 项育苗方式字典）翻译；未匹配则原样回显 */}
+            <span className="text-sm text-gray-900">{SEEDLING_TYPE_MAP[record.seedlingType] || record.seedlingType}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">温室场地：</span>
@@ -121,7 +123,9 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
           {record.qualityGrade && (
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">品质等级：</span>
-              <span className="text-sm text-gray-900">{record.qualityGrade}</span>
+              {/* 2026-07-16 修复：qualityGrade 是英文枚举（A/B/special/excellent/good/qualified 等），
+                  走 QUALITY_GRADE_MAP 翻译 */}
+              <span className="text-sm text-gray-900">{QUALITY_GRADE_MAP[record.qualityGrade]?.label || record.qualityGrade}</span>
             </div>
           )}
         </div>
@@ -244,10 +248,19 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       // 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）
       typeColumn={{
         label: '种苗类型',
-        // 注：service 类型未声明 seedlingForm（待下次 service 改造补全），运行时从 record 读取
-        value: (record as any).seedlingForm
-          ? (SEEDLING_FORM_MAP[(record as any).seedlingForm] || (record as any).seedlingForm)
-          : '-',
+        // 2026-07-16 修复：
+        //   1) 优先 seedlingForm（容器/形态）→ SEEDLING_FORM_MAP
+        //   2) fallback 到 seedlingType（育苗方式）→ SEEDLING_TYPE_MAP
+        //   解决截图问题：YM20260705 系列 seedlingType='direct' 原本显示 'direct' 英文，现翻译成「直播育苗」
+        value: (() => {
+          const sf = (record as any).seedlingForm;
+          if (sf && SEEDLING_FORM_MAP[sf]) return SEEDLING_FORM_MAP[sf];
+          const st = record.seedlingType;
+          if (st && SEEDLING_TYPE_MAP[st]) return SEEDLING_TYPE_MAP[st];
+          if (sf) return SEEDLING_FORM_MAP[sf] || sf;
+          if (st) return st;
+          return '-';
+        })(),
       }}
     />
   );

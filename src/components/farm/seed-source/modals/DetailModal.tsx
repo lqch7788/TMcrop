@@ -12,7 +12,10 @@ import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
 import { SeedSource } from '../../../../types/crop';
-import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP, TRANSFERRED_FROM_BUSINESS_TYPE_MAP, ORIGINAL_SOURCE_MODULE_MAP } from '../../../../constants/cropConstants';
+// 2026-07-16：种源形态字段 seedForm 后端可能存中文（来自 product_form）或英文（来自 stock_type），
+// 统一在前端兜底翻译成中文显示
+import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getSeedSourceUsageRecords,
@@ -21,6 +24,20 @@ import {
   type SeedSourceInboundHistoryRecord,
 } from '@/services/apiSeedSourceService';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
+
+/**
+ * 2026-07-16：种源形态字段兜底翻译
+ * - 后端可能写中文（来自 inventory_stock.product_form「花朵/果实/种子」等 12 选）
+ * - 也可能写英文（来自 inventory_stock.stock_type 或回流时存的 seed/seedling/planting）
+ * - 显示统一返回中文，未匹配则原样回显
+ */
+function formatSeedForm(sf: string | null | undefined): string {
+  if (!sf) return '—';
+  // 已在中文词典中 → 原样返回
+  if (SEED_FORM_OPTIONS.some(opt => opt.value === sf)) return sf;
+  // 走英文 → 中文映射
+  return SOURCE_TYPE_MAP[sf] || sf;
+}
 
 /** 入库模式配置 — 三种入口各有不同的关联信息 */
 const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -83,7 +100,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">形态：</span>
-            <span className="text-sm text-gray-900">{record.seedForm || '—'}</span>
+            <span className="text-sm text-gray-900">{formatSeedForm(record.seedForm)}</span>
           </div>
         </div>
       </div>
@@ -142,7 +159,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">采收形态：</span>
-              <span className="text-sm text-gray-900">{record.seedForm || '—'}</span>
+              <span className="text-sm text-gray-900">{formatSeedForm(record.seedForm)}</span>
             </div>
           </div>
         </div>
@@ -196,7 +213,8 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">来源业务类型：</span>
-            <span className="text-sm text-gray-900">{record.transferredFromBusinessType || '—'}</span>
+            {/* 2026-07-16：transferredFromBusinessType 是英文枚举（harvest/purchase/transfer），走字典翻译 */}
+            <span className="text-sm text-gray-900">{TRANSFERRED_FROM_BUSINESS_TYPE_MAP[record.transferredFromBusinessType] || record.transferredFromBusinessType || '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">来源业务 ID：</span>
@@ -208,7 +226,8 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">原始来源模块：</span>
-            <span className="text-sm text-gray-900">{record.originalSourceModule || '—'}</span>
+            {/* 2026-07-16：originalSourceModule 是英文枚举（seed_source/seedling/planting/harvest），走字典翻译 */}
+            <span className="text-sm text-gray-900">{ORIGINAL_SOURCE_MODULE_MAP[record.originalSourceModule] || record.originalSourceModule || '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">原始来源 ID：</span>
@@ -316,7 +335,7 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
               r.sourceCode || '',
               r.cropName || '',
               r.cropCode || '',
-              r.seedForm || '',
+              r.seedForm ? (formatSeedForm(r.seedForm)) : '',
               r.quantity ?? 0,
               r.plantingCode || '',
               r.toAreaName || r.fromAreaName || '',
@@ -371,7 +390,7 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
                 <td className="px-2 py-1.5"><code className="text-xs">{r.sourceCode || '-'}</code></td>
                 <td className="px-2 py-1.5 whitespace-nowrap">{r.cropName || '-'}</td>
                 <td className="px-2 py-1.5"><code className="text-xs text-orange-600">{r.cropCode || '-'}</code></td>
-                <td className="px-2 py-1.5">{r.seedForm || '-'}</td>
+                <td className="px-2 py-1.5">{r.seedForm ? formatSeedForm(r.seedForm) : '-'}</td>
                 <td className="px-2 py-1.5 text-right font-medium">
                   {(r.quantity || 0).toLocaleString()}
                 </td>

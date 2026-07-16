@@ -1031,6 +1031,11 @@ router.get('/', (req: Request, res: Response) => {
     const params: any[] = [];
     // 2026-06-24: 排除已调拨到种源管理的行（种源管理是内部专用库存，不与作物库存重叠）
     sql += ` AND s.status != 'transferred'`;
+    // 2026-07-16：过滤已用完的库存（status='depleted'/'empty' 或 quantity=0），
+    //   避免退库后归零的种源库存记录（如 INS-20260716-0003）出现在作物库存列表
+    //   与 inventoryTransfer.service.ts:156 的过滤条件对齐
+    sql += ` AND s.current_quantity > 0`;
+    sql += ` AND s.status NOT IN ('depleted', 'empty')`;
     if (stock_type) { sql += ` AND s.stock_type = ?`; params.push(stock_type); }
     if (crop_name) { sql += ` AND s.crop_name LIKE ?`; params.push(`%${crop_name}%`); }
     if (status) { sql += ` AND s.status = ?`; params.push(status); }

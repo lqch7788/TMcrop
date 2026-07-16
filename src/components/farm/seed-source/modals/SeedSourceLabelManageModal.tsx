@@ -37,6 +37,7 @@ const EXPORT_FIELDS = [
 const STATUS_LABEL_MAP: Record<string, string> = {
   active: '在用',
   void: '已作废',
+  voided: '已作废',
   printed: '已打印',
   archived: '已归档',
   disabled: '已停用',

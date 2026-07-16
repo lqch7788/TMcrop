@@ -46,7 +46,10 @@ export interface TransferableSourceRow {
   warehouseName: string | null;
   // 2026-06-30 Bug 13：作物形态（果实/种子/花朵 等 12 选 — 从 inventory_stock.product_form 读取）
   // 后端 listTransferableSources SQL 已加这列；前端 UI 用于在调拨面板列表里展示
+  // 2026-07-16：种源/育苗库存形态在 source_form 字段，productForm 已做 product_form||source_form 兜底
   productForm?: string;
+  // 2026-07-16：单独保留 source_form 字段，方便前端 UI 显示完整原始信息
+  sourceForm?: string;
 }
 
 /** 调拨面板单条提交数据 */

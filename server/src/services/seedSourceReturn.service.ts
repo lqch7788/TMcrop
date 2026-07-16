@@ -269,31 +269,35 @@ export function executeReturnToInventory(
         id, transaction_id, instance_id, stock_type, transaction_type, quantity,
         balance_before, balance_after, business_id, business_type, business_code,
         operator_id, operator_name, operate_date, remarks, create_time
-      ) VALUES (?, ?, ?, ?, 'transfer_in', ?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        txId,
-        txId,
-        String(stock.instance_id || ''),
-        String(ir.stock_type || ''),
-        item.quantity,
-        oldCurrent,
-        newCurrent,
-        targetSeedSourceId,  // 2026-07-06 P0 修复 A：种源 ID（让 timeline 能查到）
-        String(ir.source_code || ''),
-        'system',
-        'system',
-        dateStr,
-        `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}`,
-        now,
+        txId,                                                    // 1: id
+        txId,                                                    // 2: transaction_id
+        String(stock.instance_id || ''),                         // 3: instance_id
+        String(ir.stock_type || ''),                             // 4: stock_type
+        'transfer_in',                                           // 5: transaction_type
+        item.quantity,                                           // 6: quantity
+        oldCurrent,                                              // 7: balance_before
+        newCurrent,                                              // 8: balance_after
+        targetSeedSourceId,  // 2026-07-06 P0 修复 A：种源 ID     // 9: business_id
+        'inventory_transfer',                                    // 10: business_type（2026-07-16 修复）
+        String(ir.source_code || ''),                            // 11: business_code
+        'system',                                                // 12: operator_id
+        'system',                                                // 13: operator_name
+        dateStr,                                                 // 14: operate_date
+        `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}`, // 15: remarks
+        now,                                                     // 16: create_time
       ],
     );
 
     // 12. 扣减新种源库存 + 写 transfer_out 流水（仅当新种源库存与原库存不同时）
     // 2026-07-06 P0 修复 B：补齐新种源库存扣减 + 流水（否则库存层 + 种源层数据不一致）
+    // 2026-07-16：种源退库完成（quantity=0）后把 status 标记为 'transferred'，让所有列表过滤（status!='transferred'）自动隐藏
+    //   避免产生 0 数量的"僵尸"库存记录无法删除（inventoryDeleteGuard 会拦截有流水关联的库存）
     if (newSeedStockId && newSeedStockId !== originalStockId && newSeedStockCurrent > 0) {
       const newSeedCurrentAfter = newSeedStockCurrent - item.quantity;
       const newSeedAvailableAfter = Math.max(0, newSeedStockAvailable - item.quantity);
-      const newSeedStatus = newSeedCurrentAfter <= 0 ? 'depleted' : 'in_stock';
+      const newSeedStatus = newSeedCurrentAfter <= 0 ? 'transferred' : 'in_stock';
       db.run(
         `UPDATE inventory_stock
          SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
@@ -307,22 +311,24 @@ export function executeReturnToInventory(
           id, transaction_id, instance_id, stock_type, transaction_type, quantity,
           balance_before, balance_after, business_id, business_type, business_code,
           operator_id, operator_name, operate_date, remarks, create_time
-        ) VALUES (?, ?, ?, ?, 'transfer_out', ?, ?, ?, ?, 'inventory_transfer', ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          txOutId, txOutId,
-          newSeedStockInstanceId,
-          String(ir.stock_type || ''),
-          item.quantity,
-          newSeedStockCurrent,
-          newSeedCurrentAfter,
-          targetSeedSourceId,
-          'inventory_transfer',
-          String(ss.source_code || ''),
-          'system',
-          'system',
-          dateStr,
-          `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}（扣减种源库存）`,
-          now,
+          txOutId,                                                // 1: id
+          txOutId,                                                // 2: transaction_id
+          newSeedStockInstanceId,                                 // 3: instance_id
+          String(ir.stock_type || ''),                             // 4: stock_type
+          'transfer_out',                                         // 5: transaction_type
+          item.quantity,                                           // 6: quantity
+          newSeedStockCurrent,                                    // 7: balance_before
+          newSeedCurrentAfter,                                    // 8: balance_after
+          targetSeedSourceId,                                     // 9: business_id
+          'inventory_transfer',                                    // 10: business_type（2026-07-16 修复）
+          String(ss.source_code || ''),                            // 11: business_code
+          'system',                                                // 12: operator_id
+          'system',                                                // 13: operator_name
+          dateStr,                                                 // 14: operate_date
+          `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}（扣减种源库存）`, // 15: remarks
+          now,                                                     // 16: create_time
         ]
       );
     }
@@ -378,9 +384,12 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
             ist.instance_id AS source_instance_id,
             ir.stock_type, ir.warehouse_id, ir.warehouse_name,
             ir.record_date, ir.quantity, COALESCE(ir.returned_quantity, 0) AS returned_quantity,
-            ir.unit, ir.crop_name, ir.crop_code
+            ir.unit, ir.crop_name, ir.crop_code,
+            -- 2026-07-16 修复：JOIN 种源表取剩余量，避免弹窗可退量与种源实际可用不一致
+            ss.remaining_quantity AS source_remaining
      FROM inventory_inbound_records ir
      LEFT JOIN inventory_stock ist ON ir.source_id = ist.id
+     LEFT JOIN seed_sources ss ON ss.id = ir.business_id
      WHERE ir.source_module = 'inventory'
        AND ir.business_id = ?
        AND ir.record_type = 'inbound'
@@ -393,6 +402,10 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
     const r = stmt.getAsObject() as Record<string, unknown>;
     const quantity = Number(r.quantity || 0);
     const returned = Number(r.returned_quantity || 0);
+    const sourceRemaining = Number(r.source_remaining ?? quantity);  // fallback: 无值时用 quantity
+    // 2026-07-16 修复：可退量取 MIN(入库未退量, 种源剩余量) — 防止种源剩余<入库未退时仍显示可退全部入库量
+    const inboundReturnable = quantity - returned;
+    const returnableQuantity = Math.max(0, Math.min(inboundReturnable, sourceRemaining));
     rows.push({
       id: String(r.id || ''),
       sourceId: String(r.source_id || ''),
@@ -404,7 +417,7 @@ export function listReturnableInboundRecords(seedSourceId: string): ReturnableIn
       recordDate: String(r.record_date || ''),
       quantity,
       returnedQuantity: returned,
-      returnableQuantity: quantity - returned,
+      returnableQuantity,
       unit: String(r.unit || ''),
       cropName: r.crop_name ? String(r.crop_name) : null,
       cropCode: r.crop_code ? String(r.crop_code) : null,

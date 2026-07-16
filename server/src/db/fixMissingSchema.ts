@@ -3886,6 +3886,10 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('历史 method 字段翻译失败:', e.message);
   }
+
+  // 2026-07-16：库存 crop_name 数据错位迁移已移至独立脚本 server/scripts/migrateInventoryCropName.ts
+  //   原因：fixMissingSchema 被启动白名单禁用（index.ts:173 注释：YELLOW 级含 UPDATE 迁移，c55 事故），
+  //   即使把迁移函数加到这里，启动也不会跑。改用独立脚本，用户手动跑 npx tsx 执行。
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

@@ -88,6 +88,20 @@ const FLOW_TYPE_CN: Record<string, string> = {
 };
 
 /**
+ * 2026-07-16：flowType 第一段（来源） → 中文
+ * 让 EntityHistoryTimeline 表格"来源"列能展示有意义的标签（如「种源」「库存」）
+ * 之前只填到 remarks，表格列永远显示 '-'
+ */
+const FLOW_SOURCE_CN: Record<string, string> = {
+  seed_source: '种源',
+  inventory: '库存',
+  external: '外部',
+  planting: '种植',
+  correction: '数量修正',
+  plan: '计划',
+};
+
+/**
  * 查询 material_flow_log（调已有 /material-flow-log/trace 端点）
  */
 async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
@@ -97,19 +111,28 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
       `/material-flow-log/trace?code=${encodeURIComponent(code)}`
     );
     const rows = Array.isArray(res) ? res : (res as Record<string, unknown>)?.data as FlowLogRow[] || [];
-    return rows.map((r: FlowLogRow) => ({
-      id: r.id,
-      occurredAt: r.createdAt,
-      source: 'flow' as const,
-      category: 'flow' as const,
-      action: FLOW_TYPE_CN[r.flowType] || r.flowType || '流转',
-      quantityDelta: r.targetQuantity || r.sourceQuantity || undefined,
-      unit: r.targetUnit || r.sourceUnit,
-      refCode: r.sourceCode || r.targetCode,
-      refModule: undefined,
-      operatorName: r.createdBy,
-      remarks: r.cropName,
-    }));
+    return rows.map((r: FlowLogRow) => {
+      // 2026-07-16 修复：flowType 第一段即"来源"（如 seed_source→seedling → 'seed_source' → '种源'）
+      const sourceKey = r.flowType ? r.flowType.split('→')[0] : '';
+      return {
+        id: r.id,
+        occurredAt: r.createdAt,
+        source: 'flow' as const,
+        category: 'flow' as const,
+        action: FLOW_TYPE_CN[r.flowType] || r.flowType || '流转',
+        quantityDelta: r.targetQuantity || r.sourceQuantity || undefined,
+        unit: r.targetUnit || r.sourceUnit,
+        refCode: r.sourceCode || r.targetCode,
+        refModule: undefined,
+        operatorName: r.createdBy,
+        // 2026-07-16 修复：把 cropName 也填到 HistoryItem.cropName 字段（之前只塞到 remarks，导致表格"作物品种"列永远为 '-'）
+        cropName: r.cropName,
+        // 2026-07-16 修复：从 flowType 推断入库来源，让表格"来源"列展示有意义的标签
+        inboundSource: FLOW_SOURCE_CN[sourceKey] || sourceKey || undefined,
+        // 保留原行为：作物名也写到备注（不破坏既有 UI 习惯）
+        remarks: r.cropName,
+      };
+    });
   } catch {
     return [];
   }
