@@ -15,6 +15,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 
 interface AddPestDiseaseModalProps {
   isOpen: boolean;
@@ -50,9 +51,20 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
   // 生成编码
   const generateCode = async () => {
     setGeneratingCode(true);
-    const nextCode = await store.fetchNextCode(form.dictType);
-    setForm(prev => ({ ...prev, dictCode: nextCode }));
-    setGeneratingCode(false);
+    try {
+      const nextCode = await store.fetchNextCode(form.dictType);
+      if (!nextCode) {
+        await showAlert('生成编码失败：后端返回为空，请稍后重试');
+        return;
+      }
+      setForm(prev => ({ ...prev, dictCode: nextCode }));
+    } catch (err) {
+      // 2026-07-16：补 try/catch + 友好错误提示（之前 catch 抛出但 UI 没 catch，UI 永远卡在「生成中...」无反馈）
+      console.error('[AddPestDiseaseModal] 生成编码失败:', err);
+      await showAlert('生成编码失败：' + (err instanceof Error ? err.message : '未知错误'));
+    } finally {
+      setGeneratingCode(false);
+    }
   };
 
   // 重置表单

@@ -18,15 +18,16 @@ router.get('/next-code', (req: Request, res: Response) => {
   const prefix = type === 'pest' ? 'PD-P-' : 'PD-D-';
   const db = getDatabase();
 
+  // 2026-07-16：自动查重 — 取 MAX 后，逐个查直到找到不冲突的编码
+  // 防并发 / 防手动插空缺 / 补跳号，最多重试 20 次
   const stmt = db.prepare(
-    `SELECT dict_code FROM pest_disease_dict WHERE dict_type = ? AND dict_code LIKE ? ORDER BY dict_code DESC LIMIT 1`
+    `SELECT MAX(dict_code) AS max_code FROM pest_disease_dict WHERE dict_type = ? AND dict_code LIKE ?`
   );
-  stmt.bind([type, `${prefix}%`] as any);
-
+  stmt.bind([type, `${prefix}%`]);
   let lastCode = '';
   if (stmt.step()) {
-    const row = stmt.getAsObject() as { dict_code: string };
-    lastCode = row.dict_code || '';
+    const row = stmt.getAsObject() as { max_code: string | null };
+    lastCode = String(row.max_code || '');
   }
   stmt.free();
 
@@ -38,8 +39,28 @@ router.get('/next-code', (req: Request, res: Response) => {
     }
   }
 
-  const nextCode = `${prefix}${nextNum.toString().padStart(4, '0')}`;
-  res.json({ next_code: nextCode });
+  // 自动查重：候选 nextNum 可能因手动插号/并发预留而冲突
+  // 逐个查直到找到 0 冲突的最小编码
+  const checkStmt = db.prepare(
+    `SELECT 1 FROM pest_disease_dict WHERE dict_code = ? LIMIT 1`
+  );
+  let candidateNum = nextNum;
+  const MAX_RETRIES = 20;
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const candidate = `${prefix}${candidateNum.toString().padStart(4, '0')}`;
+    checkStmt.bind([candidate]);
+    const exists = checkStmt.step();
+    checkStmt.reset();
+    if (!exists) {
+      // 找到空闲编码，返回（前端 INSERT 时 dict_code 还有 UNIQUE 约束兜底）
+      res.json({ nextCode: candidate });
+      return;
+    }
+    candidateNum++;
+  }
+
+  // 重试耗尽仍冲突（极罕见）
+  res.status(500).json({ error: `生成编码冲突，已重试 ${MAX_RETRIES} 次仍冲突，请联系管理员` });
 });
 
 /** 生成字典编码 PD-P-/PD-D-+4位流水号 */
