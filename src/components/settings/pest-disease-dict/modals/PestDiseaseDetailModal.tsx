@@ -77,6 +77,8 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
 
   const [relatedPesticides, setRelatedPesticides] = useState<PesticideForRelation[]>([]);
   const [loadingRelations, setLoadingRelations] = useState(false);
+  // 2026-07-17：图片全屏预览
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // 加载关联的药剂
   useEffect(() => {
@@ -88,12 +90,18 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
   const loadRelatedPesticides = async () => {
     if (!record) return;
     setLoadingRelations(true);
-    const pesticides = await pestDiseaseStore.fetchRelatedPesticides(record.id);
-    setRelatedPesticides(pesticides);
-    setLoadingRelations(false);
+    try {
+      const pesticides = await pestDiseaseStore.fetchRelatedPesticides(record.id);
+      setRelatedPesticides(pesticides);
+    } finally {
+      setLoadingRelations(false);
+    }
   };
 
   if (!record) return null;
+
+  // 2026-07-17：图片数组（store normalize 已 parseImages 为 string[]，兜底再防御一层）
+  const images: string[] = Array.isArray(record.images) ? record.images : [];
 
   // 详情字段定义
   const fields = [
@@ -145,7 +153,8 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
                   <div className="font-medium text-gray-900">{pesticide.pesticideName}</div>
                   <div className="text-sm text-gray-500 font-mono">{pesticide.pesticideCode}</div>
                 </div>
-                // 2026-07-10：controlType 已删除，改为 pesticideTypes 多值 chips 展示
+                {/* 2026-07-10：controlType 已删除，改为 pesticideTypes 多值 chips 展示
+                    2026-07-17：修复 — 原注释用 // 直接写在 JSX 里被当文本渲染 */}
                 <div className="ml-4 flex flex-wrap gap-1">
                   {(pesticide.pesticideTypes || []).map(t => (
                     <span
@@ -161,6 +170,24 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
           </div>
         )}
       </div>
+
+      {/* 2026-07-17：图片区块（缩略图 + 点击全屏预览） */}
+      {images.length > 0 && (
+        <div className="mb-4">
+          <Label className="text-gray-700 mb-2 block">图片 ({images.length})</Label>
+          <div className="flex flex-wrap gap-2">
+            {images.map((src, idx) => (
+              <img
+                key={idx}
+                src={src}
+                alt={`病虫害图片 ${idx + 1}`}
+                className="w-24 h-24 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setPreviewUrl(src)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 详情网格 */}
       <div className="grid grid-cols-2 gap-4">
@@ -209,6 +236,28 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
           <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
+
+      {/* 2026-07-17：图片全屏预览层 */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewUrl(null)}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={previewUrl}
+            alt="预览"
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </UnifiedModal>
   );
 }

@@ -181,17 +181,20 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict/${pestId}/relations`);
         const items = Array.isArray(response) ? response : response?.data ?? [];
         // 2026-07-10：兼容后端返回的 pesticide_type 字段（snake_case JSON 字符串），前端统一为 pesticideTypes[]
+        // 2026-07-17 审核修复：补 camelCase 单数 pesticideType 分支（camelCase 中间件已把 pesticide_type
+        // 转成 pesticideType，原代码只查 snake_case 恒 miss → 类型 chips 永远为空）
         return items.map((item: Record<string, unknown>) => {
           if (Array.isArray(item.pesticideTypes)) return item as PesticideForRelation;
           let arr: string[] = [];
-          if (Array.isArray(item.pesticide_types)) {
-            arr = (item.pesticide_types as string[]).filter((v): v is string => typeof v === 'string');
-          } else if (typeof item.pesticide_type === 'string' && item.pesticide_type.trim()) {
+          const rawTypes = item.pesticide_types ?? item.pesticideType ?? item.pesticide_type;
+          if (Array.isArray(rawTypes)) {
+            arr = (rawTypes as string[]).filter((v): v is string => typeof v === 'string');
+          } else if (typeof rawTypes === 'string' && rawTypes.trim()) {
             try {
-              const parsed = JSON.parse(item.pesticide_type);
+              const parsed = JSON.parse(rawTypes);
               arr = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
             } catch {
-              arr = item.pesticide_type ? [item.pesticide_type] : [];
+              arr = [rawTypes];
             }
           }
           return { ...item, pesticideTypes: arr } as PesticideForRelation;
