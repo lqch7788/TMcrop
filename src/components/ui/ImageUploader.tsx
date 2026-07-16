@@ -82,13 +82,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const isDisabled = disabled || value.length >= maxCount
 
-  // ====== 紧凑模式：一行小缩略图（带实际图片预览）+ 小 + 添加按钮 ======
+  // ====== 紧凑模式：一行小缩略图（带实际图片预览）+ 显式「+ 添加图片」按钮 ======
   // 2026-07-16 修正：保留缩略图（紧凑尺寸 64x64），避免用「图片 1/2/3」之类的盲标签
+  //            加回明显的「+ 添加图片」文字按钮（用户反馈隐式虚线方框不直观）
   if (compact) {
     return (
       <div className={cn("space-y-2", className)}>
+        {/* 已有图片缩略图（一行小尺寸 + 末尾 + 占位方框） */}
         <div className="flex items-center flex-wrap gap-2">
-          {/* 已有图片缩略图（紧凑尺寸 w-16 h-16，hover 删除） */}
           {value.map((url, index) => (
             <div
               key={index}
@@ -100,7 +101,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setPreviewUrl(url)}
               />
-              {/* 删除按钮（右上角 ×） */}
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
@@ -112,22 +112,35 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
           ))}
 
-          {/* 添加按钮（≤maxCount 时显示） */}
-          {!isDisabled && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
+          {/* 占位「+ N/M」方框（缩略图不足时显示，无文字让用户疑惑） */}
+          {!isDisabled && value.length > 0 && (
+            <div
               onClick={() => inputRef.current?.click()}
-              className="w-16 h-16 border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-lg flex flex-col items-center justify-center gap-0.5 p-0"
+              className="w-16 h-16 border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer shrink-0"
             >
-              <ImageIcon className="w-5 h-5 text-gray-500" />
-              <span className="text-xs text-gray-500">
+              <Plus className="w-5 h-5 text-gray-400" />
+              <span className="text-xs text-gray-400">
                 {value.length}/{maxCount}
               </span>
-            </Button>
+            </div>
           )}
         </div>
+
+        {/* 明显的「+ 添加图片」文字按钮（用户主要操作入口） */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={isDisabled}
+          onClick={() => inputRef.current?.click()}
+          className="gap-1"
+        >
+          <Plus className="w-4 h-4" />
+          {value.length === 0 ? '添加图片' : '继续添加图片'}
+          <span className="text-xs text-gray-500 ml-1">
+            ({value.length}/{maxCount})
+          </span>
+        </Button>
 
         {/* 隐藏的 file input */}
         <input
