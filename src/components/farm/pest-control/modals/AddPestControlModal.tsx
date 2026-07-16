@@ -1153,7 +1153,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                           category="application_method"
                           value={item.applicationMethod || ''}
                           onChange={(val) => updatePoolField(idx, 'applicationMethod', val)}
-                          placeholder="方法"
+                          placeholder="请选择"
                         />
                       </div>
                       <div className="col-span-3">
