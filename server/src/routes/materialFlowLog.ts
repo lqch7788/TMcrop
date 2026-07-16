@@ -51,6 +51,8 @@ router.get('/', (req: Request, res: Response) => {
 
 // ============================================================
 // GET /trace — 单批次全链路追溯
+// 2026-07-16：加 LIMIT 200 硬上限（热门批号可达 10k+ 行 → 加 LIMIT 防止 dev server OOM）
+//             超出截断时返回 truncated=true 让前端提示「仅显示最近 200 条」可再翻页
 // ============================================================
 router.get('/trace', (req: Request, res: Response) => {
   try {
@@ -59,9 +61,17 @@ router.get('/trace', (req: Request, res: Response) => {
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ success: false, error: 'code 参数必填' });
     }
-    const rows = db.exec(
-      `SELECT * FROM material_flow_log WHERE source_code = ? OR target_code = ? ORDER BY created_at ASC`,
+    const TRACE_LIMIT = 200;
+    // 先 COUNT 一次判断是否截断
+    const countRows = db.exec(
+      `SELECT COUNT(*) AS cnt FROM material_flow_log WHERE source_code = ? OR target_code = ?`,
       [code, code]
+    );
+    const total = Number(countRows[0]?.values?.[0]?.[0] || 0);
+    const truncated = total > TRACE_LIMIT;
+    const rows = db.exec(
+      `SELECT * FROM material_flow_log WHERE source_code = ? OR target_code = ? ORDER BY created_at ASC LIMIT ?`,
+      [code, code, TRACE_LIMIT]
     );
     const list = rows[0]?.values?.map((row) => {
       const cols = rows[0].columns;
@@ -69,7 +79,7 @@ router.get('/trace', (req: Request, res: Response) => {
       cols.forEach((c, i) => { obj[c] = row[i]; });
       return obj;
     }) || [];
-    res.json({ success: true, data: list });
+    res.json({ success: true, data: list, truncated, total });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -181,16 +191,23 @@ router.get('/stats/annual', (req: Request, res: Response) => {
 // ============================================================
 // DELETE /:id — 单条删除流转记录
 // 2026-06-15 新增（前端要求删除测试数据）
+// 2026-07-16 安全加固：仅 admin 角色可调用；统一使用主键 id（删除 oid 备用匹配）
 // ============================================================
 router.delete('/:id', (req: Request, res: Response) => {
   try {
+    // 2026-07-16：仅 admin 角色可删除流转审计记录
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: '无权删除流转记录，需要管理员权限' });
+    }
     const { id } = req.params;
     const db = getDatabase();
-    const result = db.run('DELETE FROM material_flow_log WHERE id = ? OR oid = ?', [id, id]);
+    const result = db.run('DELETE FROM material_flow_log WHERE id = ?', [id]);
     if ((result as any).changes === 0) {
       return res.status(404).json({ success: false, error: '流转记录不存在' });
     }
     saveDatabase();
+    // 2026-07-16：审计日志（成功也记录）
+    console.log(`[audit] material-flow-log DELETE id=${id} by user=${req.user?.userId} (${req.user?.name})`);
     res.json({ success: true, data: { deletedCount: (result as any).changes } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
@@ -200,9 +217,15 @@ router.delete('/:id', (req: Request, res: Response) => {
 // ============================================================
 // DELETE / — 批量删除（按 ids 复数 query 参数）
 // 2026-06-15 新增
+// 2026-07-16 安全加固：admin 角色 + 单次最多 100 个 + 审计
 // ============================================================
+const MAX_BATCH_DELETE = 100;
 router.delete('/', (req: Request, res: Response) => {
   try {
+    // 2026-07-16：仅 admin 角色可删除
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: '无权批量删除流转记录，需要管理员权限' });
+    }
     // 兼容 ids=id1&ids=id2 和 ids=id1,id2 两种格式
     let ids: string[] = [];
     const raw = req.query.ids;
@@ -214,13 +237,18 @@ router.delete('/', (req: Request, res: Response) => {
     if (ids.length === 0) {
       return res.status(400).json({ success: false, error: 'ids 必填且非空' });
     }
+    // 2026-07-16：限制单次删除数量，防止 DoS
+    if (ids.length > MAX_BATCH_DELETE) {
+      return res.status(400).json({ success: false, error: `单次最多删除 ${MAX_BATCH_DELETE} 条，当前 ${ids.length} 条` });
+    }
     const db = getDatabase();
     const placeholders = ids.map(() => '?').join(',');
     const result = db.run(
-      `DELETE FROM material_flow_log WHERE id IN (${placeholders}) OR oid IN (${placeholders})`,
-      [...ids, ...ids]
+      `DELETE FROM material_flow_log WHERE id IN (${placeholders})`,
+      ids
     );
     saveDatabase();
+    console.log(`[audit] material-flow-log BATCH DELETE count=${ids.length} by user=${req.user?.userId} (${req.user?.name})`);
     res.json({ success: true, data: { deletedCount: (result as any).changes } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
@@ -229,6 +257,7 @@ router.delete('/', (req: Request, res: Response) => {
 
 // ============================================================
 // GET /stats/inventory-trace — 库存来源追溯
+// 2026-07-16：加 ORDER BY + LIMIT 200（之前 SELECT * 无 LIMIT，长生命周期产品可达数百条）
 // ============================================================
 router.get('/stats/inventory-trace', (req: Request, res: Response) => {
   try {
@@ -237,9 +266,16 @@ router.get('/stats/inventory-trace', (req: Request, res: Response) => {
     if (!instanceId || typeof instanceId !== 'string') {
       return res.status(400).json({ success: false, error: 'instanceId 参数必填' });
     }
-    const rows = db.exec(
-      `SELECT * FROM material_flow_log WHERE target_type = 'inventory_stock' AND target_id = ?`,
+    const TRACE_LIMIT = 200;
+    const countRows = db.exec(
+      `SELECT COUNT(*) AS cnt FROM material_flow_log WHERE target_type = 'inventory_stock' AND target_id = ?`,
       [instanceId]
+    );
+    const total = Number(countRows[0]?.values?.[0]?.[0] || 0);
+    const truncated = total > TRACE_LIMIT;
+    const rows = db.exec(
+      `SELECT * FROM material_flow_log WHERE target_type = 'inventory_stock' AND target_id = ? ORDER BY created_at DESC LIMIT ?`,
+      [instanceId, TRACE_LIMIT]
     );
     const list = rows[0]?.values?.map((row) => {
       const cols = rows[0].columns;
@@ -247,7 +283,7 @@ router.get('/stats/inventory-trace', (req: Request, res: Response) => {
       cols.forEach((c, i) => { obj[c] = row[i]; });
       return obj;
     }) || [];
-    res.json({ success: true, data: list });
+    res.json({ success: true, data: list, truncated, total });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }

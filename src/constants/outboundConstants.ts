@@ -43,10 +43,11 @@ export function mapLegacyBusinessType(legacy: string | null | undefined): Outbou
   return OutboundBusinessType.OTHER;
 }
 
-// 2026-07-15：库存类型 meta — 从 OutboundRecordsComponents 抽出复用
-// （之前硬编码在组件内，多处颜色风格不一致：组件用实色，这里用浅底深字与其他 meta 统一）
+// 2026-07-16：库存类型 meta — 从 OutboundRecordsComponents 抽出复用
+// 改为深底白字（500 级实色 + 白字），与"业务"列浅底深字形成对比，且解决组件硬编码 text-white
+// 与浅底色叠加导致白字看不清的问题
 export const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: string }> = {
-  seed:     { label: '种源', color: 'bg-amber-100 text-amber-700',  icon: '🌱' },
-  seedling: { label: '种苗', color: 'bg-green-100 text-green-700',  icon: '🌿' },
-  product:  { label: '成品', color: 'bg-emerald-100 text-emerald-700', icon: '📦' },
+  seed:     { label: '种源', color: 'bg-amber-500 text-white',    icon: '🌱' },
+  seedling: { label: '种苗', color: 'bg-green-500 text-white',    icon: '🌿' },
+  product:  { label: '成品', color: 'bg-emerald-500 text-white',  icon: '📦' },
 };

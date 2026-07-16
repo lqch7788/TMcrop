@@ -370,13 +370,17 @@ export class InventoryService {
   /**
    * 上游追溯（沿 source_instance_id 链向上）
    * Phase 13.1.5：补 depth + parentInstanceId 字段
+   * 2026-07-16：改写为单条 WITH RECURSIVE CTE，把 N+1 应用层 BFS 替换为 1 次 SQL 往返
+   * - 起点优先 inventory_stock（标准来源链），不在时回退到 crop_instances（虚拟节点）
+   * - WHERE chain.depth < ? 保证深度上限硬约束（防止 maxDepth=999 DoS）
+   * - chain.depth 单调递增天然防环（无需 visited 集合）
    */
   async traceUpstream(instanceId: string, maxDepth: number = 10): Promise<Array<{
     instanceId: string;
     stockType: string;
     businessType: string;
     businessId: string;
-    businessCode?: string;    // 2026-07-04：批次号（育苗编码/种植编码/种源编码）
+    businessCode?: string;
     cropName: string;
     varietyName?: string;
     quantity: number;
@@ -385,77 +389,107 @@ export class InventoryService {
     depth: number;
     parentInstanceId: string | null;
   }>> {
-    const results: any[] = [];
-    const visited = new Set<string>();
-    const queue: { id: string; depth: number; parentId: string | null }[] = [
-      { id: instanceId, depth: 0, parentId: null }
-    ];
+    // 安全硬上限：service 层兜底，不信任 controller 传入值
+    const HARD_DEPTH_CAP = 20;
+    const depth = Math.min(Math.max(0, Math.floor(Number(maxDepth) || 10)), HARD_DEPTH_CAP);
+    const db = getDatabase();
+    // 起点查询：instanceId 在 inventory_stock / crop_instances 任一张表 → 直接返回
+    // 同时把整个上游链 CTE 也跑出来，单次 round-trip
+    // 参数顺序：?1 = inventory_stock 起点，?2 = crop_instances 起点，?3 = crop_instances 起点（NOT EXISTS 子查询），?4 = depth 上限
+    const result = db.exec(
+      `WITH RECURSIVE upstream_chain AS (
+         -- 锚点 1：inventory_stock（标准链起点）
+         SELECT
+           s.instance_id AS id,
+           s.source_instance_id AS source_id,
+           'inventory_stock' AS source_table,
+           s.stock_type, s.business_type, s.business_id, s.business_code,
+           s.crop_name, s.variety_name,
+           s.current_quantity AS quantity, s.inbound_date,
+           0 AS depth, NULL AS parent_id
+         FROM inventory_stock s
+         WHERE s.instance_id = ?1
+         UNION ALL
+         -- 锚点 2：crop_instances（起点不在 inventory_stock 时的回退虚拟节点）
+         SELECT
+           ci.id, ci.source_instance_id,
+           'crop_instances',
+           CASE ci.business_type
+             WHEN 'planting' THEN 'product'
+             WHEN 'seedling' THEN 'seedling'
+             WHEN 'seed_source' THEN 'seed'
+             ELSE 'unknown'
+           END,
+           ci.business_type, ci.business_id, ci.instance_code,
+           ci.crop_name, ci.crop_variety,
+           COALESCE(ci.current_quantity, 0),
+           substr(ci.create_time, 1, 10),
+           0, NULL
+         FROM crop_instances ci
+         WHERE ci.id = ?2
+           AND NOT EXISTS (SELECT 1 FROM inventory_stock WHERE instance_id = ?3)
+         UNION ALL
+         -- 递归 1：inventory_stock → inventory_stock（标准来源链）
+         SELECT
+           s.instance_id, s.source_instance_id, 'inventory_stock',
+           s.stock_type, s.business_type, s.business_id, s.business_code,
+           s.crop_name, s.variety_name,
+           s.current_quantity, s.inbound_date,
+           chain.depth + 1, chain.id
+         FROM inventory_stock s
+         JOIN upstream_chain chain ON s.instance_id = chain.source_id
+         WHERE chain.depth < ?4
+         UNION ALL
+         -- 递归 2：source 指向 crop_instances（跨表回退，与原 BFS 等价）
+         SELECT
+           ci.id, ci.source_instance_id, 'crop_instances',
+           CASE ci.business_type
+             WHEN 'planting' THEN 'product'
+             WHEN 'seedling' THEN 'seedling'
+             WHEN 'seed_source' THEN 'seed'
+             ELSE 'unknown'
+           END,
+           ci.business_type, ci.business_id, ci.instance_code,
+           ci.crop_name, ci.crop_variety,
+           COALESCE(ci.current_quantity, 0),
+           substr(ci.create_time, 1, 10),
+           chain.depth + 1, chain.id
+         FROM crop_instances ci
+         JOIN upstream_chain chain ON ci.id = chain.source_id
+         WHERE chain.depth < ?4
+           AND NOT EXISTS (SELECT 1 FROM inventory_stock WHERE instance_id = chain.source_id)
+       )
+       SELECT * FROM upstream_chain ORDER BY depth ASC`,
+      [instanceId, instanceId, instanceId, depth]
+    );
 
-    while (queue.length > 0) {
-      const { id, depth, parentId } = queue.shift()!;
-      if (visited.has(id) || depth > maxDepth) continue;
-      visited.add(id);
-
-      const stock = await inventoryStockRepository.findByInstanceId(id);
-      if (stock) {
-        // inventory_stock 节点：直接入结果
-        results.push({
-          instanceId: stock.instanceId,
-          stockType: stock.stockType,
-          businessType: stock.businessType,
-          businessId: stock.businessId,
-          cropName: stock.cropName,
-          varietyName: stock.varietyName,
-          quantity: stock.currentQuantity,
-          inboundDate: stock.inboundDate,
-          sourceInstanceId: stock.sourceInstanceId,
-          depth,
-          parentInstanceId: parentId,
-        });
-        if (stock.sourceInstanceId && !visited.has(stock.sourceInstanceId)) {
-          queue.push({ id: stock.sourceInstanceId, depth: depth + 1, parentId: stock.instanceId ?? null });
-        }
-      } else {
-        // 2026-07-04 修复：source_instance_id 可能指向 crop_instances 而非 inventory_stock
-        // 当 inventory_stock 查不到时，回退查 crop_instances 继续往上追溯
-        const db = getDatabase();
-        const ciStmt = db.prepare('SELECT * FROM crop_instances WHERE id = ?');
-        ciStmt.bind([id]);
-        let ciRow: any = null;
-        if (ciStmt.step()) ciRow = ciStmt.getAsObject();
-        ciStmt.free();
-
-        if (ciRow) {
-          // crop_instance → 作为虚拟节点插入结果
-          const bizTypeLabel = ciRow.business_type === 'planting' ? '种植'
-            : ciRow.business_type === 'seedling' ? '育苗'
-            : ciRow.business_type === 'seed_source' ? '种源'
-            : ciRow.business_type;
-          results.push({
-            instanceId: ciRow.id,
-            stockType: ciRow.business_type === 'planting' ? 'product'
-                     : ciRow.business_type === 'seedling' ? 'seedling'
-                     : ciRow.business_type === 'seed_source' ? 'seed'
-                     : 'unknown',
-            businessType: ciRow.business_type,
-            businessId: ciRow.business_id,
-            businessCode: ciRow.instance_code ? `${bizTypeLabel}批次: ${ciRow.instance_code}` : `来源: ${ciRow.business_id}`,
-            cropName: ciRow.crop_name,
-            varietyName: ciRow.crop_variety,
-            quantity: ciRow.current_quantity ?? 0,
-            inboundDate: ciRow.create_time ? ciRow.create_time.slice(0, 10) : '',
-            sourceInstanceId: ciRow.source_instance_id,
-            depth,
-            parentInstanceId: parentId,
-          });
-          if (ciRow.source_instance_id && !visited.has(ciRow.source_instance_id)) {
-            queue.push({ id: ciRow.source_instance_id, depth: depth + 1, parentId: ciRow.id ?? null });
-          }
-        }
-      }
-    }
-
-    return results;
+    if (!result[0]) return [];
+    const cols = result[0].columns;
+    const rows = result[0].values;
+    // 把 source_table / id / source_id 等 CTE 字段映射回原 JS 响应结构
+    const bizTypeLabelOf = (bt: string) =>
+      bt === 'planting' ? '种植' : bt === 'seedling' ? '育苗' : bt === 'seed_source' ? '种源' : bt;
+    return rows.map((row) => {
+      const obj: Record<string, any> = {};
+      cols.forEach((c, i) => { obj[c] = row[i]; });
+      const businessCode = obj.source_table === 'crop_instances'
+        ? (obj.business_code ? `${bizTypeLabelOf(obj.business_type)}批次: ${obj.business_code}` : `来源: ${obj.business_id}`)
+        : obj.business_code;
+      return {
+        instanceId: obj.id,
+        stockType: obj.stock_type,
+        businessType: obj.business_type,
+        businessId: obj.business_id,
+        businessCode,
+        cropName: obj.crop_name,
+        varietyName: obj.variety_name,
+        quantity: obj.quantity ?? 0,
+        inboundDate: obj.inbound_date ?? '',
+        sourceInstanceId: obj.source_id,
+        depth: obj.depth,
+        parentInstanceId: obj.parent_id,
+      };
+    });
   }
 
   /**
