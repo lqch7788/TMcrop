@@ -5,11 +5,12 @@
 import React from 'react';
 import { Wifi, WifiOff, Cpu } from 'lucide-react';
 
-interface IotDeviceStatus {
-  device_id: string;
-  device_name: string;
-  record_count: number;
-  last_active?: string;
+// 2026-07-16：导出方式与 interface 定义保持一致（避免外部 import 拿到的只是 type 别名）
+export interface IotDeviceStatus {
+  deviceId: string;
+  deviceName: string;
+  recordCount: number;
+  lastActive?: string;
 }
 
 interface IotDataIndicatorProps {

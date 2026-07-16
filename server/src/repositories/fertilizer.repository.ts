@@ -76,9 +76,50 @@ export interface FertilizerRecord {
   spec_brand_name: string | null;
   spec_unit_price_snapshot: number | null;
   spec_batch_number: string | null;
-  // 注意：运行时通过 queryToObjects 获取的对象会自动转 camelCase
-  // 这里用 [key: string]: any 让 service 端可用 camelCase 字段而不报错
-  [key: string]: any;
+}
+
+/**
+ * 2026-07-16：service 层用 queryToObjects 后会得到 camelCase 字段。
+ * 为避免使用 [key: string]: any（这破坏类型保护），强制约定：
+ * - SQL 列与 FertilizerRecord 字段一一对应（snake_case）
+ * - service 层只在反序列化时显式映射
+ */
+export interface FertilizerRecordCamel {
+  id: string;
+  fertilizerCode: string;
+  farmTaskId: string | null;
+  productionPlanId: string | null;
+  productionPlanCode: string | null;
+  plantingId: string | null;
+  plantingCode: string | null;
+  greenhouseId: string | null;
+  greenhouseName: string;
+  areaName: string | null;
+  cropName: string;
+  cropVariety: string | null;
+  fertilizerName: string;
+  fertilizerType: string;
+  dilutionRatio: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalCost: number;
+  fertilizeTime: string;
+  operatorId: string | null;
+  operatorName: string | null;
+  dataSource: 'manual' | 'auto_iot';
+  iotDeviceId: string | null;
+  iotRecordId: string | null;
+  description: string | null;
+  status: string;
+  createTime: string;
+  updateTime: string;
+  fertilizerId: string | null;
+  fertilizationPool: string | null;
+  specId: string | null;
+  specBrandName: string | null;
+  specUnitPriceSnapshot: number | null;
+  specBatchNumber: string | null;
 }
 
 export class FertilizerRepository {
@@ -90,6 +131,113 @@ export class FertilizerRepository {
     const db = getDatabase();
     const rows = queryToObjects<FertilizerRecord>(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
     return rows[0] ?? null;
+  }
+
+  /**
+   * 通用条件查询（带分页 + 排序）
+   * 2026-07-16：route 层不再允许 getDatabase() 直写 SQL
+   */
+  findAll(filters: Record<string, string | undefined>, page: number, pageSize: number): { rows: FertilizerRecord[]; total: number } {
+    const db = getDatabase();
+    const wheres: string[] = [];
+    const params: any[] = [];
+    // 白名单过滤字段（防 SQL 注入）
+    const FILTER_WHITELIST: Record<string, string> = {
+      crop_name: 'crop_name',
+      planting_id: 'planting_id',
+      seedling_id: 'seedling_id',
+      data_source: 'data_source',
+      fertilizer_name: 'fertilizer_name',
+      fertilizer_type: 'fertilizer_type',
+      status: 'status',
+      greenhouse_name: 'greenhouse_name',
+      operator_name: 'operator_name',
+      start_date: 'fertilize_time',
+      end_date: 'fertilize_time',
+    };
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value) continue;
+      const col = FILTER_WHITELIST[key];
+      if (!col) continue;
+      if (key === 'start_date') {
+        wheres.push(`${col} >= ?`);
+      } else if (key === 'end_date') {
+        wheres.push(`${col} <= ?`);
+      } else {
+        wheres.push(`${col} = ?`);
+      }
+      params.push(value);
+    }
+    const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
+    const offset = (page - 1) * pageSize;
+    const rows = queryToObjects<FertilizerRecord>(db,
+      `SELECT * FROM fertilizer_records ${whereSql} ORDER BY create_time DESC LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset]);
+    const totalRows = queryToObjects<{ total: number }>(db,
+      `SELECT COUNT(*) AS total FROM fertilizer_records ${whereSql}`,
+      params);
+    return { rows, total: totalRows[0]?.total ?? 0 };
+  }
+
+  /**
+   * 统计聚合：按 group_by 字段分组
+   */
+  findStats(filters: Record<string, string | undefined>, groupBy: string): any[] {
+    const db = getDatabase();
+    const GROUP_WHITELIST: Record<string, string> = {
+      month: "strftime('%Y-%m', fertilize_time)",
+      crop_name: 'crop_name',
+      fertilizer_type: 'fertilizer_type',
+      greenhouse_name: 'greenhouse_name',
+    };
+    const groupExpr = GROUP_WHITELIST[groupBy];
+    if (!groupExpr) return [];
+    const wheres: string[] = [];
+    const params: any[] = [];
+    if (filters.start_date) { wheres.push('fertilize_time >= ?'); params.push(filters.start_date); }
+    if (filters.end_date) { wheres.push('fertilize_time <= ?'); params.push(filters.end_date); }
+    const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
+    return queryToObjects(db,
+      `SELECT ${groupExpr} AS label,
+              COUNT(*) AS record_count,
+              SUM(quantity) AS total_quantity,
+              SUM(total_cost) AS total_cost,
+              AVG(quantity) AS avg_quantity,
+              AVG(total_cost) AS avg_cost
+       FROM fertilizer_records ${whereSql}
+       GROUP BY label ORDER BY label DESC LIMIT 100`,
+      params);
+  }
+
+  /**
+   * 按 IoT 记录 id 查施肥记录（用于幂等去重）
+   */
+  findByIotRecordId(iotRecordId: string): FertilizerRecord[] {
+    const db = getDatabase();
+    return queryToObjects<FertilizerRecord>(db,
+      `SELECT * FROM fertilizer_records WHERE iot_record_id = ?`, [iotRecordId]);
+  }
+
+  /**
+   * 查询某天/某前缀的所有编码（用于 service.generateCode 最大序号+1）
+   * 2026-07-16：替代全表 ORDER BY DESC + LIMIT 1 的 ORDER BY scan
+   */
+  findAllCodesByPrefix(prefix: string): string[] {
+    const db = getDatabase();
+    const rows = queryToObjects<{ fertilizer_code: string }>(db,
+      `SELECT fertilizer_code FROM fertilizer_records WHERE fertilizer_code LIKE ? ORDER BY create_time DESC`,
+      [`${prefix}%`]);
+    return rows.map((r) => r.fertilizer_code);
+  }
+
+  /** 查询某天的最大序号（用于 generateCode 不全表扫描） */
+  findMaxCodeSeq(prefix: string): number {
+    const db = getDatabase();
+    const rows = queryToObjects<{ max_seq: number }>(db,
+      `SELECT MAX(CAST(SUBSTR(fertilizer_code, ${prefix.length + 1}) AS INTEGER)) AS max_seq
+       FROM fertilizer_records WHERE fertilizer_code LIKE ?`,
+      [`${prefix}%`]);
+    return rows[0]?.max_seq ?? 0;
   }
 
   /**
@@ -202,14 +350,23 @@ export class FertilizerRepository {
 
   /**
    * 扣减 spec 库存（spec 级精确扣减，替代原主表聚合）
-   * @returns 更新后库存数（负数表示扣成负数，不允许 — 调用方需校验）
+   * 2026-07-16：增加安全校验（database-reviewer M-7 TOCTOU）
+   * - 只对 stock_quantity >= quantity 的记录扣减（防负数）
+   * - 校验 affected_rows（防 specId 不存在导致误返回 0 误判为"扣成 0"）
+   * @returns 更新后库存数；返回 null 表示扣减失败（specId 不存在或库存不够）
    */
-  decreaseStock(specId: string, quantity: number, now: string): number {
+  decreaseStock(specId: string, quantity: number, now: string): number | null {
     const db = getDatabase();
     db.run(
-      `UPDATE fertilizer_specs SET stock_quantity = stock_quantity - ?, update_time = ? WHERE id = ?`,
-      [quantity, now, specId],
+      `UPDATE fertilizer_specs SET stock_quantity = stock_quantity - ?, update_time = ?
+       WHERE id = ? AND stock_quantity >= ?`,
+      [quantity, now, specId, quantity],
     );
+    const affected = db.getRowsModified();
+    if (affected === 0) {
+      // specId 不存在 或 库存不够
+      return null;
+    }
     const rows = queryToObjects<{ stockQuantity: number }>(db,
       `SELECT stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
     return rows[0]?.stockQuantity ?? 0;
