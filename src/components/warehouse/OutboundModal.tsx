@@ -99,8 +99,10 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       onClose={handleClose}
       title="出库操作"
       // 2026-07-16：默认宽度缩窄 30%（1350 → 945），高度保持
+      // 注：Modal.tsx 要求 width&&height 都传才生效 explicit value
       size="xxxl"
       width={945}
+      height={700}
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
