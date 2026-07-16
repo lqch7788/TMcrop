@@ -3155,7 +3155,8 @@ export function initializeDatabase() {
       target_crops TEXT,
       description TEXT,
       status TEXT DEFAULT 'active',
-      create_time TEXT DEFAULT (datetime('now','localtime'))
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      images TEXT
     )
   `);
 

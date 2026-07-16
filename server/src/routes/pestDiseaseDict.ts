@@ -151,7 +151,10 @@ router.post('/', (req: Request, res: Response) => {
     }
     // 如果提供了 dictCode 则使用，否则自动生成
     const code = body.dict_code || generateDictCode(db, body.dict_type);
-    const now = new Date().toISOString();
+    // 2026-07-17 审核修复：本地时间戳替代 toISOString()（UTC 跨天错位 — 项目已有教训 utc-timezone-id-bug）
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     const id = `pdd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     // 2026-07-16：images 字段 — 走 sanitizeImages 校验（格式白名单 + 大小上限 + 最多 5 张）
     const imagesJson = sanitizeImages(body.images);

@@ -28,7 +28,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: {
     { label: '数据来源', value: record.dataSource==='auto_iot'?'IoT自动':'手动录入' },
     { label: '关联生产计划', value: record.productionPlanCode||'-' },
     { label: '关联种植批号', value: record.plantingCode||'-' },
-    { label: '关联育苗批号', value: (record as any).seedlingCode||'-' },
+    { label: '关联育苗批号', value: record.seedlingCode||'-' },
     { label: '备注', value: record.description||'-', full: true },
   ];
 
