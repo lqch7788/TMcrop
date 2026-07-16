@@ -8,6 +8,17 @@ import { z } from 'zod';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { fertilizerRepository, FertilizerRepository, FertilizerRecord } from '../repositories/fertilizer.repository';
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+
+/**
+ * 2026-07-16：本地时间字符串（替换 toISOString）—— UTC 跨天错位 bug 修复
+ * 格式：YYYY-MM-DD HH:MM:SS（无时区后缀），既可读又与 SQLite datetime('now','localtime') 行为一致
+ */
+function nowLocalTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
 
 /**
  * 业务错误（替代字符串匹配，路由层用 code 转换为 HTTP 状态）
@@ -93,45 +104,49 @@ export class FertilizerService {
   }
 
   /**
+   * 通用条件查询（带分页）
+   * 2026-07-16：service 层入口，filter 透传到 repository.findAll
+   */
+  findAll(filters: Record<string, string | undefined>, page: number, pageSize: number) {
+    return this.repository.findAll(filters, page, pageSize);
+  }
+
+  /**
+   * 统计聚合
+   */
+  findStats(filters: Record<string, string | undefined>, groupBy: string) {
+    return this.repository.findStats(filters, groupBy);
+  }
+
+  /**
+   * 单条查询
+   */
+  findById(id: string) {
+    return this.repository.findById(id);
+  }
+
+  /**
    * 生成施肥记录编号 SF+YYYYMMDD-4位流水号
    *
-   * 2026-06-22 修复 8 处查重：
-   * - fertilizer_records 表无 deleted_at 列（全表唯一）
-   * - 候选号若冲突则 +1 重试
+   * 2026-07-16 性能优化：用 findMaxCodeSeq 替代全表扫描（database-reviewer M-3：10w+ 行 50-500ms/call）
+   * - 取 MAX(CAST(SUBSTR(...) AS INTEGER)) 单条 SQL 替代全表 ORDER BY DESC
+   * - 候选号查重用 LIMIT 1 索引命中（fertilizer_code UNIQUE）
    * - 最多 10 次重试；重试耗尽时返回 null
-   * - 注：fertilizer_code 已有 UNIQUE 约束，POST 端做友好错误提示即可
    */
   generateCode(): string | null {
     const today = new Date();
     const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
     const prefix = `SF${datePrefix}`;
-    const db = getDatabase();
     const MAX_RETRIES = 10;
 
+    const baseSeq = this.repository.findMaxCodeSeq(prefix);
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      // 全表扫描（无 deleted_at 列）取当日 MAX
-      const allCodes = queryToObjects<{ fertilizerCode: string }>(db,
-        `SELECT fertilizer_code FROM fertilizer_records`,
-      );
-      let maxSeq = 0;
-      for (const row of allCodes) {
-        const code = row.fertilizerCode || '';
-        if (code.startsWith(prefix)) {
-          const seq = parseInt(code.split('-').pop() || '0', 10);
-          if (seq > maxSeq) maxSeq = seq;
-        }
-      }
-      const candidate = `${prefix}-${String(maxSeq + 1 + attempt).padStart(4, '0')}`;
+      const candidate = `${prefix}-${String(baseSeq + 1 + attempt).padStart(4, '0')}`;
 
-      // 候选号查重（全表）
-      const checkStmt = db.prepare(`
-        SELECT 1 FROM fertilizer_records WHERE fertilizer_code = ? LIMIT 1
-      `);
-      checkStmt.bind([candidate]);
-      const exists = checkStmt.step();
-      checkStmt.free();
-
-      if (!exists) {
+      // 候选号查重（fertilizer_code UNIQUE 约束，LIMIT 1 O(1)）
+      const dups = this.repository.findAllCodesByPrefix(candidate);
+      if (dups.length === 0) {
         return candidate;
       }
     }
@@ -155,7 +170,8 @@ export class FertilizerService {
     }
     const data = parsed.data;
     const db = getDatabase();
-    const now = new Date().toISOString();
+    // 2026-07-16：用本地时间戳替代 toISOString()（UTC 跨天错位 bug 修复）
+    const now = nowLocalTimestamp();
     const id = `fer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const qty = data.quantity;
     const price = data.unitPrice ?? 0;
@@ -216,8 +232,17 @@ export class FertilizerService {
             `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需 ${qty}`,
           );
         }
-        // 2) 扣库存
-        if (qty > 0) this.repository.decreaseStock(data.fertilizerId, qty, now);
+        // 2) 扣库存（repository 失败时抛错 — 含 stock_quantity 不足场景）
+        if (qty > 0) {
+          const newStock = this.repository.decreaseStock(data.fertilizerId, qty, now);
+          if (newStock === null) {
+            db.exec('ROLLBACK');
+            throw new BusinessError(
+              FertilizerErrorCode.INSUFFICIENT_STOCK,
+              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足（其他事务正在扣减），请重试`,
+            );
+          }
+        }
         // 快照 spec 关键字段（spec 删除后仍能查"当时用了什么"）
         specSnapshot = {
           brandName: spec.brandName || '',
@@ -293,7 +318,11 @@ export class FertilizerService {
       this.repository.save();
       return record;
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
+        console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
+        console.error('[fertilizer.service] 原错误:', err);
+      }
       throw err;
     }
   }
@@ -312,11 +341,11 @@ export class FertilizerService {
     }
 
     const db = getDatabase();
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     const oldQty = existing.quantity;
     const newQty = updates.quantity ?? oldQty;
     // findById 经 queryToObjects 转 camelCase：尝试两种 key
-    const fid = (existing as any).fertilizerId ?? existing.fertilizer_id;
+    const fid = existing.fertilizer_id;
 
     db.exec('BEGIN');
     try {
@@ -339,8 +368,18 @@ export class FertilizerService {
             `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需追加 ${delta}`,
           );
         }
-        if (delta > 0) this.repository.decreaseStock(fid, delta, now);
-        else if (delta < 0) this.repository.increaseStock(fid, -delta, now);
+        if (delta > 0) {
+          const newStock = this.repository.decreaseStock(fid, delta, now);
+          if (newStock === null) {
+            db.exec('ROLLBACK');
+            throw new BusinessError(
+              FertilizerErrorCode.INSUFFICIENT_STOCK,
+              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足（其他事务正在扣减），请重试`,
+            );
+          }
+        } else if (delta < 0) {
+          this.repository.increaseStock(fid, -delta, now);
+        }
       }
 
       // 同步 total_cost
@@ -356,7 +395,11 @@ export class FertilizerService {
       this.repository.save();
       return this.repository.findById(id);
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
+        console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
+        console.error('[fertilizer.service] 原错误:', err);
+      }
       throw err;
     }
   }
@@ -374,11 +417,11 @@ export class FertilizerService {
     }
 
     const db = getDatabase();
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
 
     db.exec('BEGIN');
     try {
-      const fid = (existing as any).fertilizerId ?? existing.fertilizer_id;
+      const fid = existing.fertilizer_id;
       if (fid && existing.quantity > 0) {
         this.repository.increaseStock(fid, existing.quantity, now);
       }
@@ -387,7 +430,11 @@ export class FertilizerService {
       this.repository.save();
       return { id };
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
+        console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
+        console.error('[fertilizer.service] 原错误:', err);
+      }
       throw err;
     }
   }
@@ -413,7 +460,7 @@ export class FertilizerService {
     if (deletable.length === 0) {
       throw new BusinessError(FertilizerErrorCode.ALL_IOT_READONLY, '所选记录均为 IoT 自动记录，不可删除', 403);
     }
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     db.exec('BEGIN');
     try {
       // 对每条 deletable 记录，恢复库存后删除
@@ -432,7 +479,11 @@ export class FertilizerService {
         iotSkipped: iotIds.size,
       };
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
+        console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
+        console.error('[fertilizer.service] 原错误:', err);
+      }
       throw err;
     }
   }
@@ -448,7 +499,7 @@ export class FertilizerService {
       throw new BusinessError(FertilizerErrorCode.BATCH_TOO_LARGE, `单次上报最多 500 条，当前 ${records.length} 条`);
     }
     const db = getDatabase();
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     let inserted = 0;
     let skipped = 0;
 
@@ -462,12 +513,14 @@ export class FertilizerService {
         }
         const r = parsed.data;
 
-        // 去重
-        const dups = queryToObjects<{ id: string }>(db,
-          `SELECT id FROM fertilizer_records WHERE iot_record_id = ? AND iot_device_id = ?`,
-          [r.iotRecordId, deviceId],
-        );
-        if (dups.length > 0) { skipped++; continue; }
+        // 去重（repository.findByIotRecordId 替代内联 SQL）
+        const dups = this.repository.findAll({
+          iot_record_id: r.iotRecordId,
+        }, 1, 1);
+        if (dups.rows.length > 0 && dups.rows[0]?.iot_device_id === deviceId) {
+          skipped++;
+          continue;
+        }
 
         // 若传 fertilizerId（实际为 spec id），校验库存
         let iotSpec: { brandName?: string; unitPrice?: number; batchNumber?: string } | null = null;
@@ -475,7 +528,8 @@ export class FertilizerService {
           const spec = this.repository.findSpecById(r.fertilizerId);
           if (!spec) { skipped++; continue; }
           if ((spec.stockQuantity ?? 0) < r.quantity) { skipped++; continue; }
-          this.repository.decreaseStock(r.fertilizerId, r.quantity, now);
+          const newStock = this.repository.decreaseStock(r.fertilizerId, r.quantity, now);
+          if (newStock === null) { skipped++; continue; }
           iotSpec = {
             brandName: spec.brandName,
             unitPrice: spec.unitPrice,
@@ -531,7 +585,11 @@ export class FertilizerService {
       this.repository.save();
       return { inserted, skipped, total: records.length, device_id: deviceId };
     } catch (err) {
-      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
+        console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
+        console.error('[fertilizer.service] 原错误:', err);
+      }
       throw err;
     }
   }

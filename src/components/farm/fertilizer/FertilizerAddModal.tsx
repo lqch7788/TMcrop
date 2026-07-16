@@ -190,7 +190,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       });
       onSaved();
     } catch (err) {
-      await showAlert('保存出错：' + (err as Error).message);
+      // 2026-07-16：UI 错误脱敏 — 不向用户暴露 (err as Error).message（可能含内堆/SQL）
+      console.error('[FertilizerAddModal] 保存出错:', err);
+      await showAlert('保存失败，请稍后重试。如持续出现请联系管理员。');
     } finally {
       setSubmitting(false);
     }

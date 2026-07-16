@@ -159,7 +159,11 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
         specId:pFert.specId,specBrandName:pFert.brandName,specUnitPriceSnapshot:pFert.unitPrice,
       });
       onSaved();
-    } catch(err) { await showAlert('保存出错：'+(err as Error).message); }
+    } catch(err) {
+      // 2026-07-16：UI 错误脱敏
+      console.error('[FertilizerEditModal] 保存出错:', err);
+      await showAlert('保存失败，请稍后重试。如持续出现请联系管理员。');
+    }
     finally { setSubmitting(false); }
   };
 
