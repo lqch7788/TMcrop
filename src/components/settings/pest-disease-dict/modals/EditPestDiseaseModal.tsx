@@ -43,6 +43,7 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
   const [loadingRelations, setLoadingRelations] = useState(false);
 
   // 药剂搜索和过滤
+  const [pesticideSearch, setPesticideSearch] = useState('');
   // 2026-07-16：pesticide_typeFilter 字段对齐药剂库字典 dict_code（杀虫剂/杀菌剂/...）
   // 旧的「化学/生物/物理」分类已废弃
   const PESTICIDE_TYPE_OPTIONS = [
