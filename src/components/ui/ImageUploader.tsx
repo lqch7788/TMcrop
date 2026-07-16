@@ -82,60 +82,54 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const isDisabled = disabled || value.length >= maxCount
 
-  // ====== 紧凑模式：只显示「添加图片」按钮 + 已选 N/M + 删除 chip ======
+  // ====== 紧凑模式：一行小缩略图（带实际图片预览）+ 小 + 添加按钮 ======
+  // 2026-07-16 修正：保留缩略图（紧凑尺寸 64x64），避免用「图片 1/2/3」之类的盲标签
   if (compact) {
     return (
       <div className={cn("space-y-2", className)}>
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            disabled={isDisabled}
-            onClick={() => inputRef.current?.click()}
-            className="gap-1"
-          >
-            <ImageIcon className="w-4 h-4" />
-            {value.length === 0 ? '添加图片' : '继续添加图片'}
-          </Button>
-          <span className="text-xs text-gray-500">
-            已选 <strong className="text-orange-600">{value.length}</strong>/{maxCount} 张
-          </span>
-          {isDisabled && (
-            <span className="text-xs text-gray-400">已达上限</span>
+        <div className="flex items-center flex-wrap gap-2">
+          {/* 已有图片缩略图（紧凑尺寸 w-16 h-16，hover 删除） */}
+          {value.map((url, index) => (
+            <div
+              key={index}
+              className="group relative w-16 h-16 rounded-lg overflow-hidden border border-gray-300 shrink-0"
+            >
+              <img
+                src={url}
+                alt={`图片 ${index + 1}`}
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={() => setPreviewUrl(url)}
+              />
+              {/* 删除按钮（右上角 ×） */}
+              <button
+                type="button"
+                onClick={() => handleRemove(index)}
+                className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                title="删除该图片"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
+          {/* 添加按钮（≤maxCount 时显示） */}
+          {!isDisabled && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => inputRef.current?.click()}
+              className="w-16 h-16 border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-lg flex flex-col items-center justify-center gap-0.5 p-0"
+            >
+              <ImageIcon className="w-5 h-5 text-gray-500" />
+              <span className="text-xs text-gray-500">
+                {value.length}/{maxCount}
+              </span>
+            </Button>
           )}
         </div>
 
-        {/* 已选 chip：可单张删除 */}
-        {value.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {value.map((src, index) => (
-              <span
-                key={index}
-                className="group inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 border border-gray-300 text-xs text-gray-700"
-              >
-                <ImageIcon className="w-3 h-3" />
-                <span>图片 {index + 1}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemove(index)}
-                  className="text-gray-400 hover:text-red-600 ml-0.5"
-                  title="删除该图片"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            <button
-              type="button"
-              onClick={() => onChange?.([])}
-              className="text-xs text-gray-400 hover:text-red-500 ml-1"
-            >
-              清空全部
-            </button>
-          </div>
-        )}
-
+        {/* 隐藏的 file input */}
         <input
           ref={inputRef}
           type="file"
@@ -145,6 +139,28 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           className="hidden"
           disabled={disabled}
         />
+
+        {/* 全屏预览弹窗（点缩略图触发） */}
+        {previewUrl && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+            onClick={() => setPreviewUrl(null)}
+          >
+            <button
+              onClick={() => setPreviewUrl(null)}
+              className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+              type="button"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+            <img
+              src={previewUrl}
+              alt="预览"
+              className="max-w-[90vw] max-h-[90vh] object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+        )}
       </div>
     )
   }
