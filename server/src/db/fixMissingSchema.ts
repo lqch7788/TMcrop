@@ -3810,6 +3810,18 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.error('inventory_transaction 扣减流水符号修复失败:', e.message);
   }
 
+  // ========== 2026-07-16：病虫害字典加 images 列（用户可上传最多 5 张 base64 图） ==========
+  try {
+    db.run(`ALTER TABLE pest_disease_dict ADD COLUMN images TEXT`);
+    seedLog.info('✓ pest_disease_dict 表添加 images 列（病虫害图片 base64 JSON 数组）');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• pest_disease_dict.images 列已存在');
+    } else {
+      seedLog.skip('• pest_disease_dict.images:', e.message);
+    }
+  }
+
   // ========== 2026-07-14：迁移 — 删除 harvest_inbounds 表 ==========
   // 独立采收入库页面已下线，所有入库走 inventory_* 表（行级弹窗）。
   // 一次性 DROP，下次启动自动跳过（IF EXISTS 保护）。

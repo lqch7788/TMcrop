@@ -11,6 +11,8 @@ export interface PestDiseaseDict {
   dictType: 'pest' | 'disease';
   targetCrops?: string;
   description?: string;
+  // 2026-07-16：病虫害图片（base64 data URL 数组 JSON）
+  images?: string[];
   status: string;
   createTime: string;
 }

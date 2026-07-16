@@ -121,12 +121,14 @@ router.post('/', (req: Request, res: Response) => {
     const code = body.dict_code || generateDictCode(db, body.dict_type);
     const now = new Date().toISOString();
     const id = `pdd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // 2026-07-16：images 字段 — base64 data URL 数组的 JSON 字符串
+    const imagesJson = Array.isArray(body.images) ? JSON.stringify(body.images.slice(0, 5)) : null;
 
     db.run(`INSERT INTO pest_disease_dict (
-      id, dict_code, dict_name, dict_type, target_crops, description, status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?)`,
+      id, dict_code, dict_name, dict_type, target_crops, description, status, create_time, images
+    ) VALUES (?,?,?,?,?,?,?,?,?)`,
       [id, code, body.dict_name, body.dict_type, body.target_crops || null,
-       body.description || null, body.status || 'active', now]
+       body.description || null, body.status || 'active', now, imagesJson]
     );
 
     const items = queryToObjects(db, `SELECT * FROM pest_disease_dict WHERE dict_code = ?`, [code]);
@@ -159,11 +161,16 @@ router.put('/:id', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM pest_disease_dict WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
 
+    // 2026-07-16：images 更新逻辑 — 数组转 JSON，未传则保留原值
+    const newImages = Array.isArray(body.images) ? JSON.stringify(body.images.slice(0, 5)) : (body.images === null ? null : undefined);
+
     db.run(`UPDATE pest_disease_dict SET dict_name=?, dict_type=?, target_crops=?,
-      description=?, status=? WHERE id=?`,
+      description=?, status=?, images=? WHERE id=?`,
       [body.dict_name ?? existing[0].dict_name, body.dict_type ?? existing[0].dict_type,
        body.target_crops ?? existing[0].target_crops, body.description ?? existing[0].description,
-       body.status ?? existing[0].status, id]
+       body.status ?? existing[0].status,
+       newImages === undefined ? existing[0].images : newImages,
+       id]
     );
     const updated = queryToObjects(db, `SELECT * FROM pest_disease_dict WHERE id = ?`, [id]);
     saveDatabase();
