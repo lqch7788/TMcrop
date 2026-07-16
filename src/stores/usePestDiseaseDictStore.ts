@@ -141,8 +141,10 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
     },
 
     fetchNextCode: async (type) => {
+      // 2026-07-16：后端 middleware 已转 camelCase（response.nextCode），但兼容老版本 fallback snake_case
       const response = await enhancedApiClient.get<any>(`/pest-disease-dict/next-code?type=${type}`);
-      return (response as any).next_code || response.next_code || '';
+      const payload = response?.data ?? response;
+      return payload?.nextCode || payload?.next_code || '';
     },
 
     fetchRelatedPesticides: async (pestId) => {
