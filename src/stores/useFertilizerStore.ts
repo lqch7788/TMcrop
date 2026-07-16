@@ -43,6 +43,11 @@ export interface FertilizerData {
   fertilizerId?: string | null;
   // 2026-07-12：施肥区域池（JSON 字符串，每条独立 [type, code, area, quantity, unit, dilutionRatio]）
   fertilizationPool?: string;
+  // 2026-07-12 重构：spec 快照字段（参考后端 schema）
+  specId?: string;
+  specBatchNumber?: string;
+  specUnitPriceSnapshot?: number;
+  specBrandName?: string;
 }
 
 // ========== FIELD_MAP ==========
@@ -79,6 +84,11 @@ const FIELD_MAP: Record<string, string> = {
   fertilizer_id: 'fertilizerId',
   // 2026-07-12：施肥区域池
   fertilization_pool: 'fertilizationPool',
+  // 2026-07-16：spec 快照字段映射（对齐后端 schema spec_id/spec_batch_number/spec_unit_price_snapshot/spec_brand_name）
+  spec_id: 'specId',
+  spec_batch_number: 'specBatchNumber',
+  spec_unit_price_snapshot: 'specUnitPriceSnapshot',
+  spec_brand_name: 'specBrandName',
 };
 
 // ========== 转换函数 ==========
@@ -106,7 +116,6 @@ function denormalizeFertilizer(item: Partial<FertilizerData>): Record<string, un
 // ========== Store 接口 ==========
 interface FertilizerState {
   items: FertilizerData[];
-  stats: any[];
   isLoading: boolean;
   error: string | null;
 
@@ -119,8 +128,7 @@ interface FertilizerState {
   updateItem: (id: string, updates: Partial<FertilizerData>) => Promise<FertilizerData | null>;
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<{ deleted: number; skipped: number }>;
-  fetchStats: (filters?: Record<string, string>) => Promise<void>;
-  ingestIotRecords: (deviceId: string, records: any[]) => Promise<any>;
+  /** 2026-07-16：失败时抛错（修 silent failure：返回 '' 让 AddModal 静默吞错） */
   generateCode: () => Promise<string>;
 }
 
@@ -128,7 +136,6 @@ interface FertilizerState {
 export const useFertilizerStore = create<FertilizerState>()(
   (set, get) => ({
     items: [],
-    stats: [],
     isLoading: false,
     error: null,
 
@@ -148,12 +155,9 @@ export const useFertilizerStore = create<FertilizerState>()(
     },
 
     fetchItemById: async (id: string) => {
-      try {
-        const response = await enhancedApiClient.get<any>(`/fertilizer/${id}`);
-        return (response.data ?? response) as FertilizerData;
-      } catch {
-        return null;
-      }
+      // 2026-07-16：失败时抛错（修 silent failure），调用方负责 toString + toast
+      const response = await enhancedApiClient.get<any>(`/fertilizer/${id}`);
+      return (response.data ?? response) as FertilizerData;
     },
 
     createItem: async (item) => {
@@ -209,38 +213,11 @@ export const useFertilizerStore = create<FertilizerState>()(
       }
     },
 
-    fetchStats: async (filters = {}) => {
-      try {
-        const params = new URLSearchParams();
-        Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
-        const response = await enhancedApiClient.get<any>(`/fertilizer/stats?${params.toString()}`);
-        set({ stats: Array.isArray(response.data ?? response) ? response.data ?? response : [] });
-      } catch (err) {
-        set({ error: (err as Error).message });
-      }
-    },
-
-    ingestIotRecords: async (deviceId, records) => {
-      try {
-        const response = await enhancedApiClient.post('/fertilizer/iot-ingest', {
-          device_id: deviceId,
-          device_name: `设备${deviceId}`,
-          records,
-        });
-        return response.data ?? response;
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return null;
-      }
-    },
-
     generateCode: async () => {
-      try {
-        const response = await enhancedApiClient.get<any>('/fertilizer/generate-code');
-        return (response.data ?? response)?.data?.code ?? (response.data ?? response)?.code ?? '';
-      } catch {
-        return '';
-      }
+      // 2026-07-16：失败时抛错（修 silent failure），AddModal 检测到抛错就 toast "编号生成失败请重试或手动输入"
+      const response = await enhancedApiClient.get<any>('/fertilizer/generate-code');
+      const payload = response.data ?? response;
+      return payload?.data?.code ?? payload?.code ?? '';
     },
   })
 );

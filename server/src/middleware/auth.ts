@@ -16,6 +16,10 @@ import * as jwt from 'jsonwebtoken';
 // 演示模式：需显式设置 DEMO_MODE=true（推荐仅开发/测试环境使用）
 // 生产模式：设置 JWT_SECRET 环境变量
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
+// 2026-07-16：拒绝 DEMO_MODE 旁路（即使 DEMO_MODE=true，生产模式下也强制 JWT 验证）
+// 防止攻击者通过伪造 NODE_ENV 缺失 + DEMO_MODE=true 拿到无鉴权 token
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const DEMO_BYPASS_ALLOWED = DEMO_MODE && !IS_PRODUCTION;
 
 let JWT_SECRET: string;
 if (DEMO_MODE) {
@@ -79,13 +83,10 @@ export function verifyToken(token: string): JwtPayload | null {
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
-  // 演示模式白名单 - 跳过认证的用户
-  const DEMO_USERS = ['陆启闯', 'admin', '演示用户'];
-
   // 检查是否有 Authorization 头
   if (!authHeader) {
-    // 演示模式下，白名单用户可以不带 token 访问
-    if (DEMO_MODE) {
+    // 2026-07-16：仅 NODE_ENV≠production 且 DEMO_MODE=true 时才允许无 token 旁路
+    if (DEMO_BYPASS_ALLOWED) {
       // 演示模式：为未认证请求设置默认用户信息
       req.user = {
         userId: 'demo_user',
@@ -111,8 +112,8 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const payload = verifyToken(token);
 
   if (!payload) {
-    // 2026-07-14：演示模式下 JWT 验证失败不拒绝请求（服务器重启后密钥变化导致旧 token 无效）
-    if (DEMO_MODE) {
+    // 2026-07-16：演示模式旁路也仅在非生产环境生效
+    if (DEMO_BYPASS_ALLOWED) {
       req.user = {
         userId: 'demo_user',
         aid: 'demo_aid',

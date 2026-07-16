@@ -36,6 +36,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
   const [submitting, setSubmitting] = useState(false);
 
   const [areaTab, setAreaTab] = useState<'planting'|'seedling'>('planting');
+  // 2026-07-16：池 JSON 损坏标记（修 silent failure：损坏时禁用保存按钮，避免覆盖原数据）
+  const [poolBroken, setPoolBroken] = useState(false);
   const [areaSearch, setAreaSearch] = useState('');
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
@@ -45,6 +47,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
     if (!isOpen || !record) return;
     setForm({ fertilizeTime: record.fertilizeTime||'', operatorName: record.operatorName||'', description: record.description||'', greenhouseName: record.greenhouseName||'' });
     // 反序列化区域
+    setPoolBroken(false); // 重置状态
     try {
       const pool: any[] = record.fertilizationPool ? JSON.parse(record.fertilizationPool) : [];
       if (pool.length > 0) {
@@ -76,7 +79,13 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
         setSelectedAreas([]);
         setFertilizerPool([]);
       }
-    } catch { setSelectedAreas([]); setFertilizerPool([]); }
+    } catch (e) {
+      // 2026-07-16：池 JSON 损坏时禁用保存 + 显示警告条（避免"打开即覆盖原数据"事故）
+      console.warn('[FertilizerEditModal] 池 JSON 解析失败:', e);
+      setPoolBroken(true);
+      setSelectedAreas([]);
+      setFertilizerPool([]);
+    }
     // 加载数据
     plantingStore.loadItems?.();
     seedlingStore.loadItems?.();
@@ -159,6 +168,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
   return (
     <UnifiedModal isOpen={isOpen} onClose={onClose} title={`编辑施肥记录 — ${record.fertilizerCode}`} size="xxxl" showFooter={false}>
       {isIot && <div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm shrink-0"><AlertTriangle className="w-5 h-5"/>IoT 自动记录，仅可查看不可修改</div>}
+      {poolBroken && <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm shrink-0"><AlertTriangle className="w-5 h-5"/>该记录施肥方案数据格式异常，无法编辑保存。请联系管理员修复数据后再试。</div>}
       <div className="flex flex-col" style={{ maxHeight: '75vh' }}>
         <div className="flex-1 overflow-y-auto pr-1 space-y-5">
           <div>
@@ -209,7 +219,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
         </div>
         <div className="sticky bottom-0 bg-white pt-3 pb-1 border-t border-gray-200 flex justify-end gap-3 shrink-0">
           <Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4"/>取消</Button>
-          {!isIot&&<Button variant="default" size="sm" onClick={handleSubmit} disabled={submitting||selectedAreas.length===0||fertilizerPool.length===0||!form.fertilizeTime}>{submitting?'保存中...':'保存'}</Button>}
+          {!isIot&&<Button variant="default" size="sm" onClick={handleSubmit} disabled={submitting||selectedAreas.length===0||fertilizerPool.length===0||!form.fertilizeTime||poolBroken}>{submitting?'保存中...':'保存'}</Button>}
         </div>
       </div>
     </UnifiedModal>

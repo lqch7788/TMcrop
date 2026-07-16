@@ -2809,6 +2809,26 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2026-07-16：肥料模块 3 张表补索引（修 database-reviewer M-3 表无索引导致 10k+ 行时劣化 100x）
+  const fertilizerIndexes = [
+    { name: 'idx_fertilizer_records_create_time', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_create_time ON fertilizer_records(create_time DESC)' },
+    { name: 'idx_fertilizer_records_fertilize_time', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_fertilize_time ON fertilizer_records(fertilize_time DESC)' },
+    { name: 'idx_fertilizer_records_planting_id', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_planting_id ON fertilizer_records(planting_id)' },
+    { name: 'idx_fertilizer_records_seedling_id', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_seedling_id ON fertilizer_records(seedling_id)' },
+    { name: 'idx_fertilizer_records_data_source', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_data_source ON fertilizer_records(data_source)' },
+    { name: 'idx_fertilizer_records_crop_name', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_records_crop_name ON fertilizer_records(crop_name)' },
+    { name: 'idx_fertilizer_specs_fertilizer_code', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_specs_fertilizer_code ON fertilizer_specs(fertilizer_code)' },
+    { name: 'idx_fertilizer_specs_status', sql: 'CREATE INDEX IF NOT EXISTS idx_fertilizer_specs_status ON fertilizer_specs(status)' },
+  ];
+  for (const idx of fertilizerIndexes) {
+    try {
+      db.exec(idx.sql);
+      seedLog.info(`✓ 创建索引 ${idx.name}`);
+    } catch (e: any) {
+      seedLog.skip(`• 索引 ${idx.name}: ${e.message}`);
+    }
+  }
+
   saveDatabase();
 }
 

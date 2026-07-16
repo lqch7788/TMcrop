@@ -18,9 +18,17 @@ export interface ExportXlsxOptions {
   rows: Array<Record<string, unknown>>;
 }
 
+// 2026-07-16：防范 Excel 公式注入（CWE-1236）
+// 攻击场景：作物名/备注 = "=cmd|'/c calc'!A1" → 用户打开 XLSX 立即触发公式执行
+// 修复：单元格以 = / + / - / @ 开头的，前置 ' 让电子表格当作纯文本
+const FORMULA_LEADING_CHARS = /^[=+\-@\t\r]/;
+function escapeFormula(value: string): string {
+  return FORMULA_LEADING_CHARS.test(value) ? `'${value}` : value;
+}
+
 function cellToString(value: unknown): string {
   if (value == null) return '';
-  return String(value);
+  return escapeFormula(String(value));
 }
 
 /**

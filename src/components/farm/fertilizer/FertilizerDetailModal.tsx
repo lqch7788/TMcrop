@@ -8,20 +8,16 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { FertilizerData, getDictItemName } from '@/stores';
-
-function parsePool(json: string|null|undefined): any[] {
-  if (!json) return [];
-  try { const a=JSON.parse(json); return Array.isArray(a)?a.filter((it:any)=>it).map((it:any)=>({...it,quantity:Number(it.quantity)||0,unitPrice:Number(it.unitPrice)||0})):[]; } catch { return []; }
-}
+import { parseFertilizationPool, type FertilizationPoolRow } from '@/lib/fertilizerPool';
 
 export function FertilizerDetailModal({ isOpen, record, onClose }: {
   isOpen: boolean; record: FertilizerData; onClose: () => void;
 }) {
   if (!record) return null;
-  const pool = parsePool((record as any).fertilizationPool);
-  const areaNames = [...new Set(pool.map((p:any)=>p.area).filter(Boolean))];
-  const fertGroups = new Map<string,any[]>();
-  pool.forEach((p:any)=>{ const k=p.fertilizerName||'未知'; if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
+  const pool = parseFertilizationPool((record as any).fertilizationPool);
+  const areaNames = [...new Set(pool.map((p:FertilizationPoolRow)=>String(p.area??'')).filter(Boolean))];
+  const fertGroups = new Map<string,FertilizationPoolRow[]>();
+  pool.forEach((p:FertilizationPoolRow)=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
 
   const fields = [
     { label: '施肥编号', value: <span className="font-mono">{record.fertilizerCode||'-'}</span> },
