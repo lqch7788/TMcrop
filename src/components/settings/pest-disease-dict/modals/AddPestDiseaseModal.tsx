@@ -128,14 +128,25 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        {/* Section 1: 基础信息 */}
+        {/* Section 1: 基础信息 — 2026-07-16 重构：3 个字段同一行 grid-cols-3 */}
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3">📋 基础信息</h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* 列 1：类型（根据 Tab 自动设置，read-only） — 2026-07-16 用户要求放在第一列 */}
             <div>
-              <Label className="text-gray-900">
-                病虫害编码
-              </Label>
+              <Label className="text-gray-900">类型</Label>
+              <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50">
+                {form.dictType === 'pest' ? (
+                  <span className="text-orange-600 font-medium">虫害</span>
+                ) : (
+                  <span className="text-purple-600 font-medium">病害</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">根据当前Tab自动设置，不可修改</p>
+            </div>
+            {/* 列 2：病虫害编码（input + 生成按钮） */}
+            <div>
+              <Label className="text-gray-900">病虫害编码</Label>
               <div className="flex gap-2">
                 <Input
                   type="text"
@@ -150,12 +161,13 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
                   size="sm"
                   onClick={generateCode}
                   disabled={generatingCode}
-                  className="px-3"
+                  className="px-3 shrink-0"
                 >
                   {generatingCode ? '生成中...' : '生成'}
                 </Button>
               </div>
             </div>
+            {/* 列 3：病虫害名称 * */}
             <div>
               <Label className="text-gray-900">
                 病虫害名称 <span className="text-red-500">*</span>
@@ -167,17 +179,6 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
                 placeholder="请输入病虫害名称"
                 className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
-            </div>
-            <div>
-              <Label className="text-gray-900">类型</Label>
-              <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50">
-                {form.dictType === 'pest' ? (
-                  <span className="text-orange-600 font-medium">虫害</span>
-                ) : (
-                  <span className="text-purple-600 font-medium">病害</span>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">根据当前Tab自动设置，不可修改</p>
             </div>
           </div>
         </div>
