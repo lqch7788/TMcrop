@@ -1,9 +1,13 @@
 /**
  * ImageUploader 图片上传
- * 图片上传、预览、删除
+ * 支持两种模式：
+ *   1. 默认（compact=false）：缩略图 mosaic + + 上传方框
+ *   2. compact=true：只显示「+ 添加图片」按钮 + 已选 N/M + 删除 chip
+ *      （缩略图不在 modal 显示，留给列表/详情页展示）
  */
 import * as React from "react"
-import { Plus, X, Eye, Upload } from "lucide-react"
+import { Plus, X, Eye, Image as ImageIcon } from "lucide-react"
+import { Button } from './button'
 import { cn } from "@/lib/utils"
 
 export interface ImageUploaderProps {
@@ -14,6 +18,12 @@ export interface ImageUploaderProps {
   multiple?: boolean
   disabled?: boolean
   className?: string
+  /**
+   * 2026-07-16：紧凑模式
+   * - false（默认）：缩略图 mosaic + + 上传方框
+   * - true：只显示「+ 添加图片」按钮 + 已选 N/M + 删除 chip
+   */
+  compact?: boolean
 }
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -23,7 +33,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   accept = "image/*",
   multiple = true,
   disabled,
-  className
+  className,
+  compact = false,
 }) => {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
@@ -32,9 +43,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
 
-    // 2026-07-16：改用 Promise.all — 解决共享闭包 + 异步竞态 bug
-    // 旧实现：forEach + 共享 newImages 数组，依赖 length===files.length 边界判断，
-    // 在严格模式/重渲染下偶发 onChange 不触发或只提交部分图片
+    // 2026-07-16：Promise.all 解决共享闭包 + 异步竞态 bug
     const remaining = maxCount - value.length
     const slots = Math.min(files.length, Math.max(remaining, 0))
     const fileSlice = files.slice(0, slots)
@@ -61,7 +70,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         console.error('[ImageUploader] 文件读取失败:', err)
       })
 
-    // 清空 input value 以支持重复选择同一文件
     if (inputRef.current) {
       inputRef.current.value = ''
     }
@@ -72,15 +80,78 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     onChange?.(newImages)
   }
 
-  const handlePreview = (url: string) => {
-    setPreviewUrl(url)
-  }
-
   const isDisabled = disabled || value.length >= maxCount
 
+  // ====== 紧凑模式：只显示「添加图片」按钮 + 已选 N/M + 删除 chip ======
+  if (compact) {
+    return (
+      <div className={cn("space-y-2", className)}>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            disabled={isDisabled}
+            onClick={() => inputRef.current?.click()}
+            className="gap-1"
+          >
+            <ImageIcon className="w-4 h-4" />
+            {value.length === 0 ? '添加图片' : '继续添加图片'}
+          </Button>
+          <span className="text-xs text-gray-500">
+            已选 <strong className="text-orange-600">{value.length}</strong>/{maxCount} 张
+          </span>
+          {isDisabled && (
+            <span className="text-xs text-gray-400">已达上限</span>
+          )}
+        </div>
+
+        {/* 已选 chip：可单张删除 */}
+        {value.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {value.map((src, index) => (
+              <span
+                key={index}
+                className="group inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 border border-gray-300 text-xs text-gray-700"
+              >
+                <ImageIcon className="w-3 h-3" />
+                <span>图片 {index + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(index)}
+                  className="text-gray-400 hover:text-red-600 ml-0.5"
+                  title="删除该图片"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => onChange?.([])}
+              className="text-xs text-gray-400 hover:text-red-500 ml-1"
+            >
+              清空全部
+            </button>
+          </div>
+        )}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={disabled}
+        />
+      </div>
+    )
+  }
+
+  // ====== 默认模式：缩略图 mosaic + + 上传方框 ======
   return (
     <div className={cn("space-y-3", className)}>
-      {/* 图片列表 */}
       {value.length > 0 && (
         <div className="grid grid-cols-4 gap-3">
           {value.map((url, index) => (
@@ -93,11 +164,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 alt={`图片 ${index + 1}`}
                 className="w-full h-full object-cover"
               />
-
-              {/* 悬浮操作层 */}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <button
-                  onClick={() => handlePreview(url)}
+                  onClick={() => setPreviewUrl(url)}
                   className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
                   type="button"
                 >
@@ -116,7 +185,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         </div>
       )}
 
-      {/* 上传按钮 */}
       {!isDisabled && (
         <div
           onClick={() => inputRef.current?.click()}
@@ -144,7 +212,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         disabled={disabled}
       />
 
-      {/* 预览弹窗 */}
       {previewUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
@@ -153,8 +220,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           <button
             onClick={() => setPreviewUrl(null)}
             className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+            type="button"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-white" />
           </button>
           <img
             src={previewUrl}
