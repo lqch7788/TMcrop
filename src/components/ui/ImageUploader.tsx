@@ -29,26 +29,39 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
 
-    const newImages: string[] = []
+    // 2026-07-16：改用 Promise.all — 解决共享闭包 + 异步竞态 bug
+    // 旧实现：forEach + 共享 newImages 数组，依赖 length===files.length 边界判断，
+    // 在严格模式/重渲染下偶发 onChange 不触发或只提交部分图片
+    const remaining = maxCount - value.length
+    const slots = Math.min(files.length, Math.max(remaining, 0))
+    const fileSlice = files.slice(0, slots)
 
-    Array.from(files).forEach(file => {
-      if (value.length + newImages.length >= maxCount) return
-
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const result = event.target?.result as string
-        newImages.push(result)
-        if (newImages.length === files.length || value.length + newImages.length >= maxCount) {
-          onChange?.([...value, ...newImages])
+    Promise.all(
+      fileSlice.map(
+        (file) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = () => reject(reader.error || new Error('readAsDataURL failed'))
+            reader.readAsDataURL(file)
+          })
+      )
+    )
+      .then((dataUrls) => {
+        const valid = dataUrls.filter((s): s is string => typeof s === 'string' && s.length > 0)
+        if (valid.length > 0) {
+          onChange?.([...value, ...valid])
         }
-      }
-      reader.readAsDataURL(file)
-    })
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[ImageUploader] 文件读取失败:', err)
+      })
 
-    // 清空 input 以支持重复选择同一文件
+    // 清空 input value 以支持重复选择同一文件
     if (inputRef.current) {
       inputRef.current.value = ''
     }
