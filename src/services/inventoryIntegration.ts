@@ -100,7 +100,7 @@ export async function outboundSeedSource(
   const request: OutboundRequest = {
     instanceId: stock.instanceId,
     businessId,
-    businessType: OutboundBusinessType.INTERNAL_PLANTING,
+    businessType: OutboundBusinessType.OTHER,
     businessCode,
     quantity,
     operatorId,
@@ -189,7 +189,7 @@ export async function outboundSeedling(
   const request: OutboundRequest = {
     instanceId: stock.instanceId,
     businessId,
-    businessType: OutboundBusinessType.INTERNAL_PLANTING,
+    businessType: OutboundBusinessType.OTHER,
     businessCode,
     quantity,
     operatorId,

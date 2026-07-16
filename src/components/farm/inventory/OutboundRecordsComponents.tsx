@@ -114,14 +114,8 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
               <SelectItem value={OutboundBusinessType.DAMAGE_LOSS}>
                 {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.DAMAGE_LOSS].label}
               </SelectItem>
-              <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
-              </SelectItem>
               <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
                 {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.RETURN_INBOUND}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.RETURN_INBOUND].label}
               </SelectItem>
               <SelectItem value={OutboundBusinessType.INVENTORY_ADJUST}>
                 {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INVENTORY_ADJUST].label}
