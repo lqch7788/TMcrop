@@ -82,51 +82,40 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const isDisabled = disabled || value.length >= maxCount
 
-  // ====== 紧凑模式：一行小缩略图（带实际图片预览）+ 显式「+ 添加图片」按钮 ======
+  // ====== 紧凑模式：一行小缩略图（带实际图片预览）+ 仅一个「+ 添加图片」文字按钮 ======
   // 2026-07-16 修正：保留缩略图（紧凑尺寸 64x64），避免用「图片 1/2/3」之类的盲标签
-  //            加回明显的「+ 添加图片」文字按钮（用户反馈隐式虚线方框不直观）
+  //            单一操作入口（只一个文字按钮，不重复；不再加末尾虚线占位方框）
   if (compact) {
     return (
       <div className={cn("space-y-2", className)}>
-        {/* 已有图片缩略图（一行小尺寸 + 末尾 + 占位方框） */}
-        <div className="flex items-center flex-wrap gap-2">
-          {value.map((url, index) => (
-            <div
-              key={index}
-              className="group relative w-16 h-16 rounded-lg overflow-hidden border border-gray-300 shrink-0"
-            >
-              <img
-                src={url}
-                alt={`图片 ${index + 1}`}
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={() => setPreviewUrl(url)}
-              />
-              <button
-                type="button"
-                onClick={() => handleRemove(index)}
-                className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                title="删除该图片"
+        {/* 已有图片缩略图（一行小尺寸） */}
+        {value.length > 0 && (
+          <div className="flex items-center flex-wrap gap-2">
+            {value.map((url, index) => (
+              <div
+                key={index}
+                className="group relative w-16 h-16 rounded-lg overflow-hidden border border-gray-300 shrink-0"
               >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+                <img
+                  src={url}
+                  alt={`图片 ${index + 1}`}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={() => setPreviewUrl(url)}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemove(index)}
+                  className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="删除该图片"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* 占位「+ N/M」方框（缩略图不足时显示，无文字让用户疑惑） */}
-          {!isDisabled && value.length > 0 && (
-            <div
-              onClick={() => inputRef.current?.click()}
-              className="w-16 h-16 border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer shrink-0"
-            >
-              <Plus className="w-5 h-5 text-gray-400" />
-              <span className="text-xs text-gray-400">
-                {value.length}/{maxCount}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 明显的「+ 添加图片」文字按钮（用户主要操作入口） */}
+        {/* 唯一操作入口：明显的「+ 添加图片」文字按钮 */}
         <Button
           type="button"
           variant="secondary"
