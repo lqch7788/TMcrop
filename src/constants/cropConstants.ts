@@ -45,6 +45,50 @@ export const SEEDLING_FORM_MAP: Record<string, string> = {
   other: '其他',
 };
 
+// ========== 育苗方式映射（2026-07-16：补全 seedlingType 字典）==========
+// 应用场景：种苗详情弹窗"育苗方式"字段、种苗列表"育苗方式"列
+// 数据源：seedData.ts 的 seedling_type 字典（biz-001~biz-012）
+// 注意：与 SEEDLING_FORM_MAP（容器/形态）不同 — 这是"育苗方式"（plug→穴盘育苗 而非 穴盘苗）
+export const SEEDLING_TYPE_MAP: Record<string, string> = {
+  plug: '穴盘育苗',
+  direct: '直播育苗',
+  grafting: '嫁接育苗',
+  tissue: '组培育苗',
+  ground: '地栽育苗',
+  floating: '漂浮育苗',
+  ebb_flow: '潮汐育苗',
+  paper_pot: '纸袋育苗',
+  nutrition_cup: '营养杯育苗',
+  cutting: '扦插育苗',
+  division: '分株育苗',
+  other: '其他',
+};
+
+// ========== 2026-07-16：种源详情「来源业务类型」字典 ==========
+// 应用场景：SeedSourceDetailModal 调拨来源 Tab 的"来源业务类型"字段
+// 数据源：inventoryTransfer.service.ts / inventoryInboundFromSource.service.ts 写入 transferred_from_business_type 字段
+export const TRANSFERRED_FROM_BUSINESS_TYPE_MAP: Record<string, string> = {
+  harvest: '采收',
+  purchase: '外购入库',
+  transfer: '库存调拨',
+  inbound: '入库',
+  external: '外部',
+  manual: '手动',
+};
+
+// ========== 2026-07-16：种源详情「原始来源模块」字典 ==========
+// 应用场景：SeedSourceDetailModal 调拨来源 Tab 的"原始来源模块"字段
+// 数据源：inventoryTransfer.service.ts 写入 original_source_module 字段
+export const ORIGINAL_SOURCE_MODULE_MAP: Record<string, string> = {
+  seed_source: '种源',
+  seedling: '种苗',
+  planting: '种植',
+  harvest: '采收',
+  inventory: '库存',
+  manual: '手动',
+  inbound: '入库',
+};
+
 // ========== 成品形态映射（@deprecated 2026-07-07 — 迁移至 src/constants/seedFormDict.ts）==========
 // 应用场景：种植详情弹窗的"成品类型"列、采收登记、库存入库
 /** @deprecated 2026-07-07 use HARVEST_FORM_OPTIONS from seedFormDict instead */

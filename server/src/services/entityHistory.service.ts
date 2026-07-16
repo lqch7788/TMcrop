@@ -106,12 +106,17 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   // 注意：business_id 可能为空，source_id + source_module 是主要关联路径
   try {
     const stmt = db.prepare(`
-      SELECT id, record_date, source_module, source_code, source_type,
-             quantity, unit, warehouse_name, operator_name, notes, create_time,
-             crop_name
-      FROM inventory_inbound_records
-      WHERE (business_id = ? OR (source_id = ? AND source_module = ?))
-      ORDER BY create_time DESC LIMIT ?
+      SELECT ir.id, ir.record_date, ir.source_module, ir.source_code, ir.source_type,
+             ir.quantity, ir.unit, ir.warehouse_name, ir.operator_name, ir.notes, ir.create_time,
+             ir.crop_name AS ir_crop_name,
+             -- 2026-07-16：JOIN inventory_stock 取真实作物名（修复"同品种显示不同名"bug）
+             -- 优先级：inventory_stock.crop_name > inventory_inbound_records.crop_name
+             COALESCE(stk.crop_name, ir.crop_name) AS crop_name,
+             COALESCE(stk.variety_name, NULL) AS crop_variety
+      FROM inventory_inbound_records ir
+      LEFT JOIN inventory_stock stk ON stk.id = ir.source_id
+      WHERE (ir.business_id = ? OR (ir.source_id = ? AND ir.source_module = ?))
+      ORDER BY ir.create_time DESC LIMIT ?
     `);
     const sourceModule = entityType === 'seed_source' ? 'seed_source'
       : entityType === 'seedling' ? 'seedling' : 'planting';
@@ -134,7 +139,10 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
                 r.notes,
                 r.disposition ? `处置方式：${DISPOSITION_CN[String(r.disposition)] || r.disposition}` : null,
               ].filter(Boolean).join(' ｜ '),
-        cropName: r.crop_name ? String(r.crop_name) : undefined,
+        // 2026-07-16：「作物品种」列显示最后一级名称（品种名）——
+        //   完整路径：水果-浆果类-草莓-宁玉，应显示「宁玉」
+        //   优先级：variety_name（品种）> crop_name（作物）> ir.crop_name（入库脏数据）
+        cropName: r.crop_variety ? String(r.crop_variety) : (r.crop_name ? String(r.crop_name) : undefined),
         inboundSource: String(r.source_type || ''),
       });
     }
@@ -144,13 +152,32 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   }
 
   // 3. inventory_transaction（transaction）
+  // 2026-07-16：补 LEFT JOIN 关联表（seedlings/plantings/seed_sources/inventory_stock），
+  //   让 cropName / inboundSource / refCode / refModule 4 个字段不再为空，
+  //   修复「库存流水」Tab 的 4 列空数据问题（YM20260716-001 实际数据：业务=育苗 → JOIN seedlings 拿到 crop_name='宁玉'）
   try {
     const stmt = db.prepare(`
-      SELECT id, transaction_type, business_type, quantity, balance_before, balance_after,
-             operate_date, remarks, operator_name, create_time
-      FROM inventory_transaction
-      WHERE business_id = ?
-      ORDER BY create_time DESC LIMIT ?
+      SELECT
+        tx.id, tx.transaction_type, tx.business_type, tx.business_code,
+        tx.quantity, tx.balance_before, tx.balance_after,
+        tx.operate_date, tx.remarks, tx.operator_name, tx.create_time,
+        -- 2026-07-16：JOIN 关联业务表取作物名（按 business_type 分支优先匹配）
+        COALESCE(sd.crop_name, sp.crop_name, ss.crop_name, stk.crop_name) AS crop_name,
+        -- 2026-07-16：JOIN 关联业务表取品种名（最后一级，优先于 crop_name）
+        COALESCE(sd.crop_variety, sp.crop_variety, ss.crop_variety, stk.variety_name) AS variety_name,
+        -- 2026-07-16：JOIN inventory_stock 取入库来源类型（外购/调拨/自产等）
+        stk.source_type AS stock_source_type
+      FROM inventory_transaction tx
+      LEFT JOIN seedlings sd
+        ON sd.id = tx.business_id AND tx.business_type = 'seedling'
+      LEFT JOIN plantings sp
+        ON sp.id = tx.business_id AND tx.business_type = 'planting'
+      LEFT JOIN seed_sources ss
+        ON ss.id = tx.business_id AND tx.business_type = 'seed_source'
+      LEFT JOIN inventory_stock stk
+        ON stk.instance_id = tx.instance_id
+      WHERE tx.business_id = ?
+      ORDER BY tx.create_time DESC LIMIT ?
     `);
     stmt.bind([entityId, limit]);
     while (stmt.step()) {
@@ -183,8 +210,18 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         action: actionLabel,
         quantityDelta: txnType === 'transfer_out' || txnType === 'outbound' ? -qty : qty,
         unit: '',
+        // 2026-07-16：填 refCode（业务单号，如 YM20260716-001）
+        refCode: String(r.business_code || ''),
+        // 2026-07-16：填 refModule（业务模块中文：种源/育苗/种植）
+        refModule: SOURCE_MODULE_CN[bizType] || bizType,
         operatorName: String(r.operator_name || ''),
         remarks: String(r.remarks || ''),
+        // 2026-07-16：填 cropName（JOIN 关联业务表，显示最后一级品种名）
+        // 完整路径：水果-浆果类-草莓-宁玉，应显示「宁玉」
+        // 优先级：variety_name（品种）> crop_name（作物）
+        cropName: r.variety_name ? String(r.variety_name) : (r.crop_name ? String(r.crop_name) : undefined),
+        // 2026-07-16：填 inboundSource（库存来源类型，前端 fmtInboundSource 翻译）
+        inboundSource: r.stock_source_type ? String(r.stock_source_type) : bizType || undefined,
       });
     }
     stmt.free();

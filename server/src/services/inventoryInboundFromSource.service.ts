@@ -17,6 +17,48 @@ import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository } from '../repositories/inventoryTransaction.repository';
 import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
 
+/**
+ * 2026-07-16：库存 cropName 归一化（防"宁玉（宁玉）"类数据错位）
+ *
+ * 业务规则：
+ * - crop_varieties 表维护品种字典（sub_variety1_name = 子品种名）
+ * - 用户录入时可能误把"品种名"当作"作物名"传入（如「宁玉」实际是「草莓」的品种）
+ * - 写入 inventory_stock 前做反查：若 cropName 在 sub_variety1_name 中能找到（说明是品种），
+ *   自动把 cropName 修正为 type_name（作物类目，如「草莓」），varietyName 用查到的 sub_variety1_name
+ *
+ * @returns { cropName: string, varietyName: string | null }
+ */
+function normalizeCropNameForStock(
+  cropName: string,
+  cropVariety?: string | null,
+): { cropName: string; varietyName: string | null } {
+  if (!cropName) return { cropName: cropName || '', varietyName: cropVariety || null };
+
+  try {
+    const db = getDatabase();
+    // 检查 cropName 是否在 sub_variety1_name 里能找到（说明实际是品种名）
+    // 2026-07-16：用 variety_name 作为 cropName（如「草莓」），不是 type_name（"浆果类"是大类，UI 不友好）
+    const stmt = db.prepare(
+      `SELECT variety_name, sub_variety1_name FROM crop_varieties
+       WHERE sub_variety1_name = ? AND status = 'active' LIMIT 1`
+    );
+    stmt.bind([cropName]);
+    if (stmt.step()) {
+      const r = stmt.getAsObject() as Record<string, unknown>;
+      stmt.free();
+      // cropName 实际是品种名 → 用 variety_name 作为 cropName（如"草莓"），varietyName 用 cropName（"宁玉"）
+      const realCropName = String(r.variety_name || cropName);
+      return { cropName: realCropName, varietyName: String(r.sub_variety1_name || cropName) };
+    }
+    stmt.free();
+  } catch (e) {
+    // 2026-07-16：归一化失败不应阻塞写入流程，记录警告后用原值
+    console.warn('[normalizeCropNameForStock] 反查 crop_varieties 失败，使用原值:', (e as Error).message);
+  }
+
+  return { cropName, varietyName: cropVariety || null };
+}
+
 export type StockType = 'seed' | 'seedling' | 'product';
 export type SourceModule = 'seed_source' | 'seedling' | 'planting';
 
@@ -323,6 +365,10 @@ export async function executeInboundFromSource(
       const stockId = await generateStockId(dateStr);
 
       // 步骤 2：写 inventory_stock
+      // 2026-07-16 修复：写入前用 crop_varieties 表反查归一化 — 如果 product.cropName 实际是 sub_variety1_name（品种名）
+      //   自动把 cropName 替换为 type_name（作物类目），varietyName 用查到的 sub_variety1_name
+      //   修复"宁玉（宁玉）"类数据错位 bug
+      const normalizedCrop = normalizeCropNameForStock(product.cropName, product.cropVariety);
       const stockRecord: any = {
         id: stockId,
         instance_id: instanceId,
@@ -334,8 +380,9 @@ export async function executeInboundFromSource(
         source_type: (input as any).inboundSourceType || input.sourceModule,
         source_instance_id: sourceInstanceId,  // 关键：库存追溯链依赖
         crop_code: product.cropCode || null,
-        crop_name: product.cropName,
-        variety_name: product.cropVariety || null,
+        // 2026-07-16：归一化后的 cropName（防"宁玉（宁玉）"数据错位）
+        crop_name: normalizedCrop.cropName,
+        variety_name: normalizedCrop.varietyName,
         current_quantity: product.harvestQuantity,
         available_quantity: product.harvestQuantity,
         frozen_quantity: 0,

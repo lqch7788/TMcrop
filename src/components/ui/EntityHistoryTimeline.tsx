@@ -23,6 +23,8 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   transfer_inbound: '调拨入库',
   transfer_out: '调拨出库',
   transfer_in: '退库入库',
+  // 2026-07-16：库存调拨入库（inventoryTransfer.service.ts 写入 source_type='inventory_transfer'）
+  inventory_transfer: '库存调拨入库',
   circulation: '回流',
   seed_saving: '留种',
   // 实际数据中 source_type 也会存 source_module 的值
@@ -33,6 +35,28 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   manual: '手动入库',
   correction: '数量修正',
   external: '外部入库',
+  // 兼容：业务类型值（transfer/business_type）
+  inbound: '入库',
+  outbound: '出库',
+  harvest: '采收',
+  // 兼容：transaction_type 直接出现在入库记录的 source_type 字段
+  freeze: '冻结',
+  unfreeze: '解冻',
+  damaged: '报损',
+  adjustment: '库存调整',
+  // 2026-07-16：补全 inventory_inbound_records.source_type 11 枚举值（含单复数/简写变体）
+  commissioned: '委托生产',
+  external_purchase: '外购入库',
+  gift: '赠送',
+  transfer: '库存调拨',
+  // 2026-07-16：补全 inventory_transaction.business_type 全 14 枚举值
+  customer_sale: '客户销售',
+  damage_loss: '报损',
+  gift_sample: '赠送/样品',
+  internal_planting: '内部种植',
+  other: '其他',
+  purchase: '采购',
+  return_inbound: '退库入库',
 };
 
 /**
