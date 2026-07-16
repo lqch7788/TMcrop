@@ -564,84 +564,95 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
             </div>
 
             {/* 2026-07-12：防治区域多选 — Tab 切换种植/育苗 + record 列表多选；同一次防治仅同一作物 */}
+            {/* 2026-07-16 重构：拆 grid-cols-2 — 左半 Tab+搜索，右半 已选 chips + 清除，与其他 row 视觉对齐 */}
             <div ref={bizSearchRef} className="relative">
-              <div className="flex items-center gap-2 mb-1">
-                <Label className="text-gray-900 shrink-0">
-                  📍 防治区域 <span className="text-gray-500 text-xs">（可多选；同一次防治记录只能针对同一作物）</span>
-                </Label>
-                {/* Tab 切换 */}
-                <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => { setBizTabType('planting'); setShowBizSearch(true); }}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      bizTabType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    🌱 种植
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setBizTabType('seedling'); setShowBizSearch(true); }}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      bizTabType === 'seedling' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    🌿 育苗
-                  </button>
-                </div>
-                {/* 搜索框 */}
-                <Input
-                  type="text"
-                  value={bizSearchKeyword}
-                  onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
-                  onFocus={() => setShowBizSearch(true)}
-                  placeholder={bizTabType === 'planting' ? '搜索种植批号/作物/区域...' : '搜索育苗批号/作物/区域...'}
-                  className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowBizSearch(!showBizSearch)}
-                  className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
-                >
-                  <Search className="w-4 h-4 text-gray-500" />
-                </Button>
-              </div>
-              {/* 已选记录 chips + 清除全部 */}
-              {selectedBizRecords.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 p-2 border border-emerald-200 bg-emerald-50 rounded-lg mb-1">
-                  {selectedBizRecords.map((r) => (
-                    <span
-                      key={`${r.type}-${r.id}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-emerald-300 text-emerald-800 text-sm"
-                    >
-                      <span className="text-xs">{r.type === 'planting' ? '🌱' : '🌿'}</span>
-                      <span className="font-mono text-xs">{r.code}</span>
-                      <span className="text-emerald-500">·</span>
-                      <span>{r.area}</span>
+              <div className="grid grid-cols-2 gap-4">
+                {/* 左半：Label + Tab + 搜索框 */}
+                <div className="flex flex-col">
+                  <Label className="text-gray-900 mb-1">
+                    📍 防治区域 <span className="text-gray-500 text-xs">（可多选；同一次只能针对同一作物）</span>
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {/* Tab 切换 */}
+                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleToggleBizRecord(r.type, { id: r.id, cropName: r.cropName, plantCode: r.code, seedlingCode: r.code }, r.area)}
-                        className="ml-1 text-emerald-600 hover:text-red-600"
-                        title="移除该区域"
+                        onClick={() => { setBizTabType('planting'); setShowBizSearch(true); }}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          bizTabType === 'planting' ? 'bg-emerald-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                        }`}
                       >
-                        <X className="w-3 h-3" />
+                        🌱 种植
                       </button>
-                    </span>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearBizRecords}
-                    className="text-gray-500 hover:text-red-600"
-                  >
-                    <X className="w-3 h-3 mr-1" />清除全部
-                  </Button>
+                      <button
+                        type="button"
+                        onClick={() => { setBizTabType('seedling'); setShowBizSearch(true); }}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          bizTabType === 'seedling' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        🌿 育苗
+                      </button>
+                    </div>
+                    {/* 搜索框 */}
+                    <Input
+                      type="text"
+                      value={bizSearchKeyword}
+                      onChange={(e) => { setBizSearchKeyword(e.target.value); setShowBizSearch(true); }}
+                      onFocus={() => setShowBizSearch(true)}
+                      placeholder={bizTabType === 'planting' ? '搜索种植批号...' : '搜索育苗批号...'}
+                      className={`flex-1 ${deepInputClass} rounded-l-lg`}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowBizSearch(!showBizSearch)}
+                      className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg shrink-0"
+                    >
+                      <Search className="w-4 h-4 text-gray-500" />
+                    </Button>
+                  </div>
                 </div>
-              )}
+                {/* 右半：已选 chips 显示（与其他 row 右列对齐） */}
+                <div className="flex flex-col">
+                  <Label className="text-gray-900 mb-1">
+                    已选防治区域 <span className="text-gray-500 text-xs">（{selectedBizRecords.length} 个）</span>
+                  </Label>
+                  <div className={`${deepInputClass} min-h-[42px] flex flex-wrap items-center gap-1.5 px-2 py-1`}>
+                    {selectedBizRecords.length > 0 ? (
+                      <>
+                        {selectedBizRecords.map((r) => (
+                          <span
+                            key={`${r.type}-${r.id}`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs"
+                          >
+                            <span>{r.type === 'planting' ? '🌱' : '🌿'}</span>
+                            <span className="font-mono">{r.code}</span>
+                            <span>· {r.area}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBizRecord(r.type, { id: r.id, cropName: r.cropName, plantCode: r.code, seedlingCode: r.code }, r.area)}
+                              className="ml-0.5 text-emerald-600 hover:text-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={handleClearBizRecords}
+                          className="text-xs text-gray-500 hover:text-red-600 ml-auto"
+                        >
+                          清除全部
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-gray-400 text-sm">请从左侧选择区域</span>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* 下拉选项列表 */}
               {showBizSearch && (
                 <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
@@ -761,80 +772,92 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
             </div>
 
             {/* 目标病虫害（2026-07-11：病害/虫害 Tab + 搜索下拉多选，从病虫害词典关联） */}
+            {/* 2026-07-16 重构：拆 grid-cols-2 — 左半 Tab+搜索，右半 已选 chips，与其他 row 视觉对齐 */}
             <div ref={pestSearchRef} className="relative">
-              <div className="flex items-center gap-2 mb-1">
-                <Label className="text-gray-900 shrink-0">
-                  目标病虫害 <span className="text-gray-500 text-xs">（多选，可同时防病害+虫害）</span>
-                </Label>
-                {/* Tab 切换 */}
-                <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => { setPestTabType('pest'); setShowPestSearch(true); }}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      pestTabType === 'pest' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    🐛 虫害
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setPestTabType('disease'); setShowPestSearch(true); }}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      pestTabType === 'disease' ? 'bg-purple-500 text-white' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    🦠 病害
-                  </button>
-                </div>
-                {/* 搜索框 */}
-                <Input
-                  type="text"
-                  value={pestSearchKeyword}
-                  onChange={(e) => { setPestSearchKeyword(e.target.value); setShowPestSearch(true); }}
-                  onFocus={() => setShowPestSearch(true)}
-                  placeholder={pestTabType === 'pest' ? '搜索虫害名称...' : '搜索病害名称...'}
-                  className={`flex-1 ${deepInputClass} rounded-l-lg`}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowPestSearch(!showPestSearch)}
-                  className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
-                >
-                  <Search className="w-4 h-4 text-gray-500" />
-                </Button>
-              </div>
-              {/* 已选 chip（多个） */}
-              {form.targetPests.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  {form.targetPests.map((name) => {
-                    // 用 dictName 查 tab 颜色
-                    const matched = pestDiseaseStore.items.find((d: any) => d.dictName === name);
-                    const isPest = matched?.dictType === 'pest';
-                    return (
-                      <span
-                        key={name}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${
-                          isPest
-                            ? 'bg-orange-50 text-orange-700 border-orange-200'
-                            : 'bg-purple-50 text-purple-700 border-purple-200'
+              <div className="grid grid-cols-2 gap-4">
+                {/* 左半：Label + Tab + 搜索框 */}
+                <div className="flex flex-col">
+                  <Label className="text-gray-900 mb-1">
+                    目标病虫害 <span className="text-gray-500 text-xs">（多选，可同时防病害+虫害）</span>
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {/* Tab 切换 */}
+                    <div className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => { setPestTabType('pest'); setShowPestSearch(true); }}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          pestTabType === 'pest' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:text-gray-900'
                         }`}
                       >
-                        {name}
-                        <button
-                          type="button"
-                          onClick={() => removePest(name)}
-                          className="hover:bg-white/50 rounded-full w-4 h-4 flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    );
-                  })}
+                        🐛 虫害
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPestTabType('disease'); setShowPestSearch(true); }}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          pestTabType === 'disease' ? 'bg-purple-500 text-white' : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        🦠 病害
+                      </button>
+                    </div>
+                    {/* 搜索框 */}
+                    <Input
+                      type="text"
+                      value={pestSearchKeyword}
+                      onChange={(e) => { setPestSearchKeyword(e.target.value); setShowPestSearch(true); }}
+                      onFocus={() => setShowPestSearch(true)}
+                      placeholder={pestTabType === 'pest' ? '搜索虫害名称...' : '搜索病害名称...'}
+                      className={`flex-1 ${deepInputClass} rounded-l-lg`}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowPestSearch(!showPestSearch)}
+                      className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg shrink-0"
+                    >
+                      <Search className="w-4 h-4 text-gray-500" />
+                    </Button>
+                  </div>
                 </div>
-              )}
+                {/* 右半：已选 chip 显示（与其他 row 右列对齐） */}
+                <div className="flex flex-col">
+                  <Label className="text-gray-900 mb-1">
+                    已选病虫害 <span className="text-gray-500 text-xs">（{form.targetPests.length} 个）</span>
+                  </Label>
+                  <div className={`${deepInputClass} min-h-[42px] flex flex-wrap items-center gap-1.5 px-2 py-1`}>
+                    {form.targetPests.length > 0 ? (
+                      form.targetPests.map((name) => {
+                        const matched = pestDiseaseStore.items.find((d: any) => d.dictName === name);
+                        const isPest = matched?.dictType === 'pest';
+                        return (
+                          <span
+                            key={name}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
+                              isPest
+                                ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200'
+                            }`}
+                          >
+                            {name}
+                            <button
+                              type="button"
+                              onClick={() => removePest(name)}
+                              className="hover:bg-white/50 rounded-full w-3 h-3 flex items-center justify-center"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-gray-400 text-sm">请从左侧选择病虫害</span>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* 下拉选项 */}
               {showPestSearch && (
                 <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
