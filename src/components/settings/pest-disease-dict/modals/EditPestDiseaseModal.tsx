@@ -181,18 +181,16 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
             </div>
             {/* 2026-07-16：图片字段（编辑现有图片）+ 描述字段同行 grid-cols-2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-              {/* 列 1：图片 — 固定高度 h-[152px]，与描述框对齐 */}
+              {/* 列 1：图片 — 2026-07-16 修复：不强制固定高度，让 ImageUploader 自然高度 */}
               <div className="flex flex-col">
                 <Label className="text-gray-900">
-                  图片 <span className="text-xs text-gray-500">（最多 5 张）</span>
+                  图片 <span className="text-xs text-gray-500">（最多 5 张，建议小于 1MB/张）</span>
                 </Label>
-                <div className="border border-gray-400 rounded-lg p-2 h-[152px] overflow-y-auto bg-white">
-                  <ImageUploader
-                    value={form.images}
-                    onChange={(arr) => updateField('images', arr)}
-                    maxCount={5}
-                  />
-                </div>
+                <ImageUploader
+                  value={form.images}
+                  onChange={(arr) => updateField('images', arr)}
+                  maxCount={5}
+                />
               </div>
               {/* 列 2：描述 — 同步固定高度 */}
               <div className="flex flex-col">
@@ -202,7 +200,7 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
                   onChange={(e) => updateField('description', e.target.value)}
                   placeholder="请输入病虫害描述"
                   rows={6}
-                  className="w-full h-[152px] px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  className="w-full h-[200px] px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
                 />
               </div>
             </div>
