@@ -235,8 +235,8 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
                   value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
                   placeholder="请输入病虫害描述"
-                  rows={6}
-                  className="w-full h-[200px] px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  rows={3}
+                  className="w-full h-[100px] px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
                 />
               </div>
             </div>
