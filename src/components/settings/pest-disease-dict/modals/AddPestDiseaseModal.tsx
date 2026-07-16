@@ -48,8 +48,19 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
   const [selectedPesticides, setSelectedPesticides] = useState<string[]>([]);
 
   // 药剂搜索和过滤
-  const [pesticideSearch, setPesticideSearch] = useState('');
-  const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | 'chemical' | 'bio' | 'physical'>('all');
+  // 2026-07-16：pesticide_typeFilter 字段对齐药剂库字典 dict_code（杀虫剂/杀菌剂/...）
+  // 旧的「化学/生物/物理」分类已废弃（项目早期字典遗留），改为药剂库实际分类
+  const PESTICIDE_TYPE_OPTIONS = [
+    { code: 'insecticide',  label: '杀虫剂',  emoji: '🐛', active: 'bg-red-500',    idle: 'bg-red-50 text-red-600 border-red-200' },
+    { code: 'fungicide',    label: '杀菌剂',  emoji: '🦠', active: 'bg-cyan-500',   idle: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
+    { code: 'herbicide',    label: '除草剂',  emoji: '🌿', active: 'bg-emerald-500',idle: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    { code: 'acaricide',    label: '杀螨剂',  emoji: '🕷️', active: 'bg-purple-500', idle: 'bg-purple-50 text-purple-600 border-purple-200' },
+    { code: 'protective',   label: '保护剂',  emoji: '🛡️', active: 'bg-blue-500',   idle: 'bg-blue-50 text-blue-600 border-blue-200' },
+    { code: 'adjuvant',     label: '助剂',    emoji: '💧', active: 'bg-amber-500',  idle: 'bg-amber-50 text-amber-600 border-amber-200' },
+    { code: 'other',        label: '其他',    emoji: '📦', active: 'bg-gray-500',   idle: 'bg-gray-50 text-gray-600 border-gray-200' },
+  ] as const;
+  type PesticideTypeCode = typeof PESTICIDE_TYPE_OPTIONS[number]['code'];
+  const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | PesticideTypeCode>('all');
 
   // 生成编码
   const generateCode = async () => {
@@ -257,8 +268,8 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
               className="w-full h-10 px-4 text-sm"
             />
           </div>
-          {/* 类型筛选按钮 - 彩色图块 */}
-          <div className="flex gap-2 mb-4">
+          {/* 类型筛选按钮 - 彩色图块 2026-07-16：替换化学/生物/物理 → 药剂库实际分类 */}
+          <div className="flex gap-2 mb-4 flex-wrap">
             <button
               type="button"
               onClick={() => setPesticideTypeFilter('all')}
@@ -270,39 +281,20 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
             >
               全部
             </button>
-            <button
-              type="button"
-              onClick={() => setPesticideTypeFilter('chemical')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pesticideTypeFilter === 'chemical'
-                  ? 'bg-red-500 text-white shadow-md'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-              }`}
-            >
-              🧪 化学
-            </button>
-            <button
-              type="button"
-              onClick={() => setPesticideTypeFilter('bio')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pesticideTypeFilter === 'bio'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
-              }`}
-            >
-              🌿 生物
-            </button>
-            <button
-              type="button"
-              onClick={() => setPesticideTypeFilter('physical')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pesticideTypeFilter === 'physical'
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
-              }`}
-            >
-              🔧 物理
-            </button>
+            {PESTICIDE_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.code}
+                type="button"
+                onClick={() => setPesticideTypeFilter(opt.code)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pesticideTypeFilter === opt.code
+                    ? `${opt.active} text-white shadow-md`
+                    : `${opt.idle} hover:opacity-80 border`
+                }`}
+              >
+                <span className="mr-1">{opt.emoji}</span>{opt.label}
+              </button>
+            ))}
           </div>
           {/* 左右列表 */}
           <div className="grid grid-cols-2 gap-4">
