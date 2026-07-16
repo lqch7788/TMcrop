@@ -68,13 +68,13 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="radio" name="preservationMode" value="seed" checked={mode === 'seed'}
               onChange={() => switchMode('seed')} className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-medium text-gray-800">种子保存</span>
+            <span className="text-sm font-bold text-gray-900">种子保存</span>
             <span className="text-xs text-gray-500">（种子/果实 — 干燥贮藏，适用于粮食/蔬菜/花卉种子）</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="radio" name="preservationMode" value="vegetative" checked={mode === 'vegetative'}
               onChange={() => switchMode('vegetative')} className="w-4 h-4 text-emerald-600" />
-            <span className="text-sm font-medium text-gray-800">营养体保存</span>
+            <span className="text-sm font-bold text-gray-900">营养体保存</span>
             <span className="text-xs text-gray-500">（块茎/鳞茎/插穗等 — 适用马铃薯/甘薯/大蒜/葡萄/草莓）</span>
           </label>
         </div>
