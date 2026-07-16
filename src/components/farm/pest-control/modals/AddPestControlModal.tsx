@@ -659,27 +659,36 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                   {bizTabType === 'planting' && plantingOptions.length > 0 && (
                     plantingOptions.map((p: any) => {
                       const checked = selectedBizRecords.some((r) => r.type === 'planting' && r.id === p.id);
+                      const area = p.rootName || p.areaName || '';
                       return (
                         <Button
                           key={p.id}
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleToggleBizRecord('planting', p, p.rootName || p.areaName || '')}
+                          onClick={() => handleToggleBizRecord('planting', p, area)}
                           className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="flex items-center gap-2 text-left">
+                          <div className="flex items-center gap-2 text-left min-w-0 flex-1">
                             <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                               checked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white'
                             }`}>
                               {checked && <span className="text-xs">✓</span>}
                             </span>
-                            <div>
-                              <p className="text-sm font-medium text-gray-800">{p.plantCode}</p>
-                              <p className="text-xs text-gray-500">
-                                {p.cropName || ''} · {p.rootName || p.areaName || ''}
-                              </p>
-                            </div>
+                            {/* 2026-07-16：单行 3 段（ID|作物|区域），竖线分隔，不同颜色 */}
+                            <span className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                              <span className="text-sm font-mono font-semibold text-blue-700 truncate" title={p.plantCode}>
+                                {p.plantCode}
+                              </span>
+                              <span className="text-gray-300 shrink-0">|</span>
+                              <span className="text-sm font-medium text-emerald-700 truncate" title={p.cropName || ''}>
+                                {p.cropName || '-'}
+                              </span>
+                              <span className="text-gray-300 shrink-0">|</span>
+                              <span className="text-xs text-gray-600 truncate" title={area}>
+                                {area || '-'}
+                              </span>
+                            </span>
                           </div>
                           <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 ${
                             p.isHarvest ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
@@ -693,27 +702,36 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                   {bizTabType === 'seedling' && seedlingOptions.length > 0 && (
                     seedlingOptions.map((s: any) => {
                       const checked = selectedBizRecords.some((r) => r.type === 'seedling' && r.id === s.id);
+                      const area = s.siteName || '';
                       return (
                         <Button
                           key={s.id}
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleToggleBizRecord('seedling', s, s.siteName || '')}
+                          onClick={() => handleToggleBizRecord('seedling', s, area)}
                           className="w-full justify-between rounded-none border-b border-gray-100 last:border-b-0"
                         >
-                          <div className="flex items-center gap-2 text-left">
+                          <div className="flex items-center gap-2 text-left min-w-0 flex-1">
                             <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                               checked ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 bg-white'
                             }`}>
                               {checked && <span className="text-xs">✓</span>}
                             </span>
-                            <div>
-                              <p className="text-sm font-medium text-gray-800">{s.seedlingCode}</p>
-                              <p className="text-xs text-gray-500">
-                                {s.cropName || ''} · {s.siteName || ''}
-                              </p>
-                            </div>
+                            {/* 2026-07-16：单行 3 段（ID|作物|区域），竖线分隔，不同颜色 */}
+                            <span className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                              <span className="text-sm font-mono font-semibold text-blue-700 truncate" title={s.seedlingCode}>
+                                {s.seedlingCode}
+                              </span>
+                              <span className="text-gray-300 shrink-0">|</span>
+                              <span className="text-sm font-medium text-emerald-700 truncate" title={s.cropName || ''}>
+                                {s.cropName || '-'}
+                              </span>
+                              <span className="text-gray-300 shrink-0">|</span>
+                              <span className="text-xs text-gray-600 truncate" title={area}>
+                                {area || '-'}
+                              </span>
+                            </span>
                           </div>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 shrink-0 ml-2">
                             育苗中
