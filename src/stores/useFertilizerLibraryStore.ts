@@ -6,6 +6,9 @@
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 
+// 2026-07-16：保留旧别名 FertilizerLibrary 兼容 settings 页面（useState<FertilizerLibrary> 6 处引用）
+export type FertilizerLibrary = FertilizerSpec;
+
 // 扁平肥料规格（单一实体，25 字段），取代旧的主表 + 嵌套 spec 两层结构
 export interface FertilizerSpec {
   id: string;

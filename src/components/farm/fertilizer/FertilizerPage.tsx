@@ -13,7 +13,7 @@ import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
 import { todayLocal } from '@/lib/dateUtils';
-import { exportCsv, exportXlsx } from '@/services/exporters';
+import { exportXlsx } from '@/services/exporters';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import FertilizerExportModal from './FertilizerExportModal';
@@ -164,6 +164,9 @@ export default function FertilizerPage() {
       setOperationMode('normal');
       store.fetchItems(filters);
     } catch (err: any) {
+      // 2026-07-16：失败也重置选中（避免重复触发同一失败请求）
+      setSelectedIds([]);
+      setOperationMode('normal');
       toast.error(`删除失败：${err?.message || '未知错误'}`);
     }
   }, [selectedIds, filters, store, toast]);
@@ -177,50 +180,67 @@ export default function FertilizerPage() {
   }, [exportCount]);
 
   const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'pdf') => {
-    const toExport = selectedIds.length > 0
-      ? items.filter((it) => selectedIds.includes(it.id))
-      : items;
+    // 2026-07-16：try/finally 确保弹窗始终关闭（修 silent failure：导出失败时弹窗曾卡原地）
+    try {
+      const toExport = selectedIds.length > 0
+        ? items.filter((it) => selectedIds.includes(it.id))
+        : items;
 
-    // 解析池数据生成导出行
-    const rows = toExport.map((it) => {
-      let pool: any[] = [];
-      try { pool = JSON.parse((it as any).fertilizationPool || '[]'); } catch {}
-      const areas = new Set<string>();
-      const ferts = new Set<string>();
-      pool.forEach((r: any) => { if (r.area) areas.add(r.area); if (r.fertilizerName) ferts.add(r.fertilizerName); });
-      const poolDetail = pool.length > 0
-        ? pool.map((r: any) => `${r.fertilizerName||''}|${r.area||''}|${r.quantity}${r.unit||'kg'}|${r.dilutionRatio||'-'}`).join('; ')
-        : '';
-      return {
-        施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName,
-        温室: it.greenhouseName, 区域数: String(areas.size || 1), 肥料种类: String(ferts.size || 1),
-        总用量: `${it.quantity||0} ${it.unit||'kg'}`, 总成本: `¥${it.totalCost||0}`,
-        操作员: it.operatorName||'', 数据来源: it.dataSource==='auto_iot'?'IoT自动':'手动', 肥料明细: poolDetail,
-      };
-    });
+      if (toExport.length === 0) {
+        toast.error('没有可导出的数据');
+        return;
+      }
 
-    const filename = `施肥记录_${todayLocal()}`;
+      // 解析池数据生成导出行（2026-07-16：池损坏时 warn，但仍走导出）
+      const rows = toExport.map((it) => {
+        let pool: any[] = [];
+        try { pool = JSON.parse((it as any).fertilizationPool || '[]'); }
+        catch (e) { console.warn(`[export] 记录 ${it.id} 池 JSON 损坏:`, e); }
+        const areas = new Set<string>();
+        const ferts = new Set<string>();
+        pool.forEach((r: any) => { if (r.area) areas.add(r.area); if (r.fertilizerName) ferts.add(r.fertilizerName); });
+        const poolDetail = pool.length > 0
+          ? pool.map((r: any) => `${r.fertilizerName||''}|${r.area||''}|${r.quantity}${r.unit||'kg'}|${r.dilutionRatio||'-'}`).join('; ')
+          : '';
+        return {
+          施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName,
+          温室: it.greenhouseName, 区域数: String(areas.size || 1), 肥料种类: String(ferts.size || 1),
+          总用量: `${it.quantity||0} ${it.unit||'kg'}`, 总成本: `¥${it.totalCost||0}`,
+          操作员: it.operatorName||'', 数据来源: it.dataSource==='auto_iot'?'IoT自动':'手动', 肥料明细: poolDetail,
+        };
+      });
 
-    if (format === 'csv') {
-      const headers = Object.keys(rows[0] || {});
-      const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
-      const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `${filename}.csv`; a.click();
-      URL.revokeObjectURL(url);
-    } else if (format === 'xlsx') {
-      await exportXlsx({ filename: `${filename}.xlsx`, headers: Object.keys(rows[0]||{}), rows });
-    } else if (format === 'pdf') {
-      const doc = new jsPDF('l', 'mm', 'a4');
-      const headers = [Object.keys(rows[0] || {})];
-      const data = rows.map((r) => Object.values(r).map(String));
-      (doc as any).autoTable({ head: headers, body: data, startY: 15, styles: { fontSize: 7 }, headStyles: { fillColor: [16, 185, 129] } });
-      doc.save(`${filename}.pdf`);
+      const filename = `施肥记录_${todayLocal()}`;
+
+      if (format === 'csv') {
+        const headers = Object.keys(rows[0] || {});
+        const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
+        const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `${filename}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      } else if (format === 'xlsx') {
+        await exportXlsx({ filename: `${filename}.xlsx`, headers: Object.keys(rows[0]||{}), rows });
+      } else if (format === 'pdf') {
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const headers = [Object.keys(rows[0] || {})];
+        const data = rows.map((r) => Object.values(r).map(String));
+        (doc as any).autoTable({ head: headers, body: data, startY: 15, styles: { fontSize: 7 }, headStyles: { fillColor: [16, 185, 129] } });
+        doc.save(`${filename}.pdf`);
+      }
+      toast.success(`已导出 ${toExport.length} 条记录`);
+    } catch (err: any) {
+      // 2026-07-16：catch 显式提示，避免静默失败
+      console.error('[export] 失败:', err);
+      toast.error(`导出失败：${err?.message || '未知错误'}`);
+    } finally {
+      // 2026-07-16：finally 确保弹窗始终关闭（即使抛错也不卡 UI）
+      setShowExportModal(false);
+      setSelectedIds([]);
+      setOperationMode('normal');
     }
-
-    setShowExportModal(false); setSelectedIds([]); setOperationMode('normal');
-  }, [items, selectedIds]);
+  }, [items, selectedIds, toast]);
 
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {

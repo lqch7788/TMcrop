@@ -5,24 +5,13 @@
  */
 import React from 'react';
 import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
-import { FertilizerData, useDictionaryStore, getDictItemName } from '@/stores';
+import { FertilizerData, getDictItemName } from '@/stores';
+import { parseFertilizationPool, type FertilizationPoolRow } from '@/lib/fertilizerPool';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
-
-/** 池行结构 */
-interface PoolRow {
-  type: 'planting'|'seedling'; id: string; code: string; cropName: string;
-  area: string; quantity: number; unit: string; dilutionRatio: string;
-  fertilizationMethod: string; fertilizerName: string; unitPrice: number;
-  fertilizerSpecId?: string; specBrandName?: string; specUnitPrice?: number; specBatchNumber?: string;
-}
-function parsePool(json: string|null|undefined): PoolRow[] {
-  if (!json) return [];
-  try { const a=JSON.parse(json); return Array.isArray(a)?a.filter((it:any)=>it&&(it.type==='planting'||it.type==='seedling')).map((it:any)=>({...it,quantity:Number(it.quantity)||0,unitPrice:Number(it.unitPrice)||0})):[]; } catch { return []; }
-}
 
 interface FertilizerTableProps {
   data: FertilizerData[];
@@ -48,7 +37,6 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
-  const dictStore = useDictionaryStore();
 
   const totalPages = Math.ceil(data.length/pageSize)||1;
   const current = data.slice((page-1)*pageSize, page*pageSize);
@@ -57,7 +45,6 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
   const toggle = (id: string) => { const n=new Set(expanded); if (n.has(id)) n.delete(id); else n.add(id); setExpanded(n); };
   const showCb = operationMode==='delete';
 
-  const getTypeLabel = (t: string) => getDictItemName('fertilizer_type', t)||t;
   const getMethodLabel = (m: string) => getDictItemName('fertilization_method', m)||m;
 
   if (isLoading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400"><div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2"/>加载中...</div>;
@@ -105,16 +92,16 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
             {current.length===0 ? (
               <TableRow><TableCell colSpan={showCb?12:11} className="px-4 py-12 text-center text-gray-400">暂无施肥记录</TableCell></TableRow>
             ) : current.map((rec) => {
-              const pool = parsePool((rec as any).fertilizationPool);
-              const areaNames = [...new Set(pool.map(p=>p.area))];
-              const fertNames = [...new Set(pool.map(p=>p.fertilizerName))];
+              const pool = parseFertilizationPool((rec as any).fertilizationPool);
+              const areaNames = [...new Set(pool.map(p=>String(p.area??'')))];
+              const fertNames = [...new Set(pool.map(p=>String(p.fertilizerName??'')))];
               const totalQty = pool.reduce((s,r)=>s+Number(r.quantity),0)||rec.quantity||0;
               const totalCost = pool.reduce((s,r)=>s+Number(r.quantity)*Number(r.unitPrice),0)||rec.totalCost||0;
               const isIot = rec.dataSource==='auto_iot';
               const exp = expanded.has(rec.id);
               // 按肥料名分组
-              const fertGroups = new Map<string,PoolRow[]>();
-              pool.forEach(p=>{ const k=p.fertilizerName||'未知'; if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
+              const fertGroups = new Map<string,FertilizationPoolRow[]>();
+              pool.forEach(p=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
 
               return (<React.Fragment key={rec.id}>
                 {/* 主行 */}

@@ -11,13 +11,11 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { TabsList, TabsTrigger } from '@/components/ui';
-import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore, useDictionaryStore } from '@/stores';
+import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { FertilizerPoolEditor } from './FertilizerPoolEditor';
 import type { FertilizerPoolItem } from './FertilizerPoolEditor';
-
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 /** 区域选取项 */
 interface SelectedArea {
@@ -102,10 +100,15 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
 
   const removeArea = useCallback((id: string) => setSelectedAreas((p) => p.filter((a) => a.id !== id)), []);
 
-  // 生成编号
+  // 生成编号（2026-07-16：失败时弹 toast，不再静默吞错）
   const generateCode = useCallback(async () => {
-    const code = await store.generateCode();
-    if (code) setFertilizerCode(code);
+    try {
+      const code = await store.generateCode();
+      if (code) setFertilizerCode(code);
+    } catch (err) {
+      // 静默吞错修复：弹 toast 告知用户"编号生成失败"
+      await showAlert('编号生成失败，请重试或手动输入：' + (err instanceof Error ? err.message : String(err)));
+    }
   }, [store]);
 
   useEffect(() => { if (isOpen) generateCode(); }, [isOpen]);
