@@ -43,7 +43,11 @@ export function DictSelect({
       disabled={disabled}
       className="w-full h-10 px-3 border border-gray-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
-      <option value="">{placeholder}</option>
+      {/* 2026-07-16：disabled + hidden 修复 — placeholder 不作为可选项
+          （否则下拉里显示\"方法\"字样会被误选为真实值，让 dict_label=\"方法\" 留空逻辑 bug） */}
+      <option value="" disabled hidden>
+        {placeholder}
+      </option>
       {items.map((item) => (
         <option key={item.dictCode} value={item.dictCode}>
           {item.dictLabel}
