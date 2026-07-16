@@ -72,6 +72,8 @@ export function PestDiseaseDictTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">适用作物</TableHead>
+              {/* 2026-07-16：新增图片列（缩略图 mosaic，最多 5 张） */}
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">图片</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">描述</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
             </TableRow>
@@ -79,7 +81,7 @@ export function PestDiseaseDictTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={7} className="px-4 py-12 text-center text-gray-400">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -104,6 +106,30 @@ export function PestDiseaseDictTable({
                   {/* 适用作物 */}
                   <TableCell className="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">
                     {record.targetCrops || '-'}
+                  </TableCell>
+                  {/* 2026-07-16：图片列 — 最多 5 张缩略图 mosaic */}
+                  <TableCell className="px-4 py-2">
+                    <div className="flex gap-1 items-center">
+                      {(() => {
+                        const imgs = record.images ?? [];
+                        if (imgs.length === 0) return <span className="text-xs text-gray-400">-</span>;
+                        return (
+                          <>
+                            {imgs.slice(0, 4).map((src, i) => (
+                              <img
+                                key={i}
+                                src={src}
+                                alt={`图片${i + 1}`}
+                                className="w-10 h-10 object-cover rounded border border-gray-200"
+                              />
+                            ))}
+                            {imgs.length > 4 && (
+                              <span className="text-xs text-gray-500 ml-1">+{imgs.length - 4}</span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </TableCell>
                   {/* 描述 */}
                   <TableCell className="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">

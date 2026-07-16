@@ -16,6 +16,7 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { ImageUploader } from '@/components/ui';
 
 interface AddPestDiseaseModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ const defaultForm = {
   dictType: 'pest' as const,
   targetCrops: '',
   description: '',
+  // 2026-07-16：病虫害图片（base64 data URL 数组，最多 5 张）
+  images: [] as string[],
 };
 
 export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddPestDiseaseModalProps) {
@@ -112,13 +115,14 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
     if (!form.dictName.trim()) return; // 基本校验
     setSubmitting(true);
 
-    // 创建病虫害记录
+    // 创建病虫害记录（2026-07-16：含 images 字段）
     const newItem = await store.createItem({
       dictCode: form.dictCode,
       dictName: form.dictName,
       dictType: form.dictType,
       targetCrops: form.targetCrops,
       description: form.description,
+      images: form.images,
       status: 'active',
     });
 
@@ -210,15 +214,30 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
               />
               <p className="text-xs text-gray-500 mt-1">多个作物用逗号分隔</p>
             </div>
-            <div>
-              <Label className="text-gray-900">描述</Label>
-              <TextArea
-                value={form.description}
-                onChange={(e) => updateField('description', e.target.value)}
-                placeholder="请输入病虫害描述"
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-              />
+            {/* 2026-07-16：图片字段 + 描述字段同行（grid-cols-2） */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* 列 1：图片（最多 5 张） */}
+              <div>
+                <Label className="text-gray-900">
+                  图片 <span className="text-xs text-gray-500">（最多 5 张）</span>
+                </Label>
+                <ImageUploader
+                  value={form.images}
+                  onChange={(arr) => updateField('images', arr)}
+                  maxCount={5}
+                />
+              </div>
+              {/* 列 2：描述 */}
+              <div>
+                <Label className="text-gray-900">描述</Label>
+                <TextArea
+                  value={form.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                  placeholder="请输入病虫害描述"
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                />
+              </div>
             </div>
           </div>
         </div>
