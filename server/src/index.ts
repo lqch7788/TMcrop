@@ -233,8 +233,10 @@ async function start() {
     // 中间件
     app.use(cors);
     app.use(requestLogger);
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+    // 2026-07-16 审核修复：默认 100kb 限制会拒绝病虫害图片（base64 最多 5 张 × ~700KB）
+    // 提升到 8mb（5 张 × 1MB base64 膨胀 1.37x ≈ 7MB + 其他字段余量）
+    app.use(express.json({ limit: '8mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '8mb' }));
 
     // API 路由（optionalAuthenticate：演示模式无 token 放行；带 token 验证）
     const { optionalAuthenticate } = await import('./middleware/auth');

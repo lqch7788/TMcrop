@@ -14,19 +14,21 @@ import { timingSafeEqual } from 'crypto';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 
-/** IoT设备白名单记录 */
+/** IoT设备白名单记录（queryToObjects 已转 camelCase） */
 interface IotDevice {
-  device_id: string;
-  api_key: string;
-  device_name: string;
-  is_active: number;
+  deviceId: string;
+  apiKey: string;
+  deviceName: string;
+  isActive: number;
 }
 
 /**
  * 常量时间比较两个字符串（防时序攻击）
  * 长度不等直接返回 false（恒定时间，避免长度泄露）
+ * 2026-07-16 审核修复：入参防御 — 非 string 直接 false（避免 Buffer.from(undefined) 抛 TypeError）
  */
-function safeStringEqual(a: string, b: string): boolean {
+function safeStringEqual(a: unknown, b: unknown): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;
@@ -63,7 +65,8 @@ export function iotAuth(req: Request, res: Response, next: NextFunction) {
     }
 
     // 至少一个设备的 API Key 必须匹配（用 timingSafeEqual 防止时序攻击）
-    const matched = devices.find((d) => safeStringEqual(d.api_key, apiKey));
+    // 2026-07-16 审核修复：queryToObjects 已转 camelCase → d.apiKey（原 d.api_key 恒 undefined 导致认证全 500）
+    const matched = devices.find((d) => safeStringEqual(d.apiKey, apiKey));
     if (!matched) {
       res.status(403).json({ success: false, error: '设备认证失败：API Key无效' });
       return;
@@ -73,6 +76,8 @@ export function iotAuth(req: Request, res: Response, next: NextFunction) {
     (req as any).iotDevice = matched;
     next();
   } catch (error) {
+    // 2026-07-16 审核修复：加日志（原静默吞错让 camelCase bug 难以发现）
+    console.error('[iotAuth] 设备认证服务异常:', error);
     res.status(500).json({ success: false, error: '设备认证服务异常' });
   }
 }

@@ -78,10 +78,11 @@ export default function FertilizerPage() {
       }
     });
     return Array.from(deviceMap.entries()).map(([id, d]) => ({
-      device_id: id,
-      device_name: d.deviceName,
-      record_count: d.count,
-      last_active: d.lastActive || undefined,
+      // 2026-07-16 审核修复：与 IotDeviceStatus interface camelCase 对齐
+      deviceId: id,
+      deviceName: d.deviceName,
+      recordCount: d.count,
+      lastActive: d.lastActive || undefined,
     }));
   }, [items]);
 

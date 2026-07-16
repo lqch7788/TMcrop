@@ -45,6 +45,9 @@ export interface FertilizerRecord {
   production_plan_code: string | null;
   planting_id: string | null;
   planting_code: string | null;
+  // 2026-07-05: seedling 关联（与 planting 二选一）；2026-07-16 审核修复：删 [key:string]:any 后补声明
+  seedling_id: string | null;
+  seedling_code: string | null;
   greenhouse_id: string | null;
   greenhouse_name: string;
   area_name: string | null;
@@ -142,31 +145,45 @@ export class FertilizerRepository {
     const wheres: string[] = [];
     const params: any[] = [];
     // 白名单过滤字段（防 SQL 注入）
+    // 2026-07-16 审核修复：
+    // - 补 camelCase 别名（前端 query 发 camelCase，camelCaseRequestMiddleware 只转 body 不转 query）
+    // - 文本字段恢复 LIKE 模糊匹配（原路由行为）
+    // - 补 planting_code / iot_record_id
     const FILTER_WHITELIST: Record<string, string> = {
-      crop_name: 'crop_name',
-      planting_id: 'planting_id',
-      seedling_id: 'seedling_id',
-      data_source: 'data_source',
-      fertilizer_name: 'fertilizer_name',
-      fertilizer_type: 'fertilizer_type',
+      crop_name: 'crop_name', cropName: 'crop_name',
+      planting_id: 'planting_id', plantingId: 'planting_id',
+      planting_code: 'planting_code', plantingCode: 'planting_code',
+      seedling_id: 'seedling_id', seedlingId: 'seedling_id',
+      data_source: 'data_source', dataSource: 'data_source',
+      fertilizer_name: 'fertilizer_name', fertilizerName: 'fertilizer_name',
+      fertilizer_type: 'fertilizer_type', fertilizerType: 'fertilizer_type',
       status: 'status',
-      greenhouse_name: 'greenhouse_name',
-      operator_name: 'operator_name',
-      start_date: 'fertilize_time',
-      end_date: 'fertilize_time',
+      greenhouse_name: 'greenhouse_name', greenhouseName: 'greenhouse_name',
+      operator_name: 'operator_name', operatorName: 'operator_name',
+      start_date: 'fertilize_time', startDate: 'fertilize_time',
+      end_date: 'fertilize_time', endDate: 'fertilize_time',
+      iot_record_id: 'iot_record_id', iotRecordId: 'iot_record_id',
     };
+    // 文本字段用 LIKE 模糊（与原路由行为一致）
+    const LIKE_COLS = new Set(['crop_name', 'fertilizer_name', 'greenhouse_name', 'operator_name', 'planting_code']);
     for (const [key, value] of Object.entries(filters)) {
       if (!value) continue;
       const col = FILTER_WHITELIST[key];
       if (!col) continue;
-      if (key === 'start_date') {
+      if (key === 'start_date' || key === 'startDate') {
         wheres.push(`${col} >= ?`);
-      } else if (key === 'end_date') {
+        params.push(value);
+      } else if (key === 'end_date' || key === 'endDate') {
+        // 2026-07-16 审核修复：补 23:59:59 — 否则带时间的记录在结束日当天被排除
         wheres.push(`${col} <= ?`);
+        params.push(`${value} 23:59:59`);
+      } else if (LIKE_COLS.has(col)) {
+        wheres.push(`${col} LIKE '%' || ? || '%'`);
+        params.push(value);
       } else {
         wheres.push(`${col} = ?`);
+        params.push(value);
       }
-      params.push(value);
     }
     const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
     const offset = (page - 1) * pageSize;
@@ -219,25 +236,29 @@ export class FertilizerRepository {
   }
 
   /**
-   * 查询某天/某前缀的所有编码（用于 service.generateCode 最大序号+1）
-   * 2026-07-16：替代全表 ORDER BY DESC + LIMIT 1 的 ORDER BY scan
+   * 查询编码是否存在（用于 generateCode 候选查重 — 精确匹配走 UNIQUE 索引）
+   * 2026-07-16 审核修复：原 LIKE 前缀匹配返回全部编码是浪费，改精确 EXISTS
    */
-  findAllCodesByPrefix(prefix: string): string[] {
+  findAllCodesByPrefix(codeOrPrefix: string): string[] {
     const db = getDatabase();
-    const rows = queryToObjects<{ fertilizer_code: string }>(db,
-      `SELECT fertilizer_code FROM fertilizer_records WHERE fertilizer_code LIKE ? ORDER BY create_time DESC`,
-      [`${prefix}%`]);
-    return rows.map((r) => r.fertilizer_code);
+    const rows = queryToObjects<{ fertilizerCode: string }>(db,
+      `SELECT fertilizer_code FROM fertilizer_records WHERE fertilizer_code = ? LIMIT 1`,
+      [codeOrPrefix]);
+    // queryToObjects 已转 camelCase → fertilizerCode
+    return rows.map((r) => r.fertilizerCode);
   }
 
   /** 查询某天的最大序号（用于 generateCode 不全表扫描） */
   findMaxCodeSeq(prefix: string): number {
     const db = getDatabase();
-    const rows = queryToObjects<{ max_seq: number }>(db,
-      `SELECT MAX(CAST(SUBSTR(fertilizer_code, ${prefix.length + 1}) AS INTEGER)) AS max_seq
+    // 2026-07-16 审核修复：
+    // - SUBSTR 位置 +2（跳过前缀后的 '-' 连字符，否则 CAST('-0001') = -1）
+    // - queryToObjects 转 camelCase → 读 maxSeq（原 max_seq 恒 undefined → baseSeq 恒 0）
+    const rows = queryToObjects<{ maxSeq: number | null }>(db,
+      `SELECT MAX(CAST(SUBSTR(fertilizer_code, ${prefix.length + 2}) AS INTEGER)) AS max_seq
        FROM fertilizer_records WHERE fertilizer_code LIKE ?`,
-      [`${prefix}%`]);
-    return rows[0]?.max_seq ?? 0;
+      [`${prefix}-%`]);
+    return rows[0]?.maxSeq ?? 0;
   }
 
   /**
@@ -259,17 +280,19 @@ export class FertilizerRepository {
     db.run(`
       INSERT INTO fertilizer_records (
         id, fertilizer_code, farm_task_id, production_plan_id, production_plan_code,
-        planting_id, planting_code, greenhouse_id, greenhouse_name, area_name,
+        planting_id, planting_code, seedling_id, seedling_code, greenhouse_id, greenhouse_name, area_name,
         crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
         quantity, unit, unit_price, total_cost, fertilize_time,
         operator_id, operator_name, data_source, iot_device_id, iot_record_id,
         description, status, create_time, update_time, fertilizer_id,
         fertilization_pool,
         spec_id, spec_brand_name, spec_unit_price_snapshot, spec_batch_number
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `, [
       record.id, record.fertilizer_code, record.farm_task_id, record.production_plan_id,
       record.production_plan_code, record.planting_id, record.planting_code,
+      // 2026-07-16 审核修复：补 seedling 2 列（原 insert 漏列 → 育苗关联字段从未落库）
+      record.seedling_id ?? null, record.seedling_code ?? null,
       record.greenhouse_id, record.greenhouse_name, record.area_name,
       record.crop_name, record.crop_variety, record.fertilizer_name, record.fertilizer_type,
       record.dilution_ratio, record.quantity, record.unit, record.unit_price,

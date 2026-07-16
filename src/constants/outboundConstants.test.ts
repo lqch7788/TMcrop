@@ -6,8 +6,9 @@ import {
 } from './outboundConstants';
 
 describe('OutboundBusinessType enum', () => {
-  it('应包含 10 个值', () => {
-    expect(Object.values(OutboundBusinessType)).toHaveLength(10);
+  // 2026-07-16：删除 internal_planting/internal_seedling/internal_seed_source/return_inbound 4 项后剩 6 项
+  it('应包含 6 个值', () => {
+    expect(Object.values(OutboundBusinessType)).toHaveLength(6);
   });
 
   it('所有值应是字符串且唯一', () => {
@@ -18,12 +19,18 @@ describe('OutboundBusinessType enum', () => {
 
   it('应包含全部业务场景', () => {
     const expected = [
-      'customer_sale', 'transfer_out', 'damage_loss', 'internal_planting',
-      'internal_seedling', 'internal_seed_source',
-      'gift_sample', 'return_inbound', 'inventory_adjust', 'other',
+      'customer_sale', 'transfer_out', 'damage_loss',
+      'gift_sample', 'inventory_adjust', 'other',
     ];
     expected.forEach((code) => {
       expect(Object.values(OutboundBusinessType)).toContain(code);
+    });
+  });
+
+  it('已删除的 4 个枚举值不应存在', () => {
+    const removed = ['internal_planting', 'internal_seedling', 'internal_seed_source', 'return_inbound'];
+    removed.forEach((code) => {
+      expect(Object.values(OutboundBusinessType)).not.toContain(code);
     });
   });
 });
@@ -70,5 +77,13 @@ describe('mapLegacyBusinessType', () => {
 
   it('未知值 → other（防御性）', () => {
     expect(mapLegacyBusinessType('unknown_xxx')).toBe(OutboundBusinessType.OTHER);
+  });
+
+  // 2026-07-16：已删除的 4 个枚举值现在应回落到 other（历史数据渲染兜底）
+  it('已删除枚举值 internal_planting/return_inbound 等 → other', () => {
+    expect(mapLegacyBusinessType('internal_planting')).toBe(OutboundBusinessType.OTHER);
+    expect(mapLegacyBusinessType('internal_seedling')).toBe(OutboundBusinessType.OTHER);
+    expect(mapLegacyBusinessType('internal_seed_source')).toBe(OutboundBusinessType.OTHER);
+    expect(mapLegacyBusinessType('return_inbound')).toBe(OutboundBusinessType.OTHER);
   });
 });

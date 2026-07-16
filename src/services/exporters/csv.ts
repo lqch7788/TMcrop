@@ -14,12 +14,15 @@ export interface ExportCsvOptions {
   rows: Array<Record<string, unknown>>;  // 每行数据（key 与 headers 列名一致）
 }
 
+// 2026-07-16 审核修复：CSV 补公式注入防护（CWE-1236 — CSV 才是经典载体，之前只修了 xlsx）
+import { escapeFormula } from './xlsx';
+
 /**
  * 字段值转字符串（CSV 单元格），含 null/undefined → ''
  */
 function cellToString(value: unknown): string {
   if (value == null) return '';
-  return String(value);
+  return escapeFormula(String(value));
 }
 
 /**

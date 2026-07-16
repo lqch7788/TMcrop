@@ -45,13 +45,35 @@ interface PestDiseaseDictState {
 const FIELD_MAP: Record<string, string> = {
   id: 'id', dict_code: 'dictCode', dict_name: 'dictName', dict_type: 'dictType',
   target_crops: 'targetCrops', description: 'description', status: 'status', create_time: 'createTime',
+  // 2026-07-16：图片字段（DB 存 JSON 字符串，normalize 时 parse 为 string[]）
+  images: 'images',
 };
+
+/**
+ * 2026-07-16：images 反序列化 — DB/API 返回 JSON 字符串，前端需要 string[]
+ * 兼容 3 种输入：已是数组（透传）/ JSON 字符串（parse）/ null·undefined·解析失败（[]）
+ */
+function parseImages(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((s): s is string => typeof s === 'string');
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
 
 function normalize(data: Record<string, unknown>): PestDiseaseDict {
   const result: Record<string, unknown> = {};
   for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
     result[camelKey] = data[dbKey] ?? null;
   }
+  // camelCase 中间件可能已把 key 转 camel，双向兜底
+  if (result.images == null && data.images != null) result.images = data.images;
+  result.images = parseImages(result.images);
   return result as unknown as PestDiseaseDict;
 }
 
@@ -81,7 +103,12 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-        set({ items: rawItems as PestDiseaseDict[], isLoading: false });
+        // 2026-07-16：images 反序列化（JSON 字符串 → string[]），修复列表页图片列崩溃
+        const items = (rawItems as Record<string, unknown>[]).map((r) => ({
+          ...r,
+          images: parseImages(r.images),
+        })) as unknown as PestDiseaseDict[];
+        set({ items, isLoading: false });
       } catch (err) {
         set({ error: (err as Error).message, isLoading: false });
       }

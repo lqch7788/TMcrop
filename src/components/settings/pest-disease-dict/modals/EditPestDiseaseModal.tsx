@@ -15,6 +15,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import { ImageUploader } from '@/components/ui';
 
 interface EditPestDiseaseModalProps {
@@ -75,13 +76,18 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
     }
   }, [isOpen, record]);
 
-  // 加载关联的药剂
+  // 加载关联的药剂（2026-07-16 审核修复：finally 确保 loading 状态不泄漏）
   const loadRelations = async () => {
     if (!record) return;
     setLoadingRelations(true);
-    const pesticides = await store.fetchRelatedPesticides(record.id);
-    setSelectedPesticides(pesticides.map(p => p.id));
-    setLoadingRelations(false);
+    try {
+      const pesticides = await store.fetchRelatedPesticides(record.id);
+      setSelectedPesticides(pesticides.map(p => p.id));
+    } catch (err) {
+      console.error('[EditPestDiseaseModal] 加载关联药剂失败:', err);
+    } finally {
+      setLoadingRelations(false);
+    }
   };
 
   // 更新表单字段
@@ -105,26 +111,39 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
       p.pesticideName.includes(pesticideSearch) ||
       p.pesticideCode.includes(pesticideSearch);
     // 2026-07-10：controlType 已删除，pesticideTypeFilter 改为按 pesticideTypes[] 包含判断
-    const matchesType = pesticideTypeFilter === 'all' || (p.pesticideTypes || []).includes(pesticideTypeFilter);
+    // 2026-07-16 审核修复：细分码前缀匹配（fungicide_fungi 等只带细分码的药剂点「杀菌剂」也应显示）
+    const matchesType = pesticideTypeFilter === 'all' ||
+      (p.pesticideTypes || []).some((t) => t === pesticideTypeFilter || t.startsWith(pesticideTypeFilter + '_'));
     return matchesSearch && matchesType;
   });
 
-  // 提交表单
+  // 提交表单（2026-07-16 审核修复：加 try/catch/finally — 更新失败不再静默关闭弹窗）
   const handleSubmit = async () => {
     if (!form.dictName.trim()) return; // 基本校验
     setSubmitting(true);
-    await store.updateItem(record.id, {
-      dictName: form.dictName,
-      dictType: form.dictType,
-      targetCrops: form.targetCrops,
-      description: form.description,
-      // 2026-07-16：编辑保存图片数组
-      images: form.images,
-    });
-    // 更新关联的药剂
-    await store.updateRelations(record.id, selectedPesticides);
-    setSubmitting(false);
-    onSaved();
+    try {
+      const updated = await store.updateItem(record.id, {
+        dictName: form.dictName,
+        dictType: form.dictType,
+        targetCrops: form.targetCrops,
+        description: form.description,
+        // 2026-07-16：编辑保存图片数组
+        images: form.images,
+      });
+      // updateItem 内部 catch 返回 null — 必须检查，否则失败也关弹窗
+      if (!updated) {
+        await showAlert('保存失败：' + (store.error || '请稍后重试'));
+        return;
+      }
+      // 更新关联的药剂
+      await store.updateRelations(record.id, selectedPesticides);
+      onSaved();
+    } catch (err) {
+      console.error('[EditPestDiseaseModal] 保存失败:', err);
+      await showAlert('保存失败：' + (err instanceof Error ? err.message : '未知错误'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

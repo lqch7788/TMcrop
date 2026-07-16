@@ -118,33 +118,46 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       (p.functionDesc && p.functionDesc.toLowerCase().includes(searchLower)) ||
       (p.ingredient && p.ingredient.toLowerCase().includes(searchLower));
     // 2026-07-10：controlType 已删除，pesticideTypeFilter 改为按 pesticideTypes[] 包含判断
-    const matchesType = pesticideTypeFilter === 'all' || (p.pesticideTypes || []).includes(pesticideTypeFilter);
+    // 2026-07-16 审核修复：细分码前缀匹配（fungicide_fungi 等只带细分码的药剂点「杀菌剂」也应显示）
+    const matchesType = pesticideTypeFilter === 'all' ||
+      (p.pesticideTypes || []).some((t) => t === pesticideTypeFilter || t.startsWith(pesticideTypeFilter + '_'));
     return matchesSearch && matchesType;
   });
 
-  // 提交表单
+  // 提交表单（2026-07-16 审核修复：加 try/catch/finally — 创建失败不再静默关闭弹窗）
   const handleSubmit = async () => {
     if (!form.dictName.trim()) return; // 基本校验
     setSubmitting(true);
+    try {
+      // 创建病虫害记录（2026-07-16：含 images 字段）
+      const newItem = await store.createItem({
+        dictCode: form.dictCode,
+        dictName: form.dictName,
+        dictType: form.dictType,
+        targetCrops: form.targetCrops,
+        description: form.description,
+        images: form.images,
+        status: 'active',
+      });
 
-    // 创建病虫害记录（2026-07-16：含 images 字段）
-    const newItem = await store.createItem({
-      dictCode: form.dictCode,
-      dictName: form.dictName,
-      dictType: form.dictType,
-      targetCrops: form.targetCrops,
-      description: form.description,
-      images: form.images,
-      status: 'active',
-    });
+      // createItem 内部 catch 返回 null — 必须检查，否则失败也关弹窗（数据丢失感知）
+      if (!newItem) {
+        await showAlert('创建失败：' + (store.error || '请稍后重试'));
+        return;
+      }
 
-    // 如果有关联的药剂，建立关联
-    if (newItem && selectedPesticides.length > 0) {
-      await store.updateRelations(newItem.id, selectedPesticides);
+      // 如果有关联的药剂，建立关联
+      if (selectedPesticides.length > 0) {
+        await store.updateRelations(newItem.id, selectedPesticides);
+      }
+
+      onSaved();
+    } catch (err) {
+      console.error('[AddPestDiseaseModal] 创建失败:', err);
+      await showAlert('创建失败：' + (err instanceof Error ? err.message : '未知错误'));
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
-    onSaved();
   };
 
   return (

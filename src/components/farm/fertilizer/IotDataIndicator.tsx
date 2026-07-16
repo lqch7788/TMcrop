@@ -44,18 +44,18 @@ export default function IotDataIndicator({ devices, loading = false, className =
     <div className={`flex items-center gap-3 ${className}`}>
       {devices.map((device) => (
         <div
-          key={device.device_id}
+          key={device.deviceId}
           className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm"
         >
           <Wifi className="w-4 h-4 text-emerald-600" />
-          <span className="font-medium text-emerald-700">{device.device_name}</span>
+          <span className="font-medium text-emerald-700">{device.deviceName}</span>
           <span className="text-emerald-500">|</span>
           <span className="text-emerald-600">
-            自动记录: <strong>{device.record_count}</strong> 条
+            自动记录: <strong>{device.recordCount}</strong> 条
           </span>
-          {device.last_active && (
+          {device.lastActive && (
             <span className="text-xs text-gray-400 ml-1">
-              最后活跃: {new Date(device.last_active).toLocaleString('zh-CN')}
+              最后活跃: {new Date(device.lastActive).toLocaleString('zh-CN')}
             </span>
           )}
         </div>
@@ -63,5 +63,3 @@ export default function IotDataIndicator({ devices, loading = false, className =
     </div>
   );
 }
-
-export type { IotDeviceStatus };
