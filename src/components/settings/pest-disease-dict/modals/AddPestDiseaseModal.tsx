@@ -225,6 +225,7 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
                   value={form.images}
                   onChange={(arr) => updateField('images', arr)}
                   maxCount={5}
+                  compact
                 />
               </div>
               {/* 列 2：描述 */}

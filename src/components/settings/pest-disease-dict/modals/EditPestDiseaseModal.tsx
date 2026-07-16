@@ -190,6 +190,7 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
                   value={form.images}
                   onChange={(arr) => updateField('images', arr)}
                   maxCount={5}
+                  compact
                 />
               </div>
               {/* 列 2：描述 — 同步固定高度 */}
