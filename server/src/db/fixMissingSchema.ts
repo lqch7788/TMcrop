@@ -3627,6 +3627,33 @@ function fixApprovedProductionPlanStatus(): void {
     } else {
       seedLog.skip('• 字典 unit 类别单位已齐全')
     }
+
+    // 2026-07-16：用户需求给 application_method 字典补 诱捕/浸泡/其他 3 个选项
+    const newMethods = [
+      { id: 'AM008', dictCode: 'trap',   dictLabel: '诱捕', dictValue: 'trap',   color: 'rose',   sortOrder: 8 },
+      { id: 'AM009', dictCode: 'soak',   dictLabel: '浸泡', dictValue: 'soak',   color: 'indigo', sortOrder: 9 },
+      { id: 'AM010', dictCode: 'other',  dictLabel: '其他', dictValue: 'other',  color: 'gray',   sortOrder: 10 },
+    ]
+    let methodAdded = 0
+    for (const m of newMethods) {
+      const exist = db.prepare(`SELECT id FROM dictionaries WHERE id = ?`)
+      exist.bind([m.id])
+      if (!exist.step()) {
+        exist.free()
+        db.run(`INSERT OR IGNORE INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, color, sort_order, status)
+          VALUES (?, 'application_method', ?, ?, ?, ?, ?, 'active')`,
+          [m.id, m.dictCode, m.dictLabel, m.dictValue, m.color, m.sortOrder])
+        methodAdded++
+      } else {
+        exist.free()
+      }
+    }
+    if (methodAdded > 0) {
+      saveDatabase()
+      seedLog.info(`✓ 字典 application_method 类别补 ${methodAdded} 个新施用方法（诱捕/浸泡/其他）`)
+    } else {
+      seedLog.skip('• 字典 application_method 类别已含诱捕/浸泡/其他')
+    }
   } catch (e: any) {
     seedLog.skip('• 字典 unit 补单位:', e.message)
   }

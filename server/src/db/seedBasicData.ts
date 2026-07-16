@@ -721,6 +721,10 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'AM006', categoryCode: 'application_method', dictCode: 'injection', dictLabel: '注射', dictValue: 'injection', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
   // 2026-07-15：补 foliar_spray = 叶面喷雾（用户测试数据用了此 code，但原字典漏了）
   { id: 'AM007', categoryCode: 'application_method', dictCode: 'foliar_spray', dictLabel: '叶面喷雾', dictValue: 'foliar_spray', color: 'sky', sortOrder: 7, isDefault: 0, status: 'active' },
+  // 2026-07-16：用户需求增加 — 诱捕（物理诱杀）/ 浸泡（药液浸种）/ 其他（兜底）
+  { id: 'AM008', categoryCode: 'application_method', dictCode: 'trap', dictLabel: '诱捕', dictValue: 'trap', color: 'rose', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'AM009', categoryCode: 'application_method', dictCode: 'soak', dictLabel: '浸泡', dictValue: 'soak', color: 'indigo', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'AM010', categoryCode: 'application_method', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 10, isDefault: 0, status: 'active' },
   // 2026-07-12：施肥方式字典（与「施用方法」分开；侧重水肥一体/撒施/沟施等）
   { id: 'FM001', categoryCode: 'fertilization_method', dictCode: 'foliar_spray', dictLabel: '叶面喷施', dictValue: 'foliar_spray', color: 'emerald', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'FM002', categoryCode: 'fertilization_method', dictCode: 'fertigation', dictLabel: '水肥一体化（滴灌/喷灌随水）', dictValue: 'fertigation', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
