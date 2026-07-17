@@ -1,16 +1,20 @@
 /**
  * 肥料详情查看弹窗组件（扁平化 2026-07-12）
- * 只读视图，展示全部 26 字段（对应 DB fertilizer_specs 所有列）
- * 统一 4 列网格布局，统一字段背景色
+ * 2026-07-17：重构为 Tab 布局 — 基础信息 + 使用记录
+ * - 基础信息 Tab：原 26 字段（DB fertilizer_specs 所有列）
+ * - 使用记录 Tab：调用 GET /api/pest-records/by-spec/:specId，反向追溯防治记录
+ *   - 显示用过此肥料的防治记录：编号/作物/区域/操作员/时间/用量/费用
+ *   - 顶部 stat 卡：累计用量 / 累计费用 / 使用次数
  */
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { X, History, Package, Loader2 } from 'lucide-react';
 
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { FertilizerSpec } from '@/stores';
 import { getDictItemName } from '@/stores';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -69,6 +73,36 @@ interface DetailField {
 }
 
 export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'basic' | 'usage'>('basic');
+  const [usageRecords, setUsageRecords] = useState<any[]>([]);
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  // 切到「使用记录」tab 时拉数据
+  useEffect(() => {
+    if (!isOpen || !record || activeTab !== 'usage') return;
+    setUsageLoading(true);
+    enhancedApiClient
+      .get<any[]>(`/pest-records/by-spec/${record.id}`)
+      .then((resp: any) => {
+        const arr = Array.isArray(resp) ? resp : (resp?.data ?? []);
+        setUsageRecords(arr);
+      })
+      .catch((err) => console.error('[FertilizerDetailModal] 加载使用记录失败:', err))
+      .finally(() => setUsageLoading(false));
+  }, [isOpen, record?.id, activeTab]);
+
+  // 顶部 stat 卡聚合
+  const usageStats = useMemo(() => {
+    return usageRecords.reduce(
+      (acc, r) => {
+        acc.totalDosage += Number(r.totalDosage) || 0;
+        acc.totalCost += Number(r.totalCost) || 0;
+        return acc;
+      },
+      { totalDosage: 0, totalCost: 0 },
+    );
+  }, [usageRecords]);
+
   if (!record) return null;
 
   const fields: DetailField[] = [
@@ -109,7 +143,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       showFooter={false}
     >
       {/* 编号头部 — 单行展示：编码 + 名称 + 类型 */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-5 mb-5 border border-amber-100">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-5 mb-4 border border-amber-100">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">编码</span>
@@ -125,14 +159,112 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
         </div>
       </div>
 
-      {/* 统一 4 列网格 — 全部 26 字段 */}
-      <div className="max-h-[70vh] overflow-y-auto pr-1">
-        <div className="grid grid-cols-4 gap-3">
-          {fields.map((f, i) => (
-            <FieldCell key={i} field={f} />
-          ))}
-        </div>
+      {/* Tab 切换栏 */}
+      <div className="flex items-center gap-1 mb-4 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('basic')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'basic'
+              ? 'border-amber-500 text-amber-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Package className="w-4 h-4" /> 基础信息
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('usage')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'usage'
+              ? 'border-amber-500 text-amber-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="w-4 h-4" /> 使用记录
+          {usageRecords.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+              {usageRecords.length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* Tab 内容 */}
+      {activeTab === 'basic' && (
+        <div className="max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-4 gap-3">
+            {fields.map((f, i) => (
+              <FieldCell key={i} field={f} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'usage' && (
+        <div className="max-h-[70vh] overflow-y-auto pr-1">
+          {/* 顶部统计卡 */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-100">
+              <div className="text-xs text-gray-500 mb-1">累计用量</div>
+              <div className="text-2xl font-bold text-amber-700">{usageStats.totalDosage.toFixed(2)}</div>
+              <div className="text-xs text-gray-400 mt-1">{record.stockUnit || 'kg'}</div>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-100">
+              <div className="text-xs text-gray-500 mb-1">累计费用</div>
+              <div className="text-2xl font-bold text-emerald-700">¥{usageStats.totalCost.toFixed(2)}</div>
+              <div className="text-xs text-gray-400 mt-1">元</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+              <div className="text-xs text-gray-500 mb-1">使用次数</div>
+              <div className="text-2xl font-bold text-blue-700">{usageRecords.length}</div>
+              <div className="text-xs text-gray-400 mt-1">条防治记录</div>
+            </div>
+          </div>
+
+          {/* 使用记录表 */}
+          {usageLoading ? (
+            <div className="flex items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" /> 加载中…
+            </div>
+          ) : usageRecords.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-lg">
+              暂无使用记录（未在任何防治记录中用过此肥料）
+            </div>
+          ) : (
+            <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治编号</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">作物</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治区域</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">操作员</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治时间</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">用量</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">费用</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {usageRecords.map((r: any) => (
+                  <tr key={r.recordId} className="hover:bg-amber-50/50">
+                    <td className="px-3 py-2 font-mono text-blue-600">{r.recordCode || '-'}</td>
+                    <td className="px-3 py-2 text-gray-800">{r.cropName || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{r.greenhouseName || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{r.operatorName || '-'}</td>
+                    <td className="px-3 py-2 text-gray-500 text-xs">{r.sprayTime?.slice(0, 16) || '-'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-amber-700">
+                      {Number(r.totalDosage || 0).toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-emerald-700">
+                      ¥{Number(r.totalCost || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* 底部关闭按钮 */}
       <div className="mt-6 flex justify-end">
