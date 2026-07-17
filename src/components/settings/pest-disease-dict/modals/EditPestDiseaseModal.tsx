@@ -151,7 +151,10 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
       isOpen={isOpen}
       onClose={onClose}
       title={`编辑${form.dictType === 'pest' ? '虫害' : '病害'}字典 - ${record.dictCode}`}
+      // 2026-07-17：默认大小 +30%（lg 700×500 → 910×650），与详情弹窗一致
       size="lg"
+      width={910}
+      height={650}
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
