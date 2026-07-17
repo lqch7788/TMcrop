@@ -9,16 +9,17 @@
  *   - 底部翻页 + 页码 + 导出按钮（CSV / XLSX / Word 仿肥料库）
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { History, Package, Loader2, Download, X as XIcon } from 'lucide-react';
+import { History, Package, Loader2, Download, X as XIcon, Trash2 } from 'lucide-react';
 
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
-import { FertilizerSpec } from '@/stores';
+import { FertilizerSpec, useToastStore } from '@/stores';
 import { getDictItemName } from '@/stores';
 import { enhancedApiClient } from '@/lib/apiClient';
 import { exportXlsx } from '@/services/exporters';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -185,6 +186,35 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
     // 退出选择模式
     setExportMode(false);
     setSelectedRecordIds([]);
+  };
+
+  // 2026-07-17：删除单条使用记录（按 source 调对应表的 DELETE 端点）
+  // - source=pest_control → DELETE /api/pest-records/:id（删除整条防治记录 + 回补库存）
+  // - source=fertilization → DELETE /api/fertilizer/:id（删除整条施肥记录 + 回补库存）
+  const toast = useToastStore((s: any) => s.toast);
+  const handleDeleteRecord = async (r: any) => {
+    const isFert = r.source === 'fertilization';
+    const sourceLabel = isFert ? '施肥记录' : '防治记录';
+    const confirmMsg = `确定要删除${sourceLabel}「${r.recordCode}」吗？\n\n这将从「${r.cropName} - ${r.greenhouseName || '-'}」移除 ${Number(r.totalDosage).toFixed(2)} ${record?.stockUnit || 'kg'} 肥料用量，并自动恢复库存。`;
+    const ok = await showConfirm(confirmMsg, { title: '确认删除', confirmText: '删除', cancelText: '取消' });
+    if (!ok) return;
+    try {
+      const url = isFert
+        ? `/api/fertilizer/${r.recordId}`
+        : `/api/pest-records/${r.recordId}`;
+      await enhancedApiClient.delete(url);
+      toast?.success?.(`已删除${sourceLabel}，库存已恢复`);
+      // 重新拉取使用记录
+      setUsageLoading(true);
+      const resp: any = await enhancedApiClient.get(`/pest-records/by-spec/${record.id}`);
+      const arr = Array.isArray(resp) ? resp : (resp?.data ?? []);
+      setUsageRecords(arr);
+      setCurrentPage(1);
+    } catch (err) {
+      toast?.error?.('删除失败：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUsageLoading(false);
+    }
   };
 
   if (!record) return null;
@@ -376,6 +406,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
                       <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">防治时间</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">用量</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">费用</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-white whitespace-nowrap w-16">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-300 bg-white">
@@ -416,6 +447,18 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
                           </td>
                           <td className="px-3 py-2 text-right font-mono text-emerald-700 whitespace-nowrap">
                             ¥{Number(r.totalCost || 0).toFixed(2)}
+                          </td>
+                          {/* 2026-07-17：每行删除按钮（按 source 调对应表 DELETE） */}
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRecord(r)}
+                              disabled={exportMode}
+                              className="text-gray-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
+                              title="删除该使用记录"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       );
