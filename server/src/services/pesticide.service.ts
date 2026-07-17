@@ -1,0 +1,717 @@
+/**
+ * 防治记录业务逻辑层 (Service)
+ * 2026-07-17 新增：仿 FertilizerService 模式，支持防治记录 → 肥料库存扣减
+ *
+ * 关键业务规则：
+ * 1. POST：解析 leafFertilizerList JSON，对每条有 specId 的肥料逐项校验库存 + 扣减 + INSERT（事务包裹）
+ * 2. PUT：diff leafFertilizerList，对变化的 specId 做 delta 调整（新增扣减 / 删除回补 / 用量变更调整）
+ * 3. DELETE / BATCH DELETE：恢复库存后删除（事务包裹）
+ * 4. 兼容旧数据：无 specId 的 leafFertilizerList 条目跳过库存扣减（不报错）
+ */
+import { z } from 'zod';
+import { getDatabase } from '../db';
+import { queryToObjects } from '../utils/queryHelper';
+import { pesticideRepository, PesticideRepository, PesticideRecord, parseLeafFertilizerList, LeafFertilizerItem } from '../repositories/pesticide.repository';
+import { fertilizerRepository } from '../repositories/fertilizer.repository';
+
+/**
+ * 2026-07-17：本地时间戳（替换 toISOString）—— UTC 跨天错位 bug 修复
+ */
+function nowLocalTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
+ * 2026-07-17：生成防治记录编号 BY+YYYYMMDD-4位流水号
+ * - 用 MAX + LIKE prefix 走索引扫描（N=1万时性能显著）
+ * - 包含 5 次 UNIQUE 重试（事务内并发保护）
+ * @returns 唯一不冲突的 record_code
+ */
+function generateRecordCodeWithRetry(maxAttempts = 5): string {
+  const db = getDatabase();
+  const today = new Date();
+  const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  const prefix = `BY${datePrefix}`;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // 注意：queryToObjects 自动转 snake → camel，故读取 recordCode 而非 record_code
+    const maxRow = queryToObjects<{ recordCode: string | null }>(
+      db,
+      `SELECT MAX(record_code) AS record_code FROM pesticide_records WHERE record_code LIKE ?`,
+      [`${prefix}-%`],
+    );
+    let maxSeq = 0;
+    const currentMax = maxRow[0]?.recordCode;
+    if (currentMax && currentMax.startsWith(prefix)) {
+      const seq = parseInt(currentMax.split('-').pop() || '0', 10);
+      if (!isNaN(seq)) maxSeq = seq;
+    }
+    const candidate = `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
+
+    // 候选号查重（O(1) 索引扫描）— 同样 camelCase
+    const dups = queryToObjects<{ id: string }>(
+      db,
+      `SELECT id FROM pesticide_records WHERE record_code = ? LIMIT 1`,
+      [candidate],
+    );
+    if (dups.length === 0) {
+      return candidate;
+    }
+    // 已存在 — 重试时手动 +1
+  }
+  throw new PesticideBusinessError(
+    PesticideErrorCode.INVALID_INPUT,
+    `记录编号生成冲突，已重试 ${maxAttempts} 次仍失败`,
+  );
+}
+
+/**
+ * 业务错误（替代字符串匹配，路由层用 code 转换为 HTTP 状态）
+ */
+export class PesticideBusinessError extends Error {
+  code: string;
+  httpStatus: number;
+  constructor(code: string, message: string, httpStatus = 400) {
+    super(message);
+    this.name = 'PesticideBusinessError';
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+/** 防治记录业务错误码常量 */
+export const PesticideErrorCode = {
+  NOT_FOUND: 'PESTICIDE_NOT_FOUND',
+  INVALID_INPUT: 'PESTICIDE_INVALID_INPUT',
+  FERTILIZER_SPEC_NOT_FOUND: 'FERTILIZER_SPEC_NOT_FOUND',
+  INSUFFICIENT_STOCK: 'FERTILIZER_INSUFFICIENT_STOCK',
+  BATCH_TOO_LARGE: 'PESTICIDE_BATCH_TOO_LARGE',
+} as const;
+
+/**
+ * 单条叶面肥料的库存扣减单元（service 内部用）
+ */
+interface FertilizerDeduction {
+  specId: string;
+  fertilizerName: string;
+  dosage: number;        // 用量
+  fertilizerType?: string;
+  brandName?: string;
+  specContent?: string;
+  unit?: string;
+}
+
+/**
+ * 2026-07-17：从 leafFertilizerList 数组中提取出"需要扣库存"的条目
+ * - 跳过 specId 为空的旧数据
+ * - dosage 转 Number，无效用量视为 0（不报错，但 service 层也会校验）
+ */
+function extractDeductions(items: LeafFertilizerItem[]): FertilizerDeduction[] {
+  const out: FertilizerDeduction[] = [];
+  for (const it of items) {
+    if (!it.specId || !it.specId.trim()) continue;
+    const dosageNum = Number(it.dosage);
+    if (!Number.isFinite(dosageNum) || dosageNum <= 0) continue;
+    out.push({
+      specId: it.specId,
+      fertilizerName: it.fertilizerName || '(未命名肥料)',
+      dosage: dosageNum,
+      fertilizerType: it.fertilizerType,
+      brandName: it.brandName,
+      specContent: it.specContent,
+      unit: it.unit,
+    });
+  }
+  return out;
+}
+
+/**
+ * 按 specId 分组聚合扣减（同一规格多条用量合并）
+ * - 例如：同一种肥料在 leafFertilizerList 出现 2 次，总用量 = sum
+ */
+function aggregateDeductions(deductions: FertilizerDeduction[]): FertilizerDeduction[] {
+  const map = new Map<string, FertilizerDeduction>();
+  for (const d of deductions) {
+    const existing = map.get(d.specId);
+    if (existing) {
+      existing.dosage += d.dosage;
+    } else {
+      map.set(d.specId, { ...d });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/**
+ * 在事务内校验 + 扣减一批肥料库存
+ * - 任一失败 → 抛 BusinessError，由 service 层外层 ROLLBACK
+ */
+function checkAndDecreaseStock(deductions: FertilizerDeduction[], now: string): void {
+  for (const d of deductions) {
+    const spec = fertilizerRepository.findSpecById(d.specId);
+    if (!spec) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.FERTILIZER_SPEC_NOT_FOUND,
+        `肥料规格不存在: ${d.specId}`,
+        404,
+      );
+    }
+    if ((spec.stockQuantity ?? 0) < d.dosage) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.INSUFFICIENT_STOCK,
+        `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0} ${(spec as any).stockUnit || 'kg'}，需 ${d.dosage}`,
+      );
+    }
+    const newStock = fertilizerRepository.decreaseStock(d.specId, d.dosage, now);
+    if (newStock === null) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.INSUFFICIENT_STOCK,
+        `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足，请重试`,
+      );
+    }
+  }
+}
+
+/**
+ * 在事务内恢复一批肥料库存（DELETE 时调）
+ */
+function increaseStock(deductions: FertilizerDeduction[], now: string): void {
+  for (const d of deductions) {
+    fertilizerRepository.increaseStock(d.specId, d.dosage, now);
+  }
+}
+
+/**
+ * 2026-07-17：Service 入口 input schema（接收前端 store denormalize 后的 snake_case body）
+ * - 所有字段都是 optional（路由层已做必填校验：spray_time + crop_name）
+ */
+const createRecordSchema = z.object({
+  recordCode: z.string().nullish(),
+  sprayTime: z.string().min(1, '防治时间为必填'),
+  operatorId: z.string().nullish(),
+  operatorName: z.string().nullish(),
+  cropName: z.string().min(1, '作物名称为必填'),
+  greenhouseName: z.string().nullish(),
+  plantingId: z.string().nullish(),
+  plantingCode: z.string().nullish(),
+  seedlingId: z.string().nullish(),
+  seedlingCode: z.string().nullish(),
+  pesticideId: z.string().nullish(),
+  pesticideName: z.string().nullish(),
+  pesticideType: z.union([z.string(), z.array(z.string())]).nullish(),
+  specId: z.string().nullish(),
+  specContent: z.string().nullish(),
+  dosage: z.union([z.number(), z.string()]).nullish(),
+  dosageUnit: z.string().nullish(),
+  dilutionRatio: z.string().nullish(),
+  targetPest: z.string().nullish(),
+  applicationMethod: z.string().nullish(),
+  bioAgentId: z.string().nullish(),
+  bioAgentName: z.string().nullish(),
+  bioAgentType: z.string().nullish(),
+  equipmentName: z.string().nullish(),
+  equipmentCount: z.union([z.number(), z.string()]).nullish(),
+  pesticideList: z.string().nullish(),       // JSON 字符串
+  bioAgentList: z.string().nullish(),
+  equipmentList: z.string().nullish(),
+  useLeafFertilizer: z.string().nullish(),
+  leafFertilizerName: z.string().nullish(),
+  leafFertilizerDosage: z.union([z.number(), z.string()]).nullish(),
+  leafFertilizerUnit: z.string().nullish(),
+  leafFertilizerList: z.string().nullish(),  // JSON 字符串（核心：肥料池）
+  description: z.string().nullish(),
+  photos: z.union([z.string(), z.array(z.any())]).nullish(),
+});
+
+/**
+ * 防治服务类
+ */
+export class PesticideService {
+  private repository: PesticideRepository;
+
+  constructor(repo?: PesticideRepository) {
+    this.repository = repo || pesticideRepository;
+  }
+
+  /**
+   * 通用条件查询（带分页）
+   */
+  findAll(filters: Record<string, string | undefined>, page: number, pageSize: number) {
+    return this.repository.findAll(filters, page, pageSize);
+  }
+
+  /**
+   * 单条查询
+   */
+  findById(id: string) {
+    return this.repository.findById(id);
+  }
+
+  /**
+   * 查询使用过某肥料的所有防治记录（用于肥料库"使用记录"tab）
+   */
+  findByFertilizerSpecId(specId: string, page: number, pageSize: number) {
+    return this.repository.findByFertilizerSpecId(specId, page, pageSize);
+  }
+
+  /**
+   * 2026-07-17：新增防治记录（含事务：扣肥料库存 → 写记录 → COMMIT）
+   * @returns 完整新记录
+   */
+  async apply(input: Record<string, any>): Promise<PesticideRecord> {
+    // 兼容 snake_case（curl 调试）和 camelCase（前端 store）
+    const normalized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(input)) {
+      const camel = key.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+      normalized[camel] = normalized[camel] ?? value;
+    }
+
+    const parsed = createRecordSchema.safeParse(normalized);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new PesticideBusinessError(
+        PesticideErrorCode.INVALID_INPUT,
+        `参数错误 [${issue?.path?.join('.') || '?'}]: ${issue?.message || parsed.error.message}`,
+      );
+    }
+    const data = parsed.data;
+
+    // 解析 leafFertilizerList 池（兼容 string JSON / 已解析 array）
+    const rawLeafList = data.leafFertilizerList;
+    const leafItems = parseLeafFertilizerList(rawLeafList);
+    const deductions = aggregateDeductions(extractDeductions(leafItems));
+
+    const db = getDatabase();
+    const now = nowLocalTimestamp();
+    const id = `pr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // 2026-07-17：生成唯一 record_code（事务外生成候选号 + UNIQUE 冲突重试）
+    const recordCode = data.recordCode || generateRecordCodeWithRetry();
+
+    // 处理 pesticide_type：数组 → JSON 字符串
+    let pesticideTypeValue: string | null = null;
+    if (Array.isArray(data.pesticideType) && data.pesticideType.length > 0) {
+      pesticideTypeValue = JSON.stringify(data.pesticideType);
+    } else if (typeof data.pesticideType === 'string' && data.pesticideType.trim()) {
+      pesticideTypeValue = data.pesticideType.trim().startsWith('[')
+        ? data.pesticideType
+        : JSON.stringify([data.pesticideType]);
+    }
+
+    // 规范化 JSON 池字段
+    const stringifyJsonField = (val: unknown): string | null => {
+      if (val == null) return null;
+      if (typeof val === 'string') return val.trim() || null;
+      try { return JSON.stringify(val); } catch { return null; }
+    };
+
+    db.exec('BEGIN');
+    try {
+      // 1) 校验 + 扣减肥料库存（事务核心）
+      if (deductions.length > 0) {
+        checkAndDecreaseStock(deductions, now);
+      }
+
+      // 2) INSERT 防治记录（含 UNIQUE 重试：防并发同名 record_code 冲突）
+      // 注意：库存扣减已完成，所以重试时不能再扣库存（已 ROLLBACK 后重新跑）
+      let insertedRecord: PesticideRecord | null = null;
+      let currentRecordCode = recordCode;
+      for (let attempt = 0; attempt < 5 && !insertedRecord; attempt++) {
+        const record: PesticideRecord = {
+          id,
+          record_code: currentRecordCode,
+          spray_time: data.sprayTime,
+          operator_id: data.operatorId ?? null,
+          operator_name: data.operatorName ?? null,
+          crop_name: data.cropName,
+          greenhouse_name: data.greenhouseName ?? null,
+          planting_id: data.plantingId ?? null,
+          planting_code: data.plantingCode ?? null,
+          seedling_id: data.seedlingId ?? null,
+          seedling_code: data.seedlingCode ?? null,
+          pesticide_id: data.pesticideId ?? null,
+          pesticide_name: data.pesticideName ?? null,
+          pesticide_type: pesticideTypeValue,
+          spec_id: data.specId ?? null,
+          spec_content: data.specContent ?? null,
+          dosage: data.dosage != null ? Number(data.dosage) : null,
+          dosage_unit: data.dosageUnit ?? null,
+          dilution_ratio: data.dilutionRatio ?? null,
+          target_pest: data.targetPest ?? null,
+          application_method: data.applicationMethod ?? null,
+          bio_agent_id: data.bioAgentId ?? null,
+          bio_agent_name: data.bioAgentName ?? null,
+          bio_agent_type: data.bioAgentType ?? null,
+          equipment_name: data.equipmentName ?? null,
+          equipment_count: data.equipmentCount != null ? Number(data.equipmentCount) : null,
+          pesticide_list: stringifyJsonField(data.pesticideList),
+          bio_agent_list: stringifyJsonField(data.bioAgentList),
+          equipment_list: stringifyJsonField(data.equipmentList),
+          use_leaf_fertilizer: data.useLeafFertilizer ?? (leafItems.length > 0 ? 'yes' : 'no'),
+          leaf_fertilizer_name: data.leafFertilizerName ?? leafItems[0]?.fertilizerName ?? null,
+          leaf_fertilizer_dosage: data.leafFertilizerDosage != null
+            ? Number(data.leafFertilizerDosage)
+            : (leafItems[0]?.dosage != null ? Number(leafItems[0].dosage) : null),
+          leaf_fertilizer_unit: data.leafFertilizerUnit ?? leafItems[0]?.unit ?? null,
+          leaf_fertilizer_list: stringifyJsonField(rawLeafList),
+          description: data.description ?? null,
+          photos: stringifyJsonField(data.photos),
+          create_time: now,
+          update_time: now,
+        };
+        try {
+          this.repository.insert(record);
+          insertedRecord = record;
+        } catch (e: any) {
+          const msg = String(e?.message || '');
+          if (msg.includes('UNIQUE constraint failed') && attempt < 4) {
+            // 并发写同 code — 重新生成下一个候选号再 INSERT
+            // 重要：库存已经在事务里扣减了，不要在这里增加新扣减！
+            // 这里只是换 recordCode 后重试 INSERT。
+            const seq = parseInt((currentRecordCode.split('-').pop() || '1'), 10);
+            currentRecordCode = `${currentRecordCode.replace(/-\d{4,}$/, '')}-${String(seq + 1).padStart(4, '0')}`;
+            continue;
+          }
+          throw e;
+        }
+      }
+      if (!insertedRecord) {
+        throw new PesticideBusinessError(
+          PesticideErrorCode.INVALID_INPUT,
+          `记录编号生成冲突，已重试 5 次仍失败`,
+        );
+      }
+
+      db.exec('COMMIT');
+      this.repository.save();
+      return insertedRecord;
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        console.error('[pesticide.service] ROLLBACK 失败:', rbErr);
+        console.error('[pesticide.service] 原错误:', err);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * 2026-07-17：更新防治记录（diff 库存调整）
+   * - 旧记录有 specId 库存 + 新记录 specId 差异 = delta 调整
+   */
+  async update(id: string, updates: Record<string, any>): Promise<PesticideRecord | null> {
+    const existing = this.repository.findById(id);
+    if (!existing) {
+      throw new PesticideBusinessError(PesticideErrorCode.NOT_FOUND, '防治记录不存在', 404);
+    }
+
+    // 解析旧/新 leafFertilizerList
+    const oldItems = parseLeafFertilizerList(existing.leafFertilizerList);
+    const oldDeductions = aggregateDeductions(extractDeductions(oldItems));
+
+    // 兼容 snake_case / camelCase
+    const newRaw = updates.leafFertilizerList ?? updates.leaf_fertilizer_list;
+    const newItems = newRaw !== undefined ? parseLeafFertilizerList(newRaw) : oldItems;
+    const newDeductions = aggregateDeductions(extractDeductions(newItems));
+
+    // diff: 同 specId 取差值；新增的扣减；删除的回补
+    const oldMap = new Map(oldDeductions.map((d) => [d.specId, d.dosage]));
+    const newMap = new Map(newDeductions.map((d) => [d.specId, d.dosage]));
+
+    const db = getDatabase();
+    const now = nowLocalTimestamp();
+
+    db.exec('BEGIN');
+    try {
+      // 对每个 specId 计算 delta
+      const allSpecIds = new Set([...oldMap.keys(), ...newMap.keys()]);
+      for (const specId of allSpecIds) {
+        const oldQty = oldMap.get(specId) ?? 0;
+        const newQty = newMap.get(specId) ?? 0;
+        const delta = newQty - oldQty;
+        if (delta === 0) continue;
+
+        if (delta > 0) {
+          // 用量增加 → 校验 + 扣减
+          const spec = fertilizerRepository.findSpecById(specId);
+          if (!spec) {
+            throw new PesticideBusinessError(
+              PesticideErrorCode.FERTILIZER_SPEC_NOT_FOUND,
+              `肥料规格不存在: ${specId}`,
+              404,
+            );
+          }
+          if ((spec.stockQuantity ?? 0) < delta) {
+            throw new PesticideBusinessError(
+              PesticideErrorCode.INSUFFICIENT_STOCK,
+              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需追加 ${delta}`,
+            );
+          }
+          const newStock = fertilizerRepository.decreaseStock(specId, delta, now);
+          if (newStock === null) {
+            throw new PesticideBusinessError(
+              PesticideErrorCode.INSUFFICIENT_STOCK,
+              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足，请重试`,
+            );
+          }
+        } else if (delta < 0) {
+          // 用量减少或删除 → 回补库存
+          fertilizerRepository.increaseStock(specId, -delta, now);
+        }
+      }
+
+      // 同步顶层兼容字段（取新池首条）
+      if (newRaw !== undefined) {
+        if (newDeductions.length > 0) {
+          const first = newDeductions[0];
+          updates.leafFertilizerName = first.fertilizerName;
+          updates.leafFertilizerDosage = first.dosage;
+          // unit 不在 deductions 里，从原始 items 取
+          const firstItem = newItems.find((x) => x.specId === first.specId);
+          updates.leafFertilizerUnit = firstItem?.unit ?? null;
+        } else if (newItems.length > 0) {
+          // 池存在但无 specId（旧数据兼容）
+          const firstItem = newItems[0];
+          updates.leafFertilizerName = firstItem.fertilizerName ?? null;
+          updates.leafFertilizerDosage = firstItem.dosage != null ? Number(firstItem.dosage) : null;
+          updates.leafFertilizerUnit = firstItem.unit ?? null;
+        } else {
+          updates.leafFertilizerName = null;
+          updates.leafFertilizerDosage = null;
+          updates.leafFertilizerUnit = null;
+        }
+      }
+
+      updates.update_time = now;
+      this.repository.update(id, updates);
+
+      db.exec('COMMIT');
+      this.repository.save();
+      return this.repository.findById(id);
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        console.error('[pesticide.service] ROLLBACK 失败:', rbErr);
+        console.error('[pesticide.service] 原错误:', err);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * 2026-07-17：删除单条防治记录（恢复库存 → 删记录）
+   */
+  async remove(id: string): Promise<{ id: string }> {
+    const existing = this.repository.findById(id);
+    if (!existing) {
+      throw new PesticideBusinessError(PesticideErrorCode.NOT_FOUND, '防治记录不存在', 404);
+    }
+
+    const items = parseLeafFertilizerList(existing.leafFertilizerList);
+    const deductions = aggregateDeductions(extractDeductions(items));
+
+    const db = getDatabase();
+    const now = nowLocalTimestamp();
+
+    db.exec('BEGIN');
+    try {
+      if (deductions.length > 0) {
+        increaseStock(deductions, now);
+      }
+      this.repository.deleteById(id);
+      db.exec('COMMIT');
+      this.repository.save();
+      return { id };
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        console.error('[pesticide.service] ROLLBACK 失败:', rbErr);
+        console.error('[pesticide.service] 原错误:', err);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * 2026-07-17：批量删除（每条独立事务：恢复库存 → 删记录）
+   * @returns { deleted, skipped }
+   */
+  async removeBatch(ids: string[]): Promise<{ deleted: number; skipped: number }> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new PesticideBusinessError(PesticideErrorCode.INVALID_INPUT, '请提供要删除的记录ID数组');
+    }
+    if (ids.length > 500) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.BATCH_TOO_LARGE,
+        `批量删除单次最多 500 条，当前 ${ids.length} 条`,
+      );
+    }
+    let deleted = 0;
+    let skipped = 0;
+    for (const id of ids) {
+      try {
+        await this.remove(id);
+        deleted++;
+      } catch (err) {
+        // 失败跳过（不影响其他 id）
+        console.error(`[pesticide.service] 批量删除 ${id} 失败:`, err);
+        skipped++;
+      }
+    }
+    return { deleted, skipped };
+  }
+
+  /**
+   * 2026-07-17：防治记录 → 肥料池统计聚合
+   * - 按 group_by 维度聚合 leafFertilizerList JSON 池
+   * - 关键 SQL：json_each 展开池，按维度 GROUP BY
+   *
+   * @param groupBy 支持: month / crop_name / greenhouse_name / fertilizer_type / fertilizer_name
+   * @param filters 时间 + 作物 + 区域过滤
+   * @returns [{ label, record_count, total_dosage, total_cost, use_count }]
+   */
+  findFertilizerStats(
+    groupBy: string,
+    filters: { startDate?: string; endDate?: string; cropName?: string; greenhouseName?: string } = {},
+  ): any[] {
+    const db = getDatabase();
+
+    // 维度 → SQL 表达式（注意：queryToObjects 已转 camelCase，所以读取时需用 camelCase 字段名）
+    const GROUP_WHITELIST: Record<string, { expr: string; alias: string }> = {
+      month: { expr: "strftime('%Y-%m', spray_time)", alias: 'month' },
+      crop_name: { expr: 'crop_name', alias: 'cropName' },
+      greenhouse_name: { expr: 'greenhouse_name', alias: 'greenhouseName' },
+      fertilizer_type: {
+        expr: "COALESCE(json_extract(json_each.value, '$.fertilizerType'), 'unknown')",
+        alias: 'fertilizerType',
+      },
+      fertilizer_name: {
+        expr: "COALESCE(json_extract(json_each.value, '$.fertilizerName'), 'unknown')",
+        alias: 'fertilizerName',
+      },
+    };
+
+    const group = GROUP_WHITELIST[groupBy];
+    if (!group) {
+      throw new PesticideBusinessError(
+        PesticideErrorCode.INVALID_INPUT,
+        `不支持的 group_by 维度: ${groupBy}。支持: ${Object.keys(GROUP_WHITELIST).join(', ')}`,
+      );
+    }
+
+    // WHERE 条件（只能用于主表字段，不能用于池内 JSON 字段）
+    const wheres: string[] = [];
+    const params: any[] = [];
+    if (filters.startDate) { wheres.push('pesticide_records.spray_time >= ?'); params.push(filters.startDate); }
+    if (filters.endDate) { wheres.push('pesticide_records.spray_time <= ?'); params.push(`${filters.endDate} 23:59:59`); }
+    if (filters.cropName) { wheres.push('pesticide_records.crop_name = ?'); params.push(filters.cropName); }
+    if (filters.greenhouseName) { wheres.push('pesticide_records.greenhouse_name = ?'); params.push(filters.greenhouseName); }
+
+    const whereSql = wheres.length > 0 ? `WHERE ${wheres.join(' AND ')}` : '';
+
+    // 关键 SQL：json_each 展开 leaf_fertilizer_list 池，按 group_by 聚合
+    // - total_dosage = SUM(dosage 数值)
+    // - total_cost = SUM(dosage * unitPrice)
+    // - use_count = COUNT(DISTINCT 防治记录数)
+    const sql = `
+      SELECT
+        ${group.expr} AS label,
+        COUNT(DISTINCT pesticide_records.id) AS record_count,
+        SUM(CAST(COALESCE(json_extract(json_each.value, '$.dosage'), '0') AS REAL)) AS total_dosage,
+        SUM(
+          CAST(COALESCE(json_extract(json_each.value, '$.dosage'), '0') AS REAL) *
+          CAST(COALESCE(json_extract(json_each.value, '$.unitPrice'), '0') AS REAL)
+        ) AS total_cost
+      FROM pesticide_records, json_each(pesticide_records.leaf_fertilizer_list)
+      ${whereSql}
+      GROUP BY label
+      ORDER BY total_cost DESC, record_count DESC
+      LIMIT 200
+    `;
+    return queryToObjects(db, sql, params);
+  }
+
+  /**
+   * 2026-07-17：单条肥料反向追溯 — 跨两个数据源
+   * 1. 防治记录 leaf_fertilizer_list 池（叶面肥联用）
+   * 2. 施肥记录 fertilization_pool 池（主施肥流程）
+   * 两个数据源 UNION ALL 后按时间倒序，每条记录包含 source 标识。
+   *
+   * @returns [{ source, recordCode, cropName, greenhouseName, operatorName, sprayTime, totalDosage, totalCost }]
+   */
+  findUsageByFertilizerSpec(
+    specId: string,
+    filters: { startDate?: string; endDate?: string } = {},
+  ): any[] {
+    const db = getDatabase();
+    const dateConditions: string[] = [];
+    const dateParams: any[] = [];
+    if (filters.startDate) {
+      dateConditions.push('time_col >= ?');
+      dateParams.push(filters.startDate);
+    }
+    if (filters.endDate) {
+      dateConditions.push('time_col <= ?');
+      dateParams.push(`${filters.endDate} 23:59:59`);
+    }
+    // 两个 UNION 分支共用日期条件占位（time_col 是子查询中的别名）
+    const dateFilter = dateConditions.length > 0
+      ? 'AND ' + dateConditions.map((c) => c.replace('time_col', 'spray_time')).join(' AND ')
+      : '';
+
+    const sql = `
+      SELECT * FROM (
+        -- 分支 1：防治记录 → 肥料联用
+        SELECT
+          'pest_control' AS source,
+          pesticide_records.id AS recordId,
+          pesticide_records.record_code AS recordCode,
+          pesticide_records.crop_name AS cropName,
+          pesticide_records.greenhouse_name AS greenhouseName,
+          pesticide_records.operator_name AS operatorName,
+          pesticide_records.spray_time AS sprayTime,
+          SUM(CAST(COALESCE(json_extract(j1.value, '$.dosage'), '0') AS REAL)) AS totalDosage,
+          SUM(
+            CAST(COALESCE(json_extract(j1.value, '$.dosage'), '0') AS REAL) *
+            CAST(COALESCE(json_extract(j1.value, '$.unitPrice'), '0') AS REAL)
+          ) AS totalCost
+        FROM pesticide_records, json_each(pesticide_records.leaf_fertilizer_list) AS j1
+        WHERE json_extract(j1.value, '$.specId') = ?
+        GROUP BY pesticide_records.id
+
+        UNION ALL
+
+        -- 分支 2：施肥记录 → 肥料池
+        -- 注意：池 JSON 里 specId 字段命名有两套：
+        --   - 新版（FertilizerPoolEditor）：$.specId
+        --   - 旧版（手动录入历史数据）：$.fertilizerSpecId
+        -- 用 COALESCE 兼容两种，并排除空字符串
+        SELECT
+          'fertilization' AS source,
+          fertilizer_records.id AS recordId,
+          fertilizer_records.fertilizer_code AS recordCode,
+          fertilizer_records.crop_name AS cropName,
+          fertilizer_records.greenhouse_name AS greenhouseName,
+          fertilizer_records.operator_name AS operatorName,
+          fertilizer_records.fertilize_time AS sprayTime,
+          SUM(CAST(COALESCE(json_extract(j2.value, '$.quantity'), '0') AS REAL)) AS totalDosage,
+          SUM(
+            CAST(COALESCE(json_extract(j2.value, '$.quantity'), '0') AS REAL) *
+            CAST(COALESCE(json_extract(j2.value, '$.unitPrice'), '0') AS REAL)
+          ) AS totalCost
+        FROM fertilizer_records, json_each(fertilizer_records.fertilization_pool) AS j2
+        WHERE COALESCE(
+              NULLIF(json_extract(j2.value, '$.fertilizerSpecId'), ''),
+              json_extract(j2.value, '$.specId'),
+              ''
+            ) = ?
+        GROUP BY fertilizer_records.id
+      )
+      ${dateFilter ? `WHERE ${dateFilter}` : ''}
+      ORDER BY sprayTime DESC
+      LIMIT 200
+    `;
+    // 参数顺序：[specId(分支1), specId(分支2), ...dateParams]
+    return queryToObjects(db, sql, [specId, specId, ...dateParams]);
+  }
+}
+
+export const pesticideService = new PesticideService();
