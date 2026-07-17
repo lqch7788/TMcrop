@@ -17,6 +17,9 @@ import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 import { usePesticideLibraryStore, PesticideSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
+// 2026-07-17：库存单位选项 — 复用常量（与 AddPesticideModal 保持一致 10 项：kg/g/t/L/mL/袋/包/桶/瓶/块）
+// 之前 Edit 弹窗本地定义了 8 项副本（缺 t/块），与 Add 不一致且导致 kg 是种子数据默认值的假象
+import { STOCK_UNIT_OPTIONS } from '../constants';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -53,18 +56,6 @@ const FORMULATION_OPTIONS = [
   { value: '可溶液剂', label: '可溶液剂 (SL)' },
   { value: '膏剂', label: '膏剂 (PA)' },
   { value: '其他', label: '其他' },
-];
-
-// 库存单位选项
-const STOCK_UNIT_OPTIONS = [
-  { value: 'kg', label: '千克 (kg)' },
-  { value: 'g', label: '克 (g)' },
-  { value: 'L', label: '升 (L)' },
-  { value: 'mL', label: '毫升 (mL)' },
-  { value: '包', label: '包' },
-  { value: '瓶', label: '瓶' },
-  { value: '桶', label: '桶' },
-  { value: '袋', label: '袋' },
 ];
 
 // 表单字段类型（26 个可编辑字段）

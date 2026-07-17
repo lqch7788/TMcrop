@@ -34,7 +34,9 @@ router.get('/', (req: Request, res: Response) => {
     const { pesticide_type, keyword, pesticide_name, manufacturer, stock_low, stock_high, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    // 2026-07-17：解除 100 条硬上限（前端 fetchItems 传 limit=10000 想拿全表做统计用，原 Math.min(100, ...) 导致统计永远 ≤100）
+    // 上限提到 10000 与前端保持一致；如需分页改为前端传 limit + page
+    const limitNum = Math.min(10000, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
