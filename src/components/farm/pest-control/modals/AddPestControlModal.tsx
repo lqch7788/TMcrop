@@ -8,22 +8,25 @@
  * - 选择药剂后自动加入池（按 pesticideId 去重，自动用 specs[0] 默认值）
  * - 池中每行内联编辑：用量/单位/稀释倍数/使用方法/备注
  * - 一键清空药剂池、单个移除
- * - 提交时序列化为 pesticideList JSON（schema 兼容）
+ * 2026-07-17：肥料联用字段复用 FertilizerPoolEditor（与新增施肥记录一致）—— 类型下拉 → 过滤库 → 池化编辑
+ * - 移除了"启用肥料联用"checkbox 与"添加一行"按钮，肥料池始终可见
+ * - 提交时序列化为 leafFertilizerList JSON（字段名与 FertilizerPoolItem 一致，含 specId/fertilizerName/fertilizerType 等）
  */
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, X, Search } from 'lucide-react';
+import { Trash2, X, Search } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Checkbox } from '@/components/ui';
 import { DictSelect } from '@/components/common/settings/DictSelect';
 import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 import { usePestControlStore, usePesticideLibraryStore, usePestDiseaseDictStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal, currentTimeLocal } from '@/lib/dateUtils';
+import { FertilizerPoolEditor } from '@/components/farm/fertilizer/FertilizerPoolEditor';
+import type { FertilizerPoolItem } from '@/components/farm/fertilizer/FertilizerPoolEditor';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -61,17 +64,10 @@ interface PesticidePoolItem {
   remarks?: string;
 }
 
-// 2026-07-11：肥料池条目（替代原 LeafFertilizerItem 单一肥料）
-// - name: 肥料名称（自由输入）
-// - dosage / unit / ratio: 用量/单位/稀释倍数
-// - remarks: 备注
-interface FertilizerPoolItem {
-  name: string;
-  dosage: string;
-  unit: string;
-  ratio: string;
-  remarks?: string;
-}
+// 2026-07-17：肥料池条目类型复用 FertilizerPoolEditor（与新增施肥记录一致）
+// - 含 specId / fertilizerName / fertilizerType / brandName / specContent / manufacturer
+// - dosage / unit / dilutionRatio / fertilizationMethod / unitPrice / stockQuantity / stockUnit
+// 不再独立定义，避免字段漂移
 
 // 2026-07-12：防治区域多选 — 每条选中的种植/育苗记录（含批次、区域、作物）
 interface SelectedBizRecord {
@@ -115,8 +111,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   const [showPesticideDropdown, setShowPesticideDropdown] = useState(false);
   const pesticideDropdownRef = useRef<HTMLDivElement>(null);
 
-  // 2026-07-11：肥料联用池化（多行，可增删）
-  const [useFertilizer, setUseFertilizer] = useState(false);
+  // 2026-07-17：肥料联用池化（始终启用，由 FertilizerPoolEditor 提供完整 UI）
   const [fertilizerPool, setFertilizerPool] = useState<FertilizerPoolItem[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -353,7 +348,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       setSelectedTypes([]);
       setPesticideSearchKeyword('');
       setShowPesticideDropdown(false);
-      setUseFertilizer(false);
+      // 2026-07-17：肥料池始终可见，重置为空数组
       setFertilizerPool([]);
       // 2026-07-12：防治区域多选重置
       setSelectedBizRecords([]);
@@ -480,16 +475,17 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         applicationMethod: first.applicationMethod,
         // JSON 列表字段（池数据）
         pesticideList: pesticideListJson,
-        // 2026-07-11：肥料联用池化（多肥料）
-        useLeafFertilizer: useFertilizer ? 'yes' : 'no',
-        // 池序列化为 JSON（叶面肥已重命名为肥料）
-        leafFertilizerList: useFertilizer && fertilizerPool.length > 0
+        // 2026-07-17：肥料联用字段复用 FertilizerPoolEditor 数据结构
+        // - fertilizerPool 为空时 useLeafFertilizer='no' + leafFertilizerList=null
+        // - 有数据时序列化为 JSON（含 specId/fertilizerName/fertilizerType/brandName 等）
+        useLeafFertilizer: fertilizerPool.length > 0 ? 'yes' : 'no',
+        leafFertilizerList: fertilizerPool.length > 0
           ? JSON.stringify(fertilizerPool)
           : null,
-        // 兼容旧字段（取池中第一个）
-        leafFertilizerName: useFertilizer && fertilizerPool[0] ? fertilizerPool[0].name : undefined,
-        leafFertilizerDosage: useFertilizer && fertilizerPool[0]?.dosage ? Number(fertilizerPool[0].dosage) : undefined,
-        leafFertilizerUnit: useFertilizer && fertilizerPool[0] ? fertilizerPool[0].unit : undefined,
+        // 兼容旧字段（取池中第一个，仍需保留 schema 兼容）
+        leafFertilizerName: fertilizerPool[0]?.fertilizerName,
+        leafFertilizerDosage: fertilizerPool[0]?.dosage ? Number(fertilizerPool[0].dosage) : undefined,
+        leafFertilizerUnit: fertilizerPool[0]?.unit,
         // 兼容 bio/physical 字段（如有填）
         bioAgentList: JSON.stringify([]),
         equipmentList: JSON.stringify([]),
@@ -1174,114 +1170,10 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
           </div>
         </div>
 
-        {/* 肥料联用池（2026-07-11：多行，可增删） */}
+        {/* 2026-07-17：肥料联用池复用 FertilizerPoolEditor（与新增施肥记录一致） */}
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <h3 className="text-sm font-bold text-gray-900">🌱 肥料联用（可选）</h3>
-            <label className="flex items-center gap-1 text-xs text-gray-600">
-              <Checkbox
-                checked={useFertilizer}
-                onCheckedChange={(checked) => setUseFertilizer(!!checked)}
-              />
-              启用肥料联用
-            </label>
-            {useFertilizer && fertilizerPool.length > 0 && (
-              <span className="text-xs text-gray-500">已添加 {fertilizerPool.length} 种肥料</span>
-            )}
-            {useFertilizer && fertilizerPool.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setFertilizerPool([])}
-                className="text-xs text-red-500 hover:text-red-700 ml-auto"
-              >
-                清空
-              </button>
-            )}
-          </div>
-          {useFertilizer && (
-            <div className="border border-gray-200 rounded-lg p-3 bg-green-50/30">
-              {fertilizerPool.length === 0 && (
-                <div className="mb-2 p-3 text-center text-sm text-gray-400 bg-white rounded border border-dashed border-gray-300">
-                  肥料池为空，点击下方"添加一行"添加肥料
-                </div>
-              )}
-              {fertilizerPool.map((item, idx) => (
-                <div key={idx} className="bg-white border border-green-200 rounded-lg p-3 mb-2 last:mb-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-green-700">肥料 #{idx + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => setFertilizerPool(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-red-500 hover:text-red-700"
-                      title="删除该肥料"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-3">
-                      <Label className="text-xs text-gray-600">肥料名称</Label>
-                      <Input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => setFertilizerPool(prev => prev.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))}
-                        placeholder="如 磷酸二氢钾"
-                        className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600">用量</Label>
-                      <Input
-                        type="text"
-                        value={item.dosage}
-                        onChange={(e) => setFertilizerPool(prev => prev.map((it, i) => i === idx ? { ...it, dosage: e.target.value } : it))}
-                        placeholder="如 100"
-                        className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600">单位</Label>
-                      <UnitDictSelect
-                        value={item.unit}
-                        onChange={(val) => setFertilizerPool(prev => prev.map((it, i) => i === idx ? { ...it, unit: val } : it))}
-                        placeholder="单位"
-                        className="text-xs"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-gray-600">稀释倍数</Label>
-                      <Input
-                        type="text"
-                        value={item.ratio}
-                        onChange={(e) => setFertilizerPool(prev => prev.map((it, i) => i === idx ? { ...it, ratio: e.target.value } : it))}
-                        placeholder="如 1:800"
-                        className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label className="text-xs text-gray-600">备注</Label>
-                      <Input
-                        type="text"
-                        value={item.remarks || ''}
-                        onChange={(e) => setFertilizerPool(prev => prev.map((it, i) => i === idx ? { ...it, remarks: e.target.value } : it))}
-                        placeholder="可选备注"
-                        className="px-2 py-1.5 border border-gray-300 rounded text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setFertilizerPool(prev => [...prev, { name: '', dosage: '', unit: '', ratio: '', remarks: '' }])}
-                className="w-full mt-1"
-              >
-                <Plus className="w-4 h-4" /> 添加一行肥料
-              </Button>
-            </div>
-          )}
+          <h3 className="text-sm font-bold text-gray-900 mb-3">🧪 肥料联用（可选，先选类型再选肥料）</h3>
+          <FertilizerPoolEditor pool={fertilizerPool} onChange={setFertilizerPool} />
         </div>
 
         {/* 备注 */}
