@@ -85,6 +85,12 @@ export default function PestControlPage() {
     setSelectedIds([]);
   }, []);
 
+  // 2026-07-17：导出模式下点「取消」 → 退出 export 模式
+  const handleExportCancel = useCallback(() => {
+    setOperationMode('normal');
+    setSelectedIds([]);
+  }, []);
+
   // 2026-06-09 改造：批量删除直接弹 DeleteConfirmModal（替代旧自写 BatchDeleteModal + 直删逻辑）
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
@@ -116,7 +122,21 @@ export default function PestControlPage() {
     }
   }, [selectedIds, filters, store, toast]);
 
+  // 2026-07-17：点「导出」→ 进入 export 模式（显示复选框 + 顶部确认栏），不直接弹窗
   const handleExport = useCallback(() => {
+    if (operationMode === 'export') {
+      // 已在 export 模式再点 = 取消并退出
+      setOperationMode('normal');
+      setSelectedIds([]);
+      return;
+    }
+    // 退出其他模式（避免 delete 和 export 同时激活）
+    setOperationMode('export');
+    setSelectedIds([]);
+  }, [operationMode]);
+
+  // 2026-07-17：export 模式下点「确认导出」→ 弹格式选择弹窗
+  const handleExportModeConfirm = useCallback(() => {
     setShowExportModal(true);
   }, []);
 
@@ -219,6 +239,7 @@ export default function PestControlPage() {
         onBatchDelete={handleBatchDelete}
         onBatchDeleteConfirm={handleDeleteConfirm}
         onExportMode={handleExport}
+        onExportConfirm={handleExportModeConfirm}
       />
 
       {showAddModal && (

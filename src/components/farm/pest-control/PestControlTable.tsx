@@ -27,6 +27,7 @@ interface PestControlTableProps {
   onBatchDelete: () => void;
   onBatchDeleteConfirm: () => void;
   onExportMode: () => void;
+  onExportConfirm: () => void;
 }
 
 // 防治类型 Badge 颜色
@@ -45,15 +46,19 @@ import { CONTROL_TYPE_OPTIONS, lookupEnumLabel } from '@/constants/cropEnums';
 const getControlTypeLabel = (type: string): string =>
   lookupEnumLabel(CONTROL_TYPE_OPTIONS, type, type);
 
-// 解析 JSON 列表
-function parseJsonList(jsonStr: string | null | undefined): any[] {
-  if (!jsonStr) return [];
-  try {
-    const parsed = JSON.parse(jsonStr);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+// 解析 JSON 列表（兼容 string JSON / 已解析的 array / null undefined）
+function parseJsonList(val: unknown): any[] {
+  if (val == null) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string' && val.trim()) {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
+  return [];
 }
 
 // 解析目标病虫害（可能是JSON数组或单个字符串）
@@ -94,6 +99,7 @@ export function PestControlTable({
   onBatchDelete,
   onBatchDeleteConfirm,
   onExportMode,
+  onExportConfirm,
 }: PestControlTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -109,7 +115,7 @@ export function PestControlTable({
   };
 
   const totalPages = Math.ceil(data.length / pageSize) || 1;
-  const showCheckbox = operationMode === 'delete';
+  const showCheckbox = operationMode === 'delete' || operationMode === 'export';
   const startIdx = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIdx, startIdx + pageSize);
 
@@ -165,14 +171,36 @@ export function PestControlTable({
           <h3 className="text-lg font-semibold text-gray-900">防治记录列表</h3>
           <span className="text-sm text-gray-500">（点击展开查看多药剂/肥料详情）</span>
         </div>
-        {/* 批量删除模式：显示确认栏 */}
-        {operationMode === 'delete' && selectedIds.length > 0 ? (
+        {/* 批量删除模式：进入后立即显示确认栏（确认删除按键在 0 选中时置灰） */}
+        {operationMode === 'delete' ? (
           <div className="flex items-center gap-3">
-            <span className="text-sm text-red-600 font-medium">已选择 {selectedIds.length} 条记录</span>
-            <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
+            <span className="text-sm text-red-600 font-medium">
+              {selectedIds.length > 0 ? `已选择 ${selectedIds.length} 条记录` : '请勾选要删除的记录'}
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onBatchDeleteConfirm}
+              disabled={selectedIds.length === 0}
+            >
               <Trash2 className="w-4 h-4" />确认删除
             </Button>
             <Button variant="secondary" size="sm" onClick={onBatchDeleteMode}><X className="w-4 h-4" /> 取消</Button>
+          </div>
+        ) : operationMode === 'export' ? (
+          /* 导出模式：进入后立即显示确认栏（确认导出按键在 0 选中时置灰） */
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-blue-600 font-medium">
+              {selectedIds.length > 0 ? `已选择 ${selectedIds.length} 条记录（不勾选默认导出全部）` : '请勾选要导出的记录（不勾选默认导出全部）'}
+            </span>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onExportConfirm}
+            >
+              <Download className="w-4 h-4" />确认导出
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onExportMode}><X className="w-4 h-4" /> 取消</Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
@@ -227,6 +255,9 @@ export function PestControlTable({
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">操作人</TableHead>
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">施用方法</TableHead>
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">目标病虫害</TableHead>
+              {/* 2026-07-17：主行新增「药剂」「肥料」2 列，所有药剂/肥料池 chips 直接显示（无需展开） */}
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">药剂</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">肥料</TableHead>
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">备注</TableHead>
               {/* 2026-07-17：移除「状态」列（DB 中 10 条记录全部 status=completed，业务上防治=已完成事件，无中间态）*/}
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">操作</TableHead>
@@ -235,7 +266,7 @@ export function PestControlTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 11 : 10} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
                   暂无防治记录
                 </TableCell>
               </TableRow>
@@ -328,6 +359,55 @@ export function PestControlTable({
                           </div>
                         ) : '-'}
                       </TableCell>
+                      {/* 药剂 chips — 2026-07-17：从 pesticideList 派生所有药剂名+类型，类型中文靠 getDictLabel */}
+                      <TableCell className="px-4 py-3">
+                        {(() => {
+                          // 优先 pesticideList 池；池为空时用 pesticideName 单条兜底
+                          const items = pesticideList.length > 0
+                            ? pesticideList
+                            : (record.pesticideName ? [{
+                                name: record.pesticideName,
+                                types: record.pesticideTypes || [],
+                              }] : []);
+                          if (items.length === 0) return <span className="text-gray-400">-</span>;
+                          return (
+                            <div className="flex flex-wrap gap-1 max-w-[260px]">
+                              {items.map((it: any, idx: number) => {
+                                const typeLabel = (it.types && it.types.length > 0 ? it.types : (it.type ? [it.type] : []))
+                                  .map((t: string) => getDictLabel('pesticide_type', t) || t)
+                                  .join('·');
+                                return (
+                                  <span
+                                    key={idx}
+                                    title={typeLabel || ''}
+                                    className="inline-flex px-2 py-0.5 rounded text-xs bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  >
+                                    {it.name || '-'}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+                      {/* 肥料 chips — 2026-07-17：从 leafFertilizerList 派生 */}
+                      <TableCell className="px-4 py-3">
+                        {leafFertilizerList.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-[260px]">
+                            {leafFertilizerList.map((it: any, idx: number) => (
+                              <span
+                                key={idx}
+                                title={`${it.dosage || ''}${it.unit || ''} · ${it.ratio || it.dilutionRatio || ''}`}
+                                className="inline-flex px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-700 border border-purple-200"
+                              >
+                                {it.name || '-'}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
                       {/* 备注 */}
                       <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-[120px] truncate" title={record.description || ''}>
                         {record.description || '-'}
@@ -361,7 +441,7 @@ export function PestControlTable({
                     {/* 折叠的详情行 */}
                     {expanded && (
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableCell colSpan={showCheckbox ? 12 : 11} className="px-6 py-4">
+                        <TableCell colSpan={showCheckbox ? 14 : 13} className="px-6 py-4">
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {/* 左侧：防治详情表格 — 2026-07-12：改用 pesticideTypes 判定药剂池类型，移除废弃 controlType */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
