@@ -5,16 +5,20 @@
  * - 使用记录 Tab：调用 GET /api/pest-records/by-spec/:specId，反向追溯防治记录
  *   - 显示用过此肥料的防治记录：编号/作物/区域/操作员/时间/用量/费用
  *   - 顶部 stat 卡：累计用量 / 累计费用 / 使用次数
+ *   - 表格样式与肥料库一致：蓝色渐变表头 + divide-gray-300
+ *   - 底部翻页 + 页码 + 导出按钮（CSV / XLSX / Word 仿肥料库）
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { X, History, Package, Loader2 } from 'lucide-react';
+import { History, Package, Loader2, Download, X as XIcon } from 'lucide-react';
 
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { FertilizerSpec } from '@/stores';
 import { getDictItemName } from '@/stores';
 import { enhancedApiClient } from '@/lib/apiClient';
+import { exportXlsx } from '@/services/exporters';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -76,11 +80,20 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const [activeTab, setActiveTab] = useState<'basic' | 'usage'>('basic');
   const [usageRecords, setUsageRecords] = useState<any[]>([]);
   const [usageLoading, setUsageLoading] = useState(false);
+  // 翻页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  // 导出模式（简化流程：点击"导出" → 勾选 → 点击"确认导出" → 直接下载 Excel，不再弹格式选择）
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
 
   // 切到「使用记录」tab 时拉数据
   useEffect(() => {
     if (!isOpen || !record || activeTab !== 'usage') return;
     setUsageLoading(true);
+    setCurrentPage(1);  // 每次拉数据重置翻页
+    setExportMode(false);  // 切 tab 时退出导出模式
+    setSelectedRecordIds([]);
     enhancedApiClient
       .get<any[]>(`/pest-records/by-spec/${record.id}`)
       .then((resp: any) => {
@@ -102,6 +115,77 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       { totalDosage: 0, totalCost: 0 },
     );
   }, [usageRecords]);
+
+  // 翻页派生：每页显示 pageSize 条
+  const totalPages = Math.ceil(usageRecords.length / pageSize) || 1;
+  const pagedRecords = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return usageRecords.slice(startIdx, startIdx + pageSize);
+  }, [usageRecords, currentPage, pageSize]);
+
+  // 当前页超出范围时回退到第 1 页
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [usageRecords.length, totalPages, currentPage]);
+
+  // 导出模式切换（点击"导出"进入选择模式 → 表格显示复选框）
+  const handleEnterExportMode = () => {
+    setExportMode(true);
+    setSelectedRecordIds([]);  // 默认不勾选，让用户主动选
+  };
+
+  // 退出导出模式
+  const handleExitExportMode = () => {
+    setExportMode(false);
+    setSelectedRecordIds([]);
+  };
+
+  // 单行复选框 toggle
+  const toggleRowSelection = (recordId: string) => {
+    setSelectedRecordIds((prev) =>
+      prev.includes(recordId) ? prev.filter((id) => id !== recordId) : [...prev, recordId]
+    );
+  };
+
+  // 全选/全不选（当前页）
+  const toggleSelectAll = () => {
+    const pageIds = pagedRecords.map((r) => r.recordId);
+    const allSelected = pageIds.every((id) => selectedRecordIds.includes(id));
+    if (allSelected) {
+      setSelectedRecordIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedRecordIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  // 确认导出（直接下载 Excel，不再弹格式选择）
+  const handleConfirmExport = async () => {
+    const selectedRows = usageRecords.filter((r) => selectedRecordIds.includes(r.recordId));
+    if (selectedRows.length === 0) return;
+    const headers = ['来源', '记录编号', '作物', '防治区域', '操作员', '防治时间', '用量', '单位', '费用'];
+    const sourceLabel = (s: string) => s === 'pest_control' ? '防治记录' : s === 'fertilization' ? '施肥记录' : s;
+    const rows = selectedRows.map((r: any) => ({
+      '来源': sourceLabel(r.source),
+      '记录编号': r.recordCode || '',
+      '作物': r.cropName || '',
+      '防治区域': r.greenhouseName || '',
+      '操作员': r.operatorName || '',
+      '防治时间': r.sprayTime || '',
+      '用量': Number(r.totalDosage || 0).toFixed(2),
+      '单位': record?.stockUnit || 'kg',
+      '费用': Number(r.totalCost || 0).toFixed(2),
+    }));
+    const filename = `肥料使用记录_${record?.fertilizerName || ''}_${new Date().toISOString().slice(0, 10)}`;
+    try {
+      // 默认导出 Excel 格式（直接下载，不再弹窗）
+      await exportXlsx({ filename, headers, rows, sheetName: '使用记录' });
+    } catch (err) {
+      console.error('[FertilizerDetailModal] 导出失败:', err);
+    }
+    // 退出选择模式
+    setExportMode(false);
+    setSelectedRecordIds([]);
+  };
 
   if (!record) return null;
 
@@ -203,75 +287,163 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
 
       {activeTab === 'usage' && (
         <div className="max-h-[70vh] overflow-y-auto pr-1">
-          {/* 顶部统计卡 */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-100">
-              <div className="text-xs text-gray-500 mb-1">累计用量</div>
-              <div className="text-2xl font-bold text-amber-700">{usageStats.totalDosage.toFixed(2)}</div>
-              <div className="text-xs text-gray-400 mt-1">{record.stockUnit || 'kg'}</div>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-100">
-              <div className="text-xs text-gray-500 mb-1">累计费用</div>
-              <div className="text-2xl font-bold text-emerald-700">¥{usageStats.totalCost.toFixed(2)}</div>
-              <div className="text-xs text-gray-400 mt-1">元</div>
-            </div>
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-              <div className="text-xs text-gray-500 mb-1">使用次数</div>
-              <div className="text-2xl font-bold text-blue-700">{usageRecords.length}</div>
-              <div className="text-xs text-gray-400 mt-1">条防治记录</div>
-            </div>
+          {/* 顶部统计条（紧凑型：单行 flex 横排，浅色实色背景） */}
+          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-gray-50 border border-gray-200 rounded-md text-xs">
+            <span className="text-gray-500">累计用量</span>
+            <span className="font-bold text-amber-700 text-sm">
+              {usageStats.totalDosage.toFixed(2)}<span className="text-xs font-normal text-gray-400 ml-0.5">{record.stockUnit || 'kg'}</span>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">累计费用</span>
+            <span className="font-bold text-emerald-700 text-sm">
+              ¥<span>{usageStats.totalCost.toFixed(2)}</span>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">使用次数</span>
+            <span className="font-bold text-blue-700 text-sm">
+              {usageRecords.length}<span className="text-xs font-normal text-gray-400 ml-0.5">条</span>
+            </span>
           </div>
 
-          {/* 使用记录表 */}
+          {/* 使用记录表（样式与肥料库表头一致：蓝色渐变 + divide-gray-300） */}
           {usageLoading ? (
             <div className="flex items-center justify-center py-12 text-gray-400">
               <Loader2 className="w-5 h-5 mr-2 animate-spin" /> 加载中…
             </div>
           ) : usageRecords.length === 0 ? (
             <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-lg">
-              暂无使用记录（未在任何防治记录中用过此肥料）
+              暂无使用记录（未在任何防治/施肥记录中用过此肥料）
             </div>
           ) : (
-            <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治编号</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">作物</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治区域</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">操作员</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">防治时间</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">用量</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">费用</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {usageRecords.map((r: any) => (
-                  <tr key={r.recordId} className="hover:bg-amber-50/50">
-                    <td className="px-3 py-2 font-mono text-blue-600">{r.recordCode || '-'}</td>
-                    <td className="px-3 py-2 text-gray-800">{r.cropName || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{r.greenhouseName || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{r.operatorName || '-'}</td>
-                    <td className="px-3 py-2 text-gray-500 text-xs">{r.sprayTime?.slice(0, 16) || '-'}</td>
-                    <td className="px-3 py-2 text-right font-mono text-amber-700">
-                      {Number(r.totalDosage || 0).toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono text-emerald-700">
-                      ¥{Number(r.totalCost || 0).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              {/* 工具栏：导出模式切换（绿色导出按钮 + 选中数提示 + 确认/取消） */}
+              <div className="flex items-center justify-between mb-2">
+                {exportMode && (
+                  <span className="text-xs text-emerald-700 font-medium">
+                    已选择 <span className="font-bold">{selectedRecordIds.length}</span> 条
+                  </span>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                  {exportMode ? (
+                    <>
+                      <Button variant="secondary" size="sm" onClick={handleExitExportMode} className="h-8 text-xs">
+                        <XIcon className="w-3.5 h-3.5 mr-1" />取消导出
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleConfirmExport}
+                        disabled={selectedRecordIds.length === 0}
+                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1" />确认导出 ({selectedRecordIds.length})
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleEnterExportMode}
+                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" />导出
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* 表格 */}
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <tr className="hover:bg-transparent">
+                      {exportMode && (
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-white whitespace-nowrap w-10">
+                          <input
+                            type="checkbox"
+                            checked={pagedRecords.length > 0 && pagedRecords.every((r) => selectedRecordIds.includes(r.recordId))}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-white cursor-pointer"
+                            title="全选当前页"
+                          />
+                        </th>
+                      )}
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">来源</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">记录编号</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">作物</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">防治区域</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">操作员</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">防治时间</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">用量</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">费用</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-300 bg-white">
+                    {pagedRecords.map((r: any) => {
+                      const isFert = r.source === 'fertilization';
+                      const checked = selectedRecordIds.includes(r.recordId);
+                      return (
+                        <tr
+                          key={r.recordId}
+                          className={`hover:bg-amber-50/50 ${checked ? 'bg-emerald-50/30' : ''}`}
+                        >
+                          {exportMode && (
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleRowSelection(r.recordId)}
+                                className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              />
+                            </td>
+                          )}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+                              isFert
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}>
+                              {isFert ? '施肥' : '防治'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-mono text-blue-600 whitespace-nowrap">{r.recordCode || '-'}</td>
+                          <td className="px-3 py-2 text-gray-800">{r.cropName || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600">{r.greenhouseName || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600">{r.operatorName || '-'}</td>
+                          <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{r.sprayTime?.slice(0, 16) || '-'}</td>
+                          <td className="px-3 py-2 text-right font-mono text-amber-700 whitespace-nowrap">
+                            {Number(r.totalDosage || 0).toFixed(2)} <span className="text-xs text-gray-400">{record.stockUnit || 'kg'}</span>
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono text-emerald-700 whitespace-nowrap">
+                            ¥{Number(r.totalCost || 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 分页 + 页码显示（与肥料库一致） */}
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 mt-3">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  pageSize={pageSize}
+                  onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                  pageSizeOptions={[10, 20, 50]}
+                  showPageSize
+                />
+              </div>
+            </>
           )}
         </div>
       )}
 
-      {/* 底部关闭按钮 */}
-      <div className="mt-6 flex justify-end">
-        <Button variant="secondary" size="sm" onClick={onClose}>
-          <X className="w-4 h-4" /> 关闭
-        </Button>
-      </div>
+      {/* 导出已简化为直接下载，不再需要 ExportFormatModal */}
+
+      {/* 关闭按钮已由 UnifiedModal 右上角 X 提供 */}
     </UnifiedModal>
   );
 }
