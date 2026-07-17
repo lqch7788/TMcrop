@@ -391,16 +391,17 @@ export function PestControlTable({
                         })()}
                       </TableCell>
                       {/* 肥料 chips — 2026-07-17：从 leafFertilizerList 派生 */}
+                      {/* 2026-07-17：兼容 fertilizerName（新格式，从肥料库选）+ name（旧格式，自由输入）*/}
                       <TableCell className="px-4 py-3">
                         {leafFertilizerList.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[260px]">
                             {leafFertilizerList.map((it: any, idx: number) => (
                               <span
                                 key={idx}
-                                title={`${it.dosage || ''}${it.unit || ''} · ${it.ratio || it.dilutionRatio || ''}`}
+                                title={`${it.dosage || ''}${it.unit || ''} · ${it.dilutionRatio || it.ratio || ''}`}
                                 className="inline-flex px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-700 border border-purple-200"
                               >
-                                {it.name || '-'}
+                                {it.fertilizerName || it.name || '-'}
                               </span>
                             ))}
                           </div>
@@ -559,13 +560,14 @@ export function PestControlTable({
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
+                                    {/* 2026-07-17：兼容 fertilizerName（新格式）+ name（旧格式） */}
                                     {leafFertilizerList.length > 0 ? leafFertilizerList.map((item: any, idx: number) => (
                                       <tr key={idx} className="hover:bg-purple-50">
                                         <td className="px-3 py-2 text-center text-gray-500">{idx + 1}</td>
-                                        <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
+                                        <td className="px-3 py-2 font-medium text-gray-900">{item.fertilizerName || item.name || '-'}</td>
                                         <td className="px-3 py-2 text-orange-600 font-medium">{item.dosage || '-'}</td>
                                         <td className="px-3 py-2 text-gray-600">{item.unit || '-'}</td>
-                                        <td className="px-3 py-2 text-gray-600">{item.ratio || item.dilutionRatio || '-'}</td>
+                                        <td className="px-3 py-2 text-gray-600">{item.dilutionRatio || item.ratio || '-'}</td>
                                       </tr>
                                     )) : (
                                       <tr>
