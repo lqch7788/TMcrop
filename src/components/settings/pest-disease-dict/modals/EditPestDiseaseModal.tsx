@@ -47,11 +47,14 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
   const [pesticideSearch, setPesticideSearch] = useState('');
   // 2026-07-16：pesticide_typeFilter 字段对齐药剂库字典 dict_code（杀虫剂/杀菌剂/...）
   // 旧的「化学/生物/物理」分类已废弃
+  // 2026-07-17：增加「调节剂」分类（GB/T 19378 国标 04 类 - 植物生长调节剂）
+  // 数据源：ChemicalBook 植物生长调节剂目录 + 中国农药信息网登记品种
   const PESTICIDE_TYPE_OPTIONS = [
     { code: 'insecticide',  label: '杀虫剂',  emoji: '🐛', active: 'bg-red-500',    idle: 'bg-red-50 text-red-600 border-red-200' },
     { code: 'fungicide',    label: '杀菌剂',  emoji: '🦠', active: 'bg-cyan-500',   idle: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
     { code: 'herbicide',    label: '除草剂',  emoji: '🌿', active: 'bg-emerald-500',idle: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
     { code: 'acaricide',    label: '杀螨剂',  emoji: '🕷️', active: 'bg-purple-500', idle: 'bg-purple-50 text-purple-600 border-purple-200' },
+    { code: 'plant_growth_regulator', label: '调节剂', emoji: '🌱', active: 'bg-violet-500', idle: 'bg-violet-50 text-violet-600 border-violet-200' },
     { code: 'protective',   label: '保护剂',  emoji: '🛡️', active: 'bg-blue-500',   idle: 'bg-blue-50 text-blue-600 border-blue-200' },
     { code: 'adjuvant',     label: '助剂',    emoji: '💧', active: 'bg-amber-500',  idle: 'bg-amber-50 text-amber-600 border-amber-200' },
     { code: 'other',        label: '其他',    emoji: '📦', active: 'bg-gray-500',   idle: 'bg-gray-50 text-gray-600 border-gray-200' },

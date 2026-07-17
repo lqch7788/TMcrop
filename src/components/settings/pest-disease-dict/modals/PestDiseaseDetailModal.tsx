@@ -73,12 +73,14 @@ const getPesticideTypeBadge = (type: string) => {
 };
 
 // 2026-07-17：pesticide_type 中文兜底表（method-dict-cross-fallback 教训 — 字典未加载时 getDictLabel
-// 返回空导致显示英文原码。含 18 项细分码，与 DB pesticide_type 字典对齐）
+// 返回空导致显示英文原码。含 24 项细分码，与 DB pesticide_type 字典对齐）
+// 2026-07-17 新增调节剂（GB/T 19378 国标 04 类）6 个子项：促进/延缓/催熟/生根/保果/抗逆
 const PESTICIDE_TYPE_FALLBACK: Record<string, string> = {
   insecticide: '杀虫剂',
   fungicide: '杀菌剂',
   herbicide: '除草剂',
   acaricide: '杀螨剂',
+  plant_growth_regulator: '调节剂',
   protective: '保护剂',
   adjuvant: '助剂',
   other: '其他',
@@ -93,6 +95,13 @@ const PESTICIDE_TYPE_FALLBACK: Record<string, string> = {
   protective_systemic: '保护剂-系统性',
   adjuvant_penetration: '助剂-渗透剂',
   adjuvant_synergist: '助剂-增效剂',
+  // 调节剂子类
+  pgr_promoter: '调节剂-促进生长',
+  pgr_retardant: '调节剂-延缓生长',
+  pgr_ripening: '调节剂-催熟催黄',
+  pgr_rooting: '调节剂-生根壮苗',
+  pgr_fruit_set: '调节剂-保花保果',
+  pgr_stress: '调节剂-抗逆增效',
 };
 
 /** 药剂类型码 → 中文（字典优先，fallback 表兜底，最后回原码） */

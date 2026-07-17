@@ -293,13 +293,35 @@ export default function PesticideLibraryPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
           <TabsList selectedValue={activeTab} onValueChange={handleTabChange}>
             <TabsTrigger value="">全部</TabsTrigger>
-            <TabsTrigger value="insecticide">杀虫剂</TabsTrigger>
-            <TabsTrigger value="fungicide">杀菌剂</TabsTrigger>
-            <TabsTrigger value="herbicide">除草剂</TabsTrigger>
-            <TabsTrigger value="acaricide">杀螨剂</TabsTrigger>
-            <TabsTrigger value="protective">保护剂</TabsTrigger>
-            <TabsTrigger value="adjuvant">助剂</TabsTrigger>
-            <TabsTrigger value="other">其他</TabsTrigger>
+            {/* 2026-07-17：从 pesticide_type 字典动态生成 Tab（去除硬编码，自动包含调节剂）
+                只显示一级分类（parentId 为空），按 sort_order 排序
+                「其他」兜底分类强制排到最后（不动 DB sort_order） */}
+            {dictionaries
+              .filter((d: any) => {
+                const cat = d.categoryCode || d.category_code || d.category;
+                const code = d.dictCode || d.dict_code;
+                const parentId = d.parentId || d.parent_id;
+                return cat === 'pesticide_type' && !parentId && code && code !== 'nematicide';
+              })
+              .sort((a: any, b: any) => {
+                const codeA = a.dictCode || a.dict_code;
+                const codeB = b.dictCode || b.dict_code;
+                // 「其他」兜底永远排最后
+                if (codeA === 'other') return 1;
+                if (codeB === 'other') return -1;
+                const sa = a.sortOrder ?? a.sort_order ?? 0;
+                const sb = b.sortOrder ?? b.sort_order ?? 0;
+                return sa - sb;
+              })
+              .map((d: any) => {
+                const code = d.dictCode || d.dict_code;
+                const label = d.dictLabel || d.name;
+                return (
+                  <TabsTrigger key={code} value={code}>
+                    {label}
+                  </TabsTrigger>
+                );
+              })}
           </TabsList>
 
           {/* 搜索框 + 重置 + 搜索按键 */}

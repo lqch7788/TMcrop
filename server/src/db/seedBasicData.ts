@@ -696,6 +696,15 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'PT006', categoryCode: 'pesticide_type', dictCode: 'adjuvant', dictLabel: '助剂', dictValue: 'adjuvant', color: 'pink', sortOrder: 6, isDefault: 0, status: 'active' },
   { id: 'PT007', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 7, isDefault: 0, status: 'active' },
   // 2026-07-10：移除「杀线虫剂」（PT008）— 用户要求去掉该分类
+  // 2026-07-17：新增「植物生长调节剂」PT008（GB/T 19378 国标分类 04 类）— 数据源 ChemicalBook / 中国农药信息网
+  { id: 'PT008', categoryCode: 'pesticide_type', dictCode: 'plant_growth_regulator', dictLabel: '调节剂', dictValue: 'plant_growth_regulator', color: 'violet', sortOrder: 8, isDefault: 0, status: 'active' },
+  // 调节剂子类（parent=PT008 调节剂，按主要功能分类）
+  { id: 'PT019', categoryCode: 'pesticide_type', dictCode: 'pgr_promoter', parentId: 'PT008', dictLabel: '调节剂-促进生长', dictValue: 'pgr_promoter', color: 'violet', sortOrder: 21, isDefault: 0, status: 'active' },
+  { id: 'PT020', categoryCode: 'pesticide_type', dictCode: 'pgr_retardant', parentId: 'PT008', dictLabel: '调节剂-延缓生长', dictValue: 'pgr_retardant', color: 'violet', sortOrder: 22, isDefault: 0, status: 'active' },
+  { id: 'PT021', categoryCode: 'pesticide_type', dictCode: 'pgr_ripening', parentId: 'PT008', dictLabel: '调节剂-催熟催黄', dictValue: 'pgr_ripening', color: 'violet', sortOrder: 23, isDefault: 0, status: 'active' },
+  { id: 'PT022', categoryCode: 'pesticide_type', dictCode: 'pgr_rooting', parentId: 'PT008', dictLabel: '调节剂-生根壮苗', dictValue: 'pgr_rooting', color: 'violet', sortOrder: 24, isDefault: 0, status: 'active' },
+  { id: 'PT023', categoryCode: 'pesticide_type', dictCode: 'pgr_fruit_set', parentId: 'PT008', dictLabel: '调节剂-保花保果', dictValue: 'pgr_fruit_set', color: 'violet', sortOrder: 25, isDefault: 0, status: 'active' },
+  { id: 'PT024', categoryCode: 'pesticide_type', dictCode: 'pgr_stress', parentId: 'PT008', dictLabel: '调节剂-抗逆增效', dictValue: 'pgr_stress', color: 'violet', sortOrder: 26, isDefault: 0, status: 'active' },
   // 2026-07-10：药剂类型层级化（parent_id 关联一级条目，杀虫剂→咀嚼式/刺吸式 等）
   // 杀虫剂子类（parent=PT001 杀虫剂）
   { id: 'PT009', categoryCode: 'pesticide_type', dictCode: 'insecticide_chewing', parentId: 'PT001', dictLabel: '杀虫剂-咀嚼式', dictValue: 'insecticide_chewing', color: 'red', sortOrder: 11, isDefault: 0, status: 'active' },

@@ -63,7 +63,10 @@ export function PesticideStockInModal({ isOpen, record, onClose, onSaved }: Pest
       isOpen={isOpen}
       onClose={onClose}
       title="药剂入库"
+      // 2026-07-17：默认大小 +50%（md 500×400 → 750×600）
       size="md"
+      width={750}
+      height={600}
       showFooter={false}
     >
       {/* 药剂信息摘要 */}
