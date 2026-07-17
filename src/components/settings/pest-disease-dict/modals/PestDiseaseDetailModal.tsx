@@ -72,6 +72,34 @@ const getPesticideTypeBadge = (type: string) => {
   }
 };
 
+// 2026-07-17：pesticide_type 中文兜底表（method-dict-cross-fallback 教训 — 字典未加载时 getDictLabel
+// 返回空导致显示英文原码。含 18 项细分码，与 DB pesticide_type 字典对齐）
+const PESTICIDE_TYPE_FALLBACK: Record<string, string> = {
+  insecticide: '杀虫剂',
+  fungicide: '杀菌剂',
+  herbicide: '除草剂',
+  acaricide: '杀螨剂',
+  protective: '保护剂',
+  adjuvant: '助剂',
+  other: '其他',
+  nematicide: '杀线虫剂',
+  insecticide_chewing: '杀虫剂-咀嚼式',
+  insecticide_sucking: '杀虫剂-刺吸式',
+  acaricide_mite: '杀螨剂-螨类',
+  fungicide_fungi: '杀菌剂-真菌',
+  fungicide_bacteria: '杀菌剂-细菌',
+  fungicide_virus: '杀菌剂-病毒',
+  protective_contact: '保护剂-接触式',
+  protective_systemic: '保护剂-系统性',
+  adjuvant_penetration: '助剂-渗透剂',
+  adjuvant_synergist: '助剂-增效剂',
+};
+
+/** 药剂类型码 → 中文（字典优先，fallback 表兜底，最后回原码） */
+function pesticideTypeLabel(code: string): string {
+  return getDictLabel('pesticide_type', code) || PESTICIDE_TYPE_FALLBACK[code] || code;
+}
+
 export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseDetailModalProps) {
   const pestDiseaseStore = usePestDiseaseDictStore();
 
@@ -80,10 +108,14 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
   // 2026-07-17：图片全屏预览
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // 加载关联的药剂
+  // 加载关联的药剂 + 字典（2026-07-17：确保 pesticide_type 字典已加载，否则类型显示英文原码）
   useEffect(() => {
     if (isOpen && record) {
       loadRelatedPesticides();
+      const dictState = useDictionaryStore.getState();
+      if (dictState.dictionaries.length === 0 && !dictState.loading) {
+        dictState.loadDictionaries();
+      }
     }
   }, [isOpen, record]);
 
@@ -119,7 +151,10 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
       isOpen={isOpen}
       onClose={onClose}
       title="病虫害详情"
+      // 2026-07-17：默认大小 +30%（lg 700×500 → 910×650）
       size="lg"
+      width={910}
+      height={650}
       showFooter={false}
     >
       {/* 编号头部 */}
@@ -161,7 +196,7 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
                       key={t}
                       className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200"
                     >
-                      {getDictLabel('pesticide_type', t) || t}
+                      {pesticideTypeLabel(t)}
                     </span>
                   ))}
                 </div>
