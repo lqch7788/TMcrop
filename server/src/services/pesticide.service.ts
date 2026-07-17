@@ -737,7 +737,7 @@ export class PesticideService {
         GROUP BY fertilizer_records.id
       )
       ${dateFilter ? `WHERE ${dateFilter}` : ''}
-      ORDER BY sprayTime DESC
+      ORDER BY substr(sprayTime, 1, 19) DESC
       LIMIT 200
     `;
     // 参数顺序：[specId(分支1), specId(分支2), ...dateParams]
