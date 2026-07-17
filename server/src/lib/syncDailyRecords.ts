@@ -522,7 +522,7 @@ export async function syncPesticideRecords(
       safetySummary,
     ].filter(Boolean).join(' | ') || `从每日记录同步（${validItems.length}种）`;
 
-    // 9. INSERT（27 列对齐 27 值）
+    // 9. INSERT（30 列对齐 30 值 — 2026-07-17 补 bio_agent_list / equipment_list / leaf_fertilizer_list）
     db.run(
       `INSERT INTO pesticide_records (
         id, record_code, spray_time,
@@ -534,9 +534,10 @@ export async function syncPesticideRecords(
         description, source_type,
         source_daily_record_id, source_item_id,
         real_pesticide_code, pesticide_list,
+        bio_agent_list, equipment_list, leaf_fertilizer_list,
         area_id, area_name,
         create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,                                              // 1: id
         recordCode,                                      // 2: record_code
@@ -548,7 +549,8 @@ export async function syncPesticideRecords(
         ctx.greenhouseName || '',                         // 8: greenhouse_name
         ctx.cropName || '',                               // 9: crop_name
         first.name,                                       // 10: pesticide_name
-        first.category || '',                             // 11: pesticide_type
+        // 2026-07-17：pesticide_type 必须 JSON 字符串（数组形式存）— 同步路径之前漏 JSON.stringify
+        JSON.stringify(first.category ? [first.category] : []),  // 11: pesticide_type
         formatDilution(first),                            // 12: dilution_ratio
         totalDosage,                                      // 13: dosage
         first.unit || 'L',                                // 14: dosage_unit
@@ -562,9 +564,12 @@ export async function syncPesticideRecords(
         `pool-${dailyRecordId.slice(-6)}`,                // 22: source_item_id
         realCodesJson,                                    // 23: real_pesticide_code
         JSON.stringify(list),                             // 24: pesticide_list
-        ctx.areaId || null,                               // 25: area_id
-        ctx.areaName || null,                              // 26: area_name
-        new Date().toISOString(),                          // 27: create_time
+        JSON.stringify([]),                               // 25: bio_agent_list (sync 路径暂未提取)
+        JSON.stringify([]),                               // 26: equipment_list (sync 路径暂未提取)
+        JSON.stringify([]),                               // 27: leaf_fertilizer_list (sync 路径暂未提取)
+        ctx.areaId || null,                               // 28: area_id
+        ctx.areaName || null,                              // 29: area_name
+        new Date().toISOString(),                          // 30: create_time
       ]
     );
 

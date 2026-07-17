@@ -493,7 +493,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         // 兼容 bio/physical 字段（如有填）
         bioAgentList: JSON.stringify([]),
         equipmentList: JSON.stringify([]),
-        status: 'completed',
+        // 2026-07-17：移除 status 字段（DB 列已删除，业务上防治记录无中间态）
       } as any);
       onSaved();
     } catch (err) {
