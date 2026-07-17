@@ -228,14 +228,14 @@ export function PestControlTable({
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">施用方法</TableHead>
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">目标病虫害</TableHead>
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">备注</TableHead>
-              <TableHead className="py-3 font-bold text-white whitespace-nowrap">状态</TableHead>
+              {/* 2026-07-17：移除「状态」列（DB 中 10 条记录全部 status=completed，业务上防治=已完成事件，无中间态）*/}
               <TableHead className="py-3 font-bold text-white whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 12 : 11} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={showCheckbox ? 11 : 10} className="px-4 py-12 text-center text-gray-400">
                   暂无防治记录
                 </TableCell>
               </TableRow>
@@ -332,12 +332,7 @@ export function PestControlTable({
                       <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-[120px] truncate" title={record.description || ''}>
                         {record.description || '-'}
                       </TableCell>
-                      {/* 状态 */}
-                      <TableCell className="px-4 py-3 whitespace-nowrap">
-                        <Badge variant="success" className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                          {record.status === 'completed' ? '已完成' : record.status || '已完成'}
-                        </Badge>
-                      </TableCell>
+                      {/* 2026-07-17：移除「状态」单元格（与表头对应）*/}
                       {/* 操作 - 2026-06-21: 删除"查看"按钮（与点击编号重复） */}
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <div className="flex gap-1">

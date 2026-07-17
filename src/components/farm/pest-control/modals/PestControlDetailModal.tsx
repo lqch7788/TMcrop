@@ -33,7 +33,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
       return [];
     }
   };
-  const leafFertilizerList = parseJsonArray(record.leafFertilizerName);
+  const leafFertilizerList = parseJsonArray((record as any).leafFertilizerList ?? record.leafFertilizerName);
   const pesticideList = parseJsonArray((record as any).pesticideList);
   const bioAgentList = parseJsonArray((record as any).bioAgentList);
   const equipmentList = parseJsonArray((record as any).equipmentList);
@@ -246,14 +246,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                       <span className="text-xs text-gray-500">更新时间</span>
                       <span className="text-sm text-gray-900">{formatDateTime(record.updateTime)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">状态</span>
-                      <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${
-                        record.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {record.status === 'active' ? '启用' : record.status}
-                      </span>
-                    </div>
+                    {/* 2026-07-17：移除「状态」字段渲染（DB 列已 DROP）*/}
                   </div>
                 </div>
 

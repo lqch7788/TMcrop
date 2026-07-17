@@ -3201,7 +3201,7 @@ export function initializeDatabase() {
       equipment_list TEXT,
       description TEXT,
       photos TEXT,
-      status TEXT DEFAULT 'completed',
+      -- 2026-07-17：移除 status 列（业务上防治记录无中间态，10 条数据全部为 'completed'，已 DROP）
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime')),
       -- 2026-07-15：每日记录同步溯源（与 fertilizer_records 一致）

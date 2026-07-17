@@ -12,16 +12,19 @@ const router = Router();
  * 生成药剂编码（PC-XXXX 格式，全表递增）
  */
 function generatePesticideCode(db: any): string {
-  const allCodes = queryToObjects<{ pesticideCode: string }>(db,
-    `SELECT pesticide_code FROM pesticide_specs`,
+  // 2026-07-17：MAX + LIKE PC-% 走索引扫描（替代全表拉到 JS 端过滤）
+  // UNIQUE 约束保护并发；写入端 caller 捕获 UNIQUE 错误后重试
+  const maxRow = queryToObjects<{ pesticide_code: string | null }>(db,
+    `SELECT MAX(pesticide_code) AS pesticide_code FROM pesticide_specs WHERE pesticide_code LIKE ?`,
+    ['PC-%']
   );
   let maxSeq = 0;
-  for (const row of allCodes) {
-    const code = row.pesticideCode || '';
-    const match = code.match(/^PC-(\d{4,})$/);
+  const currentMax = maxRow[0]?.pesticide_code;
+  if (currentMax) {
+    const match = currentMax.match(/^PC-(\d{4,})$/);
     if (match) {
       const seq = parseInt(match[1], 10);
-      if (seq > maxSeq) maxSeq = seq;
+      if (!isNaN(seq)) maxSeq = seq;
     }
   }
   return `PC-${String(maxSeq + 1).padStart(4, '0')}`;
@@ -174,28 +177,28 @@ router.put('/:id', (req: Request, res: Response) => {
       brand_name=?, suggested_dosage=?, suggested_ratio=?, dosage_unit=?, remark=?,
       stock_quantity=?, stock_unit=?, unit_price=?, batch_number=?, production_date=?,
       expiration_date=?, package_spec=?, status=?, update_time=? WHERE id=?`,
-      [body.pesticide_name ?? existing[0].pesticide_name,
-       pesticideTypeValue !== undefined ? pesticideTypeValue : existing[0].pesticide_type,
+      [body.pesticideName ?? existing[0].pesticideName,
+       pesticideTypeValue !== undefined ? pesticideTypeValue : existing[0].pesticideTypes ?? existing[0].pesticide_type,
        body.ingredient ?? existing[0].ingredient,
        body.mechanism ?? existing[0].mechanism,
-       body.function_desc ?? existing[0].function_desc,
-       body.taboo_desc ?? existing[0].taboo_desc,
-       body.target_pests ?? existing[0].target_pests,
-       body.spec_content ?? existing[0].spec_content,
+       body.functionDesc ?? existing[0].functionDesc ?? existing[0].function_desc,
+       body.tabooDesc ?? existing[0].tabooDesc ?? existing[0].taboo_desc,
+       body.targetPests ?? existing[0].targetPests ?? existing[0].target_pests,
+       body.specContent ?? existing[0].specContent ?? existing[0].spec_content,
        body.formulation ?? existing[0].formulation,
        body.manufacturer ?? existing[0].manufacturer,
-       body.brand_name ?? existing[0].brand_name,
-       body.suggested_dosage ?? existing[0].suggested_dosage,
-       body.suggested_ratio ?? existing[0].suggested_ratio,
-       body.dosage_unit ?? existing[0].dosage_unit,
+       body.brandName ?? existing[0].brandName ?? existing[0].brand_name,
+       body.suggestedDosage ?? existing[0].suggestedDosage ?? existing[0].suggested_dosage,
+       body.suggestedRatio ?? existing[0].suggestedRatio ?? existing[0].suggested_ratio,
+       body.dosageUnit ?? existing[0].dosageUnit ?? existing[0].dosage_unit,
        body.remark ?? existing[0].remark,
-       body.stock_quantity != null ? Number(body.stock_quantity) : (existing[0].stock_quantity || 0),
-       body.stock_unit ?? existing[0].stock_unit ?? 'kg',
-       body.unit_price != null ? Number(body.unit_price) : (existing[0].unit_price || 0),
-       body.batch_number ?? existing[0].batch_number,
-       body.production_date ?? existing[0].production_date,
-       body.expiration_date ?? existing[0].expiration_date,
-       body.package_spec ?? existing[0].package_spec,
+       body.stockQuantity != null ? Number(body.stockQuantity) : (existing[0].stockQuantity ?? existing[0].stock_quantity ?? 0),
+       body.stockUnit ?? existing[0].stockUnit ?? existing[0].stock_unit ?? 'kg',
+       body.unitPrice != null ? Number(body.unitPrice) : (existing[0].unitPrice ?? existing[0].unit_price ?? 0),
+       body.batchNumber ?? existing[0].batchNumber ?? existing[0].batch_number,
+       body.productionDate ?? existing[0].productionDate ?? existing[0].production_date,
+       body.expirationDate ?? existing[0].expirationDate ?? existing[0].expiration_date,
+       body.packageSpec ?? existing[0].packageSpec ?? existing[0].package_spec,
        body.status ?? existing[0].status,
        now, id]
     );
