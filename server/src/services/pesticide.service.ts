@@ -150,7 +150,7 @@ function aggregateDeductions(deductions: FertilizerDeduction[]): FertilizerDeduc
  */
 function checkAndDecreaseStock(deductions: FertilizerDeduction[], now: string): void {
   for (const d of deductions) {
-    const spec = fertilizerRepository.findSpecById(d.specId);
+    const spec: any = fertilizerRepository.findSpecById(d.specId);
     if (!spec) {
       throw new PesticideBusinessError(
         PesticideErrorCode.FERTILIZER_SPEC_NOT_FOUND,
@@ -158,13 +158,43 @@ function checkAndDecreaseStock(deductions: FertilizerDeduction[], now: string): 
         404,
       );
     }
-    if ((spec.stockQuantity ?? 0) < d.dosage) {
+    // 2026-07-17：单位换算 — 用户输入单位可能与库存单位不一致（如 1000g vs 100kg 库存）
+    // 用 toSpecUnit 转换为库存单位的实际数值，再与库存比较
+    const { toSpecUnit } = require('../lib/unitConversions');
+    const conversion = toSpecUnit(d.dosage, d.unit, spec.stockUnit || 'kg');
+    let actualDeduction: number;
+    let displayUnit = spec.stockUnit || 'kg';
+    let displayDeduction = d.dosage;
+    let unitMismatch = false;
+    if (!conversion) {
+      // 输入数量 ≤ 0 或单位为空：直接用原值
+      actualDeduction = d.dosage;
+    } else if (conversion.needsManualCheck) {
+      // 不可自动换算的单位（包/袋/株/颗 等）：跳过单位换算，按原值比较
+      actualDeduction = d.dosage;
+      unitMismatch = true;
+    } else {
+      actualDeduction = conversion.convertedQuantity;
+      displayDeduction = conversion.convertedQuantity;
+      unitMismatch = (d.unit || '').trim().toLowerCase() !== (spec.stockUnit || 'kg').trim().toLowerCase();
+    }
+    if ((spec.stockQuantity ?? 0) < actualDeduction) {
+      let hint = '';
+      if (conversion && conversion.needsManualCheck) {
+        // 不可自动换算（包/袋/株/颗）：明确提示用户
+        hint = `（您输入的 ${d.dosage}${d.unit} 无法自动换算到库存单位 ${spec.stockUnit || 'kg'}，请确认使用量）`;
+      } else if (unitMismatch) {
+        hint = `（您输入的 ${d.dosage}${d.unit} ≈ ${displayDeduction.toFixed(4)}${displayUnit}，库存单位是 ${spec.stockUnit || 'kg'}）`;
+      }
       throw new PesticideBusinessError(
         PesticideErrorCode.INSUFFICIENT_STOCK,
-        `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0} ${(spec as any).stockUnit || 'kg'}，需 ${d.dosage}`,
+        `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0} ${spec.stockUnit || 'kg'}，需 ${displayDeduction.toFixed(4)} ${displayUnit}${hint}`,
       );
     }
-    const newStock = fertilizerRepository.decreaseStock(d.specId, d.dosage, now);
+    // decreaseStock 永远扣基准单位（kg/L）的数值 — 用 actualDeduction 已经是 spec 单位的值
+    // 注意：fertilizerRepository.decreaseStock 直接扣 stock_quantity 列（实际就是库存单位列），
+    // 所以这里传 actualDeduction 是正确的（与库存单位一致）
+    const newStock = fertilizerRepository.decreaseStock(d.specId, actualDeduction, now);
     if (newStock === null) {
       throw new PesticideBusinessError(
         PesticideErrorCode.INSUFFICIENT_STOCK,
@@ -405,8 +435,9 @@ export class PesticideService {
       throw new PesticideBusinessError(PesticideErrorCode.NOT_FOUND, '防治记录不存在', 404);
     }
 
-    // 解析旧/新 leafFertilizerList
-    const oldItems = parseLeafFertilizerList(existing.leafFertilizerList);
+    // 解析旧/新 leafFertilizerList（queryToObjects 已转 camelCase）
+    const existingRow = existing as unknown as Record<string, any>;
+    const oldItems = parseLeafFertilizerList(existingRow.leafFertilizerList);
     const oldDeductions = aggregateDeductions(extractDeductions(oldItems));
 
     // 兼容 snake_case / camelCase
@@ -506,7 +537,7 @@ export class PesticideService {
       throw new PesticideBusinessError(PesticideErrorCode.NOT_FOUND, '防治记录不存在', 404);
     }
 
-    const items = parseLeafFertilizerList(existing.leafFertilizerList);
+    const items = parseLeafFertilizerList((existing as unknown as Record<string, any>).leafFertilizerList);
     const deductions = aggregateDeductions(extractDeductions(items));
 
     const db = getDatabase();

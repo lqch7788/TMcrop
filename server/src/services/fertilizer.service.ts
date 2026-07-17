@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { fertilizerRepository, FertilizerRepository, FertilizerRecord } from '../repositories/fertilizer.repository';
+import { toSpecUnit } from '../lib/unitConversions';
 
 /**
  * 2026-07-16：本地时间字符串（替换 toISOString）—— UTC 跨天错位 bug 修复
@@ -211,39 +212,138 @@ export class FertilizerService {
           `生成施肥编号失败（重试 10 次仍冲突），请稍后重试`,
         );
       }
-      // 1) 若传了 fertilizerId（实际为 spec id，V2026-07-12 扁平化），先校验存在 + 库存够
+      // 2026-07-17：库存扣减统一处理 — 既支持顶层 fertilizerId，也支持 fertilization_pool 池里每条 specId
+      // - 单位换算：用户输入单位可能与库存单位不一致（如 1000g vs 100kg），用 toSpecUnit 转换
       let specSnapshot: { brandName: string; unitPrice: number; batchNumber: string } | null = null;
+      // 收集所有需要扣库存的项目（specId → { inputDosage, inputUnit, convertedDosage, specUnit, source }）
+      interface DeductionItem {
+        specId: string;
+        inputDosage: number;
+        inputUnit: string;
+        convertedDosage: number;  // 换算到 spec 单位的实际扣减量
+        specUnit: string;
+        needsManualCheck: boolean;
+      }
+      const deductions: DeductionItem[] = [];
+
+      // 来源 1：顶层 fertilizerId（兼容旧 schema）
       if (data.fertilizerId) {
-        const spec = this.repository.findSpecById(data.fertilizerId);
+        const spec: any = this.repository.findSpecById(data.fertilizerId);
+        if (spec && qty > 0) {
+          const conv = toSpecUnit(qty, data.unit || spec.stockUnit || 'kg', spec.stockUnit || 'kg');
+          deductions.push({
+            specId: data.fertilizerId,
+            inputDosage: qty,
+            inputUnit: data.unit || spec.stockUnit || 'kg',
+            convertedDosage: conv ? conv.convertedQuantity : qty,
+            specUnit: spec.stockUnit || 'kg',
+            needsManualCheck: conv ? conv.needsManualCheck : false,
+          });
+        }
+      }
+
+      // 来源 2：fertilization_pool 池里每条有 specId 的
+      // 2026-07-17：兼容两种字段名 — 新版 FertilizerPoolEditor 写 \$.specId，旧版手动录入写 \$.fertilizerSpecId
+      if (data.fertilizationPool && typeof data.fertilizationPool === 'string') {
+        try {
+          const pool = JSON.parse(data.fertilizationPool);
+          if (Array.isArray(pool)) {
+            // 同 specId 合并扣减量
+            const grouped = new Map<string, { inputDosage: number; inputUnit: string }>();
+            for (const r of pool) {
+              // 兼容两种字段名
+              const specId = (r.specId && r.specId.trim()) || (r.fertilizerSpecId && r.fertilizerSpecId.trim());
+              if (!specId) continue;
+              const rQty = Number(r.quantity) || 0;
+              if (rQty <= 0) continue;
+              const existing = grouped.get(specId);
+              if (existing) {
+                existing.inputDosage += rQty;
+              } else {
+                grouped.set(specId, { inputDosage: rQty, inputUnit: r.unit || 'kg' });
+              }
+            }
+            for (const [specId, item] of grouped.entries()) {
+              const spec: any = this.repository.findSpecById(specId);
+              if (!spec) {
+                throw new BusinessError(
+                  FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
+                  `肥料规格不存在: ${specId}`,
+                  404,
+                );
+              }
+              const conv = toSpecUnit(item.inputDosage, item.inputUnit, spec.stockUnit || 'kg');
+              deductions.push({
+                specId,
+                inputDosage: item.inputDosage,
+                inputUnit: item.inputUnit,
+                convertedDosage: conv ? conv.convertedQuantity : item.inputDosage,
+                specUnit: spec.stockUnit || 'kg',
+                needsManualCheck: conv ? conv.needsManualCheck : false,
+              });
+            }
+          }
+        } catch (e) {
+          // 池 JSON 解析失败：忽略（不影响顶层记录保存）
+          if (!(e instanceof BusinessError)) { /* ignore parse error */ }
+          else throw e;
+        }
+      }
+
+      // 2) 执行扣减（按 specId 合并：顶层 + pool 可能有重复 specId）
+      const deductBySpecId = new Map<string, DeductionItem>();
+      for (const d of deductions) {
+        const existing = deductBySpecId.get(d.specId);
+        if (existing) {
+          existing.convertedDosage += d.convertedDosage;
+        } else {
+          deductBySpecId.set(d.specId, { ...d });
+        }
+      }
+
+      // 3) 校验库存够 + 扣减
+      for (const [specId, d] of deductBySpecId.entries()) {
+        const spec: any = this.repository.findSpecById(specId);
         if (!spec) {
           throw new BusinessError(
             FertilizerErrorCode.FERTILIZER_LIBRARY_NOT_FOUND,
-            `肥料规格不存在: ${data.fertilizerId}`,
+            `肥料规格不存在: ${specId}`,
             404,
           );
         }
-        if (qty > 0 && (spec.stockQuantity ?? 0) < qty) {
+        if (d.convertedDosage > 0 && (spec.stockQuantity ?? 0) < d.convertedDosage) {
+          let hint = '';
+          if (d.needsManualCheck) {
+            hint = `（您输入的 ${d.inputDosage}${d.inputUnit} 无法自动换算到库存单位 ${d.specUnit}，请确认使用量）`;
+          } else if ((d.inputUnit || '').trim().toLowerCase() !== (d.specUnit || 'kg').trim().toLowerCase()) {
+            hint = `（您输入的 ${d.inputDosage}${d.inputUnit} ≈ ${d.convertedDosage.toFixed(4)}${d.specUnit}，库存单位是 ${d.specUnit}）`;
+          }
           throw new BusinessError(
             FertilizerErrorCode.INSUFFICIENT_STOCK,
-            `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0}，需 ${qty}`,
+            `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存不足：当前 ${spec.stockQuantity ?? 0} ${d.specUnit}，需 ${d.convertedDosage.toFixed(4)} ${d.specUnit}${hint}`,
           );
         }
-        // 2) 扣库存（repository 失败时抛错 — 含 stock_quantity 不足场景）
-        if (qty > 0) {
-          const newStock = this.repository.decreaseStock(data.fertilizerId, qty, now);
+        if (d.convertedDosage > 0) {
+          const newStock = this.repository.decreaseStock(specId, d.convertedDosage, now);
           if (newStock === null) {
             throw new BusinessError(
               FertilizerErrorCode.INSUFFICIENT_STOCK,
-              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足（其他事务正在扣减），请重试`,
+              `${spec.fertilizerName}${spec.brandName ? '（' + spec.brandName + '）' : ''} 库存并发不足，请重试`,
             );
           }
         }
-        // 快照 spec 关键字段（spec 删除后仍能查"当时用了什么"）
-        specSnapshot = {
-          brandName: spec.brandName || '',
-          unitPrice: spec.unitPrice || 0,
-          batchNumber: spec.batchNumber || '',
-        };
+      }
+
+      // 4) 顶层 fertilizerId 的 specSnapshot（用于顶部 spec 关键字段展示）
+      if (data.fertilizerId) {
+        const spec: any = this.repository.findSpecById(data.fertilizerId);
+        if (spec) {
+          specSnapshot = {
+            brandName: spec.brandName || '',
+            unitPrice: spec.unitPrice || 0,
+            batchNumber: spec.batchNumber || '',
+          };
+        }
       }
 
       // 3) 写记录
@@ -401,6 +501,49 @@ export class FertilizerService {
   }
 
   /**
+   * 2026-07-17：从施肥记录中恢复库存（含顶层 fertilizerId + fertilization_pool 每条 specId）
+   * - 兼容两种字段名：r.specId（新）/ r.fertilizerSpecId（旧）
+   * - 同 specId 合并后做单位换算再 increaseStock
+   */
+  private increaseStockFromFarmRecord(record: Record<string, any>, now: string): void {
+    // 1) 顶层 fertilizerId
+    const fid = record.fertilizerId ?? null;
+    const qty = Number(record.quantity) || 0;
+    if (fid && qty > 0) {
+      this.repository.increaseStock(fid, qty, now);
+    }
+    // 2) fertilization_pool 池里每条
+    if (record.fertilizationPool && typeof record.fertilizationPool === 'string') {
+      try {
+        const pool = JSON.parse(record.fertilizationPool);
+        if (Array.isArray(pool)) {
+          const grouped = new Map<string, { inputDosage: number; inputUnit: string }>();
+          for (const r of pool) {
+            const specId = (r.specId && r.specId.trim()) || (r.fertilizerSpecId && r.fertilizerSpecId.trim());
+            if (!specId) continue;
+            const rQty = Number(r.quantity) || 0;
+            if (rQty <= 0) continue;
+            const existing = grouped.get(specId);
+            if (existing) {
+              existing.inputDosage += rQty;
+            } else {
+              grouped.set(specId, { inputDosage: rQty, inputUnit: r.unit || 'kg' });
+            }
+          }
+          for (const [specId, item] of grouped.entries()) {
+            const spec: any = this.repository.findSpecById(specId);
+            if (!spec) continue;
+            // 单位换算：池里的 quantity 是用户原值（未换算），需转换为 spec 单位再 increaseStock
+            const conv = toSpecUnit(item.inputDosage, item.inputUnit, spec.stockUnit || 'kg');
+            const actualIncrease = conv ? conv.convertedQuantity : item.inputDosage;
+            this.repository.increaseStock(specId, actualIncrease, now);
+          }
+        }
+      } catch { /* ignore parse error */ }
+    }
+  }
+
+  /**
    * 删除单条施肥记录（含事务：恢复库存 → 删记录）
    */
   async remove(id: string): Promise<{ id: string }> {
@@ -419,11 +562,8 @@ export class FertilizerService {
 
     db.exec('BEGIN');
     try {
-      const fid = ex.fertilizerId ?? null;
-      const qty = Number(ex.quantity) || 0;
-      if (fid && qty > 0) {
-        this.repository.increaseStock(fid, qty, now);
-      }
+      // 2026-07-17：恢复库存（含顶层 fertilizerId + fertilization_pool 池里每条 specId）
+      this.increaseStockFromFarmRecord(ex, now);
       this.repository.deleteById(id);
       db.exec('COMMIT');
       this.repository.save();
@@ -464,11 +604,11 @@ export class FertilizerService {
     try {
       // 对每条 deletable 记录，恢复库存后删除
       // 2026-07-16 审核修复：camelCase 读取（原 rec.fertilizer_id 恒 undefined → 批量删除不回补库存）
+      // 2026-07-17：扩展到 pool 里的每条 specId（兼容旧 schema 的 fertilizerSpecId 字段名）
       for (const id of deletable) {
         const rec = this.repository.findById(id) as unknown as Record<string, any> | null;
-        const recQty = Number(rec?.quantity) || 0;
-        if (rec && rec.fertilizerId && recQty > 0) {
-          this.repository.increaseStock(rec.fertilizerId, recQty, now);
+        if (rec) {
+          this.increaseStockFromFarmRecord(rec, now);
         }
         this.repository.deleteById(id);
       }

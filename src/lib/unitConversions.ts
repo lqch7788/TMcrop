@@ -94,3 +94,38 @@ export function getUnitCategory(unit: string): UnitCategory {
   const lookup = UNIT_TO_BASE_FACTOR[trimmed] || UNIT_TO_BASE_FACTOR[trimmed.toLowerCase()];
   return lookup?.category || 'unknown';
 }
+
+/**
+ * 2026-07-17：根据 spec 的库存单位计算需要扣减的 base 数量（前端用）
+ * - 输入 quantity + 单位 + spec.stockUnit → 转换为 spec 库存单位下的实际数值
+ * - 若单位无法换算（count 类），返回 needsManualCheck=true 让 UI 提示用户
+ */
+export function toSpecUnit(
+  quantity: number,
+  inputUnit: string,
+  specUnit: string,
+): { convertedQuantity: number; needsManualCheck: boolean; originalUnit: string; targetUnit: string } | null {
+  if (!quantity || quantity <= 0) return null;
+  if ((inputUnit || '').trim().toLowerCase() === (specUnit || '').trim().toLowerCase()) {
+    return { convertedQuantity: quantity, needsManualCheck: false, originalUnit: inputUnit, targetUnit: specUnit };
+  }
+  if (!isConvertibleUnit(inputUnit)) {
+    return { convertedQuantity: quantity, needsManualCheck: true, originalUnit: inputUnit, targetUnit: specUnit };
+  }
+  if (!isConvertibleUnit(specUnit)) {
+    return { convertedQuantity: quantity, needsManualCheck: true, originalUnit: inputUnit, targetUnit: specUnit };
+  }
+  const inputBase = toBaseUnit(quantity, inputUnit);
+  const specBaseSample = toBaseUnit(1, specUnit);
+  if (!inputBase || !specBaseSample) {
+    return { convertedQuantity: quantity, needsManualCheck: true, originalUnit: inputUnit, targetUnit: specUnit };
+  }
+  if (inputBase.category !== specBaseSample.category) {
+    return { convertedQuantity: quantity, needsManualCheck: true, originalUnit: inputUnit, targetUnit: specUnit };
+  }
+  // 换算：inputBaseQty ÷ specBaseSample.baseQuantity
+  // 例：inputBaseQty=500 (kg), specBaseSample.baseQuantity=1 (1kg=1 base) → 500/1=500 kg
+  // 例：inputBaseQty=0.5 (kg), specBaseSample.baseQuantity=1000 (1t=1000kg) → 0.5/1000=0.0005 t
+  const converted = inputBase.baseQuantity / specBaseSample.baseQuantity;
+  return { convertedQuantity: converted, needsManualCheck: false, originalUnit: inputUnit, targetUnit: specUnit };
+}

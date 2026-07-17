@@ -11,6 +11,29 @@ import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { useFertilizerLibraryStore, useDictionaryStore, getDictItemName } from '@/stores';
 import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS } from '../../settings/fertilizer-library/constants';
+import { toSpecUnit } from '@/lib/unitConversions';
+
+/** 2026-07-17：单位不匹配检测 + 换算预览（避免用户填错单位导致 INSUFFICIENT_STOCK） */
+function unitMismatch(inputUnit: string, stockUnit: string): boolean {
+  return (inputUnit || '').trim().toLowerCase() !== (stockUnit || 'kg').trim().toLowerCase();
+}
+
+function UnitHint({ qty, inputUnit, stockUnit }: { qty: number; inputUnit: string; stockUnit: string }) {
+  if (!qty || qty <= 0 || !unitMismatch(inputUnit, stockUnit)) return null;
+  const conv = toSpecUnit(qty, inputUnit, stockUnit);
+  if (!conv || conv.needsManualCheck) {
+    return (
+      <div className="text-[10px] text-amber-600 mt-0.5 leading-tight">
+        ⚠ 单位「{inputUnit}」无法自动换算到「{stockUnit}」，请确认
+      </div>
+    );
+  }
+  return (
+    <div className="text-[10px] text-blue-600 mt-0.5 leading-tight">
+      ≈ <span className="font-mono">{Number(conv.convertedQuantity).toFixed(4)}</span> {stockUnit}（自动换算）
+    </div>
+  );
+}
 
 // 施肥方式字典 key
 const METHOD_DICT_KEY = 'fertilization_method';
@@ -241,13 +264,20 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
                     placeholder="用量" step="0.01" min="0" className="h-8 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">单位</Label>
+                  <Label className="text-xs text-gray-500 flex items-center gap-1">
+                    单位
+                    <span className="text-[10px] text-gray-400 font-normal">（库存：{item.stockUnit || 'kg'}）</span>
+                  </Label>
                   <Select value={item.unit} onValueChange={(v) => updateField(idx, 'unit', v)}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className={`h-8 text-sm ${unitMismatch(item.unit, item.stockUnit) ? 'border-amber-400' : ''}`}>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {STOCK_UNIT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {/* 2026-07-17：单位不一致时给换算预览，避免用户填错单位导致 INSUFFICIENT_STOCK */}
+                  <UnitHint qty={Number(item.dosage) || 0} inputUnit={item.unit} stockUnit={item.stockUnit || 'kg'} />
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">稀释倍数</Label>
