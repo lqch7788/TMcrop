@@ -15,7 +15,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
-import { FertilizerSpec, useToastStore } from '@/stores';
+import { FertilizerSpec, useToastStore, useFertilizerLibraryStore } from '@/stores';
 import { getDictItemName } from '@/stores';
 import { enhancedApiClient } from '@/lib/apiClient';
 import { exportXlsx } from '@/services/exporters';
@@ -81,6 +81,8 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const [activeTab, setActiveTab] = useState<'basic' | 'usage'>('basic');
   const [usageRecords, setUsageRecords] = useState<any[]>([]);
   const [usageLoading, setUsageLoading] = useState(false);
+  // 删除记录后刷新肥料库列表（让库存数量变化可见）
+  const libStore = useFertilizerLibraryStore();
   // 翻页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -200,10 +202,12 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
     if (!ok) return;
     try {
       const url = isFert
-        ? `/api/fertilizer/${r.recordId}`
-        : `/api/pest-records/${r.recordId}`;
+        ? `/fertilizer/${r.recordId}`
+        : `/pest-records/${r.recordId}`;
       await enhancedApiClient.delete(url);
       toast?.success?.(`已删除${sourceLabel}，库存已恢复`);
+      // 刷新肥料库列表（让库存数字实时更新）
+      libStore.fetchItems();
       // 重新拉取使用记录
       setUsageLoading(true);
       const resp: any = await enhancedApiClient.get(`/pest-records/by-spec/${record.id}`);
