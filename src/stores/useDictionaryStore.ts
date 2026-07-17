@@ -82,6 +82,52 @@ export const getDictItems = (category: string): Dictionary[] => {
 };
 
 // 获取字典项名称
+// 2026-07-17：pesticide_type 字典兜底（解决字典未加载/缓存未刷新显示英文 bug）
+// 覆盖全部分类常用码 — 即使后端字典未拉到，前端也能显示中文
+const DICT_FALLBACK: Record<string, Record<string, string>> = {
+  pesticide_type: {
+    insecticide: '杀虫剂',
+    fungicide: '杀菌剂',
+    herbicide: '除草剂',
+    acaricide: '杀螨剂',
+    plant_growth_regulator: '调节剂',
+    protective: '保护剂',
+    adjuvant: '助剂',
+    other: '其他',
+    nematicide: '杀线虫剂',
+    insecticide_chewing: '杀虫剂-咀嚼式',
+    insecticide_sucking: '杀虫剂-刺吸式',
+    acaricide_mite: '杀螨剂-螨类',
+    fungicide_fungi: '杀菌剂-真菌',
+    fungicide_bacteria: '杀菌剂-细菌',
+    fungicide_virus: '杀菌剂-病毒',
+    protective_contact: '保护剂-接触式',
+    protective_systemic: '保护剂-系统性',
+    adjuvant_penetration: '助剂-渗透剂',
+    adjuvant_synergist: '助剂-增效剂',
+    pgr_promoter: '调节剂-促进生长',
+    pgr_retardant: '调节剂-延缓生长',
+    pgr_ripening: '调节剂-催熟催黄',
+    pgr_rooting: '调节剂-生根壮苗',
+    pgr_fruit_set: '调节剂-保花保果',
+    pgr_stress: '调节剂-抗逆增效',
+  },
+  application_method: {
+    spray: '喷雾',
+    drench: '灌根',
+    fumigation: '熏蒸',
+    broadcast: '撒施',
+    trap: '诱捕',
+    soak: '浸泡',
+    other: '其他',
+  },
+  control_type: {
+    chemical: '化学防治',
+    bio: '生物防治',
+    physical: '物理防治',
+  },
+};
+
 export const getDictItemName = (category: string, code: string): string => {
   if (!code) return '';
 
@@ -100,6 +146,14 @@ export const getDictItemName = (category: string, code: string): string => {
     const c = d.dictCode || (d as any).code || (d as any).dict_code;
     return cat === category && c === code;
   });
+
+  if (item) {
+    return item.dictLabel || (item as any).dict_label || (item as any).name || code;
+  }
+
+  // 2026-07-17：字典未命中查 FALLBACK 兜底（前端不显示英文原码）
+  const fallback = DICT_FALLBACK[category]?.[code];
+  if (fallback) return fallback;
 
   if (!item) {
     // 如果找不到，尝试模糊匹配（处理空格/逗号分隔的多值情况）

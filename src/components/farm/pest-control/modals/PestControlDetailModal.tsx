@@ -23,15 +23,19 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
 
   if (!isOpen || !record) return null;
 
-  // 解析 JSON 列表
-  const parseJsonArray = (jsonStr: string | null | undefined): any[] => {
-    if (!jsonStr) return [];
-    try {
-      const parsed = JSON.parse(jsonStr);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+  // 解析 JSON 列表（兼容 string JSON / 已解析的 array / null undefined）
+  const parseJsonArray = (val: unknown): any[] => {
+    if (val == null) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
     }
+    return [];
   };
   const leafFertilizerList = parseJsonArray((record as any).leafFertilizerList ?? record.leafFertilizerName);
   const pesticideList = parseJsonArray((record as any).pesticideList);
@@ -152,13 +156,14 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                 </div>
                 <div>
                   <span className="text-xs text-emerald-600 block font-medium mb-1">药剂类型</span>
+                  {/* 2026-07-17：从 unifiedItems 派生所有药剂类型（去重 + 中文）— 之前用 record.pesticideTypes 仅第 1 个药剂的 */}
                   <div className="flex flex-wrap gap-1">
-                    {(record.pesticideTypes || []).map(t => (
+                    {Array.from(new Set(unifiedItems.flatMap((it: any) => it.pesticideTypes || []))).map(t => (
                       <span key={t} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
                         {getDictLabel('pesticide_type', t) || t}
                       </span>
                     ))}
-                    {(!record.pesticideTypes || record.pesticideTypes.length === 0) && (
+                    {unifiedItems.length === 0 && (
                       <span className="text-xs text-gray-400">-</span>
                     )}
                   </div>

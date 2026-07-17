@@ -111,16 +111,12 @@ function parsePesticideTypes(value: unknown): string[] {
   return [];
 }
 
-function normalizePestControl(db: Record<string, unknown>): PestControlData {
-  const result: Record<string, unknown> = {};
-  for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
-    // 2026-07-10：pesticideTypes 特殊处理（JSON 数组 → string[]）
-    if (camelKey === 'pesticideTypes') {
-      result[camelKey] = parsePesticideTypes(db[dbKey]);
-    } else {
-      result[camelKey] = db[dbKey] ?? null;
-    }
-  }
+// 2026-07-17：API 已返回 camelCase（camelCaseResponse 中间件），normalize 只对 JSON 字段做反序列化 + pesticideTypes 解析
+function normalizePestControl(raw: Record<string, unknown>): PestControlData {
+  const result: Record<string, unknown> = { ...raw };
+  // pesticideTypes：API 可能返回 array（已 parse）或 string（未 parse），统一为 array
+  const pesticideTypesVal = raw.pesticideTypes ?? raw.pesticide_type;
+  result.pesticideTypes = parsePesticideTypes(pesticideTypesVal);
   return result as unknown as PestControlData;
 }
 
@@ -176,7 +172,9 @@ export const usePestControlStore = create<PestControlState>()(
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
         const response = await enhancedApiClient.get<any>(`/pest-records?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-        set({ items: rawItems as PestControlData[], isLoading: false });
+        // 2026-07-17：normalize — 字段名转 camelCase + pesticideTypes JSON 字符串→数组
+        const items = (rawItems as Record<string, unknown>[]).map(normalizePestControl);
+        set({ items: items as unknown as PestControlData[], isLoading: false });
       } catch (err) {
         set({ error: (err as Error).message, isLoading: false });
       }
@@ -185,7 +183,8 @@ export const usePestControlStore = create<PestControlState>()(
     fetchItemById: async (id: string) => {
       try {
         const response = await enhancedApiClient.get<any>(`/pest-records/${id}`);
-        return ((response as any).data ?? response) as PestControlData;
+        const raw = (response as any).data ?? response;
+        return normalizePestControl(raw as Record<string, unknown>);
       } catch {
         return null;
       }
@@ -196,9 +195,10 @@ export const usePestControlStore = create<PestControlState>()(
         // 2026-07-10：pesticideTypes 数组转 JSON 字符串（后端路由已支持两种格式）
         const body = denormalizePestControl(item);
         const response = await enhancedApiClient.post<any>('/pest-records', body);
-        const newItem = (response.data ?? response) as PestControlData;
-        set((state) => ({ items: [newItem, ...state.items] }));
-        return newItem;
+        const raw = (response.data ?? response) as Record<string, unknown>;
+        const newItem = normalizePestControl(raw);
+        set((state) => ({ items: [newItem as unknown as PestControlData, ...state.items] }));
+        return newItem as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
         return null;
@@ -209,11 +209,12 @@ export const usePestControlStore = create<PestControlState>()(
       try {
         const body = denormalizePestControl(updates);
         const response = await enhancedApiClient.put<any>(`/pest-records/${id}`, body);
-        const updated = (response.data ?? response) as PestControlData;
+        const raw = (response.data ?? response) as Record<string, unknown>;
+        const updated = normalizePestControl(raw);
         set((state) => ({
-          items: state.items.map((i) => (i.id === id ? updated : i)),
+          items: state.items.map((i) => (i.id === id ? (updated as unknown as PestControlData) : i)),
         }));
-        return updated;
+        return updated as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
         return null;
