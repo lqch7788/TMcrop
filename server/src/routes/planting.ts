@@ -1827,7 +1827,7 @@ router.post('/:id/harvest-records', async (req, res) => {
     // 2026-06-29: 加 seedForm 字段（种植自留种采收形态）
     const {
       recordDate, destination, subType, seedForm, warehouseId, warehouseName,
-      quantity, unit, notes, operatorName, createBy, createById,
+      quantity, unit, notes, operatorName, operatorId, createBy, createById,
       // 2026-07-03：采收入库弹窗 sync 写入时带进来的，不需要后端重新创建
       harvestRecordId: frontHarvestRecordId,
       inventoryStockId: frontInventoryStockId,
@@ -1927,6 +1927,10 @@ router.post('/:id/harvest-records', async (req, res) => {
         destination: 'seed_source',
         quantity, unit, notes,
         seedForm: seedForm || undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
+        // 2026-07-18：种植自留种模式补传 operatorId → crop_circulation_records.operator_id
+        // - 前端从 currentUser.oid 取（默认当前登录人员）
+        // - 种源追溯时间线「操作员」列能正确显示
+        operatorId: operatorId || createById || operatorName || undefined,
       })
       if (result?.circulationId) generatedCircId = result.circulationId
     }

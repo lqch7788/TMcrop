@@ -373,6 +373,8 @@ export interface AddHarvestRecordInput {
   // 2026-07-09 v5 阶段二（方案 E）：补录场景必填（后端基于 planting.status 自动判断补录模式）
   supplementaryReason?: string
   operatorName?: string
+  // 2026-07-18：种植自留种模式补传 operatorId（后端 → executeCirculation → crop_circulation_records.operator_id）
+  operatorId?: string
   createBy?: string
   createById?: string
 }

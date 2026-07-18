@@ -230,19 +230,41 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   }
 
   // 4. crop_circulation_records（circulation，仅种源）
+  // 2026-07-18 修复：LEFT JOIN 源表（plantings/seedlings）+ users 表，补全
+  //   refCode（源单号）、operatorName（操作员）、cropName/varietyName（作物品种）
   if (entityType === 'seed_source') {
     try {
       const stmt = db.prepare(`
-        SELECT id, circulation_date, circulation_type, source_module,
-               quantity, unit, disposition, notes, created_at
-        FROM crop_circulation_records
-        WHERE parent_source_id = ? OR new_source_id = ?
-        ORDER BY created_at DESC LIMIT ?
+        SELECT
+          cc.id, cc.circulation_date, cc.circulation_type, cc.source_module,
+          cc.source_id, cc.quantity, cc.unit, cc.disposition, cc.notes, cc.created_at,
+          cc.operator_id,
+          -- 源单据 code（关联单号 refCode）：从源表按 source_module 分支取
+          COALESCE(sp.planting_code, sd.seedling_code) AS ref_code,
+          -- 作物名 + 品种名（来源列）
+          COALESCE(sp.crop_name, sd.crop_name, ss_parent.crop_name, ss_new.crop_name) AS crop_name,
+          COALESCE(sp.crop_variety, sd.crop_variety, ss_parent.crop_variety, ss_new.crop_variety) AS variety_name,
+          -- 操作员名（从 users 表取 real_name）
+          COALESCE(u.real_name, u.username) AS operator_name
+        FROM crop_circulation_records cc
+        LEFT JOIN plantings sp
+          ON sp.id = cc.source_id AND cc.source_module = 'planting'
+        LEFT JOIN seedlings sd
+          ON sd.id = cc.source_id AND cc.source_module = 'seedling'
+        LEFT JOIN seed_sources ss_parent
+          ON ss_parent.id = cc.parent_source_id
+        LEFT JOIN seed_sources ss_new
+          ON ss_new.id = cc.new_source_id
+        LEFT JOIN users u
+          ON u.id = cc.operator_id
+        WHERE cc.parent_source_id = ? OR cc.new_source_id = ?
+        ORDER BY cc.created_at DESC LIMIT ?
       `);
       stmt.bind([entityId, entityId, limit]);
       while (stmt.step()) {
         const r = stmt.getAsObject() as Record<string, unknown>;
         const qty = Number(r.quantity || 0);
+        const sourceModuleCn = SOURCE_MODULE_CN[String(r.source_module || '')] || String(r.source_module || '');
         results.push({
           id: String(r.id || ''),
           occurredAt: String(r.created_at || r.circulation_date || ''),
@@ -251,7 +273,18 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           action: CIRCULATION_TYPE_CN[String(r.circulation_type || '')] || String(r.circulation_type || '回流'),
           quantityDelta: qty,
           unit: String(r.unit || ''),
-          refModule: SOURCE_MODULE_CN[String(r.source_module || '')] || String(r.source_module || ''),
+          // 2026-07-18 修复：refCode（关联单号）从源表取
+          refCode: String(r.ref_code || ''),
+          refModule: sourceModuleCn,
+          // 2026-07-18 修复：operatorName 从 users.real_name 取
+          operatorName: String(r.operator_name || ''),
+          // 2026-07-18 修复：cropName 显示完整「作物+品种」路径
+          // 优先级：variety_name（品种）> crop_name（作物）
+          cropName: r.variety_name
+            ? `${r.crop_name ? String(r.crop_name) + ' › ' : ''}${String(r.variety_name)}`
+            : (r.crop_name ? String(r.crop_name) : undefined),
+          // 2026-07-18 修复：inboundSource（来源）与 refModule 同步（中文）
+          inboundSource: sourceModuleCn,
           remarks: [
                 r.notes,
                 r.disposition ? `处置方式：${DISPOSITION_CN[String(r.disposition)] || r.disposition}` : null,
