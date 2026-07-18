@@ -66,7 +66,11 @@ describe('executeCirculation PROPAGATION', () => {
     })
     expect(result.circulationId).toBeDefined()
     expect(result.newSourceId).toBeDefined()
-    expect(result.stockId).toBeUndefined()
+    // 2026-07-18: PROPAGATION 也返回 stockId（指向新建/合并的种源）
+    expect(result.stockId).toBeDefined()
+    expect(result.stockId).toBe(result.newSourceId)
+    // 2026-07-18: 返回 mergeAction
+    expect(result.mergeAction).toBe('create_new')
 
     // 验证: 至少 2 次 db.run (INSERT seed_sources + INSERT crop_circulation_records)
     expect(mockDb.run).toHaveBeenCalled()
@@ -76,18 +80,18 @@ describe('executeCirculation PROPAGATION', () => {
     expect(circInsertCalls.length).toBe(1)
   })
 
-  it('PROPAGATION + destination=inventory_stock 应抛错', () => {
-    expect(() => executeCirculation({
+  it('PROPAGATION + destination=inventory_stock 应抛错', async () => {
+    await expect(executeCirculation({
       circulationType: 'PROPAGATION',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
       parentSourceId: 'ss-parent',
       subType: 'seed_saving',
       destination: 'inventory_stock',
-    })).toThrow('只能 destination=seed_source')
+    })).rejects.toThrow('只能 destination=seed_source')
   })
 
-  it('PROPAGATION + subType=cutting 应派生 source_origin=cutting', async () => {
+  it('PROPAGATION + subType=cutting 应派生 source_origin=planting_self_kept', async () => {
     await executeCirculation({
       circulationType: 'PROPAGATION',
       sourceModule: 'planting',
@@ -97,9 +101,11 @@ describe('executeCirculation PROPAGATION', () => {
     })
     const insertCalls = mockDb.run.mock.calls.filter((c: any) => c[0].includes('INSERT INTO seed_sources'))
     // db.run(SQL, paramsArray): SQL is c[0], params is c[1]
-    // params = [newSourceId, sourceCode, sourceOrigin, parentSourceId]
-    // source_origin is params[2]
-    expect(insertCalls[0][1][2]).toBe('cutting')
+    // INSERT 列顺序: id, source_code, source_name, source_type='seed', source_origin, ...
+    // 2026-07-18: source_type='seed' 是 SQL 字面量不占参数位
+    // params[0]=id, params[1]=source_code, params[2]=source_name, params[3]=source_origin
+    // 2026-06-29 设计决策：cutting/seed_saving 统一使用 planting_self_kept
+    expect(insertCalls[0][1][3]).toBe('planting_self_kept')
   })
 })
 
@@ -142,26 +148,26 @@ describe('executeCirculation QUANTITY', () => {
     expect(invInsertCalls[0][1][1]).toBeDefined() // circId
   })
 
-  it('入库存无 warehouseId 应抛错', () => {
-    expect(() => executeCirculation({
+  it('入库存无 warehouseId 应抛错', async () => {
+    await expect(executeCirculation({
       circulationType: 'QUANTITY',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
       parentSourceId: 'ss-parent',
       destination: 'inventory_stock',
       quantity: 30,
-    })).toThrow('warehouseId')
+    })).rejects.toThrow('warehouseId')
   })
 
-  it('入库存无 quantity 应抛错', () => {
-    expect(() => executeCirculation({
+  it('入库存无 quantity 应抛错', async () => {
+    await expect(executeCirculation({
       circulationType: 'QUANTITY',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
       parentSourceId: 'ss-parent',
       destination: 'inventory_stock',
       warehouseId: 'wh-1',
-    })).toThrow('quantity')
+    })).rejects.toThrow('quantity')
   })
 })
 
