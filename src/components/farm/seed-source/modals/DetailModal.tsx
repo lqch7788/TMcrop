@@ -20,8 +20,9 @@ import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getSeedSourceUsageRecords,
   getSeedSourceInboundHistory,
+  getInboundRecords,
+  reverseInboundRecord,
   type SeedSourceUsageRecord,
-  type SeedSourceInboundHistoryRecord,
 } from '@/services/apiSeedSourceService';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
 
@@ -77,7 +78,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
       {/* 基本信息 */}
       <div>
         <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">基本信息</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">种源批号：</span>
             <span className="text-sm font-mono text-blue-600">{record.seedCode}</span>
@@ -108,7 +109,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
       {/* 库存信息 */}
       <div>
         <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">库存信息</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">入库日期：</span>
             <span className="text-sm text-gray-900">{record.purchaseDate || '—'}</span>
@@ -148,7 +149,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
       {isPlantingKept && (
         <div>
           <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">种植留种信息</h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="flex items-center">
               <span className="text-sm text-gray-500 w-24">关联种植：</span>
               <span className="text-sm font-mono text-gray-900">{record.linkedPlantingCode || '—'}</span>
@@ -168,7 +169,7 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
       {/* 其他信息 */}
       <div>
         <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">其他信息</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">创建人：</span>
             <span className="text-sm text-gray-900">{record.createBy || '—'}</span>
@@ -429,28 +430,9 @@ const SOURCE_MODULE_MAP: Record<string, string> = {
 //   - 追加调拨入库（append-from-inventory）→ 写 business_id=种源ID, source_module='inventory'
 // 三条入库路径都覆盖，详情弹窗能完整看到所有入库流水
 // 2026-07-14：InboundRecord 接口移到模块顶层
-interface InboundRecord {
-  id: string;
-  recordType?: string;
-  recordDate: string;
-  sourceModule?: string;
-  sourceType?: string;
-  sourceCode?: string;
-  stockType?: string;
-  warehouseName?: string;
-  cropName?: string;
-  varietyName?: string;
-  quantity: number;
-  // 2026-07-06：入库记录的「已退数量」（退库时只 UPDATE 此字段，不新增行）
-  // 入库记录 Tab 现在顶部有汇总显示已退/可退，本字段也参与计算
-  returnedQuantity?: number;
-  unit?: string;
-  unitPrice?: number;
-  totalAmount?: number;
-  supplierName?: string;
-  operatorName?: string;
-  notes?: string;
-}
+// 2026-07-18：改为 import from types/crop.ts（合并种源功能需要 recordSource/reversedAt 字段）
+import type { InboundRecord as InboundRecordType } from '@/types/crop';
+type InboundRecord = InboundRecordType;
 
 function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   const [records, setRecords] = useState<InboundRecord[]>([])
@@ -461,9 +443,9 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
     if (!seedSourceId) return
     setLoading(true)
     setError(null)
-    // 2026-07-14：改用 service 函数（替代 enhancedApiClient 直调，架构铁律合规）
-    getSeedSourceInboundHistory(seedSourceId)
-      .then((data) => setRecords(Array.isArray(data) ? (data as unknown as InboundRecord[]) : []))
+    // 2026-07-18：改用 getInboundRecords（UNION inventory_inbound + crop_circulation PROPAGATION）
+    getInboundRecords(seedSourceId)
+      .then((data) => setRecords(Array.isArray(data) ? data : []))
       .catch((e) => { console.error('[DetailModal] 入库记录加载失败:', e); setError((e && (e as { message?: string }).message) || '加载失败'); })
       .finally(() => setLoading(false))
   }, [seedSourceId])

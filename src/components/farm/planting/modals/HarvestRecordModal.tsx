@@ -40,6 +40,8 @@ import { Planting, PlantingHarvestRecord } from '../../../../types/crop'
 import type { EndType } from '../../../../types/cropCirculation'
 import type { AddHarvestRecordInput } from '@/services/apiPlantingService'
 import { showAlert, showConfirm } from '@/lib/dialogService'
+// 2026-07-18: 种源合并预览组件
+import { MergePreview } from './MergePreview'
 import { usePlantingStore } from '@/stores/usePlantingStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useWarehouseStore } from '@/stores/useWarehouseStore'
@@ -152,6 +154,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [submitting, setSubmitting] = useState(false)
   // 2026-06-19: 采收形态（仅 destination='harvest' 必填）— 区分果实/种子/种苗/枝条等
   const [sourceForm, setSourceForm] = useState<string>('')
+  // 2026-07-18: 种源合并键 — 用户输入世代（planting_self_kept 模式）
+  const [generation, setGeneration] = useState<string>('')
 
   // ============ 2026-06-19: 采收入库字段（参照行级采收入库弹窗 UnifiedRowHarvestInboundModal）============
   // 字段集与行级"采收入库"图标弹窗一致：操作员/采收员多选/产品明细(多产物) + 复用上方 6 字段（2026-07-06：单价字段已删除）
@@ -451,6 +455,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         recordDate,
         destination: inputDestination,
         subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
+        generation: destination === 'planting_self_kept' ? (generation || null) : null,  // 2026-07-18: 种源合并键
         seedForm: (requiresSelfKept || destination === 'harvest') ? sourceForm : undefined,  // 2026-07-02: harvest 分支也写形态
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
@@ -641,6 +646,25 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 </Select>
               </div>
             )}
+            {/* 2026-07-18：种源合并 - 世代选择（planting_self_kept 模式） */}
+            {destination === 'planting_self_kept' && (
+              <div>
+                <Label>世代 <span className="text-gray-400 text-xs">(可选)</span></Label>
+                <Select value={generation} onValueChange={setGeneration}>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="不参与合并" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">不参与合并</SelectItem>
+                    <SelectItem value="F1">F1</SelectItem>
+                    <SelectItem value="F2">F2</SelectItem>
+                    <SelectItem value="BC1">BC1</SelectItem>
+                    <SelectItem value="BC2">BC2</SelectItem>
+                    <SelectItem value="无性">无性</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {/* 第1行第3列：采收形态（harvest 模式） */}
             {destination === 'harvest' && (
               <div>
@@ -707,6 +731,16 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 />
               </div>
             </div>
+          )}
+          {/* 2026-07-18：合并预览（planting_self_kept 模式 + 作物+形态已选） */}
+          {destination === 'planting_self_kept' && record?.cropCode && sourceForm && (
+            <MergePreview
+              cropCode={record.cropCode}
+              seedForm={sourceForm}
+              unit={unit || ''}
+              generation={generation || null}
+              newQuantity={Number(quantity) || 0}
+            />
           )}
           {/* 兼容历史老记录（circulate/self_seed）— 仍显示原 subType，但禁止通过 UI 新建 */}
           {(destination === 'circulate' || destination === 'self_seed') && (
