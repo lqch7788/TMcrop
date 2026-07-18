@@ -21,6 +21,8 @@
 import { getDatabase, saveDatabase } from '../db';
 import { seedSourceService } from './seedSource.service';
 import { generateInstanceId, generateStockId, generateInboundRecordId, generateTransactionId } from './inventory.service';
+import { derivePropagationMethodFromSeedForm } from './circulation.service';
+import { SeedSourceRepository } from '../repositories/seedSource.repository';
 
 // ============ 类型定义 ============
 
@@ -424,52 +426,92 @@ export async function executeTransferToSource(
       seedMaxStmt.free();
       const newSeedSourceId = `${ssPrefix}${String(seedSerial).padStart(4, '0')}`;
       // 2026-06-30 Bug 13：调拨入种源时自动从源库存 product_form 复制形态
-      // （不暴露给前端 UI 简化 — 调拨形态 ≈ 源库存形态 = 入库时定的形态，传递是有意义的）
       const transferSeedForm = sourceStock.product_form || null;
-      db.run(
-        `INSERT INTO seed_sources (
-          id, source_code, source_name, source_type, source_origin,
-          production_plan_code, crop_category, type_name, variety_name,
-          crop_name, crop_variety, crop_code,
-          supplier_id, supplier_name, quantity, unit,
-          purchase_date, purchase_price, total_amount,
-          used_quantity, remaining_quantity,
-          remarks, create_by,
-          propagation_type,
-          transferred_from_stock_id, transferred_from_business_type, transferred_from_business_id,
-          original_inbound_date, original_source_module, original_source_id,
-          original_harvest_record_id,
-          original_crop_id, original_crop_name,
-          original_variety_id, original_variety_name,
-          original_unit, original_unit_price,
-          original_supplier_id, original_supplier_name,
-          original_production_plan_code,
-          seed_form,
-          create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          newSeedSourceId, newCode, `${sourceStock.crop_name || ''}（调拨）`, mapStockTypeToSeedSourceType(sourceStock.stock_type), 'inventory_transfer',
-          sourceStock.production_plan_code || '', '', '', sourceStock.variety_name || '',
-          sourceStock.crop_name || '', sourceStock.variety_name || '', sourceStock.crop_code || '',
-          sourceStock.supplier_id || '', sourceStock.supplier_name || '',
-          item.transferQuantity, sourceUnit,
-          sourceStock.inbound_date || '', sourceStock.unit_price || 0, (sourceStock.unit_price || 0) * item.transferQuantity,
-          0, item.transferQuantity,
-          `从库存 ${sourceStock.instance_id} 调拨入种源`, operator.name,
-          'transfer_from_inventory',
-          item.sourceStockId, sourceStock.business_type, sourceStock.business_id,
-          sourceStock.inbound_date || '', sourceStock.source_module, sourceStock.source_id,
-          sourceStock.harvest_record_id,
-          sourceStock.crop_id, sourceStock.crop_name,
-          sourceStock.variety_id, sourceStock.variety_name,
-          sourceUnit, sourceStock.unit_price || 0,
-          sourceStock.supplier_id, sourceStock.supplier_name,
-          sourceStock.production_plan_code,
-          transferSeedForm,
-          now, now,
-        ]
-      );
-      writtenSeedSourceIds.push(newSeedSourceId);
+
+      // 2026-07-18: 调拨入种源 —— 合并探测
+      // 若存在同合并键（作物+形态+单位+世代+繁殖方法）的 active 种源 → 合并到现有（UPDATE）
+      // 否则 → INSERT 新种源
+      const transferCropCode = sourceStock.crop_code || null;
+      const transferGeneration = sourceStock.generation || null;
+      const transferPropMethod = derivePropagationMethodFromSeedForm(transferSeedForm);
+      let mergeTargetId: string | null = null;
+
+      if (transferCropCode && transferSeedForm && sourceUnit) {
+        const repo = new SeedSourceRepository();
+        const mergeable = await repo.findMergeableSeedSource({
+          cropCode: transferCropCode,
+          seedForm: transferSeedForm,
+          unit: sourceUnit,
+          generation: transferGeneration,
+          propagationMethod: transferPropMethod,
+        });
+        if (mergeable) {
+          mergeTargetId = mergeable.id;
+        }
+      }
+
+      if (mergeTargetId) {
+        // === 合并模式：累加数量到现有种源 ===
+        const mergeStmt = db.prepare(`
+          UPDATE seed_sources
+          SET quantity = quantity + ?,
+              remaining_quantity = remaining_quantity + ?,
+              reflow_count = reflow_count + 1,
+              last_reflow_at = ?,
+              update_time = ?
+          WHERE id = ?
+        `);
+        mergeStmt.bind([item.transferQuantity, item.transferQuantity, now, now, mergeTargetId]);
+        mergeStmt.step();
+        mergeStmt.free();
+        writtenSeedSourceIds.push(mergeTargetId);
+      } else {
+        // === 新建模式：INSERT 新种源 ===
+        db.run(
+          `INSERT INTO seed_sources (
+            id, source_code, source_name, source_type, source_origin,
+            production_plan_code, crop_category, type_name, variety_name,
+            crop_name, crop_variety, crop_code,
+            supplier_id, supplier_name, quantity, unit,
+            purchase_date, purchase_price, total_amount,
+            used_quantity, remaining_quantity,
+            remarks, create_by,
+            propagation_type,
+            transferred_from_stock_id, transferred_from_business_type, transferred_from_business_id,
+            original_inbound_date, original_source_module, original_source_id,
+            original_harvest_record_id,
+            original_crop_id, original_crop_name,
+            original_variety_id, original_variety_name,
+            original_unit, original_unit_price,
+            original_supplier_id, original_supplier_name,
+            original_production_plan_code,
+            seed_form,
+            create_time, update_time
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            newSeedSourceId, newCode, `${sourceStock.crop_name || ''}（调拨）`, mapStockTypeToSeedSourceType(sourceStock.stock_type), 'inventory_transfer',
+            sourceStock.production_plan_code || '', '', '', sourceStock.variety_name || '',
+            sourceStock.crop_name || '', sourceStock.variety_name || '', sourceStock.crop_code || '',
+            sourceStock.supplier_id || '', sourceStock.supplier_name || '',
+            item.transferQuantity, sourceUnit,
+            sourceStock.inbound_date || '', sourceStock.unit_price || 0, (sourceStock.unit_price || 0) * item.transferQuantity,
+            0, item.transferQuantity,
+            `从库存 ${sourceStock.instance_id} 调拨入种源`, operator.name,
+            'transfer_from_inventory',
+            item.sourceStockId, sourceStock.business_type, sourceStock.business_id,
+            sourceStock.inbound_date || '', sourceStock.source_module, sourceStock.source_id,
+            sourceStock.harvest_record_id,
+            sourceStock.crop_id, sourceStock.crop_name,
+            sourceStock.variety_id, sourceStock.variety_name,
+            sourceUnit, sourceStock.unit_price || 0,
+            sourceStock.supplier_id, sourceStock.supplier_name,
+            sourceStock.production_plan_code,
+            transferSeedForm,
+            now, now,
+          ]
+        );
+        writtenSeedSourceIds.push(newSeedSourceId);
+      }
 
       // === 步骤 5a：写 crop_instances ===
       // 2026-07-15：crop_instances.id — 自定义 4 位自增查 max serial

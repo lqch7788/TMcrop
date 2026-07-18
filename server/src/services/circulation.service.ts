@@ -50,6 +50,14 @@ export function deriveSeedFormSubType(seedForm: string): 'cutting' | 'seed_savin
   return 'seed_saving';
 }
 
+/**
+ * 2026-07-18: 导出给 inventoryTransfer.service.ts 使用（合并键繁殖方法派生）
+ */
+export function derivePropagationMethodFromSeedForm(seedForm: string | null | undefined): string | null {
+  if (!seedForm) return null;
+  return deriveSeedFormSubType(seedForm);
+}
+
 export const CirculationInputSchema = z.object({
   circulationType: CirculationTypeEnum,
   sourceModule: SourceModuleEnum,
@@ -228,6 +236,11 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
   const seedForm = input.seedForm || null
   // 2026-07-18: generation 由用户输入决定（非硬编码 F1/无性）
   const generation = input.generation || null
+  // 2026-07-18: propagation_method 由 subType 派生（合并键关键维度）
+  const propagationMethod = input.subType === 'cutting' ? 'cutting'
+    : input.subType === 'seed_saving' ? 'seed_saving'
+    : input.subType === 'g0_g1' ? 'g0_g1'
+    : null
 
   // ===== Step 1: 读 planting =====
   let planting: any = null
@@ -276,9 +289,11 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
     let mergeable: any = null
     if (newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
       // 2026-07-18: 事务内查合并候选（防并发 race）
+      // 2026-07-18: 合并键含 propagation_method → 扦插/留种/自交不同子类型绝不合并
       const repo = new SeedSourceRepository()
       mergeable = await repo.findMergeableSeedSource({
         cropCode, seedForm, unit, generation,
+        propagationMethod,
       })
     }
 
@@ -302,10 +317,6 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
         ? generatePropagationCode(input.subType)
         : generateId('SRC')
 
-      const propagationMethod = input.subType === 'cutting' ? 'cutting'
-        : input.subType === 'seed_saving' ? 'seed_saving'
-        : input.subType === 'g0_g1' ? 'g0_g1'
-        : null
       const propagationTypeDb = input.subType === 'g0_g1' ? 'breeding' : 'planting_self_kept';
 
       db.run(`
@@ -533,10 +544,28 @@ export const RevokeInputSchema = z.object({
  * - QUANTITY 撤销: 回退 inventory_stock.quantity 或 seed_sources.remaining_quantity
  * - PROPAGATION 撤销: 保留新种源 7 天可恢复窗口 (本期不实现物理删除)
  */
+/**
+ * 双 API 兼容：better-sqlite3 (.get) / sql.js (step + getAsObject)
+ * mock 测试用 better-sqlite3 风格，E2E 测试用 sql.js 风格
+ */
+function readFirstRow(db: any, sql: string, params: any[] = []): any {
+  // sql.js 优先（mock 也定义了 step/getAsObject）
+  try {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const row = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return row;
+  } catch {
+    // better-sqlite3 / mock API 兼容
+    return db.prepare(sql).get(...params);
+  }
+}
+
 export function revokeCirculation(circId: string, rawInput: unknown): void {
   const input = RevokeInputSchema.parse(rawInput)
   const db = getDatabase()
-  const circ = db.prepare(`SELECT * FROM crop_circulation_records WHERE id = ?`).get([circId]) as any
+  const circ = readFirstRow(db, `SELECT * FROM crop_circulation_records WHERE id = ?`, [circId]) as any
   if (!circ) throw new Error('回流记录不存在')
   if (circ.is_revoked) throw new Error('回流已撤销')
 
@@ -547,6 +576,11 @@ export function revokeCirculation(circId: string, rawInput: unknown): void {
   }
   // QUANTITY + disposition='SALES' 撤销: 同时回退 inventory_stock (本期不实现, 留待 Phase 2 扩展)
   // PROPAGATION 撤销: 标记 is_revoked, 新种源记录保留 7 天可恢复窗口
+  // 2026-07-18: 撤销废止合并种源 → status='archived'（防止被 findMergeableSeedSource 再次命中）
+  if (circ.circulation_type === 'PROPAGATION' && circ.new_source_id) {
+    db.run(`UPDATE seed_sources SET status = 'archived', update_time = ? WHERE id = ?`,
+      [formatLocalDateISO(), circ.new_source_id]);
+  }
 
   // 软删除标记
   db.run(`

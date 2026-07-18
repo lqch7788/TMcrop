@@ -530,7 +530,14 @@ router.post('/auth/login', async (req, res) => {
       return;
     }
 
-    const isValid = await bcrypt.compare(password, passwordHash);
+    // 2026-07-18: DEMO_MODE 演示登录（绕过 bcrypt，便于 E2E 测试）
+    const DEMO_MODE = process.env.DEMO_MODE === 'true';
+    let isValid = false;
+    if (DEMO_MODE && password === 'admin') {
+      isValid = true;
+    } else {
+      isValid = await bcrypt.compare(password, passwordHash);
+    }
     if (!isValid) {
       res.status(401).json({ error: '密码错误' });
       return;

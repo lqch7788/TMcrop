@@ -81,6 +81,7 @@ interface SeedSourceState {
     seedForm: string;
     unit: string;
     generation: string | null;
+    propagationMethod: string | null;
   }) => Promise<any>;
 
   /**
@@ -201,7 +202,10 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
 
   findMatchable: async (params) => {
     // 错误向上抛（V2.1 铁律：不静默吞错）
-    return await seedSourceService.findMatchableSeedSource(params);
+    return await seedSourceService.findMatchableSeedSource({
+      ...params,
+      propagationMethod: params.propagationMethod || null,
+    });
   },
 
   reverseInbound: async (seedSourceId, payload) => {

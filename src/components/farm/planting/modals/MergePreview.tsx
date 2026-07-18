@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Layers, Plus, AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import { findMatchableSeedSource } from '@/services/apiSeedSourceService';
+import { derivePropagationMethod } from '@/lib/propagationMethod';
 
 interface Props {
   cropCode: string;
@@ -31,7 +32,10 @@ export function MergePreview({ cropCode, seedForm, unit, generation, newQuantity
 
   const query = useCallback(async (signal: AbortSignal) => {
     try {
-      const result = await findMatchableSeedSource({ cropCode, seedForm, unit, generation });
+      const result = await findMatchableSeedSource({
+        cropCode, seedForm, unit, generation,
+        propagationMethod: derivePropagationMethod(seedForm),
+      });
       if (signal.aborted) return;
       setData(result);
       setState(result ? 'matched' : 'new');
