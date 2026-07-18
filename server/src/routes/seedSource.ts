@@ -148,9 +148,9 @@ import { executeCirculation, revokeCirculation, listCirculations } from '../serv
  * POST /api/seed-sources/circulation
  * 执行回流 (PROPAGATION/QUANTITY/DISPOSAL, destination 决定去向)
  */
-router.post('/circulation', (req, res) => {
+router.post('/circulation', async (req, res) => {
   try {
-    const result = executeCirculation(req.body)
+    const result = await executeCirculation(req.body)
     res.json({ success: true, data: result })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })

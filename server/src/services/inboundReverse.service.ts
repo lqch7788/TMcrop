@@ -59,20 +59,20 @@ export function reverseInboundRecord(
     db.run(`UPDATE seed_sources SET quantity = quantity - ?, remaining_quantity = remaining_quantity - ? WHERE id = ?`,
       [returnable, returnable, seedSourceId]);
 
-    // 6. 写 inventory_transaction（真实字段）
+    // 6. 写 inventory_transaction（真实字段 + operator_name + remarks 审计完整性）
     const txId = `TXN-REV-${Date.now()}`;
     db.run(`
       INSERT INTO inventory_transaction (
         id, transaction_id, instance_id, stock_type,
         transaction_type, quantity, balance_before, balance_after,
         business_id, business_type, business_code,
-        operator_id, operate_date, create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        operator_id, operator_name, operate_date, create_time, remarks
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       txId, txId, seedSourceId, 'seed',
       'reverse_inbound', -returnable, balanceBefore, balanceAfter,
       payload.inboundRecordId, 'inbound_record', payload.inboundRecordId,
-      'system', nowISO, nowISO,
+      'system', 'system', nowISO, nowISO, payload.reason,
     ]);
 
     // 7. 写 material_flow_log（try/catch，不影响主流程）
