@@ -65,6 +65,8 @@ export const CirculationInputSchema = z.object({
   seedForm: z.string().optional(),
   // 2026-06-29: 来源单据编号（用于 flow_log 追踪，如 ZZ20260627-001）
   sourceRecordCode: z.string().optional(),
+  // 2026-07-18: 用户输入 generation（不参与合并 = null/undefined）
+  generation: z.string().optional(),
 });
 
 export type CirculationInput = z.infer<typeof CirculationInputSchema>;
@@ -73,6 +75,8 @@ export interface CirculationResult {
   circulationId: string;
   newSourceId?: string;
   stockId?: string;
+  // 2026-07-18: 种源合并动作标识
+  mergeAction?: 'create_new' | 'merge_into_existing';
 }
 
 // ============================================================
@@ -169,7 +173,7 @@ function generateQuantityRefillSuffix(parentSourceCode: string, parentSourceId: 
  * 执行回流
  * @throws Error 参数校验失败或业务规则违反
  */
-export function executeCirculation(rawInput: unknown): CirculationResult {
+export async function executeCirculation(rawInput: unknown): Promise<CirculationResult> {
   const input = CirculationInputSchema.parse(rawInput)
 
   // PROPAGATION 必须填 subType
@@ -213,137 +217,186 @@ export function executeCirculation(rawInput: unknown): CirculationResult {
   return executeDisposal(input, circId)
 }
 
-function executePropagation(input: CirculationInput, circId: string): CirculationResult {
+async function executePropagation(input: CirculationInput, circId: string): Promise<CirculationResult> {
   const db = getDatabase()
-  const newSourceId = generateId('SRC')
-  // 2026-06-19: 业务编号按 subType 区分（扦插 CUT / 留种 SS，前缀+日期+3位流水号）
-  const newSourceCode = input.subType === 'cutting' || input.subType === 'seed_saving'
-    ? generatePropagationCode(input.subType)
-    : generateId('SRC')  // g0_g1 等其他子类型兜底用旧规则
-  const newOrigin = deriveOriginFromContext(input)
   // 2026-06-19: 用完整 ISO 格式（new Date().toISOString()）作为 create_time/update_time
-  // 之前用 formatLocalDateISO() 返回 'YYYY-MM-DD' 短日期，导致与手动种源的完整 ISO 时间混排错位
   const nowISO = new Date().toISOString()
-  const circulationDate = formatLocalDateISO()  // 保留短日期用于 purchase_date / circulation_date
-  // 2026-06-18: PROPAGATION 也把 quantity 写入新种源 remaining_quantity
-  // 让 cutting/seed_saving/self_seed 实际可用数量反映填入的数量
+  const circulationDate = formatLocalDateISO()
   const seedQuantity = input.quantity ?? 0
   // 2026-06-29: 种植自留种采收形态 — 写到 seed_sources.seed_form
   const seedForm = input.seedForm || null
+  // 2026-07-18: generation 由用户输入决定（非硬编码 F1/无性）
+  const generation = input.generation || null
 
-  // 2026-06-18: 读 planting 拿 crop 信息 + plantingCode
-  // planting.source_id 可能是种源（SS前缀）也可能是育苗（SD前缀）
+  // ===== Step 1: 读 planting =====
   let planting: any = null
   let sourcePlantingCode: string | null = null
+  let sourcePlantingId: string | null = null
   if (input.sourceModule === 'planting' && input.sourceId) {
     const pStmt = db.prepare('SELECT id, planting_code, crop_name, crop_variety, crop_code, source_id, source_type, production_plan_id, production_plan_code FROM plantings WHERE id = ?')
     pStmt.bind([input.sourceId])
     planting = pStmt.step() ? pStmt.getAsObject() : null
     pStmt.free()
     sourcePlantingCode = (planting as any)?.planting_code || null
+    sourcePlantingId = (planting as any)?.id || null
   }
 
-  // 2026-06-18: 读 parent（种源 OR 育苗）继承 crop_category/type_name/variety_name/supplier 等字段
-  // planting.source_id 指向种源或育苗，按表分别查询
+  // ===== Step 2: 读 parent（种源 OR 育苗，保留 fallback）=====
   let parent: any = null
   const parentSourceId = planting?.source_id || input.parentSourceId
   if (parentSourceId) {
-    // 先查种源
-    const ssStmt = db.prepare('SELECT id, crop_name, crop_variety, crop_code, crop_category, type_name, variety_name, supplier_id, supplier_name, production_plan_code, unit FROM seed_sources WHERE id = ?')
+    const ssStmt = db.prepare('SELECT id, source_name, crop_name, crop_variety, crop_code, crop_category, type_name, variety_name, supplier_id, supplier_name, production_plan_code, unit FROM seed_sources WHERE id = ?')
     ssStmt.bind([parentSourceId])
     parent = ssStmt.step() ? ssStmt.getAsObject() : null
     ssStmt.free()
-    // 没找到就查育苗
+    // 没找到就查育苗（cutting/seed_saving 可能引用育苗作为 parent）
     if (!parent) {
-      const sdStmt = db.prepare('SELECT id, crop_name, crop_variety, crop_code FROM seedlings WHERE id = ?')
+      const sdStmt = db.prepare('SELECT id, crop_name, crop_variety, crop_code, unit FROM seedlings WHERE id = ?')
       sdStmt.bind([parentSourceId])
       parent = sdStmt.step() ? sdStmt.getAsObject() : null
       sdStmt.free()
     }
   }
 
-  // 2026-06-18: propagation_method 映射 subType
-  const propagationMethod = input.subType === 'cutting' ? 'cutting'
-    : input.subType === 'seed_saving' ? 'seed_saving'
-    : input.subType === 'g0_g1' ? 'g0_g1'
-    : null
+  // 种植留种统一使用 'planting_self_kept'
+  const newOrigin = deriveOriginFromContext(input)
 
-  // 种植留种统一使用 'planting_self_kept'，不再区分 cutting/seed_saving
-  const propagationTypeDb = input.subType === 'g0_g1' ? 'breeding' : 'planting_self_kept';
+  // 解析合并键
+  const cropCode = parent?.crop_code || planting?.crop_code || null
+  const unit = input.unit || parent?.unit || null
 
-  // 2026-06-18: 全量继承 parent + 新追溯字段
-  db.run(`
-    INSERT INTO seed_sources (
-      id, source_code, source_name, source_type, source_origin, parent_source_id,
-      crop_name, crop_variety, crop_code, crop_category, type_name, variety_name,
-      supplier_id, supplier_name, production_plan_code,
-      quantity, unit, purchase_date, used_quantity, remaining_quantity,
-      status, create_by, create_by_id, create_time, update_time,
-      propagation_type, propagation_status, propagation_method,
-      linked_planting_id, linked_planting_code,
-      generation,
-      seed_form
-    ) VALUES (
-      ?, ?, ?, 'seed', ?, ?,
-      ?, ?, ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?, ?, 0, ?,
-      'active', ?, ?, ?, ?,
-      ?, 'completed', ?,
-      ?, ?,
-      ?,
-      ?
-    )
-  `, [
-    newSourceId, newSourceCode, parent?.source_name || null, newOrigin, input.parentSourceId,
-    parent?.crop_name || planting?.crop_name || null, parent?.crop_variety || planting?.crop_variety || null, parent?.crop_code || planting?.crop_code || null,
-    parent?.crop_category || null, parent?.type_name || null, parent?.variety_name || null,
-    null, null, parent?.production_plan_code || planting?.production_plan_code || null, // 内部留种不继承供应商
-    seedQuantity, input.unit || parent?.unit || null, circulationDate.split('T')[0], seedQuantity,
-    input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
-    propagationTypeDb, propagationMethod,
-    input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
-    input.subType === 'seed_saving' ? 'F1' : (input.subType === 'cutting' ? '无性' : null),
-    // 2026-06-29: 种植自留种采收形态
-    seedForm,
-  ])
+  // ===== Step 3: BEGIN IMMEDIATE + 事务内查合并候选 =====
+  db.run('BEGIN IMMEDIATE')
+  let finalStockId: string
+  let mergeAction: 'create_new' | 'merge_into_existing'
+  let newSourceCode: string | null = null
 
-  db.run(`
-    INSERT INTO crop_circulation_records
-    (id, circulation_type, source_module, source_id, parent_source_id, new_source_id, quantity, unit, circulation_date, operator_id, notes)
-    VALUES (?, 'PROPAGATION', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, newSourceId, seedQuantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
-
-  // 2026-06-19: 写 material_flow_log，让 DetailModal「流转记录」Tab 能看到回流链路
   try {
-    const flowType = `${input.sourceModule || 'seed_source'}→seed_source`
-    writeFlowLog({
-      flow_type: flowType,
-      crop_name: planting?.crop_name || (parent as any)?.crop_name || '',
-      crop_variety: planting?.crop_variety || (parent as any)?.crop_variety || null,
-      crop_code: planting?.crop_code || (parent as any)?.crop_code || null,
-      source_type: input.sourceModule || null,
-      source_id: input.sourceId || null,
-      source_code: input.sourceRecordCode || input.sourceId || null,
-      source_quantity: input.quantity ?? null,
-      source_unit: input.unit || null,
-      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
-      target_type: 'seed_source',
-      target_id: newSourceId,
-      target_code: newSourceCode,
-      target_quantity: input.quantity ?? null,
-      target_unit: input.unit || null,
-      business_id: circId,
-      business_code: circId,
-      created_by: input.operatorId || 'system',
-    })
-  } catch (e: any) {
-    // 写 flow_log 失败不阻断主流程
-    console.warn('[executePropagation] writeFlowLog failed:', e.message)
+    let mergeable: any = null
+    if (newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
+      // 2026-07-18: 事务内查合并候选（防并发 race）
+      const { SeedSourceRepository } = require('../repositories/seedSource.repository')
+      const repo = new SeedSourceRepository()
+      mergeable = await repo.findMergeableSeedSource({
+        cropCode, seedForm, unit, generation,
+      })
+    }
+
+    if (mergeable) {
+      // ===== Step 4a: 合并到现有种源 =====
+      finalStockId = mergeable.id
+      mergeAction = 'merge_into_existing'
+      db.run(`
+        UPDATE seed_sources
+        SET quantity = quantity + ?,
+            remaining_quantity = remaining_quantity + ?,
+            reflow_count = reflow_count + 1,
+            last_reflow_at = ?
+        WHERE id = ?
+      `, [seedQuantity, seedQuantity, nowISO, finalStockId])
+    } else {
+      // ===== Step 4b: 创建新种源 =====
+      finalStockId = generateId('SRC')
+      mergeAction = 'create_new'
+      newSourceCode = input.subType === 'cutting' || input.subType === 'seed_saving'
+        ? generatePropagationCode(input.subType)
+        : generateId('SRC')
+
+      const propagationMethod = input.subType === 'cutting' ? 'cutting'
+        : input.subType === 'seed_saving' ? 'seed_saving'
+        : input.subType === 'g0_g1' ? 'g0_g1'
+        : null
+      const propagationTypeDb = input.subType === 'g0_g1' ? 'breeding' : 'planting_self_kept';
+
+      db.run(`
+        INSERT INTO seed_sources (
+          id, source_code, source_name, source_type, source_origin, parent_source_id,
+          crop_name, crop_variety, crop_code, crop_category, type_name, variety_name,
+          supplier_id, supplier_name, production_plan_code,
+          quantity, unit, purchase_date, used_quantity, remaining_quantity,
+          status, create_by, create_by_id, create_time, update_time,
+          propagation_type, propagation_status, propagation_method,
+          linked_planting_id, linked_planting_code,
+          generation,
+          seed_form
+        ) VALUES (
+          ?, ?, ?, 'seed', ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?, 0, ?,
+          'active', ?, ?, ?, ?,
+          ?, 'completed', ?,
+          ?, ?,
+          ?,
+          ?
+        )
+      `, [
+        finalStockId, newSourceCode, parent?.source_name || null, newOrigin, input.parentSourceId,
+        parent?.crop_name || planting?.crop_name || null,
+        parent?.crop_variety || planting?.crop_variety || null,
+        cropCode,
+        parent?.crop_category || null,
+        parent?.type_name || null,
+        parent?.variety_name || null,
+        null, null, parent?.production_plan_code || planting?.production_plan_code || null,
+        seedQuantity, unit, circulationDate.split('T')[0], seedQuantity,
+        input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
+        propagationTypeDb, propagationMethod,
+        input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
+        generation,
+        seedForm,
+      ])
+    }
+
+    // ===== Step 5: 写 crop_circulation_records（含 merge_action）=====
+    db.run(`
+      INSERT INTO crop_circulation_records
+      (id, circulation_type, source_module, source_id, parent_source_id, new_source_id,
+       quantity, unit, generation, circulation_date, operator_id, notes, merge_action)
+      VALUES (?, 'PROPAGATION', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      circId, input.sourceModule, input.sourceId, input.parentSourceId, finalStockId,
+      seedQuantity, unit ?? null, generation,
+      circulationDate, input.operatorId ?? null, input.notes ?? null, mergeAction,
+    ])
+
+    // ===== Step 6: 写 material_flow_log（统一字段，try/catch）=====
+    try {
+      const flowType = `${input.sourceModule || 'seed_source'}→seed_source`
+      writeFlowLog({
+        flow_type: flowType,
+        crop_name: planting?.crop_name || (parent as any)?.crop_name || '',
+        crop_variety: planting?.crop_variety || (parent as any)?.crop_variety || null,
+        crop_code: cropCode,
+        source_type: input.sourceModule || null,
+        source_id: input.sourceId || null,
+        source_code: input.sourceRecordCode || input.sourceId || null,
+        source_quantity: input.quantity ?? null,
+        source_unit: unit,
+        source_category: input.sourceModule === 'planting' ? 'planting'
+          : input.sourceModule === 'seedling' ? 'seedling' : 'seed_source',
+        target_type: 'seed_source',
+        target_id: finalStockId,
+        target_code: newSourceCode || (mergeable?.sourceCode ?? ''),
+        target_quantity: input.quantity ?? null,
+        target_unit: unit,
+        business_id: circId,
+        business_code: circId,
+        created_by: input.operatorId || 'system',
+      })
+    } catch (e: any) {
+      // 写 flow_log 失败不阻断主流程（已 commit）
+      console.warn('[executePropagation] writeFlowLog failed:', e.message)
+    }
+
+    db.run('COMMIT')
+    saveDatabase()
+  } catch (e) {
+    db.run('ROLLBACK')
+    throw e
   }
 
-  saveDatabase()
-  return { circulationId: circId, newSourceId }
+  return { circulationId: circId, newSourceId: finalStockId, stockId: finalStockId, mergeAction }
 }
 
 function executeQuantityToSeedSource(input: CirculationInput, circId: string): CirculationResult {
