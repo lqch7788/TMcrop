@@ -460,6 +460,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         unit,
         notes,
         createBy: currentUser?.realName || 'system',
+        // 2026-07-18：种植自留种模式补传 operatorId（默认当前登录人员）
+        // - 与采收入库模式（已通过 UnifiedRowHarvestInboundModal 处理）对称
+        // - 后端 executeCirculation → crop_circulation_records.operator_id，用于种源追溯时间线「操作员」列
+        operatorId: requiresSelfKept ? (currentUser?.oid || undefined) : undefined,
         operatorName: currentUser?.realName || 'system',
       }
       const result = await addHarvestRecord(record.id, input)
@@ -587,6 +591,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
         {/* 表单区 */}
         <div className="space-y-4">
+          {/* 第1行：采收日期 + 去向（所有模式共用） */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>采收日期 *</Label>
@@ -600,8 +605,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               <Label>去向 *</Label>
               <Select value={destination ?? ''} onValueChange={(v) => {
                 setDestination(v as EndType);
-                // 2026-07-01 P0-3 修复：destination 切换时重置 harvest 专属字段
-                // 原因：避免上次填写的 sourceForm/products 残留到下次提交
                 setSourceForm('');
               }}>
                 <SelectTrigger className={deepInputClass}>
@@ -611,11 +614,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <SelectItem value="harvest">
                     <span className="flex items-center gap-1.5"><Wheat className="w-3.5 h-3.5" /> 采收入库</span>
                   </SelectItem>
-                  {/* 2026-06-29: 合并「残株回种源」「自交种子入种源」为「种植自留种」 */}
                   <SelectItem value="planting_self_kept" disabled={!hasSeedSource}>
                     <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 种植自留种</span>
                   </SelectItem>
-                  {/* 2026-07-09：移除"直接废弃"选项 — 与每日记录"损耗"语义重叠，统一走损耗通道 */}
                 </SelectContent>
               </Select>
               {!hasSeedSource && (
@@ -624,14 +625,13 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 </p>
               )}
             </div>
-            {/* 2026-06-29: 合并种植自留种 — 替代原「回流方式」三选 Select（circulate 时切割/留种/数量回填, self_seed 时仅留种）*/}
-            {/* 新 UI 用「采收形态」12 选下拉；后端基于 seedForm 派生 PROPAGATION subType */}
+            {/* 第1行第3列：采收形态（仅 planting_self_kept 显示） */}
             {destination === 'planting_self_kept' && (
               <div>
                 <Label>采收形态 *</Label>
                 <Select value={sourceForm} onValueChange={setSourceForm}>
                   <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="选采收形态（果实/种子/种苗/穗条/枝条等）" />
+                    <SelectValue placeholder="选采收形态" />
                   </SelectTrigger>
                   <SelectContent>
                     {SEED_FORM_OPTIONS.map((f) => (
@@ -639,34 +639,95 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     ))}
                   </SelectContent>
                 </Select>
-                {/* 2026-06-29: 种植自留种说明 */}
-                <p className="mt-1 text-xs text-gray-500 flex items-start gap-1">
-                  <span className="text-emerald-600">💡</span>
-                  <span>
-                    果实/枝条/穗条/整株等植物体请选「扦插类」；种子/种苗请选「留种」。
-                    数量回流到内部种源列表，不进作物库存。
-                  </span>
-                </p>
               </div>
             )}
-            {/* 兼容历史老记录（circulate/self_seed）— 仍显示原 subType，但禁止通过 UI 新建 */}
-            {(destination === 'circulate' || destination === 'self_seed') && (
+            {/* 第1行第3列：采收形态（harvest 模式） */}
+            {destination === 'harvest' && (
               <div>
-                <Label>回流方式（历史记录，不可修改）</Label>
-                <Select value={subType} onValueChange={(v) => setSubType(v as SubType)} disabled>
+                <Label>采收形态 *</Label>
+                <Select value={sourceForm} onValueChange={setSourceForm}>
                   <SelectTrigger className={deepInputClass}>
-                    <SelectValue />
+                    <SelectValue placeholder="选采收形态" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={subType}>{getSubTypeLabel(subType)}</SelectItem>
+                    <SelectItem value="果实">果实</SelectItem>
+                    <SelectItem value="种子">种子</SelectItem>
+                    <SelectItem value="种苗">种苗</SelectItem>
+                    <SelectItem value="穗条">穗条</SelectItem>
+                    <SelectItem value="枝条">枝条</SelectItem>
+                    <SelectItem value="块根">块根</SelectItem>
+                    <SelectItem value="块茎">块茎</SelectItem>
+                    <SelectItem value="鳞茎">鳞茎</SelectItem>
+                    <SelectItem value="叶片">叶片</SelectItem>
+                    <SelectItem value="花朵">花朵</SelectItem>
+                    <SelectItem value="整株">整株</SelectItem>
+                    <SelectItem value="其他">其他</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-gray-400">
-                  此记录为旧版本（circulate/self_seed），已合并到「种植自留种」。
-                </p>
               </div>
             )}
-            {requiresWarehouse && (
+          </div>
+          {/* 第2行：数量+单位（1/3）+ 操作员（1/3）（仅 planting_self_kept 显示） */}
+          {destination === 'planting_self_kept' && (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>数量 *</Label>
+                <div className="flex gap-1">
+                  <NumberInput
+                    style={{ width: '65%' }}
+                    value={quantity}
+                    onChange={(v) => setQuantity(v)}
+                    min={0}
+                    className={deepInputClass}
+                    placeholder="0"
+                  />
+                  <Select style={{ width: '35%' }} value={unit} onValueChange={setUnit}>
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="单位" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.length === 0 ? (
+                        <SelectItem value="克" disabled>加载中…</SelectItem>
+                      ) : (
+                        unitOptions.map((u) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>操作员 *</Label>
+                <Input
+                  value={operator}
+                  onChange={(e) => setOperator(e.target.value)}
+                  placeholder="默认当前登录人员"
+                  className={deepInputClass}
+                />
+              </div>
+            </div>
+          )}
+          {/* 兼容历史老记录（circulate/self_seed）— 仍显示原 subType，但禁止通过 UI 新建 */}
+          {(destination === 'circulate' || destination === 'self_seed') && (
+            <div>
+              <Label>回流方式（历史记录，不可修改）</Label>
+              <Select value={subType} onValueChange={(v) => setSubType(v as SubType)} disabled>
+                <SelectTrigger className={deepInputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={subType}>{getSubTypeLabel(subType)}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-gray-400">
+                此记录为旧版本（circulate/self_seed），已合并到「种植自留种」。
+              </p>
+            </div>
+          )}
+          {/* 2026-07-18：harvest 模式 - 第2行：仓库 + 操作员 + 采收人员（3 列各 1/3） */}
+          {destination === 'harvest' && (
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>仓库 *</Label>
                 {activeWarehouses.length === 0 ? (
@@ -696,115 +757,87 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   </Select>
                 )}
               </div>
-            )}
-            {/* 2026-06-19: 采收形态（仅 destination='harvest' 显示且必填）— 区分果实/种子/种苗/枝条等 */}
-            {destination === 'harvest' && (
-              <>
-                <div>
-                  <Label>采收形态 *</Label>
-                  <Select value={sourceForm} onValueChange={setSourceForm}>
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="选采收形态（果实/种子/种苗/枝条等）" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="果实">果实</SelectItem>
-                      <SelectItem value="种子">种子</SelectItem>
-                      <SelectItem value="种苗">种苗</SelectItem>
-                      <SelectItem value="穗条">穗条</SelectItem>
-                      <SelectItem value="枝条">枝条</SelectItem>
-                      <SelectItem value="块根">块根</SelectItem>
-                      <SelectItem value="块茎">块茎</SelectItem>
-                      <SelectItem value="鳞茎">鳞茎</SelectItem>
-                      <SelectItem value="叶片">叶片</SelectItem>
-                      <SelectItem value="花朵">花朵</SelectItem>
-                      <SelectItem value="整株">整株</SelectItem>
-                      <SelectItem value="其他">其他</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div>
+                <Label>操作员</Label>
+                <Input
+                  value={operator}
+                  onChange={(e) => setOperator(e.target.value)}
+                  placeholder="默认当前登录人员"
+                  className={deepInputClass}
+                />
+              </div>
+              <div>
+                <Label>采收人员</Label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setHarvesterPopoverOpen(!harvesterPopoverOpen)}
+                    className={`${deepInputClass} w-full text-left flex items-center justify-between min-h-[44px] ${harvesterPopoverOpen ? 'border-emerald-500 ring-2 ring-emerald-200' : ''}`}
+                  >
+                    <div className="flex-1 flex flex-wrap gap-1">
+                      {harvesterNames.length === 0 ? (
+                        <span className="text-gray-400">点击选择采收员（可多选）</span>
+                      ) : (
+                        harvesterNames.map((n, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded">
+                            {n}
+                            <X
+                              className="w-3 h-3 cursor-pointer hover:text-emerald-950"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setHarvesterNames((prev) => prev.filter((_, i) => i !== idx))
+                                setHarvesterIds((prev) => prev.filter((_, i) => i !== idx))
+                              }}
+                            />
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500 ml-2 shrink-0" />
+                  </button>
+                  {harvesterPopoverOpen && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {users.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
+                      ) : (
+                        users.map((u: UserLite) => {
+                          const name = u.realName || u.real_name || u.username
+                          const checked = harvesterNames.includes(name)
+                          return (
+                            <label key={u.oid || u.id} className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer">
+                              <input type="checkbox" checked={checked} onChange={() => toggleHarvester(u)} />
+                              <span className="text-sm">{name}</span>
+                            </label>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
-                {/* 2026-06-19: 操作员 + 采收人员 移到"采收形态"后（顶部基础字段区），与其他基础字段统一呈现 */}
-                <div>
-                  <Label>操作员</Label>
-                  <Input
-                    value={operator}
-                    onChange={(e) => setOperator(e.target.value)}
-                    placeholder="默认当前登录人员"
-                    className={deepInputClass}
-                  />
-                </div>
-                <div>
-                  <Label>采收人员</Label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setHarvesterPopoverOpen(!harvesterPopoverOpen)}
-                      className={`${deepInputClass} w-full text-left flex items-center justify-between min-h-[44px] ${harvesterPopoverOpen ? 'border-emerald-500 ring-2 ring-emerald-200' : ''}`}
-                    >
-                      <div className="flex-1 flex flex-wrap gap-1">
-                        {harvesterNames.length === 0 ? (
-                          <span className="text-gray-400">点击选择采收员（可多选）</span>
-                        ) : (
-                          harvesterNames.map((n, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded">
-                              {n}
-                              <X
-                                className="w-3 h-3 cursor-pointer hover:text-emerald-950"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setHarvesterNames((prev) => prev.filter((_, i) => i !== idx))
-                                  setHarvesterIds((prev) => prev.filter((_, i) => i !== idx))
-                                }}
-                              />
-                            </span>
-                          ))
-                        )}
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-gray-500 ml-2 shrink-0" />
-                    </button>
-                    {harvesterPopoverOpen && (
-                      <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {users.length === 0 ? (
-                          <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
-                        ) : (
-                          users.map((u: UserLite) => {
-                            const name = u.realName || u.real_name || u.username
-                            const checked = harvesterNames.includes(name)
-                            return (
-                              <label key={u.oid || u.id} className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer">
-                                <input type="checkbox" checked={checked} onChange={() => toggleHarvester(u)} />
-                                <span className="text-sm">{name}</span>
-                              </label>
-                            )
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-            {destination && destination !== 'harvest' && (
-              <>
-                <div>
-                  <Label>数量 *</Label>
+              </div>
+            </div>
+          )}
+          {/* 2026-07-18：非 harvest 非 planting_self_kept 模式 - 数量+单位合并（1/3） */}
+          {destination && destination !== 'harvest' && destination !== 'planting_self_kept' && (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>数量 *</Label>
+                <div className="flex gap-1">
                   <NumberInput
+                    style={{ width: '65%' }}
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
                     min={0}
                     className={deepInputClass}
                     placeholder="0"
                   />
-                  {/* 2026-07-09：移除 dispose 剩余可废弃上限提示（dispose 功能已下线） */}
-                </div>
-                <div>
-                  <Label>单位 *</Label>
-                  <Select value={unit} onValueChange={setUnit}>
+                  <Select style={{ width: '35%' }} value={unit} onValueChange={setUnit}>
                     <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择单位" />
+                      <SelectValue placeholder="单位" />
                     </SelectTrigger>
                     <SelectContent>
                       {unitOptions.length === 0 ? (
-                        <SelectItem value="克" disabled>字典加载中…</SelectItem>
+                        <SelectItem value="克" disabled>加载中…</SelectItem>
                       ) : (
                         unitOptions.map((u) => (
                           <SelectItem key={u} value={u}>{u}</SelectItem>
@@ -813,8 +846,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     </SelectContent>
                   </Select>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          )}
           </div>
 
         {/* 2026-06-19: 采收入库扩展字段（与行级采收入库弹窗 UnifiedRowHarvestInboundModal 字段集一致）
@@ -862,33 +896,33 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                           className={deepInputClass}
                         />
                       </div>
-                      {/* 4. 采收量（必填） */}
+                      {/* 4. 数量（必填）+ 单位 - 合并占 1/3 宽度，与种植自留种模式对称 */}
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">采收量 *</div>
-                        <NumberInput
-                          value={p.harvestQuantity}
-                          onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
-                          min={0}
-                          className={deepInputClass}
-                        />
-                      </div>
-                      {/* 5. 单位（必填） */}
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">单位 *</div>
-                        <Select value={p.unit} onValueChange={(v) => updateProduct(idx, { unit: v })}>
-                          <SelectTrigger className={deepInputClass}>
-                            <SelectValue placeholder="单位" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {unitOptions.length === 0 ? (
-                              <SelectItem value="克" disabled>字典加载中…</SelectItem>
-                            ) : (
-                              unitOptions.map((u) => (
-                                <SelectItem key={u} value={u}>{u}</SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                        <div className="text-xs text-gray-500 mb-1">数量 *</div>
+                        <div className="flex gap-1">
+                          <NumberInput
+                            style={{ width: '65%' }}
+                            value={p.harvestQuantity}
+                            onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
+                            min={0}
+                            className={deepInputClass}
+                            placeholder="0"
+                          />
+                          <Select style={{ width: '35%' }} value={p.unit} onValueChange={(v) => updateProduct(idx, { unit: v })}>
+                            <SelectTrigger className={deepInputClass}>
+                              <SelectValue placeholder="单位" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {unitOptions.length === 0 ? (
+                                <SelectItem value="克" disabled>加载中…</SelectItem>
+                              ) : (
+                                unitOptions.map((u) => (
+                                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                       {/* 6. 品质 */}
                       <div>
@@ -934,9 +968,18 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               placeholder="可选"
               rows={2}
             />
+            {/* 2026-06-29: 种植自留种说明 - 移到备注下方 */}
+            {destination === 'planting_self_kept' && (
+              <p className="mt-1 text-xs text-gray-500 flex items-start gap-1">
+                <span className="text-emerald-600">💡</span>
+                <span>
+                  果实/枝条/穗条/整株等植物体请选「扦插类」；种子/种苗请选「留种」。
+                  数量回流到内部种源列表，不进作物库存。
+                </span>
+              </p>
+            )}
           </div>
         )}
-        </div>
 
         {/* 历史记录表 */}
         <div>
@@ -982,7 +1025,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     <th className="px-2 py-2 text-left">去向</th>
                     <th className="px-2 py-2 text-left">形态</th>
                     <th className="px-2 py-2 text-left">数量</th>
-                    <th className="px-2 py-2 text-left">单位</th>
                     <th className="px-2 py-2 text-left">仓库</th>
                     <th className="px-2 py-2 text-left">操作员</th>
                     <th className="px-2 py-2 text-left">备注</th>
@@ -996,8 +1038,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                       <td className="px-2 py-1.5">{getDestinationLabel(r.destination)}</td>
                       {/* 2026-06-29: 采收形态优先于 subType 显示（planting_self_kept 新数据有 seedForm） */}
                       <td className="px-2 py-1.5">{(r as any).seedForm || getSubTypeLabel(r.subType)}</td>
-                      <td className="px-2 py-1.5">{r.quantity}</td>
-                      <td className="px-2 py-1.5">{r.unit}</td>
+                      <td className="px-2 py-1.5">{r.quantity}{r.unit ? ` ${r.unit}` : ''}</td>
                       <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
                       <td className="px-2 py-1.5">{r.operatorName || r.createBy || '-'}</td>
                       <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]" title={r.notes || ''}>
