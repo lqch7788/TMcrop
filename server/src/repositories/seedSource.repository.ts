@@ -966,7 +966,11 @@ export class SeedSourceRepository {
       SELECT id, 'inventory_inbound_records' AS recordSource,
              record_date AS recordDate,
              source_module AS sourceModule,
+             source_id AS sourceId, source_code AS sourceCode,
+             stock_type AS stockType,
              business_id AS businessId,
+             crop_name AS cropName, variety_name AS varietyName,
+             warehouse_name AS warehouseName,
              quantity, returned_quantity AS returnedQuantity, unit,
              unit_price AS unitPrice, total_amount AS totalAmount,
              supplier_name AS supplierName,
@@ -986,7 +990,10 @@ export class SeedSourceRepository {
       SELECT c.id, 'crop_circulation_records' AS recordSource,
              c.circulation_date AS recordDate,
              c.source_module AS sourceModule,
+             c.source_id AS sourceId, NULL AS sourceCode, NULL AS stockType,
              c.id AS businessId,
+             c.crop_name AS cropName, c.crop_variety AS varietyName,
+             NULL AS warehouseName,
              c.quantity, 0 AS returnedQuantity, c.unit,
              NULL AS unitPrice, NULL AS totalAmount,
              NULL AS supplierName, u.real_name AS operatorName, c.notes,
@@ -1025,7 +1032,13 @@ export interface UnifiedInboundRecord {
   recordSource: 'inventory_inbound_records' | 'crop_circulation_records';
   recordDate: string;
   sourceModule?: string;
+  sourceId?: string;
+  sourceCode?: string;
+  stockType?: string;
   businessId?: string;
+  cropName?: string;
+  varietyName?: string;
+  warehouseName?: string;
   quantity: number;
   returnedQuantity?: number;
   unit?: string;

@@ -7,7 +7,11 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
+import { Badge, Textarea, Label } from '@/components/ui';
+import { useSeedSourceStore } from '@/stores/useSeedSourceStore';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
@@ -436,6 +440,36 @@ type InboundRecord = InboundRecordType;
 
 function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   const [records, setRecords] = useState<InboundRecord[]>([])
+  // 2026-07-18: 冲销对话框状态（C-1 修复）
+  const [reversingRecord, setReversingRecord] = useState<InboundRecord | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reverseSubmitting, setReverseSubmitting] = useState(false);
+
+  // 2026-07-18: 冲销处理函数
+  async function handleReverse() {
+    if (!reversingRecord || !reverseReason.trim()) return;
+    setReverseSubmitting(true);
+    try {
+      // 通过 Store action（架构铁律：不直接调 service）
+      await useSeedSourceStore.getState().reverseInbound(seedSourceId, {
+        inboundRecordId: reversingRecord.id,
+        reason: reverseReason.trim(),
+      });
+      toast.success('冲销成功');
+      setReversingRecord(null);
+      setReverseReason('');
+      // 刷新种源（更新 remainingQuantity）+ 刷新入库记录（更新 reversedAt 标记）
+      await useSeedSourceStore.getState().loadItems();
+      // 重新加载当前面板的 records
+      getInboundRecords(seedSourceId)
+        .then((data) => setRecords(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    } catch (e: any) {
+      toast.error(e.message || '冲销失败');
+    } finally {
+      setReverseSubmitting(false);
+    }
+  }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -451,15 +485,17 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   }, [seedSourceId])
 
   // 2026-07-06：顶部统计汇总（原始/已退/可退 + 单位），让用户一眼看到退库累计
+  // 2026-07-18：过滤已冲销记录（C-2 修复）
   // ⚠️ 必须在所有 early return 之前调用 — React hooks 调用次数必须保持一致
-  // 之前放在 records.length===0 之后导致 "Rendered more hooks than during the previous render" 报错
   const summary = useMemo(() => {
-    const totalOriginal = records.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
-    const totalReturned = records.reduce((s, r) => s + (Number(r.returnedQuantity) || 0), 0);
+    // 只统计未冲销的记录（被冲销的已不占用库存）
+    const activeRecords = records.filter(r => !r.reversedAt);
+    const totalOriginal = activeRecords.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+    const totalReturned = activeRecords.reduce((s, r) => s + (Number(r.returnedQuantity) || 0), 0);
     const totalReturnable = totalOriginal - totalReturned;
     // 取所有行的单位（通常一致，取第一个非空）
-    const unit = records.find(r => r.unit)?.unit || '';
-    return { totalOriginal, totalReturned, totalReturnable, unit, count: records.length };
+    const unit = activeRecords.find(r => r.unit)?.unit || '';
+    return { totalOriginal, totalReturned, totalReturnable, unit, count: activeRecords.length };
   }, [records]);
 
   if (loading) {
@@ -568,6 +604,8 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
               <th className="px-2 py-2 text-left">供应商</th>
               <th className="px-2 py-2 text-left">操作员</th>
               <th className="px-2 py-2 text-left">备注</th>
+              {/* 2026-07-18: 冲销按钮列（C-1 修复） */}
+              <th className="px-2 py-2 text-left w-20">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -610,12 +648,71 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
                   >
                     {r.notes || '-'}
                   </td>
+                  {/* 2026-07-18: 冲销按钮（C-1 修复） */}
+                  <td className="px-2 py-1.5">
+                    {r.reversedAt ? (
+                      <Badge variant="destructive" className="text-xs">已冲销</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setReversingRecord(r)}
+                        disabled={r.recordSource !== 'inventory_inbound_records' || returnable <= 0}
+                        title={returnable <= 0 ? '已全部退完，无需冲销' : '冲销此入库'}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {/* 2026-07-18: 冲销确认对话框（C-1 修复） */}
+      <Dialog open={reversingRecord !== null} onOpenChange={(open) => { if (!open) setReversingRecord(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              冲销入库记录
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p>冲销后将：</p>
+            <ul className="list-disc pl-6 space-y-1 text-gray-700">
+              <li>入库记录标记为「已冲销」</li>
+              <li>种源 <code className="font-mono">{record.seedCode}</code> 可用数量减少{' '}
+                <strong>{reversingRecord ? (reversingRecord.quantity || 0) - (reversingRecord.returnedQuantity || 0) : 0} {reversingRecord?.unit}</strong>
+              </li>
+              <li>此操作不可撤销（需新建一条正向入库单来补偿）</li>
+            </ul>
+            <div>
+              <Label>冲销原因 <span className="text-red-600">*</span></Label>
+              <Textarea
+                value={reverseReason}
+                onChange={e => setReverseReason(e.target.value)}
+                placeholder="录入错误 / 重复提交 / 误操作..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReversingRecord(null); setReverseReason(''); }}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!reverseReason.trim() || reverseSubmitting}
+              onClick={handleReverse}
+            >
+              {reverseSubmitting ? '冲销中...' : '确认冲销'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
