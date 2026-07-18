@@ -101,10 +101,10 @@ export function MergePreview({ cropCode, seedForm, unit, generation, newQuantity
   if (state === 'matched') {
     return (
       <Alert className="border-cyan-200 bg-cyan-50">
-        <Layers className="w-4 h-4 text-cyan-600" />
+        <Layers className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
         <AlertDescription>
           <div className="font-medium text-cyan-900">将合并到已有种源</div>
-          <div className="mt-1 text-sm text-cyan-700">
+          <div className="mt-1 text-sm text-cyan-700 break-all">
             <code className="font-mono">{data.sourceCode}</code>
             {' · '}当前 {data.availableCount} {data.unit}
             {' · '}已回流 {data.reflowCount ?? 0} 次
@@ -113,7 +113,7 @@ export function MergePreview({ cropCode, seedForm, unit, generation, newQuantity
             本次新增 <strong>{newQuantity} {unit}</strong> 后 → 可用数量{' '}
             <strong className="text-lg">{(data.availableCount || 0) + newQuantity} {unit}</strong>
           </div>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"

@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
 import { Badge, Textarea, Label } from '@/components/ui';
@@ -346,8 +346,12 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   }
   if (records.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg">
-        暂无使用记录
+      <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+        <MoveRight className="w-10 h-10 mx-auto mb-2 opacity-30" />
+        <div className="text-sm">暂无使用记录</div>
+        <div className="text-xs mt-1 text-gray-400">
+          当该种源被育苗或种植环节调用时会显示在此
+        </div>
       </div>
     )
   }
@@ -545,8 +549,12 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   }
   if (records.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg">
-        暂无入库记录
+      <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+        <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
+        <div className="text-sm">暂无入库记录</div>
+        <div className="text-xs mt-1 text-gray-400">
+          通过「外购入库」「库存调拨」「种植留种」等入口添加后会显示在此
+        </div>
       </div>
     )
   }
@@ -708,30 +716,68 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
 
       {/* 2026-07-18: 冲销确认对话框（C-1 修复） */}
       <Dialog open={reversingRecord !== null} onOpenChange={(open) => { if (!open) setReversingRecord(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
               冲销入库记录
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 text-sm">
-            <p>冲销后将：</p>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700">
-              <li>入库记录标记为「已冲销」</li>
-              <li>种源 <code className="font-mono">{record.seedCode}</code> 可用数量减少{' '}
-                <strong>{reversingRecord ? (reversingRecord.quantity || 0) - (reversingRecord.returnedQuantity || 0) : 0} {reversingRecord?.unit}</strong>
-              </li>
-              <li>此操作不可撤销（需新建一条正向入库单来补偿）</li>
+          <div className="space-y-3 text-sm">
+            {/* 完整 context 显示：让用户清楚知道要冲什么 */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">入库单号</span>
+                <code className="text-xs font-mono text-gray-700">{reversingRecord?.id}</code>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">入库方式</span>
+                <span className="text-gray-700">
+                  {SOURCE_MODULE_MAP[reversingRecord?.sourceModule || ''] || reversingRecord?.sourceModule || '外购入库'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">入库日期</span>
+                <span className="text-gray-700">{reversingRecord?.recordDate || '—'}</span>
+              </div>
+              <div className="border-t border-gray-200 pt-1.5 mt-1.5 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">原始入库数量</span>
+                  <span className="text-gray-700">{(reversingRecord?.quantity || 0).toLocaleString()} {reversingRecord?.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">已退数量</span>
+                  <span className="text-amber-600">{(reversingRecord?.returnedQuantity || 0).toLocaleString()} {reversingRecord?.unit}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span className="text-gray-700">本次可冲销数量</span>
+                  <span className="text-red-600 text-base">
+                    {((reversingRecord?.quantity || 0) - (reversingRecord?.returnedQuantity || 0)).toLocaleString()} {reversingRecord?.unit}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-gray-600 text-xs">冲销后将：</p>
+            <ul className="list-disc pl-5 space-y-0.5 text-xs text-gray-600">
+              <li>入库记录标记为「已冲销」（<code>inbound_edit_log</code> 留痕）</li>
+              <li>种源 <code className="font-mono text-gray-700">{record.seedCode}</code> 可用数量相应减少</li>
+              <li className="text-red-600 font-medium">此操作不可撤销（需新建正向入库单补偿）</li>
             </ul>
+
             <div>
               <Label>冲销原因 <span className="text-red-600">*</span></Label>
               <Textarea
                 value={reverseReason}
-                onChange={e => setReverseReason(e.target.value)}
+                onChange={e => setReverseReason(e.target.value.slice(0, 200))}
                 placeholder="录入错误 / 重复提交 / 误操作..."
                 rows={2}
+                maxLength={200}
               />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>必填，将写入审计日志</span>
+                <span>{reverseReason.length} / 200</span>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -743,13 +789,68 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
               disabled={!reverseReason.trim() || reverseSubmitting}
               onClick={handleReverse}
             >
-              {reverseSubmitting ? '冲销中...' : '确认冲销'}
+              {reverseSubmitting ? (
+                <>
+                  <RotateCcw className="w-3 h-3 mr-1 animate-spin" />
+                  冲销中...
+                </>
+              ) : (
+                '确认冲销'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
+}
+
+/**
+ * 2026-07-18: 合并历史 Tab
+ * 显示本种源历史合并过的种源 ID 列表（来自 planting_self_kept 重复种源合并）
+ */
+function MergeHistoryPanel({ record }: { record: SeedSource }) {
+  const ids = record.mergedFromIds || [];
+  return (
+    <div className="space-y-3">
+      <Alert className="border-cyan-200 bg-cyan-50">
+        <Layers className="w-4 h-4 text-cyan-600" />
+        <AlertDescription>
+          <div className="font-medium text-cyan-900">种源合并说明</div>
+          <div className="mt-1 text-sm text-cyan-700">
+            本种源 <code className="font-mono">{record.seedCode}</code> 是由 <strong>{ids.length}</strong> 条历史重复种源合并而成。
+            合并操作由「内部种源去重迁移脚本」或运行时写时合并触发。
+          </div>
+          <div className="mt-2 text-xs text-cyan-600">
+            <div>• 合并时间：{record.lastReflowAt || '未知'}</div>
+            <div>• 合并回流次数：<strong>{record.reflowCount ?? 0}</strong> 次</div>
+            <div>• 合并后总数量：<strong>{(record.quantity || 0).toLocaleString()}</strong> {record.unit}</div>
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-200">
+          被合并的历史种源（共 {ids.length} 条）
+        </div>
+        <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+          {ids.map((id, idx) => (
+            <div key={idx} className="px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400 text-xs w-8">#{idx + 1}</span>
+                <code className="text-xs font-mono text-gray-700">{id}</code>
+              </div>
+              <Badge variant="secondary" className="text-xs">archived</Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        被合并的种源记录已标记为 archived，不再在种源列表显示，但保留追溯链路。如需恢复，请联系管理员。
+      </p>
+    </div>
+  );
 }
 
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
@@ -782,6 +883,17 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     tooltip: '所有入库流水（含外购入库、库存调拨、追加入库），来自 inventory_inbound_records 表。',
     content: <InboundRecordsPanel seedSourceId={record.id} />,
   })
+
+  // 2026-07-18: 种源合并历史 Tab（仅当有 mergedFromIds 时显示）
+  if (record.mergedFromIds && record.mergedFromIds.length > 0) {
+    extraTabs.push({
+      key: 'merge-history',
+      label: `合并历史 (${record.mergedFromIds.length})`,
+      icon: <Layers className="w-4 h-4" />,
+      tooltip: '本种源历史合并过的种源 ID 列表（来自 planting_self_kept 重复种源合并）',
+      content: <MergeHistoryPanel record={record} />,
+    });
+  }
 
   // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
   extraTabs.push({
