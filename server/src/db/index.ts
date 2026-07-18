@@ -123,6 +123,11 @@ export async function initDatabase(): Promise<Database> {
   // 2026-06-20: db 加载完成,启动只读保护
   isDbInitialized = true;
   isDbReadOnly = true;
+
+  // 2026-07-18: 启用外键约束（inbound_edit_log.FK ON DELETE CASCADE 需要）
+  db.run('PRAGMA foreign_keys = ON');
+  console.log('[db-safety] PRAGMA foreign_keys = ON');
+
   console.log('[db-safety] db 加载完成,已启动写盘保护（只允许 /api/admin/db-commit）');
 
   return db;

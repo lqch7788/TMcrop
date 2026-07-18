@@ -3699,6 +3699,93 @@ export function initializeDatabase() {
       }
     }
   } catch { /* batch backfill non-critical */ }
+
+  // ============================================================
+  // 2026-07-18：种源自动合并功能 schema 改动
+  // 根因：fixMissingSchema 被启动白名单禁用，ALTER TABLE 必须放 initializeDatabase
+  // 性能优化：先 PRAGMA 查已有列，只 ALTER 真正缺的
+  // ============================================================
+
+  // seed_sources 合并统计 3 列
+  {
+    const colStmt = db.prepare('PRAGMA table_info(seed_sources)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    const seedSrcCols: Array<[string, string]> = [
+      ['reflow_count', 'INTEGER NOT NULL DEFAULT 0'],
+      ['last_reflow_at', 'TEXT'],
+      ['merged_from_ids', 'TEXT'],
+    ];
+    for (const [col, type] of seedSrcCols) {
+      if (!existing.has(col)) {
+        try { db.run(`ALTER TABLE seed_sources ADD COLUMN ${col} ${type}`); } catch {}
+      }
+    }
+  }
+
+  // inventory_inbound_records 冲销 3 列
+  {
+    const colStmt = db.prepare('PRAGMA table_info(inventory_inbound_records)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    const inboundCols: Array<[string, string]> = [
+      ['reversed_at', 'TEXT'],
+      ['reversed_by', 'TEXT'],
+      ['reverse_reason', 'TEXT'],
+    ];
+    for (const [col, type] of inboundCols) {
+      if (!existing.has(col)) {
+        try { db.run(`ALTER TABLE inventory_inbound_records ADD COLUMN ${col} ${type}`); } catch {}
+      }
+    }
+  }
+
+  // crop_circulation_records 合并动作列
+  try {
+    const colStmt = db.prepare('PRAGMA table_info(crop_circulation_records)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    if (!existing.has('merge_action')) {
+      db.run(`ALTER TABLE crop_circulation_records ADD COLUMN merge_action TEXT`);
+    }
+  } catch {}
+
+  // 2026-07-18：入库冲销审计表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inbound_edit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inbound_id TEXT NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('update', 'reverse')),
+      before_quantity REAL,
+      after_quantity REAL,
+      edited_by TEXT NOT NULL,
+      edited_by_name TEXT,
+      reason TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (inbound_id) REFERENCES inventory_inbound_records(id) ON DELETE CASCADE
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inbound_edit_log_inbound ON inbound_edit_log(inbound_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inbound_edit_log_created ON inbound_edit_log(created_at DESC)`);
+
+  // 2026-07-18：合并键索引（findMergeableSeedSource 高频查询路径）
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_seed_merge_key
+      ON seed_sources(source_origin, crop_code, seed_form, unit, generation)
+      WHERE status = 'active'
+  `);
 }
 
 export { createMaterialFlowLogTable };
