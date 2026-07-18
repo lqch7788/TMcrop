@@ -918,6 +918,125 @@ export class SeedSourceRepository {
       return obj;
     });
   }
+
+  // ============================================================
+  // 2026-07-18: 种源自动合并功能
+  // ============================================================
+
+  /**
+   * 查找合并候选（同合并键的最早一条 active 种源）
+   */
+  async findMergeableSeedSource(q: {
+    cropCode: string;
+    seedForm: string;
+    unit: string;
+    generation: string | null;
+  }): Promise<MatchableStock | null> {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT id, source_code AS sourceCode,
+             remaining_quantity AS availableCount,
+             unit, reflow_count AS reflowCount,
+             last_reflow_at AS lastReflowAt
+      FROM seed_sources
+      WHERE source_origin = 'planting_self_kept'
+        AND status = 'active'
+        AND crop_code = ?
+        AND seed_form = ?
+        AND unit = ?
+        AND IFNULL(generation, '') = IFNULL(?, '')
+      ORDER BY create_time ASC, id ASC
+      LIMIT 1
+    `);
+    stmt.bind([q.cropCode, q.seedForm, q.unit, q.generation ?? null]);
+    const row = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return row ? (row as unknown as MatchableStock) : null;
+  }
+
+  /**
+   * UNION 查询入库流水（inventory_inbound_records + crop_circulation_records PROPAGATION）
+   */
+  async getInboundRecordsUnion(seedSourceId: string): Promise<UnifiedInboundRecord[]> {
+    const db = getDatabase();
+    const results: any[] = [];
+
+    // 数据源 1: inventory_inbound_records
+    const s1 = db.prepare(`
+      SELECT id, 'inventory_inbound_records' AS recordSource,
+             record_date AS recordDate,
+             source_module AS sourceModule,
+             business_id AS businessId,
+             quantity, returned_quantity AS returnedQuantity, unit,
+             unit_price AS unitPrice, total_amount AS totalAmount,
+             supplier_name AS supplierName,
+             operator_name AS operatorName, notes,
+             reversed_at AS reversedAt, reversed_by AS reversedBy,
+             reverse_reason AS reverseReason
+      FROM inventory_inbound_records
+      WHERE business_id = ?
+        AND source_module IN ('seed_source', 'inventory')
+    `);
+    s1.bind([seedSourceId]);
+    while (s1.step()) results.push(s1.getAsObject());
+    s1.free();
+
+    // 数据源 2: crop_circulation_records (PROPAGATION)
+    const s2 = db.prepare(`
+      SELECT c.id, 'crop_circulation_records' AS recordSource,
+             c.circulation_date AS recordDate,
+             c.source_module AS sourceModule,
+             c.id AS businessId,
+             c.quantity, 0 AS returnedQuantity, c.unit,
+             NULL AS unitPrice, NULL AS totalAmount,
+             NULL AS supplierName, u.real_name AS operatorName, c.notes,
+             CASE WHEN c.is_revoked = 1 THEN c.revoked_at ELSE NULL END AS reversedAt,
+             CASE WHEN c.is_revoked = 1 THEN c.revoked_by ELSE NULL END AS reversedBy,
+             NULL AS reverseReason
+      FROM crop_circulation_records c
+      LEFT JOIN users u ON c.operator_id = u.id
+      WHERE c.new_source_id = ?
+        AND c.circulation_type = 'PROPAGATION'
+    `);
+    s2.bind([seedSourceId]);
+    while (s2.step()) results.push(s2.getAsObject());
+    s2.free();
+
+    return results.sort((a, b) =>
+      (b.recordDate || '').localeCompare(a.recordDate || '')
+    ) as UnifiedInboundRecord[];
+  }
+}
+
+// ============================================================
+// 2026-07-18: 种源合并类型导出
+// ============================================================
+export interface MatchableStock {
+  id: string;
+  sourceCode: string;
+  availableCount: number;
+  unit: string;
+  reflowCount: number;
+  lastReflowAt: string | null;
+}
+
+export interface UnifiedInboundRecord {
+  id: string;
+  recordSource: 'inventory_inbound_records' | 'crop_circulation_records';
+  recordDate: string;
+  sourceModule?: string;
+  businessId?: string;
+  quantity: number;
+  returnedQuantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalAmount?: number;
+  supplierName?: string;
+  operatorName?: string;
+  notes?: string;
+  reversedAt?: string | null;
+  reversedBy?: string | null;
+  reverseReason?: string | null;
 }
 
 // 导出单例
