@@ -500,13 +500,33 @@ export function SeedSourceTable({
                     title={undefined}
                   >
                     {(() => {
-                      // 2026-07-07: seedForm 字段值若为英文（如 'seed'）也走 SOURCE_TYPE_MAP 翻译
-                      // 兜底永远是中文，禁止显示 'seed' / 'planting' 等原始字符串
+                      // 2026-07-18 修复 v2：部分老数据 seedForm 存的是英文（如 "seed"），
+                      // 部分 sourceType 不在 SOURCE_TYPE_MAP 中（如 "transfer"）。
+                      // 全部走两段翻译，确保不露出任何英文。
+                      const SEED_FORM_EN_MAP: Record<string, string> = {
+                        seed: '种子',
+                        seedling: '种苗',
+                        cutting: '扦插苗',
+                        grafting: '嫁接苗',
+                        tissue_culture: '组培苗',
+                        bulb: '种球/球根',
+                        other: '其他',
+                      };
                       const resolveForm = (): string => {
                         const sf = record.seedForm;
-                        if (sf && SOURCE_TYPE_MAP[sf]) return SOURCE_TYPE_MAP[sf];
+                        if (sf && typeof sf === 'string' && sf.trim()) {
+                          const t = sf.trim();
+                          // 是中文文本（果实/种子/穗条/枝条...）→ 直接返回
+                          if (/[一-鿿]/.test(t)) return t;
+                          // 是英文 key → 翻译
+                          if (SEED_FORM_EN_MAP[t]) return SEED_FORM_EN_MAP[t];
+                          return t; // 兜底
+                        }
+                        // fallback: sourceType 翻译
                         const st = record.sourceType;
                         if (st && SOURCE_TYPE_MAP[st]) return SOURCE_TYPE_MAP[st];
+                        // SOURCE_TYPE_MAP 里没有的 sourceType（如 transfer/external_seed）→ 兜底
+                        if (st && st.trim()) return SEED_FORM_EN_MAP[st.trim()] || '其他';
                         return '其他';
                       };
                       const form = resolveForm();

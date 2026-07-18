@@ -473,7 +473,7 @@ const SOURCE_MODULE_MAP: Record<string, string> = {
 import type { InboundRecord as InboundRecordType } from '@/types/crop';
 type InboundRecord = InboundRecordType;
 
-function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
+function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string; seedCode: string }) {
   const [records, setRecords] = useState<InboundRecord[]>([])
   // 2026-07-18: 使用 useToast hook（项目约定）
   const { toast } = useToast();
@@ -784,13 +784,13 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
             <p className="text-gray-600 text-xs">冲销后将：</p>
             <ul className="list-disc pl-5 space-y-0.5 text-xs text-gray-600">
               <li>入库记录标记为「已冲销」（<code>inbound_edit_log</code> 留痕）</li>
-              <li>种源 <code className="font-mono text-gray-700">{record.seedCode}</code> 可用数量相应减少</li>
+              <li>种源 <code className="font-mono text-gray-700">{seedCode}</code> 可用数量相应减少</li>
               <li className="text-red-600 font-medium">此操作不可撤销（需新建正向入库单补偿）</li>
             </ul>
 
             <div>
               <Label>冲销原因 <span className="text-red-600">*</span></Label>
-              <Textarea
+              <TextArea
                 value={reverseReason}
                 onChange={e => setReverseReason(e.target.value.slice(0, 200))}
                 placeholder="录入错误 / 重复提交 / 误操作..."
@@ -994,7 +994,7 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     label: '入库记录',
     icon: <Package className="w-4 h-4" />,
     tooltip: '所有入库流水（含外购入库、库存调拨、追加入库），来自 inventory_inbound_records 表。',
-    content: <InboundRecordsPanel seedSourceId={record.id} />,
+    content: <InboundRecordsPanel seedSourceId={record.id} seedCode={record.seedCode} />,
   })
 
   // 2026-07-18: 种源合并历史 Tab（仅当有 mergedFromIds 时显示）

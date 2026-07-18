@@ -377,6 +377,10 @@ export interface AddHarvestRecordInput {
   operatorId?: string
   createBy?: string
   createById?: string
+  /** 2026-07-18: 种源合并键 — 用户输入 generation */
+  generation?: string | null
+  /** 2026-07-18: 用户选择强制新建（即使有匹配也不合并） */
+  forceNew?: boolean
 }
 
 /**

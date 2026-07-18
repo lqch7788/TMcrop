@@ -924,8 +924,24 @@ export async function findMatchableSeedSource(params: {
     ...(params.generation ? { generation: params.generation } : {}),
     ...(params.propagationMethod ? { propagationMethod: params.propagationMethod } : {}),
   });
-  const response = await enhancedApiClient.get(`/api/seed-sources/matchable?${q}`);
+  const response = await enhancedApiClient.get(`/seed-sources/matchable?${q}`);
   return response;
+}
+
+/**
+ * 2026-07-18: 查询同作物其他种源（业务上下文展示用）
+ * 用于种植自留种弹窗的"同作物参考列表"卡片，仅展示，不参与合并判断
+ */
+export async function findSameCropSources(params: {
+  cropCode: string;
+  excludeSourceId?: string;
+}): Promise<any[]> {
+  const q = new URLSearchParams({ cropCode: params.cropCode });
+  if (params.excludeSourceId) {
+    q.set('excludeId', params.excludeSourceId);
+  }
+  const response = await enhancedApiClient.get(`/seed-sources/same-crop-sources?${q}`);
+  return Array.isArray(response) ? response : [];
 }
 
 /**
@@ -937,14 +953,14 @@ export async function reverseInboundRecord(
   seedSourceId: string,
   payload: { inboundRecordId: string; reason: string }
 ): Promise<void> {
-  await enhancedApiClient.post(`/api/seed-sources/${seedSourceId}/reverse-inbound`, payload);
+  await enhancedApiClient.post(`/seed-sources/${seedSourceId}/reverse-inbound`, payload);
 }
 
 /**
  * 获取入库流水（UNION inventory_inbound_records + crop_circulation_records PROPAGATION）
  */
 export async function getInboundRecords(seedSourceId: string): Promise<InboundRecord[]> {
-  const response = await enhancedApiClient.get(`/api/seed-sources/${seedSourceId}/history-inbound`);
+  const response = await enhancedApiClient.get(`/seed-sources/${seedSourceId}/history-inbound`);
   return Array.isArray(response) ? (response as InboundRecord[]) : [];
 }
 
@@ -953,6 +969,6 @@ export async function getInboundRecords(seedSourceId: string): Promise<InboundRe
  */
 export type InboundEditLog = import('@/types/crop').InboundEditLog;
 export async function getInboundEditLogs(seedSourceId: string): Promise<InboundEditLog[]> {
-  const response = await enhancedApiClient.get(`/api/seed-sources/${seedSourceId}/inbound-audit`);
+  const response = await enhancedApiClient.get(`/seed-sources/${seedSourceId}/inbound-audit`);
   return Array.isArray(response) ? (response as InboundEditLog[]) : [];
 }

@@ -8,14 +8,16 @@
 
 /** 手机号: ^1[3|4|5|7|8][0-9]{9}$ */
 export function validateMobilePhone(value: string): boolean {
+  // 2026-07-18: 去除 11 位/1 开头限制，只校验非空
   if (!value) return true;
-  return /^1[3|4|5|7|8][0-9]{9}$/.test(value);
+  return value.trim().length > 0;
 }
 
 /** 工作电话: (\d{3,4}-)\d{7,8} */
 export function validateWorkPhone(value: string): boolean {
+  // 2026-07-18: 去除区号-号码格式限制，只校验非空
   if (!value) return true;
-  return /^(\d{3,4}-)\d{7,8}$/.test(value) || /^\(\d{3,4}\)\d{7,8}$/.test(value);
+  return value.trim().length > 0;
 }
 
 /** 传真: 工作电话格式 或 手机号格式 */
@@ -26,8 +28,9 @@ export function validateFax(value: string): boolean {
 
 /** 银行卡号: 15位或17-18位，首位非0 */
 export function validateBankCard(value: string): boolean {
+  // 2026-07-18: 去除 15/17-18 位限制，只校验非空
   if (!value) return true;
-  return /^([1-9])(\d{14}|\d{17,18})$/.test(value);
+  return value.trim().length > 0;
 }
 
 /** 标识码: 字母/数字/下划线/连字符 */

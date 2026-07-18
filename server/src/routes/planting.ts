@@ -456,7 +456,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
   try {
     const { id, recordId } = req.params;
     // 2026-06-29: 加 seedForm 字段（种植自留种采收形态）
-    const { recordDate, destination, subType, seedForm, warehouseId, warehouseName, quantity, unit, notes, generation } = req.body || {};
+    const { recordDate, destination, subType, seedForm, warehouseId, warehouseName, quantity, unit, notes, generation, forceNew, operatorName, operatorId, createBy } = req.body || {};
     const db = getDatabase();
     const now = formatLocalDateISO();
 
@@ -631,8 +631,11 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         subType: finalSubType,
         destination: 'seed_source',
         quantity, unit, notes,
-        generation: generation || null,  // 2026-07-18: 用户输入 generation
-        seedForm: seedForm || undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
+        generation: generation || null,
+        forceNew: !!forceNew,
+        seedForm: seedForm || undefined,
+        operatorName: operatorName || createBy || undefined,
+        operatorId: operatorId || undefined,
       });
       if (result?.circulationId) generatedCircId = result.circulationId;
       if (result?.newSourceId) generatedHarvestId = result.newSourceId;
@@ -1830,6 +1833,7 @@ router.post('/:id/harvest-records', async (req, res) => {
       recordDate, destination, subType, seedForm, warehouseId, warehouseName,
       quantity, unit, notes, operatorName, operatorId, createBy, createById,
       generation,  // 2026-07-18: 种源合并键 — 用户输入 generation
+      forceNew,    // 2026-07-18: 用户选择强制新建
       // 2026-07-03：采收入库弹窗 sync 写入时带进来的，不需要后端重新创建
       harvestRecordId: frontHarvestRecordId,
       inventoryStockId: frontInventoryStockId,
@@ -1928,12 +1932,11 @@ router.post('/:id/harvest-records', async (req, res) => {
         subType: finalSubType,
         destination: 'seed_source',
         quantity, unit, notes,
-        generation: generation || null,  // 2026-07-18: 用户输入 generation
-        seedForm: seedForm || undefined,  // 2026-06-29: 新增，写到 seed_sources.seed_form
-        // 2026-07-18：种植自留种模式补传 operatorId → crop_circulation_records.operator_id
-        // - 前端从 currentUser.oid 取（默认当前登录人员）
-        // - 种源追溯时间线「操作员」列能正确显示
-        operatorId: operatorId || createById || operatorName || undefined,
+        generation: generation || null,
+        seedForm: seedForm || undefined,
+        forceNew: !!forceNew,
+        operatorName: operatorName || createBy || undefined,
+        operatorId: operatorId || createById || undefined,
       })
       if (result?.circulationId) generatedCircId = result.circulationId
     }
@@ -2028,7 +2031,7 @@ router.post('/:id/harvest-records', async (req, res) => {
 router.post('/:id/end', async (req, res) => {
   try {
     const { id } = req.params
-    const { endType, subType, warehouseId, quantity, unit, notes, seedForm, generation } = req.body || {}
+    const { endType, subType, warehouseId, quantity, unit, notes, seedForm, generation, forceNew } = req.body || {}
     const db = getDatabase()
     // sql.js 标准模式：bind + step + getAsObject（.get() 在 sql.js 中不可靠，返回空对象）
     const stmt = db.prepare(`SELECT * FROM plantings WHERE id = ?`)
@@ -2225,8 +2228,9 @@ router.post('/:id/end', async (req, res) => {
       subType: finalSubType,
       destination: 'seed_source',
       quantity, unit, notes,
-      generation: generation || null,  // 2026-07-18: 用户输入 generation
-      seedForm: derivedSeedForm,  // 2026-06-29: 新增
+      generation: generation || null,
+      seedForm: derivedSeedForm,
+      forceNew: !!forceNew,
     })
 
     // 公共收尾：标记种植记录已结束

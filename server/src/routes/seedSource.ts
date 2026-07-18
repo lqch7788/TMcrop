@@ -40,7 +40,7 @@ router.get('/generate-code', (req, res, next) => seedSourceController.generateCo
 // 2026-07-18: 种源合并功能 — 必须在 /:id 路由之前，否则会被吞
 router.get('/matchable', asyncHandler(async (req, res) => {
   try {
-    const { cropCode, seedForm, unit, generation, propagationMethod } = req.query;
+    const { cropCode, seedForm, unit, generation, propagationMethod, linkedPlantingId } = req.query;
     if (!cropCode || !seedForm || !unit) {
       return res.status(400).json({ success: false, error: 'cropCode, seedForm, unit 必填' });
     }
@@ -50,7 +50,27 @@ router.get('/matchable', asyncHandler(async (req, res) => {
       unit: String(unit),
       generation: generation ? String(generation) : null,
       propagationMethod: propagationMethod ? String(propagationMethod) : null,
+      linkedPlantingId: linkedPlantingId ? String(linkedPlantingId) : null,
     });
+    res.json({ success: true, data: result });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}));
+
+// 2026-07-18: 同作物种源参考列表（业务上下文展示，不会自动合并）
+// 用于种植自留种弹窗的"同作物参考列表"卡片
+// query: ?cropCode=xxx&excludeId=yyy (可选)
+router.get('/same-crop-sources', asyncHandler(async (req, res) => {
+  try {
+    const { cropCode, excludeId } = req.query;
+    if (!cropCode) {
+      return res.status(400).json({ success: false, error: 'cropCode 必填' });
+    }
+    const result = await seedSourceRepository.findSameCropSeedSources(
+      String(cropCode),
+      excludeId ? String(excludeId) : undefined,
+    );
     res.json({ success: true, data: result });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });

@@ -566,14 +566,6 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       size="xxl"
       footer={
         <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            {isReadOnly ? '关闭' : '取消'}
-          </Button>
           {!isReadOnly && (
           <Button
             variant="default"
