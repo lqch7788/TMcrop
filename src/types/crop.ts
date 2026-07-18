@@ -334,6 +334,19 @@ export interface InboundRecord {
   reverseReason?: string | null;
 }
 
+/** 2026-07-18: 入库审计日志（inbound_edit_log 表） */
+export interface InboundEditLog {
+  id: number;
+  inboundId: string;
+  action: 'update' | 'reverse';
+  beforeQuantity: number | null;
+  afterQuantity: number | null;
+  editedBy: string;
+  editedByName?: string;
+  reason?: string;
+  createdAt: string;
+}
+
 // ========== 每日记录类型 ==========
 
 /**

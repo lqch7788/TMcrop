@@ -1013,6 +1013,36 @@ export class SeedSourceRepository {
       (b.recordDate || '').localeCompare(a.recordDate || '')
     ) as UnifiedInboundRecord[];
   }
+
+  /**
+   * 2026-07-18: 查询入库审计日志（冲销/编辑记录）
+   * 通过 inventory_inbound_records.business_id = seedSourceId 关联
+   */
+  async getInboundEditLogs(seedSourceId: string, limit = 200): Promise<InboundEditLog[]> {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT
+        iel.id,
+        iel.inbound_id AS inboundId,
+        iel.action,
+        iel.before_quantity AS beforeQuantity,
+        iel.after_quantity AS afterQuantity,
+        iel.edited_by AS editedBy,
+        iel.edited_by_name AS editedByName,
+        iel.reason,
+        iel.created_at AS createdAt
+      FROM inbound_edit_log iel
+      INNER JOIN inventory_inbound_records iir ON iir.id = iel.inbound_id
+      WHERE iir.business_id = ?
+      ORDER BY iel.created_at DESC
+      LIMIT ?
+    `);
+    stmt.bind([seedSourceId, limit]);
+    const results: any[] = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    stmt.free();
+    return results as InboundEditLog[];
+  }
 }
 
 // ============================================================
@@ -1050,6 +1080,21 @@ export interface UnifiedInboundRecord {
   reversedAt?: string | null;
   reversedBy?: string | null;
   reverseReason?: string | null;
+}
+
+/**
+ * 入库审计日志（2026-07-18）
+ */
+export interface InboundEditLog {
+  id: number;
+  inboundId: string;
+  action: 'update' | 'reverse';
+  beforeQuantity: number | null;
+  afterQuantity: number | null;
+  editedBy: string;
+  editedByName?: string;
+  reason?: string;
+  createdAt: string;
 }
 
 // 导出单例

@@ -641,6 +641,20 @@ router.post('/:id/reverse-inbound', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/seed-sources/:id/inbound-audit
+ * 2026-07-18: 入库审计日志（冲销/编辑记录，来自 inbound_edit_log 表）
+ */
+router.get('/:id/inbound-audit', asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const logs = await seedSourceRepository.getInboundEditLogs(String(id));
+    res.json({ success: true, data: logs });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}));
+
+/**
  * GET /api/seed-sources/:id/history-inventory
  * 2026-06-26: 种源关联的库存流水（inventory_transaction）
  * 用于种源页"库存流水" Tab

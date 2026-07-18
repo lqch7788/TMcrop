@@ -945,3 +945,12 @@ export async function getInboundRecords(seedSourceId: string): Promise<InboundRe
   const response = await enhancedApiClient.get(`/api/seed-sources/${seedSourceId}/history-inbound`);
   return Array.isArray(response) ? (response as InboundRecord[]) : [];
 }
+
+/**
+ * 2026-07-18: 入库审计日志（inbound_edit_log）
+ */
+export type InboundEditLog = import('@/types/crop').InboundEditLog;
+export async function getInboundEditLogs(seedSourceId: string): Promise<InboundEditLog[]> {
+  const response = await enhancedApiClient.get(`/api/seed-sources/${seedSourceId}/inbound-audit`);
+  return Array.isArray(response) ? (response as InboundEditLog[]) : [];
+}

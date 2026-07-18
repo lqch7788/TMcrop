@@ -8,6 +8,7 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { writeFlowLog } from './flowLogService';
 
 export interface ReverseInboundInput {
   inboundRecordId: string;
@@ -77,15 +78,19 @@ export function reverseInboundRecord(
 
     // 7. 写 material_flow_log（try/catch，不影响主流程）
     try {
-      // 动态 require 避免循环依赖
-      const { writeFlowLog } = require('./flowLogService');
       writeFlowLog({
         flow_type: 'correction',
         crop_name: stock.crop_name,
-        source_id: seedSourceId,
+        source_type: 'inbound_record',
+        source_id: payload.inboundRecordId,
         source_quantity: -returnable,
         source_unit: record.unit,
-        ref_id: payload.inboundRecordId,
+        target_type: 'seed_source',
+        target_id: seedSourceId,
+        target_code: stock.source_code || seedSourceId,
+        target_quantity: -returnable,
+        target_unit: record.unit,
+        business_id: payload.inboundRecordId,
         business_code: payload.inboundRecordId,
         created_by: 'system',
       });

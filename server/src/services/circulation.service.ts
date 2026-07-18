@@ -17,6 +17,7 @@
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateISO } from '../utils/dateUtil';
 import { writeFlowLog } from './flowLogService';
+import { SeedSourceRepository } from '../repositories/seedSource.repository';
 import { z } from 'zod';
 
 // ============================================================
@@ -275,9 +276,8 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
     let mergeable: any = null
     if (newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
       // 2026-07-18: 事务内查合并候选（防并发 race）
-      const { SeedSourceRepository } = require('../repositories/seedSource.repository')
       const repo = new SeedSourceRepository()
-      mergeable = await repo.findMergeableSeedSource({
+      mergeable = repo.findMergeableSeedSource({
         cropCode, seedForm, unit, generation,
       })
     }
