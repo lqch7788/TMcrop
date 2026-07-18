@@ -32,7 +32,7 @@ import { showAlert } from '@/lib/dialogService';
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
 
 // 2026-07-01 P1-9：列数抽常量（包含操作列），加列时只需更新这个数字
-const TOTAL_COLUMNS = 17;
+const TOTAL_COLUMNS = 18;  // 2026-07-18: 加回流次数列（17→18）
 
 // 单位格式化函数（优先使用常量映射，兜底返回原值）
 function formatUnit(unit: string): string {
@@ -418,6 +418,8 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="种源入库数量（采购/调拨一次性入库）">入库数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">剩余数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
+              {/* 2026-07-18: 种源合并 - 回流次数列 */}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-24" title="种植留种回流合并到本种源的次数">回流次数</TableHead>
               {/* 2026-06-30 合并：内部仓库不做分批，剩余率与状态列功能重叠（都是库存健康度表达） */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 <Tooltip
@@ -540,6 +542,19 @@ export function SeedSourceTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {formatUnit(record.unit) || '-'}
+                  </TableCell>
+                  {/* 2026-07-18: 回流次数列 - 种植自留种合并到本种源的次数 */}
+                  <TableCell className="px-4 py-3 text-center text-sm">
+                    {((record as any).reflowCount ?? 0) > 0 ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"
+                        title={(record as any).lastReflowAt ? `最近 ${(record as any).lastReflowAt}` : ''}
+                      >
+                        {(record as any).reflowCount} 次
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">

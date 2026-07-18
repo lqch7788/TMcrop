@@ -23,9 +23,7 @@ import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getSeedSourceUsageRecords,
-  getSeedSourceInboundHistory,
   getInboundRecords,
-  reverseInboundRecord,
   type SeedSourceUsageRecord,
 } from '@/services/apiSeedSourceService';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
@@ -190,6 +188,38 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-500 w-24">打印次数：</span>
             <span className="text-sm text-gray-900">{record.printCount} 次</span>
           </div>
+          {/* 2026-07-18: 种源合并 - 回流次数 + 最近回流时间 + 合并历史 */}
+          {(record.reflowCount ?? 0) > 0 && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">回流次数：</span>
+              <span className="text-sm text-cyan-700 font-medium">
+                {record.reflowCount} 次
+                {record.lastReflowAt && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    （最近 {record.lastReflowAt}）
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+          {record.mergedFromIds && record.mergedFromIds.length > 0 && (
+            <div className="col-span-2 flex items-start">
+              <span className="text-sm text-gray-500 w-24 flex-shrink-0">合并历史：</span>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-xs">
+                  合并了 {record.mergedFromIds.length} 条历史种源
+                </Badge>
+                {record.mergedFromIds.slice(0, 3).map((id, idx) => (
+                  <code key={idx} className="text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
+                    {id.substring(0, 16)}...
+                  </code>
+                ))}
+                {record.mergedFromIds.length > 3 && (
+                  <span className="text-xs text-gray-500">等 {record.mergedFromIds.length} 条</span>
+                )}
+              </div>
+            </div>
+          )}
           {record.remarks && (
             <div className="col-span-2 flex items-start">
               <span className="text-sm text-gray-500 w-24 flex-shrink-0">备注：</span>
@@ -449,13 +479,18 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   async function handleReverse() {
     if (!reversingRecord || !reverseReason.trim()) return;
     setReverseSubmitting(true);
+    // 冲销数量（用于 toast 显示）
+    const returnableQty = (reversingRecord.quantity || 0) - (reversingRecord.returnedQuantity || 0);
+    const returnableUnit = reversingRecord.unit || '';
     try {
       // 通过 Store action（架构铁律：不直接调 service）
       await useSeedSourceStore.getState().reverseInbound(seedSourceId, {
         inboundRecordId: reversingRecord.id,
         reason: reverseReason.trim(),
       });
-      toast.success('冲销成功');
+      toast.success(
+        `冲销成功：入库 ${reversingRecord.id.substring(0, 12)}... 减少 ${returnableQty} ${returnableUnit} 可用`
+      );
       setReversingRecord(null);
       setReverseReason('');
       // 刷新种源（更新 remainingQuantity）+ 刷新入库记录（更新 reversedAt 标记）
@@ -465,7 +500,7 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
         .then((data) => setRecords(Array.isArray(data) ? data : []))
         .catch(() => {});
     } catch (e: any) {
-      toast.error(e.message || '冲销失败');
+      toast.error(`冲销失败：${e.message || '未知错误'}`);
     } finally {
       setReverseSubmitting(false);
     }

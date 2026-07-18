@@ -646,23 +646,29 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 </Select>
               </div>
             )}
-            {/* 2026-07-18：种源合并 - 世代选择（planting_self_kept 模式） */}
+            {/* 2026-07-18：种源合并 - 世代选择（planting_self_kept 模式，可输入） */}
             {destination === 'planting_self_kept' && (
               <div>
-                <Label>世代 <span className="text-gray-400 text-xs">(可选)</span></Label>
-                <Select value={generation} onValueChange={setGeneration}>
-                  <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="不参与合并" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">不参与合并</SelectItem>
-                    <SelectItem value="F1">F1</SelectItem>
-                    <SelectItem value="F2">F2</SelectItem>
-                    <SelectItem value="BC1">BC1</SelectItem>
-                    <SelectItem value="BC2">BC2</SelectItem>
-                    <SelectItem value="无性">无性</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>世代 <span className="text-gray-400 text-xs">(可选, 可输入)</span></Label>
+                <Input
+                  value={generation}
+                  onChange={(e) => setGeneration(e.target.value)}
+                  placeholder="留空 = 不参与合并；或输入 F1/F2/BC1/无性..."
+                  list="generation-suggestions"
+                  className={deepInputClass}
+                />
+                <datalist id="generation-suggestions">
+                  <option value="F1">F1（杂交一代）</option>
+                  <option value="F2">F2（杂交二代）</option>
+                  <option value="F3">F3（杂交三代）</option>
+                  <option value="BC1">BC1（回交一代）</option>
+                  <option value="BC2">BC2（回交二代）</option>
+                  <option value="无性">无性（扦插/组培）</option>
+                  <option value="DH">DH（双单倍体）</option>
+                </datalist>
+                <p className="mt-1 text-xs text-gray-400">
+                  留空 = 跨世代合并；填值 = 仅同世代合并
+                </p>
               </div>
             )}
             {/* 第1行第3列：采收形态（harvest 模式） */}
