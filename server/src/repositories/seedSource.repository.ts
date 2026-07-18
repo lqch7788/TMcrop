@@ -986,22 +986,24 @@ export class SeedSourceRepository {
     s1.free();
 
     // 数据源 2: crop_circulation_records (PROPAGATION)
+    // 注意：crop_circulation_records 无 crop_name/crop_variety 列，需 JOIN seed_sources
     const s2 = db.prepare(`
-      SELECT c.id, 'crop_circulation_records' AS recordSource,
+      SELECT c.id AS id, 'crop_circulation_records' AS recordSource,
              c.circulation_date AS recordDate,
              c.source_module AS sourceModule,
              c.source_id AS sourceId, NULL AS sourceCode, NULL AS stockType,
              c.id AS businessId,
-             c.crop_name AS cropName, c.crop_variety AS varietyName,
+             ss.crop_name AS cropName, ss.crop_variety AS varietyName,
              NULL AS warehouseName,
-             c.quantity, 0 AS returnedQuantity, c.unit,
+             c.quantity AS quantity, 0 AS returnedQuantity, c.unit AS unit,
              NULL AS unitPrice, NULL AS totalAmount,
-             NULL AS supplierName, u.real_name AS operatorName, c.notes,
+             NULL AS supplierName, u.real_name AS operatorName, c.notes AS notes,
              CASE WHEN c.is_revoked = 1 THEN c.revoked_at ELSE NULL END AS reversedAt,
              CASE WHEN c.is_revoked = 1 THEN c.revoked_by ELSE NULL END AS reversedBy,
              NULL AS reverseReason
       FROM crop_circulation_records c
       LEFT JOIN users u ON c.operator_id = u.id
+      LEFT JOIN seed_sources ss ON ss.id = c.new_source_id
       WHERE c.new_source_id = ?
         AND c.circulation_type = 'PROPAGATION'
     `);
