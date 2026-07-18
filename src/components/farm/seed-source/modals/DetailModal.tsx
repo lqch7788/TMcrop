@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers, History } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
 import { Badge, Textarea, Label } from '@/components/ui';
@@ -24,7 +24,9 @@ import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getSeedSourceUsageRecords,
   getInboundRecords,
+  getInboundEditLogs,
   type SeedSourceUsageRecord,
+  type InboundEditLog,
 } from '@/services/apiSeedSourceService';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
 
@@ -503,6 +505,12 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
       getInboundRecords(seedSourceId)
         .then((data) => setRecords(Array.isArray(data) ? data : []))
         .catch(() => {});
+      // 2026-07-18: 跨页面刷新 - 通知 inventory store 同步（库存数量变化）
+      try {
+        // 动态 import 避免循环依赖
+        const { useInventoryStore } = await import('@/stores/useInventoryStore');
+        useInventoryStore.getState().notifyChange();
+      } catch {}
     } catch (e: any) {
       toast.error(`冲销失败：${e.message || '未知错误'}`);
     } finally {
@@ -715,8 +723,22 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
       </div>
 
       {/* 2026-07-18: 冲销确认对话框（C-1 修复） */}
-      <Dialog open={reversingRecord !== null} onOpenChange={(open) => { if (!open) setReversingRecord(null); }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={reversingRecord !== null} onOpenChange={(open) => { if (!open) { setReversingRecord(null); setReverseReason(''); } }}>
+        <DialogContent
+          className="max-w-lg"
+          onKeyDown={(e) => {
+            // 2026-07-18: 键盘快捷键 - Enter 提交（Ctrl+Enter）、Esc 关闭
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setReversingRecord(null);
+              setReverseReason('');
+            }
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && reverseReason.trim() && !reverseSubmitting) {
+              e.preventDefault();
+              handleReverse();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
@@ -782,7 +804,7 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setReversingRecord(null); setReverseReason(''); }}>
-              取消
+              取消 <span className="ml-1 text-xs text-gray-400">Esc</span>
             </Button>
             <Button
               variant="destructive"
@@ -795,7 +817,10 @@ function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
                   冲销中...
                 </>
               ) : (
-                '确认冲销'
+                <>
+                  确认冲销
+                  <span className="ml-1 text-xs opacity-70">Ctrl+Enter</span>
+                </>
               )}
             </Button>
           </DialogFooter>
@@ -853,6 +878,93 @@ function MergeHistoryPanel({ record }: { record: SeedSource }) {
   );
 }
 
+/**
+ * 2026-07-18: 入库审计日志 Tab
+ * 显示本种源所有入库流水的冲销/编辑记录（inbound_edit_log 表）
+ */
+function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
+  const [logs, setLogs] = useState<InboundEditLog[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!seedSourceId) return;
+    setLoading(true);
+    setError(null);
+    getInboundEditLogs(seedSourceId)
+      .then((data) => setLogs(Array.isArray(data) ? data : []))
+      .catch((e) => { console.error('[DetailModal] 审计日志加载失败:', e); setError(e.message || '加载失败'); })
+      .finally(() => setLoading(false));
+  }, [seedSourceId]);
+
+  if (loading) {
+    return <div className="text-center py-8 text-gray-500">加载中…</div>;
+  }
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+  if (logs.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+        <History className="w-10 h-10 mx-auto mb-2 opacity-30" />
+        <div className="text-sm">暂无审计日志</div>
+        <div className="text-xs mt-1 text-gray-400">
+          入库流水被冲销或修改时会记录在此
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-200 flex justify-between">
+          <span>入库审计日志（{logs.length} 条）</span>
+          <span className="text-xs text-gray-500">按时间倒序</span>
+        </div>
+        <div className="max-h-[28rem] overflow-y-auto divide-y divide-gray-100">
+          {logs.map((log) => (
+            <div key={log.id} className="px-4 py-3 text-sm hover:bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={log.action === 'reverse' ? 'destructive' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {log.action === 'reverse' ? '冲销' : '修改'}
+                  </Badge>
+                  <code className="text-xs font-mono text-gray-700">{log.inboundId}</code>
+                </div>
+                <span className="text-xs text-gray-500">{log.createdAt}</span>
+              </div>
+              {log.beforeQuantity != null && (
+                <div className="mt-1 text-xs text-gray-600">
+                  数量变化：
+                  <span className="font-mono">
+                    {log.beforeQuantity} → {log.afterQuantity ?? 0}
+                  </span>
+                </div>
+              )}
+              {log.reason && (
+                <div className="mt-1 text-xs text-gray-600">
+                  原因：<span className="text-gray-700">{log.reason}</span>
+                </div>
+              )}
+              <div className="mt-1 text-xs text-gray-400">
+                操作人：{log.editedByName || log.editedBy}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   const hasTransferSource = !!record.transferredFromStockId;
 
@@ -894,6 +1006,15 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       content: <MergeHistoryPanel record={record} />,
     });
   }
+
+  // 2026-07-18: 入库审计日志 Tab（所有种源都显示）
+  extraTabs.push({
+    key: 'inbound-audit',
+    label: '入库审计',
+    icon: <History className="w-4 h-4" />,
+    tooltip: '入库流水的冲销/修改记录（inbound_edit_log 表）',
+    content: <InboundAuditPanel seedSourceId={record.id} />,
+  });
 
   // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
   extraTabs.push({
