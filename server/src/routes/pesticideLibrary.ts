@@ -5,8 +5,44 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// 2026-07-18 P2-M8：统一 LIMIT 常量
+import { MAX_LIST_LIMIT } from '../lib/constants';
 
 const router = Router();
+
+/**
+ * 2026-07-18 P3-L4 修复：本地时间戳（替换 toISOString，避免 UTC 跨天错位 bug）
+ */
+function nowLocalTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
+ * 2026-07-18 P2-H13 修复：saveDatabase 错误处理（磁盘写失败时仅警告，不阻断 HTTP 200）
+ * - sql.js 是内存数据库，写入即对前端可见，saveDatabase 只是落盘
+ * - 落盘失败时数据已在内存中，前端操作已生效，不应返回 500 误导用户
+ */
+function trySaveDatabase(): void {
+  try {
+    saveDatabase();
+  } catch (e) {
+    console.warn('[pesticideLibrary] saveDatabase 失败（数据已在内存中，重启前有效）:', (e as Error)?.message || e);
+  }
+}
+
+/**
+ * 2026-07-18 P2-M6 修复：从 req.body 同时取 camelCase / snake_case
+ * - 与 POST 路径对称（POST 已支持两种命名）
+ * - PUT 之前只取 camelCase，导致 snake_case 客户端发来的更新丢失字段
+ */
+function pickBody(body: any, camelKey: string, snakeKey: string): any {
+  if (body == null) return undefined;
+  if (body[camelKey] !== undefined) return body[camelKey];
+  if (body[snakeKey] !== undefined) return body[snakeKey];
+  return undefined;
+}
 
 /**
  * 生成药剂编码（PC-XXXX 格式，全表递增）
@@ -38,8 +74,8 @@ router.get('/', (req: Request, res: Response) => {
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     // 2026-07-17：解除 100 条硬上限（前端 fetchItems 传 limit=10000 想拿全表做统计用，原 Math.min(100, ...) 导致统计永远 ≤100）
-    // 上限提到 10000 与前端保持一致；如需分页改为前端传 limit + page
-    const limitNum = Math.min(10000, Math.max(1, parseInt(limit, 10) || 20));
+    // 上限提到 MAX_LIST_LIMIT 与前端保持一致；如需分页改为前端传 limit + page
+    const limitNum = Math.min(MAX_LIST_LIMIT, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -105,30 +141,53 @@ router.post('/', (req: Request, res: Response) => {
       pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
     }
 
-    const code = generatePesticideCode(db);
-    const now = new Date().toISOString();
-    const id = `ps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // 2026-07-18 P2-M7 修复：UNIQUE 冲突重试（与 generateRecordCodeWithRetry 一致）
+    // - 并发 INSERT 时同 code 可能冲突，重生成 code 后再试
+    let code = generatePesticideCode(db);
+    const now = nowLocalTimestamp();
+    let id = `ps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    db.run(`INSERT INTO pesticide_specs (
-      id, pesticide_code, pesticide_name, pesticide_type, ingredient, mechanism,
-      function_desc, taboo_desc, target_pests, spec_content, formulation, manufacturer,
-      brand_name, suggested_dosage, suggested_ratio, dosage_unit, remark,
-      stock_quantity, stock_unit, unit_price, batch_number, production_date,
-      expiration_date, package_spec, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.pesticide_name, pesticideTypeValue,
-       body.ingredient || null, body.mechanism || null,
-       body.function_desc || null, body.taboo_desc || null, body.target_pests || null,
-       body.spec_content || null, body.formulation || null, body.manufacturer || null,
-       body.brand_name || null, body.suggested_dosage || null, body.suggested_ratio || null,
-       body.dosage_unit || null, body.remark || null,
-       Number(body.stock_quantity) || 0, body.stock_unit || 'kg', Number(body.unit_price) || 0,
-       body.batch_number || null, body.production_date || null, body.expiration_date || null,
-       body.package_spec || null, body.status || 'active', now, now]
-    );
+    const tryInsert = (codeToUse: string): boolean => {
+      try {
+        db.run(`INSERT INTO pesticide_specs (
+          id, pesticide_code, pesticide_name, pesticide_type, ingredient, mechanism,
+          function_desc, taboo_desc, target_pests, spec_content, formulation, manufacturer,
+          brand_name, suggested_dosage, suggested_ratio, dosage_unit, remark,
+          stock_quantity, stock_unit, unit_price, batch_number, production_date,
+          expiration_date, package_spec, status, create_time, update_time
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [id, codeToUse, body.pesticide_name, pesticideTypeValue,
+           body.ingredient || null, body.mechanism || null,
+           body.function_desc || null, body.taboo_desc || null, body.target_pests || null,
+           body.spec_content || null, body.formulation || null, body.manufacturer || null,
+           body.brand_name || null, body.suggested_dosage || null, body.suggested_ratio || null,
+           body.dosage_unit || null, body.remark || null,
+           Number(body.stock_quantity) || 0, body.stock_unit || 'kg', Number(body.unit_price) || 0,
+           body.batch_number || null, body.production_date || null, body.expiration_date || null,
+           body.package_spec || null, body.status || 'active', now, now]
+        );
+        return true;
+      } catch (e: any) {
+        if (e.message?.includes('UNIQUE constraint failed') && e.message?.includes('pesticide_code')) {
+          return false; // 需要重试
+        }
+        throw e; // 其他错误向上抛
+      }
+    };
+
+    let inserted = tryInsert(code);
+    let attempts = 0;
+    while (!inserted && attempts < 5) {
+      code = generatePesticideCode(db);
+      attempts++;
+      inserted = tryInsert(code);
+    }
+    if (!inserted) {
+      throw new Error('药剂编码生成冲突重试 5 次仍失败');
+    }
 
     const items = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE pesticide_code = ?`, [code]);
-    saveDatabase();
+    trySaveDatabase();
     res.status(201).json({ success: true, data: items[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -159,17 +218,15 @@ router.put('/:id', (req: Request, res: Response) => {
 
     // pesticide_type 处理（数组或 JSON 字符串）
     let pesticideTypeValue: string | null | undefined = undefined;
-    if (Array.isArray(body.pesticide_type)) {
-      pesticideTypeValue = body.pesticide_type.length > 0 ? JSON.stringify(body.pesticide_type) : null;
-    } else if (Array.isArray(body.pesticideType)) {
-      pesticideTypeValue = body.pesticideType.length > 0 ? JSON.stringify(body.pesticideType) : null;
-    } else if (typeof body.pesticide_type === 'string') {
-      pesticideTypeValue = body.pesticide_type.trim().startsWith('[') ? body.pesticide_type : JSON.stringify([body.pesticide_type]);
-    } else if (typeof body.pesticideType === 'string') {
-      pesticideTypeValue = body.pesticideType.trim().startsWith('[') ? body.pesticideType : JSON.stringify([body.pesticideType]);
+    // 2026-07-18 P2-M6 修复：用 pickBody 同时取 camelCase / snake_case
+    const pesticideTypeRaw = pickBody(body, 'pesticideType', 'pesticide_type');
+    if (Array.isArray(pesticideTypeRaw)) {
+      pesticideTypeValue = pesticideTypeRaw.length > 0 ? JSON.stringify(pesticideTypeRaw) : null;
+    } else if (typeof pesticideTypeRaw === 'string') {
+      pesticideTypeValue = pesticideTypeRaw.trim().startsWith('[') ? pesticideTypeRaw : JSON.stringify([pesticideTypeRaw]);
     }
 
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
 
     db.run(`UPDATE pesticide_specs SET
       pesticide_name=?, pesticide_type=?, ingredient=?, mechanism=?,
@@ -204,7 +261,7 @@ router.put('/:id', (req: Request, res: Response) => {
     );
 
     const updated = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [id]);
-    saveDatabase();
+    trySaveDatabase();
     res.json({ success: true, data: updated[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -219,7 +276,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT id FROM pesticide_specs WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '药剂不存在' }); return; }
     db.run(`DELETE FROM pesticide_specs WHERE id = ?`, [id]);
-    saveDatabase();
+    trySaveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -241,22 +298,31 @@ router.post('/:id/stock-in', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '药剂不存在' }); return; }
 
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     const spec = existing[0];
 
-    // 原子更新库存
-    db.run(`UPDATE pesticide_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`, [quantity, now, id]);
+    // 2026-07-18 P0-C7 修复：库存更新 + 审计写入包事务，INSERT 失败时 ROLLBACK
+    db.exec('BEGIN');
+    try {
+      // 原子更新库存
+      db.run(`UPDATE pesticide_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`, [quantity, now, id]);
 
-    // 写入库审计记录
-    const recordId = `psi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    db.run(`INSERT INTO pesticide_stock_in_records (
-      id, spec_id, pesticide_code, pesticide_name, quantity, remark, create_time
-    ) VALUES (?,?,?,?,?,?,?)`,
-      [recordId, id, spec.pesticideCode, spec.pesticideName, quantity, remark || null, now]
-    );
+      // 写入库审计记录
+      const recordId = `psi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      db.run(`INSERT INTO pesticide_stock_in_records (
+        id, spec_id, pesticide_code, pesticide_name, quantity, remark, create_time
+      ) VALUES (?,?,?,?,?,?,?)`,
+        [recordId, id, spec.pesticideCode, spec.pesticideName, quantity, remark || null, now]
+      );
+
+      db.exec('COMMIT');
+    } catch (innerErr) {
+      db.exec('ROLLBACK');
+      throw innerErr;
+    }
 
     const updated = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [id]);
-    saveDatabase();
+    trySaveDatabase();
     const result = updated[0] || {};
     result.newStock = spec.stockQuantity + quantity;
     res.json({ success: true, data: result });

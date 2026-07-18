@@ -3189,7 +3189,7 @@ export function initializeDatabase() {
       bio_agent_name TEXT,
       bio_agent_type TEXT,
       equipment_name TEXT,
-      equipment_count TEXT,
+      equipment_count INTEGER,  -- 2026-07-18 P0-C8: 改为 INTEGER，service 已用 Number() 强转
       use_leaf_fertilizer TEXT DEFAULT 'no',
       leaf_fertilizer_name TEXT,
       leaf_fertilizer_dosage REAL,

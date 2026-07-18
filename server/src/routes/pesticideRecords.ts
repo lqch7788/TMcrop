@@ -8,6 +8,8 @@
  */
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+// 2026-07-18 P2-M8：统一 LIMIT 常量
+import { PEST_RECORDS } from '../lib/constants';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { pesticideService, PesticideBusinessError } from '../services/pesticide.service';
 
@@ -63,29 +65,15 @@ function parseJsonFieldsOnRead(row: any): any {
   return out;
 }
 
-/** 生成记录编号 BY+年月日-4位流水号 */
-function generateRecordCode(db: any): string {
-  const today = new Date();
-  const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-  const prefix = `BY${datePrefix}`;
-  const maxRow = queryToObjects<{ record_code: string | null }>(db,
-    `SELECT MAX(record_code) AS record_code FROM pesticide_records WHERE record_code LIKE ?`,
-    [`${prefix}-%`]
-  );
-  let maxSeq = 0;
-  const currentMax = maxRow[0]?.record_code;
-  if (currentMax && currentMax.startsWith(prefix)) {
-    const seq = parseInt(currentMax.split('-').pop() || '0', 10);
-    if (!isNaN(seq)) maxSeq = seq;
-  }
-  return `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
-}
+/** 生成记录编号（2026-07-18 P3-L8：路由改用 service 层的 generateRecordCodeWithRetry，删除本地实现） */
+// （本地 generateRecordCode 已删除，统一用 service.generateRecordCodeWithRetry）
 
 /** GET /api/pest-records/generate-code */
 router.get('/generate-code', (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const code = generateRecordCode(db);
+    // 2026-07-18 P3-L8：改用 service 层（带 UNIQUE 重试，与 apply() 路径一致）
+    const { generateRecordCodeWithRetry } = require('../services/pesticide.service');
+    const code = generateRecordCodeWithRetry();
     res.json({ success: true, data: { code } });
   } catch (error) {
     res.status(500).json({ success: false, error: sanitizeError(error) });
@@ -99,7 +87,7 @@ router.get('/', (req: Request, res: Response) => {
     const { pesticide_type, crop_name, greenhouse_name, start_date, end_date, operator_name, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const limitNum = Math.min(PEST_RECORDS.MAX_LIMIT, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -281,7 +269,7 @@ router.post('/batch-delete', async (req: Request, res: Response) => {
       return;
     }
     // 防 DoS：单次最多 500 条
-    const MAX_BATCH_DELETE = 500;
+    const MAX_BATCH_DELETE = PEST_RECORDS.BATCH_DELETE_LIMIT;
     if (ids.length > MAX_BATCH_DELETE) {
       res.status(400).json({ success: false, error: `批量删除最多 ${MAX_BATCH_DELETE} 条/次，当前 ${ids.length} 条` });
       return;

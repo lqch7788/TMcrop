@@ -298,10 +298,19 @@ export function getOldPesticideSync(db: any, dailyRecordId: string): Array<{ cod
         try {
           const list = JSON.parse(listJson);
           if (Array.isArray(list)) {
-            for (let i = 0; i < list.length; i++) {
-              const item = list[i];
-              const code = results[i]?.code;
-              if (code && item) results[i] = { code, qty: Number(item.dosage) || 0 };
+            // 2026-07-18 P2-M5 修复：按 item.specId / item.fertilizerCode 配对，不再依赖位置索引
+            // - 历史位置索引方案存在错位风险（数组长度不一致时关联错误规格）
+            for (const item of list) {
+              if (!item) continue;
+              const itemCode = item.specId || item.fertilizerCode || item.code || '';
+              if (!itemCode) continue;
+              const existingIdx = results.findIndex((r) => r.code === String(itemCode));
+              const qty = Number(item.dosage) || Number(item.amount) || 0;
+              if (existingIdx >= 0) {
+                results[existingIdx] = { code: String(itemCode), qty };
+              } else {
+                results.push({ code: String(itemCode), qty });
+              }
             }
           }
         } catch { /* ignore */ }
@@ -522,63 +531,43 @@ export async function syncPesticideRecords(
       safetySummary,
     ].filter(Boolean).join(' | ') || `从每日记录同步（${validItems.length}种）`;
 
-    // 9. INSERT（30 列对齐 30 值 — 2026-07-17 补 bio_agent_list / equipment_list / leaf_fertilizer_list）
-    db.run(
-      `INSERT INTO pesticide_records (
-        id, record_code, spray_time,
-        planting_id, planting_code, seedling_id, seedling_code,
-        greenhouse_name, crop_name,
-        pesticide_name, pesticide_type, dilution_ratio,
-        dosage, dosage_unit, target_pest, application_method,
-        operator_id, operator_name,
-        description, source_type,
-        source_daily_record_id, source_item_id,
-        real_pesticide_code, pesticide_list,
-        bio_agent_list, equipment_list, leaf_fertilizer_list,
-        area_id, area_name,
-        create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,                                              // 1: id
-        recordCode,                                      // 2: record_code
-        ctx.recordDate + ' 12:00:00',                    // 3: spray_time
-        ctx.relatedType === 'planting' ? ctx.relatedId : null,         // 4: planting_id
-        ctx.relatedType === 'planting' ? ctx.relatedCode : null,       // 5: planting_code
-        ctx.relatedType === 'seedling' ? ctx.relatedId : null,         // 6: seedling_id
-        ctx.relatedType === 'seedling' ? ctx.relatedCode : null,       // 7: seedling_code
-        ctx.greenhouseName || '',                         // 8: greenhouse_name
-        ctx.cropName || '',                               // 9: crop_name
-        first.name,                                       // 10: pesticide_name
-        // 2026-07-17：pesticide_type 必须 JSON 字符串（数组形式存）— 同步路径之前漏 JSON.stringify
-        JSON.stringify(first.category ? [first.category] : []),  // 11: pesticide_type
-        formatDilution(first),                            // 12: dilution_ratio
-        totalDosage,                                      // 13: dosage
-        first.unit || 'L',                                // 14: dosage_unit
-        ctx.primaryTargetPest || firstWithPest?.targetPest || '',  // 15: target_pest
-        methodLabel,                                      // 2026-07-15：application_method 列直接存中文 label（显示层无需再翻译）
-        ctx.operatorId || null,                           // 17: operator_id
-        ctx.operatorName || null,                         // 18: operator_name
-        description,                                      // 19: description
-        'daily_record_sync',                              // 20: source_type
-        dailyRecordId,                                    // 21: source_daily_record_id
-        `pool-${dailyRecordId.slice(-6)}`,                // 22: source_item_id
-        realCodesJson,                                    // 23: real_pesticide_code
-        JSON.stringify(list),                             // 24: pesticide_list
-        JSON.stringify([]),                               // 25: bio_agent_list (sync 路径暂未提取)
-        JSON.stringify([]),                               // 26: equipment_list (sync 路径暂未提取)
-        JSON.stringify([]),                               // 27: leaf_fertilizer_list (sync 路径暂未提取)
-        ctx.areaId || null,                               // 28: area_id
-        ctx.areaName || null,                              // 29: area_name
-        new Date().toISOString(),                          // 30: create_time
-      ]
-    );
-
-    // 10. 扣减库存
-    for (const item of validItems) {
-      if (item.fertilizerCode) {
-        adjustPesticideStock(db, item.fertilizerCode, -item.amount);
-      }
-    }
+    // 9+10. 2026-07-18 P2-H12 修复：INSERT + 库存扣减统一通过 pesticideService.applySyncRecord
+    // - 避免与手动 apply() 路径维护双份逻辑
+    // - 用 require 懒加载避免 syncDailyRecords ↔ pesticide.service 循环引用
+    const { pesticideService } = require('../services/pesticide.service');
+    await pesticideService.applySyncRecord({
+      id, recordCode,
+      sprayTime: ctx.recordDate + ' 12:00:00',
+      plantingId: ctx.relatedType === 'planting' ? ctx.relatedId : null,
+      plantingCode: ctx.relatedType === 'planting' ? ctx.relatedCode : null,
+      seedlingId: ctx.relatedType === 'seedling' ? ctx.relatedId : null,
+      seedlingCode: ctx.relatedType === 'seedling' ? ctx.relatedCode : null,
+      greenhouseName: ctx.greenhouseName || '',
+      cropName: ctx.cropName || '',
+      pesticideName: first.name,
+      pesticideType: JSON.stringify(first.category ? [first.category] : []),
+      dilutionRatio: formatDilution(first),
+      totalDosage,
+      dosageUnit: first.unit || 'L',
+      targetPest: ctx.primaryTargetPest || firstWithPest?.targetPest || '',
+      applicationMethod: methodLabel,
+      operatorId: ctx.operatorId || null,
+      operatorName: ctx.operatorName || null,
+      description,
+      sourceType: 'daily_record_sync',
+      sourceDailyRecordId: dailyRecordId,
+      sourceItemId: `pool-${dailyRecordId.slice(-6)}`,
+      realPesticideCode: realCodesJson,
+      pesticideListJson: JSON.stringify(list),
+      bioAgentListJson: JSON.stringify([]),
+      equipmentListJson: JSON.stringify([]),
+      leafFertilizerListJson: JSON.stringify([]),
+      areaId: ctx.areaId || null,
+      areaName: ctx.areaName || null,
+      pesticideStockDeductions: validItems
+        .filter((it) => it.fertilizerCode && it.amount)
+        .map((it) => ({ code: String(it.fertilizerCode), qty: Number(it.amount) || 0 })),
+    });
   } catch (err) {
     console.error('[syncPesticideRecords] 同步失败（不影响主记录）:', (err as Error)?.message || err);
   }

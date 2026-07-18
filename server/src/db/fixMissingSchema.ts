@@ -1465,6 +1465,15 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• pesticide_records.control_type 列删除: ' + e.message);
   }
 
+  // 2026-07-18 P2-H9 修复：pesticide_records 表删除 status 列（业务上防治记录无中间态，schema 已 DROP）
+  try {
+    db.run(`ALTER TABLE pesticide_records DROP COLUMN status`);
+    seedLog.info('✓ pesticide_records 表删除 status 列成功');
+  } catch (e: any) {
+    if (e.message.includes('no such column')) seedLog.skip('• pesticide_records.status 列不存在');
+    else seedLog.skip('• pesticide_records.status 列删除: ' + e.message);
+  }
+
   // 2026-07-10：删除 control_type 相关索引（如果存在）
   try {
     db.run(`DROP INDEX IF EXISTS idx_pesticide_control_type`);
