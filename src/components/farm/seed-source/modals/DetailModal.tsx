@@ -8,9 +8,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers, History } from 'lucide-react';
-import { toast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
-import { Badge, Textarea, Label } from '@/components/ui';
+import { Badge, TextArea, Label, useToast } from '@/components/ui';
 import { useSeedSourceStore } from '@/stores/useSeedSourceStore';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
@@ -476,6 +475,8 @@ type InboundRecord = InboundRecordType;
 
 function InboundRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
   const [records, setRecords] = useState<InboundRecord[]>([])
+  // 2026-07-18: 使用 useToast hook（项目约定）
+  const { toast } = useToast();
   // 2026-07-18: 冲销对话框状态（C-1 修复）
   const [reversingRecord, setReversingRecord] = useState<InboundRecord | null>(null);
   const [reverseReason, setReverseReason] = useState('');

@@ -40,7 +40,7 @@ router.get('/generate-code', (req, res, next) => seedSourceController.generateCo
 // 2026-07-18: 种源合并功能 — 必须在 /:id 路由之前，否则会被吞
 router.get('/matchable', asyncHandler(async (req, res) => {
   try {
-    const { cropCode, seedForm, unit, generation } = req.query;
+    const { cropCode, seedForm, unit, generation, propagationMethod } = req.query;
     if (!cropCode || !seedForm || !unit) {
       return res.status(400).json({ success: false, error: 'cropCode, seedForm, unit 必填' });
     }
@@ -49,6 +49,7 @@ router.get('/matchable', asyncHandler(async (req, res) => {
       seedForm: String(seedForm),
       unit: String(unit),
       generation: generation ? String(generation) : null,
+      propagationMethod: propagationMethod ? String(propagationMethod) : null,
     });
     res.json({ success: true, data: result });
   } catch (e: any) {

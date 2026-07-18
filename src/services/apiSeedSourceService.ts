@@ -914,6 +914,7 @@ export async function findMatchableSeedSource(params: {
   seedForm: string;
   unit: string;
   generation: string | null;
+  propagationMethod: string | null;
 }): Promise<any> {
   // 2026-06-27 项目记忆坑：enhancedApiClient.get 不支持 params 对象，必须用 URLSearchParams
   const q = new URLSearchParams({
@@ -921,6 +922,7 @@ export async function findMatchableSeedSource(params: {
     seedForm: params.seedForm,
     unit: params.unit,
     ...(params.generation ? { generation: params.generation } : {}),
+    ...(params.propagationMethod ? { propagationMethod: params.propagationMethod } : {}),
   });
   const response = await enhancedApiClient.get(`/api/seed-sources/matchable?${q}`);
   return response;

@@ -931,6 +931,7 @@ export class SeedSourceRepository {
     seedForm: string;
     unit: string;
     generation: string | null;
+    propagationMethod: string | null;
   }): Promise<MatchableStock | null> {
     const db = getDatabase();
     const stmt = db.prepare(`
@@ -939,16 +940,17 @@ export class SeedSourceRepository {
              unit, reflow_count AS reflowCount,
              last_reflow_at AS lastReflowAt
       FROM seed_sources
-      WHERE source_origin = 'planting_self_kept'
-        AND status = 'active'
+      WHERE status = 'active'
         AND crop_code = ?
         AND seed_form = ?
         AND unit = ?
         AND IFNULL(generation, '') = IFNULL(?, '')
+        AND IFNULL(propagation_method, '') = IFNULL(?, '')
+        AND source_origin IN ('planting_self_kept', 'inventory_transfer')
       ORDER BY create_time ASC, id ASC
       LIMIT 1
     `);
-    stmt.bind([q.cropCode, q.seedForm, q.unit, q.generation ?? null]);
+    stmt.bind([q.cropCode, q.seedForm, q.unit, q.generation ?? null, q.propagationMethod ?? null]);
     const row = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
     return row ? (row as unknown as MatchableStock) : null;
