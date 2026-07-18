@@ -924,7 +924,13 @@ export class SeedSourceRepository {
   // ============================================================
 
   /**
-   * 查找合并候选（同合并键的最早一条 active 种源）
+   * 查找合并候选（两段式优先策略）
+   *
+   * Step 1（高优先）：同种植批次内匹配（linked_planting_id + 5 维度）
+   * Step 2（兜底）  ：全库匹配（5 维度，不限种植批次）
+   *
+   * 业务语义：同一茬种植多次采收 → 种子合并到同一种源（溯源清晰）
+   *           不同批次但同作物同形态 → 兜底合并（避免重复建种源）
    */
   async findMergeableSeedSource(q: {
     cropCode: string;
@@ -932,25 +938,52 @@ export class SeedSourceRepository {
     unit: string;
     generation: string | null;
     propagationMethod: string | null;
+    /** 2026-07-18: 种植批次 ID（用于同种植优先匹配） */
+    linkedPlantingId?: string | null;
   }): Promise<MatchableStock | null> {
     const db = getDatabase();
+    const baseWhere = `
+      status = 'active'
+      AND crop_code = ?
+      AND seed_form = ?
+      AND unit = ?
+      AND IFNULL(generation, '') = IFNULL(?, '')
+      AND IFNULL(propagation_method, '') = IFNULL(?, '')
+      AND source_origin IN ('planting_self_kept', 'inventory_transfer')
+    `;
+    const baseParams = [q.cropCode, q.seedForm, q.unit, q.generation ?? null, q.propagationMethod ?? null];
+
+    // Step 1: 同种植批次优先
+    if (q.linkedPlantingId) {
+      const stmt1 = db.prepare(`
+        SELECT id, source_code AS sourceCode,
+               remaining_quantity AS availableCount,
+               unit, reflow_count AS reflowCount,
+               last_reflow_at AS lastReflowAt
+        FROM seed_sources
+        WHERE ${baseWhere}
+          AND linked_planting_id = ?
+        ORDER BY create_time ASC, id ASC
+        LIMIT 1
+      `);
+      stmt1.bind([...baseParams, q.linkedPlantingId]);
+      const row = stmt1.step() ? stmt1.getAsObject() : null;
+      stmt1.free();
+      if (row) return row as unknown as MatchableStock;
+    }
+
+    // Step 2: 全库兜底
     const stmt = db.prepare(`
       SELECT id, source_code AS sourceCode,
              remaining_quantity AS availableCount,
              unit, reflow_count AS reflowCount,
              last_reflow_at AS lastReflowAt
       FROM seed_sources
-      WHERE status = 'active'
-        AND crop_code = ?
-        AND seed_form = ?
-        AND unit = ?
-        AND IFNULL(generation, '') = IFNULL(?, '')
-        AND IFNULL(propagation_method, '') = IFNULL(?, '')
-        AND source_origin IN ('planting_self_kept', 'inventory_transfer')
+      WHERE ${baseWhere}
       ORDER BY create_time ASC, id ASC
       LIMIT 1
     `);
-    stmt.bind([q.cropCode, q.seedForm, q.unit, q.generation ?? null, q.propagationMethod ?? null]);
+    stmt.bind(baseParams);
     const row = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
     return row ? (row as unknown as MatchableStock) : null;
@@ -1047,6 +1080,46 @@ export class SeedSourceRepository {
     stmt.free();
     return results as InboundEditLog[];
   }
+
+  /**
+   * 2026-07-18: 查询同作物的所有 active 种源（仅作业务上下文展示，不会自动合并）
+   * - 用于种植自留种弹窗的"同作物参考列表"卡片
+   * - 仅展示 status='active' 且 source_origin ∈ ('planting_self_kept','inventory_transfer')
+   * - 可选 excludeSourceId 排除某条（避免推荐卡里重复展示）
+   * - 按最新创建时间倒序，最多 10 条（种源场景通常不多）
+   */
+  async findSameCropSeedSources(
+    cropCode: string,
+    excludeSourceId?: string,
+  ): Promise<SameCropSourceItem[]> {
+    const db = getDatabase();
+    const params: any[] = [cropCode];
+    let excludeClause = '';
+    if (excludeSourceId) {
+      excludeClause = ' AND id != ?';
+      params.push(excludeSourceId);
+    }
+    const stmt = db.prepare(`
+      SELECT id, source_code AS sourceCode, source_name AS sourceName,
+             crop_name AS cropName, crop_variety AS cropVariety,
+             seed_form AS seedForm, unit, generation,
+             propagation_method AS propagationMethod, source_origin AS sourceOrigin,
+             quantity, remaining_quantity AS remainingQuantity,
+             create_time AS createTime
+      FROM seed_sources
+      WHERE status = 'active'
+        AND crop_code = ?
+        AND source_origin IN ('planting_self_kept', 'inventory_transfer')
+        ${excludeClause}
+      ORDER BY create_time DESC, id DESC
+      LIMIT 10
+    `);
+    stmt.bind(params);
+    const results: any[] = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    stmt.free();
+    return results as SameCropSourceItem[];
+  }
 }
 
 // ============================================================
@@ -1059,6 +1132,25 @@ export interface MatchableStock {
   unit: string;
   reflowCount: number;
   lastReflowAt: string | null;
+}
+
+/**
+ * 2026-07-18: 同作物种源参考列表项（业务上下文展示用）
+ */
+export interface SameCropSourceItem {
+  id: string;
+  sourceCode: string;
+  sourceName: string | null;
+  cropName: string | null;
+  cropVariety: string | null;
+  seedForm: string | null;
+  unit: string | null;
+  generation: string | null;
+  propagationMethod: string | null;
+  sourceOrigin: string | null;
+  quantity: number;
+  remainingQuantity: number;
+  createTime: string | null;
 }
 
 export interface UnifiedInboundRecord {

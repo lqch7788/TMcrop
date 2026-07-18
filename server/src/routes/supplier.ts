@@ -90,19 +90,7 @@ router.post('/', (req: Request, res: Response) => {
       organization, create_date, remarks, create_by
     } = req.body;
 
-    // 格式验证（对标 iAGS purchaserManagement）
-    if (mobile_phone && !VALIDATION.mobilePhone(mobile_phone)) {
-      return res.status(400).json({ success: false, error: '手机号格式不正确，应为1开头的11位数字' });
-    }
-    if (work_phone && !VALIDATION.workPhone(work_phone)) {
-      return res.status(400).json({ success: false, error: '工作电话格式不正确，应为区号-号码格式' });
-    }
-    if (fax && !VALIDATION.fax(fax)) {
-      return res.status(400).json({ success: false, error: '传真格式不正确' });
-    }
-    if (bank_card_number && !VALIDATION.bankCard(bank_card_number)) {
-      return res.status(400).json({ success: false, error: '银行卡号格式不正确，应为15位或17-18位数字' });
-    }
+    // 2026-07-18: 去除电话/传真/银行卡格式限制（用户需求：允许任意格式输入）
 
     const newId = id || `SUP${Date.now()}`;
     const now = new Date().toISOString();
@@ -142,19 +130,7 @@ router.put('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const updates = req.body;
 
-    // 格式验证（只验证请求中包含的字段）
-    if (updates.mobile_phone && !VALIDATION.mobilePhone(updates.mobile_phone)) {
-      return res.status(400).json({ success: false, error: '手机号格式不正确' });
-    }
-    if (updates.work_phone && !VALIDATION.workPhone(updates.work_phone)) {
-      return res.status(400).json({ success: false, error: '工作电话格式不正确' });
-    }
-    if (updates.fax && !VALIDATION.fax(updates.fax)) {
-      return res.status(400).json({ success: false, error: '传真格式不正确' });
-    }
-    if (updates.bank_card_number && !VALIDATION.bankCard(updates.bank_card_number)) {
-      return res.status(400).json({ success: false, error: '银行卡号格式不正确' });
-    }
+    // 2026-07-18: 去除电话/传真/银行卡格式限制（用户需求：允许任意格式输入）
 
     const now = new Date().toISOString();
     const db = getDatabase();

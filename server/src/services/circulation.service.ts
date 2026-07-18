@@ -70,12 +70,16 @@ export const CirculationInputSchema = z.object({
   unit: z.string().optional(),
   notes: z.string().optional(),
   operatorId: z.string().optional(),
+  /** 2026-07-18: 操作员姓名（用于 seed_sources.create_by 展示） */
+  operatorName: z.string().optional(),
   // 2026-06-29: 种植自留种回流时存到 seed_sources.seed_form
   seedForm: z.string().optional(),
   // 2026-06-29: 来源单据编号（用于 flow_log 追踪，如 ZZ20260627-001）
   sourceRecordCode: z.string().optional(),
   // 2026-07-18: 用户输入 generation（不参与合并 = null/undefined）
   generation: z.string().optional(),
+  // 2026-07-18: 用户选择强制新建（即使有匹配也不合并）
+  forceNew: z.boolean().optional(),
 });
 
 export type CirculationInput = z.infer<typeof CirculationInputSchema>;
@@ -287,13 +291,16 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
 
   try {
     let mergeable: any = null
-    if (newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
+    // 2026-07-18: 用户选择强制新建 → 跳过合并检查
+    if (!input.forceNew && newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
       // 2026-07-18: 事务内查合并候选（防并发 race）
       // 2026-07-18: 合并键含 propagation_method → 扦插/留种/自交不同子类型绝不合并
+      // 2026-07-18: 两段式优先 — 同种植批次（linked_planting_id）优先匹配
       const repo = new SeedSourceRepository()
       mergeable = await repo.findMergeableSeedSource({
         cropCode, seedForm, unit, generation,
         propagationMethod,
+        linkedPlantingId: input.sourceModule === 'planting' ? input.sourceId : null,
       })
     }
 
@@ -351,7 +358,8 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
         parent?.variety_name || null,
         null, null, parent?.production_plan_code || planting?.production_plan_code || null,
         seedQuantity, unit, circulationDate.split('T')[0], seedQuantity,
-        input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
+        // 2026-07-18 修复：create_by 用姓名（显示），create_by_id 用 ID（追溯）
+        input.operatorName || input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
         propagationTypeDb, propagationMethod,
         input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
         generation,

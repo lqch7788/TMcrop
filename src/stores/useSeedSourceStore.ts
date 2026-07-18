@@ -85,6 +85,17 @@ interface SeedSourceState {
   }) => Promise<any>;
 
   /**
+   * 2026-07-18: 查询同作物其他种源（业务上下文展示用）
+   * - 用于种植自留种弹窗的"同作物参考列表"卡片
+   * - 返回同 crop_code 的 active 种源（按时间倒序，最多 10 条）
+   * - 仅作展示，不会自动合并
+   */
+  findSameCropSources: (params: {
+    cropCode: string;
+    excludeSourceId?: string;
+  }) => Promise<any[]>;
+
+  /**
    * 冲销入库流水（软删除 + 库存回退）
    * 调用方负责刷新相关数据
    */
@@ -206,6 +217,12 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
       ...params,
       propagationMethod: params.propagationMethod || null,
     });
+  },
+
+  // 2026-07-18: 同作物种源参考列表（业务上下文展示用）
+  findSameCropSources: async (params) => {
+    // 错误向上抛（V2.1 铁律：不静默吞错）
+    return await seedSourceService.findSameCropSources(params);
   },
 
   reverseInbound: async (seedSourceId, payload) => {

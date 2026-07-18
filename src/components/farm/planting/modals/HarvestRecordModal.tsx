@@ -157,6 +157,14 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   // 2026-07-18: 种源合并键 — 用户输入世代（planting_self_kept 模式）
   const [generation, setGeneration] = useState<string>('')
 
+  // 2026-07-18: 合并推荐 — MergePreview 回调状态
+  // matchedUnitSource: 推荐种源的单位（用于自动填充）
+  const [matchedUnitSource, setMatchedUnitSource] = useState<{ id: string; sourceCode: string; unit: string } | null>(null)
+  // 单位是否被自动推荐（用于显示「✨ 自动」标签）
+  const [unitAutoRecommended, setUnitAutoRecommended] = useState<boolean>(false)
+  // 2026-07-18: 用户选择强制新建（即使有匹配也不合并）
+  const [forceNew, setForceNew] = useState<boolean>(false)
+
   // ============ 2026-06-19: 采收入库字段（参照行级采收入库弹窗 UnifiedRowHarvestInboundModal）============
   // 字段集与行级"采收入库"图标弹窗一致：操作员/采收员多选/产品明细(多产物) + 复用上方 6 字段（2026-07-06：单价字段已删除）
   const [operator, setOperator] = useState<string>('')               // 操作员
@@ -265,6 +273,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     setQuantity(0)
     setWarehouseId('')
     setNotes('')
+    // 2026-07-18: 合并推荐相关状态重置
+    setMatchedUnitSource(null)
+    setUnitAutoRecommended(false)
+    setForceNew(false)
     // 2026-06-19: 采收入库字段重置
     setHarvesterIds([])
     setHarvesterNames([])
@@ -456,6 +468,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         destination: inputDestination,
         subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
         generation: destination === 'planting_self_kept' ? (generation || null) : null,  // 2026-07-18: 种源合并键
+        forceNew: destination === 'planting_self_kept' ? forceNew : undefined,  // 2026-07-18: 用户选择强制新建
         seedForm: (requiresSelfKept || destination === 'harvest') ? sourceForm : undefined,  // 2026-07-02: harvest 分支也写形态
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
@@ -587,7 +600,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showFooter={true}
       onSubmit={handleAdd}
       submitText={submitting ? '处理中...' : '添加记录'}
-      cancelText="关闭"
+      cancelText=""
     >
       <div className="space-y-4">
         {/* 2026-07-09 v5 阶段三（路径 B）：补录模式已下沉到库存页 AddStockModal 统一入口
@@ -630,7 +643,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 </p>
               )}
             </div>
-            {/* 第1行第3列：采收形态（仅 planting_self_kept 显示） */}
+            {/* 第1行第3列：采收形态（仅 planting_self_kept 显示）
+                注：世代字段已移到下方第2行，与「数量」「操作员」同一行（用户需求 2026-07-18） */}
             {destination === 'planting_self_kept' && (
               <div>
                 <Label>采收形态 *</Label>
@@ -644,31 +658,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-            {/* 2026-07-18：种源合并 - 世代选择（planting_self_kept 模式，可输入） */}
-            {destination === 'planting_self_kept' && (
-              <div>
-                <Label>世代 <span className="text-gray-400 text-xs">(可选, 可输入)</span></Label>
-                <Input
-                  value={generation}
-                  onChange={(e) => setGeneration(e.target.value)}
-                  placeholder="留空 = 不参与合并；或输入 F1/F2/BC1/无性..."
-                  list="generation-suggestions"
-                  className={deepInputClass}
-                />
-                <datalist id="generation-suggestions">
-                  <option value="F1">F1（杂交一代）</option>
-                  <option value="F2">F2（杂交二代）</option>
-                  <option value="F3">F3（杂交三代）</option>
-                  <option value="BC1">BC1（回交一代）</option>
-                  <option value="BC2">BC2（回交二代）</option>
-                  <option value="无性">无性（扦插/组培）</option>
-                  <option value="DH">DH（双单倍体）</option>
-                </datalist>
-                <p className="mt-1 text-xs text-gray-400">
-                  留空 = 跨世代合并；填值 = 仅同世代合并
-                </p>
               </div>
             )}
             {/* 第1行第3列：采收形态（harvest 模式） */}
@@ -697,21 +686,29 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               </div>
             )}
           </div>
-          {/* 第2行：数量+单位（1/3）+ 操作员（1/3）（仅 planting_self_kept 显示） */}
+          {/* 第2行：数量+单位（1/3）+ 操作员（1/3）+ 世代（1/3）（仅 planting_self_kept 显示） */}
           {destination === 'planting_self_kept' && (
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>数量 *</Label>
                 <div className="flex gap-1">
                   <NumberInput
-                    style={{ width: '65%' }}
+                    style={{ width: '60%' }}
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
                     min={0}
                     className={deepInputClass}
                     placeholder="0"
                   />
-                  <Select style={{ width: '35%' }} value={unit} onValueChange={setUnit}>
+                  <Select
+                    style={{ width: '40%' }}
+                    value={unit}
+                    onValueChange={(v) => {
+                      setUnit(v)
+                      // 2026-07-18: 用户手动改单位 → 清掉「自动推荐」标记
+                      setUnitAutoRecommended(false)
+                    }}
+                  >
                     <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="单位" />
                     </SelectTrigger>
@@ -726,6 +723,13 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     </SelectContent>
                   </Select>
                 </div>
+                {/* 2026-07-18: 自动推荐单位提示 */}
+                {unitAutoRecommended && matchedUnitSource && (
+                  <p className="mt-1 text-xs text-cyan-600 flex items-center gap-1">
+                    <span>✨</span>
+                    <span>已自动推荐【{matchedUnitSource.unit}】— 与已有种源 <code className="font-mono">{matchedUnitSource.sourceCode}</code> 一致</span>
+                  </p>
+                )}
               </div>
               <div>
                 <Label>操作员 *</Label>
@@ -735,6 +739,32 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   placeholder="默认当前登录人员"
                   className={deepInputClass}
                 />
+              </div>
+              {/* 2026-07-18：世代字段从第1行移到第2行，与「数量」「操作员」同一行（用户需求） */}
+              <div>
+                <Label>世代 <span className="text-gray-400 text-xs">(可选)</span></Label>
+                {/* 2026-07-18 Bug 修复：datalist 有 2 个 bug
+                    1. value 与文本不同时浏览器会显示两条（"F1" 和 "F1(杂交一代)"）
+                    2. 选中后再次点箭头只显示匹配项，丢失其他选项
+                    改用 Select 解决（与「采收形态」「去向」一致） */}
+                <Select value={generation || ''} onValueChange={(v) => setGeneration(v)}>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="留空 = 不参与合并" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">（留空 — 不参与合并）</SelectItem>
+                    <SelectItem value="F1">F1（杂交一代）</SelectItem>
+                    <SelectItem value="F2">F2（杂交二代）</SelectItem>
+                    <SelectItem value="F3">F3（杂交三代）</SelectItem>
+                    <SelectItem value="BC1">BC1（回交一代）</SelectItem>
+                    <SelectItem value="BC2">BC2（回交二代）</SelectItem>
+                    <SelectItem value="无性">无性（扦插/组培）</SelectItem>
+                    <SelectItem value="DH">DH（双单倍体）</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-gray-400">
+                  留空 = 跨世代合并；填值 = 仅同世代合并
+                </p>
               </div>
             </div>
           )}
@@ -746,6 +776,18 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               unit={unit || ''}
               generation={generation || null}
               newQuantity={Number(quantity) || 0}
+              linkedPlantingId={record.id}
+              forceNew={forceNew}
+              onForceNewChange={(v) => setForceNew(v)}
+              onMatchFound={(m) => {
+                setMatchedUnitSource(m)
+                if (m && m.unit && (!unit || unit === record.unit)) {
+                  setUnit(m.unit)
+                  setUnitAutoRecommended(true)
+                } else if (!m) {
+                  setUnitAutoRecommended(false)
+                }
+              }}
             />
           )}
           {/* 兼容历史老记录（circulate/self_seed）— 仍显示原 subType，但禁止通过 UI 新建 */}
