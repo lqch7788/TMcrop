@@ -300,6 +300,38 @@ export interface SeedSource {
   originalSupplierName?: string;
   /** 原始生产计划编码 */
   originalProductionPlanCode?: string;
+
+  // ========== 2026-07-18: 种源合并功能 ==========
+
+  /** 回流次数（merge 键命中后累加） */
+  reflowCount?: number;
+  /** 最近一次回流时间 */
+  lastReflowAt?: string;
+  /** 被合并过来的种源 ID 列表（前端 JSON.parse 后） */
+  mergedFromIds?: string[];
+}
+
+// ========== 入库记录类型（2026-07-18 新增）==========
+
+export interface InboundRecord {
+  id: string;
+  /** 数据源表（UNION 查询标记） */
+  recordSource?: 'inventory_inbound_records' | 'crop_circulation_records';
+  recordDate: string;
+  sourceModule?: string;
+  businessId?: string;
+  quantity: number;
+  returnedQuantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalAmount?: number;
+  supplierName?: string;
+  operatorName?: string;
+  notes?: string;
+  /** 冲销标记 */
+  reversedAt?: string | null;
+  reversedBy?: string | null;
+  reverseReason?: string | null;
 }
 
 // ========== 每日记录类型 ==========
