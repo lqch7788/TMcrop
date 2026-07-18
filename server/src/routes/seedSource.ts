@@ -24,6 +24,8 @@ import {
   type ReturnItem,
 } from '../services/seedSourceReturn.service';
 import { queryToObjects } from '../utils/queryHelper';
+// 2026-07-18: 入库冲销服务
+import { reverseInboundRecord } from '../services/inboundReverse.service';
 
 const router = Router();
 
@@ -34,6 +36,25 @@ router.use(authenticate);
 
 // 生成种源编码
 router.get('/generate-code', (req, res, next) => seedSourceController.generateCode(req, res, next));
+
+// 2026-07-18: 种源合并功能 — 必须在 /:id 路由之前，否则会被吞
+router.get('/matchable', asyncHandler(async (req, res) => {
+  try {
+    const { cropCode, seedForm, unit, generation } = req.query;
+    if (!cropCode || !seedForm || !unit) {
+      return res.status(400).json({ success: false, error: 'cropCode, seedForm, unit 必填' });
+    }
+    const result = await seedSourceRepository.findMergeableSeedSource({
+      cropCode: String(cropCode),
+      seedForm: String(seedForm),
+      unit: String(unit),
+      generation: generation ? String(generation) : null,
+    });
+    res.json({ success: true, data: result });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}));
 
 // 2026-06-26: 检查种源批号是否已存在（POST 前查重，避开 UNIQUE 异常）
 router.get('/check-source-code', asyncHandler(async (req, res) => {
@@ -587,24 +608,36 @@ router.get('/:id/inbound-records', asyncHandler(async (req, res) => {
 
 /**
  * GET /api/seed-sources/:id/history-inbound
- * 2026-06-26: 种源历史入库流水（全部 inventory_inbound_records，含 source_module='inventory' 调拨和 'seed_source' 入库）
+ * 2026-07-18: 改为 UNION 查询（inventory_inbound_records + crop_circulation_records PROPAGATION）
  * 用于种源页"入库记录" Tab
  */
 router.get('/:id/history-inbound', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { getDatabase } = require('../db');
-  const db = getDatabase();
-  const stmt = db.prepare(`
-    SELECT * FROM inventory_inbound_records
-    WHERE (source_id = ? AND source_module = 'seed_source')
-       OR (business_id = ?)
-    ORDER BY create_time DESC LIMIT 200
-  `);
-  stmt.bind([id, id]);
-  const rows: any[] = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  res.json({ success: true, data: rows });
+  try {
+    const records = await seedSourceRepository.getInboundRecordsUnion(String(id));
+    res.json({ success: true, data: records });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+}));
+
+/**
+ * POST /api/seed-sources/:id/reverse-inbound
+ * 2026-07-18: 冲销入库流水（软删除 + 库存回退）
+ * body: { inboundRecordId, reason }
+ */
+router.post('/:id/reverse-inbound', asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { inboundRecordId, reason } = req.body || {};
+    if (!inboundRecordId || !reason) {
+      return res.status(400).json({ success: false, error: 'inboundRecordId + reason 必填' });
+    }
+    reverseInboundRecord(String(id), { inboundRecordId, reason });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 }));
 
 /**
