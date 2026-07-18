@@ -15,6 +15,8 @@ interface SeedlingState {
   clearError: () => void;
 
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   addItem: (item: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>) => Promise<Seedling | null>;
   updateItem: (id: string, updates: Partial<Seedling>) => Promise<Seedling | null>;
   deleteItem: (id: string) => Promise<boolean>;
@@ -43,6 +45,9 @@ export const useSeedlingStore = create<SeedlingState>()(
         set({ error: (error as Error).message, isLoading: false });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async () => { await get().loadItems(); },
 
     addItem: async (item) => {
       try {

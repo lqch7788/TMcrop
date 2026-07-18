@@ -39,6 +39,8 @@ interface SeedSourceState {
 
   // ===== 列表 =====
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   addItem: (item: Parameters<typeof seedSourceService.addSeedSource>[0]) => Promise<SeedSource>;
   updateItem: (id: string, updates: Partial<SeedSource>) => Promise<SeedSource>;
   deleteItem: (id: string) => Promise<void>;
@@ -88,6 +90,9 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
       set({ error: (error as Error).message, isLoading: false });
     }
   },
+
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: async () => { await get().loadItems(); },
 
   addItem: async (item) => {
     // 错误直接向上抛（HIGH #3）

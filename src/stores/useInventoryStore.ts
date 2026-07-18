@@ -46,6 +46,8 @@ interface InventoryState {
   // 方法
   setFilters: (filters: InventoryFilters) => void;
   loadItems: (filters?: InventoryFilters) => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: (filters?: InventoryFilters) => Promise<void>;
   loadStats: () => Promise<void>;
   loadAll: (filters?: InventoryFilters) => Promise<void>;
   /** 通知一次变更（写操作成功后调用） */
@@ -91,6 +93,9 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
       set({ error: error instanceof Error ? error.message : '加载库存失败', loading: false });
     }
   },
+
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: async (filters) => { await get().loadItems(filters); },
 
   loadStats: async () => {
     try {

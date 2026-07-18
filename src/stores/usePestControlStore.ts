@@ -1,9 +1,12 @@
 /**
  * 病虫害防治记录 Store (V12.0)
  * 遵循 V2.1 Store 标准模板
+ * 2026-07-18 P1-H7 修复：写后 notifyChange 跨页刷新（库存/肥料库）
  */
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { useInventoryStore } from './useInventoryStore';
+import { useFertilizerStore } from './useFertilizerStore';
 
 export interface PestControlData {
   id: string;
@@ -34,7 +37,7 @@ export interface PestControlData {
   bioAgentName?: string;
   bioAgentType?: string;
   equipmentName?: string;
-  equipmentCount?: string;
+  equipmentCount?: string | number;
   pesticideList?: string;
   bioAgentList?: string;
   equipmentList?: string;
@@ -111,9 +114,22 @@ function parsePesticideTypes(value: unknown): string[] {
   return [];
 }
 
-// 2026-07-17：API 已返回 camelCase（camelCaseResponse 中间件），normalize 只对 JSON 字段做反序列化 + pesticideTypes 解析
+// 2026-07-17：API 已返回 camelCase（camelCaseResponse 中间件）
+// 2026-07-18 P1-H2 修复：normalize 显式走 FIELD_MAP 做 snake→camel 映射（idempotent），不再隐式依赖全局中间件
 function normalizePestControl(raw: Record<string, unknown>): PestControlData {
-  const result: Record<string, unknown> = { ...raw };
+  const result: Record<string, unknown> = {};
+  // 显式映射：snake_case → camelCase（已 camelCase 时直接 copy）
+  for (const [snakeKey, camelKey] of Object.entries(FIELD_MAP)) {
+    if (raw[camelKey] !== undefined) {
+      result[camelKey] = raw[camelKey];
+    } else if (raw[snakeKey] !== undefined) {
+      result[camelKey] = raw[snakeKey];
+    }
+  }
+  // 透传未在 FIELD_MAP 的额外字段（防止漏配）
+  for (const [k, v] of Object.entries(raw)) {
+    if (!(k in result)) result[k] = v;
+  }
   // pesticideTypes：API 可能返回 array（已 parse）或 string（未 parse），统一为 array
   const pesticideTypesVal = raw.pesticideTypes ?? raw.pesticide_type;
   result.pesticideTypes = parsePesticideTypes(pesticideTypesVal);
@@ -198,6 +214,9 @@ export const usePestControlStore = create<PestControlState>()(
         const raw = (response.data ?? response) as Record<string, unknown>;
         const newItem = normalizePestControl(raw);
         set((state) => ({ items: [newItem as unknown as PestControlData, ...state.items] }));
+        // 2026-07-18 P1-H7 修复：跨页刷新（库存/肥料库订阅了 version 变化）
+        useInventoryStore.getState().notifyChange();
+        useFertilizerStore.getState().notifyChange?.();
         return newItem as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -214,6 +233,9 @@ export const usePestControlStore = create<PestControlState>()(
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? (updated as unknown as PestControlData) : i)),
         }));
+        // 2026-07-18 P1-H7 修复：跨页刷新
+        useInventoryStore.getState().notifyChange();
+        useFertilizerStore.getState().notifyChange?.();
         return updated as unknown as PestControlData;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -225,6 +247,9 @@ export const usePestControlStore = create<PestControlState>()(
       try {
         await enhancedApiClient.delete(`/pest-records/${id}`);
         set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
+        // 2026-07-18 P1-H7 修复：跨页刷新
+        useInventoryStore.getState().notifyChange();
+        useFertilizerStore.getState().notifyChange?.();
         return true;
       } catch (err) {
         set({ error: (err as Error).message });
@@ -234,17 +259,16 @@ export const usePestControlStore = create<PestControlState>()(
 
     deleteItems: async (ids) => {
       try {
-        // logger.info('[PestControlStore] deleteItems called with:', ids);
         const response = await enhancedApiClient.post('/pest-records/batch-delete', { ids }) as { deleted?: number };
-        // logger.info('[PestControlStore] deleteItems response:', response);
         const deleted = response?.deleted ?? 0;
         if (deleted > 0) {
-          // logger.info('[PestControlStore] Updating state, removing IDs:', ids);
           set((state) => ({ items: state.items.filter((i) => !ids.includes(i.id)) }));
         }
+        // 2026-07-18 P1-H7 修复：跨页刷新
+        useInventoryStore.getState().notifyChange();
+        useFertilizerStore.getState().notifyChange?.();
         return { deleted };
       } catch (err) {
-        // logger.error('[PestControlStore] deleteItems error:', err);
         set({ error: (err as Error).message });
         return { deleted: 0 };
       }

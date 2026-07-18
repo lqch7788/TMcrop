@@ -20,35 +20,30 @@ import { usePestControlStore, usePesticideLibraryStore, usePlantingStore, useSee
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
 import { PestControlData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+// 2026-07-18 P3-L7：从共享工具导入
+import { parseJsonList } from '@/lib/jsonPool';
 import { FertilizerPoolEditor } from '@/components/farm/fertilizer/FertilizerPoolEditor';
 import type { FertilizerPoolItem } from '@/components/farm/fertilizer/FertilizerPoolEditor';
 
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 2026-07-18 P3-L11：从共享工具导入
+import { deepInputClass } from '@/components/common/deepInputClass';
 
-interface PesticideItem {
-  name: string;
+// 2026-07-18 P2-M3：从共享类型导入
+import type { PesticidePoolItem } from '@/types/farm/pest-control';
+
+interface PesticideItem extends PesticidePoolItem {
+  name: string;          // legacy: aliased to pesticideName
   pesticideTypes: string[];
-  dosage: string;
-  unit: string;
-  ratio: string;
-  applicationMethod: string;
+  ratio: string;         // legacy: aliased to dilutionRatio
 }
 
 // 2026-07-17：肥料池条目复用 FertilizerPoolEditor 类型（与 Add 一致）
 // 不再独立定义
 
 /**
- * 解析 JSON 列表（用于回填 pesticideList / bioAgentList / equipmentList）
+ * 2026-07-18 P3-L7：从共享工具导入（避免 4 处重复实现）
  */
-function parseJsonList(jsonStr: string | null | undefined): any[] {
-  if (!jsonStr) return [];
-  try {
-    const parsed = JSON.parse(jsonStr);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+// (本地 parseJsonList 已删除，统一用 @/lib/jsonPool)
 
 export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
   isOpen: boolean;
@@ -120,11 +115,20 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
       if (storedList.length > 0) {
         setPesticideList(storedList.map((it: any) => ({
           name: it.name || '',
-          pesticideTypes: Array.isArray(it.types) ? it.types : (it.type ? [it.type] : []),
+          // 2026-07-18 P0-C6 修复：统一读 pesticideTypes 字段名
+          pesticideTypes: Array.isArray(it.pesticideTypes) ? it.pesticideTypes : [],
           dosage: it.dosage ? String(it.dosage) : '',
           unit: it.unit || '',
           ratio: it.ratio || '',
           applicationMethod: it.applicationMethod || '',
+          // 2026-07-18 P2-M1 修复：回填 spec 级字段（防止编辑后丢失规格信息）
+          pesticideId: it.pesticideId,
+          pesticideCode: it.pesticideCode,
+          specId: it.specId,
+          specContent: it.specContent,
+          formulation: it.formulation,
+          manufacturer: it.manufacturer,
+          brandName: it.brandName,
         })));
       } else {
         // 回退：用主字段 + 兼容 bio/physical

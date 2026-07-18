@@ -11,6 +11,7 @@ import { useWorkerMatch } from './useWorkerMatch';
 import { useFarmTaskStore } from '../../stores/farmTaskStore';
 import { useProductionPlanStore } from '../../stores/useProductionPlanStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
+import { usePestControlStore } from '../../stores/usePestControlStore';
 import {
   SmartRecommendation,
   EnvAlert,
@@ -305,13 +306,35 @@ export function useSmartRecommendation() {
 
   /**
    * 生成病虫害预警推荐
+   * 2026-07-18 P2-H11 修复：检查 usePestControlStore，跳过近 N 天已创建防治记录的告警（避免重复推荐）
    */
   const generatePestRecommendations = useCallback((): SmartRecommendation[] => {
     const results: SmartRecommendation[] = [];
 
+    // 收集最近 7 天已用药剂 + 温室+作物组合
+    const recentPestKeys = new Set<string>();
+    try {
+      const records = usePestControlStore.getState().items;
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      for (const r of records) {
+        const t = r.sprayTime ? new Date(r.sprayTime).getTime() : 0;
+        if (t >= cutoff) {
+          recentPestKeys.add(`${r.greenhouseName || ''}__${r.cropName || ''}`);
+        }
+      }
+    } catch {
+      // 静默忽略
+    }
+
     pestAlerts.forEach(alert => {
       // 跳过已有活跃任务的
       if (hasActiveTask(alert.greenhouseName, 'pest_control')) {
+        return;
+      }
+
+      // 2026-07-18 P2-H11：跳过最近 7 天已创建防治记录的告警
+      const alertKey = `${alert.greenhouseName || ''}__${alert.cropName || ''}`;
+      if (recentPestKeys.has(alertKey)) {
         return;
       }
 

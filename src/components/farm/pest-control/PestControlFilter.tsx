@@ -30,7 +30,7 @@ export function PestControlFilter({
   };
 
   return (
-    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+    <div className="bg-gray-50 rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
         {/* 2026-07-10：药剂类型下拉（替代原防治类型，关联 pesticide_type 字典） */}
         <div className="min-w-[160px]">

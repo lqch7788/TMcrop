@@ -14,6 +14,8 @@ interface SupplierState {
   lastFetch: number | null;
 
   loadItems: (force?: boolean) => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: (force?: boolean) => Promise<void>;
   addItem: (item: Omit<Supplier, 'id'>) => Promise<Supplier | null>;
   updateItem: (id: number, updates: Partial<Supplier>) => Promise<Supplier | null>;
   deleteItem: (id: number) => Promise<boolean>;
@@ -109,6 +111,9 @@ export const useSupplierStore = create<SupplierState>()(
         set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async (force) => { await get().loadItems(force); },
 
     /** 前端内存关键字过滤 */
     search: (keyword: string) => {
