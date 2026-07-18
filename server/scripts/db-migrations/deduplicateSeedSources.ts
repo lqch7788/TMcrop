@@ -11,7 +11,7 @@
  * - source_module 重关联 IN ('seed_source', 'inventory')
  */
 
-import { getDatabase, saveDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../../src/db';
 import fs from 'fs';
 import path from 'path';
 
@@ -151,7 +151,7 @@ export function deduplicate(options: DedupeOptions = {}): void {
         const nowLocal = new Date().toISOString();
         db.run(`
           UPDATE seed_sources SET status = 'archived',
-            notes = COALESCE(notes || '; ', '') || ?, update_time = ?
+            remarks = COALESCE(remarks || '; ', '') || ?, update_time = ?
           WHERE id = ?
         `, [`已合并到 ${keepId}（${nowLocal}）`, nowLocal, mergeId]);
       }
@@ -212,5 +212,14 @@ export function deduplicate(options: DedupeOptions = {}): void {
 // CLI 入口
 if (require.main === module) {
   const dryRun = process.argv.includes('--dry-run');
-  deduplicate({ dryRun });
+  // 先初始化数据库（initDatabase + initializeDatabase）
+  const { initDatabase } = require('../../src/db');
+  const { initializeDatabase } = require('../../src/db/schema');
+  initDatabase().then(() => {
+    initializeDatabase();
+    deduplicate({ dryRun });
+  }).catch((e) => {
+    console.error('初始化失败:', e.message);
+    process.exit(1);
+  });
 }
