@@ -117,6 +117,7 @@ export interface LeafFertilizerItem {
 
 /**
  * 2026-07-17：安全解析 leafFertilizerList（兼容 string JSON / 已解析的 array / null undefined）
+ * 2026-07-18 P1-H5 修复：解析失败时记录 warning 日志，避免静默返回空数组（导致库存未扣但记录写入）
  */
 export function parseLeafFertilizerList(raw: unknown): LeafFertilizerItem[] {
   if (raw == null) return [];
@@ -124,7 +125,9 @@ export function parseLeafFertilizerList(raw: unknown): LeafFertilizerItem[] {
   if (typeof raw === 'string' && raw.trim()) {
     try {
       arr = JSON.parse(raw);
-    } catch {
+    } catch (e) {
+      // 解析失败时记录 warning，便于排查"记录写入但库存未扣"的数据异常
+      console.warn('[parseLeafFertilizerList] JSON.parse 失败，已忽略:', (e as Error).message, 'raw=', raw.slice(0, 100));
       return [];
     }
   }
@@ -304,17 +307,7 @@ export class PesticideRepository {
     return db.getRowsModified();
   }
 
-  /**
-   * 批量删除记录
-   * @returns 受影响行数
-   */
-  deleteByIds(ids: string[]): number {
-    if (ids.length === 0) return 0;
-    const db = getDatabase();
-    const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM pesticide_records WHERE id IN (${placeholders})`, ids);
-    return db.getRowsModified();
-  }
+  // 2026-07-18 P3-L3 清理：deleteByIds 死代码已删除（无 caller，service.removeBatch 用循环 remove 实现）
 
   /**
    * 持久化到磁盘（sql.js 内存模式需要在事务结束后统一 save）

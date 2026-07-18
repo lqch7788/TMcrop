@@ -348,17 +348,7 @@ export class FertilizerRepository {
     return db.getRowsModified();
   }
 
-  /**
-   * 批量删除记录
-   * @returns 受影响行数
-   */
-  deleteByIds(ids: string[]): number {
-    if (ids.length === 0) return 0;
-    const db = getDatabase();
-    const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM fertilizer_records WHERE id IN (${placeholders})`, ids);
-    return db.getRowsModified();
-  }
+  // 2026-07-18 P3-L3 清理：deleteByIds 死代码已删除（无 caller）
 
   /**
    * 查询单条 spec（替代原 findLibraryById）
@@ -397,9 +387,16 @@ export class FertilizerRepository {
 
   /**
    * 恢复 spec 库存（DELETE 记录时调用）
+   * 2026-07-18 P0-C5 修复：检测 specId 是否存在，不存在时抛业务错误避免库存永久丢失
    */
   increaseStock(specId: string, quantity: number, now: string): number {
     const db = getDatabase();
+    // 先检查 spec 是否存在（避免 UPDATE 影响 0 行但静默成功）
+    const exists = queryToObjects<{ id: string }>(db,
+      `SELECT id FROM fertilizer_specs WHERE id = ?`, [specId]);
+    if (exists.length === 0) {
+      throw new Error(`肥料规格不存在，无法恢复库存：specId=${specId}`);
+    }
     db.run(
       `UPDATE fertilizer_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`,
       [quantity, now, specId],

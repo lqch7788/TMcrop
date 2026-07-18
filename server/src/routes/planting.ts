@@ -1290,6 +1290,19 @@ router.delete('/:id', (req: Request, res: Response) => {
       console.error('[DELETE /:id] cascade ERROR:', e);
     }
 
+    // 2026-07-18 P0-C4 修复：软删种植后，置空关联的防治记录的 planting_id/planting_code
+    // - 保留防治历史，但断关联（避免跳转 404 / 孤儿数据）
+    try {
+      db.run(
+        `UPDATE pesticide_records
+         SET planting_id = NULL, planting_code = NULL
+         WHERE planting_id = ?`,
+        [id]
+      );
+    } catch (e) {
+      console.error('[planting DELETE] 清理关联防治记录 ERROR:', e);
+    }
+
     // 2026-06-14: 反向累加到上游
     if (row) {
       try {

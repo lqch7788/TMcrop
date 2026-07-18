@@ -1315,6 +1315,18 @@ router.delete('/:id', (req: Request, res: Response) => {
             [deducted, now, row.source_id]);
         }
       }
+      // 2026-07-18 P0-C4 修复：软删育苗后，置空关联的防治记录的 seedling_id/seedling_code
+      // - 保留防治历史，但断关联（避免跳转 404 / 孤儿数据）
+      try {
+        db.run(
+          `UPDATE pesticide_records
+           SET seedling_id = NULL, seedling_code = NULL
+           WHERE seedling_id = ?`,
+          [id]
+        );
+      } catch (e) {
+        console.error('[seedling DELETE] 清理关联防治记录 ERROR:', e);
+      }
       db.exec('COMMIT');
       saveDatabase();
       res.json({ success: true, data: { id, deleted: true } });
