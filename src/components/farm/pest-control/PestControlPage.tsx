@@ -4,7 +4,8 @@
  * 布局：PageHeader → FilterBar → StatsCards → Table → Modals
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Sprout, Loader2, Package, MapPin, Wallet, Calendar, BarChart3 } from 'lucide-react';
+import { Sprout } from 'lucide-react';
+// 2026-07-18 P3-L6 清理：MapPin、Calendar 未使用，删除
 import { DeleteConfirmModal } from '@/components/ui';
 import { usePestControlStore, PestControlData, useToastStore } from '@/stores';
 import { PestControlFilter } from './PestControlFilter';
@@ -18,7 +19,6 @@ import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { PestControlExportModal } from './modals/PestControlExportModal';
 // 2026-07-10：导出时把 pesticideTypes 转中文
 import { getDictLabel } from '@/stores/useDictionaryStore';
-import { enhancedApiClient } from '@/lib/apiClient';
 
 type OperationMode = 'normal' | 'delete' | 'export';
 
@@ -41,58 +41,18 @@ export default function PestControlPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 2026-07-17：肥料统计（总用量 / 总费用 / 种类数 / 区域数）— 顶部 stats cards
-  const [fertilizerStats, setFertilizerStats] = useState<{
-    totalDosage: number;
-    totalCost: number;
-    typesCount: number;
-    cropsCount: number;
-    loading: boolean;
-  }>({ totalDosage: 0, totalCost: 0, typesCount: 0, cropsCount: 0, loading: true });
-
-  const loadFertilizerStats = useCallback(async () => {
-    setFertilizerStats((s) => ({ ...s, loading: true }));
-    try {
-      // 拉 4 个维度并行（用 Promise.all）
-      const [byName, byType, byCrop, byRegion] = await Promise.all([
-        enhancedApiClient.get<any>('/pest-records/fertilizer-stats?group_by=fertilizer_name').catch(() => []),
-        enhancedApiClient.get<any>('/pest-records/fertilizer-stats?group_by=fertilizer_type').catch(() => []),
-        enhancedApiClient.get<any>('/pest-records/fertilizer-stats?group_by=crop_name').catch(() => []),
-        enhancedApiClient.get<any>('/pest-records/fertilizer-stats?group_by=greenhouse_name').catch(() => []),
-      ]);
-      const norm = (resp: any): any[] => Array.isArray(resp) ? resp : (resp?.data ?? []);
-      const listName = norm(byName);
-      const listType = norm(byType);
-      const listCrop = norm(byCrop);
-      const listRegion = norm(byRegion);
-      // 过滤掉 "unknown"（旧 schema 数据）
-      const totalDosage = listName.reduce((s, r) => s + (Number(r.totalDosage) || 0), 0);
-      const totalCost = listName.reduce((s, r) => s + (Number(r.totalCost) || 0), 0);
-      const typesCount = listType.filter((r) => r.label && r.label !== 'unknown').length;
-      const cropsCount = listCrop.filter((r) => r.label && r.label !== 'unknown').length;
-      void listRegion; // 暂未直接显示区域数，预留给后续扩展
-      setFertilizerStats({ totalDosage, totalCost, typesCount, cropsCount, loading: false });
-    } catch (e) {
-      console.error('[PestControlPage] 加载肥料统计失败:', e);
-      setFertilizerStats((s) => ({ ...s, loading: false }));
-    }
-  }, []);
-
-  useEffect(() => { loadFertilizerStats(); }, [loadFertilizerStats]);
-
-  // 保存/删除防治记录后，重新拉统计
-  const handleStatsRefresh = useCallback(() => { loadFertilizerStats(); }, [loadFertilizerStats]);
-
   useEffect(() => {
     store.fetchItems(filters);
   }, []);
 
   // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  // 2026-07-18 P2-H8 修复：clearError 后同步清空 ref，否则相同错误消息第二次会被吞
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
       lastShownErrorRef.current = error;
       toast.error(`加载病虫害数据失败：${error}`);
       clearError();
+      lastShownErrorRef.current = null; // 清空让下次相同错误也能弹
     }
   }, [error, toast, clearError]);
 
@@ -135,6 +95,7 @@ export default function PestControlPage() {
   }, []);
 
   // 2026-06-09 改造：批量删除直接弹 DeleteConfirmModal（替代旧自写 BatchDeleteModal + 直删逻辑）
+// 2026-07-18 P3-L2 清理：BatchDeleteModal.tsx 已删除（死代码）
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
     setShowDeleteModal(true);
@@ -150,14 +111,19 @@ export default function PestControlPage() {
         const ok = await store.deleteItem(ids[0]);
         if (ok) {
           toast.success('已删除 1 条记录');
-          handleStatsRefresh();
         } else {
           toast.error('删除失败');
         }
       } else {
         const { deleted } = await store.deleteItems(ids);
-        toast.success(`已删除 ${deleted} 条记录`);
-        handleStatsRefresh();
+        // 2026-07-18 P0-C2 修复：删除数不匹配时弹 error，避免静默成功
+        if (deleted === ids.length) {
+          toast.success(`已删除 ${deleted} 条记录`);
+        } else if (deleted > 0) {
+          toast.error(`部分删除失败：成功 ${deleted}/${ids.length} 条`);
+        } else {
+          toast.error(`删除失败：未删除任何记录`);
+        }
       }
       setSelectedIds([]);
       setOperationMode('normal');
@@ -231,14 +197,12 @@ export default function PestControlPage() {
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
     store.fetchItems(filters);
-    handleStatsRefresh();
-  }, [filters, store, handleStatsRefresh]);
+  }, [filters, store]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
     store.fetchItems(filters);
-    handleStatsRefresh();
-  }, [filters, store, handleStatsRefresh]);
+  }, [filters, store]);
 
   return (
     <div className="space-y-6">
@@ -254,50 +218,6 @@ export default function PestControlPage() {
               <p className="text-gray-500">管理化学/生物/物理防治记录</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 2026-07-17：肥料使用统计卡（4 张：总用量 / 总费用 / 种类数 / 作物数） */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-100">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">累计用量</span>
-            <Package className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-2xl font-bold text-amber-700">
-            {fertilizerStats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : fertilizerStats.totalDosage.toFixed(2)}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">肥料库消耗总量</div>
-        </div>
-        <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-100">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">累计费用</span>
-            <Wallet className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="text-2xl font-bold text-emerald-700">
-            {fertilizerStats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `¥${fertilizerStats.totalCost.toFixed(2)}`}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">元</div>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">涉及种类</span>
-            <BarChart3 className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="text-2xl font-bold text-blue-700">
-            {fertilizerStats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : fertilizerStats.typesCount}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">种肥料类型</div>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">涉及作物</span>
-            <Sprout className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="text-2xl font-bold text-purple-700">
-            {fertilizerStats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : fertilizerStats.cropsCount}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">种作物</div>
         </div>
       </div>
 

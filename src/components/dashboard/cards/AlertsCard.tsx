@@ -48,7 +48,8 @@ export function AlertsCard() {
         <div className="flex items-center justify-between">
           <span className="text-gray-500 flex items-center gap-1">
             <Eye className="w-3 h-3 text-yellow-500" />
-            病虫害告警
+            {/* 2026-07-18 P3-L13：明确语义（实际是巡查异常告警，与防治记录脱钩，详见 usePestAlert） */}
+            巡查异常
           </span>
           <span className="font-medium">{alertsBreakdown.pest}</span>
         </div>

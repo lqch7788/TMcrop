@@ -19,6 +19,8 @@ interface ProcessDefinitionStore {
   lastFetch: number | null;
 
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   addItem: (item: Partial<ProcessDefinition>) => Promise<ProcessDefinition>;
   updateItem: (id: number | string, item: Partial<ProcessDefinition>) => Promise<void>;
   removeItem: (id: number | string) => Promise<void>;
@@ -48,6 +50,9 @@ export const useProcessDefinitionStore = create<ProcessDefinitionStore>()(
           set({ error: error instanceof Error ? error.message : '加载工序定义失败', loading: false });
         }
       },
+
+      // 2026-07-18 P2-M4：fetchItems 别名
+      fetchItems: async () => { await get().loadItems(); },
 
       addItem: async (item) => {
         set({ loading: true, error: null });

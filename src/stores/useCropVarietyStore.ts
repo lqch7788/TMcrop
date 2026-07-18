@@ -23,6 +23,8 @@ interface CropVarietyState {
   // === 数据加载 ===
   /** 从后端加载所有品种 */
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   /** 强制刷新 */
   refreshItems: () => Promise<void>;
   /** 加载品种选项（下拉选择用） */
@@ -63,6 +65,9 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         set({ error: (error as Error).message, isLoading: false, isInitialized: true });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async () => { await get().loadItems(); },
 
     refreshItems: async () => {
       set({ isLoading: true, error: null });

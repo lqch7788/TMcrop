@@ -10,6 +10,8 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { useDictionaryStore, getDictLabel } from '@/stores';
 import { PestControlData } from '@/stores/usePestControlStore';
+// 2026-07-18 P3-L7：从共享工具导入
+import { parseJsonList } from '@/lib/jsonPool';
 
 interface PestControlDetailModalProps {
   isOpen: boolean;
@@ -23,31 +25,20 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
 
   if (!isOpen || !record) return null;
 
-  // 解析 JSON 列表（兼容 string JSON / 已解析的 array / null undefined）
-  const parseJsonArray = (val: unknown): any[] => {
-    if (val == null) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string' && val.trim()) {
-      try {
-        const parsed = JSON.parse(val);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-  const leafFertilizerList = parseJsonArray((record as any).leafFertilizerList ?? record.leafFertilizerName);
-  const pesticideList = parseJsonArray((record as any).pesticideList);
-  const bioAgentList = parseJsonArray((record as any).bioAgentList);
-  const equipmentList = parseJsonArray((record as any).equipmentList);
+  // 2026-07-18 P3-L7：使用共享工具
+  const leafFertilizerList = parseJsonList((record as any).leafFertilizerList ?? record.leafFertilizerName);
+  const pesticideList = parseJsonList((record as any).pesticideList);
+  const bioAgentList = parseJsonList((record as any).bioAgentList);
+  const equipmentList = parseJsonList((record as any).equipmentList);
+  // 2026-07-18 P1-H3 修复：兼容旧 schema 空格 join 的多值
   const targetPestList = (() => {
     if (!record.targetPest) return [];
     try {
       const parsed = JSON.parse(record.targetPest);
       return Array.isArray(parsed) ? parsed : [record.targetPest];
     } catch {
-      return [record.targetPest];
+      const split = record.targetPest.split(/\s+/).filter(Boolean);
+      return split.length > 1 ? split : [record.targetPest];
     }
   })();
 
@@ -56,7 +47,8 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
   if (pesticideList.length > 0) {
     pesticideList.forEach((it: any) => unifiedItems.push({
       name: it.name,
-      pesticideTypes: Array.isArray(it.types) ? it.types : (it.type ? [it.type] : []),
+      // 2026-07-18 P0-C6 修复：统一读 pesticideTypes 字段名
+      pesticideTypes: Array.isArray(it.pesticideTypes) ? it.pesticideTypes : [],
       dosage: it.dosage,
       unit: it.unit,
       ratio: it.ratio,

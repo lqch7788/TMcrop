@@ -22,6 +22,8 @@ interface PlantingState {
   clearError: () => void;
 
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名（与项目其他 store 命名一致，如 usePestControlStore）
+  fetchItems: () => Promise<void>;
   addItem: (item: Omit<Planting, 'id' | 'createTime' | 'updateTime'>) => Promise<Planting | null>;
   updateItem: (id: string, updates: Partial<Planting>) => Promise<Planting | null>;
   deleteItem: (id: string) => Promise<boolean>;
@@ -71,6 +73,11 @@ export const usePlantingStore = create<PlantingState>()(
         // logger.error('[usePlantingStore] 获取种植数据失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
+    },
+
+    // 2026-07-18 P2-M4：fetchItems 别名实现
+    fetchItems: async () => {
+      await get().loadItems();
     },
 
     addItem: async (item) => {

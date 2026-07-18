@@ -112,6 +112,8 @@ interface MaterialRequestDataState {
   error: string | null;
 
   loadItems: (params?: Record<string, string>) => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: (params?: Record<string, string>) => Promise<void>;
   addItem: (item: Partial<MaterialReceivingRecord>) => Promise<MaterialReceivingRecord | null>;
   updateItem: (id: string | number, updates: Partial<MaterialReceivingRecord>) => Promise<boolean>;
   deleteItem: (id: string | number) => Promise<boolean>;
@@ -141,6 +143,9 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         set({ error: error instanceof Error ? error.message : '获取物料申请失败', isLoading: false });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async (params) => { await get().loadItems(params); },
 
     // 创建
     addItem: async (item) => {

@@ -13,6 +13,8 @@ interface InboundState {
   error: string | null;
 
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   addItem: (item: Omit<InboundRecord, 'id'>) => Promise<InboundRecord | null>;
   updateItem: (id: number, updates: Partial<InboundRecord>) => Promise<InboundRecord | null>;
   deleteItem: (id: number) => Promise<boolean>;
@@ -35,6 +37,9 @@ export const useInboundStore = create<InboundState>()(
         set({ error: (error as Error).message, isLoading: false });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async () => { await get().loadItems(); },
 
     addItem: async (item) => {
       try {

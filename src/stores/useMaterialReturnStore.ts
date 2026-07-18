@@ -13,6 +13,8 @@ interface MaterialReturnState {
   error: string | null;
 
   loadItems: () => Promise<void>;
+  // 2026-07-18 P2-M4：fetchItems 别名
+  fetchItems: () => Promise<void>;
   addItem: (item: Omit<MaterialReturnRecord, 'id'>) => Promise<MaterialReturnRecord | null>;
   updateItem: (id: string | number, updates: Partial<MaterialReturnRecord>) => Promise<boolean>;
   deleteItem: (id: string | number) => Promise<boolean>;
@@ -35,6 +37,9 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         set({ error: (error as Error).message, isLoading: false });
       }
     },
+
+    // 2026-07-18 P2-M4：fetchItems 别名
+    fetchItems: async () => { await get().loadItems(); },
 
     addItem: async (item) => {
       try {

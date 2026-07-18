@@ -4,14 +4,15 @@
  * 列：勾选框、展开、编号、防治日期、作物、防治区域、操作人、施用方法、目标病虫害、备注、状态、操作（编辑/删除）
  * 2026-06-21: 删除操作列"查看"按钮（与点击编号重复，统一通过编号查看详情）
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { PestControlData, useDictionaryStore } from '@/stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
-import { Badge } from '@/components/ui';
+// 2026-07-18 P3-L7：共用 JSON 列表解析
+import { parseJsonList } from '@/lib/jsonPool';
 
 interface PestControlTableProps {
   data: PestControlData[];
@@ -30,38 +31,18 @@ interface PestControlTableProps {
   onExportConfirm: () => void;
 }
 
-// 防治类型 Badge 颜色
-const getControlTypeBadgeColor = (type: string): string => {
-  const colors: Record<string, string> = {
-    'chemical': 'bg-red-100 text-red-700 border-red-200',
-    'bio': 'bg-green-100 text-green-700 border-green-200',
-    'physical': 'bg-blue-100 text-blue-700 border-blue-200',
-  };
-  return colors[type] || 'bg-gray-100 text-gray-700 border-gray-200';
-};
-
 // 2026-07-10 P1-6：抽到 constants/cropEnums.ts 共享（替代 3 处 inline 定义）
 // 保留函数名 getControlTypeLabel 以兼容现有调用
 import { CONTROL_TYPE_OPTIONS, lookupEnumLabel } from '@/constants/cropEnums';
 const getControlTypeLabel = (type: string): string =>
   lookupEnumLabel(CONTROL_TYPE_OPTIONS, type, type);
+// 2026-07-18 P3-L6 清理：getControlTypeBadgeColor 已删除（controlType 已取消，Badge 颜色映射无 caller）
 
-// 解析 JSON 列表（兼容 string JSON / 已解析的 array / null undefined）
-function parseJsonList(val: unknown): any[] {
-  if (val == null) return [];
-  if (Array.isArray(val)) return val;
-  if (typeof val === 'string' && val.trim()) {
-    try {
-      const parsed = JSON.parse(val);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
+// 2026-07-18 P3-L7：从共享工具导入（避免 4 处重复实现）
+// (import 已移至顶部)
 
-// 解析目标病虫害（可能是JSON数组或单个字符串）
+// 解析目标病虫害（可能是JSON数组、单个字符串、或空格分隔的多值）
+// 2026-07-18 P1-H3 修复：兼容旧 schema 空格 join 的多值
 function parseTargetPests(targetPest: string | null | undefined): string[] {
   if (!targetPest) return [];
   try {
@@ -69,7 +50,9 @@ function parseTargetPests(targetPest: string | null | undefined): string[] {
     if (Array.isArray(parsed)) return parsed;
     return [parsed];
   } catch {
-    return [targetPest];
+    // 旧数据：用空格 join 的多值，按空格 split
+    const split = targetPest.split(/\s+/).filter(Boolean);
+    return split.length > 1 ? split : [targetPest];
   }
 }
 
@@ -113,6 +96,9 @@ export function PestControlTable({
     const item = items.find(d => (d as any).dictCode === code);
     return item ? (item as any).dictLabel : code;
   };
+
+  // 2026-07-18 P3-L12：用 Set 替代 .includes 避免 O(N²)
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const showCheckbox = operationMode === 'delete' || operationMode === 'export';
@@ -289,7 +275,7 @@ export function PestControlTable({
                         <TableCell className="px-4 py-3">
                           <Input
                             type="checkbox"
-                            checked={selectedIds.includes(record.id)}
+                            checked={selectedSet.has(record.id)}
                             onChange={(e) => handleSelectRow(record.id, e.target.checked)}
                             className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                           />
@@ -363,17 +349,18 @@ export function PestControlTable({
                       <TableCell className="px-4 py-3">
                         {(() => {
                           // 优先 pesticideList 池；池为空时用 pesticideName 单条兜底
+                          // 2026-07-18 P0-C6 修复：统一读 pesticideTypes 字段名
                           const items = pesticideList.length > 0
                             ? pesticideList
                             : (record.pesticideName ? [{
                                 name: record.pesticideName,
-                                types: record.pesticideTypes || [],
+                                pesticideTypes: record.pesticideTypes || [],
                               }] : []);
                           if (items.length === 0) return <span className="text-gray-400">-</span>;
                           return (
                             <div className="flex flex-wrap gap-1 max-w-[260px]">
                               {items.map((it: any, idx: number) => {
-                                const typeLabel = (it.types && it.types.length > 0 ? it.types : (it.type ? [it.type] : []))
+                                const typeLabel = (it.pesticideTypes && it.pesticideTypes.length > 0 ? it.pesticideTypes : [])
                                   .map((t: string) => getDictLabel('pesticide_type', t) || t)
                                   .join('·');
                                 return (

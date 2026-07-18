@@ -27,9 +27,8 @@ import { showAlert } from '@/lib/dialogService';
 import { todayLocal, currentTimeLocal } from '@/lib/dateUtils';
 import { FertilizerPoolEditor } from '@/components/farm/fertilizer/FertilizerPoolEditor';
 import type { FertilizerPoolItem } from '@/components/farm/fertilizer/FertilizerPoolEditor';
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 2026-07-18 P3-L11：从共享工具导入
+import { deepInputClass } from '@/components/common/deepInputClass';
 
 /**
  * 2026-07-11：药剂池条目（替代化学/生物/物理三分支 + 原 PesticideItem 多卡片）
@@ -47,22 +46,8 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
  * - remarks: 备注
  * - 添加到池时自动用选中规格的 suggestedDosage/Ratio/Unit/remark 作默认值
  */
-interface PesticidePoolItem {
-  pesticideId?: string;
-  pesticideName: string;
-  pesticideCode?: string;
-  pesticideTypes?: string[];
-  specId?: string;
-  specContent?: string;
-  formulation?: string;
-  manufacturer?: string;
-  brandName?: string;
-  dosage?: string;
-  unit?: string;
-  dilutionRatio?: string;
-  applicationMethod?: string;
-  remarks?: string;
-}
+// 2026-07-18 P2-M3：从共享类型导入，避免与 EditModal 定义漂移
+import type { PesticidePoolItem } from '@/types/farm/pest-control';
 
 // 2026-07-17：肥料池条目类型复用 FertilizerPoolEditor（与新增施肥记录一致）
 // - 含 specId / fertilizerName / fertilizerType / brandName / specContent / manufacturer
@@ -135,11 +120,12 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       // 2026-07-11：药剂池只需拉取 store，UI 中通过 useMemo 派生过滤列表
       pesticideStore.fetchItems();
       // 加载种植和育苗记录列表（用于关联业务下拉）
+      // 2026-07-18 P2-M4：统一使用 fetchItems 别名（与项目其他 store 命名一致）
       if (plantingStore.items.length === 0) {
-        plantingStore.loadItems();
+        plantingStore.fetchItems();
       }
       if (seedlingStore.items.length === 0) {
-        seedlingStore.loadItems();
+        seedlingStore.fetchItems();
       }
       // 加载病虫害词典（用于目标病虫害多选）
       pestDiseaseStore.fetchItems();
@@ -393,6 +379,13 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         showAlert(`同一次防治记录只能针对同一作物。已选作物：${prev[0].cropName}，该区域作物：${cropName}`);
         return prev;
       }
+      // 2026-07-18 P1-H1 修复：种植/育苗二选一互斥校验（schema 约束）
+      if (prev.length > 0 && prev[0].type !== kind) {
+        const prevTypeLabel = prev[0].type === 'planting' ? '种植' : '育苗';
+        const newTypeLabel = kind === 'planting' ? '种植' : '育苗';
+        showAlert(`同一次防治记录只能在「${prevTypeLabel}」或「${newTypeLabel}」中选择一种类型。已选：${prevTypeLabel}，新选：${newTypeLabel}`);
+        return prev;
+      }
       const nextItem: SelectedBizRecord = { type: kind, id: recordId, code: code || '', cropName, area };
       const next = [...prev, nextItem];
       // 自动填入作物：仅在用户尚未手动改过 cropName 时
@@ -447,8 +440,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
           formulation: it.formulation,
           manufacturer: it.manufacturer,
           brandName: it.brandName,
-          type: (it.pesticideTypes || [])[0] || '',   // 主类型
-          types: it.pesticideTypes || [],              // 完整类型
+          // 2026-07-18 P0-C6 修复：统一写 pesticideTypes 字段名，删除 type/types 别名
+          pesticideTypes: it.pesticideTypes || [],
           dosage: it.dosage,
           unit: it.unit,
           ratio: it.dilutionRatio,
@@ -462,8 +455,15 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         operatorName: form.operatorName,
         cropName: form.cropName,
         greenhouseName: form.greenhouseName,
-        // 目标病虫害多选用空格 join（兼容旧 schema 显示）
-        targetPest: form.targetPests.join(' '),
+        // 2026-07-18 P0-C1 修复：补传关联业务 ID/Code（之前完全丢失）
+        // - selectedBizRecords 是用户多选的种植/育苗记录数组
+        // - 按 type 分组 join 成逗号分隔字符串（与后端 schema 一致）
+        plantingId: selectedBizRecords.filter((r) => r.type === 'planting').map((r) => r.id).join(',') || undefined,
+        plantingCode: selectedBizRecords.filter((r) => r.type === 'planting').map((r) => r.code).filter(Boolean).join(',') || undefined,
+        seedlingId: selectedBizRecords.filter((r) => r.type === 'seedling').map((r) => r.id).join(',') || undefined,
+        seedlingCode: selectedBizRecords.filter((r) => r.type === 'seedling').map((r) => r.code).filter(Boolean).join(',') || undefined,
+        // 2026-07-18 P1-H3 修复：targetPests 多选用 JSON 数组存储（之前 join(' ') 导致详情页只能解析为一个 chip）
+        targetPest: JSON.stringify(form.targetPests),
         description: form.description,
         pesticideTypes: allTypes,
         // 兼容老字段（取池中第一个药剂）
