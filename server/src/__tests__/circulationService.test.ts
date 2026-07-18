@@ -55,8 +55,8 @@ beforeEach(() => {
 })
 
 describe('executeCirculation PROPAGATION', () => {
-  it('应建新种源 + 写 circulation 记录 + 返回 newSourceId', () => {
-    const result = executeCirculation({
+  it('应建新种源 + 写 circulation 记录 + 返回 newSourceId', async () => {
+    const result = await executeCirculation({
       circulationType: 'PROPAGATION',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
@@ -87,8 +87,8 @@ describe('executeCirculation PROPAGATION', () => {
     })).toThrow('只能 destination=seed_source')
   })
 
-  it('PROPAGATION + subType=cutting 应派生 source_origin=cutting', () => {
-    executeCirculation({
+  it('PROPAGATION + subType=cutting 应派生 source_origin=cutting', async () => {
+    await executeCirculation({
       circulationType: 'PROPAGATION',
       sourceModule: 'planting',
       sourceId: 'pl-1',
@@ -104,8 +104,8 @@ describe('executeCirculation PROPAGATION', () => {
 })
 
 describe('executeCirculation QUANTITY', () => {
-  it('回种源: 应 UPDATE seed_sources.availableCount', () => {
-    const result = executeCirculation({
+  it('回种源: 应 UPDATE seed_sources.availableCount', async () => {
+    const result = await executeCirculation({
       circulationType: 'QUANTITY',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
@@ -122,8 +122,8 @@ describe('executeCirculation QUANTITY', () => {
     expect(updateCalls[0][1][0]).toBe(50)
   })
 
-  it('入库存: 应 INSERT inventory_stock (disposition=SALES)', () => {
-    const result = executeCirculation({
+  it('入库存: 应 INSERT inventory_stock (disposition=SALES)', async () => {
+    const result = await executeCirculation({
       circulationType: 'QUANTITY',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
@@ -166,8 +166,8 @@ describe('executeCirculation QUANTITY', () => {
 })
 
 describe('executeCirculation DISPOSAL', () => {
-  it('应只写 circulation 记录, 不动种源/库存', () => {
-    const result = executeCirculation({
+  it('应只写 circulation 记录, 不动种源/库存', async () => {
+    const result = await executeCirculation({
       circulationType: 'DISPOSAL',
       sourceModule: 'harvest',
       sourceId: 'hrv-1',
