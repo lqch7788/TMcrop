@@ -277,7 +277,7 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
     if (newOrigin === 'planting_self_kept' && cropCode && seedForm && unit) {
       // 2026-07-18: 事务内查合并候选（防并发 race）
       const repo = new SeedSourceRepository()
-      mergeable = repo.findMergeableSeedSource({
+      mergeable = await repo.findMergeableSeedSource({
         cropCode, seedForm, unit, generation,
       })
     }

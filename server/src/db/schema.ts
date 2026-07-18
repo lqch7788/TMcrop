@@ -3760,6 +3760,10 @@ export function initializeDatabase() {
     if (!existing.has('merge_action')) {
       db.run(`ALTER TABLE crop_circulation_records ADD COLUMN merge_action TEXT`);
     }
+    // 2026-07-18：种源合并 - crop_circulation_records 加 generation 列
+    if (!existing.has('generation')) {
+      db.run(`ALTER TABLE crop_circulation_records ADD COLUMN generation TEXT`);
+    }
   } catch {}
 
   // 2026-07-18：入库冲销审计表
