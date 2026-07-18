@@ -71,6 +71,26 @@ interface SeedSourceState {
     items: TransferItem[],
     operator?: { id?: string; name?: string }
   ) => Promise<TransferResult[]>;
+
+  // ===== 2026-07-18: 种源合并功能 =====
+  /**
+   * 查询合并候选（同合并键的最早一条 active 种源）
+   */
+  findMatchable: (params: {
+    cropCode: string;
+    seedForm: string;
+    unit: string;
+    generation: string | null;
+  }) => Promise<any>;
+
+  /**
+   * 冲销入库流水（软删除 + 库存回退）
+   * 调用方负责刷新相关数据
+   */
+  reverseInbound: (
+    seedSourceId: string,
+    payload: { inboundRecordId: string; reason: string }
+  ) => Promise<void>;
 }
 
 export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
@@ -175,6 +195,19 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  // ===== 2026-07-18: 种源合并功能 =====
+
+  findMatchable: async (params) => {
+    // 错误向上抛（V2.1 铁律：不静默吞错）
+    return await seedSourceService.findMatchableSeedSource(params);
+  },
+
+  reverseInbound: async (seedSourceId, payload) => {
+    // 错误向上抛
+    await seedSourceService.reverseInboundRecord(seedSourceId, payload);
+    // 调用方决定是否 loadItems 刷新列表
   },
 }));
 

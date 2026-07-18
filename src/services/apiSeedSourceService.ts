@@ -67,6 +67,10 @@ const CAMEL_TO_SNAKE_MAP: Record<string, string> = {
   endTime: 'end_time',
   // 打印统计
   printCount: 'print_count',
+  // 2026-07-18: 种源合并统计
+  reflowCount: 'reflow_count',
+  lastReflowAt: 'last_reflow_at',
+  mergedFromIds: 'merged_from_ids',
 };
 
 /**
@@ -146,6 +150,10 @@ interface BackendSeedSource {
   // 结束标记（2026-06-05：强结分支写入）
   endType?: string;
   endTime?: string;
+  // 2026-07-18: 种源合并统计字段（中间件自动转 camelCase）
+  reflowCount?: number;
+  lastReflowAt?: string;
+  mergedFromIds?: string;  // JSON 字符串，transform 时 JSON.parse
   [key: string]: unknown;
 }
 
@@ -243,6 +251,12 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     // 结束标记（2026-06-05：强结分支读取）
     endType: (item.endType as 'normal' | 'abnormal') || undefined,
     endTime: item.endTime || undefined,
+    // 2026-07-18: 种源合并统计字段
+    reflowCount: item.reflowCount || 0,
+    lastReflowAt: item.lastReflowAt || undefined,
+    mergedFromIds: item.mergedFromIds ? (() => {
+      try { return JSON.parse(item.mergedFromIds); } catch { return undefined; }
+    })() : undefined,
   };
 }
 
@@ -883,4 +897,51 @@ export async function getSeedSourceInboundHistory(
     `/seed-sources/${seedSourceId}/history-inbound`
   );
   return Array.isArray(rows) ? rows : [];
+}
+
+// ============================================================
+// 2026-07-18: 种源合并功能 - service 函数
+// ============================================================
+
+import type { InboundRecord } from '@/types/crop';
+
+/**
+ * 查询合并候选（同合并键的最早一条 active 种源）
+ * @param params cropCode + seedForm + unit + 可选 generation
+ */
+export async function findMatchableSeedSource(params: {
+  cropCode: string;
+  seedForm: string;
+  unit: string;
+  generation: string | null;
+}): Promise<any> {
+  // 2026-06-27 项目记忆坑：enhancedApiClient.get 不支持 params 对象，必须用 URLSearchParams
+  const q = new URLSearchParams({
+    cropCode: params.cropCode,
+    seedForm: params.seedForm,
+    unit: params.unit,
+    ...(params.generation ? { generation: params.generation } : {}),
+  });
+  const response = await enhancedApiClient.get(`/api/seed-sources/matchable?${q}`);
+  return response;
+}
+
+/**
+ * 冲销入库流水
+ * @param seedSourceId 种源 ID
+ * @param payload { inboundRecordId, reason }
+ */
+export async function reverseInboundRecord(
+  seedSourceId: string,
+  payload: { inboundRecordId: string; reason: string }
+): Promise<void> {
+  await enhancedApiClient.post(`/api/seed-sources/${seedSourceId}/reverse-inbound`, payload);
+}
+
+/**
+ * 获取入库流水（UNION inventory_inbound_records + crop_circulation_records PROPAGATION）
+ */
+export async function getInboundRecords(seedSourceId: string): Promise<InboundRecord[]> {
+  const response = await enhancedApiClient.get(`/api/seed-sources/${seedSourceId}/history-inbound`);
+  return Array.isArray(response) ? (response as InboundRecord[]) : [];
 }
