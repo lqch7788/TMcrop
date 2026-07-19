@@ -438,7 +438,7 @@ export async function syncFertilizerRecords(
     // 8. 扣减库存（按每条 item 真实 code）
     for (const item of validItems) {
       if (item.fertilizerCode) {
-        adjustFertilizerStock(db, item.fertilizerCode, -item.amount);
+        adjustFertilizerStock(db, item.fertilizerCode, -(item.amount ?? 0));
       }
     }
   } catch (err) {

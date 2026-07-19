@@ -339,13 +339,8 @@ export async function executeTransferToSource(
         );
       }
 
-      // 记录原始数量（精确回滚用）
-      originalQuantities.push({
-        id: item.sourceStockId,
-        currentQty: sourceCurrentQty,
-        availableQty: sourceAvailableQty,
-        unit: sourceUnit,
-      });
+      // 2026-07-19 P0-1 重构后:BEGIN IMMEDIATE 事务替代 manual rollback,不再需要 originalQuantities 跟踪
+      // (原 rollbackTransfer 函数 + originalQuantities 数组已在 P0-1 删除,这里残留 push 调用导致 TS 报错)
 
       // === 步骤 2：扣减原库存（乐观锁 WHERE current_quantity >= ?） ===
       // 2026-06-24 修正: 调拨只减少源行 qty，源行仍保留在作物库存列表（用户语义：扣减而非消失）。
