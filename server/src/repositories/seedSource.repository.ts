@@ -377,6 +377,15 @@ export class SeedSourceRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
     db.run('UPDATE seed_sources SET deleted_at = ? WHERE id = ?', [now, id]);
+    // 2026-07-19 P1：软删时级联清理 crop_circulation_records 引用（避免孤儿引用）
+    // 仅处理未撤销的回流（已撤销的保留作为审计痕迹）
+    try {
+      db.run(`UPDATE crop_circulation_records SET parent_source_id = NULL WHERE parent_source_id = ? AND is_revoked = 0`, [id]);
+      db.run(`UPDATE crop_circulation_records SET new_source_id = NULL WHERE new_source_id = ? AND is_revoked = 0`, [id]);
+    } catch (e: any) {
+      // 列不存在时（老库）跳过，不阻断主流程
+      console.warn(`[seedSource.delete] crop_circulation_records 级联清理失败（可忽略）:`, e?.message || e);
+    }
     saveDatabase();
   }
 
@@ -940,10 +949,15 @@ export class SeedSourceRepository {
     propagationMethod: string | null;
     /** 2026-07-18: 种植批次 ID（用于同种植优先匹配） */
     linkedPlantingId?: string | null;
+    /** 2026-07-19：可选排除 parent 种源（避免 PARENT 自身被命中回流自身） */
+    excludeSourceId?: string | null;
   }): Promise<MatchableStock | null> {
     const db = getDatabase();
+    // 2026-07-19 P0-5：加 deleted_at IS NULL 过滤，避免软删种源被错误合并
+    // 软删种源 status='active' 但 deleted_at 不为 NULL，仍会被命中导致脏数据
     const baseWhere = `
       status = 'active'
+      AND deleted_at IS NULL
       AND crop_code = ?
       AND seed_form = ?
       AND unit = ?
@@ -952,6 +966,9 @@ export class SeedSourceRepository {
       AND source_origin IN ('planting_self_kept', 'inventory_transfer')
     `;
     const baseParams = [q.cropCode, q.seedForm, q.unit, q.generation ?? null, q.propagationMethod ?? null];
+    // 排除自己：避免 PARENT 自身命中合并候选（PARENT 通常就是合并键的源种源）
+    const excludeClause = q.excludeSourceId ? ` AND id != ?` : '';
+    const excludeParams = q.excludeSourceId ? [q.excludeSourceId] : [];
 
     // Step 1: 同种植批次优先
     if (q.linkedPlantingId) {
@@ -961,12 +978,12 @@ export class SeedSourceRepository {
                unit, reflow_count AS reflowCount,
                last_reflow_at AS lastReflowAt
         FROM seed_sources
-        WHERE ${baseWhere}
+        WHERE ${baseWhere}${excludeClause}
           AND linked_planting_id = ?
         ORDER BY create_time ASC, id ASC
         LIMIT 1
       `);
-      stmt1.bind([...baseParams, q.linkedPlantingId]);
+      stmt1.bind([...baseParams, ...excludeParams, q.linkedPlantingId]);
       const row = stmt1.step() ? stmt1.getAsObject() : null;
       stmt1.free();
       if (row) return row as unknown as MatchableStock;
@@ -979,11 +996,11 @@ export class SeedSourceRepository {
              unit, reflow_count AS reflowCount,
              last_reflow_at AS lastReflowAt
       FROM seed_sources
-      WHERE ${baseWhere}
+      WHERE ${baseWhere}${excludeClause}
       ORDER BY create_time ASC, id ASC
       LIMIT 1
     `);
-    stmt.bind(baseParams);
+    stmt.bind([...baseParams, ...excludeParams]);
     const row = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
     return row ? (row as unknown as MatchableStock) : null;
@@ -1057,24 +1074,69 @@ export class SeedSourceRepository {
    */
   async getInboundEditLogs(seedSourceId: string, limit = 200): Promise<InboundEditLog[]> {
     const db = getDatabase();
+    // 2026-07-19：UNION 两张审计表（inbound_edit_log + circulation_edit_log）+ 完整 JOIN 业务表
+    // - inventory_inbound_records 关联：取 cropName/varietyName/unit/operatorName/recordDate/supplierName
+    // - crop_circulation_records 关联：取 circulationDate/unit/mergeAction
     const stmt = db.prepare(`
-      SELECT
-        iel.id,
-        iel.inbound_id AS inboundId,
-        iel.action,
-        iel.before_quantity AS beforeQuantity,
-        iel.after_quantity AS afterQuantity,
-        iel.edited_by AS editedBy,
-        iel.edited_by_name AS editedByName,
-        iel.reason,
-        iel.created_at AS createdAt
-      FROM inbound_edit_log iel
-      INNER JOIN inventory_inbound_records iir ON iir.id = iel.inbound_id
-      WHERE iir.business_id = ?
-      ORDER BY iel.created_at DESC
+      SELECT * FROM (
+        SELECT
+          iel.id,
+          iel.inbound_id AS inboundId,
+          'inventory_inbound_records' AS sourceType,
+          iel.action,
+          iel.before_quantity AS beforeQuantity,
+          iel.after_quantity AS afterQuantity,
+          iel.edited_by AS editedBy,
+          iel.edited_by_name AS editedByName,
+          iel.reason,
+          iel.created_at AS createdAt,
+          -- 业务表关联字段（inventory_inbound_records）
+          iir.record_date AS recordDate,
+          iir.source_module AS sourceModule,
+          iir.source_id AS sourceId,
+          iir.crop_name AS cropName,
+          iir.variety_name AS varietyName,
+          iir.unit AS unit,
+          iir.quantity AS originalQuantity,
+          iir.supplier_name AS supplierName,
+          iir.operator_name AS operatorName,
+          NULL AS mergeAction,
+          NULL AS circulationDate
+        FROM inbound_edit_log iel
+        INNER JOIN inventory_inbound_records iir ON iir.id = iel.inbound_id
+        WHERE iir.business_id = ?
+        UNION ALL
+        SELECT
+          cel.id,
+          cel.circulation_id AS inboundId,
+          'crop_circulation_records' AS sourceType,
+          cel.action,
+          cel.before_quantity AS beforeQuantity,
+          cel.after_quantity AS afterQuantity,
+          cel.edited_by AS editedBy,
+          cel.edited_by_name AS editedByName,
+          cel.reason,
+          cel.created_at AS createdAt,
+          -- 业务表关联字段（crop_circulation_records）
+          ccr.circulation_date AS recordDate,
+          ccr.source_module AS sourceModule,
+          ccr.source_id AS sourceId,
+          NULL AS cropName,
+          NULL AS varietyName,
+          ccr.unit AS unit,
+          ccr.quantity AS originalQuantity,
+          NULL AS supplierName,
+          ccr.operator_id AS operatorName,
+          ccr.merge_action AS mergeAction,
+          ccr.circulation_date AS circulationDate
+        FROM circulation_edit_log cel
+        INNER JOIN crop_circulation_records ccr ON ccr.id = cel.circulation_id
+        WHERE ccr.new_source_id = ?
+      )
+      ORDER BY createdAt DESC
       LIMIT ?
     `);
-    stmt.bind([seedSourceId, limit]);
+    stmt.bind([seedSourceId, seedSourceId, limit]);
     const results: any[] = [];
     while (stmt.step()) results.push(stmt.getAsObject());
     stmt.free();
@@ -1184,6 +1246,7 @@ export interface UnifiedInboundRecord {
 export interface InboundEditLog {
   id: number;
   inboundId: string;
+  sourceType: 'inventory_inbound_records' | 'crop_circulation_records';
   action: 'update' | 'reverse';
   beforeQuantity: number | null;
   afterQuantity: number | null;
@@ -1191,6 +1254,18 @@ export interface InboundEditLog {
   editedByName?: string;
   reason?: string;
   createdAt: string;
+  // 业务表关联字段（2026-07-19 表格形式需要）
+  recordDate?: string | null;
+  sourceModule?: string | null;
+  sourceId?: string | null;
+  cropName?: string | null;
+  varietyName?: string | null;
+  unit?: string | null;
+  originalQuantity?: number | null;
+  supplierName?: string | null;
+  operatorName?: string | null;
+  mergeAction?: 'create_new' | 'merge_into_existing' | null;
+  circulationDate?: string | null;
 }
 
 // 导出单例

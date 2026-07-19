@@ -13,6 +13,9 @@ import { writeFlowLog } from './flowLogService';
 export interface ReverseInboundInput {
   inboundRecordId: string;
   reason: string;
+  // 2026-07-19 P0-2：操作员透传（替代硬编码 'system'）
+  operatorId?: string;
+  operatorName?: string;
 }
 
 export function reverseInboundRecord(
@@ -54,7 +57,7 @@ export function reverseInboundRecord(
 
     // 4. 标记入库记录为已冲销
     db.run(`UPDATE inventory_inbound_records SET reversed_at = ?, reversed_by = ?, reverse_reason = ? WHERE id = ?`,
-      [nowISO, 'system', payload.reason, payload.inboundRecordId]);
+      [nowISO, payload.operatorId || 'system', payload.reason, payload.inboundRecordId]);
 
     // 5. 扣减种源库存
     db.run(`UPDATE seed_sources SET quantity = quantity - ?, remaining_quantity = remaining_quantity - ? WHERE id = ?`,
@@ -73,7 +76,7 @@ export function reverseInboundRecord(
       txId, txId, seedSourceId, 'seed',
       'reverse_inbound', -returnable, balanceBefore, balanceAfter,
       payload.inboundRecordId, 'inbound_record', payload.inboundRecordId,
-      'system', 'system', nowISO, nowISO, payload.reason,
+      payload.operatorId || 'system', payload.operatorName || 'system', nowISO, nowISO, payload.reason,
     ]);
 
     // 7. 写 material_flow_log（try/catch，不影响主流程）
@@ -92,7 +95,7 @@ export function reverseInboundRecord(
         target_unit: record.unit,
         business_id: payload.inboundRecordId,
         business_code: payload.inboundRecordId,
-        created_by: 'system',
+        created_by: payload.operatorId || 'system',
       });
     } catch (e: any) {
       console.warn('[reverseInboundRecord] writeFlowLog failed:', e.message);
@@ -102,7 +105,7 @@ export function reverseInboundRecord(
     db.run(`
       INSERT INTO inbound_edit_log (inbound_id, action, before_quantity, after_quantity, edited_by, edited_by_name, reason, created_at)
       VALUES (?, 'reverse', ?, 0, ?, ?, ?, ?)
-    `, [payload.inboundRecordId, record.quantity, 'system', 'system', payload.reason, nowISO]);
+    `, [payload.inboundRecordId, record.quantity, payload.operatorId || 'system', payload.operatorName || 'system', payload.reason, nowISO]);
 
     db.run('COMMIT');
     saveDatabase();

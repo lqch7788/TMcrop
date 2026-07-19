@@ -196,13 +196,21 @@ export default function SeedSourcePage() {
   // 2026-07-14：删除逻辑已提取到 useSeedSourceDelete hook
   // setSelectedIdsFromCaller 包装 setSelectedRows 同步弹模态
 
+  // 2026-07-19 P1：统一批量操作结束收口（避免删除/导出后 batchOp 残留）
+  // 必须放在 handleDeleteConfirm 之前，否则 TDZ 报错
+  const finishBatchOperation = useCallback(() => {
+    setBatchOp({ mode: 'normal' });
+    setSelectedRows([]);
+    setShowExportModal(false);
+  }, []);
+
   // 弹窗回调：调用 hook 执行删除 + 关闭弹窗 + 清空选择
   const handleDeleteConfirm = useCallback(async () => {
     const ids = [...selectedRows];
     setShowDeleteModal(false);
     const ok = await doDelete(ids);
-    if (ok) setSelectedRows([]);
-  }, [selectedRows, doDelete]);
+    if (ok) finishBatchOperation(); // 2026-07-19 P1：统一收口
+  }, [selectedRows, doDelete, finishBatchOperation]);
 
   // 弹窗入口：单条/批量删除
   const setSelectedIdsFromCaller = useCallback((ids: string[]) => {
@@ -213,6 +221,8 @@ export default function SeedSourcePage() {
   // 2026-07-14：移除 handleBatchDelete 死函数（表格行级删除入口已改为 setSelectedIdsFromCaller）
 
   // 2026-06-25 v3: 种源是纯仓库 — 移除 handleEnd（正常/异常结束）
+
+  // 2026-07-19：finishBatchOperation 已移至上方（避免 TDZ）
 
   // 导出相关处理
   const handleExportClick = () => {
@@ -229,8 +239,7 @@ export default function SeedSourcePage() {
   };
 
   const handleExportCancel = () => {
-    setBatchOp({ mode: 'normal' });
-    setSelectedRows([]);
+    finishBatchOperation();
   };
 
   const handleExportClickConfirm = () => {

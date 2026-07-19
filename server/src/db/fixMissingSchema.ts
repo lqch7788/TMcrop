@@ -2658,6 +2658,10 @@ export async function fixMissingSchema(): Promise<void> {
       harvest_record_id TEXT,
       inventory_stock_id TEXT,
       circulation_record_id TEXT,
+      -- 2026-07-19: circulation revoke audit (留种回流撤销 — 撤销不删本行，仅记录)
+      circulation_revoked_at TEXT,
+      circulation_revoked_by TEXT,
+      circulation_revoke_reason TEXT,
       -- 2026-06-19 unify-harvest-inbound-into-source-operations: 采收形态
       source_form TEXT,  -- 果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他
       FOREIGN KEY (planting_id) REFERENCES plantings(id)
@@ -2675,6 +2679,10 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'supplementary_reason', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_reason TEXT" },
     { name: 'supplementary_at', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_at TEXT" },
     { name: 'supplementary_by', sql: "ALTER TABLE planting_harvest_records ADD COLUMN supplementary_by TEXT" },
+    // 2026-07-19：留种回流撤销时记录"该次采收对应的回流被撤销"（仅记录不删数据）
+    { name: 'circulation_revoked_at', sql: "ALTER TABLE planting_harvest_records ADD COLUMN circulation_revoked_at TEXT" },
+    { name: 'circulation_revoked_by', sql: "ALTER TABLE planting_harvest_records ADD COLUMN circulation_revoked_by TEXT" },
+    { name: 'circulation_revoke_reason', sql: "ALTER TABLE planting_harvest_records ADD COLUMN circulation_revoke_reason TEXT" },
   ]
   for (const col of plantingHarvestColumnsToAdd) {
     try {

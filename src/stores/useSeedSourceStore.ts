@@ -103,6 +103,14 @@ interface SeedSourceState {
     seedSourceId: string,
     payload: { inboundRecordId: string; reason: string }
   ) => Promise<void>;
+
+  /**
+   * 2026-07-19：撤销留种回流（PROPAGATION 类型，crop_circulation_records 表）
+   * 调用方负责刷新相关数据
+   */
+  revokeCirculation: (
+    payload: { circulationId: string; reason: string }
+  ) => Promise<void>;
 }
 
 export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
@@ -228,6 +236,13 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
   reverseInbound: async (seedSourceId, payload) => {
     // 错误向上抛
     await seedSourceService.reverseInboundRecord(seedSourceId, payload);
+    // 调用方决定是否 loadItems 刷新列表
+  },
+
+  // 2026-07-19：撤销留种回流
+  revokeCirculation: async (payload) => {
+    // 错误向上抛
+    await seedSourceService.revokeCirculation(payload.circulationId, { reason: payload.reason });
     // 调用方决定是否 loadItems 刷新列表
   },
 }));

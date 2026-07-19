@@ -957,6 +957,18 @@ export async function reverseInboundRecord(
 }
 
 /**
+ * 2026-07-19：撤销留种回流（PROPAGATION 类型）
+ * @param circulationId crop_circulation_records.id
+ * @param payload { reason }
+ */
+export async function revokeCirculation(
+  circulationId: string,
+  payload: { reason: string }
+): Promise<void> {
+  await enhancedApiClient.post(`/seed-sources/circulation/${circulationId}/revoke`, payload);
+}
+
+/**
  * 获取入库流水（UNION inventory_inbound_records + crop_circulation_records PROPAGATION）
  */
 export async function getInboundRecords(seedSourceId: string): Promise<InboundRecord[]> {
@@ -970,5 +982,9 @@ export async function getInboundRecords(seedSourceId: string): Promise<InboundRe
 export type InboundEditLog = import('@/types/crop').InboundEditLog;
 export async function getInboundEditLogs(seedSourceId: string): Promise<InboundEditLog[]> {
   const response = await enhancedApiClient.get(`/seed-sources/${seedSourceId}/inbound-audit`);
-  return Array.isArray(response) ? (response as InboundEditLog[]) : [];
+  // 2026-07-19 P2：响应不合法时抛错（不静默返空）
+  if (!Array.isArray(response)) {
+    throw new Error('冲销记录响应格式错误：期望数组');
+  }
+  return response as InboundEditLog[];
 }

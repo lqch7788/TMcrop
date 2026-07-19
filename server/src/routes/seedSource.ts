@@ -16,7 +16,8 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { recomputeAndUpdateStockStatus } from '../lib/inventoryStockStatus';
 // 2026-07-08 V3.4 流水号规范化：使用项目统一工具生成 TRX-YYYYMMDD-NNNN 流水号
 // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
-import { generateTransactionId } from '../services/inventory.service';
+// 2026-07-19 P0-8：generateInboundRecordId 改静态 import（避免 require() 运行时错误）
+import { generateTransactionId, generateInboundRecordId } from '../services/inventory.service';
 import {
   executeReturnToInventory,
   listReturnableInboundRecords,
@@ -24,8 +25,11 @@ import {
   type ReturnItem,
 } from '../services/seedSourceReturn.service';
 import { queryToObjects } from '../utils/queryHelper';
+// 2026-07-19 P0-8：所有 require() 改静态 import（避免 Vite/Rollup dynamic-import 报错）
+import { queryEntityHistory } from '../services/entityHistory.service';
 // 2026-07-18: 入库冲销服务
 import { reverseInboundRecord } from '../services/inboundReverse.service';
+import { revokeCirculationRecord } from '../services/circulationRevoke.service';
 
 const router = Router();
 
@@ -138,9 +142,20 @@ router.get('/:id/print-records', asyncHandler(async (req, res) => {
 }));
 
 // 创建打印记录
+const PrintRecordSchema = z.object({
+  printType: z.string().min(1).max(50).optional(),
+  printCount: z.number().int().min(1).max(1000).default(1),
+  operator: z.string().min(1).max(50).optional(),
+  labelNumbers: z.array(z.union([z.string(), z.number()])).max(10000).optional(),
+});
 router.post('/:id/print', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { printType, printCount, operator, labelNumbers } = req.body;
+  const parsed = PrintRecordSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    const issues = (parsed.error as any)?.issues || [];
+    return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
+  }
+  const { printType, printCount = 1, operator, labelNumbers } = parsed.data;
   const db = getDatabase();
 
   // 生成打印记录ID
@@ -200,16 +215,41 @@ router.get('/circulation', (req, res) => {
 
 /**
  * POST /api/seed-sources/circulation/:id/revoke
- * 撤销回流 (软删除 + 数量回退)
+ * 2026-07-19：撤销留种回流（PROPAGATION 类型，完整版）
+ * - 整批作废，不删种植事实
+ * - 库存/reflowCount 同步回退
+ * - 审计写入 circulation_edit_log
+ * - 关联 planting_harvest_records 标 circulation_revoked_at
+ * （旧版 circulation.service.revokeCirculation 仅 archive 种源，库存不回退；2026-07-19 升级为新 service）
  */
-router.post('/circulation/:id/revoke', (req, res) => {
+// 2026-07-19 P0-7：撤销回流 zod schema 校验（自定义错误信息含字段名，便于测试和前端识别）
+// 2026-07-19 P2：用 preprocess 把 undefined 转 '' → 让 min(1) 触发自定义错误信息
+const RevokeCirculationSchema = z.object({
+  reason: z.preprocess(
+    (val) => val ?? '',
+    z.string().min(1, { message: 'reason 必填' }).max(500, { message: 'reason 不超过 500 字符' })
+  ),
+});
+router.post('/circulation/:id/revoke', asyncHandler(async (req, res) => {
   try {
-    revokeCirculation(req.params.id, req.body)
-    res.json({ success: true })
+    const { id } = req.params;
+    const parsed = RevokeCirculationSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      const issues = (parsed.error as any)?.issues || [];
+      return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
+    }
+    const { reason } = parsed.data;
+    revokeCirculationRecord({
+      circulationId: String(id),
+      reason: String(reason).trim(),
+      operatorId: req.user?.userId,
+      operatorName: req.user?.name,
+    });
+    res.json({ success: true });
   } catch (e: any) {
-    res.status(400).json({ success: false, error: e.message })
+    res.status(500).json({ success: false, error: e.message });
   }
-})
+}));
 
 /**
  * 2026-06-30: 种植调入弹窗用 — 按作物品种名搜索可用种源
@@ -536,7 +576,7 @@ router.post('/append-from-inventory', async (req, res) => {
         // 7. 写 inventory_inbound_records
         // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('IR') 与 inventory_stock.instance_id 跨表冲突
         // 2026-07-14：流水号改用 generateInboundRecordId（替代 Math.random + Date.now 违规格式）
-        const { generateInboundRecordId } = require('../services/inventory.service');
+        // 2026-07-19 P0-8：改静态 import（直接调用即可）
         const inRecId = await generateInboundRecordId(dateStr);
         // 2026-06-26: 修复 — inventory_inbound_records 表 schema 修正
         // 实际列（按 schema.ts / fixMissingSchema.ts）：
@@ -645,16 +685,35 @@ router.get('/:id/history-inbound', asyncHandler(async (req, res) => {
 /**
  * POST /api/seed-sources/:id/reverse-inbound
  * 2026-07-18: 冲销入库流水（软删除 + 库存回退）
+ * 2026-07-19 P0-7：加 zod schema 校验入参
  * body: { inboundRecordId, reason }
  */
+// 2026-07-19 P2：preprocess 兼容客户端不发字段的情况
+const ReverseInboundSchema = z.object({
+  inboundRecordId: z.preprocess(
+    (val) => val ?? '',
+    z.string().min(1, { message: 'inboundRecordId 必填' }).max(200, { message: 'inboundRecordId 不超过 200 字符' })
+  ),
+  reason: z.preprocess(
+    (val) => val ?? '',
+    z.string().min(1, { message: 'reason 必填' }).max(500, { message: 'reason 不超过 500 字符' })
+  ),
+});
 router.post('/:id/reverse-inbound', asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { inboundRecordId, reason } = req.body || {};
-    if (!inboundRecordId || !reason) {
-      return res.status(400).json({ success: false, error: 'inboundRecordId + reason 必填' });
+    const parsed = ReverseInboundSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      const issues = (parsed.error as any)?.issues || [];
+      return res.status(400).json({ success: false, error: issues[0]?.message || '参数错误' });
     }
-    reverseInboundRecord(String(id), { inboundRecordId, reason });
+    const { inboundRecordId, reason } = parsed.data;
+    reverseInboundRecord(String(id), {
+      inboundRecordId,
+      reason,
+      operatorId: req.user?.userId,
+      operatorName: req.user?.name,
+    });
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
@@ -663,7 +722,7 @@ router.post('/:id/reverse-inbound', asyncHandler(async (req, res) => {
 
 /**
  * GET /api/seed-sources/:id/inbound-audit
- * 2026-07-18: 入库审计日志（冲销/编辑记录，来自 inbound_edit_log 表）
+ * 2026-07-18: 入库审计日志（冲销/编辑记录，来自 inbound_edit_log + circulation_edit_log UNION）
  */
 router.get('/:id/inbound-audit', asyncHandler(async (req, res) => {
   try {
@@ -684,11 +743,15 @@ router.get('/:id/history-inventory', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { getDatabase } = require('../db');
   const db = getDatabase();
+  // 2026-07-19 P1：显式加括号修正 OR 优先级（避免 inventory_transfer 行混入非本种源流水）
   const stmt = db.prepare(`
     SELECT it.* FROM inventory_transaction it
     INNER JOIN inventory_stock ist ON it.instance_id = ist.instance_id
-    WHERE it.business_id = ? OR ist.business_id = ? OR ist.business_type = 'inventory_transfer' AND ist.business_code = (
-      SELECT source_code FROM seed_sources WHERE id = ?
+    WHERE (
+      it.business_id = ?
+      OR ist.business_id = ?
+      OR (ist.business_type = 'inventory_transfer'
+          AND ist.business_code = (SELECT source_code FROM seed_sources WHERE id = ?))
     )
     ORDER BY it.create_time DESC LIMIT 200
   `);
@@ -748,7 +811,7 @@ router.get('/:id/history-audit', asyncHandler(async (req, res) => {
  */
 router.get('/:id/history', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { queryEntityHistory } = require('../services/entityHistory.service');
+  // 2026-07-19 P0-8：改静态 import（直接调用即可）
   const items = queryEntityHistory('seed_source', id, 200);
   res.json({ success: true, data: items });
 }));
@@ -783,6 +846,7 @@ router.post('/return-to-inventory', async (req, res) => {
     const result = executeReturnToInventory(
       targetSeedSourceId,
       items.map(i => ({ inboundRecordId: i.inboundRecordId, quantity: i.quantity, unit: i.unit || '' })),
+      { id: req.user?.userId, name: req.user?.name },
     );
     res.json({ success: true, data: result });
   } catch (e: any) {

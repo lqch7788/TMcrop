@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useToastStore } from '@/stores/useToastStore';
 import {
   Button,
   Card,
@@ -97,7 +98,10 @@ export function InventoryTransferPanel({
   targetCropVariety,
   onConfirm,
 }: InventoryTransferPanelProps) {
-  const toast = useToast();
+  const toast = useToastStore((s) => s.toast);
+  // 2026-07-19 P0-6：提交锁（防止双击/快速重复触发）
+  const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   // ============ 筛选状态 ============
   const [stockTypeFilter, setStockTypeFilter] = useState<TransferStockType[]>([
@@ -263,15 +267,23 @@ export function InventoryTransferPanel({
   }, [rows, selected]);
 
   // ============ 校验并提交 ============
-  const handleConfirm = () => {
-    if (selected.size === 0) {
-      toast.error('请至少选择 1 条调拨记录');
+  // 2026-07-19 P0-6：提交锁 — 防止双击/快速重复触发
+  const handleConfirm = async () => {
+    if (submitLockRef.current || submitting) {
       return;
     }
-    if (selected.size > 100) {
-      toast.error('批量调拨单次最多 100 条');
-      return;
-    }
+    submitLockRef.current = true;
+    setSubmitting(true);
+
+    try {
+      if (selected.size === 0) {
+        toast.error('请至少选择 1 条调拨记录');
+        return;
+      }
+      if (selected.size > 100) {
+        toast.error('批量调拨单次最多 100 条');
+        return;
+      }
 
     // 校验：每条 quantity > 0 且 ≤ currentQuantity，unit 必须匹配
     const items: TransferItem[] = [];
@@ -304,7 +316,12 @@ export function InventoryTransferPanel({
       return;
     }
 
-    onConfirm(items);
+      // P0-6：await onConfirm（父组件必须支持 Promise<void>）
+      await onConfirm(items);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -551,13 +568,23 @@ export function InventoryTransferPanel({
               </Badge>
             ))}
           </div>
+          {/* 2020-07-19 P1：提交期间禁用按钮 + loading 状态 */}
           <Button
             onClick={handleConfirm}
-            disabled={totalCount === 0 || loading}
+            disabled={totalCount === 0 || loading || submitting}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            <ArrowLeftRight className="w-4 h-4 mr-1" />
-            确认调拨 {totalCount > 0 && `(${totalCount})`}
+            {submitting ? (
+              <>
+                <RotateCcw className="w-4 h-4 mr-1 animate-spin" />
+                调拨中...
+              </>
+            ) : (
+              <>
+                <ArrowLeftRight className="w-4 h-4 mr-1" />
+                确认调拨 {totalCount > 0 && `(${totalCount})`}
+              </>
+            )}
           </Button>
         </div>
       </Card>

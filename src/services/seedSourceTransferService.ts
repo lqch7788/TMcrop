@@ -204,7 +204,11 @@ export const seedSourceTransferService = {
       operatorName: params.operator?.name,
       remarks: params.remarks,
     });
-    return result || { appendedCount: 0, newAvailableCount: 0, newQuantity: 0 };
+    // 2026-07-19 P2：响应不合法时抛错（不再 fallback 为 0，违反 Fail Loud 原则）
+    if (!result || typeof result.appendedCount !== 'number') {
+      throw new Error('调拨响应格式错误：缺少 appendedCount 字段');
+    }
+    return result;
   },
 
   /**
@@ -250,7 +254,11 @@ export const seedSourceTransferService = {
     const rows = await enhancedApiClient.get<ReturnableInboundRow[]>(
       `/seed-sources/${seedSourceId}/inbound-records`,
     );
-    return rows || [];
+    // 2026-07-19 P2：响应不合法时抛错（不静默返空，否则前端看不到错误）
+    if (!Array.isArray(rows)) {
+      throw new Error('可退库流水响应格式错误：期望数组');
+    }
+    return rows;
   },
 };
 

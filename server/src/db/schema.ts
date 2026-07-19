@@ -3784,12 +3784,50 @@ export function initializeDatabase() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_inbound_edit_log_inbound ON inbound_edit_log(inbound_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_inbound_edit_log_created ON inbound_edit_log(created_at DESC)`);
 
+  // 2026-07-19：留种回流撤销审计表
+  // 与 inbound_edit_log 同样的结构，但 FK 指向 crop_circulation_records
+  // 前端入库审计 Tab 用 UNION 两表展示
+  db.run(`
+    CREATE TABLE IF NOT EXISTS circulation_edit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      circulation_id TEXT NOT NULL,
+      action TEXT NOT NULL CHECK(action IN ('update', 'reverse')),
+      before_quantity REAL,
+      after_quantity REAL,
+      edited_by TEXT NOT NULL,
+      edited_by_name TEXT,
+      reason TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (circulation_id) REFERENCES crop_circulation_records(id) ON DELETE CASCADE
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_circulation_edit_log_circulation ON circulation_edit_log(circulation_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_circulation_edit_log_created ON circulation_edit_log(created_at DESC)`);
+
   // 2026-07-18：合并键索引（findMergeableSeedSource 高频查询路径）
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_seed_merge_key
       ON seed_sources(source_origin, crop_code, seed_form, unit, generation)
       WHERE status = 'active'
   `);
+
+  // 2026-07-19 P0-16：source_code UNIQUE 索引（仅对未软删生效）
+  // 部分索引 (partial index) 允许软删行 source_code 复用（避免历史软删约束冲突）
+  db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_seed_sources_source_code_active
+      ON seed_sources(source_code)
+      WHERE deleted_at IS NULL
+  `);
+
+  // 2026-07-19 P1：history-inventory 高频查询优化索引
+  // 支持 routes/seedSource.ts history-inventory 端点的 3 个 OR 条件
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_tx_business_id ON inventory_transaction(business_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_business_id ON inventory_stock(business_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_business_type_code ON inventory_stock(business_type, business_code)`);
+
+  // 2026-07-19 P1：source_module CHECK 约束（防止非法值写入导致查询漏报）
+  // 注：SQLite CHECK 约束在 ALTER TABLE ADD COLUMN 时不能加，只能 CREATE TABLE 时加
+  // 此处仅做文档化说明，运行时由 service 层校验
 }
 
 export { createMaterialFlowLogTable };

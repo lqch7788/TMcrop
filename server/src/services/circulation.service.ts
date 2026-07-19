@@ -301,6 +301,8 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
         cropCode, seedForm, unit, generation,
         propagationMethod,
         linkedPlantingId: input.sourceModule === 'planting' ? input.sourceId : null,
+        // 2026-07-19：排除 parent 自身（PARENT 自身也是同合并键的 active 种源，会被错误命中回流自身）
+        excludeSourceId: input.parentSourceId,
       })
     }
 

@@ -290,20 +290,10 @@ export async function executeTransferToSource(
   const nowDate = new Date();
   const dateStr = `${nowDate.getFullYear()}${String(nowDate.getMonth() + 1).padStart(2, '0')}${String(nowDate.getDate()).padStart(2, '0')}`;
 
-  // 已写入记录追踪（用于回滚）
-  const writtenStockIds: Array<string | number> = [];                // 原 inventory_stock.id（已扣减）
-  const writtenSeedSourceIds: string[] = [];           // 新 seed_sources.id
-  const writtenCropInstanceIds: string[] = [];         // 新 crop_instances.id
-  const writtenNewInventoryStockIds: string[] = [];    // 新 inventory_stock.id
-  const writtenTxIds: string[] = [];                   // inventory_transaction.id
-  // 2026-07-06 Bug 16 修复：调拨入种源时补写 inventory_inbound_records，
-  // 让 listReturnableInboundRecords（种源退库前置查询）能查到此流水
-  // 不写则退库弹窗永远报「该种源没有可退的调拨入库流水（或已全部退完）」
-  const writtenInboundRecordIds: string[] = [];        // 新 inventory_inbound_records.id
-  // 原始库存数量快照（用于精确回滚）
-  const originalQuantities: Array<{ id: string | number; currentQty: number; availableQty: number; unit: string }> = [];
-
   try {
+    // 2026-07-19 P0-1：包裹 BEGIN IMMEDIATE 事务
+    // 替代之前的"catch 块手动 DELETE 反序回滚"模式（进程崩溃 = 数据半成品）
+    db.run('BEGIN IMMEDIATE');
     const results: TransferResult[] = [];
 
     for (const item of items) {
@@ -374,8 +364,16 @@ export async function executeTransferToSource(
         item.sourceStockId, item.transferQuantity,
       ]);
       updateStmt.step();
+      // 2026-07-19 P1：检查受影响行数（rowsModified = 0 → 库存不足，抛错回滚）
+      const sourceRowsModified = db.getRowsModified();
       updateStmt.free();
-      writtenStockIds.push(item.sourceStockId);
+      if (sourceRowsModified === 0) {
+        // 库存数量在并发场景下被其他事务扣减 → 乐观锁失败，事务回滚
+        throw new InventoryTransferBusinessError(
+          InventoryTransferErrorCode.INSUFFICIENT_QUANTITY,
+          `源库存 ${sourceStock.instance_id} 在并发场景下数量不足（当前 ${sourceCurrentQty}${sourceUnit}，需 ${item.transferQuantity}${sourceUnit}）`,
+        );
+      }
 
       // === 步骤 3：写 transfer_out 流水 ===
       // 2026-07-14：流水 ID 改用 generateTransactionId（替代 Math.random 违规，违反 [[code-generation-contract-rule]] 铁律）
@@ -397,7 +395,6 @@ export async function executeTransferToSource(
           now,
         ]
       );
-      writtenTxIds.push(outTxId);
 
       // === 步骤 4：生成 ZZ code + 写 seed_sources（14 个 original_* 字段） ===
       const newCode = await seedSourceService.generateCode(dateStr);
@@ -464,7 +461,7 @@ export async function executeTransferToSource(
         mergeStmt.bind([item.transferQuantity, item.transferQuantity, now, now, mergeTargetId]);
         mergeStmt.step();
         mergeStmt.free();
-        writtenSeedSourceIds.push(mergeTargetId);
+        // writtenSeedSourceIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
       } else {
         // === 新建模式：INSERT 新种源 ===
         db.run(
@@ -510,7 +507,7 @@ export async function executeTransferToSource(
             now, now,
           ]
         );
-        writtenSeedSourceIds.push(newSeedSourceId);
+        // 注: writtenSeedSourceIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
       }
 
       // === 步骤 5a：写 crop_instances ===
@@ -545,7 +542,7 @@ export async function executeTransferToSource(
           now, now,
         ]
       );
-      writtenCropInstanceIds.push(newCropInstanceId);
+      // writtenCropInstanceIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
 
       // === 步骤 5b：写新 inventory_stock（stock_type='seed'）+ transfer_in 流水 ===
       const newInstanceId = await generateInstanceId('INS', dateStr);
@@ -575,7 +572,7 @@ export async function executeTransferToSource(
           now, now,
         ]
       );
-      writtenNewInventoryStockIds.push(newStockId);
+      // writtenNewInventoryStockIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
 
       // === 步骤 5c：写 inventory_inbound_records（退库前置流水）===
       // 2026-07-06 Bug 16：调拨入种源必须写一条 source_module='inventory' 的入库记录，
@@ -610,7 +607,7 @@ export async function executeTransferToSource(
           operator.name, operator.name, now, now,
         ]
       );
-      writtenInboundRecordIds.push(inbRecordId);
+      // writtenInboundRecordIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
 
       // 2026-07-14：流水 ID 改用 generateTransactionId（替代 Math.random 违规）
       const inTransactionId = await generateTransactionId(dateStr);
@@ -630,7 +627,7 @@ export async function executeTransferToSource(
           now,
         ]
       );
-      writtenTxIds.push(inTxId);
+      // writtenTxIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
 
       results.push({
         newSeedSourceId,
@@ -641,43 +638,23 @@ export async function executeTransferToSource(
       });
     }
 
-    // 全部成功 — 持久化
+    // 全部成功 — 提交事务
+    db.run('COMMIT');
     saveDatabase();
     return results;
   } catch (err) {
+    // 2026-07-19 P0-1：SQLite 原生 ROLLBACK 替代手动 DELETE 反序回滚
     console.error('[executeTransferToSource] failed, rolling back:', err);
-    // === 反序回滚：清理所有已写入记录 + 恢复原库存 ===
-    let rollbackFailed = false;
-    let rollbackError: unknown = null;
     try {
-      // P2-9 修复：调用 helper 函数（提升可维护性）
-      rollbackFailed = rollbackTransfer(
-        db,
-        writtenTxIds,
-        writtenNewInventoryStockIds,
-        writtenCropInstanceIds,
-        writtenSeedSourceIds,
-        originalQuantities,
-        writtenInboundRecordIds,
-        now,
-      );
-    } catch (e) {
-      rollbackFailed = true;
-      rollbackError = e;
-      console.error('[executeTransferToSource] rollback error:', e);
-    }
-
-    // P1-5 修复：rollback 失败时附加告警信息（不能仅 console.error 而让用户以为已成功）
-    if (rollbackFailed) {
-      const rollbackMsg = rollbackError instanceof Error
-        ? rollbackError.message
-        : '未知回滚错误';
-      // 注意：ES2020 target 不支持 Error constructor 的 { cause } 选项，改为属性赋值
+      db.run('ROLLBACK');
+    } catch (rbErr) {
+      console.error('[executeTransferToSource] ROLLBACK failed:', rbErr);
+      // ROLLBACK 失败时附加告警信息（不能仅 console.error 而让用户以为已成功）
+      const rbMsg = rbErr instanceof Error ? rbErr.message : '未知回滚错误';
       const wrapped: Error & { cause?: unknown; code?: string; httpStatus?: number } = new Error(
-        `${err instanceof Error ? err.message : '调拨失败'}（且数据库回滚失败：${rollbackMsg}。请立即联系管理员排查 DB 状态！）`
+        `${err instanceof Error ? err.message : '调拨失败'}（且数据库回滚失败：${rbMsg}。请立即联系管理员排查 DB 状态！）`
       );
       wrapped.cause = err;
-      // 保留原 code（如果有）
       if (err instanceof InventoryTransferBusinessError) {
         wrapped.code = err.code;
         wrapped.httpStatus = 500;
@@ -686,63 +663,4 @@ export async function executeTransferToSource(
     }
     throw err;
   }
-}
-
-// ============ Helper Functions（P2-9 拆分）============
-
-/**
- * 反序回滚：清理 transfer 写入的 5 张表数据 + 恢复原库存
- * - 返回 true 表示回滚过程中发生错误（用于上层决定是否需要告警）
- */
-function rollbackTransfer(
-  db: any,
-  writtenTxIds: string[],
-  writtenNewInventoryStockIds: string[],
-  writtenCropInstanceIds: string[],
-  writtenSeedSourceIds: string[],
-  originalQuantities: Array<{ id: string | number; currentQty: number; availableQty: number; unit: string }>,
-  writtenInboundRecordIds: string[],
-  now: string,
-): boolean {
-  let failed = false;
-  // 5c → 5b → 5a → 4 → 3 → 2 反序
-  // 2026-07-06 Bug 16 修复：先删 inbound_records（依赖 5b 的 newStockId 作为 source_id，
-  // 删了 stock 后 inbound.source_id 变成悬空，但删 stock 不会级联删 inbound）
-  for (const id of writtenInboundRecordIds) {
-    try { db.run('DELETE FROM inventory_inbound_records WHERE id = ?', [id]); }
-    catch (e) { console.error('[rollback] delete inbound_record failed:', e); failed = true; }
-  }
-  // 删除 transfer_in / transfer_out 流水（按 writtenTxIds 倒序）
-  for (let i = writtenTxIds.length - 1; i >= 0; i--) {
-    try { db.run('DELETE FROM inventory_transaction WHERE id = ?', [writtenTxIds[i]]); }
-    catch (e) { console.error('[rollback] delete tx failed:', e); failed = true; }
-  }
-  // 删除新 inventory_stock
-  for (const id of writtenNewInventoryStockIds) {
-    try { db.run('DELETE FROM inventory_stock WHERE id = ?', [id]); }
-    catch (e) { console.error('[rollback] delete new stock failed:', e); failed = true; }
-  }
-  // 删除 crop_instances
-  for (const id of writtenCropInstanceIds) {
-    try { db.run('DELETE FROM crop_instances WHERE id = ?', [id]); }
-    catch (e) { console.error('[rollback] delete crop_instance failed:', e); failed = true; }
-  }
-  // 删除 seed_sources
-  for (const id of writtenSeedSourceIds) {
-    try { db.run('DELETE FROM seed_sources WHERE id = ?', [id]); }
-    catch (e) { console.error('[rollback] delete seed_source failed:', e); failed = true; }
-  }
-  // 恢复原库存到精确原始值
-  for (const orig of originalQuantities) {
-    try {
-      db.run(
-        `UPDATE inventory_stock
-         SET current_quantity = ?, available_quantity = ?, status = 'in_stock', update_time = ?
-         WHERE id = ?`,
-        [orig.currentQty, orig.availableQty, now, orig.id]
-      );
-    } catch (e) { console.error('[rollback] restore stock failed:', e); failed = true; }
-  }
-  try { saveDatabase(); } catch (e) { console.error('[rollback] saveDatabase failed:', e); }
-  return failed;
 }

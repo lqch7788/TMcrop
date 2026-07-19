@@ -69,6 +69,12 @@ export function EntityDetailModal({
   size = 'xl',
 }: EntityDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('info');
+  // 2026-07-19 P1：isOpen 变化时重置 activeTab，避免条件 Tab 跨记录残留空白
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab('info');
+    }
+  }, [isOpen]);
 
   return (
     <UnifiedModal

@@ -257,12 +257,13 @@ export function Modal({
         ref={modalRef}
         className={`bg-white rounded-xl shadow-xl flex flex-col ${useCenteredLayout ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'absolute'}`}
         style={useCenteredLayout ? {
-          width: modalSize.width,
+          // 2026-07-19 P1：响应式宽度（避免 1350px 固定宽度在小屏超出视口）
+          width: `min(${modalSize.width}, calc(100vw - 32px))`,
           maxHeight: '90vh'
         } : {
           left: position.x,
           top: position.y,
-          width: isMaximized ? 'calc(100vw - 32px)' : modalSize.width,
+          width: isMaximized ? 'calc(100vw - 32px)' : `min(${modalSize.width}, calc(100vw - 32px))`,
           height: isMaximized ? 'calc(100vh - 32px)' : modalSize.height,
           maxHeight: '90vh'
         }}

@@ -11,7 +11,8 @@
  * - 提交：POST /api/seed-sources/return-to-inventory
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useToastStore } from '@/stores/useToastStore';
 import {
   Button,
   Card,
@@ -52,7 +53,11 @@ export function SeedSourceReturnModal({
   targetSeedSourceCode,
   onConfirm,
 }: SeedSourceReturnModalProps) {
-  const toast = useToast();
+  // 2026-07-19 P0-6：改用全局 useToastStore（避免 toast.error is not a function）
+  const toast = useToastStore((s) => s.toast);
+  // 2026-07-19 P0-6：提交锁 — 防止双击/重复触发
+  const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);  // 同步锁，覆盖 React state 延迟窗口
 
   // ============ 数据状态 ============
   const [rows, setRows] = useState<ReturnableInboundRow[]>([]);
@@ -316,13 +321,23 @@ export function SeedSourceReturnModal({
               </Badge>
             ))}
           </div>
+          {/* 2020-07-19 P1：提交期间禁用按钮 + loading 状态 */}
           <Button
             onClick={handleConfirm}
-            disabled={totalCount === 0 || loading}
+            disabled={totalCount === 0 || loading || submitting}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            <Undo2 className="w-4 h-4 mr-1" />
-            确认退库 {totalCount > 0 && `(${totalCount})`}
+            {submitting ? (
+              <>
+                <RotateCcw className="w-4 h-4 mr-1 animate-spin" />
+                退库中...
+              </>
+            ) : (
+              <>
+                <Undo2 className="w-4 h-4 mr-1" />
+                确认退库 {totalCount > 0 && `(${totalCount})`}
+              </>
+            )}
           </Button>
         </div>
       </Card>
