@@ -2708,7 +2708,8 @@ export function initializeDatabase() {
       seedling_code TEXT,
       greenhouse_id TEXT,
       greenhouse_name TEXT NOT NULL,
-      area_name TEXT,
+      -- area_name 定义在下方 (line ~2747, 2026-07-15 修复同步后 area 为空 bug,
+      -- 配合 area_id 一起;此处的旧 area_name 已被合并,避免重复列定义 throw)
       crop_name TEXT NOT NULL,
       crop_variety TEXT,
       fertilizer_name TEXT NOT NULL,
@@ -3219,6 +3220,8 @@ export function initializeDatabase() {
   // ========== V12.0: 库存中心表（采收入库联动）==========
 
   // 库存中心表 - 存储所有库存实例
+  // 2026-07-19 P0-fix: 合并 fixMissingSchema 的 ALTER TABLE ADD COLUMN 到 CREATE TABLE
+  // 原因同前:fixMissingSchema 被禁用 → :memory: 测试缺列 + 新部署 prod 缺列
   db.run(`
     CREATE TABLE IF NOT EXISTS inventory_stock (
       id TEXT PRIMARY KEY,
@@ -3229,6 +3232,7 @@ export function initializeDatabase() {
       business_code TEXT,
       crop_id TEXT,
       crop_name TEXT,
+      crop_code TEXT,
       variety_id TEXT,
       variety_name TEXT,
       current_quantity REAL DEFAULT 0,
@@ -3239,8 +3243,32 @@ export function initializeDatabase() {
       warehouse_name TEXT,
       inbound_date TEXT,
       source_type TEXT,
-      production_plan_code TEXT,
+      source_module TEXT,
+      source_id TEXT,
       source_instance_id TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT,
+      planting_mode TEXT,
+      target_yield REAL DEFAULT 0,
+      grade TEXT,
+      auditor TEXT,
+      remarks TEXT,
+      notes TEXT,
+      greenhouse_name TEXT,
+      area_name TEXT,
+      supplier_id TEXT,
+      supplier_name TEXT,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      purchase_date TEXT,
+      quality_grade TEXT,
+      product_form TEXT,
+      propagation_form TEXT,
+      source_form TEXT,
+      is_supplementary INTEGER DEFAULT 0,
+      supplementary_reason TEXT,
+      supplementary_at TEXT,
+      supplementary_by TEXT,
       status TEXT DEFAULT 'in_stock',
       version INTEGER DEFAULT 1,
       create_time TEXT,
@@ -3288,6 +3316,67 @@ export function initializeDatabase() {
   try {
     db.run(`INSERT OR IGNORE INTO warehouses (id, oid, code, name, warehouse_type, location, status) VALUES ('WH-SEEDLING-001', 'ORG001', 'SM-001', '种苗B库', 'seedling', '待定', 'active')`);
   } catch (e) {}
+
+  // 2026-07-19 P0-fix: inventory_inbound_records 表 CREATE 从 fixMissingSchema 移到这里
+  // 原因：fixMissingSchema 被临时禁用(YELLOW 级含 UPDATE 迁移),但 inventory_inbound_records 表
+  //       只在 fixMissingSchema 里创建 → prod db 新部署会缺表 + e2e :memory: 测试必失败
+  // 这里 CREATE TABLE IF NOT EXISTS 是 GREEN 级,加到 initializeDatabase 永远执行
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_inbound_records (
+      id TEXT PRIMARY KEY,
+      record_type TEXT DEFAULT 'inbound',
+      record_date TEXT NOT NULL,
+      source_module TEXT NOT NULL,
+      source_id TEXT NOT NULL,
+      source_code TEXT,
+      stock_type TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      crop_id TEXT,
+      crop_code TEXT,
+      crop_name TEXT,
+      variety_name TEXT,
+      quantity REAL NOT NULL DEFAULT 0,
+      returned_quantity REAL DEFAULT 0,
+      unit TEXT NOT NULL,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      quality_grade TEXT,
+      supplier_id TEXT,
+      supplier_name TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT,
+      business_id TEXT,
+      notes TEXT,
+      operator_name TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+  // 3 索引(幂等)
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_inbound_source ON inventory_inbound_records (source_module, source_id)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_inbound_stock_type ON inventory_inbound_records (stock_type, record_date)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_inbound_warehouse ON inventory_inbound_records (warehouse_id)'); } catch (e) {}
+
+  // 2026-07-19 P0-fix: inventory_freeze 表 CREATE 从 fixMissingSchema 移到这里
+  // 原因同 inventory_inbound_records: fixMissingSchema 被禁用 → :memory: 测试 + 新部署 prod 缺表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_freeze (
+      id TEXT PRIMARY KEY,
+      order_id TEXT,
+      order_code TEXT,
+      harvest_record_id TEXT,
+      harvest_code TEXT,
+      freeze_quantity INTEGER DEFAULT 0,
+      used_quantity INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'frozen',
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT
+    )
+  `);
 
   console.log('库存中心表初始化完成');
   // 2026-07-14：移除 harvest_inbounds 表定义（独立采收入库页面已下线）
@@ -3765,6 +3854,72 @@ export function initializeDatabase() {
       db.run(`ALTER TABLE crop_circulation_records ADD COLUMN generation TEXT`);
     }
   } catch {}
+
+  // 2026-07-19 P0-fix: crop_circulation_records 表 CREATE 从 fixMissingSchema 移到这里
+  // (原在 scripts/db-migrations/cropCirculationRecords.ts 由 fixMissingSchema 动态 import 调用)
+  // 必须在 circulation_edit_log 之前(下方行 3835+),因为后者有 FK 引用本表 id
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crop_circulation_records (
+      id TEXT PRIMARY KEY,
+      circulation_type TEXT NOT NULL
+        CHECK(circulation_type IN ('PROPAGATION','QUANTITY','DISPOSAL')),
+      source_module TEXT NOT NULL
+        CHECK(source_module IN ('planting','harvest','seedling')),
+      source_id TEXT,
+      parent_source_id TEXT,
+      new_source_id TEXT,
+      quantity REAL,
+      unit TEXT,
+      circulation_date TEXT NOT NULL,
+      operator_id TEXT,
+      notes TEXT,
+      residue_type TEXT
+        CHECK(residue_type IS NULL OR residue_type IN ('STEM','ROOT','BRANCH','OTHER')),
+      disposition TEXT
+        CHECK(disposition IS NULL OR disposition IN ('CIRCULATE','DISPOSAL','SALES')),
+      is_revoked INTEGER DEFAULT 0,
+      revoked_at TEXT,
+      revoked_by TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (parent_source_id) REFERENCES seed_sources(id),
+      FOREIGN KEY (new_source_id) REFERENCES seed_sources(id)
+    )
+  `);
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_circ_parent ON crop_circulation_records(parent_source_id)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_circ_source ON crop_circulation_records(source_module, source_id)'); } catch (e) {}
+
+  // 2026-07-19 P0-fix: planting_harvest_records 表 CREATE 从 fixMissingSchema 移到这里
+  // 原因同 inventory_inbound_records / inventory_freeze
+  db.run(`
+    CREATE TABLE IF NOT EXISTS planting_harvest_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT,
+      record_type TEXT DEFAULT 'planting',
+      record_date TEXT NOT NULL,
+      planting_id TEXT NOT NULL,
+      planting_code TEXT,
+      destination TEXT NOT NULL,
+      sub_type TEXT,
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT DEFAULT 'g',
+      notes TEXT,
+      operator_name TEXT,
+      create_by TEXT,
+      create_by_id TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT NOT NULL,
+      harvest_record_id TEXT,
+      inventory_stock_id TEXT,
+      circulation_record_id TEXT,
+      circulation_revoked_at TEXT,
+      circulation_revoked_by TEXT,
+      circulation_revoke_reason TEXT,
+      source_form TEXT,
+      FOREIGN KEY (planting_id) REFERENCES plantings(id)
+    )
+  `);
 
   // 2026-07-18：入库冲销审计表
   db.run(`
