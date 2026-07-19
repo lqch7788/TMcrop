@@ -27,12 +27,17 @@ interface FertilizerTableProps {
   onConfirmBatchDelete: () => void;
   onCancelBatchDelete: () => void;
   onExportMode: () => void;
+  // 2026-07-19 P2：参照 SeedSource/Seedling 2 步流程加 exportMode 相关 props
+  exportMode?: boolean;
+  onConfirmExport?: () => void;
+  onCancelExport?: () => void;
   iotDevices?: IotDeviceStatus[];
   iotLoading?: boolean;
 }
 
 export function FertilizerTable({ data, isLoading, operationMode, selectedIds, onSelectionChange,
   onDetail, onEdit, onDelete, onAdd, onBatchDeleteMode, onConfirmBatchDelete, onCancelBatchDelete, onExportMode,
+  exportMode, onConfirmExport, onCancelExport,
   iotDevices=[], iotLoading=false }: FertilizerTableProps) {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -43,7 +48,8 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
   React.useEffect(() => { if (page>totalPages) setPage(1); }, [data.length,totalPages,page]);
 
   const toggle = (id: string) => { const n=new Set(expanded); if (n.has(id)) n.delete(id); else n.add(id); setExpanded(n); };
-  const showCb = operationMode==='delete';
+  // 2026-07-19 P2：checkbox 在 delete 模式或 export 模式都显示
+  const showCb = operationMode==='delete' || !!exportMode;
 
   const getMethodLabel = (m: string) => getDictItemName('fertilization_method', m)||m;
 
@@ -58,7 +64,19 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
           <IotDataIndicator devices={iotDevices} loading={iotLoading}/>
         </div>
         <div className="flex items-center gap-2">
-          {showCb ? (<>
+          {/* 2026-07-19 P2：参照 SeedSource 100% 对齐 2 步导出流程
+              - 导出模式（exportMode）：显示 "已选 N 条 / 确认导出 / 取消"（优先级最高）
+              - 删除模式（showCb）：显示 "已选 N 条 / 确认删除 / 取消"
+              - 默认模式：显示 "新增 / 批量删除 / 导出"
+
+              注意：必须 exportMode 优先于 showCb（showCb = operationMode==='delete' || !!exportMode，
+              当 exportMode=true 时 showCb=true，会优先匹配 delete UI 而不是 export UI）
+          */}
+          {exportMode ? (<>
+            <span className="text-sm text-gray-600">已选择 {selectedIds.length} 条</span>
+            <Button variant="default" size="sm" onClick={onConfirmExport} disabled={selectedIds.length===0}><Download className="w-4 h-4"/>确认导出</Button>
+            <Button variant="secondary" size="sm" onClick={onCancelExport}>取消</Button>
+          </>) : showCb ? (<>
             <span className="text-sm text-red-700">已选择 {selectedIds.length} 条</span>
             <Button variant="destructive" size="sm" onClick={onConfirmBatchDelete} disabled={selectedIds.length===0}><Trash2 className="w-4 h-4"/>确认删除</Button>
             <Button variant="secondary" size="sm" onClick={onCancelBatchDelete}>取消</Button>

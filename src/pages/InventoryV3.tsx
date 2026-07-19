@@ -22,9 +22,11 @@ import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-07-10 P1-1：抽取公共导出函数
-import { exportCsv } from '@/services/exporters';
+import { exportCsv, exportXlsx } from '@/services/exporters';
 // 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
 import { DeleteConfirmModal, Button } from '@/components/ui';
+// 2026-07-19 P2：100% 对齐内部种源导出模式（2 步流程 + ExportFormatModal 弹窗）
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
@@ -202,11 +204,27 @@ export default function InventoryV3Page() {
     setExportMode(true);
   };
 
-  // 2026-07-10 P1-1 bugfix：原 () => {...} 内含 await 编译失败，改为 async
-  const handleConfirmExport = async () => {
+  // 2026-07-19 P2：100% 对齐内部种源导出模式（参照 SeedSourcePage handleExportClickConfirm）
+  //   - 旧版：直接 exportCsv（1 步完成）
+  //   - 新版：handleConfirmExport 只 setShowExportModal(true)，等用户在弹窗选格式
+  //     + handleExportFormatConfirm 真正执行导出（按选中格式）
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+
+  const handleConfirmExport = () => {
+    // 第 2 步：进入格式选择弹窗
+    if (selectedRows.length === 0 && filteredStocks.length === 0) {
+      showAlert('没有可导出的数据');
+      return;
+    }
+    setShowExportModal(true);
+  };
+
+  const handleExportFormatConfirm = async () => {
     const rowsToExport = selectedRows.length > 0
       ? filteredStocks.filter(s => selectedRows.includes(s.instanceId))
       : filteredStocks;
+    setShowExportModal(false);
     if (rowsToExport.length === 0) {
       showAlert('没有可导出的数据');
       return;
@@ -233,10 +251,24 @@ export default function InventoryV3Page() {
         '入库日期': s.inboundDate,
       };
     });
-    await exportCsv({ filename: `作物库存_${todayLocal()}.csv`, headers, rows: exportData });
-    showAlert(`已导出 ${rowsToExport.length} 条记录`);
-    setSelectedRows([]);
-    setExportMode(false);
+    try {
+      // 2026-07-19 P2：按 exportFormat 分支（参照通用 ExportFormatModal 接口 excel/csv/word）
+      if (exportFormat === 'csv') {
+        await exportCsv({ filename: `作物库存_${todayLocal()}.csv`, headers, rows: exportData });
+        toast.success(`CSV 下载已开始（共 ${rowsToExport.length} 条）`);
+      } else if (exportFormat === 'excel') {
+        exportXlsx({ filename: `作物库存_${todayLocal()}.xlsx`, headers, rows: exportData });
+        toast.success(`Excel 下载已开始（共 ${rowsToExport.length} 条）`);
+      } else {
+        toast.warning('Word 格式作物库存暂不支持，请选 Excel 或 CSV');
+      }
+    } catch (e) {
+      toast.error(`导出失败：${e instanceof Error ? e.message : '未知错误'}`);
+    } finally {
+      // 2026-07-16：try/finally 确保弹窗始终关闭 + 清理状态
+      setSelectedRows([]);
+      setExportMode(false);
+    }
   };
 
   const handleCancelExport = () => {
@@ -445,6 +477,16 @@ export default function InventoryV3Page() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteModalConfirm}
         impactHint="删除作物库存会破坏「采收入库 → 库存 → 出库」的完整追溯链。系统已拦截有出库/冻结的记录；如果通过校验，请确认该库存从未被出库使用过，且后续审计不需要追溯。"
+      />
+
+      {/* 2026-07-19 P2：导出格式选择弹窗（与内部种源/育苗/种植/订单 100% 一致） */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFileType={exportFormat}
+        onChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleExportFormatConfirm}
+        selectedCount={selectedRows.length > 0 ? selectedRows.length : filteredStocks.length}
       />
     </div>
   );

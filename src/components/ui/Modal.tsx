@@ -258,13 +258,23 @@ export function Modal({
         className={`bg-white rounded-xl shadow-xl flex flex-col ${useCenteredLayout ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'absolute'}`}
         style={useCenteredLayout ? {
           // 2026-07-19 P1：响应式宽度（避免 1350px 固定宽度在小屏超出视口）
-          width: `min(${modalSize.width}, calc(100vw - 32px))`,
+          // 2026-07-19 P1-fix: 改用纯 px 字符串(React 不支持 inline style 里嵌套 CSS 函数
+          //   min()/calc(),会静默丢弃 width 属性导致 modalSize.width 完全失效)
+          width: typeof window !== 'undefined'
+            ? `${Math.min(modalSize.width, window.innerWidth - 32)}px`
+            : `${modalSize.width}px`,
           maxHeight: '90vh'
         } : {
           left: position.x,
           top: position.y,
-          width: isMaximized ? 'calc(100vw - 32px)' : `min(${modalSize.width}, calc(100vw - 32px))`,
-          height: isMaximized ? 'calc(100vh - 32px)' : modalSize.height,
+          width: isMaximized
+            ? (typeof window !== 'undefined' ? `${window.innerWidth - 32}px` : '100vw')
+            : (typeof window !== 'undefined'
+              ? `${Math.min(modalSize.width, window.innerWidth - 32)}px`
+              : `${modalSize.width}px`),
+          height: isMaximized
+            ? (typeof window !== 'undefined' ? `${window.innerHeight - 32}px` : '100vh')
+            : modalSize.height,
           maxHeight: '90vh'
         }}
         onMouseDown={useCenteredLayout ? undefined : handleMouseDown}
