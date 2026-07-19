@@ -11,10 +11,17 @@
 // 必须在 import 任何后端模块前设置环境变量（auth.ts 顶层 import 校验 JWT_SECRET）
 process.env.DEMO_MODE = 'true';
 process.env.JWT_SECRET = 'test-e2e-secret-do-not-use-in-prod';
+// 2026-07-19 P0-fix: e2e 测试用 ':memory:' 隔离 db,绝不污染 prod db
+// (db/index.ts 在模块 import 时读取此 env var,所以必须在 import db 前设置)
+process.env.DB_PATH_OVERRIDE = ':memory:';
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { initDatabase, getDatabase, saveDatabase, closeDatabase } from '../db';
 import { initializeDatabase } from '../db/schema';
+// 2026-07-19 P0-fix: 补齐 :memory: db 缺失列(GREEN 级纯 ADD COLUMN)
+//   - 在 prod 启动时 index.ts 已调,但 :memory: 测试环境需要自己调
+//   - 不调会导致 transferred_from_stock_id 等列缺失 → executeCirculation 等服务 500
+import { fixSchemaColumns } from '../db/fixSchemaColumns';
 import { executeCirculation } from '../services/circulation.service';
 import { reverseInboundRecord } from '../services/inboundReverse.service';
 import { seedSourceRepository } from '../repositories/seedSource.repository';
@@ -39,11 +46,15 @@ describe('种源自动合并 E2E', () => {
     // 初始化数据库
     await initDatabase();
     initializeDatabase();
+    // 2026-07-19 P0-fix: 补齐 :memory: db 缺失的列(纯 ADD COLUMN,幂等)
+    fixSchemaColumns();
 
     // 清理上一次测试 run 残留的数据（使用通配符覆盖所有可能的测试数据模式）
     const db = getDatabase();
     // 删除所有非原始数据（原始数据的 crop_code 不含 'CROP-' 前缀且 source_code 不含 'SRC-CODE'）
-    db.exec(`DELETE FROM seed_sources WHERE source_code LIKE 'SRC-CODE%' OR crop_code LIKE 'CROP%' OR id LIKE 'SRC-%' OR id LIKE 'PARENT-%'`);
+    db.exec(`DELETE FROM seed_sources WHERE source_code LIKE 'SRC-CODE%' OR crop_code LIKE 'CROP%' OR id LIKE 'SRC-%' OR id LIKE 'PARENT-%' OR id LIKE 'SS-E2E-%' OR id LIKE 'SS-COMBO-%' OR id LIKE 'SRC-MATCH-%'`);
+    db.exec(`DELETE FROM seed_sources WHERE source_code LIKE 'SRC-R%' OR source_code LIKE 'SRC-CUT%' OR source_code LIKE 'SRC-COMBO%' OR source_code LIKE 'SRC-SS%' OR source_code LIKE 'SRC-MATCH%'`);
+    db.exec(`DELETE FROM seed_sources WHERE id LIKE 'PARENT-E2E-%' OR id LIKE 'PARENT-R%' OR id LIKE 'SS-E2E-%' OR id LIKE 'SS-COMBO-%' OR id LIKE 'SRC-MATCH-%' OR id LIKE 'SRC-R%' OR id LIKE 'SRC-CUT-%'`);
     db.exec(`DELETE FROM inventory_inbound_records WHERE id LIKE 'INB-%'`);
     db.exec(`DELETE FROM inbound_edit_log WHERE inbound_id LIKE 'INB-%'`);
     db.exec(`DELETE FROM inventory_transaction WHERE business_id LIKE 'INB-%'`);

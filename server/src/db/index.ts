@@ -11,7 +11,19 @@ import path from 'path';
 import fs from 'fs';
 
 // 数据库文件路径
-const DB_PATH = path.join(__dirname, '../../data/yuanxingtu.db');
+// 2026-07-19 P0-fix: 支持 DB_PATH_OVERRIDE 环境变量用于 e2e 测试隔离
+//  - ':memory:' → sql.js 纯内存数据库（不读不写磁盘，关闭即销毁，零污染）
+//  - 其他值 → 解析为绝对路径作为 db 路径
+//  - 未设置 → 默认 prod db（行为不变）
+// 关键：必须是函数（lazy resolve），因为 vitest test file 顶部 `process.env.DB_PATH_OVERRIDE = ':memory:'`
+//       会在 import db 后才执行；如果 DB_PATH 是 module-level const 会错过 env var
+function resolveDbPath(): string {
+  const override = process.env.DB_PATH_OVERRIDE;
+  if (override === ':memory:') return ':memory:';
+  if (override) return path.resolve(override);
+  return path.join(__dirname, '../../data/yuanxingtu.db');
+}
+const DB_PATH: string = resolveDbPath(); // 兼容老代码（db-safety 拦截器等需要 const）
 
 // 数据库实例
 let db: Database | null = null;
@@ -91,8 +103,13 @@ export async function initDatabase(): Promise<Database> {
   }
 
   // 加载已有数据库或创建新数据库
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
+  // 2026-07-19 P0-fix: ':memory:' 模式跳过文件 IO,直接创建空内存 db
+  // 同时支持 lazy resolve: 如果 test file 在 import db 后才设 DB_PATH_OVERRIDE,这里能读到
+  const effectivePath = resolveDbPath();
+  if (effectivePath === ':memory:') {
+    db = new SQL.Database();
+  } else if (fs.existsSync(effectivePath)) {
+    const buffer = fs.readFileSync(effectivePath);
     db = new SQL.Database(buffer);
   } else {
     db = new SQL.Database();
@@ -170,6 +187,12 @@ let lastSaveError: Error | null = null;
 export function saveDatabase(): void {
   if (!db || !isDbInitialized) {
     console.warn('[db-safety] saveDatabase() 调用时 db 未初始化,跳过');
+    return;
+  }
+
+  // 2026-07-19 P0-fix: 内存模式直接跳过(不写盘,避免无意义的 IO)
+  // 同样 lazy resolve: 用函数读取 env var 兼容 test file 顶部后置设置
+  if (resolveDbPath() === ':memory:') {
     return;
   }
 
