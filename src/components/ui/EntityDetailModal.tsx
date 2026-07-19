@@ -12,7 +12,7 @@
  * - 种植：{ label: '成品类型', value: '果实' }
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UnifiedModal, Button } from '@/components/ui';
 import { Clock } from 'lucide-react';
 import { EntityHistoryTimeline, type TypeColumnConfig } from './EntityHistoryTimeline';
