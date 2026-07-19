@@ -47,6 +47,7 @@ interface SeedlingTableProps {
   onOperationModeChange: (mode: SeedlingOperationMode) => void;
   // 导出相关
   exportMode: boolean;
+  onExportClick?: () => void;  // 2026-07-19 P2-fix：点击"导出"按钮的入口（SeedlingPage.handleExportClick 同时设 exportMode + operationMode）
   onExportSelectAll: () => void;
   onExportCancel: () => void;
   onConfirmExport: () => void;
@@ -83,6 +84,7 @@ export function SeedlingTable({
   operationMode,
   onOperationModeChange,
   exportMode,
+  onExportClick,
   onExportSelectAll,
   onExportCancel,
   onConfirmExport,
@@ -418,7 +420,9 @@ export function SeedlingTable({
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => { onOperationModeChange('export'); }}
+                  // 2026-07-19 P2-fix：调 onExportClick（SeedlingPage.handleExportClick 同时设 exportMode + operationMode）
+                  // 旧版只 setOperationMode('export') → exportMode 保持 false → "确认导出"按钮不显示
+                  onClick={() => onExportClick ? onExportClick() : onOperationModeChange('export')}
                 >
                   <Download className="w-4 h-4" />
                   导出

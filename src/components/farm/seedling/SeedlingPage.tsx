@@ -568,6 +568,10 @@ export default function SeedlingPage() {
     setExportMode(false);
     setSelectedRows([]);
     setShowExportModal(false);
+    // 2026-07-19 P2-fix: 重置 operationMode 为 normal,否则 SeedlingTable 行 224 的
+    //   showCheckbox = operationMode !== 'normal' || exportMode || printMode 仍为 true,
+    //   导致复选框在导出完成后不消失(对齐 handleExportCancel 行 447-448 的重置逻辑)
+    setOperationMode('normal');
   };
 
   return (
@@ -630,6 +634,8 @@ export default function SeedlingPage() {
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
+        // 2026-07-19 P2-fix：传 onExportClick 让 SeedlingTable "导出"按钮正确进入 exportMode
+        onExportClick={handleExportClick}
         onExportSelectAll={handleExportSelectAll}
         onExportCancel={handleExportCancel}
         onConfirmExport={handleExportClickConfirm}

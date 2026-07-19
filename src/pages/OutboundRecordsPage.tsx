@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Download, Trash2, X } from 'lucide-react';
 import { Button, DeleteConfirmModal } from '@/components/ui';
 import { useToast } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
@@ -93,14 +93,31 @@ export default function OutboundRecordsPage() {
     setDetailOpen(true);
   }
 
-  // ===== 导出：按 OrderPage 3 步流程 =====
-  // 1. 点 ActionToolbar "导出" → 进入 exportMode（表格出现 checkbox + 全选）
+  // ===== 导出：参照 SeedSourcePage 2 步流程 =====
+  // 2026-07-19 P1-fix：完整参照 SeedSource 的导出模式（handleExportClick → setBatchOp export +
+  //   handleExportClickConfirm → 校验 selectedRows → setShowExportModal）
+  // 第 1 步：点导出 → 进入 exportMode（表格显示 checkbox + 全选）
   const handleExportClick = () => {
     setExportMode(true);
     setSelectedRows([]);
   };
 
-  // 2. 全选/取消全选（用 row.id 而非 instanceId —— 同一库存可有多条流水）
+  // 第 2 步：勾选完成后再次点击「确认导出」 → 校验 + 弹格式选择弹窗
+  const handleExportClickConfirm = () => {
+    if (selectedRows.length === 0) {
+      showAlert('请先勾选要导出的出库记录');
+      return;
+    }
+    setExportOpen(true);
+  };
+
+  // 取消导出模式
+  const handleCancelExport = () => {
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // 全选/取消全选（用 row.id 而非 instanceId —— 同一库存可有多条流水）
   const handleExportSelectAll = () => {
     if (selectedRows.length === rows.length) {
       setSelectedRows([]);
@@ -109,22 +126,31 @@ export default function OutboundRecordsPage() {
     }
   };
 
-  // 3. 取消导出模式 — 2026-07-15 删除（ActionToolbar 简化后无调用方）
-
-  // ===== 删除：参照作物库存模式（先选行 deleteMode，再确认弹窗） =====
-  // 2026-07-15：点直接删除按钮（不再走 ActionToolbar）→ 选中 0 条直接跳过，否则弹 DeleteConfirmModal
+  // ===== 删除：参照作物库存 ActionToolbar 模式 =====
+  // 1. 第一次点击 → 进入 deleteMode（表格显示 checkbox）
+  // 2. 选行后再次点击 → 弹 DeleteConfirmModal 确认
+  // 2026-07-19 P0-fix: 原版 disabled={selectedRows.length===0} 永远为 true,
+  //                    因为从未 setDeleteMode(true) 进入勾选模式 → 用户根本进不去
   const handleDeleteClick = () => {
-    if (selectedRows.length === 0) {
-      showAlert('请先勾选要删除的出库记录');
+    if (deleteMode) {
+      // 二次确认模式：弹删除警告弹窗
+      if (selectedRows.length === 0) {
+        showAlert('请先勾选要删除的出库记录');
+        return;
+      }
+      setShowDeleteModal(true);
       return;
     }
-    setShowDeleteModal(true);
+    // 第一次进入 deleteMode
+    setDeleteMode(true);
+    setSelectedRows([]);
   };
 
-  // 2. 全选/取消全选（复用导出模式的 selectAll 逻辑）
-  //    — 已在 handleExportSelectAll 中实现（共用 selectedRows）
-
-  // 3. 取消删除模式 + 4. 校验 — 2026-07-15 合并到 handleDeleteClick 直接走弹窗
+  // 取消删除模式
+  const handleCancelDelete = () => {
+    setDeleteMode(false);
+    setSelectedRows([]);
+  };
 
   // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
   const handleDeleteModalConfirm = async () => {
@@ -142,14 +168,18 @@ export default function OutboundRecordsPage() {
   // 2026-07-15：删除 handleExportClickConfirm 死代码（ActionToolbar 移除后无调用方，handleExportClick 直接弹窗）
 
   // 5. 弹窗选中格式后实际导出（**只导出选中行**，不是全表）
-  async function handleExportConfirm(format: 'csv' | 'xlsx' | 'pdf') {
+  // 2026-07-19 P2：format 类型改为 'excel'|'csv'|'word' 对齐 ExportFormatModal
+  //   - 'excel' → 走 exportOutboundXLSX（前端 XLSX 双 sheet：明细 + 汇总）
+  //   - 'csv'   → 走 exportOutboundCSV（后端生成）
+  //   - 'word'  → toast.warning 提示（出库业务暂不支持 docx，与种源不一致但保留选项对齐）
+  // 注：原 'pdf' 格式移除（按 ExportFormatModal 100% 一致原则），原 PDF 报表功能并入 XLSX 汇总 sheet
+  async function handleExportConfirm(format: 'excel' | 'csv' | 'word') {
     setExportOpen(false);
     setExportMode(false);
     setSelectedRows([]);
     try {
       // 选中的行（按 row.id 过滤 — selectedRows 现在存的是 row.id 而非 instanceId）
       const selectedData = rows.filter(r => selectedRows.includes(r.id));
-      // 2026-07-10 P1-3：去掉 as unknown 双重断言（Store 与 Service 用相同 OutboundQuery/Row 类型）
       if (format === 'csv') {
         // CSV 走后端（保持一致性）
         const blob = await exportOutboundCSV(query);
@@ -161,13 +191,13 @@ export default function OutboundRecordsPage() {
         a.click();
         URL.revokeObjectURL(url);
         toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
-      } else if (format === 'xlsx') {
-        // XLSX 走前端（按选中的行生成）
+      } else if (format === 'excel') {
+        // Excel 走前端（按选中的行生成 XLSX 双 sheet）
         exportOutboundXLSX(selectedData, summary);
-        toast.success(`XLSX 下载已开始（共 ${selectedData.length} 条）`);
-      } else if (format === 'pdf') {
-        await exportOutboundPDF(selectedData, summary);
-        toast.success(`PDF 下载已开始（共 ${selectedData.length} 条）`);
+        toast.success(`Excel 下载已开始（共 ${selectedData.length} 条）`);
+      } else if (format === 'word') {
+        // 2026-07-19 P2：Word 格式出库暂不支持（与种源对齐，但出库业务无需 docx）
+        toast.warning('Word 格式出库暂不支持，请选 Excel 或 CSV');
       }
     } catch (e) {
       // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
@@ -195,29 +225,60 @@ export default function OutboundRecordsPage() {
       {/* 6 维筛选 */}
       <OutboundRecordsFilter value={query as unknown as ServiceOutboundQuery} onChange={handleFilterChange} onReset={handleReset} />
 
-      {/* 工具栏：2026-07-15 简化为直接渲染按钮组（之前 ActionToolbar 传 13 个空函数硬塞组件，与出库业务不适配） */}
+      {/* 工具栏：2026-07-19 参照作物库存 ActionToolbar 模式重写
+          - 默认模式：蓝色「导出」+ 红色「删除」（variant=default / destructive，与全站统一）
+          - 选中模式：蓝色「确认导出 (N)」+ 红色「确认删除 (N)」+ 灰色「取消」
+      */}
       <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 mb-3">
         <h2 className="text-base font-semibold text-gray-900">出库记录列表</h2>
         <div className="flex items-center gap-2">
-          {selectedRows.length > 0 && (
-            <span className="text-sm text-gray-600 mr-2">已选 {selectedRows.length} 条</span>
+          {/* 默认模式：仅 2 个主按钮 */}
+          {!exportMode && !deleteMode && (
+            <>
+              {selectedRows.length > 0 && (
+                <span className="text-sm text-gray-600 mr-2">已选 {selectedRows.length} 条</span>
+              )}
+              <Button
+                size="sm"
+                onClick={handleExportClick}
+                disabled={loading || total === 0}
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleDeleteClick}
+                disabled={loading}
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
+            </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportClick}
-            disabled={loading || total === 0}
-          >
-            导出
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDeleteClick}
-            disabled={loading || selectedRows.length === 0}
-          >
-            删除 ({selectedRows.length})
-          </Button>
+          {/* 选中模式：确认 + 取消按钮组（与 SeedSource ActionToolbar 一致） */}
+          {(exportMode || deleteMode) && (
+            <>
+              <span className="text-sm text-gray-600 mr-2">已选 {selectedRows.length} 条</span>
+              {exportMode && (
+                <Button size="sm" onClick={handleExportClickConfirm}>
+                  <Download className="w-4 h-4" />
+                  确认导出 ({selectedRows.length})
+                </Button>
+              )}
+              {deleteMode && (
+                <Button size="sm" variant="destructive" onClick={handleDeleteClick}>
+                  <Trash2 className="w-4 h-4" />
+                  确认删除 ({selectedRows.length})
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={exportMode ? handleCancelExport : handleCancelDelete}>
+                <X className="w-4 h-4" />
+                取消
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -244,13 +305,10 @@ export default function OutboundRecordsPage() {
         onNavigateToInstance={(id) => setDetailInstanceId(id)}
       />
 
-      {/* 导出格式选择弹窗（按 Materials.tsx 模式）
-          2026-07-15：rowCount 区分选中/全表（之前 total 总是显示总数误导用户）
-      */}
+      {/* 导出格式选择弹窗（2026-07-19：参照 SeedSource 强制勾选 + selectedCount 文案） */}
       <OutboundExportModal
         isOpen={exportOpen}
         onClose={() => setExportOpen(false)}
-        rowCount={total}
         selectedCount={selectedRows.length}
         onConfirm={handleExportConfirm}
       />

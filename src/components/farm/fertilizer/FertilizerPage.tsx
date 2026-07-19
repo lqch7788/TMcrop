@@ -42,6 +42,11 @@ export default function FertilizerPage() {
   // 2026-06-09 删除警告弹窗：与技术方案/作物库存/出库记录统一用 UI 库 DeleteConfirmModal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  // 2026-07-19 P2：参照 SeedSource 100% 对齐 2 步导出流程
+  //   - 第 1 次点"导出"：setExportMode(true) → 表格显示 checkbox
+  //   - 勾选后第 2 次点"确认导出"：handleConfirmExport → setShowExportModal(true)
+  //   - 导出完成后重置 exportMode + operationMode + selectedIds（避免复选框残留）
+  const [exportMode, setExportMode] = useState(false);
 
 
 
@@ -172,14 +177,39 @@ export default function FertilizerPage() {
     }
   }, [selectedIds, filters, store, toast]);
 
-  // ========== 导出处理 ==========
+  // ========== 导出处理（2026-07-19 P2：100% 对齐内部种源 2 步流程）==========
   const exportCount = selectedIds.length > 0 ? selectedIds.length : items.length;
 
+  // 第 1 步：点"导出" → 进入 exportMode（表格显示 checkbox）
+  // 参照 SeedSourcePage.handleExportClick
   const handleExport = useCallback(() => {
-    if (exportCount === 0) return;
-    setShowExportModal(true);
+    if (exportCount === 0) {
+      toast.warning('当前筛选条件下没有可导出的数据');
+      return;
+    }
+    setOperationMode('export');
+    setExportMode(true);
+    setSelectedIds([]);
   }, [exportCount]);
 
+  // 第 2 步：勾选后点"确认导出" → 校验 + 弹格式选择弹窗
+  // 参照 SeedSourcePage.handleExportClickConfirm
+  const handleConfirmExport = useCallback(() => {
+    if (selectedIds.length === 0) {
+      toast.warning('请先勾选要导出的施肥记录');
+      return;
+    }
+    setShowExportModal(true);
+  }, [selectedIds]);
+
+  // 取消导出模式（参照 SeedSourcePage.handleExportCancel）
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setOperationMode('normal');
+    setSelectedIds([]);
+  }, []);
+
+  // 实际导出（参照 SeedSourcePage.handleConfirmExport）
   const handleExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'pdf') => {
     // 2026-07-16：try/finally 确保弹窗始终关闭（修 silent failure：导出失败时弹窗曾卡原地）
     try {
@@ -237,9 +267,13 @@ export default function FertilizerPage() {
       toast.error(`导出失败：${err?.message || '未知错误'}`);
     } finally {
       // 2026-07-16：finally 确保弹窗始终关闭（即使抛错也不卡 UI）
+      // 2026-07-19 P2-fix: 重置 exportMode + operationMode + selectedIds
+      //   否则 FertilizerTable showCb = operationMode==='delete' || !!exportMode 仍为 true
+      //   → 复选框导出完成后不消失(参考 Seedling 同样 bug 修复)
       setShowExportModal(false);
       setSelectedIds([]);
       setOperationMode('normal');
+      setExportMode(false);
     }
   }, [items, selectedIds, toast]);
 
@@ -306,6 +340,10 @@ export default function FertilizerPage() {
         onConfirmBatchDelete={handleBatchDelete}
         onCancelBatchDelete={() => { setOperationMode('normal'); setSelectedIds([]); }}
         onExportMode={handleExport}
+        // 2026-07-19 P2：传 exportMode 相关 props 完整实现 2 步流程
+        exportMode={exportMode}
+        onConfirmExport={handleConfirmExport}
+        onCancelExport={handleCancelExport}
         iotDevices={iotDevices}
         iotLoading={isLoading}
       />
@@ -337,7 +375,8 @@ export default function FertilizerPage() {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleExportConfirm}
-        rowCount={selectedIds.length > 0 ? selectedIds.length : items.length}
+        // 2026-07-19 P2：prop 名 rowCount → selectedCount 对齐通用 ExportFormatModal 接口
+        selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length}
       />
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录一致） */}
       <DeleteConfirmModal
