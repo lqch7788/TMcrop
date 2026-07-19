@@ -7,6 +7,8 @@
  * 执行方式：npm run migrate-pesticide-type
  * 干跑模式：npm run migrate-pesticide-type -- --dry-run
  */
+// 2026-07-19: better-sqlite3 缺 declaration,@ts-expect-error 绕过(独立 migrate 脚本,不参与 server build)
+// @ts-expect-error - missing types for better-sqlite3
 import Database from 'better-sqlite3';
 import path from 'path';
 

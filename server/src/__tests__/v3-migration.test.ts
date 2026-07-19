@@ -3,6 +3,8 @@
  * 测试 migrateSeedSourcePropagation 脚本
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+// 2026-07-19: better-sqlite3 缺 declaration,@ts-expect-error 绕过(测试独立文件,不参与 server build)
+// @ts-expect-error - missing types for better-sqlite3
 import Database from 'better-sqlite3';
 import { mkdtempSync, copyFileSync, rmSync } from 'fs';
 import { join } from 'path';

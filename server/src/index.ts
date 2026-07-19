@@ -181,7 +181,7 @@ async function start() {
       // 先删除旧格式 IR-RETRO-STK...-{timestamp}-{random} → 重新以新格式 IR-YYYYMMDD-NNNN 生成
       const migrated = migrateBackfillIds();
       console.log(`[backfillTransferInboundRecords] 清理旧格式回填行：删除 ${migrated.deleted} 条`);
-      const result = backfillTransferInboundRecords();
+      const result = await backfillTransferInboundRecords();
       console.log(`[backfillTransferInboundRecords] 启动回填：插入 ${result.inserted} 条，跳过 ${result.skipped} 条`);
     } catch (e: any) {
       console.warn('[backfillTransferInboundRecords] 启动回填失败（不影响主流程）:', e?.message || e);

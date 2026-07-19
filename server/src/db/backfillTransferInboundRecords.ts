@@ -104,7 +104,7 @@ export function migrateBackfillIds(): { deleted: number } {
   const db = getDatabase();
   const old = db.prepare(`SELECT id FROM inventory_inbound_records WHERE id LIKE 'IR-RETRO-STK%'`);
   const oldIds: string[] = [];
-  while (old.step()) oldIds.push(old.getAsObject().id);
+  while (old.step()) oldIds.push(String(old.getAsObject().id));
   old.free();
   for (const id of oldIds) {
     db.run(`DELETE FROM inventory_inbound_records WHERE id = ?`, [id]);
@@ -119,7 +119,7 @@ if (require.main === module) {
     await initDatabase();
     const { saveDatabase } = await import('./index');
     console.log('[backfillTransferInboundRecords] 开始回填...');
-    const result = backfillTransferInboundRecords();
+    const result = await backfillTransferInboundRecords();
     saveDatabase();
     console.log(`[backfillTransferInboundRecords] 完成：插入 ${result.inserted} 条，跳过 ${result.skipped} 条`);
     process.exit(0);
