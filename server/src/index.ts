@@ -172,6 +172,31 @@ async function start() {
     initializeDatabase();
     console.log('[启动白名单] 临时禁用 fixMissingSchema（YELLOW 级含 UPDATE 迁移）');
 
+    // 2026-07-19：启动时自动回填 inventory_transfer → inventory_inbound_records 流水
+    // 老数据通过 inventoryTransfer 调拨生成的种源没写 inventory_inbound_records，
+    // 导致 listReturnableInboundRecords 查不到、种源退库弹窗空白
+    // 此操作幂等（NOT EXISTS 过滤），不会重复插入
+    try {
+      const { backfillTransferInboundRecords, migrateBackfillIds } = await import('./db/backfillTransferInboundRecords');
+      // 先删除旧格式 IR-RETRO-STK...-{timestamp}-{random} → 重新以新格式 IR-YYYYMMDD-NNNN 生成
+      const migrated = migrateBackfillIds();
+      console.log(`[backfillTransferInboundRecords] 清理旧格式回填行：删除 ${migrated.deleted} 条`);
+      const result = backfillTransferInboundRecords();
+      console.log(`[backfillTransferInboundRecords] 启动回填：插入 ${result.inserted} 条，跳过 ${result.skipped} 条`);
+    } catch (e: any) {
+      console.warn('[backfillTransferInboundRecords] 启动回填失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-07-19 P0-15：GREEN 级 schema 补齐（纯 ADD COLUMN + CREATE INDEX，无 UPDATE/DELETE）
+    // 绕过 YELLOW 级 fixMissingSchema 禁用导致老/新 DB schema 不一致问题
+    try {
+      const { fixSchemaColumns } = await import('./db/fixSchemaColumns');
+      const result = fixSchemaColumns();
+      console.log(`[fixSchemaColumns] 启动补齐：新增 ${result.addedColumns} 列，新增 ${result.addedIndexes} 索引`);
+    } catch (e: any) {
+      console.warn('[fixSchemaColumns] 启动补齐失败（不影响主流程）:', e?.message || e);
+    }
+
     // Step 3: 启动后 db 状态对比
     if (dbFileExists) {
       const compare = postStartupCompare(preCheck.snapshot);

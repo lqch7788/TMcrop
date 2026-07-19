@@ -8,6 +8,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers, History } from 'lucide-react';
+import { useToastStore } from '@/stores/useToastStore';
+// 2026-07-19 P2：导入 todayLocal 避免运行时 ReferenceError
+import { todayLocal } from '@/lib/dateUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
 import { Badge, TextArea, Label, useToast } from '@/components/ui';
 import { useSeedSourceStore } from '@/stores/useSeedSourceStore';
@@ -250,7 +253,7 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">来源业务类型：</span>
             {/* 2026-07-16：transferredFromBusinessType 是英文枚举（harvest/purchase/transfer），走字典翻译 */}
-            <span className="text-sm text-gray-900">{TRANSFERRED_FROM_BUSINESS_TYPE_MAP[record.transferredFromBusinessType] || record.transferredFromBusinessType || '—'}</span>
+            <span className="text-sm text-gray-900">{record.transferredFromBusinessType ? (TRANSFERRED_FROM_BUSINESS_TYPE_MAP[record.transferredFromBusinessType] || record.transferredFromBusinessType) : '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">来源业务 ID：</span>
@@ -263,7 +266,7 @@ function TransferSourcePanel({ record }: { record: SeedSource }) {
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">原始来源模块：</span>
             {/* 2026-07-16：originalSourceModule 是英文枚举（seed_source/seedling/planting/harvest），走字典翻译 */}
-            <span className="text-sm text-gray-900">{ORIGINAL_SOURCE_MODULE_MAP[record.originalSourceModule] || record.originalSourceModule || '—'}</span>
+            <span className="text-sm text-gray-900">{record.originalSourceModule ? (ORIGINAL_SOURCE_MODULE_MAP[record.originalSourceModule] || record.originalSourceModule) : '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-28">原始来源 ID：</span>
@@ -456,9 +459,22 @@ function UsageRecordsPanel({ seedSourceId }: { seedSourceId: string }) {
 
 // 来源模块中文映射（与 SeedSourceInboundModal 的 sourceModule 保持一致）
 // 2026-07-14：移到模块顶层（避免 InboundRecordsPanel 每次 render 重建）
+// 2026-07-19：补全所有 inventory_inbound_records.source_module / crop_circulation_records.source_module 实际值
+// - inventory_inbound_records.source_module 实际值：seed_source / inventory / inventory_inbound / seedling / planting / harvest
+// - crop_circulation_records.source_module 实际值：planting / seedling / harvest / seed_source
 const SOURCE_MODULE_MAP: Record<string, string> = {
+  // inventory_inbound_records 来源
   seed_source: '商品种源入库',
   inventory: '库存调拨',
+  inventory_inbound: '外购入库',
+  // crop_circulation_records（PROPAGATION 自产回流）来源
+  planting: '种植采收回流',
+  seedling: '育苗回流',
+  harvest: '采收回流',
+  // 兜底
+  circulation: '作物流转',
+  circulation_records: '作物流转',
+  inbound: '入库流水',
 };
 
 // 2026-07-06 Bug 19：种源详情弹窗新增「入库记录」Tab
@@ -475,29 +491,38 @@ type InboundRecord = InboundRecordType;
 
 function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string; seedCode: string }) {
   const [records, setRecords] = useState<InboundRecord[]>([])
-  // 2026-07-18: 使用 useToast hook（项目约定）
-  const { toast } = useToast();
+  // 2026-07-19 P0-4：改用全局 useToastStore（useToast() 是组件私有 state，不渲染 ToastContainer 看不到）
+  const toast = useToastStore((s) => s.toast);
   // 2026-07-18: 冲销对话框状态（C-1 修复）
   const [reversingRecord, setReversingRecord] = useState<InboundRecord | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reverseSubmitting, setReverseSubmitting] = useState(false);
 
-  // 2026-07-18: 冲销处理函数
+  // 2026-07-18: 冲销处理函数；2026-07-19: 按 recordSource 路由（调拨 → reverseInbound；留种回流 → revokeCirculation）
   async function handleReverse() {
     if (!reversingRecord || !reverseReason.trim()) return;
     setReverseSubmitting(true);
-    // 冲销数量（用于 toast 显示）
-    const returnableQty = (reversingRecord.quantity || 0) - (reversingRecord.returnedQuantity || 0);
-    const returnableUnit = reversingRecord.unit || '';
+    const isCirculation = reversingRecord.recordSource === 'crop_circulation_records';
     try {
-      // 通过 Store action（架构铁律：不直接调 service）
-      await useSeedSourceStore.getState().reverseInbound(seedSourceId, {
-        inboundRecordId: reversingRecord.id,
-        reason: reverseReason.trim(),
-      });
-      toast.success(
-        `冲销成功：入库 ${reversingRecord.id.substring(0, 12)}... 减少 ${returnableQty} ${returnableUnit} 可用`
-      );
+      if (isCirculation) {
+        // 留种回流撤销
+        await useSeedSourceStore.getState().revokeCirculation({
+          circulationId: reversingRecord.id,
+          reason: reverseReason.trim(),
+        });
+        toast.success(`撤销成功：留种回流 ${reversingRecord.id.substring(0, 12)}... 已作废，库存与 reflowCount 同步回退`);
+      } else {
+        // 调拨/外购入库冲销
+        const returnableQty = (reversingRecord.quantity || 0) - (reversingRecord.returnedQuantity || 0);
+        const returnableUnit = reversingRecord.unit || '';
+        await useSeedSourceStore.getState().reverseInbound(seedSourceId, {
+          inboundRecordId: reversingRecord.id,
+          reason: reverseReason.trim(),
+        });
+        toast.success(
+          `冲销成功：入库 ${reversingRecord.id.substring(0, 12)}... 减少 ${returnableQty} ${returnableUnit} 可用`
+        );
+      }
       setReversingRecord(null);
       setReverseReason('');
       // 刷新种源（更新 remainingQuantity）+ 刷新入库记录（更新 reversedAt 标记）
@@ -505,7 +530,11 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
       // 重新加载当前面板的 records
       getInboundRecords(seedSourceId)
         .then((data) => setRecords(Array.isArray(data) ? data : []))
-        .catch(() => {});
+        .catch((e) => {
+          // 2026-07-19 P1：不再静默吞错，操作后刷新失败要提示
+          console.error('[DetailModal] 刷新入库记录失败:', e);
+          toast.error('刷新入库记录失败，请手动关闭重开');
+        });
       // 2026-07-18: 跨页面刷新 - 通知 inventory store 同步（库存数量变化）
       try {
         // 动态 import 避免循环依赖
@@ -513,7 +542,7 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
         useInventoryStore.getState().notifyChange();
       } catch {}
     } catch (e: any) {
-      toast.error(`冲销失败：${e.message || '未知错误'}`);
+      toast.error(`${isCirculation ? '撤销' : '冲销'}失败：${e.message || '未知错误'}`);
     } finally {
       setReverseSubmitting(false);
     }
@@ -579,23 +608,30 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
           onClick={() => {
-            const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '原始数量', '已退数量', '可退数量', '单价', '总金额', '供应商', '操作员', '备注'];
-            const data = records.map(r => [
-              r.recordDate || '',
-              SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '',
-              r.id || '',
-              r.cropName || '',
-              r.varietyName || '',
-              r.warehouseName || '',
-              r.quantity ?? 0,
-              r.returnedQuantity ?? 0,
-              (r.quantity || 0) - (r.returnedQuantity || 0),
-              r.unitPrice ?? 0,
-              r.totalAmount ?? 0,
-              r.supplierName || '',
-              r.operatorName || '',
-              r.notes || '',
-            ]);
+            // 2026-07-19 P1：Excel 导出增加"记录类型"+"作废状态"列，已冲销行显示"—（已冲销）"
+            const headers = ['日期', '入库方式', '入库单号', '作物', '品种', '仓库', '原始数量', '已退数量', '可退数量', '单价', '总金额', '供应商', '操作员', '记录类型', '作废状态', '备注'];
+            const data = records.map(r => {
+              const isCirculation = r.recordSource === 'crop_circulation_records';
+              const isReversed = !!r.reversedAt;
+              return [
+                r.recordDate || '',
+                SOURCE_MODULE_MAP[r.sourceModule || ''] || r.sourceModule || '',
+                r.id || '',
+                r.cropName || '',
+                r.varietyName || '',
+                r.warehouseName || '',
+                r.quantity ?? 0,
+                r.returnedQuantity ?? 0,
+                isReversed ? '—（已冲销）' : ((r.quantity || 0) - (r.returnedQuantity || 0)),
+                r.unitPrice ?? 0,
+                r.totalAmount ?? 0,
+                r.supplierName || '',
+                r.operatorName || '',
+                isCirculation ? '留种回流' : '调拨入库',
+                isReversed ? (isCirculation ? '已撤销' : '已冲销') : '',
+                r.notes || '',
+              ];
+            });
             const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
             ws['!cols'] = headers.map(() => ({ wch: 16 }));
             const wb = XLSX.utils.book_new();
@@ -686,9 +722,14 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                     )}
                   </td>
                   <td className="px-2 py-1.5 text-right">
-                    <span className={returnable > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
-                      {returnable.toLocaleString()}
-                    </span>
+                    {/* 2026-07-19 P1：已冲销/已撤销行可退数量显示为 —，避免业务认知错误 */}
+                    {r.reversedAt ? (
+                      <span className="text-gray-400">—（已冲销）</span>
+                    ) : returnable > 0 ? (
+                      <span className="text-emerald-600 font-medium">{returnable.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-2 py-1.5 text-right">{(r.unitPrice || 0).toFixed(2)}</td>
                   <td className="px-2 py-1.5 text-right">{(r.totalAmount || 0).toFixed(2)}</td>
@@ -701,19 +742,37 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                     {r.notes || '-'}
                   </td>
                   {/* 2026-07-18: 冲销按钮（C-1 修复） */}
+                  {/* 2026-07-19: 留种回流也支持撤销 — onClick 内按 recordSource 路由
+                      （移除 recordSource 禁用，禁用条件只剩"已退完 / 不可操作"两类） */}
                   <td className="px-2 py-1.5">
                     {r.reversedAt ? (
                       <Badge variant="destructive" className="text-xs">已冲销</Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setReversingRecord(r)}
-                        disabled={r.recordSource !== 'inventory_inbound_records' || returnable <= 0}
-                        title={returnable <= 0 ? '已全部退完，无需冲销' : '冲销此入库'}
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                      </Button>
+                      (() => {
+                        const isCirculation = r.recordSource === 'crop_circulation_records';
+                        const disabledReason = !isCirculation && returnable <= 0
+                          ? '已全部退完，无需冲销'
+                          : '';
+                        return (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (disabledReason) {
+                                toast.error(disabledReason);
+                                return;
+                              }
+                              setReversingRecord(r);
+                            }}
+                            title={
+                              disabledReason
+                                || (isCirculation ? '撤销该次留种回流（整批作废）' : '冲销此入库')
+                            }
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </Button>
+                        );
+                      })()
                     )}
                   </td>
                 </tr>
@@ -724,7 +783,14 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
       </div>
 
       {/* 2026-07-18: 冲销确认对话框（C-1 修复） */}
-      <Dialog open={reversingRecord !== null} onOpenChange={(open) => { if (!open) { setReversingRecord(null); setReverseReason(''); } }}>
+      {/* 2026-07-19 P1：提交期间阻止关闭（避免中断进行中的库存扣减）*/}
+      <Dialog
+        open={reversingRecord !== null}
+        onOpenChange={(open) => {
+          if (!open && reverseSubmitting) return; // 提交期间禁止关闭
+          if (!open) { setReversingRecord(null); setReverseReason(''); }
+        }}
+      >
         <DialogContent
           className="max-w-lg"
           onKeyDown={(e) => {
@@ -743,57 +809,76 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
-              冲销入库记录
+              {reversingRecord?.recordSource === 'crop_circulation_records' ? '撤销留种回流' : '冲销入库记录'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             {/* 完整 context 显示：让用户清楚知道要冲什么 */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-gray-500">入库单号</span>
+                <span className="text-gray-500">单据号</span>
                 <code className="text-xs font-mono text-gray-700">{reversingRecord?.id}</code>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">入库方式</span>
+                <span className="text-gray-500">{reversingRecord?.recordSource === 'crop_circulation_records' ? '回流来源' : '入库方式'}</span>
                 <span className="text-gray-700">
                   {SOURCE_MODULE_MAP[reversingRecord?.sourceModule || ''] || reversingRecord?.sourceModule || '外购入库'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">入库日期</span>
+                <span className="text-gray-500">{reversingRecord?.recordSource === 'crop_circulation_records' ? '回流日期' : '入库日期'}</span>
                 <span className="text-gray-700">{reversingRecord?.recordDate || '—'}</span>
               </div>
               <div className="border-t border-gray-200 pt-1.5 mt-1.5 space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">原始入库数量</span>
+                  <span className="text-gray-500">{reversingRecord?.recordSource === 'crop_circulation_records' ? '回流量' : '原始入库数量'}</span>
                   <span className="text-gray-700">{(reversingRecord?.quantity || 0).toLocaleString()} {reversingRecord?.unit}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">已退数量</span>
-                  <span className="text-amber-600">{(reversingRecord?.returnedQuantity || 0).toLocaleString()} {reversingRecord?.unit}</span>
-                </div>
-                <div className="flex justify-between font-medium">
-                  <span className="text-gray-700">本次可冲销数量</span>
-                  <span className="text-red-600 text-base">
-                    {((reversingRecord?.quantity || 0) - (reversingRecord?.returnedQuantity || 0)).toLocaleString()} {reversingRecord?.unit}
-                  </span>
-                </div>
+                {reversingRecord?.recordSource !== 'crop_circulation_records' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">已退数量</span>
+                      <span className="text-amber-600">{(reversingRecord?.returnedQuantity || 0).toLocaleString()} {reversingRecord?.unit}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span className="text-gray-700">本次可冲销数量</span>
+                      <span className="text-red-600 text-base">
+                        {((reversingRecord?.quantity || 0) - (reversingRecord?.returnedQuantity || 0)).toLocaleString()} {reversingRecord?.unit}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            <p className="text-gray-600 text-xs">冲销后将：</p>
-            <ul className="list-disc pl-5 space-y-0.5 text-xs text-gray-600">
-              <li>入库记录标记为「已冲销」（<code>inbound_edit_log</code> 留痕）</li>
-              <li>种源 <code className="font-mono text-gray-700">{seedCode}</code> 可用数量相应减少</li>
-              <li className="text-red-600 font-medium">此操作不可撤销（需新建正向入库单补偿）</li>
-            </ul>
+            {reversingRecord?.recordSource === 'crop_circulation_records' ? (
+              <>
+                <p className="text-gray-600 text-xs">撤销后：</p>
+                <ul className="list-disc pl-5 space-y-0.5 text-xs text-gray-600">
+                  <li>回流记录标记为「已撤销」（<code>circulation_edit_log</code> 留痕）</li>
+                  <li>种源 <code className="font-mono text-gray-700">{seedCode}</code> 可用数量相应减少</li>
+                  <li>合并计数 <code>reflow_count</code> -1（仅合并命中的回流）</li>
+                  <li>种植端 <code>planting_harvest_records.circulation_revoked_at</code> 同步标记（种植事实保留）</li>
+                  <li className="text-red-600 font-medium">此操作不可撤销（需新建正向回流补偿）</li>
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 text-xs">冲销后将：</p>
+                <ul className="list-disc pl-5 space-y-0.5 text-xs text-gray-600">
+                  <li>入库记录标记为「已冲销」（<code>inbound_edit_log</code> 留痕）</li>
+                  <li>种源 <code className="font-mono text-gray-700">{seedCode}</code> 可用数量相应减少</li>
+                  <li className="text-red-600 font-medium">此操作不可撤销（需新建正向入库单补偿）</li>
+                </ul>
+              </>
+            )}
 
             <div>
-              <Label>冲销原因 <span className="text-red-600">*</span></Label>
+              <Label>{reversingRecord?.recordSource === 'crop_circulation_records' ? '撤销原因' : '冲销原因'} <span className="text-red-600">*</span></Label>
               <TextArea
                 value={reverseReason}
                 onChange={e => setReverseReason(e.target.value.slice(0, 200))}
-                placeholder="录入错误 / 重复提交 / 误操作..."
+                placeholder={reversingRecord?.recordSource === 'crop_circulation_records' ? '错回流 / 误操作 / 数据错误...' : '录入错误 / 重复提交 / 误操作...'}
                 rows={2}
                 maxLength={200}
               />
@@ -804,7 +889,12 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setReversingRecord(null); setReverseReason(''); }}>
+            {/* 2026-07-19 P1：提交期间禁用取消按钮 */}
+            <Button
+              variant="outline"
+              disabled={reverseSubmitting}
+              onClick={() => { setReversingRecord(null); setReverseReason(''); }}
+            >
               取消 <span className="ml-1 text-xs text-gray-400">Esc</span>
             </Button>
             <Button
@@ -815,11 +905,11 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
               {reverseSubmitting ? (
                 <>
                   <RotateCcw className="w-3 h-3 mr-1 animate-spin" />
-                  冲销中...
+                  {reversingRecord?.recordSource === 'crop_circulation_records' ? '撤销中...' : '冲销中...'}
                 </>
               ) : (
                 <>
-                  确认冲销
+                  {reversingRecord?.recordSource === 'crop_circulation_records' ? '确认撤销' : '确认冲销'}
                   <span className="ml-1 text-xs opacity-70">Ctrl+Enter</span>
                 </>
               )}
@@ -880,10 +970,13 @@ function MergeHistoryPanel({ record }: { record: SeedSource }) {
 }
 
 /**
- * 2026-07-18: 入库审计日志 Tab
- * 显示本种源所有入库流水的冲销/编辑记录（inbound_edit_log 表）
+ * 2026-07-19 改名：入库审计 → 冲销记录
+ * - 涵盖 inbound_edit_log（调拨/外购入库冲销）+ circulation_edit_log（留种回流撤销）
+ * - 种源详情弹窗的入库记录 Tab 中所有来源都支持作废操作
  */
 function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
+  // 2026-07-19 P2：InboundAuditPanel 独立使用全局 toast
+  const toast = useToastStore((s) => s.toast);
   const [logs, setLogs] = useState<InboundEditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -894,7 +987,13 @@ function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
     setError(null);
     getInboundEditLogs(seedSourceId)
       .then((data) => setLogs(Array.isArray(data) ? data : []))
-      .catch((e) => { console.error('[DetailModal] 审计日志加载失败:', e); setError(e.message || '加载失败'); })
+      .catch((e) => {
+        console.error('[DetailModal] 审计日志加载失败:', e);
+        const msg = e instanceof Error ? e.message : '加载失败';
+        setError(msg);
+        // 2026-07-19 P1：不再静默吞错，弹 toast 提示用户
+        toast.error(`加载冲销记录失败：${msg}`);
+      })
       .finally(() => setLoading(false));
   }, [seedSourceId]);
 
@@ -920,46 +1019,108 @@ function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
     );
   }
 
+  // 格式化数量变化（带正负号 + 单位）
+  const formatQtyChange = (log: InboundEditLog): string => {
+    if (log.beforeQuantity == null) return '-';
+    const before = log.beforeQuantity;
+    const after = log.afterQuantity ?? 0;
+    const delta = after - before;
+    const sign = delta > 0 ? '+' : '';
+    return `${before} → ${after}（${sign}${delta}）`;
+  };
+
   return (
     <div className="space-y-2">
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-200 flex justify-between">
-          <span>入库审计日志（{logs.length} 条）</span>
-          <span className="text-xs text-gray-500">按时间倒序</span>
+          <span>冲销记录（{logs.length} 条）</span>
+          <span className="text-xs text-gray-500">按时间倒序 · 调拨冲销 + 留种回流撤销</span>
         </div>
-        <div className="max-h-[28rem] overflow-y-auto divide-y divide-gray-100">
-          {logs.map((log) => (
-            <div key={log.id} className="px-4 py-3 text-sm hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={log.action === 'reverse' ? 'destructive' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {log.action === 'reverse' ? '冲销' : '修改'}
-                  </Badge>
-                  <code className="text-xs font-mono text-gray-700">{log.inboundId}</code>
-                </div>
-                <span className="text-xs text-gray-500">{log.createdAt}</span>
-              </div>
-              {log.beforeQuantity != null && (
-                <div className="mt-1 text-xs text-gray-600">
-                  数量变化：
-                  <span className="font-mono">
-                    {log.beforeQuantity} → {log.afterQuantity ?? 0}
-                  </span>
-                </div>
-              )}
-              {log.reason && (
-                <div className="mt-1 text-xs text-gray-600">
-                  原因：<span className="text-gray-700">{log.reason}</span>
-                </div>
-              )}
-              <div className="mt-1 text-xs text-gray-400">
-                操作人：{log.editedByName || log.editedBy}
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto max-h-[32rem] overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+              <tr>
+                <th className="px-2 py-2 text-left whitespace-nowrap">操作时间</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">操作</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">来源</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">单据号</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">单据日期</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">作物/品种</th>
+                <th className="px-2 py-2 text-right whitespace-nowrap">原数量</th>
+                <th className="px-2 py-2 text-right whitespace-nowrap">数量变化</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">单位</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">供应商/源</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">回流方式</th>
+                <th className="px-2 py-2 text-left whitespace-nowrap">操作人</th>
+                <th className="px-2 py-2 text-left" style={{ minWidth: '180px' }}>撤回原因</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {logs.map((log) => {
+                const actionLabel = log.sourceType === 'crop_circulation_records'
+                  ? (log.action === 'reverse' ? '撤销' : '修改')
+                  : (log.action === 'reverse' ? '冲销' : '修改');
+                const sourceLabel = SOURCE_MODULE_MAP[log.sourceModule || ''] || log.sourceModule || '-';
+                const cropDisplay = log.cropName
+                  ? `${log.cropName}${log.varietyName ? ` / ${log.varietyName}` : ''}`
+                  : (log.sourceType === 'crop_circulation_records' ? '（作物信息见种源）' : '-');
+                return (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '-'}
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <Badge
+                        variant={log.action === 'reverse' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {actionLabel}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <Badge variant="outline" className="text-xs text-gray-500">
+                        {log.sourceType === 'crop_circulation_records' ? '留种回流' : '调拨入库'}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-2">
+                      <code className="text-xs font-mono text-gray-700">{log.inboundId}</code>
+                    </td>
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
+                      {log.recordDate ? log.recordDate.split('T')[0] : '-'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-700" style={{ maxWidth: '180px' }}>
+                      {cropDisplay}
+                    </td>
+                    <td className="px-2 py-2 text-right text-gray-700 whitespace-nowrap">
+                      {log.originalQuantity != null ? log.originalQuantity.toLocaleString() : '-'}
+                    </td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">
+                      <span className={log.action === 'reverse' ? 'text-red-600 font-medium' : 'text-amber-600'}>
+                        {formatQtyChange(log)}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
+                      {log.unit || '-'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-600" style={{ maxWidth: '120px' }} title={log.supplierName || log.sourceId || ''}>
+                      {log.supplierName || log.sourceId || '-'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
+                      {log.mergeAction === 'create_new' ? '新建种源' : log.mergeAction === 'merge_into_existing' ? '合并命中' : '-'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
+                      {log.editedByName || log.editedBy || '-'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-700" style={{ maxWidth: '240px' }}>
+                      <div className="line-clamp-2" title={log.reason || ''}>
+                        {log.reason || '-'}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -969,11 +1130,13 @@ function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   const hasTransferSource = !!record.transferredFromStockId;
 
+  // 2026-07-19 P2：加 tooltip 字段（Hover 提示）
   const extraTabs: Array<{
     key: string
     label: string
     icon: React.ReactNode
     content: React.ReactNode
+    tooltip?: string
   }> = []
 
   // 调拨来源 tab — 仅库存调拨入库的种源显示
@@ -1008,12 +1171,12 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     });
   }
 
-  // 2026-07-18: 入库审计日志 Tab（所有种源都显示）
+  // 2026-07-19 改名：入库审计 → 冲销记录（涵盖调拨冲销 + 留种回流撤销）
   extraTabs.push({
     key: 'inbound-audit',
-    label: '入库审计',
+    label: '冲销记录',
     icon: <History className="w-4 h-4" />,
-    tooltip: '入库流水的冲销/修改记录（inbound_edit_log 表）',
+    tooltip: '入库流水的作废记录（调拨/外购冲销 + 留种回流撤销）',
     content: <InboundAuditPanel seedSourceId={record.id} />,
   });
 

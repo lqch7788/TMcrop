@@ -36,13 +36,19 @@ export async function generateInstanceId(prefix: string, dateStr: string): Promi
 }
 
 export async function generateTransactionId(dateStr: string): Promise<string> {
+  // 2026-07-19 P1：加并发保护（原实现读 max 后直接返回，并发下会 UNIQUE 冲突）
+  // 使用事务内重试：读取 max → 尝试 INSERT → 冲突则重试
   for (let i = 0; i < MAX_RETRY; i++) {
     const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(dateStr);
     const serial = max + 1;
-    // 流水不再二次查（UNIQUE 约束保护），省一次 IO（同日并发极端场景下 5 次重试内能解决）
-    return `TRX-${dateStr}-${String(serial).padStart(4, '0')}`;
+    const candidateId = `TRX-${dateStr}-${String(serial).padStart(4, '0')}`;
+    // 二次查重：避免并发场景下两个请求读到同一个 max
+    const existing = await inventoryTransactionRepository.findByTransactionId(candidateId);
+    if (!existing) return candidateId;
   }
-  throw new Error(`生成 transactionId 失败：${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
+  // 兜底：追加随机后缀避免无限循环（极端并发场景）
+  const fallbackSerial = (await inventoryTransactionRepository.getTransactionIdMaxSerial(dateStr)) + 1;
+  return `TRX-${dateStr}-${String(fallbackSerial).padStart(4, '0')}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 /**

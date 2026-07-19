@@ -30,7 +30,10 @@ export type SourceOrigin =
   | 'direct_seedling'     // 直接育苗（自繁）
   | 'direct_planting'     // 直接种植（外购苗）
   | 'external_harvest'    // 外购成品入库
-  | 'inventory_transfer'; // 2026-06-24: 库存调拨入种源（移动语义）
+  | 'inventory_transfer'  // 2026-06-24: 库存调拨入种源（移动语义）
+  | 'planting_self_kept'  // 2026-07-19 P1: 种植自留种回流（V3.0 合并功能）
+  | 'transfer_from_inventory' // 2026-07-19 P1: 库存调拨回流（V3.0）
+  | 'external';            // 2026-07-19 P1: 旧数据 external（无 _purchase 后缀）
 
 /** 种子类型 */
 export enum SeedType {
@@ -332,12 +335,21 @@ export interface InboundRecord {
   reversedAt?: string | null;
   reversedBy?: string | null;
   reverseReason?: string | null;
+  // 2026-07-19 P2：补全业务表 JOIN 字段（UNION inventory_inbound_records + crop_circulation_records）
+  cropName?: string;
+  varietyName?: string;
+  warehouseName?: string;
+  sourceId?: string;
+  sourceCode?: string;
+  stockType?: string;
+  warehouseId?: string;
 }
 
-/** 2026-07-18: 入库审计日志（inbound_edit_log 表） */
+/** 2026-07-18: 入库审计日志；2026-07-19 扩展 sourceType + 完整业务表 JOIN 字段 */
 export interface InboundEditLog {
   id: number;
   inboundId: string;
+  sourceType: 'inventory_inbound_records' | 'crop_circulation_records';
   action: 'update' | 'reverse';
   beforeQuantity: number | null;
   afterQuantity: number | null;
@@ -345,6 +357,18 @@ export interface InboundEditLog {
   editedByName?: string;
   reason?: string;
   createdAt: string;
+  // 业务表关联字段（2026-07-19 表格形式需要）
+  recordDate?: string | null;
+  sourceModule?: string | null;
+  sourceId?: string | null;
+  cropName?: string | null;
+  varietyName?: string | null;
+  unit?: string | null;
+  originalQuantity?: number | null;
+  supplierName?: string | null;
+  operatorName?: string | null;
+  mergeAction?: 'create_new' | 'merge_into_existing' | null;
+  circulationDate?: string | null;
 }
 
 // ========== 每日记录类型 ==========

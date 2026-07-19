@@ -25,6 +25,8 @@ export const SeedSourceReturnErrorCode = {
   SOURCE_STOCK_GONE: 'SEED_SRC_RETURN_SOURCE_STOCK_GONE',
   UNIT_MISMATCH: 'SEED_SRC_RETURN_UNIT_MISMATCH',
   EMPTY_ITEMS: 'SEED_SRC_RETURN_EMPTY_ITEMS',
+  // 2026-07-19：入库流水已被冲销，不能再退库（避免双重扣库存）
+  INBOUND_REVERSED: 'SEED_SRC_RETURN_INBOUND_REVERSED',
 } as const;
 
 // 2026-07-14：业务错误基类统一——别名 re-export 给 SeedSourceReturnBusinessError（与 routes/seedSource.ts AppendBusinessError 共用 BusinessError）
@@ -50,6 +52,7 @@ export interface ReturnResult {
 export function executeReturnToInventory(
   targetSeedSourceId: string,
   items: ReturnItem[],
+  operator: { id?: string; name?: string } = {},
 ): ReturnResult {
   if (!targetSeedSourceId) {
     throw new SeedSourceReturnBusinessError(
@@ -104,14 +107,21 @@ export function executeReturnToInventory(
     }
 
     // 2. 锁定流水（FOR UPDATE 语义：sql.js 是单线程内存，这里直接读取）
+    // 2026-07-19：增加 reversed_at 校验 — 已冲销的流水不能退库（避免双重扣库存）
     const irStmt = db.prepare(
       `SELECT id, source_module, source_id, source_code, stock_type,
-              quantity, returned_quantity, unit
+              quantity, returned_quantity, unit, reversed_at
        FROM inventory_inbound_records WHERE id = ?`
     );
     irStmt.bind([item.inboundRecordId]);
     const ir = irStmt.step() ? (irStmt.getAsObject() as Record<string, unknown>) : null;
     irStmt.free();
+    if (ir && (ir as any).reversed_at) {
+      throw new SeedSourceReturnBusinessError(
+        SeedSourceReturnErrorCode.INBOUND_REVERSED,
+        `该入库流水已被冲销，不能再退库: recordId=${item.inboundRecordId}`,
+      );
+    }
     if (!ir) {
       throw new SeedSourceReturnBusinessError(
         SeedSourceReturnErrorCode.INBOUND_RECORD_NOT_FOUND,
@@ -233,6 +243,8 @@ export function executeReturnToInventory(
     );
 
     // 9. 增加原库存
+    // 2026-07-19 P1：退库循环内使用累加值（非初值），避免多次退库时库存计算错误
+    // 每次退库后立即更新 oldCurrent/oldAvailable，下一次循环读到最新值
     const oldCurrent = Number(stock.current_quantity || 0);
     const oldAvailable = Number(stock.available_quantity || 0);
     const newCurrent = oldCurrent + item.quantity;
@@ -282,8 +294,8 @@ export function executeReturnToInventory(
         targetSeedSourceId,  // 2026-07-06 P0 修复 A：种源 ID     // 9: business_id
         'inventory_transfer',                                    // 10: business_type（2026-07-16 修复）
         String(ir.source_code || ''),                            // 11: business_code
-        'system',                                                // 12: operator_id
-        'system',                                                // 13: operator_name
+        operator.id || 'system',                                // 12: operator_id
+        operator.name || 'system',                              // 13: operator_name
         dateStr,                                                 // 14: operate_date
         `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}`, // 15: remarks
         now,                                                     // 16: create_time
@@ -324,8 +336,8 @@ export function executeReturnToInventory(
           targetSeedSourceId,                                     // 9: business_id
           'inventory_transfer',                                    // 10: business_type（2026-07-16 修复）
           String(ss.source_code || ''),                            // 11: business_code
-          'system',                                                // 12: operator_id
-          'system',                                                // 13: operator_name
+          operator.id || 'system',                                // 12: operator_id
+          operator.name || 'system',                              // 13: operator_name
           dateStr,                                                 // 14: operate_date
           `种源 ${ss.source_code} 退库 ${item.quantity}${irUnit}（扣减种源库存）`, // 15: remarks
           now,                                                     // 16: create_time

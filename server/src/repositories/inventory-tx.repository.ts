@@ -66,6 +66,18 @@ export class InventoryTransactionRepository {
   }
 
   /**
+   * 2026-07-19 P1：按 transaction_id 查重（generateTransactionId 并发保护用）
+   */
+  async findByTransactionId(transactionId: string): Promise<InventoryTransaction | null> {
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM inventory_transaction WHERE transaction_id = ? LIMIT 1');
+    stmt.bind([transactionId]);
+    const row: any = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return row ? (row as unknown as InventoryTransaction) : null;
+  }
+
+  /**
    * 创建流水记录
    */
   async create(data: Partial<InventoryTransaction>): Promise<InventoryTransaction> {
