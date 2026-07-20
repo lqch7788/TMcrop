@@ -223,17 +223,13 @@ export function AddModal({
     // 通过校验，清空旧 errors
     setErrors({});
 
-    // 2026-06-25: 育种计划校验
+    // 2026-06-25: 育种计划校验（2026-07-20 修订：父本选填，可能未知或多父本）
     if (formData.isBreeding) {
-      if (!formData.parentMaleCode.trim()) {
-        await showAlert('标记为育种计划时，父本编码必填');
-        return;
-      }
       if (!formData.parentFemaleCode.trim()) {
         await showAlert('标记为育种计划时，母本编码必填');
         return;
       }
-      if (formData.parentMaleCode.trim() === formData.parentFemaleCode.trim()) {
+      if (formData.parentMaleCode.trim() && formData.parentMaleCode.trim() === formData.parentFemaleCode.trim()) {
         await showAlert('父本和母本编码不能相同（避免自交）');
         return;
       }
@@ -517,9 +513,7 @@ export function AddModal({
                 {/* 父母本 */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-gray-900">
-                      <span className="text-red-500">*</span> 父本编码
-                    </Label>
+                    <Label className="text-gray-900">父本编码</Label>
                     <Input
                       value={formData.parentMaleCode}
                       onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
