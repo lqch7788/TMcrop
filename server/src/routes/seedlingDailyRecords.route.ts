@@ -3,12 +3,13 @@
  * 挂载点：/api/seedlings/:id/daily-records
  */
 import { Router, Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { getDatabase, saveDatabase } from "../db";
-import { queryToObjects } from "../utils/queryHelper";
+import { queryToObjects, execCount } from "../utils/queryHelper";
 import { formatLocalDateISO } from "../utils/dateUtil";
 import { seedLog } from "../lib/seedLogger";
-// 2026-07-21 修复：导入实际存在的导出函数名
-import { validateDailyChange, normalizeChangeData, applyDailyChangeToPlanting } from "../services/plantingDailyChange";
+// 2026-07-21：育苗专用 daily change 函数
+import { validateSeedlingDailyChange, normalizeSeedlingChange, applyDailyChangeToSeedling } from "../services/seedlingDailyChange";
 
 const router = Router({ mergeParams: true });
 /**
@@ -50,8 +51,8 @@ router.post("/", (req: Request, res: Response) => {
     if (data) {
       try {
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        const normalized = normalizeChangeData(parsed, (seedling as any).propagation_mode);
-        const validateErr = validateDailyChange(id, normalized);
+        const normalized = normalizeSeedlingChange(parsed, (seedling as any).propagation_mode);
+        const validateErr = validateSeedlingDailyChange(id, normalized);
         if (validateErr) {
           return res.status(400).json({ success: false, error: validateErr });
         }
@@ -96,7 +97,7 @@ router.post("/", (req: Request, res: Response) => {
     if (data) {
       try {
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        const normalized = normalizeChangeData(parsed, (seedling as any).propagation_mode);
+        const normalized = normalizeSeedlingChange(parsed, (seedling as any).propagation_mode);
         applyDailyChangeToSeedling(id, normalized, 1);
       } catch (e) {
         console.error('[seedling] applyDailyChangeToSeedling 失败（JSON 解析或数量更新异常）:', e);
@@ -302,7 +303,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
     // 2026-06-15: 编辑场景上限校验
     // 思路：先临时反向抵消旧值，让主表退回到"没有这条记录"的状态，再校验新值是否越界
     //      校验失败必须把旧值补回去，避免数据不一致
-    // 兼容旧字段名：调用 normalizeChangeData 把旧字段名映射为新字段名
+    // 兼容旧字段名：调用 normalizeSeedlingChange 把旧字段名映射为新字段名
     if (dataJson !== null) {
       try {
         const newData = JSON.parse(dataJson);
@@ -313,8 +314,8 @@ router.put("/:recordId", (req: Request, res: Response) => {
         if (sStmt.step()) sRow = sStmt.getAsObject();
         sStmt.free();
         const propagationMode = sRow?.propagation_mode || 'one_to_one';
-        const newDataNormalized = normalizeChangeData(newData, propagationMode);
-        const oldDataNormalized = normalizeChangeData(oldData, propagationMode);
+        const newDataNormalized = normalizeSeedlingChange(newData, propagationMode);
+        const oldDataNormalized = normalizeSeedlingChange(oldData, propagationMode);
         const hasMeaningfulChange = ['survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount']
           .some(k => Number(oldData[k] ?? 0) !== Number(newData[k] ?? 0));
         if (hasMeaningfulChange) {
@@ -323,7 +324,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
             applyDailyChangeToSeedling(id, oldDataNormalized, -1);
           }
           // 2) 校验新值（用 normalized 数据）
-          const validateErr = validateDailyChange(id, newDataNormalized);
+          const validateErr = validateSeedlingDailyChange(id, newDataNormalized);
           if (validateErr) {
             // 3) 校验失败：旧值还原回去（避免数据不一致）
             if (oldData && Object.keys(oldData).length > 0) {
