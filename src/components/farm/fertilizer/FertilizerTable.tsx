@@ -7,6 +7,7 @@ import React from 'react';
 import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { FertilizerData, getDictItemName } from '@/stores';
 import { parseFertilizationPool, type FertilizationPoolRow } from '@/lib/fertilizerPool';
+import { calculateDilutionWater, calcWaterFromPoolRow } from '@/lib/dilutionWater';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -196,31 +197,35 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
                                 <table className="w-full text-sm">
                                   <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
                                     <tr>
-                                      <th className="px-3 py-2 text-left">#</th>
-                                      <th className="px-3 py-2 text-left">作物</th>
-                                      <th className="px-3 py-2 text-left">来源</th>
-                                      <th className="px-3 py-2 text-left">批号</th>
-                                      <th className="px-3 py-2 text-left">区域</th>
-                                      <th className="px-3 py-2 text-right">用量</th>
-                                      <th className="px-3 py-2 text-left">稀释倍数</th>
-                                      <th className="px-3 py-2 text-left">施肥方式</th>
-                                      <th className="px-3 py-2 text-right">单价</th>
-                                      <th className="px-3 py-2 text-right">小计</th>
+                                      <th className="px-3 py-2 text-center">#</th>
+                                      <th className="px-3 py-2 text-center">作物</th>
+                                      <th className="px-3 py-2 text-center">来源</th>
+                                      <th className="px-3 py-2 text-center">批号</th>
+                                      <th className="px-3 py-2 text-center">区域</th>
+                                      <th className="px-3 py-2 text-center">用量</th>
+                                      <th className="px-3 py-2 text-center">稀释倍数</th>
+                                      <th className="px-3 py-2 text-center">用水量</th>
+                                      <th className="px-3 py-2 text-center">施肥方式</th>
+                                      <th className="px-3 py-2 text-center">单价</th>
+                                      <th className="px-3 py-2 text-center">小计</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
                                     {rows.map((r,i)=>(
                                       <tr key={`${r.type}-${r.id}-${i}`} className="hover:bg-emerald-50/40">
                                         <td className="px-3 py-2 text-center text-gray-500">{i+1}</td>
-                                        <td className="px-3 py-2 text-gray-800 font-medium text-xs">{r.cropName||'-'}</td>
-                                        <td className="px-3 py-2 text-gray-700">{r.type==='planting'?'🌱种植':'🌿育苗'}</td>
-                                        <td className="px-3 py-2 font-mono text-xs text-gray-600">{r.code||'-'}</td>
-                                        <td className="px-3 py-2 text-gray-800 font-medium">{r.area}</td>
-                                        <td className="px-3 py-2 text-right font-bold text-emerald-600">{r.quantity.toLocaleString()} {r.unit}</td>
-                                        <td className="px-3 py-2 text-gray-600">{r.dilutionRatio||'-'}</td>
-                                        <td className="px-3 py-2 text-gray-600">{r.fertilizationMethod?getMethodLabel(r.fertilizationMethod):'-'}</td>
-                                        <td className="px-3 py-2 text-right text-gray-600">{r.unitPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                                        <td className="px-3 py-2 text-right font-bold text-amber-600">{(r.quantity*r.unitPrice).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                                        <td className="px-3 py-2 text-center text-gray-800 font-medium text-xs">{r.cropName||'-'}</td>
+                                        <td className="px-3 py-2 text-center text-gray-700">{r.type==='planting'?'🌱种植':'🌿育苗'}</td>
+                                        <td className="px-3 py-2 text-center font-mono text-xs text-gray-600">{r.code||'-'}</td>
+                                        <td className="px-3 py-2 text-center text-gray-800 font-medium">{r.area}</td>
+                                        <td className="px-3 py-2 text-center font-bold text-emerald-600">{r.quantity.toLocaleString()} {r.unit}</td>
+                                        <td className="px-3 py-2 text-center text-gray-600">{r.dilutionRatio||'-'}</td>
+                                        <td className="px-3 py-2 text-center text-blue-600 font-medium">
+                                          {(() => { const w = calcWaterFromPoolRow(r as any); return w ? `${w.amount.toLocaleString()} ${w.unit}` : '-'; })()}
+                                        </td>
+                                        <td className="px-3 py-2 text-center text-gray-600">{r.fertilizationMethod?getMethodLabel(r.fertilizationMethod):'-'}</td>
+                                        <td className="px-3 py-2 text-center text-gray-600">{r.unitPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                                        <td className="px-3 py-2 text-center font-bold text-amber-600">{(r.quantity*r.unitPrice).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                                       </tr>
                                     ))}
                                   </tbody>

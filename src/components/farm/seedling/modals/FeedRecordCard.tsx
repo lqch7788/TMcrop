@@ -21,6 +21,8 @@ import {
 import { useFertilizerLibraryStore, usePesticideLibraryStore, useDictionaryStore } from '@/stores'
 // 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
 import { FERTILIZER_TYPE_OPTIONS } from '../../../settings/fertilizer-library/constants'
+// 2026-07-21：稀释用水量自动计算
+import { calculateDilutionWater } from '@/lib/dilutionWater'
 
 // 2026-07-15：mode 决定 method 字段对应哪个字典
 // - fertilizer → fertilization_method（施肥方式：滴灌/喷施等）
@@ -354,8 +356,8 @@ export function FeedRecordCard({
             </div>
           )}
 
-          {/* 第 2 行：稀释比例 + 施肥方式 + 备注（2026-07-15：删除稀释方式字段，施用→施肥） */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* 第 2 行：稀释比例 + 用水量(自动) + 施肥方式 + 备注 */}
+          <div className="grid grid-cols-4 gap-2">
             <div>
               <Label className="text-xs text-gray-600 mb-1">
                 稀释比例 {value.dilutionType === 'dry' && <span className="text-gray-400">（干施不需要）</span>}
@@ -376,7 +378,26 @@ export function FeedRecordCard({
                 className="h-8 text-sm border-gray-300 disabled:bg-gray-100"
               />
             </div>
-            <div>
+            {/* 2026-07-21：自动计算稀释用水量（只读） */}
+            {mode === 'fertilizer' && (
+              <div>
+                <Label className="text-xs text-gray-600 mb-1">用水量 <span className="text-gray-400">（自动）</span></Label>
+                {(() => {
+                  const water = calculateDilutionWater(
+                    Number(value.amount) || 0,
+                    value.unit || 'kg',
+                    value.dilution,
+                    value.dilutionType,
+                  );
+                  return (
+                    <div className="h-8 flex items-center px-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-blue-600">
+                      {water ? `${water.amount.toLocaleString()} ${water.unit}` : <span className="text-gray-400">0</span>}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            <div className={mode === 'fertilizer' ? '' : 'col-span-2'}>
               <Label className="text-xs text-gray-600 mb-1">{mode === 'fertilizer' ? '施肥方式' : '使用方法'}</Label>
               <Select
                 value={value.applicationMethod || (methodItems[0]?.dictCode || methodItems[0]?.dict_code || '')}

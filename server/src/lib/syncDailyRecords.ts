@@ -353,27 +353,42 @@ export async function syncFertilizerRecords(
     //   type, id, code, cropName, area, quantity, unit, dilutionRatio,
     //   fertilizationMethod, fertilizerName, unitPrice, ...
     const methodCode = ctx.primaryMethod || '';  // 存 dict_code（让显示层 getDictItemName 翻译）
-    const pool = validItems.map((item) => ({
-      type: ctx.relatedType,                         // 'planting' | 'seedling'
-      id: ctx.relatedId,
-      code: ctx.relatedCode,
-      cropName: ctx.cropName,
-      area: ctx.areaName || '',                      // 用户实际用的"区域"（planting.area_name）
-      quantity: Number(item.amount) || 0,
-      unit: item.unit || 'kg',
-      dilutionRatio: formatDilution(item),
-      fertilizationMethod: methodCode,               // 存 dict_code（显示层翻译）
-      fertilizerName: item.name,
-      fertilizerType: item.category || '',
-      fertilizerCode: item.fertilizerCode || '',
-      specId: '',
-      brandName: item.brandName || '',
-      specBrandName: item.brandName || '',
-      unitPrice: Number(item.unitPrice) || 0,
-      specUnitPrice: Number(item.unitPrice) || 0,
-      specBatchNumber: '',
-      remarks: item.notes || '',
-    }));
+    // 2026-07-21：自动计算稀释用水量（固体→g，液体→ml，水量统一存 L）
+    function calcWater(amount: number, unit: string, dilution: number | undefined, dilutionType: string): { waterAmount: number; waterUnit: string } | null {
+      if (dilutionType === 'dry' || !dilution || dilution <= 0 || !amount || amount <= 0) return null;
+      // 转为基本单位：kg→g（×1000），L→ml（×1000），g/ml 即基本单位
+      const base = unit === 'kg' ? amount * 1000 : unit === 'L' ? amount * 1000 : amount;
+      const waterML = base * dilution;
+      const waterL = Math.round(waterML / 10) / 100;  // ml → L（保留 2 位）
+      return { waterAmount: waterL, waterUnit: 'L' };
+    }
+    const pool = validItems.map((item) => {
+      const water = calcWater(Number(item.amount) || 0, item.unit || 'kg', item.dilution, item.dilutionType);
+      return {
+        type: ctx.relatedType,
+        id: ctx.relatedId,
+        code: ctx.relatedCode,
+        cropName: ctx.cropName,
+        area: ctx.areaName || '',
+        quantity: Number(item.amount) || 0,
+        unit: item.unit || 'kg',
+        dilutionRatio: formatDilution(item),
+        fertilizationMethod: methodCode,
+        fertilizerName: item.name,
+        fertilizerType: item.category || '',
+        fertilizerCode: item.fertilizerCode || '',
+        specId: '',
+        brandName: item.brandName || '',
+        specBrandName: item.brandName || '',
+        unitPrice: Number(item.unitPrice) || 0,
+        specUnitPrice: Number(item.unitPrice) || 0,
+        specBatchNumber: '',
+        remarks: item.notes || '',
+        // 2026-07-21：稀释用水量
+        waterAmount: water?.waterAmount ?? 0,
+        waterUnit: water?.waterUnit ?? '',
+      };
+    });
 
     // 4. 计算汇总字段（取第一个 item）
     const first = validItems[0];
@@ -441,6 +456,62 @@ export async function syncFertilizerRecords(
       if (item.fertilizerCode) {
         adjustFertilizerStock(db, item.fertilizerCode, -(item.amount ?? 0));
       }
+    }
+
+    // 9. 2026-07-21：自动生成稀释用水浇水记录（同步施肥稀释产生的用水量）
+    const dilutionWaterRows = pool.filter((p: any) => p.waterAmount > 0);
+    if (dilutionWaterRows.length > 0) {
+      const totalDilutionWater = dilutionWaterRows.reduce((s: number, p: any) => {
+        const inLiter = p.waterUnit === 'L' ? p.waterAmount : p.waterAmount / 1000;
+        return s + inLiter;
+      }, 0);
+      const firstWaterUnit = dilutionWaterRows[0].waterUnit || 'L';
+      // 取第一个有用水量的肥料名作为关联
+      const primaryFertName = dilutionWaterRows[0].fertilizerName || '';
+      const waterCode = generateWateringCode(db, dateStr);
+      const waterPoolRows = dilutionWaterRows.map((p: any) => ({
+        area: p.area || '',
+        wateringMethod: p.fertilizationMethod || 'drip_irrigation',
+        waterAmount: p.waterAmount,
+        waterUnit: p.waterUnit,
+        sourceFertilizerName: p.fertilizerName,
+        sourceDilutionRatio: p.dilutionRatio,
+        sourceFertilizerQuantity: p.quantity,
+      }));
+      // 用 dailyRecordId + '-dilution' 后缀区分，避免 syncWateringRecords 的 DELETE 误删
+      const dilutionSourceId = `${dailyRecordId}-dilution`;
+      // 先清旧稀释浇水记录（幂等）
+      db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [dilutionSourceId]);
+      db.run(
+        `INSERT INTO watering_records (
+          id, water_code, record_type, fertilizer_record_id,
+          planting_id, planting_code, seedling_id, seedling_code,
+          greenhouse_name, crop_name, crop_names,
+          area_id, area_name,
+          water_pool, total_water, water_unit,
+          water_time, data_source,
+          source_daily_record_id,
+          operator_id, operator_name, description,
+          status, create_time
+        ) VALUES (?, ?, 'fertilizer_dilution', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?, ?, 'completed', ?)`,
+        [
+          waterCode, waterCode, fertilizerCode,
+          ctx.relatedType === 'planting' ? ctx.relatedId : null,
+          ctx.relatedType === 'planting' ? ctx.relatedCode : null,
+          ctx.relatedType === 'seedling' ? ctx.relatedId : null,
+          ctx.relatedType === 'seedling' ? ctx.relatedCode : null,
+          ctx.greenhouseName || '', ctx.cropName || '',
+          ctx.cropName ? JSON.stringify([ctx.cropName]) : null,
+          ctx.areaId || null, ctx.areaName || null,
+          JSON.stringify(waterPoolRows),
+          totalDilutionWater, firstWaterUnit,
+          `${ctx.recordDate} 08:00`,
+          dilutionSourceId,
+          ctx.operatorId || null, ctx.operatorName || null,
+          `施肥稀释用水（${primaryFertName}等${dilutionWaterRows.length}种肥料）`,
+          new Date().toISOString(),
+        ]
+      );
     }
   } catch (err) {
     console.error('[syncFertilizerRecords] 同步失败（不影响主记录）:', (err as Error)?.message || err);
