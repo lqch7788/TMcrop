@@ -2,9 +2,11 @@
  * 育苗管理 — 定植/标签子路由（2026-07-21 提取）
  * 挂载点：/api/seedlings/:id
  */
+import { randomUUID } from "crypto";
 import { Router, Request, Response } from "express";
 import { getDatabase, saveDatabase } from "../db";
-import { queryToObjects } from "../utils/queryHelper";
+import { queryToObjects, execCount } from "../utils/queryHelper";
+import { formatLocalDateISO } from "../utils/dateUtil";
 
 const router = Router({ mergeParams: true });
 /**
