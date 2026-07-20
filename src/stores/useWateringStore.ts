@@ -133,8 +133,7 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
       const url = `/watering${params.toString() ? `?${params}` : ''}`;
       const response: any = await enhancedApiClient.get(url);
       const items = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
-      const normalized = items.map(normalizeWatering);
-      set({ items: normalized, isLoading: false });
+      set({ items: items as WateringData[], isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message || '加载浇水记录失败' });
       throw err;
@@ -144,14 +143,14 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   fetchItemById: async (id: string) => {
     const response: any = await enhancedApiClient.get(`/watering/${id}`);
     const raw = response?.data ?? response;
-    return normalizeWatering(raw);
+    return raw as WateringData;
   },
 
   createItem: async (item: Partial<WateringData>) => {
     // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
     const response: any = await enhancedApiClient.post('/watering', item);
     const raw = response?.data ?? response;
-    const newItem = normalizeWatering(raw);
+    const newItem = raw as WateringData;
     set({ items: [newItem, ...get().items] });
     return newItem;
   },
@@ -160,7 +159,7 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
     // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
     const response: any = await enhancedApiClient.put(`/watering/${id}`, updates);
     const raw = response?.data ?? response;
-    const updated = normalizeWatering(raw);
+    const updated = raw as WateringData;
     set({
       items: get().items.map((it) => (it.id === id ? updated : it)),
     });
