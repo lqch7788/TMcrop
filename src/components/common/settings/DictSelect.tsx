@@ -48,8 +48,8 @@ export function DictSelect({
       <option value="" disabled hidden>
         {placeholder}
       </option>
-      {items.map((item) => (
-        <option key={item.dictCode} value={item.dictCode}>
+      {items.map((item, idx) => (
+        <option key={(item as any).id || `${item.dictCode}-${idx}`} value={item.dictCode}>
           {item.dictLabel}
         </option>
       ))}
