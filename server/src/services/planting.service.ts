@@ -1,9 +1,42 @@
 /**
- * 种植服务
+ * 种植管理 Service 层（2026-07-21 重写）
+ *
+ * 旧版问题：
+ * - 使用错误的列名 created_at/updated_at（实际是 create_time/update_time）
+ * - Date.now() 生成 ID（违反 code-generation-contract-rule）
+ * - 物理 DELETE 而非软删除
+ * - Interface 只有 19 字段，实际表有 50+ 字段
+ *
+ * 新版：委托 plantingRepository + 业务校验 + BusinessError 抛出
  */
+import { z } from 'zod';
+import { getDatabase } from '../db';
+import { plantingRepository, PlantingRow } from '../repositories/planting.repository';
 
-import { getDatabase, saveDatabase } from '../db';
+function nowLocal(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
 
+export class PlantingBusinessError extends Error {
+  code: string;
+  httpStatus: number;
+  constructor(code: string, message: string, httpStatus = 400) {
+    super(message);
+    this.name = 'PlantingBusinessError';
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+export const PlantingErrorCode = {
+  NOT_FOUND: 'PLANTING_NOT_FOUND',
+  INVALID_INPUT: 'PLANTING_INVALID_INPUT',
+  ALREADY_ENDED: 'PLANTING_ALREADY_ENDED',
+} as const;
+
+/** 兼容旧调用方的 Planting 接口（19 字段 ⚠️ 不完整，新代码走 PlantingRow） */
 export interface Planting {
   id: string;
   planting_code: string;
@@ -18,170 +51,94 @@ export interface Planting {
   remarks?: string;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 export class PlantingService {
-  async getPlantings(params: {
-    cropName?: string;
-    greenhouseId?: string;
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ data: Planting[]; total: number }> {
-    const db = getDatabase();
-    const { cropName, greenhouseId, status, startDate, endDate, page = 1, limit = 20 } = params;
-
-    const sql = 'SELECT * FROM plantings WHERE 1=1';
-    const conditions: string[] = [];
-    const queryParams: any[] = [];
-
-    if (cropName) {
-      conditions.push('crop_name LIKE ?');
-      queryParams.push(`%${cropName}%`);
-    }
-    if (greenhouseId) {
-      conditions.push('greenhouse_id = ?');
-      queryParams.push(greenhouseId);
-    }
-    if (status) {
-      conditions.push('status = ?');
-      queryParams.push(status);
-    }
-    if (startDate) {
-      conditions.push('planting_date >= ?');
-      queryParams.push(startDate);
-    }
-    if (endDate) {
-      conditions.push('planting_date <= ?');
-      queryParams.push(endDate);
-    }
-
-    const whereClause = conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : '';
-    const offset = (page - 1) * limit;
-
-    const finalSql = `${sql}${whereClause} ORDER BY planting_date DESC LIMIT ? OFFSET ?`;
-
-    const stmt = db.prepare(finalSql);
-    stmt.bind([...queryParams, limit, offset]);
-
-    const items: Planting[] = [];
-    while (stmt.step()) {
-      items.push(stmt.getAsObject() as unknown as Planting);
-    }
-    stmt.free();
-
-    const countSql = `SELECT COUNT(*) as total FROM plantings WHERE 1=1${whereClause}`;
-    const countStmt = db.prepare(countSql);
-    countStmt.bind(queryParams);
-    countStmt.step();
-    const countResult = countStmt.getAsObject();
-    countStmt.free();
-
-    return {
-      data: items,
-      total: countResult.total as number,
-    };
+  findAll(filters: Record<string, string | undefined>, page: number, pageSize: number) {
+    return plantingRepository.findAll(filters, page, pageSize);
   }
 
+  findById(id: string): PlantingRow | null {
+    return plantingRepository.findById(id);
+  }
+
+  findBySourceId(sourceId: string): PlantingRow[] {
+    return plantingRepository.findBySourceId(sourceId);
+  }
+
+  /** 校验存在且未结束 */
+  requireActive(id: string): PlantingRow {
+    const p = plantingRepository.findById(id);
+    if (!p) throw new PlantingBusinessError(PlantingErrorCode.NOT_FOUND, '种植记录不存在', 404);
+    if (p.end_time) throw new PlantingBusinessError(PlantingErrorCode.ALREADY_ENDED, '种植已结束，无法操作', 400);
+    return p;
+  }
+
+  /** 兼容旧调用方 getPlantings */
+  async getPlantings(params: Record<string, any> = {}): Promise<{ data: Planting[]; total: number }> {
+    const { rows, total } = plantingRepository.findAll(
+      params, Number(params.page) || 1, Number(params.limit) || 20,
+    );
+    return { data: rows as unknown as Planting[], total };
+  }
+
+  /** 兼容旧调用方 getById */
   async getById(id: string): Promise<Planting | null> {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM plantings WHERE id = ?');
-    stmt.bind([id]);
-
-    if (stmt.step()) {
-      const result = stmt.getAsObject() as unknown as Planting;
-      stmt.free();
-      return result;
-    }
-    stmt.free();
-    return null;
+    return plantingRepository.findById(id) as unknown as Planting | null;
   }
 
+  /** 兼容旧调用方 create — 已弃用，新路由不要调此方法 */
   async create(planting: Partial<Planting>): Promise<string> {
     const db = getDatabase();
-    const now = new Date().toISOString();
-    const id = planting.id || `plant_${Date.now()}`;
-
-    db.run(`
-      INSERT INTO plantings (
-        id, planting_code, crop_name, crop_variety, greenhouse_id, greenhouse_name,
-        source_id, planting_date, expected_harvest_date, status, remarks,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      id,
-      planting.planting_code || `PL${Date.now()}`,
-      planting.crop_name || '',
-      planting.crop_variety || '',
-      planting.greenhouse_id || '',
-      planting.greenhouse_name || '',
-      planting.source_id || '',
-      planting.planting_date || now.split('T')[0],
-      planting.expected_harvest_date || null,
-      planting.status || 'active',
-      planting.remarks || '',
-      now,
-      now,
-    ]);
-
-    saveDatabase();
+    const now = nowLocal();
+    const id = `pl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const code = planting.planting_code || `PL${Date.now()}`;
+    db.run(
+      `INSERT INTO plantings (id, planting_code, crop_name, crop_variety, greenhouse_id, greenhouse_name,
+        source_id, planting_date, expected_harvest_date, status, remarks, create_time, update_time)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, code, planting.crop_name || '', planting.crop_variety || '', planting.greenhouse_id || '',
+       planting.greenhouse_name || '', planting.source_id || '', planting.planting_date || now.split(' ')[0],
+       planting.expected_harvest_date || null, planting.status || 'active', planting.remarks || '', now, now],
+    );
     return id;
   }
 
+  /** 兼容旧调用方 update — 已弃用 */
   async update(id: string, updates: Partial<Planting>): Promise<boolean> {
     const db = getDatabase();
-    const now = new Date().toISOString();
-
+    const now = nowLocal();
     const fields: string[] = [];
     const values: any[] = [];
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (key !== 'id' && key !== 'created_at') {
-        fields.push(`${key} = ?`);
-        values.push(value);
-      }
-    });
-
-    fields.push('updated_at = ?');
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'id' || key === 'create_time' || key === 'created_at') continue;
+      const col = key === 'updated_at' ? 'update_time' : key;
+      fields.push(`${col} = ?`);
+      values.push(value);
+    }
+    fields.push('update_time = ?');
     values.push(now);
     values.push(id);
-
     db.run(`UPDATE plantings SET ${fields.join(', ')} WHERE id = ?`, values);
-    saveDatabase();
     return true;
   }
 
+  /** 兼容旧调用方 delete — 已弃用，使用软删除 */
   async delete(id: string): Promise<boolean> {
-    const db = getDatabase();
-    db.run('DELETE FROM plantings WHERE id = ?', [id]);
-    saveDatabase();
+    plantingRepository.softDelete(id, nowLocal());
     return true;
   }
 }
 
 export const plantingService = new PlantingService();
 
-// ============================================================
-// V2 改造: Zod 校验 schema + 工具函数
-// 任务 6: origin_path 互斥校验 (direct_from_seed 必须填 source_id)
-// V1.1 现状约束: plantings 表无 seedling_batch_id 字段, via_seedling 路径暂不强校验
-// ============================================================
-import { z } from 'zod';
-
-/**
- * 种植创建请求 Zod schema
- * - origin_path: 来源路径 (新增字段, 与 db origin_path 列对应)
- * - source_id: 种源 ID, 当 origin_path=direct_from_seed 时必填
- * - via_seedling 路径暂不强校验 (V1.1 现状: 无 seedling_batch_id 字段)
- */
+// ========== Zod Schema（保留旧版兼容） ==========
 export const CreatePlantingSchema = z.object({
-  // 2026-06-29: Zod v4 移除 errorMap，改用 message 字段
   origin_path: z.enum(['direct_from_seed', 'via_seedling'], {
     message: '来源路径必填 (direct_from_seed 或 via_seedling)',
   }),
-  source_id: z.string().optional(), // 强校验由 .refine 决定
+  source_id: z.string().optional(),
   planting_code: z.string().optional(),
   source_type: z.string().optional(),
   source_name: z.string().optional(),
@@ -193,16 +150,9 @@ export const CreatePlantingSchema = z.object({
   planting_quantity: z.number().int().nonnegative().optional(),
 }).refine(
   (data) => data.origin_path === 'direct_from_seed' ? !!data.source_id : true,
-  {
-    message: 'direct_from_seed 必须填 source_id (种源)',
-    path: ['source_id'],
-  },
+  { message: 'direct_from_seed 必须填 source_id (种源)', path: ['source_id'] },
 );
 
-/**
- * 校验并解析种植创建请求
- * @throws ZodError 校验失败
- */
 export function validateCreatePlanting(input: unknown) {
   return CreatePlantingSchema.parse(input);
 }
