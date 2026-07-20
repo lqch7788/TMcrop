@@ -1991,6 +1991,9 @@ router.post('/:id/harvest-records', async (req, res) => {
       })
       if (result?.circulationId) generatedCircId = result.circulationId
     }
+    // 2026-07-21 修复：executeCirculation 在事务外执行（内部有自己的 BEGIN/COMMIT）。
+    // 如果后续 INSERT 失败 → ROLLBACK，circulation 已提交不可回滚。
+    // TODO: 重构 executeCirculation 支持外部事务传入，消除此不一致窗口。
 
     db.exec('BEGIN')
     try {

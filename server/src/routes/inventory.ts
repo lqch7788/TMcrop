@@ -722,6 +722,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const freezeDate = formatLocalDateYYYYMMDD(new Date());
 
+    db.exec('BEGIN');  // 2026-07-21 修复：4 步操作加事务包裹（防半成品数据）
     try {
       // 4a. INSERT inventory_freeze
       db.run(`
@@ -791,6 +792,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
         });
       } catch (e) { console.error('[inventory] writeFlowLog 失败:', (e as any)?.message || e); }
 
+      db.exec('COMMIT');  // 2026-07-21 修复：事务提交
       saveDatabase();
 
       res.json({
@@ -811,6 +813,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
         },
       });
     } catch (innerErr: any) {
+      try { db.exec('ROLLBACK'); } catch {}  // 2026-07-21 修复：事务回滚
       console.error('[POST /inventory/freeze] 事务失败:', innerErr);
       return res.status(500).json({ success: false, error: innerErr?.message || '冻结失败' });
     }
@@ -866,6 +869,7 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const unfreezeDate = formatLocalDateYYYYMMDD(new Date());
 
+    db.exec('BEGIN');  // 2026-07-21 修复：3 步操作加事务包裹
     try {
       // 3a. 更新冻结记录
       const newUsed = Number(freeze.used_quantity || 0) + unfreezeQty;
@@ -905,6 +909,7 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
         now,
       ]);
 
+      db.exec('COMMIT');  // 2026-07-21 修复：事务提交
       saveDatabase();
 
       res.json({
@@ -918,6 +923,7 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
         },
       });
     } catch (innerErr: any) {
+      try { db.exec('ROLLBACK'); } catch {}  // 2026-07-21 修复：事务回滚
       console.error('[POST /inventory/unfreeze] 事务失败:', innerErr);
       return res.status(500).json({ success: false, error: innerErr?.message || '解冻失败' });
     }

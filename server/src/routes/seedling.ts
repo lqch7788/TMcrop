@@ -1276,7 +1276,7 @@ router.put('/:id', (req: Request, res: Response) => {
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
               [delta, now, old.source_id]);
             // 同步更新 source_deducted_quantity 让 DELETE 时能正确归还
-            const newDeducted = (Number(old.source_deducted_quantity) || 0) + delta;
+            const newDeducted = (Number(old.sourceDeductedQuantity) || 0) + delta;  // 2026-07-21 修复：queryToObjects 已转 camelCase，读 snake_case 返回 undefined → NaN
             db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted, id]);
           }
         }
