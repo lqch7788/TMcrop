@@ -427,6 +427,8 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
   const quantity = input.quantity ?? 0
   const circulationDate = formatLocalDateISO()
 
+  db.exec('BEGIN');  // 2026-07-21 修复：UPDATE + INSERT 加事务包裹
+  try {
   db.run(`UPDATE seed_sources SET remaining_quantity = remaining_quantity + ? WHERE id = ?`, [quantity, input.parentSourceId])
 
   db.run(`
@@ -434,6 +436,11 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes)
     VALUES (?, 'QUANTITY', ?, ?, ?, ?, ?, ?, ?, ?)
   `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit ?? null, circulationDate, input.operatorId ?? null, input.notes ?? null])
+  db.exec('COMMIT');
+  } catch (e) {
+    try { db.exec('ROLLBACK'); } catch {}
+    throw e;
+  }
 
   // 2026-06-19: 写 material_flow_log（数量回填到原种源）
   try {
