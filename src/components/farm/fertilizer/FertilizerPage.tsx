@@ -1,25 +1,34 @@
 /**
- * 施肥管理主页面组件
- * 布局：PageHeader → FilterBar → IotIndicator → StatsBar → ActionBar → Table → StatsPanel → Modals
- * 所有数据通过 useFertilizerStore 管理
+ * 水肥管理主页面组件（2026-07-20 升级）
+ * Tab 系统：施肥记录 | 浇水记录
+ * 布局：PageHeader → Tabs → [Tab1: 施肥原有结构 | Tab2: 浇水结构]
+ * 施肥数据通过 useFertilizerStore；浇水数据通过 useWateringStore
+ * 设计文档：docs/superpowers/specs/2026-07-20-water-fertilizer-design.md §8
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Button, DeleteConfirmModal } from '@/components/ui';
+import { Button, DeleteConfirmModal, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Sprout } from 'lucide-react';
-import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
+import { useFertilizerStore, FertilizerData, useWateringStore, WateringData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
 import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
+import WaterFilter from './WaterFilter';
+import { WaterTable } from './WaterTable';
+import WaterAddModal from './WaterAddModal';
+import WaterEditModal from './WaterEditModal';
+import WaterDetailModal from './WaterDetailModal';
+import WaterExportModal from './WaterExportModal';
 import { todayLocal } from '@/lib/dateUtils';
-import { exportXlsx } from '@/services/exporters';
+import { exportXlsx, exportWord } from '@/services/exporters';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
 
 type OperationMode = 'normal' | 'delete' | 'export';
+type ActiveTab = 'fertilizer' | 'watering';
 
 export default function FertilizerPage() {
   // ========== Store ==========
@@ -29,6 +38,14 @@ export default function FertilizerPage() {
   // 2026-06-06: 监听 store 错误并弹 Toast（不修改 store 内部实现）
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
+
+  // 2026-07-20：浇水 Store（与施肥独立）
+  const waterStore = useWateringStore();
+  const { items: waterItems, isLoading: waterLoading, error: waterError, clearError: clearWaterError } = waterStore;
+  const lastShownWaterErrorRef = useRef<string | null>(null);
+
+  // 2026-07-20：Tab 状态 + URL 深链状态
+  const [activeTab, setActiveTab] = useState<ActiveTab>('fertilizer');
 
   // ========== 本地状态 ==========
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -48,6 +65,18 @@ export default function FertilizerPage() {
   //   - 导出完成后重置 exportMode + operationMode + selectedIds（避免复选框残留）
   const [exportMode, setExportMode] = useState(false);
 
+  // 2026-07-20：浇水独立状态（与施肥解耦，tab 切换不互相干扰）
+  const [waterFilters, setWaterFilters] = useState<Record<string, string>>({});
+  const [waterSelectedIds, setWaterSelectedIds] = useState<string[]>([]);
+  const [waterOperationMode, setWaterOperationMode] = useState<OperationMode>('normal');
+  const [waterExportMode, setWaterExportMode] = useState(false);
+  // 浇水模态框
+  const [showWaterAddModal, setShowWaterAddModal] = useState(false);
+  const [waterEditTarget, setWaterEditTarget] = useState<WateringData | null>(null);
+  const [waterDetailTarget, setWaterDetailTarget] = useState<WateringData | null>(null);
+  const [showWaterDeleteModal, setShowWaterDeleteModal] = useState(false);
+  const [showWaterExportModal, setShowWaterExportModal] = useState(false);
+
 
 
   // ========== 数据加载 ==========
@@ -64,6 +93,25 @@ export default function FertilizerPage() {
       clearError();
     }
   }, [error, toast, clearError]);
+
+  // 2026-07-20：监听浇水 store.error（与施肥对称风格）
+  useEffect(() => {
+    if (waterError && waterError !== lastShownWaterErrorRef.current) {
+      lastShownWaterErrorRef.current = waterError;
+      toast.error(`加载浇水数据失败：${waterError}`);
+      clearWaterError();
+    }
+  }, [waterError, toast, clearWaterError]);
+
+  // 2026-07-20：URL 深链 — ?tab=watering 自动切到浇水 Tab（参照 ?new=1 模式，操作后 replaceState 清理）
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'watering') {
+      setActiveTab('watering');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // ========== IoT设备状态（从施肥记录中提取auto_iot记录） ==========
   const iotDevices = useMemo<IotDeviceStatus[]>(() => {
@@ -277,6 +325,17 @@ export default function FertilizerPage() {
     }
   }, [items, selectedIds, toast]);
 
+  // 2026-07-20：Tab 切换（activeTab 变化时的统一重置入口；保留各自 filters 不丢）
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab);
+    setSelectedIds([]);
+    setWaterSelectedIds([]);
+    setOperationMode('normal');
+    setWaterOperationMode('normal');
+    setExportMode(false);
+    setWaterExportMode(false);
+  }, []);
+
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
@@ -288,10 +347,165 @@ export default function FertilizerPage() {
     store.fetchItems(filters);
   }, [filters, store]);
 
+  // ========== 2026-07-20：浇水 handlers（与施肥解耦） ==========
+
+  // 浇水筛选/重置
+  const handleWaterSearch = useCallback(() => {
+    waterStore.fetchItems(waterFilters);
+    setWaterSelectedIds([]);
+    setWaterOperationMode('normal');
+  }, [waterStore, waterFilters]);
+
+  const handleWaterReset = useCallback(() => {
+    setWaterFilters({});
+    waterStore.fetchItems({});
+    setWaterSelectedIds([]);
+    setWaterOperationMode('normal');
+  }, [waterStore]);
+
+  // 浇水 CRUD
+  const handleWaterAdd = useCallback(() => setShowWaterAddModal(true), []);
+  const handleWaterEdit = useCallback((r: WateringData) => setWaterEditTarget(r), []);
+  const handleWaterDetail = useCallback((r: WateringData) => setWaterDetailTarget(r), []);
+
+  const handleWaterDelete = useCallback((id: string) => {
+    setWaterSelectedIds([id]);
+    setShowWaterDeleteModal(true);
+  }, []);
+
+  // 浇水批量删除（toggle 模式）
+  const handleWaterBatchDeleteMode = useCallback(() => {
+    setWaterOperationMode((prev) => (prev === 'delete' ? 'normal' : 'delete'));
+    setWaterSelectedIds([]);
+  }, []);
+
+  // 浇水批量删除确认（弹窗回调）
+  const handleWaterBatchDelete = useCallback(() => {
+    if (waterSelectedIds.length === 0) return;
+    setShowWaterDeleteModal(true);
+  }, [waterSelectedIds]);
+
+  // 浇水删除确认 — 走 store.deleteItems（deleted/skipped 统计）
+  const handleWaterDeleteConfirm = useCallback(async () => {
+    const ids = [...waterSelectedIds];
+    if (ids.length === 0) return;
+    setShowWaterDeleteModal(false);
+    try {
+      const { deleted, skipped } = await waterStore.deleteItems(ids);
+      if (skipped > 0) {
+        toast.success(`已删除 ${deleted} 条，跳过 ${skipped} 条受保护的浇水记录`);
+      } else {
+        toast.success(`已删除 ${deleted} 条浇水记录`);
+      }
+      setWaterSelectedIds([]);
+      setWaterOperationMode('normal');
+    } catch (err: any) {
+      setWaterSelectedIds([]);
+      setWaterOperationMode('normal');
+      toast.error(`删除失败：${err?.message || '未知错误'}`);
+    }
+  }, [waterSelectedIds, waterStore, toast]);
+
+  // 浇水导出（2 步流程，对齐施肥/FertilizerExportModal）
+  const handleWaterExport = useCallback(() => {
+    if (waterItems.length === 0) {
+      toast.warning('当前筛选条件下没有可导出的浇水记录');
+      return;
+    }
+    setWaterOperationMode('export');
+    setWaterExportMode(true);
+    setWaterSelectedIds([]);
+  }, [waterItems.length, toast]);
+
+  const handleWaterConfirmExport = useCallback(() => {
+    if (waterSelectedIds.length === 0) {
+      toast.warning('请先勾选要导出的浇水记录');
+      return;
+    }
+    setShowWaterExportModal(true);
+  }, [waterSelectedIds, toast]);
+
+  const handleWaterCancelExport = useCallback(() => {
+    setWaterExportMode(false);
+    setWaterOperationMode('normal');
+    setWaterSelectedIds([]);
+  }, []);
+
+  // 浇水导出确认（xlsx / csv / word 三格式）
+  const handleWaterExportConfirm = useCallback(async (format: 'csv' | 'xlsx' | 'word') => {
+    try {
+      const toExport = waterSelectedIds.length > 0
+        ? waterItems.filter((it) => waterSelectedIds.includes(it.id))
+        : waterItems;
+      if (toExport.length === 0) {
+        toast.error('没有可导出的数据');
+        return;
+      }
+      const rows = toExport.map((it) => ({
+        浇水编号: it.waterCode || '',
+        浇水时间: it.waterTime || '',
+        作物: it.cropName || '',
+        温室: it.greenhouseName || '',
+        区域: it.areaName || '',
+        总用水量: `${it.totalWater || 0} ${it.waterUnit || 'L'}`,
+        操作员: it.operatorName || '',
+        来源: it.recordType === 'manual'
+          ? '手动录入'
+          : it.recordType === 'fertilizer_dilution'
+            ? '施肥稀释'
+            : '每日记录同步',
+      }));
+      const filename = `浇水记录_${todayLocal()}`;
+      const headers = Object.keys(rows[0] || {});
+      if (format === 'csv') {
+        const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
+        const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${filename}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      } else if (format === 'xlsx') {
+        await exportXlsx({ filename: `${filename}.xlsx`, headers, rows });
+      } else if (format === 'word') {
+        await exportWord({ filename: `${filename}.doc`, headers, rows: rows as Array<Record<string, unknown>> });
+      }
+      toast.success(`已导出 ${toExport.length} 条浇水记录`);
+    } catch (err: any) {
+      console.error('[water export] 失败:', err);
+      toast.error(`导出失败：${err?.message || '未知错误'}`);
+    } finally {
+      setShowWaterExportModal(false);
+      setWaterSelectedIds([]);
+      setWaterOperationMode('normal');
+      setWaterExportMode(false);
+    }
+  }, [waterItems, waterSelectedIds, toast]);
+
+  // 浇水保存后回调
+  const handleWaterAddSaved = useCallback(() => {
+    setShowWaterAddModal(false);
+    waterStore.fetchItems(waterFilters);
+  }, [waterFilters, waterStore]);
+
+  const handleWaterEditSaved = useCallback(() => {
+    setWaterEditTarget(null);
+    waterStore.fetchItems(waterFilters);
+  }, [waterFilters, waterStore]);
+
+  // 2026-07-20：浇水数据懒加载 — 切到浇水 tab（含 URL 深链 ?tab=watering）时按当前筛选拉一次
+  useEffect(() => {
+    if (activeTab === 'watering') {
+      waterStore.fetchItems(waterFilters);
+    }
+    // 仅依赖 activeTab；筛选变化由 handleWaterSearch / handleWaterReset / 保存回调主动触发
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   // ========== 渲染 ==========
   return (
     <div className="space-y-6">
-      {/* PageHeader */}
+      {/* PageHeader — 2026-07-20：标题改为"水肥管理"（保留 Sprout 图标） */}
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -299,92 +513,177 @@ export default function FertilizerPage() {
               <Sprout className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">施肥管理</h1>
-              <p className="text-gray-500">管理施肥记录、追踪肥料使用和成本分析</p>
+              <h1 className="text-2xl font-bold text-gray-900">水肥管理</h1>
+              <p className="text-gray-500">管理施肥记录、浇水记录、肥料使用和水费追踪</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2026-07-05: 顶部统计卡片已删除（user 要求） */}
+      {/* 2026-07-20：Tab 系统 — 施肥记录 | 浇水记录 */}
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as ActiveTab)}>
+        <TabsList>
+          <TabsTrigger value="fertilizer">施肥记录</TabsTrigger>
+          <TabsTrigger value="watering">浇水记录</TabsTrigger>
+        </TabsList>
 
-      {/* FilterBar */}
-      <FertilizerFilter
-        filters={filters}
-        onChange={setFilters}
-        onSearch={handleSearch}
-        onReset={handleReset}
-      />
+        {/* ========== Tab1：施肥记录（原有结构） ========== */}
+        <TabsContent value="fertilizer" className="space-y-6">
+          {/* 2026-07-05: 顶部统计卡片已删除（user 要求） */}
 
-      {/* 批量删除操作栏 - 已移除：2026-06-21 改为在 FertilizerTable 工具栏原"批量删除"位置直接显示确认/取消按钮 */}
+          {/* FilterBar */}
+          <FertilizerFilter
+            filters={filters}
+            onChange={setFilters}
+            onSearch={handleSearch}
+            onReset={handleReset}
+          />
 
-      {/* 错误提示 */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-          加载出错：{error}
-        </div>
-      )}
+          {/* 批量删除操作栏 - 已移除：2026-06-21 改为在 FertilizerTable 工具栏原"批量删除"位置直接显示确认/取消按钮 */}
 
-      {/* Table */}
-      <FertilizerTable
-        data={items}
-        isLoading={isLoading}
-        operationMode={operationMode}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        onDetail={handleDetail}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onAdd={handleAdd}
-        onBatchDeleteMode={handleBatchDeleteMode}
-        onConfirmBatchDelete={handleBatchDelete}
-        onCancelBatchDelete={() => { setOperationMode('normal'); setSelectedIds([]); }}
-        onExportMode={handleExport}
-        // 2026-07-19 P2：传 exportMode 相关 props 完整实现 2 步流程
-        exportMode={exportMode}
-        onConfirmExport={handleConfirmExport}
-        onCancelExport={handleCancelExport}
-        iotDevices={iotDevices}
-        iotLoading={isLoading}
-      />
+          {/* 错误提示 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+              加载出错：{error}
+            </div>
+          )}
 
-      {/* Modals */}
-      {showAddModal && (
-        <FertilizerAddModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSaved={handleAddSaved}
-        />
-      )}
-      {editTarget && (
-        <FertilizerEditModal
-          isOpen={!!editTarget}
-          record={editTarget}
-          onClose={() => setEditTarget(null)}
-          onSaved={handleEditSaved}
-        />
-      )}
-      {detailTarget && (
-        <FertilizerDetailModal
-          isOpen={!!detailTarget}
-          record={detailTarget}
-          onClose={() => setDetailTarget(null)}
-        />
-      )}
-      <FertilizerExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onConfirm={handleExportConfirm}
-        // 2026-07-19 P2：prop 名 rowCount → selectedCount 对齐通用 ExportFormatModal 接口
-        selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length}
-      />
-      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录一致） */}
-      <DeleteConfirmModal
-        isOpen={showDeleteModal}
-        selectedCount={selectedIds.length}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-      />
+          {/* Table */}
+          <FertilizerTable
+            data={items}
+            isLoading={isLoading}
+            operationMode={operationMode}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onDetail={handleDetail}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAdd={handleAdd}
+            onBatchDeleteMode={handleBatchDeleteMode}
+            onConfirmBatchDelete={handleBatchDelete}
+            onCancelBatchDelete={() => { setOperationMode('normal'); setSelectedIds([]); }}
+            onExportMode={handleExport}
+            // 2026-07-19 P2：传 exportMode 相关 props 完整实现 2 步流程
+            exportMode={exportMode}
+            onConfirmExport={handleConfirmExport}
+            onCancelExport={handleCancelExport}
+            iotDevices={iotDevices}
+            iotLoading={isLoading}
+          />
+
+          {/* 施肥 Modals */}
+          {showAddModal && (
+            <FertilizerAddModal
+              isOpen={showAddModal}
+              onClose={() => setShowAddModal(false)}
+              onSaved={handleAddSaved}
+            />
+          )}
+          {editTarget && (
+            <FertilizerEditModal
+              isOpen={!!editTarget}
+              record={editTarget}
+              onClose={() => setEditTarget(null)}
+              onSaved={handleEditSaved}
+            />
+          )}
+          {detailTarget && (
+            <FertilizerDetailModal
+              isOpen={!!detailTarget}
+              record={detailTarget}
+              onClose={() => setDetailTarget(null)}
+            />
+          )}
+          <FertilizerExportModal
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            onConfirm={handleExportConfirm}
+            // 2026-07-19 P2：prop 名 rowCount → selectedCount 对齐通用 ExportFormatModal 接口
+            selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length}
+          />
+          {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录一致） */}
+          <DeleteConfirmModal
+            isOpen={showDeleteModal}
+            selectedCount={selectedIds.length}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={handleDeleteConfirm}
+          />
+        </TabsContent>
+
+        {/* ========== Tab2：浇水记录（2026-07-20 新增） ========== */}
+        <TabsContent value="watering" className="space-y-6">
+          {/* 浇水筛选器 */}
+          <WaterFilter
+            filters={waterFilters}
+            onChange={setWaterFilters}
+            onSearch={handleWaterSearch}
+            onReset={handleWaterReset}
+          />
+
+          {/* 浇水错误提示 */}
+          {waterError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+              加载出错：{waterError}
+            </div>
+          )}
+
+          {/* 浇水表格 */}
+          <WaterTable
+            data={waterItems}
+            isLoading={waterLoading}
+            selectedIds={waterSelectedIds}
+            onSelectionChange={setWaterSelectedIds}
+            onDetail={handleWaterDetail}
+            onEdit={handleWaterEdit}
+            onDelete={handleWaterDelete}
+            onAdd={handleWaterAdd}
+            onBatchDeleteMode={handleWaterBatchDeleteMode}
+            onConfirmBatchDelete={handleWaterBatchDelete}
+            onCancelBatchDelete={() => { setWaterOperationMode('normal'); setWaterSelectedIds([]); }}
+            onExportMode={handleWaterExport}
+            exportMode={waterExportMode}
+            onConfirmExport={handleWaterConfirmExport}
+            onCancelExport={handleWaterCancelExport}
+          />
+
+          {/* 浇水 Modals */}
+          {showWaterAddModal && (
+            <WaterAddModal
+              isOpen={showWaterAddModal}
+              onClose={() => setShowWaterAddModal(false)}
+              onSaved={handleWaterAddSaved}
+            />
+          )}
+          {waterEditTarget && (
+            <WaterEditModal
+              isOpen={!!waterEditTarget}
+              record={waterEditTarget}
+              onClose={() => setWaterEditTarget(null)}
+              onSaved={handleWaterEditSaved}
+            />
+          )}
+          {waterDetailTarget && (
+            <WaterDetailModal
+              isOpen={!!waterDetailTarget}
+              record={waterDetailTarget}
+              onClose={() => setWaterDetailTarget(null)}
+            />
+          )}
+          <WaterExportModal
+            isOpen={showWaterExportModal}
+            onClose={() => setShowWaterExportModal(false)}
+            selectedCount={waterSelectedIds.length > 0 ? waterSelectedIds.length : waterItems.length}
+            onConfirm={handleWaterExportConfirm}
+          />
+          {/* 浇水删除确认（与施肥一致用 DeleteConfirmModal） */}
+          <DeleteConfirmModal
+            isOpen={showWaterDeleteModal}
+            selectedCount={waterSelectedIds.length}
+            onClose={() => setShowWaterDeleteModal(false)}
+            onConfirm={handleWaterDeleteConfirm}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
