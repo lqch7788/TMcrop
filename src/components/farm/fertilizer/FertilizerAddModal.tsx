@@ -81,16 +81,11 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       !kw || (s.seedlingCode||'').toLowerCase().includes(kw) || (s.cropName||'').toLowerCase().includes(kw) || (s.siteName||'').toLowerCase().includes(kw));
   }, [areaTab, areaSearch, plantingStore.items, seedlingStore.items]);
 
-  // 添加区域（同作物校验）
+  // 添加区域（2026-07-20：取消同作物限制，支持跨作物批量施肥）
   const addArea = useCallback((item: any) => {
     const area: SelectedArea = areaTab === 'planting'
       ? { type:'planting', id:item.id, code:item.plantCode||item.code, cropName:item.cropName, area:item.rootName||item.areaName, greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName }
       : { type:'seedling', id:item.id, code:item.seedlingCode||item.code, cropName:item.cropName, area:item.siteName||'育苗区', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName||item.greenhouseName };
-    const existingCrop = selectedAreas[0]?.cropName;
-    if (existingCrop && area.cropName !== existingCrop) {
-      showAlert(`所选区域作物为「${area.cropName}」，与已选「${existingCrop}」不一致。同一次施肥只能针对同一作物。`);
-      return;
-    }
     if (selectedAreas.some((a) => a.id === area.id)) return;
     setSelectedAreas((prev) => [...prev, area]);
     if (!form.greenhouseName && area.greenhouseName) setForm((f) => ({ ...f, greenhouseName: area.greenhouseName }));
@@ -160,11 +155,14 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       const totalCost = poolRows.reduce((s, r) => s + Number(r.quantity) * Number(r.unitPrice), 0);
       const primaryArea = selectedAreas[0];
       const primaryFert = fertilizerPool[0];
+      // 2026-07-20：汇总所有作物名（支持跨作物批量施肥）
+      const allCropNames = [...new Set(selectedAreas.map(a => a.cropName).filter(Boolean))];
 
       await store.createItem({
         fertilizerCode: fertilizerCode || undefined,
         fertilizeTime: form.fertilizeTime,
         cropName: primaryArea.cropName,
+        cropNames: allCropNames.length > 0 ? JSON.stringify(allCropNames) : undefined,
         greenhouseName: gh || (areaTab==='seedling'?'育苗温室':selectedAreas[0]?.area||''),
         greenhouseId: primaryArea.greenhouseId,
         areaName: primaryArea.area,
@@ -198,8 +196,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
     }
   };
 
-  const cropName = selectedAreas[0]?.cropName || '';
-
+  // 2026-07-20：已支持多作物，不再限制单作物
   return (
     <UnifiedModal isOpen={isOpen} onClose={onClose} title="新增施肥记录" size="xxxl" showFooter={false}>
       <div className="flex flex-col" style={{ maxHeight: '75vh' }}>
@@ -237,8 +234,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
 
         {/* 关联业务 → 选择区域 */}
         <div>
-          <h3 className="text-sm font-bold text-gray-900 mb-3">📍 施肥区域（多选，必须同一作物）</h3>
-          {cropName && <p className="text-xs text-emerald-600 mb-2">🌱 当前作物：{cropName}</p>}
+          <h3 className="text-sm font-bold text-gray-900 mb-3">📍 施肥区域（多选，支持不同作物不同区域）</h3>
           <div className="relative" ref={areaRef}>
             <div className="flex items-center gap-2 mb-2">
               <TabsList selectedValue={areaTab} onValueChange={(v) => setAreaTab(v as 'planting'|'seedling')}>

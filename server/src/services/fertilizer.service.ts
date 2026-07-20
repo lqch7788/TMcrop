@@ -229,6 +229,8 @@ const createRecordSchema = z.object({
   fertilizerId: z.string().nullish(),
   // 2026-07-12：施肥区域池（JSON 字符串，每条独立 [区域, 用量, 单位, 稀释倍数]）
   fertilizationPool: z.string().nullish(),
+  // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+  cropNames: z.string().nullish(),
 });
 
 /** IoT ingest 单条记录 schema（H3：补业务校验） */
@@ -531,6 +533,8 @@ export class FertilizerService {
         greenhouse_name: data.greenhouseName,
         area_name: data.areaName ?? null,
         crop_name: data.cropName,
+        // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+        crop_names: data.cropNames ?? null,
         crop_variety: data.cropVariety ?? null,
         fertilizer_name: data.fertilizerName,
         // 2026-07-12：fertilizerType 已不再必填；null/undefined 转为 '' 兼容 NOT NULL
@@ -887,6 +891,7 @@ export class FertilizerService {
           greenhouse_name: r.greenhouseName,
           area_name: r.areaName ?? null,
           crop_name: r.cropName,
+          crop_names: null,  // IoT 记录不涉及多作物
           crop_variety: null,
           fertilizer_name: r.fertilizerName,
           fertilizer_type: r.fertilizerType ?? '',

@@ -1,27 +1,18 @@
 /**
- * XLSX 导出工具（2026-07-10 P1-1）
- * 抽自 7 个 Page 的 handleConfirmExport 中的 xlsx/xls 分支（保留原有行为）。
- *
- * 保留行为说明（P2-5 待修）：
- * - 当前 MIME 用 `application/vnd.ms-excel;charset=utf-8`，扩展名 `.xls`
- * - 实际内容是 HTML 表格（Excel 可打开但 Chrome 会报警"格式与扩展名不符"）
- * - P2-5 修复目标：改用真正的 xlsx（xlsx 库写二进制 .xlsx）或改 .csv
- *
- * 本文件保留原有"HTML 假装 xls"行为，避免破坏现有功能。
+ * XLSX 导出工具（2026-07-20 重构）
+ * 改为使用 SheetJS (xlsx) 库生成真正的 .xlsx 二进制文件
+ * 解决旧版 HTML 伪装 xls 导致 Excel 打不开的 bug
  */
 
 import { triggerDownloadLikeCsv } from './shared';
 
 export interface ExportXlsxOptions {
-  filename: string;            // 含扩展名（通常是 .xls）
+  filename: string;
   headers: string[];
   rows: Array<Record<string, unknown>>;
 }
 
 // 2026-07-16：防范 Excel 公式注入（CWE-1236）
-// 攻击场景：作物名/备注 = "=cmd|'/c calc'!A1" → 用户打开 XLSX 立即触发公式执行
-// 修复：单元格以 = / + / - / @ 开头的，前置 ' 让电子表格当作纯文本
-// 2026-07-16 审核修复：纯数字（含负数/小数）白名单跳过 — 避免 -5 被转成 '-5 文本
 const FORMULA_LEADING_CHARS = /^[=+\-@\t\r]/;
 const PURE_NUMBER_RE = /^-?\d+(\.\d+)?$/;
 export function escapeFormula(value: string): string {
@@ -29,40 +20,44 @@ export function escapeFormula(value: string): string {
   return FORMULA_LEADING_CHARS.test(value) ? `'${value}` : value;
 }
 
-// 2026-07-16 审核修复：HTML 转义（该导出实际是 HTML 表格伪装 .xls）
-// 攻击场景：字段含 <script>/外链 <img> → 文件被浏览器打开时执行/外泄
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function cellToString(value: unknown): string {
+function cellValue(value: unknown): string | number {
   if (value == null) return '';
-  // 先公式转义，再 HTML 转义（顺序不能反：HTML转义后 = 前缀检测仍准确因 = 不在转义集）
-  return escapeHtml(escapeFormula(String(value)));
+  const s = String(value);
+  // 纯数字保留数字类型（Excel 可直接计算）
+  if (PURE_NUMBER_RE.test(s)) return Number(s);
+  return escapeFormula(s);
 }
 
-/**
- * 序列化为 HTML 表格字符串（Excel 兼容）
- */
+/** 保留的旧 HTML 序列化函数（其他模块可能还在用） */
 export function serializeHtmlTable(headers: string[], rows: Array<Record<string, unknown>>): string {
-  const headerRow = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
-  const bodyRows = rows
-    .map((row) => `<tr>${headers.map((h) => `<td>${cellToString(row[h])}</td>`).join('')}</tr>`)
-    .join('');
+  const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const headerRow = headers.map((h) => `<th>${esc(h)}</th>`).join('');
+  const bodyRows = rows.map((row) =>
+    `<tr>${headers.map((h) => `<td>${esc(cellValue(row[h]) as string)}</td>`).join('')}</tr>`
+  ).join('');
   return `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headerRow}</tr>${bodyRows}</table></body></html>`;
 }
 
 /**
- * 主入口：序列化 HTML 表格为 xls 并下载
+ * 主入口：使用 SheetJS 生成真正的 .xlsx 并下载
  */
 export async function exportXlsx(options: ExportXlsxOptions): Promise<void> {
-  const content = serializeHtmlTable(options.headers, options.rows);
-  // 2026-07-10 P2-5：MIME 改用 Excel 2007+ 格式（解决 Chrome 报警"格式与扩展名不符"）
-  // 保留 .xls 扩展名以兼容 Excel 双击直接打开（HTML 内嵌 table 实际可读）
-  const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const XLSX = await import('xlsx');
+  // 构建二维数组：第一行表头 + 数据行
+  const aoa: any[][] = [options.headers];
+  for (const row of options.rows) {
+    aoa.push(options.headers.map((h) => cellValue(row[h])));
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // 自动列宽
+  const colWidths = options.headers.map((h, i) => {
+    const maxLen = Math.max(h.length, ...options.rows.map((r) => String(r[h] ?? '').length).slice(0, 200));
+    return { wch: Math.min(Math.max(maxLen + 4, 10), 40) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '施肥记录');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await triggerDownloadLikeCsv(options.filename, blob);
 }

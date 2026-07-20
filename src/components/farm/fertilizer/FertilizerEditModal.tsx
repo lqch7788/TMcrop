@@ -105,12 +105,11 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
     return (seedlingStore.items as any[]).filter((s:any)=>!kw||(s.seedlingCode||'').toLowerCase().includes(kw)||(s.cropName||'').toLowerCase().includes(kw)||(s.siteName||'').toLowerCase().includes(kw));
   }, [areaTab,areaSearch,plantingStore.items,seedlingStore.items]);
 
-  const addArea = useCallback(async (item: any) => {
+  // 2026-07-20：取消同作物限制，支持跨作物批量施肥
+  const addArea = useCallback((item: any) => {
     const area: SelectedArea = areaTab==='planting'
       ? { type:'planting',id:item.id,code:item.plantCode||item.code,cropName:item.cropName,area:item.rootName||item.areaName,greenhouseId:item.greenhouseId,greenhouseName:item.greenhouseName}
       : { type:'seedling',id:item.id,code:item.seedlingCode||item.code,cropName:item.cropName,area:item.siteName||'育苗区',greenhouseId:item.greenhouseId,greenhouseName:item.greenhouseName||item.greenhouseName};
-    const existingCrop = selectedAreas[0]?.cropName;
-    if (existingCrop && area.cropName!==existingCrop) { await showAlert(`作物不一致：「${area.cropName}」≠「${existingCrop}」`); return; }
     if (selectedAreas.some(a=>a.id===area.id)) return;
     setSelectedAreas(p=>[...p,area]);
     if (!form.greenhouseName&&area.greenhouseName) setForm(f=>({...f,greenhouseName:area.greenhouseName}));
@@ -144,7 +143,10 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
       const totalQty=poolRows.reduce((s,r)=>s+r.quantity,0);
       const totalCost=poolRows.reduce((s,r)=>s+r.quantity*r.unitPrice,0);
       const pFert=fertilizerPool[0];
+      // 2026-07-20：汇总所有作物名（支持跨作物批量施肥）
+      const allCropNames = [...new Set(selectedAreas.map(a => a.cropName).filter(Boolean))];
       await store.updateItem(record.id,{
+        cropNames: allCropNames.length > 0 ? JSON.stringify(allCropNames) : undefined,
         fertilizeTime:form.fertilizeTime,cropName:selectedAreas[0].cropName,
         greenhouseName:selectedAreas[0]?.greenhouseName||selectedAreas[0]?.area||form.greenhouseName||record.greenhouseName||'',
         greenhouseId:selectedAreas[0].greenhouseId,areaName:selectedAreas[0].area,

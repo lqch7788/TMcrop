@@ -126,6 +126,35 @@ const DICT_FALLBACK: Record<string, Record<string, string>> = {
     bio: '生物防治',
     physical: '物理防治',
   },
+  // 2026-07-21：浇水方式字典兜底（同步记录存 dict_code，DB 可能缺录入）
+  watering_method: {
+    spray: '喷雾浇水',
+    drip: '滴灌',
+    flood: '漫灌',
+    mist: '弥雾',
+    dip: '浸盆',
+    pot: '浇盆',
+    drip_irrigation: '滴灌',
+    flood_irrigation: '冲施/漫灌',
+    manual: '人工浇水',
+    manual_watering: '人工浇水',
+  },
+  // 2026-07-20：施肥方式字典兜底（同步记录存 dict_code，DB 可能缺录入）
+  fertilization_method: {
+    foliar_spray: '叶面喷施',
+    drip_irrigation: '滴灌施肥',
+    flood_irrigation: '冲施/漫灌',
+    spread: '撒施',
+    buried: '埋施/穴施',
+    injection: '注射施肥',
+    base: '基施/底肥',
+    top_dressing: '追肥',
+    spray: '叶面喷施',
+    drench: '浇根',
+    fumigation: '土壤熏蒸',
+    broadcast: '撒施',
+    irrigation: '随水冲施',
+  },
 };
 
 export const getDictItemName = (category: string, code: string): string => {

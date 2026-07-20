@@ -2746,6 +2746,8 @@ export function initializeDatabase() {
       -- 2026-07-15：区域字段（关联种植的 area_name，修复同步后 area 为空 bug）
       area_id TEXT,
       area_name TEXT,
+      -- 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥，如 ["番茄","黄瓜","辣椒"]）
+      crop_names TEXT,
       FOREIGN KEY (spec_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL,
       FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_specs(id) ON DELETE SET NULL
     )
@@ -2764,6 +2766,8 @@ export function initializeDatabase() {
       fertilizer_record_id    TEXT,
       source_daily_record_id  TEXT,
       crop_name               TEXT NOT NULL,
+      -- 2026-07-21：多作物名 JSON 数组（与 fertilizer/pesticide 对齐）
+      crop_names              TEXT,
       crop_variety            TEXT,
       greenhouse_id           TEXT,
       greenhouse_name         TEXT NOT NULL,
@@ -3214,6 +3218,8 @@ export function initializeDatabase() {
       operator_id TEXT,
       operator_name TEXT,
       crop_name TEXT NOT NULL,
+      -- 2026-07-21：多作物名 JSON 数组（与 fertilizer_records 对齐）
+      crop_names TEXT,
       greenhouse_name TEXT,
       -- 2026-07-05: 关联业务（与种植/育苗二选一，互斥）
       planting_id TEXT,

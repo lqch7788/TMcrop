@@ -219,10 +219,11 @@ export function checkHarvestRecordDeletable(harvestRecordId: string): DeleteChec
 export function checkInventoryStockDeletable(stockId: string): DeleteCheckResult {
   const db = getDatabase();
 
-  // 1. 查找 stock 记录（同时获取作物信息）
+  // 1. 查找 stock 记录（同时获取作物信息 + 业务类型，用于区分种子追踪库存）
   const stockStmt = db.prepare(`
     SELECT id, instance_id, crop_name, variety_name, current_quantity, unit,
-           frozen_quantity, status, COALESCE(warehouse_name, '') AS warehouse_name
+           frozen_quantity, status, COALESCE(warehouse_name, '') AS warehouse_name,
+           business_type, stock_type
     FROM inventory_stock WHERE id = ? OR instance_id = ?
   `);
   stockStmt.bind([stockId, stockId]);
@@ -237,14 +238,25 @@ export function checkInventoryStockDeletable(stockId: string): DeleteCheckResult
     return { ok: false, error: `库存 ${stockRow.instance_id} 还有冻结数量（${stockRow.frozen_quantity}），请先解冻再删除` };
   }
 
-  // 2026-07-16：白名单——已用完/已调拨走的"僵尸"库存（quantity=0 + status in transferred/depleted/empty）
+  // 2026-07-16：白名单——已用完/已调拨走的"僵尸"库存（quantity=0 + status in transferred/depleted/empty/in_stock）
   //   允许物理删除，绕过下游流水校验
   //   原因：种源退库产生的新种源库存（quantity=0）即使被标记为 transferred/depleted，
   //   仍会有 TX-RET-OUT 流水关联，导致无法清理；这些记录本身已是无效状态，无追溯价值
+  // 2026-07-20 修复：补 'in_stock' — 退库 bug 曾把种子库存 status 错设为 in_stock，
+  //   导致 qty=0 但 status=in_stock 的记录被僵尸检查遗漏，用户无法删除
   const currentQty = Number(stockRow.current_quantity || 0);
   const stockStatus = String(stockRow.status || '');
-  const isZombie = currentQty === 0 && ['transferred', 'depleted', 'empty'].includes(stockStatus);
+  const isZombie = currentQty === 0 && ['transferred', 'depleted', 'empty', 'in_stock'].includes(stockStatus);
   if (isZombie) {
+    return { ok: true };
+  }
+
+  // 2026-07-20 修复：种子追踪库存（transfer-to-source 创建的配套 inventory_stock）豁免下游流水校验
+  // 这些记录的 business_type='inventory_transfer'，仅用于追踪种源库存量，
+  // 其 transfer_out 流水是退库流程自行写出的（非真正下游消耗），不应阻止删除
+  const businessType = String(stockRow.business_type || '');
+  const stockType = String(stockRow.stock_type || '');
+  if (businessType === 'inventory_transfer' && stockType === 'seed') {
     return { ok: true };
   }
 

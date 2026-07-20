@@ -16,13 +16,20 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: {
   if (!record) return null;
   const pool = parseFertilizationPool(record.fertilizationPool);
   const areaNames = [...new Set(pool.map((p:FertilizationPoolRow)=>String(p.area??'')).filter(Boolean))];
+  // 2026-07-20：多作物支持 — 解析 crop_names JSON
+  let cropNames: string[] = [];
+  try { cropNames = JSON.parse((record as any).cropNames || '[]'); } catch { cropNames = []; }
+  if (cropNames.length === 0) {
+    cropNames = [...new Set(pool.map(p=>String(p.cropName??'')))].filter(Boolean);
+  }
+  if (cropNames.length === 0 && record.cropName) cropNames = [record.cropName];
   const fertGroups = new Map<string,FertilizationPoolRow[]>();
   pool.forEach((p:FertilizationPoolRow)=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
 
   const fields = [
     { label: '施肥编号', value: <span className="font-mono">{record.fertilizerCode||'-'}</span> },
     { label: '施肥时间', value: record.fertilizeTime||'-' },
-    { label: '作物', value: <span className="font-bold">{record.cropName||'-'}</span> },
+    { label: '作物', value: <span className="font-bold">{cropNames.length > 1 ? cropNames.join('、') : (record.cropName||'-')}</span> },
     { label: '温室位置', value: record.greenhouseName||'-' },
     { label: '操作员', value: record.operatorName||'-' },
     { label: '数据来源', value: record.dataSource==='auto_iot'?'IoT自动':'手动录入' },
@@ -40,7 +47,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: {
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-emerald-700 font-bold text-lg">{record.fertilizerCode}</span>
             <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">{record.cropName}</span>
+            <span className="font-bold text-gray-800">{cropNames.length > 1 ? cropNames.join('、') : record.cropName}</span>
             <span className="text-gray-300">|</span>
             <span className="text-sm text-gray-500">总用量 {record.quantity?.toLocaleString()} {record.unit||'kg'}</span>
             <span className="text-gray-300">|</span>

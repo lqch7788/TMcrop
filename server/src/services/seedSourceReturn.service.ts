@@ -309,7 +309,9 @@ export function executeReturnToInventory(
     if (newSeedStockId && newSeedStockId !== originalStockId && newSeedStockCurrent > 0) {
       const newSeedCurrentAfter = newSeedStockCurrent - item.quantity;
       const newSeedAvailableAfter = Math.max(0, newSeedStockAvailable - item.quantity);
-      const newSeedStatus = newSeedCurrentAfter <= 0 ? 'transferred' : 'in_stock';
+      // 2026-07-20 修复：种子库存始终标记为 'transferred'（不暴露到作物库存列表）
+      // 之前 partial 退库时设为 'in_stock' 会导致种子库存在库存列表中出现（重复记录 bug）
+      const newSeedStatus = 'transferred';
       db.run(
         `UPDATE inventory_stock
          SET current_quantity = ?, available_quantity = ?, status = ?, update_time = ?
@@ -330,7 +332,7 @@ export function executeReturnToInventory(
           newSeedStockInstanceId,                                 // 3: instance_id
           String(ir.stock_type || ''),                             // 4: stock_type
           'transfer_out',                                         // 5: transaction_type
-          item.quantity,                                           // 6: quantity
+          -item.quantity,                                          // 6: quantity（出库应为负数，与 transfer-to-source 的 transfer_out 约定一致）
           newSeedStockCurrent,                                    // 7: balance_before
           newSeedCurrentAfter,                                    // 8: balance_after
           targetSeedSourceId,                                     // 9: business_id

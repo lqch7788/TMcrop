@@ -395,7 +395,7 @@ export async function syncFertilizerRecords(
     db.run(
       `INSERT INTO fertilizer_records (
         id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code,
-        greenhouse_name, crop_name, crop_variety,
+        greenhouse_name, crop_name, crop_names, crop_variety,
         fertilizer_name, fertilizer_type, dilution_ratio,
         quantity, unit, fertilize_time, description,
         operator_id, operator_name,
@@ -404,7 +404,7 @@ export async function syncFertilizerRecords(
         real_fertilizer_code, fertilization_pool,
         area_id, area_name,
         create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, fertilizerCode,
         ctx.relatedType === 'planting' ? ctx.relatedId : null,
@@ -413,6 +413,7 @@ export async function syncFertilizerRecords(
         ctx.relatedType === 'seedling' ? ctx.relatedCode : null,
         ctx.greenhouseName || '',
         ctx.cropName || '',
+        ctx.cropName ? JSON.stringify([ctx.cropName]) : null,  // 2026-07-20：crop_names JSON
         ctx.cropVariety || '',
         // 2026-07-15：summary 用第一个 item + 总数量（与 AddFertilizerModal 一致）
         first.name,
@@ -564,11 +565,124 @@ export async function syncPesticideRecords(
       leafFertilizerListJson: JSON.stringify([]),
       areaId: ctx.areaId || null,
       areaName: ctx.areaName || null,
+      // 2026-07-21：多作物名 JSON（与 fertilizer 对齐）
+      cropNames: ctx.cropName ? JSON.stringify([ctx.cropName]) : null,
       pesticideStockDeductions: validItems
         .filter((it) => it.fertilizerCode && it.amount)
         .map((it) => ({ code: String(it.fertilizerCode), qty: Number(it.amount) || 0 })),
     });
   } catch (err) {
     console.error('[syncPesticideRecords] 同步失败（不影响主记录）:', (err as Error)?.message || err);
+  }
+}
+
+// ============ 浇水同步 ============
+
+/** 生成 WS{YYYYMMDD}-NNNN 编号 */
+function generateWateringCode(db: any, dateStr: string): string {
+  const prefix = `WS${dateStr}`;
+  const r = db.exec(
+    `SELECT water_code FROM watering_records WHERE water_code LIKE ?`,
+    [`${prefix}%`]
+  );
+  let maxSeq = 0;
+  for (const row of r?.[0]?.values || []) {
+    const code = (row[0] || '') as string;
+    const tail = code.split('-').pop() || '';
+    const n = parseInt(tail, 10);
+    if (!isNaN(n) && n > maxSeq) maxSeq = n;
+  }
+  return `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
+}
+
+/** 浇水方式 dict_code → 中文兜底 */
+const WATERING_METHOD_FALLBACK: Record<string, string> = {
+  spray: '喷雾浇水',
+  drip: '滴灌',
+  flood: '漫灌',
+  mist: '弥雾',
+  dip: '浸盆',
+  pot: '浇盆',
+  drip_irrigation: '滴灌',
+  flood_irrigation: '冲施/漫灌',
+  manual: '人工浇水',
+};
+
+/**
+ * 同步浇水记录
+ * 一个 daily record → 一条 watering_record，多个区域存入 water_pool JSON
+ */
+export async function syncWateringRecords(
+  db: any,
+  dailyRecordId: string,
+  wateringData: { watering: boolean; wateringMethod?: string; wateringAmount?: number; wateringUnit?: string } | null,
+  ctx: SyncContext,
+): Promise<void> {
+  try {
+    // 0. 删除旧同步行（幂等）
+    db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [dailyRecordId]);
+
+    // 1. 无浇水或水量为 0 → 只清理旧记录
+    if (!wateringData?.watering || !wateringData.wateringAmount || wateringData.wateringAmount <= 0) {
+      return;
+    }
+
+    // 2. 生成标准编号 WS{YYYYMMDD}-NNNN
+    const dateStr = localDateYYYYMMDD(ctx.recordDate);
+    const waterCode = generateWateringCode(db, dateStr);
+    const id = waterCode;
+
+    // 3. 构建 water_pool JSON（与 WaterAddModal 池格式对齐）
+    const methodLabel = WATERING_METHOD_FALLBACK[wateringData.wateringMethod || ''] || wateringData.wateringMethod || '';
+    const pool = [{
+      type: ctx.relatedType,
+      id: ctx.relatedId,
+      code: ctx.relatedCode,
+      cropName: ctx.cropName,
+      area: ctx.areaName || '',
+      wateringMethod: wateringData.wateringMethod || '',
+      waterAmount: Number(wateringData.wateringAmount) || 0,
+      waterUnit: wateringData.wateringUnit || 'L',
+    }];
+
+    // 4. INSERT
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT INTO watering_records (
+        id, water_code, record_type,
+        planting_id, planting_code, seedling_id, seedling_code,
+        greenhouse_name, crop_name, crop_names,
+        area_id, area_name,
+        water_pool, total_water, water_unit,
+        water_time, data_source,
+        source_daily_record_id,
+        operator_id, operator_name, description,
+        status, create_time
+      ) VALUES (?, ?, 'daily_sync', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, ?, ?, 'completed', ?)`,
+      [
+        id, waterCode,
+        ctx.relatedType === 'planting' ? ctx.relatedId : null,
+        ctx.relatedType === 'planting' ? ctx.relatedCode : null,
+        ctx.relatedType === 'seedling' ? ctx.relatedId : null,
+        ctx.relatedType === 'seedling' ? ctx.relatedCode : null,
+        ctx.greenhouseName || '',
+        ctx.cropName || '',
+        ctx.cropName ? JSON.stringify([ctx.cropName]) : null,  // 2026-07-21：crop_names JSON
+        ctx.areaId || null,
+        ctx.areaName || null,
+        JSON.stringify(pool),
+        Number(wateringData.wateringAmount) || 0,
+        wateringData.wateringUnit || 'L',
+        // 浇水时间：用记录日期 + 默认 08:00（每日记录无具体时间字段）
+        `${ctx.recordDate} 08:00`,
+        dailyRecordId,
+        ctx.operatorId || null,
+        ctx.operatorName || null,
+        `从每日记录同步（${methodLabel}）`,
+        now,
+      ]
+    );
+  } catch (err) {
+    console.error('[syncWateringRecords] 同步失败（不影响主记录）:', (err as Error)?.message || err);
   }
 }

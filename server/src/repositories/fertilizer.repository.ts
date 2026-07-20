@@ -35,6 +35,8 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'description',
   'update_time',
   'fertilization_pool',
+  // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥编辑）
+  'crop_names',
 ]);
 
 export interface FertilizerRecord {
@@ -52,6 +54,8 @@ export interface FertilizerRecord {
   greenhouse_name: string;
   area_name: string | null;
   crop_name: string;
+  // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+  crop_names: string | null;
   crop_variety: string | null;
   fertilizer_name: string;
   fertilizer_type: string;
@@ -178,8 +182,14 @@ export class FertilizerRepository {
         wheres.push(`${col} <= ?`);
         params.push(`${value} 23:59:59`);
       } else if (LIKE_COLS.has(col)) {
-        wheres.push(`${col} LIKE '%' || ? || '%'`);
-        params.push(value);
+        // 2026-07-20：crop_name 筛选同时搜索 crop_names JSON 数组（支持跨作物查询）
+        if (col === 'crop_name') {
+          wheres.push(`(crop_name LIKE '%' || ? || '%' OR crop_names LIKE '%' || ? || '%')`);
+          params.push(value, value);
+        } else {
+          wheres.push(`${col} LIKE '%' || ? || '%'`);
+          params.push(value);
+        }
       } else {
         wheres.push(`${col} = ?`);
         params.push(value);
@@ -281,20 +291,20 @@ export class FertilizerRepository {
       INSERT INTO fertilizer_records (
         id, fertilizer_code, farm_task_id, production_plan_id, production_plan_code,
         planting_id, planting_code, seedling_id, seedling_code, greenhouse_id, greenhouse_name, area_name,
-        crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
+        crop_name, crop_names, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
         quantity, unit, unit_price, total_cost, fertilize_time,
         operator_id, operator_name, data_source, iot_device_id, iot_record_id,
         description, status, create_time, update_time, fertilizer_id,
         fertilization_pool,
         spec_id, spec_brand_name, spec_unit_price_snapshot, spec_batch_number
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `, [
       record.id, record.fertilizer_code, record.farm_task_id, record.production_plan_id,
       record.production_plan_code, record.planting_id, record.planting_code,
       // 2026-07-16 审核修复：补 seedling 2 列（原 insert 漏列 → 育苗关联字段从未落库）
       record.seedling_id ?? null, record.seedling_code ?? null,
       record.greenhouse_id, record.greenhouse_name, record.area_name,
-      record.crop_name, record.crop_variety, record.fertilizer_name, record.fertilizer_type,
+      record.crop_name, record.crop_names ?? null, record.crop_variety, record.fertilizer_name, record.fertilizer_type,
       record.dilution_ratio, record.quantity, record.unit, record.unit_price,
       record.total_cost, record.fertilize_time, record.operator_id, record.operator_name,
       record.data_source, record.iot_device_id, record.iot_record_id,

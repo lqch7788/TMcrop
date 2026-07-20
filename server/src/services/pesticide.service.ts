@@ -693,6 +693,8 @@ export class PesticideService {
     leafFertilizerListJson: string;
     areaId?: string | null;
     areaName?: string | null;
+    // 2026-07-21：多作物名 JSON（与 fertilizer_records 对齐）
+    cropNames?: string | null;
     // 库存扣减（同步路径用 adjustPesticideStock，独立于肥料 apply 路径）
     pesticideStockDeductions: Array<{ code: string; qty: number }>;
   }): Promise<{ id: string }> {
@@ -712,7 +714,7 @@ export class PesticideService {
         `INSERT INTO pesticide_records (
           id, record_code, spray_time,
           planting_id, planting_code, seedling_id, seedling_code,
-          greenhouse_name, crop_name,
+          greenhouse_name, crop_name, crop_names,
           pesticide_name, pesticide_type, dilution_ratio,
           dosage, dosage_unit, target_pest, application_method,
           operator_id, operator_name,
@@ -722,12 +724,12 @@ export class PesticideService {
           bio_agent_list, equipment_list, leaf_fertilizer_list,
           area_id, area_name,
           create_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           params.id, params.recordCode, params.sprayTime,
           params.plantingId ?? null, params.plantingCode ?? null,
           params.seedlingId ?? null, params.seedlingCode ?? null,
-          params.greenhouseName, params.cropName,
+          params.greenhouseName, params.cropName, params.cropNames ?? null,
           params.pesticideName, params.pesticideType, params.dilutionRatio,
           params.totalDosage, params.dosageUnit, params.targetPest, params.applicationMethod,
           params.operatorId ?? null, params.operatorName ?? null,

@@ -2865,6 +2865,12 @@ export async function fixMissingSchema(): Promise<void> {
     // 2026-07-15：区域字段（修复同步后 greenhouse_name 为空 — 改用 area_name 优先）
     { table: 'fertilizer_records', col: 'area_id', sql: 'ALTER TABLE fertilizer_records ADD COLUMN area_id TEXT' },
     { table: 'fertilizer_records', col: 'area_name', sql: 'ALTER TABLE fertilizer_records ADD COLUMN area_name TEXT' },
+    // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+    { table: 'fertilizer_records', col: 'crop_names', sql: 'ALTER TABLE fertilizer_records ADD COLUMN crop_names TEXT' },
+    // 2026-07-21：病虫害记录同步加多作物名支持
+    { table: 'pesticide_records', col: 'crop_names', sql: 'ALTER TABLE pesticide_records ADD COLUMN crop_names TEXT' },
+    // 2026-07-21：浇水记录同步加多作物名支持
+    { table: 'watering_records', col: 'crop_names', sql: 'ALTER TABLE watering_records ADD COLUMN crop_names TEXT' },
     { table: 'pesticide_records', col: 'area_id', sql: 'ALTER TABLE pesticide_records ADD COLUMN area_id TEXT' },
     { table: 'pesticide_records', col: 'area_name', sql: 'ALTER TABLE pesticide_records ADD COLUMN area_name TEXT' },
   ];

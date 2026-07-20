@@ -1678,10 +1678,10 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               recordDate: record_date || formatLocalDateISO(),
               cropName: crop_name || (seedling as any).crop_name || '',
               cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              // 2026-07-15：area_name 优先（用户实际用的"区域"），greenhouse_name 回退
-              greenhouseName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              // 2026-07-21：greenhouseName/areaName 优先用幼苗记录自身的字段（中文），请求体 greenhouse_name 仅兜底
+              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
               areaId: (seedling as any).area_id || '',
-              areaName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
               operatorId: operatorId3, operatorName: operatorName3,
               primaryMethod: primaryFertMethod3,
             });
@@ -1692,17 +1692,37 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               recordDate: record_date || formatLocalDateISO(),
               cropName: crop_name || (seedling as any).crop_name || '',
               cropVariety: crop_variety || (seedling as any).crop_variety || '',
-              greenhouseName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
               areaId: (seedling as any).area_id || '',
-              areaName: greenhouse_name || (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
               operatorId: operatorId3, operatorName: operatorName3,
               primaryMethod: primaryPestMethod3,
               primaryTargetPest: primaryTargetPest3,
             });
           }
+          // 2026-07-21：浇水字段同步到浇水记录列表
+          const wateringData = parsed?.watering != null ? {
+            watering: !!parsed.watering,
+            wateringMethod: parsed.wateringMethod,
+            wateringAmount: parsed.wateringAmount,
+            wateringUnit: parsed.wateringUnit,
+          } : null;
+          if (wateringData?.watering && wateringData.wateringAmount > 0) {
+            const { syncWateringRecords } = require('../lib/syncDailyRecords');
+            syncWateringRecords(db, newId, wateringData, {
+              relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
+              recordDate: record_date || formatLocalDateISO(),
+              cropName: crop_name || (seedling as any).crop_name || '',
+              cropVariety: crop_variety || (seedling as any).crop_variety || '',
+              greenhouseName: (seedling as any).greenhouse_name || greenhouse_name || '',
+              areaId: (seedling as any).area_id || '',
+              areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || greenhouse_name || '',
+              operatorId: operatorId3, operatorName: operatorName3,
+            });
+          }
         }
       } catch (syncErr) {
-        console.error('[seedling daily-records] 施肥/用药同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+        console.error('[seedling daily-records] 施肥/用药/浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
       }
     }
 
@@ -1766,6 +1786,8 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
     const { id, recordId } = req.params;
     const db = getDatabase();
     const now = new Date().toISOString();
+    // 2026-07-21：加载育苗记录（浇水同步需要 crop_name/greenhouse_name 等字段）
+    const seedling = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM seedlings WHERE id = ?', [id])[0];
 
     // 2026-06-14: 先取旧记录算 diff，用于反向补偿 + 正向应用
     const oldStmt = db.prepare('SELECT data FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?');
@@ -1834,8 +1856,41 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
     // 2026-06-15: 上面已经先反向抵消旧值再正向应用新值，此处不再二次 apply diff
     // (原 2026-06-14 的 diff 累加逻辑在新校验流程下会重复累加，已移除)
 
+    // 2026-07-21：编辑场景浇水同步（参照 POST 浇水同步逻辑）
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const wateringData = parsed?.watering != null ? {
+          watering: !!parsed.watering,
+          wateringMethod: parsed.wateringMethod,
+          wateringAmount: parsed.wateringAmount,
+          wateringUnit: parsed.wateringUnit,
+        } : null;
+        if (wateringData?.watering && wateringData.wateringAmount > 0) {
+          const { syncWateringRecords } = require('../lib/syncDailyRecords');
+          syncWateringRecords(db, recordId, wateringData, {
+            relatedId: id, relatedCode: (seedling as any).seedling_code || '', relatedType: 'seedling',
+            recordDate: recordDate || (seedling as any).seedling_date || formatLocalDateISO(),
+            cropName: (seedling as any).crop_name || '',
+            cropVariety: (seedling as any).crop_variety || '',
+            greenhouseName: (seedling as any).greenhouse_name || '',
+            areaId: (seedling as any).area_id || '',
+            areaName: (seedling as any).area_name || (seedling as any).greenhouse_name || '',
+            operatorId: (req as any).body?.operatorId || '',
+            operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
+          });
+        } else {
+          // 无浇水或水量为 0 → 删除旧同步记录
+          db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+        }
+      } catch (syncErr) {
+        console.error('[seedling daily-records PUT] 浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+      }
+    }
+
     saveDatabase();
-    res.json({ success: true, data: queryToObjects(db, "SELECT * FROM daily_records WHERE id = ?", [recordId])[0] });
+    const updatedPut = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
+    res.json({ success: true, data: updatedPut[0] });
   } catch (error) {
     console.error('更新每日记录失败:', error);
     res.status(500).json({ success: false, error: '更新每日记录失败' });

@@ -418,7 +418,7 @@ router.delete('/:id', (req, res, next) => seedSourceController.delete(req, res, 
  *   5. 同一 SQL 事务
  */
 // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
-import { formatLocalDateISO } from '../utils/dateUtil';
+import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
 const AppendItemSchema = z.object({
   sourceStockId: z.string().min(1),
@@ -450,7 +450,11 @@ router.post('/append-from-inventory', async (req, res) => {
     const db = getDatabase();
     const now = new Date().toISOString();
     // 2026-06-26: 用本地日期避免 UTC 时区差（中国早上 0:00-8:00 UTC 还是昨天）
-    const dateStr = formatLocalDateISO();
+    // 2026-07-20 修复：ID 生成用紧凑格式 (YYYYMMDD)，日期字段用 ISO 格式 (YYYY-MM-DD)
+    //   之前 dateStr 格式为 2026-07-20，传入 generateInboundRecordId/generateTransactionId 后
+    //   getInboundIdMaxSerial 的 LIKE/LENGTH 过滤会漏掉所有紧凑格式记录，导致 maxSerial=0 → 重复 ID 冲突
+    const dateStr = formatLocalDateISO();              // YYYY-MM-DD，用于 operate_date/record_date 字段
+    const idDateStr = formatLocalDateYYYYMMDD();       // YYYYMMDD，用于 ID 生成
 
     const writtenStockIds: string[] = [];
     const writtenTxIds: string[] = [];
@@ -536,8 +540,8 @@ router.post('/append-from-inventory', async (req, res) => {
         // 2026-07-08 V3.4 流水号规范化：使用项目统一工具 generateTransactionId 生成 TRX-YYYYMMDD-NNNN 流水号
         // 替代原 TXO-/OUT- + Math.random() 违规格式（违反 [[code-generation-contract-rule]] 铁律）
         // 之前 2026-06-26 修复的「跨表唯一」问题由 getTransactionIdMaxSerial 内部 LIKE + UNIQUE 约束保证
-        const outTxId = await generateTransactionId(dateStr);
-        const outTransactionId = await generateTransactionId(dateStr);
+        const outTxId = await generateTransactionId(idDateStr);
+        const outTransactionId = await generateTransactionId(idDateStr);
         const insTx = db.prepare(
           `INSERT INTO inventory_transaction (
             id, transaction_id, instance_id, stock_type, transaction_type, quantity,
@@ -547,7 +551,7 @@ router.post('/append-from-inventory', async (req, res) => {
         );
         insTx.run([
           outTxId, outTransactionId, sourceInstanceId, String(sourceObj.stock_type || 'seed'),
-          item.transferQuantity, sourceCurrent, newSourceCurrent,
+          -item.transferQuantity, sourceCurrent, newSourceCurrent,
           targetSeedSourceId, targetCode, operator.id, operator.name, dateStr,
           `调拨入种源 ${targetCode}（追加模式）`, now,
         ]);
@@ -577,7 +581,7 @@ router.post('/append-from-inventory', async (req, res) => {
         // 2026-06-26: 修复 — 用 timestamp+random 避免 generateInstanceId('IR') 与 inventory_stock.instance_id 跨表冲突
         // 2026-07-14：流水号改用 generateInboundRecordId（替代 Math.random + Date.now 违规格式）
         // 2026-07-19 P0-8：改静态 import（直接调用即可）
-        const inRecId = await generateInboundRecordId(dateStr);
+        const inRecId = await generateInboundRecordId(idDateStr);
         // 2026-06-26: 修复 — inventory_inbound_records 表 schema 修正
         // 实际列（按 schema.ts / fixMissingSchema.ts）：
         //   id, record_type, record_date, source_module, source_id, source_code,
