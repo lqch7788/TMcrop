@@ -8,7 +8,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button, DeleteConfirmModal, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Sprout } from 'lucide-react';
-import { useFertilizerStore, FertilizerData, useWateringStore, WateringData, useIotStore, useToastStore } from '@/stores';
+import { useFertilizerStore, FertilizerData, useWateringStore, useIotStore, useToastStore } from '@/stores';
+import type { WateringData } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
 import { FertilizerAddModal } from './FertilizerAddModal';
