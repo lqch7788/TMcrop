@@ -272,7 +272,13 @@ function checkAndDecreaseStock(deductions: FertilizerDeduction[], now: string): 
  */
 function increaseStock(deductions: FertilizerDeduction[], now: string): void {
   for (const d of deductions) {
-    fertilizerRepository.increaseStock(d.specId, d.dosage, now);
+    // 2026-07-21 修复：补单位换算（与 checkAndDecreaseStock 对称）
+    const spec: any = fertilizerRepository.findSpecById(d.specId);
+    if (!spec) continue;
+    const { toSpecUnit } = require('../lib/unitConversions');
+    const conv = toSpecUnit(d.dosage, d.unit, spec.stockUnit || 'kg');
+    const actualIncrease = (conv && !conv.needsManualCheck) ? conv.convertedQuantity : d.dosage;
+    fertilizerRepository.increaseStock(d.specId, actualIncrease, now);
   }
 }
 
@@ -723,8 +729,8 @@ export class PesticideService {
           real_pesticide_code, pesticide_list,
           bio_agent_list, equipment_list, leaf_fertilizer_list,
           area_id, area_name,
-          create_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           params.id, params.recordCode, params.sprayTime,
           params.plantingId ?? null, params.plantingCode ?? null,
@@ -738,7 +744,8 @@ export class PesticideService {
           params.realPesticideCode, params.pesticideListJson,
           params.bioAgentListJson, params.equipmentListJson, params.leafFertilizerListJson,
           params.areaId ?? null, params.areaName ?? null,
-          now,
+          now,  // create_time
+          now,  // 2026-07-21 修复：补齐 update_time
         ],
       );
       db.exec('COMMIT');
@@ -752,6 +759,11 @@ export class PesticideService {
       throw err;
     }
   }
+  /**
+   * 2026-07-21 修复：批量删除改为单事务原子操作（与 fertilizer.service.removeBatch 一致）
+   * 旧逻辑：循环调 remove()，每条独立 BEGIN/COMMIT → 部分失败时前 N 条已提交不可回滚
+   * 新逻辑：单事务 BEGIN → N 条恢复库存+删除 → COMMIT → 任一失败则 ROLLBACK 全部
+   */
   async removeBatch(ids: string[]): Promise<{ deleted: number; skipped: number }> {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new PesticideBusinessError(PesticideErrorCode.INVALID_INPUT, '请提供要删除的记录ID数组');
@@ -762,19 +774,47 @@ export class PesticideService {
         `批量删除单次最多 500 条，当前 ${ids.length} 条`,
       );
     }
+    const db = getDatabase();
+    const now = nowLocalTimestamp();
     let deleted = 0;
     let skipped = 0;
-    for (const id of ids) {
-      try {
-        await this.remove(id);
+
+    db.exec('BEGIN');
+    try {
+      for (const id of ids) {
+        const existing = this.repository.findById(id);
+        if (!existing) {
+          skipped++;
+          continue;
+        }
+        // 恢复肥料库存
+        const items = parseLeafFertilizerList((existing as unknown as Record<string, any>).leafFertilizerList);
+        const deductions = aggregateDeductions(extractDeductions(items));
+        if (deductions.length > 0) {
+          increaseStock(deductions, now);
+        }
+        // 恢复同步路径扣减的药剂库存
+        const sourceType = (existing as unknown as Record<string, any>).sourceType;
+        const sourceDailyRecordId = (existing as unknown as Record<string, any>).sourceDailyRecordId;
+        if (sourceType === 'daily_record_sync' && sourceDailyRecordId) {
+          const oldRows = getOldPesticideSync(db, sourceDailyRecordId);
+          for (const r of oldRows) {
+            if (r.code && r.qty > 0) adjustPesticideStock(db, r.code, r.qty);
+          }
+        }
+        this.repository.deleteById(id);
         deleted++;
-      } catch (err) {
-        // 失败跳过（不影响其他 id）
-        console.error(`[pesticide.service] 批量删除 ${id} 失败:`, err);
-        skipped++;
       }
+      db.exec('COMMIT');
+      this.repository.save();
+      return { deleted, skipped };
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch (rbErr) {
+        console.error('[pesticide.service] removeBatch ROLLBACK 失败:', rbErr);
+        console.error('[pesticide.service] 原错误:', err);
+      }
+      throw err;
     }
-    return { deleted, skipped };
   }
 
   /**
