@@ -475,14 +475,15 @@ export function PestControlTable({
                                     {/* 药剂池内容（JSON 列表优先；老字段兜底单条） */}
                                     {(pesticideList.length > 0 ? pesticideList : (record as any).pesticideName ? [{
                                       name: (record as any).pesticideName,
-                                      types: record.pesticideTypes || [(record as any).pesticideType],
+                                      pesticideTypes: record.pesticideTypes || [(record as any).pesticideType],
                                       specContent: (record as any).specContent,
                                       dosage: (record as any).dosage,
                                       unit: (record as any).dosageUnit,
                                       ratio: (record as any).dilutionRatio,
                                       applicationMethod: (record as any).applicationMethod,
                                     }] : []).map((item: any, idx: number) => {
-                                      const pestTypes = item.types && item.types.length > 0 ? item.types : (item.type ? [item.type] : []);
+                                      // 2026-07-21 修复：统一读 pesticideTypes（与 AddModal 序列化字段名一致）
+                                      const pestTypes = item.pesticideTypes && item.pesticideTypes.length > 0 ? item.pesticideTypes : (item.type ? [item.type] : []);
                                       return (
                                         <tr key={idx} className="hover:bg-emerald-50">
                                           <td className="px-3 py-2 text-center text-gray-500">{idx + 1}</td>

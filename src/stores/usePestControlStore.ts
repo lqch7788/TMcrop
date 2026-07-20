@@ -287,13 +287,10 @@ export const usePestControlStore = create<PestControlState>()(
     },
 
     generateCode: async () => {
-      try {
-        const response = await enhancedApiClient.get<any>('/pest-records/generate-code');
-        const data = (response as any).data ?? response;
-        return data?.code ?? '';
-      } catch {
-        return '';
-      }
+      // 2026-07-21 修复：失败时抛错（修 silent failure），调用方 catch 后 toast
+      const response = await enhancedApiClient.get<any>('/pest-records/generate-code');
+      const payload = (response as any).data ?? response;
+      return payload?.data?.code ?? payload?.code ?? '';
     },
   })
 );
