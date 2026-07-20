@@ -195,6 +195,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     const nowIso = now.toISOString();
     const version = stock.version ?? 1;
 
+    let txId: string | null = null;  // 2026-07-21 修复：提升作用域到 try 块外
     db.exec('BEGIN');  // 2026-07-21 修复：扣库存 + 写流水加事务包裹
     try {
     const updateStmt = db.prepare(
@@ -229,9 +230,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       -body.quantity, currentQty, newQty, body.businessId || null, body.businessType, body.businessCode || null,
       operatorId || null, operatorName || '', formatLocalDateISO(now),
       body.remarks || '出库', nowIso,
-    ];
-    let txId: string | null = null;
-    // 5 次重试 UNIQUE 冲突
+    ];  // txId 在 try 块外声明，写入循环使用
     for (let attempt = 0; attempt < 5; attempt++) {
       const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
       const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;

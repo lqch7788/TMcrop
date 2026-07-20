@@ -7,11 +7,8 @@ import { getDatabase, saveDatabase } from "../db";
 import { queryToObjects } from "../utils/queryHelper";
 import { formatLocalDateISO } from "../utils/dateUtil";
 import { seedLog } from "../lib/seedLogger";
-import {
-  applySeedlingDailyChange,
-  undoSeedlingDailyChange,
-  validateSeedlingDailyChange,
-} from "../services/plantingDailyChange";
+// 2026-07-21 修复：导入实际存在的导出函数名
+import { validateDailyChange, normalizeChangeData, applyDailyChangeToPlanting } from "../services/plantingDailyChange";
 
 const router = Router({ mergeParams: true });
 /**

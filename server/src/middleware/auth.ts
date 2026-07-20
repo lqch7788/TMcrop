@@ -17,10 +17,11 @@ import * as jwt from 'jsonwebtoken';
 // 生产模式：设置 JWT_SECRET 环境变量
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
 // 2026-07-16：显式 NODE_ENV=production 时强制禁用 demo 旁路（保护生产）
-// 未设置 NODE_ENV 视为开发环境（本项目 dev 脚本 tsx watch 不设 NODE_ENV，fail-closed 会打断本地开发）
-// 生产部署必须显式设置 NODE_ENV=production — 启动日志会给出提示
+// 2026-07-21 修复：Electron 桌面端 NODE_ENV=production + DEMO_MODE=true 时仍应放行
+//   原因：桌面端是本地运行的单用户环境，不存在外部攻击面；禁用 demo 旁路导致所有 API 401
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const DEMO_BYPASS_ALLOWED = DEMO_MODE && !IS_PRODUCTION;
+const IS_ELECTRON = process.env.ELECTRON_IS_PACKAGED === 'true';
+const DEMO_BYPASS_ALLOWED = DEMO_MODE && (!IS_PRODUCTION || IS_ELECTRON);
 if (DEMO_MODE && !process.env.NODE_ENV) {
   console.warn('[auth] ⚠️ DEMO_MODE=true 且 NODE_ENV 未设置 — 视为开发环境放行 demo 旁路。生产部署务必设置 NODE_ENV=production！');
 }
