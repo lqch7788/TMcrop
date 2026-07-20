@@ -2751,6 +2751,50 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== V10.0: 浇水记录管理 ==========
+  // 浇水记录表 — 手动记录 + IoT 自动记录
+  // Phase 1: 先建表与索引
+  // Phase 2: 业务侧按 water_code 关联显示，自动合并写入
+  // 通过 source_daily_record_id 唯一索引保证每日记录同步幂等
+  db.run(`
+    CREATE TABLE IF NOT EXISTS watering_records (
+      id                      TEXT PRIMARY KEY,
+      water_code              TEXT NOT NULL UNIQUE,
+      record_type             TEXT NOT NULL DEFAULT 'manual',
+      fertilizer_record_id    TEXT,
+      source_daily_record_id  TEXT,
+      crop_name               TEXT NOT NULL,
+      crop_variety            TEXT,
+      greenhouse_id           TEXT,
+      greenhouse_name         TEXT NOT NULL,
+      area_id                 TEXT,
+      area_name               TEXT,
+      planting_id             TEXT,
+      planting_code           TEXT,
+      seedling_id             TEXT,
+      seedling_code           TEXT,
+      water_pool              TEXT,
+      total_water             REAL NOT NULL DEFAULT 0,
+      water_unit              TEXT DEFAULT 'L',
+      water_cost              REAL DEFAULT 0,
+      water_time              TEXT NOT NULL,
+      operator_id             TEXT,
+      operator_name           TEXT,
+      data_source             TEXT NOT NULL DEFAULT 'manual',
+      iot_device_id           TEXT,
+      description             TEXT,
+      status                  TEXT DEFAULT 'completed',
+      create_time             TEXT DEFAULT (datetime('now','localtime')),
+      update_time             TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (fertilizer_record_id) REFERENCES fertilizer_records(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_watering_records_water_time ON watering_records(water_time)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_watering_records_crop_name ON watering_records(crop_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_watering_records_record_type ON watering_records(record_type)`);
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_watering_records_daily_sync ON watering_records(source_daily_record_id) WHERE source_daily_record_id IS NOT NULL`);
+
   // ========== V10.0: 行政区划字典表 ==========
   db.run(`
     CREATE TABLE IF NOT EXISTS region_data (
