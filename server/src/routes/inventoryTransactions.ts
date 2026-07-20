@@ -194,12 +194,13 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     const now = new Date();
     const nowIso = now.toISOString();
     const version = stock.version ?? 1;
+
+    db.exec('BEGIN');  // 2026-07-21 修复：扣库存 + 写流水加事务包裹
+    try {
     const updateStmt = db.prepare(
       'UPDATE inventory_stock SET current_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ? AND version = ?'
     );
     updateStmt.run([newQty, nowIso, body.instanceId, version]);
-    // 2026-06-08 修复：乐观锁 0 rows 静默通过会导致"假流水"（库存没扣但写流水），违反 Fail Loud
-    // 这里显式检查 affected rows，0 行即版本冲突，直接 409 退出，避免后续 insert 假数据
     const modified = db.getRowsModified();
     updateStmt.free();
     if (modified === 0) {
@@ -214,11 +215,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     // 取代原来的 hardcode 'empty' 块
     recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
 
-    // 5. 写老表 inventory_transaction（含原子性保护 — sql.js 无 BEGIN/COMMIT，手动 try/catch + 反向回滚）
-    // 2026-06-08 V2.1：4 位自增 ID（TRX + YYYYMMDD + NNNN），替代 Math.random 4 字符 base36
-    // 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"
-    // 2026-06-09 修复：用本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
-    // 5 次重试：UNIQUE 冲突时下一轮查 max（已被对方更新）→ 序号 +1 跳过
+    // 5. 写流水（事务内，失败自动 ROLLBACK 库存扣减）
     const txDateStr = formatLocalDateYYYYMMDD(new Date());
     const insertSql = `
       INSERT INTO inventory_transaction (
@@ -234,47 +231,33 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       body.remarks || '出库', nowIso,
     ];
     let txId: string | null = null;
-    try {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
-        const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;
-        const stmt = db.prepare(insertSql);
-        try {
-          stmt.run(insertParams(candidate));
-          stmt.free();
-          txId = candidate;
-          break;
-        } catch (err) {
-          stmt.free();
-          if (attempt === 4) throw err; // 最后一次重试失败抛错
-          // 否则下一轮重查 max 跳过已存在的序号
-        }
-      }
-    } catch (txErr) {
-      // 2026-07-15：原子性保护 — INSERT 流水失败必须反向回滚库存
-      // 否则库存已扣减但无流水 → 永久数据漂移
-      console.error('[inventoryTransactions POST] 流水写入失败，反向回滚库存:', txErr);
+    // 5 次重试 UNIQUE 冲突
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
+      const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;
+      const stmt = db.prepare(insertSql);
       try {
-        const rollbackStmt = db.prepare(
-          'UPDATE inventory_stock SET current_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ?'
-        );
-        rollbackStmt.run([currentQty, nowIso, body.instanceId]);
-        rollbackStmt.free();
-        // 重算 status（恢复到原值）
-        recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
-        saveDatabase();
-      } catch (rollbackErr) {
-        console.error('[inventoryTransactions POST] 库存回滚也失败:', rollbackErr);
-        // 必须抛错让客户端知道（Fail Loud）
+        stmt.run(insertParams(candidate));
+        stmt.free();
+        txId = candidate;
+        break;
+      } catch (err) {
+        stmt.free();
+        if (attempt === 4) throw err;
       }
-      throw txErr;
     }
 
+    // 6. 事务提交 + 状态重算（2026-07-21 修复：用 COMMIT 替代手动回滚）
+    recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
+    db.exec('COMMIT');
     saveDatabase();
+    } catch (txErr) {
+      try { db.exec('ROLLBACK'); } catch {}
+      console.error('[inventoryTransactions POST] 事务失败已回滚:', txErr);
+      return res.status(500).json({ success: false, error: '出库失败，已回滚' });
+    }
 
-    // 6. 状态更新（2026-07-14：方案 C — 已被乐观锁后的 recompute 替代，删除 hardcode 块）
-
-    // 8. 写入 material_flow_log（按 businessType 白名单）
+    // 7. 写入 material_flow_log（按 businessType 白名单，事务外非关键）
     try {
       const { writeFlowLog } = require('../services/flowLogService');
       const { mapOutboundToFlowType, mapInventorySourceToCategory } = require('../lib/sourceCategoryMapper');
@@ -369,8 +352,9 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
     const instanceId = txRow.instance_id || txRow.instanceId;
     // 白名单：仅出库/调拨/损耗/退货/调整/赠送/其他 等 VALID_OUTBOUND_TYPES 才回填
     const shouldRollback = txQty < 0 && VALID_OUTBOUND_TYPES.has(txBusinessType) && instanceId;
+    db.exec('BEGIN');  // 2026-07-21 修复：回填库存 + 删流水加事务包裹
+    try {
     if (shouldRollback) {
-      // 出库是负数，回填 = 当前数量 + |出库数量|
       const stockStmt = db.prepare('SELECT id, current_quantity, frozen_quantity FROM inventory_stock WHERE instance_id = ?');
       stockStmt.bind([instanceId]);
       if (stockStmt.step()) {
@@ -378,22 +362,23 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
         const currentQty = Number(stock.current_quantity) || 0;
         const frozenQty = Number(stock.frozen_quantity) || 0;
         const restoredQty = currentQty + Math.abs(txQty);
-        // 2026-07-14：方案 C — 只更新数量，status 由 recompute 自动计算
-        // 2026-07-15：用 Math.max 兜底防止 frozenQty > restoredQty 算出负数 available
         const updateStmt = db.prepare('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE instance_id = ?');
         updateStmt.run([restoredQty, Math.max(0, restoredQty - frozenQty), new Date().toISOString(), instanceId]);
         updateStmt.free();
-        // 重算 status（撤销出库后可能变成 in_stock / low_stock / frozen）
         recomputeAndUpdateStockStatus(getDatabase(), instanceId);
       }
       stockStmt.free();
     }
-    // 硬删流水
     const delStmt = db.prepare('DELETE FROM inventory_transaction WHERE id = ?');
     delStmt.run([id]);
     delStmt.free();
+    db.exec('COMMIT');
     saveDatabase();
     return res.json({ success: true, data: { id, deleted: true, rolledBack: shouldRollback } });
+    } catch (txErr) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw txErr;
+    }
   } catch (error) {
     console.error('[inventoryTransactions DELETE] 失败:', error);
     return res.status(500).json({
