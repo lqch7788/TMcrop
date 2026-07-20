@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 import { fertilizerRepository, FertilizerRepository, FertilizerRecord } from '../repositories/fertilizer.repository';
+import { wateringRepository, WateringRecord } from '../repositories/watering.repository';
 import { toSpecUnit } from '../lib/unitConversions';
 
 /**
@@ -31,6 +32,159 @@ export class BusinessError extends Error {
     this.name = 'BusinessError';
     this.code = code;
     this.httpStatus = httpStatus;
+  }
+}
+
+/**
+ * Phase 2 (2026-07-20)：施肥稀释自动生成浇水记录 — 工具函数区
+ * 设计文档：docs/superpowers/specs/2026-07-20-water-fertilizer-design.md §4.6
+ */
+
+/**
+ * 解析稀释倍数（如 '1:500' → 500）。无法解析或不应稀释时返回 null。
+ * 'dry' 表示干施不稀释，也返回 null。
+ * 安全上限 100000 防止异常输入。
+ */
+function parseDilutionForWater(dilutionRatio: string | null | undefined): number | null {
+  if (!dilutionRatio || dilutionRatio === 'dry') return null;
+  const match = String(dilutionRatio).match(/^1:(\d+)$/);
+  if (!match) return null;
+  const ratio = parseInt(match[1], 10);
+  if (ratio <= 0 || ratio > 100000) return null;
+  return ratio;
+}
+
+/**
+ * 计算用水量（含单位换算）
+ * - 肥料用量统一转为克(g)
+ * - 水量统一为毫升(mL)，>= 1000mL 时转为升(L)（保留 2 位小数）
+ */
+function calculateWaterAmount(
+  fertilizerQty: number,
+  fertilizerUnit: string,
+  ratio: number,
+): { amount: number; waterUnit: string } {
+  const qtyInGrams = fertilizerUnit === 'kg' ? fertilizerQty * 1000
+    : fertilizerUnit === 'g' ? fertilizerQty
+    : fertilizerQty;
+  const waterInML = qtyInGrams * ratio;
+  if (waterInML >= 1000) {
+    return { amount: Math.round(waterInML / 10) / 100, waterUnit: 'L' };
+  }
+  return { amount: Math.round(waterInML), waterUnit: 'ml' };
+}
+
+/**
+ * Phase 2：从 fertilizationPool 解析稀释倍数并生成浇水记录
+ * 必须在施肥事务内调用（不可独立事务包装 — 否则 SQLite 嵌套 BEGIN 破坏原子性）
+ * - 无有效稀释倍数/空池时直接返回 []
+ * - 池中所有稀释行合并为一条 watering_records（多条产物同时稀释到同一片区域）
+ */
+function buildWateringFromPool(
+  pool: any[],
+  context: {
+    id: string;
+    cropName: string;
+    greenhouseName: string;
+    waterTime: string;
+    operatorName?: string | null;
+    areaName?: string | null;
+  },
+): WateringRecord[] {
+  const rows: any[] = [];
+  for (const p of pool) {
+    const ratio = parseDilutionForWater(p.dilutionRatio);
+    if (!ratio) continue;
+    const qty = Number(p.quantity) || 0;
+    if (qty <= 0) continue;
+    const { amount, waterUnit } = calculateWaterAmount(qty, p.unit || 'kg', ratio);
+    if (amount <= 0) continue;
+    rows.push({
+      area: p.area || '',
+      wateringMethod: p.fertilizationMethod || 'drip_irrigation',
+      waterAmount: amount,
+      waterUnit,
+      sourceFertilizerName: p.fertilizerName,
+      sourceDilutionRatio: p.dilutionRatio,
+      sourceFertilizerQuantity: qty,
+    });
+  }
+
+  if (rows.length === 0) return [];
+
+  const code = wateringRepository.generateCode();
+  if (!code) return [];
+
+  // 总量按 L 累加（mL / 1000 转 L）
+  const total = rows.reduce((s, r) => {
+    const inLiter = r.waterUnit === 'L' ? r.waterAmount : r.waterAmount / 1000;
+    return s + inLiter;
+  }, 0);
+
+  return [{
+    id: `water-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    waterCode: code,
+    recordType: 'fertilizer_dilution',
+    fertilizerRecordId: context.id,
+    sourceDailyRecordId: null,
+    cropName: context.cropName,
+    cropVariety: null,
+    greenhouseId: null,
+    greenhouseName: context.greenhouseName,
+    areaId: null,
+    areaName: (context.areaName ?? rows[0].area) || null,
+    plantingId: null,
+    plantingCode: null,
+    seedlingId: null,
+    seedlingCode: null,
+    waterPool: JSON.stringify(rows),
+    totalWater: Math.round(total * 100) / 100,
+    waterUnit: 'L',
+    waterCost: 0,
+    waterTime: context.waterTime,
+    operatorId: null,
+    operatorName: context.operatorName || null,
+    dataSource: 'manual',
+    iotDeviceId: null,
+    description: null,
+    status: 'completed',
+    createTime: nowLocalTimestamp(),
+    updateTime: nowLocalTimestamp(),
+  }];
+}
+
+/**
+ * Phase 2：在施肥事务内统一调用入口（含异常隔离，避免浇水失败污染施肥事务）
+ * - context.fertilizationPool：JSON 字符串或已解析数组
+ * - 浇水写失败仅 console.error 不抛错（施肥仍是主业务）
+ */
+function tryGenerateWateringFromPool(
+  fertilizationPool: string | any[] | null | undefined,
+  context: {
+    id: string;
+    cropName: string;
+    greenhouseName: string;
+    waterTime: string;
+    operatorName?: string | null;
+    areaName?: string | null;
+  },
+): void {
+  try {
+    if (!fertilizationPool) return;
+    let pool: any[] = [];
+    if (typeof fertilizationPool === 'string') {
+      try { pool = JSON.parse(fertilizationPool); } catch { return; }
+    } else if (Array.isArray(fertilizationPool)) {
+      pool = fertilizationPool;
+    }
+    if (!Array.isArray(pool) || pool.length === 0) return;
+    const waterings = buildWateringFromPool(pool, context);
+    for (const w of waterings) {
+      wateringRepository.insert(w);
+    }
+  } catch (e) {
+    // 浇水生成失败不影响施肥事务
+    console.error('[fertilizer.service] 浇水自动生成失败（不影响施肥事务）:', e);
   }
 }
 
@@ -408,6 +562,16 @@ export class FertilizerService {
       };
       this.repository.insert(record);
 
+      // Phase 2：施肥稀释自动生成浇水记录（必须在 COMMIT 前 — 事务原子性）
+      tryGenerateWateringFromPool(data.fertilizationPool, {
+        id,
+        cropName: data.cropName,
+        greenhouseName: data.greenhouseName,
+        waterTime: data.fertilizeTime,
+        operatorName: data.operatorName,
+        areaName: data.areaName,
+      });
+
       db.exec('COMMIT');
       this.repository.save();
       return record;
@@ -487,6 +651,22 @@ export class FertilizerService {
       upd.update_time = now;
       this.repository.update(id, updates);
 
+      // Phase 2：先删旧浇水记录，再根据新的 fertilizationPool 重新生成（必须在 COMMIT 前 — 事务原子性）
+      try {
+        wateringRepository.deleteByFertilizerRecordId(id);
+        const newPool = upd.fertilizationPool ?? ex.fertilizationPool;
+        tryGenerateWateringFromPool(newPool, {
+          id,
+          cropName: upd.cropName ?? ex.cropName,
+          greenhouseName: upd.greenhouseName ?? ex.greenhouseName,
+          waterTime: upd.fertilizeTime ?? ex.fertilizeTime,
+          operatorName: upd.operatorName ?? ex.operatorName,
+          areaName: upd.areaName ?? ex.areaName,
+        });
+      } catch (e) {
+        console.error('[fertilizer.service] 浇水更新失败（不影响施肥事务）:', e);
+      }
+
       db.exec('COMMIT');
       this.repository.save();
       return this.repository.findById(id);
@@ -564,6 +744,12 @@ export class FertilizerService {
     try {
       // 2026-07-17：恢复库存（含顶层 fertilizerId + fertilization_pool 池里每条 specId）
       this.increaseStockFromFarmRecord(ex, now);
+      // Phase 2：级联删除关联浇水记录（必须在 COMMIT 前 — 事务原子性）
+      try {
+        wateringRepository.deleteByFertilizerRecordId(id);
+      } catch (e) {
+        console.error('[fertilizer.service] 浇水级联删除失败（不影响施肥事务）:', e);
+      }
       this.repository.deleteById(id);
       db.exec('COMMIT');
       this.repository.save();
@@ -609,6 +795,12 @@ export class FertilizerService {
         const rec = this.repository.findById(id) as unknown as Record<string, any> | null;
         if (rec) {
           this.increaseStockFromFarmRecord(rec, now);
+        }
+        // Phase 2：批量删除时级联删浇水（必须在 COMMIT 前 — 事务原子性）
+        try {
+          wateringRepository.deleteByFertilizerRecordId(id);
+        } catch (e) {
+          console.error('[fertilizer.service] 批量删浇水级联失败:', e);
         }
         this.repository.deleteById(id);
       }
