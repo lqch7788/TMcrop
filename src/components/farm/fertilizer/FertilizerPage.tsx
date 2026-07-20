@@ -27,6 +27,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
+import { calcWaterFromPoolRow } from '@/lib/dilutionWater';
 
 type OperationMode = 'normal' | 'delete' | 'export';
 type ActiveTab = 'fertilizer' | 'watering';
@@ -284,6 +285,7 @@ export default function FertilizerPage() {
             来源: '-', 批号: it.plantingCode || it.seedlingCode || '-', 区域: it.areaName || it.greenhouseName || '-',
             肥料名: it.fertilizerName || '-', 品牌: (it as any).specBrandName || '',
             用量: it.quantity ?? 0, 单位: it.unit || 'kg', 施肥方式: '-', 稀释倍数: it.dilutionRatio || '-',
+            用水量: '-',
             单价: it.unitPrice ?? 0, 小计: it.totalCost ?? 0,
             操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
             备注: it.description || '',
@@ -300,6 +302,7 @@ export default function FertilizerPage() {
               用量: Number(r.quantity) || 0, 单位: r.unit || it.unit || 'kg',
               施肥方式: r.fertilizationMethod ? (getDictItemName('fertilization_method', r.fertilizationMethod) || r.fertilizationMethod) : '-',
               稀释倍数: r.dilutionRatio || it.dilutionRatio || '-',
+              用水量: (() => { const w = calcWaterFromPoolRow(r as any); return w ? `${w.amount} ${w.unit}` : '-'; })(),
               单价: Number(r.unitPrice) || it.unitPrice || 0,
               小计: (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
               操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',

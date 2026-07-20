@@ -185,15 +185,12 @@ export const DILUTION_TYPE_MAP: Record<string, string> = {
 };
 
 // ========== 用量单位映射（2026-06-28：施肥/用药共用 — 8 种） ==========
+// 2026-07-21：精简为 4 个标准重量/体积单位，去掉非标准单位（瓶/袋/包/勺）
 export const FEED_UNIT_MAP: Record<string, string> = {
-  g: '克',
-  kg: '公斤',
-  L: '升',
-  ml: '毫升',
-  bottle: '瓶',
-  bag: '袋',
-  pack: '包',
-  scoop: '勺',
+  kg: '千克(kg)',
+  g: '克(g)',
+  L: '升(L)',
+  ml: '毫升(ml)',
 };
 
 // ========== 种源来源途径映射 ==========
