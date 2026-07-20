@@ -130,7 +130,7 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
       if (filters.page) params.append('page', filters.page);
       if (filters.pageSize) params.append('pageSize', filters.pageSize);
 
-      const url = `/api/watering${params.toString() ? `?${params}` : ''}`;
+      const url = `/watering${params.toString() ? `?${params}` : ''}`;
       const response: any = await enhancedApiClient.get(url);
       const items = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
       const normalized = items.map(normalizeWatering);
@@ -142,14 +142,14 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   fetchItemById: async (id: string) => {
-    const response: any = await enhancedApiClient.get(`/api/watering/${id}`);
+    const response: any = await enhancedApiClient.get(`/watering/${id}`);
     const raw = response?.data ?? response;
     return normalizeWatering(raw);
   },
 
   createItem: async (item: Partial<WateringData>) => {
     const payload = denormalizeWatering(item);
-    const response: any = await enhancedApiClient.post('/api/watering', payload);
+    const response: any = await enhancedApiClient.post('/watering', payload);
     const raw = response?.data ?? response;
     const newItem = normalizeWatering(raw);
     set({ items: [newItem, ...get().items] });
@@ -158,7 +158,7 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
 
   updateItem: async (id: string, updates: Partial<WateringData>) => {
     const payload = denormalizeWatering(updates);
-    const response: any = await enhancedApiClient.put(`/api/watering/${id}`, payload);
+    const response: any = await enhancedApiClient.put(`/watering/${id}`, payload);
     const raw = response?.data ?? response;
     const updated = normalizeWatering(raw);
     set({
@@ -168,13 +168,13 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   deleteItem: async (id: string) => {
-    await enhancedApiClient.delete(`/api/watering/${id}`);
+    await enhancedApiClient.delete(`/watering/${id}`);
     set({ items: get().items.filter((it) => it.id !== id) });
     return true;
   },
 
   deleteItems: async (ids: string[]) => {
-    const response: any = await enhancedApiClient.post('/api/watering/batch-delete', { ids });
+    const response: any = await enhancedApiClient.post('/watering/batch-delete', { ids });
     const raw = response?.data ?? response;
     // 刷新列表（删除的可能不在当前 items 中）
     await get().fetchItems();
@@ -182,7 +182,7 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   generateCode: async () => {
-    const response: any = await enhancedApiClient.get('/api/watering/generate-code');
+    const response: any = await enhancedApiClient.get('/watering/generate-code');
     const raw = response?.data ?? response;
     return raw?.code || '';
   },
