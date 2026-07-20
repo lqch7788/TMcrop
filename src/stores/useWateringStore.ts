@@ -148,8 +148,8 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   createItem: async (item: Partial<WateringData>) => {
-    const payload = denormalizeWatering(item);
-    const response: any = await enhancedApiClient.post('/watering', payload);
+    // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
+    const response: any = await enhancedApiClient.post('/watering', item);
     const raw = response?.data ?? response;
     const newItem = normalizeWatering(raw);
     set({ items: [newItem, ...get().items] });
@@ -157,8 +157,8 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   updateItem: async (id: string, updates: Partial<WateringData>) => {
-    const payload = denormalizeWatering(updates);
-    const response: any = await enhancedApiClient.put(`/watering/${id}`, payload);
+    // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
+    const response: any = await enhancedApiClient.put(`/watering/${id}`, updates);
     const raw = response?.data ?? response;
     const updated = normalizeWatering(raw);
     set({
