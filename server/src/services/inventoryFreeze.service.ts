@@ -1,6 +1,7 @@
 /**
  * 库存冻结服务
  */
+import { randomUUID } from 'crypto';
 import { getDatabase, saveDatabase } from '../db';
 
 export interface InventoryFreeze {
@@ -39,7 +40,8 @@ export class InventoryFreezeService {
   async create(record: Partial<InventoryFreeze>): Promise<string> {
     const db = getDatabase();
     const now = new Date().toISOString();
-    const id = record.id || `freeze_${Date.now()}`;
+    // 2026-07-21 修复：违反 code-generation-contract-rule（禁止 Date.now 作 ID），改用 crypto.randomUUID
+    const id = record.id || randomUUID();
 
     db.run(`
       INSERT INTO inventory_freeze (id, order_id, order_code, harvest_record_id, harvest_code, freeze_quantity, used_quantity, status, remarks, create_by, create_time)
