@@ -300,6 +300,9 @@ export type {
 export { useFertilizerStore } from './useFertilizerStore';
 export type { FertilizerData } from './useFertilizerStore';
 
+// 2026-07-20：浇水记录 Store
+export { useWateringStore, WateringData } from './useWateringStore';
+
 export { useRegionStore } from './useRegionStore';
 export type { RegionNode } from './useRegionStore';
 
