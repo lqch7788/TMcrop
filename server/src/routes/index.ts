@@ -97,6 +97,7 @@ import qualityRouter from './quality.routes';
 import acceptanceRouter from './acceptance.routes';
 import inventoryRouterAlias from './inventory.routes';
 import materialFlowLogRouter from './materialFlowLog';
+import wateringRouter from './watering';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -371,6 +372,9 @@ router.use('/inventory-freeze', requireAuth, inventoryRouterAlias);
 
 // 物料流转追溯路由
 router.use('/material-flow-log', requireAuth, materialFlowLogRouter);
+
+// 浇水记录路由 - 2026-07-20 Phase 1
+router.use('/watering', requireAuth, wateringRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {
