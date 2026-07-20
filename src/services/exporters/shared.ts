@@ -4,21 +4,7 @@
  */
 
 export async function triggerDownloadLikeCsv(filename: string, blob: Blob): Promise<void> {
-  const anyWin = window as unknown as { showSaveFilePicker?: (opts: any) => Promise<any> };
-  if (anyWin.showSaveFilePicker) {
-    try {
-      const handle = await anyWin.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{ description: 'File', accept: { [blob.type]: [filename.substring(filename.lastIndexOf('.'))] } }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return;
-    } catch {
-      // 用户取消 — 降级
-    }
-  }
+  // 2026-07-20：去掉 showSaveFilePicker（弹保存对话框），统一用 a 标签直接下载到默认目录
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

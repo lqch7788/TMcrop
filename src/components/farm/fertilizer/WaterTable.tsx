@@ -306,14 +306,14 @@ export function WaterTable({
                                 </span>
                               </div>
                               <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm table-fixed">
                                   <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
                                     <tr>
-                                      <th className="px-3 py-2 text-left w-12">#</th>
-                                      <th className="px-3 py-2 text-left">浇水方式</th>
-                                      <th className="px-3 py-2 text-right">用水量</th>
-                                      <th className="px-3 py-2 text-left">来源肥料</th>
-                                      <th className="px-3 py-2 text-left">稀释倍数</th>
+                                      <th className="px-3 py-2 text-center w-[5%]">#</th>
+                                      <th className="px-3 py-2 text-center w-[23%]">浇水方式</th>
+                                      <th className="px-3 py-2 text-center w-[20%]">用水量</th>
+                                      <th className="px-3 py-2 text-center w-[23%]">来源肥料</th>
+                                      <th className="px-3 py-2 text-center w-[29%]">稀释倍数</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
@@ -324,12 +324,12 @@ export function WaterTable({
                                       return (
                                         <tr key={`${aName}-${i}`} className="hover:bg-emerald-50/40">
                                           <td className="px-3 py-2 text-center text-gray-500">{i + 1}</td>
-                                          <td className="px-3 py-2 text-gray-800 font-medium">{methodLabel}</td>
-                                          <td className="px-3 py-2 text-right font-bold text-emerald-600">
+                                          <td className="px-3 py-2 text-center text-gray-800 font-medium">{methodLabel}</td>
+                                          <td className="px-3 py-2 text-center font-bold text-emerald-600">
                                             {Number(r.waterAmount ?? 0).toLocaleString()} {r.waterUnit || rec.waterUnit || 'L'}
                                           </td>
-                                          <td className="px-3 py-2 text-gray-700">{r.sourceFertilizerName || '-'}</td>
-                                          <td className="px-3 py-2 text-gray-600">{r.sourceDilutionRatio || '-'}</td>
+                                          <td className="px-3 py-2 text-center text-gray-700">{r.sourceFertilizerName || '-'}</td>
+                                          <td className="px-3 py-2 text-center text-gray-600">{r.sourceDilutionRatio || '-'}</td>
                                         </tr>
                                       );
                                     })}

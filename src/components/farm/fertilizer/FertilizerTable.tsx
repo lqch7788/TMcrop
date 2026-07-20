@@ -113,6 +113,14 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
               const pool = parseFertilizationPool(rec.fertilizationPool);
               const areaNames = [...new Set(pool.map(p=>String(p.area??'')))];
               const fertNames = [...new Set(pool.map(p=>String(p.fertilizerName??'')))];
+              // 2026-07-20：支持多作物 — 优先用 crop_names JSON，fallback 到 pool 去重
+              let cropNames: string[] = [];
+              try { cropNames = JSON.parse((rec as any).cropNames || '[]'); } catch { cropNames = []; }
+              if (cropNames.length === 0) {
+                cropNames = [...new Set(pool.map(p=>String(p.cropName??'')))].filter(Boolean);
+              }
+              if (cropNames.length === 0 && rec.cropName) cropNames = [rec.cropName];
+              const areaSummary = [...new Set(pool.map(p=>`${p.cropName||''}·${p.area||''}`))].filter(Boolean).join('；');
               const totalQty = pool.reduce((s,r)=>s+Number(r.quantity),0)||rec.quantity||0;
               const totalCost = pool.reduce((s,r)=>s+Number(r.quantity)*Number(r.unitPrice),0)||rec.totalCost||0;
               const isIot = rec.dataSource==='auto_iot';
@@ -120,6 +128,8 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
               // 按肥料名分组
               const fertGroups = new Map<string,FertilizationPoolRow[]>();
               pool.forEach(p=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
+              // 作物 Badge 色板
+              const CROP_COLORS = ['bg-amber-100 text-amber-700','bg-sky-100 text-sky-700','bg-rose-100 text-rose-700','bg-violet-100 text-violet-700','bg-teal-100 text-teal-700','bg-orange-100 text-orange-700','bg-cyan-100 text-cyan-700','bg-pink-100 text-pink-700'];
 
               return (<React.Fragment key={rec.id}>
                 {/* 主行 */}
@@ -132,8 +142,21 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
                     <Button variant="link" size="sm" onClick={()=>onDetail(rec)} className="font-mono p-0 h-auto text-blue-600">{rec.fertilizerCode}</Button>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{rec.fertilizeTime||'-'}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">{rec.cropName||'-'}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{areaNames.length||1} 个</TableCell>
+                  {/* 2026-07-20：作物列 — 多作物 Badge 展示 */}
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {cropNames.slice(0, 3).map((cn, i) => (
+                        <span key={cn} className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${CROP_COLORS[i % CROP_COLORS.length]}`}>{cn}</span>
+                      ))}
+                      {cropNames.length > 3 && <span className="text-xs text-gray-400">+{cropNames.length - 3}</span>}
+                    </div>
+                  </TableCell>
+                  {/* 2026-07-20：区域列 — 摘要 text + tooltip */}
+                  <TableCell className="px-4 py-3 text-xs text-gray-600 max-w-[200px]">
+                    <span className="truncate block" title={areaSummary}>
+                      {areaSummary.length > 25 ? areaSummary.slice(0, 25) + '…' : areaSummary}
+                    </span>
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{fertNames.length||1} 种</TableCell>
                   <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 text-right whitespace-nowrap">{totalQty.toLocaleString()} {pool[0]?.unit||rec.unit||'kg'}</TableCell>
                   <TableCell className="px-4 py-3 text-sm font-medium text-amber-600 text-right whitespace-nowrap">¥{totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</TableCell>
@@ -174,6 +197,7 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
                                   <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
                                     <tr>
                                       <th className="px-3 py-2 text-left">#</th>
+                                      <th className="px-3 py-2 text-left">作物</th>
                                       <th className="px-3 py-2 text-left">来源</th>
                                       <th className="px-3 py-2 text-left">批号</th>
                                       <th className="px-3 py-2 text-left">区域</th>
@@ -188,6 +212,7 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
                                     {rows.map((r,i)=>(
                                       <tr key={`${r.type}-${r.id}-${i}`} className="hover:bg-emerald-50/40">
                                         <td className="px-3 py-2 text-center text-gray-500">{i+1}</td>
+                                        <td className="px-3 py-2 text-gray-800 font-medium text-xs">{r.cropName||'-'}</td>
                                         <td className="px-3 py-2 text-gray-700">{r.type==='planting'?'🌱种植':'🌿育苗'}</td>
                                         <td className="px-3 py-2 font-mono text-xs text-gray-600">{r.code||'-'}</td>
                                         <td className="px-3 py-2 text-gray-800 font-medium">{r.area}</td>

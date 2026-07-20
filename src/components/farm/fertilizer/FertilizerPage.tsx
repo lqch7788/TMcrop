@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button, DeleteConfirmModal, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Sprout } from 'lucide-react';
-import { useFertilizerStore, FertilizerData, useWateringStore, useIotStore, useToastStore } from '@/stores';
+import { useFertilizerStore, FertilizerData, useWateringStore, useIotStore, useToastStore, getDictItemName } from '@/stores';
 import type { WateringData } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
@@ -271,24 +271,43 @@ export default function FertilizerPage() {
         return;
       }
 
-      // 解析池数据生成导出行（2026-07-16：池损坏时 warn，但仍走导出）
-      const rows = toExport.map((it) => {
+      // 2026-07-20 重构：展平池行为导出行（每条 = 一个区域 × 一种肥料），清晰展示多作物/多区域
+      const rows: Array<Record<string, unknown>> = [];
+      for (const it of toExport) {
         let pool: any[] = [];
         try { pool = JSON.parse((it as any).fertilizationPool || '[]'); }
         catch (e) { console.warn(`[export] 记录 ${it.id} 池 JSON 损坏:`, e); }
-        const areas = new Set<string>();
-        const ferts = new Set<string>();
-        pool.forEach((r: any) => { if (r.area) areas.add(r.area); if (r.fertilizerName) ferts.add(r.fertilizerName); });
-        const poolDetail = pool.length > 0
-          ? pool.map((r: any) => `${r.fertilizerName||''}|${r.area||''}|${r.quantity}${r.unit||'kg'}|${r.dilutionRatio||'-'}`).join('; ')
-          : '';
-        return {
-          施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName,
-          温室: it.greenhouseName, 区域数: String(areas.size || 1), 肥料种类: String(ferts.size || 1),
-          总用量: `${it.quantity||0} ${it.unit||'kg'}`, 总成本: `¥${it.totalCost||0}`,
-          操作员: it.operatorName||'', 数据来源: it.dataSource==='auto_iot'?'IoT自动':'手动', 肥料明细: poolDetail,
-        };
-      });
+        if (pool.length === 0) {
+          // 无池数据 → 用扁平字段兜底一行
+          rows.push({
+            施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName || '-',
+            来源: '-', 批号: it.plantingCode || it.seedlingCode || '-', 区域: it.areaName || it.greenhouseName || '-',
+            肥料名: it.fertilizerName || '-', 品牌: (it as any).specBrandName || '',
+            用量: it.quantity ?? 0, 单位: it.unit || 'kg', 施肥方式: '-', 稀释倍数: it.dilutionRatio || '-',
+            单价: it.unitPrice ?? 0, 小计: it.totalCost ?? 0,
+            操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
+            备注: it.description || '',
+          });
+        } else {
+          for (const r of pool) {
+            rows.push({
+              施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: r.cropName || it.cropName || '-',
+              来源: r.type === 'planting' ? '种植' : r.type === 'seedling' ? '育苗' : '-',
+              批号: r.code || it.plantingCode || it.seedlingCode || '-',
+              区域: r.area || it.areaName || '-',
+              肥料名: r.fertilizerName || it.fertilizerName || '-',
+              品牌: r.specBrandName || (it as any).specBrandName || '',
+              用量: Number(r.quantity) || 0, 单位: r.unit || it.unit || 'kg',
+              施肥方式: r.fertilizationMethod ? (getDictItemName('fertilization_method', r.fertilizationMethod) || r.fertilizationMethod) : '-',
+              稀释倍数: r.dilutionRatio || it.dilutionRatio || '-',
+              单价: Number(r.unitPrice) || it.unitPrice || 0,
+              小计: (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
+              操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
+              备注: it.description || '',
+            });
+          }
+        }
+      }
 
       const filename = `施肥记录_${todayLocal()}`;
 

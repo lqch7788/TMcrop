@@ -48,6 +48,8 @@ export interface FertilizerData {
   specBatchNumber?: string;
   specUnitPriceSnapshot?: number;
   specBrandName?: string;
+  // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+  cropNames?: string;
 }
 
 // ========== FIELD_MAP ==========
@@ -89,6 +91,8 @@ const FIELD_MAP: Record<string, string> = {
   spec_batch_number: 'specBatchNumber',
   spec_unit_price_snapshot: 'specUnitPriceSnapshot',
   spec_brand_name: 'specBrandName',
+  // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
+  crop_names: 'cropNames',
 };
 
 // ========== 转换函数 ==========

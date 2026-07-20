@@ -1633,9 +1633,29 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
               primaryTargetPest,
             });
           }
+          // 2026-07-21：浇水字段同步到浇水记录列表
+          const wateringData = parsed?.watering != null ? {
+            watering: !!parsed.watering,
+            wateringMethod: parsed.wateringMethod,
+            wateringAmount: parsed.wateringAmount,
+            wateringUnit: parsed.wateringUnit,
+          } : null;
+          if (wateringData?.watering && wateringData.wateringAmount > 0) {
+            const { syncWateringRecords } = require('../lib/syncDailyRecords');
+            syncWateringRecords(db, newId, wateringData, {
+              relatedId: id, relatedCode: (planting as any).planting_code || '', relatedType: 'planting',
+              recordDate: recordDate || formatLocalDateISO(),
+              cropName: (planting as any).crop_name || '',
+              cropVariety: (planting as any).crop_variety || '',
+              greenhouseName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              areaId: (planting as any).area_id || '',
+              areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+              operatorId: operatorId2, operatorName: operatorName2,
+            });
+          }
         }
       } catch (syncErr) {
-        console.error('[planting daily-records] 施肥/用药同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+        console.error('[planting daily-records] 施肥/用药/浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
       }
     }
 
@@ -1734,6 +1754,37 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
       `UPDATE daily_records SET ${fields.join(', ')} WHERE id = ? AND related_id = ? AND related_type = ?`,
       values
     );
+
+    // 2026-07-21：编辑场景浇水同步
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const wateringData = parsed?.watering != null ? {
+          watering: !!parsed.watering,
+          wateringMethod: parsed.wateringMethod,
+          wateringAmount: parsed.wateringAmount,
+          wateringUnit: parsed.wateringUnit,
+        } : null;
+        if (wateringData?.watering && wateringData.wateringAmount > 0) {
+          const { syncWateringRecords } = require('../lib/syncDailyRecords');
+          syncWateringRecords(db, recordId, wateringData, {
+            relatedId: id, relatedCode: (planting as any).planting_code || '', relatedType: 'planting',
+            recordDate: recordDate || formatLocalDateISO(),
+            cropName: (planting as any).crop_name || '',
+            cropVariety: (planting as any).crop_variety || '',
+            greenhouseName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+            areaId: (planting as any).area_id || '',
+            areaName: (planting as any).area_name || (planting as any).greenhouse_name || '',
+            operatorId: (req as any).body?.operatorId || '',
+            operatorName: (req as any).body?.operatorName || (req as any).body?.createBy || '',
+          });
+        } else {
+          db.run('DELETE FROM watering_records WHERE source_daily_record_id = ?', [recordId]);
+        }
+      } catch (syncErr) {
+        console.error('[planting daily-records PUT] 浇水同步失败（不影响主记录）:', (syncErr as Error)?.message || syncErr);
+      }
+    }
 
     saveDatabase();
     const updated = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
