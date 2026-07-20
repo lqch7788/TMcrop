@@ -176,7 +176,7 @@ export class InventoryTransactionRepository {
 
     // 今日出库次数（独立 SQL：不受当前筛选影响，全局当天）
     const todayResult = queryToObjects<{ cnt: number }>(db,
-      `SELECT COUNT(*) AS cnt FROM inventory_transaction WHERE transaction_type = 'outbound' AND operate_date = date('now')`,
+      `SELECT COUNT(*) AS cnt FROM inventory_transaction WHERE transaction_type = 'outbound' AND operate_date = date('now','localtime')  -- 2026-07-21 修复：UTC→本地日期（中国 0-8 点统计错位）`,
       []
     );
     const todayCount = todayResult[0]?.cnt || 0;

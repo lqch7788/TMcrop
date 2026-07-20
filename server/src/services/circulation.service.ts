@@ -107,7 +107,9 @@ function deriveOriginFromContext(input: CirculationInput): string {
 }
 
 function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  // 2026-07-21 修复：违反 code-generation-contract-rule（禁止 Math.random()），改用 crypto.randomUUID
+  const { randomUUID } = require('crypto');
+  return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
 
 /**
