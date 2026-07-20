@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS watering_records (
   crop_variety            TEXT,
   greenhouse_id           TEXT,
   greenhouse_name         TEXT NOT NULL,
-  area_name               TEXT,                          -- 区域快照（来自 pool 第一行 area 字段，快速展示）
+  area_id                 TEXT,                          -- 区域 ID（外键关联，筛选用）
+  area_name               TEXT,                          -- 区域名称快照（来自 pool 第一行 area）
   planting_id             TEXT,
   planting_code           TEXT,
   seedling_id             TEXT,
@@ -493,3 +494,45 @@ const [waterFilters, setWaterFilters] = useState<Record<string, string>>({});
 - [ ] Tab 切换时重置 selectedIds / operationMode / exportMode
 - [ ] 页面刷新后 Tab 状态不丢失
 - [ ] ?tab=watering URL 参数直达浇水 tab
+
+## 11. 补充说明
+
+### 11.1 与现有系统的命名冲突
+
+| 已有 | 新设计 | 关系 |
+|------|--------|------|
+| `water_fertilizer_configs` 表 | `watering_records` 表 | **无数据关联**。前者是 iAGS IoT 水肥一体机设备参数配置，后者是业务浇水记录。`total_water`/`water_unit` 字段名重叠属巧合 |
+| `/api/water-fertilizer` 路由 | `/api/watering` 路由 | 功能独立。前者是 IoT 配置 CRUD+下发，后者是浇水业务记录 CRUD |
+
+### 11.2 `record_type` vs `data_source` 双字段分工
+
+`watering_records` 沿用 `fertilizer_records` 的 `data_source` 字段（`'manual'` / `'auto_iot'`）标记**输入方式**。同时新增 `record_type` 标记**业务来源**（`'manual'` / `'fertilizer_dilution'` / `'daily_sync'`）。两字段正交：
+
+| record_type | data_source | 含义 |
+|-------------|-------------|------|
+| `manual` | `manual` | 用户在水肥管理页面手动新增 |
+| `fertilizer_dilution` | `manual` | 施肥记录自动生成 |
+| `daily_sync` | `manual` | 每日记录同步 |
+
+此设计保留 `data_source` 以兼容 IoT 扩展（未来可能有 IoT 自动浇水数据，`data_source='auto_iot'`）。
+
+### 11.3 时间戳写入方式
+
+DDL 使用 `DEFAULT (datetime('now','localtime'))`，但 Service 层统一**显式传 `nowLocalTimestamp()`**（参照 `fertilizer.service.ts` 模式），确保事务内所有时间戳一致。
+
+### 11.4 列表查询不 JOIN 取来源编号
+
+`GET /api/watering` 列表查询**不 JOIN** `fertilizer_records` 或 `daily_records`。前端来源列直接按 `record_type` 显示中文映射（「手动录入」「施肥稀释」「每日记录同步」）。只在 `/api/watering/:id` 详情查询中按需 JOIN 取来源实体的 code 字段。
+
+### 11.5 浇水方式字典
+
+数据存储统一使用 dict_code（如 `drip_irrigation`），前端渲染时用 `getDictItemName('watering_method', code)` 翻译为中文。字典复用 `cropConstants.ts` 中已有的 `WATERING_METHOD_MAP`（16 种），无需新建字典。
+
+### 11.6 已知技术债（非本次 scope）
+
+- `fertilizer.repository.ts` 的 `FertilizerRecord` interface 缺少 `source_daily_record_id`/`source_type`/`area_id`/`area_name` 字段声明（fixMissingSchema 已加列，但 TS 接口未同步）。本设计涉及的浇水相关字段走显式类型定义，不依赖此技术债。
+- `plantings` 表有 `total_irrigation`/`irrigation_count` 累加字段（`schema.ts:597-598`），但当前每日记录浇水不触发累加。本次设计暂不改变此行为，后续可考虑一致性。
+
+### 11.7 页面入口文件不重命名
+
+`src/pages/crop/Fertilizer.tsx` 保持原名不变（仅透传组件）。路由 `/crop/fertilizer` 不变。只在 `FertilizerPage.tsx` 内部改标题和加 Tab。避免破坏现有 lazy import 链。
