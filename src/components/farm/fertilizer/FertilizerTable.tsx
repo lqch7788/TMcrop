@@ -14,6 +14,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Pagination } from '@/components/ui';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
 
+/** 作物 Badge 色板（模块级常量，避免每行渲染重复创建） */
+const CROP_COLORS = ['bg-amber-100 text-amber-700','bg-sky-100 text-sky-700','bg-rose-100 text-rose-700','bg-violet-100 text-violet-700','bg-teal-100 text-teal-700','bg-orange-100 text-orange-700','bg-cyan-100 text-cyan-700','bg-pink-100 text-pink-700'];
+
 interface FertilizerTableProps {
   data: FertilizerData[];
   isLoading: boolean;
@@ -130,8 +133,6 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
               const fertGroups = new Map<string,FertilizationPoolRow[]>();
               pool.forEach(p=>{ const k=String(p.fertilizerName??'未知'); if(!fertGroups.has(k))fertGroups.set(k,[]); fertGroups.get(k)!.push(p); });
               // 作物 Badge 色板
-              const CROP_COLORS = ['bg-amber-100 text-amber-700','bg-sky-100 text-sky-700','bg-rose-100 text-rose-700','bg-violet-100 text-violet-700','bg-teal-100 text-teal-700','bg-orange-100 text-orange-700','bg-cyan-100 text-cyan-700','bg-pink-100 text-pink-700'];
-
               return (<React.Fragment key={rec.id}>
                 {/* 主行 */}
                 <TableRow className={`hover:bg-emerald-50 transition-colors ${isIot?'border-l-4 border-l-green-400':''}`}>

@@ -364,10 +364,10 @@ export class FertilizerRepository {
    * 查询单条 spec（替代原 findLibraryById）
    * 注意：queryToObjects 已转 camelCase，所以返回字段是 camelCase
    */
-  findSpecById(specId: string): { id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string } | null {
+  findSpecById(specId: string): { id: string; fertilizerName: string; stockQuantity: number; stockUnit?: string; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string } | null {
     const db = getDatabase();
-    const rows = queryToObjects<{ id: string; fertilizerName: string; stockQuantity: number; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string }>(db,
-      `SELECT id, fertilizer_code, fertilizer_name, brand_name, unit_price, batch_number, stock_quantity FROM fertilizer_specs WHERE id = ?`, [specId]);
+    const rows = queryToObjects<{ id: string; fertilizerName: string; stockQuantity: number; stockUnit?: string; brandName?: string; fertilizerCode?: string; unitPrice?: number; batchNumber?: string }>(db,
+      `SELECT id, fertilizer_code, fertilizer_name, brand_name, unit_price, batch_number, stock_quantity, stock_unit FROM fertilizer_specs WHERE id = ?`, [specId]);
     return rows[0] ?? null;
   }
 
