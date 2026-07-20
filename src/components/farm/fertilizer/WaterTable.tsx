@@ -5,7 +5,8 @@
  */
 import React from 'react';
 import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2 } from 'lucide-react';
-import { WateringData, getDictItemName } from '@/stores';
+import { getDictItemName } from '@/stores';
+import type { WateringData } from '@/stores';
 import { parseWateringPool, type WateringPoolRow } from '@/lib/wateringPool';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
