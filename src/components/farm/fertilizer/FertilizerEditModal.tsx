@@ -60,10 +60,12 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
             seenAreaIds.add(row.id);
             areas.push({ type: row.type||'planting', id: row.id, code: row.code||'', cropName: row.cropName||record.cropName, area: row.area||'', greenhouseId: record.greenhouseId, greenhouseName: record.greenhouseName });
           }
-          if (row.fertilizerSpecId && !seenSpecIds.has(row.fertilizerSpecId)) {
-            seenSpecIds.add(row.fertilizerSpecId);
+          // 2026-07-21：兼容旧字段名 fertilizerSpecId + 新统一字段名 specId
+          const rowSpecId = row.specId || row.fertilizerSpecId;
+          if (rowSpecId && !seenSpecIds.has(rowSpecId)) {
+            seenSpecIds.add(rowSpecId);
             ferts.push({
-              specId: row.fertilizerSpecId, fertilizerName: row.fertilizerName,
+              specId: rowSpecId, fertilizerName: row.fertilizerName,
               fertilizerCode: '', fertilizerType: record.fertilizerType||'',
               brandName: row.specBrandName||'', specContent: '', manufacturer: '',
               dosage: String(row.quantity), unit: row.unit||'kg', dilutionRatio: row.dilutionRatio||'',
@@ -137,7 +139,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
         type:area.type,id:area.id,code:area.code,cropName:area.cropName,cropCode:'',area:area.area,
         quantity:Number(fert.dosage),unit:fert.unit,dilutionRatio:fert.dilutionRatio,
         fertilizationMethod:fert.fertilizationMethod,fertilizerName:fert.fertilizerName,
-        unitPrice:Number(fert.unitPrice),fertilizerSpecId:fert.specId,
+        unitPrice:Number(fert.unitPrice),specId:fert.specId,  // 2026-07-21 统一字段名
         specBrandName:fert.brandName,specUnitPrice:Number(fert.unitPrice),specBatchNumber:'',
       })));
       const totalQty=poolRows.reduce((s,r)=>s+r.quantity,0);

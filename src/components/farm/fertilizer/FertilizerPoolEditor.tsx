@@ -113,9 +113,9 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
     return result;
   }, [selectedTypes, searchKeyword, libStore.items]);
 
-  // 加入池（去重）
+  // 加入池（按 specId 去重，避免同一肥料重复添加）
   const addToPool = useCallback((spec: any) => {
-    const dedupeKey = spec.id;
+    if (pool.some((p) => p.specId === spec.id)) return;  // 2026-07-21 修复：未使用的 dedupeKey 改为实际去重
     setSearchKeyword('');
     setShowDropdown(false);
     onChange([

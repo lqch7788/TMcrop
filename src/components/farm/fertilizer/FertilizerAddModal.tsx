@@ -144,7 +144,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
           fertilizationMethod: fert.fertilizationMethod,
           fertilizerName: fert.fertilizerName,
           unitPrice: Number(fert.unitPrice),
-          fertilizerSpecId: fert.specId,
+          specId: fert.specId,  // 2026-07-21 统一字段名（旧名 fertilizerSpecId 已废弃）
           specBrandName: fert.brandName,
           specUnitPrice: Number(fert.unitPrice),
           specBatchNumber: '',

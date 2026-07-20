@@ -171,6 +171,13 @@ function generatePesticideCode(db: any, dateStr: string): string {
   return `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
 }
 
+/** 本地时间戳 YYYY-MM-DD HH:MM:SS（替换 toISOString，修复 UTC 跨天错位 bug） */
+function localNow(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 /** 将本地 Date 转 YYYYMMDD（用于肥料/药剂编号） */
 function localDateYYYYMMDD(recordDate: string): string {
   // recordDate 已是 'YYYY-MM-DD' 格式（前端传或 backend ISO 截取）
@@ -394,6 +401,9 @@ export async function syncFertilizerRecords(
     const first = validItems[0];
     const totalQuantity = validItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
     const firstUnit = first.unit || 'kg';
+    // 2026-07-21 修复：计算 total_cost（池行 sum）和 unit_price（首项单价），补齐同步记录导出时费用列为 0 的问题
+    const totalCost = pool.reduce((sum: number, p: any) => sum + (Number(p.quantity) || 0) * (Number(p.unitPrice) || 0), 0);
+    const firstUnitPrice = Number(first.unitPrice) || 0;
 
     // 5. 生成标准编号 SF{YYYYMMDD}-NNNN
     const dateStr = localDateYYYYMMDD(ctx.recordDate);
@@ -407,19 +417,20 @@ export async function syncFertilizerRecords(
     const realCodesJson = realCodes.length > 0 ? JSON.stringify(realCodes) : null;
 
     // 7. INSERT 一条聚合记录
+    const now = localNow();
     db.run(
       `INSERT INTO fertilizer_records (
         id, fertilizer_code, planting_id, planting_code, seedling_id, seedling_code,
         greenhouse_name, crop_name, crop_names, crop_variety,
         fertilizer_name, fertilizer_type, dilution_ratio,
-        quantity, unit, fertilize_time, description,
+        quantity, unit, unit_price, total_cost, fertilize_time, description,
         operator_id, operator_name,
         data_source, source_type,
         source_daily_record_id, source_item_id,
         real_fertilizer_code, fertilization_pool,
         area_id, area_name,
-        create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?, ?, ?, ?, ?)`,
+        status, create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record', 'daily_record_sync', ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
       [
         id, fertilizerCode,
         ctx.relatedType === 'planting' ? ctx.relatedId : null,
@@ -436,6 +447,8 @@ export async function syncFertilizerRecords(
         formatDilution(first),
         totalQuantity,
         firstUnit,
+        firstUnitPrice,  // 2026-07-21 修复：补齐 unit_price
+        totalCost,       // 2026-07-21 修复：补齐 total_cost（池行 sum）
         ctx.recordDate,
         validItems.map((it) => it.notes).filter(Boolean).join(' | ') || `从每日记录同步（${validItems.length}种）`,
         ctx.operatorId || null,
@@ -447,7 +460,8 @@ export async function syncFertilizerRecords(
         JSON.stringify(pool),
         ctx.areaId || null,  // 2026-07-15：区域 ID
         ctx.areaName || null,  // 2026-07-15：区域名（用户实际用的"区域"）
-        new Date().toISOString(),
+        now,  // 2026-07-21 修复：补齐 status='completed', create_time, update_time（本地时间）
+        now,
       ]
     );
 
@@ -492,8 +506,8 @@ export async function syncFertilizerRecords(
           water_time, data_source,
           source_daily_record_id,
           operator_id, operator_name, description,
-          status, create_time
-        ) VALUES (?, ?, 'fertilizer_dilution', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?, ?, 'completed', ?)`,
+          status, create_time, update_time
+        ) VALUES (?, ?, 'fertilizer_dilution', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'daily_record_sync', ?, ?, ?, ?, 'completed', ?, ?)`,
         [
           waterCode, waterCode, fertilizerCode,
           ctx.relatedType === 'planting' ? ctx.relatedId : null,
@@ -509,7 +523,8 @@ export async function syncFertilizerRecords(
           dilutionSourceId,
           ctx.operatorId || null, ctx.operatorName || null,
           `施肥稀释用水（${primaryFertName}等${dilutionWaterRows.length}种肥料）`,
-          new Date().toISOString(),
+          now,  // create_time
+          now,  // 2026-07-21 修复：补齐 update_time
         ]
       );
     }
@@ -717,7 +732,7 @@ export async function syncWateringRecords(
     }];
 
     // 4. INSERT
-    const now = new Date().toISOString();
+    const now = localNow();  // 2026-07-21 修复：用本地时间替代 toISOString()（UTC 跨天错位）
     db.run(
       `INSERT INTO watering_records (
         id, water_code, record_type,
@@ -728,8 +743,8 @@ export async function syncWateringRecords(
         water_time, data_source,
         source_daily_record_id,
         operator_id, operator_name, description,
-        status, create_time
-      ) VALUES (?, ?, 'daily_sync', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, ?, ?, 'completed', ?)`,
+        status, create_time, update_time
+      ) VALUES (?, ?, 'daily_sync', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, ?, ?, 'completed', ?, ?)`,
       [
         id, waterCode,
         ctx.relatedType === 'planting' ? ctx.relatedId : null,
@@ -750,7 +765,8 @@ export async function syncWateringRecords(
         ctx.operatorId || null,
         ctx.operatorName || null,
         `从每日记录同步（${methodLabel}）`,
-        now,
+        now,  // create_time
+        now,  // 2026-07-21 修复：补齐 update_time
       ]
     );
   } catch (err) {
