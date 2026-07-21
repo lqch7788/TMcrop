@@ -234,6 +234,7 @@ export interface SeedSource {
   createBy: string;           // 创建人
   createTime: string;          // 创建时间
   updateTime: string;          // 更新时间
+  updateBy?: string;           // 最后修改人（2026-07-21 补全）
   // 关联字段（新增）
   instanceId?: string;         // 关联的作物实例ID
   orderId?: string;           // 关联的订单ID
@@ -796,6 +797,11 @@ export interface SeedSourceFilters {
   // 繁殖途径筛选
   propagationType?: string;    // 入库方式（external/breeding/seed_saving/asexual）
   propagationStatus?: string;  // 繁殖阶段
+  // 2026-07-21：回流合并筛选（列表已删除回流次数字段，移到筛选器）
+  // - undefined / '' = 不筛选（显示全部）
+  // - 'has_reflow' = 只显示 reflow_count > 0 的种源（被合并过）
+  // - 'no_reflow' = 只显示 reflow_count = 0 的种源
+  reflowFilter?: 'has_reflow' | 'no_reflow' | '';
 }
 
 /** 育苗筛选条件 */

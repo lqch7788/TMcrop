@@ -27,12 +27,15 @@ import { Tooltip } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+// 2026-07-21：共享品种路径 hook（列表/详情/编辑统一来源）
+import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
 
 // 2026-07-01 P1-9：列数抽常量（包含操作列），加列时只需更新这个数字
-const TOTAL_COLUMNS = 18;  // 2026-07-18: 加回流次数列（17→18）
+// 2026-07-21：删除回流次数列（17→16）— 详情弹窗已展示完整回流记录，列表单独显示次数无意义
+const TOTAL_COLUMNS = 16;
 
 // 单位格式化函数（优先使用常量映射，兜底返回原值）
 function formatUnit(unit: string): string {
@@ -122,75 +125,8 @@ export function SeedSourceTable({
   canExport = true,
   canPrint = true,
 }: SeedSourceTableProps) {
-  // 2026-07-01: 品种库缓存 — 从作物品种库实时查询完整四段路径（对标种植管理）
-  const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
-
-  useEffect(() => {
-    const loadVarieties = async () => {
-      const varieties = await cropVarietyService.getAllVarieties();
-      const cache = new Map<string, CropVariety>();
-      varieties.forEach((v: CropVariety) => {
-        // 按 subVariety1Name 缓存（最细分）
-        const key1 = v.subVariety1Name || '';
-        if (key1 && !cache.has(key1)) cache.set(key1, v);
-        // 按 varietyName 缓存
-        const key2 = v.varietyName || '';
-        if (key2 && !cache.has(key2)) cache.set(key2, v);
-        // 按 cropCode 缓存（最精确）
-        const key3 = v.cropCode || '';
-        if (key3 && !cache.has(key3)) cache.set(key3, v);
-      });
-      setVarietyCache(cache);
-    };
-    loadVarieties();
-  }, []);
-
-  // 从品种库查找完整品种信息（对标种植管理 PlantingTable.getVarietyByAny）
-  const getVarietyByAny = (record: SeedSource): CropVariety | null => {
-    // 优先 cropCode 查找
-    if (record.cropCode) {
-      const v = varietyCache.get(record.cropCode);
-      if (v) return v;
-    }
-    // cropName 模糊匹配
-    if (record.cropName) {
-      for (const [key, variety] of varietyCache.entries()) {
-        const fullName = variety.subVariety1Name || variety.varietyName || '';
-        if (fullName.includes(record.cropName) || record.cropName.includes(fullName)) {
-          return variety;
-        }
-      }
-    }
-    // cropVariety 模糊匹配
-    if (record.cropVariety) {
-      for (const [key, variety] of varietyCache.entries()) {
-        const fullName = variety.subVariety1Name || variety.varietyName || '';
-        if (fullName.includes(record.cropVariety) || record.cropVariety.includes(fullName)) {
-          return variety;
-        }
-      }
-    }
-    return null;
-  };
-
-  // 品种完整路径：从品种库查四段路径（类别 > 类型 > 品种 > 子品种）
-  const getVarietyPath = (record: SeedSource): string => {
-    const variety = getVarietyByAny(record);
-    if (!variety) {
-      // 兜底：用 record 自身字段拼接
-      const parts: string[] = [];
-      if (record.cropCategory) parts.push(record.cropCategory);
-      if (record.cropName) parts.push(record.cropName);
-      if (record.cropVariety && record.cropVariety !== record.cropName) parts.push(record.cropVariety);
-      return parts.length > 0 ? parts.join(' > ') : '-';
-    }
-    const parts: string[] = [];
-    if (variety.categoryName) parts.push(variety.categoryName);
-    if (variety.typeName) parts.push(variety.typeName);
-    if (variety.varietyName) parts.push(variety.varietyName);
-    if (variety.subVariety1Name) parts.push(variety.subVariety1Name);
-    return parts.join(' > ') || '-';
-  };
+  // 2026-07-21：使用共享 hook 取品种路径（与详情/编辑完全一致）
+  const { getVarietyByAny, getVarietyPath } = useSeedSourceVarietyPath();
 
   // 获取标准作物编码（从品种库获取 cropCode）
   const getStandardCropCode = (record: SeedSource): string => {
@@ -418,8 +354,7 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="种源入库数量（采购/调拨一次性入库）">入库数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">剩余数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
-              {/* 2026-07-18: 种源合并 - 回流次数列 */}
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-24" title="种植留种回流合并到本种源的次数">回流次数</TableHead>
+              {/* 2026-07-21：回流次数列已删除（移到筛选器，详情弹窗展示完整信息） */}
               {/* 2026-06-30 合并：内部仓库不做分批，剩余率与状态列功能重叠（都是库存健康度表达） */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 <Tooltip
@@ -441,7 +376,7 @@ export function SeedSourceTable({
                 </Tooltip>
               </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人/时间</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
               <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20">操作</TableHead>
             </TableRow>
@@ -547,8 +482,23 @@ export function SeedSourceTable({
                     {/* 2026-06-25 v3: 种源只有 external + transfer_from_inventory — 统一显示 SOURCE_ORIGIN_MAP */}
                     <span>{truncateText(SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin)}</span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.supplierName || undefined}>
-                    {truncateText(record.supplierName)}
+                  {/* 2026-07-21：供应商列展示逻辑 — 调拨/回流的种源显示原始来源供应商
+                      （避免混淆用户：当前种源的 supplierName 是入库时复制过来的，
+                      而 originalSupplierName 才是来源库存的真正供应商） */}
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap"
+                    title={
+                      record.sourceOrigin === 'inventory_transfer'
+                        ? `调拨来源：${record.originalSupplierName || record.supplierName || '未知'}`
+                        : (record.supplierName || undefined)
+                    }>
+                    {record.sourceOrigin === 'inventory_transfer' ? (
+                      <span>
+                        {truncateText(record.originalSupplierName || record.supplierName)}
+                        <span className="ml-1 text-[10px] text-cyan-600">(调拨来源)</span>
+                      </span>
+                    ) : (
+                      truncateText(record.supplierName)
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.purchaseDate || record.createTime}>
                     {/* 2026-07-01 P2-19：调拨入种源的 record.purchaseDate 为空时 fallback 到 createTime */}
@@ -563,19 +513,7 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {formatUnit(record.unit) || '-'}
                   </TableCell>
-                  {/* 2026-07-18: 回流次数列 - 种植自留种合并到本种源的次数 */}
-                  <TableCell className="px-4 py-3 text-center text-sm">
-                    {((record as any).reflowCount ?? 0) > 0 ? (
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"
-                        title={(record as any).lastReflowAt ? `最近 ${(record as any).lastReflowAt}` : ''}
-                      >
-                        {(record as any).reflowCount} 次
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </TableCell>
+                  {/* 2026-07-21：回流次数列表列已删除（移到筛选器 + 详情弹窗） */}
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       {(() => {
@@ -606,8 +544,15 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={record.remarks || undefined}>
                     {truncateText(record.remarks)}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={record.createBy}>
-                    {truncateText(record.createBy)}
+                  {/* 2026-07-21：补全创建时间展示（与详情完全一致） */}
+                  <TableCell
+                    className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap"
+                    title={`${record.createBy || '—'}\n${record.createTime || '—'}`}
+                  >
+                    <div>{truncateText(record.createBy, 8)}</div>
+                    <div className="text-gray-400 text-[10px]">
+                      {record.createTime ? record.createTime.substring(0, 10) : '—'}
+                    </div>
                   </TableCell>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
                   <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">

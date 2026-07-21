@@ -30,6 +30,8 @@ import {
   type SeedSourceUsageRecord,
   type InboundEditLog,
 } from '@/services/apiSeedSourceService';
+// 2026-07-21：使用共享品种路径 hook（与列表/编辑完全一致）
+import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
 
 /**
@@ -65,6 +67,8 @@ interface DetailModalProps {
 function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
   const formatUnit = (unit: string) => UNIT_MAP[unit] || unit || '';
   const status = STOCK_STATUS_MAP[computeStockStatus(record.availableCount, record.initialCount)] || STOCK_STATUS_MAP['sufficient'];
+  // 2026-07-21：使用共享 hook 取完整 4 段品种路径（与列表完全一致）
+  const { getVarietyPath } = useSeedSourceVarietyPath();
 
   // 判断入库模式
   const originKey = record.sourceOrigin || (record.transferredFromStockId ? 'transfer_from_inventory' : 'external');
@@ -99,7 +103,8 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">品种路径：</span>
-            <span className="text-sm text-gray-600">{record.typeName && record.varietyName ? `${record.typeName} › ${record.varietyName}` : record.varietyName || record.typeName || '—'}</span>
+            {/* 2026-07-21：使用共享 hook 取完整 4 段路径（与列表完全一致） */}
+            <span className="text-sm text-gray-600">{getVarietyPath(record)}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">来源途径：</span>
@@ -108,6 +113,11 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">形态：</span>
             <span className="text-sm text-gray-900">{formatSeedForm(record.seedForm)}</span>
+          </div>
+          {/* 2026-07-21：补种源类型字段（与编辑/列表对齐） */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">种源类型：</span>
+            <span className="text-sm text-gray-900">{SOURCE_TYPE_MAP[record.sourceType] || record.sourceType || '—'}</span>
           </div>
         </div>
       </div>
@@ -124,22 +134,33 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             <span className="text-sm text-gray-500 w-24">入库数量：</span>
             <span className="text-sm text-gray-900">{record.quantity.toLocaleString()} {formatUnit(record.unit)}</span>
           </div>
-          {isExternal && (
-            <>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-24">单价：</span>
-                <span className="text-sm text-gray-900">¥{record.unitPrice}/{formatUnit(record.unit)}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-24">总金额：</span>
-                <span className="text-sm text-gray-900">¥{record.totalAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-24">供应商：</span>
-                <span className="text-sm text-gray-900">{record.supplierName || '—'}</span>
-              </div>
-            </>
-          )}
+          {/* 2026-07-21：价格字段统一展示（不再仅 external 模式显示）
+              - 外购：显示 unitPrice + totalAmount
+              - 调拨：unitPrice 已从原库存复制（见 inventoryTransfer.service.ts:489），显示单价+总额 + 原始供应商
+              - 回流：unitPrice 默认 0，显示"—"
+              调拨种源额外显示"原始单价"作为审计对照 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">单价：</span>
+            <span className="text-sm text-gray-900">
+              ¥{record.unitPrice || 0}/{formatUnit(record.unit)}
+              {isTransfer && record.originalUnitPrice != null && Number(record.unitPrice) !== Number(record.originalUnitPrice) && (
+                <span className="text-xs text-gray-400 ml-1">（原始 ¥{record.originalUnitPrice}）</span>
+              )}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">总金额：</span>
+            <span className="text-sm text-gray-900">¥{(record.totalAmount || 0).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">供应商：</span>
+            <span className="text-sm text-gray-900">
+              {record.supplierName || '—'}
+              {isTransfer && record.originalSupplierName && (
+                <span className="text-xs text-gray-400 ml-1">（原始：{record.originalSupplierName}）</span>
+              )}
+            </span>
+          </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">可用数量：</span>
             <span className="text-sm font-medium text-emerald-600">{record.availableCount.toLocaleString()} {formatUnit(record.unit)}</span>
@@ -151,26 +172,8 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
         </div>
       </div>
 
-      {/* 种植留种关联信息 */}
-      {isPlantingKept && (
-        <div>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">种植留种信息</h4>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">关联种植：</span>
-              <span className="text-sm font-mono text-gray-900">{record.linkedPlantingCode || '—'}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">世代：</span>
-              <span className="text-sm text-gray-900">{record.generation || '—'}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-500 w-24">采收形态：</span>
-              <span className="text-sm text-gray-900">{formatSeedForm(record.seedForm)}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2026-07-21：删除"繁殖信息"区块 — 内部种源已退化为纯仓库角色，育种/留种功能已移到种植管理
+         外购/调拨/回流种源均不再显示繁殖相关字段（propagationType/propagationMethod/propagationStatus 为历史遗留） */}
 
       {/* 其他信息 */}
       <div>
@@ -182,15 +185,29 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">创建时间：</span>
-            <span className="text-sm text-gray-900">{record.createTime}</span>
+            <span className="text-sm text-gray-900">{record.createTime || '—'}</span>
+          </div>
+          {/* 2026-07-21：补全最后修改人/时间 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">最后修改人：</span>
+            <span className="text-sm text-gray-900">{(record as any).updateBy || '—'}</span>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 w-24">更新时间：</span>
-            <span className="text-sm text-gray-900">{record.updateTime}</span>
+            <span className="text-sm text-gray-500 w-24">最后修改时间：</span>
+            <span className="text-sm text-gray-900">{record.updateTime || '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">打印次数：</span>
             <span className="text-sm text-gray-900">{record.printCount} 次</span>
+          </div>
+          {/* 2026-07-21：始终展示生产计划和溯源码（空值显示"—"） */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">生产计划：</span>
+            <span className="text-sm font-mono text-gray-900">{record.productionPlanCode || '—'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">溯源码：</span>
+            <span className="text-sm font-mono text-gray-900">{record.traceabilityCode || '—'}</span>
           </div>
           {/* 2026-07-18: 种源合并 - 回流次数 + 最近回流时间 + 合并历史 */}
           {(record.reflowCount ?? 0) > 0 && (

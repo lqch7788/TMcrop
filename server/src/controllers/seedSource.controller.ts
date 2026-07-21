@@ -23,6 +23,37 @@ function pickField(obj: any, snakeName: string, camelName?: string): any {
 }
 
 /**
+ * 2026-07-21：把请求体的 camelCase 字段转回 snake_case（与仓库白名单对齐）
+ *
+ * 背景：
+ * - camelCaseRequestMiddleware 已经把请求体 snake→camel
+ * - 但仓库白名单 ALLOWED_UPDATE_COLUMNS 是 snake_case（直接拼 SQL）
+ * - 两层转换净效果：仓库拿到的 key 是 camelCase，命中白名单失败
+ *
+ * 修复：调用 repository 前做一次 camel→snake 转换
+ *
+ * 例外：少数字段 camelCase → snake_case 转换后与 DB 列名不一致
+ *（如 unitPrice → purchase_price）。这里维护映射表修正。
+ */
+const CAMEL_TO_SNAKE_SPECIAL: Record<string, string> = {
+  unitPrice: 'purchase_price',
+};
+
+function camelToSnake(str: string): string {
+  return str.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+}
+
+function camelKeysToSnake(obj: any): any {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const result: any = {};
+  for (const k of Object.keys(obj)) {
+    const target = CAMEL_TO_SNAKE_SPECIAL[k] || camelToSnake(k);
+    result[target] = obj[k];
+  }
+  return result;
+}
+
+/**
  * 把业务错误消息映射成 HTTP 状态码（H9 辅助函数）
  * 2026-06-06: L4 — 优先用 BusinessError.code 匹配；保留 msg 关键字兜底兼容历史报错
  */
@@ -235,7 +266,9 @@ export class SeedSourceController {
       // 2026-06-26: 写审计日志前先取旧值做 diff
       let oldRecord: any = null;
       try { oldRecord = await this.service.getById(id); } catch (_) { /* 不存在时 update 会失败 */ }
-      const result = await this.service.update(id, data);
+      // 2026-07-21：camelCase 请求体 → snake_case（仓库白名单对齐）
+      const snakeData = camelKeysToSnake(data) as UpdateSeedSourceDTO;
+      const result = await this.service.update(id, snakeData);
       // 数量变更时写 correction
       if (pickField(data, 'quantity') !== undefined) {
         try {
