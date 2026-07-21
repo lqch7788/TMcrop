@@ -15,8 +15,13 @@ export interface PestControlData {
   operatorId?: string;
   operatorName?: string;
   cropName: string;
+  // 2026-07-21：多作物 JSON 数组字符串（与 fertilizer_records 对齐）
+  // - 放宽限制后同次可跨作物防治；持久化字段为 JSON 字符串
+  // - 解析后用作物 Badge 多色板展示
+  cropNames?: string;
   greenhouseName?: string;
   // 2026-07-05: 关联业务（与种植/育苗二选一，互斥）
+  // 2026-07-21：放宽限制后 — 改为逗号分隔的多 ID 字符串；解析回列表用于展示
   plantingId?: string;
   plantingCode?: string;
   seedlingId?: string;
@@ -61,6 +66,8 @@ const FIELD_MAP: Record<string, string> = {
   operator_id: 'operatorId',
   operator_name: 'operatorName',
   crop_name: 'cropName',
+  // 2026-07-21：多作物 JSON 数组
+  crop_names: 'cropNames',
   greenhouse_name: 'greenhouseName',
   // 2026-07-05: 关联业务字段
   planting_id: 'plantingId',
@@ -133,6 +140,7 @@ function normalizePestControl(raw: Record<string, unknown>): PestControlData {
   // pesticideTypes：API 可能返回 array（已 parse）或 string（未 parse），统一为 array
   const pesticideTypesVal = raw.pesticideTypes ?? raw.pesticide_type;
   result.pesticideTypes = parsePesticideTypes(pesticideTypesVal);
+  // 2026-07-21：cropNames 保留 JSON 字符串原值（前端展示时按需 parse，避免破坏 JSON 池结构）
   return result as unknown as PestControlData;
 }
 
