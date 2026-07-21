@@ -10,6 +10,8 @@ import { seedSourceService, SeedSourceService, BusinessError } from '../services
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
 import { AppError } from '../middleware/errorHandler';
+// 2026-07-21：字符串乱码防御工具（防止再次写入 U+FFFD 替代字符）
+import { sanitizeObject, assertNoMojibake } from '../utils/stringSanitizer';
 
 /**
  * 2026-07-14：snake/camel 双字段读取 helper（替代 `data as any` 强转 30+ 处）
@@ -140,6 +142,11 @@ export class SeedSourceController {
     operatorName?: string;
   }): void {
     try {
+      // 2026-07-21：防御 — 检测 opinion 中的乱码，若有则清洗（不抛错，保持审计日志可写入）
+      if (args.opinion) {
+        args.opinion = sanitizeObject(args.opinion);
+        assertNoMojibake(args.opinion, 'audit_log.opinion');
+      }
       const { getDatabase } = require('../db');
       const db = getDatabase();
       // 2026-07-14：审计日志 ID 改用 crypto.randomUUID()（替代 Math.random，违反 [[code-generation-contract-rule]] 铁律）
@@ -162,7 +169,9 @@ export class SeedSourceController {
    */
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data: CreateSeedSourceDTO = req.body;
+      let data: CreateSeedSourceDTO = req.body;
+      // 2026-07-21：防御 — 清洗所有字符串字段中的乱码（防再次写入 U+FFFD 替代字符）
+      data = sanitizeObject(data);
       const result = await this.service.create(data);
       // 写入 material_flow_log
       try {
@@ -250,7 +259,9 @@ export class SeedSourceController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const data: UpdateSeedSourceDTO = req.body;
+      let data: UpdateSeedSourceDTO = req.body;
+      // 2026-07-21：防御 — 清洗所有字符串字段中的乱码（防再次写入 U+FFFD 替代字符）
+      data = sanitizeObject(data);
       // 2026-07-01 P2-11：空 body 校验（避免空对象 PUT 触发 500）
       if (!data || Object.keys(data).length === 0) {
         res.status(400).json({ success: false, error: '请求体不能为空' });
