@@ -2686,6 +2686,17 @@ export async function fixMissingSchema(): Promise<void> {
     } else { seedLog.error(`  ✗ plantings.is_harvest_locked 失败: ${e.message}`); }
   }
 
+  // 2026-07-21: 育种/留种字段（编辑弹窗可保存）
+  try { db.run('ALTER TABLE plantings ADD COLUMN is_breeding INTEGER DEFAULT 0'); seedLog.info('  ✓ plantings.is_breeding 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.is_breeding 已存在，跳过'); else seedLog.error(`  ✗ plantings.is_breeding 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN parent_male_code TEXT'); seedLog.info('  ✓ plantings.parent_male_code 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.parent_male_code 已存在，跳过'); else seedLog.error(`  ✗ plantings.parent_male_code 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN parent_female_code TEXT'); seedLog.info('  ✓ plantings.parent_female_code 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.parent_female_code 已存在，跳过'); else seedLog.error(`  ✗ plantings.parent_female_code 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN generation TEXT'); seedLog.info('  ✓ plantings.generation 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.generation 已存在，跳过'); else seedLog.error(`  ✗ plantings.generation 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN breeding_method TEXT'); seedLog.info('  ✓ plantings.breeding_method 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.breeding_method 已存在，跳过'); else seedLog.error(`  ✗ plantings.breeding_method 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN breeding_location TEXT'); seedLog.info('  ✓ plantings.breeding_location 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.breeding_location 已存在，跳过'); else seedLog.error(`  ✗ plantings.breeding_location 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN target_traits TEXT'); seedLog.info('  ✓ plantings.target_traits 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.target_traits 已存在，跳过'); else seedLog.error(`  ✗ plantings.target_traits 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN is_seed_saving INTEGER DEFAULT 0'); seedLog.info('  ✓ plantings.is_seed_saving 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.is_seed_saving 已存在，跳过'); else seedLog.error(`  ✗ plantings.is_seed_saving 失败: ${e.message}`); }
+  try { db.run('ALTER TABLE plantings ADD COLUMN seed_plant_marker TEXT'); seedLog.info('  ✓ plantings.seed_plant_marker 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - plantings.seed_plant_marker 已存在，跳过'); else seedLog.error(`  ✗ plantings.seed_plant_marker 失败: ${e.message}`); }
+
   // 2. 建 planting_harvest_records 表（采收/淘汰/损耗/分级 多记录明细）
   db.run(`
     CREATE TABLE IF NOT EXISTS planting_harvest_records (

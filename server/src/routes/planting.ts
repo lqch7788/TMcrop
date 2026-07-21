@@ -46,6 +46,13 @@ const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'soil_ph', 'soil_ec', 'attrition_rate',
   'is_harvest_locked',  // 2026-06-17: 软锁标志
   'update_time',
+  // 2026-07-21 新增：补全缺失字段（编辑弹窗可保存）
+  'transplant_count', 'transplant_date',
+  'is_breeding', 'parent_male_code', 'parent_female_code', 'generation',
+  'breeding_method', 'breeding_location', 'target_traits',
+  'is_seed_saving', 'seed_plant_marker',
+  'loss_count', 'supplement_count',
+  'unit', 'target_yield', 'target_yield_unit',
 ]);
 
 /** 通用 UPDATE 白名单过滤：拒绝未知列，返回 {fields, values} */
