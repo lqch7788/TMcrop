@@ -496,7 +496,8 @@ export default function MaterialFlowPage() {
     } else {
       const tk = activeTab as Exclude<TabKey, 'logs' | 'trace'>;
       const H: Record<typeof tk, Record<string, string>> = {
-        seedling: { cropName: '作物', sourceCategory: '来源', totalQty: '总用量', sourceUnit: '单位', batchCount: '批次数' },
+        // 2026-07-21 修复：删除不存在的 batchCount 字段（后端返回无此字段）
+        seedling: { cropName: '作物', sourceCategory: '来源', totalQty: '总用量', sourceUnit: '单位' },
         planting: { cropName: '作物', flowType: '方式', sourceCategory: '来源', totalQty: '消耗量', sourceUnit: '单位' },
         annual:   { flowType: '流转环节', cropName: '作物', flowCount: '流转次数', totalQty: '总量', unit: '单位' },
       };
@@ -509,10 +510,20 @@ export default function MaterialFlowPage() {
     const ext = format === 'excel' ? 'xlsx' : format;
     const filename = `${title}_${today}_${exportSource.length}条.${ext}`;
 
+    // 2026-07-21 修复：统一 camelCase 字段名（后端可能返回 snake_case）
     const exportRows = exportSource.map((it: any) => ({
       ...it,
-      flowType: it.flowType ? labelFlowType(it.flowType) : it.flowType,
-      sourceCategory: it.sourceCategory ? labelCategory(it.sourceCategory) : it.sourceCategory,
+      // 统一字段名：优先 camelCase，fallback snake_case
+      flowType: it.flowType || it.flow_type,
+      cropName: it.cropName || it.crop_name,
+      sourceCategory: it.sourceCategory || it.source_category,
+      totalQty: it.totalQty ?? it.total_qty,
+      sourceUnit: it.sourceUnit || it.source_unit,
+      flowCount: it.flowCount ?? it.flow_count,
+      unit: it.unit || it.unit,
+      // 翻译
+      flowType: it.flowType || it.flow_type ? labelFlowType(it.flowType || it.flow_type) : it.flowType,
+      sourceCategory: it.sourceCategory || it.source_category ? labelCategory(it.sourceCategory || it.source_category) : it.sourceCategory,
     }));
 
     if (format === 'excel') {
