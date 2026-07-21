@@ -30,6 +30,44 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
   const pesticideList = parseJsonList((record as any).pesticideList);
   const bioAgentList = parseJsonList((record as any).bioAgentList);
   const equipmentList = parseJsonList((record as any).equipmentList);
+
+  // 2026-07-21 审核补齐：多作物 JSON 数组（与列表/编辑/新增一致）
+  const cropNamesList = (() => {
+    try {
+      if ((record as any).cropNames) {
+        const parsed = JSON.parse((record as any).cropNames);
+        if (Array.isArray(parsed)) return parsed.filter((v: any) => typeof v === 'string' && v.trim());
+      }
+    } catch {}
+    return record.cropName ? [record.cropName] : [];
+  })();
+
+  // 2026-07-21 审核补齐：关联业务（planting/seedling 多值逗号分隔解析）
+  const bizRecords = (() => {
+    const list: Array<{ type: 'planting' | 'seedling'; code: string; area: string }> = [];
+    const plantingCodes = (record.plantingCode || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const greenhouseAreas = (record.greenhouseName || '').split(/[,，]/).map((s: string) => s.trim()).filter(Boolean);
+    plantingCodes.forEach((code, i) => list.push({ type: 'planting', code, area: greenhouseAreas[i] || '' }));
+    const seedlingCodes = (record.seedlingCode || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    seedlingCodes.forEach((code, i) => list.push({
+      type: 'seedling',
+      code,
+      area: greenhouseAreas[plantingCodes.length + i] || '',
+    }));
+    return list;
+  })();
+
+  // 2026-07-21 审核补齐：作物 Badge 色板（与列表保持一致）
+  const CROP_DETAIL_COLORS = [
+    'bg-amber-100 text-amber-700',
+    'bg-sky-100 text-sky-700',
+    'bg-rose-100 text-rose-700',
+    'bg-violet-100 text-violet-700',
+    'bg-teal-100 text-teal-700',
+    'bg-orange-100 text-orange-700',
+    'bg-cyan-100 text-cyan-700',
+    'bg-pink-100 text-pink-700',
+  ];
   // 2026-07-18 P1-H3 修复：兼容旧 schema 空格 join 的多值
   const targetPestList = (() => {
     if (!record.targetPest) return [];
@@ -177,15 +215,44 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">作物与位置</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">作物名称</span>
-                      <span className="text-sm text-gray-900">{record.cropName || '-'}</span>
+                  <div className="space-y-3">
+                    {/* 2026-07-21 审核补齐：多作物 Badge（与列表一致） */}
+                    <div>
+                      <span className="text-xs text-gray-500 block mb-1">作物名称（{cropNamesList.length} 个）</span>
+                      <div className="flex flex-wrap gap-1">
+                        {cropNamesList.length > 0 ? cropNamesList.map((cn: string, i: number) => (
+                          <span
+                            key={cn}
+                            className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${CROP_DETAIL_COLORS[i % CROP_DETAIL_COLORS.length]}`}
+                            title={cn}
+                          >
+                            {cn}
+                          </span>
+                        )) : <span className="text-sm text-gray-400">-</span>}
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-gray-500">温室位置</span>
+                    <div>
+                      <span className="text-xs text-gray-500 block mb-1">温室位置</span>
                       <span className="text-sm text-gray-900">{record.greenhouseName || '-'}</span>
                     </div>
+                    {/* 2026-07-21 审核补齐：关联业务（种植/育苗多值） */}
+                    {bizRecords.length > 0 && (
+                      <div>
+                        <span className="text-xs text-gray-500 block mb-1">关联批次（{bizRecords.length} 个）</span>
+                        <div className="flex flex-wrap gap-1">
+                          {bizRecords.map((r, idx) => (
+                            <span
+                              key={`${r.type}-${r.code}-${idx}`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs"
+                            >
+                              <span>{r.type === 'planting' ? '🌱' : '🌿'}</span>
+                              <span className="font-mono">{r.code}</span>
+                              {r.area && <span>· {r.area}</span>}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-xs text-gray-500">操作员</span>
                       <span className="text-sm text-gray-900">{record.operatorName || '-'}</span>
@@ -287,6 +354,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
             </div>
 
             {/* 2026-07-10：统一防治项目表（不分化学/生物/物理） */}
+            {/* 2026-07-21 审核补齐：增加「含量/规格」列，展示 specContent/manufacturer/brandName/formulation */}
             <div className="overflow-hidden border border-emerald-200 rounded-lg">
               <div className="bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700">防治项目</div>
               <table className="w-full text-sm">
@@ -295,6 +363,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                     <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">#</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">名称</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">药剂类型</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-emerald-700">含量/规格</th>
                     <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">用量</th>
                     <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">稀释倍数</th>
                   </tr>
@@ -317,13 +386,35 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                             )}
                           </div>
                         </td>
+                        <td className="px-3 py-2 text-gray-600 text-xs">
+                          {/* 2026-07-21：详情与池 chip 同款规格字段展示 */}
+                          {it.specContent ? (
+                            <div>
+                              <div className="font-medium text-gray-800">{it.specContent}</div>
+                              {(it.manufacturer || it.brandName || it.formulation) && (
+                                <div className="text-gray-500 mt-0.5">
+                                  {it.formulation && <span>{it.formulation}</span>}
+                                  {it.manufacturer && <span> · {it.manufacturer}</span>}
+                                  {it.brandName && <span> · {it.brandName}</span>}
+                                </div>
+                              )}
+                            </div>
+                          ) : (it.manufacturer || it.brandName) ? (
+                            <div>
+                              {it.manufacturer && <div>{it.manufacturer}</div>}
+                              {it.brandName && <div className="text-gray-500">{it.brandName}</div>}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-right text-gray-900">{it.dosage || '-'} {it.unit || ''}</td>
                         <td className="px-3 py-2 text-right text-gray-900">{it.ratio || '-'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-3 py-4 text-center text-gray-400">暂无防治项目</td>
+                      <td colSpan={6} className="px-3 py-4 text-center text-gray-400">暂无防治项目</td>
                     </tr>
                   )}
                 </tbody>
