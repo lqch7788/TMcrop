@@ -87,6 +87,8 @@ export const SEED_SOURCE_FILTER_DEFAULTS = {
   surplusMax: undefined as number | undefined,
   propagationType: undefined as string | undefined,
   propagationStatus: undefined as string | undefined,
+  // 2026-07-21：回流合并筛选（列表已删除回流次数字段，移到筛选器）
+  reflowFilter: '' as 'has_reflow' | 'no_reflow' | '',
 };
 
 // 2026-07-14：导出 Excel 表头抽到共享常量（避免硬编码在组件内）

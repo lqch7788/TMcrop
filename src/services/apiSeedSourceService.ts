@@ -71,6 +71,26 @@ const CAMEL_TO_SNAKE_MAP: Record<string, string> = {
   reflowCount: 'reflow_count',
   lastReflowAt: 'last_reflow_at',
   mergedFromIds: 'merged_from_ids',
+  // 2026-07-21: 缺失映射（导致请求体以 camelCase 到达后端被白名单拒绝）
+  seedForm: 'seed_form',
+  updateBy: 'update_by',
+  // 调拨入种源全量元数据
+  transferredFromStockId: 'transferred_from_stock_id',
+  transferredFromBusinessType: 'transferred_from_business_type',
+  transferredFromBusinessId: 'transferred_from_business_id',
+  originalInboundDate: 'original_inbound_date',
+  originalSourceModule: 'original_source_module',
+  originalSourceId: 'original_source_id',
+  originalHarvestRecordId: 'original_harvest_record_id',
+  originalCropId: 'original_crop_id',
+  originalCropName: 'original_crop_name',
+  originalVarietyId: 'original_variety_id',
+  originalVarietyName: 'original_variety_name',
+  originalUnit: 'original_unit',
+  originalUnitPrice: 'original_unit_price',
+  originalSupplierId: 'original_supplier_id',
+  originalSupplierName: 'original_supplier_name',
+  originalProductionPlanCode: 'original_production_plan_code',
 };
 
 /**
@@ -99,6 +119,8 @@ function toBackendPayload(updates: Partial<SeedSource>): Record<string, unknown>
 interface BackendSeedSource {
   id: string;
   seedCode: string;
+  /** 2026-07-21：兼容 — findById 接口用 sourceCode 字段名 */
+  sourceCode?: string;
   sourceName: string;
   sourceType: string;
   sourceOrigin: string;
@@ -199,7 +221,8 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
 
   return {
     id: item.id,
-    seedCode: item.seedCode || '',
+    // 2026-07-21：兼容两种字段名 — list 接口用 seedCode，GET 详情 / PUT 响应是 sourceCode
+    seedCode: item.seedCode || (item as any).sourceCode || '',
     sourceType: sourceType,
     sourceOrigin: (item.sourceOrigin as SourceOrigin) || 'external_purchase',
     cropCategory: item.cropCategory || '',
@@ -213,7 +236,8 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     purchaseDate: item.purchaseDate ? item.purchaseDate.split('T')[0] : '',
     quantity: item.quantity || 0,
     unit: item.unit || '',
-    unitPrice: item.unitPrice || 0,
+    // 2026-07-21：兼容两种字段名 — list 接口 alias as unitPrice，GET 详情/PUT 响应是 purchasePrice
+    unitPrice: (item as any).unitPrice ?? (item as any).purchasePrice ?? 0,
     totalAmount: item.totalAmount || 0,
     initialCount: item.initialCount || 0,
     // 2026-06-19: 兼容两种来源 — list API 用 alias availableCount，findById 用 SELECT * 然后 mapRowToCamel 得 remainingQuantity
@@ -257,6 +281,28 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     mergedFromIds: item.mergedFromIds ? (() => {
       try { return JSON.parse(item.mergedFromIds); } catch { return undefined; }
     })() : undefined,
+    // 2026-07-21：补全调拨来源字段（之前漏映射导致详情看不到）
+    transferredFromStockId: (item as any).transferredFromStockId || undefined,
+    transferredFromBusinessType: (item as any).transferredFromBusinessType || undefined,
+    transferredFromBusinessId: (item as any).transferredFromBusinessId || undefined,
+    originalInboundDate: (item as any).originalInboundDate || undefined,
+    originalSourceModule: (item as any).originalSourceModule || undefined,
+    originalSourceId: (item as any).originalSourceId || undefined,
+    originalHarvestRecordId: (item as any).originalHarvestRecordId || undefined,
+    originalCropId: (item as any).originalCropId || undefined,
+    originalCropName: (item as any).originalCropName || undefined,
+    originalVarietyId: (item as any).originalVarietyId || undefined,
+    originalVarietyName: (item as any).originalVarietyName || undefined,
+    originalUnit: (item as any).originalUnit || undefined,
+    originalUnitPrice: (item as any).originalUnitPrice ?? undefined,
+    originalSupplierId: (item as any).originalSupplierId || undefined,
+    originalSupplierName: (item as any).originalSupplierName || undefined,
+    originalProductionPlanCode: (item as any).originalProductionPlanCode || undefined,
+    // 2026-07-21：补全审计字段
+    updateBy: (item as any).updateBy || undefined,
+    baseId: (item as any).baseId || undefined,
+    baseName: (item as any).baseName || undefined,
+    traceabilityCode: (item as any).traceabilityCode || undefined,
   };
 }
 
@@ -336,8 +382,17 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
   // 2026-06-06: 改用统一映射表 toBackendPayload，消除白名单漂移（HIGH #1）
   const backendUpdates = toBackendPayload(updates);
 
-  const result = await enhancedApiClient.put<{ id: string; update_time?: string }>(`/seed-sources/${id}`, backendUpdates);
-  return result ? { ...updates, id, updateTime: result.update_time || '' } as SeedSource : null;
+  const result = await enhancedApiClient.put<any>(`/seed-sources/${id}`, backendUpdates);
+  if (!result) return null;
+  // 2026-07-21：后端响应含完整记录（不只 {id, update_time}）
+  // 兼容 purchasePrice → unitPrice（DB 列名 vs 前端字段名不一致）
+  const record: SeedSource = {
+    ...(updates as SeedSource),
+    id,
+    updateTime: result.update_time || result.updateTime || '',
+    unitPrice: result.unitPrice ?? result.purchasePrice ?? updates.unitPrice ?? 0,
+  };
+  return record;
 }
 
 /**

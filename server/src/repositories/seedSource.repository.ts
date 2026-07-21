@@ -86,6 +86,8 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'original_supplier_id',
   'original_supplier_name',
   'original_production_plan_code',
+  // 2026-07-21: 允许更新种子形态（编辑弹窗支持修改）
+  'seed_form',
 ]);
 
 /**
@@ -161,7 +163,11 @@ export class SeedSourceRepository {
       ss.actual_harvest_date AS actualHarvestDate,
       ss.breeding_location AS breedingLocation,
       ss.target_traits AS targetTraits,
-      ss.generation
+      ss.generation,
+      -- 2026-07-21：种源合并统计 3 列（之前 list SQL 漏掉导致前端永远看不到回流次数）
+      ss.reflow_count AS reflowCount,
+      ss.last_reflow_at AS lastReflowAt,
+      ss.merged_from_ids AS mergedFromIds
     FROM seed_sources ss
     LEFT JOIN crop_varieties cv
       ON ss.crop_code = cv.crop_code

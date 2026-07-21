@@ -135,6 +135,24 @@ export function SeedSourceFilter({
           </Select>
         </div>
 
+        {/* 2026-07-21：回流合并筛选 — 列表已删除回流次数字段，此筛选让用户能主动查找合并过的种源 */}
+        <div className="min-w-[120px] flex-shrink-0">
+          <Label className="text-gray-700">回流合并</Label>
+          <Select
+            value={filters.reflowFilter || '__all__'}
+            onValueChange={(val) => onChange({ ...filters, reflowFilter: val === '__all__' ? '' : (val as 'has_reflow' | 'no_reflow') })}
+          >
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">全部</SelectItem>
+              <SelectItem value="has_reflow">已合并过（回流次数 &gt; 0）</SelectItem>
+              <SelectItem value="no_reflow">未合并（首次入库）</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* 采购/入库日期 — 窄一点 (160px) */}
         <div className="min-w-[160px] flex-shrink-0">
           <Label className="text-gray-700">采购/入库日期</Label>

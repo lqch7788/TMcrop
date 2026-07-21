@@ -60,6 +60,9 @@ export function useFilteredSeedSources(
       if (filters.propagationStatus) {
         if (item.propagationStatus !== filters.propagationStatus) return false;
       }
+      // 2026-07-21：回流合并筛选（列表已删除回流次数字段，移到筛选器）
+      if (filters.reflowFilter === 'has_reflow' && ((item as any).reflowCount ?? 0) <= 0) return false;
+      if (filters.reflowFilter === 'no_reflow' && ((item as any).reflowCount ?? 0) > 0) return false;
       return true;
     });
     // 按创建时间倒序排列
