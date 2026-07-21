@@ -1239,9 +1239,17 @@ router.put('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     // 白名单（V3 stock 实际列）
     // 2026-07-14：frozen_quantity 移除白名单（只能通过 /freeze /unfreeze 调整，避免审计链断裂）
+    // 2026-07-21：补全缺失字段（编辑弹窗可保存）
     const allowed = ['crop_name', 'variety_name', 'current_quantity',
       'available_quantity', 'unit', 'warehouse_id', 'warehouse_name',
-      'inbound_date', 'production_plan_code', 'status'];
+      'inbound_date', 'production_plan_code', 'status',
+      // 2026-07-21 新增
+      'grade', 'remarks', 'target_yield', 'planting_mode',
+      'supplier_name', 'unit_price', 'total_amount',
+      'crop_code', 'source_form', 'product_form',
+      'greenhouse_name', 'area_name', 'expiry_date',
+      'purchase_date', 'base_id', 'base_name',
+    ];
     const fields: string[] = [];
     const values: any[] = [];
     for (const k of Object.keys(updates)) {

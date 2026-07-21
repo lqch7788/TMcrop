@@ -229,26 +229,31 @@ export default function InventoryV3Page() {
       showAlert('没有可导出的数据');
       return;
     }
-    // 2026-07-10 P1-1：抽到底层公共函数
-    const headers = ['实例ID', '类型', '作物', '品种', '数量', '可用', '冻结', '仓库', '来源', '状态', '入库日期'];
+    // 2026-07-21 修复：导出包含所有列表字段（15 列全部覆盖）
+    const headers = ['实例ID', '作物编码', '类型', '作物信息', '品质', '采收区域', '形态', '数量', '可用', '冻结', '单位', '仓库', '来源', '状态', '入库日期'];
     const exportData = rowsToExport.map((s) => {
       const stockTypeLabel = s.stockType === 'seed'
         ? `商品种源${s.businessType === 'seed_source' ? '（历史迁移）' : ''}`
         : s.stockType === 'seedling' ? '种苗' : '成品';
       const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
-      const sourceLabel = s.sourceType === 'self_produced' ? '自产' : '外购';
+      const sourceLabel = s.sourceType === 'self_produced' ? '自产' : s.sourceType === 'external_purchase' ? '外购' : s.sourceType === 'transfer' ? '调拨' : s.sourceType || '-';
+      const formLabel = s.sourceForm || s.productForm || '-';
       return {
         '实例ID': s.instanceId,
+        '作物编码': s.cropCode || '-',
         '类型': stockTypeLabel,
-        '作物': s.cropName,
-        '品种': s.varietyName,
+        '作物信息': s.cropName || '-',
+        '品质': s.grade || '-',
+        '采收区域': s.greenhouseName || s.areaName || '-',
+        '形态': formLabel,
         '数量': `${s.currentQuantity} ${s.unit}`,
         '可用': `${(s.currentQuantity ?? 0) - (s.frozenQuantity ?? 0)} ${s.unit}`,
         '冻结': `${s.frozenQuantity} ${s.unit}`,
-        '仓库': s.warehouseName,
+        '单位': s.unit || '-',
+        '仓库': s.warehouseName || '-',
         '来源': sourceLabel,
         '状态': statusLabel,
-        '入库日期': s.inboundDate,
+        '入库日期': s.inboundDate || '-',
       };
     });
     try {

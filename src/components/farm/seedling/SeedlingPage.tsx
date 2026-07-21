@@ -476,12 +476,12 @@ export default function SeedlingPage() {
     // 获取选中的数据
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头（按规划完整字段，2026-06-28：移除"已定植数量"列）
+    // 导出表头（2026-07-21：补全所有列表字段）
     const headers = [
-      '育苗批号', '作物编码', '关联种源', '作物名称', '作物品种',
-      '育苗方式', '育苗区域', '开始日期', '预计结束日期', '实际结束日期',
-      '初始数量', '目标成苗率', '目标成苗数', '成活数量', '损耗数量', '现存数量',
-      '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
+      '育苗批号', '繁殖模式', '关联生产计划', '关联种源', '作物编码', '作物名称', '作物品种', '品种路径',
+      '育苗方式', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
+      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '采收入库累计',
+      '目标成苗数', '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
 
@@ -492,29 +492,33 @@ export default function SeedlingPage() {
       - (record.harvestStockedCount || 0)
     );
 
-    // 生成导出数据
+    // 生成导出数据（2026-07-21：补全所有列表字段）
     const exportData = selectedData.map(record => ({
       '育苗批号': record.seedlingCode,
-      '作物编码': record.cropCode || '',
+      '繁殖模式': record.propagationMode === 'one_to_many' ? '1:多' : '1:1',
+      '关联生产计划': record.productionPlanCode || '-',
       '关联种源': record.sourceCode,
+      '作物编码': record.cropCode || '',
       '作物名称': record.cropName,
       '作物品种': record.cropVariety,
+      '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVarietyName].filter(Boolean).join(' > ') || '-',
       '育苗方式': record.seedlingType || '',
       '育苗区域': record.siteName,
+      '单位': record.unit || '株',
       '开始日期': record.startDate,
       '预计结束日期': record.expectedEndDate || '',
       '实际结束日期': record.endDate || '',
       '初始数量': record.initialCount,
-      '目标成苗率': record.targetSurvivalRate != null ? `${record.targetSurvivalRate}%` : '-',
+      '母株存活数': record.motherPlantCount || 0,
+      '母株累计损耗': record.motherLossCount || 0,
+      '补苗累计': record.replantCount || 0,
+      '小苗累计产出': record.expandedPlantCount || 0,
+      '小苗累计损耗': record.seedlingLossCount || 0,
+      '采收入库累计': record.harvestStockedCount || 0,
       '目标成苗数': record.targetSurvivalCount ?? '-',
-      '成活数量': record.survivalCount,
-      '损耗数量': record.lossCount,
-      '现存数量': getRemainingCount(record),
-      // 2026-06-28：完成比例 = (产出 - 损耗) / 目标（与 SeedlingTable 一致）
       '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, ((record.expandedPlantCount || 0) - (record.seedlingLossCount || 0))) / record.targetSurvivalCount * 100)}%` : '-',
       '损耗率': `${record.lossRate}%`,
       '育苗结束': record.isFinished ? '是' : '否',
-      // 状态（2026-07-04 v2：6 态对齐种植）
       '状态': (() => {
         switch (record.status) {
           case 'sown': return '已播种';
