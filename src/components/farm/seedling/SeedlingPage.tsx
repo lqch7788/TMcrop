@@ -480,7 +480,7 @@ export default function SeedlingPage() {
     const headers = [
       '育苗批号', '繁殖模式', '关联生产计划', '关联种源', '作物编码', '作物名称', '作物品种', '品种路径',
       '育苗方式', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
-      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '采收入库累计',
+      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '采收入库累计', '小苗剩余数量',
       '目标成苗数', '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
@@ -515,6 +515,7 @@ export default function SeedlingPage() {
       '小苗累计产出': record.expandedPlantCount || 0,
       '小苗累计损耗': record.seedlingLossCount || 0,
       '采收入库累计': record.harvestStockedCount || 0,
+      '小苗剩余数量': getRemainingCount(record),
       '目标成苗数': record.targetSurvivalCount ?? '-',
       '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, ((record.expandedPlantCount || 0) - (record.seedlingLossCount || 0))) / record.targetSurvivalCount * 100)}%` : '-',
       '损耗率': `${record.lossRate}%`,

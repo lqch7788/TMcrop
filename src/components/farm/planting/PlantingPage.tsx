@@ -466,14 +466,17 @@ export default function PlantingPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头（2026-07-21：补全所有列表字段）
-    const headers = ['种植批号', '作物编码', '来源类型', '来源批号', '作物品种', '品种', '品种路径', '种植区域', '大棚名称', '种植数量', '单位', '种植日期', '土壤PH', '土壤EC', '目标产量', '移栽数量', '移栽日期', '是否采收', '采收日期', '已采收数量', '采收入库量', '种植自留种量', '损耗率', '损耗数量', '补栽数量', '剩余数量', '完成比例', '溯源码', '状态', '创建人', '创建时间', '备注'];
+    // 2026-07-21 修复：补全"关联生产计划"列
+    const headers = ['种植批号', '关联生产计划', '作物编码', '来源类型', '来源批号', '作物品种', '品种', '品种路径', '种植区域', '大棚名称', '种植数量', '单位', '种植日期', '土壤PH', '土壤EC', '目标产量', '移栽数量', '移栽日期', '是否采收', '采收日期', '已采收数量', '采收入库量', '种植自留种量', '损耗率', '损耗数量', '补栽数量', '剩余数量', '完成比例', '溯源码', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => {
       const remaining = Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0));
-      const completionRate = record.targetYield && record.targetYield > 0 ? `${Math.round((record.harvestToInventoryQty || 0) / record.targetYield * 100)}%` : '-';
+      // 2026-07-21 修复：完成比例计算与列表一致（用 harvestQuantity 而非 harvestToInventoryQty）
+      const completionRate = record.targetYield && record.targetYield > 0 ? `${Math.round((record.harvestQuantity || 0) / record.targetYield * 100)}%` : '-';
       return {
         '种植批号': record.plantCode,
+        '关联生产计划': record.productionPlanCode || '-',
         '作物编码': record.cropCode || '',
         '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
         '来源批号': record.sourceCode,
