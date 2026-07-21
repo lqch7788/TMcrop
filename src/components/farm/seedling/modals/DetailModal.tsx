@@ -65,6 +65,13 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
                 走 SEEDLING_TYPE_MAP（12 项育苗方式字典）翻译；未匹配则原样回显 */}
             <span className="text-sm text-gray-900">{SEEDLING_TYPE_MAP[record.seedlingType] || record.seedlingType}</span>
           </div>
+          {/* 2026-07-21 修复：添加种苗形态（与育苗方式分开显示） */}
+          {record.seedlingForm && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 w-24">种苗形态：</span>
+              <span className="text-sm text-gray-900">{SEEDLING_FORM_MAP[record.seedlingForm] || record.seedlingForm}</span>
+            </div>
+          )}
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">温室场地：</span>
             <span className="text-sm text-gray-900">{record.siteName}</span>
@@ -222,6 +229,27 @@ function SeedlingBasicInfo({ record }: { record: Seedling }) {
             <span className="text-sm text-gray-900">
               {record.printRecords ? `${record.printRecords.length} 条` : '0 条'}
             </span>
+          </div>
+          {/* 2026-07-21 修复：补全缺失字段 */}
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">作物编码：</span>
+            <span className="text-sm font-mono text-orange-600">{record.cropCode || '—'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">单位：</span>
+            <span className="text-sm text-gray-900">{record.unit || '—'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">育苗工时：</span>
+            <span className="text-sm text-gray-900">{record.seedlingTaskTime ? `${record.seedlingTaskTime} 小时` : '—'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">创建人：</span>
+            <span className="text-sm text-gray-900">{record.createBy || '—'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 w-24">创建时间：</span>
+            <span className="text-sm text-gray-900">{record.createTime || '—'}</span>
           </div>
           {record.remarks && (
             <div className="col-span-2 flex items-start">
