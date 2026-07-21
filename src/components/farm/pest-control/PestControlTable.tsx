@@ -3,6 +3,10 @@
  * V12.0 新增 - 折叠形式展示多药剂/多制剂/多肥料详情
  * 列：勾选框、展开、编号、防治日期、作物、防治区域、操作人、施用方法、目标病虫害、备注、状态、操作（编辑/删除）
  * 2026-06-21: 删除操作列"查看"按钮（与点击编号重复，统一通过编号查看详情）
+ * 2026-07-21：放宽同一次多作物/多类型限制后，列表展示参照水肥管理列表样式：
+ *   - 「作物」列：多作物 Badge 多色板（CROP_COLORS，继承自 FertilizerTable）
+ *   - 「防治区域」列：作物·区域；... 摘要格式 + title 完整列表
+ *   - 后端字段 crop_names（JSON 字符串）优先，fallback 到 cropName 单字段
  */
 import React, { useMemo } from 'react';
 import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
@@ -13,6 +17,18 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Pagination } from '@/components/ui';
 // 2026-07-18 P3-L7：共用 JSON 列表解析
 import { parseJsonList } from '@/lib/jsonPool';
+
+/** 2026-07-21：作物 Badge 色板（与 FertilizerTable CROP_COLORS 一致，颜色循环分配多作物） */
+const CROP_COLORS = [
+  'bg-amber-100 text-amber-700',
+  'bg-sky-100 text-sky-700',
+  'bg-rose-100 text-rose-700',
+  'bg-violet-100 text-violet-700',
+  'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-pink-100 text-pink-700',
+];
 
 interface PestControlTableProps {
   data: PestControlData[];
@@ -66,6 +82,27 @@ function parseGreenhouses(greenhouseName: string | null | undefined): string[] {
   } catch {
     return [greenhouseName];
   }
+}
+
+/**
+ * 2026-07-21：解析 cropNames JSON 数组，fallback 到 cropName 单字段
+ * - 与 fertilizer_records 的 cropNames 语义对齐：放宽后允许同次防治跨多作物
+ * - 旧数据无 cropNames 字段时，仅返回 [cropName]（确保列表至少显示一种作物）
+ */
+function parseCropNames(cropNames: string | null | undefined, cropName: string | null | undefined): string[] {
+  if (cropNames && cropNames.trim()) {
+    try {
+      const parsed = JSON.parse(cropNames);
+      if (Array.isArray(parsed)) {
+        const arr = parsed.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+        if (arr.length > 0) return arr;
+      }
+    } catch {
+      // 单字符串兜底
+      if (cropNames.trim()) return [cropNames.trim()];
+    }
+  }
+  return cropName ? [cropName] : [];
 }
 
 export function PestControlTable({
@@ -312,15 +349,48 @@ export function PestControlTable({
                       <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                         {record.sprayTime ? record.sprayTime.slice(0, 16) : '-'}
                       </TableCell>
-                      {/* 作物 */}
-                      <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                        {record.cropName || '-'}
+                      {/* 作物 — 2026-07-21：多作物 Badge 展示（参照水肥管理样式） */}
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        {(() => {
+                          const cropNames = parseCropNames(record.cropNames, record.cropName);
+                          if (cropNames.length === 0) return <span className="text-gray-400">-</span>;
+                          return (
+                            <div className="flex items-center gap-1 flex-wrap max-w-[200px]">
+                              {cropNames.slice(0, 3).map((cn, i) => (
+                                <span
+                                  key={cn}
+                                  className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${CROP_COLORS[i % CROP_COLORS.length]}`}
+                                  title={cn}
+                                >
+                                  {cn}
+                                </span>
+                              ))}
+                              {cropNames.length > 3 && (
+                                <span className="text-xs text-gray-400">+{cropNames.length - 3}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
-                      {/* 防治区域 */}
-                      <TableCell className="px-4 py-3 text-sm text-gray-600">
-                        {parseGreenhouses(record.greenhouseName).length > 0
-                          ? parseGreenhouses(record.greenhouseName).join(', ')
-                          : '-'}
+                      {/* 防治区域 — 2026-07-21：摘要文本 + tooltip 显示所有作物+区域组合（参照水肥管理样式） */}
+                      <TableCell className="px-4 py-3 text-xs text-gray-600 max-w-[260px]">
+                        {(() => {
+                          const areas = parseGreenhouses(record.greenhouseName);
+                          const cropNames = parseCropNames(record.cropNames, record.cropName);
+                          if (areas.length === 0) return <span className="text-gray-400">-</span>;
+                          // 摘要："作物·区域；作物·区域；..."
+                          const summary = cropNames.length > 0 && areas.length === cropNames.length
+                            ? cropNames.map((cn, i) => `${cn}·${areas[i]}`).join('；')
+                            : areas.join('，');
+                          const tooltip = cropNames.length > 0 && areas.length === cropNames.length
+                            ? cropNames.map((cn, i) => `${cn}·${areas[i]}`).join('\n')
+                            : areas.join('\n');
+                          return (
+                            <span className="truncate block" title={tooltip}>
+                              {summary.length > 25 ? summary.slice(0, 25) + '…' : summary}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       {/* 操作人 */}
                       <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">

@@ -17,6 +17,8 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'operator_id',
   'operator_name',
   'crop_name',
+  // 2026-07-21：多作物 JSON 数组（与 fertilizer_records 对齐，允许 Put 时一并更新）
+  'crop_names',
   'greenhouse_name',
   'planting_id',
   'planting_code',
@@ -61,6 +63,8 @@ export interface PesticideRecord {
   operator_id: string | null;
   operator_name: string | null;
   crop_name: string;
+  // 2026-07-21：多作物名 JSON 数组（与 fertilizer_records 对齐；允许同一次防治覆盖多个作物）
+  crop_names: string | null;
   greenhouse_name: string | null;
   planting_id: string | null;
   planting_code: string | null;
@@ -239,7 +243,7 @@ export class PesticideRepository {
     const db = getDatabase();
     db.run(
       `INSERT INTO pesticide_records (
-        id, record_code, spray_time, operator_id, operator_name, crop_name, greenhouse_name,
+        id, record_code, spray_time, operator_id, operator_name, crop_name, crop_names, greenhouse_name,
         planting_id, planting_code, seedling_id, seedling_code,
         pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content,
         dosage, dosage_unit, dilution_ratio, target_pest, application_method,
@@ -249,10 +253,10 @@ export class PesticideRepository {
         use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
         leaf_fertilizer_list,
         description, photos, create_time, update_time
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         record.id, record.record_code, record.spray_time,
-        record.operator_id, record.operator_name, record.crop_name, record.greenhouse_name,
+        record.operator_id, record.operator_name, record.crop_name, record.crop_names ?? null, record.greenhouse_name,
         record.planting_id, record.planting_code, record.seedling_id, record.seedling_code,
         record.pesticide_id, record.pesticide_name, record.pesticide_type,
         record.spec_id, record.spec_content,

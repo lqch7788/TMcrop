@@ -292,6 +292,8 @@ const createRecordSchema = z.object({
   operatorId: z.string().nullish(),
   operatorName: z.string().nullish(),
   cropName: z.string().min(1, '作物名称为必填'),
+  // 2026-07-21：多作物名 JSON 数组（与 fertilizer_records 对齐）
+  cropNames: z.union([z.string(), z.array(z.string())]).nullish(),
   greenhouseName: z.string().nullish(),
   plantingId: z.string().nullish(),
   plantingCode: z.string().nullish(),
@@ -425,6 +427,8 @@ export class PesticideService {
           operator_id: data.operatorId ?? null,
           operator_name: data.operatorName ?? null,
           crop_name: data.cropName,
+          // 2026-07-21：多作物 JSON 数组（前端 AddPestControlModal 已放宽同次多选限制）
+          crop_names: stringifyJsonField((data as any).cropNames) ?? (data.cropName ? JSON.stringify([data.cropName]) : null),
           greenhouse_name: data.greenhouseName ?? null,
           planting_id: data.plantingId ?? null,
           planting_code: data.plantingCode ?? null,

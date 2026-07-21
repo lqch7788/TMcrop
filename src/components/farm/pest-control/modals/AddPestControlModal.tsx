@@ -100,6 +100,11 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   const [fertilizerPool, setFertilizerPool] = useState<FertilizerPoolItem[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
+  // 2026-07-21：标记 cropName 是否仍处于"由所选批次自动反填"状态
+  // - true = 由勾选批次自动维护（继续 append 新作物）；改为 false 表示用户已在 Input 中手动改过
+  // - 解决旧 bug：第二次勾选时 form.cropName 已被反填成 'A'，导致 if (!form.cropName) 为 false 永远跳过更新
+  //   → 后续选中的不同作物不会再进入作物名输入框
+  const cropNameAutoFilledRef = useRef<boolean>(true);
 
   // 2026-07-12：防治区域多选 — 选项按 Tab 分种植/育苗（可同时多选 record；同一次只允许同一作物）
   const [bizTabType, setBizTabType] = useState<'planting' | 'seedling'>('planting');
@@ -341,6 +346,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       setBizSearchKeyword('');
       setShowBizSearch(false);
       setBizTabType('planting');
+      // 2026-07-21 P1-修复：弹窗打开时重置自动反填 flag=true，让新一次勾选重新进入自动反填状态
+      cropNameAutoFilledRef.current = true;
       // 目标病虫害选择器重置
       setPestSearchKeyword('');
       setPestTabType('pest');
@@ -356,7 +363,13 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   // 2026-07-11：移除原 PesticideItem 多卡片相关函数（addPesticideItem/removePesticideItem/updatePesticideItem/togglePesticideTypeInItem/renderPesticideTypeSelector）
 // 改为统一的药剂池（toggleTypeFilter/addToPool/removeFromPool/updatePoolField）
 
-  // 2026-07-12：多选勾选一条种植/育苗记录 + 作物一致性校验
+  // 2026-07-21：放宽防治区域选择限制 — 取消同作物/同类型互斥，允许跨作物跨类型共用药剂
+  // 修改点：
+  // - 移除「同一次防治记录只能针对同一作物」校验
+  // - 移除「种植/育苗二选一」互斥校验
+  // - 保留作物自动反填逻辑（仅在用户未手动改过 cropName 时），但允许多作物并存
+  // - 2026-07-21 P1-修复：用 cropNameAutoFilledRef 追踪"用户是否手动改过"，
+  //   避免旧逻辑「第二次勾选时 form.cropName 已非空，if (!form.cropName) 跳过同步」导致多作物丢失
   const handleToggleBizRecord = (kind: 'planting' | 'seedling', record: any, area: string) => {
     const recordId = record.id;
     const cropName = record.cropName || '';
@@ -365,32 +378,25 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       const isSelected = prev.some((r) => r.type === kind && r.id === recordId);
       if (isSelected) {
         const next = prev.filter((r) => !(r.type === kind && r.id === recordId));
-        // 同步作物：若还剩已选，取首个 cropName；全部清空则不动 cropName 让用户保留或自填
-        if (next.length > 0 && !form.cropName) {
-          updateForm('cropName', next[0].cropName);
+        // 同步作物：仅当处于"自动反填"状态时，去重拼接所有 cropName
+        if (cropNameAutoFilledRef.current) {
+          const cropNames = [...new Set(next.map((r) => r.cropName).filter(Boolean))];
+          updateForm('cropName', cropNames.join(','));
+          // 全部清空时重置 ref 为 true，便于下次勾选重新开始反填
+          if (next.length === 0) cropNameAutoFilledRef.current = true;
         }
         // 同步 greenhouseName：去重按区域排序 join
         const areas = Array.from(new Set(next.map((r) => r.area))).filter(Boolean);
         updateForm('greenhouseName', areas.join(','));
         return next;
       }
-      // 新增：与已选作物一致性校验（混合作物拒绝）
-      if (prev.length > 0 && prev[0].cropName && cropName && prev[0].cropName !== cropName) {
-        showAlert(`同一次防治记录只能针对同一作物。已选作物：${prev[0].cropName}，该区域作物：${cropName}`);
-        return prev;
-      }
-      // 2026-07-18 P1-H1 修复：种植/育苗二选一互斥校验（schema 约束）
-      if (prev.length > 0 && prev[0].type !== kind) {
-        const prevTypeLabel = prev[0].type === 'planting' ? '种植' : '育苗';
-        const newTypeLabel = kind === 'planting' ? '种植' : '育苗';
-        showAlert(`同一次防治记录只能在「${prevTypeLabel}」或「${newTypeLabel}」中选择一种类型。已选：${prevTypeLabel}，新选：${newTypeLabel}`);
-        return prev;
-      }
+      // 2026-07-21：新增不再校验作物一致性和类型互斥 — 同一次可选跨作物/跨种植/跨育苗
       const nextItem: SelectedBizRecord = { type: kind, id: recordId, code: code || '', cropName, area };
       const next = [...prev, nextItem];
-      // 自动填入作物：仅在用户尚未手动改过 cropName 时
-      if (next.length === 1 && cropName && !form.cropName) {
-        updateForm('cropName', cropName);
+      // 自动填入作物：仅当处于"自动反填"状态时，去重拼接所有 cropName
+      if (cropNameAutoFilledRef.current) {
+        const cropNames = [...new Set(next.map((r) => r.cropName).filter(Boolean))];
+        updateForm('cropName', cropNames.join(','));
       }
       // 同步 greenhouseName：去重按区域排序 join
       const areas = Array.from(new Set(next.map((r) => r.area))).filter(Boolean);
@@ -400,9 +406,11 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   };
 
   // 2026-07-12：清除全部已选
+  // 2026-07-21 P1-修复：清除时同时重置 cropNameAutoFilledRef=true，让后续重新勾选能继续自动反填
   const handleClearBizRecords = () => {
     setSelectedBizRecords([]);
     updateForm('greenhouseName', '');
+    cropNameAutoFilledRef.current = true;
   };
 
   // 提交
@@ -454,6 +462,14 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         sprayTime: form.sprayTime,
         operatorName: form.operatorName,
         cropName: form.cropName,
+        // 2026-07-21：放宽限制后 — 写入多作物 JSON 数组（与 fertilizer_records 对齐）
+        // - 优先取已选批次的去重 cropName 列表
+        // - 若没有批次选中，回退为 [cropName] 单元素数组
+        cropNames: JSON.stringify(
+          Array.from(new Set(selectedBizRecords.map((r) => r.cropName).filter(Boolean))).length > 0
+            ? Array.from(new Set(selectedBizRecords.map((r) => r.cropName).filter(Boolean)))
+            : [form.cropName].filter(Boolean)
+        ),
         greenhouseName: form.greenhouseName,
         // 2026-07-18 P0-C1 修复：补传关联业务 ID/Code（之前完全丢失）
         // - selectedBizRecords 是用户多选的种植/育苗记录数组
@@ -566,7 +582,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                 {/* 左半：Label + Tab + 搜索框 */}
                 <div className="flex flex-col">
                   <Label className="text-gray-900 mb-1">
-                    📍 防治区域 <span className="text-gray-500 text-xs">（可多选；同一次只能针对同一作物）</span>
+                    📍 防治区域 <span className="text-gray-500 text-xs">（可多选；可跨作物/跨类型，共用同一套药剂）</span>
                   </Label>
                   <div className="flex items-center gap-2">
                     {/* Tab 切换 */}
@@ -753,15 +769,20 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                   作物名称 <span className="text-red-500">*</span>
                   {selectedBizRecords.length > 0 && (
                     <span className="ml-2 text-xs text-emerald-600">
-                      （由所选批次反填：{selectedBizRecords[0].cropName || '-'}，可手改）
+                      （由所选批次反填，多个作物逗号分隔，可手改）
                     </span>
                   )}
                 </Label>
                 <Input
                   type="text"
                   value={form.cropName}
-                  onChange={(e) => updateForm('cropName', e.target.value)}
-                  placeholder={selectedBizRecords.length > 0 ? '由所选批次反填' : '请输入作物名称'}
+                  // 2026-07-21 P1-修复：用户主动在 Input 中改动 → 标记 ref=false，
+                  // 后续勾选新区域时不再覆盖（但用户可随时重新勾选来恢复）
+                  onChange={(e) => {
+                    cropNameAutoFilledRef.current = false;
+                    updateForm('cropName', e.target.value);
+                  }}
+                  placeholder={selectedBizRecords.length > 0 ? '由所选批次反填（逗号分隔）' : '请输入作物名称'}
                   className={deepInputClass}
                 />
               </div>
