@@ -281,9 +281,27 @@ export async function updatePlanting(id: string, updates: Partial<Planting>): Pr
     cropVariety: 'crop_variety',
     productionPlanCode: 'production_plan_code',
     productionPlanId: 'production_plan_id',
-    // 2026-07-01 P0-1 修复：补录通道字段也要走 camelCase→snake_case 转换
-    // 否则后端白名单列拒绝写入，前端 store 看似更新但 DB 没动
     isHarvestLocked: 'is_harvest_locked',
+    // 2026-07-21 新增：补全缺失字段映射
+    unit: 'unit',
+    targetYield: 'target_yield',
+    targetYieldUnit: 'target_yield_unit',
+    transplantCount: 'transplant_count',
+    transplantDate: 'transplant_date',
+    targetYield: 'target_yield',
+    targetYieldUnit: 'target_yield_unit',
+    unit: 'unit',
+    isBreeding: 'is_breeding',
+    parentMaleCode: 'parent_male_code',
+    parentFemaleCode: 'parent_female_code',
+    generation: 'generation',
+    breedingMethod: 'breeding_method',
+    breedingLocation: 'breeding_location',
+    targetTraits: 'target_traits',
+    isSeedSaving: 'is_seed_saving',
+    seedPlantMarker: 'seed_plant_marker',
+    lossCount: 'loss_count',
+    supplementCount: 'supplement_count',
   };
   const backendUpdates: Record<string, any> = {};
   for (const [key, value] of Object.entries(updates)) {
