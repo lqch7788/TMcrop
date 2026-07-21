@@ -35,7 +35,6 @@ import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
-// 2026-07-09 v6：恢复 UnifiedRowHarvestInboundModal import（行级弹窗恢复，弹窗内"补录"按钮跳转）
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 
 export default function SeedlingPage() {
@@ -169,7 +168,6 @@ export default function SeedlingPage() {
   }, [error, toast, clearError]);
 
   // 2026-07-09 v5（方案 A 阶段一）：单态结束弹窗
-  // 砍掉"异常结束"选项——补录不再是状态机的开关，而是采收记录的属性
   // 历史 endType='abnormal' 数据保留兼容（SeedlingTable 仍识别），但不再提供新建入口
   const [endConfirm, setEndConfirm] = useState<{ record: Seedling | null }>({
     record: null,
@@ -297,7 +295,6 @@ export default function SeedlingPage() {
     setLabelManageOpen(true);
   };
 
-  // 2026-07-09 v6：恢复 handleInbound 弹窗模式（用户要求：必须打开采收弹窗，弹窗内"补录"按钮跳转）
   const handleInbound = (record: Seedling) => {
     setInboundModal({ open: true, record });
   };
@@ -350,7 +347,6 @@ export default function SeedlingPage() {
   const executeEnd = async () => {
     const record = endConfirm.record;
     if (!record) return;
-    // 2026-07-09 v5：单态结束 — 固定 endType='normal', isHarvestLocked=0（允许后续补录）
     const endType = 'normal' as const;
     const endStatus = SeedlingStatus.COMPLETED;
     const planCode = record.productionPlanCode;
@@ -361,7 +357,7 @@ export default function SeedlingPage() {
     if (!planCode || planCode.trim() === '') {
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert('育苗记录已结束（仍可补录遗漏库存）');
+        await showAlert('育苗记录已结束');
         await loadItems();
       } else {
         await showAlert('结束失败');
@@ -373,7 +369,7 @@ export default function SeedlingPage() {
     if (!batch) {
       const result = await updateItem(record.id, { endType, endTime: todayLocal(), status: endStatus });
       if (result) {
-        await showAlert('育苗记录已结束（强结，仍可补录遗漏库存）');
+        await showAlert('育苗记录已结束（强结）');
         await loadItems();
       } else {
         await showAlert('强结失败');
@@ -740,9 +736,7 @@ export default function SeedlingPage() {
         />
       )}
 
-      {/* 2026-07-09 v6：恢复 UnifiedRowHarvestInboundModal 行级弹窗
-          育苗行点"出圃入库" → 弹窗 → 弹窗内"补录"按钮跳转 AddStockModal
-          必须打开采收弹窗，弹窗内"补录"按钮才能跳转（用户 v6 设计） */}
+      {/* 育苗行点"出圃入库" → 采收弹窗 */}
       {inboundModal.record && (
         <UnifiedRowHarvestInboundModal
           isOpen={inboundModal.open}
@@ -757,7 +751,6 @@ export default function SeedlingPage() {
             cropVariety: inboundModal.record.cropVariety || '',
             cropCode: inboundModal.record.cropCode || '',
             unit: undefined,
-            // 2026-07-09 v6：传 endTime/status 让弹窗显示"补录"按钮（仅已结束/已取消行）
             endTime: inboundModal.record.endTime,
             status: inboundModal.record.status,
           }}
@@ -803,7 +796,6 @@ export default function SeedlingPage() {
                 <div className="text-sm font-semibold text-red-800">⚠️ 结束育苗记录</div>
                 <div className="text-xs text-red-700 mt-1">
                   结束后将锁定日常运维操作（移栽、出圃、修改等）。<br />
-                  <span className="font-semibold">仍可补录遗漏的库存</span>（通过"出圃入库"按钮，必填补录原因）。<br />
                   <span className="font-semibold">此操作不可撤销！</span>
                 </div>
               </div>

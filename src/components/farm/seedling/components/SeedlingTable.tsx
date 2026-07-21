@@ -655,10 +655,10 @@ export function SeedlingTable({
                   </td>
                   {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index） */}
                   <td className="sticky right-0 px-2 py-1.5 text-xs text-center bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
-                    {/* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用（保留补录例外），读操作（每日记录/标签/图片）始终可用
-                        正常结束(status=completed 或 endType=normal) → 写操作全锁；读操作可用；补录关闭
-                        异常结束(status=abnormal 或 endType=abnormal) → 写操作全锁（除补录）；读操作可用；补录保留
-                        已取消(status=cancelled) → 写操作全锁；读操作可用；补录关闭
+                    {/* 2026-07-03 v2：写读分离 — 写操作在结束态灰显+禁用，读操作（每日记录/标签/图片）始终可用
+                        正常结束(status=completed 或 endType=normal) → 写操作全锁；读操作可用
+                        异常结束(status=abnormal 或 endType=abnormal) → 写操作全锁；读操作可用
+                        已取消(status=cancelled) → 写操作全锁；读操作可用
                         进行中 → 全部可用 */}
                     {(() => {
                       const isNormalEnded = record.status === 'completed' || record.endType === 'normal'
@@ -736,7 +736,7 @@ export function SeedlingTable({
                                 : isCancelled
                                 ? 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
                                 : ''}
-                              title={isAbnormalEnded ? '出圃入库（补录）' : isCancelled ? '出圃入库（已取消，仅查看）' : '出圃入库 / 采收'}
+                              title={isAbnormalEnded ? '出圃入库' : isCancelled ? '出圃入库（已取消，仅查看）' : '出圃入库 / 采收'}
                             />
                           )}
                           {/* 2026-07-09 v5（方案 A 阶段一）：单态结束按钮 — 仅进行中显示 */}

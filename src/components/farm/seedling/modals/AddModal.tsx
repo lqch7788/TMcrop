@@ -1,7 +1,6 @@
 /**
  * 育苗新增弹窗 - 重新规划版本
  * 三区段式布局：关联种源信息 | 场地与计划 | 数量与品质
- * V3.1: 支持补录申请功能
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -117,8 +116,6 @@ export function AddModal({
     customMultiple: 0,
     theoreticalYield: 0,
     workHours: 0,
-    isSupplementary: false,
-    supplementaryReason: '',
     // 2026-06-15: 数量体系重构 — 繁殖模式合并为 2 种（1:1 / 1:多）
     propagationMode: 'one_to_one' as 'one_to_one' | 'one_to_many',
     propagationMotherPlantCount: 0,  // 兼容字段（后续可移除）
@@ -520,54 +517,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       } catch (error) {
         // logger.error('更新作物实例状态失败:', error);
       }
-    }
-
-    // V3.1 补录申请：如果勾选了补录，创建审批记录
-    if (formData.isSupplementary) {
-      // 2026-07-10 P0-5 修复：用 crypto.randomUUID() 替代 Math.random()/Date.now() 避免并发碰撞
-      // （业务 ID 必须唯一，Math.random 1/1000 碰撞 + Date.now 毫秒并发都不可接受）
-      const approvalSuffix = crypto.randomUUID().slice(0, 8);
-      const approvalCode = `YM-SUP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${approvalSuffix}`;
-      const approval = {
-        id: `APPROVAL-${approvalSuffix}`,
-        code: approvalCode,
-        type: ApprovalType.SEEDLING_SUPPLEMENTARY,
-        title: `育苗补录申请 - ${formData.seedlingCode}`,
-        description: `育苗补录申请：${formData.cropName}，初始数量：${formData.initialCount}株，育苗区域：${siteName}，补录原因：${formData.supplementaryReason}`,
-        status: ApprovalStatus.PENDING,
-        applicantId: currentUser.id,
-        applicantName: currentUser.name,
-        applicantDept: currentUser.department || '生产部',
-        createTime: new Date().toLocaleString('zh-CN'),
-        updateTime: new Date().toLocaleString('zh-CN'),
-        steps: [
-          {
-            id: 'STEP-001',
-            name: '生产主管',
-            status: 'pending' as const,
-            order: 1,
-          },
-          {
-            id: 'STEP-002',
-            name: '基地负责人',
-            status: 'pending' as const,
-            order: 2,
-          },
-        ],
-        currentStep: 1,
-        businessLink: {
-          type: 'seedling' as const,
-          requestCode: formData.seedlingCode,
-          requestId: addedSeedlingId || '',
-        },
-        supplementaryData: {
-          reason: formData.supplementaryReason,
-          quantity: formData.initialCount,
-          cropName: formData.cropName,
-          siteName: siteName,
-        },
-      };
-      addApproval(approval);
     }
 
     onClose();
@@ -1379,34 +1328,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 placeholder="请输入备注信息"
               />
             </div>
-
-            {/* V3.1 补录字段 */}
-            <div>
-              <Label className="text-gray-900">是否补录</Label>
-              <DictSelect
-                category="is_supplementary"
-                value={formData.isSupplementary ? 'yes' : 'no'}
-                onChange={(value) => setFormData({ ...formData, isSupplementary: value === 'yes' })}
-                placeholder="选择是否补录"
-              />
-              <p className="mt-1 text-xs text-amber-500">选择"是"时，该育苗记录将提交审批审核</p>
-            </div>
-
-            {/* V3.1 补录原因 */}
-            {formData.isSupplementary && (
-              <div>
-                <Label className="text-gray-900">
-                  补录原因 <span className="text-red-500">*</span>
-                </Label>
-                <TextArea
-                  value={formData.supplementaryReason}
-                  onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                  placeholder="请输入补录原因，说明为什么需要补录此育苗记录"
-                />
-              </div>
-            )}
 
             {/* 图片上传 */}
             <div>
