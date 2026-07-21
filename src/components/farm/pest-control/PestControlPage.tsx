@@ -158,28 +158,19 @@ export default function PestControlPage() {
       : items;
     if (toExport.length === 0) return;
     // 2026-07-10：导出表头删除「防治类型」列（controlType 字段已删除）
+    // 2026-07-21 修复：headers 与 exportData key 对齐（旧代码 header[2]='药剂类型' 但 data key='防治类型' 导致列错位）
     const headers = ['记录编号', '防治日期', '药剂类型', '作物', '温室', '药剂名称', '用药量', '稀释比例', '防治对象', '操作员'];
-    const rows = toExport.map((it) => [
-      it.recordCode, it.sprayTime,
-      // 药剂类型多值
-      (it.pesticideTypes || []).map(t => getDictLabel('pesticide_type', t) || t).join('、'),
-      it.cropName, it.greenhouseName || '',
-      it.pesticideName || it.bioAgentName || it.equipmentName || '',
-      it.dosage ? `${it.dosage}${it.dosageUnit || ''}` : '', it.dilutionRatio || '', it.targetPest || '', it.operatorName || '',
-    ]);
-
-    // 2026-07-10 P1-1：抽到底层公共函数
-    const exportData = rows.map((r) => ({
-      '记录编号': r[0],
-      '防治日期': r[1],
-      '防治类型': r[2],
-      '作物': r[3],
-      '温室': r[4],
-      '药剂名称': r[5],
-      '用药量': r[6],
-      '稀释比例': r[7],
-      '防治对象': r[8],
-      '操作员': r[9],
+    const exportData = toExport.map((it) => ({
+      '记录编号': it.recordCode,
+      '防治日期': it.sprayTime,
+      '药剂类型': (it.pesticideTypes || []).map(t => getDictLabel('pesticide_type', t) || t).join('、'),
+      '作物': it.cropName,
+      '温室': it.greenhouseName || '-',
+      '药剂名称': it.pesticideName || it.bioAgentName || it.equipmentName || '-',
+      '用药量': it.dosage ? `${it.dosage}${it.dosageUnit || ''}` : '-',
+      '稀释比例': it.dilutionRatio || '-',
+      '防治对象': it.targetPest || '-',
+      '操作员': it.operatorName || '-',
     }));
     const filename = `病虫害防治记录_${todayLocal()}`;
     if (format === 'csv') {
