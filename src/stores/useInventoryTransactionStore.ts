@@ -52,10 +52,7 @@ export interface OutboundRow {
   grade?: string;
   // 备注/其他
   remarks?: string;
-  receiver?: string;
-  unitPrice?: number;
-  totalAmount?: number;
-  updatedAt?: string;
+  // 2026-07-21 清理：移除 DB 不存在的字段（receiver/unitPrice/totalAmount/updatedAt/status/type）
 }
 
 /** 库存出库统计汇总 — 2026-07-15 移除 [key: string]: any 索引签名 */

@@ -79,8 +79,9 @@ import { saveAs } from 'file-saver';
 export function exportOutboundXLSX(rows: OutboundRow[], summary: OutboundSummary | null): void {
   const wb = XLSX.utils.book_new();
 
-  // Sheet 1: 明细
+  // Sheet 1: 明细（2026-07-21：补全流水号字段，与列表对齐）
   const detail = rows.map((r) => ({
+    '流水号':      r.id || '',
     '业务单号':    r.businessCode || '',
     '操作时间':    r.operateDate,
     '实例ID':      r.instanceId,
