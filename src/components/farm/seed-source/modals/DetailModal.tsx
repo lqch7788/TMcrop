@@ -138,19 +138,20 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
               - 外购：显示 unitPrice + totalAmount
               - 调拨：unitPrice 已从原库存复制（见 inventoryTransfer.service.ts:489），显示单价+总额 + 原始供应商
               - 回流：unitPrice 默认 0，显示"—"
-              调拨种源额外显示"原始单价"作为审计对照 */}
+              调拨种源额外显示"原始单价"作为审计对照
+              2026-07-21 修复：加"元"字，为 0 时显示"—" */}
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">单价：</span>
             <span className="text-sm text-gray-900">
-              ¥{record.unitPrice || 0}/{formatUnit(record.unit)}
+              {record.unitPrice ? `¥${record.unitPrice}元/${formatUnit(record.unit)}` : '—'}
               {isTransfer && record.originalUnitPrice != null && Number(record.unitPrice) !== Number(record.originalUnitPrice) && (
-                <span className="text-xs text-gray-400 ml-1">（原始 ¥{record.originalUnitPrice}）</span>
+                <span className="text-xs text-gray-400 ml-1">（原始 ¥{record.originalUnitPrice}元）</span>
               )}
             </span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">总金额：</span>
-            <span className="text-sm text-gray-900">¥{(record.totalAmount || 0).toLocaleString()}</span>
+            <span className="text-sm text-gray-900">{record.totalAmount ? `¥${record.totalAmount.toLocaleString()}元` : '—'}</span>
           </div>
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">供应商：</span>
