@@ -13,6 +13,8 @@ import { useToastStore } from '@/stores/useToastStore';
 import { todayLocal } from '@/lib/dateUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui';
 import { Badge, TextArea, Label, useToast } from '@/components/ui';
+// 2026-07-21：种源二维码（扫码查看详情）
+import { QRCodeSVG } from 'qrcode.react';
 import { useSeedSourceStore } from '@/stores/useSeedSourceStore';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
@@ -1216,6 +1218,8 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       onClose={onClose}
       title="种源详情"
       basicInfoPanel={<SeedSourceBasicInfo record={record} />}
+      // 2026-07-21 v2：二维码通过 topRight slot 传入，顶部对齐 Modal 标题栏底部
+      topRight={<SeedSourceQrCodeCard seedCode={record.seedCode} />}
       entity="seed-sources"
       entityId={record.id}
       entityCode={record.seedCode}
@@ -1227,5 +1231,33 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
       // 2026-07-05: 弹窗宽度 +30%（xl → xxxl：max-w-4xl → max-w-6xl）让"使用记录" Tab 字段完整展示
       size="xxxl"
     />
+  );
+}
+
+/** 2026-07-21：二维码卡片组件（v5）— 通过 EntityDetailModal 的 topRight slot 显示
+ *  顶部对齐 Modal 内容区顶部（= 标题栏底部），固定高度覆盖 Tab行+来源行+基本信息标题行
+ *  二维码 128×128 + 标题 + 复制按钮垂直排列 */
+function SeedSourceQrCodeCard({ seedCode }: { seedCode: string }) {
+  const url = `${window.location.origin}/crop/seed-sources?seedCode=${encodeURIComponent(seedCode)}`;
+  return (
+    <div className="flex flex-col items-center gap-1.5 px-2 py-2 bg-gradient-to-br from-emerald-50 to-cyan-50 border border-emerald-200 rounded-lg shadow-sm">
+      <div className="bg-white p-1 rounded">
+        <QRCodeSVG value={url} size={128} level="M" includeMargin={false} />
+      </div>
+      <span className="text-xs font-medium text-emerald-800 whitespace-nowrap">扫码查看详情</span>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-6 px-2.5 text-xs"
+        onClick={() => {
+          navigator.clipboard.writeText(url).then(
+            () => alert('链接已复制'),
+            () => alert('复制失败，请手动复制')
+          );
+        }}
+      >
+        复制链接
+      </Button>
+    </div>
   );
 }

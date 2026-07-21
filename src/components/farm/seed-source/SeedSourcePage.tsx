@@ -91,6 +91,26 @@ export default function SeedSourcePage() {
     loadItems();
   }, [loadItems]);
 
+  // 2026-07-21：监听 URL ?seedCode=xxx 参数（扫码跳转场景）
+  // 找到对应种源后自动打开详情弹窗，处理完后用 replaceState 清理 URL（避免刷新重复触发）
+  const handledSeedCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (seedSources.length === 0) return; // 等种源列表加载完
+    const params = new URLSearchParams(window.location.search);
+    const targetSeedCode = params.get('seedCode');
+    if (!targetSeedCode) return;
+    if (handledSeedCodeRef.current === targetSeedCode) return; // 已处理过
+    const matched = seedSources.find(s => s.seedCode === targetSeedCode);
+    if (matched) {
+      handledSeedCodeRef.current = targetSeedCode;
+      setCurrentRecord(matched);
+      setDetailModalOpen(true);
+      // 清理 URL 参数（避免刷新页面重复触发）
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [seedSources]);
+
   // 2026-06-06: R3 — 监听 store.loadItems 错误并弹 Toast（不修改 store 内部实现）
   // store 内部已在 catch 中 set({ error: msg })，此处仅做 UI 展示
   // 用 useRef 记录上次已展示的错误，避免同一错误重复弹 toast

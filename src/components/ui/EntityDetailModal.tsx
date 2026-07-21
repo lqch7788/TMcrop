@@ -54,6 +54,17 @@ interface EntityDetailModalProps {
    * - 种源详情用 'xxxl'（max-w-6xl ≈ 1152px，+约 28%）让"使用记录" Tab 能完整展示字段
    */
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl' | 'full';
+  /**
+   * 2026-07-21：Tab 行右侧附加内容（如二维码、辅助按钮等）
+   * 显示位置：与 Tab 同一行的右端，不占用额外行空间
+   */
+  headerRight?: React.ReactNode;
+  /**
+   * 2026-07-21 v2：Modal 内容区右上角浮动内容（如二维码卡片）
+   * 绝对定位在内容区顶部，顶部对齐 Modal 标题栏底部
+   * 用于跨越 Tab 行右侧空白，覆盖到基本信息标题行
+   */
+  topRight?: React.ReactNode;
 }
 
 export function EntityDetailModal({
@@ -67,6 +78,8 @@ export function EntityDetailModal({
   typeColumn,
   extraTabs = [],
   size = 'xl',
+  headerRight,
+  topRight,
 }: EntityDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('info');
   // 2026-07-19 P1：isOpen 变化时重置 activeTab，避免条件 Tab 跨记录残留空白
@@ -87,52 +100,66 @@ export function EntityDetailModal({
       submitText="关闭"
       cancelText=""
     >
-      {/* Tab 切换 */}
-      <div className="flex border-b border-gray-200 mb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setActiveTab('info')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
-            activeTab === 'info'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          基本信息
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setActiveTab('history')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent flex items-center gap-1 ${
-            activeTab === 'history'
-              ? 'border-emerald-500 text-emerald-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          追溯时间线
-        </Button>
-        {extraTabs.map((tab) => (
+      {/* 2026-07-21 v2：Modal 内容区右上角浮动内容（如二维码卡片）
+          top-0 让其顶部对齐 Modal 内容区顶部（= 标题栏底部），不占用额外行空间 */}
+      {topRight && (
+        <div className="relative">
+          <div className="absolute top-0 right-0 z-10">
+            {topRight}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 切换 + 右侧附加内容（与 Tab 同一行，2026-07-21） */}
+      <div className="flex items-center border-b border-gray-200 mb-4">
+        <div className="flex flex-1 min-w-0">
           <Button
-            key={tab.key}
             variant="ghost"
             size="sm"
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent flex items-center gap-1 ${
-              activeTab === tab.key
+            onClick={() => setActiveTab('info')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
+              activeTab === 'info'
                 ? 'border-emerald-500 text-emerald-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {tab.icon}
-            {tab.label}
-            {tab.tooltip && (
-              <span className="text-gray-400 cursor-help ml-0.5" title={tab.tooltip}>ⓘ</span>
-            )}
+            基本信息
           </Button>
-        ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent flex items-center gap-1 ${
+              activeTab === 'history'
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            追溯时间线
+          </Button>
+          {extraTabs.map((tab) => (
+            <Button
+              key={tab.key}
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent flex items-center gap-1 ${
+                activeTab === tab.key
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              {tab.tooltip && (
+                <span className="text-gray-400 cursor-help ml-0.5" title={tab.tooltip}>ⓘ</span>
+              )}
+            </Button>
+          ))}
+        </div>
+        {/* 2026-07-21：Tab 行右侧附加内容（如二维码），不占单独行空间 */}
+        {headerRight && <div className="flex-shrink-0 flex items-center">{headerRight}</div>}
       </div>
 
       {/* Tab 内容 */}
