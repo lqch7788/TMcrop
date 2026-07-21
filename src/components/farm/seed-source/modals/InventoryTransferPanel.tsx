@@ -424,7 +424,8 @@ export function InventoryTransferPanel({
         )
       ) : (
         <Card className="overflow-x-auto p-0">
-          <Table className="table-fixed w-[1100px]">
+          {/* 2026-07-21：表格自适应弹窗宽度（去掉固定 1100px，改 w-full + table-fixed 列宽控制列宽） */}
+          <Table className="table-fixed w-full">
             <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600">
               <TableRow className="hover:from-blue-500 hover:to-blue-600">
                 <TableHead className="w-10 text-center text-white text-sm font-semibold">
