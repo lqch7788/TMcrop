@@ -2475,6 +2475,13 @@ export async function fixMissingSchema(): Promise<void> {
   // 2026-06-16: 补苗累计字段（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
   try { db.run("ALTER TABLE seedlings ADD COLUMN replant_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.replant_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.replant_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.replant_count 失败: ${e.message}`); }
 
+  // 2026-07-21: 补全 5 个缺失字段（calculate_mode / propagation_multiple / custom_multiple / theoretical_yield / available_transplant_count）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN calculate_mode TEXT"); seedLog.info('  ✓ seedlings.calculate_mode 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.calculate_mode 已存在，跳过'); else seedLog.error(`  ✗ seedlings.calculate_mode 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN propagation_multiple REAL DEFAULT 0"); seedLog.info('  ✓ seedlings.propagation_multiple 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.propagation_multiple 已存在，跳过'); else seedLog.error(`  ✗ seedlings.propagation_multiple 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN custom_multiple REAL DEFAULT 0"); seedLog.info('  ✓ seedlings.custom_multiple 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.custom_multiple 已存在，跳过'); else seedLog.error(`  ✗ seedlings.custom_multiple 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN theoretical_yield REAL DEFAULT 0"); seedLog.info('  ✓ seedlings.theoretical_yield 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.theoretical_yield 已存在，跳过'); else seedLog.error(`  ✗ seedlings.theoretical_yield 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN available_transplant_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.available_transplant_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.available_transplant_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.available_transplant_count 失败: ${e.message}`); }
+
   // 2026-07-04 v3: 无性繁殖母株溯源列（铁律 #8 同步 schema.ts CREATE TABLE）
   // 2026-07-04 修复：POST /api/seedlings/with-deduct 报 no such column: mother_source_type
   // 根因：seedling.ts INSERT 列表加了 10 列（2026-07-03 v5），但 fixMissingSchema.ts 漏同步 ALTER TABLE

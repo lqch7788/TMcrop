@@ -76,6 +76,7 @@ router.put('/batch', (req: Request, res: Response) => {
     const db = getDatabase();
 
     // 2026-07-14：批量更新字段名白名单（修复 H15：此前任意字段名可注入 SQL 列名）
+    // 2026-07-21 修复：同步单个更新白名单
     const ALLOWED_FIELDS = new Set([
       'seedling_code', 'source_id', 'source_name', 'production_plan_code',
       'crop_code', 'crop_name', 'crop_variety', 'seedling_type',
@@ -86,6 +87,11 @@ router.put('/batch', (req: Request, res: Response) => {
       'target_survival_rate', 'target_survival_count', 'loss_count', 'loss_rate',
       'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
       'charge_person', 'seedling_form', 'unit',
+      // 2026-07-21 新增
+      'mother_plant_count', 'expanded_plant_count', 'mother_loss_count',
+      'seedling_loss_count', 'harvest_stocked_count', 'replant_count',
+      'propagation_mode', 'calculate_mode', 'propagation_multiple',
+      'custom_multiple', 'theoretical_yield', 'available_transplant_count',
     ]);
 
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
@@ -1223,6 +1229,7 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     // 白名单：只允许更新 DB 真实存在的列；过滤前端传来的额外字段（避免 SQL 注入 + 兼容字段缺失）
+    // 2026-07-21 修复：补全 10 个缺失字段（之前编辑无法保存）
     const ALLOWED_FIELDS = new Set([
       'seedling_code', 'source_id', 'source_name', 'production_plan_code',
       'crop_code', 'crop_name', 'crop_variety', 'seedling_type',
@@ -1233,19 +1240,74 @@ router.put('/:id', (req: Request, res: Response) => {
       'target_survival_rate', 'target_survival_count',
       'loss_count', 'loss_rate',
       'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
-      // 2026-06-15: 负责人（编辑弹窗"负责人"显示空 bug 修复）
-      'charge_person',
-      // 2026-06-27 P0：种苗形态（详情弹窗"种苗类型"列数据源）
-      'seedling_form',
-      'unit', // 2026-07-01: 单位
+      'charge_person', 'seedling_form', 'unit',
+      // 2026-07-21 新增：数量体系字段（编辑弹窗可保存）
+      'mother_plant_count', 'expanded_plant_count', 'mother_loss_count',
+      'seedling_loss_count', 'harvest_stocked_count', 'replant_count',
+      'propagation_mode', 'calculate_mode', 'propagation_multiple',
+      'custom_multiple', 'theoretical_yield', 'available_transplant_count',
     ]);
-    const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
+    // 2026-07-21 修复：前端传 camelCase，后端白名单是 snake_case，需要转换
+    const CAMEL_TO_SNAKE: Record<string, string> = {
+      motherPlantCount: 'mother_plant_count',
+      expandedPlantCount: 'expanded_plant_count',
+      motherLossCount: 'mother_loss_count',
+      seedlingLossCount: 'seedling_loss_count',
+      harvestStockedCount: 'harvest_stocked_count',
+      replantCount: 'replant_count',
+      propagationMode: 'propagation_mode',
+      calculateMode: 'calculate_mode',
+      propagationMultiple: 'propagation_multiple',
+      customMultiple: 'custom_multiple',
+      theoreticalYield: 'theoretical_yield',
+      availableTransplantCount: 'available_transplant_count',
+      seedlingForm: 'seedling_form',
+      seedlingType: 'seedling_type',
+      greenhouseName: 'greenhouse_name',
+      areaName: 'area_name',
+      startDate: 'seedling_date',
+      expectedEndDate: 'expected_finish_date',
+      endDate: 'actual_finish_date',
+      initialCount: 'seedling_quantity',
+      survivalCount: 'survival_quantity',
+      survivalRate: 'survival_rate',
+      qualityGrade: 'quality_grade',
+      workHours: 'work_hours',
+      chargePerson: 'charge_person',
+      productionPlanCode: 'production_plan_code',
+      cropCode: 'crop_code',
+      cropName: 'crop_name',
+      cropVariety: 'crop_variety',
+      unit: 'unit',
+      sourceId: 'source_id',
+      sourceCode: 'source_name',
+      sourceName: 'source_name',
+      remarks: 'remarks',
+      endType: 'end_type',
+      endTime: 'end_time',
+      targetSurvivalRate: 'target_survival_rate',
+      targetSurvivalCount: 'target_survival_count',
+      lossCount: 'loss_count',
+      lossRate: 'loss_rate',
+      printCount: 'print_count',
+      status: 'status',
+    };
+    // 转换 camelCase → snake_case，过滤不在白名单中的字段
+    const snakeUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === 'id') continue;
+      const snakeKey = CAMEL_TO_SNAKE[key] || key;
+      if (ALLOWED_FIELDS.has(snakeKey)) {
+        snakeUpdates[snakeKey] = value;
+      }
+    }
+    const safeKeys = Object.keys(snakeUpdates);
     if (safeKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
     const fields = safeKeys.map(k => `${k} = ?`).join(', ');
-    const values = safeKeys.map(k => updates[k]);
+    const values = safeKeys.map(k => snakeUpdates[k]);
     values.push(now, id);
 
     db.run(`UPDATE seedlings SET ${fields}, update_time = ? WHERE id = ?`, values);

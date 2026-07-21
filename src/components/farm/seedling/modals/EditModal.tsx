@@ -61,7 +61,8 @@ export function EditModal({
     plantedCount: 0, // 2026-06-28：保留字段以兼容后端 PUT ALLOWED_FIELDS，但前端不再使用
     remarks: record.remarks || '',
     // 方案2.6: 育苗工时
-    workHours: record.workHours || 0,
+    // 2026-07-21 修复：workHours 映射到 seedlingTaskTime（对齐详情显示）
+    workHours: record.seedlingTaskTime || 0,
     // 新增缺失字段
     qualityGrade: record.qualityGrade || '',
     isFinished: record.isFinished || false,
@@ -215,6 +216,12 @@ export function EditModal({
         customMultiple: formData.customMultiple,
         theoreticalYield: formData.theoreticalYield,
         workHours: formData.workHours || undefined,
+        // 2026-07-21 修复：添加 5 个数量字段 + replantCount 到提交 payload（之前缺失导致无法保存）
+        motherLossCount: formData.motherLossCount,
+        expandedPlantCount: formData.expandedPlantCount,
+        seedlingLossCount: formData.seedlingLossCount,
+        harvestStockedCount: formData.harvestStockedCount,
+        replantCount: formData.replantCount,
       });
     } catch (error) {
       // logger.error('更新育苗记录失败:', error);
@@ -456,18 +463,19 @@ export function EditModal({
           />
         </div>
 
-        {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，不可手动改） */}
+        {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，可手动纠错） */}
         <div>
           <Label className="text-gray-700">
             {record.propagationMode === 'one_to_many' ? '母株数量' : '成活数量'}
-            <span className="text-xs text-gray-500 ml-1">（每日记录自动累加）</span>
+            <span className="text-xs text-gray-500 ml-1">（每日记录自动累加，可手动纠错）</span>
           </Label>
           <Input
             type="number"
             min={0}
             value={formData.survivalCount || ''}
             title="从每日记录累加（手动修改仅用于纠错）"
-            className={`${deepInputClass} bg-gray-100`}
+            className={deepInputClass}
+            onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, survivalCount: v < 0 ? 0 : v }); }}
           />
         </div>
 
@@ -475,37 +483,43 @@ export function EditModal({
       业务规则变更：种植管理不再从育苗管理取苗（统一从内部种源页面），育苗小苗全部先入库作物库存再出库。
       因此"已定植数量"无业务含义，留着只会误导。*/}
 
-        {/* 2026-06-16: 5 业务字段只读显示（数量体系重构后字段，UI 渲染） */}
+        {/* 2026-06-16: 5 业务字段 + 补苗累计（数量体系重构后字段） */}
+        {/* 2026-07-21 修复：添加 onChange，让这些字段可以编辑保存（之前只读无法写入 DB） */}
         <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-semibold text-amber-900">数量统计（只读，自动累加）</span>
+            <span className="text-sm font-semibold text-amber-900">数量统计（自动累加，可手动纠错）</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-700">母株累计损耗</Label>
-              <Input type="number" value={formData.motherLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
+              <Input type="number" min={0} value={formData.motherLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={deepInputClass}
+                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, motherLossCount: v < 0 ? 0 : v }); }} />
             </div>
             <div>
               <Label className="text-gray-700">小苗累计产出</Label>
-              <Input type="number" value={formData.expandedPlantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
+              <Input type="number" min={0} value={formData.expandedPlantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={deepInputClass}
+                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, expandedPlantCount: v < 0 ? 0 : v }); }} />
             </div>
             <div>
               <Label className="text-gray-700">小苗累计损耗</Label>
-              <Input type="number" value={formData.seedlingLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
+              <Input type="number" min={0} value={formData.seedlingLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={deepInputClass}
+                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, seedlingLossCount: v < 0 ? 0 : v }); }} />
             </div>
             <div>
               <Label className="text-gray-700">采收入库累计</Label>
-              <Input type="number" value={formData.harvestStockedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
+              <Input type="number" min={0} value={formData.harvestStockedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={deepInputClass}
+                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, harvestStockedCount: v < 0 ? 0 : v }); }} />
             </div>
             {/* 2026-06-16: 补苗累计（严格区分母株/小苗池子） */}
             <div>
               <Label className="text-gray-700">补苗累计</Label>
-              <Input type="number" value={formData.replantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
-                className={`${deepInputClass} bg-gray-100`} />
+              <Input type="number" min={0} value={formData.replantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={deepInputClass}
+                onChange={(e) => { const v = Number(e.target.value); setFormData({ ...formData, replantCount: v < 0 ? 0 : v }); }} />
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
