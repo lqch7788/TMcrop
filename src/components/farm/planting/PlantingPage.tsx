@@ -465,33 +465,48 @@ export default function PlantingPage() {
     // 获取选中的数据
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
-    // 导出表头
-    const headers = ['种植批号', '来源类型', '来源批号', '作物品种', '品种', '种植区域', '大棚名称', '种植数量', '种植日期', '土壤PH', '土壤EC', '移栽数量', '移栽日期', '是否采收', '采收日期', '损耗率', '溯源码', '状态', '创建人', '创建时间', '备注'];
+    // 导出表头（2026-07-21：补全所有列表字段）
+    const headers = ['种植批号', '作物编码', '来源类型', '来源批号', '作物品种', '品种', '品种路径', '种植区域', '大棚名称', '种植数量', '单位', '种植日期', '土壤PH', '土壤EC', '目标产量', '移栽数量', '移栽日期', '是否采收', '采收日期', '已采收数量', '采收入库量', '种植自留种量', '损耗率', '损耗数量', '补栽数量', '剩余数量', '完成比例', '溯源码', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
-    const exportData = selectedData.map(record => ({
-      '种植批号': record.plantCode,
-      '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
-      '来源批号': record.sourceCode,
-      '作物品种': record.cropName,
-      '品种': record.cropVariety,
-      '种植区域': record.areaName,
-      '大棚名称': record.rootName,
-      '种植数量': record.plantingCount,
-      '种植日期': record.plantingDate,
-      '土壤PH': record.soilPH || '',
-      '土壤EC': record.soilEC || '',
-      '移栽数量': record.transplantCount || '',
-      '移栽日期': record.transplantDate || '',
-      '是否采收': record.isHarvest ? '是' : '否',
-      '采收日期': record.harvestDate || '',
-      '损耗率': `${record.attritionRate}%`,
-      '溯源码': record.traceabilityCode,
-      '状态': record.status === PlantingStatus.PLANTED ? '已定植' : record.status === PlantingStatus.GROWING ? '生长期' : record.status === PlantingStatus.HARVESTED ? '已采收' : '已取消',
-      '创建人': record.createBy,
-      '创建时间': record.createTime,
-      '备注': record.remarks || ''
-    }));
+    const exportData = selectedData.map(record => {
+      const remaining = Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0));
+      const completionRate = record.targetYield && record.targetYield > 0 ? `${Math.round((record.harvestToInventoryQty || 0) / record.targetYield * 100)}%` : '-';
+      return {
+        '种植批号': record.plantCode,
+        '作物编码': record.cropCode || '',
+        '来源类型': record.sourceType === SourceType.SEED ? '种子' : '种苗',
+        '来源批号': record.sourceCode,
+        '作物品种': record.cropName,
+        '品种': record.cropVariety,
+        '品种路径': record.varietyPath || [record.categoryName, record.typeName, record.varietyName, record.subVariety1Name].filter(Boolean).join(' > ') || '-',
+        '种植区域': record.areaName,
+        '大棚名称': record.rootName,
+        '种植数量': record.plantingCount,
+        '单位': record.unit || '',
+        '种植日期': record.plantingDate,
+        '土壤PH': record.soilPH || '',
+        '土壤EC': record.soilEC || '',
+        '目标产量': record.targetYield || '',
+        '移栽数量': record.transplantCount || '',
+        '移栽日期': record.transplantDate || '',
+        '是否采收': record.isHarvest ? '是' : '否',
+        '采收日期': record.harvestDate || '',
+        '已采收数量': record.harvestQuantity || '',
+        '采收入库量': record.harvestToInventoryQty || '',
+        '种植自留种量': record.selfKeptToSourceQty || '',
+        '损耗率': `${record.attritionRate}%`,
+        '损耗数量': record.lossCount || '',
+        '补栽数量': record.supplementCount || '',
+        '剩余数量': remaining,
+        '完成比例': completionRate,
+        '溯源码': record.traceabilityCode,
+        '状态': record.status === PlantingStatus.PLANTED ? '已定植' : record.status === PlantingStatus.GROWING ? '生长期' : record.status === PlantingStatus.HARVESTING ? '采收中' : record.status === PlantingStatus.HARVESTED ? '已采收' : record.status === PlantingStatus.ENDED ? '已结束' : record.status === PlantingStatus.CANCELLED ? '已取消' : '-',
+        '创建人': record.createBy,
+        '创建时间': record.createTime,
+        '备注': record.remarks || ''
+      };
+    });
 
     // 2026-07-10 P1-1：抽到底层公共函数
     const ext = exportFormat === 'csv' ? 'csv' : exportFormat === 'word' ? 'doc' : 'xls';

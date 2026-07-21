@@ -1,7 +1,10 @@
 /**
- * 库存编辑弹窗
- * 2026-07-14：新增——支持编辑库存记录的核心字段（数量、仓库、品质等）
- * 设计原则：只暴露允许编辑的字段，freeze/transferred 等状态不可手动改
+ * 库存编辑弹窗 — V2（2026-07-21 重构）
+ *
+ * 设计原则（深度审核后重构）：
+ * 1. 与列表/详情字段对齐，确保所有可编辑字段都有输入入口
+ * 2. 不可编辑字段（创建后锁定）只读展示
+ * 3. 后端白名单 + 前端 FIELD_MAP 同步，确保编辑后能保存
  */
 
 import React, { useState, useEffect } from 'react';
@@ -9,11 +12,13 @@ import { Modal, Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { InventoryStock } from '@/types/inventory';
 import { QUALITY_GRADE_MAP as QUALITY_GRADE_OPTIONS } from '@/constants/cropConstants';
 import { useWarehouseStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
+import { DictSelect } from '../../common/settings/DictSelect';
 
 interface InventoryEditModalProps {
   isOpen: boolean;
@@ -23,19 +28,29 @@ interface InventoryEditModalProps {
 }
 
 export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: InventoryEditModalProps) {
-  // 2026-07-14：表单状态——只暴露可编辑字段
+  // 可编辑字段状态
   const [currentQuantity, setCurrentQuantity] = useState<string>('');
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [warehouseName, setWarehouseName] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
   const [remarks, setRemarks] = useState<string>('');
-  // 品质等级下拉（兜底空数组防止 undefined.map 崩溃）
+  // 2026-07-21 补全缺失字段
+  const [unit, setUnit] = useState<string>('');
+  const [varietyName, setVarietyName] = useState<string>('');
+  const [cropName, setCropName] = useState<string>('');
+  const [targetYield, setTargetYield] = useState<string>('');
+  const [plantingMode, setPlantingMode] = useState<string>('');
+  const [productionPlanCode, setProductionPlanCode] = useState<string>('');
+  const [inboundDate, setInboundDate] = useState<string>('');
+  const [supplierName, setSupplierName] = useState<string>('');
+  const [unitPrice, setUnitPrice] = useState<string>('');
+  // 品质等级下拉
   const gradeOptions = Object.entries(QUALITY_GRADE_OPTIONS || {}).map(([value, { label }]) => ({ value, label }));
 
-  // 2026-07-14：仓库列表（注意：Store 字段名是 warehouses，不是 items）
+  // 仓库列表
   const warehouses = useWarehouseStore((s) => s.warehouses) || [];
-  // 2026-07-14：打开弹窗时触发仓库数据加载（如果还没加载）
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
+
   useEffect(() => {
     if (isOpen && warehouses.length === 0) {
       loadWarehouses();
@@ -50,10 +65,19 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       setWarehouseName(stock.warehouseName || '');
       setGrade(stock.grade || '');
       setRemarks(stock.remarks || '');
+      // 2026-07-21 补全缺失字段
+      setUnit(stock.unit || '');
+      setVarietyName(stock.varietyName || '');
+      setCropName(stock.cropName || '');
+      setTargetYield(stock.targetYield ? String(stock.targetYield) : '');
+      setPlantingMode(stock.plantingMode || '');
+      setProductionPlanCode(stock.productionPlanCode || '');
+      setInboundDate(stock.inboundDate || '');
+      setSupplierName(stock.supplierName || '');
+      setUnitPrice(stock.unitPrice ? String(stock.unitPrice) : '');
     }
   }, [stock]);
 
-  // 2026-07-14：提交
   const handleSubmit = async () => {
     if (!stock) return;
     const qty = Number(currentQuantity);
@@ -62,16 +86,24 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       return;
     }
     try {
-      // 用 instanceId 作为路由参数（列表数据里没有 id 字段）
-      // 注意：enhancedApiClient 已自动解包 response.data — success=true 时返回 data 内容，success=false 时 throw
+      // 2026-07-21 修复：发送所有可编辑字段（camelCase），后端自动转 snake_case
       await enhancedApiClient.put<{ id: string }>(`/inventory/${stock.instanceId}`, {
         current_quantity: qty,
         warehouse_id: warehouseId || undefined,
         warehouse_name: warehouseName || undefined,
         grade: grade || undefined,
         remarks: remarks || undefined,
+        // 2026-07-21 补全缺失字段
+        unit: unit || undefined,
+        variety_name: varietyName || undefined,
+        crop_name: cropName || undefined,
+        target_yield: targetYield ? Number(targetYield) : undefined,
+        planting_mode: plantingMode || undefined,
+        production_plan_code: productionPlanCode || undefined,
+        inbound_date: inboundDate || undefined,
+        supplier_name: supplierName || undefined,
+        unit_price: unitPrice ? Number(unitPrice) : undefined,
       });
-      // 没有抛错 = 保存成功
       onSuccess();
       onClose();
     } catch (e: any) {
@@ -86,7 +118,7 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       isOpen={isOpen}
       onClose={onClose}
       title="编辑库存"
-      size="lg"
+      size="xl"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>取消</Button>
@@ -94,77 +126,134 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
         </div>
       }
     >
-      <div className="space-y-4">
-        {/* 只读字段：实例 ID / 库存类型 / 状态 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>实例ID</Label>
-            <Input value={stock.instanceId} disabled className="bg-gray-50" />
-          </div>
-          <div>
-            <Label>作物名称</Label>
-            <Input value={stock.cropName || '-'} disabled className="bg-gray-50" />
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        {/* 只读字段 */}
+        <div>
+          <Label>实例ID</Label>
+          <Input value={stock.instanceId} disabled className="bg-gray-50 font-mono text-xs" />
+        </div>
+        <div>
+          <Label>库存类型</Label>
+          <Input value={stock.stockType === 'seed' ? '种源' : stock.stockType === 'seedling' ? '种苗' : '成品'} disabled className="bg-gray-50" />
         </div>
 
         {/* 可编辑字段 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>数量 *</Label>
-            <Input
-              type="number"
-              value={currentQuantity}
-              onChange={(e) => setCurrentQuantity(e.target.value)}
-              min={0}
-              step={1}
-            />
-          </div>
-          <div>
-            <Label>品质等级</Label>
-            <Select value={grade} onValueChange={setGrade}>
-              <SelectTrigger>
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">无</SelectItem>
-                {gradeOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div>
+          <Label>作物名称</Label>
+          <Input value={cropName} onChange={(e) => setCropName(e.target.value)} />
+        </div>
+        <div>
+          <Label>品种名称</Label>
+          <Input value={varietyName} onChange={(e) => setVarietyName(e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>仓库</Label>
-            <Select value={warehouseId} onValueChange={(v) => {
-              setWarehouseId(v);
-              const wh = warehouses.find((w) => w.id === v);
-              setWarehouseName(wh?.name || '');
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="请选择仓库" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">无</SelectItem>
-                {warehouses.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>备注</Label>
-            <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-          </div>
+        <div>
+          <Label>数量 *</Label>
+          <Input
+            type="number"
+            value={currentQuantity}
+            onChange={(e) => setCurrentQuantity(e.target.value)}
+            min={0}
+            step={1}
+          />
+        </div>
+        <div>
+          <Label>单位</Label>
+          <DictSelect
+            category="unit"
+            value={unit}
+            onChange={(value) => setUnit(value)}
+            placeholder="选择单位"
+          />
+        </div>
+
+        <div>
+          <Label>品质等级</Label>
+          <Select value={grade} onValueChange={setGrade}>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">无</SelectItem>
+              {gradeOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>目标产量</Label>
+          <Input
+            type="number"
+            min={0}
+            value={targetYield}
+            onChange={(e) => setTargetYield(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <Label>种植模式</Label>
+          <DictSelect
+            category="planting_mode"
+            value={plantingMode}
+            onChange={(value) => setPlantingMode(value)}
+            placeholder="选择种植模式"
+          />
+        </div>
+        <div>
+          <Label>仓库</Label>
+          <Select value={warehouseId} onValueChange={(v) => {
+            setWarehouseId(v);
+            const wh = warehouses.find((w) => w.id === v);
+            setWarehouseName(wh?.name || '');
+          }}>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择仓库" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">无</SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>入库日期</Label>
+          <Input type="date" value={inboundDate} onChange={(e) => setInboundDate(e.target.value)} />
+        </div>
+        <div>
+          <Label>供应商</Label>
+          <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+        </div>
+
+        <div>
+          <Label>单价（元）</Label>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={unitPrice}
+            onChange={(e) => setUnitPrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>关联生产计划</Label>
+          <Input value={productionPlanCode} onChange={(e) => setProductionPlanCode(e.target.value)} />
+        </div>
+
+        {/* 备注 - 占两列 */}
+        <div className="col-span-2">
+          <Label>备注</Label>
+          <TextArea value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={3} />
         </div>
 
         {/* 只读信息提示 */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+        <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
           <p className="font-semibold mb-1">编辑说明</p>
           <ul className="list-disc list-inside space-y-0.5">
-            <li>数量和仓库变更后会自动重算冻结状态（如全部冻结→部分冻结）</li>
+            <li>数量和仓库变更后会自动重算状态</li>
             <li>冻结中的库存仍可编辑（不影响已冻结的配额）</li>
           </ul>
         </div>

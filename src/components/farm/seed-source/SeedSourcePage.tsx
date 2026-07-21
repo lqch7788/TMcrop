@@ -367,10 +367,11 @@ export default function SeedSourcePage() {
     // 2026-07-14：导出表头改用共享常量 SEED_SOURCE_EXPORT_HEADERS
     const headers = [...SEED_SOURCE_EXPORT_HEADERS];
 
-    // 生成导出数据
+    // 生成导出数据（2026-07-21：补全所有列表字段）
     const exportData = selectedData.map(record => ({
       '种源图片': (record.pictures && record.pictures.length > 0) ? record.pictures[0] : '',
       '种源批号': record.seedCode,
+      '作物编码': record.cropCode || '',
       '种源类型': record.sourceType === SourceType.SEED ? '种子' :
                   record.sourceType === SourceType.SEEDLING ? '种苗/实生苗' :
                   record.sourceType === SourceType.CUTTING ? '扦插苗' :
@@ -381,10 +382,12 @@ export default function SeedSourcePage() {
                   record.sourceType === SourceType.SELF_PRODUCED ? '自繁苗' :
                   record.sourceType === SourceType.EXTERNAL ? '外购苗' : '其他',
       '作物类别': record.cropCategory,
-      // 2026-06-06: L7 对齐表格列名 — 表格列「作物品种」实际显示 cropVariety||cropName（最细分）
       '作物品种（最细化）': record.cropName,
       '作物品种（细分品种）': record.cropVariety,
-      '供应商': record.supplierName,
+      '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVarietyName].filter(Boolean).join(' > ') || '-',
+      '形态': record.seedForm || record.sourceType || '-',
+      '来源途径': SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-',
+      '供应商': record.supplierName || '-',
       '采购日期': record.purchaseDate,
       '采购数量': record.quantity,
       '单位': record.unit,
@@ -392,8 +395,8 @@ export default function SeedSourcePage() {
       '总金额(元)': record.totalAmount,
       '初始数量': record.initialCount,
       '可用数量': record.availableCount,
+      '回流次数': record.reflowCount || 0,
       '库存状态': (() => {
-        // 2026-06-04: 实时计算 status
         const live = computeStockStatus(record.availableCount, record.initialCount);
         return live === StockStatus.SUFFICIENT ? '充足' : live === StockStatus.LOW ? '不足' : '耗尽';
       })(),
