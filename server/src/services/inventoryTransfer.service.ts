@@ -257,6 +257,9 @@ export async function executeTransferToSource(
   items: TransferInput[],
   operator: { id?: string; name: string } = { name: 'system' }
 ): Promise<TransferResult[]> {
+  // 2026-07-21：防御 — 清洗 items 中的字符串字段，防 U+FFFD 脏数据写入种源
+  const { sanitizeObject } = await import('../utils/stringSanitizer');
+  items = sanitizeObject(items);
   // 参数校验
   if (!items || items.length === 0) {
     throw new InventoryTransferBusinessError(

@@ -166,7 +166,8 @@ export function EntityDetailModal({
       {activeTab === 'info' && basicInfoPanel}
 
       {activeTab === 'history' && (
-        <div className="py-2">
+        // 2026-07-21：topRight 存在时给工具栏留出右侧空间，避免刷新/导出按钮被二维码遮挡
+        <div className={`py-2 ${topRight ? 'pr-[170px]' : ''}`}>
           <EntityHistoryTimeline
             entity={entity}
             entityId={entityId}
@@ -177,7 +178,10 @@ export function EntityDetailModal({
       )}
 
       {extraTabs.map((tab) =>
-        activeTab === tab.key ? <div key={tab.key} className="py-2">{tab.content}</div> : null
+        activeTab === tab.key ? (
+          // 2026-07-21：topRight 存在时给 tab 内容留出右侧空间
+          <div key={tab.key} className={`py-2 ${topRight ? 'pr-[170px]' : ''}`}>{tab.content}</div>
+        ) : null
       )}
     </UnifiedModal>
   );
