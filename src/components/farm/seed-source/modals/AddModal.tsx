@@ -31,6 +31,8 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
+// 2026-07-22：追溯修复 - 种源形态字典（必填）
+import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {
@@ -104,6 +106,8 @@ export function AddModal({
     linkedPlantingId: '', linkedPlantingCode: '',
     propagationStartDate: '', expectedHarvestDate: '',
     breedingLocation: '', targetTraits: '', generation: '',
+    // 2026-07-22：追溯修复 - 种源形态必填（与表格形态列对齐，避免编辑弹窗空值）
+    seedForm: '',
   };
 
   // 表单数据
@@ -292,6 +296,11 @@ export function AddModal({
       await showAlert('请输入有效的单价（数字）');
       return;
     }
+    // 2026-07-22：追溯修复 - 种源形态必填校验
+    if (!formData.seedForm || !formData.seedForm.trim()) {
+      await showAlert('请选择种源形态（必填）');
+      return;
+    }
 
     // 获取供应商名称（从已选择的供应商对象中获取）
     const supplierName = selectedSupplier?.name || '';
@@ -337,6 +346,8 @@ export function AddModal({
         // status 字段已废弃（2026-06-04）
         traceabilityCode,
         printCount: 0,
+        // 2026-07-22：追溯修复 - 种源形态必填提交
+        seedForm: formData.seedForm,
         createBy: formData.createBy,
         // V3.0 新增字段
         productionPlanId: formData.productionPlanId,
@@ -575,6 +586,24 @@ export function AddModal({
                 <p className="mt-1 text-xs text-red-500">必填：选择"其他"时必须填写详细说明</p>
               </div>
             )}
+          </div>
+
+          {/* 2026-07-22：追溯修复 - 种源形态（必填） */}
+          <div>
+            <Label className="text-gray-900">
+              <span className="text-red-500">*</span>种源形态
+            </Label>
+            <select
+              value={formData.seedForm}
+              onChange={(e) => setFormData({ ...formData, seedForm: e.target.value })}
+              className="w-full h-10 px-3 border border-gray-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            >
+              <option value="">请选择种源形态</option>
+              {SEED_FORM_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">必填：与列表"形态"列对应，编辑弹窗会预填此值</p>
           </div>
 
           {/* 来源途径 - 根据入库方式自动设置 */}
