@@ -99,7 +99,7 @@ function renderPesticideTypeChips(
           insecticide: 'bg-red-100 text-red-700',
           fungicide: 'bg-blue-100 text-blue-700',
           herbicide: 'bg-amber-100 text-amber-700',
-          plant_regulator: 'bg-purple-100 text-purple-700',
+          plant_growth_regulator: 'bg-purple-100 text-purple-700',
           // 二级子类默认用灰色
         };
         const colorClass = colors[t] || 'bg-gray-100 text-gray-700';
