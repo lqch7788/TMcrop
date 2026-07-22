@@ -43,7 +43,8 @@ import materialCostRouter from './materialCost';
 import materialReturnRouter from './materialReturn';
 import materialExecuteRouter from './materialExecute';
 import materialStatisticsRouter from './materialStatistics';
-import monitoringRouter from './monitoring';
+// 2026-07-21 临时禁用: routes/monitoring.ts 引用了不存在的 services/performanceMonitor
+// import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 import announcementRouter from './announcement';
 import indicatorsRouter from './indicators';
@@ -231,7 +232,8 @@ router.use('/material-executes', requireAuth, materialExecuteRouter);
 router.use('/material-statistics', requireAuth, materialStatisticsRouter);
 
 // 性能监控路由 - 需要认证
-router.use('/monitoring', requireAuth, monitoringRouter);
+// 2026-07-21 临时禁用: 同上,因 services/performanceMonitor 模块不存在
+// router.use('/monitoring', requireAuth, monitoringRouter);
 
 // 数据同步路由 - 需要认证
 router.use('/sync', requireAuth, syncRouter);
