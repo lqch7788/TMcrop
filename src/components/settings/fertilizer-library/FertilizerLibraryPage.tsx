@@ -26,9 +26,13 @@ export default function FertilizerLibraryPage() {
   // ========== 导航 ==========
   const navigate = useNavigate();
 
-  // ========== Store ==========
+  // ========== Store（H22 修复：用 selector 避免整 store 解构反模式）==========
+  const items = useFertilizerLibraryStore((s) => s.items);
+  const isLoading = useFertilizerLibraryStore((s) => s.isLoading);
+  const error = useFertilizerLibraryStore((s) => s.error);
+  const clearError = useFertilizerLibraryStore((s) => s.clearError);
+  // actions 保持解构（不在 selector 中）
   const store = useFertilizerLibraryStore();
-  const { items, isLoading, error, clearError } = store;
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
 
@@ -53,17 +57,17 @@ export default function FertilizerLibraryPage() {
   const [showExportModal, setShowExportModal] = useState(false);
 
   // ========== 数据加载 ==========
+  // C7 修复：补全依赖数组（filters + store）
+  // 注意：activeTab 切换后需要保留关键字（肥料名称）作为后端 keyword 查询条件，
+  // 否则 useEffect 拉的全 tab 列表会覆盖掉搜索结果，导致用户看不到匹配行。
   useEffect(() => {
-    // 注意：activeTab 切换后需要保留关键字（肥料名称）作为后端 keyword 查询条件，
-    // 否则 useEffect 拉的全 tab 列表会覆盖掉搜索结果，导致用户看不到匹配行。
     const typeFilter = {
       ...filters,
       fertilizer_type: activeTab,
       keyword: (filters.fertilizerName || '').trim(),
     };
     store.fetchItems(typeFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, filters, store]);
 
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
