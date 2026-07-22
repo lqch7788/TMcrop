@@ -325,6 +325,7 @@ function AppContent() {
           <Route path="/summary/labor" element={<Navigate to="/summary/business-analysis" replace />} />
           <Route path="/summary/batch" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/summary/chain" element={<Navigate to="/summary/batch-management" replace />} />
+          <Route path="/summary/chain-traceability" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />
           <Route path="/farm-approval" element={<FarmApproval />} />
