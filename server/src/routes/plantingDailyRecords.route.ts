@@ -15,6 +15,8 @@ import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { formatLocalDateISO } from '../utils/dateUtil';
+// 2026-07-22：追溯修复 - 种植日常记录写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 import {
   validateDailyChange,
   normalizeChangeData,
@@ -180,6 +182,14 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
     const inserted = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [newId]);
     res.status(201).json({ success: true, data: inserted[0] || { id: newId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.daily_record',
+      businessId: id,
+      action: 'daily_record_change',
+      operatorName: (req.body as any)?.createBy || (req as any).user?.name,
+      opinion: `添加种植日常记录 ${newId}`,
+    });
   } catch (error) {
     console.error('[plantingDailyRecords] 新增失败:', error);
     res.status(500).json({ success: false, error: '添加种植每日记录失败' });
@@ -270,6 +280,14 @@ router.put('/:recordId', (req: Request, res: Response) => {
     saveDatabase();
     const updated = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
     res.json({ success: true, data: updated[0] || { id: recordId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.daily_record',
+      businessId: id,
+      action: 'daily_record_change',
+      operatorName: (req.body as any)?.createBy || (req as any).user?.name,
+      opinion: `编辑种植日常记录 ${recordId}`,
+    });
   } catch (error) {
     console.error('[plantingDailyRecords] 编辑失败:', error);
     res.status(500).json({ success: false, error: '编辑种植每日记录失败' });
@@ -318,6 +336,14 @@ router.delete('/:recordId', (req: Request, res: Response) => {
 
     saveDatabase();
     res.json({ success: true });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.daily_record',
+      businessId: id,
+      action: 'daily_record_change',
+      operatorName: (req as any).user?.name,
+      opinion: `删除种植日常记录 ${recordId}`,
+    });
   } catch (error) {
     console.error('[plantingDailyRecords] 删除失败:', error);
     res.status(500).json({ success: false, error: '删除种植每日记录失败' });

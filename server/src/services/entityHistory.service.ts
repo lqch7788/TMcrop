@@ -17,7 +17,7 @@ export interface HistoryItem {
   id: string;
   occurredAt: string;
   source: 'entity';           // 实体级历史（非业务流转）
-  category: 'lifecycle' | 'inbound' | 'transaction' | 'circulation';
+  category: 'lifecycle' | 'inbound' | 'transaction' | 'circulation' | 'movement' | 'daily' | 'print';
   action: string;
   quantityDelta?: number;
   unit?: string;
@@ -31,13 +31,14 @@ export interface HistoryItem {
 }
 
 /** 实体类型 */
-export type EntityType = 'seed_source' | 'seedling' | 'planting';
+export type EntityType = 'seed_source' | 'seedling' | 'planting' | 'inventory_stock';
 
-/** entityType → audit_logs business_type 映射 */
-const ENTITY_TO_AUDIT_TYPE: Record<EntityType, string> = {
-  seed_source: 'seed_source',
-  seedling: 'seedling',
-  planting: 'planting',
+/** entityType → audit_logs business_type 映射（2026-07-22 扩展支持子操作） */
+const ENTITY_TO_AUDIT_TYPE: Record<EntityType, string[]> = {
+  seed_source: ['seed_source', 'seed_source.propagation', 'seed_source.print', 'seed_source.status_change'],
+  seedling: ['seedling', 'seedling.propagation', 'seedling.transplant', 'seedling.print', 'seedling.daily_record'],
+  planting: ['planting', 'planting.move', 'planting.daily_record', 'planting.breeding', 'planting.seed_saving'],
+  inventory_stock: ['inventory_stock.create', 'inventory_stock.update', 'inventory_stock.delete'],
 };
 
 // ========== 2026-07-05 英文枚举 → 中文映射（修复种源详情弹窗显示 PROPAGATION/DISPOSAL/SALES 等） ==========
@@ -72,18 +73,19 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   if (!entityId) return [];
 
   const db = getDatabase();
-  const auditType = ENTITY_TO_AUDIT_TYPE[entityType];
+  const auditTypes = ENTITY_TO_AUDIT_TYPE[entityType];
+  const placeholders = auditTypes.map(() => '?').join(',');
   const results: HistoryItem[] = [];
 
-  // 1. audit_logs（lifecycle）
+  // 1. audit_logs（lifecycle + 子操作审计）
   try {
     const stmt = db.prepare(`
       SELECT id, action, opinion, operator_name, created_at
       FROM audit_logs
-      WHERE business_type = ? AND business_id = ?
+      WHERE business_type IN (${placeholders}) AND business_id = ?
       ORDER BY created_at DESC LIMIT ?
     `);
-    stmt.bind([auditType, entityId, limit]);
+    stmt.bind([...auditTypes, entityId, limit]);
     while (stmt.step()) {
       const r = stmt.getAsObject() as Record<string, unknown>;
       const action = String(r.action || '');
@@ -297,7 +299,211 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
     }
   }
 
+  // 5. planting_move_records（移入移出，仅 planting）— 2026-07-22
+  if (entityType === 'planting') {
+    try {
+      const stmt = db.prepare(`
+        SELECT id, operation_type, operation_date, quantity,
+               from_area_name, to_area_name, operator_name, remarks, create_time
+        FROM planting_move_records
+        WHERE planting_id = ?
+        ORDER BY create_time DESC LIMIT ?
+      `);
+      stmt.bind([entityId, limit]);
+      while (stmt.step()) {
+        const r = stmt.getAsObject() as Record<string, unknown>;
+        results.push({
+          id: String(r.id || ''),
+          occurredAt: String(r.create_time || r.operation_date || ''),
+          source: 'entity',
+          category: 'movement',
+          action: String(r.operation_type) === 'move_in' ? '移入' : '移出',
+          quantityDelta: Number(r.quantity || 0),
+          unit: '',
+          operatorName: String(r.operator_name || ''),
+          remarks: `${r.from_area_name || ''} → ${r.to_area_name || ''}${r.remarks ? ' | ' + r.remarks : ''}`,
+        });
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn(`[entityHistory] planting_move_records query failed:`, (e as Error).message);
+    }
+  }
+
+  // 6. daily_records（育苗/种植日常记录，按 related_type 过滤）— 2026-07-22
+  const dailyRelatedType = entityType === 'seedling' ? 'seedling'
+    : entityType === 'planting' ? 'planting' : null;
+  if (dailyRelatedType) {
+    try {
+      const stmt = db.prepare(`
+        SELECT id, record_type, record_date, quantity, unit,
+               data, status, remarks, create_by, create_time
+        FROM daily_records
+        WHERE related_id = ? AND related_type = ?
+        ORDER BY create_time DESC LIMIT ?
+      `);
+      stmt.bind([entityId, dailyRelatedType, limit]);
+      while (stmt.step()) {
+        const r = stmt.getAsObject() as Record<string, unknown>;
+        const qty = Number(r.quantity || 0);
+        results.push({
+          id: String(r.id || ''),
+          occurredAt: String(r.create_time || r.record_date || ''),
+          source: 'entity',
+          category: 'daily',
+          action: '日常记录',
+          quantityDelta: qty,
+          unit: String(r.unit || ''),
+          operatorName: String(r.create_by || ''),
+          remarks: String(r.remarks || ''),
+        });
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn(`[entityHistory] daily_records query failed:`, (e as Error).message);
+    }
+  }
+
+  // 7. print_records（育苗/种植/种源打印，按 related_type 过滤）— 2026-07-22
+  const printRelatedType = entityType === 'seedling' ? 'seedling'
+    : entityType === 'planting' ? 'planting'
+    : entityType === 'seed_source' ? 'seed_source' : null;
+  if (printRelatedType) {
+    try {
+      const stmt = db.prepare(`
+        SELECT id, print_type, related_type, copies, create_by, create_time
+        FROM print_records
+        WHERE related_id = ? AND related_type = ?
+        ORDER BY create_time DESC LIMIT ?
+      `);
+      stmt.bind([entityId, printRelatedType, limit]);
+      while (stmt.step()) {
+        const r = stmt.getAsObject() as Record<string, unknown>;
+        const copies = Number(r.copies || 1);
+        results.push({
+          id: String(r.id || ''),
+          occurredAt: String(r.create_time || ''),
+          source: 'entity',
+          category: 'print',
+          action: `打印 ${r.print_type || ''} ×${copies}`,
+          operatorName: String(r.create_by || ''),
+          remarks: '',
+        });
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn(`[entityHistory] print_records query failed:`, (e as Error).message);
+    }
+  }
+
+  // 8. seed_source_print_records（仅 seed_source）— 2026-07-22
+  if (entityType === 'seed_source') {
+    try {
+      const stmt = db.prepare(`
+        SELECT id, print_type, print_count, operator, print_time, create_time
+        FROM seed_source_print_records
+        WHERE seed_source_id = ?
+        ORDER BY create_time DESC LIMIT ?
+      `);
+      stmt.bind([entityId, limit]);
+      while (stmt.step()) {
+        const r = stmt.getAsObject() as Record<string, unknown>;
+        const cnt = Number(r.print_count || 1);
+        results.push({
+          id: String(r.id || ''),
+          occurredAt: String(r.create_time || r.print_time || ''),
+          source: 'entity',
+          category: 'print',
+          action: `打印 ${r.print_type || ''} ×${cnt}`,
+          operatorName: String(r.operator || ''),
+          remarks: '',
+        });
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn(`[entityHistory] seed_source_print_records query failed:`, (e as Error).message);
+    }
+  }
+
   // 排序：occurredAt 倒序
   results.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   return results.slice(0, limit);
+}
+
+/**
+ * 按 instanceId 查询库存时间线（2026-07-22 新增）
+ * 复用 queryEntityHistory('inventory_stock', id) 的 9 表 UNION
+ */
+export function queryInventoryHistory(stockId: string, limit = 200): HistoryItem[] {
+  return queryEntityHistory('inventory_stock', stockId, limit);
+}
+
+/**
+ * 按 batchCode 聚合全链路时间线（2026-07-22 新增）
+ * 链路：production_plans → seed_sources → seedlings → plantings → inventory_stock
+ */
+export function queryBatchTimeline(batchCode: string, limit = 500): HistoryItem[] {
+  if (!batchCode) return [];
+  const db = getDatabase();
+  const allItems: HistoryItem[] = [];
+
+  // 1. 查 production_plans.id
+  let planId: string | null = null;
+  try {
+    const stmt = db.prepare(`SELECT id FROM production_plans WHERE plan_code = ? LIMIT 1`);
+    stmt.bind([batchCode]);
+    if (stmt.step()) planId = String((stmt.getAsObject() as any).id || '');
+    stmt.free();
+  } catch (e) {
+    console.warn(`[entityHistory] batch lookup failed:`, (e as Error).message);
+  }
+  if (!planId) return [];
+
+  // 2. 查 seed_sources by production_plan_code
+  const seedIds: string[] = [];
+  try {
+    const stmt = db.prepare(`SELECT id FROM seed_sources WHERE production_plan_code = ?`);
+    stmt.bind([batchCode]);
+    while (stmt.step()) seedIds.push(String((stmt.getAsObject() as any).id));
+    stmt.free();
+  } catch {}
+
+  // 3. 查 seedlings by source_id
+  const sdIds: string[] = [];
+  for (const sid of seedIds) {
+    try {
+      const stmt = db.prepare(`SELECT id FROM seedlings WHERE source_id = ?`);
+      stmt.bind([sid]);
+      while (stmt.step()) sdIds.push(String((stmt.getAsObject() as any).id));
+      stmt.free();
+    } catch {}
+  }
+
+  // 4. 查 plantings by source_id (来自 seedlings)
+  const plIds: string[] = [];
+  for (const sdid of sdIds) {
+    try {
+      const stmt = db.prepare(`SELECT id FROM plantings WHERE source_id = ?`);
+      stmt.bind([sdid]);
+      while (stmt.step()) plIds.push(String((stmt.getAsObject() as any).id));
+      stmt.free();
+    } catch {}
+  }
+
+  // 5. UNION 所有 entityHistory
+  allItems.push(...queryEntityHistory('seed_source', planId, limit));
+  for (const sid of seedIds) allItems.push(...queryEntityHistory('seed_source', sid, limit));
+  for (const sdid of sdIds) allItems.push(...queryEntityHistory('seedling', sdid, limit));
+  for (const plid of plIds) allItems.push(...queryEntityHistory('planting', plid, limit));
+
+  // 去重 + 排序
+  const seen = new Set<string>();
+  const unique = allItems.filter(item => {
+    const key = `${item.id}-${item.category}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  unique.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+  return unique.slice(0, limit);
 }

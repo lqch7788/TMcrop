@@ -96,7 +96,6 @@ import customerRouter from './customer.routes';
 import deliveryRouter from './delivery.routes';
 import qualityRouter from './quality.routes';
 import acceptanceRouter from './acceptance.routes';
-import inventoryRouterAlias from './inventory.routes';
 import materialFlowLogRouter from './materialFlowLog';
 import wateringRouter from './watering';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
@@ -368,9 +367,6 @@ router.use('/quality-checks', requireAuth, qualityRouter);
 
 // 验收记录路由
 router.use('/acceptances', requireAuth, acceptanceRouter);
-
-// 库存冻结路由
-router.use('/inventory-freeze', requireAuth, inventoryRouterAlias);
 
 // 物料流转追溯路由
 router.use('/material-flow-log', requireAuth, materialFlowLogRouter);

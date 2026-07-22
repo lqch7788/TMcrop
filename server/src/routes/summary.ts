@@ -6,6 +6,8 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// 2026-07-22：追溯修复 - 链时间线端点
+import { queryEntityHistory, queryInventoryHistory, queryBatchTimeline } from '../services/entityHistory.service';
 
 const router = Router();
 
@@ -144,12 +146,17 @@ router.get('/batch-stats', (req: Request, res: Response) => {
         -- 全链条追溯阶段标记：标识批次在各环节是否有数据
         CASE WHEN COUNT(DISTINCT ss.id) > 0 THEN 1 ELSE 0 END as hasSeedSource,
         CASE WHEN COUNT(DISTINCT s.id) > 0 THEN 1 ELSE 0 END as hasSeedling,
-        CASE WHEN COUNT(DISTINCT pl.id) > 0 THEN 1 ELSE 0 END as hasPlanting
+        CASE WHEN COUNT(DISTINCT pl.id) > 0 THEN 1 ELSE 0 END as hasPlanting,
+        -- 2026-07-22：P1 改进 - 库存聚合（来自 inventory_stock 表）
+        CASE WHEN COUNT(DISTINCT ist.id) > 0 THEN 1 ELSE 0 END as hasInventory,
+        COALESCE(SUM(ist.current_quantity), 0) as inventoryQuantity,
+        COUNT(DISTINCT ist.id) as inventoryItemCount
       FROM production_plans pp
       LEFT JOIN seed_sources ss ON ss.production_plan_code = pp.plan_code
       LEFT JOIN seedlings s ON s.source_id = ss.id
       LEFT JOIN plantings pl ON pl.source_id = s.id
       LEFT JOIN harvest_records hr ON hr.source_id = pl.id
+      LEFT JOIN inventory_stock ist ON (ist.business_id = pl.id OR ist.business_id = hr.id OR ist.source_id = ss.id) AND ist.current_quantity > 0
       LEFT JOIN farm_tasks ft ON ft.greenhouse_name = pp.greenhouse_name AND ft.source_type = 'planting' AND ft.source_id = pl.id
       LEFT JOIN labor_records lr ON lr.greenhouse_name = pp.greenhouse_name AND lr.task_description LIKE '%' || pp.plan_code || '%'
       ${whereClause}
@@ -936,18 +943,32 @@ router.get('/chain-overview', (_req: Request, res: Response) => {
       FROM harvest_records
     `)[0];
 
-    // 库存管理 — 物品列表+总量
-    const inventoryItems = queryToObjects(db, `
-      SELECT id, code, name, category, specification as spec, unit, quantity,
-             price as unitPrice, (quantity * CAST(price AS REAL)) as totalAmount,
-             location as warehouseName, dataStatus as status
-      FROM materials WHERE quantity > 0 ORDER BY lastUpdateTime DESC LIMIT 20
-    `);
+    // 库存管理 — 作物库存按 stock_type 分组（v2 设计 §5.4）
+    // 2026-07-22：修复追溯页面第六阶段数据源错位
+    // 之前查 materials 表（物料字典）—— 用户问的是 inventory_stock（作物库存）
+    // 状态过滤：排除已用完/已调拨/已出库；保留冻结（frozen_full/frozen_partial）
     const inventoryStats = queryToObjects(db, `
-      SELECT COUNT(*) as itemCount,
-             COALESCE(SUM(quantity), 0) as totalQuantity
-      FROM materials WHERE quantity > 0
-    `)[0];
+      SELECT stock_type,
+             COUNT(*) as itemCount,
+             COALESCE(SUM(current_quantity), 0) as totalQuantity,
+             COALESCE(SUM(total_amount), 0) as totalAmount
+      FROM inventory_stock
+      WHERE current_quantity > 0
+        AND status NOT IN ('empty', 'transferred', 'outbound')
+      GROUP BY stock_type
+    `);
+    const inventoryItems = queryToObjects(db, `
+      SELECT id, instance_id as code, stock_type, crop_name as cropName,
+             variety_name as variety, current_quantity as quantity, unit,
+             warehouse_name as warehouseName, status,
+             business_id as sourceId, business_type as sourceType,
+             source_module as sourceModule
+      FROM inventory_stock
+      WHERE current_quantity > 0
+        AND status NOT IN ('empty', 'transferred', 'outbound')
+      ORDER BY stock_type, create_time DESC
+      LIMIT 60
+    `);
 
     res.json({
       success: true,
@@ -958,13 +979,77 @@ router.get('/chain-overview', (_req: Request, res: Response) => {
           { key: 'seedling', label: '育苗管理', count: seedlingTotal, detail: seedlingStats, items: seedlingItems },
           { key: 'planting', label: '种植管理', count: plantingTotal, detail: plantingStats, items: plantingItems },
           { key: 'harvest', label: '采收入库', count: Number(harvestStats?.count || 0), detail: { ...harvestStats }, items: harvestItems },
-          { key: 'inventory', label: '库存管理', count: Number(inventoryStats?.itemCount || 0), detail: { ...inventoryStats }, items: inventoryItems },
+          {
+            key: 'inventory',
+            label: '库存管理',
+            count: inventoryItems.length,
+            detail: {
+              seedCount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seed')?.itemCount || 0),
+              seedlingCount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seedling')?.itemCount || 0),
+              productCount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'product')?.itemCount || 0),
+              seedQuantity: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seed')?.totalQuantity || 0),
+              seedlingQuantity: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seedling')?.totalQuantity || 0),
+              productQuantity: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'product')?.totalQuantity || 0),
+              seedAmount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seed')?.totalAmount || 0),
+              seedlingAmount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'seedling')?.totalAmount || 0),
+              productAmount: Number(inventoryStats.find((s: any) => (s.stock_type || s.stockType) === 'product')?.totalAmount || 0),
+            },
+            items: inventoryItems,
+          },
         ],
       },
     });
   } catch (error) {
     console.error('获取全链条概览失败:', error);
     res.status(500).json({ success: false, error: '获取全链条概览失败' });
+  }
+});
+
+/**
+ * GET /api/summary/chain-timeline
+ * 2026-07-22：全链路操作时间线端点（追溯页面核心组件）
+ * Query:
+ *   - batchCode: 按生产计划批次聚合整条链路
+ *   - instanceId: 按库存实例 ID 查询
+ *   - seedSourceId / seedlingId / plantingId: 按实体 ID 查询
+ *   - from / to: 时间范围（YYYY-MM-DD）
+ *   - limit: 默认 200，最大 500
+ */
+router.get('/chain-timeline', (req: Request, res: Response) => {
+  try {
+    const { batchCode, instanceId, seedSourceId, seedlingId, plantingId, from, to, limit = '200' } = req.query;
+    const limitNum = Math.min(500, Math.max(1, parseInt(String(limit), 10) || 200));
+
+    let items: any[] = [];
+    if (batchCode) {
+      items = queryBatchTimeline(String(batchCode), limitNum);
+    } else if (instanceId) {
+      items = queryInventoryHistory(String(instanceId), limitNum);
+    } else if (seedSourceId) {
+      items = queryEntityHistory('seed_source', String(seedSourceId), limitNum);
+    } else if (seedlingId) {
+      items = queryEntityHistory('seedling', String(seedlingId), limitNum);
+    } else if (plantingId) {
+      items = queryEntityHistory('planting', String(plantingId), limitNum);
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: '缺少 batchCode / instanceId / seedSourceId / seedlingId / plantingId 之一',
+      });
+    }
+
+    // 时间过滤（occurredAt 是 ISO 字符串，可直接字符串比较）
+    const filtered = items.filter((item) => {
+      const occurred = String(item.occurredAt || '');
+      if (from && occurred < String(from)) return false;
+      if (to && occurred > String(to)) return false;
+      return true;
+    });
+
+    res.json({ success: true, data: { items: filtered, total: filtered.length } });
+  } catch (e: any) {
+    console.error('[GET /summary/chain-timeline]', e);
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 

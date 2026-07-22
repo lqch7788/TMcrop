@@ -7,6 +7,8 @@ import { Router, Request, Response } from "express";
 import { getDatabase, saveDatabase } from "../db";
 import { queryToObjects, execCount } from "../utils/queryHelper";
 import { formatLocalDateISO } from "../utils/dateUtil";
+// 2026-07-22：追溯修复 - 定植/打印操作写入 audit_log
+import { writeAuditLog } from "../services/auditLog.service";
 
 const router = Router({ mergeParams: true });
 /**
@@ -134,6 +136,14 @@ router.put('/transplant-records/:recordId/status', (req: Request, res: Response)
     saveDatabase();
 
     res.json({ success: true, data: { id: recordId, status } });
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.transplant',
+      businessId: recordId,
+      action: 'update',
+      operatorName: (req as any).user?.name,
+      opinion: `更新定植记录状态 ${status}`,
+    });
   } catch (error) {
     console.error('更新定植记录状态失败:', error);
     res.status(500).json({ success: false, error: '更新定植记录状态失败' });
@@ -238,6 +248,14 @@ router.post('/print', (req: Request, res: Response) => {
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.print',
+      businessId: id,
+      action: 'print',
+      operatorName: (req as any).user?.name,
+      opinion: `打印定植标签`,
+    });
   } catch (error) {
     console.error('添加打印记录失败:', error);
     res.status(500).json({ success: false, error: '添加打印记录失败' });

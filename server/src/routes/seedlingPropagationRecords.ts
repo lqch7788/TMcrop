@@ -9,6 +9,8 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
 import { authenticate } from '../middleware/auth';
+// 2026-07-22：追溯修复 - 繁殖记录操作写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 
 const router = Router();
 router.use(authenticate);

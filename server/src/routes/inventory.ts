@@ -23,6 +23,8 @@ import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 import { recomputeAndUpdateStockStatus, recomputeAllStockStatus } from '../lib/inventoryStockStatus';
 // 2026-07-14：添加认证中间件（与 seedSource.ts 对齐——演示模式自动放行，生产模式需 JWT token）
 import { authenticate } from '../middleware/auth';
+// 2026-07-22：追溯修复 - 库存 CRUD 写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 
 const router = Router();
 router.use(authenticate);
@@ -1205,6 +1207,14 @@ router.post('/', async (req: Request, res: Response) => {
     saveDatabase();
 
     res.status(201).json({ success: true, data: { id, instanceId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'inventory_stock.create',
+      businessId: id,
+      action: 'create',
+      operatorName: (req.body as any)?.create_by || (req as any).user?.name,
+      opinion: `新增库存 ${crop_name} ${quantity}${unit}`,
+    });
   } catch (error) {
     console.error('[inventory] 兼容 POST / 失败:', error);
     res.status(500).json({ success: false, error: '新增库存失败' });
@@ -1281,6 +1291,14 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     res.json({ success: true, data: { id } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'inventory_stock.update',
+      businessId: req.params.id,
+      action: 'update',
+      operatorName: (req as any).user?.name,
+      opinion: `更新库存 ${req.params.id}`,
+    });
   } catch (error) {
     console.error('[inventory] 兼容 PUT /:id 失败:', error);
     res.status(500).json({ success: false, error: '更新库存失败' });
@@ -1330,6 +1348,14 @@ router.delete('/batch', (req: Request, res: Response) => {
     db.run(`DELETE FROM inventory_stock WHERE ${conditions}`, params);
     saveDatabase();
     res.json({ success: true, data: { deletedCount: idArray.length } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'inventory_stock.delete',
+      businessId: idArray.join(','),
+      action: 'delete',
+      operatorName: (req as any).user?.name,
+      opinion: `批量删除 ${idArray.length} 条库存`,
+    });
   } catch (error) {
     console.error('[inventory] 批量 DELETE /batch 失败:', error);
     res.status(500).json({ success: false, error: '批量删除库存失败' });
@@ -1353,6 +1379,14 @@ router.delete('/:id', (req: Request, res: Response) => {
     db.run('DELETE FROM inventory_stock WHERE id = ? OR instance_id = ?', [id, id]);
     saveDatabase();
     res.json({ success: true, data: { id } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'inventory_stock.delete',
+      businessId: req.params.id,
+      action: 'delete',
+      operatorName: (req as any).user?.name,
+      opinion: `删除库存 ${req.params.id}`,
+    });
   } catch (error) {
     console.error('[inventory] 兼容 DELETE /:id 失败:', error);
     res.status(500).json({ success: false, error: '删除库存失败' });

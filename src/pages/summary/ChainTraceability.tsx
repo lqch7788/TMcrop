@@ -23,6 +23,8 @@ import {
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '@/components/ui';
 import { useSummaryDataStore, type BatchStatItem, type ChainStageStat, type ChainStageKey, type BatchStatus } from '../../stores/useSummaryDataStore';
+// 2026-07-22：追溯修复 - 操作时间线组件
+import { ChainTimeline } from '../../components/summary/ChainTimeline';
 
 // ========== 常量 ==========
 
@@ -561,6 +563,15 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
                   <p className="text-xs text-amber-500">待处理</p>
                 </div>
               </div>
+            </div>
+
+            {/* 2026-07-22：操作时间线 - 按批次聚合展示 */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                操作时间线
+              </h3>
+              <ChainTimeline batchCode={selectedBatch.batchCode} />
             </div>
           </div>
         )}

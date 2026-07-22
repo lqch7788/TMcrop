@@ -10,6 +10,8 @@ import { formatLocalDateISO } from "../utils/dateUtil";
 import { seedLog } from "../lib/seedLogger";
 // 2026-07-21：育苗专用 daily change 函数
 import { validateSeedlingDailyChange, normalizeSeedlingChange, applyDailyChangeToSeedling } from "../services/seedlingDailyChange";
+// 2026-07-22：追溯修复 - 日常记录操作写入 audit_log
+import { writeAuditLog } from "../services/auditLog.service";
 
 const router = Router({ mergeParams: true });
 /**
@@ -225,6 +227,14 @@ router.post("/", (req: Request, res: Response) => {
 
     saveDatabase();
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.daily_record',
+      businessId: req.params.id,
+      action: 'daily_record_change',
+      operatorName: (req.body as any)?.createBy || (req as any).user?.name,
+      opinion: `添加日常记录 ${newId}`,
+    });
   } catch (error) {
     console.error('添加每日记录失败:', error);
     res.status(500).json({ success: false, error: '添加每日记录失败' });
@@ -388,6 +398,14 @@ router.put("/:recordId", (req: Request, res: Response) => {
     saveDatabase();
     const updatedPut = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
     res.json({ success: true, data: updatedPut[0] });
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.daily_record',
+      businessId: req.params.id,
+      action: 'daily_record_change',
+      operatorName: (req.body as any)?.createBy || (req as any).user?.name,
+      opinion: `更新日常记录 ${req.params.recordId}`,
+    });
   } catch (error) {
     console.error('更新每日记录失败:', error);
     res.status(500).json({ success: false, error: '更新每日记录失败' });
@@ -439,6 +457,14 @@ router.delete("/:recordId", (req: Request, res: Response) => {
 
     saveDatabase();
     res.json({ success: true });
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.daily_record',
+      businessId: req.params.id,
+      action: 'daily_record_change',
+      operatorName: (req as any).user?.name,
+      opinion: `删除日常记录 ${req.params.recordId}`,
+    });
   } catch (error) {
     console.error('删除每日记录失败:', error);
     res.status(500).json({ success: false, error: '删除每日记录失败' });

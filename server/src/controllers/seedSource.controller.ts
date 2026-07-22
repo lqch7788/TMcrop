@@ -8,6 +8,8 @@ import { Request, Response, NextFunction } from 'express';
 import { seedSourceService, SeedSourceService, BusinessError } from '../services/seedSource.service';
 // 2026-07-14：时区铁律合规——业务日期严禁用 toISOString()（中国早上 0-8 点会带前一天日期）
 import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+// 2026-07-22：追溯修复 - 子表操作写入 audit_logs
+import { writeAuditLog } from '../services/auditLog.service';
 import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
 import { AppError } from '../middleware/errorHandler';
 // 2026-07-21：字符串乱码防御工具（防止再次写入 U+FFFD 替代字符）
@@ -368,6 +370,13 @@ export class SeedSourceController {
       const { id } = req.params;
       const { count } = req.body as { count?: number };
       const data = await this.service.decreaseAvailable(id, Number(count));
+      writeAuditLog({
+        businessType: 'seed_source.status_change',
+        businessId: id,
+        action: 'decrease_available',
+        operatorName: (req as any).user?.name,
+        opinion: `扣减可用数量 ${count}`,
+      });
       res.json({ success: true, data });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -422,6 +431,13 @@ export class SeedSourceController {
       const { id } = req.params;
       const data: CreatePropagationRecordDTO = req.body;
       const result = await this.service.addPropagationRecord(id, data);
+      writeAuditLog({
+        businessType: 'seed_source.propagation',
+        businessId: id,
+        action: 'create',
+        operatorName: (req as any).user?.name,
+        opinion: `添加繁殖记录`,
+      });
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -473,6 +489,13 @@ export class SeedSourceController {
       const { id } = req.params;
       const data: UpdatePropagationStageDTO = req.body;
       const result = await this.service.updatePropagationStage(id, data);
+      writeAuditLog({
+        businessType: 'seed_source.status_change',
+        businessId: id,
+        action: 'propagation_stage',
+        operatorName: (req as any).user?.name,
+        opinion: `更新繁殖阶段`,
+      });
       res.json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -490,6 +513,13 @@ export class SeedSourceController {
       const { id, recordId } = req.params;
       const data: Record<string, any> = req.body || {};
       const result = await this.service.updatePropagationRecord(id, recordId, data);
+      writeAuditLog({
+        businessType: 'seed_source.propagation',
+        businessId: id,
+        action: 'update',
+        operatorName: (req as any).user?.name,
+        opinion: `更新繁殖记录 ${recordId}`,
+      });
       res.json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -499,12 +529,19 @@ export class SeedSourceController {
   /**
    * DELETE /seed-sources/:id/propagation-records/:recordId
    * 删除繁殖过程记录
-   * 2026-06-13: 与育苗每日记录对齐，操作列支持删除
+   * 2026-06-13: 与育苗日常记录对齐，操作列支持删除
    */
   async deletePropagationRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id, recordId } = req.params;
       await this.service.deletePropagationRecord(id, recordId);
+      writeAuditLog({
+        businessType: 'seed_source.propagation',
+        businessId: id,
+        action: 'delete',
+        operatorName: (req as any).user?.name,
+        opinion: `删除繁殖记录 ${recordId}`,
+      });
       res.json({ success: true, data: { id: recordId } });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -520,6 +557,13 @@ export class SeedSourceController {
       const { id } = req.params;
       const data: CompletePropagationDTO = req.body;
       const result = await this.service.completePropagation(id, data);
+      writeAuditLog({
+        businessType: 'seed_source.status_change',
+        businessId: id,
+        action: 'complete_propagation',
+        operatorName: (req as any).user?.name,
+        opinion: `完成繁殖`,
+      });
       res.json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
