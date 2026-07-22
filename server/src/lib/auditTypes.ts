@@ -20,6 +20,13 @@ export type AuditBusinessType =
   | 'planting.daily_record'
   | 'planting.breeding'
   | 'planting.seed_saving'
+  | 'planting.end'
+  | 'planting.create'
+  | 'planting.update'
+  | 'planting.delete'
+  | 'seedling.create'
+  | 'seedling.update'
+  | 'seedling.delete'
   // 库存级
   | 'inventory_stock.create'
   | 'inventory_stock.update'
@@ -38,4 +45,8 @@ export type AuditAction =
   | 'transplant'
   | 'decrease_available'
   | 'propagation_stage'
-  | 'complete_propagation';
+  | 'complete_propagation'
+  | 'end'
+  | 'harvest_create'
+  | 'harvest_update'
+  | 'harvest_delete';

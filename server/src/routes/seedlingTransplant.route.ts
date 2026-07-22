@@ -142,9 +142,7 @@ router.put('/transplant-records/:recordId/status', (req: Request, res: Response)
     const now = new Date().toISOString();
     db.run('UPDATE transplant_records SET status = ?, update_time = ? WHERE id = ?', [status, now, recordId]);
     saveDatabase();
-
-    res.json({ success: true, data: { id: recordId, status } });
-    // 2026-07-22：追溯修复 - 写入 audit_log
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'seedling.transplant',
       businessId: recordId,
@@ -152,6 +150,7 @@ router.put('/transplant-records/:recordId/status', (req: Request, res: Response)
       operatorName: (req as any).user?.name,
       opinion: `更新定植记录状态 ${status}`,
     });
+    res.json({ success: true, data: { id: recordId, status } });
   } catch (error) {
     console.error('更新定植记录状态失败:', error);
     res.status(500).json({ success: false, error: '更新定植记录状态失败' });
@@ -255,8 +254,7 @@ router.post('/print', (req: Request, res: Response) => {
     ]);
 
     saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
-    // 2026-07-22：追溯修复 - 写入 audit_log
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'seedling.print',
       businessId: id,
@@ -264,6 +262,7 @@ router.post('/print', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `打印定植标签`,
     });
+    res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
   } catch (error) {
     console.error('添加打印记录失败:', error);
     res.status(500).json({ success: false, error: '添加打印记录失败' });

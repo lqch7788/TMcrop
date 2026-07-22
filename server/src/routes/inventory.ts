@@ -1205,9 +1205,7 @@ router.post('/', async (req: Request, res: Response) => {
       status, 1, now, now,
     ]);
     saveDatabase();
-
-    res.status(201).json({ success: true, data: { id, instanceId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前且 saveDatabase 之后（否则 audit log 不落盘）
     writeAuditLog({
       businessType: 'inventory_stock.create',
       businessId: id,
@@ -1289,9 +1287,8 @@ router.put('/:id', (req: Request, res: Response) => {
     if (needRecompute) {
       recomputeAndUpdateStockStatus(getDatabase(), id);
     }
-
-    res.json({ success: true, data: { id } });
-    // 2026-07-22：追溯修复
+    saveDatabase();
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前且 saveDatabase 之后
     writeAuditLog({
       businessType: 'inventory_stock.update',
       businessId: req.params.id,
@@ -1347,8 +1344,7 @@ router.delete('/batch', (req: Request, res: Response) => {
     idArray.forEach(id => params.push(id, id));
     db.run(`DELETE FROM inventory_stock WHERE ${conditions}`, params);
     saveDatabase();
-    res.json({ success: true, data: { deletedCount: idArray.length } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'inventory_stock.delete',
       businessId: idArray.join(','),
@@ -1356,6 +1352,7 @@ router.delete('/batch', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `批量删除 ${idArray.length} 条库存`,
     });
+    res.json({ success: true, data: { deletedCount: idArray.length } });
   } catch (error) {
     console.error('[inventory] 批量 DELETE /batch 失败:', error);
     res.status(500).json({ success: false, error: '批量删除库存失败' });
@@ -1378,8 +1375,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     db.run('DELETE FROM inventory_stock WHERE id = ? OR instance_id = ?', [id, id]);
     saveDatabase();
-    res.json({ success: true, data: { id } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'inventory_stock.delete',
       businessId: req.params.id,
@@ -1387,6 +1383,7 @@ router.delete('/:id', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `删除库存 ${req.params.id}`,
     });
+    res.json({ success: true, data: { id } });
   } catch (error) {
     console.error('[inventory] 兼容 DELETE /:id 失败:', error);
     res.status(500).json({ success: false, error: '删除库存失败' });
