@@ -17,6 +17,8 @@ import { generateTransactionId } from '../services/inventory.service';
 import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
 import { seedLog } from '../lib/seedLogger';
 import { formatLocalDateISO } from '../utils/dateUtil';
+// 2026-07-22：追溯修复 - 子表操作写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 
 import seedlingDailyRecordsRouter from "./seedlingDailyRecords.route";
 import seedlingTransplantRouter from "./seedlingTransplant.route";
@@ -779,6 +781,15 @@ router.post('/batch-print', (req: Request, res: Response) => {
           'seedling', null, 'A6', 1, 'success', operator, now, now]);
 
       results.push({ id: newId, oid: newOid, seedlingId, seedlingCode: seedling.seedling_code });
+
+      // 2026-07-22：追溯修复 - 写入 audit_log（每个 ID 一条）
+      writeAuditLog({
+        businessType: 'seedling.print',
+        businessId: seedlingId,
+        action: 'print',
+        operatorName: operator,
+        opinion: `打印育苗标签 ${seedling.seedling_code}`,
+      });
     }
 
     saveDatabase();

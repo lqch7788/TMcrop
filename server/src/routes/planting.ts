@@ -18,6 +18,8 @@ import {
   applyDailyChangeToPlanting,
 } from '../services/plantingDailyChange';
 import { checkHarvestRecordDeletable, checkInventoryStockDeletable } from '../services/inventoryDeleteGuard.service';
+// 2026-07-22：追溯修复 - 移入移出/种植结束写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 // 2026-07-21：每日记录子路由提取（planting.ts 2316 行 → 拆分为独立文件）
 import plantingDailyRecordsRouter from './plantingDailyRecords.route';
 const router = Router();
@@ -433,6 +435,15 @@ router.post('/:id/move', async (req, res) => {
     try { saveDatabase(); } catch (e: any) {
       console.error('saveDatabase failed:', e?.message || e);
     }
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'planting.move',
+      businessId: id,
+      action: 'move',
+      operatorId: (req as any).user?.id,
+      operatorName: (req as any).user?.name,
+      opinion: `${req.body?.operationType || 'move'} 数量 ${req.body?.quantity || 0}`,
+    });
   }
   res.status(result.status).json(result.body);
 });
@@ -1897,6 +1908,14 @@ router.post('/:id/end', async (req, res) => {
       [endType, now, now, id]
     )
     saveDatabase()
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'planting.move',
+      businessId: id,
+      action: 'move',
+      operatorName: (req as any).user?.name,
+      opinion: `种植结束 ${endType}`,
+    });
     return res.json({ success: true, data: { id, status: 'ended', endType, ...result } })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })

@@ -2271,6 +2271,9 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-07-22：追溯修复 - daily_records 新增索引（追溯 UNION 查询需要）
+  db.run('CREATE INDEX IF NOT EXISTS idx_daily_records_related ON daily_records (related_id, related_type, create_time)');
+
   // ========== V8.0: 打印记录表 ==========
   // 打印记录表 - 用于存储打印操作的历史记录
   db.run(`
@@ -2324,6 +2327,8 @@ export function initializeDatabase() {
       update_time TEXT
     )
   `);
+  // 2026-07-22：追溯修复 - print_records 新增索引（追溯 UNION 查询需要）
+  db.run('CREATE INDEX IF NOT EXISTS idx_print_records_related ON print_records (related_id, related_type, create_time)');
   // ========== V12.0: 繁殖过程记录表 ==========
   // 存储育种/留种/无性繁殖各阶段的过程记录
   db.run(`

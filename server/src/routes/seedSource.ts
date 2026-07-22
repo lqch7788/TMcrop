@@ -30,6 +30,8 @@ import { queryEntityHistory } from '../services/entityHistory.service';
 // 2026-07-18: 入库冲销服务
 import { reverseInboundRecord } from '../services/inboundReverse.service';
 import { revokeCirculationRecord } from '../services/circulationRevoke.service';
+// 2026-07-22：追溯修复 - 打印/状态变更写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 
 const router = Router();
 
@@ -170,6 +172,15 @@ router.post('/:id/print', asyncHandler(async (req, res) => {
 
   // 更新种源的打印次数
   db.run(`UPDATE seed_sources SET print_count = print_count + ? WHERE id = ?`, [printCount || 1, id]);
+
+  // 2026-07-22：追溯修复 - 写入 audit_log
+  writeAuditLog({
+    businessType: 'seed_source.print',
+    businessId: id,
+    action: 'print',
+    operatorName: operator,
+    opinion: `打印 ${printType || 'new'} ×${printCount || 1}`,
+  });
 
   saveDatabase();
   res.json({ success: true, data: { id: recordId, printCount: printCount || 1 } });

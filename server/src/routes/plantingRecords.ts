@@ -10,6 +10,8 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
 import { authenticate } from '../middleware/auth';
+// 2026-07-22：追溯修复 - 育种/留种操作写入 audit_log
+import { writeAuditLog } from '../services/auditLog.service';
 
 const router = Router();
 router.use(authenticate);
@@ -364,6 +366,14 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
     ins.free();
     saveDatabase();
     return res.json({ success: true, data: { id: recordId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.breeding',
+      businessId: req.params.id,
+      action: 'breeding',
+      operatorName: (req as any).user?.name,
+      opinion: `添加育种记录 ${recordId}`,
+    });
   } catch (err) {
     console.error('[POST breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '创建失败' });
@@ -438,6 +448,14 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
     upd.free();
     saveDatabase();
     return res.json({ success: true, data: { id: recordId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.breeding',
+      businessId: req.params.id,
+      action: 'breeding',
+      operatorName: (req as any).user?.name,
+      opinion: `更新育种记录 ${recordId}`,
+    });
   } catch (err) {
     console.error('[PUT breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '更新失败' });
@@ -457,6 +475,14 @@ router.delete('/:id/breeding-records/:recordId', (req: Request, res: Response) =
     del.free();
     saveDatabase();
     return res.json({ success: true });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.breeding',
+      businessId: req.params.id,
+      action: 'breeding',
+      operatorName: (req as any).user?.name,
+      opinion: `删除育种记录 ${req.params.recordId}`,
+    });
   } catch (err) {
     console.error('[DELETE breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '删除失败' });
@@ -546,6 +572,14 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
     ins.free();
     saveDatabase();
     return res.json({ success: true, data: { id: recordId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.seed_saving',
+      businessId: req.params.id,
+      action: 'seed_saving',
+      operatorName: (req as any).user?.name,
+      opinion: `添加留种记录 ${recordId}`,
+    });
   } catch (err) {
     console.error('[POST seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '创建失败' });
@@ -609,6 +643,14 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
     upd.free();
     saveDatabase();
     return res.json({ success: true, data: { id: recordId } });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.seed_saving',
+      businessId: req.params.id,
+      action: 'seed_saving',
+      operatorName: (req as any).user?.name,
+      opinion: `更新留种记录 ${recordId}`,
+    });
   } catch (err) {
     console.error('[PUT seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '更新失败' });
@@ -628,6 +670,14 @@ router.delete('/:id/seed-saving-records/:recordId', (req: Request, res: Response
     del.free();
     saveDatabase();
     return res.json({ success: true });
+    // 2026-07-22：追溯修复
+    writeAuditLog({
+      businessType: 'planting.seed_saving',
+      businessId: req.params.id,
+      action: 'seed_saving',
+      operatorName: (req as any).user?.name,
+      opinion: `删除留种记录 ${req.params.recordId}`,
+    });
   } catch (err) {
     console.error('[DELETE seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '删除失败' });
