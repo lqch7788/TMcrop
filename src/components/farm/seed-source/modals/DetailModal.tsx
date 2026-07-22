@@ -34,6 +34,8 @@ import {
 } from '@/services/apiSeedSourceService';
 // 2026-07-21：使用共享品种路径 hook（与列表/编辑完全一致）
 import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
+// 2026-07-22：上游溯源面板
+import { UpstreamTracePanel } from './UpstreamTracePanel';
 // 2026-07-14：删除 enhancedApiClient 直调（架构铁律：组件 → Store → enhancedApiClient → API）
 
 /**
@@ -1158,6 +1160,15 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     content: React.ReactNode
     tooltip?: string
   }> = []
+
+  // 2026-07-22：溯源链 tab — 新增（所有种源都显示）
+  extraTabs.push({
+    key: 'upstream-trace',
+    label: '溯源链',
+    icon: <ArrowLeftRight className="w-4 h-4" />,
+    tooltip: '追溯种源入库前的完整来源链路（调拨来源→库存→入库→采购/采收/种植）',
+    content: <UpstreamTracePanel seedSourceId={record.id} />,
+  })
 
   // 调拨来源 tab — 仅库存调拨入库的种源显示
   if (hasTransferSource) {
