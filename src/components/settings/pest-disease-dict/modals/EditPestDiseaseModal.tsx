@@ -63,6 +63,8 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
   const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | PesticideTypeCode>('all');
 
   // 预填充数据
+  // H1 修复：依赖改为 [isOpen, record?.id] 而非 [isOpen, record]，
+  // 避免父组件 re-render 时 record 对象引用变化导致表单被重置
   useEffect(() => {
     if (isOpen && record) {
       setForm({
@@ -77,7 +79,8 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
       // 确保药剂列表已加载（强制刷新获取所有药剂）
       pesticideStore.fetchItems();
     }
-  }, [isOpen, record]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, record?.id]);
 
   // 加载关联的药剂（2026-07-16 审核修复：finally 确保 loading 状态不泄漏）
   const loadRelations = async () => {
