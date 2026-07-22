@@ -65,9 +65,14 @@ function renderPesticideTypeLabels(
 export default function PesticideLibraryPage() {
   const navigate = useNavigate();
 
-  // ========== Store ==========
-  const store = usePesticideLibraryStore();
-  const { items, isLoading, error, clearError } = store;
+  // ========== Store（H22 修复：拆 selector 避免全 store 订阅触发整组件重渲染）==========
+  const items = usePesticideLibraryStore((s) => s.items);
+  const isLoading = usePesticideLibraryStore((s) => s.isLoading);
+  const error = usePesticideLibraryStore((s) => s.error);
+  const clearError = usePesticideLibraryStore((s) => s.clearError);
+  const fetchItems = usePesticideLibraryStore((s) => s.fetchItems);
+  const fetchItemById = usePesticideLibraryStore((s) => s.fetchItemById);
+  const deleteItem = usePesticideLibraryStore((s) => s.deleteItem);
   const toast = useToastStore((s) => s.toast);
   const dictionaries = useDictionaryStore((s) => s.dictionaries);
   const lastShownErrorRef = useRef<string | null>(null);
@@ -89,12 +94,14 @@ export default function PesticideLibraryPage() {
   const [showExportModal, setShowExportModal] = useState(false);
 
   // ========== 数据加载 ==========
+  // TOP1+C2 修复：依赖数组补全 filters，filters 变化也能触发重拉；
+  //               fetchItems 为 Zustand 稳定 action 引用，依赖稳定不会引发无限循环
   useEffect(() => {
     const typeFilter = activeTab
       ? { ...filters, pesticide_type: activeTab }
       : filters;
-    store.fetchItems(typeFilter);
-  }, [activeTab]);
+    fetchItems(typeFilter);
+  }, [activeTab, filters, fetchItems]);
 
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
@@ -109,13 +116,13 @@ export default function PesticideLibraryPage() {
     const typeFilter = activeTab
       ? { ...filters, pesticide_type: activeTab }
       : filters;
-    store.fetchItems(typeFilter);
-  }, [filters, activeTab, store]);
+    fetchItems(typeFilter);
+  }, [filters, activeTab, fetchItems]);
 
   const handleReset = useCallback(() => {
     setFilters({});
-    store.fetchItems(activeTab ? { pesticide_type: activeTab } : {});
-  }, [activeTab, store]);
+    fetchItems(activeTab ? { pesticide_type: activeTab } : {});
+  }, [activeTab, fetchItems]);
 
   const updateFilter = useCallback((key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -125,21 +132,21 @@ export default function PesticideLibraryPage() {
   const handleAdd = useCallback(() => setShowAddModal(true), []);
 
   const handleEdit = useCallback(async (record: PesticideSpec) => {
-    const fullRecord = await store.fetchItemById(record.id);
+    const fullRecord = await fetchItemById(record.id);
     setEditTarget(fullRecord || record);
-  }, [store]);
+  }, [fetchItemById]);
 
   const handleDetail = useCallback(async (record: PesticideSpec) => {
-    const fullRecord = await store.fetchItemById(record.id);
+    const fullRecord = await fetchItemById(record.id);
     setDetailTarget(fullRecord || record);
-  }, [store]);
+  }, [fetchItemById]);
 
   const handleDelete = useCallback(async (id: string) => {
     const confirmed = await showConfirm('确认删除该药剂记录？此操作不可恢复。');
     if (confirmed) {
-      store.deleteItem(id);
+      deleteItem(id);
     }
-  }, [store]);
+  }, [deleteItem]);
 
   const handleStockIn = useCallback((record: PesticideSpec) => {
     setStockInTarget(record);
@@ -149,20 +156,20 @@ export default function PesticideLibraryPage() {
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
     const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
-    store.fetchItems(typeFilter);
-  }, [activeTab, filters, store]);
+    fetchItems(typeFilter);
+  }, [activeTab, filters, fetchItems]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
     const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
-    store.fetchItems(typeFilter);
-  }, [activeTab, filters, store]);
+    fetchItems(typeFilter);
+  }, [activeTab, filters, fetchItems]);
 
   const handleStockInSaved = useCallback(() => {
     setStockInTarget(null);
     const typeFilter = activeTab ? { pesticide_type: activeTab, ...filters } : filters;
-    store.fetchItems(typeFilter);
-  }, [activeTab, filters, store]);
+    fetchItems(typeFilter);
+  }, [activeTab, filters, fetchItems]);
 
   // ========== Tab 切换 ==========
   const handleTabChange = useCallback((tab: string) => {
