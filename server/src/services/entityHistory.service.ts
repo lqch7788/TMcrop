@@ -491,7 +491,8 @@ export function queryBatchTimeline(batchCode: string, limit = 500): HistoryItem[
   }
 
   // 5. UNION 所有 entityHistory
-  allItems.push(...queryEntityHistory('seed_source', planId, limit));
+  // 2026-07-22：修复 planId 不应作为 seed_source.id 查询（planId 是 production_plans.id）
+  // 生产计划本身没有专属 history 端点，跳过 planId；seed/seedling/planting 的循环已覆盖完整链路
   for (const sid of seedIds) allItems.push(...queryEntityHistory('seed_source', sid, limit));
   for (const sdid of sdIds) allItems.push(...queryEntityHistory('seedling', sdid, limit));
   for (const plid of plIds) allItems.push(...queryEntityHistory('planting', plid, limit));
