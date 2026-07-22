@@ -32,6 +32,8 @@ import { reverseInboundRecord } from '../services/inboundReverse.service';
 import { revokeCirculationRecord } from '../services/circulationRevoke.service';
 // 2026-07-22：追溯修复 - 打印/状态变更写入 audit_log
 import { writeAuditLog } from '../services/auditLog.service';
+// 2026-07-22：上游溯源 - 种源详情"溯源链" tab
+import { traceUpstream } from '../services/upstreamTrace.service';
 
 const router = Router();
 
@@ -115,6 +117,14 @@ router.post('/:id/complete-propagation', (req, res, next) => seedSourceControlle
 
 // 扣减可用数量（育苗新增时调用，2026-06-05 新增）
 router.post('/:id/decrease-available', (req, res, next) => seedSourceController.decreaseAvailable(req, res, next));
+
+// 2026-07-22：上游溯源（种源详情"溯源链" tab）—— 必须在 /:id/check-deletable 之前
+router.get('/:id/upstream-trace', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const maxDepth = Math.min(10, Math.max(1, Number(req.query.maxDepth) || 10));
+  const data = traceUpstream(id, maxDepth);
+  res.json({ success: true, data });
+}));
 
 // 检查种源是否可删除（C8：下沉到 repository，补全所有引用方）
 // 引用方：seedlings.source_id / propagation_records.seed_source_id / seed_source_print_records.seed_source_id / plantings.linked_planting_id
