@@ -105,7 +105,9 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
       if (newSpec) {
         onSaved();
       } else {
-        await showAlert('保存失败，请重试');
+        // H30 修复：失败时使用 store.error 给具体原因（保留原 setSubmitting(false) 顺序）
+        await showAlert('保存失败：' + (store.error || '请重试'));
+        return;
       }
     } catch (err) {
       await showAlert('保存出错：' + (err as Error).message);

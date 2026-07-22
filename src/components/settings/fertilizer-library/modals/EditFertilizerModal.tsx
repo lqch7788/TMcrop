@@ -83,13 +83,15 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
   const [submitting, setSubmitting] = useState(false);
 
   // 弹窗打开时初始化表单
+  // H1 修复：依赖改为 [isOpen, record?.id] 而非 [isOpen, record]，
+  // 避免父组件 re-render 时 record 对象引用变化导致表单被重置
   useEffect(() => {
     if (isOpen && record) {
       const initForm = buildInitialForm(record);
       setForm(initForm);
       setOriginal(initForm);
     }
-  }, [isOpen, record]);
+  }, [isOpen, record?.id]);
 
   // 更新字段
   const updateField = useCallback(<K extends keyof SpecForm>(field: K, value: SpecForm[K]) => {
@@ -123,7 +125,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
 
     setSubmitting(true);
     try {
-      await store.updateItem(record.id, {
+      const result = await store.updateItem(record.id, {
         fertilizerName: form.fertilizerName,
         fertilizerType: form.fertilizerType,
         applicationTiming: form.applicationTiming,
@@ -147,8 +149,13 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
         packageSpec: form.packageSpec,
         stockUnit: form.stockUnit,
       });
-
-      onSaved();
+      // H30 修复：updateItem 返回 null 时不再静默关闭弹窗，需 user-visible 提示
+      if (result) {
+        onSaved();
+      } else {
+        await showAlert('保存失败：' + (store.error || '请重试'));
+        return;
+      }
     } catch (err) {
       await showAlert('保存出错：' + (err as Error).message);
     } finally {

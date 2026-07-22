@@ -107,6 +107,9 @@ interface FertilizerLibraryState {
   deleteItem: (id: string) => Promise<boolean>;
   /** 入库：增加指定 spec 的库存量 */
   stockIn: (id: string, quantity: number, remark?: string) => Promise<number | null>;
+  // 2026-07-22：使用记录 API（C9 修复：组件不再绕过 store 直接 fetch）
+  fetchUsageRecords: (specId: string) => Promise<any[]>;
+  deleteUsageRecord: (usageId: string, source: string) => Promise<boolean>;
 }
 
 export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
@@ -197,6 +200,31 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
       } catch (err) {
         set({ error: (err as Error).message });
         return null;
+      }
+    },
+
+    // 2026-07-22：使用记录 — 替代组件内直接调 enhancedApiClient，遵守 V2.1 铁律
+    fetchUsageRecords: async (specId: string) => {
+      try {
+        const response: any = await enhancedApiClient.get(`/pest-records/by-spec/${specId}`);
+        return Array.isArray(response) ? response : (response?.data ?? []);
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return [];
+      }
+    },
+
+    // 2026-07-22：删除单条使用记录（按 source 路由到不同表）
+    deleteUsageRecord: async (usageId: string, source: string) => {
+      try {
+        const url = source === 'fertilization'
+          ? `/fertilizer/${usageId}`
+          : `/pest-records/${usageId}`;
+        await enhancedApiClient.delete(url);
+        return true;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return false;
       }
     },
   })

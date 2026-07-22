@@ -83,6 +83,8 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const [usageLoading, setUsageLoading] = useState(false);
   // 删除记录后刷新肥料库列表（让库存数量变化可见）
   const libStore = useFertilizerLibraryStore();
+  // 2026-07-22：把 toast 上移到 useEffect 之前（C9 修复后 useEffect 内要调 toast?.error）
+  const toast = useToastStore((s: any) => s.toast);
   // 翻页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -91,20 +93,24 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
 
   // 切到「使用记录」tab 时拉数据
+  // C9 修复：走 store.fetchUsageRecords，不再绕过 store 直接 fetch
   useEffect(() => {
     if (!isOpen || !record || activeTab !== 'usage') return;
     setUsageLoading(true);
     setCurrentPage(1);  // 每次拉数据重置翻页
     setExportMode(false);  // 切 tab 时退出导出模式
     setSelectedRecordIds([]);
-    enhancedApiClient
-      .get<any[]>(`/pest-records/by-spec/${record.id}`)
-      .then((resp: any) => {
-        const arr = Array.isArray(resp) ? resp : (resp?.data ?? []);
+    libStore
+      .fetchUsageRecords(record.id)
+      .then((arr) => {
         setUsageRecords(arr);
       })
-      .catch((err) => console.error('[FertilizerDetailModal] 加载使用记录失败:', err))
+      .catch(() => {
+        // H30 修复：失败要给用户可见提示，不再静默 console.error
+        toast?.error?.('加载使用记录失败，请稍后重试');
+      })
       .finally(() => setUsageLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, record?.id, activeTab]);
 
   // 顶部 stat 卡聚合
@@ -178,7 +184,8 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       '单位': record?.stockUnit || 'kg',
       '费用': Number(r.totalCost || 0).toFixed(2),
     }));
-    const filename = `肥料使用记录_${record?.fertilizerName || ''}_${new Date().toISOString().slice(0, 10)}`;
+    // H18 修复：用 todayLocal() 取本地日期，避免 UTC 跨天导致中国早晨 8 点前显示昨天
+    const filename = `肥料使用记录_${record?.fertilizerName || ''}_${todayLocal()}`;
     try {
       // 默认导出 Excel 格式（直接下载，不再弹窗）
       await exportXlsx({ filename, headers, rows, sheetName: '使用记录' });
@@ -193,7 +200,6 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   // 2026-07-17：删除单条使用记录（按 source 调对应表的 DELETE 端点）
   // - source=pest_control → DELETE /api/pest-records/:id（删除整条防治记录 + 回补库存）
   // - source=fertilization → DELETE /api/fertilizer/:id（删除整条施肥记录 + 回补库存）
-  const toast = useToastStore((s: any) => s.toast);
   const handleDeleteRecord = async (r: any) => {
     const isFert = r.source === 'fertilization';
     const sourceLabel = isFert ? '施肥记录' : '防治记录';
