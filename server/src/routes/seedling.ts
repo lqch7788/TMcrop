@@ -1206,6 +1206,14 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     }
 
     saveDatabase();
+    // 2026-07-22：追溯修复 - seedling 创建补 audit_log
+    writeAuditLog({
+      businessType: 'seedling.create',
+      businessId: newId,
+      action: 'create',
+      operatorName: create_by || (req as any).user?.name,
+      opinion: `创建育苗 ${seedling_code}`,
+    });
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM seedlings WHERE id = ?', [newId])[0] });
   } catch (error) {
     // 2026-07-01 P0-2 修复：BusinessError 用其 httpStatus（默认 400），非 BusinessError 才 500
@@ -1361,6 +1369,14 @@ router.put('/:id', (req: Request, res: Response) => {
       }
     }
 
+    // 2026-07-22：追溯修复 - seedling 更新补 audit_log
+    writeAuditLog({
+      businessType: 'seedling.update',
+      businessId: id,
+      action: 'update',
+      operatorName: (req as any).user?.name,
+      opinion: `更新育苗 ${id}`,
+    });
     res.json({ success: true, data: queryToObjects(db, "SELECT * FROM seedlings WHERE id = ?", [id])[0] });
   } catch (error) {
     console.error('更新育苗记录失败:', error);
@@ -1404,6 +1420,14 @@ router.delete('/:id', (req: Request, res: Response) => {
       }
       db.exec('COMMIT');
       saveDatabase();
+      // 2026-07-22：追溯修复 - seedling 删除补 audit_log
+      writeAuditLog({
+        businessType: 'seedling.delete',
+        businessId: id,
+        action: 'delete',
+        operatorName: (req as any).user?.name,
+        opinion: `软删育苗 ${id}`,
+      });
       res.json({ success: true, data: { id, deleted: true } });
     } catch (innerErr) {
       try { db.exec('ROLLBACK'); } catch {}

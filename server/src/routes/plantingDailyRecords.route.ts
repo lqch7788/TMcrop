@@ -181,8 +181,7 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
     const inserted = queryToObjects<any>(db, 'SELECT * FROM daily_records WHERE id = ?', [newId]);
-    res.status(201).json({ success: true, data: inserted[0] || { id: newId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'planting.daily_record',
       businessId: id,
@@ -190,6 +189,7 @@ router.post('/', (req: Request, res: Response) => {
       operatorName: (req.body as any)?.createBy || (req as any).user?.name,
       opinion: `添加种植日常记录 ${newId}`,
     });
+    res.status(201).json({ success: true, data: inserted[0] || { id: newId } });
   } catch (error) {
     console.error('[plantingDailyRecords] 新增失败:', error);
     res.status(500).json({ success: false, error: '添加种植每日记录失败' });

@@ -1081,6 +1081,14 @@ router.post('/', (req: Request, res: Response) => {
 
       db.exec('COMMIT');
       saveDatabase();
+      // 2026-07-22：追溯修复 - planting 创建补 audit_log
+      writeAuditLog({
+        businessType: 'planting.create',
+        businessId: newId,
+        action: 'create',
+        operatorName: finalCreateBy,
+        opinion: `创建种植 ${finalPlantCode}`,
+      });
       const _newItems = queryToObjects<any>(db, 'SELECT * FROM plantings WHERE id = ?', [newId]);
       res.status(201).json({ success: true, data: _newItems[0] || { id: newId } });
     } catch (txErr) {
@@ -1157,6 +1165,14 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     saveDatabase();
+    // 2026-07-22：追溯修复 - planting 更新补 audit_log
+    writeAuditLog({
+      businessType: 'planting.update',
+      businessId: id,
+      action: 'update',
+      operatorName: (req as any).user?.name,
+      opinion: `更新种植 ${id}`,
+    });
     const _updItems = queryToObjects<any>(db, "SELECT * FROM plantings WHERE id = ?", [id]);
     res.json({ success: true, data: _updItems[0] || { id } });
   } catch (error) {
@@ -1348,6 +1364,14 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
 
     saveDatabase();
+    // 2026-07-22：追溯修复 - planting 删除补 audit_log
+    writeAuditLog({
+      businessType: 'planting.delete',
+      businessId: id,
+      action: 'delete',
+      operatorName: (req as any).user?.name,
+      opinion: `软删种植 ${id}`,
+    });
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: '删除种植记录失败' });
@@ -1665,6 +1689,14 @@ router.post('/:id/harvest-records', async (req, res) => {
     }
 
     saveDatabase()
+    // 2026-07-22：追溯修复 - 采收记录创建补 audit_log
+    writeAuditLog({
+      businessType: 'planting.end',  // 沿用 planting 域（采收属于种植终结阶段）
+      businessId: plantingId,
+      action: 'harvest_create',
+      operatorName: operatorName || createBy || (req as any).user?.name,
+      opinion: `添加采收记录 ${destination} 数量 ${quantity}${unit || ''}`,
+    });
     res.status(201).json({
       success: true,
       data: {
@@ -1908,11 +1940,11 @@ router.post('/:id/end', async (req, res) => {
       [endType, now, now, id]
     )
     saveDatabase()
-    // 2026-07-22：追溯修复 - 写入 audit_log
+    // 2026-07-22：追溯修复 - 修复 businessType 误用（CRITICAL 修复 #2）
     writeAuditLog({
-      businessType: 'planting.move',
+      businessType: 'planting.end',
       businessId: id,
-      action: 'move',
+      action: 'end',
       operatorName: (req as any).user?.name,
       opinion: `种植结束 ${endType}`,
     });

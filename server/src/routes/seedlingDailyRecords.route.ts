@@ -226,8 +226,7 @@ router.post("/", (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
-    // 2026-07-22：追溯修复 - 写入 audit_log
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'seedling.daily_record',
       businessId: req.params.id,
@@ -235,6 +234,7 @@ router.post("/", (req: Request, res: Response) => {
       operatorName: (req.body as any)?.createBy || (req as any).user?.name,
       opinion: `添加日常记录 ${newId}`,
     });
+    res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM daily_records WHERE id = ?', [newId])[0] });
   } catch (error) {
     console.error('添加每日记录失败:', error);
     res.status(500).json({ success: false, error: '添加每日记录失败' });
@@ -397,8 +397,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
 
     saveDatabase();
     const updatedPut = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM daily_records WHERE id = ?', [recordId]);
-    res.json({ success: true, data: updatedPut[0] });
-    // 2026-07-22：追溯修复 - 写入 audit_log
+    // 2026-07-22：追溯修复 - 必须在 res.json 之前
     writeAuditLog({
       businessType: 'seedling.daily_record',
       businessId: req.params.id,
@@ -406,6 +405,7 @@ router.put("/:recordId", (req: Request, res: Response) => {
       operatorName: (req.body as any)?.createBy || (req as any).user?.name,
       opinion: `更新日常记录 ${req.params.recordId}`,
     });
+    res.json({ success: true, data: updatedPut[0] });
   } catch (error) {
     console.error('更新每日记录失败:', error);
     res.status(500).json({ success: false, error: '更新每日记录失败' });
