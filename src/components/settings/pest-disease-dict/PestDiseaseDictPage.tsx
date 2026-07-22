@@ -22,14 +22,17 @@ export default function PestDiseaseDictPage() {
   // ========== 导航 ==========
   const navigate = useNavigate();
 
-  // ========== Store ==========
+  // ========== Store（用 selector 避免整 store 解构反模式）==========
+  const items = usePestDiseaseDictStore((s) => s.items);
+  const isLoading = usePestDiseaseDictStore((s) => s.isLoading);
+  const error = usePestDiseaseDictStore((s) => s.error);
+  const clearError = usePestDiseaseDictStore((s) => s.clearError);
+  // actions 保持解构（不在 selector 中）
   const store = usePestDiseaseDictStore();
-  const { items, isLoading, error } = store;
 
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<TabType>('pest');
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({ dictType: 'pest' });
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
@@ -37,25 +40,22 @@ export default function PestDiseaseDictPage() {
   const [detailTarget, setDetailTarget] = useState<PestDiseaseDict | null>(null);
 
   // ========== 数据加载 ==========
-  useEffect(() => {
-    store.fetchItems({ limit: '10000' });
-  }, []);
-
-  // ========== Tab切换时重新加载数据 ==========
+  // C4 修复：单一 useEffect 同时承担「初始化加载 + Tab 切换」职责
+  // 关键点：传 dictType 给后端过滤，避免数据混合；不重复拉取
   useEffect(() => {
     setFilters({ dictType: activeTab });
-    // 获取所有数据用于统计，不限制类型
-    store.fetchItems({ limit: '10000' });
-  }, [activeTab]);
+    store.fetchItems({ limit: '10000', dictType: activeTab });
+  }, [activeTab, store]);
 
   // ========== 筛选处理 ==========
+  // H10 修复：去掉 searchKeyword 本地 state，搜索词走 filters.keyword；
+  // 搜索框实时回车或点击「搜索」触发，handleSearch 直接传 keyword。
   const handleSearch = useCallback(() => {
-    store.fetchItems({ ...filters, keyword: searchKeyword, limit: '10000' });
-  }, [filters, searchKeyword, store]);
+    store.fetchItems({ ...filters, limit: '10000' });
+  }, [filters, store]);
 
   const handleReset = useCallback(() => {
     setFilters({ dictType: activeTab });
-    setSearchKeyword('');
     store.fetchItems({ dictType: activeTab, limit: '10000' });
   }, [activeTab, store]);
 
@@ -161,13 +161,13 @@ export default function PestDiseaseDictPage() {
         {/* 顶部操作栏 */}
         <div className="px-4 py-3 flex items-center justify-between gap-4 border-b border-gray-100">
           <div className="flex items-center gap-3 flex-1 flex-wrap">
-            {/* 搜索框 */}
+            {/* 搜索框（H10 修复：直接 bind filters.keyword，无本地 state）*/}
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
+                value={filters.keyword || ''}
+                onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value, dictType: activeTab }))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="搜索病虫害名称或编码..."
                 className="pl-9 h-10"
