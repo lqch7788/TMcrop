@@ -96,6 +96,14 @@ router.post('/transplant-records', (req: Request, res: Response) => {
     db.run('UPDATE seedlings SET status = ?, update_time = ? WHERE id = ?', ['transplanted', now, id]);
 
     saveDatabase();
+    // 2026-07-22：追溯修复 - 写入 audit_log（CRITICAL 3 修复）
+    writeAuditLog({
+      businessType: 'seedling.transplant',
+      businessId: id,
+      action: 'transplant',
+      operatorName: (req as any).user?.name,
+      opinion: `添加定植记录 ${newId}`,
+    });
     res.status(201).json({ success: true, data: queryToObjects(db, 'SELECT * FROM transplant_records WHERE id = ?', [newId])[0] });
   } catch (error) {
     console.error('添加定植记录失败:', error);

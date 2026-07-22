@@ -365,8 +365,7 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
     ]);
     ins.free();
     saveDatabase();
-    return res.json({ success: true, data: { id: recordId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.breeding',
       businessId: req.params.id,
@@ -374,6 +373,7 @@ router.post('/:id/breeding-records', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `添加育种记录 ${recordId}`,
     });
+    return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[POST breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '创建失败' });
@@ -447,8 +447,7 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
     upd.run(params as (string | number | null)[]);
     upd.free();
     saveDatabase();
-    return res.json({ success: true, data: { id: recordId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.breeding',
       businessId: req.params.id,
@@ -456,6 +455,7 @@ router.put('/:id/breeding-records/:recordId', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `更新育种记录 ${recordId}`,
     });
+    return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[PUT breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '更新失败' });
@@ -474,8 +474,7 @@ router.delete('/:id/breeding-records/:recordId', (req: Request, res: Response) =
     del.run([recordId, id]);
     del.free();
     saveDatabase();
-    return res.json({ success: true });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.breeding',
       businessId: req.params.id,
@@ -483,6 +482,7 @@ router.delete('/:id/breeding-records/:recordId', (req: Request, res: Response) =
       operatorName: (req as any).user?.name,
       opinion: `删除育种记录 ${req.params.recordId}`,
     });
+    return res.json({ success: true });
   } catch (err) {
     console.error('[DELETE breeding-records] error:', err);
     return res.status(500).json({ success: false, error: '删除失败' });
@@ -571,8 +571,7 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
     ]);
     ins.free();
     saveDatabase();
-    return res.json({ success: true, data: { id: recordId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.seed_saving',
       businessId: req.params.id,
@@ -580,6 +579,7 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `添加留种记录 ${recordId}`,
     });
+    return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[POST seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '创建失败' });
@@ -642,8 +642,7 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
     upd.run(params as (string | number | null)[]);
     upd.free();
     saveDatabase();
-    return res.json({ success: true, data: { id: recordId } });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.seed_saving',
       businessId: req.params.id,
@@ -651,6 +650,7 @@ router.put('/:id/seed-saving-records/:recordId', (req: Request, res: Response) =
       operatorName: (req as any).user?.name,
       opinion: `更新留种记录 ${recordId}`,
     });
+    return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[PUT seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '更新失败' });
@@ -669,8 +669,7 @@ router.delete('/:id/seed-saving-records/:recordId', (req: Request, res: Response
     del.run([recordId, id]);
     del.free();
     saveDatabase();
-    return res.json({ success: true });
-    // 2026-07-22：追溯修复
+    // 2026-07-22：追溯修复 - 必须在 return 之前调用
     writeAuditLog({
       businessType: 'planting.seed_saving',
       businessId: req.params.id,
@@ -678,6 +677,7 @@ router.delete('/:id/seed-saving-records/:recordId', (req: Request, res: Response
       operatorName: (req as any).user?.name,
       opinion: `删除留种记录 ${req.params.recordId}`,
     });
+    return res.json({ success: true });
   } catch (err) {
     console.error('[DELETE seed-saving-records] error:', err);
     return res.status(500).json({ success: false, error: '删除失败' });

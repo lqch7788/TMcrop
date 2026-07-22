@@ -181,6 +181,14 @@ router.post('/:id/propagation-records', (req: Request, res: Response) => {
     ]);
     ins.free();
     saveDatabase();
+    // 2026-07-22：追溯修复 - 写入 audit_log（CRITICAL 2 修复）
+    writeAuditLog({
+      businessType: 'seedling.propagation',
+      businessId: req.params.id,
+      action: 'propagation',
+      operatorName: (req as any).user?.name,
+      opinion: `添加育苗繁殖记录 ${recordId}`,
+    });
     return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[POST propagation-records] error:', err);
@@ -238,6 +246,14 @@ router.put('/:id/propagation-records/:recordId', (req: Request, res: Response) =
     upd.run(params);
     upd.free();
     saveDatabase();
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.propagation',
+      businessId: req.params.id,
+      action: 'propagation',
+      operatorName: (req as any).user?.name,
+      opinion: `更新育苗繁殖记录 ${recordId}`,
+    });
     return res.json({ success: true, data: { id: recordId } });
   } catch (err) {
     console.error('[PUT propagation-records] error:', err);
@@ -257,6 +273,14 @@ router.delete('/:id/propagation-records/:recordId', (req: Request, res: Response
     del.run([recordId, id]);
     del.free();
     saveDatabase();
+    // 2026-07-22：追溯修复 - 写入 audit_log
+    writeAuditLog({
+      businessType: 'seedling.propagation',
+      businessId: req.params.id,
+      action: 'propagation',
+      operatorName: (req as any).user?.name,
+      opinion: `删除育苗繁殖记录 ${req.params.recordId}`,
+    });
     return res.json({ success: true });
   } catch (err) {
     console.error('[DELETE propagation-records] error:', err);
