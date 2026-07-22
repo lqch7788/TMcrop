@@ -154,8 +154,12 @@ export function AddPesticideModal({ isOpen, onClose, onSaved }: AddPesticideModa
     const result = await store.createItem(payload);
 
     setSubmitting(false);
+    // H30 修复：createItem 失败时不再静默关闭弹窗，需给出 user-visible 提示
     if (result) {
       onSaved();
+    } else {
+      await showAlert('保存失败：' + (store.error || '请重试'));
+      return;
     }
   };
 
