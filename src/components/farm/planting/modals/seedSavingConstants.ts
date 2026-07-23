@@ -9,7 +9,7 @@
 import type { SeedSavingPart } from '@/services/apiPlantingSubRecordService'
 
 // ============ 模式分类 ============
-export const VEGETATIVE_HARVEST_PARTS: SeedSavingPart[] = ['tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf']
+export const VEGETATIVE_HARVEST_PARTS: SeedSavingPart[] = ['tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf', 'whole_plant']
 export const SEED_HARVEST_PARTS: SeedSavingPart[] = ['seed', 'fruit']
 
 // ============ 采收部位文案 ============

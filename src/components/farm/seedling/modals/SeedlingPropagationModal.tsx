@@ -1,5 +1,5 @@
 /**
- * 2026-07-04 v2 育苗无性繁殖记录弹窗（完整版）
+ * 2026-07-04 v2 育苗繁殖记录弹窗（完整版）
  *
  * 与种植/RecordModal 的 asexual 分支 100% 对齐：
  * - 顶部繁殖模式切换 banner（默认无性）
@@ -88,7 +88,7 @@ export function SeedlingPropagationModal({
       setRecords(Array.isArray(list) ? list : []);
     } catch (error) {
       const msg = error instanceof Error ? error.message : '加载失败';
-      await showAlert(`加载无性繁殖记录失败：${msg}`);
+      await showAlert(`加载繁殖记录失败：${msg}`);
       setRecords([]);
     } finally {
       setLoading(false);
@@ -165,7 +165,7 @@ export function SeedlingPropagationModal({
       await showAlert('该育苗已结束，无法删除记录');
       return;
     }
-    const ok = await showConfirm('确定删除这条无性繁殖记录？');
+    const ok = await showConfirm('确定删除这条繁殖记录？');
     if (!ok) return;
     try {
       await apiSeedlingPropagationService.delete(String(record.id), recordId);
@@ -215,15 +215,15 @@ export function SeedlingPropagationModal({
     });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '无性繁殖记录');
-    XLSX.writeFile(wb, `无性繁殖记录_${record.seedlingCode}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, '繁殖记录');
+    XLSX.writeFile(wb, `繁殖记录_${record.seedlingCode}.xlsx`);
   };
 
   return (
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`无性繁殖记录 - ${record.seedlingCode}${readOnly ? '（只读）' : ''}`}
+      title={`繁殖记录 - ${record.seedlingCode}${readOnly ? '（只读）' : ''}`}
       size="xxxl"
       showFooter={true}
       onSubmit={readOnly ? onClose : (editingId ? handleSaveEdit : handleSubmit)}
@@ -241,7 +241,7 @@ export function SeedlingPropagationModal({
         {readOnly && (
           <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
             <Lock className="w-4 h-4 text-gray-600 shrink-0" />
-            <span className="text-sm text-gray-700">该育苗已结束，无性繁殖记录处于<strong>只读模式</strong>（可查看、导出）</span>
+            <span className="text-sm text-gray-700">该育苗已结束，繁殖记录处于<strong>只读模式</strong>（可查看、导出）</span>
           </div>
         )}
 
@@ -250,7 +250,7 @@ export function SeedlingPropagationModal({
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <GitBranch className="w-4 h-4 text-emerald-600" />
-              {editingId ? '编辑无性繁殖记录' : '添加无性繁殖记录'}
+              {editingId ? '编辑繁殖记录' : '添加繁殖记录'}
               {editingId && (
                 <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="ml-auto text-gray-500">
                   <X className="w-4 h-4 mr-1" />取消编辑

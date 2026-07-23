@@ -122,6 +122,8 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     areaName: item.areaName || '',
     rootName: item.rootName || '',
     plantingCount: item.plantingCount || 0,
+    // 2026-07-23：列表"剩余数量"列用 Σ area_stocks.quantity
+    availableQuantity: item.availableQuantity ?? item.plantingCount ?? 0,
     plantingDate: item.plantingDate ? item.plantingDate.split('T')[0] : '',
     soilPH: item.soilPH || 0,
     soilEC: item.soilEC || 0,
@@ -532,7 +534,8 @@ export interface MovePlantingInputV2 {
   operationDate: string;
   remarks?: string;
   // 调入必填
-  sourceType?: 'seed' | 'seedling';
+  // 2026-07-23: 新增 'planting' — 调入来源改为其他种植单（与调出对称，移除种源参与）
+  sourceType?: 'seed' | 'seedling' | 'planting';
   sourceId?: string;
   sourceCode?: string;
   // 调出必填

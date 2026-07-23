@@ -366,12 +366,20 @@ export function PlantingTable({
         width: 140
       },
       {
-        title: '种植数量',
-        dataIndex: 'plantingCount',
+        // 2026-07-23：删除"种植数量"列（创建总量），与"剩余数量"列语义重复且会让用户混淆
+        // 创建总量在订单详情弹窗里可查
+        title: '剩余数量',
+        dataIndex: 'availableQuantity',
         width: 100,
-        render: (count: number, record: Planting) => (
-          <span className="text-emerald-600 font-medium">{(count || 0).toLocaleString()}{record.unit || ''}</span>
-        )
+        render: (_: unknown, record: Planting) => {
+          // 实际剩余 = Σ planting_area_stocks.quantity（与弹窗调出/目标区域同源）
+          const remaining = record.availableQuantity ?? 0;
+          return (
+            <span className="text-blue-600 font-bold">
+              {remaining.toLocaleString()}{record.unit || ''}
+            </span>
+          );
+        }
       },
       // 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余）
       {
@@ -393,24 +401,6 @@ export function PlantingTable({
             {count ? `${count.toLocaleString()}${record.unit || ''}` : '-'}
           </span>
         )
-      },
-      {
-        title: '剩余数量',
-        dataIndex: 'remainingCount',
-        width: 100,
-        render: (_: unknown, record: Planting) => {
-          // 活体剩余 = plantingCount + supplementCount - lossCount（MAX 0）
-          const remaining = Math.max(0,
-            (record.plantingCount || 0) +
-            (record.supplementCount || 0) -
-            (record.lossCount || 0)
-          );
-          return (
-            <span className="text-blue-600 font-bold">
-              {remaining.toLocaleString()}{record.unit || ''}
-            </span>
-          );
-        }
       },
       {
         title: '种植日期',
@@ -939,7 +929,7 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">品种路径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植区域</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap text-center">种植数量</TableHead>
+              {/* 2026-07-23：删除"种植数量"列（创建总量），避免与"剩余数量"语义重复让用户混淆 */}
               {/* 2026-06-28: 每日记录累加 3 列 */}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">损耗数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-orange-700/30 text-center">补栽数量</TableHead>
@@ -1045,9 +1035,7 @@ export function PlantingTable({
                     {getVarietyPath(record)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap text-center">{record.areaName}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap text-center">
-                    {(record.plantingCount || 0).toLocaleString()}{record.unit || ''}
-                  </TableCell>
+                  {/* 2026-07-23：删除"种植数量"列（创建总量），避免与"剩余数量"语义重复让用户混淆 */}
                   {/* 2026-06-28: 每日记录累加 3 列（损耗/补栽/剩余） */}
                   <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     <span className={(record.lossCount || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
@@ -1061,7 +1049,10 @@ export function PlantingTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm bg-orange-50/30 whitespace-nowrap text-center">
                     <span className="text-blue-600 font-bold">
-                      {Math.max(0, (record.plantingCount || 0) + (record.supplementCount || 0) - (record.lossCount || 0)).toLocaleString()}{record.unit || ''}
+                      {/* 2026-07-23 修复：实际剩余 = Σ planting_area_stocks.quantity（与弹窗调出/目标区域同源）
+                          旧公式 plantingCount + supplementCount - lossCount 不反映调入/调出后的真实剩余
+                          因为主表 plantingCount 是创建总量（调入调出后不变），而 area_stocks 才是实际分布 */}
+                      {(record.availableQuantity ?? 0).toLocaleString()}{record.unit || ''}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">{record.plantingDate}</TableCell>

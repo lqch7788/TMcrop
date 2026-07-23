@@ -134,6 +134,13 @@ router.get('/', (req: Request, res: Response) => {
         p.area_name
       ) AS areaName,
       p.planting_quantity AS plantingCount,
+      -- 2026-07-23 修复：Σ area_stocks.quantity 作为"实际可调拨剩余"
+      -- 主表 plantingCount = 创建总量（调入/调出后永不变），列表"剩余数量"应该 = Σ area_stocks.quantity
+      -- （与调出区域弹窗字段一致，单一数据源无歧义）
+      COALESCE(
+        (SELECT SUM(quantity) FROM planting_area_stocks WHERE planting_id = p.id),
+        0
+      ) AS availableQuantity,
       p.planting_date AS plantingDate,
       p.soil_ph AS soilPH,
       p.soil_ec AS soilEC,
@@ -1078,6 +1085,31 @@ router.post('/', (req: Request, res: Response) => {
         business_code: finalPlantCode,
         created_by: finalCreateBy,
       });
+
+      // 2026-07-23 源头修复：创建种植单时自动写入 planting_area_stocks 初始记录
+      // 让 planting_quantity（创建总量）= Σ area_stocks.quantity（区域分布）天然成立
+      // 避免后续 modal "剩 0 株""凭空差额"等数据一致性问题
+      if (finalPlantingQuantity > 0 && finalAreaId) {
+        db.run(
+          `INSERT INTO planting_area_stocks
+            (id, planting_id, area_id, area_name, quantity, source_type, source_id, source_code,
+             operation_date, create_time, update_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            `STK_INIT_${newId}`,
+            newId,
+            finalAreaId,
+            finalAreaName || finalAreaId,
+            finalPlantingQuantity,
+            'initial',  // 标识"创建时的初始库存"，与 move_in 产生的 source_type='planting'/'seed' 区分
+            null,
+            null,
+            finalPlantingDate || now.slice(0, 10),
+            now,
+            now,
+          ]
+        );
+      }
 
       db.exec('COMMIT');
       saveDatabase();

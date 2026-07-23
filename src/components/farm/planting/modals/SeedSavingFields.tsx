@@ -14,6 +14,7 @@ import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { todayLocal } from '@/lib/dateUtils'
 import {
   HARVEST_PART_LABELS,
+  SEED_HARVEST_PARTS,
   VEGETATIVE_HARVEST_PARTS,
   PURPOSE_OPTIONS,
   PROCESSING_OPTIONS,
@@ -119,8 +120,9 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
             onValueChange={(v) => onChange({ ...form, harvestPart: v as SeedSavingPart })}>
             <SelectTrigger className={deepInputClass}><SelectValue /></SelectTrigger>
             <SelectContent className="max-h-80">
-              {Object.entries(HARVEST_PART_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+              {/* 按保存模式过滤：种子保存只显示 seed/fruit；营养体保存只显示 9 个营养体部位 */}
+              {(mode === 'vegetative' ? VEGETATIVE_HARVEST_PARTS : SEED_HARVEST_PARTS).map((k) => (
+                <SelectItem key={k} value={k}>{HARVEST_PART_LABELS[k]}</SelectItem>
               ))}
             </SelectContent>
           </Select>

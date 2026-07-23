@@ -37,7 +37,10 @@ export type EntityType = 'seed_source' | 'seedling' | 'planting' | 'inventory_st
 const ENTITY_TO_AUDIT_TYPE: Record<EntityType, string[]> = {
   seed_source: ['seed_source', 'seed_source.propagation', 'seed_source.print', 'seed_source.status_change'],
   seedling: ['seedling', 'seedling.propagation', 'seedling.transplant', 'seedling.print', 'seedling.daily_record'],
-  planting: ['planting', 'planting.move', 'planting.daily_record', 'planting.breeding', 'planting.seed_saving'],
+  // 2026-07-23 修复：移除 'planting.move'
+  // 原因：planting.move 已经在 planting_move_records 表里有完整字段化记录（区域/数量/关联单号等），
+  //       audit_log 只记"move in 数量 21"这种残缺文本，会重复显示让用户困惑。
+  planting: ['planting', 'planting.daily_record', 'planting.breeding', 'planting.seed_saving'],
   inventory_stock: ['inventory_stock.create', 'inventory_stock.update', 'inventory_stock.delete'],
 };
 
@@ -299,27 +302,47 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
     }
   }
 
-  // 5. planting_move_records（移入移出，仅 planting）— 2026-07-22
+  // 5. planting_move_records（移入移出，仅 planting）— 2026-07-22 + 2026-07-23 完善字段
   if (entityType === 'planting') {
     try {
+      // JOIN plantings 取 crop_name/variety/unit；保留 source_code 作为关联单号
       const stmt = db.prepare(`
-        SELECT id, operation_type, operation_date, quantity,
-               from_area_name, to_area_name, operator_name, remarks, create_time
-        FROM planting_move_records
-        WHERE planting_id = ?
-        ORDER BY create_time DESC LIMIT ?
+        SELECT m.id, m.operation_type, m.operation_date, m.quantity,
+               m.from_area_name, m.to_area_name, m.source_id, m.source_code,
+               m.operator_name, m.remarks, m.create_time,
+               p.crop_name AS crop_name, p.crop_variety AS crop_variety,
+               p.unit AS unit, p.planting_code AS target_plant_code
+        FROM planting_move_records m
+        LEFT JOIN plantings p ON p.id = m.planting_id
+        WHERE m.planting_id = ?
+        ORDER BY m.create_time DESC LIMIT ?
       `);
       stmt.bind([entityId, limit]);
       while (stmt.step()) {
         const r = stmt.getAsObject() as Record<string, unknown>;
+        const opType = String(r.operation_type);
+        const isMoveIn = opType === 'move_in';
+        const cropName = r.crop_name && r.crop_variety
+          ? `${r.crop_name}-${r.crop_variety}`
+          : (r.crop_name || '');
         results.push({
           id: String(r.id || ''),
           occurredAt: String(r.create_time || r.operation_date || ''),
           source: 'entity',
           category: 'movement',
-          action: String(r.operation_type) === 'move_in' ? '移入' : '移出',
-          quantityDelta: Number(r.quantity || 0),
-          unit: '',
+          action: isMoveIn ? '移入' : '移出',
+          // 2026-07-23 修复：移出取负号（之前统一正数，导致表格模式"数量变化"列显示错误）
+          // 语义：移入=正向流入(+)，移出=正向流出(-)
+          quantityDelta: isMoveIn ? Number(r.quantity || 0) : -Number(r.quantity || 0),
+          unit: String(r.unit || '株'),
+          // 来源列：让前端 timeline 用 INBOUND_SOURCE_LABELS 映射为中文
+          inboundSource: isMoveIn ? 'move_in' : 'move_out',
+          // 关联单号列：调入显示源种植单，调出显示本单（target_plant_code 即本行）
+          refCode: isMoveIn
+            ? String(r.source_code || '')
+            : String(r.target_plant_code || ''),
+          // 作物品种列（中文显示）
+          cropName,
           operatorName: String(r.operator_name || ''),
           remarks: `${r.from_area_name || ''} → ${r.to_area_name || ''}${r.remarks ? ' | ' + r.remarks : ''}`,
         });
