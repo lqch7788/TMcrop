@@ -616,19 +616,36 @@ router.post('/append-from-inventory', async (req, res) => {
           `INSERT INTO inventory_inbound_records (
             id, record_type, record_date, source_module, source_id, source_code,
             stock_type, source_type,
-            crop_code, crop_name,
-            quantity, unit, quality_grade,
+            warehouse_id, warehouse_name,
+            crop_id, crop_code, crop_name, variety_name,
+            quantity, unit, unit_price, total_amount, quality_grade,
+            supplier_id, supplier_name,
+            production_plan_id, production_plan_code,
             business_id, notes, operator_name, create_time
-          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ) VALUES (?, 'inbound', ?, 'inventory', ?, ?, ?, 'transfer_inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         insIR.run([
           inRecId,
           dateStr,
           item.sourceStockId, sourceInstanceId,
           String(sourceObj.stock_type || 'seed'),
-          targetCropCode, targetCropName,
+          // 仓库/品种/供应商/价格：从源库存行继承（追加入库时前端不传这些字段，否则入库记录缺字段显示为 "-"）
+          String(sourceObj.warehouse_id || ''),
+          String(sourceObj.warehouse_name || ''),
+          String(sourceObj.crop_id || ''),
+          targetCropCode || String(sourceObj.crop_code || ''),
+          targetCropName || String(sourceObj.crop_name || ''),
+          String(sourceObj.variety_name || ''),
           item.transferQuantity, item.unit,
+          Number(sourceObj.unit_price || 0),
+          Number(sourceObj.total_amount || 0) > 0
+            ? Number(item.transferQuantity) * Number(sourceObj.unit_price || 0)
+            : 0,
           null,
+          String(sourceObj.supplier_id || ''),
+          String(sourceObj.supplier_name || ''),
+          String(sourceObj.production_plan_id || ''),
+          String(sourceObj.production_plan_code || ''),
           targetSeedSourceId,
           remarks || `追加入库（从 ${sourceInstanceId} 入种源 ${targetCode}）`,
           operator.name,
