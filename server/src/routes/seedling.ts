@@ -1031,6 +1031,13 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     if (propagationMode === 'one_to_many' && (!mother_plant_count || mother_plant_count <= 0)) {
       return res.status(400).json({ success: false, error: `one_to_many 模式必须填写母株数量 > 0` });
     }
+    // 2026-07-23：育苗后形态必填（防止绕过前端校验 POST null，下游详情弹窗"种苗类型"列显示空）
+    // 兼容 camelCase / snake_case 两种字段名（前端 AddModal 用 seedlingForm）
+    const seedlingFormRaw = req.body.seedling_form ?? req.body.seedlingForm;
+    if (!seedlingFormRaw || !String(seedlingFormRaw).trim()) {
+      return res.status(400).json({ success: false, error: '请选择育苗后形态（必填）' });
+    }
+    const seedlingForm = String(seedlingFormRaw).trim();
     // 2026-06-15: 负责人字段（前端 chargePerson）
     const chargePerson = req.body.charge_person ?? req.body.chargePerson ?? null;
 
@@ -1075,7 +1082,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
       (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
       chargePerson,
-      seedling_form || null, // 2026-06-27：种苗形态
+      seedlingForm, // 2026-07-23：已校验必填，不再 `|| null`
       seedlingUnit, // 2026-07-01: 单位
       // 2026-07-03 v5：无性繁殖母株溯源
       req.body.mother_source_type || null,

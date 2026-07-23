@@ -7,7 +7,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { SEEDLING_FORM_MAP } from '../../../../constants/cropConstants';
+import { SEEDLING_FORM_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
 import { X, Upload, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
@@ -41,6 +42,19 @@ interface AddModalProps {
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
+/**
+ * 种源形态兜底翻译（2026-07-23）
+ * - DB 可能是中文（product_form「花朵/果实/种子」12 选）或英文（stock_type fallback「seed/seedling/...」）
+ * - 已在 SEED_FORM_OPTIONS 中文词典 → 原样返回
+ * - 英文 → 走 SOURCE_TYPE_MAP 翻译
+ * - 无匹配 → 原样回显（保留透明度）
+ */
+function formatSeedFormDisplay(sf: string | null | undefined): string {
+  if (!sf) return '';
+  if (SEED_FORM_OPTIONS.some(opt => opt.value === sf)) return sf;
+  return SOURCE_TYPE_MAP[sf] || sf;
+}
 
 export function AddModal({
   isOpen,
@@ -358,6 +372,12 @@ export function AddModal({
       return;
     }
 
+    // 2026-07-23：育苗后形态必填（入库后写入详情弹窗"种苗类型"列）
+    if (!(formData as any).seedlingForm) {
+      await showAlert('请选择育苗后形态（必填）');
+      return;
+    }
+
     // 单株育苗模式验证
     if (formData.calculateMode === SeedlingCalculateMode.SINGLE) {
       if (!formData.initialCount || formData.initialCount <= 0) {
@@ -550,6 +570,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         sourceId,
         sourceCode: source.seedCode,
         sourceType: sourceTypeLabel,
+        seedForm: (source as any).seedForm || '',
         supplierName: supplierName,
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName || '',
@@ -626,7 +647,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             繁殖模式 <span className="text-red-500">*</span>
             <span className="text-xs text-gray-500 ml-2 font-normal">建档后不可修改，决定数量字段语义</span>
           </h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {PROPAGATION_MODES.map(m => (
               <label
                 key={m.value}
@@ -655,7 +676,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   className="mt-1"
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">{m.label}</div>
+                  <div className="text-sm font-bold text-gray-900">{m.label}</div>
                   <div className="text-xs text-gray-500 mt-0.5">{m.desc}</div>
                 </div>
               </label>
@@ -785,7 +806,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' }));
+                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', seedForm: '', supplierName: '' }));
                         setSourceSearch('');
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -799,9 +820,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       style={{ minWidth: '500px', left: 0 }}
                     >
                       {/* 表头 */}
-                      <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+                      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
                         <div>作物名称</div>
                         <div>种源批号</div>
+                        <div>形态</div>
                         <div>采购数量</div>
                         <div>可用数量</div>
                       </div>
@@ -847,7 +869,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                                   setSourcePopoverOpen(false);
                                   setSourceSearch('');
                                 }}
-                                className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
+                                className={`grid grid-cols-5 gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
                                   ${isDisabled
                                     ? 'bg-gray-100 cursor-not-allowed opacity-60'
                                     : `cursor-pointer hover:bg-emerald-50 ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}`}
@@ -858,6 +880,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                                   {isFailed && <span className="ml-1 text-xs text-red-500">[已失败]</span>}
                                 </div>
                                 <div className={`truncate ${isDisabled ? 'text-gray-400' : 'text-emerald-700'}`}>{s.seedCode}</div>
+                                <div className="text-gray-600 truncate">{formatSeedFormDisplay((s as any).seedForm) || '—'}</div>
                                 <div className="text-gray-600">{s.quantity} {s.unit}</div>
                                 <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
                                   {s.availableCount} {s.unit}
@@ -876,12 +899,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 </div>
               </div>
 
-              {/* 来源类型（只读自动带入） */}
+              {/* 种源形态（只读自动带入） — 2026-07-23：原"来源类型"改名"种源形态"，数据源改为种源 seedForm */}
               <div>
-                <Label className="text-gray-700">来源类型</Label>
+                <Label className="text-gray-700">种源形态</Label>
                 <Input
                   type="text"
-                  value={formData.sourceType || '请先选择种源'}
+                  value={formatSeedFormDisplay((formData as any).seedForm) || '请先选择种源'}
                   readOnly
                   className={`${deepInputClass} bg-gray-100 text-gray-600`}
                 />
@@ -1197,18 +1220,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               />
             </div>
 
-            {/* 2026-06-27：种苗形态（花朵/枝条/裸根苗/穴盘苗 等）— 详情弹窗"种苗类型"列数据源 */}
+            {/* 2026-07-23：必填 — 描述"这次育苗产出的种苗是什么形态"（花朵/枝条/裸根苗/穴盘苗 等），入库后写入详情弹窗"种苗类型"列 */}
             <div>
-              <Label className="text-gray-900">种苗形态</Label>
+              <Label className="text-gray-900">
+                育苗后形态 <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={(formData as any).seedlingForm || '__none__'}
                 onValueChange={(v) => setFormData({ ...formData, seedlingForm: v === '__none__' ? '' : v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="请选择种苗形态（可选）" />
+                  <SelectValue placeholder="请选择育苗后形态（必填）" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">不指定</SelectItem>
                   {Object.entries(SEEDLING_FORM_MAP).map(([k, label]) => (
                     <SelectItem key={k} value={k}>{label}</SelectItem>
                   ))}
@@ -1245,25 +1269,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               />
             </div>
 
-            {/* 计划类型 */}
-            <div>
-              <Label className="text-gray-900">
-                计划类型 <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.planType}
-                onValueChange={(val) => setFormData({ ...formData, planType: val as SeedlingPlanType })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择计划类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {seedlingPlanTypes.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* 2026-07-23：删除计划类型字段（业务上不需要，育苗计划类型由生产计划批次决定） */}
 
             {/* 开始日期 */}
             <div>
@@ -1296,18 +1302,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               />
             </div>
 
-            {/* 方案2.6: 育苗工时（整行独占，2 个一排规则例外） */}
-            <div className="col-span-2">
-              <Label className="text-gray-900">工时（小时）</Label>
-              <NumberInput
-                value={formData.workHours}
-                onChange={(val) => setFormData({ ...formData, workHours: parseFloat(val) || 0 })}
-                className={deepInputClass}
-                placeholder="请输入育苗工时（预估执行时间）"
-                decimals={1}
-              />
-              <p className="text-xs text-gray-500 mt-1">预估本次育苗的执行工时</p>
-            </div>
+            {/* 2026-07-23：删除育苗工时字段（业务上不需要，估时数据由生产环节跟踪） */}
           </div>
         </div>
 
