@@ -256,6 +256,32 @@ export class SyncController {
         ]);
         stmt.step();
         stmt.free();
+        // 2026-07-23 源头修复：同步导入种植单时也自动写入 area_stocks 初始记录
+        // 与 routes/planting.ts POST 保持一致
+        const plantingQty = item.plantingCount || item.planting_quantity || 0;
+        const areaIdVal = item.areaId || item.area_id || '';
+        const areaNameVal = item.areaName || item.area_name || '';
+        if (plantingQty > 0 && areaIdVal) {
+          db.run(
+            `INSERT OR IGNORE INTO planting_area_stocks
+              (id, planting_id, area_id, area_name, quantity, source_type, source_id, source_code,
+               operation_date, create_time, update_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              `STK_INIT_${id}`,
+              id,
+              areaIdVal,
+              areaNameVal || areaIdVal,
+              plantingQty,
+              'initial',
+              null,
+              null,
+              item.plantingDate || item.planting_date || now.slice(0, 10),
+              now,
+              now,
+            ]
+          );
+        }
         insertedCount++;
       }
 

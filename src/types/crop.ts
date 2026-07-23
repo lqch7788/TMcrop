@@ -732,6 +732,9 @@ export interface Planting {
   // 2026-06-28：每日记录累加字段（活体剩余 = plantingCount + supplementCount - lossCount）
   lossCount?: number                   // 损耗累计
   supplementCount?: number             // 补栽累计
+  // 2026-07-23 修复：列表"剩余数量"列改为 Σ area_stocks.quantity
+  // 旧公式 plantingCount + supplementCount - lossCount 不反映调入/调出后的实际可调拨量
+  availableQuantity?: number           // 实际剩余 = Σ planting_area_stocks.quantity
 }
 
 /**

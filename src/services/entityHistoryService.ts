@@ -44,6 +44,7 @@ interface FlowLogRow {
   id: string;
   flowType: string;
   cropName?: string;
+  cropVariety?: string;       // 2026-07-23：补全，数据库表已有此列
   sourceCode?: string;
   sourceQuantity?: number;
   sourceUnit?: string;
@@ -114,6 +115,13 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
     return rows.map((r: FlowLogRow) => {
       // 2026-07-16 修复：flowType 第一段即"来源"（如 seed_source→seedling → 'seed_source' → '种源'）
       const sourceKey = r.flowType ? r.flowType.split('→')[0] : '';
+      // 2026-07-23 修复：拼接 cropName + cropVariety 让"作物品种"列显示完整名（如"草莓-红颜"）
+      const fullCropName = r.cropName && r.cropVariety
+        ? `${r.cropName}-${r.cropVariety}`
+        : (r.cropName || r.cropVariety || '');
+      // 2026-07-23 修复：refCode 优先用 targetCode（用户视角"这条记录关联的本订单"）
+      // 之前 sourceCode || targetCode 对种植实体显示的是种源单号（如 ZZ20260723-002），
+      // 用户期望的是种植单 ZZ20260723-003 自身
       return {
         id: r.id,
         occurredAt: r.createdAt,
@@ -122,15 +130,15 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
         action: FLOW_TYPE_CN[r.flowType] || r.flowType || '流转',
         quantityDelta: r.targetQuantity || r.sourceQuantity || undefined,
         unit: r.targetUnit || r.sourceUnit,
-        refCode: r.sourceCode || r.targetCode,
+        refCode: r.targetCode || r.sourceCode,
         refModule: undefined,
         operatorName: r.createdBy,
-        // 2026-07-16 修复：把 cropName 也填到 HistoryItem.cropName 字段（之前只塞到 remarks，导致表格"作物品种"列永远为 '-'）
-        cropName: r.cropName,
+        // 2026-07-23：完整作物+品种名
+        cropName: fullCropName,
         // 2026-07-16 修复：从 flowType 推断入库来源，让表格"来源"列展示有意义的标签
         inboundSource: FLOW_SOURCE_CN[sourceKey] || sourceKey || undefined,
         // 保留原行为：作物名也写到备注（不破坏既有 UI 习惯）
-        remarks: r.cropName,
+        remarks: fullCropName || r.cropName,
       };
     });
   } catch {

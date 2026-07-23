@@ -105,71 +105,100 @@ export async function handleMove(
     const operatorName = user.realName || user.username || 'system'
 
     // 3. 调入 / 调出 分支
+    // 2026-07-23: 调入改为种植单对调（与调出对称），不再支持 seed/seedling 来源
+    //            业务约束：调入/调出都是种植管理内不同区域之间的互相调拨
     if (operationType === 'move_in') {
       if (!toAreaName) {
         return { status: 400, body: { success: false, error: '请选择目标区域' } }
       }
-      if (!sourceType || !['seed', 'seedling'].includes(sourceType)) {
-        return { status: 400, body: { success: false, error: '来源类型必须为 seed 或 seedling' } }
+      if (sourceType !== 'planting') {
+        return {
+          status: 400,
+          body: {
+            success: false,
+            error: '调入来源类型必须为 planting（仅支持其他种植单的同作物同品种调入，不再支持种源）',
+          },
+        }
       }
       if (!sourceId) {
-        return { status: 400, body: { success: false, error: '请选择来源批号' } }
+        return { status: 400, body: { success: false, error: '请选择来源种植单' } }
+      }
+      if (!fromAreaId || !fromAreaName) {
+        return { status: 400, body: { success: false, error: '请选择源区域' } }
       }
 
-      // 2026-06-30 Bug 修复：seed_sources 表没有 area_id 列，移除（种源本身无"区域"概念）
+      // 校验源 ≠ 目标（同区域同订单不可自调）
+      if (sourceId === plantingId && fromAreaId === toAreaId) {
+        return { status: 400, body: { success: false, error: '源区域与目标区域相同' } }
+      }
+
+      // 查询源种植单
       const src = queryToObjects<any>(db,
-        `SELECT id, source_code, crop_code, crop_variety, remaining_quantity, status
-         FROM seed_sources WHERE id = ?`, [sourceId])
+        `SELECT id, planting_code, crop_code, crop_variety, status, is_harvest_locked, end_time
+         FROM plantings WHERE id = ?`, [sourceId])
       if (src.length === 0) {
-        return { status: 404, body: { success: false, error: '来源种源/育苗记录不存在' } }
+        return { status: 404, body: { success: false, error: '源种植单不存在' } }
       }
       const s = src[0]
 
-      // P0 校验 1+2：作物编码 + 品种一致
+      if (s.status === 'ended' || s.status === 'harvested' || s.status === 'cancelled' || s.endTime) {
+        return { status: 400, body: { success: false, error: '源种植单已结束/已采收' } }
+      }
+      if (s.isHarvestLocked) {
+        return { status: 400, body: { success: false, error: '源种植单已锁定采收' } }
+      }
+
+      // P0 校验：作物编码 + 品种一致
       if (s.cropCode !== cur.cropCode) {
-        return { status: 400, body: { success: false, error: '来源作物与目标订单作物不一致' } }
+        return { status: 400, body: { success: false, error: '源种植单作物与目标订单作物不一致' } }
       }
       if (s.cropVariety && cur.cropVariety && s.cropVariety !== cur.cropVariety) {
-        return { status: 400, body: { success: false, error: '来源品种与目标订单品种不一致' } }
+        return { status: 400, body: { success: false, error: '源种植单品种与目标订单品种不一致' } }
       }
-      // P1 校验 5：source 状态
-      if (s.status === 'depleted' || s.status === 'cancelled') {
-        return { status: 400, body: { success: false, error: '来源记录状态不可用' } }
+
+      // 校验源区域库存
+      const fromStock = queryToObjects<any>(db,
+        `SELECT id, quantity FROM planting_area_stocks WHERE planting_id = ? AND area_id = ?`,
+        [sourceId, fromAreaId])
+      if (fromStock.length === 0) {
+        return { status: 404, body: { success: false, error: '源种植单该区域未种该作物' } }
       }
-      // P1 校验 3：来源库存不足
-      if (qty > s.remainingQuantity) {
+      if (qty > fromStock[0].quantity) {
         return {
           status: 400,
-          body: { success: false, error: `来源库存不足：剩余 ${s.remainingQuantity} 株` },
+          body: {
+            success: false,
+            error: `源区域当前只有 ${fromStock[0].quantity} 株，不足 ${qty} 株`,
+          },
         }
       }
 
-      // 4. 事务：扣来源 + 加区域库存 + 写履历
+      // 事务：扣源 + 加目标 + 写履历 + 双方主表同步
       db.exec('BEGIN')
       try {
-        db.run(
-          `UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, used_quantity = used_quantity + ? WHERE id = ?`,
-          [qty, qty, sourceId],
-        )
-
-        const existing = queryToObjects<any>(db,
-          `SELECT id, quantity FROM planting_area_stocks WHERE planting_id = ? AND area_id = ?`,
-          [plantingId, toAreaId || ''])
         const now = nowIso()
         const today = now.slice(0, 10)
 
-        if (existing.length > 0) {
+        db.run(
+          `UPDATE planting_area_stocks SET quantity = quantity - ?, update_time = ? WHERE id = ?`,
+          [qty, now, fromStock[0].id],
+        )
+
+        const toExisting = queryToObjects<any>(db,
+          `SELECT id FROM planting_area_stocks WHERE planting_id = ? AND area_id = ?`,
+          [plantingId, toAreaId])
+        if (toExisting.length > 0) {
           db.run(
             `UPDATE planting_area_stocks SET quantity = quantity + ?, update_time = ? WHERE id = ?`,
-            [qty, now, existing[0].id],
+            [qty, now, toExisting[0].id],
           )
         } else {
           db.run(
             `INSERT INTO planting_area_stocks
               (id, planting_id, area_id, area_name, quantity, source_type, source_id, source_code, operation_date, create_time, update_time)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [genId('STK'), plantingId, toAreaId || '', toAreaName, qty,
-             sourceType, sourceId, sourceCode || '',
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [genId('STK'), plantingId, toAreaId, toAreaName, qty,
+             'planting', sourceId, s.plantingCode || '',
              operationDate || today, now, now],
           )
         }
@@ -181,25 +210,17 @@ export async function handleMove(
              from_area_id, from_area_name, to_area_id, to_area_name,
              quantity, operation_date, operator_name, remarks, create_time,
              source_id, source_type, source_code)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [moveId, plantingId, cur.plantingCode, 'move_in',
-           '', s.sourceCode || '',
-           toAreaId || '', toAreaName,
+           fromAreaId, fromAreaName,
+           toAreaId, toAreaName,
            qty, operationDate || today, operatorName, remarks, now,
-           sourceId, sourceType, sourceCode || ''],
+           sourceId, 'planting', s.plantingCode || ''],
         )
 
-        // 2026-06-30 Bug 修复：调入时同步累加 plantings.planting_quantity
-        // 原因：列表 fallback 逻辑（area_stocks 优先 + 主表 fallback）会让用户感觉
-        //       "首次调入时从原值跳到新值"（看起来像覆盖）。同步累加主表保证
-        //       主表与 area_stocks 之和永远一致，列表显示与调入数量始终累加。
-        db.run(
-          `UPDATE plantings SET planting_quantity = planting_quantity + ?, update_time = ? WHERE id = ?`,
-          [qty, now, plantingId],
-        )
-        // 2026-06-30 验证埋点：调入成功后输出累加结果，让用户能确认后端是否加载新代码
-        const afterQ = queryToObjects<any>(db, `SELECT planting_quantity FROM plantings WHERE id = ?`, [plantingId])[0]
-        console.log(`[move-in] plantingId=${plantingId} qty=${qty} newPlantingQuantity=${afterQ?.plantingQuantity}`)
+        // 2026-07-23 架构修复：planting_quantity 是创建时的"种植总量"，不应被调入/调出动态修改
+        // 之前的累加逻辑会让"521 vs 200"这种数据一致性问题雪上加霜
+        // 现在：调入只动 planting_area_stocks，主表保持不变
 
         db.exec('COMMIT')
         return {
@@ -316,20 +337,9 @@ export async function handleMove(
          plantingId, 'planting', cur.plantingCode],
       )
 
-      // 2026-06-30 Bug 修复：调出时同步扣减源种植单的主表 planting_quantity
-      // 与"调入累加主表"对称：保持主表 = 历次调入之和 - 历次调出之和
-      // 不然列表显示与 area_stocks 累加值偏差累积
-      db.run(
-        `UPDATE plantings SET planting_quantity = planting_quantity - ?, update_time = ? WHERE id = ?`,
-        [qty, now, plantingId],
-      )
-
-      // 2026-06-30 Bug 修复：调出时同步累加目标种植单的主表 planting_quantity
-      // 让"调入/调出任意一侧"都让目标单的主表同步变化（保持数据一致）
-      db.run(
-        `UPDATE plantings SET planting_quantity = planting_quantity + ?, update_time = ? WHERE id = ?`,
-        [qty, now, targetPlantingId],
-      )
+      // 2026-07-23 架构修复：planting_quantity 是创建时的"种植总量"，不应被调出动态修改
+      // 之前的累加/累减逻辑导致 "521 vs 200" 这种数据一致性问题
+      // 现在：调出只动 planting_area_stocks，主表保持不变
 
       db.exec('COMMIT')
       return {

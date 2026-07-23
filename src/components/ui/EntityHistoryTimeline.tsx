@@ -57,7 +57,38 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
   other: '其他',
   purchase: '采购',
   return_inbound: '退库入库',
+  // 2026-07-23：种植管理调拨（planting_move_records.operation_type）
+  move_in: '区域调入',
+  move_out: '区域调出',
 };
+
+/**
+ * 2026-07-23：action 本地化兜底
+ * 部分数据源（audit_log 等）可能写入英文 action（create/update/delete 等）
+ * 后端已经返回"移入/移出"等中文，但保险起见前端再兜底一次
+ */
+const ACTION_LABELS: Record<string, string> = {
+  create: '创建',
+  update: '修改',
+  delete: '删除',
+  soft_delete: '软删除',
+  move_in: '区域调入',
+  move_out: '区域调出',
+  inbound: '入库',
+  outbound: '出库',
+  transfer: '调拨',
+  freeze: '冻结',
+  unfreeze: '解冻',
+  damaged: '报损',
+  adjustment: '库存调整',
+  harvest: '采收',
+  manual: '手动操作',
+};
+
+function fmtAction(action?: string): string {
+  if (!action) return '-';
+  return ACTION_LABELS[action] || action;
+}
 
 /**
  * 类型列配置：每个 entity 都有自己的"类型"概念
@@ -172,7 +203,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
       const row: Record<string, string | number> = {
         '序号': i + 1,
         '时间': fmtTime(r.occurredAt),
-        '类型': r.action,
+        '类型': fmtAction(r.action),
         '来源': fmtInboundSource(r.inboundSource),
         '作物品种': r.cropName || '-',
         '数量变化': fmtDelta(r.quantityDelta, r.unit),
@@ -364,7 +395,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
                     <td className="px-2 py-1.5 text-xs text-gray-500 font-mono truncate" title={fmtTime(r.occurredAt)}>{fmtTime(r.occurredAt)}</td>
                     <td className="px-2 py-1.5">
                       <span className={`px-1.5 py-0.5 text-xs rounded border whitespace-nowrap ${catBadge(r.category)}`}>
-                        {r.action}
+                        {fmtAction(r.action)}
                       </span>
                     </td>
                     <td className="px-2 py-1.5 text-xs text-gray-600 truncate" title={fmtInboundSource(r.inboundSource)}>{fmtInboundSource(r.inboundSource)}</td>

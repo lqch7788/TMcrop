@@ -57,10 +57,10 @@ describe('getSeedSavingRateColor', () => {
 })
 
 describe('harvest part classification', () => {
-  it('VEGETATIVE 含 9 个无性器官', () => {
-    expect(VEGETATIVE_HARVEST_PARTS.length).toBe(9)
+  it('VEGETATIVE 含 10 个营养体部位', () => {
+    expect(VEGETATIVE_HARVEST_PARTS.length).toBe(10)
     expect(VEGETATIVE_HARVEST_PARTS).toContain('tuber')
-    expect(VEGETATIVE_HARVEST_PARTS).toContain('bulb')
+    expect(VEGETATIVE_HARVEST_PARTS).toContain('whole_plant')
   })
   it('SEED 含 2 个有性器官', () => {
     expect(SEED_HARVEST_PARTS.length).toBe(2)

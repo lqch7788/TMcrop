@@ -701,7 +701,7 @@ export function SeedlingTable({
                               variant="breeding"
                               icon={<GitBranch className="w-4 h-4" />}
                               onClick={() => onPropagation(record)}
-                              title={`无性繁殖记录${isEnded ? '（只读）' : ''}`}
+                              title={`繁殖记录${isEnded ? '（只读）' : ''}`}
                               className={isEnded ? 'text-emerald-400' : ''}
                             />
                           )}

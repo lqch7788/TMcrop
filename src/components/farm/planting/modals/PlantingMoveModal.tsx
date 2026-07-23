@@ -1,11 +1,11 @@
 /**
- * 种植调入/调出弹窗 V3
+ * 种植调入/调出弹窗 V4
  *
- * 改造要点（2026-06-30）：
- * - 移除来源类型 seed/seedling 单选（固定为 seed，与种源页面统一）
- * - 调入模式：目标区域下拉（取自 planting_area_stocks）+ 来源种源搜索（作物品种名 + 形态过滤 + 5 列表格）
- * - 调出模式：保留基本 UI，仅做小幅调整
- * - 后端契约 MovePlantingInputV2 完全保留
+ * 2026-07-23 改造要点：
+ * - 移除种源参与：调入/调出仅在种植管理内不同区域之间互调（与调出对称）
+ * - 调入模式：源订单下拉（其他同作物同品种种植单）+ 调出区域 + 目标区域（本行）
+ * - 调出模式：保留 V3 UI，调出区域 + 目标订单 + 目标区域
+ * - 后端 move_in.sourceType 固定为 'planting'，seed/seedling 已废弃
  */
 import React, { useEffect, useState } from 'react';
 import {
@@ -28,10 +28,6 @@ import {
   PlantingAreaStock,
   PlantingLookupRow,
 } from '@/services/apiPlantingService';
-import {
-  lookupAvailableSeedSources,
-  SeedSourceLookupRow,
-} from '@/services/apiSeedSourceService';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { Sprout, AlertCircle } from 'lucide-react';
@@ -47,22 +43,8 @@ interface PlantingMoveModalProps {
   onSubmit: (input: MovePlantingInputV2) => Promise<boolean | void> | void;
 }
 
-// 形态选项（与 seed_sources.seed_form / inventory_stock.source_form 枚举保持一致）
-const SEED_FORM_OPTIONS = [
-  '全部',
-  '果实',
-  '种子',
-  '种苗',
-  '穗条',
-  '枝条',
-  '块根',
-  '块茎',
-  '鳞茎',
-  '叶片',
-  '花朵',
-  '整株',
-  '其他',
-];
+// 2026-07-23: SEED_FORM_OPTIONS 已移除 — 种源不再参与调入/调出
+// （原用于调入时的形态过滤下拉）
 
 /**
  * 2026-06-30 Bug 修复：英文错误信息 → 中文兜底映射
@@ -101,20 +83,20 @@ export default function PlantingMoveModal({
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // 调入（目标区域 + 种源搜索 + 选中行）
+  // 调入（源订单 + 调出区域 + 目标区域）
+  // 2026-07-23: 移除种源参与；调入改为种植单对调（与调出对称）
   const [toAreaId, setToAreaId] = useState('');
   const [toAreaName, setToAreaName] = useState('');
   const [areaStocks, setAreaStocks] = useState<PlantingAreaStock[]>([]);
-  const [sourceCropName, setSourceCropName] = useState('');
-  const [sourceSeedForm, setSourceSeedForm] = useState(''); // '' = 全部
-  const [seedSources, setSeedSources] = useState<SeedSourceLookupRow[]>([]);
-  const [selectedSource, setSelectedSource] = useState<SeedSourceLookupRow | null>(null);
-  const [sourceLoading, setSourceLoading] = useState(false);
+  const [sourcePlantings, setSourcePlantings] = useState<PlantingLookupRow[]>([]);
+  const [sourcePlantingId, setSourcePlantingId] = useState('');
+  const [sourceAreaStocks, setSourceAreaStocks] = useState<PlantingAreaStock[]>([]);
+  // fromAreaId/fromAreaName 在调入/调出下都表示"调出区域"（扣减方），只是所属订单不同
+  const [fromAreaId, setFromAreaId] = useState('');
+  const [fromAreaName, setFromAreaName] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);  // 弹窗内联错误条（不依赖 toast）
 
   // 调出
-  const [fromAreaId, setFromAreaId] = useState('');
-  const [fromAreaName, setFromAreaName] = useState('');
   const [targetPlantingId, setTargetPlantingId] = useState('');
   const [targetAreaName, setTargetAreaName] = useState('');
   // 2026-06-30: 调出模式 UI 重构 — 候选目标订单 + 目标区域 stocks
@@ -129,58 +111,33 @@ export default function PlantingMoveModal({
       setToAreaId('');
       setToAreaName('');
       setAreaStocks([]);
-      setSourceCropName('');
-      setSourceSeedForm('');
-      setSeedSources([]);
-      setSelectedSource(null);
+      // 2026-07-23: 调入源订单相关 state 重置
+      setSourcePlantings([]);
+      setSourcePlantingId('');
+      setSourceAreaStocks([]);
       setQuantity(0);
       setOperationDate(todayLocal());
       setRemarks('');
-      setFromAreaId(initialPlanting.areaId || '');
-      setFromAreaName(initialPlanting.areaName || '');
+      setFromAreaId('');
+      setFromAreaName('');
       setTargetPlantingId('');
       setTargetAreaName('');
-      setTargetPlantings([]);  // 2026-06-30: 调出候选重置
+      setTargetPlantings([]);
       setTargetAreaStocks([]);
       setSubmitting(false);
       setErrorMessage(null);  // 2026-06-30 Bug 3：清空旧错误
     }
   }, [isOpen, initialPlanting]);
 
-  // 拉取该订单的区域库存（弹窗打开 & 选了订单时）
-  // 2026-06-30 Bug 修复：planting_area_stocks 表为空时，从 plantings 主表兜底
-  // 原因：新建种植订单不写 planting_area_stocks（只写 plantings.area_id/area_name），
-  //       但列表用 COALESCE 兜底显示，新订单在调入弹窗里"看不到"区域，导致无法调入
+  // 拉取该订单的区域数量（弹窗打开 & 选了订单时）
+  // 2026-07-23 源头修复后：移除主表兜底逻辑。创建种植单时已自动 INSERT area_stocks 初始记录，
+  //                       历史数据已迁移。modal 直接读真实 area_stocks 数据。
   useEffect(() => {
     if (!isOpen || !selectedPlantingId) return;
     getPlantingAreaStocks(selectedPlantingId)
-      .then((rows) => {
-        if (rows && rows.length > 0) {
-          setAreaStocks(rows);
-        } else {
-          // 兜底：从 plantings 主表取 areaId/areaName 作为虚拟区域
-          const planting = availablePlantings.find(
-            (p) => String(p.id) === String(selectedPlantingId)
-          );
-          if (planting?.areaId) {
-            setAreaStocks([
-              {
-                id: 'fallback',
-                areaId: planting.areaId,
-                areaName: planting.areaName || planting.areaId,
-                quantity: Number(planting.plantingCount) || 0,
-                sourceType: 'initial',
-                sourceId: null,
-                sourceCode: null,
-              },
-            ]);
-          } else {
-            setAreaStocks([]);
-          }
-        }
-      })
+      .then((rows) => setAreaStocks(rows || []))
       .catch(() => setAreaStocks([]));
-  }, [isOpen, selectedPlantingId, availablePlantings]);
+  }, [isOpen, selectedPlantingId]);
 
   // 用户改了 selectedPlantingId 后，调出模式下"调出区域"应该跟着新订单的主区域走
   useEffect(() => {
@@ -192,8 +149,8 @@ export default function PlantingMoveModal({
     }
   }, [selectedPlantingId, opType, availablePlantings]);
 
-  // 2026-06-30: 调出模式 — 选源订单后自动按其 cropName 筛候选目标订单（排除自己）
-  // UI 简化：用户不需要输入 cropName 搜索，下拉直接显示同作物候选
+  // 2026-06-30: 调出模式 — 选源订单后自动按其 cropName + cropVariety 筛候选目标订单（排除自己）
+  // UI 简化：用户不需要输入 cropName 搜索，下拉直接显示同作物同品种候选
   // 注：直接用 availablePlantings 过滤（绕开后端 sql.js 对中文 LIKE 的兼容问题）
   useEffect(() => {
     if (!isOpen || opType !== 'move_out') return;
@@ -209,7 +166,9 @@ export default function PlantingMoveModal({
     const candidates = availablePlantings
       .filter((p) =>
         String(p.id) !== String(selectedPlantingId) &&
-        p.cropName === source.cropName
+        p.cropName === source.cropName &&
+        // 品种一致（双方都有值时才校验，缺失则不限）
+        (!source.cropVariety || !p.cropVariety || p.cropVariety === source.cropVariety)
       )
       .map((p) => ({
         id: String(p.id),
@@ -223,6 +182,7 @@ export default function PlantingMoveModal({
   }, [isOpen, opType, selectedPlantingId, availablePlantings]);
 
   // 2026-06-30: 调出模式 — 选目标订单后自动拉其 areaStocks 作为"目标区域"下拉
+  // 2026-07-23 优化：单区域时自动选定（与调入模式对称），多区域时让用户选
   useEffect(() => {
     if (!isOpen || opType !== 'move_out') return;
     if (!targetPlantingId) {
@@ -230,7 +190,15 @@ export default function PlantingMoveModal({
       return;
     }
     getPlantingAreaStocks(targetPlantingId)
-      .then((rows) => setTargetAreaStocks(rows || []))
+      .then((rows) => {
+        const safeRows = rows || [];
+        setTargetAreaStocks(safeRows);
+        // 单区域时自动选定（用户无需操作）
+        if (safeRows.length === 1) {
+          setToAreaId(safeRows[0].areaId);
+          setToAreaName(safeRows[0].areaName);
+        }
+      })
       .catch(() => setTargetAreaStocks([]));
   }, [isOpen, opType, targetPlantingId]);
 
@@ -251,29 +219,78 @@ export default function PlantingMoveModal({
     }
   }, [isOpen, areaStocks, selectedPlantingId, availablePlantings, toAreaId]);
 
-  // 种源搜索 debounce 300ms
+  // 2026-07-23: 调入模式 — 按本行订单的 cropName + cropVariety 筛候选源订单（排除自己）
+  //            业务约束：同一区域内不会种植不同作物/品种
+  //            与调出的 targetPlantings 效果完全对称，差异仅为 opType 守卫
+  //            2026-07-23 合并：带出 plantingCount（迁移后 = Σ area_stocks 总和），用于下拉项显示"剩 X 株"
   useEffect(() => {
-    if (opType !== 'move_in') return;
-    const timer = setTimeout(() => {
-      setSourceLoading(true);
-      lookupAvailableSeedSources({
-        cropName: sourceCropName.trim() || undefined,
-        seedForm: sourceSeedForm || undefined,
+    if (!isOpen || opType !== 'move_in') return;
+    if (!selectedPlantingId) {
+      setSourcePlantings([]);
+      return;
+    }
+    const cur = availablePlantings.find((p) => String(p.id) === String(selectedPlantingId));
+    if (!cur?.cropName) {
+      setSourcePlantings([]);
+      return;
+    }
+    const candidates = availablePlantings
+      .filter((p) =>
+        String(p.id) !== String(selectedPlantingId) &&
+        p.cropName === cur.cropName &&
+        // 品种一致（双方都有值时才校验，缺失则不限）
+        (!cur.cropVariety || !p.cropVariety || p.cropVariety === cur.cropVariety)
+      )
+      .map((p) => ({
+        id: String(p.id),
+        plantCode: p.plantCode,
+        cropName: p.cropName,
+        cropVariety: p.cropVariety,
+        cropCode: (p as any).cropCode || '',
+        areaName: p.areaName,
+        // 数据迁移后主表 plantingCount === Σ area_stocks.quantity，可直接作为"剩余可调拨量"
+        plantingCount: Number((p as any).plantingCount ?? 0),
+      }));
+    setSourcePlantings(candidates);
+  }, [isOpen, opType, selectedPlantingId, availablePlantings]);
+
+  // 2026-07-23: 调入模式 — 选源订单后自动拉其 areaStocks
+  //            与调出的 targetAreaStocks 效果完全对称
+  // 2026-07-23 源头修复后：移除主表兜底逻辑。创建种植单时已自动 INSERT area_stocks 初始记录，
+  //                       历史数据已迁移。modal 直接读真实 area_stocks 数据，不再凭空虚拟。
+  // 2026-07-23 合并优化：单区域时自动选定 fromArea（90% 场景），多区域时让用户选
+  useEffect(() => {
+    if (!isOpen || opType !== 'move_in') return;
+    if (!sourcePlantingId) {
+      setSourceAreaStocks([]);
+      return;
+    }
+    getPlantingAreaStocks(sourcePlantingId)
+      .then((rows) => {
+        const safeRows = rows || [];
+        setSourceAreaStocks(safeRows);
+        // 单区域时自动选定（用户无需操作）
+        if (safeRows.length === 1) {
+          setFromAreaId(safeRows[0].areaId);
+          setFromAreaName(safeRows[0].areaName);
+        }
       })
-        .then((rows) => setSeedSources(rows || []))
-        .catch(() => setSeedSources([]))
-        .finally(() => setSourceLoading(false));
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [opType, sourceCropName, sourceSeedForm]);
+      .catch(() => setSourceAreaStocks([]));
+  }, [isOpen, opType, sourcePlantingId]);
 
   // 操作类型切换时清掉不相关的字段
   const handleOpTypeChange = (next: 'move_in' | 'move_out') => {
     setOpType(next);
-    // 切换到调出时，清空种源选择
-    if (next === 'move_out') {
-      setSelectedSource(null);
-    }
+    // 切换时清空来源/目标相关字段，避免旧状态污染
+    setFromAreaId('');
+    setFromAreaName('');
+    setToAreaId('');
+    setToAreaName('');
+    setSourcePlantingId('');
+    setSourceAreaStocks([]);
+    setTargetPlantingId('');
+    setTargetAreaStocks([]);
+    setErrorMessage(null);
   };
 
   const handleSubmit = async () => {
@@ -290,23 +307,33 @@ export default function PlantingMoveModal({
       return;
     }
     if (!quantity || quantity <= 0) {
-      setErrorMessage('请输入调入数量（必须 > 0）');
+      setErrorMessage(`请输入${opType === 'move_in' ? '调入' : '调出'}数量（必须 > 0）`);
       return;
     }
 
     if (opType === 'move_in') {
+      // 2026-07-23: 调入改为种植单对调 — 校验源订单 + 调出区域 + 目标区域
+      if (!sourcePlantingId) {
+        setErrorMessage('请选择来源种植单');
+        return;
+      }
+      if (!fromAreaId) {
+        setErrorMessage('请选择调出区域');
+        return;
+      }
       if (!toAreaId) {
         setErrorMessage('请选择目标区域');
         return;
       }
-      if (!selectedSource) {
-        setErrorMessage('请选择来源种源批号（点击表格行选中）');
+      // 校验源 ≠ 目标（同区域同订单不可自调）
+      if (sourcePlantingId === selectedPlantingId && fromAreaId === toAreaId) {
+        setErrorMessage('调出区域与目标区域相同');
         return;
       }
-      if (quantity > selectedSource.remainingQuantity) {
-        setErrorMessage(
-          `数量超过种源可用库存 ${selectedSource.remainingQuantity} ${selectedSource.unit || ''}`
-        );
+      // 校验调出区域数量
+      const sourceStock = sourceAreaStocks.find((s) => s.areaId === fromAreaId);
+      if (sourceStock && quantity > sourceStock.quantity) {
+        setErrorMessage(`调出区域当前只有 ${sourceStock.quantity} 株，不足 ${quantity} 株`);
         return;
       }
     } else {
@@ -326,7 +353,7 @@ export default function PlantingMoveModal({
       // 2026-06-30: 校验调出数量 ≤ 源 area_stocks
       const fromStock = areaStocks.find((s) => s.areaId === fromAreaId)
       if (fromStock && quantity > fromStock.quantity) {
-        setErrorMessage(`调出数量超过源区域库存 ${fromStock.quantity} ${fromStock.sourceCode || ''}`)
+        setErrorMessage(`调出数量超过调出区域数量 ${fromStock.quantity} ${fromStock.sourceCode || ''}`)
         return
       }
     }
@@ -334,20 +361,24 @@ export default function PlantingMoveModal({
     setSubmitting(true);
     try {
       if (opType === 'move_in') {
+        // 2026-07-23: sourceType='planting' + fromAreaId/fromAreaName 为调出区域（源订单的扣减方）
+        const sourcePlanting = sourcePlantings.find((p) => p.id === sourcePlantingId);
         const input: MovePlantingInputV2 = {
           operationType: 'move_in',
           toAreaId,
           toAreaName,
+          fromAreaId,
+          fromAreaName,
           quantity,
           operationDate,
           remarks,
-          sourceType: 'seed', // V3: 固定为 seed（前端不再允许 seedling）
-          sourceId: selectedSource!.id,
-          sourceCode: selectedSource!.sourceCode,
+          sourceType: 'planting',
+          sourceId: sourcePlantingId,
+          sourceCode: sourcePlanting?.plantCode || '',
         };
         await movePlantingV2(String(targetRecord.id), input);
         await showAlert(
-          `调入成功：${toAreaName}（${quantity} ${selectedSource!.unit || ''}）`
+          `调入成功：${sourcePlanting?.plantCode || ''} ${fromAreaName} → ${toAreaName}（${quantity} 株）`
         );
         await onSubmit(input);
       } else {
@@ -416,16 +447,18 @@ export default function PlantingMoveModal({
         {/* 操作类型切换 */}
         <div>
           <Label>操作类型</Label>
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-4 mt-2">
             <Button
-              size="sm"
+              size="default"
+              className="text-base font-medium min-w-[80px]"
               variant={opType === 'move_in' ? 'default' : 'secondary'}
               onClick={() => handleOpTypeChange('move_in')}
             >
               调入
             </Button>
             <Button
-              size="sm"
+              size="default"
+              className="text-base font-medium min-w-[80px]"
               variant={opType === 'move_out' ? 'default' : 'secondary'}
               onClick={() => handleOpTypeChange('move_out')}
             >
@@ -434,156 +467,137 @@ export default function PlantingMoveModal({
           </div>
         </div>
 
-        {/* 调入/调出订单 — 可改 Select */}
+        {/* 调入/调出订单 — 每行点开都是本行订单，固定展示，不可改；Label 随模式切换 */}
         <div>
-          <Label>调入/调出订单</Label>
-          <Select value={selectedPlantingId} onValueChange={setSelectedPlantingId}>
-            <SelectTrigger className="border-gray-300">
-              <SelectValue placeholder="选择种植订单" />
-            </SelectTrigger>
-            <SelectContent>
-              {availablePlantings.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
-                  {p.plantCode} - {p.cropName} ({p.areaName})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>{opType === 'move_in' ? '调入订单' : '调出订单'}</Label>
+          <div className="mt-1 px-3 py-2 text-sm border border-gray-300 bg-white rounded text-gray-900 h-10 flex items-center">
+            {initialPlanting
+              ? `${initialPlanting.plantCode} - ${initialPlanting.cropName}${initialPlanting.cropVariety ? `-${initialPlanting.cropVariety}` : ''} (${initialPlanting.areaName})`
+              : '—'}
+          </div>
         </div>
 
+        {/* 目标区域：仅在调入模式下显示，固定展示本行的目标区域（含作物/品种/数量信息） */}
+        {opType === 'move_in' && (
+          <div>
+            <Label>目标区域</Label>
+            {areaStocks.length === 0 ? (
+              <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
+                本订单暂无区域数量，请先确认订单区域信息
+              </div>
+            ) : (
+              <div className="mt-1 px-3 py-2 text-sm border border-gray-300 bg-white rounded text-gray-900 flex items-center">
+                {(() => {
+                  const targetStock = areaStocks.find((s) => s.areaId === toAreaId) || areaStocks[0];
+                  if (!targetStock) return '—';
+                  const cropName = initialPlanting?.cropName || '';
+                  const cropVariety = initialPlanting?.cropVariety || '';
+                  const cropLabel = cropName + (cropVariety ? `-${cropVariety}` : '');
+                  return (
+                    <>
+                      <span className="font-medium">{targetStock.areaName}</span>
+                      <span className="ml-2 text-gray-600">
+                        （{cropLabel} · 当前 {targetStock.quantity} 株{targetStock.quantity === 0 ? '（新区域）' : ''}）
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ============ 调入模式 ============ */}
+        {/* 2026-07-23: 调入改为种植单对调 — 镜像调出结构（角色互换）
+            调入：源订单(其他) → 调出区域 → 目标区域(本行)
+            调出：调出区域(本行) → 目标订单(其他) → 目标区域 */}
         {opType === 'move_in' && (
           <>
-            {/* 2026-06-30 UI 调整：目标区域 + 来源类型 同行 grid-cols-2 */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* 目标区域：取自该订单的 planting_area_stocks，下拉（弹窗打开自动默认选第一个） */}
-              <div>
-                <Label>目标区域 *</Label>
-                {areaStocks.length === 0 ? (
-                  <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
-                    该订单暂无区域库存，请先去库存页登记
-                  </div>
-                ) : (
-                  <Select
-                    value={toAreaId}
-                    onValueChange={(v) => {
-                      setToAreaId(v);
-                      const found = areaStocks.find((s) => s.areaId === v);
-                      setToAreaName(found?.areaName || '');
-                    }}
-                  >
-                    <SelectTrigger className="border-gray-300">
-                      <SelectValue placeholder="选择区域" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {areaStocks.map((s) => (
-                        <SelectItem key={s.areaId} value={s.areaId}>
-                          {s.areaName}（剩 {s.quantity}）
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* 来源类型：固定显示（V3：移除 seedling 单选） */}
-              <div>
-                <Label>来源类型</Label>
-                <div className="mt-1 px-3 py-2 text-sm border border-gray-200 bg-gray-50 rounded text-gray-700 h-10 flex items-center">
-                  种源（种源页面）
-                </div>
-              </div>
-            </div>
-
-            {/* 来源种源搜索 */}
+            {/* 源订单：按本行 cropName + cropVariety 筛候选（排除自己）
+                2026-07-23 修复：下拉项不再显示"剩 X 株"
+                原因：plantingCount 是主表（创建总量，调入调出后不变），与调出区域的实际剩余会不一致。
+                       真实剩余量由下方"调出区域"显示，单一数据源无歧义。 */}
             <div>
-              <Label>搜索来源批号</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <Input
-                  value={sourceCropName}
-                  onChange={(e) => setSourceCropName(e.target.value)}
-                  placeholder="作物品种名（如 葡萄）"
-                />
+              <Label>源订单 *</Label>
+              {sourcePlantings.length === 0 ? (
+                <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
+                  未找到同作物同品种的其他种植订单
+                </div>
+              ) : (
                 <Select
-                  value={sourceSeedForm || '全部'}
-                  onValueChange={(v) => setSourceSeedForm(v === '全部' ? '' : v)}
+                  value={sourcePlantingId}
+                  onValueChange={(v) => {
+                    setSourcePlantingId(v);
+                    setFromAreaId('');
+                    setFromAreaName('');
+                  }}
                 >
                   <SelectTrigger className="border-gray-300">
-                    <SelectValue />
+                    <SelectValue placeholder="选择同作物同品种的源订单" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SEED_FORM_OPTIONS.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {f}
+                    {sourcePlantings.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.plantCode} - {p.cropName}{p.cropVariety ? `-${p.cropVariety}` : ''} ({p.areaName})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* 调出区域：选源订单后自动带出其 areaStocks
+                2026-07-23 合并优化：
+                - 单区域（90% 场景）：自动选定，静态展示，不再显示独立下拉
+                - 多区域：保留独立下拉让用户选 */}
+            {!sourcePlantingId ? (
+              <div>
+                <Label>调出区域</Label>
+                <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
+                  请先选择源订单
+                </div>
+              </div>
+            ) : sourceAreaStocks.length === 0 ? (
+              <div>
+                <Label>调出区域</Label>
+                <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
+                  该源订单暂无区域数量
+                </div>
+              </div>
+            ) : sourceAreaStocks.length === 1 ? (
+              // 单区域：自动选定 + 静态展示（合并到源订单的简化体现）
+              <div>
+                <Label>调出区域</Label>
+                <div className="mt-1 px-3 py-2 text-sm border border-gray-300 bg-white rounded text-gray-900 flex items-center">
+                  <span className="font-medium">{sourceAreaStocks[0].areaName}</span>
+                  <span className="ml-2 text-gray-600">（剩 {sourceAreaStocks[0].quantity} 株，已自动选定）</span>
+                </div>
+              </div>
+            ) : (
+              // 多区域：保留下拉选择
+              <div>
+                <Label>调出区域 *</Label>
+                <Select
+                  value={fromAreaId}
+                  onValueChange={(v) => {
+                    setFromAreaId(v);
+                    const found = sourceAreaStocks.find((s) => s.areaId === v);
+                    setFromAreaName(found?.areaName || '');
+                  }}
+                >
+                  <SelectTrigger className="border-gray-300">
+                    <SelectValue placeholder="选择调出区域" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceAreaStocks.map((s) => (
+                      <SelectItem key={s.areaId} value={s.areaId}>
+                        {s.areaName}（剩 {s.quantity} 株）
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* 种源列表 5 列 */}
-            <div>
-              <Label>可用种源</Label>
-              <div className="mt-1 border border-gray-200 rounded overflow-hidden">
-                <div className="grid grid-cols-[40px_1fr_1fr_1fr_80px_80px] bg-gray-50 text-xs text-gray-600 px-2 py-1.5">
-                  <div className="text-center">选</div>
-                  <div>批号</div>
-                  <div>作物</div>
-                  <div>品种</div>
-                  <div className="text-right">可用</div>
-                  <div>形态</div>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {sourceLoading ? (
-                    <div className="px-2 py-3 text-sm text-gray-500 text-center">加载中…</div>
-                  ) : seedSources.length === 0 ? (
-                    <div className="px-2 py-3 text-sm text-gray-500 text-center">
-                      {sourceCropName || sourceSeedForm
-                        ? '未找到符合该条件的种源'
-                        : '请输入作物品种名筛选'}
-                    </div>
-                  ) : (
-                    seedSources.map((row) => {
-                      const checked = selectedSource?.id === row.id;
-                      return (
-                        <label
-                          key={row.id}
-                          className={`grid grid-cols-[40px_1fr_1fr_1fr_80px_80px] px-2 py-1.5 text-sm border-t border-gray-100 cursor-pointer hover:bg-blue-50 ${
-                            checked ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <div className="text-center">
-                            <input
-                              type="radio"
-                              checked={checked}
-                              onChange={() => setSelectedSource(row)}
-                              className="cursor-pointer"
-                            />
-                          </div>
-                          <div className="truncate">{row.sourceCode}</div>
-                          <div className="truncate">{row.cropName}</div>
-                          <div className="truncate">{row.cropVariety}</div>
-                          <div className="text-right">
-                            {row.remainingQuantity} {row.unit}
-                          </div>
-                          <div>{row.seedForm || '-'}</div>
-                        </label>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* 选中行展示 */}
-              {selectedSource && (
-                <div className="mt-2 text-xs text-gray-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
-                  选中：{selectedSource.sourceCode} — {selectedSource.cropName}（
-                  {selectedSource.cropVariety}）— 剩余 {selectedSource.remainingQuantity}{' '}
-                  {selectedSource.unit}
-                </div>
-              )}
-            </div>
+            )}
           </>
         )}
 
@@ -595,7 +609,7 @@ export default function PlantingMoveModal({
               <Label>调出区域 *</Label>
               {areaStocks.length === 0 ? (
                 <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
-                  该订单暂无区域库存
+                  该订单暂无区域数量
                 </div>
               ) : (
                 <Select
@@ -625,7 +639,7 @@ export default function PlantingMoveModal({
               <Label>目标订单 *</Label>
               {targetPlantings.length === 0 ? (
                 <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
-                  未找到同作物的其他种植订单
+                  未找到同作物同品种的其他种植订单
                 </div>
               ) : (
                 <Select
@@ -642,7 +656,7 @@ export default function PlantingMoveModal({
                   <SelectContent>
                     {targetPlantings.map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>
-                        {p.plantCode} - {p.cropName} ({p.areaName})
+                        {p.plantCode} - {p.cropName}{p.cropVariety ? `-${p.cropVariety}` : ''} ({p.areaName})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -650,18 +664,30 @@ export default function PlantingMoveModal({
               )}
             </div>
 
-            {/* 目标区域：选中目标订单后自动带出其 areaStocks */}
+            {/* 目标区域：选中目标订单后自动带出其 areaStocks
+                2026-07-23 优化（与调入模式对称）：
+                - 单区域（90% 场景）：自动选定 + 静态展示
+                - 多区域：保留下拉让用户选 */}
             <div>
-              <Label>目标区域 *</Label>
+              <Label>目标区域</Label>
               {!targetPlantingId ? (
                 <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
                   请先选择目标订单
                 </div>
               ) : targetAreaStocks.length === 0 ? (
                 <div className="mt-1 px-3 py-2 text-sm text-gray-500 border border-dashed border-gray-300 rounded">
-                  该目标订单暂无区域库存
+                  该目标订单暂无区域数量
+                </div>
+              ) : targetAreaStocks.length === 1 ? (
+                // 单区域：自动选定 + 静态展示
+                <div className="mt-1 px-3 py-2 text-sm border border-gray-300 bg-white rounded text-gray-900 flex items-center">
+                  <span className="font-medium">{targetAreaStocks[0].areaName}</span>
+                  <span className="ml-2 text-gray-600">
+                    （已有 {targetAreaStocks[0].quantity} 株，已自动选定）
+                  </span>
                 </div>
               ) : (
+                // 多区域：保留下拉
                 <Select
                   value={toAreaId}
                   onValueChange={(v) => {
@@ -676,7 +702,7 @@ export default function PlantingMoveModal({
                   <SelectContent>
                     {targetAreaStocks.map((s) => (
                       <SelectItem key={s.areaId} value={s.areaId}>
-                        {s.areaName}（{s.quantity > 0 ? `已有 ${s.quantity}` : '新区域'}）
+                        {s.areaName}（{s.quantity > 0 ? `已有 ${s.quantity} 株` : '0 株（新区域）'}）
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -688,18 +714,30 @@ export default function PlantingMoveModal({
 
         {/* ============ 公共字段 ============ */}
         <div>
-          <Label>数量 *</Label>
-          <Input
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            min={1}
-          />
-          {opType === 'move_in' && selectedSource && (
-            <div className="text-xs text-gray-500 mt-1">
-              （≤ {selectedSource.remainingQuantity} {selectedSource.unit}）
-            </div>
-          )}
+          <Label>{opType === 'move_in' ? '调入数量' : '调出数量'} *</Label>
+          <div className="mt-1 grid grid-cols-[1fr_120px] gap-2">
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              min={1}
+            />
+            <Input
+              value={initialPlanting?.unit || '株'}
+              readOnly
+              className="bg-gray-100 cursor-not-allowed text-center"
+              placeholder="单位"
+              title="默认与调入订单的植株单位一致"
+            />
+          </div>
+          {opType === 'move_in' && fromAreaId && (() => {
+            const src = sourceAreaStocks.find((s) => s.areaId === fromAreaId);
+            return src ? (
+              <div className="text-xs text-gray-500 mt-1">
+                （≤ {src.quantity} {initialPlanting?.unit || '株'}）
+              </div>
+            ) : null;
+          })()}
         </div>
         <div>
           <Label>业务日期</Label>
