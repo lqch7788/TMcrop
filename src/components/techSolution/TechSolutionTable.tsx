@@ -18,13 +18,10 @@ export interface TechSolutionTableHandlers {
   onSelectAll: () => void;
   onSelectRow: (id: string | number) => void;
   onOpenCreate: () => void;
-  onEnterBatchEdit: () => void;
   onEnterBatchDelete: () => void;
   onEnterExport: () => void;
   onConfirmExport: () => void;
   onCancelExport: () => void;
-  onConfirmBatchEdit: () => void;
-  onCancelBatchEdit: () => void;
   onConfirmBatchDelete: () => void;
   onCancelBatchDelete: () => void;
   onDownloadDetail: (tech: TechSolution) => void;
@@ -37,7 +34,6 @@ export interface TechSolutionTableProps {
   batchEditMode: boolean;
   batchDeleteMode: boolean;
   canCreate: boolean;
-  canEdit: boolean;
   canDelete: boolean;
   canExport: boolean;
   getDictItemName: (category: string, code: string) => string;
@@ -51,7 +47,6 @@ export function TechSolutionTable({
   batchEditMode,
   batchDeleteMode,
   canCreate,
-  canEdit,
   canDelete,
   canExport,
   getDictItemName,
@@ -97,17 +92,6 @@ export function TechSolutionTable({
           <h3 className="text-lg font-semibold text-gray-900">技术方案列表</h3>
           {inSelectionMode ? (
             <div className="flex gap-2">
-              {batchEditMode && (
-                <>
-                  <Button variant="blue" size="sm" onClick={handlers.onConfirmBatchEdit}>
-                    <Edit2 className="w-4 h-4" />
-                    编辑
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handlers.onCancelBatchEdit}>
-                    <X className="w-4 h-4" /> 取消
-                  </Button>
-                </>
-              )}
               {batchDeleteMode && (
                 <>
                   <Button variant="destructive" size="sm" onClick={handlers.onConfirmBatchDelete} disabled={selectedRows.length === 0}>
@@ -137,12 +121,6 @@ export function TechSolutionTable({
                 <Button variant="default" size="sm" onClick={handlers.onOpenCreate}>
                   <Plus className="w-4 h-4" />
                   新增
-                </Button>
-              )}
-              {canEdit && (
-                <Button variant="blue" size="sm" onClick={handlers.onEnterBatchEdit}>
-                  <Edit2 className="w-4 h-4" />
-                  编辑
                 </Button>
               )}
               {canDelete && (

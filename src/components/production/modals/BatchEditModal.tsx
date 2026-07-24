@@ -247,35 +247,7 @@ export function BatchEditModal({
       }
     >
 
-        {/* Info Banner */}
-        <div className="p-4 bg-gray-50 border-b border-gray-300 flex-shrink-0">
-          <div className="bg-blue-50 rounded-lg p-3 mb-3">
-            <p className="text-sm text-blue-800">
-              已选择 <strong>{selectedRows.length}</strong> 个生产计划进行批量编辑，
-              已编辑 <strong>{editedBatchCodes.length}</strong> 个
-            </p>
-          </div>
-
-          {/* Batch Selector */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex-1">
-              <Label className="text-xs text-gray-600">选择生产计划批次号</Label>
-              <Select value={selectedBatchCode} onValueChange={(v) => onSelectedBatchCodeChange(v)}>
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择批次号" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedBatches.map(batch => (
-                    <SelectItem key={batch.id} value={batch.batchCode}>
-                      {batch.batchCode} - {batch.cropName}
-                      {editedBatchCodes.includes(batch.batchCode) ? ' [已编辑]' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+        {/* 已移除批量编辑时的"已选择 X 个"提示与批次号选择器（行内编辑场景无意义） */}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">

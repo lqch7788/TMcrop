@@ -2,7 +2,7 @@
  * 生产计划页面
  * 精简后的主组件，逻辑全部抽取到 useProductionPage hook
  */
-import { Download, Edit2, FileText, Plus, Trash2, X } from 'lucide-react';
+import { Download, FileText, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useProductionPage } from './hooks/useProductionPage';
 import { ProductionStatsCards } from './ProductionStatsCards';
@@ -21,7 +21,6 @@ export default function ProductionPage() {
   const hook = useProductionPage();
 
   const canCreate = true;
-  const canEdit = true;
   const canDelete = true;
   const canExport = true;
 
@@ -79,24 +78,6 @@ export default function ProductionPage() {
                 <X className="w-4 h-4" /> 取消
               </Button>
             </div>
-          ) : hook.batchEditMode ? (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="blue"
-                onClick={() => hook.setShowBatchEditModal(true)}
-                disabled={hook.selectedRows.length === 0}
-              >
-                <Edit2 className="w-4 h-4" />
-                批量编辑
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => {
-                hook.setBatchEditMode(false);
-                hook.setSelectedRows([]);
-              }}>
-                <X className="w-4 h-4" /> 取消
-              </Button>
-            </div>
           ) : hook.batchDeleteMode ? (
             <div className="flex gap-2">
               <Button
@@ -121,15 +102,6 @@ export default function ProductionPage() {
                 <Button size="sm" onClick={() => hook.setShowCreateModal(true)}>
                   <Plus className="w-4 h-4" />
                   新增
-                </Button>
-              )}
-              {canEdit && (
-                <Button size="sm" variant="blue" onClick={() => {
-                  hook.setBatchEditMode(true);
-                  hook.setSelectedRows([]);
-                }}>
-                  <Edit2 className="w-4 h-4" />
-                  编辑
                 </Button>
               )}
               {canDelete && (

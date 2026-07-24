@@ -30,7 +30,6 @@ import { buildPlaceholderCode } from './codeGenerator';
 export function PurchasePlanPage() {
   // 权限控制 - 已取消，所有人可使用所有功能
   const canCreate = true;
-  const canEdit = true;
   const canDelete = true;
   const canExport = true;
 
@@ -528,11 +527,6 @@ export function PurchasePlanPage() {
     setSelectedCodes([]);
   };
 
-  // 进入批量编辑模式（显示复选框）
-  const handleEnterBatchEditMode = () => {
-    setBatchEditMode(true);
-  };
-
   // 进入批量删除模式（显示复选框）
   const handleEnterBatchDeleteMode = () => {
     setBatchDeleteMode(true);
@@ -675,35 +669,6 @@ export function PurchasePlanPage() {
   const handleSingleDelete = (plan: PurchasePlan) => {
     setSelectedCodes([plan.purchaseApplicationCode]);
     setShowDeleteModal(true);
-  };
-
-  // 批量编辑确认
-  const handleBatchEditConfirm = () => {
-    if (selectedCodes.length === 0) {
-      showAlert('请先选择要编辑的数据');
-      return;
-    }
-    const selectedPlansData = purchasePlansData.filter(p => selectedCodes.includes(p.purchaseApplicationCode));
-    if (selectedPlansData.length > 0) {
-      setSelectedPlanCode(selectedPlansData[0].purchaseApplicationCode);
-      setCurrentEditingPlan(selectedPlansData[0]);
-      setBatchEditData({
-        purchaseType: selectedPlansData[0].purchaseType,
-        priority: selectedPlansData[0].priority,
-        requiredDate: selectedPlansData[0].requiredDate || '',
-        remark: selectedPlansData[0].remark || '',
-      });
-      setBatchEditItems(selectedPlansData[0].items || []);
-    }
-    setEditedPlanCodes([]);
-    setEditedPlans({});
-    setShowBatchEditModal(true);
-  };
-
-  // 批量编辑取消
-  const handleBatchEditCancel = () => {
-    setBatchEditMode(false);
-    setSelectedCodes([]);
   };
 
   // 批量删除取消
@@ -917,17 +882,13 @@ export function PurchasePlanPage() {
         onDelete={handleSingleDelete}
         filteredAndSortedData={filteredAndSortedData}
         canCreate={canCreate}
-        canEdit={canEdit}
         canDelete={canDelete}
         canExport={canExport}
         onCreate={handleOpenCreateModal}
-        onBatchEdit={handleEnterBatchEditMode}
         onBatchDelete={handleEnterBatchDeleteMode}
         onExport={handleExportClick}
         onExportConfirm={handleConfirmExport}
         onExportCancel={handleCancelExport}
-        onBatchEditConfirm={handleBatchEditConfirm}
-        onBatchEditCancel={handleBatchEditCancel}
         onBatchDeleteConfirm={() => setShowDeleteModal(true)}
         onBatchDeleteCancel={handleBatchDeleteCancel}
       />

@@ -35,7 +35,6 @@ export function TechSolutionPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   const canCreate = true;
-  const canEdit = true;
   const canDelete = true;
   const canExport = true;
 
@@ -655,7 +654,6 @@ export function TechSolutionPage() {
         batchEditMode={batchEditMode}
         batchDeleteMode={batchDeleteMode}
         canCreate={canCreate}
-        canEdit={canEdit}
         canDelete={canDelete}
         canExport={canExport}
         getDictItemName={getDictItemName}
@@ -671,10 +669,6 @@ export function TechSolutionPage() {
           onSelectAll: handleSelectAll,
           onSelectRow: handleSelectRow,
           onOpenCreate: handleOpenCreateModal,
-          onEnterBatchEdit: () => {
-            setBatchEditMode(true);
-            setSelectedRows([]);
-          },
           onEnterBatchDelete: () => {
             setBatchDeleteMode(true);
             setSelectedRows([]);
@@ -682,23 +676,6 @@ export function TechSolutionPage() {
           onEnterExport: handleExportClick,
           onConfirmExport: () => setShowExportModal(true),
           onCancelExport: handleCancelExport,
-          onConfirmBatchEdit: () => {
-            if (selectedRows.length === 0) {
-              showAlert('请先选择要编辑的数据');
-              return;
-            }
-            const selectedTechsData = techSolutions.filter((t) => selectedRows.includes(t.id));
-            if (selectedTechsData.length > 0) {
-              setSelectedTechCode(selectedTechsData[0].code);
-            }
-            setEditedTechCodes([]);
-            setEditedTechs({});
-            setShowBatchEditModal(true);
-          },
-          onCancelBatchEdit: () => {
-            setBatchEditMode(false);
-            setSelectedRows([]);
-          },
           onConfirmBatchDelete: () => {
             if (selectedRows.length === 0) {
               showAlert('请先选择要删除的数据');
