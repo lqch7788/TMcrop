@@ -26,6 +26,7 @@ interface WateringRow {
   wateringMethod: string;
   waterAmount: string;
   waterUnit: string;
+  remark: string;
 }
 
 const WATER_UNITS = ['L', 'ml', 'm3', 'kg'] as const;
@@ -94,35 +95,43 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
   // 区域选项（Tab + 关键字模糊匹配）
   const areaOptions = useMemo(() => {
     const kw = areaSearch.trim().toLowerCase();
+    // 2026-07-24：显示品种（subVariety1Name / cropVariety）而非作物大类（cropName）
+    const displayName = (p: any) => p.subVariety1Name || p.cropVariety || p.cropName || '';
     if (areaTab === 'planting') {
       return (plantingStore.items as any[]).filter((p: any) => !p.isHarvest).filter((p: any) =>
         !kw || (p.plantCode || '').toLowerCase().includes(kw)
           || (p.cropName || '').toLowerCase().includes(kw)
+          || (p.cropVariety || '').toLowerCase().includes(kw)
+          || (p.subVariety1Name || '').toLowerCase().includes(kw)
           || (p.rootName || '').toLowerCase().includes(kw));
     }
     return (seedlingStore.items as any[]).filter((s: any) =>
       !kw || (s.seedlingCode || '').toLowerCase().includes(kw)
+        || (s.displayName || '').toLowerCase().includes(kw)
         || (s.cropName || '').toLowerCase().includes(kw)
         || (s.siteName || '').toLowerCase().includes(kw));
   }, [areaTab, areaSearch, plantingStore.items, seedlingStore.items]);
 
-  // 添加区域（同作物校验 + 自动追加空浇水行）
+  // 2026-07-24：种植项展示用品种（与种植管理列表一致：红颜 > 草莓）
+  const formatPlantingDisplay = (p: any) => {
+    const variety = p.subVariety1Name || p.cropVariety || p.cropName || '';
+    return variety;
+  };
+
+  // 添加区域（与施肥一致：支持跨作物多区域，自动追加空浇水行）
   const addArea = useCallback((item: any) => {
+    // 2026-07-24：cropName 优先存品种（与种植管理列表一致：红颜），作物大类作为 _cropCategory 备份
+    const displayCrop = item.subVariety1Name || item.cropVariety || item.cropName || '';
     const area: SelectedArea = areaTab === 'planting'
-      ? { type: 'planting', id: item.id, code: item.plantCode || item.code, cropName: item.cropName, area: item.rootName || item.areaName, greenhouseId: item.greenhouseId, greenhouseName: item.greenhouseName }
-      : { type: 'seedling', id: item.id, code: item.seedlingCode || item.code, cropName: item.cropName, area: item.siteName || '育苗区', greenhouseId: item.greenhouseId, greenhouseName: item.greenhouseName || item.greenhouseName };
+      ? { type: 'planting', id: item.id, code: item.plantCode || item.code, cropName: displayCrop, area: item.rootName || item.areaName, greenhouseId: item.greenhouseId, greenhouseName: item.greenhouseName }
+      : { type: 'seedling', id: item.id, code: item.seedlingCode || item.code, cropName: displayCrop, area: item.siteName || '育苗区', greenhouseId: item.greenhouseId, greenhouseName: item.greenhouseName || item.greenhouseName };
     if (selectedAreas.some((a) => a.id === area.id)) {
       setAreaSearch('');
       setShowAreaDropdown(false);
       return;
     }
-    const existingCrop = selectedAreas[0]?.cropName;
-    if (existingCrop && area.cropName !== existingCrop) {
-      showAlert(`所选区域作物为「${area.cropName}」，与已选「${existingCrop}」不一致。同一次浇水只能针对同一作物。`);
-      return;
-    }
     setSelectedAreas((prev) => [...prev, area]);
-    setWateringRows((prev) => [...prev, { area, wateringMethod: 'drip_irrigation', waterAmount: '', waterUnit: 'L' }]);
+    setWateringRows((prev) => [...prev, { area, wateringMethod: 'drip_irrigation', waterAmount: '', waterUnit: 'L', remark: '' }]);
     setAreaSearch('');
     setShowAreaDropdown(false);
   }, [areaTab, selectedAreas]);
@@ -170,16 +179,20 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
         wateringMethod: r.wateringMethod,
         waterAmount: Number(r.waterAmount),
         waterUnit: r.waterUnit,
+        remark: r.remark || '',
       }));
       const totalWater = poolRows.reduce((s, r) => s + r.waterAmount, 0);
       const unit = wateringRows[0].waterUnit;
       const primary = selectedAreas[0];
+      // 2026-07-24：跨作物多区域时汇总所有作物名（与施肥一致）
+      const allCropNames = [...new Set(selectedAreas.map((a) => a.cropName).filter(Boolean))];
 
       await store.createItem({
         waterCode: waterCode || undefined,
         recordType: 'manual',
         dataSource: 'manual',
         cropName: primary.cropName,
+        cropNames: allCropNames.length > 0 ? JSON.stringify(allCropNames) : undefined,
         greenhouseName: primary.greenhouseName || primary.area || (areaTab === 'seedling' ? '育苗温室' : ''),
         greenhouseId: primary.greenhouseId,
         areaName: primary.area,
@@ -206,6 +219,8 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
   };
 
   const cropName = selectedAreas[0]?.cropName || '';
+// 2026-07-24：支持跨作物，与施肥一致
+const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).filter(Boolean)));
 
   return (
     <UnifiedModal isOpen={isOpen} onClose={onClose} title="新增浇水记录" size="xxl" showFooter={false}>
@@ -244,8 +259,12 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
 
           {/* 区域选择 */}
           <div>
-            <h3 className="text-sm font-bold text-gray-900 mb-3">📍 浇水区域（多选，必须同一作物）</h3>
-            {cropName && <p className="text-xs text-emerald-600 mb-2">🌱 当前作物：{cropName}</p>}
+            <h3 className="text-sm font-bold text-gray-900 mb-3">📍 浇水区域（多选，支持不同作物不同区域）</h3>
+            {allCropNames.length > 0 && (
+              <p className="text-xs text-emerald-600 mb-2">
+                🌱 {allCropNames.length === 1 ? '当前作物' : `包含作物（${allCropNames.length}）`}：{allCropNames.join('、')}
+              </p>
+            )}
             <div className="relative" ref={areaRef}>
               <div className="flex items-center gap-2 mb-2">
                 <TabsList selectedValue={areaTab} onValueChange={(v) => setAreaTab(v as 'planting' | 'seedling')}>
@@ -263,7 +282,10 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
                   {areaOptions.map((item: any) => (
                     <button key={item.id} onClick={() => addArea(item)}
                       className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm">
-                      <span className="font-medium">{item.cropName}</span>
+                      <span className="font-medium">{formatPlantingDisplay(item)}</span>
+                      {item.cropName && formatPlantingDisplay(item) !== item.cropName && (
+                        <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                      )}
                       <span className="text-gray-400 mx-1">·</span>
                       <span className="text-gray-600">{areaTab === 'planting' ? item.rootName || item.areaName : item.siteName || '育苗区'}</span>
                       <span className="text-gray-400 mx-1">·</span>
@@ -294,12 +316,12 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
               <div className="space-y-2">
                 {wateringRows.map((row) => (
                   <div key={row.area.id} className="grid grid-cols-12 gap-2 items-center bg-emerald-50/40 border border-emerald-100 rounded-lg px-3 py-2">
-                    <div className="col-span-4 text-sm">
+                    <div className="col-span-3 text-sm">
                       <span className="text-gray-400 mr-1">{row.area.type === 'planting' ? '🌱' : '🌿'}</span>
                       <span className="font-medium text-gray-800">{row.area.area}</span>
                       <span className="ml-1 text-xs text-gray-500">· {row.area.code}</span>
                     </div>
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <select value={row.wateringMethod} onChange={(e) => updateRow(row.area.id, { wateringMethod: e.target.value })}
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                         title={labelOfMethod(row.wateringMethod)}>
@@ -308,7 +330,7 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
                         ))}
                       </select>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Input type="number" step="0.01" min="0" value={row.waterAmount}
                         onChange={(e) => updateRow(row.area.id, { waterAmount: e.target.value })}
                         placeholder="用量" className="h-9 text-sm" />
@@ -318,6 +340,11 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
                         className="w-full h-9 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                         {WATER_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                       </select>
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="text" value={row.remark}
+                        onChange={(e) => updateRow(row.area.id, { remark: e.target.value })}
+                        placeholder="备注（选填）" className="h-9 text-sm" />
                     </div>
                   </div>
                 ))}

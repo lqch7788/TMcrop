@@ -71,21 +71,26 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
   }, []);
 
   // 种植/育苗选项
+  // 2026-07-24：显示品种（subVariety1Name / cropVariety）而非作物大类（cropName）
   const areaOptions = useMemo(() => {
     const kw = areaSearch.trim().toLowerCase();
     if (areaTab === 'planting') {
       return (plantingStore.items as any[]).filter((p: any) => !p.isHarvest).filter((p: any) =>
-        !kw || (p.plantCode||'').toLowerCase().includes(kw) || (p.cropName||'').toLowerCase().includes(kw) || (p.rootName||'').toLowerCase().includes(kw));
+        !kw || (p.plantCode||'').toLowerCase().includes(kw) || (p.cropName||'').toLowerCase().includes(kw) || (p.cropVariety||'').toLowerCase().includes(kw) || (p.subVariety1Name||'').toLowerCase().includes(kw) || (p.rootName||'').toLowerCase().includes(kw));
     }
     return (seedlingStore.items as any[]).filter((s: any) =>
       !kw || (s.seedlingCode||'').toLowerCase().includes(kw) || (s.cropName||'').toLowerCase().includes(kw) || (s.siteName||'').toLowerCase().includes(kw));
   }, [areaTab, areaSearch, plantingStore.items, seedlingStore.items]);
 
-  // 添加区域（2026-07-20：取消同作物限制，支持跨作物批量施肥）
+  // 2026-07-24：种植项展示用品种（与种植管理列表一致：红颜 > 草莓）
+  const formatPlantingDisplay = (p: any) => p.subVariety1Name || p.cropVariety || p.cropName || '';
+
+  // 添加区域（2026-07-20：取消同作物限制，支持跨作物批量施肥；2026-07-24：使用品种名）
   const addArea = useCallback((item: any) => {
+    const displayCrop = item.subVariety1Name || item.cropVariety || item.cropName || '';
     const area: SelectedArea = areaTab === 'planting'
-      ? { type:'planting', id:item.id, code:item.plantCode||item.code, cropName:item.cropName, area:item.rootName||item.areaName, greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName }
-      : { type:'seedling', id:item.id, code:item.seedlingCode||item.code, cropName:item.cropName, area:item.siteName||'育苗区', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName||item.greenhouseName };
+      ? { type:'planting', id:item.id, code:item.plantCode||item.code, cropName:displayCrop, area:item.rootName||item.areaName, greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName }
+      : { type:'seedling', id:item.id, code:item.seedlingCode||item.code, cropName:displayCrop, area:item.siteName||'育苗区', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName||item.greenhouseName };
     if (selectedAreas.some((a) => a.id === area.id)) return;
     setSelectedAreas((prev) => [...prev, area]);
     if (!form.greenhouseName && area.greenhouseName) setForm((f) => ({ ...f, greenhouseName: area.greenhouseName }));
@@ -252,7 +257,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
                 {areaOptions.map((item: any) => (
                   <button key={item.id} onClick={() => addArea(item)}
                     className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm">
-                    <span className="font-medium">{item.cropName}</span>
+                    <span className="font-medium">{formatPlantingDisplay(item)}</span>
+                    {item.cropName && formatPlantingDisplay(item) !== item.cropName && (
+                      <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                    )}
                     <span className="text-gray-400 mx-1">·</span>
                     <span className="text-gray-600">{areaTab==='planting'?item.rootName||item.areaName:item.siteName||'育苗区'}</span>
                     <span className="text-gray-400 mx-1">·</span>
