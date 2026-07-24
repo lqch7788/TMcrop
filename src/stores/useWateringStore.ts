@@ -17,6 +17,8 @@ export interface WateringData {
   sourceDailyRecordId?: string;
   cropName: string;
   cropVariety?: string;
+  // 2026-07-24：多区域多作物时汇总所有作物名（JSON 字符串），与施肥记录一致
+  cropNames?: string;
   greenhouseId?: string;
   greenhouseName: string;
   areaId?: string;
@@ -48,6 +50,7 @@ const FIELD_MAP: Record<string, string> = {
   fertilizer_record_id: 'fertilizerRecordId',
   source_daily_record_id: 'sourceDailyRecordId',
   crop_name: 'cropName',
+  crop_names: 'cropNames',
   crop_variety: 'cropVariety',
   greenhouse_id: 'greenhouseId',
   greenhouse_name: 'greenhouseName',

@@ -15,6 +15,8 @@ export interface WateringRecord {
   fertilizerRecordId?: string | null;
   sourceDailyRecordId?: string | null;
   cropName: string;
+  // 2026-07-24：多区域多作物时汇总所有作物名（JSON 字符串），与施肥记录一致
+  cropNames?: string | null;
   cropVariety?: string | null;
   greenhouseId?: string | null;
   greenhouseName: string;
@@ -130,8 +132,8 @@ class WateringRepository {
         water_pool, total_water, water_unit, water_cost,
         water_time, operator_id, operator_name,
         data_source, iot_device_id, description, status,
-        create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        create_time, update_time, crop_names
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         record.id,
         record.waterCode,
@@ -161,6 +163,7 @@ class WateringRepository {
         record.status,
         now,
         now,
+        record.cropNames || null,
       ],
     );
     saveDatabase();
@@ -172,6 +175,7 @@ class WateringRepository {
     const now = nowLocalTimestamp();
     const allowed = [
       'crop_name',
+      'crop_names',
       'crop_variety',
       'greenhouse_name',
       'area_id',
@@ -270,6 +274,8 @@ class WateringRepository {
       status: row[25],
       createTime: row[26],
       updateTime: row[27],
+      // 2026-07-24：crop_names 列在表最后（fixMissingSchema ALTER TABLE ADD COLUMN 追加），不是 crop_variety 之后
+      cropNames: row[28],
     };
   }
 }

@@ -61,15 +61,25 @@ export function WaterDetailModal({ isOpen, record, onClose }: {
     areaGroups.get(k)!.push(r);
   }
 
+  // 2026-07-24：聚合所有区域的名称（去重）
+  const allAreaNames = [...new Set(pool.map((r) => String(r.area || '').trim()).filter(Boolean))];
+
+  // 2026-07-24：作物名三重兜底（与 WaterTable 一致）— 历史数据 cropNames 字段为 null 时从 waterPool 提取
+  const cropListFromNames = (() => { try { const arr = JSON.parse(record.cropNames || ''); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
+  const cropListFromPool = [...new Set(pool.map((r) => String(r.cropName || '').trim()).filter(Boolean))];
+  const cropsDisplay = cropListFromNames.length > 0
+    ? cropListFromNames
+    : cropListFromPool.length > 0
+    ? cropListFromPool
+    : [record.cropName].filter(Boolean);
+
   const fields = [
     { label: '浇水编号', value: <span className="font-mono">{record.waterCode || '-'}</span> },
     { label: '浇水时间', value: record.waterTime || '-' },
-    { label: '作物', value: <span className="font-bold">{record.cropName || '-'}</span> },
-    { label: '温室位置', value: record.greenhouseName || '-' },
-    { label: '区域', value: record.areaName || '-' },
+    { label: '作物', value: <span className="font-bold">{cropsDisplay.length > 0 ? cropsDisplay.join('、') : '-'}</span> },
+    { label: '区域', value: allAreaNames.length > 0 ? allAreaNames.join('、') : (record.areaName || '-') },
     { label: '操作员', value: record.operatorName || '-' },
     { label: '数据来源', value: dataSourceLabel(record.dataSource) },
-    { label: '业务来源', value: recordTypeLabel(record.recordType) },
     { label: '备注', value: record.description || '-', full: true },
   ];
 
@@ -81,7 +91,8 @@ export function WaterDetailModal({ isOpen, record, onClose }: {
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-emerald-700 font-bold text-lg">{record.waterCode}</span>
             <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">{record.cropName}</span>
+            {/* 2026-07-24：作物也用三重兜底，呼应下方字段 */}
+            <span className="font-bold text-gray-800">{cropsDisplay.length > 0 ? cropsDisplay.join('、') : '-'}</span>
             <span className="text-gray-300">|</span>
             <span className="text-sm text-gray-500">总用水量 {record.totalWater?.toLocaleString()} {record.waterUnit || 'L'}</span>
             {record.waterCost != null && (

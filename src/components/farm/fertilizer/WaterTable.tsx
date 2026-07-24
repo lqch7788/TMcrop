@@ -155,7 +155,7 @@ export function WaterTable({
           <TableHeader className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
             <TableRow className="hover:bg-transparent">
               {showCb && (
-                <TableHead className="py-3 w-12">
+                <TableHead className="py-3 w-12 text-center">
                   <Input
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.length === data.length}
@@ -164,15 +164,15 @@ export function WaterTable({
                   />
                 </TableHead>
               )}
-              <TableHead className="py-3 w-10"></TableHead>
-              <TableHead className="py-3 whitespace-nowrap">浇水编号</TableHead>
-              <TableHead className="py-3 whitespace-nowrap">浇水时间</TableHead>
-              <TableHead className="py-3 whitespace-nowrap">作物</TableHead>
-              <TableHead className="py-3 whitespace-nowrap">区域</TableHead>
-              <TableHead className="py-3 whitespace-nowrap text-right">总用水量</TableHead>
-              <TableHead className="py-3 whitespace-nowrap">操作员</TableHead>
-              <TableHead className="py-3 whitespace-nowrap">来源</TableHead>
-              {!showCb && <TableHead className="py-3 whitespace-nowrap sticky right-0 bg-green-600 z-10">操作</TableHead>}
+              <TableHead className="py-3 w-10 text-center"></TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">浇水编号</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">浇水时间</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">作物</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">区域</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">总用水量</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">操作员</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center">来源</TableHead>
+              {!showCb && <TableHead className="py-3 whitespace-nowrap text-center sticky right-0 bg-green-600 z-10">操作</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-200">
@@ -188,6 +188,15 @@ export function WaterTable({
               const totalQty = pool.reduce((s, r) => s + Number(r.waterAmount ?? 0), 0) || rec.totalWater || 0;
               const exp = expanded.has(rec.id);
               const isManual = rec.recordType === 'manual';
+
+              // 2026-07-24：作物名兜底链 — cropNames（多作物汇总）→ waterPool 提取 → cropName（单作物）
+              const cropListFromNames = (() => { try { const arr = JSON.parse(rec.cropNames || ''); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
+              const cropListFromPool = [...new Set(pool.map((p) => String(p.cropName ?? '').trim()).filter(Boolean))];
+              const cropsDisplay = cropListFromNames.length > 0
+                ? cropListFromNames
+                : cropListFromPool.length > 0
+                ? cropListFromPool
+                : [rec.cropName].filter(Boolean);
 
               // 按区域分组（与 FertilizerTable 按肥料分组一致）
               const areaGroups = new Map<string, WateringPoolRow[]>();
@@ -229,7 +238,7 @@ export function WaterTable({
                       <span className="w-4 h-4 inline-block" />
                     )}
                   </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-center">
                     <Button
                       variant="link"
                       size="sm"
@@ -239,30 +248,31 @@ export function WaterTable({
                       {rec.waterCode}
                     </Button>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {rec.waterTime || '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
-                    {rec.cropName || '-'}
+                  <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap text-center">
+                    {/* 2026-07-24：三重兜底展示作物（修复历史数据水合裂展） */}
+                    {cropsDisplay.length > 0 ? cropsDisplay.join('、') : '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {areaNames.length > 0
                       ? `${areaNames.length} 个 · ${areaNames.slice(0, 2).join('、')}${areaNames.length > 2 ? '...' : ''}`
                       : rec.areaName || '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 text-right whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 whitespace-nowrap text-center">
                     {totalQty.toLocaleString()} {pool[0]?.waterUnit || rec.waterUnit || 'L'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {rec.operatorName || '-'}
                   </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-center">
                     {renderSourceBadge(rec.recordType)}
                   </TableCell>
                   {!showCb && (
-                    <TableCell className="px-4 py-3 whitespace-nowrap sticky right-0 bg-white z-10">
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-white z-10">
                       {isManual && (
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 justify-center">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -310,10 +320,11 @@ export function WaterTable({
                                   <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
                                     <tr>
                                       <th className="px-3 py-2 text-center w-[5%]">#</th>
-                                      <th className="px-3 py-2 text-center w-[23%]">浇水方式</th>
-                                      <th className="px-3 py-2 text-center w-[20%]">用水量</th>
-                                      <th className="px-3 py-2 text-center w-[23%]">来源肥料</th>
-                                      <th className="px-3 py-2 text-center w-[29%]">稀释倍数</th>
+                                      <th className="px-3 py-2 text-center w-[16%]">批号</th>
+                                      <th className="px-3 py-2 text-center w-[18%]">浇水方式</th>
+                                      <th className="px-3 py-2 text-center w-[15%]">用水量</th>
+                                      <th className="px-3 py-2 text-center w-[12%]">单位</th>
+                                      <th className="px-3 py-2 text-center w-[34%]">备注</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100">
@@ -324,12 +335,13 @@ export function WaterTable({
                                       return (
                                         <tr key={`${aName}-${i}`} className="hover:bg-emerald-50/40">
                                           <td className="px-3 py-2 text-center text-gray-500">{i + 1}</td>
+                                          <td className="px-3 py-2 text-center text-gray-600">{r.code || '-'}</td>
                                           <td className="px-3 py-2 text-center text-gray-800 font-medium">{methodLabel}</td>
                                           <td className="px-3 py-2 text-center font-bold text-emerald-600">
-                                            {Number(r.waterAmount ?? 0).toLocaleString()} {r.waterUnit || rec.waterUnit || 'L'}
+                                            {Number(r.waterAmount ?? 0).toLocaleString()}
                                           </td>
-                                          <td className="px-3 py-2 text-center text-gray-700">{r.sourceFertilizerName || '-'}</td>
-                                          <td className="px-3 py-2 text-center text-gray-600">{r.sourceDilutionRatio || '-'}</td>
+                                          <td className="px-3 py-2 text-center text-gray-600">{r.waterUnit || rec.waterUnit || 'L'}</td>
+                                          <td className="px-3 py-2 text-center text-gray-600">{r.remark || '-'}</td>
                                         </tr>
                                       );
                                     })}

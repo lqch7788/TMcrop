@@ -31,6 +31,8 @@ const createWateringSchema = z.object({
   waterUnit: z.string().default('L'),
   waterCost: z.number().optional(),
   cropVariety: z.string().optional(),
+  // 2026-07-24：多区域多作物汇总（与施肥记录一致）
+  cropNames: z.string().optional(),
   greenhouseId: z.string().optional(),
   areaId: z.string().optional(),
   areaName: z.string().optional(),
@@ -69,6 +71,7 @@ class WateringService {
       fertilizerRecordId: null,
       sourceDailyRecordId: null,
       cropName: data.cropName,
+      cropNames: data.cropNames || null,
       cropVariety: data.cropVariety || null,
       greenhouseId: data.greenhouseId || null,
       greenhouseName: data.greenhouseName,
