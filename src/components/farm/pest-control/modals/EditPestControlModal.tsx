@@ -288,7 +288,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
           type: 'planting',
           id: pid,
           code: plantingCodes[i] || p.plantCode || p.plantingCode || '',
-          cropName: p.cropName || '',
+          // 2026-07-24：与种植管理列表一致，存品种（红颜）而非作物大类（草莓）
+          cropName: p.subVariety1Name || p.cropVariety || p.cropName || '',
           area: p.rootName || p.areaName || '',
         });
       } else if (plantingCodes[i]) {
@@ -311,7 +312,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
           type: 'seedling',
           id: sid,
           code: seedlingCodes[i] || s.seedlingCode || '',
-          cropName: s.cropName || '',
+          // 2026-07-24：与种植管理列表一致，存品种
+          cropName: s.subVariety1Name || s.cropVariety || s.cropName || '',
           area: s.siteName || '',
         });
       } else if (seedlingCodes[i]) {
@@ -453,6 +455,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
   }, []);
 
   // 种植记录选项（按 Tab 过滤 + 搜索）
+  // 2026-07-24：搜索增加 cropVariety / subVariety1Name 字段（与种植管理列表一致）
   const plantingOptions = useMemo(() => {
     const plantings = plantingStore.items as any[];
     const activePlantings = plantings.filter((p: any) => !p.isHarvest);
@@ -463,6 +466,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
     return activePlantings.filter((p: any) =>
       (p.plantCode || '').toLowerCase().includes(kw) ||
       (p.cropName || '').toLowerCase().includes(kw) ||
+      (p.cropVariety || '').toLowerCase().includes(kw) ||
+      (p.subVariety1Name || '').toLowerCase().includes(kw) ||
       (p.rootName || '').toLowerCase().includes(kw) ||
       (p.areaName || '').toLowerCase().includes(kw)
     );
@@ -481,6 +486,9 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
       (s.siteName || '').toLowerCase().includes(kw)
     );
   }, [bizSearchKeyword, bizTabType, seedlingStore.items]);
+
+  // 2026-07-24：种植/育苗项展示用品种（与种植管理列表一致：红颜 > 草莓）
+  const formatPlantingDisplay = (p: any) => p.subVariety1Name || p.cropVariety || p.cropName || '';
 
   // 点击外部关闭搜索下拉
   useEffect(() => {
@@ -502,7 +510,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
   // 2026-07-21 P2：放宽防治区域选择限制（与 AddModal 同款 — 取消同作物/同类型互斥）
   const handleToggleBizRecord = (kind: 'planting' | 'seedling', recordRef: any, area: string) => {
     const recordId = recordRef.id;
-    const cropNameVal = recordRef.cropName || '';
+    // 2026-07-24：cropName 优先存品种（与种植管理列表一致：红颜）
+    const cropNameVal = recordRef.subVariety1Name || recordRef.cropVariety || recordRef.cropName || '';
     const code = kind === 'planting' ? recordRef.plantCode : recordRef.seedlingCode;
     setSelectedBizRecords((prev) => {
       const isSelected = prev.some((r) => r.type === kind && r.id === recordId);
@@ -781,7 +790,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
                           <span className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                             <span className="text-sm font-mono font-semibold text-blue-700 truncate" title={p.plantCode}>{p.plantCode}</span>
                             <span className="text-gray-300 shrink-0">|</span>
-                            <span className="text-sm font-medium text-emerald-700 truncate" title={p.cropName || ''}>{p.cropName || '-'}</span>
+                            <span className="text-sm font-medium text-emerald-700 truncate" title={formatPlantingDisplay(p)}>{formatPlantingDisplay(p) || '-'}</span>
                             <span className="text-gray-300 shrink-0">|</span>
                             <span className="text-xs text-gray-600 truncate" title={area}>{area || '-'}</span>
                           </span>
@@ -815,7 +824,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
                           <span className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                             <span className="text-sm font-mono font-semibold text-blue-700 truncate" title={s.seedlingCode}>{s.seedlingCode}</span>
                             <span className="text-gray-300 shrink-0">|</span>
-                            <span className="text-sm font-medium text-emerald-700 truncate" title={s.cropName || ''}>{s.cropName || '-'}</span>
+                            <span className="text-sm font-medium text-emerald-700 truncate" title={formatPlantingDisplay(s)}>{formatPlantingDisplay(s) || '-'}</span>
                             <span className="text-gray-300 shrink-0">|</span>
                             <span className="text-xs text-gray-600 truncate" title={area}>{area || '-'}</span>
                           </span>

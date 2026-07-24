@@ -138,6 +138,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   }, [isOpen]);
 
   // 2026-07-12：种植记录选项（按 Tab 过滤 + 搜索）
+  // 2026-07-24：搜索增加 cropVariety / subVariety1Name 字段（与种植管理列表一致）
   const plantingOptions = useMemo(() => {
     const plantings = plantingStore.items as any[];
     const activePlantings = plantings.filter((p: any) => !p.isHarvest);
@@ -146,6 +147,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
     return activePlantings.filter((p: any) =>
       (p.plantCode || '').toLowerCase().includes(kw) ||
       (p.cropName || '').toLowerCase().includes(kw) ||
+      (p.cropVariety || '').toLowerCase().includes(kw) ||
+      (p.subVariety1Name || '').toLowerCase().includes(kw) ||
       (p.rootName || '').toLowerCase().includes(kw) ||
       (p.areaName || '').toLowerCase().includes(kw)
     );
@@ -162,6 +165,9 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
       (s.siteName || '').toLowerCase().includes(kw)
     );
   }, [bizSearchKeyword, bizTabType, seedlingStore.items]);
+
+  // 2026-07-24：种植/育苗项展示用品种（与种植管理列表一致：红颜 > 草莓）
+  const formatPlantingDisplay = (p: any) => p.subVariety1Name || p.cropVariety || p.cropName || '';
 
   // 点击外部关闭搜索下拉
   useEffect(() => {
@@ -372,7 +378,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
   //   避免旧逻辑「第二次勾选时 form.cropName 已非空，if (!form.cropName) 跳过同步」导致多作物丢失
   const handleToggleBizRecord = (kind: 'planting' | 'seedling', record: any, area: string) => {
     const recordId = record.id;
-    const cropName = record.cropName || '';
+    // 2026-07-24：cropName 优先存品种（与种植管理列表一致：红颜）
+    const cropName = record.subVariety1Name || record.cropVariety || record.cropName || '';
     const code = kind === 'planting' ? record.plantCode : record.seedlingCode;
     setSelectedBizRecords((prev) => {
       const isSelected = prev.some((r) => r.type === kind && r.id === recordId);
@@ -693,8 +700,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                                 {p.plantCode}
                               </span>
                               <span className="text-gray-300 shrink-0">|</span>
-                              <span className="text-sm font-medium text-emerald-700 truncate" title={p.cropName || ''}>
-                                {p.cropName || '-'}
+                              <span className="text-sm font-medium text-emerald-700 truncate" title={formatPlantingDisplay(p)}>
+                                {formatPlantingDisplay(p) || '-'}
                               </span>
                               <span className="text-gray-300 shrink-0">|</span>
                               <span className="text-xs text-gray-600 truncate" title={area}>
@@ -736,8 +743,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                                 {s.seedlingCode}
                               </span>
                               <span className="text-gray-300 shrink-0">|</span>
-                              <span className="text-sm font-medium text-emerald-700 truncate" title={s.cropName || ''}>
-                                {s.cropName || '-'}
+                              <span className="text-sm font-medium text-emerald-700 truncate" title={formatPlantingDisplay(s)}>
+                                {formatPlantingDisplay(s) || '-'}
                               </span>
                               <span className="text-gray-300 shrink-0">|</span>
                               <span className="text-xs text-gray-600 truncate" title={area}>
