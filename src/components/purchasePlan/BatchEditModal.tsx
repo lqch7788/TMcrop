@@ -256,25 +256,7 @@ export function BatchEditModal({
     >
       {/* 内容区域全宽显示 */}
       <div className="space-y-4">
-          {/* 提示信息 */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-sm text-blue-800">已选择 <strong>{selectedRows.length}</strong> 个采购计划进行编辑</p>
-          </div>
-
-          {/* 采购申请批次号选择下拉 */}
-          <div className="mb-4">
-            <Label className="text-gray-700">选择采购申请批次号</Label>
-            <BatchSelectDropdown
-              selectedRows={selectedRows}
-              purchasePlansData={purchasePlansData}
-              selectedPlanCode={selectedPlanCode}
-              batchSelectOpen={batchSelectOpen}
-              editedPlans={editedPlans}
-              onSelectOpenChange={handleBatchSelectOpen}
-              onPlanCodeChange={onSelectedPlanCodeChange}
-              onPlanSelect={handlePlanSelect}
-            />
-          </div>
+          {/* 已移除批量编辑时"已选择 X 个"提示与批次号选择下拉（行内编辑场景无意义） */}
 
           {/* 编辑表单 - 紧凑布局 2-3列，字段与 CreatePlanModal 完全一致 */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

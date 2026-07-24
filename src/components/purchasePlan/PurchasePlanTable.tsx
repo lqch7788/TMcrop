@@ -50,18 +50,14 @@ interface PurchasePlanTableProps {
   filteredAndSortedData: PurchasePlan[];
   // 工具栏权限
   canCreate?: boolean;
-  canEdit?: boolean;
   canDelete?: boolean;
   canExport?: boolean;
   // 工具栏操作
   onCreate?: () => void;
-  onBatchEdit?: () => void;
   onBatchDelete?: () => void;
   onExport?: () => void;
   onExportConfirm?: () => void;
   onExportCancel?: () => void;
-  onBatchEditConfirm?: () => void;
-  onBatchEditCancel?: () => void;
   onBatchDeleteConfirm?: () => void;
   onBatchDeleteCancel?: () => void;
 }
@@ -155,17 +151,13 @@ export function PurchasePlanTable({
   onDelete,
   filteredAndSortedData,
   canCreate = true,
-  canEdit = true,
   canDelete = true,
   canExport = true,
   onCreate,
-  onBatchEdit,
   onBatchDelete,
   onExport,
   onExportConfirm,
   onExportCancel,
-  onBatchEditConfirm,
-  onBatchEditCancel,
   onBatchDeleteConfirm,
   onBatchDeleteCancel,
 }: PurchasePlanTableProps) {
@@ -190,27 +182,6 @@ export function PurchasePlanTable({
         <h3 className="text-lg font-semibold text-gray-900">采购计划列表</h3>
         {exportMode || batchEditMode || batchDeleteMode ? (
           <div className="flex gap-2">
-            {batchEditMode && (
-              <>
-                <Button
-                  size="sm"
-                  variant="blue"
-                  onClick={() => {
-                    if (selectedRows.length === 0) {
-                      showAlert('请先选择要编辑的数据');
-                      return;
-                    }
-                    onBatchEditConfirm?.();
-                  }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                  编辑
-                </Button>
-                <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
-                  <X className="w-4 h-4" /> 取消
-                </Button>
-              </>
-            )}
             {batchDeleteMode && (
               <>
                 <Button
@@ -251,12 +222,6 @@ export function PurchasePlanTable({
               <Button size="sm" onClick={onCreate}>
                 <Plus className="w-4 h-4" />
                 新增
-              </Button>
-            )}
-            {canEdit && onBatchEdit && (
-              <Button size="sm" variant="blue" onClick={onBatchEdit}>
-                <Edit2 className="w-4 h-4" />
-                编辑
               </Button>
             )}
             {canDelete && onBatchDelete && (
