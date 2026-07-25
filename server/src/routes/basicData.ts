@@ -274,12 +274,15 @@ router.delete('/warehouses/:id', (req, res) => {
 router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
+    // 2026-07-25：支持 ?baseOid= 过滤（避免泄漏其他基地数据）
+    const { baseOid } = req.query;
+    const whereExtra = baseOid ? ` AND base_oid = '${String(baseOid).replace(/'/g, "''")}'` : '';
     const result = db.exec(`
       SELECT id, oid, code, name, greenhouse_type, area, unit, location, base_oid, base_name,
              company_id, company_name, lng, lat, crop, growth_day, manager, phone,
              soil_type, ph, intro, description, greenhouse_count, field_area, status, created_at
       FROM greenhouses
-      WHERE status = 'active'
+      WHERE status = 'active'${whereExtra}
       ORDER BY company_name, code
     `);
 
@@ -1238,12 +1241,15 @@ router.delete('/devices/:id', (req, res) => {
 router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
+    // 2026-07-25：支持 ?baseOid= 过滤（避免泄漏其他基地数据）
+    const { baseOid } = req.query;
+    const whereExtra = baseOid ? ` AND base_oid = '${String(baseOid).replace(/'/g, "''")}'` : '';
     const result = db.exec(`
       SELECT id, oid, code, name, greenhouse_type, area, unit, location, base_oid, base_name,
              company_id, company_name, lng, lat, crop, growth_day, manager, phone,
              soil_type, ph, intro, description, greenhouse_count, field_area, status, created_at
       FROM greenhouses
-      WHERE status = 'active'
+      WHERE status = 'active'${whereExtra}
       ORDER BY company_name, code
     `);
 

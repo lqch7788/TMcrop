@@ -570,7 +570,7 @@ export default function BaseOperationsCenterV2() {
 
   // 加载所有数据（仅首次挂载时）
   useEffect(() => {
-    loadAllData();
+    loadAllData(baseOidFromUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
