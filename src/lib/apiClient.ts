@@ -205,16 +205,25 @@ class EnhancedApiClient {
           if (errorData?.error) {
             errorMessage = errorData.error;
           }
+          // 2026-07-25：把后端 detail（真实 SQL 错误）拼接到 message，UI 弹窗才能展示
+          if (errorData?.detail) {
+            errorMessage = `${errorMessage}：${errorData.detail}`;
+          }
         } catch {
           // 忽略解析错误
         }
-        // 附带 status + 阻挡详情，便于前端展示精确的阻挡记录
+        // 附带 status + 阻挡详情 + SQL 错误码，便于前端展示精确的阻挡记录
         const httpError = new Error(errorMessage) as Error & {
           status?: number;
           blockingRecords?: any[];
           blockingTransactions?: any[];
+          sqlCode?: any;   // 2026-07-25：附加 SQL 错误码供前端 switch
+          detail?: string; // 2026-07-25：附加原始 detail
         };
         httpError.status = response.status;
+        // 2026-07-25：把后端 detail 和 sqlCode 附到 Error 对象上，方便前端 catch 后读取
+        if (errorData?.detail) httpError.detail = errorData.detail;
+        if (errorData?.sqlCode != null) httpError.sqlCode = errorData.sqlCode;
         if (errorData?.blockingRecords) {
           httpError.blockingRecords = errorData.blockingRecords;
         }

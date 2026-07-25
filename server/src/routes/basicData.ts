@@ -441,8 +441,12 @@ router.post('/zones', (req, res) => {
 
     db.run(`
       INSERT INTO zones (id, oid, zone_code, zone_name, greenhouse_oid, zone_type, area, sort_order, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
-    `, [id, oid, zoneCode, zoneName, baseOid || '', zoneType || '', area || 0, sortOrder || 0, now, now]);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      id, oid, zoneCode, zoneName, baseOid || '', zoneType || '', area || 0, sortOrder || 0,
+      'active',  // 2026-07-25 修复：原字面量 'active' 写死导致 sql.js 把 VALUES 算成 12 项 vs 10 values
+      now, now,
+    ]);
 
     saveDatabase();
     res.json({ success: true, message: '区域创建成功', data: { id, oid, zoneCode, zoneName } });
@@ -1163,13 +1167,14 @@ router.post('/greenhouses', (req, res) => {
              base_oid, base_name, company_id, company_name, lng, lat, crop, growth_day,
              manager, phone, soil_type, ph, intro, greenhouse_count, field_area,
              status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id, oid, code, name, greenhouseType || '', area || 0, unit || '亩', location || '', description || '',
       baseOid || '', baseName || '', companyId || '', companyName || '',
       lng || 0, lat || 0, crop || '', growthDay || 0,
       manager || '', phone || '', soilType || '', ph || 0, intro || '',
       greenhouseCount || 0, fieldArea || 0,
+      'active',
       now, now
     ]);
 
@@ -1207,9 +1212,15 @@ router.post('/greenhouses', (req, res) => {
     };
 
     res.json({ success: true, message: '温室创建成功', data: greenhouse });
-  } catch (error) {
-    console.error('创建温室失败:', error);
-    res.status(500).json({ success: false, error: '创建温室失败' });
+  } catch (error: any) {
+    // 2026-07-25：把真实 SQL 错误暴露给前端（之前只 console + 返回通用消息，无法诊断）
+    console.error('[greenhouses POST] SQL error:', error?.message || String(error), 'code:', error?.code);
+    res.status(500).json({
+      success: false,
+      error: '创建温室失败',
+      detail: (error?.message || String(error) || '未知错误').slice(0, 500),   // 截 500 字防爆
+      sqlCode: error?.code || null,
+    });
   }
 });
 
