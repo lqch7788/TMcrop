@@ -77,7 +77,6 @@ import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
 import FarmStructureManagement from './pages/farm/FarmStructureManagement';
-import BaseOperationsCenter from './pages/BaseOperationsCenter';
 import BaseOperationsCenterV2 from './pages/BaseOperationsCenterV2';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';

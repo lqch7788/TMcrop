@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Plus, Edit2, Trash2, Building2, Loader2, List, Network } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, Loader2, List, Network, ArrowLeft, CalendarCheck, Check, History, Layers, Leaf, MapPin, Save, X, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import { Tree } from '@/components/ui';
 import type { TreeNode } from '@/components/ui/Tree';
@@ -18,6 +18,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  Pagination,
 } from '@/components/ui';
 import { useBaseOperationsStore } from '@/stores/useBaseOperationsStore';
 import { useBaseStore } from '@/stores/useBaseStore';
@@ -26,8 +27,14 @@ import { useZoneStore } from '@/stores/useZoneStore';
 import { useBlockStore } from '@/stores/useBlockStore';
 import { usePlantingRecordStore } from '@/stores/usePlantingRecordStore';
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore';
+import type { Greenhouse, Zone } from '@/services/apiBasicDataService';
+import type { PlantingRecord } from '@/services/apiPlantingRecordService';
 import { showAlert, showToast } from '@/lib/dialogService';
-import { FacilityTab, ZoneTab, PlantingTab } from './BaseOperationsCenter';
+
+// 2026-07-25 重构（方案 B）：FacilityTab / ZoneTab / PlantingTab 内联到本文件末尾
+// 删除原 import './BaseOperationsCenter' 跨文件依赖
+
+const LIST_PAGE_SIZE = 10;
 
 // ============================================
 // 数据转换函数
@@ -1066,16 +1073,7 @@ export default function BaseOperationsCenterV2() {
             >
               种植区管理
             </button>
-            <button
-              onClick={() => setListTab('zone')}
-              className={`px-6 py-3 text-base font-bold border-b-2 transition-all duration-200 rounded-t-md ${
-                listTab === 'zone'
-                  ? 'border-green-600 text-green-700 bg-green-50 shadow-sm'
-                  : 'border-transparent text-gray-500 hover:text-green-600 hover:bg-green-50/50'
-              }`}
-            >
-              区块划分
-            </button>
+            {/* 2026-07-25：'区块划分' tab 已并入 '种植区管理'，删除该按钮 */}
             <button
               onClick={() => setListTab('planting')}
               className={`px-6 py-3 text-base font-bold border-b-2 transition-all duration-200 rounded-t-md ${
@@ -1092,42 +1090,34 @@ export default function BaseOperationsCenterV2() {
         {/* Tab 内容区域 */}
         <div className="flex-1 p-4 overflow-auto">
           {listTab === 'facility' && (
-            <FacilityTab
+            <GreenhouseWithZonesTab
               greenhouses={filteredGreenhouses}
+              zones={filteredZones}
               bases={bases}
               baseOid={baseOidFromUrl}
               baseName={bases.find(b => b.oid === baseOidFromUrl)?.name || ''}
               loading={loading}
-              onAdd={async (data: any) => {
+              onAddGH={async (data: any) => {
                 await useGreenhouseStore.getState().addGreenhouse(data);
-                loadAllData(); // 刷新 useBaseOperationsStore
+                loadAllData();
               }}
-              onEdit={async (id: any, data: any) => {
+              onEditGH={async (id: any, data: any) => {
                 await useGreenhouseStore.getState().editGreenhouse(id, data);
                 loadAllData();
               }}
-              onRemove={async (id: any) => {
+              onRemoveGH={async (id: any) => {
                 await useGreenhouseStore.getState().removeGreenhouse(id);
                 loadAllData();
               }}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          )}
-          {listTab === 'zone' && (
-            <ZoneTab
-              zones={filteredZones}
-              greenhouses={filteredGreenhouses}
-              loading={loading}
-              onAdd={async (data: any) => {
+              onAddZone={async (data: any) => {
                 await useZoneStore.getState().addZone(data);
                 loadAllData();
               }}
-              onEdit={async (id: any, data: any) => {
+              onEditZone={async (id: any, data: any) => {
                 await useZoneStore.getState().editZone(id, data);
                 loadAllData();
               }}
-              onRemove={async (id: any) => {
+              onRemoveZone={async (id: any) => {
                 await useZoneStore.getState().removeZone(id);
                 loadAllData();
               }}
@@ -1135,6 +1125,7 @@ export default function BaseOperationsCenterV2() {
               setSearchTerm={setSearchTerm}
             />
           )}
+          {/* 2026-07-25：区块划分 tab 已合并到 种植区管理（GreenhouseWithZonesTab 内部嵌套展示） */}
           {listTab === 'planting' && (
             <PlantingTab
               records={filteredRecords}
@@ -1143,7 +1134,7 @@ export default function BaseOperationsCenterV2() {
               loading={loading}
               onAdd={async (data: any) => {
                 await usePlantingRecordStore.getState().addRecord(data);
-                loadRecords();
+                loadAllData(); // 2026-07-25：与 Tab1/2 对齐——统一刷 useBaseOperationsStore 保证双模式同步
               }}
               onEdit={async (id: any, data: any) => {
                 await usePlantingRecordStore.getState().editRecord(id, data);
@@ -1452,6 +1443,734 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
         </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ============================================
+ * 2026-07-25 重构（方案 B）：以下 3 个 Tab 函数原本在
+ * src/pages/BaseOperationsCenter.tsx，现已内联到本文件末尾
+ *
+ * 共享模式：
+ * - 接受 props (data + onAdd/onEdit/onRemove)：V2 父组件接管所有数据加载和 mutation
+ * - 每次 onAdd/onEdit/onRemove 后 V2 自动调 useBaseOperationsStore.loadAllData()，
+ *   → 双模式（树状视图 + 列表视图）都自动反映最新数据，无需各自再 loadX
+ * - PAGE_SIZE 改为 LIST_PAGE_SIZE 避免与外部 import 冲突
+ * ============================================ */
+
+/* ==================== 种植区 + 区块合并子组件（列表模式 Tab 1，折叠式） ==================== */
+/**
+ * 2026-07-25：合并原 FacilityTab + ZoneTab 为折叠式树状列表
+ * 每个种植区是一行（可点击展开），展开后显示嵌套的区块列表
+ *
+ * 设计要点：
+ * - 默认全部折叠（节省屏幕）
+ * - 搜索时自动展开命中行（让匹配可见）
+ * - 区块的"所属种植区"在编辑时锁定、新增时预填当前展开组
+ * - 删除种植区前弹警告（若有区块）
+ */
+export function GreenhouseWithZonesTab({
+  greenhouses, zones, bases, baseOid, baseName, loading,
+  onAddGH, onEditGH, onRemoveGH,
+  onAddZone, onEditZone, onRemoveZone,
+  searchTerm, setSearchTerm,
+}: {
+  greenhouses: Greenhouse[];
+  zones: Zone[];
+  bases: any[];
+  baseOid: string;
+  baseName: string;
+  loading: boolean;
+  onAddGH: any; onEditGH: any; onRemoveGH: any;
+  onAddZone: any; onEditZone: any; onRemoveZone: any;
+  searchTerm: string;
+  setSearchTerm: (v: string) => void;
+}) {
+  // 折叠展开状态：oid → boolean
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // 温室新增/编辑 modal
+  const [showGHModal, setShowGHModal] = useState(false);
+  const [editingGH, setEditingGH] = useState<Greenhouse | null>(null);
+  const [ghFormData, setGHFormData] = useState<Partial<Greenhouse>>({});
+  const [deleteGHConfirm, setDeleteGHConfirm] = useState<Greenhouse | null>(null);
+  // 区块新增/编辑 modal
+  const [showZoneModal, setShowZoneModal] = useState(false);
+  const [editingZone, setEditingZone] = useState<Zone | null>(null);
+  const [zoneFormData, setZoneFormData] = useState<Partial<Zone>>({});
+  const [deleteZoneConfirm, setDeleteZoneConfirm] = useState<Zone | null>(null);
+
+  const { loadDictionaries } = useDictionaryStore();
+  const facilityTypes = getDictItems('greenhouse_type');
+  const zoneTypes = [
+    { value: 'greenhouse', label: '温室大棚' },
+    { value: 'plastic_house', label: '塑料大棚' },
+    { value: 'glass_house', label: '玻璃温室' },
+    { value: 'solar_greenhouse', label: '日光温室' },
+    { value: 'open_field', label: '露天种植区' },
+    { value: 'other', label: '其他' },
+  ];
+  const areaUnits = [
+    { value: '亩', label: '亩' },
+    { value: '平方米', label: '平方米' },
+    { value: '公顷', label: '公顷' },
+    { value: '个', label: '个' },
+    { value: '栋', label: '栋' },
+    { value: '座', label: '座' },
+  ];
+
+  // 搜索匹配：种植区 或 区块 名称/编码
+  const lowerQ = searchTerm.trim().toLowerCase();
+  const filteredGH = greenhouses.filter(gh =>
+    (gh.name || '').toLowerCase().includes(lowerQ) ||
+    (gh.code || '').toLowerCase().includes(lowerQ)
+  );
+
+  // 搜索变化时自动展开命中种植区（让匹配项可见）
+  useEffect(() => {
+    if (!lowerQ) { setExpanded({}); return; }
+    const auto: Record<string, boolean> = {};
+    filteredGH.forEach(gh => {
+      const hasMatch = zones.some(z =>
+        z.greenhouseOid === gh.oid && (
+          (z.zoneName || '').toLowerCase().includes(lowerQ) ||
+          (z.zoneCode || '').toLowerCase().includes(lowerQ)
+        )
+      );
+      if (hasMatch) auto[gh.oid] = true;
+    });
+    setExpanded(prev => ({ ...prev, ...auto }));
+  }, [lowerQ, zones.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleGH = (oid: string) => setExpanded(p => ({ ...p, [oid]: !p[oid] }));
+  const expandAll = () => {
+    const all: Record<string, boolean> = {};
+    filteredGH.forEach(gh => { all[gh.oid] = true; });
+    setExpanded(all);
+  };
+
+  // === 温室 Modal handlers ===
+  const openAddGHModal = () => {
+    const currentBase = bases.find(b => b.oid === baseOid);
+    setEditingGH(null);
+    setGHFormData({ status: 'active', baseOid: baseOid, baseName: currentBase?.name || baseName, unit: '亩' });
+    setShowGHModal(true);
+  };
+  const openEditGHModal = (gh: Greenhouse) => { setEditingGH(gh); setGHFormData({ ...gh }); setShowGHModal(true); };
+  const saveGH = async () => {
+    if (!ghFormData.name || !ghFormData.code) { await showAlert('请填写名称和编码'); return; }
+    try {
+      if (editingGH) await onEditGH(editingGH.id, ghFormData);
+      else await onAddGH(ghFormData);
+      setShowGHModal(false);
+    } catch (err: any) {
+      const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      console.error('[GreenhouseWithZonesTab] GH save failed:', err);
+      await showAlert(`保存失败：${d}`);
+    }
+  };
+  const deleteGH = async () => {
+    if (!deleteGHConfirm) return;
+    try { await onRemoveGH(deleteGHConfirm.id); setDeleteGHConfirm(null); } catch (err: any) {
+      const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      await showAlert(`删除失败：${d}`);
+    }
+  };
+
+  // === 区块 Modal handlers ===
+  // openAddZoneModal(ghOid?) 预填当前所在种植区
+  const openAddZoneModal = (ghOid?: string) => {
+    setEditingZone(null);
+    setZoneFormData({
+      status: 'active',
+      greenhouseOid: ghOid || filteredGH[0]?.oid || '',
+    });
+    setShowZoneModal(true);
+  };
+  const openEditZoneModal = (z: Zone) => { setEditingZone(z); setZoneFormData({ ...z }); setShowZoneModal(true); };
+  const saveZone = async () => {
+    if (!zoneFormData.zoneName) { await showAlert('请填写区块名称'); return; }
+    try {
+      if (editingZone) await onEditZone(editingZone.id, zoneFormData);
+      else await onAddZone(zoneFormData);
+      setShowZoneModal(false);
+    } catch (err: any) {
+      const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      console.error('[GreenhouseWithZonesTab] Zone save failed:', err);
+      await showAlert(`保存失败：${d}`);
+    }
+  };
+  const deleteZone = async () => {
+    if (!deleteZoneConfirm) return;
+    try { await onRemoveZone(deleteZoneConfirm.oid); setDeleteZoneConfirm(null); } catch (err: any) {
+      const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      await showAlert(`删除失败：${d}`);
+    }
+  };
+
+  // RENDER
+  return (
+    <div>
+      {/* 顶部工具栏 */}
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="搜索种植区/区块（编码或名称）..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg" />
+        </div>
+        <Button size="sm" variant="secondary" onClick={expandAll} className="h-9">
+          <ChevronDown className="w-4 h-4 mr-1" />展开全部
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => setExpanded({})} className="h-9">
+          <ChevronDown className="w-4 h-4 mr-1" />收起全部
+        </Button>
+        <Button size="sm" onClick={openAddGHModal}>
+          <Plus className="w-4 h-4 mr-1" />新增种植区
+        </Button>
+      </div>
+
+      {/* 种植区 + 嵌套区块 折叠列表 */}
+      {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div> : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {filteredGH.length === 0 ? (
+            <div className="px-3 py-12 text-center text-gray-400">
+              <Building2 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              暂无种植区。点击顶部"新增种植区"开始。
+            </div>
+          ) : (
+            <div>
+              {filteredGH.map((gh, idx) => {
+                const isOpen = !!expanded[gh.oid];
+                const childZones = zones.filter(z => z.greenhouseOid === gh.oid);
+                return (
+                  <div key={gh.oid} className={`${idx > 0 ? 'border-t border-gray-200' : ''}`}>
+                    {/* 种植区折叠组头部（点击行切换展开） */}
+                    <div
+                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition-colors ${
+                        isOpen ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => toggleGH(gh.oid)}
+                    >
+                      <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                      <span className="font-mono text-sm text-gray-500">{gh.code || '-'}</span>
+                      <span className="font-medium text-gray-800">{gh.name}</span>
+                      <span className="text-xs text-gray-500">
+                        {facilityTypes.find(f => f.dictCode === gh.greenhouseType)?.dictLabel || gh.greenhouseType || ''}
+                      </span>
+                      <span className="text-xs text-gray-500">{gh.area || 0} {gh.unit || '亩'}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        gh.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {gh.status === 'active' ? '活跃' : '停用'}
+                      </span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        📍 {childZones.length} 个区块
+                      </span>
+                      {/* 阻止事件冒泡到 toggle */}
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        {/* 2026-07-25：操作列新增"新增区块"按钮（始终可见，不依赖展开状态） */}
+                        <button onClick={() => openAddZoneModal(gh.oid)} className="p-1.5 hover:bg-green-50 text-green-600 rounded" title={`为「${gh.name}」新增区块`}>
+                          <Plus className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openEditGHModal(gh)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded" title="编辑种植区">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setDeleteGHConfirm(gh)} className="p-1.5 hover:bg-red-50 text-red-500 rounded" title="删除种植区">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 展开区域：嵌套显示该种植区下的区块列表 */}
+                    {isOpen && (
+                      <div className="bg-gray-50 border-t border-gray-200">
+                        {childZones.length === 0 ? (
+                          <div className="px-12 py-4 text-sm text-gray-400">
+                            （该种植区暂无区块）
+                          </div>
+                        ) : (
+                          <table className="w-full text-sm">
+                            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                              <tr>
+                                <th className="px-3 py-2 text-left font-medium">编码</th>
+                                <th className="px-3 py-2 text-left font-medium">名称</th>
+                                <th className="px-3 py-2 text-left font-medium">类型</th>
+                                <th className="px-3 py-2 text-right font-medium">面积(㎡)</th>
+                                <th className="px-3 py-2 text-left font-medium">状态</th>
+                                <th className="px-3 py-2 text-left font-medium">备注</th>
+                                <th className="px-3 py-2 text-center font-medium">操作</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {childZones.map(z => (
+                                <tr key={z.oid} className="hover:bg-blue-50 border-t border-gray-300">
+                                  <td className="px-3 py-2 font-mono text-gray-600">{z.zoneCode || '-'}</td>
+                                  <td className="px-3 py-2 font-medium text-gray-800">{z.zoneName}</td>
+                                  <td className="px-3 py-2 text-gray-600">{zoneTypes.find(t => t.value === z.zoneType)?.label || z.zoneType || '-'}</td>
+                                  <td className="px-3 py-2 text-right">{z.area || 0}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                      z.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                      {z.status === 'active' ? '活跃' : '停用'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-gray-500 truncate max-w-[150px]" title={z.description || '-'}>{z.description || '-'}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <div className="flex justify-center gap-1">
+                                      <button onClick={() => openEditZoneModal(z)} className="p-1 hover:bg-blue-50 text-blue-500 rounded" title="编辑区块">
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                      <button onClick={() => setDeleteZoneConfirm(z)} className="p-1 hover:bg-red-50 text-red-500 rounded" title="删除区块">
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 温室新增/编辑 modal */}
+      <Modal isOpen={showGHModal} onClose={() => setShowGHModal(false)} title={editingGH ? '编辑种植区' : '新增种植区'} size="xxl" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowGHModal(false)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={saveGH}><Save className="w-4 h-4" /> 保存</Button>
+        </div>}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">编码<span className="text-red-500">*</span>
+              <div className="flex gap-1 mt-1">
+                <input value={ghFormData.code || ''} onChange={e => setGHFormData({ ...ghFormData, code: e.target.value })} disabled={!!editingGH} className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                {!editingGH && (
+                  <button type="button" onClick={async () => {
+                    if (!baseOid) { await showAlert('请先选择基地'); return; }
+                    try {
+                      const res = await fetch(`/api/code-generator/next-greenhouse-code?baseOid=${baseOid}`);
+                      const json = await res.json();
+                      if (json.success) setGHFormData({ ...ghFormData, code: json.data.code });
+                      else await showAlert(json.error || '生成编码失败');
+                    } catch { await showAlert('生成编码失败，请检查网络'); }
+                  }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200">生成</button>
+                )}
+              </div>
+            </label>
+            <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
+              <input value={ghFormData.name || ''} onChange={e => setGHFormData({ ...ghFormData, name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">类型
+              <select value={ghFormData.greenhouseType || ''} onChange={e => setGHFormData({ ...ghFormData, greenhouseType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="">请选择</option>
+                {facilityTypes.map(o => <option key={o.dictCode} value={o.dictCode}>{o.dictLabel}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">面积
+              <input type="number" value={ghFormData.area || ''} onChange={e => setGHFormData({ ...ghFormData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">单位
+              <select value={ghFormData.unit || '亩'} onChange={e => setGHFormData({ ...ghFormData, unit: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                {areaUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">种植类型
+              <select value={ghFormData.crop || ''} onChange={e => setGHFormData({ ...ghFormData, crop: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="">请选择</option>
+                <option value="vegetable">蔬菜</option>
+                <option value="grain">粮食</option>
+                <option value="fruit">水果</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">位置
+            <input value={ghFormData.location || ''} onChange={e => setGHFormData({ ...ghFormData, location: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+          </label>
+          <label className="text-xs font-medium text-gray-600">状态
+            <select value={ghFormData.status || 'active'} onChange={e => setGHFormData({ ...ghFormData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+              <option value="active">活跃</option><option value="inactive">停用</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={ghFormData.description || ''} onChange={e => setGHFormData({ ...ghFormData, description: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+          </label>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!deleteGHConfirm} onClose={() => setDeleteGHConfirm(null)} title="确认删除种植区" size="sm" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setDeleteGHConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" variant="destructive" onClick={deleteGH}><Trash2 className="w-4 h-4" /> 删除</Button>
+        </div>}>
+        <p className="text-sm text-gray-600">
+          确定删除「{deleteGHConfirm?.name}」？
+          {deleteGHConfirm && zones.filter(z => z.greenhouseOid === deleteGHConfirm.oid).length > 0 && (
+            <span className="block mt-2 text-amber-600 text-xs">
+              ⚠ 该种植区有 {zones.filter(z => z.greenhouseOid === deleteGHConfirm.oid).length} 个区块，建议先删除区块后再删除种植区。
+            </span>
+          )}
+        </p>
+      </Modal>
+
+      {/* 区块新增/编辑 modal */}
+      <Modal isOpen={showZoneModal} onClose={() => setShowZoneModal(false)} title={editingZone ? '编辑区块' : '新增区块'} size="xxl" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowZoneModal(false)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={saveZone}><Save className="w-4 h-4" /> 保存</Button>
+        </div>}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">编码
+              <div className="flex gap-1 mt-1">
+                <input value={zoneFormData.zoneCode || ''} onChange={e => setZoneFormData({ ...zoneFormData, zoneCode: e.target.value })} disabled={!!editingZone} className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                {!editingZone && (
+                  <button type="button" disabled={!zoneFormData.greenhouseOid} onClick={async () => {
+                    if (!zoneFormData.greenhouseOid) { await showAlert('请先选择所属种植区'); return; }
+                    try {
+                      const res = await fetch(`/api/code-generator/next-zone-code?greenhouseOid=${zoneFormData.greenhouseOid}`);
+                      const json = await res.json();
+                      if (json.success) setZoneFormData({ ...zoneFormData, zoneCode: json.data.code });
+                      else await showAlert(json.error || '生成编码失败');
+                    } catch { await showAlert('生成编码失败，请检查网络'); }
+                  }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">生成</button>
+                )}
+              </div>
+            </label>
+            <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
+              <input value={zoneFormData.zoneName || ''} onChange={e => setZoneFormData({ ...zoneFormData, zoneName: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">所属种植区<span className="text-red-500">*</span>
+              <select value={zoneFormData.greenhouseOid || ''} onChange={e => setZoneFormData({ ...zoneFormData, greenhouseOid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" disabled={!!editingZone}>
+                <option value="">请选择</option>
+                {filteredGH.map(g => <option key={g.oid} value={g.oid}>{g.code} {g.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域类型
+              <select value={zoneFormData.zoneType || ''} onChange={e => setZoneFormData({ ...zoneFormData, zoneType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="">请选择</option>
+                {zoneTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">面积(㎡)
+              <input type="number" value={zoneFormData.area || ''} onChange={e => setZoneFormData({ ...zoneFormData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">状态
+              <select value={zoneFormData.status || 'active'} onChange={e => setZoneFormData({ ...zoneFormData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="active">活跃</option><option value="inactive">停用</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <input value={zoneFormData.description || ''} onChange={e => setZoneFormData({ ...zoneFormData, description: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+          </label>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!deleteZoneConfirm} onClose={() => setDeleteZoneConfirm(null)} title="确认删除区块" size="sm" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setDeleteZoneConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" variant="destructive" onClick={deleteZone}><Trash2 className="w-4 h-4" /> 删除</Button>
+        </div>}>
+        <p className="text-sm text-gray-600">确定删除「{deleteZoneConfirm?.zoneName}」？</p>
+      </Modal>
+    </div>
+  );
+}
+
+/* ==================== 种植记录子组件（列表模式 Tab 3） ==================== */
+export function PlantingTab({
+  records, greenhouses, zones, loading, onAdd, onEdit, onEnd, onRemove, searchTerm, setSearchTerm
+}: {
+  records: PlantingRecord[];
+  greenhouses: Greenhouse[];
+  zones: Zone[];
+  loading: boolean;
+  onAdd: any;
+  onEdit: any;
+  onEnd: any;
+  onRemove: any;
+  searchTerm: string;
+  setSearchTerm: (v: string) => void;
+}) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [currentRecord, setCurrentRecord] = useState<PlantingRecord | null>(null);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<PlantingRecord | null>(null);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const { loadDictionaries } = useDictionaryStore();
+  const statusOptions = getDictItems('planting_season_status');
+
+  const filtered = records.filter(r => {
+    const matchSearch = !searchTerm || (r.seasonCode || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.cropName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchActive = !showOnlyActive || r.status === 'planting';
+    return matchSearch && matchActive;
+  });
+  const totalPages = Math.ceil(filtered.length / LIST_PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * LIST_PAGE_SIZE, currentPage * LIST_PAGE_SIZE);
+
+  const selectedFacilityZones = zones.filter(z => z.greenhouseOid === formData.facility_oid);
+
+  const handleAdd = () => {
+    setCurrentRecord(null);
+    setFormData({ status: 'planting', start_date: new Date().toISOString().slice(0, 10), zone_oid: '', facility_oid: '', crop_name: '', variety_name: '' });
+    setShowCreateModal(true);
+  };
+  const handleEdit = (r: PlantingRecord) => {
+    setCurrentRecord(r);
+    setFormData({
+      crop_name: r.cropName,
+      variety_name: r.varietyName,
+      start_date: r.startDate?.slice(0, 10),
+      notes: r.notes || '',
+      zone_oid: r.zoneOid || '',
+      facility_oid: r.facilityOid || ''
+    });
+    setShowEditModal(true);
+  };
+  const handleEnd = (r: PlantingRecord) => { setCurrentRecord(r); setFormData({ end_date: new Date().toISOString().slice(0, 10), yield_amount: '', yield_unit: 'kg', quality_grade: '', notes: '' }); setShowEndModal(true); };
+  const handleSaveAdd = async () => {
+    if (!formData.facility_oid || !formData.zone_oid || !formData.crop_name) { await showAlert('请选择种植区、区域和填写作物'); return; }
+    try {
+      await onAdd({
+        facility_oid: formData.facility_oid,
+        zone_oid: formData.zone_oid,
+        crop_name: formData.crop_name,
+        variety_name: formData.variety_name || '',
+        start_date: formData.start_date,
+        notes: formData.notes || ''
+      });
+      setShowCreateModal(false);
+    } catch (err: any) {
+      const detail = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      console.error('[PlantingTab] add failed:', err);
+      await showAlert(`创建失败：${detail}`);
+    }
+  };
+  const handleSaveEdit = async () => {
+    if (!currentRecord) return;
+    try { await onEdit(currentRecord.oid, formData); setShowEditModal(false); } catch (err: any) {
+      const detail = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      await showAlert(`更新失败：${detail}`);
+    }
+  };
+  const handleSaveEnd = async () => {
+    if (!currentRecord || !formData.end_date) { await showAlert('请填写结束日期'); return; }
+    try { await onEnd(currentRecord.oid, { end_date: formData.end_date, yield_amount: Number(formData.yield_amount) || 0, yield_unit: formData.yield_unit, quality_grade: formData.quality_grade, notes: formData.notes }); setShowEndModal(false); } catch (err: any) {
+      const detail = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      await showAlert(`结束失败：${detail}`);
+    }
+  };
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    try { await onRemove(deleteConfirm.oid); setDeleteConfirm(null); } catch (err: any) {
+      const detail = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
+      await showAlert(`删除失败：${detail}`);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="搜索..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg" />
+        </div>
+        <button onClick={() => setShowOnlyActive(!showOnlyActive)} className={`px-3 py-1.5 text-sm rounded-lg border ${showOnlyActive ? 'bg-green-50 border-green-300 text-green-600' : 'border-gray-400'}`}>
+          {showOnlyActive ? '种植中' : '全部'}
+        </button>
+        <Button size="sm" onClick={handleAdd}><Plus className="w-4 h-4 mr-1" />新增种植季</Button>
+      </div>
+
+      {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div> : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full table-fixed">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <tr>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">编码</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">种植区</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">区域</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">作物</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">开始</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">结束</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">状态</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">产量</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">备注</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-300">
+              {paginated.length === 0 ? (
+                <tr><td colSpan={10} className="px-3 py-12 text-center text-gray-400"><Leaf className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无种植记录</td></tr>
+              ) : paginated.map(r => (
+                <tr key={r.oid} className="hover:bg-green-50">
+                  <td className="px-2 py-3 text-sm text-center font-mono font-semibold text-green-600 truncate">{r.seasonCode}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{greenhouses.find(g => g.oid === r.facilityOid)?.name || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{zones.find(z => z.oid === r.zoneOid)?.zoneName || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{r.cropName}{r.varietyName ? ` · ${r.varietyName}` : ''}</td>
+                  <td className="px-2 py-3 text-sm text-center">{r.startDate?.slice(0, 10) || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center">{r.endDate?.slice(0, 10) || '-'}</td>
+                  <td className="px-2 py-3 text-center">
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${r.status === 'planting' ? 'bg-blue-100 text-blue-700' : r.status === 'harvested' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {statusOptions.find(s => s.dictCode === r.status)?.dictLabel || r.status}
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-sm text-center">{r.yieldAmount ?? '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate" title={r.notes || '-'}>{r.notes || '-'}</td>
+                  <td className="px-2 py-3 text-center">
+                    <div className="flex justify-center gap-1">
+                      {r.status === 'planting' && <button onClick={() => handleEnd(r)} className="p-1.5 hover:bg-green-50 text-green-500 rounded" title="结束"><CalendarCheck className="w-4 h-4" /></button>}
+                      <button onClick={() => handleEdit(r)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => setDeleteConfirm(r)} className="p-1.5 hover:bg-red-50 text-red-500 rounded"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {filtered.length > 0 && <div className="flex justify-between mt-3 px-4">
+        <div className="text-sm text-gray-500">共 {filtered.length} 条</div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} pageSize={LIST_PAGE_SIZE}
+          onPageSizeChange={() => {}} pageSizeOptions={[10, 20, 50]} showPageSize={false} />
+      </div>}
+
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="新增种植季" size="xxl" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={handleSaveAdd}><Plus className="w-4 h-4" /> 创建</Button>
+        </div>}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">种植区<span className="text-red-500">*</span>
+              <select value={formData.facility_oid || ''} onChange={e => setFormData({ ...formData, facility_oid: e.target.value, zone_oid: '' })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="">请选择</option>
+                {greenhouses.map(g => <option key={g.oid} value={g.oid}>{g.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域<span className="text-red-500">*</span>
+              <select value={formData.zone_oid || ''} onChange={e => setFormData({ ...formData, zone_oid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="">请选择</option>
+                {selectedFacilityZones.map(z => <option key={z.oid} value={z.oid}>{z.zoneName}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">作物名称<span className="text-red-500">*</span>
+              <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">品种
+              <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">开始日期
+              <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">编码预览
+              <div className="flex gap-1 mt-1">
+                <input value={formData.season_code || ''} readOnly className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" placeholder="选择种植区后点击生成" />
+                <button type="button" disabled={!formData.facility_oid} onClick={async () => {
+                  if (!formData.facility_oid) { await showAlert('请先选择种植区'); return; }
+                  try {
+                    const year = formData.start_date ? formData.start_date.slice(0, 4) : new Date().getFullYear();
+                    const res = await fetch(`/api/code-generator/next-season-code?facilityOid=${formData.facility_oid}&year=${year}`);
+                    const json = await res.json();
+                    if (json.success) setFormData({ ...formData, season_code: json.data.code });
+                    else await showAlert(json.error || '生成编码失败');
+                  } catch { await showAlert('生成编码失败'); }
+                }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">生成</button>
+              </div>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+          </label>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="编辑种植记录" size="xxl" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={handleSaveEdit}><Save className="w-4 h-4" /> 保存</Button>
+        </div>}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">种植区
+              <input value={greenhouses.find(g => g.oid === formData.facility_oid)?.name || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域
+              <input value={zones.find(z => z.oid === formData.zone_oid)?.zoneName || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">作物名称
+              <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">品种
+              <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">开始日期
+              <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+          </label>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showEndModal} onClose={() => setShowEndModal(false)} title="结束种植季" size="xxl" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={handleSaveEnd}><Check className="w-4 h-4" /> 确认结束</Button>
+        </div>}>
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">结束「<span className="font-semibold text-green-600">{currentRecord?.seasonCode}</span>」</p>
+          <label className="text-xs font-medium text-gray-600">结束日期<span className="text-red-500">*</span>
+            <input type="date" value={formData.end_date || ''} onChange={e => setFormData({ ...formData, end_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">产量
+              <input type="number" value={formData.yield_amount || ''} onChange={e => setFormData({ ...formData, yield_amount: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">单位
+              <select value={formData.yield_unit || 'kg'} onChange={e => setFormData({ ...formData, yield_unit: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                <option value="kg">千克</option>
+                <option value="ton">吨</option>
+                <option value="jin">斤</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">品质
+            <select value={formData.quality_grade || ''} onChange={e => setFormData({ ...formData, quality_grade: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+              <option value="">请选择</option>
+              <option value="A">A级</option>
+              <option value="B">B级</option>
+              <option value="C">C级</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+          </label>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="确认删除" size="sm" enableDrag enableResize showFooter
+        footer={<div className="flex justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" variant="destructive" onClick={handleDelete}><Trash2 className="w-4 h-4" /> 删除</Button>
+        </div>}>
+        <p className="text-sm text-gray-600">确定删除「{deleteConfirm?.seasonCode}」？</p>
       </Modal>
     </div>
   );
