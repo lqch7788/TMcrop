@@ -1323,8 +1323,21 @@ export function GreenhouseWithZonesTab({
   searchTerm: string;
   setSearchTerm: (v: string) => void;
 }) {
-  // 折叠展开状态：oid → boolean
+  // 2026-07-25：默认全部展开（用户期望右侧显示完整 3 级结构：基地→温室→区域）
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // 数据到达时展开所有温室
+  useEffect(() => {
+    if (filteredGH.length === 0) return;
+    setExpanded(prev => {
+      // 已展开的保持折叠，避免覆盖用户主动收起的状态
+      const next: Record<string, boolean> = {};
+      filteredGH.forEach(gh => {
+        if (prev[gh.oid] === undefined) next[gh.oid] = true;
+        else next[gh.oid] = prev[gh.oid];
+      });
+      return next;
+    });
+  }, [filteredGH.length]);  // eslint-disable-line react-hooks/exhaustive-deps
   // 温室新增/编辑 modal
   const [showGHModal, setShowGHModal] = useState(false);
   const [editingGH, setEditingGH] = useState<Greenhouse | null>(null);
