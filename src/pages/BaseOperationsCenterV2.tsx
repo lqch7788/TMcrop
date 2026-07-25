@@ -234,6 +234,8 @@ const ZONE_TYPE_LABEL: Record<string, string> = {
   glass_house: '玻璃温室',
   solar_greenhouse: '日光温室',
   open_field: '露天种植区',
+  multi_span: '连栋温室',
+  联动温室: '联动温室',
   // 兼容历史/手填的可能取值
   大棚: '塑料大棚',
   露地: '露天种植区',
@@ -242,7 +244,7 @@ const BLOCK_TYPE_LABEL: Record<string, string> = {
   露地: '露地',
   大棚: '塑料大棚',
   planting: '种植区',
-  open_field: '露天种植区',
+  open_field: '露地',
 };
 const translateType = (key: string, value: unknown): string => {
   const v = value == null ? '' : String(value);
@@ -259,6 +261,7 @@ const ZONE_TYPE_OPTIONS = [
   { value: 'solar_greenhouse', label: '日光温室' },
   { value: 'open_field', label: '露天种植区' },
   { value: 'greenhouse', label: '温室大棚' },
+  { value: 'multi_span', label: '连栋温室' },
 ];
 const BLOCK_TYPE_OPTIONS = [
   { value: '露地', label: '露地' },
@@ -1357,6 +1360,7 @@ export function GreenhouseWithZonesTab({
     { value: 'glass_house', label: '玻璃温室' },
     { value: 'solar_greenhouse', label: '日光温室' },
     { value: 'open_field', label: '露天种植区' },
+    { value: 'multi_span', label: '连栋温室' },
     { value: 'other', label: '其他' },
   ];
   const areaUnits = [
