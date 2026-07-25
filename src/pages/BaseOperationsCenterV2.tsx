@@ -214,6 +214,48 @@ const PLANTING_RECORD_COLUMNS: TableColumn[] = [
   { key: 'action', label: '操作', width: 'w-32' },
 ];
 
+// 2026-07-25：类型列英文→中文翻译表
+// - zoneType 取值（来自 server/src/db/seedData.ts）：greenhouse / plastic_house / glass_house / solar_greenhouse / open_field
+// - blockType 数据中已有中文（"露地"/"大棚"），但历史脏数据可能含英文，统一兼容
+// - 找不到匹配时原样输出（不抹掉未知值，便于后期补字典）
+const ZONE_TYPE_LABEL: Record<string, string> = {
+  greenhouse: '温室大棚',
+  plastic_house: '塑料大棚',
+  glass_house: '玻璃温室',
+  solar_greenhouse: '日光温室',
+  open_field: '露天种植区',
+  // 兼容历史/手填的可能取值
+  大棚: '塑料大棚',
+  露地: '露天种植区',
+};
+const BLOCK_TYPE_LABEL: Record<string, string> = {
+  露地: '露地',
+  大棚: '塑料大棚',
+  planting: '种植区',
+  open_field: '露天种植区',
+};
+const translateType = (key: string, value: unknown): string => {
+  const v = value == null ? '' : String(value);
+  if (!v) return '-';
+  if (key === 'zoneType') return ZONE_TYPE_LABEL[v] || v;
+  if (key === 'blockType') return BLOCK_TYPE_LABEL[v] || v;
+  return v;
+};
+
+// 2026-07-25：编辑表单用的"类型"下拉选项（中文标签 + 英文存储值）
+const ZONE_TYPE_OPTIONS = [
+  { value: 'glass_house', label: '玻璃温室' },
+  { value: 'plastic_house', label: '塑料大棚' },
+  { value: 'solar_greenhouse', label: '日光温室' },
+  { value: 'open_field', label: '露天种植区' },
+  { value: 'greenhouse', label: '温室大棚' },
+];
+const BLOCK_TYPE_OPTIONS = [
+  { value: '露地', label: '露地' },
+  { value: '大棚', label: '塑料大棚' },
+  { value: 'planting', label: '种植区' },
+];
+
 // ============================================
 // 主组件
 // ============================================
@@ -339,25 +381,36 @@ export default function BaseOperationsCenterV2() {
   // 提交表单（新增或编辑）
   const handleSubmit = async () => {
     try {
-      // 验证必填字段
-      if (!formData.code && !formData.zoneCode && !formData.blockCode) {
-        showToast('请填写编码', 'error');
-        return;
-      }
-      if (!formData.name && !formData.zoneName && !formData.blockName) {
-        showToast('请填写名称', 'error');
-        return;
+      // 2026-07-25 修复 种植记录 无 seasonCode 字段却要求"编码"：
+      //   旧版单一校验 (code|zoneCode|blockCode) 漏了 seasonCode，新增种植记录时 formData 三个都是 undefined
+      //   → 走"请填写编码"红 toast，但表单里压根没这字段，用户无法保存
+      //   修复：按表单类型分支校验
+      if (addAnchorType === 'block' || editTargetType === 'planting') {
+        // 种植记录表单：仅校验作物名称；seasonCode 可选（空时自动生成）
+        if (!formData.cropName || !String(formData.cropName).trim()) {
+          showToast('请填写作物名称', 'error');
+          return;
+        }
+      } else {
+        // 基地 / 温室 / 区域 / 地块：编码 + 名称必填
+        if (!formData.code && !formData.zoneCode && !formData.blockCode) {
+          showToast('请填写编码', 'error');
+          return;
+        }
+        if (!formData.name && !formData.zoneName && !formData.blockName) {
+          showToast('请填写名称', 'error');
+          return;
+        }
       }
 
-      // 区域新增/编辑时的面积验证
-      if ((selectedNode.type === 'greenhouse' && modalType === 'add') ||
-          (selectedNode.type === 'zone' && modalType === 'edit')) {
-        const ghOid = selectedNode.type === 'greenhouse' && modalType === 'add'
+      // 区域新增/编辑时的面积验证（2026-07-25 同步改：用 editTargetType/addAnchorType 替换 selectedNode.type）
+      if (addAnchorType === 'greenhouse' || editTargetType === 'zone') {
+        const ghOid = addAnchorType === 'greenhouse'
           ? selectedNode.oid
           : formData.greenhouseOid;
         const greenhouse = greenhouses.find(gh => gh.oid === ghOid);
         if (greenhouse) {
-          // 计算已分配的区块面积
+          // 计算已分配的区块面积（编辑时排除自身）
           const usedArea = zones
             .filter(z => z.greenhouseOid === ghOid && (modalType === 'edit' ? z.oid !== editingItem?.oid : true))
             .reduce((sum, z) => sum + (z.area || 0), 0);
@@ -393,9 +446,12 @@ export default function BaseOperationsCenterV2() {
           });
           showToast('地块新增成功', 'success');
         } else if (selectedNode.type === 'block') {
-          // 新增种植记录
+          // 2026-07-25 新增种植记录：用户没填 seasonCode 时自动生成（防"提示填编码但无字段"）
+          const trimmedCode = String(formData.seasonCode || '').trim();
+          const finalSeasonCode = trimmedCode || `PR-${Date.now()}-${String(formData.cropName || 'X').slice(0, 2)}`;
           await usePlantingRecordStore.getState().addRecord({
             ...formData,
+            season_code: finalSeasonCode,   // 转为 snake_case 字段名
             block_oid: selectedNode.oid || '',
           } as any);
           showToast('种植记录新增成功', 'success');
@@ -422,20 +478,43 @@ export default function BaseOperationsCenterV2() {
   };
 
   // 处理删除
-  const handleDelete = async (oid: string) => {
+  // 2026-07-25 修复"删除假成功"bug：
+  //   旧版按 selectedNode.type 派发 store.remove，但 selectedNode 是"父节点"
+  //   删的是"子行"——例如 selectedNode='greenhouse'（玻璃温室区），表里点 zone 行删除 →
+  //   走 removeGreenhouse(zoneOid)，API 200 + 0 rows affected，返回的 toast 还会显示
+  //   "温室删除成功"（UI 看不出错误，但 zone 还在 DB 里）
+  // 修复：用被删行的 row.type 决定派发哪个 store
+  const handleDelete = async (row: Record<string, any>) => {
     await showAlert('确定要删除吗？删除后无法恢复。');
     // showAlert 仅接受 1 个参数（message）；删除按钮文字由 UI 提供
 
+    const rowType = row.type as string;
+    const labelMap: Record<string, string> = {
+      greenhouse: '温室',
+      zone: '区域',
+      block: '地块',
+      planting: '种植记录',
+      base: '基地',
+    };
+    const successLabel = labelMap[rowType] || '记录';
+
     try {
-      if (selectedNode.type === 'greenhouse') {
-        await useGreenhouseStore.getState().removeGreenhouse(oid);
-        showToast('温室删除成功', 'success');
-      } else if (selectedNode.type === 'zone') {
-        await useZoneStore.getState().removeZone(oid);
-        showToast('区域删除成功', 'success');
-      } else if (selectedNode.type === 'block') {
-        await useBlockStore.getState().removeBlock(oid);
-        showToast('地块删除成功', 'success');
+      if (rowType === 'greenhouse') {
+        await useGreenhouseStore.getState().removeGreenhouse(row.oid);
+        showToast(`${successLabel}删除成功`, 'success');
+      } else if (rowType === 'zone') {
+        await useZoneStore.getState().removeZone(row.oid);
+        showToast(`${successLabel}删除成功`, 'success');
+      } else if (rowType === 'block') {
+        await useBlockStore.getState().removeBlock(row.oid);
+        showToast(`${successLabel}删除成功`, 'success');
+      } else if (rowType === 'planting') {
+        // 种植记录暂无 delete store，fallback 占位（暂无 UI 入口）
+        showToast('种植记录删除：未实现', 'error');
+        return;
+      } else {
+        showToast('未知的记录类型，无法删除', 'error');
+        return;
       }
       loadAllData();
     } catch (error) {
@@ -736,6 +815,29 @@ export default function BaseOperationsCenterV2() {
     return '';
   }, [baseOidFromUrl, bases]);
 
+  // 2026-07-25 修复 modal 弹窗空白 bug：
+  // 旧版"用 selectedNode.type 决定编辑模式显示哪种表单"在以下场景失效——
+  //   当 selectedNode = greenhouse（左侧树节点），用户点"右侧子 zone 行"的编辑按钮，
+  //   handleEdit 设置 modalType='edit'、formData=zone 数据，但 selectedNode.type 仍是 'greenhouse'，
+  //   modal 内 4 个表单的条件 (selectedNode.type === 'zone' && modalType === 'edit') 全 false，
+  //   弹窗打开但内容为空。
+  // 修复：在 edit 模式下，目标表单类型由 formData.type（被编辑行类型）决定；
+  //       在 add 模式下，仍由 selectedNode.type 决定。
+  const editTargetType = modalType === 'edit' ? (formData?.type as string | undefined) : undefined;
+  const addAnchorType = modalType === 'add' ? selectedNode.type : null;
+
+  /** 编辑模式标题：跟随被编辑行的真实类型 */
+  const getEditButtonText = (): string => {
+    const map: Record<string, string> = {
+      greenhouse: '温室',
+      zone: '区域',
+      block: '地块',
+      planting: '种植记录',
+      base: '基地',
+    };
+    return map[editTargetType as string] || '';
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* 页面头部 */}
@@ -906,7 +1008,7 @@ export default function BaseOperationsCenterV2() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(row.oid)}
+                                onClick={() => handleDelete(row)}
                                 className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -924,6 +1026,9 @@ export default function BaseOperationsCenterV2() {
                             </span>
                           ) : col.key === 'code' || col.key === 'name' || col.key === 'zoneCode' || col.key === 'zoneName' || col.key === 'blockCode' || col.key === 'blockName' ? (
                             highlightText((row as Record<string, unknown>)[col.key]?.toString() || '-', searchTerm)
+                          ) : col.key === 'zoneType' || col.key === 'blockType' ? (
+                            // 2026-07-25：类型列英文枚举 → 中文
+                            translateType(col.key, (row as Record<string, unknown>)[col.key])
                           ) : (
                             (row as Record<string, unknown>)[col.key]?.toString() || '-'
                           )}
@@ -1064,13 +1169,13 @@ export default function BaseOperationsCenterV2() {
       <Modal
         isOpen={!!modalType}
         onClose={handleCloseModal}
-        title={modalType === 'add' ? `新增${getAddButtonText().replace('新增', '')}` : `编辑${getAddButtonText().replace('新增', '')}`}
+        title={modalType === 'add' ? `新增${getAddButtonText().replace('新增', '')}` : `编辑${getEditButtonText()}`}
         onSubmit={handleSubmit}
         size="md"
       >
         <div className="space-y-4">
-          {/* 温室表单：新增温室或编辑温室 */}
-          {(selectedNode.type === 'greenhouse' && modalType === 'edit') || (selectedNode.type === 'base' && modalType === 'add') && (
+          {/* 温室表单：编辑温室行（formData.type='greenhouse'）OR 新增基地下温室（addAnchorType='base'）*/}
+          {(editTargetType === 'greenhouse' || addAnchorType === 'base') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1148,8 +1253,8 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
 
-          {/* 区域表单：新增区域或编辑区域 */}
-          {(selectedNode.type === 'zone' && modalType === 'edit') || (selectedNode.type === 'greenhouse' && modalType === 'add') && (
+          {/* 区域表单：编辑 zone 行（formData.type='zone'）OR 新增温室下区域（addAnchorType='greenhouse'）*/}
+          {(editTargetType === 'zone' || addAnchorType === 'greenhouse') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1172,11 +1277,19 @@ export default function BaseOperationsCenterV2() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-                  <Input
+                  <Select
                     value={formData.zoneType || ''}
-                    onChange={(e) => handleFormChange('zoneType', e.target.value)}
-                    placeholder="请输入区域类型"
-                  />
+                    onValueChange={(value) => handleFormChange('zoneType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择区域类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ZONE_TYPE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">面积(㎡)</label>
@@ -1206,8 +1319,8 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
 
-          {/* 地块表单：新增地块或编辑地块 */}
-          {(selectedNode.type === 'block' && modalType === 'edit') || (selectedNode.type === 'zone' && modalType === 'add') && (
+          {/* 地块表单：编辑 block 行 OR 新增 zone 下地块 */}
+          {(editTargetType === 'block' || addAnchorType === 'zone') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1230,11 +1343,19 @@ export default function BaseOperationsCenterV2() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-                  <Input
+                  <Select
                     value={formData.blockType || ''}
-                    onChange={(e) => handleFormChange('blockType', e.target.value)}
-                    placeholder="请输入地块类型"
-                  />
+                    onValueChange={(value) => handleFormChange('blockType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择地块类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BLOCK_TYPE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">面积(㎡)</label>
@@ -1264,8 +1385,8 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
 
-          {/* 种植记录表单：新增种植记录 */}
-          {selectedNode.type === 'block' && modalType === 'add' && (
+          {/* 种植记录表单：新增 block 下种植记录 */}
+          {addAnchorType === 'block' && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1286,6 +1407,15 @@ export default function BaseOperationsCenterV2() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
+                {/* 2026-07-25：补 seasonCode 可选输入（留空自动生成 PR-<timestamp>-<作物名首两字>） */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">编码（可选）</label>
+                  <Input
+                    value={formData.seasonCode || ''}
+                    onChange={(e) => handleFormChange('seasonCode', e.target.value)}
+                    placeholder="留空自动生成"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
                   <Input
