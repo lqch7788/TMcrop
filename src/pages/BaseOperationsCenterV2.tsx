@@ -32,7 +32,6 @@ import type { Greenhouse, Zone } from '@/services/apiBasicDataService';
 import type { PlantingRecord } from '@/services/apiPlantingRecordService';
 import { showAlert, showToast } from '@/lib/dialogService';
 import { StatsCards } from '@/components/farm/base-ops/StatsCards';
-import { TreeMenu } from '@/components/farm/base-ops/TreeMenu';
 
 // 2026-07-25 重构（方案 B）：FacilityTab / ZoneTab / PlantingTab 内联到本文件末尾
 // 删除原 import './BaseOperationsCenter' 跨文件依赖
@@ -921,9 +920,7 @@ export default function BaseOperationsCenterV2() {
               <p className="text-sm text-gray-500">
                 {baseOidFromUrl
                   ? `当前基地：${currentBaseName}`
-                  : selectedNode.name
-                  ? `当前选择：${selectedNode.name}`
-                  : '请从左侧树形结构中选择节点'}
+                  : '基地运营中心'}
               </p>
             </div>
           </div>
@@ -946,22 +943,8 @@ export default function BaseOperationsCenterV2() {
             <Plus className="w-4 h-4 mr-1" /> 新增区块
           </Button>
         </div>
-        {/* Plan B Task 5：删除 tree branch（line 880-1028）和 list mode tab UI
-            改为统一布局：左 TreeMenu + 右 GreenhouseWithZonesTab（保留行折叠） */}
-        <div className="flex-1 flex gap-4 min-h-0">
-          {/* 左 4 级树菜单（Plan B Task 3 TreeMenu 组件） */}
-          <TreeMenu
-            treeData={treeData}
-            selectedNode={selectedNode}
-            expandedKeys={expandedKeys}
-            searchTerm={searchTerm}
-            onSelect={handleNodeSelect}
-            onExpand={setExpandedKeys}
-            onSearchChange={setSearchTerm}
-            loading={loading}
-          />
-
-          {/* 右侧主区域：直接用 GreenhouseWithZonesTab（带行折叠 + 行内批次列表） */}
+        {/* 2026-07-25：删除左侧 TreeMenu，右侧自给自足（filteredGreenhouses + 自带搜索） */}
+        <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 bg-white rounded-xl shadow-none flex flex-col min-h-0 p-4 overflow-auto">
             {/* Plan B Task 5: 旧的 listTab 切换按钮已删除（合并为单 TreeMenu + GreenhouseWithZonesTab） */}
             <GreenhouseWithZonesTab
