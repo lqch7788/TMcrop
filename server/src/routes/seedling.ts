@@ -94,6 +94,8 @@ router.put('/batch', (req: Request, res: Response) => {
       'seedling_loss_count', 'harvest_stocked_count', 'replant_count',
       'propagation_mode', 'calculate_mode', 'propagation_multiple',
       'custom_multiple', 'theoretical_yield', 'available_transplant_count',
+      // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+      'area_oid',
     ]);
 
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
@@ -350,6 +352,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       'propagation_method', 'inoculation_count', 'survival_count',
       'mother_generation', 'mother_crop_name', 'mother_propagation_method', 'asexual_propagation_note',
       'create_time', 'update_time',
+      // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+      'area_oid',
     ];
     const insertValues = [
       newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
@@ -374,6 +378,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       seedling.mother_propagation_method || null,
       seedling.asexual_propagation_note || null,
       now, now,
+      // 2026-07-25: 区域外键（接受 areaOid camelCase 或 area_oid snake_case）
+      seedling.area_oid ?? seedling.areaOid ?? null,
     ];
     if (insertCols.length !== insertValues.length) {
       // 铁律 #12: 字段不匹配必须 throw，绝不静默成功
@@ -1072,6 +1078,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       'propagation_method', 'inoculation_count', 'survival_count',
       'mother_generation', 'mother_crop_name', 'mother_propagation_method', 'asexual_propagation_note',
       'create_time', 'update_time',
+      // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+      'area_oid',
     ];
     const insertValues = [
       newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
@@ -1096,6 +1104,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       req.body.mother_propagation_method || null,
       req.body.asexual_propagation_note || null,
       now, now,
+      // 2026-07-25: 区域外键（接受 areaOid camelCase 或 area_oid snake_case）
+      req.body.area_oid ?? req.body.areaOid ?? null,
     ];
     if (insertCols.length !== insertValues.length) {
       throw new Error(`INSERT 列数(${insertCols.length}) 与值数(${insertValues.length}) 不一致`);
@@ -1272,6 +1282,8 @@ router.put('/:id', (req: Request, res: Response) => {
       'seedling_loss_count', 'harvest_stocked_count', 'replant_count',
       'propagation_mode', 'calculate_mode', 'propagation_multiple',
       'custom_multiple', 'theoretical_yield', 'available_transplant_count',
+      // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+      'area_oid',
     ]);
     // 2026-07-21 修复：前端传 camelCase，后端白名单是 snake_case，需要转换
     const CAMEL_TO_SNAKE: Record<string, string> = {
@@ -1317,6 +1329,8 @@ router.put('/:id', (req: Request, res: Response) => {
       lossRate: 'loss_rate',
       printCount: 'print_count',
       status: 'status',
+      // 2026-07-25: 区域外键
+      areaOid: 'area_oid',
     };
     // 转换 camelCase → snake_case，过滤不在白名单中的字段
     const snakeUpdates: Record<string, any> = {};
