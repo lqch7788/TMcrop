@@ -392,12 +392,11 @@ export default function BaseOperationsCenterV2() {
       //   旧版单一校验 (code|zoneCode|blockCode) 漏了 seasonCode，新增种植记录时 formData 三个都是 undefined
       //   → 走"请填写编码"红 toast，但表单里压根没这字段，用户无法保存
       //   修复：按表单类型分支校验
+      // 2026-07-25：planting_records 表已弃用，block 行不允许新增种植记录表单
       if (addAnchorType === 'block' || editTargetType === 'planting') {
-        // 种植记录表单：仅校验作物名称；seasonCode 可选（空时自动生成）
-        if (!formData.cropName || !String(formData.cropName).trim()) {
-          showToast('请填写作物名称', 'error');
-          return;
-        }
+        showToast('种植信息请到「种植管理」页面编辑', 'info');
+        handleCloseModal();
+        return;
       } else {
         // 基地 / 温室 / 区域 / 地块：编码 + 名称必填
         if (!formData.code && !formData.zoneCode && !formData.blockCode) {
@@ -453,15 +452,8 @@ export default function BaseOperationsCenterV2() {
           });
           showToast('地块新增成功', 'success');
         } else if (selectedNode.type === 'block') {
-          // 2026-07-25 新增种植记录：用户没填 seasonCode 时自动生成（防"提示填编码但无字段"）
-          const trimmedCode = String(formData.seasonCode || '').trim();
-          const finalSeasonCode = trimmedCode || `PR-${Date.now()}-${String(formData.cropName || 'X').slice(0, 2)}`;
-          await usePlantingRecordStore.getState().addRecord({
-            ...formData,
-            season_code: finalSeasonCode,   // 转为 snake_case 字段名
-            block_oid: selectedNode.oid || '',
-          } as any);
-          showToast('种植记录新增成功', 'success');
+          // 2026-07-25：planting_records 表已弃用，block 行不再支持新增种植记录表单
+          showToast('种植信息请到「种植管理」页面编辑', 'info');
         }
       } else if (modalType === 'edit' && editingItem) {
         // 编辑
@@ -1132,21 +1124,19 @@ export default function BaseOperationsCenterV2() {
               greenhouses={filteredGreenhouses}
               zones={filteredZones}
               loading={loading}
-              onAdd={async (data: any) => {
-                await usePlantingRecordStore.getState().addRecord(data);
-                loadAllData(); // 2026-07-25：与 Tab1/2 对齐——统一刷 useBaseOperationsStore 保证双模式同步
+              // 2026-07-25：planting_records 表弃用，listTab='planting' 内所有写 action 都改为抛错
+              // 视觉上保留只读表格（待 Plan B Task 5 整体删除 listTab='planting'）
+              onAdd={async () => {
+                throw new Error('DEPRECATED: planting_records 表已弃用，请到「种植管理」页面操作');
               }}
-              onEdit={async (id: any, data: any) => {
-                await usePlantingRecordStore.getState().editRecord(id, data);
-                loadRecords();
+              onEdit={async () => {
+                throw new Error('DEPRECATED: planting_records 表已弃用');
               }}
-              onEnd={async (id: any, data: any) => {
-                await usePlantingRecordStore.getState().endSeason(id, data);
-                loadRecords();
+              onEnd={async () => {
+                throw new Error('DEPRECATED: planting_records 表已弃用');
               }}
-              onRemove={async (id: any) => {
-                await usePlantingRecordStore.getState().removeRecord(id);
-                loadRecords();
+              onRemove={async () => {
+                throw new Error('DEPRECATED: planting_records 表已弃用');
               }}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -1376,72 +1366,8 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
 
-          {/* 种植记录表单：新增 block 下种植记录 */}
-          {addAnchorType === 'block' && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
-                  <Input
-                    value={formData.cropName || ''}
-                    onChange={(e) => handleFormChange('cropName', e.target.value)}
-                    placeholder="请输入作物名称"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
-                  <Input
-                    value={formData.varietyName || ''}
-                    onChange={(e) => handleFormChange('varietyName', e.target.value)}
-                    placeholder="请输入品种"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {/* 2026-07-25：补 seasonCode 可选输入（留空自动生成 PR-<timestamp>-<作物名首两字>） */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">编码（可选）</label>
-                  <Input
-                    value={formData.seasonCode || ''}
-                    onChange={(e) => handleFormChange('seasonCode', e.target.value)}
-                    placeholder="留空自动生成"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-                  <Input
-                    type="date"
-                    value={formData.startDate || ''}
-                    onChange={(e) => handleFormChange('startDate', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-                  <Select
-                    value={formData.status || 'planting'}
-                    onValueChange={(value) => handleFormChange('status', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="planting">种植中</SelectItem>
-                      <SelectItem value="harvested">已收获</SelectItem>
-                      <SelectItem value="cancelled">已取消</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <Input
-                  value={formData.notes || ''}
-                  onChange={(e) => handleFormChange('notes', e.target.value)}
-                  placeholder="请输入备注"
-                />
-              </div>
-            </>
-          )}
+          {/* 2026-07-25：planting_records 表已弃用，移除 block 行种植记录表单。
+              种植信息请到「种植管理」页面编辑（plan Task 5）。 */}
         </div>
       </Modal>
     </div>
