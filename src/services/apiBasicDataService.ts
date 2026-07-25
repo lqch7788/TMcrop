@@ -312,8 +312,10 @@ export async function deleteWarehouse(id: string): Promise<void> {
  * 获取所有温室
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
-export async function getGreenhouses(): Promise<Greenhouse[]> {
-  const data = await enhancedApiClient.get<Greenhouse[]>('/basic-data/greenhouses');
+export async function getGreenhouses(baseOid?: string): Promise<Greenhouse[]> {
+  // 2026-07-25：支持 ?baseOid= 过滤（V2 中心只显示当前基地的温室）
+  const query = baseOid ? `?baseOid=${encodeURIComponent(baseOid)}` : '';
+  const data = await enhancedApiClient.get<Greenhouse[]>(`/basic-data/greenhouses${query}`);
   return data || [];
 }
 

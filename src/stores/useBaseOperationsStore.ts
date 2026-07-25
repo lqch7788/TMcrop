@@ -203,15 +203,17 @@ export const useBaseOperationsStore = create<BaseOperationsStore>()((set, get) =
   // Actions - 数据加载
   // ============================================
 
-  loadAllData: async () => {
+  loadAllData: async (baseOid?: string) => {
     set({ loading: true, error: null });
 
     try {
       // 并行加载所有数据
       // 注意：API 返回 {success, data} 格式，需要提取 data 数组
+      // 2026-07-25：传 baseOid 让 greenhouse API 只返回该基地的温室
+      //           zones/blocks 仍走全量 + 前端 filteredZones/filteredBlocks 过滤
       const [basesData, greenhousesData, zonesData, blocksData] = await Promise.all([
         getBases(),
-        getGreenhouses(),
+        getGreenhouses(baseOid),
         getZones(),
         getBlocks(),
       ]);
