@@ -389,12 +389,22 @@ router.get('/code-rules', (req, res) => {
 router.get('/zones', (req, res) => {
   try {
     const db = getDatabase();
+    // 2026-07-25: 加 aggregatedPlantings 聚合字段（COUNT plantings/seedlings, SUM quantity, latest crop_name）
     const result = db.exec(`
       SELECT z.id, z.oid, z.zone_code, z.zone_name, z.greenhouse_oid, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
-             g.name as greenhouseName
+             g.name as greenhouseName,
+             COUNT(DISTINCT p.id) AS planting_count,
+             COUNT(DISTINCT s.id) AS seedling_count,
+             COALESCE(SUM(p.planting_quantity), 0) AS occupied_area,
+             (SELECT crop_name FROM plantings
+              WHERE area_oid = z.oid AND deleted_at IS NULL
+              ORDER BY planting_date DESC LIMIT 1) AS current_crop
       FROM zones z
       LEFT JOIN greenhouses g ON z.greenhouse_oid = g.oid
+      LEFT JOIN plantings p ON p.area_oid = z.oid AND p.deleted_at IS NULL
+      LEFT JOIN seedlings s ON s.area_oid = z.oid AND s.deleted_at IS NULL
       WHERE z.status = 'active'
+      GROUP BY z.id
       ORDER BY z.zone_code
     `);
 
@@ -412,6 +422,18 @@ router.get('/zones', (req, res) => {
       // 将 greenhouseOid 映射到 baseOid，供前端统一使用
       obj.baseOid = obj.greenhouseOid;
       obj.baseName = obj.greenhouseName;
+      // 2026-07-25: 聚合字段结构化（snake_case → camelCase）
+      // 注意：上方 forEach 已经把 planting_count 转成 plantingCount，所以读取 camelCase key
+      obj.aggregatedPlantings = {
+        count: Number(obj.plantingCount) || 0,
+        seedlingCount: Number(obj.seedlingCount) || 0,
+        occupiedArea: Number(obj.occupiedArea) || 0,
+        currentCrop: obj.currentCrop || '-',
+      };
+      delete obj.plantingCount;
+      delete obj.seedlingCount;
+      delete obj.occupiedArea;
+      delete obj.currentCrop;
       return obj;
     });
 
