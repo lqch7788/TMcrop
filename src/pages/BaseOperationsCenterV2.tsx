@@ -348,22 +348,25 @@ export default function BaseOperationsCenterV2() {
   }, [selectedNode, modalType, formData.greenhouseOid, greenhouses, zones]);
 
   // 打开新增弹窗
-  const handleAdd = () => {
+  const handleAdd = (addedType?: 'base' | 'greenhouse' | 'zone') => {
     setModalType('add');
     setEditingItem(null);
+    // 2026-07-25：支持显式指定新增类型（来自 TreeMenu 底部 [+新增基地/温室/区块]）
+    setExplicitAddType(addedType || null);
+    const effectiveType = addedType || selectedNode.type;
     // 根据选中节点类型初始化表单数据
-    if (selectedNode.type === 'base') {
-      // 新增温室
-      setFormData({ status: 'active', baseOid: selectedNode.oid });
-    } else if (selectedNode.type === 'greenhouse') {
-      // 新增区域
-      setFormData({ status: 'active', greenhouseOid: selectedNode.oid });
-    } else if (selectedNode.type === 'zone') {
+    if (effectiveType === 'base') {
+      // 新增基地（explicit addType='base' from TreeMenu [+新增基地]）
+      setFormData({ status: 'active' });
+    } else if (effectiveType === 'greenhouse') {
+      // 新增温室（默认选中 base 时，或 explicit addType='greenhouse'）
+      setFormData({ status: 'active', baseOid: selectedNode.oid || '' });
+    } else if (effectiveType === 'zone') {
+      // 新增区域/区块（selectedNode 是 greenhouse 时新增区域，或 explicit addType='zone' 新增区块）
+      setFormData({ status: 'active', greenhouseOid: selectedNode.oid || '' });
+    } else if (effectiveType === 'block') {
       // 新增地块
-      setFormData({ status: 'active', zoneOid: selectedNode.oid });
-    } else if (selectedNode.type === 'block') {
-      // 新增种植记录
-      setFormData({ status: 'active', blockOid: selectedNode.oid });
+      setFormData({ status: 'active', zoneOid: selectedNode.oid || '' });
     } else {
       setFormData({ status: 'active' });
     }
@@ -381,6 +384,7 @@ export default function BaseOperationsCenterV2() {
     setModalType(null);
     setEditingItem(null);
     setFormData({});
+    setExplicitAddType(null);  // 2026-07-25：清空显式新增类型
   };
 
   // 处理表单字段变化
@@ -433,15 +437,33 @@ export default function BaseOperationsCenterV2() {
 
       if (modalType === 'add') {
         // 新增
-        if (selectedNode.type === 'base') {
-          // 新增温室
+        if (explicitAddType === 'base') {
+          // 2026-07-25：新增基地（来自 [+新增基地] 工具栏按钮）
+          await useBaseStore.getState().addBase(formData);
+          showToast('基地新增成功', 'success');
+        } else if (explicitAddType === 'greenhouse') {
+          // 2026-07-25：新增温室（来自 [+新增温室] 工具栏按钮）
+          await useGreenhouseStore.getState().addGreenhouse({
+            ...formData,
+            baseOid: selectedNode.oid || baseOidFromUrl || '',
+          });
+          showToast('温室新增成功', 'success');
+        } else if (explicitAddType === 'zone') {
+          // 2026-07-25：新增区块（来自 [+新增区块] 工具栏按钮）
+          await useZoneStore.getState().addZone({
+            ...formData,
+            greenhouseOid: selectedNode.oid || '',
+          });
+          showToast('区块新增成功', 'success');
+        } else if (selectedNode.type === 'base') {
+          // 新增温室（隐式，行操作列按钮）
           await useGreenhouseStore.getState().addGreenhouse({
             ...formData,
             baseOid: selectedNode.oid || '',
           });
           showToast('温室新增成功', 'success');
         } else if (selectedNode.type === 'greenhouse') {
-          // 新增区域
+          // 新增区域（隐式，行操作列按钮）
           await useZoneStore.getState().addZone({
             ...formData,
             greenhouseOid: selectedNode.oid || '',
@@ -856,7 +878,9 @@ export default function BaseOperationsCenterV2() {
   // 修复：在 edit 模式下，目标表单类型由 formData.type（被编辑行类型）决定；
   //       在 add 模式下，仍由 selectedNode.type 决定。
   const editTargetType = modalType === 'edit' ? (formData?.type as string | undefined) : undefined;
-  const addAnchorType = modalType === 'add' ? selectedNode.type : null;
+  // 2026-07-25：addAnchorType 优先取 handleAdd 传入的显式 type（来自 TreeMenu [+新增基地/温室/区块] 按钮）
+  const [explicitAddType, setExplicitAddType] = useState<'base' | 'greenhouse' | 'zone' | null>(null);
+  const addAnchorType = modalType === 'add' ? (explicitAddType || selectedNode.type) : null;
 
   /** 编辑模式标题：跟随被编辑行的真实类型 */
   const getEditButtonText = (): string => {
@@ -907,7 +931,18 @@ export default function BaseOperationsCenterV2() {
       <div className="flex-1 flex flex-col gap-4 px-6 pb-6 min-h-0">
         {/* 顶部 4 统计卡（Plan B Task 2 抽出，stats 来自 useBaseOpsStats hook） */}
         <StatsCards stats={stats} />
-        {/* 左侧树形结构 */}
+        {/* 工具栏：新增基地 / 新增温室 / 新增区块（顶部操作区，不在 TreeMenu 底部） */}
+        <div className="bg-white rounded-xl p-3 flex items-center gap-2 shadow-none">
+          <Button size="sm" onClick={() => handleAdd('base')}>
+            <Plus className="w-4 h-4 mr-1" /> 新增基地
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => handleAdd('greenhouse')}>
+            <Plus className="w-4 h-4 mr-1" /> 新增温室
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => handleAdd('zone')}>
+            <Plus className="w-4 h-4 mr-1" /> 新增区块
+          </Button>
+        </div>
         {/* Plan B Task 5：删除 tree branch（line 880-1028）和 list mode tab UI
             改为统一布局：左 TreeMenu + 右 GreenhouseWithZonesTab（保留行折叠） */}
         <div className="flex-1 flex gap-4 min-h-0">
@@ -920,9 +955,6 @@ export default function BaseOperationsCenterV2() {
             onSelect={handleNodeSelect}
             onExpand={setExpandedKeys}
             onSearchChange={setSearchTerm}
-            onAddBase={() => handleAdd('base')}
-            onAddGreenhouse={() => handleAdd('greenhouse')}
-            onAddZone={() => handleAdd('zone')}
             loading={loading}
           />
 
@@ -964,42 +996,8 @@ export default function BaseOperationsCenterV2() {
               setSearchTerm={setSearchTerm}
             />
           {/* Plan B Task 5：删除 listTab='planting' PlantingTab（planting_records 弃用） */}
-
-            {/* 主表格：GreenhouseWithZonesTab（带行折叠 + 行内批次列表） */}
-            <GreenhouseWithZonesTab
-              greenhouses={filteredGreenhouses}
-              zones={filteredZones}
-              bases={bases}
-              baseOid={baseOidFromUrl}
-              baseName={bases.find(b => b.oid === baseOidFromUrl)?.name || ''}
-              loading={loading}
-              onAddGH={async (data: any) => {
-                await useGreenhouseStore.getState().addGreenhouse(data);
-                loadAllData();
-              }}
-              onEditGH={async (id: any, data: any) => {
-                await useGreenhouseStore.getState().editGreenhouse(id, data);
-                loadAllData();
-              }}
-              onRemoveGH={async (id: any) => {
-                await useGreenhouseStore.getState().removeGreenhouse(id);
-                loadAllData();
-              }}
-              onAddZone={async (data: any) => {
-                await useZoneStore.getState().addZone(data);
-                loadAllData();
-              }}
-              onEditZone={async (id: any, data: any) => {
-                await useZoneStore.getState().editZone(id, data);
-                loadAllData();
-              }}
-              onRemoveZone={async (id: any) => {
-                await useZoneStore.getState().removeZone(id);
-                loadAllData();
-              }}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
+          {/* ↑↑↑ 上面 line 932 已经是唯一的 GreenhouseWithZonesTab。
+               这里（line 969）原本有一份重复渲染，已删除。 */}
           </div>
         </div>
       </div>
@@ -1014,7 +1012,59 @@ export default function BaseOperationsCenterV2() {
       >
         <div className="space-y-4">
           {/* 温室表单：编辑温室行（formData.type='greenhouse'）OR 新增基地下温室（addAnchorType='base'）*/}
-          {(editTargetType === 'greenhouse' || addAnchorType === 'base') && (
+          {/* 2026-07-25：基地表单（点击 [+新增基地] 时显示）。
+              触发条件：modalType='add' 且 explicitAddType='base' */}
+          {modalType === 'add' && explicitAddType === 'base' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">编码</label>
+                  <Input
+                    value={formData.code || ''}
+                    onChange={(e) => handleFormChange('code', e.target.value)}
+                    placeholder="请输入基地编码"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                  <Input
+                    value={formData.name || ''}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
+                    placeholder="请输入基地名称"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">面积(亩)</label>
+                  <Input
+                    type="number"
+                    value={formData.area || ''}
+                    onChange={(e) => handleFormChange('area', Number(e.target.value))}
+                    placeholder="请输入面积"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                  <Select
+                    value={formData.status || 'active'}
+                    onValueChange={(value) => handleFormChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">启用</SelectItem>
+                      <SelectItem value="inactive">停用</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 温室表单：编辑温室 OR 新增温室（显式或默认 selectedNode='base'） */}
+          {(editTargetType === 'greenhouse' || addAnchorType === 'base' || explicitAddType === 'greenhouse') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1093,7 +1143,7 @@ export default function BaseOperationsCenterV2() {
           )}
 
           {/* 区域表单：编辑 zone 行（formData.type='zone'）OR 新增温室下区域（addAnchorType='greenhouse'）*/}
-          {(editTargetType === 'zone' || addAnchorType === 'greenhouse') && (
+          {(editTargetType === 'zone' || addAnchorType === 'greenhouse' || explicitAddType === 'zone') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
