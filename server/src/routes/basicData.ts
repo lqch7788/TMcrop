@@ -582,6 +582,62 @@ router.delete('/zones/:id', (req, res) => {
 });
 
 /**
+ * 2026-07-25：获取某 zone 下的 plantings + seedlings（V2 行内联批次列表用）
+ * GET /api/basic-data/zones/:oid/plantings
+ */
+router.get('/zones/:oid/plantings', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { oid } = req.params;
+
+    const plantings = db.exec(
+      `SELECT id, planting_code, crop_name, crop_variety, area_oid, area_name,
+              planting_date, planting_quantity, status, unit
+       FROM plantings
+       WHERE area_oid = ? AND deleted_at IS NULL
+       ORDER BY planting_date DESC
+       LIMIT 100`,
+      [oid],
+    );
+
+    const seedlings = db.exec(
+      `SELECT id, seedling_code, crop_name, crop_variety, area_oid, area_name,
+              seedling_date, seedling_quantity, status, unit
+       FROM seedlings
+       WHERE area_oid = ? AND deleted_at IS NULL
+       ORDER BY seedling_date DESC
+       LIMIT 100`,
+      [oid],
+    );
+
+    const map = (rows: any[] | undefined) =>
+      (rows || []).map((r: any[]) => ({
+        id: r[0],
+        plantingCode: r[1],  // 也兼容 seedlings：seedlingCode 同字段返回
+        cropName: r[2],
+        cropVariety: r[3],
+        areaOid: r[4],
+        areaName: r[5],
+        plantingDate: r[6],
+        plantingQuantity: r[7],
+        status: r[8],
+        unit: r[9] || '株',
+      }));
+
+    res.json({
+      success: true,
+      data: {
+        plantings: map(plantings[0]?.values),
+        seedlings: map(seedlings[0]?.values),
+      },
+    });
+  } catch (error) {
+    console.error('获取 zone 批次列表失败:', error);
+    res.status(500).json({ success: false, error: '获取 zone 批次列表失败' });
+  }
+});
+
+/**
  * 获取所有地块
  * GET /api/basic-data/blocks
  */

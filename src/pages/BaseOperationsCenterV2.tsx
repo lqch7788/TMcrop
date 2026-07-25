@@ -3,9 +3,10 @@
  * 树状布局：左侧基地树 + 右侧数据表格和统计卡片
  * 路由：/base-operations-v2
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Plus, Edit2, Trash2, Building2, Loader2, List, Network, ArrowLeft, CalendarCheck, Check, History, Layers, Leaf, MapPin, Save, X, ChevronDown } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Building2, Loader2, List, Network, ArrowLeft, CalendarCheck, Check, History, Layers, Leaf, MapPin, Save, X, ChevronDown, ListTree } from 'lucide-react';
+import { enhancedApiClient } from '@/lib/apiClient';
 import { Modal } from '@/components/ui';
 import { Tree } from '@/components/ui';
 import type { TreeNode } from '@/components/ui/Tree';
@@ -1475,6 +1476,124 @@ export function GreenhouseWithZonesTab({
     setExpanded(all);
   };
 
+  // 2026-07-25：zone 行内联只读批次列表（plantings + seedlings 来自 API 聚合）
+  const [expandedZonePlantings, setExpandedZonePlantings] = useState<Set<string>>(new Set());
+  const toggleZonePlantings = (zoneOid: string) => {
+    setExpandedZonePlantings(prev => {
+      const next = new Set(prev);
+      if (next.has(zoneOid)) next.delete(zoneOid);
+      else next.add(zoneOid);
+      return next;
+    });
+  };
+
+  /**
+   * 内联子组件：zone 行的「▼ 批次列表」展开区
+   * 拉取 plantings + seedlings（通过 /api/basic-data/zones/:oid/plantings）
+   */
+  const ZonePlantingsList = ({ zoneOid, zoneName }: { zoneOid: string; zoneName: string }) => {
+    const [items, setItems] = useState<Array<{
+      kind: 'planting' | 'seedling';
+      code: string;
+      cropName: string;
+      cropVariety: string;
+      quantity: number;
+      unit: string;
+      date: string;
+      status: string;
+    }>>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const res: any = await enhancedApiClient.get(
+            `/api/basic-data/zones/${encodeURIComponent(zoneOid)}/plantings`,
+          );
+          if (cancelled) return;
+          const raw = res?.data || res || { plantings: [], seedlings: [] };
+          const list: typeof items = [];
+          (raw.plantings || []).forEach((p: any) => {
+            list.push({
+              kind: 'planting',
+              code: p.plantingCode || p.planting_code || '-',
+              cropName: p.cropName || p.crop_name || '-',
+              cropVariety: p.cropVariety || p.crop_variety || '-',
+              quantity: p.plantingQuantity ?? p.planting_quantity ?? 0,
+              unit: p.unit || '株',
+              date: (p.plantingDate || p.planting_date || '').slice(0, 10),
+              status: p.status || '-',
+            });
+          });
+          (raw.seedlings || []).forEach((s: any) => {
+            list.push({
+              kind: 'seedling',
+              code: s.seedlingCode || s.seedling_code || '-',
+              cropName: s.cropName || s.crop_name || '-',
+              cropVariety: s.cropVariety || s.crop_variety || '-',
+              quantity: s.seedlingQuantity ?? s.seedling_quantity ?? 0,
+              unit: s.unit || '株',
+              date: (s.seedlingDate || s.seedling_date || '').slice(0, 10),
+              status: s.status || '-',
+            });
+          });
+          setItems(list);
+        } catch (e) {
+          console.warn('[ZonePlantingsList] fetch failed', e);
+          setItems([]);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [zoneOid]);
+
+    if (loading) return <div className="px-12 py-4 text-sm text-gray-500">加载批次中…</div>;
+    if (items.length === 0) {
+      return <div className="px-12 py-4 text-sm text-gray-400">该区块「{zoneName}」暂无种植/育苗批次</div>;
+    }
+    return (
+      <div className="bg-white">
+        <div className="px-12 py-2 text-xs font-medium text-gray-600 bg-gray-100">
+          共 {items.length} 个批次（{items.filter(i => i.kind === 'planting').length} 种植 / {items.filter(i => i.kind === 'seedling').length} 育苗）
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">类型</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">批次号</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">作物</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">品种</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">数量</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">日期</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it, i) => (
+              <tr key={`${it.kind}-${it.code}-${i}`} className="hover:bg-blue-50 border-t border-gray-200">
+                <td className="px-3 py-2">
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                    it.kind === 'planting' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {it.kind === 'planting' ? '种植' : '育苗'}
+                  </span>
+                </td>
+                <td className="px-3 py-2 font-mono text-gray-600">{it.code}</td>
+                <td className="px-3 py-2 text-gray-800">{it.cropName}</td>
+                <td className="px-3 py-2 text-gray-600">{it.cropVariety}</td>
+                <td className="px-3 py-2 text-right">{it.quantity} {it.unit}</td>
+                <td className="px-3 py-2 text-gray-600">{it.date || '-'}</td>
+                <td className="px-3 py-2 text-gray-600">{it.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   // === 温室 Modal handlers ===
   const openAddGHModal = () => {
     const currentBase = bases.find(b => b.oid === baseOid);
@@ -1629,7 +1748,8 @@ export function GreenhouseWithZonesTab({
                             </thead>
                             <tbody>
                               {childZones.map(z => (
-                                <tr key={z.oid} className="hover:bg-blue-50 border-t border-gray-300">
+                                <Fragment key={z.oid}>
+                                <tr className="hover:bg-blue-50 border-t border-gray-300">
                                   <td className="px-3 py-2 font-mono text-gray-600">{z.zoneCode || '-'}</td>
                                   <td className="px-3 py-2 font-medium text-gray-800">{z.zoneName}</td>
                                   <td className="px-3 py-2 text-gray-600">{zoneTypes.find(t => t.value === z.zoneType)?.label || z.zoneType || '-'}</td>
@@ -1644,6 +1764,14 @@ export function GreenhouseWithZonesTab({
                                   <td className="px-3 py-2 text-gray-500 truncate max-w-[150px]" title={z.description || '-'}>{z.description || '-'}</td>
                                   <td className="px-3 py-2 text-center">
                                     <div className="flex justify-center gap-1">
+                                      {/* 2026-07-25：行内联批次列表按钮（只读聚合） */}
+                                      <button
+                                        onClick={() => toggleZonePlantings(z.oid)}
+                                        className="p-1 hover:bg-purple-50 text-purple-500 rounded"
+                                        title="查看该区块下的种植/育苗批次"
+                                      >
+                                        <ListTree className={`w-3 h-3 transition-transform ${expandedZonePlantings.has(z.oid) ? 'rotate-90' : ''}`} />
+                                      </button>
                                       <button onClick={() => openEditZoneModal(z)} className="p-1 hover:bg-blue-50 text-blue-500 rounded" title="编辑区块">
                                         <Edit2 className="w-3 h-3" />
                                       </button>
@@ -1653,6 +1781,15 @@ export function GreenhouseWithZonesTab({
                                     </div>
                                   </td>
                                 </tr>
+                                {/* 2026-07-25：展开批次列表（行折叠，只读） */}
+                                {expandedZonePlantings.has(z.oid) && (
+                                  <tr>
+                                    <td colSpan={7} className="p-0 bg-white border-t border-gray-200">
+                                      <ZonePlantingsList zoneOid={z.oid} zoneName={z.zoneName} />
+                                    </td>
+                                  </tr>
+                                )}
+                                </Fragment>
                               ))}
                             </tbody>
                           </table>
