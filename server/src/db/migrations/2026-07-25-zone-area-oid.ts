@@ -43,28 +43,32 @@ export function migrate20260725ZoneAreaOid(db: Database): void {
 
   // 反查 zones.oid，按 zone_name 匹配；失败保留为 NULL（orphan）。
   // UPDATE 前后取 area_oid IS NULL 计数，用于日志观测孤儿数（plan Step 3）。
-  const beforePlantings = db
-    .exec('SELECT COUNT(*) FROM plantings WHERE area_oid IS NULL')[0]?.values[0][0] || 0;
+  const beforePlantings = Number(
+    db.exec('SELECT COUNT(*) FROM plantings WHERE area_oid IS NULL')[0]?.values[0][0] ?? 0,
+  );
   db.run(`
     UPDATE plantings
     SET area_oid = (SELECT oid FROM zones WHERE zone_name = plantings.area_name LIMIT 1)
     WHERE area_oid IS NULL
   `);
-  const afterPlantings = db
-    .exec('SELECT COUNT(*) FROM plantings WHERE area_oid IS NULL')[0]?.values[0][0] || 0;
+  const afterPlantings = Number(
+    db.exec('SELECT COUNT(*) FROM plantings WHERE area_oid IS NULL')[0]?.values[0][0] ?? 0,
+  );
   seedLog.info(
     `[migrate 2026-07-25] plantings: 回填 ${beforePlantings - afterPlantings} 条, orphan ${afterPlantings} 条`,
   );
 
-  const beforeSeedlings = db
-    .exec('SELECT COUNT(*) FROM seedlings WHERE area_oid IS NULL')[0]?.values[0][0] || 0;
+  const beforeSeedlings = Number(
+    db.exec('SELECT COUNT(*) FROM seedlings WHERE area_oid IS NULL')[0]?.values[0][0] ?? 0,
+  );
   db.run(`
     UPDATE seedlings
     SET area_oid = (SELECT oid FROM zones WHERE zone_name = seedlings.area_name LIMIT 1)
     WHERE area_oid IS NULL
   `);
-  const afterSeedlings = db
-    .exec('SELECT COUNT(*) FROM seedlings WHERE area_oid IS NULL')[0]?.values[0][0] || 0;
+  const afterSeedlings = Number(
+    db.exec('SELECT COUNT(*) FROM seedlings WHERE area_oid IS NULL')[0]?.values[0][0] ?? 0,
+  );
   seedLog.info(
     `[migrate 2026-07-25] seedlings: 回填 ${beforeSeedlings - afterSeedlings} 条, orphan ${afterSeedlings} 条`,
   );
