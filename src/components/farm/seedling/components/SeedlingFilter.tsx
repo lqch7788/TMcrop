@@ -96,12 +96,12 @@ export function SeedlingFilter({
           />
         </div>
 
-        {/* 育苗区域 */}
+        {/* 育苗区域（2026-07-25 改用 areaOid FK） */}
         <div className="min-w-[120px]">
           <Label className="text-gray-700">育苗区域</Label>
           <Select
-            value={filters.siteName}
-            onValueChange={(val) => onChange({ ...filters, siteName: val })}
+            value={filters.areaOid || '__all__'}
+            onValueChange={(val) => onChange({ ...filters, areaOid: val === '__all__' ? '' : val, siteName: val })}
           >
             <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />

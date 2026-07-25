@@ -120,12 +120,12 @@ export function PlantingFilter({
           />
         </div>
 
-        {/* 种植区域/大棚位置（树形选择） */}
+        {/* 种植区域/大棚位置（树形选择，2026-07-25 改用 areaOid FK） */}
         <div className="min-w-[160px]">
           <Label className="text-gray-700">大棚位置</Label>
           <TreeSelect
-            value={filters.areaName || undefined}
-            onChange={(val) => onChange({ ...filters, areaName: val || '' })}
+            value={filters.areaOid || undefined}
+            onChange={(val) => onChange({ ...filters, areaOid: val || '', areaName: val || '' })}
             treeData={areaTreeData}
             placeholder="全部"
             allowClear

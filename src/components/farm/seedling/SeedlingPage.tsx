@@ -65,6 +65,7 @@ export default function SeedlingPage() {
     startDate: '',
     endDate: '',
     siteName: '',
+    areaOid: '',  // 2026-07-25: 区域 oid（FK 权威）
     seedlingType: '',
     createBy: '',
     status: ''
