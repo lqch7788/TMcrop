@@ -514,6 +514,9 @@ router.put('/zones/:id', (req, res) => {
 /**
  * 删除区域（软删除）
  * DELETE /api/basic-data/zones/:id
+ *
+ * 2026-07-25：增加 409 阻挡逻辑 — 若该 zone 下有未删除的 plantings/seedlings
+ * 引用（area_oid = zones.oid），拒绝删除并返回阻塞明细。
  */
 router.delete('/zones/:id', (req, res) => {
   try {
@@ -521,6 +524,53 @@ router.delete('/zones/:id', (req, res) => {
     const { id } = req.params;
     const now = new Date().toISOString();
 
+    // 1. 反查 zones.oid（plantings.area_oid 是 zones.oid 引用，不是 PK id）
+    const zoneRes = db.exec(`SELECT oid, zone_name FROM zones WHERE id = ?`, [id]);
+    if (zoneRes.length === 0 || zoneRes[0].values.length === 0) {
+      return res.status(404).json({ success: false, error: '区域不存在' });
+    }
+    const zoneOid = zoneRes[0].values[0][0] as string;
+    const zoneName = zoneRes[0].values[0][1] as string;
+
+    // 2. 检测 plantings 阻塞
+    const plantingRes = db.exec(
+      `SELECT id, planting_code, crop_name, crop_variety FROM plantings
+       WHERE area_oid = ? AND deleted_at IS NULL
+       ORDER BY planting_date DESC LIMIT 50`,
+      [zoneOid],
+    );
+    const blockingPlantings = (plantingRes[0]?.values || []).map((row: any[]) => ({
+      id: row[0],
+      plantingCode: row[1],
+      cropName: row[2],
+      cropVariety: row[3],
+    }));
+
+    // 3. 检测 seedlings 阻塞
+    const seedlingRes = db.exec(
+      `SELECT id, seedling_code, crop_name, crop_variety FROM seedlings
+       WHERE area_oid = ? AND deleted_at IS NULL
+       ORDER BY seedling_date DESC LIMIT 50`,
+      [zoneOid],
+    );
+    const blockingSeedlings = (seedlingRes[0]?.values || []).map((row: any[]) => ({
+      id: row[0],
+      seedlingCode: row[1],
+      cropName: row[2],
+      cropVariety: row[3],
+    }));
+
+    // 4. 有阻塞 → 409
+    if (blockingPlantings.length > 0 || blockingSeedlings.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `该区块「${zoneName}」下有 ${blockingPlantings.length} 个种植批次、${blockingSeedlings.length} 个育苗批次，请先迁移或删除后再试`,
+        blockingPlantings,
+        blockingSeedlings,
+      });
+    }
+
+    // 5. 无阻塞 → 软删除
     db.run(`UPDATE zones SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
     saveDatabase();
