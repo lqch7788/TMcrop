@@ -1009,6 +1009,8 @@ export default function BaseOperationsCenterV2() {
         title={modalType === 'add' ? `新增${getAddButtonText().replace('新增', '')}` : `编辑${getEditButtonText()}`}
         onSubmit={handleSubmit}
         size="md"
+        width={650}
+        height={520}
       >
         <div className="space-y-4">
           {/* 温室表单：编辑温室行（formData.type='greenhouse'）OR 新增基地下温室（addAnchorType='base'）*/}
