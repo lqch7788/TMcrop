@@ -661,19 +661,13 @@ export default function BaseOperationsCenterV2() {
     }
 
     // 局部辅助：与原 case 'base' 同样的统计逻辑，对外暴露 targetBaseOid 参数
+    // 2026-07-25：改用 zones[].aggregatedPlantings API 字段（planting_records 已弃用）
     const computeBaseStats = (targetBaseOid: string) => {
       const baseNode = bases.find((b) => b.oid === targetBaseOid);
       const baseGreenhouses = greenhouses.filter((gh) => gh.baseOid === targetBaseOid);
-      const baseZoneOids = new Set(
-        zones
-          .filter((z) => baseGreenhouses.some((gh) => gh.oid === String(z.greenhouseOid || '')))
-          .map((z) => String(z.oid || '')),
+      const baseZones = zones.filter((z) =>
+        baseGreenhouses.some((gh) => gh.oid === String(z.greenhouseOid || '')),
       );
-      const baseRecords = records.filter((r) => {
-        const block = blocks.find((b) => b.oid === String(r.blockOid || ''));
-        return block && baseZoneOids.has(String(block.zoneOid || ''));
-      });
-      const plantingRecords = baseRecords.filter((r) => r.status === 'planting');
 
       // P2 修复：base.area（亩 → ㎡）优先于 greenhouse.area 累加
       const MU_TO_SQM = 666.67;
@@ -681,11 +675,20 @@ export default function BaseOperationsCenterV2() {
       const ghAreaSum = baseGreenhouses.reduce((sum, gh) => sum + (Number(gh.area) || 0), 0);
       const totalArea = baseAreaSqm > 0 ? baseAreaSqm : ghAreaSum;
 
+      // 用 aggregatedPlantings 聚合字段（来自 GET /api/basic-data/zones 的 LEFT JOIN）
+      const plantingCount = baseZones.reduce(
+        (sum, z) => sum + (z.aggregatedPlantings?.count || 0),
+        0,
+      );
+      const currentCrop = baseZones
+        .map((z) => z.aggregatedPlantings?.currentCrop)
+        .filter((c) => c && c !== '-')[0] || '-';
+
       return {
         totalArea,
-        zoneCount: baseZoneOids.size,
-        plantingCount: plantingRecords.length,
-        currentCrop: plantingRecords[0]?.cropName || '-',
+        zoneCount: baseZones.length,
+        plantingCount,
+        currentCrop,
       };
     };
 
@@ -695,32 +698,31 @@ export default function BaseOperationsCenterV2() {
         return computeBaseStats(effectiveBaseOid);
       }
       case 'greenhouse': {
-        const ghZoneOids = new Set(zones.filter(z => z.greenhouseOid === selectedNode.oid).map(z => String(z.oid || '')));
-        const ghRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
-          return block && ghZoneOids.has(String(block.zoneOid || ''));
-        });
-        const plantingRecords = ghRecords.filter(r => r.status === 'planting');
+        // 2026-07-25：改用 aggregatedPlantings API 字段（planting_records 已弃用）
+        const ghZones = zones.filter(z => z.greenhouseOid === selectedNode.oid);
+        const plantingCount = ghZones.reduce(
+          (sum, z) => sum + (z.aggregatedPlantings?.count || 0),
+          0,
+        );
+        const currentCrop = ghZones
+          .map(z => z.aggregatedPlantings?.currentCrop)
+          .filter(c => c && c !== '-')[0] || '-';
 
         return {
           totalArea: greenhouses.find(gh => gh.oid === selectedNode.oid)?.area || 0,
-          zoneCount: ghZoneOids.size,
-          plantingCount: plantingRecords.length,
-          currentCrop: plantingRecords[0]?.cropName || '-',
+          zoneCount: ghZones.length,
+          plantingCount,
+          currentCrop,
         };
       }
       case 'zone': {
-        const zoneRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
-          return block?.zoneOid === selectedNode.oid;
-        });
-        const plantingRecords = zoneRecords.filter(r => r.status === 'planting');
-
+        // 2026-07-25：改用 aggregatedPlantings API 字段（planting_records 已弃用）
+        const zone = zones.find(z => z.oid === selectedNode.oid);
         return {
-          totalArea: zones.find(z => z.oid === selectedNode.oid)?.area || 0,
+          totalArea: zone?.area || 0,
           zoneCount: 1,
-          plantingCount: plantingRecords.length,
-          currentCrop: plantingRecords[0]?.cropName || '-',
+          plantingCount: zone?.aggregatedPlantings?.count || 0,
+          currentCrop: zone?.aggregatedPlantings?.currentCrop || '-',
         };
       }
       default:
