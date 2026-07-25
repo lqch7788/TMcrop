@@ -451,7 +451,9 @@ router.get('/zones', (req, res) => {
 router.post('/zones', (req, res) => {
   try {
     const db = getDatabase();
-    const { zoneName, zoneCode, baseOid, zoneType, area, sortOrder, description } = req.body;
+    // 2026-07-25：前端发 greenhouseOid（camelCase），后端兼容 baseOid
+    const { zoneName, zoneCode, baseOid, greenhouseOid, zoneType, area, sortOrder, description } = req.body;
+    const ghOid = greenhouseOid || baseOid || '';
 
     if (!zoneName || !zoneCode) {
       return res.status(400).json({ success: false, error: '区域名称和编码不能为空' });
@@ -465,7 +467,7 @@ router.post('/zones', (req, res) => {
       INSERT INTO zones (id, oid, zone_code, zone_name, greenhouse_oid, zone_type, area, sort_order, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      id, oid, zoneCode, zoneName, baseOid || '', zoneType || '', area || 0, sortOrder || 0,
+      id, oid, zoneCode, zoneName, ghOid, zoneType || '', area || 0, sortOrder || 0,
       'active',  // 2026-07-25 修复：原字面量 'active' 写死导致 sql.js 把 VALUES 算成 12 项 vs 10 values
       now, now,
     ]);
@@ -486,7 +488,8 @@ router.put('/zones/:id', (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
-    const { zoneName, zoneCode, baseOid, zoneType, area, sortOrder, status, description } = req.body;
+    const { zoneName, zoneCode, baseOid, greenhouseOid, zoneType, area, sortOrder, status, description } = req.body;
+    const ghOid = greenhouseOid ?? baseOid;
 
     const now = new Date().toISOString();
 
@@ -501,7 +504,7 @@ router.put('/zones/:id', (req, res) => {
           status = COALESCE(?, status),
           updated_at = ?
       WHERE id = ?
-    `, [zoneName, zoneCode, baseOid, zoneType, area, sortOrder, status, now, id]);
+    `, [zoneName, zoneCode, ghOid, zoneType, area, sortOrder, status, now, id]);
 
     saveDatabase();
     res.json({ success: true, message: '区域更新成功' });
