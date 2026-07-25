@@ -323,8 +323,8 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         const opType = String(r.operation_type);
         const isMoveIn = opType === 'move_in';
         const cropName = r.crop_name && r.crop_variety
-          ? `${r.crop_name}-${r.crop_variety}`
-          : (r.crop_name || '');
+          ? `${String(r.crop_name)}-${String(r.crop_variety)}`
+          : String(r.crop_name || '');
         results.push({
           id: String(r.id || ''),
           occurredAt: String(r.create_time || r.operation_date || ''),

@@ -337,8 +337,13 @@ export class FertilizerRepository {
     for (const [key, value] of Object.entries(updates)) {
       const col = camelToSnake[key] ?? (ALLOWED_UPDATE_COLUMNS.has(key) ? key : null);
       if (!col) continue;
+      // 2026-07-25 修复 500：undefined → null
+      // 背景：前端 EditModal 提交时 seedlingId/plantingId 等字段根据业务可能为 undefined
+      //       sql.js 1.x 对 undefined 参数抛错（"SQL values can only be number, string, bigint, buffer, or null"）
+      //       → service.update 抛普通 Error → 路由 500
+      // 修复：push 之前转 null（数据库列允许 NULL 的场景）
       sets.push(`${col} = ?`);
-      params.push(value);
+      params.push(value === undefined ? null : value);
     }
     if (sets.length === 0) return 0;
     params.push(id);
@@ -405,7 +410,11 @@ export class FertilizerRepository {
     const exists = queryToObjects<{ id: string }>(db,
       `SELECT id FROM fertilizer_specs WHERE id = ?`, [specId]);
     if (exists.length === 0) {
-      throw new Error(`肥料规格不存在，无法恢复库存：specId=${specId}`);
+      // 2026-07-25：spec 已删除时无法定位换算，跳过库存恢复（仅 warning + return 0）
+      // 修 service.update 编辑保存时遍历 allSpecIds 走 increaseStock → 抛普通 Error → 500
+      // 与 service increaseStockFromFarmRecord 的修复对称
+      console.warn(`[fertilizer.repository] 增加库存失败（spec 不存在，跳过）: specId=${specId}`);
+      return 0;
     }
     db.run(
       `UPDATE fertilizer_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`,

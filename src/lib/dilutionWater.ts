@@ -47,20 +47,33 @@ export function calculateDilutionWater(
   return formatWaterL(waterL);
 }
 
-/** 从 pool 行的 dilutionRatio 字符串计算用水量 */
+/** 从 pool 行的 dilutionRatio 字符串计算用水量
+ * 2026-07-25 修复：放宽正则，支持多种用户输入格式
+ *   - "1:500" / "1/500" / "1：500"（中英文冒号） → 500
+ *   - "1:500倍" / "1:500 倍" / "1:500X"（带单位/空格）→ 500
+ *   - "500"（纯数字，视为 1:500）→ 500
+ *   - "dry" / "" → null（不计算）
+ */
 export function calcWaterFromPoolRow(row: {
   quantity?: number;
   unit?: string;
   dilutionRatio?: string;
 }): { amount: number; unit: string } | null {
-  const dr = row.dilutionRatio || '';
-  if (!dr || dr === 'dry') return null;
-  const match = dr.match(/^1:(\d+)$/);
-  if (!match) return null;
-  const dilution = parseInt(match[1], 10);
+  const dr = (row.dilutionRatio || '').trim();
+  if (!dr || dr.toLowerCase() === 'dry') return null;
+  // 2026-07-25 放宽：支持 "1:N" / "1/N" / "1：N" + 可选 "倍" 后缀
+  //   模式 1：标准 "1:N"（含中文/英文/斜杠分隔符）
+  let m = dr.match(/^1\s*[:/：]\s*(\d+(?:\.\d+)?)\s*(?:倍|倍液)?$/);
+  // 模式 2：纯数字 "N"（视为 1:N）
+  if (!m) m = dr.match(/^(\d+(?:\.\d+)?)\s*(?:倍|倍液)?$/);
+  if (!m) return null;
+  const dilution = parseFloat(m[1]);
   if (!dilution || dilution <= 0) return null;
+  // 用水量为 0 时也不计算
+  const qty = Number(row.quantity) || 0;
+  if (qty <= 0) return null;
 
-  const base = toBaseUnit(row.quantity ?? 0, row.unit ?? 'kg');
+  const base = toBaseUnit(qty, row.unit ?? 'kg');
   const waterML = base * dilution;
   const waterL = waterML / 1000;
 

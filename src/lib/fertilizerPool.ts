@@ -8,17 +8,31 @@
  *       类型断言性反序列化（带去重/Spec 关联）由各组件自处理
  */
 
-/** 池行结构（最小可用集；具体业务字段由消费方决定） */
+/** 池行结构（2026-07-25：补全所有写入字段，不再用 unknown 索引签名兜底） */
 export interface FertilizationPoolRow {
-  type?: string;
+  // 区域/作物关联
+  type?: 'planting' | 'seedling';
   id?: string;
   code?: string;
-  cropName?: string;
+  cropName?: string;   // 品种名（AddModal 写入时用 subVariety1Name || cropVariety || cropName）
+  cropCode?: string;
   area?: string;
+  // 肥料用量
   quantity?: number;
   unit?: string;
   unitPrice?: number;
-  [key: string]: unknown;
+  dilutionRatio?: string;
+  fertilizationMethod?: string;
+  fertilizerName?: string;
+  // Spec 快照（2026-07-12 重构后所有 spec 关联字段都从 pool 行取）
+  specId?: string;
+  specBrandName?: string;
+  specUnitPrice?: number;
+  specBatchNumber?: string;
+  // 2026-07-25：稀释用水量（计算公式：肥料用量 × 稀释倍数；≥1000L 自动切 m³）
+  // 写入时由 AddModal/EditModal 提交时计算并持久化，详情优先读取
+  waterAmount?: number;
+  waterUnit?: string;  // 'L' | 'm³'
 }
 
 /**

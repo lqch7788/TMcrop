@@ -16,6 +16,7 @@ import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { FertilizerPoolEditor } from './FertilizerPoolEditor';
 import type { FertilizerPoolItem } from './FertilizerPoolEditor';
+import { calcWaterFromPoolRow } from '@/lib/dilutionWater';
 
 /** 区域选取项 */
 interface SelectedArea {
@@ -136,24 +137,35 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
     try {
       // 构造池 JSON：每个区域 × 每个肥料 = 一行
       const poolRows = selectedAreas.flatMap((area) =>
-        fertilizerPool.map((fert) => ({
-          type: area.type,
-          id: area.id,
-          code: area.code,
-          cropName: area.cropName,
-          cropCode: '',
-          area: area.area,
-          quantity: Number(fert.dosage),
-          unit: fert.unit,
-          dilutionRatio: fert.dilutionRatio,
-          fertilizationMethod: fert.fertilizationMethod,
-          fertilizerName: fert.fertilizerName,
-          unitPrice: Number(fert.unitPrice),
-          specId: fert.specId,  // 2026-07-21 统一字段名（旧名 fertilizerSpecId 已废弃）
-          specBrandName: fert.brandName,
-          specUnitPrice: Number(fert.unitPrice),
-          specBatchNumber: '',
-        }))
+        fertilizerPool.map((fert) => {
+          // 2026-07-25：提交时计算并写入用水量（与编辑器实时预览一致）
+          const water = calcWaterFromPoolRow({
+            quantity: Number(fert.dosage) || 0,
+            unit: fert.unit,
+            dilutionRatio: fert.dilutionRatio,
+          });
+          return {
+            type: area.type,
+            id: area.id,
+            code: area.code,
+            cropName: area.cropName,
+            cropCode: '',
+            area: area.area,
+            quantity: Number(fert.dosage),
+            unit: fert.unit,
+            dilutionRatio: fert.dilutionRatio,
+            fertilizationMethod: fert.fertilizationMethod,
+            fertilizerName: fert.fertilizerName,
+            unitPrice: Number(fert.unitPrice),
+            // 2026-07-25：写入用水量（公式：肥料用量 × 稀释倍数；≥1000L 自动切 m³）
+            waterAmount: water?.amount ?? 0,
+            waterUnit: water?.unit ?? 'L',
+            specId: fert.specId,  // 2026-07-21 统一字段名（旧名 fertilizerSpecId 已废弃）
+            specBrandName: fert.brandName,
+            specUnitPrice: Number(fert.unitPrice),  // 2026-07-25：与类型对齐（保留同名字段，不改后端读取；specUnitPriceSnapshot 是 record 顶层字段）
+            specBatchNumber: '',
+          };
+        })
       );
 
       const totalQty = poolRows.reduce((s, r) => s + Number(r.quantity), 0);
@@ -240,6 +252,15 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
         {/* 关联业务 → 选择区域 */}
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3">📍 施肥区域（多选，支持不同作物不同区域）</h3>
+          {/* 2026-07-25 P1：与 EditModal 对齐 — 当前作物多作物展示 */}
+          {selectedAreas.length > 0 && (() => {
+            const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).filter(Boolean)));
+            return allCropNames.length > 0 ? (
+              <p className="text-xs text-emerald-600 mb-2">
+                🌱 {allCropNames.length === 1 ? '当前作物' : `包含作物（${allCropNames.length}）`}：{allCropNames.join('、')}
+              </p>
+            ) : null;
+          })()}
           <div className="relative" ref={areaRef}>
             <div className="flex items-center gap-2 mb-2">
               <TabsList selectedValue={areaTab} onValueChange={(v) => setAreaTab(v as 'planting'|'seedling')}>

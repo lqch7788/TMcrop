@@ -50,6 +50,12 @@ export interface FertilizerData {
   specBrandName?: string;
   // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
   cropNames?: string;
+  // 2026-07-25：与后端 schema 对齐 — 补全 5 字段
+  areaId?: string;
+  sourceType?: string;            // 'manual' | 'fertilizer_dilution' | 'daily_sync'
+  sourceDailyRecordId?: string;  // 每日记录同步溯源
+  sourceItemId?: string;         // 每日记录同步子项 ID
+  realFertilizerCode?: string;   // 库中真实 code（DELETE 时恢复库存用）
 }
 
 // ========== FIELD_MAP ==========
@@ -93,6 +99,12 @@ const FIELD_MAP: Record<string, string> = {
   spec_brand_name: 'specBrandName',
   // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥）
   crop_names: 'cropNames',
+  // 2026-07-25：补全 5 字段映射
+  area_id: 'areaId',
+  source_type: 'sourceType',
+  source_daily_record_id: 'sourceDailyRecordId',
+  source_item_id: 'sourceItemId',
+  real_fertilizer_code: 'realFertilizerCode',
 };
 
 // ========== 转换函数 ==========
@@ -188,7 +200,9 @@ export const useFertilizerStore = create<FertilizerState>()(
         return updated;
       } catch (err) {
         set({ error: (err as Error).message });
-        return null;
+        // 2026-07-25：重新抛错（之前静默返回 null → FertilizerEditModal 不感知失败 → 弹窗误导性关闭）
+        // 修"保存后列表数据没变化"：前端 catch 后阻止 onSaved/onClose，让用户看到错误
+        throw err;
       }
     },
 
