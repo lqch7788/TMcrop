@@ -55,6 +55,8 @@ const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'is_seed_saving', 'seed_plant_marker',
   'loss_count', 'supplement_count',
   'unit', 'target_yield', 'target_yield_unit',
+  // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+  'area_oid',
 ]);
 
 /** 通用 UPDATE 白名单过滤：拒绝未知列，返回 {fields, values} */
@@ -899,6 +901,8 @@ router.post('/', (req: Request, res: Response) => {
 
     const finalAreaId = body.area_id || body.areaId || '';
     const finalAreaName = body.area_name || body.areaName || '';
+    // 2026-07-25: 区域外键字段（关联 zones.oid），area_name 继续冗余保留以兼容旧查询
+    const finalAreaOid = body.area_oid || body.areaOid || null;
     const finalRootName = body.root_name || body.rootName || '';
     const finalGreenhouseName = body.greenhouse_name || body.greenhouseName || '';
 
@@ -1007,8 +1011,9 @@ router.post('/', (req: Request, res: Response) => {
           harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code,
           is_breeding, parent_male_code, parent_female_code, generation, breeding_method, breeding_location, target_traits,
           is_seed_saving, seed_plant_marker,
-          loss_count, supplement_count
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          loss_count, supplement_count,
+          area_oid
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -1023,6 +1028,8 @@ router.post('/', (req: Request, res: Response) => {
         finalIsSeedSaving, finalSeedPlantMarker,
         // 2026-06-28: 新建时 loss_count/supplement_count 默认 0（每日记录累加写入）
         0, 0,
+        // 2026-07-25: 区域外键（zones.oid），area_name 仍冗余保留
+        finalAreaOid,
       ]);
 
       // 2026-06-24: 同步建 crop_instance 行，让行级采收入库 findSourceInstanceId() 能溯源
