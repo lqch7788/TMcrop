@@ -392,7 +392,7 @@ router.get('/code-rules', (req, res) => {
 router.get('/zones', (req, res) => {
   try {
     const db = getDatabase();
-    // 2026-07-25: 加 aggregatedPlantings 聚合字段（COUNT plantings/seedlings, SUM quantity, latest crop_name）
+    // 2026-07-25: 加 aggregatedPlantings 聚合字段（area_oid 列已通过 migration 应用）
     const result = db.exec(`
       SELECT z.id, z.oid, z.zone_code, z.zone_name, z.greenhouse_oid, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
              g.name as greenhouseName,
@@ -535,7 +535,7 @@ router.delete('/zones/:id', (req, res) => {
     const zoneOid = zoneRes[0].values[0][0] as string;
     const zoneName = zoneRes[0].values[0][1] as string;
 
-    // 2. 检测 plantings 阻塞
+    // 2. 检测 plantings 阻塞（area_oid 列已迁移）
     const plantingRes = db.exec(
       `SELECT id, planting_code, crop_name, crop_variety FROM plantings
        WHERE area_oid = ? AND deleted_at IS NULL
