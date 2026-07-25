@@ -560,6 +560,34 @@ export default function BaseOperationsCenterV2() {
     }
   }, [baseOidFromUrl, bases, expandedKeys, setExpandedKeys]);
 
+  // 2026-07-25 Plan B Task 6：URL 持久化选中节点
+  //   - 选中节点变化 → 写入 ?nodeType=&nodeOid=
+  //   - URL 读取 → 恢复 selectedNode（一次性 mount）
+  const [urlApplied, setUrlApplied] = useState(false);
+  useEffect(() => {
+    if (urlApplied) return;
+    const params = new URLSearchParams(window.location.search);
+    const nodeType = params.get('nodeType');
+    const nodeOid = params.get('nodeOid');
+    if (nodeType && nodeOid) {
+      selectNode(nodeType as any, nodeOid, '');
+    }
+    setUrlApplied(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedNode.oid) {
+      params.set('nodeType', selectedNode.type);
+      params.set('nodeOid', selectedNode.oid);
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    if (newUrl !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [selectedNode]);
+
   // 根据选中节点获取表格数据（树状视图使用）
   const tableData = useMemo(() => {
     if (!selectedNode.oid) {
