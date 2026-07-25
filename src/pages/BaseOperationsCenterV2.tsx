@@ -272,10 +272,10 @@ export default function BaseOperationsCenterV2() {
   const [searchParams] = useSearchParams();
   const baseOidFromUrl = searchParams.get('baseOid') || '';
 
-  // 视图模式状态：'tree' 树状视图，'list' 列表视图
-  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
-  // 列表视图中的 Tab 状态：'facility' 设施，'zone' 区块，'planting' 种植记录
-  const [listTab, setListTab] = useState<'facility' | 'zone' | 'planting'>('facility');
+  // 2026-07-25 Plan B：合并双模式为单一布局。
+//   删除 viewMode（'tree' | 'list'） + listTab（'facility' | 'zone' | 'planting'）
+//   默认：顶部 4 统计卡 + 左 4 级树菜单 + 右主表格（带行折叠）。
+//   selectedNode 驱动整页状态。
 
   // Store
   const {
@@ -862,229 +862,43 @@ export default function BaseOperationsCenterV2() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">基地运营中心</h1>
               <p className="text-sm text-gray-500">
-                {viewMode === 'tree' && baseOidFromUrl
+                {baseOidFromUrl
                   ? `当前基地：${currentBaseName}`
-                  : viewMode === 'tree' && selectedNode.name
+                  : selectedNode.name
                   ? `当前选择：${selectedNode.name}`
-                  : viewMode === 'tree'
-                  ? '请从左侧树形结构中选择节点'
-                  : '列表视图'}
+                  : '请从左侧树形结构中选择节点'}
               </p>
             </div>
           </div>
-          {/* 视图切换按钮 */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white text-green-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              列表
-            </button>
-            <button
-              onClick={() => setViewMode('tree')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'tree'
-                  ? 'bg-white text-green-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Network className="w-4 h-4" />
-              树状
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* 主内容区：根据视图模式显示不同内容 */}
-      {viewMode === 'tree' ? (
-      /* 树状视图：左侧树 + 右侧内容 */
-      <div className="flex-1 flex gap-4 min-h-0">
+      {/* Plan B 统一布局：顶部 4 统计卡 + 左 4 级树菜单 + 右主表格（带行折叠） */}
+      <div className="flex-1 flex flex-col gap-4 px-6 pb-6 min-h-0">
+        {/* 顶部 4 统计卡（Plan B Task 2 抽出，stats 来自 useBaseOpsStats hook） */}
+        <StatsCards stats={stats} />
         {/* 左侧树形结构 */}
-        <div className="w-80 flex-shrink-0 bg-white rounded-xl shadow-none flex flex-col">
-          {/* 搜索框 */}
-          <div className="p-3 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="搜索基地/温室/区域..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-          </div>
+        {/* Plan B Task 5：删除 tree branch（line 880-1028）和 list mode tab UI
+            改为统一布局：左 TreeMenu + 右 GreenhouseWithZonesTab（保留行折叠） */}
+        <div className="flex-1 flex gap-4 min-h-0">
+          {/* 左 4 级树菜单（Plan B Task 3 TreeMenu 组件） */}
+          <TreeMenu
+            treeData={treeData}
+            selectedNode={selectedNode}
+            expandedKeys={expandedKeys}
+            searchTerm={searchTerm}
+            onSelect={handleNodeSelect}
+            onExpand={setExpandedKeys}
+            onSearchChange={setSearchTerm}
+            onAddBase={() => handleAdd('base')}
+            onAddGreenhouse={() => handleAdd('greenhouse')}
+            onAddZone={() => handleAdd('zone')}
+            loading={loading}
+          />
 
-          {/* 树形组件 */}
-          <div className="flex-1 overflow-auto p-3">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              </div>
-            ) : (
-              <Tree
-                data={treeData}
-                selectable
-                selectedKeys={selectedNode.oid ? [`${selectedNode.type === 'greenhouse' ? 'gh' : selectedNode.type === 'zone' ? 'zone' : selectedNode.type === 'block' ? 'block' : 'base'}_${selectedNode.oid}`] : []}
-                expandedKeys={expandedKeys}
-                onSelect={(keys) => {
-                  if (keys.length > 0) {
-                    handleNodeSelect(keys[0])
-                  }
-                }}
-                onExpand={setExpandedKeys}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* 右侧内容区 */}
-        <div className="flex-1 flex flex-col min-h-0 gap-4">
-          {/* 统计卡片 */}
-          <div className="grid grid-cols-4 gap-4 mb-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-              <CardContent className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.totalArea}</div>
-                <div className="text-sm text-gray-600">总面积(㎡)</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-green-50 to-green-100">
-              <CardContent className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.zoneCount}</div>
-                <div className="text-sm text-gray-600">区块数</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
-              <CardContent className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.plantingCount}</div>
-                <div className="text-sm text-gray-600">种植中</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-              <CardContent className="text-center">
-                <div className="text-lg font-bold text-purple-600 truncate">{stats.currentCrop}</div>
-                <div className="text-sm text-gray-600">当前作物</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 数据表格 */}
-          <div className="flex-1 bg-white rounded-xl shadow-none overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {tableColumns.map((col) => (
-                    <TableHead key={col.key} className={`${col.width || ''} text-center`.trim()}>
-                      {col.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tableData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={tableColumns.length} className="text-center py-8 text-gray-500">
-                      暂无数据
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  tableData.map((row) => (
-                    <TableRow key={row.oid}>
-                      {tableColumns.map((col) => (
-                        <TableCell key={col.key} className={`${col.width || ''} text-center`.trim()}>
-                          {col.key === 'action' ? (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(row)}
-                                className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(row)}
-                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : col.key === 'status' ? (
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                row.status === 'active'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {row.status === 'active' ? '启用' : '停用'}
-                            </span>
-                          ) : col.key === 'code' || col.key === 'name' || col.key === 'zoneCode' || col.key === 'zoneName' || col.key === 'blockCode' || col.key === 'blockName' ? (
-                            highlightText((row as Record<string, unknown>)[col.key]?.toString() || '-', searchTerm)
-                          ) : col.key === 'zoneType' || col.key === 'blockType' ? (
-                            // 2026-07-25：类型列英文枚举 → 中文
-                            translateType(col.key, (row as Record<string, unknown>)[col.key])
-                          ) : (
-                            (row as Record<string, unknown>)[col.key]?.toString() || '-'
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* 底部操作按钮 */}
-          <div className="flex items-center justify-start gap-3 bg-white rounded-xl p-4 shadow-none">
-            <Button onClick={handleAdd}>
-              <Plus className="w-4 h-4 mr-1" />
-              {getAddButtonText()}
-            </Button>
-          </div>
-        </div>
-      </div>
-      ) : (
-      /* 列表视图：使用旧版三个 Tab 组件 */
-      <div className="flex-1 bg-white rounded-xl shadow-none flex flex-col">
-        {/* Tab 切换 */}
-        <div className="border-b border-gray-200 rounded-t-xl">
-          <nav className="flex gap-0">
-            <button
-              onClick={() => setListTab('facility')}
-              className={`px-6 py-3 text-base font-bold border-b-2 transition-all duration-200 rounded-t-md ${
-                listTab === 'facility'
-                  ? 'border-green-600 text-green-700 bg-green-50 shadow-sm'
-                  : 'border-transparent text-gray-500 hover:text-green-600 hover:bg-green-50/50'
-              }`}
-            >
-              种植区管理
-            </button>
-            {/* 2026-07-25：'区块划分' tab 已并入 '种植区管理'，删除该按钮 */}
-            <button
-              onClick={() => setListTab('planting')}
-              className={`px-6 py-3 text-base font-bold border-b-2 transition-all duration-200 rounded-t-md ${
-                listTab === 'planting'
-                  ? 'border-green-600 text-green-700 bg-green-50 shadow-sm'
-                  : 'border-transparent text-gray-500 hover:text-green-600 hover:bg-green-50/50'
-              }`}
-            >
-              种植记录
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab 内容区域 */}
-        <div className="flex-1 p-4 overflow-auto">
-          {listTab === 'facility' && (
+          {/* 右侧主区域：直接用 GreenhouseWithZonesTab（带行折叠 + 行内批次列表） */}
+          <div className="flex-1 bg-white rounded-xl shadow-none flex flex-col min-h-0 p-4 overflow-auto">
+            {/* Plan B Task 5: 旧的 listTab 切换按钮已删除（合并为单 TreeMenu + GreenhouseWithZonesTab） */}
             <GreenhouseWithZonesTab
               greenhouses={filteredGreenhouses}
               zones={filteredZones}
@@ -1119,35 +933,46 @@ export default function BaseOperationsCenterV2() {
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
             />
-          )}
-          {/* 2026-07-25：区块划分 tab 已合并到 种植区管理（GreenhouseWithZonesTab 内部嵌套展示） */}
-          {listTab === 'planting' && (
-            <PlantingTab
-              records={filteredRecords}
+          {/* Plan B Task 5：删除 listTab='planting' PlantingTab（planting_records 弃用） */}
+
+            {/* 主表格：GreenhouseWithZonesTab（带行折叠 + 行内批次列表） */}
+            <GreenhouseWithZonesTab
               greenhouses={filteredGreenhouses}
               zones={filteredZones}
+              bases={bases}
+              baseOid={baseOidFromUrl}
+              baseName={bases.find(b => b.oid === baseOidFromUrl)?.name || ''}
               loading={loading}
-              // 2026-07-25：planting_records 表弃用，listTab='planting' 内所有写 action 都改为抛错
-              // 视觉上保留只读表格（待 Plan B Task 5 整体删除 listTab='planting'）
-              onAdd={async () => {
-                throw new Error('DEPRECATED: planting_records 表已弃用，请到「种植管理」页面操作');
+              onAddGH={async (data: any) => {
+                await useGreenhouseStore.getState().addGreenhouse(data);
+                loadAllData();
               }}
-              onEdit={async () => {
-                throw new Error('DEPRECATED: planting_records 表已弃用');
+              onEditGH={async (id: any, data: any) => {
+                await useGreenhouseStore.getState().editGreenhouse(id, data);
+                loadAllData();
               }}
-              onEnd={async () => {
-                throw new Error('DEPRECATED: planting_records 表已弃用');
+              onRemoveGH={async (id: any) => {
+                await useGreenhouseStore.getState().removeGreenhouse(id);
+                loadAllData();
               }}
-              onRemove={async () => {
-                throw new Error('DEPRECATED: planting_records 表已弃用');
+              onAddZone={async (data: any) => {
+                await useZoneStore.getState().addZone(data);
+                loadAllData();
+              }}
+              onEditZone={async (id: any, data: any) => {
+                await useZoneStore.getState().editZone(id, data);
+                loadAllData();
+              }}
+              onRemoveZone={async (id: any) => {
+                await useZoneStore.getState().removeZone(id);
+                loadAllData();
               }}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
             />
-          )}
+          </div>
         </div>
       </div>
-      )}
 
       {/* 新增/编辑弹窗 */}
       <Modal
