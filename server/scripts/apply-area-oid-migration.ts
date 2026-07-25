@@ -11,7 +11,7 @@
  *
  * 幂等：多次运行结果一致（try/catch duplicate column）
  */
-import { initDatabase, getDatabase, closeDatabase } from '../src/db';
+import { initDatabase, getDatabase, closeDatabase, saveDatabase } from '../src/db';
 import { initializeDatabase } from '../src/db/schema';
 import { migrate20260725ZoneAreaOid } from '../src/db/migrations/2026-07-25-zone-area-oid';
 
@@ -66,6 +66,9 @@ async function main() {
   console.log(`  plantings: ${pCount} 条已反查`);
   console.log(`  seedlings: ${sCount} 条已反查`);
 
+  // 2026-07-25 重要：closeDatabase 不会自动 saveDatabase（db-safety 设计），
+  //   必须显式调用 saveDatabase() 才能持久化到磁盘！
+  saveDatabase();
   closeDatabase();
 }
 

@@ -392,22 +392,19 @@ router.get('/code-rules', (req, res) => {
 router.get('/zones', (req, res) => {
   try {
     const db = getDatabase();
-    // 2026-07-25: 加 aggregatedPlantings 聚合字段（area_oid 列已通过 migration 应用）
+    // 聚合字段：用 area_name 匹配 plantings/seedlings（兼容 production DB 无 area_oid 列）
     const result = db.exec(`
       SELECT z.id, z.oid, z.zone_code, z.zone_name, z.greenhouse_oid, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
              g.name as greenhouseName,
-             COUNT(DISTINCT p.id) AS planting_count,
-             COUNT(DISTINCT s.id) AS seedling_count,
-             COALESCE(SUM(p.planting_quantity), 0) AS occupied_area,
+             (SELECT COUNT(*) FROM plantings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS planting_count,
+             (SELECT COUNT(*) FROM seedlings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS seedling_count,
+             (SELECT COALESCE(SUM(planting_quantity), 0) FROM plantings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS occupied_area,
              (SELECT crop_name FROM plantings
-              WHERE area_oid = z.oid AND deleted_at IS NULL
+              WHERE area_name = z.zone_name AND deleted_at IS NULL
               ORDER BY planting_date DESC LIMIT 1) AS current_crop
       FROM zones z
       LEFT JOIN greenhouses g ON z.greenhouse_oid = g.oid
-      LEFT JOIN plantings p ON p.area_oid = z.oid AND p.deleted_at IS NULL
-      LEFT JOIN seedlings s ON s.area_oid = z.oid AND s.deleted_at IS NULL
       WHERE z.status = 'active'
-      GROUP BY z.id
       ORDER BY z.zone_code
     `);
 
@@ -535,12 +532,12 @@ router.delete('/zones/:id', (req, res) => {
     const zoneOid = zoneRes[0].values[0][0] as string;
     const zoneName = zoneRes[0].values[0][1] as string;
 
-    // 2. 检测 plantings 阻塞（area_oid 列已迁移）
+    // 2. 检测 plantings 阻塞（用 zoneName 匹配 — 兼容无 area_oid 列）
     const plantingRes = db.exec(
       `SELECT id, planting_code, crop_name, crop_variety FROM plantings
-       WHERE area_oid = ? AND deleted_at IS NULL
+       WHERE area_name = ? AND deleted_at IS NULL
        ORDER BY planting_date DESC LIMIT 50`,
-      [zoneOid],
+      [zoneName],
     );
     const blockingPlantings = (plantingRes[0]?.values || []).map((row: any[]) => ({
       id: row[0],
@@ -549,12 +546,12 @@ router.delete('/zones/:id', (req, res) => {
       cropVariety: row[3],
     }));
 
-    // 3. 检测 seedlings 阻塞
+    // 3. 检测 seedlings 阻塞（用 zoneName 匹配 — 兼容无 area_oid 列）
     const seedlingRes = db.exec(
       `SELECT id, seedling_code, crop_name, crop_variety FROM seedlings
-       WHERE area_oid = ? AND deleted_at IS NULL
+       WHERE area_name = ? AND deleted_at IS NULL
        ORDER BY seedling_date DESC LIMIT 50`,
-      [zoneOid],
+      [zoneName],
     );
     const blockingSeedlings = (seedlingRes[0]?.values || []).map((row: any[]) => ({
       id: row[0],
@@ -593,21 +590,25 @@ router.get('/zones/:oid/plantings', (req, res) => {
     const db = getDatabase();
     const { oid } = req.params;
 
+    // 反查 zone_name（用 area_name 文本匹配，兼容无 area_oid 列）
+    const zoneRes = db.exec(`SELECT zone_name FROM zones WHERE oid = ?`, [oid]);
+    const zoneName = zoneRes[0]?.values[0]?.[0] || '';
+
     const plantings = db.exec(
-      `SELECT id, planting_code, crop_name, crop_variety, area_oid, area_name,
+      `SELECT id, planting_code, crop_name, crop_variety, area_name,
               planting_date, planting_quantity, status, unit
        FROM plantings
-       WHERE area_oid = ? AND deleted_at IS NULL
+       WHERE area_name = ? AND deleted_at IS NULL
        ORDER BY planting_date DESC
        LIMIT 100`,
-      [oid],
+      [zoneName],
     );
 
     const seedlings = db.exec(
-      `SELECT id, seedling_code, crop_name, crop_variety, area_oid, area_name,
+      `SELECT id, seedling_code, crop_name, crop_variety, area_name,
               seedling_date, seedling_quantity, status, unit
        FROM seedlings
-       WHERE area_oid = ? AND deleted_at IS NULL
+       WHERE area_name = ? AND deleted_at IS NULL
        ORDER BY seedling_date DESC
        LIMIT 100`,
       [oid],
@@ -616,15 +617,14 @@ router.get('/zones/:oid/plantings', (req, res) => {
     const map = (rows: any[] | undefined) =>
       (rows || []).map((r: any[]) => ({
         id: r[0],
-        plantingCode: r[1],  // 也兼容 seedlings：seedlingCode 同字段返回
+        plantingCode: r[1],
         cropName: r[2],
         cropVariety: r[3],
-        areaOid: r[4],
-        areaName: r[5],
-        plantingDate: r[6],
-        plantingQuantity: r[7],
-        status: r[8],
-        unit: r[9] || '株',
+        areaName: r[4],
+        plantingDate: r[5],
+        plantingQuantity: r[6],
+        status: r[7],
+        unit: r[8] || '株',
       }));
 
     res.json({
