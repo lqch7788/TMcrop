@@ -16,6 +16,7 @@ import { Planting } from '../../../../types/crop';
 import { SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import { BaseZoneSelect } from '../../../common/BaseZoneSelect';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -186,8 +187,7 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
         {/* 种植区域 */}
         <div>
           <Label className="text-gray-900">种植区域</Label>
-          <DictSelect
-            category="planting_area"
+          <BaseZoneSelect
             value={formData.areaId}
             onChange={(value) => setFormData({ ...formData, areaId: value })}
             placeholder="选择种植区域"

@@ -12,6 +12,8 @@ const basicDataSections = [
   { icon: SettingsCog, label: '系统配置', path: '/settings/system-config', desc: '系统参数和全局配置' },
   { icon: BookOpen, label: '数据字典', path: '/settings/dictionary', desc: '管理所有枚举值和状态' },
   { icon: Target, label: '部门设置', path: '/settings/departments', desc: '设置组织架构' },
+  // 2026-07-25：补 基地架构管理 菜单入口（之前只有路由，无菜单项，导致用户找不到 base area 编辑页）
+  { icon: Building2, label: '基地架构管理', path: '/settings/bases', desc: '公司-基地结构配置（编辑基地面积/负责人/经纬度等）' },
   { icon: Building2, label: '基地运营中心', path: '/settings/base-operations?baseOid=base_1780023508412', desc: '设施管理 · 区域划分 · 种植记录' },
   { icon: Bell, label: '通知设置', path: '/settings/notification', desc: '消息通知渠道和规则' },
   { icon: FileText, label: '操作日志', path: '/settings/audit-log', desc: '系统操作审计日志' },

@@ -568,27 +568,52 @@ export default function BaseOperationsCenterV2() {
   }, [selectedNode, bases, greenhouses, zones, blocks, records, baseOidFromUrl]);
 
   // 根据选中节点计算统计数据
+  // 2026-07-25 P2 修复：URL 带 baseOid 但用户尚未点选树节点时，
+  //   tableData 已经 fallback 用 baseOidFromUrl 显示温室列表，但 stats 仍然走
+  //   "selectedNode.oid 为空 → 返回全 0" 的旧路径，导致顶部 4 个统计卡片全是 0
+  // 修复：selectedNode.oid 为空但有 baseOidFromUrl 时，按 baseOidFromUrl 当作"base 级"统计
   const stats = useMemo(() => {
-    if (!selectedNode.oid) {
+    // 派生一个有效的 base oid（先 selectedNode，没有再 URL）
+    const effectiveBaseOid = selectedNode.oid || baseOidFromUrl;
+    const effectiveNodeType = selectedNode.oid ? selectedNode.type : (baseOidFromUrl ? 'base' : null);
+
+    if (!effectiveBaseOid || !effectiveNodeType) {
       return { totalArea: 0, zoneCount: 0, plantingCount: 0, currentCrop: '-' };
     }
 
-    switch (selectedNode.type) {
-      case 'base': {
-        const baseGreenhouses = greenhouses.filter(gh => gh.baseOid === selectedNode.oid);
-        const baseZoneOids = new Set(zones.filter(z => baseGreenhouses.some(gh => gh.oid === String(z.greenhouseOid || ''))).map(z => String(z.oid || '')));
-        const baseRecords = records.filter(r => {
-          const block = blocks.find(b => b.oid === String(r.blockOid || ''));
-          return block && baseZoneOids.has(String(block.zoneOid || ''));
-        });
-        const plantingRecords = baseRecords.filter(r => r.status === 'planting');
+    // 局部辅助：与原 case 'base' 同样的统计逻辑，对外暴露 targetBaseOid 参数
+    const computeBaseStats = (targetBaseOid: string) => {
+      const baseNode = bases.find((b) => b.oid === targetBaseOid);
+      const baseGreenhouses = greenhouses.filter((gh) => gh.baseOid === targetBaseOid);
+      const baseZoneOids = new Set(
+        zones
+          .filter((z) => baseGreenhouses.some((gh) => gh.oid === String(z.greenhouseOid || '')))
+          .map((z) => String(z.oid || '')),
+      );
+      const baseRecords = records.filter((r) => {
+        const block = blocks.find((b) => b.oid === String(r.blockOid || ''));
+        return block && baseZoneOids.has(String(block.zoneOid || ''));
+      });
+      const plantingRecords = baseRecords.filter((r) => r.status === 'planting');
 
-        return {
-          totalArea: baseGreenhouses.reduce((sum, gh) => sum + (gh.area || 0), 0),
-          zoneCount: baseZoneOids.size,
-          plantingCount: plantingRecords.length,
-          currentCrop: plantingRecords[0]?.cropName || '-',
-        };
+      // P2 修复：base.area（亩 → ㎡）优先于 greenhouse.area 累加
+      const MU_TO_SQM = 666.67;
+      const baseAreaSqm = (Number(baseNode?.area) || 0) * MU_TO_SQM;
+      const ghAreaSum = baseGreenhouses.reduce((sum, gh) => sum + (Number(gh.area) || 0), 0);
+      const totalArea = baseAreaSqm > 0 ? baseAreaSqm : ghAreaSum;
+
+      return {
+        totalArea,
+        zoneCount: baseZoneOids.size,
+        plantingCount: plantingRecords.length,
+        currentCrop: plantingRecords[0]?.cropName || '-',
+      };
+    };
+
+    switch (effectiveNodeType) {
+      case 'base': {
+        // 委托给外层 computeBaseStats（共享统计逻辑）
+        return computeBaseStats(effectiveBaseOid);
       }
       case 'greenhouse': {
         const ghZoneOids = new Set(zones.filter(z => z.greenhouseOid === selectedNode.oid).map(z => String(z.oid || '')));
@@ -622,15 +647,22 @@ export default function BaseOperationsCenterV2() {
       default:
         return { totalArea: 0, zoneCount: 0, plantingCount: 0, currentCrop: '-' };
     }
-  }, [selectedNode, greenhouses, zones, records]);
+  }, [selectedNode, bases, greenhouses, zones, records, blocks, baseOidFromUrl]);
 
   // 根据选中节点类型获取表格列
+  // 2026-07-25 修复 区域划分 bug：列模板必须匹配"显示的子节点类型"而非"被选中节点类型"
+  //   - 选中 base 时，tableData 返回 greenhouse children → 用 GREENHOUSE_COLUMNS
+  //   - 选中 greenhouse 时，tableData 返回 zone children → 用 ZONE_COLUMNS
+  //   - 选中 zone 时，tableData 返回 block children → 用 BLOCK_COLUMNS
+  //   错配导致子节点的 code/name 等字段全部 undefined、回退显示 "-"
   const tableColumns = useMemo(() => {
     switch (selectedNode.type) {
-      case 'greenhouse':
+      case 'base':
         return GREENHOUSE_COLUMNS;
-      case 'zone':
+      case 'greenhouse':
         return ZONE_COLUMNS;
+      case 'zone':
+        return BLOCK_COLUMNS;
       case 'block':
         return PLANTING_RECORD_COLUMNS;
       default:
@@ -640,8 +672,13 @@ export default function BaseOperationsCenterV2() {
 
   // 处理节点选择
   const handleNodeSelect = (key: string) => {
-    // key 格式: "base_xxx" | "gh_xxx" | "zone_xxx" | "block_xxx"
-    const [type, oid] = key.split('_')
+    // 2026-07-25 修复 key 解析：base oid 含 '_'（如 'base_1780023508412'）
+    //   旧版用 split('_') 会把 oid 截断成 '1780023508412'——base.match(b.oid=?) 返回 undefined
+    //   → stats 退化到 0
+    //   改用 indexOf 取首个分隔位置，剩下的部分（含 '_'）作为 oid 整段
+    const sepIdx = key.indexOf('_');
+    const type = sepIdx >= 0 ? key.substring(0, sepIdx) : '';
+    const oid = sepIdx >= 0 ? key.substring(sepIdx + 1) : '';
     const typeMap: Record<string, 'base' | 'greenhouse' | 'zone' | 'block'> = {
       base: 'base',
       gh: 'greenhouse',
@@ -705,6 +742,16 @@ export default function BaseOperationsCenterV2() {
       <div className="bg-white rounded-xl p-4 shadow-none mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* 2026-07-25：返回箭头 → 系统设置主页（与 FarmStructureManagement 等其他设置子页面一致） */}
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </a>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>

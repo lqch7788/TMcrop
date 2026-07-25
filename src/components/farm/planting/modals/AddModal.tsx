@@ -13,7 +13,7 @@ import { getSeedSources, searchSeedSources } from '../../../../services/apiSeedS
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { todayLocal } from '@/lib/dateUtils';
-import { useProductionPlanStore, usePlantingStore } from '../../../../stores';
+import { useProductionPlanStore, usePlantingStore, useZoneStore, getGreenhouseByOid } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
@@ -21,6 +21,7 @@ import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Badge } from '@/components/ui';
+import { BaseZoneSelect } from '../../../common/BaseZoneSelect';
 import { showAlert } from '@/lib/dialogService';
 import { generatePlantCode } from '../../../../services/apiPlantingService';
 
@@ -248,10 +249,9 @@ export function AddModal({
     // 与作物品种库不是同一体系，找不到就返回空 → 列表显示 sourceCode 代替品种名
     const cropCode = formData.selectedCropCode || '';
 
-    // 获取区域信息
-    const area = areas.find(a => a.value === formData.areaId);
-    const areaName = area?.label || '';
-    const rootName = area?.parent || '';
+    // 获取区域信息（2026-07-25：handleAreaChange 已写入 formData.areaName/rootName，直接取用）
+    const areaName = formData.areaName || '';
+    const rootName = formData.rootName || '';
 
     try {
       await usePlantingStore.getState().addItem({
@@ -340,14 +340,16 @@ export function AddModal({
     }
   };
 
-  // 处理区域选择
-  const handleAreaChange = (areaId: string) => {
-    const area = areas.find(a => a.value === areaId);
+  // 处理区域选择（2026-07-25：数据源从字典改为基地运营中心 zone 表）
+  // formData.areaId 现在存 zone.oid；areaName 取 zone.zoneName；rootName 取所属 greenhouse.name
+  const handleAreaChange = (oid: string) => {
+    const zone = useZoneStore.getState().zones.find((z) => z.oid === oid);
+    const greenhouse = zone?.greenhouseOid ? getGreenhouseByOid(zone.greenhouseOid) : undefined;
     setFormData({
       ...formData,
-      areaId,
-      areaName: area?.label || '',
-      rootName: area?.parent || ''
+      areaId: oid,
+      areaName: zone?.zoneName || '',
+      rootName: greenhouse?.name || '',
     });
   };
 
@@ -646,8 +648,7 @@ export function AddModal({
             种植区域 <span className="text-red-500">*</span>
           </Label>
           <div className={errors.areaId ? 'border border-red-500 rounded-lg ring-1 ring-red-200' : ''}>
-            <DictSelect
-              category="planting_area"
+            <BaseZoneSelect
               value={formData.areaId}
               onChange={(value) => { clearError('areaId'); handleAreaChange(value); }}
               placeholder="选择种植区域"
