@@ -45,7 +45,7 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
   const plantingStore = usePlantingStore();
   const seedlingStore = useSeedlingStore();
 
-  const [form, setForm] = useState({ waterTime: '', operatorName: '', description: '' });
+  const [form, setForm] = useState({ waterTime: '', operatorName: '', description: '', waterCost: '' });
   const [waterCode, setWaterCode] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<SelectedArea[]>([]);
   const [wateringRows, setWateringRows] = useState<WateringRow[]>([]);
@@ -65,7 +65,7 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
     const mi = String(now.getMinutes()).padStart(2, '0');
-    setForm({ waterTime: `${todayLocal(now)}T${hh}:${mi}`, operatorName: '', description: '' });
+    setForm({ waterTime: `${todayLocal(now)}T${hh}:${mi}`, operatorName: '', description: '', waterCost: '' });
     setWaterCode('');
     setSelectedAreas([]);
     setWateringRows([]);
@@ -206,6 +206,8 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
         waterTime,
         operatorName: form.operatorName || undefined,
         description: form.description || undefined,
+        // 2026-07-25 P1：与详情/导出对齐 — 提交时写入水费
+        waterCost: form.waterCost ? Number(form.waterCost) : undefined,
       });
       showToast('浇水记录已新增', 'success');
       onSaved();
@@ -253,6 +255,13 @@ const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).fil
                 ) : (
                   <Input type="text" value={form.operatorName} onChange={(e) => setForm({ ...form, operatorName: e.target.value })} placeholder="操作员姓名" className="h-10 text-sm" />
                 )}
+              </div>
+              {/* 2026-07-25 P1：与详情/导出对齐 — 水费输入字段 */}
+              <div>
+                <Label className="text-gray-900">水费（元）</Label>
+                <Input type="number" step="0.01" min="0" value={form.waterCost}
+                  onChange={(e) => setForm({ ...form, waterCost: e.target.value })}
+                  placeholder="选填" className="h-10 text-sm" />
               </div>
             </div>
           </div>

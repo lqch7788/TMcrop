@@ -32,6 +32,12 @@ import { calcWaterFromPoolRow } from '@/lib/dilutionWater';
 type OperationMode = 'normal' | 'delete' | 'export';
 type ActiveTab = 'fertilizer' | 'watering';
 
+// 2026-07-25：水肥管理 Tab 选中态覆盖默认"白底绿字"为"绿底白字"
+// - 用 data-[state=active]: 前缀（属性选择器特异性 0,2,0 > 类选择器 0,1,0），必然覆盖 tabs.tsx 默认样式
+// - 不动 UI 通用组件，仅在水肥管理页面生效，避免影响其他用 Tabs 的页面
+const WATER_FERTILIZER_TAB_ACTIVE_CLASS =
+  'data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md';
+
 export default function FertilizerPage() {
   // ========== Store ==========
   const store = useFertilizerStore();
@@ -272,50 +278,105 @@ export default function FertilizerPage() {
         return;
       }
 
-      // 2026-07-20 重构：展平池行为导出行（每条 = 一个区域 × 一种肥料），清晰展示多作物/多区域
+// 2026-07-25 P1+：单 sheet 宽表模式（参照物料入库导出风格）
+      // - 父级字段（11 列）：只在每条记录第一条写值，其他行留空（视觉分组）
+      // - 子级字段（10 列）：每行都有值
+      // - 序号列：`${i+1}/${total}` 形式（如 "1/3"）
+      // 列顺序：父级在前（11 列） + 子级在后（10 列）= 共 21 列
+      const headers = [
+        '施肥编号', '施肥时间', '施肥类型', '数据来源', '作物', '温室',
+        '肥料类型', '稀释倍数', '肥料品牌', '操作员', '备注',
+        '序号', '批号', '来源', '区域', '作物品种', '用量', '稀释', '用水量', '方式', '单价', '小计',
+      ];
+
       const rows: Array<Record<string, unknown>> = [];
       for (const it of toExport) {
+        // 解析池
         let pool: any[] = [];
         try { pool = JSON.parse((it as any).fertilizationPool || '[]'); }
         catch (e) { console.warn(`[export] 记录 ${it.id} 池 JSON 损坏:`, e); }
-        if (pool.length === 0) {
-          // 无池数据 → 用扁平字段兜底一行
+
+        // 作物多作物聚合
+        let cropsLabel = '';
+        try {
+          const arr = JSON.parse((it as any).cropNames || '');
+          if (Array.isArray(arr) && arr.length > 0) cropsLabel = arr.filter(Boolean).join('、');
+        } catch {}
+        if (!cropsLabel && it.cropName) cropsLabel = it.cropName;
+
+        // 业务类型翻译
+        const sourceTypeLabel = (it as any).sourceType === 'fertilizer_dilution'
+          ? '施肥稀释'
+          : (it as any).sourceType === 'daily_sync'
+            ? '每日记录同步'
+            : '手动录入';
+
+        // 父级字段（只在第一条写值）
+        const parentRow = {
+          施肥编号: it.fertilizerCode || '',
+          施肥时间: it.fertilizeTime || '',
+          施肥类型: sourceTypeLabel,
+          数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
+          作物: cropsLabel,
+          温室: it.greenhouseName || '',
+          肥料类型: it.fertilizerType || '',
+          稀释倍数: it.dilutionRatio || '',
+          肥料品牌: (it as any).specBrandName || '',
+          操作员: it.operatorName || '',
+          备注: it.description || '',
+        };
+        // 父级空白占位（后续行使用）
+        const emptyParent = {
+          施肥编号: '', 施肥时间: '', 施肥类型: '', 数据来源: '',
+          作物: '', 温室: '', 肥料类型: '', 稀释倍数: '', 肥料品牌: '',
+          操作员: '', 备注: '',
+        };
+
+        const total = pool.length;
+        if (total === 0) {
+          // 无池数据 — 输出一行兜底
           rows.push({
-            施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: it.cropName || '-',
-            来源: '-', 批号: it.plantingCode || it.seedlingCode || '-', 区域: it.areaName || it.greenhouseName || '-',
-            肥料名: it.fertilizerName || '-', 品牌: (it as any).specBrandName || '',
-            用量: it.quantity ?? 0, 单位: it.unit || 'kg', 施肥方式: '-', 稀释倍数: it.dilutionRatio || '-',
+            ...parentRow,
+            序号: '1/1',
+            批号: '',
+            来源: '-',
+            区域: it.areaName || '-',
+            作物品种: it.cropName || '-',
+            用量: `${it.quantity || 0} ${it.unit || 'kg'}`,
+            稀释: '-',
             用水量: '-',
-            单价: it.unitPrice ?? 0, 小计: it.totalCost ?? 0,
-            操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
-            备注: it.description || '',
+            方式: '-',
+            单价: '',
+            小计: (it.totalCost || 0).toFixed(2),
           });
         } else {
-          for (const r of pool) {
+          pool.forEach((r: any, i: number) => {
+            const methodLabel = r.fertilizationMethod
+              ? (getDictItemName('fertilization_method', r.fertilizationMethod) || r.fertilizationMethod)
+              : '-';
+            const subTotal = (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0);
+            const waterText = (() => { const w = calcWaterFromPoolRow(r); return w ? `${w.amount} ${w.unit}` : '-'; })();
             rows.push({
-              施肥编号: it.fertilizerCode, 施肥时间: it.fertilizeTime, 作物: r.cropName || it.cropName || '-',
+              ...(i === 0 ? parentRow : emptyParent),
+              序号: `${i + 1}/${total}`,
+              批号: r.code || '',
               来源: r.type === 'planting' ? '种植' : r.type === 'seedling' ? '育苗' : '-',
-              批号: r.code || it.plantingCode || it.seedlingCode || '-',
-              区域: r.area || it.areaName || '-',
-              肥料名: r.fertilizerName || it.fertilizerName || '-',
-              品牌: r.specBrandName || (it as any).specBrandName || '',
-              用量: Number(r.quantity) || 0, 单位: r.unit || it.unit || 'kg',
-              施肥方式: r.fertilizationMethod ? (getDictItemName('fertilization_method', r.fertilizationMethod) || r.fertilizationMethod) : '-',
-              稀释倍数: r.dilutionRatio || it.dilutionRatio || '-',
-              用水量: (() => { const w = calcWaterFromPoolRow(r as any); return w ? `${w.amount} ${w.unit}` : '-'; })(),
-              单价: Number(r.unitPrice) || it.unitPrice || 0,
-              小计: (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
-              操作员: it.operatorName || '', 数据来源: it.dataSource === 'auto_iot' ? 'IoT自动' : '手动',
-              备注: it.description || '',
+              区域: r.area || '-',
+              作物品种: r.cropName || '-',
+              用量: `${r.quantity || 0} ${r.unit || 'kg'}`,
+              稀释: r.dilutionRatio || '-',
+              用水量: waterText,
+              方式: methodLabel,
+              单价: (r.unitPrice || 0).toFixed(2),
+              小计: subTotal.toFixed(2),
             });
-          }
+          });
         }
       }
 
       const filename = `施肥记录_${todayLocal()}`;
 
       if (format === 'csv') {
-        const headers = Object.keys(rows[0] || {});
         const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
         const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -323,12 +384,12 @@ export default function FertilizerPage() {
         const a = document.createElement('a'); a.href = url; a.download = `${filename}.csv`; a.click();
         URL.revokeObjectURL(url);
       } else if (format === 'xlsx') {
-        await exportXlsx({ filename: `${filename}.xlsx`, headers: Object.keys(rows[0]||{}), rows });
+        // 2026-07-25 P1+：单 sheet 宽表（参照物料入库导出风格）
+        await exportXlsx({ filename: `${filename}.xlsx`, sheetName: '施肥记录', headers, rows });
       } else if (format === 'pdf') {
         const doc = new jsPDF('l', 'mm', 'a4');
-        const headers = [Object.keys(rows[0] || {})];
-        const data = rows.map((r) => Object.values(r).map(String));
-        (doc as any).autoTable({ head: headers, body: data, startY: 15, styles: { fontSize: 7 }, headStyles: { fillColor: [16, 185, 129] } });
+        const data = rows.map((r) => headers.map((h) => String((r as any)[h] || '')));
+        (doc as any).autoTable({ head: [headers], body: data, startY: 15, styles: { fontSize: 6 }, headStyles: { fillColor: [16, 185, 129] } });
         doc.save(`${filename}.pdf`);
       }
       toast.success(`已导出 ${toExport.length} 条记录`);
@@ -464,22 +525,91 @@ export default function FertilizerPage() {
         toast.error('没有可导出的数据');
         return;
       }
-      const rows = toExport.map((it) => ({
-        浇水编号: it.waterCode || '',
-        浇水时间: it.waterTime || '',
-        作物: it.cropName || '',
-        温室: it.greenhouseName || '',
-        区域: it.areaName || '',
-        总用水量: `${it.totalWater || 0} ${it.waterUnit || 'L'}`,
-        操作员: it.operatorName || '',
-        来源: it.recordType === 'manual'
+      // 2026-07-25 P1+：单 sheet 宽表模式（参照物料入库导出风格）
+      // - 父级字段（9 列）：只在每条记录第一条写值，其他行留空（视觉分组）
+      // - 子级字段（8 列）：每行都有值
+      // - 序号列：`${i+1}/${total}` 形式（如 "1/3"）
+      // 列顺序：父级在前（9 列） + 子级在后（8 列）= 共 17 列
+      const headers = [
+        '浇水编号', '浇水时间', '记录类型', '录入来源', '作物', '温室',
+        '总用水量', '水费', '操作员',
+        '序号', '批号', '区域', '作物品种', '浇水方式', '用水量', '单位', '备注',
+      ];
+
+      const rows: Array<Record<string, unknown>> = [];
+      for (const it of toExport) {
+        // 解析池
+        let pool: any[] = [];
+        try { pool = JSON.parse((it as any).waterPool || '[]'); } catch (e) { console.warn('[water export] 池 JSON 损坏:', e); }
+
+        // 作物多作物聚合
+        let cropsLabel = '';
+        try {
+          const arr = JSON.parse(it.cropNames || '');
+          if (Array.isArray(arr) && arr.length > 0) cropsLabel = arr.filter(Boolean).join('、');
+        } catch {}
+        if (!cropsLabel && it.cropName) cropsLabel = it.cropName;
+
+        const recordTypeLabel = it.recordType === 'manual'
           ? '手动录入'
           : it.recordType === 'fertilizer_dilution'
             ? '施肥稀释'
-            : '每日记录同步',
-      }));
+            : '每日记录同步';
+        const dataSourceLabel = it.dataSource === 'auto_iot' ? 'IoT 自动' : '手动录入';
+
+        // 父级字段（只在第一条写值）
+        const parentRow = {
+          浇水编号: it.waterCode || '',
+          浇水时间: it.waterTime || '',
+          记录类型: recordTypeLabel,
+          录入来源: dataSourceLabel,
+          作物: cropsLabel,
+          温室: it.greenhouseName || '',
+          总用水量: `${it.totalWater || 0} ${it.waterUnit || 'L'}`,
+          水费: it.waterCost != null ? `¥${Number(it.waterCost).toFixed(2)}` : '',
+          操作员: it.operatorName || '',
+        };
+        // 父级空白占位（后续行使用）
+        const emptyParent = {
+          浇水编号: '', 浇水时间: '', 记录类型: '', 录入来源: '',
+          作物: '', 温室: '', 总用水量: '', 水费: '', 操作员: '',
+        };
+
+        const total = pool.length;
+        if (total === 0) {
+          // 无池数据 — 输出一行兜底（父级写值，子级填空）
+          rows.push({
+            ...parentRow,
+            序号: '1/1',
+            批号: '',
+            区域: it.areaName || '-',
+            作物品种: it.cropName || '-',
+            浇水方式: '-',
+            用水量: '',
+            单位: '',
+            备注: it.description || '-',
+          });
+        } else {
+          pool.forEach((r, i) => {
+            const methodLabel = r.wateringMethod
+              ? (getDictItemName('watering_method', r.wateringMethod) || r.wateringMethod)
+              : '-';
+            rows.push({
+              ...(i === 0 ? parentRow : emptyParent),
+              序号: `${i + 1}/${total}`,
+              批号: r.code || '',
+              区域: r.area || '-',
+              作物品种: r.cropName || '-',
+              浇水方式: methodLabel,
+              用水量: r.waterAmount ?? '-',
+              单位: r.waterUnit || '-',
+              备注: r.remark || '-',
+            });
+          });
+        }
+      }
       const filename = `浇水记录_${todayLocal()}`;
-      const headers = Object.keys(rows[0] || {});
+
       if (format === 'csv') {
         const csvRows = rows.map((r) => headers.map((h) => `"${String((r as any)[h] || '').replace(/"/g, '""')}"`).join(','));
         const csv = '﻿' + [headers.join(','), ...csvRows].join('\n');
@@ -489,7 +619,13 @@ export default function FertilizerPage() {
         a.href = url; a.download = `${filename}.csv`; a.click();
         URL.revokeObjectURL(url);
       } else if (format === 'xlsx') {
-        await exportXlsx({ filename: `${filename}.xlsx`, headers, rows });
+        // 2026-07-25 P1+：单 sheet 宽表（参照物料入库导出风格）
+        await exportXlsx({
+          filename: `${filename}.xlsx`,
+          sheetName: '浇水记录',
+          headers,
+          rows: rows as Array<Record<string, unknown>>,
+        });
       } else if (format === 'word') {
         await exportWord({ filename: `${filename}.doc`, headers, rows: rows as Array<Record<string, unknown>> });
       }
@@ -544,10 +680,11 @@ export default function FertilizerPage() {
       </div>
 
       {/* 2026-07-20：Tab 系统 — 施肥记录 | 浇水记录 */}
+      {/* 2026-07-25：选中态改为绿底白字（用户要求） */}
       <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as ActiveTab)}>
         <TabsList>
-          <TabsTrigger value="fertilizer">施肥记录</TabsTrigger>
-          <TabsTrigger value="watering">浇水记录</TabsTrigger>
+          <TabsTrigger value="fertilizer" className={WATER_FERTILIZER_TAB_ACTIVE_CLASS}>施肥记录</TabsTrigger>
+          <TabsTrigger value="watering" className={WATER_FERTILIZER_TAB_ACTIVE_CLASS}>浇水记录</TabsTrigger>
         </TabsList>
 
         {/* ========== Tab1：施肥记录（原有结构） ========== */}

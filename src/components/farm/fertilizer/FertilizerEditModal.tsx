@@ -14,6 +14,7 @@ import { TabsList, TabsTrigger } from '@/components/ui';
 import { useFertilizerStore, useFertilizerLibraryStore, usePlantingStore, useSeedlingStore, FertilizerData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { FertilizerPoolEditor, FertilizerPoolItem } from './FertilizerPoolEditor';
+import { calcWaterFromPoolRow } from '@/lib/dilutionWater';
 
 interface SelectedArea {
   type: 'planting' | 'seedling';
@@ -101,11 +102,15 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  // 区域选项（2026-07-25 P1：与 AddModal 对齐 — 搜索支持品种字段 cropVariety/subVariety1Name）
   const areaOptions = useMemo(() => {
     const kw = areaSearch.trim().toLowerCase();
-    if (areaTab==='planting') return (plantingStore.items as any[]).filter((p:any)=>!p.isHarvest).filter((p:any)=>!kw||(p.plantCode||'').toLowerCase().includes(kw)||(p.cropName||'').toLowerCase().includes(kw)||(p.rootName||'').toLowerCase().includes(kw));
-    return (seedlingStore.items as any[]).filter((s:any)=>!kw||(s.seedlingCode||'').toLowerCase().includes(kw)||(s.cropName||'').toLowerCase().includes(kw)||(s.siteName||'').toLowerCase().includes(kw));
+    if (areaTab==='planting') return (plantingStore.items as any[]).filter((p:any)=>!p.isHarvest).filter((p:any)=>!kw||(p.plantCode||'').toLowerCase().includes(kw)||(p.cropName||'').toLowerCase().includes(kw)||(p.cropVariety||'').toLowerCase().includes(kw)||(p.subVariety1Name||'').toLowerCase().includes(kw)||(p.rootName||'').toLowerCase().includes(kw));
+    return (seedlingStore.items as any[]).filter((s:any)=>!kw||(s.seedlingCode||'').toLowerCase().includes(kw)||(s.cropName||'').toLowerCase().includes(kw)||(s.cropVariety||'').toLowerCase().includes(kw)||(s.subVariety1Name||'').toLowerCase().includes(kw)||(s.siteName||'').toLowerCase().includes(kw));
   }, [areaTab,areaSearch,plantingStore.items,seedlingStore.items]);
+
+  // 2026-07-25 P1：与 AddModal 对齐 — 区域选项展示用品种名（红颜 > 草莓）
+  const formatPlantingDisplay = (item: any) => item.subVariety1Name || item.cropVariety || item.cropName || '';
 
   // 2026-07-20：取消同作物限制，支持跨作物批量施肥
   const addArea = useCallback((item: any) => {
@@ -135,13 +140,24 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
     if (hasInvalid) { await showAlert('每种肥料的用量必须大于 0'); return; }
     setSubmitting(true);
     try {
-      const poolRows = selectedAreas.flatMap(area=>fertilizerPool.map(fert=>({
-        type:area.type,id:area.id,code:area.code,cropName:area.cropName,cropCode:'',area:area.area,
-        quantity:Number(fert.dosage),unit:fert.unit,dilutionRatio:fert.dilutionRatio,
-        fertilizationMethod:fert.fertilizationMethod,fertilizerName:fert.fertilizerName,
-        unitPrice:Number(fert.unitPrice),specId:fert.specId,  // 2026-07-21 统一字段名
-        specBrandName:fert.brandName,specUnitPrice:Number(fert.unitPrice),specBatchNumber:'',
-      })));
+      const poolRows = selectedAreas.flatMap(area=>fertilizerPool.map(fert=>{
+        // 2026-07-25：提交时计算并写入用水量（与编辑器实时预览一致）
+        const water = calcWaterFromPoolRow({
+          quantity: Number(fert.dosage) || 0,
+          unit: fert.unit,
+          dilutionRatio: fert.dilutionRatio,
+        });
+        return {
+          type:area.type,id:area.id,code:area.code,cropName:area.cropName,cropCode:'',area:area.area,
+          quantity:Number(fert.dosage),unit:fert.unit,dilutionRatio:fert.dilutionRatio,
+          fertilizationMethod:fert.fertilizationMethod,fertilizerName:fert.fertilizerName,
+          unitPrice:Number(fert.unitPrice),specId:fert.specId,  // 2026-07-21 统一字段名
+          // 2026-07-25：写入用水量（公式：肥料用量 × 稀释倍数；≥1000L 自动切 m³）
+          waterAmount: water?.amount ?? 0,
+          waterUnit: water?.unit ?? 'L',
+          specBrandName:fert.brandName,specUnitPrice:Number(fert.unitPrice),specBatchNumber:'',
+        };
+      }));
       const totalQty=poolRows.reduce((s,r)=>s+r.quantity,0);
       const totalCost=poolRows.reduce((s,r)=>s+r.quantity*r.unitPrice,0);
       const pFert=fertilizerPool[0];
@@ -172,7 +188,15 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
   };
 
   if (!record) return null;
-  const cropName = selectedAreas[0]?.cropName||record.cropName||'';
+  // 2026-07-25 P1：与 AddModal 对齐 — 当前作物多作物展示（编辑时 selectedAreas 可能为空，从 record.cropNames 兜底）
+  const allCropNames = Array.from(new Set(selectedAreas.map((a) => a.cropName).filter(Boolean)));
+  const displayCrops = allCropNames.length > 0 ? allCropNames : (() => {
+    try {
+      const arr = JSON.parse(record.cropNames || '');
+      if (Array.isArray(arr) && arr.length > 0) return arr.filter(Boolean);
+    } catch {}
+    return record.cropName ? [record.cropName] : [];
+  })();
   return (
     <UnifiedModal isOpen={isOpen} onClose={onClose} title={`编辑施肥记录 — ${record.fertilizerCode}`} size="xxxl" showFooter={false}>
       {isIot && <div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm shrink-0"><AlertTriangle className="w-5 h-5"/>IoT 自动记录，仅可查看不可修改</div>}
@@ -194,7 +218,12 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
           </div>
           <div>
             <h3 className="text-sm font-bold text-gray-900 mb-3">📍 施肥区域</h3>
-            {cropName&&<p className="text-xs text-emerald-600 mb-2">🌱 当前作物：{cropName}</p>}
+            {/* 2026-07-25 P1：与 AddModal 对齐 — 多作物展示（编辑模式 record 兜底） */}
+            {displayCrops.length > 0 && (
+              <p className="text-xs text-emerald-600 mb-2">
+                🌱 {displayCrops.length === 1 ? '当前作物' : `包含作物（${displayCrops.length}）`}：{displayCrops.join('、')}
+              </p>
+            )}
             {!isIot && (<>
               <div className="relative" ref={areaRef}>
                 <div className="flex items-center gap-2 mb-2">
@@ -208,7 +237,15 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
                   </div>
                 </div>
                 {showAreaDropdown&&areaOptions.length>0&&<div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {areaOptions.map((item:any)=><button key={item.id} onClick={()=>addArea(item)} className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm"><span className="font-medium">{item.cropName}</span><span className="text-gray-400 mx-1">·</span><span className="text-gray-600">{areaTab==='planting'?item.rootName||item.areaName:item.siteName||'育苗区'}</span></button>)}</div>}
+                  {areaOptions.map((item:any)=><button key={item.id} onClick={()=>addArea(item)} className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm">
+                    {/* 2026-07-25 P1：与 AddModal 对齐 — 品种名优先展示 */}
+                    <span className="font-medium">{formatPlantingDisplay(item)}</span>
+                    {item.cropName && formatPlantingDisplay(item) !== item.cropName && (
+                      <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                    )}
+                    <span className="text-gray-400 mx-1">·</span>
+                    <span className="text-gray-600">{areaTab==='planting'?item.rootName||item.areaName:item.siteName||'育苗区'}</span>
+                  </button>)}</div>}
               </div>
             </>)}
             {selectedAreas.length>0&&<div className="flex flex-wrap gap-1.5 mt-2">

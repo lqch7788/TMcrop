@@ -585,7 +585,17 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      throw err;
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
+      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
+      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      if (err instanceof BusinessError) throw err;
+      console.error('[fertilizer.service] 详细错误堆栈:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new BusinessError(
+        'OPERATION_FAILED',
+        `操作失败：${detail || '未知错误'}`,
+        500,
+      );
     }
   }
 
@@ -715,7 +725,14 @@ export class FertilizerService {
       upd.update_time = now;
       this.repository.update(id, updates);
 
-      // Phase 2：先删旧浇水记录，再根据新的 fertilizationPool 重新生成（必须在 COMMIT 前 — 事务原子性）
+      // 2026-07-25：先 COMMIT 再做浇水操作（独立事务）
+      // 修复 "cannot commit - no transaction is active"：之前浇水在主事务内，sql.js 内存模式下
+      //   外键 quirk 触发 INSERT 失败 → sql.js 内部 ROLLBACK 事务 → COMMIT 失败
+      // 移到 COMMIT 之后：施肥主事务已提交，浇水操作独立事务（接受原子性损失）
+      db.exec('COMMIT');
+      this.repository.save();
+
+      // Phase 2：先删旧浇水记录，再根据新的 fertilizationPool 重新生成（独立事务）
       try {
         wateringRepository.deleteByFertilizerRecordId(id);
         const newPool = upd.fertilizationPool ?? ex.fertilizationPool;
@@ -728,11 +745,9 @@ export class FertilizerService {
           areaName: upd.areaName ?? ex.areaName,
         });
       } catch (e) {
-        console.error('[fertilizer.service] 浇水更新失败（不影响施肥事务）:', e);
+        console.error('[fertilizer.service] 浇水更新失败（不影响施肥保存）:', e);
       }
 
-      db.exec('COMMIT');
-      this.repository.save();
       return this.repository.findById(id);
     } catch (err) {
       try { db.exec('ROLLBACK'); } catch (rbErr) {
@@ -740,7 +755,17 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      throw err;
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
+      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
+      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      if (err instanceof BusinessError) throw err;
+      console.error('[fertilizer.service] 详细错误堆栈:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new BusinessError(
+        'OPERATION_FAILED',
+        `操作失败：${detail || '未知错误'}`,
+        500,
+      );
     }
   }
 
@@ -761,8 +786,14 @@ export class FertilizerService {
         const actualIncrease = conv ? conv.convertedQuantity : qty;
         this.repository.increaseStock(fid, actualIncrease, now);
       } else {
-        // spec 已删除：无法换算，按原值恢复（尽力而为）
-        this.repository.increaseStock(fid, qty, now);
+        // 2026-07-25 修复 500：spec 已删除时 try/catch 包裹 increaseStock（之前会抛普通 Error → 500）
+        // - 场景：施肥记录顶层 fertilizerId 关联的 spec 已被用户/系统删除
+        // - 行为：跳过库存恢复（无法定位 spec 换算），仅记录 warning，不阻塞删除主流程
+        try {
+          this.repository.increaseStock(fid, qty, now);
+        } catch (e) {
+          console.warn(`[fertilizer.service] 恢复库存失败（spec 已删除）: specId=${fid}`, e);
+        }
       }
     }
     // 2) fertilization_pool 池里每条
@@ -833,7 +864,17 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      throw err;
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
+      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
+      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      if (err instanceof BusinessError) throw err;
+      console.error('[fertilizer.service] 详细错误堆栈:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new BusinessError(
+        'OPERATION_FAILED',
+        `操作失败：${detail || '未知错误'}`,
+        500,
+      );
     }
   }
 
@@ -890,7 +931,17 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      throw err;
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
+      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
+      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      if (err instanceof BusinessError) throw err;
+      console.error('[fertilizer.service] 详细错误堆栈:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new BusinessError(
+        'OPERATION_FAILED',
+        `操作失败：${detail || '未知错误'}`,
+        500,
+      );
     }
   }
 
@@ -999,7 +1050,17 @@ export class FertilizerService {
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      throw err;
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
+      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
+      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      if (err instanceof BusinessError) throw err;
+      console.error('[fertilizer.service] 详细错误堆栈:', err);
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new BusinessError(
+        'OPERATION_FAILED',
+        `操作失败：${detail || '未知错误'}`,
+        500,
+      );
     }
   }
 }

@@ -8,8 +8,17 @@ import { triggerDownloadLikeCsv } from './shared';
 
 export interface ExportXlsxOptions {
   filename: string;
-  headers: string[];
-  rows: Array<Record<string, unknown>>;
+  // 单 sheet 模式（向后兼容）
+  headers?: string[];
+  rows?: Array<Record<string, unknown>>;
+  /** 单 sheet 时自定义名（默认「施肥记录」向后兼容） */
+  sheetName?: string;
+  // 多 sheet 模式（2026-07-25 新增：用于「汇总+明细」双 sheet 导出）
+  sheets?: Array<{
+    name: string;
+    headers: string[];
+    rows: Array<Record<string, unknown>>;
+  }>;
 }
 
 // 2026-07-16：防范 Excel 公式注入（CWE-1236）
@@ -40,23 +49,46 @@ export function serializeHtmlTable(headers: string[], rows: Array<Record<string,
 
 /**
  * 主入口：使用 SheetJS 生成真正的 .xlsx 并下载
+ * 2026-07-25：支持多 sheet 模式（向后兼容：未传 sheets 则走单 sheet 旧逻辑）
  */
 export async function exportXlsx(options: ExportXlsxOptions): Promise<void> {
   const XLSX = await import('xlsx');
-  // 构建二维数组：第一行表头 + 数据行
-  const aoa: any[][] = [options.headers];
-  for (const row of options.rows) {
-    aoa.push(options.headers.map((h) => cellValue(row[h])));
-  }
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  // 自动列宽
-  const colWidths = options.headers.map((h, i) => {
-    const maxLen = Math.max(h.length, ...options.rows.map((r) => String(r[h] ?? '').length).slice(0, 200));
-    return { wch: Math.min(Math.max(maxLen + 4, 10), 40) };
-  });
-  ws['!cols'] = colWidths;
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '施肥记录');
+  // Excel sheet 名最长 31 字符，超出截断
+  const trimSheetName = (n: string) => String(n || '').slice(0, 31);
+
+  if (options.sheets && options.sheets.length > 0) {
+    // 多 sheet 模式
+    for (const sheet of options.sheets) {
+      const aoa: any[][] = [sheet.headers];
+      for (const row of sheet.rows) {
+        aoa.push(sheet.headers.map((h) => cellValue(row[h])));
+      }
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const colWidths = sheet.headers.map((h) => {
+        const maxLen = Math.max(h.length, ...sheet.rows.map((r) => String(r[h] ?? '').length).slice(0, 200));
+        return { wch: Math.min(Math.max(maxLen + 4, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+      XLSX.utils.book_append_sheet(wb, ws, trimSheetName(sheet.name));
+    }
+  } else {
+    // 单 sheet 模式（向后兼容）
+    const headers = options.headers || [];
+    const rows = options.rows || [];
+    const aoa: any[][] = [headers];
+    for (const row of rows) {
+      aoa.push(headers.map((h) => cellValue(row[h])));
+    }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const colWidths = headers.map((h) => {
+      const maxLen = Math.max(h.length, ...rows.map((r) => String(r[h] ?? '').length).slice(0, 200));
+      return { wch: Math.min(Math.max(maxLen + 4, 10), 40) };
+    });
+    ws['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, ws, trimSheetName(options.sheetName || '施肥记录'));
+  }
+
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await triggerDownloadLikeCsv(options.filename, blob);

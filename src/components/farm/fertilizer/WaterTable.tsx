@@ -151,7 +151,7 @@ export function WaterTable({
       </div>
 
       <div className="overflow-x-auto">
-        <Table style={{ minWidth: '1100px' }}>
+        <Table style={{ minWidth: '1500px' }}>
           <TableHeader className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
             <TableRow className="hover:bg-transparent">
               {showCb && (
@@ -169,16 +169,22 @@ export function WaterTable({
               <TableHead className="py-3 whitespace-nowrap text-center">浇水时间</TableHead>
               <TableHead className="py-3 whitespace-nowrap text-center">作物</TableHead>
               <TableHead className="py-3 whitespace-nowrap text-center">区域</TableHead>
+              {/* 2026-07-25：与详情/导出对齐 — 主表新增「温室」列 */}
+              <TableHead className="py-3 whitespace-nowrap text-center">温室</TableHead>
               <TableHead className="py-3 whitespace-nowrap text-center">总用水量</TableHead>
+              {/* 2026-07-25：与详情/导出对齐 — 主表新增「水费」列 */}
+              <TableHead className="py-3 whitespace-nowrap text-center">水费</TableHead>
               <TableHead className="py-3 whitespace-nowrap text-center">操作员</TableHead>
-              <TableHead className="py-3 whitespace-nowrap text-center">来源</TableHead>
+              <TableHead className="py-3 whitespace-nowrap text-center" title="浇水类型（业务类型）">记录类型</TableHead>
+              {/* 2026-07-25 P1：与详情/编辑对齐 — 主表新增「备注」列（record 顶层 description，区别于 pool 行 remark） */}
+              <TableHead className="py-3 whitespace-nowrap text-center">备注</TableHead>
               {!showCb && <TableHead className="py-3 whitespace-nowrap text-center sticky right-0 bg-green-600 z-10">操作</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-200">
             {current.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCb ? 10 : 9} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={showCb ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
                   暂无浇水记录
                 </TableCell>
               </TableRow>
@@ -260,14 +266,38 @@ export function WaterTable({
                       ? `${areaNames.length} 个 · ${areaNames.slice(0, 2).join('、')}${areaNames.length > 2 ? '...' : ''}`
                       : rec.areaName || '-'}
                   </TableCell>
+                  {/* 2026-07-25：温室列（truncate + tooltip） */}
+                  <TableCell className="px-4 py-3 text-xs text-gray-600 max-w-[140px]">
+                    {rec.greenhouseName ? (
+                      <span className="truncate block" title={rec.greenhouseName}>
+                        {rec.greenhouseName}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 whitespace-nowrap text-center">
                     {totalQty.toLocaleString()} {pool[0]?.waterUnit || rec.waterUnit || 'L'}
+                  </TableCell>
+                  {/* 2026-07-25：水费列 */}
+                  <TableCell className="px-4 py-3 text-sm font-medium text-amber-600 whitespace-nowrap text-center">
+                    {rec.waterCost != null ? `¥${Number(rec.waterCost).toFixed(2)}` : <span className="text-gray-300">-</span>}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap text-center">
                     {rec.operatorName || '-'}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-center">
                     {renderSourceBadge(rec.recordType)}
+                  </TableCell>
+                  {/* 2026-07-25 P1：备注列（truncate + tooltip） */}
+                  <TableCell className="px-4 py-3 text-xs text-gray-600 max-w-[160px]">
+                    {rec.description ? (
+                      <span className="truncate block" title={rec.description}>
+                        {rec.description}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
                   </TableCell>
                   {!showCb && (
                     <TableCell className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-white z-10">
@@ -297,60 +327,75 @@ export function WaterTable({
                   )}
                 </TableRow>
 
-                {/* 展开行：按区域分组展示浇水方式/用水量明细 */}
+                {/* 展开行：单表 + 跨组连续序号 + 区域 rowspan + 作物品种列（2026-07-25 重构 v4）
+                    - 序号列移到最前，按所有分组连续编号 1,2,3...（不再每组内从 1 开始）
+                    - 区域 cell 仅 rowspan 该组明细行数（不再包含小计行）
+                    - 删除「小计」行：每个区域只填一次水量，区域小计无意义；父级表头已有总用水量
+                    - 「批号」列移到「区域」列前面，按对应批号（pool 行 code）精准获取「作物品种」
+                    - 「作物品种」列从 pool 行 r.cropName 拿（WaterAddModal/EditModal 写入时已存） */}
                 {exp && pool.length > 0 && (
                   <TableRow className="bg-gray-50 hover:bg-gray-50">
                     <TableCell colSpan={showCb ? 10 : 9} className="px-6 py-4">
-                      <div className="space-y-3">
-                        <div className="px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-bold rounded-lg">
-                          💧 浇水方案明细 · 共 {areaGroups.size} 个区域 / {pool.length} 行用量
-                        </div>
-                        {Array.from(areaGroups.entries()).map(([aName, rows]) => {
-                          const subTotalQty = rows.reduce((s, r) => s + Number(r.waterAmount ?? 0), 0);
-                          return (
-                            <div key={aName} className="bg-white rounded-lg border border-emerald-200 overflow-hidden">
-                              <div className="px-3 py-2 bg-emerald-50 text-emerald-900 text-sm font-bold border-b border-emerald-200">
-                                🌿 {aName}
-                                <span className="ml-2 text-xs font-normal text-emerald-600">
-                                  用水量合计 {subTotalQty.toLocaleString()} {rows[0]?.waterUnit || rec.waterUnit || 'L'}
-                                </span>
-                              </div>
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-sm table-fixed">
-                                  <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
-                                    <tr>
-                                      <th className="px-3 py-2 text-center w-[5%]">#</th>
-                                      <th className="px-3 py-2 text-center w-[16%]">批号</th>
-                                      <th className="px-3 py-2 text-center w-[18%]">浇水方式</th>
-                                      <th className="px-3 py-2 text-center w-[15%]">用水量</th>
-                                      <th className="px-3 py-2 text-center w-[12%]">单位</th>
-                                      <th className="px-3 py-2 text-center w-[34%]">备注</th>
+                      <div className="bg-white rounded-lg border border-emerald-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm table-fixed">
+                            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs uppercase">
+                              <tr>
+                                <th className="px-3 py-2 text-center w-[7%]">序号</th>
+                                {/* 2026-07-25 v4：批号列移到区域列前面，按对应批号取作物品种 */}
+                                <th className="px-3 py-2 text-center w-[14%]">批号</th>
+                                <th className="px-3 py-2 text-center w-[12%]">区域</th>
+                                <th className="px-3 py-2 text-center w-[13%]">作物品种</th>
+                                <th className="px-3 py-2 text-center w-[16%]">浇水方式</th>
+                                <th className="px-3 py-2 text-center w-[14%]">用水量</th>
+                                <th className="px-3 py-2 text-center w-[11%]">单位</th>
+                                <th className="px-3 py-2 text-center w-[13%]">备注</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {/* 展平所有分组为单行数组，跨区域连续累计序号 */}
+                              {(() => {
+                                const flat: Array<{ aName: string; r: WateringPoolRow; seq: number; isFirst: boolean; groupSize: number }> = [];
+                                let seq = 1;
+                                for (const [aName, rows] of areaGroups.entries()) {
+                                  rows.forEach((r, i) => {
+                                    flat.push({ aName, r, seq: seq++, isFirst: i === 0, groupSize: rows.length });
+                                  });
+                                }
+                                return flat.map(({ aName, r, seq, isFirst, groupSize }) => {
+                                  const methodLabel = r.wateringMethod
+                                    ? (getDictItemName('watering_method', r.wateringMethod) || r.wateringMethod)
+                                    : '-';
+                                  return (
+                                    <tr key={`${aName}-${seq}`} className="hover:bg-emerald-50/40">
+                                      <td className="px-3 py-2 text-center text-gray-500">{seq}</td>
+                                      {/* 2026-07-25 v4：批号列移到区域列前 */}
+                                      <td className="px-3 py-2 text-center text-gray-600 font-mono text-xs">{r.code || '-'}</td>
+                                      {isFirst && (
+                                        <td
+                                          rowSpan={groupSize}
+                                          className="px-3 py-2 text-center align-middle text-sm font-bold text-emerald-900 bg-emerald-50/40 border-r border-emerald-100"
+                                        >
+                                          🌿 {aName}
+                                        </td>
+                                      )}
+                                      {/* 2026-07-25 v4：作物品种列从 pool 行 r.cropName 取（精准按行） */}
+                                      <td className="px-3 py-2 text-center text-gray-800 font-medium text-xs">
+                                        {r.cropName || '-'}
+                                      </td>
+                                      <td className="px-3 py-2 text-center text-gray-800 font-medium">{methodLabel}</td>
+                                      <td className="px-3 py-2 text-center font-bold text-emerald-600">
+                                        {Number(r.waterAmount ?? 0).toLocaleString()}
+                                      </td>
+                                      <td className="px-3 py-2 text-center text-gray-600">{r.waterUnit || rec.waterUnit || 'L'}</td>
+                                      <td className="px-3 py-2 text-center text-gray-600">{r.remark || '-'}</td>
                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-100">
-                                    {rows.map((r, i) => {
-                                      const methodLabel = r.wateringMethod
-                                        ? (getDictItemName('watering_method', r.wateringMethod) || r.wateringMethod)
-                                        : '-';
-                                      return (
-                                        <tr key={`${aName}-${i}`} className="hover:bg-emerald-50/40">
-                                          <td className="px-3 py-2 text-center text-gray-500">{i + 1}</td>
-                                          <td className="px-3 py-2 text-center text-gray-600">{r.code || '-'}</td>
-                                          <td className="px-3 py-2 text-center text-gray-800 font-medium">{methodLabel}</td>
-                                          <td className="px-3 py-2 text-center font-bold text-emerald-600">
-                                            {Number(r.waterAmount ?? 0).toLocaleString()}
-                                          </td>
-                                          <td className="px-3 py-2 text-center text-gray-600">{r.waterUnit || rec.waterUnit || 'L'}</td>
-                                          <td className="px-3 py-2 text-center text-gray-600">{r.remark || '-'}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>

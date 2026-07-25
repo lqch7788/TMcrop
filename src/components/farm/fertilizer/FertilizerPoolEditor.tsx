@@ -12,6 +12,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useFertilizerLibraryStore, useDictionaryStore, getDictItemName } from '@/stores';
 import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS } from '../../settings/fertilizer-library/constants';
 import { toSpecUnit } from '@/lib/unitConversions';
+import { calcWaterFromPoolRow } from '@/lib/dilutionWater';
 
 /** 2026-07-17：单位不匹配检测 + 换算预览（避免用户填错单位导致 INSUFFICIENT_STOCK） */
 function unitMismatch(inputUnit: string, stockUnit: string): boolean {
@@ -130,7 +131,8 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
         manufacturer: spec.manufacturer || '',
         dosage: spec.suggestedDosage || '',
         unit: spec.dosageUnit || 'kg',
-        dilutionRatio: spec.suggestedRatio || '',
+        // 2026-07-25：spec 无建议稀释倍数时预填 "1:500"，让用水量字段能立即显示计算结果
+        dilutionRatio: spec.suggestedRatio || '1:500',
         fertilizationMethod: '',
         unitPrice: spec.unitPrice || 0,
         stockQuantity: spec.stockQuantity || 0,
@@ -256,8 +258,9 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
-              {/* 内联编辑 */}
-              <div className="grid grid-cols-5 gap-2">
+{/* 内联编辑 */}
+              {/* 2026-07-25：5 列 → 7 列 — 新增「用水量」+「用水量单位」（自动计算 readonly，公式：肥料用量 × 稀释倍数，≥1000L 自动切 m³） */}
+              <div className="grid grid-cols-7 gap-2">
                 <div>
                   <Label className="text-xs text-gray-500">用量</Label>
                   <Input type="number" value={item.dosage} onChange={(e) => updateField(idx, 'dosage', e.target.value)}
@@ -283,6 +286,41 @@ export function FertilizerPoolEditor({ pool, onChange }: FertilizerPoolEditorPro
                   <Label className="text-xs text-gray-500">稀释倍数</Label>
                   <Input type="text" value={item.dilutionRatio} onChange={(e) => updateField(idx, 'dilutionRatio', e.target.value)}
                     placeholder="如 1:500" className="h-8 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">用水量</Label>
+                  {/* 2026-07-25：用水量自动计算（readonly）= 肥料用量 × 稀释倍数右侧数字（toBaseUnit 已处理 kg/L 单位换算） */}
+                  {(() => {
+                    const water = calcWaterFromPoolRow({
+                      quantity: Number(item.dosage) || 0,
+                      unit: item.unit,
+                      dilutionRatio: item.dilutionRatio,
+                    });
+                    return (
+                      <Input
+                        type="text"
+                        value={water ? water.amount.toFixed(2) : '-'}
+                        readOnly
+                        className="h-8 text-sm bg-gray-50 text-blue-700 font-mono"
+                        title="自动计算：肥料用量 × 稀释倍数"
+                      />
+                    );
+                  })()}
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">用水单位</Label>
+                  {(() => {
+                    const water = calcWaterFromPoolRow({
+                      quantity: Number(item.dosage) || 0,
+                      unit: item.unit,
+                      dilutionRatio: item.dilutionRatio,
+                    });
+                    return (
+                      <div className="h-8 px-2 py-1 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-700 flex items-center font-mono">
+                        {water?.unit || 'L'}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">施肥方式</Label>
