@@ -19,6 +19,7 @@ interface ProduceCodeRuleTableProps {
   showAddType: string | null;
   showAddSub: { categoryCode: string; typeCode: string } | null;
   showAddSubVariety1: { categoryCode: string; typeCode: string; subCode: string } | null;
+  showAddCategory: boolean;
   newTypeCode: string;
   newTypeName: string;
   newSubCode: string;
@@ -137,6 +138,7 @@ export function ProduceCodeRuleTable({
   showAddType,
   showAddSub,
   showAddSubVariety1,
+  showAddCategory,
   newTypeCode,
   newTypeName,
   newSubCode,
