@@ -10,6 +10,8 @@ import { createMaterialFlowLogTable } from './materialFlowLog';
 import { createPlantingAreaStocksTable, migrateToAreaStocks } from './plantingAreaStocks';
 // 2026-07-14：方案 C — 启动时批量重算 inventory_stock.status
 import { recomputeAllStockStatus } from '../lib/inventoryStockStatus';
+// 2026-07-25：plantings/seedlings 加 area_oid 列 + 反查 zones.zone_name 回填
+import { migrate20260725ZoneAreaOid } from './migrations/2026-07-25-zone-area-oid';
 
 /**
  * 2026-07-17 审核修复：本地时间戳（替代 toISOString 的 UTC 错位 — utc-timezone-id-bug 教训）
@@ -2926,6 +2928,15 @@ export async function fixMissingSchema(): Promise<void> {
     } catch (e: any) {
       seedLog.skip(`• 索引 ${idx.name}: ${e.message}`);
     }
+  }
+
+  // 2026-07-25：plantings/seedlings 加 area_oid 列 + 反查 zone_name 回填
+  // 顺序：放在所有其他 ALTER TABLE 之后、saveDatabase 之前，确保列存在
+  try {
+    migrate20260725ZoneAreaOid(db);
+    seedLog.info('✓ 2026-07-25 zone-area-oid 迁移完成');
+  } catch (e: any) {
+    seedLog.skip('• 2026-07-25 zone-area-oid:', e.message);
   }
 
   saveDatabase();
