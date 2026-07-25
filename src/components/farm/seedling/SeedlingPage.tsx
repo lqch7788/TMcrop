@@ -26,7 +26,7 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 // 2026-06-28 方案B：移除 RecordModal import — 繁殖记录已合并到每日记录弹窗
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
-import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useZoneStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
@@ -113,17 +113,27 @@ export default function SeedlingPage() {
     });
   }, [dictionaries]);
 
-  // 育苗区域选项
+  // 育苗区域选项（2026-07-25：数据源从字典改为基地运营中心 zone 表，统一数据源）
+  const zones = useZoneStore((s) => s.zones);
+  const loadZones = useZoneStore((s) => s.loadZones);
+  const zoneLoading = useZoneStore((s) => s.loading);
+  useEffect(() => {
+    if (zones.length === 0 && !zoneLoading) loadZones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const sites = useMemo(() => {
-    const items = getDictItems('seedling_site').map(d => ({ value: d.dictCode, label: d.dictLabel }));
+    const items = zones
+      .filter((z) => (z.status ?? 'active') !== 'inactive')
+      .map((z) => ({ value: z.oid, label: z.zoneName || '未命名区域' }));
     // 去重
     const seen = new Set<string>();
-    return items.filter(s => {
+    return items.filter((s) => {
       if (seen.has(s.value)) return false;
       seen.add(s.value);
       return true;
     });
-  }, [dictionaries]);
+  }, [zones]);
 
   // 2026-07-04 v2：6 状态筛选项（与种植对齐，不用字典）
   const seedlingStatusOptions = useMemo(() => [

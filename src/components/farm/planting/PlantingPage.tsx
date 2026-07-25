@@ -29,7 +29,7 @@ import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore, useZoneStore, getGreenhouseByOid } from '../../../stores';
 // 2026-06-29：合并 onLabelDetail + onMark → onLabelManage（参考育苗管理 SeedlingTable）
 import PlantingLabelManageModal from './modals/PlantingLabelManageModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
@@ -104,10 +104,27 @@ export default function PlantingPage() {
   }, [plantings]);
 
   // 字典数据转换（使用 Zustand store 获取）
+  // 2026-07-25：种植区域改用基地运营中心 zone 表（统一数据源）
+  const zones = useZoneStore((s) => s.zones);
+  const loadZones = useZoneStore((s) => s.loadZones);
+  const zoneLoading = useZoneStore((s) => s.loading);
+  useEffect(() => {
+    if (zones.length === 0 && !zoneLoading) loadZones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 种植区域选项
   const areas = useMemo(() => {
-    return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
-  }, [dictionaries]);
+    return zones
+      .filter((z) => (z.status ?? 'active') !== 'inactive')
+      .map((z) => ({
+        value: z.oid,
+        label: z.zoneName || '未命名区域',
+        // parent 用 greenhouse.name 让 PlantingFilter 树形筛选可显示层级
+        parent: z.greenhouseOid ? (getGreenhouseByOid(z.greenhouseOid)?.name || '') : '',
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zones]);
 
   // 种植状态选项
   const plantingStatusOptions = useMemo(() => {
