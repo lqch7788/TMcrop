@@ -1327,17 +1327,17 @@ export function GreenhouseWithZonesTab({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   // 数据到达时展开所有温室
   useEffect(() => {
-    if (filteredGH.length === 0) return;
+    if (greenhouses.length === 0) return;
     setExpanded(prev => {
       // 已展开的保持折叠，避免覆盖用户主动收起的状态
       const next: Record<string, boolean> = {};
-      filteredGH.forEach(gh => {
+      greenhouses.forEach(gh => {
         if (prev[gh.oid] === undefined) next[gh.oid] = true;
         else next[gh.oid] = prev[gh.oid];
       });
       return next;
     });
-  }, [filteredGH.length]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [greenhouses.length]);  // eslint-disable-line react-hooks/exhaustive-deps
   // 温室新增/编辑 modal
   const [showGHModal, setShowGHModal] = useState(false);
   const [editingGH, setEditingGH] = useState<Greenhouse | null>(null);
