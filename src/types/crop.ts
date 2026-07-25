@@ -809,7 +809,8 @@ export interface SeedSourceFilters {
 
 /** 育苗筛选条件 */
 export interface SeedlingFilters {
-  siteName: string;      // 场地名称
+  siteName: string;      // 场地名称（保留兼容）
+  areaOid: string;       // 2026-07-25: 区域 oid（FK 权威，seedlings.area_oid）
   seedlingCode: string;  // 育苗批号
   sourceCode: string;     // 种源批号
   startDate: string;     // 开始日期
@@ -835,7 +836,8 @@ export interface SeedlingFilters {
 
 /** 种植筛选条件 */
 export interface PlantingFilters {
-  areaName: string;      // 区域名称
+  areaName: string;      // 区域名称（保留兼容）
+  areaOid: string;       // 2026-07-25: 区域 oid（FK 权威，plantings/seedlings.area_oid）
   plantCode: string;     // 种植批号
   sourceCode: string;     // 来源批号（种源/育苗批号）
   isHarvest: string;     // 是否已采收

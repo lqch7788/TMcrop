@@ -71,6 +71,7 @@ export default function PlantingPage() {
     plantCode: '',
     sourceCode: '',
     areaName: '',
+    areaOid: '',  // 2026-07-25: 区域 oid（FK 权威），替代 areaName 文本过滤
     isHarvest: '',
     startDate: '',
     endDate: '',
@@ -424,6 +425,7 @@ export default function PlantingPage() {
       plantCode: '',
       sourceCode: '',
       areaName: '',
+      areaOid: '',
       isHarvest: '',
       startDate: '',
       endDate: '',
