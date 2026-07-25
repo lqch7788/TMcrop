@@ -1651,6 +1651,7 @@ export function GreenhouseWithZonesTab({
                                 <th className="px-3 py-2 text-left font-medium">类型</th>
                                 <th className="px-3 py-2 text-right font-medium">面积(㎡)</th>
                                 <th className="px-3 py-2 text-left font-medium">状态</th>
+                                <th className="px-3 py-2 text-left font-medium">种植信息</th>
                                 <th className="px-3 py-2 text-left font-medium">备注</th>
                                 <th className="px-3 py-2 text-center font-medium">操作</th>
                               </tr>
@@ -1671,6 +1672,26 @@ export function GreenhouseWithZonesTab({
                                     </span>
                                   </td>
                                   <td className="px-3 py-2 text-gray-500 truncate max-w-[150px]" title={z.description || '-'}>{z.description || '-'}</td>
+                                  {/* 2026-07-25：常驻「种植信息」列 — 显示该 zone 下的当前作物 + 已用面积 */}
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {(() => {
+                                      const agg = z.aggregatedPlantings;
+                                      if (!agg || (agg.count === 0 && agg.seedlingCount === 0)) {
+                                        return <span className="text-gray-400">— 暂无种植 —</span>;
+                                      }
+                                      return (
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className="font-medium text-purple-700">
+                                            🌱 {agg.currentCrop || '-'}
+                                          </span>
+                                          <span className="text-orange-600">
+                                            已用 {agg.occupiedArea || 0} ㎡
+                                            （{agg.count} 种植 / {agg.seedlingCount} 育苗）
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
+                                  </td>
                                   <td className="px-3 py-2 text-center">
                                     <div className="flex justify-center gap-1">
                                       {/* 2026-07-25：行内联批次列表按钮（只读聚合） */}
