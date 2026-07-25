@@ -31,6 +31,8 @@ import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore';
 import type { Greenhouse, Zone } from '@/services/apiBasicDataService';
 import type { PlantingRecord } from '@/services/apiPlantingRecordService';
 import { showAlert, showToast } from '@/lib/dialogService';
+import { StatsCards } from '@/components/farm/base-ops/StatsCards';
+import { TreeMenu } from '@/components/farm/base-ops/TreeMenu';
 
 // 2026-07-25 重构（方案 B）：FacilityTab / ZoneTab / PlantingTab 内联到本文件末尾
 // 删除原 import './BaseOperationsCenter' 跨文件依赖
