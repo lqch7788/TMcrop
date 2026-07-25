@@ -1,6 +1,10 @@
 /**
  * 种植季记录 Store (V2.1 架构 - 已简化)
  * 统一管理种植季记录的增删改查
+ *
+ * @deprecated 2026-07-25：planting_records 表已弃用（plan 2026-07-25-zone-planting-info-ownership）。
+ * 写入请改用 plantings / seedlings 表（在 /crop/planting 和 /crop/seedling 页面）。
+ * 本 store 仅保留 GET 读能力兼容历史数据，所有写 action 已改为 throw DEPRECATED。
  */
 import { create } from 'zustand';
 import {
@@ -45,55 +49,27 @@ export const usePlantingRecordStore = create<PlantingRecordStore>()(
     },
 
     addRecord: async (data) => {
-      set({ loading: true, error: null });
-      try {
-        const created = await createPlantingRecord(data);
-        set((s) => ({ records: [created, ...s.records], loading: false }));
-        return created;
-      } catch (error) {
-        set({ error: error instanceof Error ? error.message : '创建种植季记录失败', loading: false });
-        throw error;
-      }
+      // 2026-07-25 DEPRECATED：planting_records 表已弃用。请改用 /crop/planting 页面写 plantings 表。
+      set({ loading: false });
+      throw new Error('DEPRECATED: planting_records 表已弃用，请到「种植管理」页面操作 plantings 表');
     },
 
     editRecord: async (oid, data) => {
-      set({ loading: true, error: null });
-      try {
-        const updated = await updatePlantingRecord(oid, data);
-        set((s) => ({
-          records: s.records.map((r) => r.oid === oid ? updated : r),
-          loading: false,
-        }));
-      } catch (error) {
-        set({ error: error instanceof Error ? error.message : '更新种植季记录失败', loading: false });
-        throw error;
-      }
+      // 2026-07-25 DEPRECATED
+      set({ loading: false });
+      throw new Error('DEPRECATED: planting_records 表已弃用');
     },
 
     endSeason: async (oid, data) => {
-      set({ loading: true, error: null });
-      try {
-        const result = await endPlantingSeason(oid, data);
-        set((s) => ({
-          records: s.records.map((r) => r.oid === oid ? result : r),
-          loading: false,
-        }));
-        return result;
-      } catch (error) {
-        set({ error: error instanceof Error ? error.message : '结束种植季失败', loading: false });
-        throw error;
-      }
+      // 2026-07-25 DEPRECATED
+      set({ loading: false });
+      throw new Error('DEPRECATED: planting_records 表已弃用');
     },
 
     removeRecord: async (oid) => {
-      set({ loading: true, error: null });
-      try {
-        await deletePlantingRecord(oid);
-        set((s) => ({ records: s.records.filter((r) => r.oid !== oid), loading: false }));
-      } catch (error) {
-        set({ error: error instanceof Error ? error.message : '删除种植季记录失败', loading: false });
-        throw error;
-      }
+      // 2026-07-25 DEPRECATED
+      set({ loading: false });
+      throw new Error('DEPRECATED: planting_records 表已弃用');
     },
 
     refreshRecords: async () => {
