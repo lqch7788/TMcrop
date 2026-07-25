@@ -39,7 +39,7 @@ export default function FarmStructureManagement() {
         <p className="text-sm text-blue-700">
           <span className="font-semibold">提示：</span>
           基地架构用于配置公司-基地的层级结构。日常运营（温室管理、区域划分、种植记录）请使用「
-          <a href="/settings/base-operations" className="underline font-medium">基地运营中心</a>
+          <a href="/settings/base-operations?baseOid=base_1780023508412" className="underline font-medium">基地运营中心</a>
           」。
         </p>
       </div>
