@@ -1383,6 +1383,10 @@ export function GreenhouseWithZonesTab({
       quantity: number;
       unit: string;
       date: string;
+      /** 种植：采收日期（取 harvest_date > actual_harvest_date > expected_harvest_date） */
+      harvestDate: string;
+      /** 育苗：预计/实际完成日期 */
+      finishDate: string;
       status: string;
     }>>([]);
     const [loading, setLoading] = useState(true);
@@ -1398,6 +1402,8 @@ export function GreenhouseWithZonesTab({
           const raw = res?.data || res || { plantings: [], seedlings: [] };
           const list: typeof items = [];
           (raw.plantings || []).forEach((p: any) => {
+            // 采收日期优先级：harvestDate > actualHarvestDate > expectedHarvestDate
+            const harvestDate = (p.harvestDate || p.actualHarvestDate || p.expectedHarvestDate || '').slice(0, 10);
             list.push({
               kind: 'planting',
               code: p.plantingCode || p.planting_code || '-',
@@ -1406,10 +1412,14 @@ export function GreenhouseWithZonesTab({
               quantity: p.plantingQuantity ?? p.planting_quantity ?? 0,
               unit: p.unit || '株',
               date: (p.plantingDate || p.planting_date || '').slice(0, 10),
+              harvestDate,
+              finishDate: '',
               status: p.status || '-',
             });
           });
           (raw.seedlings || []).forEach((s: any) => {
+            // 育苗完成日期：actualFinishDate > expectedFinishDate
+            const finishDate = (s.actualFinishDate || s.expectedFinishDate || '').slice(0, 10);
             list.push({
               kind: 'seedling',
               code: s.seedlingCode || s.seedling_code || '-',
@@ -1418,6 +1428,8 @@ export function GreenhouseWithZonesTab({
               quantity: s.seedlingQuantity ?? s.seedling_quantity ?? 0,
               unit: s.unit || '株',
               date: (s.seedlingDate || s.seedling_date || '').slice(0, 10),
+              harvestDate: '',
+              finishDate,
               status: s.status || '-',
             });
           });
@@ -1449,7 +1461,8 @@ export function GreenhouseWithZonesTab({
               <th className="px-3 py-2 text-left font-medium text-gray-600">作物</th>
               <th className="px-3 py-2 text-left font-medium text-gray-600">品种</th>
               <th className="px-3 py-2 text-right font-medium text-gray-600">数量</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-600">日期</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">开始日期</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">采收/完成</th>
               <th className="px-3 py-2 text-left font-medium text-gray-600">状态</th>
             </tr>
           </thead>
@@ -1468,6 +1481,11 @@ export function GreenhouseWithZonesTab({
                 <td className="px-3 py-2 text-gray-600">{it.cropVariety}</td>
                 <td className="px-3 py-2 text-right">{it.quantity} {it.unit}</td>
                 <td className="px-3 py-2 text-gray-600">{it.date || '-'}</td>
+                <td className="px-3 py-2 text-gray-600">
+                  {it.kind === 'planting'
+                    ? (it.harvestDate || <span className="text-gray-400 italic">未采收</span>)
+                    : (it.finishDate || <span className="text-gray-400 italic">未完成</span>)}
+                </td>
                 <td className="px-3 py-2 text-gray-600">{it.status}</td>
               </tr>
             ))}
@@ -1645,8 +1663,7 @@ export function GreenhouseWithZonesTab({
                                       {z.status === 'active' ? '活跃' : '停用'}
                                     </span>
                                   </td>
-                                  <td className="px-3 py-2 text-gray-500 truncate max-w-[150px]" title={z.description || '-'}>{z.description || '-'}</td>
-                                  {/* 2026-07-25：常驻「种植信息」列 — 显示该 zone 下的当前作物 + 已用面积 */}
+                                  {/* 种植信息列 — 显示该 zone 下的当前作物 + 已用面积 */}
                                   <td className="px-3 py-2 text-xs text-gray-700">
                                     {(() => {
                                       const agg = z.aggregatedPlantings;
@@ -1666,15 +1683,18 @@ export function GreenhouseWithZonesTab({
                                       );
                                     })()}
                                   </td>
+                                  {/* 备注列 */}
+                                  <td className="px-3 py-2 text-gray-500 truncate max-w-[150px]" title={z.description || '-'}>{z.description || '-'}</td>
                                   <td className="px-3 py-2 text-center">
                                     <div className="flex justify-center gap-1">
-                                      {/* 2026-07-25：行内联批次列表按钮（只读聚合） */}
+                                      {/* 2026-07-26：行内联批次列表按钮 — 加文字标签让用户可发现 */}
                                       <button
                                         onClick={() => toggleZonePlantings(z.oid)}
-                                        className="p-1 hover:bg-purple-50 text-purple-500 rounded"
-                                        title="查看该区块下的种植/育苗批次"
+                                        className="px-2 py-1 text-xs bg-purple-50 hover:bg-purple-100 text-purple-600 hover:text-purple-700 rounded border border-purple-200 flex items-center gap-1"
+                                        title="查看该区块下的种植/育苗批次详情"
                                       >
                                         <ListTree className={`w-3 h-3 transition-transform ${expandedZonePlantings.has(z.oid) ? 'rotate-90' : ''}`} />
+                                        批次
                                       </button>
                                       <button onClick={() => openEditZoneModal(z)} className="p-1 hover:bg-blue-50 text-blue-500 rounded" title="编辑区块">
                                         <Edit2 className="w-3 h-3" />

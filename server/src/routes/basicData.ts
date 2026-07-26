@@ -393,15 +393,23 @@ router.get('/zones', (req, res) => {
   try {
     const db = getDatabase();
     // 聚合字段：用 area_name 匹配 plantings/seedlings（兼容 production DB 无 area_oid 列）
+    // 2026-07-26 修复：seedlings 的 area_name 可能存 zone_oid（如 ZN018）而非 zone_name（"育苗一区"），
+    //   所以匹配条件需同时覆盖 zone_name 和 oid 两种存储方式
+    // 2026-07-26 修复：current_crop 优先取种植，无种植时取育苗（育苗一区/二区等纯育苗区块也能显示作物名）
     const result = db.exec(`
       SELECT z.id, z.oid, z.zone_code, z.zone_name, z.greenhouse_oid, z.zone_type, z.area, z.sort_order, z.status, z.created_at,
              g.name as greenhouseName,
-             (SELECT COUNT(*) FROM plantings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS planting_count,
-             (SELECT COUNT(*) FROM seedlings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS seedling_count,
-             (SELECT COALESCE(SUM(planting_quantity), 0) FROM plantings WHERE area_name = z.zone_name AND deleted_at IS NULL) AS occupied_area,
-             (SELECT crop_name FROM plantings
-              WHERE area_name = z.zone_name AND deleted_at IS NULL
-              ORDER BY planting_date DESC LIMIT 1) AS current_crop
+             (SELECT COUNT(*) FROM plantings WHERE (area_name = z.zone_name OR area_name = z.oid) AND deleted_at IS NULL) AS planting_count,
+             (SELECT COUNT(*) FROM seedlings WHERE (area_name = z.zone_name OR area_name = z.oid) AND deleted_at IS NULL) AS seedling_count,
+             (SELECT COALESCE(SUM(planting_quantity), 0) FROM plantings WHERE (area_name = z.zone_name OR area_name = z.oid) AND deleted_at IS NULL) AS occupied_area,
+             COALESCE(
+               (SELECT crop_name FROM plantings
+                WHERE (area_name = z.zone_name OR area_name = z.oid) AND deleted_at IS NULL
+                ORDER BY planting_date DESC LIMIT 1),
+               (SELECT crop_name FROM seedlings
+                WHERE (area_name = z.zone_name OR area_name = z.oid) AND deleted_at IS NULL
+                ORDER BY seedling_date DESC LIMIT 1)
+             ) AS current_crop
       FROM zones z
       LEFT JOIN greenhouses g ON z.greenhouse_oid = g.oid
       WHERE z.status = 'active'
@@ -428,7 +436,7 @@ router.get('/zones', (req, res) => {
         count: Number(obj.plantingCount) || 0,
         seedlingCount: Number(obj.seedlingCount) || 0,
         occupiedArea: Number(obj.occupiedArea) || 0,
-        currentCrop: obj.currentCrop || '-',
+        currentCrop: obj.currentCrop || '-',  // COALESCE 已处理，兜底再防 null
       };
       delete obj.plantingCount;
       delete obj.seedlingCount;
@@ -597,27 +605,34 @@ router.get('/zones/:oid/plantings', (req, res) => {
     const zoneRes = db.exec(`SELECT zone_name FROM zones WHERE oid = ?`, [oid]);
     const zoneName = zoneRes[0]?.values[0]?.[0] || '';
 
+    // 2026-07-26 修复：plantings/seedlings 的 area_name 可能存 zone_name 或 zone_oid，
+    //   所以同时匹配两种形式（area_name = zoneName OR area_name = oid）
+    // 种植批次查询（含采收日期）
     const plantings = db.exec(
       `SELECT id, planting_code, crop_name, crop_variety, area_name,
-              planting_date, planting_quantity, status, unit
+              planting_date, planting_quantity, status, unit,
+              expected_harvest_date, actual_harvest_date, harvest_date, is_harvest
        FROM plantings
-       WHERE area_name = ? AND deleted_at IS NULL
+       WHERE (area_name = ? OR area_name = ?) AND deleted_at IS NULL
        ORDER BY planting_date DESC
        LIMIT 100`,
-      [zoneName],
+      [zoneName, oid],
     );
 
+    // 育苗批次查询（含预计/实际完成日期）
     const seedlings = db.exec(
       `SELECT id, seedling_code, crop_name, crop_variety, area_name,
-              seedling_date, seedling_quantity, status, unit
+              seedling_date, seedling_quantity, status, unit,
+              expected_finish_date, actual_finish_date
        FROM seedlings
-       WHERE area_name = ? AND deleted_at IS NULL
+       WHERE (area_name = ? OR area_name = ?) AND deleted_at IS NULL
        ORDER BY seedling_date DESC
        LIMIT 100`,
-      [oid],
+      [zoneName, oid],
     );
 
-    const map = (rows: any[] | undefined) =>
+    // 种植记录映射（含采收字段）
+    const mapPlantings = (rows: any[] | undefined) =>
       (rows || []).map((r: any[]) => ({
         id: r[0],
         plantingCode: r[1],
@@ -628,13 +643,33 @@ router.get('/zones/:oid/plantings', (req, res) => {
         plantingQuantity: r[6],
         status: r[7],
         unit: r[8] || '株',
+        expectedHarvestDate: r[9] || null,
+        actualHarvestDate: r[10] || null,
+        harvestDate: r[11] || null,
+        isHarvest: r[12] || 0,
+      }));
+
+    // 育苗记录映射（独立字段名，不复用 planting 的 map）
+    const mapSeedlings = (rows: any[] | undefined) =>
+      (rows || []).map((r: any[]) => ({
+        id: r[0],
+        seedlingCode: r[1],
+        cropName: r[2],
+        cropVariety: r[3],
+        areaName: r[4],
+        seedlingDate: r[5],
+        seedlingQuantity: r[6],
+        status: r[7],
+        unit: r[8] || '株',
+        expectedFinishDate: r[9] || null,
+        actualFinishDate: r[10] || null,
       }));
 
     res.json({
       success: true,
       data: {
-        plantings: map(plantings[0]?.values),
-        seedlings: map(seedlings[0]?.values),
+        plantings: mapPlantings(plantings[0]?.values),
+        seedlings: mapSeedlings(seedlings[0]?.values),
       },
     });
   } catch (error) {
