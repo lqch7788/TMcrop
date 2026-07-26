@@ -497,7 +497,7 @@ export default function BaseOperationsCenterV2() {
       }
       handleCloseModal();
       // 刷新数据
-      loadAllData();
+      loadAllData(baseOidFromUrl);
     } catch (error) {
       showToast('操作失败', 'error');
     }
@@ -542,7 +542,7 @@ export default function BaseOperationsCenterV2() {
         showToast('未知的记录类型，无法删除', 'error');
         return;
       }
-      loadAllData();
+      loadAllData(baseOidFromUrl);
     } catch (error) {
       showToast('删除失败', 'error');
     }
@@ -570,9 +570,11 @@ export default function BaseOperationsCenterV2() {
     return records.filter(r => baseGhOids.has(String(r.facilityOid || '')));
   }, [records, filteredGreenhouses, baseOidFromUrl]);
 
-  // 加载所有数据（仅首次挂载时）
+  // 加载数据（仅在 baseOid 存在时 — 防止无参数时泄漏其他基地数据）
   useEffect(() => {
-    loadAllData(baseOidFromUrl);
+    if (baseOidFromUrl) {
+      loadAllData(baseOidFromUrl);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -586,33 +588,8 @@ export default function BaseOperationsCenterV2() {
     }
   }, [baseOidFromUrl, bases, expandedKeys, setExpandedKeys]);
 
-  // 2026-07-25 Plan B Task 6：URL 持久化选中节点
-  //   - 选中节点变化 → 写入 ?nodeType=&nodeOid=
-  //   - URL 读取 → 恢复 selectedNode（一次性 mount）
-  const [urlApplied, setUrlApplied] = useState(false);
-  useEffect(() => {
-    if (urlApplied) return;
-    const params = new URLSearchParams(window.location.search);
-    const nodeType = params.get('nodeType');
-    const nodeOid = params.get('nodeOid');
-    if (nodeType && nodeOid) {
-      selectNode(nodeType as any, nodeOid, '');
-    }
-    setUrlApplied(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (selectedNode.oid) {
-      params.set('nodeType', selectedNode.type);
-      params.set('nodeOid', selectedNode.oid);
-    }
-    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-    if (newUrl !== `${window.location.pathname}${window.location.search}`) {
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [selectedNode]);
+  {/* 2026-07-26：删除 URL 持久化 — 树菜单已删除，无 selectedNode 可持久化。
+    baseOid 参数由入口链接（Settings/FarmStructureManagement）固定携带，刷新不丢失。 */}
 
   // 根据选中节点获取表格数据（树状视图使用）
   const tableData = useMemo(() => {
@@ -956,27 +933,27 @@ export default function BaseOperationsCenterV2() {
               loading={loading}
               onAddGH={async (data: any) => {
                 await useGreenhouseStore.getState().addGreenhouse(data);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               onEditGH={async (id: any, data: any) => {
                 await useGreenhouseStore.getState().editGreenhouse(id, data);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               onRemoveGH={async (id: any) => {
                 await useGreenhouseStore.getState().removeGreenhouse(id);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               onAddZone={async (data: any) => {
                 await useZoneStore.getState().addZone(data);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               onEditZone={async (id: any, data: any) => {
                 await useZoneStore.getState().editZone(id, data);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               onRemoveZone={async (id: any) => {
                 await useZoneStore.getState().removeZone(id);
-                loadAllData();
+                loadAllData(baseOidFromUrl);
               }}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -1276,7 +1253,7 @@ export default function BaseOperationsCenterV2() {
  *
  * 共享模式：
  * - 接受 props (data + onAdd/onEdit/onRemove)：V2 父组件接管所有数据加载和 mutation
- * - 每次 onAdd/onEdit/onRemove 后 V2 自动调 useBaseOperationsStore.loadAllData()，
+ * - 每次 onAdd/onEdit/onRemove 后 V2 自动调 useBaseOperationsStore.loadAllData(baseOidFromUrl)，
  *   → 双模式（树状视图 + 列表视图）都自动反映最新数据，无需各自再 loadX
  * - PAGE_SIZE 改为 LIST_PAGE_SIZE 避免与外部 import 冲突
  * ============================================ */
