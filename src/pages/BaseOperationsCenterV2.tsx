@@ -553,22 +553,20 @@ export default function BaseOperationsCenterV2() {
     return buildTreeData(bases as any, greenhouses as any, zones as any, blocks as any, baseOidFromUrl, searchTerm) as any;
   }, [bases, greenhouses, zones, searchTerm]);
 
-  // 按基地过滤后的数据（用于列表视图）
+  // 按基地过滤后的数据（基地运营中心只显示当前基地，不泄漏其他基地）
   const filteredGreenhouses = useMemo(() => {
-    return greenhouses.filter(g => !baseOidFromUrl || g.baseOid === baseOidFromUrl);
+    return greenhouses.filter(g => g.baseOid === baseOidFromUrl);
   }, [greenhouses, baseOidFromUrl]);
 
   const filteredZones = useMemo(() => {
-    if (!baseOidFromUrl) return zones;
     const baseGhOids = new Set(filteredGreenhouses.map(g => String(g.oid || '')));
     return zones.filter(z => baseGhOids.has(String(z.greenhouseOid || '')));
-  }, [zones, filteredGreenhouses, baseOidFromUrl]);
+  }, [zones, filteredGreenhouses]);
 
   const filteredRecords = useMemo(() => {
-    if (!baseOidFromUrl) return records;
     const baseGhOids = new Set(filteredGreenhouses.map(g => String(g.oid || '')));
     return records.filter(r => baseGhOids.has(String(r.facilityOid || '')));
-  }, [records, filteredGreenhouses, baseOidFromUrl]);
+  }, [records, filteredGreenhouses]);
 
   // 加载数据（baseOidFromUrl 空时加载全部，由 filteredGreenhouses 在前端过滤）
   useEffect(() => {
