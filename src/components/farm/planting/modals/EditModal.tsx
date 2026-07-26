@@ -191,6 +191,7 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
             value={formData.areaId}
             onChange={(value) => setFormData({ ...formData, areaId: value })}
             placeholder="选择种植区域"
+            baseOid="base_1780023508412"
           />
         </div>
 
