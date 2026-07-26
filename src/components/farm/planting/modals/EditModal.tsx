@@ -17,6 +17,7 @@ import { SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { BaseZoneSelect } from '../../../common/BaseZoneSelect';
+import { useZoneStore } from '@/stores/useZoneStore';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -35,12 +36,15 @@ interface EditModalProps {
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps) {
+  const zones = useZoneStore((s) => s.zones);
   // 可编辑字段状态
   const [formData, setFormData] = useState({
     // 基本信息（创建后锁定，不可编辑）
     // plantCode, sourceType, sourceId, sourceCode, cropName, cropVariety, cropCode - 只读
     // 可编辑字段
     areaId: record.areaId || '',
+    areaName: record.areaName || '',
+    rootName: record.rootName || '',
     plantingCount: record.plantingCount || 0,
     plantingDate: record.plantingDate || '',
     soilPH: record.soilPH ?? 0,
@@ -89,6 +93,9 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
       await usePlantingStore.getState().updateItem(String(record.id), {
         // 可编辑字段
         areaId: formData.areaId,
+        areaName: formData.areaName || record.areaName || '',
+        rootName: formData.rootName || record.rootName || '',
+        greenhouseName: (formData as any).greenhouseName || record.greenhouseName || '',
         plantingCount: formData.plantingCount,
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,
@@ -189,7 +196,10 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
           <Label className="text-gray-900">种植区域</Label>
           <BaseZoneSelect
             value={formData.areaId}
-            onChange={(value) => setFormData({ ...formData, areaId: value })}
+            onChange={(value) => {
+                const zone = zones.find(z => z.oid === value);
+                setFormData({ ...formData, areaId: value, areaName: zone?.zoneName || '', rootName: (zone as any)?.greenhouseName || '' });
+              }}
             placeholder="选择种植区域"
             baseOid="base_1780023508412"
           />
