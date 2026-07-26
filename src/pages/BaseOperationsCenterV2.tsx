@@ -570,11 +570,9 @@ export default function BaseOperationsCenterV2() {
     return records.filter(r => baseGhOids.has(String(r.facilityOid || '')));
   }, [records, filteredGreenhouses, baseOidFromUrl]);
 
-  // 加载数据（仅在 baseOid 存在时 — 防止无参数时泄漏其他基地数据）
+  // 加载数据（baseOidFromUrl 空时加载全部，由 filteredGreenhouses 在前端过滤）
   useEffect(() => {
-    if (baseOidFromUrl) {
-      loadAllData(baseOidFromUrl);
-    }
+    loadAllData(baseOidFromUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
