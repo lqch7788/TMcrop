@@ -81,7 +81,7 @@ export default function ProduceCodeRule() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">作物编码规则</h1>
-              <p className="text-gray-500">编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位</p>
+              <p className="text-gray-500">编码结构：类别(2位字母) + 类型(2位数字) + 作物(2位数字) + 品种(3位数字) = 9位</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -130,16 +130,14 @@ export default function ProduceCodeRule() {
           {showCodeRuleInfo && (
             <div className="grid grid-cols-2 gap-4 text-sm text-emerald-700 mt-3">
               <div>
-                <p><strong>编码结构：</strong>类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位</p>
-                <p><strong>示例：</strong>FR010100101</p>
+                <p><strong>编码结构：</strong>类别(2位字母) + 类型(2位数字) + 作物(2位数字) + 品种(3位数字) = 9位</p>
+                <p><strong>示例：</strong>FR0101001</p>
                 <ul className="ml-4 mt-1 space-y-0.5">
-                  <li>• FR - 水果类</li>
-                  <li>• 01 - 浆果类</li>
-                  <li>• 01 - 草莓</li>
-                  <li>• 001 - 红颜（子品种）</li>
-                  <li>• 01 - 大叶红颜（详细品种序号）</li>
+                  <li>• FR - 水果类（类别）</li>
+                  <li>• 01 - 浆果类（类型）</li>
+                  <li>• 01 - 草莓（作物）</li>
+                  <li>• 001 - 红颜（品种）</li>
                 </ul>
-                <p className="mt-2 text-xs"><strong>注：</strong>详细品种名称（如"大叶红颜"）由用户在录入时手工输入，系统自动分配2位序号</p>
               </div>
               <div>
                 <p><strong>大类代码：</strong></p>
