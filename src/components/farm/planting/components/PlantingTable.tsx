@@ -1147,6 +1147,18 @@ export function PlantingTable({
                             />
                           )}
 
+                          {/* 2026-07-26：行内编辑按钮（工具栏批量编辑已移除） */}
+                          {onEdit && (
+                            <ActionIconButton
+                              variant="edit"
+                              icon={<Edit2 className="w-4 h-4" />}
+                              onClick={() => guardClick(lockReason, () => onEdit(record))}
+                              disabled={isEnded}
+                              className={isEnded ? writeClass : ''}
+                              title={isEnded ? lockReason : '编辑'}
+                            />
+                          )}
+
                           {/* 写操作 — 结束态灰显+禁用（采收 onEndV2 仅进行中显示） */}
                           {onEndV2 && !isEnded && (
                             <ActionIconButton

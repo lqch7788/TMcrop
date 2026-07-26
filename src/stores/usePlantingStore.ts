@@ -94,7 +94,11 @@ export const usePlantingStore = create<PlantingState>()(
     updateItem: async (id, updates) => {
       try {
         const result = await plantingService.updatePlanting(id, updates);
-        if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
+        // 2026-07-26：用 API 返回的真实数据更新列表，不用本地 updates
+        //   （本地 updates 缺少服务端计算的字段如 area_name，导致列表显示旧数据）
+        if (result) set((s) => ({
+          items: s.items.map((i) => i.id === id ? { ...i, ...updates, ...(result as any) } : i),
+        }));
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '更新种植失败' });
