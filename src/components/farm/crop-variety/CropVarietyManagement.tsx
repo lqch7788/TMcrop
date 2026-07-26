@@ -314,14 +314,10 @@ export default function CropVarietyManagement() {
       const subVarieties = getSubVariety1Options(codeGenCategory, codeGenType, codeGenVariety);
       setSubVariety1Options(subVarieties);
       setCodeGenSubVariety1('');
-      setDetailVarietyName('');
-      setDetailVarietyCode('');
       setGeneratedCode('');
     } else {
       setSubVariety1Options([]);
       setCodeGenSubVariety1('');
-      setDetailVarietyName('');
-      setDetailVarietyCode('');
       setGeneratedCode('');
     }
   }, [codeGenCategory, codeGenType, codeGenVariety]);
