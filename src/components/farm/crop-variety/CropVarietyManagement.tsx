@@ -115,9 +115,7 @@ export default function CropVarietyManagement() {
   const [codeGenCategory, setCodeGenCategory] = useState('');
   const [codeGenType, setCodeGenType] = useState('');
   const [codeGenVariety, setCodeGenVariety] = useState('');
-  const [codeGenSubVariety1, setCodeGenSubVariety1] = useState(''); // 子品种1（3位码）
-  const [detailVarietyName, setDetailVarietyName] = useState(''); // 详细品种名称（用户手工输入）
-  const [detailVarietyCode, setDetailVarietyCode] = useState(''); // 详细品种序号（自动生成）
+  const [codeGenSubVariety1, setCodeGenSubVariety1] = useState(''); // 品种（3位码）
   const [generatedCode, setGeneratedCode] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [codeGenExpanded, setCodeGenExpanded] = useState(false);
@@ -328,33 +326,23 @@ export default function CropVarietyManagement() {
     }
   }, [codeGenCategory, codeGenType, codeGenVariety]);
 
-  // 子品种1变化时自动分配详细品种序号
+  // 2026-07-26：详细品种层级已删除，不再需要自动分配
   useEffect(() => {
     if (codeGenCategory && codeGenType && codeGenVariety && codeGenSubVariety1) {
-      // 自动分配下一个序号
-      const nextCode = getMaxDetailVarietyCode(
-        codeGenCategory,
-        codeGenType,
-        codeGenVariety,
-        codeGenSubVariety1
-      );
-      setDetailVarietyCode(nextCode);
+      // 编码已改为9位（类别+类型+作物+品种），无需额外的序号
     } else {
-      setDetailVarietyCode('');
     }
   }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1]);
 
   // 生成编码
   const handleGenerateCode = useCallback(() => {
     if (codeGenCategory && codeGenType && codeGenVariety) {
-      // 子品种1使用3位码（如001红颜）
+      // 品种使用3位码（如001红颜）
       const sub1Code = codeGenSubVariety1 || '000';
-      // 详细品种序号（2位）
-      const detailCode = detailVarietyCode || '00';
-      const code = generateCropCode(codeGenCategory, codeGenType, codeGenVariety, sub1Code, detailCode);
+      const code = generateCropCode(codeGenCategory, codeGenType, codeGenVariety, sub1Code);
       setGeneratedCode(code);
     }
-  }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1, detailVarietyCode]);
+  }, [codeGenCategory, codeGenType, codeGenVariety, codeGenSubVariety1]);
 
   // 复制编码
   const handleCopyCode = useCallback(async () => {
@@ -612,34 +600,15 @@ export default function CropVarietyManagement() {
                 </Select>
               </div>
 
-              {/* 详细品种名称（用户手工输入） */}
-              <div>
-                <Label className="text-gray-700">详细品种名称</Label>
-                <Input
-                  type="text"
-                  value={detailVarietyName}
-                  onChange={(e) => setDetailVarietyName(e.target.value)}
-                  placeholder="输入详细品种名称"
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              {/* 详细品种序号（自动生成）和生成结果 */}
+              {/* 生成结果 */}
               <div className="md:col-span-2">
-                <Label className="text-gray-700">详细品种序号</Label>
+                <Label className="text-gray-700">生成结果</Label>
                 <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={detailVarietyCode}
-                    readOnly
-                    placeholder="自动分配"
-                    className="w-20 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
-                  />
                   <Input
                     type="text"
                     value={generatedCode}
                     readOnly
-                    placeholder="生成结果"
+                    placeholder="选择作物后点击生成"
                     className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
                   />
                   <Button

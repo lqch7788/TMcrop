@@ -425,12 +425,11 @@ export function generateCropCode(
   typeCode: string,
   varietyCode: string,
   subVariety1Code?: string,
-  detailVarietyCode?: string
+  _detailVarietyCode?: string  // 2026-07-26: 保留参数兼容性，不再使用
 ): string {
-  // 编码结构：类别(2) + 类型(2) + 品种(2) + 子品种1(3) + 详细品种(2) = 11位
+  // 编码结构：类别(2字母) + 类型(2数字) + 作物(2数字) + 品种(3数字) = 9位
   const sub1 = subVariety1Code ? subVariety1Code.padStart(3, '0') : '000';
-  const detail = detailVarietyCode ? detailVarietyCode.padStart(2, '0') : '00';
-  return `${categoryCode}${typeCode}${varietyCode}${sub1}${detail}`;
+  return `${categoryCode}${typeCode}${varietyCode}${sub1}`;
 }
 
 /**
