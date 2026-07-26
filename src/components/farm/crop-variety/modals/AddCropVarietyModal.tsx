@@ -472,35 +472,32 @@ export function AddCropVarietyModal({
           </Select>
         </div>
 
-        {/* 品种 */}
+        {/* 品种（新建时可输入） */}
         <div>
           <Label className="text-gray-600">
-            品种
+            品种名称 <span className="text-xs text-gray-400">(可输入新建)</span>
           </Label>
-          <Select
+          <Input
+            type="text"
+            value={formData.subVariety1Name}
+            onChange={(e) => handleSubVariety1Change(formData.subVariety1Code || '000', e.target.value)}
+            placeholder="输入品种名称"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <Label className="text-gray-600">
+            品种编码
+          </Label>
+          <Input
+            type="text"
             value={formData.subVariety1Code}
-            onValueChange={(val) => {
-              const opt = subVariety1Options.find(s => s.value === val);
-              if (opt) {
-                handleSubVariety1Change(opt.value, opt.label);
-              } else {
-                handleSubVariety1Change('', '');
-              }
-            }}
-            disabled={!formData.varietyCode || subVariety1Options.length === 0}
-          >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
-              <SelectValue placeholder="请选择品种" />
-            </SelectTrigger>
-            <SelectContent>
-              {subVariety1Options.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {subVariety1Options.length === 0 && formData.varietyCode && (
-            <p className="mt-1 text-xs text-gray-400">该作物暂无品种分类</p>
-          )}
+            onChange={(e) => handleSubVariety1Change(e.target.value, formData.subVariety1Name)}
+            placeholder="3位数字编码"
+            maxLength={3}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+          />
+          <p className="mt-1 text-xs text-gray-400">品种编码为3位数字（如001），在已有最大数基础上递增</p>
         </div>
 
         {/* 2026-07-26：作物品种字段已删除（编码改为9位，品种=子品种名） */}
