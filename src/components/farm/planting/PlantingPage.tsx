@@ -29,7 +29,7 @@ import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore, useZoneStore, getGreenhouseByOid } from '../../../stores';
+import { useDictionaryStore, getDictItems, usePlantingStore, useToastStore, useZoneStore, useGreenhouseStore, getGreenhouseByOid } from '../../../stores';
 // 2026-06-29：合并 onLabelDetail + onMark → onLabelManage（参考育苗管理 SeedlingTable）
 import PlantingLabelManageModal from './modals/PlantingLabelManageModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
@@ -105,19 +105,31 @@ export default function PlantingPage() {
   }, [plantings]);
 
   // 字典数据转换（使用 Zustand store 获取）
-  // 2026-07-25：种植区域改用基地运营中心 zone 表（统一数据源）
+  // 2026-07-26：种植区域只加载当前基地（宁波北仑）的 zone，过滤无关基地区域
   const zones = useZoneStore((s) => s.zones);
   const loadZones = useZoneStore((s) => s.loadZones);
   const zoneLoading = useZoneStore((s) => s.loading);
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
   useEffect(() => {
     if (zones.length === 0 && !zoneLoading) loadZones();
+    if (greenhouses.length === 0) loadGreenhouses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 种植区域选项
+  // 2026-07-26：注册基地温室 OID 集合（baseOid=base_1780023508412）
+  const baseGhOids = useMemo(() => {
+    return new Set(
+      greenhouses
+        .filter(gh => gh.baseOid === 'base_1780023508412')
+        .map(gh => String(gh.oid))
+    );
+  }, [greenhouses]);
+
+  // 种植区域选项（只显示当前基地的子级区块）
   const areas = useMemo(() => {
     return zones
-      .filter((z) => (z.status ?? 'active') !== 'inactive')
+      .filter((z) => (z.status ?? 'active') !== 'inactive' && baseGhOids.has(String(z.greenhouseOid || '')))
       .map((z) => ({
         value: z.oid,
         label: z.zoneName || '未命名区域',
@@ -125,7 +137,7 @@ export default function PlantingPage() {
         parent: z.greenhouseOid ? (getGreenhouseByOid(z.greenhouseOid)?.name || '') : '',
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones]);
+  }, [zones, baseGhOids]);
 
   // 种植状态选项
   const plantingStatusOptions = useMemo(() => {

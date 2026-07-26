@@ -26,7 +26,7 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 // 2026-06-28 方案B：移除 RecordModal import — 繁殖记录已合并到每日记录弹窗
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
-import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useZoneStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore, useZoneStore, useGreenhouseStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
@@ -114,18 +114,30 @@ export default function SeedlingPage() {
     });
   }, [dictionaries]);
 
-  // 育苗区域选项（2026-07-25：数据源从字典改为基地运营中心 zone 表，统一数据源）
+  // 育苗区域选项（2026-07-26：只显示当前基地的子级区块）
   const zones = useZoneStore((s) => s.zones);
   const loadZones = useZoneStore((s) => s.loadZones);
   const zoneLoading = useZoneStore((s) => s.loading);
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
   useEffect(() => {
     if (zones.length === 0 && !zoneLoading) loadZones();
+    if (greenhouses.length === 0) loadGreenhouses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 2026-07-26：当前基地温室 OID 集合
+  const baseGhOids = useMemo(() => {
+    return new Set(
+      greenhouses
+        .filter(gh => gh.baseOid === 'base_1780023508412')
+        .map(gh => String(gh.oid))
+    );
+  }, [greenhouses]);
+
   const sites = useMemo(() => {
     const items = zones
-      .filter((z) => (z.status ?? 'active') !== 'inactive')
+      .filter((z) => (z.status ?? 'active') !== 'inactive' && baseGhOids.has(String(z.greenhouseOid || '')))
       .map((z) => ({ value: z.oid, label: z.zoneName || '未命名区域' }));
     // 去重
     const seen = new Set<string>();
