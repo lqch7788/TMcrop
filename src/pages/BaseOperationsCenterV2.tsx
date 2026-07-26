@@ -274,7 +274,7 @@ const BLOCK_TYPE_OPTIONS = [
 export default function BaseOperationsCenterV2() {
   // URL 参数获取当前基地 OID
   const [searchParams] = useSearchParams();
-  const baseOidFromUrl = searchParams.get('baseOid') || '';
+  const baseOidFromUrl = searchParams.get('baseOid') || 'base_1780023508412';
 
   // 2026-07-25 Plan B：合并双模式为单一布局。
 //   删除 viewMode（'tree' | 'list'） + listTab（'facility' | 'zone' | 'planting'）
@@ -554,6 +554,7 @@ export default function BaseOperationsCenterV2() {
   }, [bases, greenhouses, zones, searchTerm]);
 
   // 按基地过滤后的数据（基地运营中心只显示当前基地，不泄漏其他基地）
+  // baseOidFromUrl 已在顶部定义：URL ?baseOid= 参数，兜底为 base_1780023508412
   const filteredGreenhouses = useMemo(() => {
     return greenhouses.filter(g => g.baseOid === baseOidFromUrl);
   }, [greenhouses, baseOidFromUrl]);
@@ -681,7 +682,7 @@ export default function BaseOperationsCenterV2() {
   const stats = useMemo(() => {
     // 派生一个有效的 base oid（先 selectedNode，没有再 URL）
     const effectiveBaseOid = selectedNode.oid || baseOidFromUrl;
-    const effectiveNodeType = selectedNode.oid ? selectedNode.type : (baseOidFromUrl ? 'base' : null);
+    const effectiveNodeType = selectedNode.oid ? selectedNode.type : (effectiveBaseOid ? 'base' : null);
 
     if (!effectiveBaseOid || !effectiveNodeType) {
       return { totalArea: 0, zoneCount: 0, plantingCount: 0, currentCrop: '-' };
@@ -722,7 +723,7 @@ export default function BaseOperationsCenterV2() {
     switch (effectiveNodeType) {
       case 'base': {
         // 委托给外层 computeBaseStats（共享统计逻辑）
-        return computeBaseStats(effectiveBaseOid);
+        return computeBaseStats(baseOidFromUrl);
       }
       case 'greenhouse': {
         // 2026-07-25：改用 aggregatedPlantings API 字段（planting_records 已弃用）
