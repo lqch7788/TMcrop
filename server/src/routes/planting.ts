@@ -1176,6 +1176,16 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id = ?`, values);
 
+    // 2026-07-26：同步更新 planting_area_stocks 的 area_name / area_id
+    // GET /plantings 用 COALESCE(s.area_name, p.area_name) — 优先读 stocks 表
+    // 只改 plantings 表不改 stocks 表 → 列表显示旧数据
+    const newAreaName = updates.areaName || updates.area_name || '';
+    const newAreaId = updates.areaId || updates.area_id || '';
+    if (newAreaName || newAreaId) {
+      db.run(`UPDATE planting_area_stocks SET area_name = ?, area_id = ? WHERE planting_id = ?`,
+        [newAreaName || null, newAreaId || null, id]);
+    }
+
     // correction 补偿流水 + 上游增量补偿
     if (plantingQtyChanged) {
       try {
