@@ -446,10 +446,10 @@ export function AddCropVarietyModal({
           </Select>
         </div>
 
-        {/* 品种 */}
+        {/* 作物 */}
         <div>
           <Label className="font-bold text-blue-700">
-            品种 <span className="text-red-500">*</span>
+            作物 <span className="text-red-500">*</span>
           </Label>
           <Select
             value={formData.varietyCode}
@@ -462,7 +462,7 @@ export function AddCropVarietyModal({
             disabled={!formData.typeCode}
           >
             <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-400">
-              <SelectValue placeholder="请选择品种" />
+              <SelectValue placeholder="请选择作物" />
             </SelectTrigger>
             <SelectContent>
               {varietyOptions.map(opt => (
@@ -472,10 +472,10 @@ export function AddCropVarietyModal({
           </Select>
         </div>
 
-        {/* 子品种 */}
+        {/* 品种 */}
         <div>
           <Label className="text-gray-600">
-            子品种
+            品种
           </Label>
           <Select
             value={formData.subVariety1Code}
@@ -490,7 +490,7 @@ export function AddCropVarietyModal({
             disabled={!formData.varietyCode || subVariety1Options.length === 0}
           >
             <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
-              <SelectValue placeholder="请选择子品种" />
+              <SelectValue placeholder="请选择品种" />
             </SelectTrigger>
             <SelectContent>
               {subVariety1Options.map(opt => (
@@ -499,7 +499,7 @@ export function AddCropVarietyModal({
             </SelectContent>
           </Select>
           {subVariety1Options.length === 0 && formData.varietyCode && (
-            <p className="mt-1 text-xs text-gray-400">该品种暂无子品种分类</p>
+            <p className="mt-1 text-xs text-gray-400">该作物暂无品种分类</p>
           )}
         </div>
 
