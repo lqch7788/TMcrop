@@ -395,7 +395,7 @@ export default function InventoryV3Page() {
         onCancelExport={handleCancelExport}
         onAdd={handleAdd}
         canCreate={true}
-        canEdit={true}
+        canEdit={false}
         canDelete={true}
         canExport={true}
         showLowStockButton={true}
