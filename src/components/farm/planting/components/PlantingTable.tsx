@@ -856,16 +856,7 @@ export function PlantingTable({
                   新增
                 </Button>
               )}
-              {canEdit && (
-                <Button
-                  variant="blue"
-                  size="sm"
-                  onClick={() => { if (onOperationModeChange) onOperationModeChange('edit'); }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                  编辑
-                </Button>
-              )}
+              {/* 2026-07-26：工具栏"编辑"按钮移除，保留行内编辑 */}
               {canDelete && (
                 <Button
                   variant="destructive"
