@@ -652,6 +652,7 @@ export function AddModal({
               value={formData.areaId}
               onChange={(value) => { clearError('areaId'); handleAreaChange(value); }}
               placeholder="选择种植区域"
+              baseOid="base_1780023508412"
             />
           </div>
           {errors.areaId && <p className="mt-1 text-xs text-red-600">{errors.areaId}</p>}

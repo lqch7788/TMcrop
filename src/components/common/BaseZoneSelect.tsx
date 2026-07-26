@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { useZoneStore } from '@/stores';
+import { useZoneStore, useGreenhouseStore } from '@/stores';
 
 interface BaseZoneSelectProps {
   value?: string;
@@ -44,20 +44,35 @@ export function BaseZoneSelect({
   const zones = useZoneStore((s) => s.zones);
   const loading = useZoneStore((s) => s.loading);
   const loadZones = useZoneStore((s) => s.loadZones);
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
+  const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
 
-  // 首次打开自动加载 zone 列表
+  // 首次打开自动加载 zone + greenhouse 列表
   React.useEffect(() => {
-    if (zones.length === 0 && !loading) {
-      loadZones();
-    }
-  }, [zones.length, loading, loadZones]);
+    if (zones.length === 0 && !loading) loadZones();
+    if (greenhouses.length === 0) loadGreenhouses();
+  }, [zones.length, loading, loadZones, greenhouses.length, loadGreenhouses]);
 
-  // 过滤：仅取 status !== 'inactive'（active 状态显示）；可选 baseOid 过滤
+  // 2026-07-26：baseOid 过滤改为 greenhouseOid 集合匹配
+  //  旧: z.baseOid(z.greenhouseOid) === baseOid（greenhouseOid 是温室 ID 不是基地 ID，永远 false）
+  //  新: 取该基地下所有温室 OID → 过滤 zone.greenhouseOid ∈ 该集合
+  const baseGhOids = React.useMemo(() => {
+    if (!baseOid) return null;  // null = 不过滤
+    return new Set(
+      greenhouses
+        .filter(gh => gh.baseOid === baseOid)
+        .map(gh => String(gh.oid))
+    );
+  }, [greenhouses, baseOid]);
+
+  // 过滤：仅取 status !== 'inactive'；可选 baseOid → 温室 OID 集合过滤
   const filtered = React.useMemo(() => {
-    const active = zones.filter((z) => (z.status ?? 'active') !== 'inactive');
-    if (baseOid) return active.filter((z) => z.baseOid === baseOid);
+    let active = zones.filter((z) => (z.status ?? 'active') !== 'inactive');
+    if (baseGhOids) {
+      active = active.filter((z) => baseGhOids.has(String(z.greenhouseOid || '')));
+    }
     return active;
-  }, [zones, baseOid]);
+  }, [zones, baseGhOids]);
 
   return (
     <select
