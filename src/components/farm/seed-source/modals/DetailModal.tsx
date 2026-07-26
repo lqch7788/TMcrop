@@ -23,7 +23,7 @@ import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP, TRANSFERRED_FROM_BUSINESS_TYPE_MAP, ORIGINAL_SOURCE_MODULE_MAP } from '../../../../constants/cropConstants';
 // 2026-07-16：种源形态字段 seedForm 后端可能存中文（来自 product_form）或英文（来自 stock_type），
 // 统一在前端兜底翻译成中文显示
-import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
+import { SEED_FORM_OPTIONS, SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
 import { computeStockStatus } from '../../../../lib/stockStatus';
 import {
   getSeedSourceUsageRecords,
@@ -121,7 +121,12 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
           {/* 2026-07-21：补种源类型字段（与编辑/列表对齐） */}
           <div className="flex items-center">
             <span className="text-sm text-gray-500 w-24">种源类型：</span>
-            <span className="text-sm text-gray-900">{SOURCE_TYPE_MAP[record.sourceType] || record.sourceType || '—'}</span>
+            {/* 2026-07-26 修复：与列表 resolveForm 对齐 — SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 是反模式
+                （同文件 84 行 ORIGINAL_SOURCE_MODULE_MAP['seedling']='种苗'、seedFormDict.ts:55 都是 '种苗'），
+                走 SEED_FORM_EN_MAP 直译保持一致 */}
+            <span className="text-sm text-gray-900">
+              {SEED_FORM_EN_MAP[record.sourceType] || record.sourceType || '—'}
+            </span>
           </div>
         </div>
       </div>

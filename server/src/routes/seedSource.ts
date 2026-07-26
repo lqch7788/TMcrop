@@ -584,17 +584,17 @@ router.post('/append-from-inventory', async (req, res) => {
         // 2026-07-01 P0-3 修复：调拨入种源时继承源库存的 seed_form（仅在种源记录 seed_form 为空时设置，避免覆盖已有值）
         // 2026-07-06 Bug 17 修复：删除 quality_grade 字段写入 — seed_sources 表无此列（仅 inventory_inbound_records 有），
         //   写会报 `no such column: quality_grade`，且 quality_grade 属于入库记录的检验/分拣信息，不应污染种源主表
+        // 2026-07-26 修复：去掉 || sourceObj.stock_type fallback — product_form 为 null 时不能再写英文 stock_type
+        //   （之前 fallback 写入 "seedling" 等英文码，导致种源形态列显示英文）。product_form 为空时存空串，
+        //   由前端 SeedSourceTable.tsx 的 resolveForm 走 SOURCE_TYPE_MAP 翻译兜底。
         const updSS = db.prepare(
           `UPDATE seed_sources
            SET remaining_quantity = remaining_quantity + ?, quantity = quantity + ?,
-               seed_form = COALESCE(NULLIF(seed_form, ''), ?),
+               seed_form = COALESCE(NULLIF(seed_form, ''), NULLIF(?, '')),
                update_time = ?
            WHERE id = ? AND deleted_at IS NULL`
         );
-        // 2026-07-06 Bug 18 修复：seed_form 优先从 inventory_stock.product_form 取（中文"花朵/果实/种子"等 12 选），
-        //   fallback 到 stock_type（英文 seed/seedling/product，仅历史数据兜底）
-        //   之前用 stock_type 直接写，导致种源列表形态列显示英文（如 "seedling"）
-        const sourceForm = String(sourceObj.product_form || sourceObj.stock_type || '');
+        const sourceForm = String(sourceObj.product_form || (sourceObj as any).source_form || '');
         updSS.run([item.transferQuantity, item.transferQuantity, sourceForm, now, targetSeedSourceId]);
         updSS.free();
 
