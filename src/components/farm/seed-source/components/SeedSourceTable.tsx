@@ -21,6 +21,8 @@ import {
   SOURCE_TYPE_MAP,
   SOURCE_ORIGIN_MAP,
 } from '../../../../constants/cropConstants';
+// 2026-07-26：英文 stock_type → 中文形态映射抽到共享常量（与 DetailModal/EditModal 复用）
+import { SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
 import { computeStockStatus, LOW_THRESHOLD_RATIO } from '../../../../lib/stockStatus';
 import { Checkbox } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
@@ -435,18 +437,7 @@ export function SeedSourceTable({
                     title={undefined}
                   >
                     {(() => {
-                      // 2026-07-18 修复 v2：部分老数据 seedForm 存的是英文（如 "seed"），
-                      // 部分 sourceType 不在 SOURCE_TYPE_MAP 中（如 "transfer"）。
-                      // 全部走两段翻译，确保不露出任何英文。
-                      const SEED_FORM_EN_MAP: Record<string, string> = {
-                        seed: '种子',
-                        seedling: '种苗',
-                        cutting: '扦插苗',
-                        grafting: '嫁接苗',
-                        tissue_culture: '组培苗',
-                        bulb: '种球/球根',
-                        other: '其他',
-                      };
+                      // 2026-07-26：从 seedFormDict.ts 抽出来共享（避免与 DetailModal/EditModal 重复定义）
                       const resolveForm = (): string => {
                         const sf = record.seedForm;
                         if (sf && typeof sf === 'string' && sf.trim()) {
@@ -457,10 +448,11 @@ export function SeedSourceTable({
                           if (SEED_FORM_EN_MAP[t]) return SEED_FORM_EN_MAP[t];
                           return t; // 兜底
                         }
-                        // fallback: sourceType 翻译
+                        // 2026-07-26 修复：seedForm 为空时不再 fallback 到 SOURCE_TYPE_MAP
+                        // （SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 是历史遗留反模式，违反 [[KISS]]，
+                        //   且与同文件 ORIGINAL_SOURCE_MODULE_MAP['seedling']='种苗' / seedFormDict.ts:55['seedling']='种苗' 不一致）。
+                        // 直接走 SEED_FORM_EN_MAP 直译，SOURCE_TYPE_MAP 不在的 key（如 transfer/external_seed）显示"其他"
                         const st = record.sourceType;
-                        if (st && SOURCE_TYPE_MAP[st]) return SOURCE_TYPE_MAP[st];
-                        // SOURCE_TYPE_MAP 里没有的 sourceType（如 transfer/external_seed）→ 兜底
                         if (st && st.trim()) return SEED_FORM_EN_MAP[st.trim()] || '其他';
                         return '其他';
                       };

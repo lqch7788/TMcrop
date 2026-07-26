@@ -110,3 +110,19 @@ export function getFormDict(field: 'seedForm' | 'seedType' | 'seedlingForm' | 'h
     case 'harvestForm': return HARVEST_FORM_OPTIONS;
   }
 }
+
+/**
+ * 2026-07-26：英文 stock_type → 中文形态 兜底映射
+ * 用途：种源页面"形态/种源类型"列显示统一（避免 SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 反模式）
+ * 来源：SeedSourceTable 内联定义抽到此处共享，DetailModal/EditModal 也复用
+ * 范围：只覆盖库存/种源的 stock_type 字面量；其它 source_type（如 transfer/external_seed）不在表内则保持原值或显示"其他"
+ */
+export const SEED_FORM_EN_MAP: Record<string, string> = {
+  seed: '种子',
+  seedling: '种苗',
+  cutting: '扦插苗',
+  grafting: '嫁接苗',
+  tissue_culture: '组培苗',
+  bulb: '种球/球根',
+  other: '其他',
+};

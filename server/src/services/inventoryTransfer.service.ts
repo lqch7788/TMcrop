@@ -421,7 +421,11 @@ export async function executeTransferToSource(
       seedMaxStmt.free();
       const newSeedSourceId = `${ssPrefix}${String(seedSerial).padStart(4, '0')}`;
       // 2026-06-30 Bug 13：调拨入种源时自动从源库存 product_form 复制形态
-      const transferSeedForm = sourceStock.product_form || null;
+      // 2026-07-26 修复：fallback 到 source_form（中文"种苗/种子/果实"等 12 选），不再 fallback 到英文 stock_type
+      // 原因：product_form 为 null 时（如 seedling 来源的库存），原 fallback `|| stock_type` 会写入英文 "seedling"，
+      //   导致种源页 resolveForm 二次翻译成 "种苗/实生苗"（SOURCE_TYPE_MAP['seedling']），
+      //   而原库存实际形态是 source_form="种苗"（中文），应该如实继承
+      const transferSeedForm = sourceStock.product_form || sourceStock.source_form || null;
 
       // 2026-07-18: 调拨入种源 —— 合并探测
       // 若存在同合并键（作物+形态+单位+世代+繁殖方法）的 active 种源 → 合并到现有（UPDATE）

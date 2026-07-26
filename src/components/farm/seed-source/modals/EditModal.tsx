@@ -32,7 +32,7 @@ import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE as SOURCE_TYPE_TO_SUPPLIER_TYPE } from '../../../../constants/seedSourceDict';
-import { SEED_FORM_OPTIONS } from '../../../../constants/seedFormDict';
+import { SEED_FORM_OPTIONS, SEED_FORM_EN_MAP } from '../../../../constants/seedFormDict';
 import { useSupplierStore } from '../../../../stores/useSupplierStore';
 // 2026-07-21：共享品种路径 hook（与列表/详情完全一致）
 import { useSeedSourceVarietyPath } from '@/hooks/useSeedSourceVarietyPath';
@@ -293,9 +293,10 @@ export function EditModal({
           <Label className="text-gray-900">种源类型</Label>
           {/* 种源类型不可编辑（入库时已确定，避免类型和库存单位/形态不匹配） */}
           {/* 2026-07-21：去掉 .label — SOURCE_TYPE_MAP 值是字符串不是对象（之前 .label 永远 undefined 导致 fallback 英文） */}
+          {/* 2026-07-26 修复：与列表/详情对齐 — 用 SEED_FORM_EN_MAP 直译（SOURCE_TYPE_MAP['seedling']='种苗/实生苗' 反模式） */}
           <Input
             type="text"
-            value={SOURCE_TYPE_MAP[record.sourceType] || record.sourceType || '-'}
+            value={SEED_FORM_EN_MAP[record.sourceType] || record.sourceType || '-'}
             readOnly
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
           />

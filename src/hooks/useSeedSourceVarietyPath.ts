@@ -85,28 +85,13 @@ export function useSeedSourceVarietyPath(): UseSeedSourceVarietyPathResult {
 
   // 从品种库查找完整品种信息
   const getVarietyByAny = (record: SeedSource): CropVariety | null => {
-    // 优先 cropCode 查找
+    // 2026-07-26 修复：用 cropCode 精确匹配唯一标准，移除 cropName/cropVariety 模糊 fallback。
+    // 原因：模糊 includes 匹配会因为子品种名包含父作物名（如"其他草莓".includes("草莓")）而
+    //   错误命中其他 variety，导致调拨后种源页显示错误的 cropCode/cropVarietyName。
+    // cropCode 是后端从 crop_varieties JOIN 返的唯一真理源，匹配不上就 null，由 UI 兜底。
     if (record.cropCode) {
       const v = varietyCache.get(record.cropCode);
       if (v) return v;
-    }
-    // cropName 模糊匹配
-    if (record.cropName) {
-      for (const [, variety] of varietyCache.entries()) {
-        const fullName = variety.subVariety1Name || variety.varietyName || '';
-        if (fullName && (fullName.includes(record.cropName) || record.cropName.includes(fullName))) {
-          return variety;
-        }
-      }
-    }
-    // cropVariety 模糊匹配
-    if (record.cropVariety) {
-      for (const [, variety] of varietyCache.entries()) {
-        const fullName = variety.subVariety1Name || variety.varietyName || '';
-        if (fullName && (fullName.includes(record.cropVariety) || record.cropVariety.includes(fullName))) {
-          return variety;
-        }
-      }
     }
     return null;
   };
