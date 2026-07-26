@@ -64,7 +64,7 @@ export function AddCropVarietyModal({
     varietyName: '',
     subVariety1Code: '',   // 子品种1代码（3位）
     subVariety1Name: '',   // 子品种1名称
-    detailVarietyName: '', // 详细品种名称（用户手工输入）
+    // 2026-07-26：详细品种层级已删除
     alias: '',
     image: '',            // 作物图片URL
     description: '',     // 特性描述
@@ -88,8 +88,7 @@ export function AddCropVarietyModal({
   // 作物编码（可编辑）
   const [cropCode, setCropCode] = useState('');
 
-  // 详细品种序号（自动生成）
-  const [detailVarietyCode, setDetailVarietyCode] = useState('');
+  // 2026-07-26：详细品种层级已删除
 
   // 查重结果
   const [duplicateCheckResult, setDuplicateCheckResult] = useState<{
@@ -114,30 +113,13 @@ export function AddCropVarietyModal({
         varietyName: prefillData.varietyName,
         subVariety1Code: prefillData.subVariety1Code || '',
         subVariety1Name: prefillData.subVariety1Name || '',
-        detailVarietyName: ''
-      }));
-      // 自动获取下一个详细品种序号
-      if (prefillData.subVariety1Code) {
-        const maxCode = getMaxDetailVarietyCode(
-          prefillData.categoryCode,
-          prefillData.typeCode,
-          prefillData.varietyCode,
-          prefillData.subVariety1Code
-        );
-        setDetailVarietyCode(maxCode);
-      }
-      // 自动生成编码
+        }));
+      // 自动生成编码（9位）
       const code = generateCropCode(
         prefillData.categoryCode,
         prefillData.typeCode,
         prefillData.varietyCode,
-        prefillData.subVariety1Code,
-        prefillData.subVariety1Code ? getMaxDetailVarietyCode(
-          prefillData.categoryCode,
-          prefillData.typeCode,
-          prefillData.varietyCode,
-          prefillData.subVariety1Code
-        ) : undefined
+        prefillData.subVariety1Code || undefined,
       );
       setCropCode(code);
       setCodeGenerated(true);
@@ -172,10 +154,10 @@ export function AddCropVarietyModal({
       varietyName: '',
       subVariety1Code: '',
       subVariety1Name: '',
-      detailVarietyName: ''
+      // detailVarietyName removed
     }));
     setCropCode('');
-    setDetailVarietyCode('');
+    // setDetailVarietyCode removed
     setCodeGenerated(false);
     setDuplicateCheckResult(null);
   };
@@ -191,10 +173,10 @@ export function AddCropVarietyModal({
       varietyName: '',
       subVariety1Code: '',
       subVariety1Name: '',
-      detailVarietyName: ''
+      // detailVarietyName removed
     }));
     setCropCode('');
-    setDetailVarietyCode('');
+    // setDetailVarietyCode removed
     setCodeGenerated(false);
     setDuplicateCheckResult(null);
   };
@@ -207,10 +189,10 @@ export function AddCropVarietyModal({
       varietyName: name,
       subVariety1Code: '',
       subVariety1Name: '',
-      detailVarietyName: ''
+      // detailVarietyName removed
     }));
     setCropCode('');
-    setDetailVarietyCode('');
+    // setDetailVarietyCode removed
     setCodeGenerated(false);
     setDuplicateCheckResult(null);
   };
@@ -221,42 +203,23 @@ export function AddCropVarietyModal({
       ...prev,
       subVariety1Code: code,
       subVariety1Name: name,
-      detailVarietyName: name  // 默认使用子品种名称作为作物品种
+      // detailVarietyName removed
     }));
-    // 获取该子品种1下的最大详细品种序号
-    const maxCode = getMaxDetailVarietyCode(
-      formData.categoryCode,
-      formData.typeCode,
-      formData.varietyCode,
-      code
-    );
-    setDetailVarietyCode(maxCode);
+    // 详细品种层级已删除
     setDuplicateCheckResult(null);
   };
 
-  // 处理详细品种名称变化
+  // 详细品种名称变化handler已删除
   const handleDetailVarietyNameChange = (name: string) => {
-    setFormData(prev => ({ ...prev, detailVarietyName: name }));
+    // detailVarietyName setter removed
     setDuplicateCheckResult(null);
   };
 
-  // 生成编码
+  // 生成编码（9位：类别+类型+作物+品种）
   const handleGenerateCode = () => {
     if (!formData.categoryCode || !formData.typeCode || !formData.varietyCode) {
-      showAlert('请先选择完整的类别、类型和品种');
+      showAlert('请先选择完整的类别、类型和作物');
       return;
-    }
-
-    // 如果选择了子品种1但还没分配序号，自动分配下一个序号
-    let finalDetailCode = detailVarietyCode;
-    if (formData.subVariety1Code && !detailVarietyCode) {
-      finalDetailCode = getMaxDetailVarietyCode(
-        formData.categoryCode,
-        formData.typeCode,
-        formData.varietyCode,
-        formData.subVariety1Code
-      );
-      setDetailVarietyCode(finalDetailCode);
     }
 
     const code = generateCropCode(
@@ -264,7 +227,6 @@ export function AddCropVarietyModal({
       formData.typeCode,
       formData.varietyCode,
       formData.subVariety1Code || undefined,
-      finalDetailCode || undefined
     );
     setCropCode(code);
     setCodeGenerated(true);
@@ -273,7 +235,7 @@ export function AddCropVarietyModal({
 
   // 查重
   const handleCheckDuplicate = () => {
-    if (!cropCode && !formData.detailVarietyName && !formData.varietyName) {
+    if (!cropCode && !formData.varietyName) {
       setDuplicateCheckResult({
         hasDuplicate: false,
         message: '请先生成编码或输入品种名称'
@@ -292,16 +254,7 @@ export function AddCropVarietyModal({
       }
     }
 
-    // 检查详细品种名称是否重复（同一子品种1下不能有相同名称）
-    if (formData.detailVarietyName && formData.subVariety1Code) {
-      const existingByName = allVarieties.find(v =>
-        v.subVariety1Code === formData.subVariety1Code &&
-        v.varietyName === formData.detailVarietyName
-      );
-      if (existingByName) {
-        duplicates.push(`品种名称 "${formData.detailVarietyName}" 已存在于该子品种下，对应编码：${existingByCode?.cropCode || existingByName.cropCode}`);
-      }
-    }
+    {/* 2026-07-26：删除详细品种名称重复检查（层级已删除） */}
 
     if (duplicates.length > 0) {
       setDuplicateCheckResult({
@@ -339,14 +292,11 @@ export function AddCropVarietyModal({
         return;
       }
 
-      // 如果没有输入作物品种，使用子品种名称作为最终品种名称，详细品种序号默认为00
-      // 注意：varietyName 保持为"草莓"等基础品种名，detailVarietyName 存储用户输入的最细分品种名
-      const finalDetailVarietyName = formData.detailVarietyName.trim() || formData.subVariety1Name || '';
-      const finalDetailCode = formData.detailVarietyName.trim() ? detailVarietyCode : '00';
+      // 2026-07-26：作物品种 = subVariety1Name || varietyName
 
       // 通过 Store 添加品种
       await store.addItem({
-        cropCode: cropCode,           // 作物编码（数据库NOT NULL必填）
+        cropCode: cropCode,           // 作物编码（9位，数据库NOT NULL必填）
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
         typeCode: formData.typeCode,
@@ -355,8 +305,6 @@ export function AddCropVarietyModal({
         varietyName: formData.varietyName,
         subVariety1Code: formData.subVariety1Code || undefined,
         subVariety1Name: formData.subVariety1Name || undefined,
-        detailVarietyCode: finalDetailCode || undefined,
-        detailVarietyName: finalDetailVarietyName || undefined,
         alias: parseAlias(formData.alias),
         image: formData.image || undefined,
         description: formData.description || undefined,
@@ -393,7 +341,7 @@ export function AddCropVarietyModal({
         varietyName: '',
         subVariety1Code: '',
         subVariety1Name: '',
-        detailVarietyName: '',
+        // detailVarietyName removed
         alias: '',
         image: '',
         description: '',
@@ -405,7 +353,7 @@ export function AddCropVarietyModal({
         remarks: ''
       });
       setCropCode('');
-      setDetailVarietyCode('');
+      // setDetailVarietyCode removed
       setCodeGenerated(false);
       setDuplicateCheckResult(null);
     }
@@ -422,7 +370,7 @@ export function AddCropVarietyModal({
       varietyName: '',
       subVariety1Code: '',
       subVariety1Name: '',
-      detailVarietyName: '',
+      // detailVarietyName removed
       alias: '',
       image: '',
       description: '',
@@ -434,7 +382,7 @@ export function AddCropVarietyModal({
       remarks: ''
     });
     setCropCode('');
-    setDetailVarietyCode('');
+    // setDetailVarietyCode removed
     setCodeGenerated(false);
     setDuplicateCheckResult(null);
     onClose();
@@ -555,19 +503,7 @@ export function AddCropVarietyModal({
           )}
         </div>
 
-        {/* 作物品种 */}
-        <div className="col-span-2">
-          <Label className="text-gray-600">
-            作物品种 <span className="text-xs text-gray-400">(可选，不填则使用子品种名称)</span>
-          </Label>
-          <Input
-            type="text"
-            value={formData.detailVarietyName}
-            onChange={(e) => handleDetailVarietyNameChange(e.target.value)}
-            placeholder="输入作物品种"
-            className={deepInputClass}
-          />
-        </div>
+        {/* 2026-07-26：作物品种字段已删除（编码改为9位，品种=子品种名） */}
 
         {/* 分类标题 */}
         <div className="col-span-2">
@@ -623,14 +559,8 @@ export function AddCropVarietyModal({
             </div>
           )}
           <p className="mt-1 text-xs text-gray-400">
-            格式：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
+            格式：类别(2位字母) + 类型(2位数字) + 作物(2位数字) + 品种(3位数字) = 9位
           </p>
-          {formData.subVariety1Code && (
-            <p className="mt-1 text-xs text-blue-600">
-              当前子品种「{formData.subVariety1Name}」下已有详细品种，系统将自动分配下一个序号
-              {detailVarietyCode && `（当前序号：${detailVarietyCode}）`}
-            </p>
-          )}
         </div>
 
         {/* 分类标题 */}
