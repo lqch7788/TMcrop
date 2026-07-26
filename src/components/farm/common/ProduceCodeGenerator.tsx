@@ -1,5 +1,6 @@
 /**
  * 通用产品编码生成器组件
+ * 编码：类别(2字母)+类型(2数字)+作物(2数字)+品种(3随机数字) = 9位
  * 供种源管理、育苗管理、种植管理页面使用
  */
 
@@ -126,7 +127,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
 
         {/* 品种选择 */}
         <div className="col-span-1">
-          <Label className="text-gray-700">品种</Label>
+          <Label className="text-gray-700">作物</Label>
           <Select
             value={codeGen.subCategory}
             onValueChange={(val) => setCodeGen(prev => ({

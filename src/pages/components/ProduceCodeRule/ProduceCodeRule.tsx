@@ -1,6 +1,6 @@
 /**
  * 作物编码规则管理页面
- * 编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
+ * 编码结构：类别(2位字母) + 类型(2位数字) + 作物(2位数字) + 品种(3位数字) = 9位
  */
 import React from 'react';
 import { AlertTriangle, ArrowLeft, Check, Edit2, Hash, Plus, Save, X } from 'lucide-react';

@@ -1,6 +1,7 @@
 /**
  * 作物品种库管理页面
  * 系统设置 > 作物品种库管理
+ * 编码：类别(2字母)+类型(2数字)+作物(2数字)+品种(3数字) = 9位
  * 功能：品种列表、编码规则、编码生成
  */
 
@@ -575,7 +576,7 @@ export default function CropVarietyManagement() {
 
               {/* 品种 */}
               <div>
-                <Label className="text-gray-700">品种</Label>
+                <Label className="text-gray-700">作物</Label>
                 <Select
                   value={codeGenVariety}
                   onValueChange={(val) => setCodeGenVariety(val)}
@@ -594,7 +595,7 @@ export default function CropVarietyManagement() {
 
               {/* 子品种（3位码） */}
               <div>
-                <Label className="text-gray-700">子品种</Label>
+                <Label className="text-gray-700">品种</Label>
                 <Select
                   value={codeGenSubVariety1}
                   onValueChange={(val) => setCodeGenSubVariety1(val)}

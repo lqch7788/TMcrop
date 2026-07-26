@@ -183,10 +183,10 @@ export function ProduceCodeRuleTable({
             <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">类别名称</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">类型代码</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white w-28">类型名称</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">作物代码</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">作物名称</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">品种代码</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">品种名称</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white w-16">子品种代码</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white w-24">子品种名称</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-300">
@@ -328,93 +328,7 @@ export function ProduceCodeRuleTable({
                               <td className="px-4 py-1"></td>
                             </tr>
 
-                            {/* 子品种1行 */}
-                            {isSubExpanded && hasSubVarieties && sub.subVarieties.map((subVar) => (
-                              <tr key={`subVar-${typeKey}-${sub.code}-${subVar.code}`} className="hover:bg-green-50">
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1"></td>
-                                <td className="px-4 py-1">
-                                  <div className="flex items-center gap-2 ml-6">
-                                    <span className="font-mono text-green-600 text-sm">{subVar.code}</span>
-                                    {isEditing && (
-                                      <button
-                                        onClick={() => onDeleteSubVariety1(category.code, type.code, sub.code, subVar.code)}
-                                        className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-1">
-                                  <span className="text-sm text-gray-600">{subVar.name}</span>
-                                </td>
-                              </tr>
-                            ))}
-
-                            {/* 子品种1添加按钮 */}
-                            {isEditing && isTypeExpanded && isSubExpanded && (
-                              <tr className="bg-green-50 hover:bg-green-100">
-                                <td colSpan={6} className="px-4 py-1"></td>
-                                <td colSpan={2} className="px-4 py-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onSetShowAddSubVariety1({ categoryCode: category.code, typeCode: type.code, subCode: sub.code })}
-                                    className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                                  >
-                                    <Plus className="w-3 h-3" /> 添加子品种
-                                  </Button>
-                                </td>
-                              </tr>
-                            )}
-
-                            {/* 添加子品种1弹窗 */}
-                            {showAddSubVariety1?.categoryCode === category.code && showAddSubVariety1?.typeCode === type.code && showAddSubVariety1?.subCode === sub.code && isSubExpanded && (
-                              <tr className="bg-green-50">
-                                <td colSpan={8} className="px-4 py-2">
-                                  <div className="flex items-center gap-2" style={{ marginLeft: '704px' }}>
-                                    <input
-                                      type="text"
-                                      value={newSubVariety1Code}
-                                      onChange={(e) => onNewSubVariety1CodeChange(e.target.value)}
-                                      placeholder="代码(3位)"
-                                      maxLength={3}
-                                      className="w-24 px-2 py-1 border border-gray-400 rounded text-sm"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={newSubVariety1Name}
-                                      onChange={(e) => onNewSubVariety1NameChange(e.target.value)}
-                                      placeholder="子品种名称"
-                                      className="w-32 px-2 py-1 border border-gray-400 rounded text-sm"
-                                    />
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      onClick={() => onAddSubVariety1(category.code, type.code, sub.code)}
-                                    >
-                                      <Plus className="w-4 h-4" /> 添加
-                                    </Button>
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={() => {
-                                        onSetShowAddSubVariety1(null);
-                                        onNewSubVariety1CodeChange('');
-                                        onNewSubVariety1NameChange('');
-                                      }}
-                                    >
-                                      <X className="w-4 h-4" /> 取消
-                                    </Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
+                            {/* 2026-07-26：删除第5级"详细品种"展开行（编码已改为9位4级） */}
                           </React.Fragment>
                         );
                       })}
