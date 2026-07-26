@@ -18,4 +18,8 @@ export interface PesticidePoolItem {
   dilutionRatio?: string;
   applicationMethod?: string;
   remarks?: string;
+  // 2026-07-26：库存信息（对照肥料池 FertilizerPoolItem，下拉和池内行展示剩余用量）
+  stockQuantity?: number;
+  stockUnit?: string;
+  unitPrice?: number;
 }

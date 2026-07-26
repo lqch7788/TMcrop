@@ -407,6 +407,10 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
         dilutionRatio: spec?.suggestedRatio || '',
         applicationMethod: '',
         remarks: spec?.remark || '',
+        // 2026-07-26：从药剂库携带库存信息，池内行展示剩余用量（对照 FertilizerPoolEditor）
+        stockQuantity: spec?.stockQuantity ?? pesticide.stockQuantity ?? 0,
+        stockUnit: spec?.stockUnit || pesticide.stockUnit || 'kg',
+        unitPrice: spec?.unitPrice ?? pesticide.unitPrice ?? 0,
       };
       return [...prev, newItem];
     });
@@ -1073,22 +1077,28 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
                           className={`w-full justify-between rounded-none border-b border-gray-100 last:border-b-0 py-2 px-3 ${inPool ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <div className="text-left flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-800 truncate">{p.pesticideName}</span>
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="text-sm font-medium text-gray-800">{p.pesticideName}</span>
                               {inPool && <span className="text-xs text-emerald-600 shrink-0">✓ 已添加</span>}
-                            </div>
-                            <div className="text-xs text-gray-600 mt-0.5 truncate">
-                              {spec?.specContent || '（无规格）'}
-                              {spec?.manufacturer && <span className="text-gray-500"> · {spec.manufacturer}</span>}
-                              {spec?.brandName && <span className="text-gray-400"> · {spec.brandName}</span>}
-                            </div>
-                          </div>
-                          <div className="flex gap-1 shrink-0 ml-2">
-                            {(p.pesticideTypes || []).slice(0, 1).map((t: string) => (
-                              <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                                {getDictLabel('pesticide_type', t) || t}
+                              <span className="text-gray-400 shrink-0">|</span>
+                              <span className="text-xs text-gray-600 truncate">{spec?.specContent || '无规格'}{spec?.manufacturer ? ` · ${spec.manufacturer}` : ''}{spec?.brandName ? ` · ${spec.brandName}` : ''}</span>
+                              <span className="text-gray-400 shrink-0">|</span>
+                              {(p.pesticideTypes || []).slice(0, 1).map((t: string) => (
+                                <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 shrink-0">
+                                  {getDictLabel('pesticide_type', t) || t}
+                                </span>
+                              ))}
+                              {(spec?.unitPrice ?? p.unitPrice) > 0 && (
+                                <>
+                                  <span className="text-gray-400 shrink-0">|</span>
+                                  <span className="text-xs text-amber-600 shrink-0">¥{Number(spec?.unitPrice ?? p.unitPrice).toFixed(2)}</span>
+                                </>
+                              )}
+                              <span className="text-gray-400 shrink-0">|</span>
+                              <span className={`text-xs shrink-0 ${(spec?.stockQuantity ?? p.stockQuantity ?? 0) > 0 ? 'text-emerald-600' : 'text-red-400'}`}>
+                                库存 {Number(spec?.stockQuantity ?? p.stockQuantity ?? 0).toFixed(2)} {spec?.stockUnit || p.stockUnit || 'kg'}
                               </span>
-                            ))}
+                            </div>
                           </div>
                         </Button>
                       );
@@ -1132,6 +1142,15 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
                             {getDictLabel('pesticide_type', t) || t}
                           </span>
                         ))}
+                        {/* 2026-07-26：显示库存与价格（对照 FertilizerPoolEditor 池内行头部） */}
+                        {(item.unitPrice ?? 0) > 0 && (
+                          <span className="text-xs text-emerald-600 whitespace-nowrap shrink-0">
+                            ¥{Number(item.unitPrice ?? 0).toFixed(2)}
+                          </span>
+                        )}
+                        <span className="text-xs text-emerald-600 whitespace-nowrap shrink-0">
+                          · 库存 {Number(item.stockQuantity ?? 0).toFixed(2)} {item.stockUnit || 'kg'}
+                        </span>
                       </div>
                       <button type="button" onClick={() => removeFromPool(idx)} className="text-red-500 hover:text-red-700 shrink-0 ml-2" title="从药剂池移除">
                         <Trash2 className="w-4 h-4" />
