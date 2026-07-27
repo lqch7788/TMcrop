@@ -11,6 +11,7 @@ import { useWateringStore, usePlantingStore, useSeedlingStore } from '@/stores';
 import type { WateringData } from '@/stores';
 import { showAlert, showToast } from '@/lib/dialogService';
 import { WATERING_METHOD_MAP } from '@/constants/cropConstants';
+import { WATER_UNITS, normalizeWaterUnit, getWaterUnitCategory } from '@/constants/waterUnits';
 
 interface SelectedArea {
   type: 'planting' | 'seedling';
@@ -30,8 +31,6 @@ interface WateringRow {
   // 2026-07-25：与 WaterAddModal 对齐 — 每行可填备注（按区域独立备注）
   remark: string;
 }
-
-const WATER_UNITS = ['L', 'ml', 'm3', 'kg'] as const;
 
 function labelOfMethod(code: string): string {
   return WATERING_METHOD_MAP[code] || code || '-';
@@ -219,13 +218,17 @@ export function WaterEditModal({ isOpen, record, onClose, onSaved }: {
     if (wateringRows.length === 0) { await showAlert('请至少填写一个区域的用水明细'); return; }
     const invalid = wateringRows.find((r) => !r.wateringMethod || !r.waterAmount || Number(r.waterAmount) <= 0);
     if (invalid) { await showAlert('每个区域的浇水方式和用水量（>0）都必须填写'); return; }
-    const units = new Set(wateringRows.map((r) => r.waterUnit));
+    // 2026-07-27 审核修复 C-3/H-13：单位归一化 + 物理量分类校验
+    const normalizedUnits = wateringRows.map((r) => normalizeWaterUnit(r.waterUnit));
+    const units = new Set(normalizedUnits);
     if (units.size > 1) { await showAlert('所有区域行的单位必须一致（当前使用了 ' + Array.from(units).join(', ') + '），请统一后再保存'); return; }
+    const categories = new Set(normalizedUnits.map(getWaterUnitCategory));
+    if (categories.size > 1) { await showAlert('不能混用体积单位（L/ml/m³）和质量单位（kg），请统一后再保存'); return; }
 
     setSubmitting(true);
     try {
       const waterTime = form.waterTime.replace('T', ' ');
-      const poolRows = wateringRows.map((r) => ({
+      const poolRows = wateringRows.map((r, i) => ({
         type: r.area.type,
         id: r.area.id,
         code: r.area.code,
@@ -234,12 +237,12 @@ export function WaterEditModal({ isOpen, record, onClose, onSaved }: {
         area: r.area.area,
         wateringMethod: r.wateringMethod,
         waterAmount: Number(r.waterAmount),
-        waterUnit: r.waterUnit,
+        waterUnit: normalizedUnits[i],  // 2026-07-27 修复 C-3：写入已归一化的单位
         // 2026-07-25：与 WaterAddModal 对齐 — 提交时写入备注
         remark: r.remark || '',
       }));
       const totalWater = poolRows.reduce((s, r) => s + r.waterAmount, 0);
-      const unit = wateringRows[0].waterUnit;
+      const unit = normalizedUnits[0];  // 2026-07-27 修复 C-3：主行用归一化单位
       const primary = selectedAreas[0];
       // 2026-07-25：与 WaterAddModal 对齐 — 汇总所有作物品种名（支持跨作物批量浇水）
       const allCropNames = [...new Set(selectedAreas.map((a) => a.cropName).filter(Boolean))];

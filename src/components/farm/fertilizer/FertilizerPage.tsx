@@ -804,6 +804,8 @@ export default function FertilizerPage() {
             exportMode={waterExportMode}
             onConfirmExport={handleWaterConfirmExport}
             onCancelExport={handleWaterCancelExport}
+            // 2026-07-27 修复：传 deleteMode 让 WaterTable 在批量删除模式下显示 checkbox
+            deleteMode={waterOperationMode === 'delete'}
           />
 
           {/* 浇水 Modals */}

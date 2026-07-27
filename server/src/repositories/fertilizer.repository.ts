@@ -37,6 +37,17 @@ const ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'fertilization_pool',
   // 2026-07-20：多作物名 JSON 数组（支持跨作物批量施肥编辑）
   'crop_names',
+  // 2026-07-27 审核修复 C-5：补全 5 个新列（schema 已加，ALLOWED 漏了导致前端补传被静默丢弃）
+  // - area_id：与 area_name 配套
+  // - source_type：daily_sync / manual / fertilizer_dilution（写入允许编辑，但 UI 通常不改）
+  // - source_daily_record_id：每日记录同步溯源（编辑允许传 null 解除关联）
+  // - source_item_id：每日记录同步子项
+  // - real_fertilizer_code：库存真实 code（IoT 写回）
+  'area_id',
+  'source_type',
+  'source_daily_record_id',
+  'source_item_id',
+  'real_fertilizer_code',
 ]);
 
 export interface FertilizerRecord {

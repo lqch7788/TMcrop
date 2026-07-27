@@ -44,9 +44,16 @@ export interface WateringRecord {
 class WateringRepository {
   findById(id: string): WateringRecord | null {
     const db = getDatabase();
-    const result = db.exec(`SELECT * FROM watering_records WHERE id = ?`, [id]);
-    if (result.length === 0 || result[0].values.length === 0) return null;
-    return this.mapRow(result[0].values[0]);
+    // 2026-07-27 审核修复 C-1：改用 db.prepare/step 风格，让 mapRow 直接 getAsObject
+    const stmt = db.prepare(`SELECT * FROM watering_records WHERE id = ?`);
+    stmt.bind([id]);
+    if (!stmt.step()) {
+      stmt.free();
+      return null;
+    }
+    const rec = this.mapRow(stmt);
+    stmt.free();
+    return rec;
   }
 
   findAll(filters: Record<string, any> = {}, page = 1, pageSize = 20): { items: WateringRecord[]; total: number } {
@@ -241,42 +248,69 @@ class WateringRepository {
   }
 
   /**
-   * mapRow: 数据库行（snake_case 顺序数组） → WateringRecord（camelCase）
-   * 列顺序必须与 schema.ts 第 2760-2793 行完全一致
+   * mapRow: 数据库行 → WateringRecord（camelCase）
+   * 2026-07-27 审核修复 C-1：支持两种入参
+   * - stmt（sql.js Statement）：用 getAsObject 按列名取值（findById / findByFertilizerRecordId 用）
+   * - row[]（db.exec 出来的位置数组）：保留向后兼容，row[28] 是 crop_names
+   *   注意：位置数组对 schema 漂移敏感，新增列必须同步更新下方 row[N] 位置
+   * - 列名兜底：缺列时给空字符串而非 undefined
    */
-  private mapRow(row: any[]): WateringRecord {
+  private mapRow(input: any): WateringRecord {
+    const row: Record<string, any> = (input && typeof input.getAsObject === 'function')
+      ? (input.getAsObject() as Record<string, any>)
+      : (Array.isArray(input) ? this.arrayRowToObject(input) : input);
     return {
-      id: row[0],
-      waterCode: row[1],
-      recordType: row[2],
-      fertilizerRecordId: row[3],
-      sourceDailyRecordId: row[4],
-      cropName: row[5],
-      cropVariety: row[6],
-      greenhouseId: row[7],
-      greenhouseName: row[8],
-      areaId: row[9],
-      areaName: row[10],
-      plantingId: row[11],
-      plantingCode: row[12],
-      seedlingId: row[13],
-      seedlingCode: row[14],
-      waterPool: row[15],
-      totalWater: row[16],
-      waterUnit: row[17],
-      waterCost: row[18] || 0,
-      waterTime: row[19],
-      operatorId: row[20],
-      operatorName: row[21],
-      dataSource: row[22],
-      iotDeviceId: row[23],
-      description: row[24],
-      status: row[25],
-      createTime: row[26],
-      updateTime: row[27],
-      // 2026-07-24：crop_names 列在表最后（fixMissingSchema ALTER TABLE ADD COLUMN 追加），不是 crop_variety 之后
-      cropNames: row[28],
+      id: row.id ?? '',
+      waterCode: row.water_code ?? '',
+      recordType: row.record_type ?? 'manual',
+      fertilizerRecordId: row.fertilizer_record_id ?? null,
+      sourceDailyRecordId: row.source_daily_record_id ?? null,
+      cropName: row.crop_name ?? '',
+      cropVariety: row.crop_variety ?? null,
+      greenhouseId: row.greenhouse_id ?? null,
+      greenhouseName: row.greenhouse_name ?? '',
+      areaId: row.area_id ?? null,
+      areaName: row.area_name ?? null,
+      plantingId: row.planting_id ?? null,
+      plantingCode: row.planting_code ?? null,
+      seedlingId: row.seedling_id ?? null,
+      seedlingCode: row.seedling_code ?? null,
+      waterPool: row.water_pool ?? null,
+      totalWater: Number(row.total_water) || 0,
+      waterUnit: row.water_unit ?? 'L',
+      waterCost: Number(row.water_cost) || 0,
+      waterTime: row.water_time ?? '',
+      operatorId: row.operator_id ?? null,
+      operatorName: row.operator_name ?? null,
+      dataSource: row.data_source ?? 'manual',
+      iotDeviceId: row.iot_device_id ?? null,
+      description: row.description ?? null,
+      status: row.status ?? 'completed',
+      createTime: row.create_time ?? '',
+      updateTime: row.update_time ?? '',
+      // 2026-07-24：crop_names 列在表最后（fixMissingSchema ALTER TABLE ADD COLUMN 追加），可能缺列
+      cropNames: row.crop_names ?? null,
     };
+  }
+
+  /**
+   * 旧路径位置数组 → 对象映射（向后兼容）
+   * 列顺序必须与 schema.ts 第 2760-2793 行 + ALTER crop_names 一致
+   * 警告：新增列必须同步更新这里
+   */
+  private arrayRowToObject(row: any[]): Record<string, any> {
+    const cols = [
+      'id', 'water_code', 'record_type', 'fertilizer_record_id', 'source_daily_record_id',
+      'crop_name', 'crop_variety', 'greenhouse_id', 'greenhouse_name', 'area_id', 'area_name',
+      'planting_id', 'planting_code', 'seedling_id', 'seedling_code',
+      'water_pool', 'total_water', 'water_unit', 'water_cost',
+      'water_time', 'operator_id', 'operator_name',
+      'data_source', 'iot_device_id', 'description', 'status',
+      'create_time', 'update_time', 'crop_names',
+    ];
+    const obj: Record<string, any> = {};
+    cols.forEach((c, i) => { obj[c] = row[i]; });
+    return obj;
   }
 }
 

@@ -134,9 +134,9 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
       if (filters.pageSize) params.append('pageSize', filters.pageSize);
 
       const url = `/watering${params.toString() ? `?${params}` : ''}`;
-      const response: any = await enhancedApiClient.get(url);
-      const items = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
-      set({ items: items as WateringData[], isLoading: false });
+      // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包 .data，信任其结果
+      const items = (await enhancedApiClient.get(url)) as WateringData[];
+      set({ items, isLoading: false });
     } catch (err: any) {
       set({ isLoading: false, error: err?.message || '加载浇水记录失败' });
       throw err;
@@ -144,25 +144,19 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   fetchItemById: async (id: string) => {
-    const response: any = await enhancedApiClient.get(`/watering/${id}`);
-    const raw = response?.data ?? response;
-    return raw as WateringData;
+    return (await enhancedApiClient.get(`/watering/${id}`)) as WateringData;
   },
 
   createItem: async (item: Partial<WateringData>) => {
     // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
-    const response: any = await enhancedApiClient.post('/watering', item);
-    const raw = response?.data ?? response;
-    const newItem = raw as WateringData;
+    const newItem = (await enhancedApiClient.post('/watering', item)) as WateringData;
     set({ items: [newItem, ...get().items] });
     return newItem;
   },
 
   updateItem: async (id: string, updates: Partial<WateringData>) => {
     // 直接发 camelCase（后端 Zod schema 期望 camelCase）— 参照 FertilizerStore 模式
-    const response: any = await enhancedApiClient.put(`/watering/${id}`, updates);
-    const raw = response?.data ?? response;
-    const updated = raw as WateringData;
+    const updated = (await enhancedApiClient.put(`/watering/${id}`, updates)) as WateringData;
     set({
       items: get().items.map((it) => (it.id === id ? updated : it)),
     });
@@ -170,22 +164,33 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   deleteItem: async (id: string) => {
-    await enhancedApiClient.delete(`/watering/${id}`);
-    set({ items: get().items.filter((it) => it.id !== id) });
-    return true;
+    try {
+      await enhancedApiClient.delete(`/watering/${id}`);
+      set({ items: get().items.filter((it) => it.id !== id) });
+      return true;
+    } catch (err: any) {
+      // 2026-07-27 审核修复 H-9：与 useFertilizerStore.deleteItem 对齐，错误不冒泡
+      set({ error: err?.message || '删除失败' });
+      return false;
+    }
   },
 
   deleteItems: async (ids: string[]) => {
-    const response: any = await enhancedApiClient.post('/watering/batch-delete', { ids });
-    const raw = response?.data ?? response;
+    // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包，return 结构化结果而非 raw
+    const result = (await enhancedApiClient.post('/watering/batch-delete', { ids })) as {
+      deleted?: number; skipped?: number;
+    };
     // 刷新列表（删除的可能不在当前 items 中）
     await get().fetchItems();
-    return raw;
+    return {
+      deleted: result?.deleted ?? 0,
+      skipped: result?.skipped ?? 0,
+    };
   },
 
   generateCode: async () => {
-    const response: any = await enhancedApiClient.get('/watering/generate-code');
-    const raw = response?.data ?? response;
-    return raw?.code || '';
+    // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包；generate-code 响应也是 {data:{code:'...'}}
+    const result = (await enhancedApiClient.get('/watering/generate-code')) as { code?: string };
+    return result?.code || '';
   },
 }));
