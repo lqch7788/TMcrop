@@ -1,12 +1,29 @@
 /**
  * 肥料库（扁平化）API 路由
  * 2026-07-12：所有路由直接操作 fertilizer_specs，不再有 fertilizer_library 主表
+ * 2026-07-27 审核修复 C-6：所有 catch 统一走 handleError 脱敏 helper，避免泄露 SQL/堆栈
  */
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { BusinessError } from '../services/fertilizer.service';
 
 const router = Router();
+
+/**
+ * 统一错误处理（2026-07-27 审核修复 C-6）
+ * - BusinessError → 透传 status + message + code
+ * - 其他 Error → 500 + 脱敏的「操作失败」文本，详细堆栈写 console.error
+ * - 避免前端 toast 直接展示 SQL/堆栈给用户
+ */
+function handleError(res: Response, error: unknown, logTag: string, fallback: string): void {
+  console.error(`[fertilizerSpecs:${logTag}]`, error);
+  if (error instanceof BusinessError) {
+    res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
+    return;
+  }
+  res.status(500).json({ success: false, error: fallback });
+}
 
 /** 生成编码 FG+年月日-4位流水号 */
 function generateFertilizerCode(db: any): string {
@@ -58,7 +75,7 @@ router.get('/', (req: Request, res: Response) => {
     );
     res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'op', '操作失败');
   }
 });
 
@@ -98,7 +115,7 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
     res.status(201).json({ success: true, data: items[0] || null });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'create', '新增失败');
   }
 });
 
@@ -107,7 +124,10 @@ router.post('/:id/stock-in', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
-    const { quantity, remark } = req.body as { quantity?: number; remark?: string };
+    const { quantity, remark, unitPrice, operatorId, operatorName, source } = req.body as {
+      quantity?: number; remark?: string;
+      unitPrice?: number; operatorId?: string; operatorName?: string; source?: string;
+    };
 
     if (!quantity || quantity <= 0) {
       res.status(400).json({ success: false, error: '入库数量必须大于 0' });
@@ -123,12 +143,19 @@ router.post('/:id/stock-in', (req: Request, res: Response) => {
     // 原子更新库存（避免并发读-改-写竞态）
     db.run(`UPDATE fertilizer_specs SET stock_quantity = stock_quantity + ?, update_time = ? WHERE id = ?`, [quantity, now, id]);
 
-    // 写入库记录（审计追溯）
+    // 写入库记录（审计追溯）—— 2026-07-27 补全 unit_price/operator/source 字段
     const recordId = `fsi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     db.run(`INSERT INTO fertilizer_stock_in_records (
-      id, spec_id, fertilizer_code, fertilizer_name, quantity, remark, create_time
-    ) VALUES (?,?,?,?,?,?,?)`,
-      [recordId, id, spec.fertilizerCode, spec.fertilizerName, quantity, remark || null, now]
+      id, spec_id, fertilizer_code, fertilizer_name, quantity, remark, create_time,
+      unit_price, operator_id, operator_name, source
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        recordId, id, spec.fertilizerCode, spec.fertilizerName, quantity, remark || null, now,
+        unitPrice ?? null,
+        operatorId ?? null,
+        operatorName ?? null,
+        source || 'manual',
+      ]
     );
 
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [id]);
@@ -137,7 +164,27 @@ router.post('/:id/stock-in', (req: Request, res: Response) => {
     result.newStock = spec.stockQuantity + quantity;
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'stock-in', '入库失败');
+  }
+});
+
+/** GET /api/fertilizer-specs/:id/stock-in-records — 查询某肥料的所有入库记录（按时间倒序） */
+router.get('/:id/stock-in-records', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const items = queryToObjects(
+      db,
+      `SELECT id, spec_id, fertilizer_code, fertilizer_name, quantity, remark,
+              create_time, unit_price, operator_id, operator_name, source
+         FROM fertilizer_stock_in_records
+        WHERE spec_id = ?
+        ORDER BY create_time DESC, id DESC`,
+      [id],
+    );
+    res.json({ success: true, data: items });
+  } catch (error) {
+    handleError(res, error, 'stock-in-records', '查询入库记录失败');
   }
 });
 
@@ -150,7 +197,7 @@ router.get('/:id', (req: Request, res: Response) => {
     if (items.length === 0) { res.status(404).json({ success: false, error: '肥料不存在' }); return; }
     res.json({ success: true, data: items[0] });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'get', '查询失败');
   }
 });
 
@@ -199,7 +246,7 @@ router.put('/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, data: updated[0] || null });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'update', '更新失败');
   }
 });
 
@@ -214,7 +261,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    handleError(res, error, 'delete', '删除失败');
   }
 });
 
