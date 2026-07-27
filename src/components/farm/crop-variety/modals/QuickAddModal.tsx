@@ -125,8 +125,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
       .map(a => a.trim())
       .filter(a => a.length > 0);
 
-    // 新增品种
-    const newVariety = cropVarietyService.addVariety({
+    // 2026-07-27 审核 C-3：改用 apiCropVarietyService 走 V2.1 架构（替代老 cropVarietyService 走 localStorage）
+    // 移除废弃字段 growthCycle/targetYield/yieldUnit（2026-07-27 重构后这些字段已不属于 CropVariety）
+    const newVariety = await apiCropVarietyService.createVariety({
       categoryCode: selectedCategory,
       categoryName,
       typeCode: selectedType,
@@ -134,12 +135,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
       varietyCode: selectedVariety,
       varietyName,
       alias: aliasList.length > 0 ? aliasList : undefined,
-      growthCycle,
-      targetYield,
-      yieldUnit: targetYield ? 'kg/亩' : undefined,
       status: 'active',
       remarks: remarks || undefined
-    });
+    } as any);
 
     onSuccess(newVariety);
     handleClose();

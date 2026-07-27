@@ -398,6 +398,15 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
         floweringPeriod: undefined,
         fruitingPeriod: undefined,
         harvestPeriod: undefined,
+        // 2026-07-27 审核 C-7：补全 8 个环境字段，避免新增第二条带温度的品种时显示上一次的温度
+        airTemperature: undefined,
+        airHumidity: undefined,
+        co2Content: undefined,
+        lightIntensity: undefined,
+        soilTemperature: undefined,
+        soilHumidity: undefined,
+        soilPh: undefined,
+        soilEc: undefined,
         remarks: ''
       });
       setCropCode('');

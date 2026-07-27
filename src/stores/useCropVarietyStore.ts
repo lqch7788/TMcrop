@@ -151,23 +151,24 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         await get().loadVarietyOptions();
         return get().items.find(v => v.id === id) || null;
       } catch (error) {
-        // logger.error('[useCropVarietyStore] 更新失败:', error);
-        return null;
+        // 2026-07-27 审核 C-4：不再静默吞错，透传后端错误（包括 409 Conflict）让调用方弹窗
+        console.error('[useCropVarietyStore] 更新失败:', error);
+        throw error;
       }
     },
 
     deleteItem: async (id) => {
       try {
         await apiCropVarietyService.deleteVariety(id);
-        set(s => ({ items: s.items.filter(item => item.id !== id) }));
+        set(s => ({ items: get().items.filter(item => item.id !== id) }));
         await get().loadVarietyOptions();
         return true;
       } catch (error) {
-        // logger.error('[useCropVarietyStore] 删除失败:', error);
-        return false;
+        // 2026-07-27 审核 C-4：透传错误让调用方弹窗
+        console.error('[useCropVarietyStore] 删除失败:', error);
+        throw error;
       }
     },
-
     getVarietyByCode: (cropCode) => {
       return get().items.find(v => v.cropCode === cropCode);
     },
@@ -189,7 +190,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
       let maxCode = 0;
       for (const v of get().items) {
         if (v.cropCode && v.cropCode.startsWith(prefix) && v.cropCode.length === 9) {
-          const sub = v.cropCode.slice(5, 8); // 后 3 位 = 子品种序号
+          const sub = v.cropCode.slice(6, 9); // 后 3 位 = 子品种序号 (slice(6,9) 对应 prefix 长度 6 = 2字母+2数字+2数字)
           const n = parseInt(sub, 10);
           if (!isNaN(n) && n > maxCode) maxCode = n;
         }
