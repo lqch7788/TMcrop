@@ -31,8 +31,13 @@ export default function FertilizerLibraryPage() {
   const isLoading = useFertilizerLibraryStore((s) => s.isLoading);
   const error = useFertilizerLibraryStore((s) => s.error);
   const clearError = useFertilizerLibraryStore((s) => s.clearError);
-  // actions 保持解构（不在 selector 中）
-  const store = useFertilizerLibraryStore();
+  // 2026-07-27 修复：必须用 selector 单独选 actions，否则 useFertilizerLibraryStore()
+  // 返回整个 store 对象引用，每次 set({isLoading}) 都让 store 引用变 → useEffect
+  // 依赖里包含 store 会无限重渲染 + Maximum update depth 死循环。
+  // 用 useShallow 浅比较 actions 对象（zustand 5 推荐用法）。
+  const fetchItems = useFertilizerLibraryStore((s) => s.fetchItems);
+  const fetchItemById = useFertilizerLibraryStore((s) => s.fetchItemById);
+  const deleteItem = useFertilizerLibraryStore((s) => s.deleteItem);
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
 
@@ -57,7 +62,8 @@ export default function FertilizerLibraryPage() {
   const [showExportModal, setShowExportModal] = useState(false);
 
   // ========== 数据加载 ==========
-  // C7 修复：补全依赖数组（filters + store）
+  // C7 修复：补全依赖数组（filters + fetchItems）
+  // 2026-07-27 修复：依赖必须是稳定引用的 fetchItems selector，不能是整个 store 对象
   // 注意：activeTab 切换后需要保留关键字（肥料名称）作为后端 keyword 查询条件，
   // 否则 useEffect 拉的全 tab 列表会覆盖掉搜索结果，导致用户看不到匹配行。
   useEffect(() => {
@@ -66,8 +72,8 @@ export default function FertilizerLibraryPage() {
       fertilizer_type: activeTab,
       keyword: (filters.fertilizerName || '').trim(),
     };
-    store.fetchItems(typeFilter);
-  }, [activeTab, filters, store]);
+    fetchItems(typeFilter);
+  }, [activeTab, filters, fetchItems]);
 
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
@@ -83,7 +89,7 @@ export default function FertilizerLibraryPage() {
     setSearchKey((k) => k + 1);
     if (keyword) {
       // 输入了关键字时：全局搜索（不按 tab 过滤），让用户能跨类型找到肥料
-      await store.fetchItems({ ...filters, keyword });
+      await fetchItems({ ...filters, keyword });
       // 取首条命中 → 自动切到该肥料所在的 tab，保证"输入名称即可定位"
       const firstMatch = useFertilizerLibraryStore.getState().items[0];
       if (firstMatch?.fertilizerType && firstMatch.fertilizerType !== activeTab) {
@@ -93,15 +99,15 @@ export default function FertilizerLibraryPage() {
       }
     } else {
       // 无关键字时按当前 tab 过滤
-      await store.fetchItems({ ...filters, fertilizer_type: activeTab });
+      await fetchItems({ ...filters, fertilizer_type: activeTab });
     }
-  }, [filters, activeTab, store]);
+  }, [filters, activeTab, fetchItems]);
 
   const handleReset = useCallback(() => {
     setFilters({});
     setSearchKey((k) => k + 1);
-    store.fetchItems({ fertilizer_type: activeTab });
-  }, [activeTab, store]);
+    fetchItems({ fertilizer_type: activeTab });
+  }, [activeTab, fetchItems]);
 
   const updateFilter = useCallback((key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -199,18 +205,18 @@ export default function FertilizerLibraryPage() {
 
   const handleEdit = useCallback(
     async (record: FertilizerLibrary) => {
-      const fullRecord = await store.fetchItemById(record.id);
+      const fullRecord = await fetchItemById(record.id);
       setEditTarget(fullRecord || record);
     },
-    [store],
+    [fetchItemById],
   );
 
   const handleDetail = useCallback(
     async (record: FertilizerLibrary) => {
-      const fullRecord = await store.fetchItemById(record.id);
+      const fullRecord = await fetchItemById(record.id);
       setDetailTarget(fullRecord || record);
     },
-    [store],
+    [fetchItemById],
   );
 
   // 入库
@@ -220,29 +226,29 @@ export default function FertilizerLibraryPage() {
 
   const handleStockInSaved = useCallback(() => {
     setStockInTarget(null);
-    store.fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, store]);
+    fetchItems({ fertilizer_type: activeTab, ...filters });
+  }, [activeTab, filters, fetchItems]);
 
   const handleDelete = useCallback(
     async (id: string) => {
       const confirmed = await showConfirm('确认删除该肥料记录？此操作不可恢复。');
       if (confirmed) {
-        store.deleteItem(id);
+        deleteItem(id);
       }
     },
-    [store],
+    [deleteItem],
   );
 
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    store.fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, store]);
+    fetchItems({ fertilizer_type: activeTab, ...filters });
+  }, [activeTab, filters, fetchItems]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    store.fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, store]);
+    fetchItems({ fertilizer_type: activeTab, ...filters });
+  }, [activeTab, filters, fetchItems]);
 
   // ========== Tab 切换 ==========
   const handleTabChange = useCallback((tab: string) => {

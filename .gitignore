@@ -101,6 +101,7 @@ openspec/
 # 数据库备份文件（不提交）
 server/data/backups/
 server/data/yuanxingtu_backup_*.db
+server/data/yuanxingtu.db.before-*.db
 
 # 后端脚本（不提交）
 server/src/scripts/

@@ -106,10 +106,17 @@ interface FertilizerLibraryState {
   updateItem: (id: string, updates: Partial<FertilizerSpec>) => Promise<FertilizerSpec | null>;
   deleteItem: (id: string) => Promise<boolean>;
   /** 入库：增加指定 spec 的库存量 */
-  stockIn: (id: string, quantity: number, remark?: string) => Promise<number | null>;
+  stockIn: (
+    id: string,
+    quantity: number,
+    remark?: string,
+    extra?: { unitPrice?: number; operatorId?: string; operatorName?: string },
+  ) => Promise<number | null>;
   // 2026-07-22：使用记录 API（C9 修复：组件不再绕过 store 直接 fetch）
   fetchUsageRecords: (specId: string) => Promise<any[]>;
   deleteUsageRecord: (usageId: string, source: string) => Promise<boolean>;
+  // 2026-07-27：入库记录 API（详情弹窗入库 Tab 使用）
+  fetchStockInRecords: (specId: string) => Promise<any[]>;
 }
 
 export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
@@ -183,9 +190,16 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
       }
     },
 
-    stockIn: async (id, quantity, remark) => {
+    stockIn: async (id, quantity, remark, extra) => {
       try {
-        const response = await enhancedApiClient.post<{ newStock?: number }>(`/fertilizer-specs/${id}/stock-in`, { quantity, remark });
+        const response = await enhancedApiClient.post<{ newStock?: number }>(`/fertilizer-specs/${id}/stock-in`, {
+          quantity,
+          remark,
+          unitPrice: extra?.unitPrice,
+          operatorId: extra?.operatorId,
+          operatorName: extra?.operatorName,
+          source: 'manual',
+        });
         // enhancedApiClient 已解包 .data，response 即为 spec 对象 + newStock
         const newStock = response?.newStock;
         // 更新本地列表中的库存
@@ -207,6 +221,17 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
     fetchUsageRecords: async (specId: string) => {
       try {
         const response: any = await enhancedApiClient.get(`/pest-records/by-spec/${specId}`);
+        return Array.isArray(response) ? response : (response?.data ?? []);
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return [];
+      }
+    },
+
+    // 2026-07-27：入库记录 — 详情弹窗入库 Tab 使用
+    fetchStockInRecords: async (specId: string) => {
+      try {
+        const response: any = await enhancedApiClient.get(`/fertilizer-specs/${specId}/stock-in-records`);
         return Array.isArray(response) ? response : (response?.data ?? []);
       } catch (err) {
         set({ error: (err as Error).message });

@@ -9,7 +9,7 @@
  *   - 底部翻页 + 页码 + 导出按钮（CSV / XLSX / Word 仿肥料库）
  */
 import React, { useEffect, useState, useMemo } from 'react';
-import { History, Package, Loader2, Download, X as XIcon, Trash2 } from 'lucide-react';
+import { History, Package, Loader2, Download, X as XIcon, Trash2, ArrowDownToLine } from 'lucide-react';
 
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -18,8 +18,9 @@ import { Pagination } from '@/components/ui';
 import { FertilizerSpec, useToastStore, useFertilizerLibraryStore } from '@/stores';
 import { getDictItemName } from '@/stores';
 import { enhancedApiClient } from '@/lib/apiClient';
-import { exportXlsx } from '@/services/exporters';
+import { exportXlsx, exportCsv } from '@/services/exporters';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -78,9 +79,14 @@ interface DetailField {
 }
 
 export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'basic' | 'usage'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'usage' | 'stockIn'>('basic');
   const [usageRecords, setUsageRecords] = useState<any[]>([]);
   const [usageLoading, setUsageLoading] = useState(false);
+  // 2026-07-27：入库记录 Tab 数据
+  const [stockInRecords, setStockInRecords] = useState<any[]>([]);
+  const [stockInLoading, setStockInLoading] = useState(false);
+  const [stockInFormat, setStockInFormat] = useState<'xlsx' | 'csv'>('xlsx'); // 用户最新选择：默认 Excel
+  const [stockInExportOpen, setStockInExportOpen] = useState(false); // 控制格式选择弹窗
   // 删除记录后刷新肥料库列表（让库存数量变化可见）
   const libStore = useFertilizerLibraryStore();
   // 2026-07-22：把 toast 上移到 useEffect 之前（C9 修复后 useEffect 内要调 toast?.error）
@@ -112,6 +118,69 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       .finally(() => setUsageLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, record?.id, activeTab]);
+
+  // 2026-07-27：切到「入库记录」tab 时拉数据
+  useEffect(() => {
+    if (!isOpen || !record || activeTab !== 'stockIn') return;
+    setStockInLoading(true);
+    setStockInExportOpen(false); // 切 tab 时关闭导出选择弹窗
+    libStore
+      .fetchStockInRecords(record.id)
+      .then((arr) => {
+        setStockInRecords(arr);
+      })
+      .catch(() => {
+        toast?.error?.('加载入库记录失败，请稍后重试');
+      })
+      .finally(() => setStockInLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, record?.id, activeTab]);
+
+  // 2026-07-27：入库记录统计聚合（顶部 stat 卡用）
+  const stockInStats = useMemo(() => {
+    const totalQty = stockInRecords.reduce((acc, r) => acc + (Number(r.quantity) || 0), 0);
+    const totalAmount = stockInRecords.reduce(
+      (acc, r) => acc + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
+      0,
+    );
+    const lastTime = stockInRecords[0]?.create_time || stockInRecords[0]?.createTime || '-';
+    return { totalQty, totalAmount, count: stockInRecords.length, lastTime };
+  }, [stockInRecords]);
+
+  // 2026-07-27：入库记录导出（用户最新选择：默认 Excel 格式，提供 Excel/CSV 选项）
+  const handleExportStockIn = async () => {
+    if (stockInRecords.length === 0) return;
+    const headers = ['入库时间', '数量', '单位', '单价 (元)', '小计 (元)', '操作人', '数据来源', '备注'];
+    const rows = stockInRecords.map((r: any) => {
+      const qty = Number(r.quantity || 0);
+      const price = Number(r.unit_price ?? r.unitPrice ?? 0);
+      const subtotal = qty * price;
+      const sourceLabel = r.source === 'manual' ? '手动入库' : r.source === 'auto_iot' ? 'IoT 同步' : (r.source || '-');
+      return {
+        '入库时间': r.create_time || r.createTime || '-',
+        '数量': qty.toFixed(2),
+        '单位': record?.stockUnit || 'kg',
+        '单价 (元)': price > 0 ? price.toFixed(2) : '-',
+        '小计 (元)': subtotal > 0 ? subtotal.toFixed(2) : '-',
+        '操作人': r.operator_name || r.operatorName || '-',
+        '数据来源': sourceLabel,
+        '备注': r.remark || '-',
+      };
+    });
+    const filename = `肥料入库记录_${record?.fertilizerName || ''}_${todayLocal()}`;
+    try {
+      if (stockInFormat === 'xlsx') {
+        await exportXlsx({ filename, headers, rows, sheetName: '入库记录' });
+      } else {
+        await exportCsv({ filename, headers, rows });
+      }
+      toast?.success?.(`已导出 ${rows.length} 条入库记录`);
+    } catch (err) {
+      toast?.error?.('导出失败：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setStockInExportOpen(false);
+    }
+  };
 
   // 顶部 stat 卡聚合
   const usageStats = useMemo(() => {
@@ -312,6 +381,23 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
             </span>
           )}
         </button>
+        {/* 2026-07-27：入库记录 Tab */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('stockIn')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'stockIn'
+              ? 'border-amber-500 text-amber-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ArrowDownToLine className="w-4 h-4" /> 入库记录
+          {stockInRecords.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+              {stockInRecords.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tab 内容 */}
@@ -490,6 +576,133 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
                 />
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* 2026-07-27：入库记录 Tab 内容 */}
+      {activeTab === 'stockIn' && (
+        <div className="max-h-[70vh] overflow-y-auto pr-1">
+          {/* 顶部统计条 */}
+          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-gray-50 border border-gray-200 rounded-md text-xs flex-wrap">
+            <span className="text-gray-500">累计入库</span>
+            <span className="font-bold text-amber-700 text-sm">
+              {stockInStats.totalQty.toFixed(2)}<span className="text-xs font-normal text-gray-400 ml-0.5">{record.stockUnit || 'kg'}</span>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">累计金额</span>
+            <span className="font-bold text-emerald-700 text-sm">
+              ¥<span>{stockInStats.totalAmount.toFixed(2)}</span>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">入库次数</span>
+            <span className="font-bold text-blue-700 text-sm">
+              {stockInStats.count}<span className="text-xs font-normal text-gray-400 ml-0.5">次</span>
+            </span>
+            {stockInStats.lastTime !== '-' && (
+              <>
+                <span className="text-gray-300">|</span>
+                <span className="text-gray-500">最近入库</span>
+                <span className="font-mono text-gray-700 text-xs">
+                  {String(stockInStats.lastTime).slice(0, 16)}
+                </span>
+              </>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {stockInExportOpen ? (
+                <>
+                  <select
+                    value={stockInFormat}
+                    onChange={(e) => setStockInFormat(e.target.value as 'xlsx' | 'csv')}
+                    className="h-8 text-xs px-2 border border-gray-300 rounded bg-white"
+                  >
+                    <option value="xlsx">Excel (.xlsx)</option>
+                    <option value="csv">CSV (.csv)</option>
+                  </select>
+                  <Button variant="default" size="sm" onClick={handleExportStockIn} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700">
+                    <Download className="w-3.5 h-3.5 mr-1" />确认导出
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setStockInExportOpen(false)} className="h-8 text-xs">
+                    <XIcon className="w-3.5 h-3.5 mr-1" />取消
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setStockInExportOpen(true)}
+                  disabled={stockInRecords.length === 0}
+                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" />导出 ({stockInRecords.length})
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {stockInLoading ? (
+            <div className="flex items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" /> 加载中…
+            </div>
+          ) : stockInRecords.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-lg">
+              暂无入库记录
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <tr className="hover:bg-transparent">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">入库时间</th>
+                    <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">数量</th>
+                    <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">单价 (元)</th>
+                    <th className="px-3 py-3 text-right text-xs font-semibold text-white whitespace-nowrap">小计 (元)</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">操作人</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">数据来源</th>
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">备注</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-300 bg-white">
+                  {stockInRecords.map((r: any) => {
+                    const qty = Number(r.quantity || 0);
+                    const price = Number(r.unit_price ?? r.unitPrice ?? 0);
+                    const subtotal = qty * price;
+                    const sourceLabel = r.source === 'manual' ? '手动入库' : r.source === 'auto_iot' ? 'IoT 同步' : (r.source || '-');
+                    return (
+                      <tr key={r.id} className="hover:bg-amber-50/50">
+                        <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap font-mono">
+                          {String(r.create_time || r.createTime || '-').slice(0, 16)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-amber-700 whitespace-nowrap">
+                          {qty.toFixed(2)} <span className="text-xs text-gray-400">{record.stockUnit || 'kg'}</span>
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-gray-700 whitespace-nowrap">
+                          {price > 0 ? price.toFixed(2) : <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-emerald-700 whitespace-nowrap">
+                          {subtotal > 0 ? subtotal.toFixed(2) : <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                          {r.operator_name || r.operatorName || <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+                            r.source === 'auto_iot'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {sourceLabel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 text-xs">
+                          {r.remark || <span className="text-gray-400">-</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

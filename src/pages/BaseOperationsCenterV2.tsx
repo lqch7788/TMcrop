@@ -273,8 +273,10 @@ const BLOCK_TYPE_OPTIONS = [
 // ============================================
 export default function BaseOperationsCenterV2() {
   // URL 参数获取当前基地 OID
+  // 2026-07-26 修复：去掉硬编码兜底（'base_1780023508412' 是宁波北仑），改用「无 baseOid 时显示全部基地」
+  // 原写死兜底会让 URL 无参时只看宁波北仑一个基地，其他 11 个基地完全屏蔽，导致"分区数据丢失"
   const [searchParams] = useSearchParams();
-  const baseOidFromUrl = searchParams.get('baseOid') || 'base_1780023508412';
+  const baseOidFromUrl = searchParams.get('baseOid') || '';
 
   // 2026-07-25 Plan B：合并双模式为单一布局。
 //   删除 viewMode（'tree' | 'list'） + listTab（'facility' | 'zone' | 'planting'）
