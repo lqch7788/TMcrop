@@ -355,7 +355,7 @@ export function initializeDatabase() {
   db.run(`
     CREATE TABLE IF NOT EXISTS crop_varieties (
       id TEXT PRIMARY KEY,
-      crop_code TEXT NOT NULL,
+      crop_code TEXT NOT NULL UNIQUE,  -- 2026-07-27 C-5：DB 层 UNIQUE 约束（弥补应用层 SELECT-then-INSERT 的 race condition）
       category_code TEXT,
       category_name TEXT,
       type_code TEXT,

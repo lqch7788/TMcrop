@@ -101,7 +101,7 @@ export default function CropVarietyManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [migrationDone, setMigrationDone] = useState(false);
+  // 2026-07-27 审核修复 C-1：删除 migrationDone 状态（V2.1 架构下不再有 localStorage → API 迁移需求）
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, byCategory: {} as Record<string, number> });
 
   // 视图模式状态：表格 or 树形
@@ -237,17 +237,8 @@ export default function CropVarietyManagement() {
     const init = async () => {
       extensionService.initExtensionCache();
 
-      // 先尝试从后端加载
+      // 先尝试从后端加载（V2.1 架构：API 直连，无 localStorage 兜底）
       await store.loadItems();
-
-      // 如果后端数据少于预期（默认206条），执行 localStorage → 后端迁移
-      // 迁移通过 crop_code 去重，不会覆盖已有数据
-      if (!migrationDone && store.items.length < 100) {
-        // logger.info(`[品种迁移] 后端数据仅 ${store.items.length} 条，开始从 localStorage 迁移...`);
-        const result = await store.migrateFromLocalStorage();
-        // logger.info(`[品种迁移] 完成: 新增 ${result.inserted}, 跳过 ${result.skipped}`);
-        setMigrationDone(true);
-      }
     };
     init();
   }, []);

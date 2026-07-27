@@ -10,8 +10,8 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { CropVariety } from '../types/crop';
-import { CropVarietyOption } from '../types/crop';
+// 2026-07-27 审核 M-1：import 路径错误修正（../types/crop → ../types/cropVariety）
+import { CropVariety, CropVarietyOption } from '../types/cropVariety';
 import * as cropVarietyService from './cropVarietyService';
 
 /**
