@@ -51,7 +51,7 @@ export function VarietyTree({
 
   // 使用外部或内部状态
   const searchNameKeyword = externalSearchKeyword !== undefined ? externalSearchKeyword : internalSearchNameKeyword;
-  const searchCodeKeyword = externalSearchCodeKeyword !== undefined ? externalSearchCodeKeyword : internalSearchCodeKeyword;
+  const searchCodeKeyword = externalSearchKeyword !== undefined ? externalSearchKeyword : internalSearchCodeKeyword;
   const categoryFilter = externalCategoryFilter !== undefined ? externalCategoryFilter : internalCategoryFilter;
 
   // 从 Store 获取已录入品种数据
