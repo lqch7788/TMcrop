@@ -30,6 +30,8 @@ interface WaterTableProps {
   exportMode?: boolean;
   onConfirmExport?: () => void;
   onCancelExport?: () => void;
+  // 2026-07-27 修复：批量删除模式开关（之前只用 exportMode 推 showCb，导致"批量删除"按钮点了没反应）
+  deleteMode?: boolean;
 }
 
 export function WaterTable({
@@ -48,6 +50,7 @@ export function WaterTable({
   exportMode,
   onConfirmExport,
   onCancelExport,
+  deleteMode,
 }: WaterTableProps) {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
@@ -63,9 +66,9 @@ export function WaterTable({
     setExpanded(n);
   };
 
-  // 2026-07-19 P2：checkbox 在 delete 模式或 export 模式都显示
-  // 与 FertilizerTable 保持完全相同的 exportMode > showCb > default 优先级
-  const showCb = !!exportMode;
+  // 2026-07-27 修复：checkbox 在 delete 模式 OR export 模式都显示
+  // 之前只用 !!exportMode，导致 deleteMode=true 时也走"默认 UI"，批量删除按钮点了不进入勾选模式
+  const showCb = !!exportMode || !!deleteMode;
 
   // 来源 badge 渲染（manual / fertilizer_dilution / daily_sync）
   const renderSourceBadge = (recordType: string) => {
@@ -193,7 +196,11 @@ export function WaterTable({
               const areaNames = [...new Set(pool.map((p) => String(p.area ?? '').trim()).filter(Boolean))];
               const totalQty = pool.reduce((s, r) => s + Number(r.waterAmount ?? 0), 0) || rec.totalWater || 0;
               const exp = expanded.has(rec.id);
-              const isManual = rec.recordType === 'manual';
+              // 2026-07-27 修复：恢复原来的"仅 manual 可操作"保护规则
+              // 之前误放宽为 fertilizer_dilution 也可操作 → 但后端 service 拒绝（fertilizer_dilution
+              //   是施肥副作用自动生成的，业务上应在源头施肥记录修改，不允许在此删除）
+              // 保留 manual 为唯一可编辑/删除类型，与后端 service + WaterEditModal readonly 保护对齐
+              const isEditable = rec.recordType === 'manual';
 
               // 2026-07-24：作物名兜底链 — cropNames（多作物汇总）→ waterPool 提取 → cropName（单作物）
               const cropListFromNames = (() => { try { const arr = JSON.parse(rec.cropNames || ''); return Array.isArray(arr) ? arr.filter(Boolean) : []; } catch { return []; } })();
@@ -301,7 +308,7 @@ export function WaterTable({
                   </TableCell>
                   {!showCb && (
                     <TableCell className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-white z-10">
-                      {isManual && (
+                      {isEditable && (
                         <div className="flex gap-1 justify-center">
                           <Button
                             variant="ghost"

@@ -174,6 +174,22 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       const primaryFert = fertilizerPool[0];
       // 2026-07-20：汇总所有作物名（支持跨作物批量施肥）
       const allCropNames = [...new Set(selectedAreas.map(a => a.cropName).filter(Boolean))];
+      // 2026-07-27 审核修复 C-4：多肥混合时主行 fertilizerName 用汇总
+      // - 之前：只取 primaryFert（pool[0]），多种肥料时主行 fertilizerName 不代表全部
+      // - 现在：用 "主名 + 并列" 或单一时直接用主名
+      const uniqueFertNames = [...new Set(fertilizerPool.map(f => f.fertilizerName).filter(Boolean))];
+      const summaryFertName = uniqueFertNames.length === 1
+        ? uniqueFertNames[0]
+        : uniqueFertNames.length > 1
+          ? `${uniqueFertNames[0]} 等 ${uniqueFertNames.length} 种`
+          : primaryFert?.fertilizerName || '';
+      // 2026-07-27 修复 C-4：unit/fertilizerType/dilutionRatio 也用汇总
+      const uniqueUnits = [...new Set(fertilizerPool.map(f => f.unit).filter(Boolean))];
+      const summaryUnit = uniqueUnits.length === 1 ? uniqueUnits[0] : '混合单位';
+      const uniqueTypes = [...new Set(fertilizerPool.map(f => f.fertilizerType).filter(Boolean))];
+      const summaryType = uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed';
+      const uniqueRatios = [...new Set(fertilizerPool.map(f => f.dilutionRatio).filter(Boolean))];
+      const summaryRatio = uniqueRatios.length === 1 ? uniqueRatios[0] : `${uniqueRatios.length}种比例`;
 
       await store.createItem({
         fertilizerCode: fertilizerCode || undefined,
@@ -187,21 +203,21 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
         plantingCode: primaryArea.type === 'planting' ? primaryArea.code : undefined,
         seedlingId: primaryArea.type === 'seedling' ? primaryArea.id : undefined,
         seedlingCode: primaryArea.type === 'seedling' ? primaryArea.code : undefined,
-        fertilizerName: primaryFert.fertilizerName,
-        fertilizerType: primaryFert.fertilizerType,
-        dilutionRatio: primaryFert.dilutionRatio,
+        fertilizerName: summaryFertName,
+        fertilizerType: summaryType,
+        dilutionRatio: summaryRatio,
         quantity: totalQty,
-        unit: fertilizerPool[0]?.unit || 'kg',
-        unitPrice: Number(primaryFert.unitPrice) || 0,
+        unit: summaryUnit,
+        unitPrice: Number(primaryFert?.unitPrice) || 0,
         totalCost: Number(totalCost) || 0,
         operatorName: form.operatorName || undefined,
         description: form.description || undefined,
         dataSource: 'manual' as const,
         fertilizationPool: JSON.stringify(poolRows),
-        specId: primaryFert.specId,
-        specBrandName: primaryFert.brandName,
-        specUnitPriceSnapshot: primaryFert.unitPrice,
-        specBatchNumber: '',
+        specId: primaryFert?.specId,
+        specBrandName: primaryFert?.brandName,
+        specUnitPriceSnapshot: primaryFert?.unitPrice,
+        specBatchNumber: primaryFert?.specBatchNumber || '',
       });
       onSaved();
     } catch (err) {

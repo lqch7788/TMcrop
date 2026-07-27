@@ -47,11 +47,26 @@ export class BusinessError extends Error {
  */
 function parseDilutionForWater(dilutionRatio: string | null | undefined): number | null {
   if (!dilutionRatio || dilutionRatio === 'dry') return null;
-  const match = String(dilutionRatio).match(/^1:(\d+)$/);
-  if (!match) return null;
-  const ratio = parseInt(match[1], 10);
-  if (ratio <= 0 || ratio > 100000) return null;
-  return ratio;
+  // 2026-07-27 修复：宽松接受多种稀释倍数格式（用户实测常填"8000"而非"1:8000"）
+  // - 1:8000 / 1：8000（半角/全角冒号）
+  // - 8000 / 1/8000（裸数字）
+  // - 0.001（浮点等价 1:1000）
+  const s = String(dilutionRatio).trim();
+  // 先尝试 1:N 或 1：N
+  const colonMatch = s.match(/^1[:：](\d+(?:\.\d+)?)$/);
+  if (colonMatch) {
+    const ratio = parseFloat(colonMatch[1]);
+    if (ratio > 0 && ratio <= 100000) return ratio;
+    return null;
+  }
+  // 再尝试裸数字（N → 1:N）
+  const numMatch = s.match(/^(\d+(?:\.\d+)?)$/);
+  if (numMatch) {
+    const ratio = parseFloat(numMatch[1]);
+    if (ratio > 0 && ratio <= 100000) return ratio;
+    return null;
+  }
+  return null;
 }
 
 /**
@@ -101,6 +116,12 @@ function buildWateringFromPool(
     if (amount <= 0) continue;
     rows.push({
       area: p.area || '',
+      // 2026-07-27 修复：保留 code/cropName/id 三个溯源字段（之前 buildWateringFromPool 只复制 7 字段，
+      //   导致 WaterTable 展开行的"批号/作物品种"列显示 "-"。这与 WaterAddModal/EditModal 写入完整字段
+      //   不一致，施肥自动生成的浇水记录缺溯源信息）
+      code: p.code || '',
+      cropName: p.cropName || '',
+      id: p.id || '',
       wateringMethod: p.fertilizationMethod || 'drip_irrigation',
       waterAmount: amount,
       waterUnit,
@@ -566,7 +587,13 @@ export class FertilizerService {
       };
       this.repository.insert(record);
 
-      // Phase 2：施肥稀释自动生成浇水记录（必须在 COMMIT 前 — 事务原子性）
+      db.exec('COMMIT');
+      this.repository.save();
+
+      // Phase 2：施肥稀释自动生成浇水记录（移到 COMMIT 之后，独立事务）
+      // 修复 "cannot commit - no transaction is active"：之前浇水 INSERT 在主事务内，
+      //   浇水表 NOT NULL/外键/UNIQUE 约束失败触发 sql.js 自动 ROLLBACK → 主事务破坏 → COMMIT 失败
+      // 与 update 方法（739 行）模式对齐：主事务先提交，浇水再独立事务（接受极小原子性损失）
       tryGenerateWateringFromPool(data.fertilizationPool, {
         id,
         cropName: data.cropName,
@@ -576,8 +603,6 @@ export class FertilizerService {
         areaName: data.areaName,
       });
 
-      db.exec('COMMIT');
-      this.repository.save();
       return record;
     } catch (err) {
       try { db.exec('ROLLBACK'); } catch (rbErr) {
@@ -848,25 +873,16 @@ export class FertilizerService {
     try {
       // 2026-07-17：恢复库存（含顶层 fertilizerId + fertilization_pool 池里每条 specId）
       this.increaseStockFromFarmRecord(ex, now);
-      // Phase 2：级联删除关联浇水记录（必须在 COMMIT 前 — 事务原子性）
-      try {
-        wateringRepository.deleteByFertilizerRecordId(id);
-      } catch (e) {
-        console.error('[fertilizer.service] 浇水级联删除失败（不影响施肥事务）:', e);
-      }
       this.repository.deleteById(id);
       db.exec('COMMIT');
       this.repository.save();
-      return { id };
     } catch (err) {
       try { db.exec('ROLLBACK'); } catch (rbErr) {
         // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
-      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
-      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误
       if (err instanceof BusinessError) throw err;
       console.error('[fertilizer.service] 详细错误堆栈:', err);
       const detail = err instanceof Error ? err.message : String(err);
@@ -876,6 +892,19 @@ export class FertilizerService {
         500,
       );
     }
+
+    // 2026-07-27 修复：浇水级联删除移到 COMMIT 之后（独立操作）
+    // 根因：之前浇水 DELETE 在主事务内，sql.js 内存模式下某些 UPDATE/DELETE 触发
+    //   内部 ROLLBACK → 主事务破坏 → COMMIT 失败 → 但 DELETE 在内存已 mark → saveDatabase 落盘
+    //   → 用户看到 500 "删除失败" 但实际数据已删除（状态撕裂）
+    // 移到 COMMIT 之后：施肥主事务已提交，浇水级联是独立操作（接受极小原子性损失）
+    // 这与 apply 方法（739 行）浇水生成移到 COMMIT 之后的修复对称
+    try {
+      wateringRepository.deleteByFertilizerRecordId(id);
+    } catch (e) {
+      console.error('[fertilizer.service] 浇水级联删除失败（不影响施肥删除结果）:', e);
+    }
+    return { id };
   }
 
   /**
@@ -910,30 +939,17 @@ export class FertilizerService {
         if (rec) {
           this.increaseStockFromFarmRecord(rec, now);
         }
-        // Phase 2：批量删除时级联删浇水（必须在 COMMIT 前 — 事务原子性）
-        try {
-          wateringRepository.deleteByFertilizerRecordId(id);
-        } catch (e) {
-          console.error('[fertilizer.service] 批量删浇水级联失败:', e);
-        }
         this.repository.deleteById(id);
       }
       db.exec('COMMIT');
       this.repository.save();
-      return {
-        deleted: deletable.length,
-        skipped: ids.length - deletable.length,
-        iotSkipped: iotIds.size,
-      };
     } catch (err) {
       try { db.exec('ROLLBACK'); } catch (rbErr) {
         // 2026-07-16：ROLLBACK 失败时记录 ERROR（不再完全静默）
         console.error('[fertilizer.service] ROLLBACK 失败:', rbErr);
         console.error('[fertilizer.service] 原错误:', err);
       }
-      // 2026-07-25：所有 throw 转 BusinessError 详细错误（避免 500 通用"更新失败/删除失败"看不到根因）
-      // - 之前：普通 Error 透传 → handleError 返回 500 + fallback "更新失败"（无诊断价值）
-      // - 现在：转 BusinessError（消息含 err.message + 完整堆栈到 console）
+      // 2026-07-25：所有 throw 转 BusinessError 详细错误
       if (err instanceof BusinessError) throw err;
       console.error('[fertilizer.service] 详细错误堆栈:', err);
       const detail = err instanceof Error ? err.message : String(err);
@@ -943,6 +959,22 @@ export class FertilizerService {
         500,
       );
     }
+
+    // 2026-07-27 修复：浇水级联删除移到 COMMIT 之后（独立操作）
+    // 与单条 remove 对称：避免 sql.js 内存事务被破坏导致"500 失败但实际已删"的状态撕裂
+    for (const id of deletable) {
+      try {
+        wateringRepository.deleteByFertilizerRecordId(id);
+      } catch (e) {
+        console.error('[fertilizer.service] 批量删浇水级联失败:', e);
+      }
+    }
+
+    return {
+      deleted: deletable.length,
+      skipped: ids.length - deletable.length,
+      iotSkipped: iotIds.size,
+    };
   }
 
   /**
