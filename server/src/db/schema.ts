@@ -3186,7 +3186,7 @@ export function initializeDatabase() {
     )
   `);
 
-  // 肥料入库记录表（2026-07-12：审计追溯）
+  // 肥料入库记录表（2026-07-12：审计追溯；2026-07-27 补全 unit_price/operator/source）
   db.run(`
     CREATE TABLE IF NOT EXISTS fertilizer_stock_in_records (
       id TEXT PRIMARY KEY,
@@ -3195,7 +3195,11 @@ export function initializeDatabase() {
       fertilizer_name TEXT,
       quantity REAL NOT NULL,
       remark TEXT,
-      create_time TEXT DEFAULT (datetime('now','localtime'))
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      unit_price REAL,
+      operator_id TEXT,
+      operator_name TEXT,
+      source TEXT
     )
   `);
 
@@ -3695,6 +3699,36 @@ export function initializeDatabase() {
     db.run('ALTER TABLE harvest_records ADD COLUMN supplementary_reason TEXT');
   } catch (e) {
     // 列已存在则忽略
+  }
+
+  // 2026-07-27：肥料入库记录表补 4 列（unit_price / operator_id / operator_name / source）
+  // 用于详情弹窗"入库记录" Tab 显示完整审计信息（单价、小计、操作人、数据来源）
+  {
+    const existingCols = new Set<string>();
+    try {
+      const colStmt = db.prepare('PRAGMA table_info(fertilizer_stock_in_records)');
+      while (colStmt.step()) {
+        const r = colStmt.getAsObject() as { name: string };
+        existingCols.add(r.name);
+      }
+      colStmt.free();
+    } catch {
+      // 表不存在时 PRAGMA 会抛错，忽略
+    }
+    const stockInNewCols: Array<[string, string]> = [
+      ['unit_price', 'REAL'],
+      ['operator_id', 'TEXT'],
+      ['operator_name', 'TEXT'],
+      ['source', 'TEXT'],
+    ];
+    for (const [name, type] of stockInNewCols) {
+      if (existingCols.has(name)) continue;
+      try {
+        db.run(`ALTER TABLE fertilizer_stock_in_records ADD COLUMN ${name} ${type}`);
+      } catch {
+        // 列已存在则忽略
+      }
+    }
   }
 
   // 2026-07-04：无性繁殖母株溯源列（seedling.ts INSERT 列表引用了这 10 列）

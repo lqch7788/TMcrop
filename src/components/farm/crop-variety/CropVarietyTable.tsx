@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Eye, Edit2, Trash2, List, GitBranch } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { CropVariety } from '../../../types/cropVariety';
 import {
@@ -128,87 +129,79 @@ export function CropVarietyTable({
       {/* 搜索和操作栏 */}
       <div className="p-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-4 mb-4">
-          {/* 视图切换 */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-sm text-gray-600 font-medium">视图：</span>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'secondary'}
-              size="sm"
-              onClick={() => onViewModeChange('table')}
-            >
-              <List className="w-4 h-4" />
-              表格
-            </Button>
-            <Button
-              variant={viewMode === 'tree' ? 'default' : 'secondary'}
-              size="sm"
-              onClick={() => onViewModeChange('tree')}
-            >
-              <GitBranch className="w-4 h-4" />
-              树形
-            </Button>
-          </div>
+          {/* 2026-07-27：视图切换已上移到 CropVarietyManagement 顶栏（编码规则前面），此处移除避免重复 */}
 
-          {/* 搜索框区域 - 均匀分布 */}
-          <div className="flex-1 flex items-center gap-4">
-            <Select
-              value={categoryFilter}
-              onValueChange={(val) => {
-                setCategoryFilter(val);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 px-3 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1">
-                <SelectValue placeholder="全部类别" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="作物品种搜索..."
-                value={searchNameKeyword}
-                onChange={(e) => handleNameSearch(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
+          {/* 搜索框区域 - 均匀分布（2026-07-27：每个搜索框加 Label 字段名） */}
+          <div className="flex-1 flex items-start gap-4">
+            {/* 类别 */}
+            <div className="flex-1">
+              <Label className="text-xs text-gray-500 mb-1 block">类别</Label>
+              <Select
+                value={categoryFilter}
+                onValueChange={(val) => {
+                  setCategoryFilter(val);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-10 px-3 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 w-full">
+                  <SelectValue placeholder="全部类别" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="作物编码搜索..."
-                value={searchCodeKeyword}
-                onChange={(e) => handleCodeSearch(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              />
+            {/* 作物品种搜索 */}
+            <div className="flex-1">
+              <Label className="text-xs text-gray-500 mb-1 block">作物品种名称</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="按作物品种名称搜索..."
+                  value={searchNameKeyword}
+                  onChange={(e) => handleNameSearch(e.target.value)}
+                  className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+            {/* 作物编码搜索 */}
+            <div className="flex-1">
+              <Label className="text-xs text-gray-500 mb-1 block">作物编码</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="按9位编码搜索（如 FR0101001）..."
+                  value={searchCodeKeyword}
+                  onChange={(e) => handleCodeSearch(e.target.value)}
+                  className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             </div>
           </div>
-
-          {canCreate && (
-            <Button
-              size="sm"
-              className="flex-shrink-0"
-              onClick={onAdd}
-            >
-              <Plus className="w-4 h-4" />
-              新增作物
-            </Button>
-          )}
         </div>
       </div>
 
       {/* 表格内容 */}
-      <div className="px-6 py-4 border-b border-gray-100 bg-white">
+      <div className="px-6 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">作物编码列表</h3>
+        {/* 2026-07-27：新增作物按钮从第一行筛选区移到与标题同一行（靠右） */}
+        {canCreate && (
+          <Button
+            size="sm"
+            onClick={onAdd}
+          >
+            <Plus className="w-4 h-4" />
+            新增作物
+          </Button>
+        )}
       </div>
       <div className="flex-1 overflow-auto">
           <table className="w-full" style={{ tableLayout: 'fixed' }}>
-            <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white sticky top-0 z-10">
+            <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-36">编码</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-64">品种路径</th>

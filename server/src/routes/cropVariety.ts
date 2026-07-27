@@ -98,6 +98,25 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const newId = req.body.id || `CV${Date.now()}`;
 
+    // 2026-07-27：服务端唯一约束校验（crop_code 不能重复）
+    // 修复前端查重只看 localStorage + 多用户并发写入导致 crop_code 冲突
+    const cropCode = req.body.crop_code;
+    if (cropCode) {
+      const db0 = getDatabase();
+      const stmt0 = db0.prepare('SELECT id, variety_name FROM crop_varieties WHERE crop_code = ?');
+      stmt0.bind([cropCode]);
+      if (stmt0.step()) {
+        const existing = stmt0.getAsObject();
+        stmt0.free();
+        res.status(409).json({
+          success: false,
+          error: `作物编码 ${cropCode} 已存在（对应品种：${(existing as any).variety_name || existing.id}）`,
+        });
+        return;
+      }
+      stmt0.free();
+    }
+
     // 所有支持的字段列表（snake_case）
     const fields = [
       'id', 'crop_code', 'category_code', 'category_name', 'type_code', 'type_name',

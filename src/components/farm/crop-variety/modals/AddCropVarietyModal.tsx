@@ -10,6 +10,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { EnvironmentRangeInput } from '../EnvironmentRangeInput';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -53,7 +54,13 @@ export function AddCropVarietyModal({
   prefillData
 }: AddCropVarietyModalProps) {
   // Zustand Store
-  const store = useCropVarietyStore();
+  // 2026-07-27：用 selector 单独选 actions（避免整 store 解构触发 useEffect 死循环）
+const store = useCropVarietyStore();
+const addItem = useCropVarietyStore((s) => s.addItem);
+const getVarietyByCode = useCropVarietyStore((s) => s.getVarietyByCode);
+const getMaxSubVariety1Code = useCropVarietyStore((s) => s.getMaxSubVariety1Code);
+const loadItems = useCropVarietyStore((s) => s.loadItems);
+const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
   const [formData, setFormData] = useState({
     categoryCode: '',
@@ -68,20 +75,21 @@ export function AddCropVarietyModal({
     alias: '',
     image: '',            // 作物图片URL
     description: '',     // 特性描述
-    germinationPeriod: undefined as number | undefined,  // 发芽期(天)
-    seedlingPeriod: undefined as number | undefined,     // 育苗期(天)
-    floweringPeriod: undefined as number | undefined,    // 开花期(天)
-    fruitingPeriod: undefined as number | undefined,    // 结果期(天)
-    harvestPeriod: undefined as number | undefined,     // 摘收期(天)
-    // 适宜环境参数
-    airTemperature: undefined as number | undefined,    // 空气温度(℃)
-    airHumidity: undefined as number | undefined,      // 空气湿度(%)
-    co2Content: undefined as number | undefined,       // CO₂含量(ppm)
-    lightIntensity: undefined as number | undefined,    // 光照度(lx)
-    soilTemperature: undefined as number | undefined,   // 土壤温度(℃)
-    soilHumidity: undefined as number | undefined,      // 土壤湿度(%)
-    soilPh: undefined as number | undefined,           // 土壤PH值
-    soilEc: undefined as number | undefined,            // 土壤EC值
+    // 2026-07-27：作物生长周期改为时间段（string 格式 "min-max" 天数）
+    germinationPeriod: undefined as string | undefined,  // 发芽期(天)
+    seedlingPeriod: undefined as string | undefined,     // 育苗期(天)
+    floweringPeriod: undefined as string | undefined,    // 开花期(天)
+    fruitingPeriod: undefined as string | undefined,    // 结果期(天)
+    harvestPeriod: undefined as string | undefined,     // 摘收期(天)
+    // 适宜环境参数（2026-07-27：改为阈值区间，string 格式 "min-max"）
+    airTemperature: undefined as string | undefined,    // 空气温度(℃)
+    airHumidity: undefined as string | undefined,      // 空气湿度(%)
+    co2Content: undefined as string | undefined,       // CO₂含量(ppm)
+    lightIntensity: undefined as string | undefined,    // 光照度(lx)
+    soilTemperature: undefined as string | undefined,   // 土壤温度(℃)
+    soilHumidity: undefined as string | undefined,      // 土壤湿度(%)
+    soilPh: undefined as string | undefined,           // 土壤PH值
+    soilEc: undefined as string | undefined,            // 土壤EC值
     remarks: ''
   });
 
@@ -215,25 +223,59 @@ export function AddCropVarietyModal({
     setDuplicateCheckResult(null);
   };
 
-  // 生成编码（9位：类别+类型+作物+品种）
-  const handleGenerateCode = () => {
+  // 生成编码（9位：类别+类型+作物+子品种）
+  // 2026-07-27 v3：服务端 409 兜底 + 前端循环递增
+  // - 优先用 store.items（已从后端 DB 加载）的最大子品种序号 + 1 作为起点
+  // - 循环确认新编码不在 store 里（处理本地缓存短暂不一致）
+  // - 即便前端检查全过，后端也会用 409 拦截重复 INSERT（race 保护）
+  const handleGenerateCode = async () => {
     if (!formData.categoryCode || !formData.typeCode || !formData.varietyCode) {
       showAlert('请先选择完整的类别、类型和作物');
       return;
     }
 
-    const code = generateCropCode(
-      formData.categoryCode,
-      formData.typeCode,
-      formData.varietyCode,
-      formData.subVariety1Code || undefined,
-    );
-    setCropCode(code);
-    setCodeGenerated(true);
-    setDuplicateCheckResult(null);
+    const { categoryCode, typeCode, varietyCode } = formData;
+
+    // 防御 1：store 未初始化时（用户极速点开新增弹窗），强制触发加载
+    if (!isInitialized) {
+      try {
+        await loadItems();
+      } catch (e) {
+        // 即便加载失败，也按当前 items（可能为空）继续，避免阻塞用户
+      }
+    }
+
+    // 从 store.items 中找最大子品种序号
+    const maxSub = getMaxSubVariety1Code(categoryCode, typeCode, varietyCode);
+    let candidate = parseInt(maxSub, 10) + 1;
+
+    // 循环找无冲突的子品种序号（前端预检）
+    // 上限 999 次（实际不可能达到，但提供安全网）
+    let attempts = 0;
+    while (attempts < 999) {
+      const sub = String(candidate).padStart(3, '0');
+      const code = generateCropCode(categoryCode, typeCode, varietyCode, sub);
+      // 在前端 store 中查冲突（store.items 已含后端 DB 全量）
+      const existing = getVarietyByCode(code);
+      if (!existing) {
+        // 找到无冲突的编码
+        setCropCode(code);
+        setCodeGenerated(true);
+        setDuplicateCheckResult({
+          hasDuplicate: false,
+          message: `已自动生成无重码编码（子品种序号 ${sub}）`,
+        });
+        return;
+      }
+      candidate += 1;
+      attempts += 1;
+    }
+
+    // 极端情况：999 次都冲突（不可能但兜底）
+    showAlert('生成失败：连续 999 次都遇到冲突，请联系管理员检查作物编码库');
   };
 
-  // 查重
+  // 查重（2026-07-27 修复：改用 store.getVarietyByCode — store.items 已从后端 API 加载，不再走 localStorage）
   const handleCheckDuplicate = () => {
     if (!cropCode && !formData.varietyName) {
       setDuplicateCheckResult({
@@ -243,23 +285,23 @@ export function AddCropVarietyModal({
       return;
     }
 
-    const allVarieties = getAllVarieties();
     const duplicates: string[] = [];
 
-    // 检查编码是否重复
+    // 检查编码是否重复（store.items 已包含后端 DB 全量数据）
     if (cropCode) {
-      const existingByCode = allVarieties.find(v => v.cropCode === cropCode);
+      const existingByCode = store.getVarietyByCode(cropCode);
       if (existingByCode) {
-        duplicates.push(`编码 ${cropCode} 已存在，对应品种：${existingByCode.varietyName}`);
+        duplicates.push(`编码 ${cropCode} 已存在，对应品种：${existingByCode.varietyName || existingByCode.detailVarietyName || existingByCode.subVariety1Name || '-'}`);
       }
     }
 
-    {/* 2026-07-26：删除详细品种名称重复检查（层级已删除） */}
+    // 2026-07-26：删除详细品种名称重复检查（层级已删除）
 
     if (duplicates.length > 0) {
       setDuplicateCheckResult({
         hasDuplicate: true,
-        message: duplicates.join('；')
+        message: duplicates.join('；'),
+        duplicateInfo: cropCode ? { code: cropCode, name: store.getVarietyByCode(cropCode)?.varietyName || '' } : undefined,
       });
     } else {
       setDuplicateCheckResult({
@@ -295,7 +337,8 @@ export function AddCropVarietyModal({
       // 2026-07-26：作物品种 = subVariety1Name || varietyName
 
       // 通过 Store 添加品种
-      await store.addItem({
+      // 2026-07-27：检查返回值 — addItem 抛错时（409 Conflict 等）不能继续 onSuccess
+      const result = await store.addItem({
         cropCode: cropCode,           // 作物编码（9位，数据库NOT NULL必填）
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
@@ -325,11 +368,16 @@ export function AddCropVarietyModal({
         remarks: formData.remarks
       } as any);
 
-      onSuccess();
-      onClose();
-    } catch (error) {
-      // logger.error('保存品种失败:', error);
-      await showAlert('保存失败，请重试');
+      // 2026-07-27：addItem 抛错时（409 Conflict）已经被 catch 接住，这里不会再执行
+      if (result) {
+        onSuccess();
+        onClose();
+      }
+    } catch (error: any) {
+      // 2026-07-27：透传后端 409 Conflict 详细错误（"作物编码 XXX 已存在"）
+      // 之前：catch 块只显示通用"保存失败"，用户看不到根因
+      const errMsg = error?.message || String(error);
+      await showAlert(`保存失败：${errMsg}\n\n如果提示"作物编码已存在"，请重新点击"生成编码"按钮获取新编码。`);
     } finally {
       // 重置表单
       setFormData({
@@ -400,9 +448,9 @@ export function AddCropVarietyModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 分类标题 */}
+        {/* 分类标题 — 2026-07-27：原"编码分类"区块已删除，替换为"编码生成"区块（移到顶部位置） */}
         <div className="col-span-2 -mt-2">
-          <span className="inline-block bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-medium">编码分类</span>
+          <span className="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 rounded text-sm font-normal">编码生成</span>
         </div>
 
         {/* 类别 */}
@@ -480,35 +528,18 @@ export function AddCropVarietyModal({
           <Input
             type="text"
             value={formData.subVariety1Name}
-            onChange={(e) => handleSubVariety1Change(formData.subVariety1Code || '000', e.target.value)}
+            // 2026-07-27 审核清理：品种编码字段已删除，handleSubVariety1Change 第二个参数为名称
+            onChange={(e) => handleSubVariety1Change('000', e.target.value)}
             placeholder="输入品种名称"
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <div>
-          <Label className="text-gray-600">
-            品种编码
-          </Label>
-          <Input
-            type="text"
-            value={formData.subVariety1Code}
-            onChange={(e) => handleSubVariety1Change(e.target.value, formData.subVariety1Name)}
-            placeholder="3位数字编码"
-            maxLength={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-          />
-          <p className="mt-1 text-xs text-gray-400">品种编码为3位数字（如001），在已有最大数基础上递增</p>
-        </div>
 
         {/* 2026-07-26：作物品种字段已删除（编码改为9位，品种=子品种名） */}
+        {/* 2026-07-27：品种编码字段也删除（编码 9 位已含子品种 3 位，subVariety1Code 不再需要用户输入） */}
 
-        {/* 分类标题 */}
         <div className="col-span-2">
-          <span className="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium">编码生成</span>
-        </div>
-
-        {/* 作物编码 */}
-        <div className="col-span-2">
+          {/* 作物编码 */}
           <Label className="font-bold text-emerald-700">
             作物编码 <span className="text-red-500">*</span>
             <span className="text-xs text-gray-400 ml-2">(点击生成按钮自动生成)</span>
@@ -562,7 +593,7 @@ export function AddCropVarietyModal({
 
         {/* 分类标题 */}
         <div className="col-span-2">
-          <span className="inline-block bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-lg font-medium">品种信息</span>
+          <span className="inline-block bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded text-sm font-normal">品种信息</span>
         </div>
 
         {/* 别名 */}
@@ -645,58 +676,53 @@ export function AddCropVarietyModal({
           <div className="grid grid-cols-5 gap-3">
             <div>
               <Label className="text-xs text-amber-600">发芽期(天)</Label>
-              <Input
-                type="number"
-                value={formData.germinationPeriod || ''}
-                onChange={(e) => setFormData({ ...formData, germinationPeriod: Number(e.target.value) || undefined })}
-                placeholder="0"
-                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              <EnvironmentRangeInput
+                value={formData.germinationPeriod}
+                onChange={(v) => setFormData({ ...formData, germinationPeriod: v || undefined })}
+                placeholderMin="最少"
+                placeholderMax="最多"
               />
             </div>
             <div>
               <Label className="text-xs text-amber-600">育苗期(天)</Label>
-              <Input
-                type="number"
-                value={formData.seedlingPeriod || ''}
-                onChange={(e) => setFormData({ ...formData, seedlingPeriod: Number(e.target.value) || undefined })}
-                placeholder="0"
-                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              <EnvironmentRangeInput
+                value={formData.seedlingPeriod}
+                onChange={(v) => setFormData({ ...formData, seedlingPeriod: v || undefined })}
+                placeholderMin="最少"
+                placeholderMax="最多"
               />
             </div>
             <div>
               <Label className="text-xs text-amber-600">开花期(天)</Label>
-              <Input
-                type="number"
-                value={formData.floweringPeriod || ''}
-                onChange={(e) => setFormData({ ...formData, floweringPeriod: Number(e.target.value) || undefined })}
-                placeholder="0"
-                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              <EnvironmentRangeInput
+                value={formData.floweringPeriod}
+                onChange={(v) => setFormData({ ...formData, floweringPeriod: v || undefined })}
+                placeholderMin="最少"
+                placeholderMax="最多"
               />
             </div>
             <div>
               <Label className="text-xs text-amber-600">结果期(天)</Label>
-              <Input
-                type="number"
-                value={formData.fruitingPeriod || ''}
-                onChange={(e) => setFormData({ ...formData, fruitingPeriod: Number(e.target.value) || undefined })}
-                placeholder="0"
-                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              <EnvironmentRangeInput
+                value={formData.fruitingPeriod}
+                onChange={(v) => setFormData({ ...formData, fruitingPeriod: v || undefined })}
+                placeholderMin="最少"
+                placeholderMax="最多"
               />
             </div>
             <div>
               <Label className="text-xs text-amber-600">摘收期(天)</Label>
-              <Input
-                type="number"
-                value={formData.harvestPeriod || ''}
-                onChange={(e) => setFormData({ ...formData, harvestPeriod: Number(e.target.value) || undefined })}
-                placeholder="0"
-                className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              <EnvironmentRangeInput
+                value={formData.harvestPeriod}
+                onChange={(v) => setFormData({ ...formData, harvestPeriod: v || undefined })}
+                placeholderMin="最少"
+                placeholderMax="最多"
               />
             </div>
           </div>
         </div>
 
-        {/* 作物适宜环境参数 */}
+        {/* 作物适宜环境参数（2026-07-27：改为阈值区间，min-max） */}
         <div className="col-span-2">
           <Label className="font-bold text-cyan-700">
             作物适宜环境参数
@@ -704,90 +730,74 @@ export function AddCropVarietyModal({
           <div className="grid grid-cols-4 gap-3">
             <div>
               <Label className="text-xs text-cyan-600">空气温度(℃)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.airTemperature || ''}
-                onChange={(e) => setFormData({ ...formData, airTemperature: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.airTemperature}
+                onChange={(v) => setFormData({ ...formData, airTemperature: v || undefined })}
+                placeholderMin="最小℃"
+                placeholderMax="最大℃"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">空气湿度(%)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.airHumidity || ''}
-                onChange={(e) => setFormData({ ...formData, airHumidity: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.airHumidity}
+                onChange={(v) => setFormData({ ...formData, airHumidity: v || undefined })}
+                placeholderMin="最小%"
+                placeholderMax="最大%"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">CO₂含量(ppm)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.co2Content || ''}
-                onChange={(e) => setFormData({ ...formData, co2Content: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.co2Content}
+                onChange={(v) => setFormData({ ...formData, co2Content: v || undefined })}
+                placeholderMin="最小ppm"
+                placeholderMax="最大ppm"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">光照度(lx)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.lightIntensity || ''}
-                onChange={(e) => setFormData({ ...formData, lightIntensity: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.lightIntensity}
+                onChange={(v) => setFormData({ ...formData, lightIntensity: v || undefined })}
+                placeholderMin="最小lx"
+                placeholderMax="最大lx"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">土壤温度(℃)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.soilTemperature || ''}
-                onChange={(e) => setFormData({ ...formData, soilTemperature: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.soilTemperature}
+                onChange={(v) => setFormData({ ...formData, soilTemperature: v || undefined })}
+                placeholderMin="最小℃"
+                placeholderMax="最大℃"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">土壤湿度(%)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.soilHumidity || ''}
-                onChange={(e) => setFormData({ ...formData, soilHumidity: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.soilHumidity}
+                onChange={(v) => setFormData({ ...formData, soilHumidity: v || undefined })}
+                placeholderMin="最小%"
+                placeholderMax="最大%"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">土壤PH值</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.soilPh || ''}
-                onChange={(e) => setFormData({ ...formData, soilPh: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.soilPh}
+                onChange={(v) => setFormData({ ...formData, soilPh: v || undefined })}
+                placeholderMin="最小"
+                placeholderMax="最大"
               />
             </div>
             <div>
               <Label className="text-xs text-cyan-600">土壤EC值</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.soilEc || ''}
-                onChange={(e) => setFormData({ ...formData, soilEc: Number(e.target.value) || undefined })}
-                placeholder="0.00"
-                className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+              <EnvironmentRangeInput
+                value={formData.soilEc}
+                onChange={(v) => setFormData({ ...formData, soilEc: v || undefined })}
+                placeholderMin="最小"
+                placeholderMax="最大"
               />
             </div>
           </div>

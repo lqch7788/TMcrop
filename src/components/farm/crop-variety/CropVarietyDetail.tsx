@@ -84,49 +84,55 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </div>
           </div>
 
-          {/* 分类信息 - 蓝色主题 */}
+          {/* 分类信息 - 蓝色主题（2026-07-27：按 9 位新编码规则重写） */}
           <div>
             <h4 className="text-sm font-bold text-blue-700 mb-3 border-b-2 border-blue-200 pb-2 flex items-center gap-2">
               <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
               分类信息
             </h4>
             <div className="grid grid-cols-2 gap-4">
+              {/* 类别(2字母)：FR / 水果类 */}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <Label className="text-xs text-blue-600">类别</Label>
+                <Label className="text-xs text-blue-600">类别（2位字母）</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.categoryCode}</span>
                   {variety.categoryName}
                 </p>
               </div>
+              {/* 类型(2数字)：01 / 浆果类 */}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <Label className="text-xs text-blue-600">类型</Label>
+                <Label className="text-xs text-blue-600">类型（2位数字）</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.typeCode}</span>
                   {variety.typeName}
                 </p>
               </div>
+              {/* 作物(2数字)：01 / 草莓 — 旧字段 varietyCode/varietyName */}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <Label className="text-xs text-blue-600">品种</Label>
+                <Label className="text-xs text-blue-600">作物（2位数字）</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.varietyCode}</span>
                   {variety.varietyName}
                 </p>
               </div>
-              {variety.subVariety1Name && (
-                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                  <Label className="text-xs text-blue-600">子品种</Label>
-                  <p className="text-blue-900 font-medium">
-                    <span className="font-mono text-blue-500 mr-2">{variety.subVariety1Code}</span>
-                    {variety.subVariety1Name}
-                  </p>
-                </div>
-              )}
+              {/* 品种(3数字)：001 / 红颜 — 旧字段 subVariety1Code/subVariety1Name */}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <Label className="text-xs text-blue-600">作物品种</Label>
-                <p className="text-blue-900 font-bold text-lg">
-                  {variety.detailVarietyName || variety.subVariety1Name || variety.varietyName}
+                <Label className="text-xs text-blue-600">品种（3位数字）</Label>
+                <p className="text-blue-900 font-medium">
+                  <span className="font-mono text-blue-500 mr-2">{variety.subVariety1Code}</span>
+                  {variety.subVariety1Name}
                 </p>
               </div>
+            </div>
+            {/* 9 位编码完整展示 */}
+            <div className="mt-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
+              <Label className="text-xs text-blue-600">完整编码（9位）</Label>
+              <p className="text-blue-900 font-bold text-lg font-mono">
+                {variety.cropCode}
+                <span className="text-xs text-gray-500 font-normal ml-2">
+                  {variety.categoryCode}(类别) + {variety.typeCode}(类型) + {variety.varietyCode}(作物) + {variety.subVariety1Code}(品种)
+                </span>
+              </p>
             </div>
           </div>
 
