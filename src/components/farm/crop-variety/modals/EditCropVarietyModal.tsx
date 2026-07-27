@@ -11,6 +11,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { EnvironmentRangeInput } from '../EnvironmentRangeInput';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
 import { showAlert } from '@/lib/dialogService';
@@ -40,7 +41,10 @@ export function EditCropVarietyModal({
   };
 
   const [formData, setFormData] = useState({
+    // 2026-07-27：按 9 位新编码规则，"品种"对应 subVariety1Name（3 位数字）
+    // 保留 varietyName fallback（兼容 detailVarietyName 兜底场景）
     varietyName: getInitialVarietyName(),
+    subVariety1Name: variety.subVariety1Name || '',
     alias: variety.alias?.join(', ') || '',
     image: variety.image || '',
     description: variety.description || '',
@@ -65,6 +69,8 @@ export function EditCropVarietyModal({
   useEffect(() => {
     setFormData({
       varietyName: getInitialVarietyName(),
+      // 2026-07-27 修复：补全 subVariety1Name 初始化（之前漏了，导致 formData.subVariety1Name 永远是 ''，保存时 fallback 到 variety 原值，新编辑丢失）
+      subVariety1Name: variety.subVariety1Name || '',
       alias: variety.alias?.join(', ') || '',
       image: variety.image || '',
       description: variety.description || '',
@@ -117,11 +123,14 @@ export function EditCropVarietyModal({
         status: formData.status as CropVarietyStatus,
         remarks: formData.remarks
       };
-      // 根据是否有 detail 级别决定更新哪个名称字段
-      if (hasDetail) {
+      // 2026-07-27：按 9 位新编码规则，用户编辑的"品种"对应 subVariety1Name
+      // 兼容历史 detailVarietyName 兜底
+      if (hasDetail && formData.subVariety1Name) {
+        updateData.detailVarietyName = formData.subVariety1Name;
+      }
+      updateData.subVariety1Name = formData.subVariety1Name || variety.subVariety1Name;
+      if (!formData.subVariety1Name && hasDetail) {
         updateData.detailVarietyName = formData.varietyName;
-      } else {
-        updateData.varietyName = formData.varietyName;
       }
       await store.updateItem(variety.id, updateData);
       onSuccess();
@@ -149,27 +158,29 @@ export function EditCropVarietyModal({
             <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
             品种信息（不可修改）
           </h4>
-          <div className="grid grid-cols-3 gap-4">
+          {/* 2026-07-27：作物 + 品种合并到同一行（9 位编码 4 段连续展示：类别/类型/作物/品种） */}
+          <div className="grid grid-cols-4 gap-4">
             <div>
-              <Label className="text-xs text-gray-500">作物编码</Label>
+              <Label className="text-xs text-gray-500">作物编码（9位）</Label>
               <p className="font-mono text-gray-600 font-medium bg-gray-200 px-2 py-1 rounded">{variety.cropCode}</p>
             </div>
             <div>
-              <Label className="text-xs text-gray-500">类别</Label>
-              <p className="text-gray-600 bg-gray-200 px-2 py-1 rounded">{variety.categoryName}</p>
+              <Label className="text-xs text-gray-500">类别（2位字母）</Label>
+              <p className="text-gray-600 bg-gray-200 px-2 py-1 rounded">{variety.categoryCode} - {variety.categoryName}</p>
             </div>
             <div>
-              <Label className="text-xs text-gray-500">类型</Label>
-              <p className="text-gray-600 bg-gray-200 px-2 py-1 rounded">{variety.typeName}</p>
+              <Label className="text-xs text-gray-500">类型（2位数字）</Label>
+              <p className="text-gray-600 bg-gray-200 px-2 py-1 rounded">{variety.typeCode} - {variety.typeName}</p>
             </div>
             <div>
-              <Label className="text-xs text-gray-500">品种</Label>
-              <p className="text-gray-700 font-medium bg-gray-200 px-2 py-1 rounded">{variety.varietyName}</p>
+              <Label className="text-xs text-gray-500">作物（2位数字）</Label>
+              <p className="text-gray-700 font-medium bg-gray-200 px-2 py-1 rounded">{variety.varietyCode} - {variety.varietyName}</p>
             </div>
+            {/* 品种（3位数字）紧跟作物 — 同一行左侧对齐 */}
             {variety.subVariety1Name && (
-              <div>
-                <Label className="text-xs text-gray-500">子品种</Label>
-                <p className="text-gray-700 font-medium bg-gray-200 px-2 py-1 rounded">{variety.subVariety1Name}</p>
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-500">品种（3位数字）— 对应作物右侧</Label>
+                <p className="text-gray-700 font-medium bg-gray-200 px-2 py-1 rounded">{variety.subVariety1Code} - {variety.subVariety1Name}</p>
               </div>
             )}
           </div>
@@ -177,16 +188,17 @@ export function EditCropVarietyModal({
 
         {/* 可编辑字段 */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {/* 作物品种 - 蓝色标签必填 */}
-          <div className="col-span-2">
+          {/* 品种（3位数字）— 2026-07-27：从 col-span-2 整行改为 1 列，与"别名"同行（响应用户"与作物字段在同一行"要求） */}
+          <div>
             <Label className="font-bold text-blue-700">
-              作物品种 <span className="text-red-500">*</span>
+              品种 <span className="text-red-500">*</span>
+              <span className="text-xs text-gray-400 ml-2 font-normal">（3位数字位）</span>
             </Label>
             <Input
               type="text"
-              value={formData.varietyName}
-              onChange={(e) => setFormData({ ...formData, varietyName: e.target.value })}
-              placeholder="如：红颜草莓、红颜草莓-A"
+              value={formData.subVariety1Name}
+              onChange={(e) => setFormData({ ...formData, subVariety1Name: e.target.value })}
+              placeholder="如：红颜、丰香"
               className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
             />
           </div>
@@ -270,52 +282,47 @@ export function EditCropVarietyModal({
             <div className="grid grid-cols-5 gap-3">
               <div>
                 <Label className="text-xs text-amber-600">发芽期(天)</Label>
-                <Input
-                  type="number"
-                  value={formData.germinationPeriod || ''}
-                  onChange={(e) => setFormData({ ...formData, germinationPeriod: Number(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                <EnvironmentRangeInput
+                  value={formData.germinationPeriod ? String(formData.germinationPeriod) : ''}
+                  onChange={(v) => setFormData({ ...formData, germinationPeriod: v || undefined })}
+                  placeholderMin="最少"
+                  placeholderMax="最多"
                 />
               </div>
               <div>
                 <Label className="text-xs text-amber-600">育苗期(天)</Label>
-                <Input
-                  type="number"
-                  value={formData.seedlingPeriod || ''}
-                  onChange={(e) => setFormData({ ...formData, seedlingPeriod: Number(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                <EnvironmentRangeInput
+                  value={formData.seedlingPeriod ? String(formData.seedlingPeriod) : ''}
+                  onChange={(v) => setFormData({ ...formData, seedlingPeriod: v || undefined })}
+                  placeholderMin="最少"
+                  placeholderMax="最多"
                 />
               </div>
               <div>
                 <Label className="text-xs text-amber-600">开花期(天)</Label>
-                <Input
-                  type="number"
-                  value={formData.floweringPeriod || ''}
-                  onChange={(e) => setFormData({ ...formData, floweringPeriod: Number(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                <EnvironmentRangeInput
+                  value={formData.floweringPeriod ? String(formData.floweringPeriod) : ''}
+                  onChange={(v) => setFormData({ ...formData, floweringPeriod: v || undefined })}
+                  placeholderMin="最少"
+                  placeholderMax="最多"
                 />
               </div>
               <div>
                 <Label className="text-xs text-amber-600">结果期(天)</Label>
-                <Input
-                  type="number"
-                  value={formData.fruitingPeriod || ''}
-                  onChange={(e) => setFormData({ ...formData, fruitingPeriod: Number(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                <EnvironmentRangeInput
+                  value={formData.fruitingPeriod ? String(formData.fruitingPeriod) : ''}
+                  onChange={(v) => setFormData({ ...formData, fruitingPeriod: v || undefined })}
+                  placeholderMin="最少"
+                  placeholderMax="最多"
                 />
               </div>
               <div>
                 <Label className="text-xs text-amber-600">摘收期(天)</Label>
-                <Input
-                  type="number"
-                  value={formData.harvestPeriod || ''}
-                  onChange={(e) => setFormData({ ...formData, harvestPeriod: Number(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="w-full px-2 py-1.5 border-2 border-amber-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                <EnvironmentRangeInput
+                  value={formData.harvestPeriod ? String(formData.harvestPeriod) : ''}
+                  onChange={(v) => setFormData({ ...formData, harvestPeriod: v || undefined })}
+                  placeholderMin="最少"
+                  placeholderMax="最多"
                 />
               </div>
             </div>
@@ -346,90 +353,74 @@ export function EditCropVarietyModal({
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <Label className="text-xs text-cyan-600">空气温度(℃)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.airTemperature ?? ''}
-                  onChange={(e) => setFormData({ ...formData, airTemperature: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.airTemperature ? String(formData.airTemperature) : ''}
+                  onChange={(v) => setFormData({ ...formData, airTemperature: v || undefined })}
+                  placeholderMin="最小℃"
+                  placeholderMax="最大℃"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">空气湿度(%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.airHumidity ?? ''}
-                  onChange={(e) => setFormData({ ...formData, airHumidity: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.airHumidity ? String(formData.airHumidity) : ''}
+                  onChange={(v) => setFormData({ ...formData, airHumidity: v || undefined })}
+                  placeholderMin="最小%"
+                  placeholderMax="最大%"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">CO₂含量(ppm)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.co2Content ?? ''}
-                  onChange={(e) => setFormData({ ...formData, co2Content: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.co2Content ? String(formData.co2Content) : ''}
+                  onChange={(v) => setFormData({ ...formData, co2Content: v || undefined })}
+                  placeholderMin="最小ppm"
+                  placeholderMax="最大ppm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">光照度(lx)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.lightIntensity ?? ''}
-                  onChange={(e) => setFormData({ ...formData, lightIntensity: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.lightIntensity ? String(formData.lightIntensity) : ''}
+                  onChange={(v) => setFormData({ ...formData, lightIntensity: v || undefined })}
+                  placeholderMin="最小lx"
+                  placeholderMax="最大lx"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">土壤温度(℃)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.soilTemperature ?? ''}
-                  onChange={(e) => setFormData({ ...formData, soilTemperature: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.soilTemperature ? String(formData.soilTemperature) : ''}
+                  onChange={(v) => setFormData({ ...formData, soilTemperature: v || undefined })}
+                  placeholderMin="最小℃"
+                  placeholderMax="最大℃"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">土壤湿度(%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.soilHumidity ?? ''}
-                  onChange={(e) => setFormData({ ...formData, soilHumidity: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.soilHumidity ? String(formData.soilHumidity) : ''}
+                  onChange={(v) => setFormData({ ...formData, soilHumidity: v || undefined })}
+                  placeholderMin="最小%"
+                  placeholderMax="最大%"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">土壤PH值</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.soilPh ?? ''}
-                  onChange={(e) => setFormData({ ...formData, soilPh: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.soilPh ? String(formData.soilPh) : ''}
+                  onChange={(v) => setFormData({ ...formData, soilPh: v || undefined })}
+                  placeholderMin="最小"
+                  placeholderMax="最大"
                 />
               </div>
               <div>
                 <Label className="text-xs text-cyan-600">土壤EC值</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.soilEc ?? ''}
-                  onChange={(e) => setFormData({ ...formData, soilEc: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="0.00"
-                  className="w-full px-2 py-1.5 border border-cyan-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-cyan-50"
+                <EnvironmentRangeInput
+                  value={formData.soilEc ? String(formData.soilEc) : ''}
+                  onChange={(v) => setFormData({ ...formData, soilEc: v || undefined })}
+                  placeholderMin="最小"
+                  placeholderMax="最大"
                 />
               </div>
             </div>

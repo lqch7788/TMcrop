@@ -149,15 +149,15 @@ export function VarietyTreeNode({
     setEditValue('');
   };
 
-  // 构建完整11位作物编码显示
+  // 构建完整9位作物编码显示（2026-07-27：按新规则 类别(2字母) + 类型(2数字) + 作物(2数字) + 品种(3数字)）
   const getFullCropCode = (): string => {
-    // detail级别：显示完整编码
-    if (node.level === 'detail') {
+    // subVariety1 叶子节点：拼出完整 9 位编码
+    if (node.level === 'subVariety1') {
       const { categoryCode, typeCode, varietyCode, subVariety1Code } = node.path;
       const sub1 = subVariety1Code || node.code || '000';
-      const detail = node.code || '00';
-      return `${categoryCode}${typeCode}${varietyCode}${sub1}${detail}`;
+      return `${categoryCode}${typeCode}${varietyCode}${sub1}`;
     }
+    // detail 叶子节点（历史 11 位规则下的最细分品种，新规则下不显示 — 留 - 占位）
     return '-';
   };
 
@@ -170,7 +170,7 @@ export function VarietyTreeNode({
       const { categoryCode, typeCode, varietyCode, subVariety1Code, subVariety1Name } = node.path;
       const mockVariety: CropVariety = {
         id: node.key,
-        cropCode: `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || node.code}00`,
+        cropCode: `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || node.code}`,  // 2026-07-27：9 位编码（去掉原 detail 00）
         categoryCode,
         categoryName: node.path.categoryName,
         typeCode,
@@ -376,7 +376,7 @@ export function VarietyTreeNode({
           )}
         </TableCell>
 
-        {/* 品种列 - 只有品种级别显示，箭头在文字前面 */}
+        {/* 作物列 - 只有 variety 级别显示，箭头在文字前面（2026-07-27：原"品种"列改名为"作物"对应 9 位编码规则） */}
         <TableCell className="px-4 py-1">
           {node.level === 'variety' ? (
             <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export function VarietyTreeNode({
           )}
         </TableCell>
 
-        {/* 子品种列 - 只有子品种级别显示，箭头在文字前面 */}
+        {/* 品种列 - 只有子品种1级别显示，箭头在文字前面（2026-07-27：原"子品种"列改名为"品种"对应 9 位编码规则） */}
         <TableCell className="px-4 py-1">
           {node.level === 'subVariety1' ? (
             <div className="flex items-center gap-2">
@@ -494,26 +494,9 @@ export function VarietyTreeNode({
           )}
         </TableCell>
 
-        {/* 详细名称列 - 只有详细品种级别显示 */}
+        {/* 编码列 - 叶子节点（subVariety1 + detail）显示完整 9 位编码（2026-07-27：按新规则 4 段） */}
         <TableCell className="px-4 py-1">
-          {node.level === 'detail' ? (
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-green-600 text-sm">{node.code}</span>
-              <span className="font-medium text-emerald-700 text-sm">{node.name}</span>
-            </div>
-          ) : node.level === 'subVariety1' && node.isRecorded ? (
-            // 子品种1有子节点（详细品种），显示子节点数量
-            <span className="text-xs text-gray-500">({node.childCount})</span>
-          ) : node.isRecorded ? (
-            <span className="text-green-600 text-sm">✓ 已录入</span>
-          ) : (
-            <span className="text-gray-300">-</span>
-          )}
-        </TableCell>
-
-        {/* 编码列 - 只有详细品种显示完整11位编码 */}
-        <TableCell className="px-4 py-1">
-          {node.level === 'detail' ? (
+          {(node.level === 'subVariety1' || node.level === 'detail') ? (
             <span className="font-mono text-blue-600 text-sm font-medium">{getFullCropCode()}</span>
           ) : (
             <span className="text-gray-300">-</span>
@@ -565,7 +548,7 @@ export function VarietyTreeNode({
       {/* 内联新增表单 */}
       {isInlineAdding && (
         <TableRow className="bg-yellow-50 border-l-4 border-yellow-400">
-          <TableCell className="px-4 py-2" colSpan={8}>
+          <TableCell className="px-4 py-2" colSpan={7}>
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
                 {inlineAddState.level === 'type' && '新增类型：'}

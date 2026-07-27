@@ -43,6 +43,12 @@ interface CropVarietyState {
   getVarietyByCode: (cropCode: string) => CropVariety | undefined;
   /** 搜索品种 */
   searchVarieties: (keyword: string) => CropVariety[];
+  /**
+   * 2026-07-27：获取指定 category/type/variety 下的最大子品种序号（3位）
+   * - 在 store.items（全量来自后端 DB）中筛选
+   * - 替代老 cropVarietyService.getMaxDetailVarietyCode（只查 localStorage）
+   */
+  getMaxSubVariety1Code: (categoryCode: string, typeCode: string, varietyCode: string) => string;
 }
 
 export const useCropVarietyStore = create<CropVarietyState>()(
@@ -127,8 +133,10 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         await get().loadVarietyOptions();
         return get().items.find(v => v.id === id) || null;
       } catch (error) {
-        // logger.error('[useCropVarietyStore] 新增失败:', error);
-        return null;
+        // 2026-07-27：不再静默吞错，透传后端错误（包括 409 Conflict）
+        // 之前 addItem 返回 null，调用方拿不到具体原因，导致 409 被 UI 误判为"成功"
+        console.error('[useCropVarietyStore] 新增失败:', error);
+        throw error;
       }
     },
 
@@ -173,6 +181,20 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         (v.subVariety1Name && v.subVariety1Name.toLowerCase().includes(lowerKeyword)) ||
         (v.detailVarietyName && v.detailVarietyName.toLowerCase().includes(lowerKeyword))
       );
+    },
+
+    // 2026-07-27：在 store.items 中找指定 category/type/variety 下最大的 subVariety1Code
+    getMaxSubVariety1Code: (categoryCode, typeCode, varietyCode) => {
+      const prefix = `${categoryCode}${typeCode}${varietyCode}`;
+      let maxCode = 0;
+      for (const v of get().items) {
+        if (v.cropCode && v.cropCode.startsWith(prefix) && v.cropCode.length === 9) {
+          const sub = v.cropCode.slice(5, 8); // 后 3 位 = 子品种序号
+          const n = parseInt(sub, 10);
+          if (!isNaN(n) && n > maxCode) maxCode = n;
+        }
+      }
+      return String(maxCode).padStart(3, '0');
     },
   })
 );

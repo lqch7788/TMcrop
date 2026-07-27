@@ -1,6 +1,6 @@
 /**
- * 作物品种库管理页面
- * 系统设置 > 作物品种库管理
+ * 作物品种库页面
+ * 系统设置 > 作物品种库
  * 编码：类别(2字母)+类型(2数字)+作物(2数字)+品种(3数字) = 9位
  * 功能：品种列表、编码规则、编码生成
  */
@@ -435,7 +435,7 @@ export default function CropVarietyManagement() {
               <Sprout className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">作物品种库管理</h1>
+              <h1 className="text-2xl font-bold text-gray-900">作物品种库</h1>
               <p className="text-gray-500">统一管理系统中所有作物品种的编码和分类信息</p>
             </div>
           </div>
@@ -495,6 +495,26 @@ export default function CropVarietyManagement() {
         <div className="flex items-center justify-between">
           {/* 左侧工具栏 */}
           <div className="flex items-center gap-4">
+            {/* 2026-07-27：视图切换（表格/树形）从 CropVarietyTable 提到此处，编码规则前面 */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-sm text-gray-600 font-medium">视图：</span>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                <List className="w-4 h-4" />
+                表格
+              </Button>
+              <Button
+                variant={viewMode === 'tree' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setViewMode('tree')}
+              >
+                <GitBranch className="w-4 h-4" />
+                树形
+              </Button>
+            </div>
             <Button
               size="sm"
               onClick={handleCodeRuleClick}

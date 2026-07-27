@@ -979,9 +979,20 @@ export async function fixMissingSchema(): Promise<void> {
         status                  TEXT DEFAULT 'completed',
         create_time             TEXT DEFAULT (datetime('now','localtime')),
         update_time             TEXT DEFAULT (datetime('now','localtime')),
+        crop_names              TEXT,  -- 2026-07-27 审核修复 C-1：与 schema.ts 对齐 + ALTER 加列
         FOREIGN KEY (fertilizer_record_id) REFERENCES fertilizer_records(id) ON DELETE CASCADE
       )
     `);
+    // 2026-07-27 C-1：老库 watering_records 缺 crop_names 列，ALTER 补
+    try {
+      const cols = db.prepare('PRAGMA table_info(watering_records)');
+      const colNames = new Set<string>();
+      while (cols.step()) { colNames.add((cols.getAsObject() as { name: string }).name); }
+      cols.free();
+      if (!colNames.has('crop_names')) {
+        db.run('ALTER TABLE watering_records ADD COLUMN crop_names TEXT');
+      }
+    } catch (e) { /* ignore */ }
     try { db.run('CREATE INDEX IF NOT EXISTS idx_watering_records_water_time ON watering_records(water_time)'); } catch {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_watering_records_crop_name ON watering_records(crop_name)'); } catch {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_watering_records_record_type ON watering_records(record_type)'); } catch {}
@@ -1438,13 +1449,34 @@ export async function fixMissingSchema(): Promise<void> {
         fertilizer_name TEXT,
         quantity REAL NOT NULL,
         remark TEXT,
-        create_time TEXT DEFAULT (datetime('now','localtime'))
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        unit_price REAL,
+        operator_id TEXT,
+        operator_name TEXT,
+        source TEXT
       )
     `);
     seedLog.info('✓ fertilizer_stock_in_records 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) seedLog.skip('• fertilizer_stock_in_records 已存在');
     else seedLog.error('fertilizer_stock_in_records:', e.message);
+  }
+
+  // 2026-07-27：补全肥料入库记录表 4 列（unit_price/operator_id/operator_name/source）
+  const stockInColumnsToAdd = [
+    { name: 'unit_price', type: 'REAL' },
+    { name: 'operator_id', type: 'TEXT' },
+    { name: 'operator_name', type: 'TEXT' },
+    { name: 'source', type: 'TEXT' },
+  ];
+  for (const col of stockInColumnsToAdd) {
+    try {
+      db.run(`ALTER TABLE fertilizer_stock_in_records ADD COLUMN ${col.name} ${col.type}`);
+      seedLog.info(`✓ fertilizer_stock_in_records 表添加 ${col.name} 列成功`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) seedLog.skip(`• ${col.name} 列已存在`);
+      else seedLog.skip(`• ${col.name} 列添加: ` + e.message);
+    }
   }
 
   // 为 pesticide_specs 表添加作用机制字段
