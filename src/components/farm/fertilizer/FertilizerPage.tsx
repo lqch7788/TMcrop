@@ -238,6 +238,7 @@ export default function FertilizerPage() {
 
   // 第 1 步：点"导出" → 进入 exportMode（表格显示 checkbox）
   // 参照 SeedSourcePage.handleExportClick
+  // 2026-07-28 审核 M：deps 加 toast，与 handleWaterExport 对齐
   const handleExport = useCallback(() => {
     if (exportCount === 0) {
       toast.warning('当前筛选条件下没有可导出的数据');
@@ -246,7 +247,7 @@ export default function FertilizerPage() {
     setOperationMode('export');
     setExportMode(true);
     setSelectedIds([]);
-  }, [exportCount]);
+  }, [exportCount, toast]);
 
   // 第 2 步：勾选后点"确认导出" → 校验 + 弹格式选择弹窗
   // 参照 SeedSourcePage.handleExportClickConfirm
@@ -470,6 +471,7 @@ export default function FertilizerPage() {
   }, [waterSelectedIds]);
 
   // 浇水删除确认 — 走 store.deleteItems（deleted/skipped 统计）
+  // 2026-07-28 审核 C-4：删除后显式按当前筛选 refetch（由调用方负责刷新，与 useFertilizerStore 对齐）
   const handleWaterDeleteConfirm = useCallback(async () => {
     const ids = [...waterSelectedIds];
     if (ids.length === 0) return;
@@ -483,12 +485,14 @@ export default function FertilizerPage() {
       }
       setWaterSelectedIds([]);
       setWaterOperationMode('normal');
+      // 重新加载当前筛选条件下的列表（删除的可能不在当前 items 中）
+      waterStore.fetchItems(waterFilters);
     } catch (err: any) {
       setWaterSelectedIds([]);
       setWaterOperationMode('normal');
       toast.error(`删除失败：${err?.message || '未知错误'}`);
     }
-  }, [waterSelectedIds, waterStore, toast]);
+  }, [waterSelectedIds, waterStore, waterFilters, toast]);
 
   // 浇水导出（2 步流程，对齐施肥/FertilizerExportModal）
   const handleWaterExport = useCallback(() => {
