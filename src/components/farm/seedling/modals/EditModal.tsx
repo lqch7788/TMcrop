@@ -143,8 +143,8 @@ export function EditModal({
       survivalCount: record.survivalCount,
       // 2026-06-28：移除 plantedCount 字段（业务规则：种植管理不再从育苗取苗）
       remarks: record.remarks || '',
-      // 方案2.6: 育苗工时
-      workHours: record.workHours || 0,
+      // 2026-07-28 审核 H-6：workHours 字段不存在，正确的是 seedlingTaskTime（与 useState 行 65 对齐）
+      workHours: record.seedlingTaskTime || 0,
       // 新增缺失字段
       qualityGrade: record.qualityGrade || '',
       isFinished: record.isFinished || false,

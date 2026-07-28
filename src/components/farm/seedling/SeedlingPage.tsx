@@ -427,6 +427,8 @@ export default function SeedlingPage() {
       startDate: '',
       endDate: '',
       siteName: '',
+      // 2026-07-28 审核 M：补 areaOid 重置（FK 权威字段，缺失会让"重置"按钮不真正清空所有筛选）
+      areaOid: '',
       seedlingType: '',
       createBy: '',
       status: '',

@@ -21,7 +21,7 @@ import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import {
   apiSeedlingPropagationService,
-  type SeedlingSeedlingPropagationRecord,
+  // 2026-07-28 审核 M：SeedlingSeedlingPropagationRecord 未使用，删除避免误导
   type SeedlingPropagationRecordInput,
   type AsexualOperationType,
   type ReproductionMode,

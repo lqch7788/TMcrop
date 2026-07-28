@@ -1095,7 +1095,8 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     </SelectTrigger>
                     <SelectContent>
                       {propagationMultiples.map(p => (
-                        <SelectItem key={p.value} value={String(p.value)}>{p.label} - {p.description}</SelectItem>
+                        // 2026-07-28 审核 M：propagationMultiple 字典项只有 value/label，没有 description，移除以避免 "undefined"
+                        <SelectItem key={p.value} value={String(p.value)}>{p.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
