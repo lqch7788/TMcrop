@@ -44,11 +44,15 @@ interface CropVarietyState {
   /** 搜索品种 */
   searchVarieties: (keyword: string) => CropVariety[];
   /**
-   * 2026-07-27：获取指定 category/type/variety 下的最大子品种序号（3位）
-   * - 在 store.items（全量来自后端 DB）中筛选
+   * 2026-07-28：获取指定 category/type/variety 下的下一个子品种序号（3位流水号）
+   * - 在 store.items（全量来自后端 DB）中筛选本品种已用序号
+   * - 返回「最低可用」的 001-998（严格流水号顺序填补间隙，不跳号）
+   * - 跳过 999 占位码（"其他"），不计入 10/11 位历史脏数据
+   * - 每个品种独立计数，不参考其它品种
+   * - 1-998 全部占满时返回 'FULL'（调用方应拒绝保存）
    * - 替代老 cropVarietyService.getMaxDetailVarietyCode（只查 localStorage）
    */
-  getMaxSubVariety1Code: (categoryCode: string, typeCode: string, varietyCode: string) => string;
+  getNextSubVariety1Code: (categoryCode: string, typeCode: string, varietyCode: string) => string;
 }
 
 export const useCropVarietyStore = create<CropVarietyState>()(
@@ -184,21 +188,27 @@ export const useCropVarietyStore = create<CropVarietyState>()(
       );
     },
 
-    // 2026-07-27：在 store.items 中找指定 category/type/variety 下最大的 subVariety1Code
-    getMaxSubVariety1Code: (categoryCode, typeCode, varietyCode) => {
+    // 2026-07-28：在 store.items 中找指定 category/type/variety 下「最低可用」subVariety1Code（严格流水号顺序，填补间隙）
+    getNextSubVariety1Code: (categoryCode, typeCode, varietyCode) => {
       const prefix = `${categoryCode}${typeCode}${varietyCode}`;
-      let maxCode = 0;
+      const usedCodes = new Set<number>();
       for (const v of get().items) {
-        if (v.cropCode && v.cropCode.startsWith(prefix) && v.cropCode.length === 9) {
-          const sub = v.cropCode.slice(6, 9); // 后 3 位 = 子品种序号 (slice(6,9) 对应 prefix 长度 6 = 2字母+2数字+2数字)
-          const n = parseInt(sub, 10);
-          // 2026-07-28：跳过 999 占位码（预定义的"其他XX"，如"其他草莓"=999）。
-          // 如果不跳过，candidate = 999+1 = 1000，String(1000).padStart(3,'0')='1000'（4 位），
-          // generateCropCode 会拼出 10 位编码（FR01011000），破坏 9 位规则
-          if (!isNaN(n) && n < 999 && n > maxCode) maxCode = n;
+        // 2026-07-28：仅 9 位合法编码计入流水号；10/11 位历史脏数据忽略
+        if (!v.cropCode || v.cropCode.length !== 9 || !v.cropCode.startsWith(prefix)) continue;
+        const n = parseInt(v.cropCode.slice(6, 9), 10);
+        // 跳过 999 占位码（"其他"），不参与流水号竞争
+        if (!isNaN(n) && n >= 1 && n < 999) {
+          usedCodes.add(n);
         }
       }
-      return String(maxCode).padStart(3, '0');
+      // 严格流水号：1-998 中最低可用 = 不跳号、不参考其它品种
+      for (let candidate = 1; candidate <= 998; candidate++) {
+        if (!usedCodes.has(candidate)) {
+          return String(candidate).padStart(3, '0');
+        }
+      }
+      // 极端：1-998 全部占满
+      return 'FULL';
     },
   })
 );
