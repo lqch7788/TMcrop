@@ -34,12 +34,18 @@ interface PestDiseaseDictState {
   createItem: (item: Partial<PestDiseaseDict>) => Promise<PestDiseaseDict | null>;
   updateItem: (id: string, updates: Partial<PestDiseaseDict>) => Promise<PestDiseaseDict | null>;
   deleteItem: (id: string) => Promise<boolean>;
+  /**
+   * @deprecated 2026-07-28 审核 LOW：当前无调用方（grep 确认），保留接口是死代码
+   *   若未来需要按作物查病虫害，使用 fetchItems({ targetCrops: cropName }) 替代
+   */
   fetchByCrop: (cropName: string) => Promise<PestDiseaseDict[]>;
   fetchNextCode: (type: 'pest' | 'disease') => Promise<string>;
   fetchRelatedPesticides: (pestId: string) => Promise<PesticideForRelation[]>;
   addRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
   removeRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
   updateRelations: (pestId: string, pesticideIds: string[]) => Promise<boolean>;
+  // 2026-07-28 审核 H-13：页面 PestDiseaseDictPage 引用了 clearError，Store 必须暴露
+  clearError: () => void;
 }
 
 const FIELD_MAP: Record<string, string> = {
@@ -103,11 +109,8 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-        // 2026-07-16：images 反序列化（JSON 字符串 → string[]），修复列表页图片列崩溃
-        const items = (rawItems as Record<string, unknown>[]).map((r) => ({
-          ...r,
-          images: parseImages(r.images),
-        })) as unknown as PestDiseaseDict[];
+        // 2026-07-28 审核 M：用 normalize() 统一字段映射（与 createItem/updateItem 行为一致），避免刷新后显示 snake_case 字段
+        const items = (rawItems as Record<string, unknown>[]).map((r) => normalize(r));
         set({ items, isLoading: false });
       } catch (err) {
         set({ error: (err as Error).message, isLoading: false });
@@ -160,14 +163,20 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
       }
     },
 
+    // @deprecated 无调用方，保留死代码（用户授权前不删除）
     fetchByCrop: async (cropName) => {
       try {
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict/by-crop/${encodeURIComponent(cropName)}`);
-        return (Array.isArray(response.data ?? response) ? response.data : []) as PestDiseaseDict[];
+        // 2026-07-28 审核 LOW：补 normalize() 让字段保持 camelCase 一致（防未来调用时拿到 snake_case 字段）
+        const raw = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+        return (raw as Record<string, unknown>[]).map(normalize);
       } catch {
         return [];
       }
     },
+
+    // 2026-07-28 审核 H-13：clearError 实现（避免 PestDiseaseDictPage 调用时报 TypeError）
+    clearError: () => set({ error: null }),
 
     fetchNextCode: async (type) => {
       // 2026-07-16：后端 middleware 已转 camelCase（response.nextCode），但兼容老版本 fallback snake_case
