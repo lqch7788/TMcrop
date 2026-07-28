@@ -74,6 +74,16 @@ const buildTreeNode = (
   let childCount = 0;
   let isRecorded = false;
 
+  // 计算节点 key（统一在函数顶部声明，供各级分支与返回语句共享）
+  // 2026-07-28 修复：将此声明从函数末尾上移至此，避免 subVariety1 分支 line 306 引用 key 时触发 TDZ（Cannot access 'key' before initialization）
+  const key = level === 'category'
+    ? code
+    : level === 'type'
+    ? `${path.categoryCode}-${code}`
+    : level === 'variety'
+    ? `${path.categoryCode}-${path.typeCode}-${code}`
+    : `${path.categoryCode}-${path.typeCode}-${path.varietyCode}-${code}`;
+
   if (level === 'category') {
     // 类别节点 - 构建类型子节点（预定义 + 用户扩展）
     const category = produceCategories.find(c => c.code === code as ProduceCategoryCode);
@@ -323,14 +333,7 @@ const buildTreeNode = (
     isRecorded = recordedVarieties.length > 0;
   }
 
-  const key = level === 'category'
-    ? code
-    : level === 'type'
-    ? `${path.categoryCode}-${code}`
-    : level === 'variety'
-    ? `${path.categoryCode}-${path.typeCode}-${code}`
-    : `${path.categoryCode}-${path.typeCode}-${path.varietyCode}-${code}`;
-
+  // key 已在函数顶部声明，此处不再重复
   return {
     key,
     name,
