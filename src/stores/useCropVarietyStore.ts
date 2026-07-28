@@ -88,9 +88,9 @@ export const useCropVarietyStore = create<CropVarietyState>()(
 
     loadVarietyOptions: async () => {
       try {
-        // 清空现有数据，强制从API重新加载（避免API的旧数据含重复）
-        set({ items: [], varietyOptions: [], categoryOptions: [] });
-        await get().loadItems();
+        // 2026-07-28 修复：不再清空 items（之前 `set({ items: [], ... })` 会导致 UI 闪烁空数据，
+        // 也是"新增/编辑/删除后列表和树形图不同步"的根因之一）。
+        // 改为只读取已有 items 构建下拉选项（不触发新的 API 请求）
         const items = get().items;
         // 构建品种选项
         const varietyOptions: CropVarietyOption[] = items
