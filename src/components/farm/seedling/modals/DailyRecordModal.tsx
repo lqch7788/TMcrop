@@ -813,10 +813,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
               <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                 <span>▼ 数量统计</span>
                 <span className="text-xs text-gray-500 font-normal">
-                  {(formData.motherLossCount || 0) > 0 ? '母株损耗 ' + formData.motherLossCount : ''}
-                  {(formData.replantCount || 0) > 0 ? ' 补苗 ' + formData.replantCount : ''}
-                  {(formData.expandedPlantCount || 0) > 0 ? ' 小苗产出 ' + formData.expandedPlantCount : ''}
-                  {(formData.seedlingLossCount || 0) > 0 ? ' 小苗损耗 ' + formData.seedlingLossCount : ''}
+                  {/* 2026-07-28 审核 H-7：原读 motherLossCount/replantCount/expandedPlantCount/seedlingLossCount 是死字段从未被赋值，改读实际输入字段（按模式区分母株损耗） */}
+                  {(isMotherMode && (formData.survivalCountChange || 0) > 0) ? '母株损耗 ' + formData.survivalCountChange : ''}
+                  {(formData.replantChange || 0) > 0 ? ' 补苗 ' + formData.replantChange : ''}
+                  {(formData.runnerIncreaseCount || 0) > 0 ? ' 小苗产出 ' + formData.runnerIncreaseCount : ''}
+                  {(formData.lossCountChange || 0) > 0 ? ' 小苗损耗 ' + formData.lossCountChange : ''}
                 </span>
               </summary>
               {/* 2026-06-28：内部 4 列布局 — 1:多 模式 4 字段一行（母株损耗/补苗/小苗产出/小苗损耗 — 母株池先排，再小苗池）；1:1 模式 2 字段（补苗/小苗损耗） */}
