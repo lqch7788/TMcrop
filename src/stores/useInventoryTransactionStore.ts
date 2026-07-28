@@ -101,8 +101,9 @@ interface InventoryTransactionState {
 
   setQuery: (q: Partial<OutboundQuery>) => void;
   loadOutbound: (q?: Partial<OutboundQuery>) => Promise<void>;
+  // 2026-07-28 审核 M：清空 error 状态（OutboundRecordsPage 显示错误后调用）
+  clearError: () => void;
   addTransaction: (payload: Partial<OutboundRow>) => Promise<OutboundRow | null>;
-  // 2026-07-15：删除单条版 deleteTransaction（死代码 — UI 只用批量版 deleteTransactions）
   /** 批量删除（V2.1 铁律：写操作走 Store action，自动 notifyChange 跨页刷新） */
   deleteTransactions: (ids: string[]) => Promise<{ success: boolean; deletedCount: number; error?: string }>;
 }
@@ -171,12 +172,6 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     }
   },
 
-  deleteTransaction: async (_id) => {
-    // 2026-07-15：保留接口（部分外部代码可能引用）但标记为 deprecated，
-    // 实际删除走 deleteTransactions 批量版（含跨页 notifyChange 刷新）
-    throw new Error('请使用 deleteTransactions 批量删除');
-  },
-
   deleteTransactions: async (ids) => {
     if (!ids || ids.length === 0) {
       return { success: false, deletedCount: 0, error: '未选择任何记录' };
@@ -201,8 +196,17 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
       const { useInventoryStore } = await import('./useInventoryStore');
       useInventoryStore.getState().notifyChange();
     }
-    return deletedCount > 0
-      ? { success: true, deletedCount }
-      : { success: false, deletedCount: 0, error: lastError };
+    // 2026-07-28 审核 H-9：区分全部成功 / 部分成功（含失败原因） / 全部失败，避免静默吞错
+    const skippedCount = ids.length - deletedCount;
+    if (deletedCount > 0 && skippedCount === 0) {
+      return { success: true, deletedCount };
+    }
+    if (deletedCount > 0 && skippedCount > 0) {
+      return { success: true, deletedCount, skippedCount, error: lastError };
+    }
+    return { success: false, deletedCount: 0, error: lastError };
   },
+
+  // 2026-07-28 审核 M：clearError 实现
+  clearError: () => set({ error: null }),
 }));
