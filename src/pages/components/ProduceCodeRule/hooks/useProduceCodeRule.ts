@@ -97,9 +97,10 @@ export function useProduceCodeRule() {
     categoryCode: string,
     typeCode?: string,
     subCode?: string,
-    currentName?: string
+    currentName?: string,
+    subVariety1Code?: string // 2026-07-28：subVariety1 编辑所需的代码字段
   ) => {
-    setEditingCell({ type, categoryCode, typeCode, subCode });
+    setEditingCell({ type, categoryCode, typeCode, subCode, subVariety1Code });
     setEditValue(currentName || '');
   }, []);
 
@@ -127,6 +128,16 @@ export function useProduceCodeRule() {
             ...type,
             subCategories: type.subCategories.map(sub => {
               if (sub.code !== editingCell.subCode) return sub;
+              // 2026-07-28：扩展支持 subVariety1 编辑（编辑"品种（3位数字）"层）
+              if (editingCell.type === 'subVariety1' && sub.subVarieties) {
+                return {
+                  ...sub,
+                  subVarieties: sub.subVarieties.map(sv => {
+                    if (sv.code !== editingCell.subVariety1Code) return sv;
+                    return { ...sv, name: editValue.trim() };
+                  })
+                };
+              }
               return { ...sub, name: editValue.trim() };
             })
           };

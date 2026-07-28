@@ -20,7 +20,8 @@ export const DEFAULT_CATEGORIES = initialCategories;
 export const getTypesByCategory = getProduceTypesByCategory;
 
 /** 编辑单元格类型 */
-export type EditCellType = 'category' | 'type' | 'sub';
+// 2026-07-28：增加 'subVariety1' 支持编辑"品种（3位数字）"层（ProduceCodeRuleTable 展开 subVariety 行的渲染）
+export type EditCellType = 'category' | 'type' | 'sub' | 'subVariety1';
 
 /** 编辑状态 */
 export interface EditingCell {
@@ -28,6 +29,7 @@ export interface EditingCell {
   categoryCode: string;
   typeCode?: string;
   subCode?: string;
+  subVariety1Code?: string; // 2026-07-28：subVariety1 编辑所需的代码字段
 }
 
 /** 添加类型弹窗状态 */

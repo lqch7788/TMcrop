@@ -168,21 +168,25 @@ export function VarietyTreeNode({
       onSelect(node.recordedVariety);
     } else if (node.level === 'subVariety1' && node.isRecorded) {
       const { categoryCode, typeCode, varietyCode, subVariety1Code, subVariety1Name } = node.path;
+      // 2026-07-28 修复：使用真实 recordedVariety 的 cropCode（数据库原值），不再用 path 字段拼接
+      // 之前用 path.subVariety1Code 拼接可能导致与数据库实际 cropCode 不一致
+      // （如 path.subVariety1Code='000' 但数据库 crop_code='FR01011000' 时拼接出 FR0101000）
+      const recorded = node.recordedVariety;
       const mockVariety: CropVariety = {
-        id: node.key,
-        cropCode: `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || node.code}`,  // 2026-07-27：9 位编码（去掉原 detail 00）
+        id: recorded?.id || node.key,
+        cropCode: recorded?.cropCode || `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || node.code}`,
         categoryCode,
         categoryName: node.path.categoryName,
         typeCode,
         typeName: node.path.typeName,
         varietyCode,
-        subVariety1Code: subVariety1Code || node.code,
-        subVariety1Name: subVariety1Name || node.name,
-        varietyName: node.path.varietyName,
-        alias: [],
+        subVariety1Code: recorded?.subVariety1Code || (subVariety1Code || node.code),
+        subVariety1Name: recorded?.subVariety1Name || (subVariety1Name || node.name),
+        varietyName: recorded?.varietyName || node.path.varietyName,
+        alias: recorded?.alias || [],
         status: 'active',
-        createTime: '',
-        updateTime: ''
+        createTime: recorded?.createTime || '',
+        updateTime: recorded?.updateTime || ''
       };
       onSelect(mockVariety);
     }

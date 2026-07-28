@@ -338,15 +338,20 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
       // 通过 Store 添加品种
       // 2026-07-27：检查返回值 — addItem 抛错时（409 Conflict 等）不能继续 onSuccess
+      // 2026-07-28 修复：subVariety1Code 必须从 cropCode 末尾提取，否则数据库存的 cropCode 与
+      // formData.subVariety1Code 错位，前端表格再次拼接显示时会与数据库 cropCode 不一致
+      // （拼接用 subVariety1Code='000' 补全，导致多条记录都显示成同一编码）
+      const submittedSub1 = formData.subVariety1Code
+        || (cropCode && cropCode.length >= 9 ? cropCode.slice(-3) : '');
       const result = await store.addItem({
-        cropCode: cropCode,           // 作物编码（9位，数据库NOT NULL必填）
+        cropCode: cropCode,           // 作物编码（9位或11位，数据库NOT NULL必填）
         categoryCode: formData.categoryCode as any,
         categoryName: formData.categoryName,
         typeCode: formData.typeCode,
         typeName: formData.typeName,
         varietyCode: formData.varietyCode,
         varietyName: formData.varietyName,
-        subVariety1Code: formData.subVariety1Code || undefined,
+        subVariety1Code: submittedSub1 || undefined,
         subVariety1Name: formData.subVariety1Name || undefined,
         alias: parseAlias(formData.alias),
         image: formData.image || undefined,
