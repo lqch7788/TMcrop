@@ -158,8 +158,11 @@ router.delete('/departments/:id', (req, res) => {
 router.get('/warehouses', (req, res) => {
   try {
     const db = getDatabase();
+    // 2026-07-28 修复：补 SELECT manager_id, manager_name —— 之前 GET 漏字段，
+    // 前端保存 "负责人" 后列表仍显示 '-' （PUT 写盘成功但 GET 不返回该字段）
     const result = db.exec(`
-      SELECT id, oid, name, code, location, capacity, current_stock, warehouse_type, status, created_at
+      SELECT id, oid, name, code, location, capacity, current_stock,
+             manager_id, manager_name, warehouse_type, status, created_at
       FROM warehouses
       WHERE status = 'active'
       ORDER BY code
