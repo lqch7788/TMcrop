@@ -102,6 +102,15 @@ router.post('/', (req: Request, res: Response) => {
     // 修复前端查重只看 localStorage + 多用户并发写入导致 crop_code 冲突
     const cropCode = req.body.crop_code;
     if (cropCode) {
+      // 2026-07-28 修复：新增 9 位长度校验，杜绝老版本写入的 10/11 位编码
+      // （旧 generateProduceCode 老循环无 MAX_SUB 上限，候选 ≥1000 时 padStart 不截断）
+      if (typeof cropCode !== 'string' || cropCode.length !== 9) {
+        res.status(400).json({
+          success: false,
+          error: `作物编码长度必须为 9 位（当前 ${cropCode.length} 位：${cropCode}）`,
+        });
+        return;
+      }
       const db0 = getDatabase();
       const stmt0 = db0.prepare('SELECT id, variety_name FROM crop_varieties WHERE crop_code = ?');
       stmt0.bind([cropCode]);
@@ -196,6 +205,16 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     const db = getDatabase();
+
+    // 2026-07-28 修复：PUT 时也校验 crop_code 长度（防止通过更新接口改写成 10/11 位）
+    if (updates.crop_code !== undefined) {
+      if (typeof updates.crop_code !== 'string' || updates.crop_code.length !== 9) {
+        return res.status(400).json({
+          success: false,
+          error: `作物编码长度必须为 9 位（当前 ${typeof updates.crop_code === 'string' ? updates.crop_code.length : 'N/A'} 位）`,
+        });
+      }
+    }
 
     // 只允许更新 crop_varieties 表中存在的字段
     const allowedFields = [
@@ -792,6 +811,12 @@ router.post('/bulk', (req: Request, res: Response) => {
     for (const item of varieties) {
       const cropCode = item.crop_code || item.cropCode;
       if (!cropCode) continue;
+      // 2026-07-28 修复：批量导入也强制 9 位长度校验
+      if (typeof cropCode !== 'string' || cropCode.length !== 9) {
+        console.warn(`[bulk import] 跳过非 9 位编码: ${cropCode} (长度 ${typeof cropCode === 'string' ? cropCode.length : 'N/A'})`);
+        skipped++;
+        continue;
+      }
       if (existingCodes.has(cropCode)) {
         skipped++;
         continue;

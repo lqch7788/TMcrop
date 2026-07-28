@@ -58,7 +58,7 @@ export function AddCropVarietyModal({
 const store = useCropVarietyStore();
 const addItem = useCropVarietyStore((s) => s.addItem);
 const getVarietyByCode = useCropVarietyStore((s) => s.getVarietyByCode);
-const getMaxSubVariety1Code = useCropVarietyStore((s) => s.getMaxSubVariety1Code);
+const getNextSubVariety1Code = useCropVarietyStore((s) => s.getNextSubVariety1Code);
 const loadItems = useCropVarietyStore((s) => s.loadItems);
 const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
@@ -224,10 +224,9 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
   };
 
   // 生成编码（9位：类别+类型+作物+子品种）
-  // 2026-07-27 v3：服务端 409 兜底 + 前端循环递增
-  // - 优先用 store.items（已从后端 DB 加载）的最大子品种序号 + 1 作为起点
-  // - 循环确认新编码不在 store 里（处理本地缓存短暂不一致）
-  // - 即便前端检查全过，后端也会用 409 拦截重复 INSERT（race 保护）
+  // 2026-07-28 v4：严格流水号顺序（最低可用序号），不跳号、不参考其它品种
+  //  - store.getNextSubVariety1Code 已返回"最低可用"的 3 位流水号
+  //  - 即便前端检查全过，后端也会用 409 拦截重复 INSERT（race 保护）
   const handleGenerateCode = async () => {
     if (!formData.categoryCode || !formData.typeCode || !formData.varietyCode) {
       showAlert('请先选择完整的类别、类型和作物');
@@ -245,25 +244,30 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
       }
     }
 
-    // 从 store.items 中找最大子品种序号
-    const maxSub = getMaxSubVariety1Code(categoryCode, typeCode, varietyCode);
-    let candidate = parseInt(maxSub, 10) + 1;
+    // 2026-07-28 v4：从 store 拿「下一个」subVariety1Code（已按流水号顺序+填补间隙算好）
+    const nextSub = getNextSubVariety1Code(categoryCode, typeCode, varietyCode);
+    if (nextSub === 'FULL') {
+      showAlert('生成失败：该作物品种下的可用子品种序号已用尽（1-998 全部占用），无法继续新增');
+      return;
+    }
+    let candidate = parseInt(nextSub, 10);
 
-    // 循环找无冲突的子品种序号（前端预检）
-    // 上限 999 次（实际不可能达到，但提供安全网）
+    // 2026-07-28 硬上限 998（999 保留给"其他"占位）
+    const MAX_SUB_CODE = 998;
+
+    // 循环处理并发竞态（race protection）—— 正常单用户流程下首次即通过
     let attempts = 0;
-    while (attempts < 999) {
+    while (candidate <= MAX_SUB_CODE && attempts < 999) {
       const sub = String(candidate).padStart(3, '0');
       const code = generateCropCode(categoryCode, typeCode, varietyCode, sub);
-      // 在前端 store 中查冲突（store.items 已含后端 DB 全量）
+      // store.items 已含后端 DB 全量；查冲突即覆盖 race case
       const existing = getVarietyByCode(code);
       if (!existing) {
-        // 找到无冲突的编码
         setCropCode(code);
         setCodeGenerated(true);
         setDuplicateCheckResult({
           hasDuplicate: false,
-          message: `已自动生成无重码编码（子品种序号 ${sub}）`,
+          message: `已自动按流水号顺序生成编码（子品种序号 ${sub}）`,
         });
         return;
       }
@@ -271,8 +275,8 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
       attempts += 1;
     }
 
-    // 极端情况：999 次都冲突（不可能但兜底）
-    showAlert('生成失败：连续 999 次都遇到冲突，请联系管理员检查作物编码库');
+    // 极端情况兜底
+    showAlert('生成失败：可用子品种序号已用尽（1-998）或并发冲突频繁，请联系管理员检查作物编码库');
   };
 
   // 查重（2026-07-27 修复：改用 store.getVarietyByCode — store.items 已从后端 API 加载，不再走 localStorage）
@@ -338,11 +342,13 @@ const isInitialized = useCropVarietyStore((s) => s.isInitialized);
 
       // 通过 Store 添加品种
       // 2026-07-27：检查返回值 — addItem 抛错时（409 Conflict 等）不能继续 onSuccess
-      // 2026-07-28 修复：subVariety1Code 必须从 cropCode 末尾提取，否则数据库存的 cropCode 与
-      // formData.subVariety1Code 错位，前端表格再次拼接显示时会与数据库 cropCode 不一致
-      // （拼接用 subVariety1Code='000' 补全，导致多条记录都显示成同一编码）
-      const submittedSub1 = formData.subVariety1Code
-        || (cropCode && cropCode.length >= 9 ? cropCode.slice(-3) : '');
+      // 2026-07-28 v2 修复：subVariety1Code 必须从 cropCode 末尾提取（数据库原值），优先级高于 formData.subVariety1Code
+      // 之前写法：formData.subVariety1Code || cropCode.slice(-3) ——
+      // 因为 formData.subVariety1Code 是用户输入框硬编码 '000'（handler 强制传 '000'），永远是 truthy，
+      // 导致新生成的 cropCode='FR0101010' 时入库 sub_variety1_code='000'（与 cropCode 错位）
+      // — 详情页展示 000、列表页展示 FR0101010，用户视角对不上
+      // 修正：cropCode.slice(-3) 作为唯一可信来源（9 位规则下），formData.subVariety1Code 不参与决策
+      const submittedSub1 = cropCode && cropCode.length >= 9 ? cropCode.slice(-3) : (formData.subVariety1Code || '');
       const result = await store.addItem({
         cropCode: cropCode,           // 作物编码（9位或11位，数据库NOT NULL必填）
         categoryCode: formData.categoryCode as any,
