@@ -222,7 +222,7 @@ export default function WarehouseManagement() {
           <span className="text-xl font-bold text-green-600 tabular-nums">{stats.active}</span>
         </div>
         <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
-          <span className="text-xs text-blue-600">总容量</span>
+          <span className="text-xs text-blue-600">总容量 (m³)</span>
           <span className="text-xl font-bold text-blue-600 tabular-nums">{stats.totalCapacity.toLocaleString()}</span>
         </div>
         <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
@@ -231,10 +231,10 @@ export default function WarehouseManagement() {
         </div>
       </div>
 
-      {/* 新增仓库（2026-07-28 v6：去掉搜索框，按钮按 UI 库标准：variant=default / size=default，不自定义渐变）*/}
+      {/* 新增仓库（2026-07-28 v7：按钮严格按 UI 库惯例 — size=sm h-8、icon 不带 mr-*）*/}
       <div className="flex items-center justify-end">
-        <Button variant="default" size="default" onClick={openCreateModal}>
-          <Plus className="w-4 h-4 mr-1.5" />
+        <Button size="sm" onClick={openCreateModal}>
+          <Plus className="w-4 h-4" />
           新增仓库
         </Button>
       </div>
@@ -260,7 +260,7 @@ export default function WarehouseManagement() {
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">仓库类型</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">位置</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">负责人</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">容量</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">容量 <span className="normal-case">(m³)</span></th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">使用率</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">启用状态</th>
                   <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap">操作</th>
@@ -298,7 +298,7 @@ export default function WarehouseManagement() {
                       </td>
                       {/* 容量（独立列） */}
                       <td className="px-3 py-3 text-gray-700 border-r border-gray-100 whitespace-nowrap">
-                        {warehouse.capacity != null ? `${warehouse.capacity} m²` : '-'}
+                        {warehouse.capacity != null ? `${warehouse.capacity} m³` : '-'}
                       </td>
                       {/* 使用率（独立列，含进度条） */}
                       <td className="px-3 py-3 border-r border-gray-100">
@@ -315,7 +315,7 @@ export default function WarehouseManagement() {
                         </div>
                         <div className="text-[11px] text-gray-400 mt-1 flex justify-between">
                           <span>当前 {warehouse.currentStock || 0}</span>
-                          <span>总量 {warehouse.capacity || 0}</span>
+                          <span>总量 {warehouse.capacity || 0} m³</span>
                         </div>
                       </td>
                       {/* 启用状态（独立列，徽章） */}
@@ -426,11 +426,12 @@ export default function WarehouseManagement() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">容量</Label>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">容量 (m³)</Label>
                   <Input
                     type="number"
                     value={newWarehouse.capacity || 0}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: parseInt(e.target.value) || 0 })}
+                    placeholder="如：500（立方米）"
                   />
                 </div>
                 <div>
