@@ -123,23 +123,19 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   fetchItems: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
+      // 2026-07-28 审核 H-12：改用通用 forEach 循环，避免硬编码字段（新增筛选字段被静默丢弃）
       const params = new URLSearchParams();
-      if (filters.recordType) params.append('recordType', filters.recordType);
-      if (filters.cropName) params.append('cropName', filters.cropName);
-      if (filters.greenhouseName) params.append('greenhouseName', filters.greenhouseName);
-      if (filters.operatorName) params.append('operatorName', filters.operatorName);
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
-      if (filters.page) params.append('page', filters.page);
-      if (filters.pageSize) params.append('pageSize', filters.pageSize);
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v != null && v !== '') params.append(k, String(v));
+      });
 
       const url = `/watering${params.toString() ? `?${params}` : ''}`;
       // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包 .data，信任其结果
       const items = (await enhancedApiClient.get(url)) as WateringData[];
       set({ items, isLoading: false });
     } catch (err: any) {
+      // 2026-07-28 审核 H-11：与 useFertilizerStore 对齐，只 setError 不 throw（页面 useEffect 统一弹 toast，否则会在控制台报 unhandled promise rejection）
       set({ isLoading: false, error: err?.message || '加载浇水记录失败' });
-      throw err;
     }
   },
 
@@ -176,16 +172,21 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
   },
 
   deleteItems: async (ids: string[]) => {
-    // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包，return 结构化结果而非 raw
-    const result = (await enhancedApiClient.post('/watering/batch-delete', { ids })) as {
-      deleted?: number; skipped?: number;
-    };
-    // 刷新列表（删除的可能不在当前 items 中）
-    await get().fetchItems();
-    return {
-      deleted: result?.deleted ?? 0,
-      skipped: result?.skipped ?? 0,
-    };
+    try {
+      // 2026-07-28 审核 H-10：加 try/catch，与 useFertilizerStore.deleteItems 对齐，避免错误冒泡
+      // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包，return 结构化结果而非 raw
+      // 2026-07-28 审核 C-4：移除内部 fetchItems()，避免丢失筛选条件。改由调用方（FertilizerPage）显式按筛选 refetch，与 useFertilizerStore 对齐
+      const result = (await enhancedApiClient.post('/watering/batch-delete', { ids })) as {
+        deleted?: number; skipped?: number;
+      };
+      return {
+        deleted: result?.deleted ?? 0,
+        skipped: result?.skipped ?? 0,
+      };
+    } catch (err: any) {
+      set({ error: err?.message || '批量删除浇水记录失败' });
+      return { deleted: 0, skipped: ids.length };
+    }
   },
 
   generateCode: async () => {

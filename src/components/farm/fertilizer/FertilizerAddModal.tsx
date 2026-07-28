@@ -52,6 +52,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
   const areaRef = useRef<HTMLDivElement>(null);
 
   // 加载数据
+  // 2026-07-28 审核 M：Zustand selector 返回的 store 引用稳定，eslint-disable 即可
   useEffect(() => { if (isOpen) {
     plantingStore.loadItems?.();
     seedlingStore.loadItems?.();
@@ -62,6 +63,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
     setFertilizerCode('');
     setSelectedAreas([]);
     setFertilizerPool([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }}, [isOpen]);
 
   // 点击外部关闭

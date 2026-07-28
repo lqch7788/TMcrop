@@ -57,6 +57,7 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
   const areaRef = useRef<HTMLDivElement>(null);
 
   // 默认时间 = 当前本地时间（datetime-local 格式 YYYY-MM-DDTHH:mm）
+  // 2026-07-28 审核 M：加 eslint-disable（Zustand selector 返回的 store 引用稳定）
   useEffect(() => {
     if (!isOpen) return;
     plantingStore.loadItems?.();
@@ -68,6 +69,7 @@ export function WaterAddModal({ isOpen, onClose, onSaved }: {
     setWaterCode('');
     setSelectedAreas([]);
     setWateringRows([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]); // 仅依赖 isOpen；loadItems 来自稳定 Store 引用
 
   // 编号生成（失败时不再静默吞错）
