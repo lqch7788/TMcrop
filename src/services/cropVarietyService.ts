@@ -11,7 +11,7 @@
  * 替代方案：
  * - CRUD 操作 → `useCropVarietyStore`（通过 `apiCropVarietyService` 调后端）
  * - 类别/类型/作物选项 → `apiCropVarietyExtensionService`
- * - 编码生成 → `store.getMaxSubVariety1Code()` + `generateCropCode()`
+ * - 编码生成 → `store.getNextSubVariety1Code()` + `generateCropCode()`
  *
  * 迁移进度：20 个文件仍在依赖此文件，将在后续 sprint 逐步替换。
  * 当前阶段：保留兼容（@deprecated）但不写入新代码。

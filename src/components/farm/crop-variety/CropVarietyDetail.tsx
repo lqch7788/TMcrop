@@ -26,6 +26,14 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
     );
   }
 
+  // 2026-07-28 防御：9 位合法编码时优先从 cropCode 末尾 3 位切片，作为 subVariety1Code 的可信值
+  // 修复旧 fix 留下的脏数据 —— DB 里 sub_variety1_code 字段可能是历史硬编码 '000'，
+  // 而 crop_code 已经是正确的 'FR0101010'。此时详情页"品种(3位数字)"应显示 010 而非 000
+  // （与列表、树形、总览页面里的 cropCode 原值保持一致）
+  const safeSubVariety1Code = (variety.cropCode && variety.cropCode.length === 9)
+    ? variety.cropCode.slice(-3)
+    : variety.subVariety1Code;
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden h-full flex flex-col">
       {/* 头部 */}
@@ -119,7 +127,7 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                 <Label className="text-xs text-blue-600">品种（3位数字）</Label>
                 <p className="text-blue-900 font-medium">
-                  <span className="font-mono text-blue-500 mr-2">{variety.subVariety1Code}</span>
+                  <span className="font-mono text-blue-500 mr-2">{safeSubVariety1Code}</span>
                   {variety.subVariety1Name}
                 </p>
               </div>
@@ -130,7 +138,7 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               <p className="text-blue-900 font-bold text-lg font-mono">
                 {variety.cropCode}
                 <span className="text-xs text-gray-500 font-normal ml-2">
-                  {variety.categoryCode}(类别) + {variety.typeCode}(类型) + {variety.varietyCode}(作物) + {variety.subVariety1Code}(品种)
+                  {variety.categoryCode}(类别) + {variety.typeCode}(类型) + {variety.varietyCode}(作物) + {safeSubVariety1Code}(品种)
                 </span>
               </p>
             </div>
