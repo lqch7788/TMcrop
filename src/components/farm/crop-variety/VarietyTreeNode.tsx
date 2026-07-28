@@ -150,14 +150,25 @@ export function VarietyTreeNode({
   };
 
   // 构建完整9位作物编码显示（2026-07-27：按新规则 类别(2字母) + 类型(2数字) + 作物(2数字) + 品种(3数字)）
+  // 2026-07-28 修复：优先使用真实 recordedVariety.cropCode（数据库原值），与表格模式共用同一份字符串
+  // 之前用 path.subVariety1Code 拼接：表格用 DB 原值（'FR0101009'）≠ 树形拼接值（'FR0101000'），
+  // 历史遗留数据 sub_variety1_code 列与 crop_code 末尾 3 位不一致时双视图必然不同步
   const getFullCropCode = (): string => {
-    // subVariety1 叶子节点：拼出完整 9 位编码
-    if (node.level === 'subVariety1') {
+    if (node.level === 'subVariety1' || node.level === 'detail') {
+      // 1. 节点自身有 recordedVariety（detail 节点）
+      if (node.recordedVariety?.cropCode) {
+        return node.recordedVariety.cropCode;
+      }
+      // 2. subVariety1 节点无 recordedVariety 时，从首个 detail 子节点取（树形子级）
+      const childWithCode = node.children?.find(c => c.recordedVariety?.cropCode);
+      if (childWithCode?.recordedVariety?.cropCode) {
+        return childWithCode.recordedVariety.cropCode;
+      }
+      // 3. 兜底：纯预定义节点无 recordedVariety 时才用 path 拼接
       const { categoryCode, typeCode, varietyCode, subVariety1Code } = node.path;
       const sub1 = subVariety1Code || node.code || '000';
       return `${categoryCode}${typeCode}${varietyCode}${sub1}`;
     }
-    // detail 叶子节点（历史 11 位规则下的最细分品种，新规则下不显示 — 留 - 占位）
     return '-';
   };
 
