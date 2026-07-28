@@ -192,7 +192,10 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         if (v.cropCode && v.cropCode.startsWith(prefix) && v.cropCode.length === 9) {
           const sub = v.cropCode.slice(6, 9); // 后 3 位 = 子品种序号 (slice(6,9) 对应 prefix 长度 6 = 2字母+2数字+2数字)
           const n = parseInt(sub, 10);
-          if (!isNaN(n) && n > maxCode) maxCode = n;
+          // 2026-07-28：跳过 999 占位码（预定义的"其他XX"，如"其他草莓"=999）。
+          // 如果不跳过，candidate = 999+1 = 1000，String(1000).padStart(3,'0')='1000'（4 位），
+          // generateCropCode 会拼出 10 位编码（FR01011000），破坏 9 位规则
+          if (!isNaN(n) && n < 999 && n > maxCode) maxCode = n;
         }
       }
       return String(maxCode).padStart(3, '0');

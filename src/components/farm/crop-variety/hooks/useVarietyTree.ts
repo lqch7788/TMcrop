@@ -17,11 +17,9 @@ import { getCategoryExtensions, getTypeExtensions, getVarietyExtensions, getSubV
 
 /**
  * 将已录入品种转换为以编码前缀分组的Map
- * key: 前8位编码 (category+type+variety+subVariety1)
- * value: 对应的已录入品种列表
- */
-/**
- * 将已录入品种转换为以编码前缀分组的Map
+ * 2026-07-28 修复：用完整的 crop_code 字段作为 key（唯一），不再用 categoryCode+typeCode+varietyCode+subVariety1Code 拼接
+ * 之前拼接 key 在 sub_variety1_code='000' 等场景下，多条 crop_code 不同的记录（如 FR0101009 香野 vs FR01011000 梦之娇）
+ * 拼成同一个 key，导致 map.set/map.get 互相覆盖，树形图只能看到一条
  * @param varieties 品种数据源（Store 或 localStorage）
  */
 const buildRecordedVarietyMap = (varieties?: CropVariety[]): Map<string, CropVariety[]> => {
@@ -29,8 +27,9 @@ const buildRecordedVarietyMap = (varieties?: CropVariety[]): Map<string, CropVar
   const map = new Map<string, CropVariety[]>();
 
   for (const v of data) {
-    // 构建前8位key（category+type+variety+subVariety1）
-    const key = `${v.categoryCode}${v.typeCode}${v.varietyCode}${v.subVariety1Code || '000'}`;
+    // 用 crop_code 作为 key（数据库原值，9 位唯一）
+    if (!v.cropCode) continue;
+    const key = v.cropCode;
     if (!map.has(key)) {
       map.set(key, []);
     }
@@ -42,6 +41,7 @@ const buildRecordedVarietyMap = (varieties?: CropVariety[]): Map<string, CropVar
 
 /**
  * 判断某路径下是否有已录入品种
+ * 2026-07-28：recordedMap 已改用完整 crop_code 作为 key，所以前缀匹配即可
  */
 const hasRecordedVariety = (
   categoryCode: string,
@@ -51,8 +51,12 @@ const hasRecordedVariety = (
   recordedMap?: Map<string, CropVariety[]>
 ): boolean => {
   if (!recordedMap) return false;
-  const key = `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || '000'}`;
-  return recordedMap.has(key) && recordedMap.get(key)!.length > 0;
+  const prefix = `${categoryCode}${typeCode}${varietyCode}${subVariety1Code || '000'}`;
+  // 用 startsWith 前缀匹配（兼容 9 位和 10 位 crop_code）
+  for (const key of recordedMap.keys()) {
+    if (key.startsWith(prefix)) return true;
+  }
+  return false;
 };
 
 /**
@@ -159,7 +163,7 @@ const buildTreeNode = (
     // 确保有子品种时展开箭头显示
     if (children.length > 0) hasChildren = true;
   } else if (level === 'variety') {
-    // 品种节点 - 构建子品种1子节点（预定义 + 用户扩展）
+    // 品种节点 - 构建子品种1子节点（预定义 + 用户扩展 + 2026-07-28 修复：已录入但未在预定义/extensions 中的）
     const category = produceCategories.find(c => c.code === path.categoryCode);
     if (category) {
       const types = getProduceTypesByCategory(category.code);
@@ -191,6 +195,7 @@ const buildTreeNode = (
         for (const extSub of extensionSubVarieties) {
           // 跳过已存在的预定义子品种
           if (existingSubCodes.has(extSub.sub_variety1_code)) continue;
+          existingSubCodes.add(extSub.sub_variety1_code);
           const subNode = buildTreeNode(
             'subVariety1',
             extSub.sub_variety1_name,
@@ -201,6 +206,39 @@ const buildTreeNode = (
           // 标记为扩展节点
           (subNode as any).isExtension = true;
           (subNode as any).extensionId = extSub.id;
+          children.push(subNode);
+          hasChildren = true;
+          childCount++;
+        }
+
+        // 2026-07-28 修复：遍历 recordedMap 找到该 variety 下所有已录入的 subVariety1，
+        // 对每个未在预定义/extensions 中的 code 创建子节点（解决"天使8号"、"梦之娇"、"越王"等
+        // 不在预定义 subVariety 范围、不在 extensions 表，但仍已录入的品种在树形图中消失的问题）
+        // 2026-07-28 v2：buildRecordedVarietyMap 已改用 crop_code 作为 key，
+        // 所以 key 前 9 位 = categoryCode(2) + typeCode(2) + varietyCode(2) + subVariety1Code(3)
+        const varietyPrefix = `${path.categoryCode}${path.typeCode}${code}`;
+        for (const [mapKey, recordedVarieties] of recordedMap.entries()) {
+          if (!mapKey.startsWith(varietyPrefix)) continue;
+          // crop_code 前 9 位：6 位 prefix + 3 位 subVariety1Code
+          // 但是部分历史数据 crop_code 是 10 位（如 FR01011000），前 9 位是 'FR0101100'（不是合法 subVariety1Code）
+          // 兼容处理：取 crop_code 的第 7-9 位作为 subVariety1Code（3 位），剩余 crop_code 作为 detailKey
+          const subCodeFromKey = mapKey.slice(6, 9);
+          // 跳过已经在预定义/extensions 中的
+          if (existingSubCodes.has(subCodeFromKey)) continue;
+          // 兼容 9 位和 10 位 crop_code（之前的 length === 9 检查把 10 位的 FR01011000 排除了）
+          if (mapKey.length !== 9 && mapKey.length !== 10) continue;
+          // 用第一条已录入品种作为节点信息（subVariety1Name/extensionId）
+          const rv = recordedVarieties[0];
+          if (!rv) continue;
+          const subName = rv.subVariety1Name || subCodeFromKey;
+          existingSubCodes.add(subCodeFromKey);
+          const subNode = buildTreeNode(
+            'subVariety1',
+            subName,
+            subCodeFromKey,
+            { ...path, subVariety1Code: rv.subVariety1Code || subCodeFromKey, subVariety1Name: subName },
+            recordedMap
+          );
           children.push(subNode);
           hasChildren = true;
           childCount++;
@@ -240,8 +278,15 @@ const buildTreeNode = (
     }
   } else if (level === 'subVariety1') {
     // 子品种1节点 - 构建详细品种子节点（用户录入的）
-    const key = `${path.categoryCode}${path.typeCode}${path.varietyCode}${code}`;
-    const recordedVarieties = recordedMap.get(key) || [];
+    // 2026-07-28 修复：recordedMap 已改用完整 crop_code 作为 key
+    // 所以要遍历 recordedMap 找 categoryCode+typeCode+varietyCode+code（subVariety1Code）前缀匹配的记录
+    const subKeyPrefix = `${path.categoryCode}${path.typeCode}${path.varietyCode}${code}`;
+    const recordedVarieties: CropVariety[] = [];
+    for (const [mapKey, items] of recordedMap.entries()) {
+      if (mapKey.startsWith(subKeyPrefix)) {
+        recordedVarieties.push(...items);
+      }
+    }
 
     // 按detailVarietyCode排序（00, 01, 02...）
     const sortedVarieties = [...recordedVarieties].sort((a, b) => {

@@ -225,13 +225,9 @@ export function CropVarietyTable({
                   onClick={() => onSelect(variety)}
                 >
                   <td className="px-4 py-3 text-sm font-mono text-blue-600 whitespace-nowrap">
-                    {generateCropCode(
-                      variety.categoryCode,
-                      variety.typeCode,
-                      variety.varietyCode,
-                      variety.subVariety1Code,
-                      variety.detailVarietyCode
-                    )}
+                    {/* 2026-07-28 修复：直接用数据库 cropCode 字段（与详情页一致），不再用 generateCropCode 实时拼接
+                        （拼接逻辑会忽略 null 的 subVariety1Code 填 '000'，导致多个不同记录显示成同一编码） */}
+                    {variety.cropCode}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                     <span className="text-gray-400">{variety.categoryName}</span>

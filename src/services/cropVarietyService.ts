@@ -439,7 +439,7 @@ export function generateCropCode(
   typeCode: string,
   varietyCode: string,
   subVariety1Code?: string,
-  _detailVarietyCode?: string  // 2026-07-26: 保留参数兼容性，不再使用
+  _detailVarietyCode?: string  // 2026-07-28：用户明确要求保持 9 位编码，不再拼接 detailVarietyCode
 ): string {
   // 编码结构：类别(2字母) + 类型(2数字) + 作物(2数字) + 品种(3数字) = 9位
   const sub1 = subVariety1Code ? subVariety1Code.padStart(3, '0') : '000';

@@ -31,7 +31,7 @@ interface ProduceCodeRuleTableProps {
   onToggleCategory: (code: string) => void;
   onToggleType: (categoryCode: string, typeCode: string) => void;
   onToggleSub: (categoryCode: string, typeCode: string, subCode: string) => void;
-  onStartEdit: (type: EditingCell['type'], categoryCode: string, typeCode?: string, subCode?: string, currentName?: string) => void;
+  onStartEdit: (type: EditingCell['type'], categoryCode: string, typeCode?: string, subCode?: string, currentName?: string, subVariety1Code?: string) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   onEditValueChange: (value: string) => void;
@@ -328,7 +328,81 @@ export function ProduceCodeRuleTable({
                               <td className="px-4 py-1"></td>
                             </tr>
 
-                            {/* 2026-07-26：删除第5级"详细品种"展开行（编码已改为9位4级） */}
+                            {/* 2026-07-28 修复：补回 subVariety1（"品种（3位数字）"层）展开/编辑/删除行 */}
+                            {isSubExpanded && sub.subVarieties && sub.subVarieties.length > 0 && (
+                              <tr className="bg-emerald-50/40">
+                                <td colSpan={4}></td>
+                                <td colSpan={4} className="px-4 py-1">
+                                  <div className="ml-4 flex flex-col gap-0.5">
+                                    {sub.subVarieties.map((sv) => {
+                                      // 判断当前 subVariety1 是否在编辑态
+                                      const isSvActive =
+                                        editingCell?.type === 'subVariety1' &&
+                                        editingCell?.categoryCode === category.code &&
+                                        editingCell?.typeCode === type.code &&
+                                        editingCell?.subCode === sub.code &&
+                                        editingCell?.subVariety1Code === sv.code;
+
+                                      if (isEditing && isSvActive) {
+                                        return (
+                                          <div key={sv.code} className="flex items-center gap-1">
+                                            <span className="font-mono text-blue-600 text-xs w-12">{sv.code}</span>
+                                            <input
+                                              type="text"
+                                              value={editValue}
+                                              onChange={(e) => onEditValueChange(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') onSaveEdit();
+                                                if (e.key === 'Escape') onCancelEdit();
+                                              }}
+                                              className="w-32 px-2 py-1 border border-emerald-500 rounded text-sm focus:outline-none"
+                                              autoFocus
+                                            />
+                                            <Button variant="ghost" size="icon" onClick={onSaveEdit}>
+                                              <Save className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={onCancelEdit}>
+                                              <X className="w-4 h-4" />
+                                            </Button>
+                                          </div>
+                                        );
+                                      }
+
+                                      return (
+                                        <div key={sv.code} className="flex items-center gap-2 group">
+                                          <span className="font-mono text-blue-600 text-xs w-12">{sv.code}</span>
+                                          {isEditing ? (
+                                            <>
+                                              <span
+                                                className="cursor-pointer hover:text-emerald-600 text-sm"
+                                                onClick={() => onStartEdit('subVariety1', category.code, type.code, sub.code, sv.name, sv.code)}
+                                              >
+                                                {sv.name}
+                                              </span>
+                                              <button
+                                                onClick={() => onStartEdit('subVariety1', category.code, type.code, sub.code, sv.name, sv.code)}
+                                                className="opacity-0 group-hover:opacity-100 p-0.5 text-blue-500 hover:bg-blue-50 rounded transition-opacity"
+                                              >
+                                                <Edit2 className="w-3 h-3" />
+                                              </button>
+                                              <button
+                                                onClick={() => onDeleteSubVariety1(category.code, type.code, sub.code, sv.code)}
+                                                className="text-xs text-red-600 hover:text-red-700 ml-1"
+                                                title="删除品种"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <span className="text-sm text-gray-600">{sv.name}</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
                           </React.Fragment>
                         );
                       })}

@@ -35,6 +35,7 @@ export default function ProduceCodeRule() {
     newCategoryCode,
     newCategoryName,
     // 方法
+    setIsEditing, // 2026-07-28 修复：之前漏解构此 setter，导致"修改规则"按钮 onClick 调用 undefined，状态无法切换
     setShowSaveConfirm,
     setShowCodeRuleInfo,
     setEditingCell,
