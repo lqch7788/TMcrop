@@ -58,9 +58,11 @@ export function ChainTimeline({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 2026-07-28 审核 M：cancelled 标志防止快速切换批次时后发先至覆盖最新响应
+    let cancelled = false;
     if (!batchCode && !instanceId && !seedSourceId && !seedlingId && !plantingId) {
       setItems([]);
-      return;
+      return () => { cancelled = true; };
     }
     setLoading(true);
     setError(null);
@@ -76,9 +78,10 @@ export function ChainTimeline({
     const url = `/summary/chain-timeline?${params.toString()}`;
     enhancedApiClient
       .get<{ items: TimelineItem[]; total: number }>(url)
-      .then((data) => setItems(data.items || []))
-      .catch((e) => setError(String(e?.message || e)))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setItems(data.items || []); })
+      .catch((e) => { if (!cancelled) setError(String(e?.message || e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [batchCode, instanceId, seedSourceId, seedlingId, plantingId, limit]);
 
   if (loading) {

@@ -470,8 +470,13 @@ export default function MaterialFlowPage() {
     const result = await batchDeleteLogs(selectedIds);
     setShowDeleteModal(false);
     cancelSelection();
-    if (!result) showAlert('删除失败，请重试');
-    else loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
+    if (!result) {
+      showAlert('删除失败，请重试');
+      return;
+    }
+    // 2026-07-28 审核 H-8：删除成功后重置 page=1，避免"幽灵页"（最后一页删完停在该页）
+    setPage(1);
+    loadLogs({ page: 1, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
   };
 
   // 点击库存实例ID → 打开库存详情弹窗
@@ -511,17 +516,14 @@ export default function MaterialFlowPage() {
     const filename = `${title}_${today}_${exportSource.length}条.${ext}`;
 
     // 2026-07-21 修复：统一 camelCase 字段名（后端可能返回 snake_case）
+    // 2026-07-28 审核 LOW：合并重复赋值（line 522 与 530 同名覆盖）+ 删除 unit: it.unit || it.unit 恒等赋值
     const exportRows = exportSource.map((it: any) => ({
       ...it,
-      // 统一字段名：优先 camelCase，fallback snake_case
-      flowType: it.flowType || it.flow_type,
       cropName: it.cropName || it.crop_name,
-      sourceCategory: it.sourceCategory || it.source_category,
       totalQty: it.totalQty ?? it.total_qty,
       sourceUnit: it.sourceUnit || it.source_unit,
       flowCount: it.flowCount ?? it.flow_count,
-      unit: it.unit || it.unit,
-      // 翻译
+      // 翻译（覆盖上面的未翻译值）
       flowType: it.flowType || it.flow_type ? labelFlowType(it.flowType || it.flow_type) : it.flowType,
       sourceCategory: it.sourceCategory || it.source_category ? labelCategory(it.sourceCategory || it.source_category) : it.sourceCategory,
     }));

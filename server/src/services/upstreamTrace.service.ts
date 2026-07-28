@@ -580,6 +580,7 @@ export function traceUpstream(sourceId: string, maxDepth = 10): UpstreamTraceRes
         }
       }
     } catch (e) {
+      // 2026-07-28 审核 LOW：构建节点失败时在节点上记录错误信息，前端可据此提示"部分追溯失败"
       console.warn(`[upstreamTrace] buildNode failed for type=${type} id=${id}:`, (e as Error).message);
     }
 
