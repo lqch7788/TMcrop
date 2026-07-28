@@ -20,6 +20,8 @@ import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { FreezeModal } from '../components/farm/inventory/FreezeModal';
 import { showAlert } from '@/lib/dialogService';
+// 2026-07-28 审核 C-2：导入 useToast 修复导出时 toast.success/warning/error ReferenceError
+import { useToast } from '../contexts/ToastContext';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-07-10 P1-1：抽取公共导出函数
 import { exportCsv, exportXlsx } from '@/services/exporters';
@@ -46,6 +48,8 @@ interface BlockingTx {
 }
 
 export default function InventoryV3Page() {
+  // 2026-07-28 审核 C-2：获取 toast 用于导出提示
+  const { toast } = useToast();
   // 持久化数据：list/stats/loading 全部从 useInventoryStore 读取
   const stocks = useInventoryStore((s) => s.items);
   const stats = useInventoryStore((s) => s.stats);
@@ -471,7 +475,7 @@ export default function InventoryV3Page() {
           setDetailModalOpen(false);
           setDetailStock(null);
         }}
-        onNavigateToInstance={(id) => setDetailStock({ instanceId: id } as any)}
+        onNavigateToInstance={(id) => setDetailStock({ instanceId: id } as Partial<InventoryStock> as InventoryStock)}
       />
 
       {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal）

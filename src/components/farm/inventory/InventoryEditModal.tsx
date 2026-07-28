@@ -15,9 +15,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { TextArea } from '@/components/ui';
 import { InventoryStock } from '@/types/inventory';
 import { QUALITY_GRADE_MAP as QUALITY_GRADE_OPTIONS } from '@/constants/cropConstants';
-import { useWarehouseStore } from '@/stores';
+// 2026-07-28 审核 H-4：去掉 enhancedApiClient 直调，改走 Store.action（V2.1 铁律）
+import { useInventoryStore, useWarehouseStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
-import { enhancedApiClient } from '@/lib/apiClient';
 import { DictSelect } from '../../common/settings/DictSelect';
 
 interface InventoryEditModalProps {
@@ -50,6 +50,9 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
   // 仓库列表
   const warehouses = useWarehouseStore((s) => s.warehouses) || [];
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
+
+  // 2026-07-28 审核 H-4：使用 Store 的 updateItem action（触发 notifyChange 跨页刷新）
+  const updateItem = useInventoryStore((s) => s.updateItem);
 
   useEffect(() => {
     if (isOpen && warehouses.length === 0) {
@@ -86,14 +89,13 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
       return;
     }
     try {
-      // 2026-07-21 修复：发送所有可编辑字段（camelCase），后端自动转 snake_case
-      await enhancedApiClient.put<{ id: string }>(`/inventory/${stock.instanceId}`, {
+      // 2026-07-28 审核 H-4：改用 Store 的 updateItem action（自动 notifyChange 跨页刷新 + 乐观更新）
+      const result = await updateItem(stock.instanceId, {
         current_quantity: qty,
         warehouse_id: warehouseId || undefined,
         warehouse_name: warehouseName || undefined,
         grade: grade || undefined,
         remarks: remarks || undefined,
-        // 2026-07-21 补全缺失字段
         unit: unit || undefined,
         variety_name: varietyName || undefined,
         crop_name: cropName || undefined,
@@ -104,8 +106,12 @@ export function InventoryEditModal({ isOpen, stock, onClose, onSuccess }: Invent
         supplier_name: supplierName || undefined,
         unit_price: unitPrice ? Number(unitPrice) : undefined,
       });
-      onSuccess();
-      onClose();
+      if (result.success) {
+        onSuccess();
+        onClose();
+      } else {
+        showAlert(result.error || '保存失败');
+      }
     } catch (e: any) {
       showAlert(e?.message || '保存失败');
     }
