@@ -11,6 +11,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Search, Plus, Sprout } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
+import * as apiCropVarietyService from '../../../../services/apiCropVarietyService';
 import {
   getTypeOptionsByCategory as getExtendedTypeOptions,
   getVarietyOptionsByType as getExtendedVarietyOptions,
@@ -108,7 +109,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
   };
 
   // 提交新增
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCategory || !selectedType || !selectedVariety) {
       showAlert('请完成所有分类选择');
       return;
@@ -125,22 +126,44 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
       .map(a => a.trim())
       .filter(a => a.length > 0);
 
-    // 2026-07-27 审核 C-3：改用 apiCropVarietyService 走 V2.1 架构（替代老 cropVarietyService 走 localStorage）
-    // 移除废弃字段 growthCycle/targetYield/yieldUnit（2026-07-27 重构后这些字段已不属于 CropVariety）
-    const newVariety = await apiCropVarietyService.createVariety({
-      categoryCode: selectedCategory,
-      categoryName,
-      typeCode: selectedType,
-      typeName,
-      varietyCode: selectedVariety,
-      varietyName,
-      alias: aliasList.length > 0 ? aliasList : undefined,
-      status: 'active',
-      remarks: remarks || undefined
-    } as any);
+    try {
+      // 2026-07-27 审核 C-3：改用 apiCropVarietyService 走 V2.1 架构（替代老 cropVarietyService 走 localStorage）
+      // 移除废弃字段 growthCycle/targetYield/yieldUnit（2026-07-27 重构后这些字段已不属于 CropVariety）
+      const newId = await apiCropVarietyService.createVariety({
+        categoryCode: selectedCategory,
+        categoryName,
+        typeCode: selectedType,
+        typeName,
+        varietyCode: selectedVariety,
+        varietyName,
+        alias: aliasList.length > 0 ? aliasList : undefined,
+        status: 'active',
+        remarks: remarks || undefined
+      });
 
-    onSuccess(newVariety);
-    handleClose();
+      // createVariety 返回 id 字符串，构造最小 CropVariety 对象供 onSuccess 回调使用
+      const newVariety: CropVariety = {
+        id: newId,
+        cropCode: previewCode || '',
+        categoryCode: selectedCategory,
+        categoryName,
+        typeCode: selectedType,
+        typeName,
+        varietyCode: selectedVariety,
+        varietyName,
+        alias: aliasList.length > 0 ? aliasList : undefined,
+        status: 'active',
+        remarks: remarks || undefined,
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+      };
+
+      onSuccess(newVariety);
+      handleClose();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '新增品种失败';
+      showAlert(message);
+    }
   };
 
   return (
