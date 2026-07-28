@@ -705,7 +705,8 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           if (params.endDate) query.set('end_date', params.endDate);
           if (params.sampling) query.set('sampling', params.sampling);
           const response = await enhancedApiClient.get<any>(`/summary/comparison-stats?${query.toString()}`);
-          set({ comparisonData: response.data ?? response, isLoading: false });
+          // 2026-07-28 审核 LOW：enhancedApiClient 已解包 .data，删除冗余 `response.data ?? response`
+          set({ comparisonData: response, isLoading: false });
         } catch (err) {
           set({ error: (err as Error).message, isLoading: false });
         }

@@ -170,22 +170,48 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
   const [view, setView] = useState<'timeline' | 'table'>('timeline');
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  // 2026-07-28 审核 M：error 状态 + 用户可见提示（修复静默吞错）
+  const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<HistoryItem[]>([]);
 
   const load = useCallback(async () => {
     if (!entityId) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchFullHistory(entity, entityId, entityCode);
       setItems(data);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       console.error('[EntityHistoryTimeline] load failed:', e);
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }, [entity, entityId, entityCode]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // 2026-07-28 审核 M：cancelled 标志防止组件卸载后 setState 触发 React 警告
+    let cancelled = false;
+    void (async () => {
+      if (!entityId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchFullHistory(entity, entityId, entityCode);
+        if (!cancelled) setItems(data);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!cancelled) {
+          console.error('[EntityHistoryTimeline] load failed:', e);
+          setError(msg);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [load]);
 
   // 筛选
   const filtered = useMemo(
@@ -305,7 +331,12 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
       </div>
 
       {/* 内容区 */}
-      {filtered.length === 0 ? (
+      {/* 2026-07-28 审核 M：错误状态提示（区别于"暂无追溯记录"，明确告知加载失败） */}
+      {error ? (
+        <div className="text-center py-12 text-red-600 text-sm bg-red-50 rounded border border-red-200">
+          加载失败：{error}（可重试）
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-500 text-sm">暂无追溯记录</div>
       ) : view === 'timeline' ? (
         /* ===== 时间线模式 ===== */
