@@ -3,18 +3,18 @@
  * 农事任务中心的新建任务功能完整实现
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '@/components/ui';
-import { Button, Label, DatePicker } from '@/components/ui';
+import { Button, Label, DatePicker, TabsList, TabsTrigger } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { AlertCircle, ArrowLeft, Camera, ChevronRight, Clock, MapPin, Mic, Package, Save, Send, Upload, Wand2 } from 'lucide-react';
+import { AlertCircle, Camera, Clock, MapPin, Mic, Package, Save, Send, Upload, Wand2, Search, X } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
 import { todayLocal } from '@/lib/dateUtils';
-import { useUserStore, useProductionPlanStore, useTeamManageStore, useGreenhouseStore } from '../../../../stores';
+import { useUserStore, useTeamManageStore, useGreenhouseStore, usePlantingStore, useSeedlingStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import type { UseTasksReturn } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
@@ -79,7 +79,18 @@ function calculateEndDateTime(startTime: string, days: number, hours: number, wo
   }
 }
 
-// newTask 状态类型
+// 2026-07-28 改造：种植/育苗多选订单接口（参照 FertilizerAddModal）
+interface SelectedArea {
+  type: 'planting' | 'seedling';
+  id: string;
+  code: string;
+  cropName: string;
+  area: string;
+  greenhouseId?: string;
+  greenhouseName?: string;
+}
+
+// newTask 状态类型（删 batch 字段）
 interface NewTaskState {
   taskId: string;
   types: string[];
@@ -89,8 +100,8 @@ interface NewTaskState {
   cropRemarks: string;
   areaRemarks: string;
   assignee: string;
-  teamId: string;       // 关联班组ID（来自农事管理-班组分配）
-  teamName: string;     // 关联班组名称
+  teamId: string;
+  teamName: string;
   planStart: string;
   planEnd: string;
   sopContent: string;
@@ -102,9 +113,6 @@ interface NewTaskState {
   estimatedHours: number;
   typeConfig: TaskConfigValues;
   toolsRemarks: string;
-  batchId: string;
-  batchCode: string;
-  batchSearch: string;
   remarks: string;
   workHoursPerDay: number;
 }
@@ -138,9 +146,6 @@ const initialNewTask: NewTaskState = {
   estimatedHours: 1,
   typeConfig: {},
   toolsRemarks: '',
-  batchId: '',
-  batchCode: '',
-  batchSearch: '',
   remarks: '',
   workHoursPerDay: 8,
 };
@@ -148,65 +153,98 @@ const initialNewTask: NewTaskState = {
 export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: CreateTaskModalProps) {
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
-  const storePlans = useProductionPlanStore((state) => state.batches);
-  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
-  // 班组数据（来自农事管理-班组分配）
+  const plantingStore = usePlantingStore();
+  const seedlingStore = useSeedlingStore();
   const teams = useTeamManageStore((state) => state.teams);
   const teamFetchData = useTeamManageStore((state) => state.fetchData);
-  // 温室数据（替换硬编码 taskDispatchFields）
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
   useEffect(() => {
-    if (users.length === 0) {
-      loadUsers();
-    }
-    if (storePlans.length === 0) {
-      fetchPlans();
-    }
-    if (teams.length === 0) {
-      teamFetchData();
-    }
-    if (greenhouses.length === 0) {
-      loadGreenhouses();
-    }
-  }, [users.length, loadUsers, storePlans.length, fetchPlans, teams.length, teamFetchData, greenhouses.length, loadGreenhouses]);
+    if (users.length === 0) loadUsers();
+    if (teams.length === 0) teamFetchData();
+    if (greenhouses.length === 0) loadGreenhouses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users.length, teams.length, greenhouses.length]);
 
-  // 从Store计算生产批次列表（保持与原 cropBatches 变量兼容）
-  const cropBatches = useMemo(() => storePlans.map(p => ({
-    id: p.id,
-    batchCode: p.batchCode,
-    cropName: (p as any).cropName || (p as any).cropTypeName || '',
-    batchStatus: (p as any).batchStatus || (p as any).status,
-  })), [storePlans]);
+  useEffect(() => { if (isOpen) { plantingStore.loadItems?.(); seedlingStore.loadItems?.(); } }, [isOpen]);
 
-  // 任务区域字段列表（从温室 Store 动态计算，替换硬编码 farmMockData.taskDispatchFields）
   const taskDispatchFields = useMemo(() => greenhouses.map(g => ({
-    id: Number(g.id) || 0,
-    name: g.name,
-    type: g.greenhouseType || '',
-    crop: g.crop || '',
-    area: g.area || 0,
+    id: Number(g.id) || 0, name: g.name, type: g.greenhouseType || '', crop: g.crop || '', area: g.area || 0,
   })), [greenhouses]);
 
-  // 新建任务状态
-  const [createStep, setCreateStep] = useState(1);
+  const [createStep] = useState(2);
   const [stepError, setStepError] = useState('');
   const [newTask, setNewTask] = useState<NewTaskState>(initialNewTask);
 
-  // 下拉框显示状态
-  const [showBatchDropdown, setShowBatchDropdown] = useState(false);
+  const [areaTab, setAreaTab] = useState<'planting' | 'seedling'>('planting');
+  const [areaSearch, setAreaSearch] = useState('');
+  const [selectedAreas, setSelectedAreas] = useState<SelectedArea[]>([]);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+
   const [showFieldDropdown, setShowFieldDropdown] = useState(false);
   const [showCropDropdown, setShowCropDropdown] = useState(false);
   const [showTaskTypeDropdown, setShowTaskTypeDropdown] = useState(false);
 
-  // 从生产计划提取唯一作物列表
   const uniqueCrops = useMemo(() => {
-    const crops = cropBatches.map(b => b.cropName).filter(Boolean);
-    return [...new Set(crops)] as string[];
-  }, [cropBatches]);
+    const ghCrops = greenhouses.map(g => g.crop).filter(Boolean);
+    const plantCrops = (plantingStore.items as any[] || []).map((p: any) => p.cropName).filter(Boolean);
+    return [...new Set([...ghCrops, ...plantCrops])] as string[];
+  }, [greenhouses, plantingStore.items]);
 
-  // 处理函数
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (areaRef.current && !areaRef.current.contains(e.target as Node)) setShowAreaDropdown(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  // 2026-07-28 改造：种植/育苗区域过滤
+  const areaOptions = useMemo(() => {
+    const kw = areaSearch.trim().toLowerCase();
+    if (areaTab === 'planting') {
+      return (plantingStore.items as any[] || []).filter(p => !p.isHarvest).filter(p =>
+        !kw || (p.plantCode||'').toLowerCase().includes(kw) || (p.cropName||'').toLowerCase().includes(kw)
+        || (p.cropVariety||'').toLowerCase().includes(kw) || (p.subVariety1Name||'').toLowerCase().includes(kw)
+        || (p.rootName||'').toLowerCase().includes(kw));
+    }
+    return (seedlingStore.items as any[] || []).filter(s =>
+      !kw || (s.seedlingCode||'').toLowerCase().includes(kw) || (s.cropName||'').toLowerCase().includes(kw)
+      || (s.siteName||'').toLowerCase().includes(kw));
+  }, [areaTab, areaSearch, plantingStore.items, seedlingStore.items]);
+
+  const formatPlantingDisplay = (p: any) => p.subVariety1Name || p.cropVariety || p.cropName || '';
+
+  const addArea = useCallback((item: any) => {
+    const displayCrop = formatPlantingDisplay(item);
+    const area: SelectedArea = areaTab === 'planting'
+      ? { type:'planting', id:item.id, code:item.plantCode||item.code, cropName:displayCrop,
+          area:item.rootName||item.areaName||'', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName }
+      : { type:'seedling', id:item.id, code:item.seedlingCode||item.code, cropName:displayCrop,
+          area:item.siteName||item.areaName||'育苗区', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName||item.greenhouseName };
+    if (selectedAreas.some(a => a.id === area.id)) return;
+    setSelectedAreas(prev => [...prev, area]);
+    setNewTask(prev => ({
+      ...prev,
+      fields: [...new Set([...prev.fields, area.area])],
+      crops: [...new Set([...prev.crops, area.cropName])],
+    }));
+    setAreaSearch(''); setShowAreaDropdown(false);
+  }, [areaTab, selectedAreas]);
+
+  const removeArea = useCallback((id: string) => {
+    const removed = selectedAreas.find(a => a.id === id);
+    setSelectedAreas(prev => prev.filter(a => a.id !== id));
+    if (removed) {
+      const remaining = selectedAreas.filter(a => a.id !== id);
+      setNewTask(prev => ({
+        ...prev,
+        fields: prev.fields.filter(f => f === removed.area ? remaining.some(a => a.area === f) : true),
+        crops: prev.crops.filter(c => c === removed.cropName ? remaining.some(a => a.cropName === c) : true),
+      }));
+    }
+  }, [selectedAreas]);
+
   const handleNextStep = () => {
     let error = '';
     if (createStep === 1) {
@@ -260,9 +298,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
     const assignerId = defaultDispatcher?.id || 'U001';
     const assignerName = defaultDispatcher?.name || '系统';
 
-    const firstFieldName = fieldValue.split(',')[0]?.trim() || '';
-    const matchedField = taskDispatchFields.find(f => f.name === firstFieldName);
-    const greenhouseId = matchedField?.id?.toString() || '';
+    const greenhouseId = selectedAreas.length > 0 && selectedAreas[0].greenhouseId
+      ? selectedAreas[0].greenhouseId
+      : (() => { const n = fieldValue.split(',')[0]?.trim() || ''; const m = taskDispatchFields.find(f => f.name === n); return m?.id?.toString() || ''; })();
 
     const estimatedHours = ((newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8)) + (newTask.estimatedHours || 0);
     const planEndTime = calculateEndDateTime(
@@ -283,8 +321,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
       typeName: typeLabels,
-      batchId: newTask.batchId,
-      batchCode: newTask.batchCode,
       greenhouseId: greenhouseId,
       greenhouseName: fieldValue,
       teamId: newTask.teamId || '',
@@ -316,6 +352,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       assignee: finalAssigneeName,
       crop: cropValue,
       sopContent: newTask.sopContent || '',
+      plantingId: selectedAreas.find(a => a.type === 'planting')?.id,
+      seedlingId: selectedAreas.find(a => a.type === 'seedling')?.id,
     });
 
     // 重置状态
@@ -365,15 +403,13 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   const handleClose = () => {
     setShowCreateModal(false);
     setStepError('');
-    setCreateStep(1);
     setNewTask(initialNewTask);
+    setAreaTab('planting'); setAreaSearch(''); setSelectedAreas([]); setShowAreaDropdown(false);
   };
 
-  // 内部关闭模态框处理
   const handleModalClose = () => {
     setShowCreateModal(false);
     setStepError('');
-    setCreateStep(1);
   };
 
   // 由于props不包含showCreateModal，需要用isOpen代替
@@ -406,10 +442,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
   // 当isOpen变化时同步状态
   React.useEffect(() => {
     setShowCreateModal(isOpen);
-    if (isOpen) {
-      setStepError('');
-      setCreateStep(1);
-    }
+    if (isOpen) setStepError('');
   }, [isOpen]);
 
   return (
@@ -420,43 +453,13 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       size="xl"
       showFooter={false}
       bottomContent={
-        <div className="flex justify-between">
-          {createStep > 1 && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setCreateStep(createStep - 1)}
-            >
-              <ArrowLeft className="w-4 h-4" /> 上一步
-            </Button>
-          )}
-          {createStep === 2 ? (
-            <div className="flex gap-2 ml-auto">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSaveDraft}
-              >
-                <Save className="w-4 h-4" /> 保存草稿
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleFinalCreate}
-              >
-                <Send className="w-4 h-4" /> 发布任务
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleNextStep}
-              className="ml-auto"
-            >
-              下一步 <ChevronRight className="w-4 h-4" />
-            </Button>
-          )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={handleSaveDraft}>
+            <Save className="w-4 h-4" /> 保存草稿
+          </Button>
+          <Button variant="default" size="sm" onClick={handleFinalCreate}>
+            <Send className="w-4 h-4" /> 发布任务
+          </Button>
         </div>
       }
     >
@@ -469,27 +472,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         </div>
       )}
 
-      {/* 步骤指示器 */}
-      <div className="px-6 py-4 border-b border-gray-100 -mx-6">
-        <div className="flex items-center justify-between">
-          <div className={`flex items-center gap-2 ${createStep >= 1 ? 'text-emerald-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 1 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>1</div>
-            <span className="text-sm font-medium">任务定义</span>
-          </div>
-          <div className="flex-1 h-0.5 bg-gray-200 mx-4">
-            <div className={`h-full bg-emerald-500 transition-all ${createStep >= 2 ? 'w-full' : 'w-0'}`} />
-          </div>
-          <div className={`flex items-center gap-2 ${createStep >= 2 ? 'text-emerald-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${createStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>2</div>
-            <span className="text-sm font-medium">资源与时间</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6">
-        {/* Step 1: 任务定义 */}
-        {createStep === 1 && (
-          <div className="space-y-4">
+      <div className="p-6 overflow-y-auto" style={{ maxHeight: '70vh' }}>
+        <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">任务编号</Label>
@@ -511,56 +495,57 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </Button>
                 </div>
               </div>
-              <div>
-                <Label className="text-gray-700 mb-1">关联生产批次</Label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={newTask.batchCode || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewTask(prev => ({ ...prev, batchCode: val, batchId: val ? prev.batchId : '' }));
-                    }}
-                    onFocus={() => setShowBatchDropdown(true)}
-                    className={deepInputClass}
-                    placeholder="搜索或选择生产批次..."
-                  />
-                  {showBatchDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {cropBatches
-                        .filter(b =>
-                          !newTask.batchCode ||
-                          b.batchCode.toLowerCase().includes(newTask.batchCode.toLowerCase()) ||
-                          b.cropName.includes(newTask.batchCode)
-                        )
-                        .slice(0, 10)
-                        .map(batch => (
-                          <div
-                            key={batch.id}
-                            className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
-                            onClick={() => {
-                              setNewTask(prev => ({
-                                ...prev,
-                                batchId: batch.id,
-                                batchCode: batch.batchCode,
-                              }));
-                              setShowBatchDropdown(false);
-                            }}
-                          >
-                            <div className="font-medium text-gray-900">{batch.batchCode}</div>
-                            <div className="text-xs text-gray-500">{batch.cropName} · {batch.greenhouseName}</div>
-                          </div>
-                        ))}
+            </div>
+            {/* 2026-07-28 改造：种植/育苗区域选择 — 单独占一行 */}
+            <div>
+                <Label className="text-gray-700 mb-1">关联种植/育苗 <span className="text-gray-400 text-xs">（多选，自动填充区域和作物）</span></Label>
+                <div className="relative" ref={areaRef}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TabsList selectedValue={areaTab} onValueChange={(v) => setAreaTab(v as 'planting' | 'seedling')}>
+                      <TabsTrigger value="planting" className="text-xs">🌱 种植区域</TabsTrigger>
+                      <TabsTrigger value="seedling" className="text-xs">🌿 育苗区域</TabsTrigger>
+                    </TabsList>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input type="text" value={areaSearch} onChange={(e) => { setAreaSearch(e.target.value); setShowAreaDropdown(true); }} onFocus={() => setShowAreaDropdown(true)}
+                        placeholder={`搜索${areaTab === 'planting' ? '种植' : '育苗'}批号/作物/区域`}
+                        className="w-full h-10 pl-10 pr-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                  </div>
+                  {showAreaDropdown && areaOptions.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {areaOptions.map((item: any) => (
+                        <button key={item.id} type="button" onClick={() => addArea(item)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 border-b border-gray-50 last:border-b-0 text-sm">
+                          <span className="font-medium">{formatPlantingDisplay(item)}</span>
+                          {item.cropName && formatPlantingDisplay(item) !== item.cropName && (
+                            <span className="text-gray-400 text-xs ml-1">（{item.cropName}）</span>
+                          )}
+                          <span className="text-gray-400 mx-1">·</span>
+                          <span className="text-gray-600">{areaTab === 'planting' ? item.rootName || item.areaName : item.siteName || '育苗区'}</span>
+                          <span className="text-gray-400 mx-1">·</span>
+                          <span className="text-xs text-gray-500 font-mono">{areaTab === 'planting' ? item.plantCode : item.seedlingCode}</span>
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-                {showBatchDropdown && (
-                  <div className="fixed inset-0 z-0" onClick={() => setShowBatchDropdown(false)} />
+                {selectedAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <p className="w-full text-xs text-emerald-600 mb-1">
+                      🌱 已选 {selectedAreas.length} 个区域（作物：{Array.from(new Set(selectedAreas.map(a => a.cropName).filter(Boolean))).join('、')}）
+                    </p>
+                    {selectedAreas.map((a) => (
+                      <span key={a.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-700">
+                        {a.type === 'planting' ? '🌱' : '🌿'} {a.cropName} · {a.area}
+                        <button type="button" onClick={() => removeArea(a.id)} className="ml-0.5 text-emerald-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mt-0">
               <div>
                 <Label className="text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></Label>
                 <div className="relative">
@@ -857,12 +842,11 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 <span className="text-xs text-gray-500">支持 .txt, .doc, .docx, .pdf 格式</span>
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
-        {/* Step 2: 资源与时间 */}
+        {/* ===== 资源与时间 ===== */}
         {createStep === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-4 mt-6 pt-4 border-t">
             <div>
               <Label className="text-gray-700 mb-1">所需物资</Label>
               <div className="border border-gray-200 rounded-lg p-3 space-y-2">
