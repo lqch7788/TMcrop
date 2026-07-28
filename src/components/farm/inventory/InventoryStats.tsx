@@ -1,6 +1,9 @@
 /**
  * 库存统计卡片组件
  * 样式与订单管理统计卡片保持一致（OrderStats 风格）
+ *
+ * 2026-07-28 审核 LOW：当前 InventoryV3.tsx 已直接使用 Store 的 stats 状态显示统计，本组件无调用方
+ *   保留文件作为未来扩展用（用户授权前不删除）
  */
 
 import React from 'react';

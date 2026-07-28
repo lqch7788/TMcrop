@@ -66,6 +66,14 @@ interface InventoryState {
     blockingTransactions?: { txId?: string; txType?: string; txTypeLabel?: string; businessCode?: string; qty?: number; operatorName?: string; operateDate?: string }[];
     blocked?: { stockId: string; blockingTransactions?: { txId?: string; txType?: string; txTypeLabel?: string; businessCode?: string; qty?: number; operatorName?: string; operateDate?: string }[] }[];
   }>;
+  /**
+   * 2026-07-28 审核 H-4：编辑库存（写操作走 Store action，符合 V2.1 铁律）
+   * 写后 notifyChange 跨页刷新 + 乐观更新本地 items
+   */
+  updateItem: (
+    instanceId: string,
+    updates: Record<string, unknown>,
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useInventoryStore = create<InventoryState>()((set, get) => ({
@@ -142,5 +150,28 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
       set((s) => ({ items: s.items.filter(it => !ids.includes(it.instanceId)) }));
     }
     return result;
+  },
+
+  // 2026-07-28 审核 H-4：编辑库存走 Store action
+  updateItem: async (instanceId, updates) => {
+    try {
+      const { updateInventory: svc } = await import('../services/apiInventoryService');
+      const ok = await svc(instanceId, updates as any);
+      if (ok) {
+        get().notifyChange();
+        // 乐观更新本地 items
+        set((s) => ({
+          items: s.items.map((it) =>
+            it.instanceId === instanceId ? { ...it, ...(updates as any) } : it,
+          ),
+        }));
+        return { success: true };
+      }
+      return { success: false, error: '编辑失败' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      set({ error: msg });
+      return { success: false, error: msg };
+    }
   },
 }));

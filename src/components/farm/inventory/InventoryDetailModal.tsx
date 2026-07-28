@@ -323,7 +323,7 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
               const result = await unfreezeInventory(freezeId);
               if (result.success) {
                 loadAllData();
-                const { useInventoryStore } = await import('../../../stores/useInventoryStore');
+                // 2026-07-28 审核 M：用顶部已 import 的 useInventoryStore（文件第 43 行），删除动态 import 冗余
                 useInventoryStore.getState().notifyChange();
               } else {
                 showAlert(result.error || '解冻失败');

@@ -127,14 +127,6 @@ export async function deleteInventory(id: string): Promise<boolean> {
   }
 }
 
-/**
- * 批量删除库存记录
- */
-export async function deleteInventoryBatch(ids: string[]): Promise<boolean> {
-  try {
-    await enhancedApiClient.delete(`/inventory/batch?ids=${ids.join(',')}`);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// 2026-07-28 审核 H-5：apiInventoryService.deleteInventoryBatch 与 inventoryService 版本签名冲突（返回 boolean vs 返回 result），且无调用方，删除之
+// 批量删除请统一用 inventoryService.deleteInventoryBatch（提供 blockingTransactions 拦截详情）
+// 保留此注释作为占位（原 deleteInventoryBatch 函数已删除）
