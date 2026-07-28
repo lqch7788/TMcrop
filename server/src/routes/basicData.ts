@@ -208,6 +208,8 @@ router.post('/warehouses', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [id, oid, name, code, warehouseType || '', location || '', capacity || 0, managerId || '', managerName || '', now, now]);
 
+    saveDatabase(); // 2026-07-28 修复：sql.js 必须显式 saveDatabase() 才会持久化到 .db 文件
+
     res.json({ success: true, message: '仓库创建成功', data: { id, oid, name, code } });
   } catch (error) {
     console.error('创建仓库失败:', error);
@@ -241,6 +243,9 @@ router.put('/warehouses/:id', (req, res) => {
       WHERE id = ?
     `, [name, code, warehouseType, location, capacity, managerId, managerName, status, now, id]);
 
+    saveDatabase(); // 2026-07-28 修复：sql.js UPDATE 后必须 saveDatabase() 才能持久化
+    // —— 之前漏调用导致用户编辑后保存"返回成功"但重启服务/刷新页面数据丢失
+
     res.json({ success: true, message: '仓库更新成功' });
   } catch (error) {
     console.error('更新仓库失败:', error);
@@ -259,6 +264,8 @@ router.delete('/warehouses/:id', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`UPDATE warehouses SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+
+    saveDatabase(); // 2026-07-28 修复：DELETE 软删后必须 saveDatabase() 持久化
 
     res.json({ success: true, message: '仓库删除成功' });
   } catch (error) {

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, Edit2, Layers, Loader2, Plus, Save, Search, Trash2, Warehouse, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Edit2, Layers, Loader2, Plus, Save, Trash2, Warehouse, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -18,6 +18,33 @@ import {
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const WAREHOUSE_TYPES = ['原料仓库', '成品仓库', '耗材仓库', '农药仓库', '化肥仓库', '设备仓库', '其他'];
+
+// 2026-07-28：将英文 dict_code 翻译为中文标签展示
+// 历史数据存了 dict_code 英文（如 cold_storage / normal），UI 必须显示中文
+const WAREHOUSE_TYPE_LABEL_MAP: Record<string, string> = {
+  cold_storage: '冷藏库',
+  normal: '常温库',
+  seed_storage: '种子库',
+  seedling: '种苗库',
+  raw_material: '原料仓库',
+  finished_goods: '成品仓库',
+  consumable: '耗材仓库',
+  pesticide: '农药仓库',
+  fertilizer: '化肥仓库',
+  equipment: '设备仓库',
+  other: '其他',
+};
+
+function translateWarehouseType(code?: string | null): string {
+  if (!code) return '-';
+  // 已经是中文的情况：直接显示
+  if (/[一-龥]/.test(code)) return code;
+  // 匹配英文 dict_code
+  const label = WAREHOUSE_TYPE_LABEL_MAP[code];
+  if (label) return label;
+  // 兜底：英文 → 友好展示
+  return code.replace(/_/g, ' ');
+}
 
 export default function WarehouseManagement() {
   // 数据从 Zustand Store 获取
@@ -32,7 +59,6 @@ export default function WarehouseManagement() {
     refreshWarehouses,
   } = useWarehouseStore();
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState<WarehouseType | null>(null);
   const [newWarehouse, setNewWarehouse] = useState<Partial<WarehouseType>>({ status: 'active' });
@@ -42,9 +68,8 @@ export default function WarehouseManagement() {
     loadWarehouses();
   }, [loadWarehouses]);
 
-  const filteredWarehouses = warehouses.filter(w =>
-    w.name.includes(searchTerm) || w.code.includes(searchTerm) || (w.location && w.location.includes(searchTerm))
-  );
+  // 2026-07-28 v6：去掉搜索框，列表直接展示全部已激活仓库
+  const filteredWarehouses = warehouses;
 
   // 创建仓库
   const handleCreate = async () => {
@@ -104,6 +129,13 @@ export default function WarehouseManagement() {
       // logger.error('删除仓库失败:', err);
       await showAlert('删除仓库失败');
     }
+  };
+
+  // 打开新增弹窗（2026-07-28 v4：列表上方的"新增仓库"按钮调用此函数）
+  const openCreateModal = () => {
+    setEditingWarehouse(null);
+    setNewWarehouse({ status: 'active' });
+    setShowModal(true);
   };
 
   // 打开编辑弹窗
@@ -179,110 +211,165 @@ export default function WarehouseManagement() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">仓库总数</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+      {/* 统计卡片（2026-07-28 v5：紧凑型 — 单行 label 左 / value 右，圆角/字号缩小）*/}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
+          <span className="text-xs text-gray-500">仓库总数</span>
+          <span className="text-xl font-bold text-gray-900 tabular-nums">{stats.total}</span>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-green-600">在用仓库</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.active}</p>
+        <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
+          <span className="text-xs text-green-600">在用仓库</span>
+          <span className="text-xl font-bold text-green-600 tabular-nums">{stats.active}</span>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-blue-600">总容量</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalCapacity.toLocaleString()}</p>
+        <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
+          <span className="text-xs text-blue-600">总容量</span>
+          <span className="text-xl font-bold text-blue-600 tabular-nums">{stats.totalCapacity.toLocaleString()}</span>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <p className="text-sm text-emerald-600">当前库存</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.totalStock.toLocaleString()}</p>
+        <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between gap-3">
+          <span className="text-xs text-emerald-600">当前库存</span>
+          <span className="text-xl font-bold text-emerald-600 tabular-nums">{stats.totalStock.toLocaleString()}</span>
         </div>
       </div>
 
-      {/* 搜索 */}
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <Input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="搜索仓库..."
-          className="pl-10 w-full"
-        />
+      {/* 新增仓库（2026-07-28 v6：去掉搜索框，按钮按 UI 库标准：variant=default / size=default，不自定义渐变）*/}
+      <div className="flex items-center justify-end">
+        <Button variant="default" size="default" onClick={openCreateModal}>
+          <Plus className="w-4 h-4 mr-1.5" />
+          新增仓库
+        </Button>
       </div>
 
-      {/* 仓库列表 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredWarehouses.map(warehouse => {
-          const percent = getStockPercent(warehouse.currentStock || 0, warehouse.capacity || 0);
-          return (
-            <div key={warehouse.id} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 rounded-lg">
-                    <Layers className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{warehouse.name}</h3>
-                    <p className="text-xs text-gray-500">{warehouse.code}</p>
-                  </div>
-                </div>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  warehouse.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {warehouse.status === 'active' ? '启用' : '停用'}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                <div>
-                  <p className="text-gray-500">类型</p>
-                  <p className="text-gray-900 font-medium">{warehouse.warehouseType || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">负责人</p>
-                  <p className="text-gray-900 font-medium">{warehouse.managerName || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">位置</p>
-                  <p className="text-gray-900 font-medium">{warehouse.location || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">使用率</p>
-                  <p className={`font-bold ${getStockColor(percent)}`}>{percent}%</p>
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${percent >= 80 ? 'bg-red-500' : percent >= 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                  style={{ width: `${Math.min(percent, 100)}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                <span>当前: {warehouse.currentStock || 0}</span>
-                <span>容量: {warehouse.capacity || 0}</span>
-              </div>
-              {warehouse.description && (
-                <p className="text-xs text-gray-500 mt-2">{warehouse.description}</p>
-              )}
-              <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-                <Button size="icon" variant="ghost" onClick={() => openEditModal(warehouse)}>
-                  <Edit2 className="w-4 h-4 text-gray-600" />
-                </Button>
-                <Button size="icon" variant="destructive" onClick={() => handleDeleteWarehouse(warehouse.id)}>
-                  <Trash2 className="w-4 h-4 text-red-600" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+      {/* 仓库列表（2026-07-28 v4：列宽重新规划 — 使用 table-layout: fixed 平衡宽度；
+          仓库名称独占剩余空间，其它列按内容宽度分配）*/}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {filteredWarehouses.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <Layers className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-500">暂无仓库数据</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+              {/* 2026-07-28 v4.1：列宽重新分配，仓库名称不再独占剩余空间
+                  —— 9 列大致按 10-15% 区间均分，让每个字段都有充足宽度 */}
+              <colgroup><col style={{ width: '110px' }} /><col style={{ width: '220px' }} /><col style={{ width: '130px' }} /><col style={{ width: '100px' }} /><col style={{ width: '140px' }} /><col style={{ width: '130px' }} /><col style={{ width: '240px' }} /><col style={{ width: '160px' }} /><col style={{ width: '110px' }} /></colgroup>
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">仓库编码</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">仓库名称</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">仓库类型</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">位置</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">负责人</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">容量</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">使用率</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-r border-blue-400/30">启用状态</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWarehouses.map(warehouse => {
+                  const percent = getStockPercent(warehouse.currentStock || 0, warehouse.capacity || 0);
+                  return (
+                    <tr
+                      key={warehouse.id}
+                      className="border-t border-gray-200 hover:bg-blue-50/40 transition-colors"
+                    >
+                      {/* 仓库编码（独立列，mono 字体） */}
+                      <td className="px-3 py-3 text-gray-700 font-mono text-xs whitespace-nowrap border-r border-gray-100 truncate">
+                        {warehouse.code}
+                      </td>
+                      {/* 仓库名称（独立列，flex 占剩余空间） */}
+                      <td className="px-3 py-3 text-gray-900 font-medium border-r border-gray-100 whitespace-nowrap truncate" title={warehouse.name}>
+                        {warehouse.name}
+                      </td>
+                      {/* 仓库类型 — 英文 dict_code 转中文标签 */}
+                      <td className="px-3 py-3 border-r border-gray-100">
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                          {translateWarehouseType(warehouse.warehouseType)}
+                        </span>
+                      </td>
+                      {/* 位置（独立列） */}
+                      <td className="px-3 py-3 text-gray-700 border-r border-gray-100 whitespace-nowrap truncate" title={warehouse.location || ''}>
+                        {warehouse.location || '-'}
+                      </td>
+                      {/* 负责人（独立列） */}
+                      <td className="px-3 py-3 text-gray-700 border-r border-gray-100 whitespace-nowrap truncate" title={warehouse.managerName || ''}>
+                        {warehouse.managerName || '-'}
+                      </td>
+                      {/* 容量（独立列） */}
+                      <td className="px-3 py-3 text-gray-700 border-r border-gray-100 whitespace-nowrap">
+                        {warehouse.capacity != null ? `${warehouse.capacity} m²` : '-'}
+                      </td>
+                      {/* 使用率（独立列，含进度条） */}
+                      <td className="px-3 py-3 border-r border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[60px]">
+                            <div
+                              className={`h-2 rounded-full ${percent >= 80 ? 'bg-red-500' : percent >= 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                              style={{ width: `${Math.min(percent, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold ${getStockColor(percent)} w-10 text-right whitespace-nowrap`}>
+                            {percent}%
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-1 flex justify-between">
+                          <span>当前 {warehouse.currentStock || 0}</span>
+                          <span>总量 {warehouse.capacity || 0}</span>
+                        </div>
+                      </td>
+                      {/* 启用状态（独立列，徽章） */}
+                      <td className="px-3 py-3 border-r border-gray-100 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          warehouse.status === 'active'
+                            ? 'bg-green-100 text-green-700 border border-green-300'
+                            : 'bg-gray-100 text-gray-600 border border-gray-300'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            warehouse.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                          }`} aria-hidden />
+                          {warehouse.status === 'active' ? '已启用' : '已停用'}
+                        </span>
+                      </td>
+                      {/* 操作（独立列） */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEditModal(warehouse)}
+                          title="编辑"
+                          aria-label="编辑"
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteWarehouse(warehouse.id)}
+                          title="删除"
+                          aria-label="删除"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* 仓库编辑弹窗 */}
+      {/* 仓库编辑/新增弹窗（2026-07-28 v5：头部绿渐变 + 圆角化）*/}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingWarehouse ? '编辑仓库' : '新增仓库'}</h3>
-            <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+            {/* 头部：绿渐变背景 */}
+            <div className="bg-gradient-to-r from-emerald-500 to-green-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">{editingWarehouse ? '编辑仓库' : '新增仓库'}</h3>
+            </div>
+            <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 mb-1">仓库名称</Label>
@@ -363,9 +450,10 @@ export default function WarehouseManagement() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 mt-6">
+            {/* 底部按钮区（2026-07-28 v5：单独分隔，加 padding） */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
               <Button variant="secondary" onClick={handleCloseModal}><X className="w-4 h-4" /> 取消</Button>
-              <Button variant="default" onClick={editingWarehouse ? handleUpdate : handleCreate}><Save className="w-4 h-4" /> 保存</Button>
+              <Button variant="default" onClick={editingWarehouse ? handleUpdate : handleCreate}><Save className="w-4 h-4 mr-1" /> 保存</Button>
             </div>
           </div>
         </div>

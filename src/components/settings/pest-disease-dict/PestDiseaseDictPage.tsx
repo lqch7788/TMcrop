@@ -42,12 +42,20 @@ export default function PestDiseaseDictPage() {
   const [detailTarget, setDetailTarget] = useState<PestDiseaseDict | null>(null);
 
   // ========== 数据加载 ==========
-  // C4 修复：单一 useEffect 同时承担「初始化加载 + Tab 切换」职责
-  // 关键点：传 dictType 给后端过滤，避免数据混合；不重复拉取
+  // C4 + Bug 8 修复：
+  // - 初始化加载：fetchItems 不传 dictType，让 API 返回 虫害+病害 全集
+  //   —— 这样 stats.pestCount 和 stats.diseaseCount 才能正确统计
+  //   （之前传 dictType=activeTab，导致 items 只含一个 tab 的数据，另一个永远 0）
+  // - Tab 切换：只更新 filters.dictType（供搜索使用），不再触发重新拉取
+  //   —— 前端 filteredItems = items.filter(it => it.dictType === activeTab) 已做 tab 过滤
+  useEffect(() => {
+    fetchItems({ limit: '10000' });
+  }, [fetchItems]);
+
+  // Tab 切换同步 filters.dictType（不重新查询）
   useEffect(() => {
     setFilters({ dictType: activeTab });
-    fetchItems({ limit: '10000', dictType: activeTab });
-  }, [activeTab, fetchItems]);
+  }, [activeTab]);
 
   // ========== 筛选处理 ==========
   // H10 修复：去掉 searchKeyword 本地 state，搜索词走 filters.keyword；
