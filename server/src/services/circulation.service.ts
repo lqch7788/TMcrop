@@ -312,14 +312,30 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
       // ===== Step 4a: 合并到现有种源 =====
       finalStockId = mergeable.id
       mergeAction = 'merge_into_existing'
+      // 2026-07-28 审核 M：补 merged_from_ids 写入（详情弹窗"合并历史"Tab 才能正确显示运行时合并记录）
+      // 用 circulation record id 作为合并标记，便于审计追溯
+      const circulationRecordId = (input as any).circulationRecordId || input.sourceId || null
+      // 注意：queryToObjects / repository 已自动转 snake→camel，故读取 mergedFromIds
+      const existingMergedFromIds = (mergeable as any).mergedFromIds ?? '[]'
+      let parsedIds: any[] = []
+      try {
+        parsedIds = JSON.parse(existingMergedFromIds)
+        if (!Array.isArray(parsedIds)) parsedIds = []
+      } catch {
+        parsedIds = []
+      }
+      if (circulationRecordId && !parsedIds.includes(circulationRecordId)) {
+        parsedIds.push(circulationRecordId)
+      }
       db.run(`
         UPDATE seed_sources
         SET quantity = quantity + ?,
             remaining_quantity = remaining_quantity + ?,
             reflow_count = reflow_count + 1,
-            last_reflow_at = ?
+            last_reflow_at = ?,
+            merged_from_ids = ?
         WHERE id = ?
-      `, [seedQuantity, seedQuantity, nowISO, finalStockId])
+      `, [seedQuantity, seedQuantity, nowISO, JSON.stringify(parsedIds), finalStockId])
     } else {
       // ===== Step 4b: 创建新种源 =====
       finalStockId = generateId('SRC')

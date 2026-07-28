@@ -173,11 +173,14 @@ export function UpstreamTracePanel({ seedSourceId }: UpstreamTracePanelProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
+    // 2026-07-28 审核 M：cancelled 标志防止快速切换 seedSourceId 时后发先至
+    let cancelled = false;
     setLoading(true);
     setError(null);
     enhancedApiClient
       .get<UpstreamTraceData>(`/seed-sources/${seedSourceId}/upstream-trace?maxDepth=10`)
       .then((d) => {
+        if (cancelled) return;
         const result = d as unknown as UpstreamTraceData;
         setData(result);
         // 默认全部折叠
@@ -185,9 +188,11 @@ export function UpstreamTracePanel({ seedSourceId }: UpstreamTracePanelProps) {
         setLoading(false);
       })
       .catch((e) => {
+        if (cancelled) return;
         setError(String(e?.message || e));
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [seedSourceId]);
 
   if (loading) {

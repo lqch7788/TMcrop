@@ -44,8 +44,8 @@ interface SeedSourceReturnModalProps {
   targetSeedSourceId: string;
   /** 目标种源 code（仅显示用） */
   targetSeedSourceCode: string;
-  /** 退库回调：返回退库明细给父组件 */
-  onConfirm: (items: Array<{ inboundRecordId: string; quantity: number; unit: string }>) => void;
+  /** 退库回调：返回退库明细给父组件（异步，Modal 等待父组件完成后再关弹窗） */
+  onConfirm: (items: Array<{ inboundRecordId: string; quantity: number; unit: string }>) => Promise<void> | void;
 }
 
 export function SeedSourceReturnModal({
@@ -116,7 +116,9 @@ export function SeedSourceReturnModal({
   };
 
   // ============ 校验并提交 ============
-  const handleConfirm = () => {
+  // 2026-07-28 审核 H-1：submitLockRef 和 submitting 真正起效，避免双击重复提交
+  const handleConfirm = async () => {
+    if (submitLockRef.current || submitting) return;
     if (selected.size === 0) {
       toast.error('请至少选择 1 条退库流水');
       return;
@@ -149,7 +151,15 @@ export function SeedSourceReturnModal({
       toast.error('没有可退库的有效记录');
       return;
     }
-    onConfirm(items);
+    // 同步锁 + state 双重保护，避免 React 18 批处理延迟导致的双击
+    submitLockRef.current = true;
+    setSubmitting(true);
+    try {
+      await onConfirm(items);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   // ============ 总数统计 ============
