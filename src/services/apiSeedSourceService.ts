@@ -970,7 +970,7 @@ export async function findMatchableSeedSource(params: {
   unit: string;
   generation: string | null;
   propagationMethod: string | null;
-}): Promise<any> {
+}): Promise<SeedSource | null> {
   // 2026-06-27 项目记忆坑：enhancedApiClient.get 不支持 params 对象，必须用 URLSearchParams
   const q = new URLSearchParams({
     cropCode: params.cropCode,
@@ -980,7 +980,8 @@ export async function findMatchableSeedSource(params: {
     ...(params.propagationMethod ? { propagationMethod: params.propagationMethod } : {}),
   });
   const response = await enhancedApiClient.get(`/seed-sources/matchable?${q}`);
-  return response;
+  // 2026-07-28 审核 LOW：去掉 any 返回类型（用 SeedSource 替代），保留运行时兜底
+  return (response as SeedSource) || null;
 }
 
 /**
@@ -990,13 +991,14 @@ export async function findMatchableSeedSource(params: {
 export async function findSameCropSources(params: {
   cropCode: string;
   excludeSourceId?: string;
-}): Promise<any[]> {
+}): Promise<SeedSource[]> {
   const q = new URLSearchParams({ cropCode: params.cropCode });
   if (params.excludeSourceId) {
     q.set('excludeId', params.excludeSourceId);
   }
   const response = await enhancedApiClient.get(`/seed-sources/same-crop-sources?${q}`);
-  return Array.isArray(response) ? response : [];
+  // 2026-07-28 审核 LOW：去掉 any[] 返回类型（用 SeedSource[] 替代）
+  return Array.isArray(response) ? (response as SeedSource[]) : [];
 }
 
 /**

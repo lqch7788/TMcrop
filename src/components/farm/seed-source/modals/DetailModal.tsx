@@ -526,6 +526,7 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
   const [reverseSubmitting, setReverseSubmitting] = useState(false);
 
   // 2026-07-18: 冲销处理函数；2026-07-19: 按 recordSource 路由（调拨 → reverseInbound；留种回流 → revokeCirculation）
+  // 2026-07-28 审核 LOW：函数声明会 hoist 到模块顶部，对 useState 引用安全；这里仅注释说明
   async function handleReverse() {
     if (!reversingRecord || !reverseReason.trim()) return;
     setReverseSubmitting(true);
