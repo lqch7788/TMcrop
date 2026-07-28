@@ -197,7 +197,9 @@ export function AddModal({
           setSeedSources(sources.filter((s: SeedSource) => s.availableCount > 0));
         })
         .catch(error => {
-          // logger.error('加载种源失败:', error);
+          // 2026-07-28 审核 M：补回用户可见的错误提示，避免静默吞错
+          console.error('[AddModal] 加载种源失败:', error);
+          showAlert(`加载种源列表失败：${error instanceof Error ? error.message : String(error)}`);
         });
     }
     // debounce 300ms（避免连续输入频繁请求）
@@ -811,7 +813,8 @@ export function AddModal({
                       const reader = new FileReader();
                       reader.onload = (event) => {
                         const result = event.target?.result as string;
-                        setPictures([...pictures, result]);
+                        // 2026-07-28 审核 H-2：用函数式 setState 避免 stale closure，多图上传只保留最后一张 bug
+                        setPictures(prev => [...prev, result]);
                       };
                       reader.readAsDataURL(file);
                     });

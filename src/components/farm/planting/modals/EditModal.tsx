@@ -62,7 +62,7 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
     parentFemaleCode: record.parentFemaleCode || '',
     generation: record.generation || '',
     breedingMethod: record.breedingMethod || '',
-    breedingLocation: record.breedingLocation || '',
+    // 2026-07-28 审核 M：删除 breedingLocation — 与"种植区域"语义重叠，AddModal 已移除
     targetTraits: record.targetTraits || '',
     isSeedSaving: record.isSeedSaving || false,
     seedPlantMarker: record.seedPlantMarker || '',
@@ -113,7 +113,7 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
         parentFemaleCode: formData.parentFemaleCode,
         generation: formData.generation,
         breedingMethod: formData.breedingMethod,
-        breedingLocation: formData.breedingLocation,
+        // 2026-07-28 审核 M：删除冗余字段 breedingLocation
         targetTraits: formData.targetTraits,
         isSeedSaving: formData.isSeedSaving,
         seedPlantMarker: formData.seedPlantMarker,

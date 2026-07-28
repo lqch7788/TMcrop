@@ -900,7 +900,8 @@ export function PlantingTable({
                 <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12 text-center">
                   <Input
                     type="checkbox"
-                    checked={selectedRows.length === data.length && data.length > 0}
+                    // 2026-07-28 审核 M：跨页选择时按"当前页所有 id 都在 selectedRows"判断，而非全局长度比较
+                    checked={data.length > 0 && data.every(item => selectedRows.includes(item.id))}
                     onChange={(e) => {
                       if (e.target.checked) {
                         onSelectionChange(data.map(item => item.id));

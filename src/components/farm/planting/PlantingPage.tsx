@@ -140,9 +140,10 @@ export default function PlantingPage() {
   }, [zones, baseGhOids]);
 
   // 种植状态选项
+  // 2026-07-28 审核 C-1：依赖改为 dictionaries，异步加载字典后能重新计算
   const plantingStatusOptions = useMemo(() => {
     return getDictItems('planting_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
-  }, [getDictItems]);
+  }, [dictionaries]);
 
   // 初始化数据（从 Store 加载）
   useEffect(() => {
@@ -425,8 +426,8 @@ export default function PlantingPage() {
     })();
 
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 仅在 mount 时执行一次
-
   const handleSearch = () => {
     setPagination({ ...pagination, current: 1 });
   };
