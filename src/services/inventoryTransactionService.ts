@@ -73,21 +73,8 @@ export async function getOutboundList(query: OutboundQuery): Promise<OutboundLis
   return enhancedApiClient.get<OutboundListResult>('/inventory/transactions?' + buildQuery(query));
 }
 
-/**
- * 导出 CSV（后端生成，前端触发下载）
- * 调用后端 GET /api/inventory/transactions/export
- */
-export async function exportOutboundCSV(query: OutboundQuery): Promise<Blob> {
-  const qs = buildQuery({ ...query, format: undefined });
-  // 显式传 format=csv
-  const url = `/inventory/transactions/export?${qs ? qs + '&' : ''}format=csv`;
-  // 后端返回 text/csv，fetch 拿 blob
-  const response = await fetch(`/api${url}`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-  });
-  if (!response.ok) throw new Error(`导出失败: HTTP ${response.status}`);
-  return response.blob();
-}
+// 2026-07-28 审核 M：原 exportOutboundCSV（直调 fetch 绕过 enhancedApiClient）已无调用方
+//  CSV 改用前端 selectedData + exportCsv 生成（2026-07-28 CRITICAL-3 修复）。删除此函数避免死代码与绕过 apiClient 风险。
 
 // ============ 内部工具 ============
 

@@ -18,7 +18,8 @@ import { useToast } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
-import { exportOutboundCSV } from '@/services/inventoryTransactionService';
+// 2026-07-28 审核 C-3：CSV 也改用前端 selectedData 生成（与 XLSX 对齐），修复"勾选无效"bug
+import { exportCsv } from '@/services/exporters';
 import type { OutboundQuery as ServiceOutboundQuery, OutboundRow as ServiceOutboundRow, OutboundSummary as ServiceOutboundSummary } from '@/services/inventoryTransactionService';
 import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
 // 2026-06-04 紧急修复：跨页刷新订阅（任何写操作 → useInventoryStore.notifyChange()
@@ -58,6 +59,9 @@ export default function OutboundRecordsPage() {
   const loading = useInventoryTransactionStore((s) => s.loading);
   const loadOutbound = useInventoryTransactionStore((s) => s.loadOutbound);
   const deleteTransactions = useInventoryTransactionStore((s) => s.deleteTransactions);
+  // 2026-07-28 审核 M：订阅 error 状态 + clearError，让 UI 能展示加载失败提示
+  const loadError = useInventoryTransactionStore((s) => s.error);
+  const clearError = useInventoryTransactionStore((s) => s.clearError);
   const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   // 工具栏模式（与作物库存 ActionToolbar 协同）
@@ -153,11 +157,17 @@ export default function OutboundRecordsPage() {
   };
 
   // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
+  // 2026-07-28 审核 H-9：支持部分成功提示（之前 success=true 包含部分失败也只显示"全部成功"）
   const handleDeleteModalConfirm = async () => {
     const result = await deleteTransactions(selectedRows);
     setShowDeleteModal(false);
     if (result.success) {
-      showAlert(`已删除 ${result.deletedCount} 条记录`);
+      const skipped = (result as any).skippedCount;
+      if (skipped && skipped > 0) {
+        showAlert(`已删除 ${result.deletedCount} 条，跳过 ${skipped} 条（${result.error || '失败原因未知'}）`);
+      } else {
+        showAlert(`已删除 ${result.deletedCount} 条记录`);
+      }
       setSelectedRows([]);
       setDeleteMode(false);
     } else {
@@ -181,15 +191,38 @@ export default function OutboundRecordsPage() {
       // 选中的行（按 row.id 过滤 — selectedRows 现在存的是 row.id 而非 instanceId）
       const selectedData = rows.filter(r => selectedRows.includes(r.id));
       if (format === 'csv') {
-        // CSV 走后端（保持一致性）
-        const blob = await exportOutboundCSV(query);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        // 2026-07-10 P0-1 修复：用 todayLocal() 替代 toISOString() 避免 UTC 时区 bug
-        a.download = `outbound-${todayLocal()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        // 2026-07-28 审核 C-3：CSV 改用前端 selectedData 生成（与 XLSX 对齐，避免"勾选无效"bug）
+        const csvHeaders = [
+          '流水号', '业务单号', '操作时间', '实例ID', '作物编码', '类型',
+          '作物名称', '品种', '种植模式', '采收区域', '品质等级',
+          '出库数量', '单位', '余额前', '余额后', '仓库', '业务类型', '出库人', '备注',
+        ];
+        const csvRows = selectedData.map((r) => ({
+          '流水号':     r.id || '',
+          '业务单号':   r.businessCode || '',
+          '操作时间':   r.operateDate,
+          '实例ID':     r.instanceId,
+          '作物编码':   r.cropCode || '',
+          '类型':       r.stockType,
+          '作物名称':   r.cropName || '',
+          '品种':       r.varietyName || '',
+          '种植模式':   r.plantingMode || '',
+          '采收区域':   r.greenhouseName || '',
+          '品质等级':   r.grade || '',
+          '出库数量':   r.quantityOut,
+          '单位':       r.unit || '',
+          '余额前':     r.balanceBefore,
+          '余额后':     r.balanceAfter,
+          '仓库':       r.warehouseName || '',
+          '业务类型':   r.businessType || '',
+          '出库人':     r.operatorName || '',
+          '备注':       r.remarks || '',
+        }));
+        await exportCsv({
+          filename: `outbound-${todayLocal()}.csv`,
+          headers: csvHeaders,
+          rows: csvRows,
+        });
         toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'excel') {
         // Excel 走前端（按选中的行生成 XLSX 双 sheet）
@@ -281,6 +314,19 @@ export default function OutboundRecordsPage() {
           )}
         </div>
       </div>
+
+      {/* 2026-07-28 审核 M：错误状态提示（区别于"暂无出库"，明确告知加载失败） */}
+      {loadError && !loading && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm flex items-center justify-between">
+          <span>加载失败：{loadError}</span>
+          <button
+            className="text-red-700 underline hover:no-underline"
+            onClick={() => { clearError(); loadOutbound(); }}
+          >
+            重试
+          </button>
+        </div>
+      )}
 
       {/* 数据表格 */}
       <OutboundRecordsTable
