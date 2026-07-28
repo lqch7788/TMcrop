@@ -51,19 +51,20 @@ export function generateRecordCodeWithRetry(maxAttempts = 5): string {
   const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
   const prefix = `BY${datePrefix}`;
 
+  // 2026-07-28 审核 H-14：首次循环先查 MAX；冲突后续重试手动递增（之前每次都重新查 MAX，非连续号场景下同一 candidate 浪费全部 5 次重试）
+  const maxRow = queryToObjects<{ recordCode: string | null }>(
+    db,
+    `SELECT MAX(record_code) AS record_code FROM pesticide_records WHERE record_code LIKE ?`,
+    [`${prefix}-%`],
+  );
+  let maxSeq = 0;
+  const currentMax = maxRow[0]?.recordCode;
+  if (currentMax && currentMax.startsWith(prefix)) {
+    const seq = parseInt(currentMax.split('-').pop() || '0', 10);
+    if (!isNaN(seq)) maxSeq = seq;
+  }
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    // 注意：queryToObjects 自动转 snake → camel，故读取 recordCode 而非 record_code
-    const maxRow = queryToObjects<{ recordCode: string | null }>(
-      db,
-      `SELECT MAX(record_code) AS record_code FROM pesticide_records WHERE record_code LIKE ?`,
-      [`${prefix}-%`],
-    );
-    let maxSeq = 0;
-    const currentMax = maxRow[0]?.recordCode;
-    if (currentMax && currentMax.startsWith(prefix)) {
-      const seq = parseInt(currentMax.split('-').pop() || '0', 10);
-      if (!isNaN(seq)) maxSeq = seq;
-    }
     const candidate = `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
 
     // 候选号查重（O(1) 索引扫描）— 同样 camelCase
@@ -75,7 +76,8 @@ export function generateRecordCodeWithRetry(maxAttempts = 5): string {
     if (dups.length === 0) {
       return candidate;
     }
-    // 已存在 — 重试时手动 +1
+    // 已存在 — 重试时手动 +1 跳过冲突号，避免再次查同一 candidate
+    maxSeq++;
   }
   throw new PesticideBusinessError(
     PesticideErrorCode.INVALID_INPUT,

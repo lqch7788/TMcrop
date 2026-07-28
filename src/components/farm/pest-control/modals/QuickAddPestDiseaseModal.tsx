@@ -40,7 +40,8 @@ export function QuickAddPestDiseaseModal({ isOpen, onClose, defaultType = 'pest'
 
   const handleSubmit = async () => {
     if (!form.dictName.trim()) {
-      showAlert('请输入病虫害名称', 'warning');
+      // 2026-07-28 审核 M：showAlert 只接受 1 个参数（message），删掉多余的 'warning'
+      showAlert('请输入病虫害名称');
       return;
     }
 
@@ -59,7 +60,8 @@ export function QuickAddPestDiseaseModal({ isOpen, onClose, defaultType = 'pest'
         handleClose();
       }
     } catch (error) {
-      showAlert('添加失败', 'error');
+      // 2026-07-28 审核 M：删掉多余的 'error'
+      showAlert(`添加失败：${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSubmitting(false);
     }

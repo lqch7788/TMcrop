@@ -105,6 +105,9 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
   // 标记 cropName 是否仍处于"由所选批次自动反填"状态（用户手动改过 Input 后置 false）
   const cropNameAutoFilledRef = useRef<boolean>(false);
 
+  // 2026-07-28 审核 H-15：弹窗"已初始化"标志，防止种植/育苗列表异步加载完成后重新初始化覆盖用户编辑
+  const initializedRef = useRef<boolean>(false);
+
   // 加载数据：药剂库 + 种植/育苗 + 病虫害词典（与 AddModal 一致）
   useEffect(() => {
     if (isOpen) {
@@ -113,11 +116,16 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
       if (plantingStore.items.length === 0) plantingStore.fetchItems();
       if (seedlingStore.items.length === 0) seedlingStore.fetchItems();
     }
+    // 弹窗关闭时重置初始化标志，确保下次打开能重新初始化
+    if (!isOpen) initializedRef.current = false;
   }, [isOpen]);
 
   // 2026-07-21 P2：初始化表单（从 record 全面回填所有字段，对齐 AddModal）
+  // 2026-07-28 审核 H-15：用 initializedRef 守卫，避免 plantingStore.items/seedlingStore.items
+  //   异步加载完成后触发此 effect 重新执行覆盖用户编辑
   useEffect(() => {
     if (!isOpen || !record) return;
+    if (initializedRef.current) return;
 
     // 基础字段回填
     setForm({
@@ -329,7 +337,10 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
     setSelectedBizRecords(restoredBiz);
     // cropNames 自动反填 flag：因回填已完成，自动反填 flag=false（用户后续手动改 cropName 时再变化）
     cropNameAutoFilledRef.current = false;
-  }, [isOpen, record, plantingStore.items, seedlingStore.items]);
+    // 2026-07-28 审核 H-15：标记为已初始化，防止 planting/seedling 列表异步加载完成后重新执行 effect 覆盖用户输入
+    initializedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, record]);
 
   const updateForm = useCallback((field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
