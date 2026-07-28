@@ -7,6 +7,8 @@
 
 import { enhancedApiClient } from '../lib/apiClient';
 import { Planting, PlantingStatus, SourceType, PlantingHarvestRecord } from '../types/crop';
+// 2026-07-28 审核 H-1：用 todayLocal() 替代 toISOString() 修复中国时区 0:00-8:00 写昨日期 bug
+import { todayLocal } from '../lib/dateUtils';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendPlanting {
@@ -425,7 +427,8 @@ export async function endPlanting(id: string, input: EndPlantingInput): Promise<
   const updates: Record<string, any> = {
     is_harvest_locked: 1,
     status: 'ended',
-    end_time: new Date().toISOString(),
+    // 2026-07-28 审核 H-1：改本地日期，避免 UTC 在中国 0:00-8:00 显示昨天
+    end_time: todayLocal(),
     end_type: input.endType,
   };
   const data = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates);

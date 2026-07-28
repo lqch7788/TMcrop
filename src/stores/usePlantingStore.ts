@@ -97,7 +97,8 @@ export const usePlantingStore = create<PlantingState>()(
         // 2026-07-26：用 API 返回的真实数据更新列表，不用本地 updates
         //   （本地 updates 缺少服务端计算的字段如 area_name，导致列表显示旧数据）
         if (result) set((s) => ({
-          items: s.items.map((i) => i.id === id ? { ...i, ...updates, ...(result as any) } : i),
+          // 2026-07-28 审核 LOW：result 已是 Planting 类型，不再 `as any`
+          items: s.items.map((i) => i.id === id ? { ...i, ...updates, ...result } : i),
         }));
         return result;
       } catch (error) {
@@ -231,7 +232,8 @@ export const usePlantingStore = create<PlantingState>()(
         set((s) => ({
           items: s.items.map((i) =>
             i.id === id
-              ? { ...i, status: options.status as unknown as Planting['status'], isHarvestLocked: true }
+              // 2026-07-28 审核 LOW：options.status 与 Planting['status'] 本就字符串兼容，删除双重类型转换
+              ? { ...i, status: options.status, isHarvestLocked: true }
               : i
           ),
         }));
