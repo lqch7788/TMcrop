@@ -1576,6 +1576,35 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• dictionaries.parent_id 列添加: ' + e.message);
   }
 
+  // 2026-07-28：农药类型字典父子关系自愈迁移
+  // 事故背景：种子 PT005 原为"保护剂"，后被改名为"其他"，新条目 PT005_xxx 创建为"保护剂"。
+  // 子项 PT015/PT016（保护剂-接触式/系统性）的 parent_id 仍指向 PT005（现在的"其他"），
+  // 导致 UI 渲染时把保护剂子项错误归类到"其他"行下。
+  // 修复：把所有"保护剂-*"子项的 parent_id 重定向到当前真正的"保护剂"主条目。
+  // 幂等：执行多次结果相同（重复指向同一目标）
+  try {
+    // 2026-07-28：sql.js 的 UPDATE ... SET col = (SELECT ...) 必须先 SELECT 拿到目标 id，
+    // 直接嵌套 SELECT 在 sql.js 里可能不被识别；分两步走更稳健
+    const findProt = db.prepare(
+      "SELECT id FROM dictionaries WHERE category_code = 'pesticide_type' AND dict_label = '保护剂' AND parent_id IS NULL ORDER BY sort_order LIMIT 1"
+    );
+    let protId: string | null = null;
+    if (findProt.step()) {
+      protId = findProt.getAsObject().id as string;
+    }
+    findProt.free();
+
+    if (protId) {
+      db.run(
+        "UPDATE dictionaries SET parent_id = ? WHERE category_code = 'pesticide_type' AND dict_label LIKE '保护剂-%' AND parent_id IS NOT NULL AND parent_id != ?",
+        [protId, protId]
+      );
+      seedLog.info(`✓ 农药类型字典 父子关系自愈（保护剂子项 → ${protId}）`);
+    }
+  } catch (e: any) {
+    seedLog.skip('• 农药类型字典自愈迁移: ' + e.message);
+  }
+
   // 2026-07-12：药剂库扁平化迁移 — 检查旧表结构并迁移到新扁平表
   // 检测条件：pesticide_specs 存在 pesticide_id 列（旧 FK 结构）且不存在 stock_quantity（新扁平结构）
   let needsPesticideMigration = false;

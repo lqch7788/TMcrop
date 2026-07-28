@@ -27,8 +27,10 @@ export default function PestDiseaseDictPage() {
   const isLoading = usePestDiseaseDictStore((s) => s.isLoading);
   const error = usePestDiseaseDictStore((s) => s.error);
   const clearError = usePestDiseaseDictStore((s) => s.clearError);
-  // actions 保持解构（不在 selector 中）
-  const store = usePestDiseaseDictStore();
+  // 2026-07-28 修复 Maximum update depth exceeded：
+  // 单独 selector 提取 actions，每个都是稳定引用（函数在 store 中不会改变）
+  const fetchItems = usePestDiseaseDictStore((s) => s.fetchItems);
+  const deleteItem = usePestDiseaseDictStore((s) => s.deleteItem);
 
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<TabType>('pest');
@@ -44,20 +46,20 @@ export default function PestDiseaseDictPage() {
   // 关键点：传 dictType 给后端过滤，避免数据混合；不重复拉取
   useEffect(() => {
     setFilters({ dictType: activeTab });
-    store.fetchItems({ limit: '10000', dictType: activeTab });
-  }, [activeTab, store]);
+    fetchItems({ limit: '10000', dictType: activeTab });
+  }, [activeTab, fetchItems]);
 
   // ========== 筛选处理 ==========
   // H10 修复：去掉 searchKeyword 本地 state，搜索词走 filters.keyword；
   // 搜索框实时回车或点击「搜索」触发，handleSearch 直接传 keyword。
   const handleSearch = useCallback(() => {
-    store.fetchItems({ ...filters, limit: '10000' });
-  }, [filters, store]);
+    fetchItems({ ...filters, limit: '10000' });
+  }, [filters, fetchItems]);
 
   const handleReset = useCallback(() => {
     setFilters({ dictType: activeTab });
-    store.fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, store]);
+    fetchItems({ dictType: activeTab, limit: '10000' });
+  }, [activeTab, fetchItems]);
 
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
     setFilters({ ...newFilters, dictType: activeTab });
@@ -77,20 +79,20 @@ export default function PestDiseaseDictPage() {
   const handleDelete = useCallback(async (id: string) => {
     const ok = await showConfirm('确定删除该病虫害吗？\n\n删除后，被引用的信息将无法完整显示。');
     if (ok) {
-      store.deleteItem(id);
+      deleteItem(id);
     }
-  }, [store]);
+  }, [deleteItem]);
 
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    store.fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, store]);
+    fetchItems({ dictType: activeTab, limit: '10000' });
+  }, [activeTab, fetchItems]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    store.fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, store]);
+    fetchItems({ dictType: activeTab, limit: '10000' });
+  }, [activeTab, fetchItems]);
 
   // ========== 根据Tab过滤数据 ==========
   const filteredItems = items.filter(item => item.dictType === activeTab);
