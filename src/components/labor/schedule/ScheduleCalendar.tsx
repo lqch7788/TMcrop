@@ -2,6 +2,8 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
+import { todayLocal } from '../../../lib/dateUtils';
+import { useDispatchOccupations } from '../../../hooks/useDispatchOccupations';
 
 interface ScheduleCalendarProps {
   viewMode: ViewMode;
@@ -69,6 +71,10 @@ export function ScheduleCalendar({
   onViewModeChange,
   onScheduleClick,
 }: ScheduleCalendarProps) {
+  // ★ Batch 4 B4.2：拉取今日排班占用（用于单元格任务数角标）
+  const today = todayLocal();
+  const { occupations } = useDispatchOccupations(today);
+
   // 规范化数据（兼容snake_case和camelCase）
   const normalizedList = React.useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
 
@@ -152,22 +158,37 @@ export function ScheduleCalendar({
                 </div>
                 {/* 排班标签 */}
                 <div className="space-y-0.5">
-                  {schedules.slice(0, 3).map(schedule => (
-                    <div
-                      key={schedule.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onScheduleClick?.(schedule);
-                      }}
-                      className={`
-                        text-xs px-1 py-0.5 rounded truncate text-white cursor-pointer
-                        ${getShiftColor(schedule.shift, shiftConfigs)}
-                        ${schedule.status === '已取消' ? 'opacity-50 line-through' : ''}
-                      `}
-                    >
-                      {schedule.staffName} {schedule.shift}
-                    </div>
-                  ))}
+                  {schedules.slice(0, 3).map(schedule => {
+                    // ★ Batch 4 B4.2：仅今日单元格显示任务数角标（occupations 数据源绑定 today）
+                    const taskCount = today
+                      ? (occupations.find(o => o.workerId === schedule.staffId)?.assignedTaskCount ?? 0)
+                      : 0;
+                    return (
+                      <div
+                        key={schedule.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onScheduleClick?.(schedule);
+                        }}
+                        className={`
+                          relative text-xs px-1 py-0.5 rounded truncate text-white cursor-pointer
+                          ${getShiftColor(schedule.shift, shiftConfigs)}
+                          ${schedule.status === '已取消' ? 'opacity-50 line-through' : ''}
+                        `}
+                      >
+                        {schedule.staffName} {schedule.shift}
+                        {taskCount > 0 && (
+                          <span
+                            className="absolute bottom-0.5 right-0.5 min-w-[16px] h-[16px] px-1
+                                       rounded-full bg-red-500 text-white text-[10px] font-bold
+                                       flex items-center justify-center"
+                          >
+                            {taskCount}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                   {schedules.length > 3 && (
                     <div className="text-xs text-gray-500 px-1">
                       +{schedules.length - 3} 更多
