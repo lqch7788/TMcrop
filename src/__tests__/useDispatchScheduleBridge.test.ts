@@ -12,12 +12,13 @@
  * 2026-07-29
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useDispatchScheduleBridge } from '../hooks/useDispatchScheduleBridge';
 import { enhancedApiClient } from '../lib/apiClient';
 import { useScheduleStore } from '../stores';
+import { useToastStore } from '../stores/useToastStore';
 
 // ============ 零依赖 renderHook 等价物 ============
 
@@ -74,11 +75,21 @@ vi.mock('../stores', () => {
     }
     return mockState;
   });
-  // 兼容 setState/getState 调用
-  useScheduleStoreMock.setState = vi.fn();
-  useScheduleStoreMock.getState = vi.fn(() => mockState);
   return { useScheduleStore: useScheduleStoreMock };
 });
+
+// Mock useToastStore（store/index.ts 透传，单独路径 mock）
+const mockToast = {
+  success: vi.fn(),
+  error: vi.fn(),
+  warning: vi.fn(),
+  info: vi.fn(),
+};
+vi.mock('../stores/useToastStore', () => ({
+  useToastStore: {
+    getState: () => ({ toast: mockToast }),
+  },
+}));
 
 // Mock enhancedApiClient
 vi.mock('../lib/apiClient', () => ({
@@ -90,16 +101,14 @@ vi.mock('../lib/apiClient', () => ({
 // ============ 测试用例 ============
 
 describe('useDispatchScheduleBridge', () => {
-  let alertSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.invalidateOccupations = vi.fn();
-    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    alertSpy.mockRestore();
+    // 重置 toast mocks
+    mockToast.success.mockReset();
+    mockToast.error.mockReset();
+    mockToast.warning.mockReset();
+    mockToast.info.mockReset();
   });
 
   it('成功 PATCH 后调用 invalidateOccupations(today)', async () => {
@@ -130,6 +139,9 @@ describe('useDispatchScheduleBridge', () => {
     expect(mockState.invalidateOccupations).toHaveBeenCalledWith(
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
     );
+    // 成功路径不应触发 toast
+    expect(mockToast.error).not.toHaveBeenCalled();
+    expect(mockToast.warning).not.toHaveBeenCalled();
   });
 
   it('传入 taskPlanDate 时 PATCH body 含 date 字段且双日期 invalidate', async () => {
@@ -162,7 +174,7 @@ describe('useDispatchScheduleBridge', () => {
     expect(mockState.invalidateOccupations).toHaveBeenCalledWith('2026-08-01');
   });
 
-  it('PATCH 失败时不抛错（alert 兜底 + 不调用 invalidate）', async () => {
+  it('PATCH 失败时不抛错（toast.error 兜底 + 不调用 invalidate）', async () => {
     (enhancedApiClient.patch as any).mockRejectedValue({
       status: 500,
       message: 'server error',
@@ -178,11 +190,33 @@ describe('useDispatchScheduleBridge', () => {
       );
     });
 
-    // ★ alert 兜底：用户能看到失败提示，但不阻塞主流程
-    expect(alertSpy).toHaveBeenCalledWith(
+    // ★ Batch 3 I-1 修复：toast.error 替代 alert（不阻塞 UI 线程）
+    expect(mockToast.error).toHaveBeenCalledWith(
       expect.stringContaining('排班占用同步失败')
     );
     // ★ 失败时不调用 invalidate（避免清理掉可能还有效的缓存）
     expect(mockState.invalidateOccupations).not.toHaveBeenCalled();
+  });
+
+  it('PATCH 网络失败时用 toast.warning（非 500）', async () => {
+    // 模拟无 status 字段的网络错误（fetch 抛错）
+    (enhancedApiClient.patch as any).mockRejectedValue({
+      message: 'Network Error',
+    });
+
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    await act(async () => {
+      await result.current!.syncAfterDispatch(
+        { source: 'farm', sourceId: 'FT-NET' },
+        'S004'
+      );
+    });
+
+    // 非 500 错误用 warning（用户可重试），不用 error
+    expect(mockToast.warning).toHaveBeenCalledWith(
+      expect.stringContaining('排班占用同步失败')
+    );
+    expect(mockToast.error).not.toHaveBeenCalled();
   });
 });
