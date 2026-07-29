@@ -5,11 +5,12 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sparkles, MapPin, Zap, RefreshCw, UserPlus, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Sparkles, MapPin, Zap, RefreshCw, UserPlus, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown, ChevronRight, Send } from 'lucide-react';
 import type { AIRecommendConfig, UnifiedTaskInput } from '../../types/dispatch';
 import type { WorkerRecommendation } from '../../hooks/useComprehensiveDispatch';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../types/dispatch';
 import { Button } from '@/components/ui';
+import { ScheduleConflictWarning } from './ScheduleConflictWarning';
 
  /** AI推荐面板组件Props */
 export interface AIRecommendationPanelProps {
@@ -19,6 +20,8 @@ export interface AIRecommendationPanelProps {
   recommendations: WorkerRecommendation[];
   /** 选中执行人回调 */
   onWorkerSelect: (workerId: string, score: number) => void;
+  /** 派发回调（确认派发时触发） */
+  onDispatch?: (workerId: string, workerName: string) => void;
   /** 重新推荐回调 */
   onReRecommend?: () => void;
   /** 手动选择回调 */
@@ -44,6 +47,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   taskInfo,
   recommendations,
   onWorkerSelect,
+  onDispatch,
   onReRecommend,
   onManualSelect,
   config = DEFAULT_AI_RECOMMEND_CONFIG,
@@ -54,6 +58,10 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
 
   // 展开状态
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
+
+  // ★ 阶段 3：排班冲突警告弹窗状态
+  const [showWarning, setShowWarning] = useState(false);
+  const [pendingDispatch, setPendingDispatch] = useState<WorkerRecommendation | null>(null);
 
   // 根据配置决定是否默认选中Top1
   useEffect(() => {
@@ -81,6 +89,30 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       }
       return newSet;
     });
+  };
+
+  // ★ 阶段 3：派发处理（含排班冲突软警告）
+  const handleDispatchClick = (rec: WorkerRecommendation) => {
+    const needWarning = rec.scheduleStatus === 'off_duty' || (rec.assignedTaskCount ?? 0) >= 3;
+    if (needWarning) {
+      setPendingDispatch(rec);
+      setShowWarning(true);
+    } else {
+      onDispatch?.(rec.worker.id, rec.worker.name);
+    }
+  };
+
+  const handleWarningConfirm = () => {
+    if (pendingDispatch) {
+      onDispatch?.(pendingDispatch.worker.id, pendingDispatch.worker.name);
+    }
+    setShowWarning(false);
+    setPendingDispatch(null);
+  };
+
+  const handleWarningCancel = () => {
+    setShowWarning(false);
+    setPendingDispatch(null);
   };
 
   // 渲染单个推荐项
@@ -218,6 +250,22 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
              rec.suggestedAction === 'split' ? '○ 建议拆分' : '○ 建议延后'}
           </span>
         </div>
+
+        {/* ★ 阶段 3：派发按钮（仅 onDispatch 提供时显示） */}
+        {onDispatch && (
+          <div className="mt-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDispatchClick(rec);
+              }}
+              className="w-full py-1.5 rounded text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center gap-1"
+            >
+              <Send className="w-3 h-3" />
+              派发
+            </button>
+          </div>
+        )}
         </div>
       </div>
     );
@@ -328,6 +376,18 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
           </p>
         </div>
       )}
+
+      {/* ★ 阶段 3：排班冲突软警告弹窗 */}
+      <ScheduleConflictWarning
+        isOpen={showWarning}
+        workerName={pendingDispatch?.worker.name ?? ''}
+        scheduleStatus={pendingDispatch?.scheduleStatus === 'off_duty' ? 'off_duty' : 'no_schedule'}
+        assignedTaskCount={pendingDispatch?.assignedTaskCount ?? 0}
+        totalAssignedHours={0}
+        tasks={[]}
+        onConfirm={handleWarningConfirm}
+        onCancel={handleWarningCancel}
+      />
     </div>
   );
 };
