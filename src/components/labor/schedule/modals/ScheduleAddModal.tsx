@@ -1,4 +1,4 @@
-import { Modal, FormField, Select } from '@/components/ui';
+import { Modal, FormField, Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { ShiftType } from '../types';
 
@@ -39,28 +39,41 @@ export function ScheduleAddModal({
         <FormField label="选择员工" required>
           <Select
             value={formData.staffId}
-            onChange={(e) => {
-              const staff = staffList.find(s => s.id === e.target.value);
-              onFormChange('staffId', e.target.value);
+            onValueChange={(val) => {
+              const staff = staffList.find(s => s.id === val);
+              onFormChange('staffId', val);
               onFormChange('staffName', staff?.name || '');
               onFormChange('workZone', staff?.workZone || '');
             }}
-            options={[
-              { value: '', label: '请选择员工' },
-              ...staffList.map(s => ({ value: s.id, label: `${s.name} - ${s.workZone}` })),
-            ]}
-          />
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="请选择员工" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">请选择员工</SelectItem>
+              {staffList.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.name} - {s.workZone}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
 
         <FormField label="选择班次" required>
           <Select
             value={formData.shift}
-            onChange={(e) => onFormChange('shift', e.target.value)}
-            options={shiftConfigs.map(config => ({
-              value: config.name,
-              label: `${config.name} (${config.startTime}-${config.endTime})`,
-            }))}
-          />
+            onValueChange={(val) => onFormChange('shift', val)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="请选择班次" />
+            </SelectTrigger>
+            <SelectContent>
+              {shiftConfigs.map(config => (
+                <SelectItem key={config.name} value={config.name}>
+                  {config.name} ({config.startTime}-{config.endTime})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
 
         <FormField label="排班日期" required>

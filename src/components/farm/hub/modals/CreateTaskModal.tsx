@@ -474,6 +474,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
       <div className="p-6 overflow-y-auto" style={{ maxHeight: '70vh' }}>
         <div className="space-y-4">
+            {/* 任务编号 | 任务类型（2列对齐） */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">任务编号</Label>
@@ -483,7 +484,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     value={newTask.taskId || ''}
                     onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
                     className={deepInputClass}
-                    placeholder="点击下方生成按钮"
+                    placeholder="点击右侧生成按钮"
                   />
                   <Button
                     type="button"
@@ -494,6 +495,70 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     <Wand2 className="w-4 h-4" /> 生成
                   </Button>
                 </div>
+              </div>
+              <div>
+                <Label className="text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <div
+                    className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
+                    onClick={() => setShowTaskTypeDropdown(!showTaskTypeDropdown)}
+                  >
+                    {(!newTask.types || newTask.types.length === 0) && (
+                      <span className="text-gray-400 text-sm">请选择任务类型</span>
+                    )}
+                    {(newTask.types || []).map((typeValue: string) => {
+                      const type = FARM_OPERATION_TYPES.find(t => t.value === typeValue);
+                      return (
+                        <span
+                          key={typeValue}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-sm"
+                        >
+                          {type?.label || typeValue}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewTask({ ...newTask, types: newTask.types.filter(v => v !== typeValue) });
+                            }}
+                            className="hover:text-red-500 h-4 w-4"
+                          >
+                            ×
+                          </Button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {showTaskTypeDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {FARM_OPERATION_TYPES.map(t => (
+                        <Label
+                          key={t.value}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Input
+                            type="checkbox"
+                            checked={newTask.types.includes(t.value)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewTask({ ...newTask, types: [...newTask.types, t.value] });
+                              } else {
+                                setNewTask({ ...newTask, types: newTask.types.filter(v => v !== t.value) });
+                              }
+                            }}
+                            className="w-4 h-4 text-emerald-600 rounded"
+                          />
+                          <span className="text-sm text-gray-700">{t.label}</span>
+                        </Label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {showTaskTypeDropdown && (
+                  <div className="fixed inset-0 z-0" onClick={() => setShowTaskTypeDropdown(false)} />
+                )}
               </div>
             </div>
             {/* 2026-07-28 改造：种植/育苗区域选择 — 单独占一行 */}
@@ -847,187 +912,87 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         {/* ===== 资源与时间 ===== */}
         {createStep === 2 && (
           <div className="space-y-4 mt-6 pt-4 border-t">
-            <div>
-              <Label className="text-gray-700 mb-1">所需物资</Label>
-              <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-                {(!newTask.materials || newTask.materials.length === 0) ? (
-                  <p className="text-sm text-gray-400 text-center py-2">暂无所需物资</p>
-                ) : (
-                  newTask.materials.map((m, i) => (
-                    <div key={`mat-${i}`} className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        value={m.name}
-                        onChange={(e) => {
-                          const newMaterials = [...(newTask.materials || [])];
-                          newMaterials[i].name = e.target.value;
-                          setNewTask({ ...newTask, materials: newMaterials });
-                        }}
-                        className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                        placeholder="物资名称"
-                      />
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={m.qty}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^\d.]/g, '');
-                          if (raw === '' || raw === '-') {
-                            const newMaterials = [...(newTask.materials || [])];
-                            newMaterials[i].qty = 0;
-                            setNewTask({ ...newTask, materials: newMaterials });
-                            return;
-                          }
-                          const val = parseFloat(raw);
-                          if (!isNaN(val)) {
-                            const newMaterials = [...(newTask.materials || [])];
-                            newMaterials[i].qty = Math.round(val * 100) / 100;
-                            setNewTask({ ...newTask, materials: newMaterials });
-                          }
-                        }}
-                        className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
-                      />
-                      <Select
-                        value={m.unit}
-                        onValueChange={(val) => {
-                          const newMaterials = [...(newTask.materials || [])];
-                          newMaterials[i].unit = val;
-                          setNewTask({ ...newTask, materials: newMaterials });
-                        }}
-                      >
-                        <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
-                          <SelectValue placeholder="个" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="个">个</SelectItem>
-                          <SelectItem value="件">件</SelectItem>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="g">g</SelectItem>
-                          <SelectItem value="L">L</SelectItem>
-                          <SelectItem value="mL">mL</SelectItem>
-                          <SelectItem value="袋">袋</SelectItem>
-                          <SelectItem value="箱">箱</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newMaterials = (newTask.materials || []).filter((_, idx) => idx !== i);
-                          setNewTask({ ...newTask, materials: newMaterials });
-                        }}
-                        className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))
-                )}
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => setNewTask({ ...newTask, materials: [...(newTask.materials || []), { name: '', qty: 1, unit: '个' }] })}
+            {/* 优先级 | 班组（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-700 mb-1">优先级</Label>
+                <Select
+                  value={newTask.priority}
+                  onValueChange={(val) => setNewTask({ ...newTask, priority: val })}
                 >
-                  + 物资
-                </Button>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="普通" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">普通</SelectItem>
+                    <SelectItem value="high">高</SelectItem>
+                    <SelectItem value="urgent">紧急</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-gray-700 mb-1">
+                  班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
+                </Label>
+                <Select
+                  value={newTask.teamId || ''}
+                  onValueChange={(val) => {
+                    const selectedTeam = teams.find(t => t.id === val);
+                    setNewTask({
+                      ...newTask,
+                      teamId: val,
+                      teamName: selectedTeam?.name || '',
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">
+                    <SelectValue placeholder="不关联班组（直接选人）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">不关联班组（直接选人）</SelectItem>
+                    {teams.map(team => (
+                      <SelectItem key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div>
-              <Label className="text-gray-700 mb-1">所需工具</Label>
-              <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-                {(!newTask.tools || newTask.tools.length === 0) ? (
-                  <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
-                ) : (
-                  newTask.tools.map((t, i) => (
-                    <div key={`tool-${i}`} className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        value={t.name}
-                        onChange={(e) => {
-                          const newTools = [...(newTask.tools || [])];
-                          newTools[i].name = e.target.value;
-                          setNewTask({ ...newTask, tools: newTools });
-                        }}
-                        className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                        placeholder="工具名称"
-                      />
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={t.qty}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^\d.]/g, '');
-                          if (raw === '' || raw === '-') {
-                            const newTools = [...(newTask.tools || [])];
-                            newTools[i].qty = 0;
-                            setNewTask({ ...newTask, tools: newTools });
-                            return;
-                          }
-                          const val = parseFloat(raw);
-                          if (!isNaN(val)) {
-                            const newTools = [...(newTask.tools || [])];
-                            newTools[i].qty = Math.round(val * 100) / 100;
-                            setNewTask({ ...newTask, tools: newTools });
-                          }
-                        }}
-                        className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
-                      />
-                      <Select
-                        value={t.unit}
-                        onValueChange={(val) => {
-                          const newTools = [...(newTask.tools || [])];
-                          newTools[i].unit = val;
-                          setNewTask({ ...newTask, tools: newTools });
-                        }}
-                      >
-                        <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
-                          <SelectValue placeholder="把" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="把">把</SelectItem>
-                          <SelectItem value="个">个</SelectItem>
-                          <SelectItem value="台">台</SelectItem>
-                          <SelectItem value="套">套</SelectItem>
-                          <SelectItem value="件">件</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newTools = (newTask.tools || []).filter((_, idx) => idx !== i);
-                          setNewTask({ ...newTask, tools: newTools });
-                        }}
-                        className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))
-                )}
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() => setNewTask({ ...newTask, tools: [...(newTask.tools || []), { name: '', qty: 1, unit: '把' }] })}
+            {newTask.teamId && (
+              <p className="text-xs text-blue-600 -mt-2">
+                已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
+              </p>
+            )}
+            {/* 执行人 | 备注（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-700 mb-1">执行人</Label>
+                <Select
+                  value={newTask.assignee || ''}
+                  onValueChange={(val) => setNewTask({ ...newTask, assignee: val })}
                 >
-                  + 工具
-                </Button>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="请选择执行人" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {responsiblePersons.map(person => (
+                      <SelectItem key={person.code || person.name} value={person.name}>{person.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-gray-700 mb-1">备注（可选）</Label>
+                <TextArea
+                  value={newTask.toolsRemarks || ''}
+                  onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
+                  placeholder="补充说明资源相关要求"
+                  rows={2}
+                  className={deepInputClass}
+                />
               </div>
             </div>
-            {/* 资源备注 */}
-            <div>
-              <Label className="text-gray-700 mb-1">备注（可选）</Label>
-              <TextArea
-                value={newTask.toolsRemarks || ''}
-                onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
-                placeholder="补充说明资源相关要求"
-                rows={2}
-                className={deepInputClass}
-              />
-            </div>
-            {/* 时间与要求 */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {/* 工作制 */}
+            {/* 工作制 | 开始日期（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">工作制</Label>
                 <Select
@@ -1050,7 +1015,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </SelectContent>
                 </Select>
               </div>
-              {/* 计划开始日期 */}
               <div>
                 <Label className="text-gray-700 mb-1">开始日期 <span className="text-red-500">*</span></Label>
                 <DatePicker
@@ -1062,7 +1026,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   placeholder="选择开始日期"
                 />
               </div>
-              {/* 开始时间 */}
+            </div>
+            {/* 开始时间 | 天数（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">开始时间</Label>
                 <Select
@@ -1082,7 +1048,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   </SelectContent>
                 </Select>
               </div>
-              {/* 天数 */}
               <div>
                 <Label className="text-gray-700 mb-1">天数</Label>
                 <Input
@@ -1097,7 +1062,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   className={deepInputClass}
                 />
               </div>
-              {/* 小时 */}
+            </div>
+            {/* 小时 | 任务截止时间（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></Label>
                 <Input
@@ -1117,86 +1084,186 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   className={deepInputClass}
                 />
               </div>
-            </div>
-            {/* 任务截止时间自动计算显示 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-blue-700">
-                  任务截止时间：
-                </span>
-                <span className="text-sm font-medium text-blue-900">
-                  {newTask.planStart ? calculateEndDateTime(newTask.planStart, newTask.estimatedDays || 0, newTask.estimatedHours || 0, newTask.workHoursPerDay || 8) : '-'}
-                </span>
-                <span className="text-xs text-blue-500">
-                  (共 {(newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)} 小时)
-                </span>
+              <div>
+                <Label className="text-gray-700 mb-1">任务截止时间</Label>
+                <div className="px-4 py-3 border border-blue-200 rounded-lg text-sm bg-blue-50 text-blue-900 font-medium flex items-center gap-2 min-h-[42px]">
+                  <Clock className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <span className="truncate">
+                    {newTask.planStart ? calculateEndDateTime(newTask.planStart, newTask.estimatedDays || 0, newTask.estimatedHours || 0, newTask.workHoursPerDay || 8) : '-'}
+                    <span className="text-xs text-blue-500 ml-1">(共 {(newTask.estimatedDays || 0) * (newTask.workHoursPerDay || 8) + (newTask.estimatedHours || 0)} 小时)</span>
+                  </span>
+                </div>
               </div>
             </div>
-            <div>
-              <Label className="text-gray-700 mb-1">优先级</Label>
-              <Select
-                value={newTask.priority}
-                onValueChange={(val) => setNewTask({ ...newTask, priority: val })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="普通" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">普通</SelectItem>
-                  <SelectItem value="high">高</SelectItem>
-                  <SelectItem value="urgent">紧急</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {/* 班组选择（数据来自农事管理-班组分配，选择后自动提示该班组成员） */}
-            <div>
-              <Label className="text-gray-700 mb-1">
-                班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
-              </Label>
-              <Select
-                value={newTask.teamId || ''}
-                onValueChange={(val) => {
-                  const selectedTeam = teams.find(t => t.id === val);
-                  setNewTask({
-                    ...newTask,
-                    teamId: val,
-                    teamName: selectedTeam?.name || '',
-                  });
-                }}
-              >
-                <SelectTrigger className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">
-                  <SelectValue placeholder="不关联班组（直接选人）" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">不关联班组（直接选人）</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {newTask.teamId && (
-                <p className="text-xs text-blue-600 mt-1">
-                  已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
-                </p>
-              )}
-            </div>
-            {/* 执行人选择 */}
-            <div>
-              <Label className="text-gray-700 mb-1">执行人</Label>
-              <Select
-                value={newTask.assignee || ''}
-                onValueChange={(val) => setNewTask({ ...newTask, assignee: val })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择执行人" />
-                </SelectTrigger>
-                <SelectContent>
-                  {responsiblePersons.map(person => (
-                    <SelectItem key={person.code || person.name} value={person.name}>{person.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* 所需物资 | 所需工具（2列对齐） */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-700 mb-1">所需物资</Label>
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  {(!newTask.materials || newTask.materials.length === 0) ? (
+                    <p className="text-sm text-gray-400 text-center py-2">暂无所需物资</p>
+                  ) : (
+                    newTask.materials.map((m, i) => (
+                      <div key={`mat-${i}`} className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={m.name}
+                          onChange={(e) => {
+                            const newMaterials = [...(newTask.materials || [])];
+                            newMaterials[i].name = e.target.value;
+                            setNewTask({ ...newTask, materials: newMaterials });
+                          }}
+                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
+                          placeholder="物资名称"
+                        />
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={m.qty}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^\d.]/g, '');
+                            if (raw === '' || raw === '-') {
+                              const newMaterials = [...(newTask.materials || [])];
+                              newMaterials[i].qty = 0;
+                              setNewTask({ ...newTask, materials: newMaterials });
+                              return;
+                            }
+                            const val = parseFloat(raw);
+                            if (!isNaN(val)) {
+                              const newMaterials = [...(newTask.materials || [])];
+                              newMaterials[i].qty = Math.round(val * 100) / 100;
+                              setNewTask({ ...newTask, materials: newMaterials });
+                            }
+                          }}
+                          className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
+                        />
+                        <Select
+                          value={m.unit}
+                          onValueChange={(val) => {
+                            const newMaterials = [...(newTask.materials || [])];
+                            newMaterials[i].unit = val;
+                            setNewTask({ ...newTask, materials: newMaterials });
+                          }}
+                        >
+                          <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+                            <SelectValue placeholder="个" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="个">个</SelectItem>
+                            <SelectItem value="件">件</SelectItem>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="g">g</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="mL">mL</SelectItem>
+                            <SelectItem value="袋">袋</SelectItem>
+                            <SelectItem value="箱">箱</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newMaterials = (newTask.materials || []).filter((_, idx) => idx !== i);
+                            setNewTask({ ...newTask, materials: newMaterials });
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setNewTask({ ...newTask, materials: [...(newTask.materials || []), { name: '', qty: 1, unit: '个' }] })}
+                  >
+                    + 物资
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-gray-700 mb-1">所需工具</Label>
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  {(!newTask.tools || newTask.tools.length === 0) ? (
+                    <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
+                  ) : (
+                    newTask.tools.map((t, i) => (
+                      <div key={`tool-${i}`} className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={t.name}
+                          onChange={(e) => {
+                            const newTools = [...(newTask.tools || [])];
+                            newTools[i].name = e.target.value;
+                            setNewTask({ ...newTask, tools: newTools });
+                          }}
+                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
+                          placeholder="工具名称"
+                        />
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={t.qty}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^\d.]/g, '');
+                            if (raw === '' || raw === '-') {
+                              const newTools = [...(newTask.tools || [])];
+                              newTools[i].qty = 0;
+                              setNewTask({ ...newTask, tools: newTools });
+                              return;
+                            }
+                            const val = parseFloat(raw);
+                            if (!isNaN(val)) {
+                              const newTools = [...(newTask.tools || [])];
+                              newTools[i].qty = Math.round(val * 100) / 100;
+                              setNewTask({ ...newTask, tools: newTools });
+                            }
+                          }}
+                          className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
+                        />
+                        <Select
+                          value={t.unit}
+                          onValueChange={(val) => {
+                            const newTools = [...(newTask.tools || [])];
+                            newTools[i].unit = val;
+                            setNewTask({ ...newTask, tools: newTools });
+                          }}
+                        >
+                          <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+                            <SelectValue placeholder="把" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="把">把</SelectItem>
+                            <SelectItem value="个">个</SelectItem>
+                            <SelectItem value="台">台</SelectItem>
+                            <SelectItem value="套">套</SelectItem>
+                            <SelectItem value="件">件</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newTools = (newTask.tools || []).filter((_, idx) => idx !== i);
+                            setNewTask({ ...newTask, tools: newTools });
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold h-5 w-5"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setNewTask({ ...newTask, tools: [...(newTask.tools || []), { name: '', qty: 1, unit: '把' }] })}
+                  >
+                    + 工具
+                  </Button>
+                </div>
+              </div>
             </div>
             <div>
               <Label className="font-bold text-red-600 mb-2">必填反馈 <span className="text-red-500">*</span></Label>

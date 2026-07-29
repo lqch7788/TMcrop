@@ -22,6 +22,8 @@ import {
 import { useTasks, TASK_STATUS_CONFIG } from '../../hooks/useTasks';
 import { usePersistentWorkLogs } from '../../hooks/usePersistentWorkLogs';
 import type { Task } from '../../hooks/useTasks';
+import { DailyWorkDetailModal } from '../../components/planning/DailyWorkDetailModal';
+import { getOperationTypeName } from '../../types/farm/common';
 
 // 汇总行数据类型（以任务为主体）
 interface DailySummaryRow {
@@ -43,6 +45,9 @@ interface DailySummaryRow {
 export default function DailyWorkSummary() {
   const { tasks } = useTasks();
   const { workLogs } = usePersistentWorkLogs();
+
+  // 任务详情弹窗状态
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   // 筛选状态
   const [dateFilter, setDateFilter] = useState<string>('');
@@ -71,7 +76,8 @@ export default function DailyWorkSummary() {
         return {
           id: task.id,
           taskCode: task.taskCode || task.id || '-',
-          taskTypeName: task.typeName || task.type || '-',
+          // 任务类型：优先用中文 label，typeName 缺失或为英文时用 getOperationTypeName 翻译
+          taskTypeName: getOperationTypeName(task.typeName || task.type || ''),
           greenhouse: task.greenhouseName || '-',
           crop: task.cropName || '-',
           worker: task.assigneeName || '-',
@@ -145,11 +151,10 @@ export default function DailyWorkSummary() {
     };
   }, [tasks]);
 
-  // 分页状态
+  // 分页状态（SummaryTable 内部处理分页）
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(filteredSummaries.length / pageSize);
-  const paginatedData = filteredSummaries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // 导出 Hook
   const exportHook = useExport({
@@ -297,15 +302,20 @@ description="基于任务数据汇总的每日农事工单执行情况"
       {/* 数据表格 */}
       <SummaryTable
         columns={columns}
-        data={paginatedData}
+        data={filteredSummaries}
         currentPage={currentPage}
         totalPages={totalPages}
         pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
         exportMode={exportHook.exportMode}
         selectedRows={exportHook.selectedRows}
         onPageChange={setCurrentPage}
         onSelectAll={() => exportHook.handleSelectAll(filteredSummaries.map((s) => s.id.toString()))}
         onSelectRow={(id) => exportHook.handleSelectRow(id as string)}
+        onView={(record) => setSelectedTaskId(record.id)}
       />
 
       {/* 导出弹窗 */}
@@ -317,6 +327,15 @@ description="基于任务数据汇总的每日农事工单执行情况"
         onClose={() => exportHook.setShowExportModal(false)}
         onConfirm={exportHook.handleDoExport}
       />
+
+      {/* 任务详情弹窗 */}
+      {selectedTaskId && (
+        <DailyWorkDetailModal
+          taskId={selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+          tasks={tasks}
+        />
+      )}
     </div>
   );
 }
