@@ -4,13 +4,14 @@
  * 基于多因子AI评分算法生成派工建议
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { useTasks } from './useTasks';
 import { useTempTasks } from './useTempTasks';
 import { useProblemDispatch } from './useProblemDispatch';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { useEnvironmentData } from './useEnvironmentData';
 import { useWorkerStore } from '../stores/useWorkerStore';
+import { useScheduleStore } from '../stores/scheduleStore';
 import type { Task, TempTask } from './useTasks';
 import type { AttendanceEntry } from './usePersistentAttendance';
 import type { DispatchConfig, ConfidenceLevel, SuggestedAction, EnhancedRecommendation } from '../types/dispatch';
@@ -707,6 +708,14 @@ export function useComprehensiveDispatch() {
     criticalAlerts,
   } = useEnvironmentData();
 
+  // 1.6 获取排班占用数据（派工联动：off_duty 扣 20 分）
+  const scheduleStore = useScheduleStore();
+  const today = new Date().toISOString().split('T')[0];
+  useEffect(() => {
+    scheduleStore.fetchOccupations(today);
+  }, [today, scheduleStore]);
+  const occupationsByDate = scheduleStore.occupations[today] ?? [];
+
   // 2. 构建统一任务池（仅获取待派发状态的任务）
   // 注意：pending状态的任务表示已发布但执行人还未接受，需要派发
   // 农事任务和临时任务在创建时可能已设置assigneeId，但仍处于pending状态等待执行人确认
@@ -817,8 +826,16 @@ export function useComprehensiveDispatch() {
             weatherScore * 0.05 // 天气影响权重5%
           );
 
+          // ★ 排班联动：off_duty 扣 20 分（最低 0）
+          const occupation = occupationsByDate.find(o => o.workerId === worker.id);
+          const scheduleStatus = occupation?.scheduleStatus ?? 'no_schedule';
+          const assignedTaskCount = occupation?.assignedTaskCount ?? 0;
+          const adjustedScore = scheduleStatus === 'off_duty'
+            ? Math.max(0, matchScore - 20)
+            : matchScore;
+
           // 计算置信度
-          const { level: confidenceLevel, score: confidenceScore } = calculateConfidence(matchScore);
+          const { level: confidenceLevel, score: confidenceScore } = calculateConfidence(adjustedScore);
 
           // 生成增强版推荐理由
           const reasonsDetail = generateEnhancedReasons(task, worker, {
@@ -835,11 +852,16 @@ export function useComprehensiveDispatch() {
           }
 
           // 计算建议动作
-          let suggestedAction = determineSuggestedAction(task, matchScore, riskWarnings);
+          let suggestedAction = determineSuggestedAction(task, adjustedScore, riskWarnings);
 
           // 如果天气不适合，默认建议延后
           if (!weatherImpact.suitable && suggestedAction === 'dispatch') {
             suggestedAction = 'delay';
+          }
+
+          // ★ 排班联动：off_duty 强制建议人工确认（不可自动派发）
+          if (scheduleStatus === 'off_duty' && suggestedAction === 'dispatch') {
+            suggestedAction = 'manual';
           }
 
           // 检查员工是否可用
@@ -857,7 +879,7 @@ export function useComprehensiveDispatch() {
 
           return {
             worker,
-            matchScore,
+            matchScore: adjustedScore,
             skillMatchRate,
             locationScore,
             loadScore,
@@ -874,12 +896,14 @@ export function useComprehensiveDispatch() {
             weatherImpact,
             weatherScore,
             factorsDetail,
+            scheduleStatus,
+            assignedTaskCount,
           };
         })
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, topN);
     },
-    [workers]
+    [workers, occupationsByDate]
   );
 
   // 5. 执行派发
