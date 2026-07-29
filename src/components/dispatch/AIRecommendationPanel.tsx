@@ -11,6 +11,14 @@ import type { WorkerRecommendation } from '../../hooks/useComprehensiveDispatch'
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../types/dispatch';
 import { Button } from '@/components/ui';
 import { ScheduleConflictWarning } from './ScheduleConflictWarning';
+import { useDispatchOccupations } from '../../hooks/useDispatchOccupations';
+import { todayLocal } from '@/lib/dateUtils';
+
+/**
+ * 单日派发任务数阈值：>= 该值触发软警告二次确认
+ * 业务依据：避免单员工当天任务堆叠导致过载
+ */
+const HIGH_TASK_COUNT_THRESHOLD = 3;
 
  /** AI推荐面板组件Props */
 export interface AIRecommendationPanelProps {
@@ -63,6 +71,10 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   const [showWarning, setShowWarning] = useState(false);
   const [pendingDispatch, setPendingDispatch] = useState<WorkerRecommendation | null>(null);
 
+  // ★ BLOCK-1：从 store 拉取当日 occupations（用于弹窗 totalAssignedHours/tasks）
+  const today = todayLocal();
+  const { occupations } = useDispatchOccupations(today);
+
   // 根据配置决定是否默认选中Top1
   useEffect(() => {
     if (config.defaultSelectTop && recommendations.length > 0 && !localSelectedWorkerId && !selectedWorkerId) {
@@ -93,7 +105,8 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
 
   // ★ 阶段 3：派发处理（含排班冲突软警告）
   const handleDispatchClick = (rec: WorkerRecommendation) => {
-    const needWarning = rec.scheduleStatus === 'off_duty' || (rec.assignedTaskCount ?? 0) >= 3;
+    // ★ WARN-1：非 on_duty 或当日任务数 >= 阈值才触发软警告
+    const needWarning = rec.scheduleStatus !== 'on_duty' || (rec.assignedTaskCount ?? 0) >= HIGH_TASK_COUNT_THRESHOLD;
     if (needWarning) {
       setPendingDispatch(rec);
       setShowWarning(true);
@@ -378,16 +391,24 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       )}
 
       {/* ★ 阶段 3：排班冲突软警告弹窗 */}
-      <ScheduleConflictWarning
-        isOpen={showWarning}
-        workerName={pendingDispatch?.worker.name ?? ''}
-        scheduleStatus={pendingDispatch?.scheduleStatus === 'off_duty' ? 'off_duty' : 'no_schedule'}
-        assignedTaskCount={pendingDispatch?.assignedTaskCount ?? 0}
-        totalAssignedHours={0}
-        tasks={[]}
-        onConfirm={handleWarningConfirm}
-        onCancel={handleWarningCancel}
-      />
+      {(() => {
+        // ★ BLOCK-1：从 store 取真实 totalAssignedHours/tasks
+        const occupation = pendingDispatch
+          ? occupations.find(o => o.workerId === pendingDispatch.worker.id)
+          : null;
+        return (
+          <ScheduleConflictWarning
+            isOpen={showWarning}
+            workerName={pendingDispatch?.worker.name ?? ''}
+            scheduleStatus={pendingDispatch?.scheduleStatus === 'off_duty' ? 'off_duty' : 'no_schedule'}
+            assignedTaskCount={pendingDispatch?.assignedTaskCount ?? 0}
+            totalAssignedHours={occupation?.totalAssignedHours ?? 0}
+            tasks={occupation?.tasks ?? []}
+            onConfirm={handleWarningConfirm}
+            onCancel={handleWarningCancel}
+          />
+        );
+      })()}
     </div>
   );
 };
