@@ -196,7 +196,7 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                         void syncAfterDispatch(
                           { source: 'tempTask', sourceId: task.id },
                           task.assigneeId || '',
-                          { taskPlanDate: (task as any).planStart || task.dueDate }
+                          { taskPlanDate: task.planStart || task.dueDate }
                         );
                       }}
                       disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
