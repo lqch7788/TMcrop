@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sparkles, MapPin, Zap, RefreshCw, UserPlus, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Sparkles, MapPin, Zap, RefreshCw, UserPlus, CheckCircle2, AlertTriangle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { AIRecommendConfig, UnifiedTaskInput } from '../../types/dispatch';
 import type { WorkerRecommendation } from '../../hooks/useComprehensiveDispatch';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../types/dispatch';
@@ -92,7 +92,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
     return (
       <div
         key={rec.worker.id}
-        className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+        className={`rounded-lg border-2 transition-all cursor-pointer overflow-hidden ${
           isSelected
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
             : isTop1
@@ -101,6 +101,23 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         }`}
         onClick={() => handleSelectWorker(rec)}
       >
+        {/* ★ Batch 4 B4.1：排班警告条（off_duty / no_schedule） */}
+        {rec.scheduleStatus === 'off_duty' && (
+          <div className="px-3 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <span className="text-xs text-red-700">
+              该员工今日未排班，确认派发将占用额外劳动力资源
+            </span>
+          </div>
+        )}
+        {rec.scheduleStatus === 'no_schedule' && (
+          <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <span className="text-xs text-amber-700">该员工无排班记录</span>
+          </div>
+        )}
+
+        <div className="p-3">
         {/* 头部：排名、名字、分数 */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -200,6 +217,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
              rec.suggestedAction === 'manual' ? '⚠ 需人工确认' :
              rec.suggestedAction === 'split' ? '○ 建议拆分' : '○ 建议延后'}
           </span>
+        </div>
         </div>
       </div>
     );
