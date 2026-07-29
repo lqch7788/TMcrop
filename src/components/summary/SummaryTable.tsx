@@ -19,6 +19,7 @@ interface SummaryTableProps<T extends { id: number | string }> {
   exportMode: boolean;
   selectedRows: (number | string)[];
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   onSelectAll: () => void;
   onSelectRow: (id: number | string) => void;
   onView?: (record: T) => void;
@@ -34,6 +35,7 @@ export function SummaryTable<T extends { id: number | string }>({
   exportMode,
   selectedRows,
   onPageChange,
+  onPageSizeChange,
   onSelectAll,
   onSelectRow,
   onView,
@@ -108,11 +110,17 @@ export function SummaryTable<T extends { id: number | string }>({
           </div>
         )}
       </div>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-      />
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages || 1}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
+      </div>
     </div>
   );
 }

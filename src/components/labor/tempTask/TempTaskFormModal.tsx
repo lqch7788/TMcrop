@@ -263,7 +263,7 @@ export function TempTaskFormModal({
         </div>
 
         {/* 第二行：任务类型、紧急程度 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="任务类型" required error={errors.tempTaskType}>
             <Select
               value={formData.tempTaskType}
@@ -271,17 +271,6 @@ export function TempTaskFormModal({
               options={TEMP_TASK_TYPES.map(t => ({ value: t.value, label: t.label }))}
             />
           </FormField>
-
-          {/* 选择"其他"时显示的备注输入框 */}
-          {formData.tempTaskType === 'other' && (
-            <FormField label="备注说明" required error={errors.notes}>
-              <Input
-                value={formData.notes}
-                onChange={(e) => onChange('notes', e.target.value)}
-                placeholder="请输入具体任务内容"
-              />
-            </FormField>
-          )}
 
           <FormField label="紧急程度" error={errors.urgency}>
             <Select
@@ -296,8 +285,19 @@ export function TempTaskFormModal({
           </FormField>
         </div>
 
-        {/* 第三行：工作地点、执行人、发布人 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 选择"其他"时显示的备注输入框（独立行，保持2列对齐） */}
+        {formData.tempTaskType === 'other' && (
+          <FormField label="备注说明" required error={errors.notes}>
+            <Input
+              value={formData.notes}
+              onChange={(e) => onChange('notes', e.target.value)}
+              placeholder="请输入具体任务内容"
+            />
+          </FormField>
+        )}
+
+        {/* 第三行：工作地点、执行人 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="工作地点" required error={errors.workLocation}>
             <Select
               value={formData.greenhouseId || formData.workLocation}
@@ -378,17 +378,10 @@ export function TempTaskFormModal({
               </div>
             )}
           </FormField>
-
-          <FormField label="发布人">
-            <div className="flex items-center px-3 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-700">
-              <span className="font-medium">{currentUser.name}</span>
-              <span className="ml-2 text-xs text-gray-500">（当前登录用户）</span>
-            </div>
-          </FormField>
         </div>
 
-        {/* 第四行：计划开始时间、截止时间、优先级 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 第四行：计划开始时间、截止时间 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="计划开始时间">
             <DatePicker
               selected={formData.planStart ? new Date(formData.planStart) : undefined}
@@ -404,7 +397,10 @@ export function TempTaskFormModal({
               className="w-full"
             />
           </FormField>
+        </div>
 
+        {/* 第五行：优先级、发布人 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="优先级" error={errors.priority}>
             <Select
               value={formData.priority}
@@ -416,10 +412,17 @@ export function TempTaskFormModal({
               ]}
             />
           </FormField>
+
+          <FormField label="发布人">
+            <div className="flex items-center px-3 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-700 h-[42px]">
+              <span className="font-medium">{currentUser.name}</span>
+              <span className="ml-2 text-xs text-gray-500">（当前登录用户）</span>
+            </div>
+          </FormField>
         </div>
 
-        {/* 第五行：预计天数、预计小时、人工数量、总工时 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* 第六行：预计天数、预计小时 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="预计天数（8小时/天）" error={errors.estimatedDays}>
             <NumberInput
               value={formData.estimatedDays}
@@ -439,7 +442,10 @@ export function TempTaskFormModal({
               className="w-full"
             />
           </FormField>
+        </div>
 
+        {/* 第七行：人工数量、总工时 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="人工数量" error={errors.workerCount}>
             <NumberInput
               value={formData.workerCount}
@@ -451,7 +457,7 @@ export function TempTaskFormModal({
           </FormField>
 
           <FormField label="总工时">
-            <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 font-medium">
+            <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 font-medium h-[42px]">
               <span className="text-sm">共</span>
               <span className="text-lg">
                 {(formData.estimatedDays * 8 + formData.estimatedHours) * formData.workerCount}
@@ -461,7 +467,7 @@ export function TempTaskFormModal({
           </FormField>
         </div>
 
-        {/* 第六行：任务描述（占满） */}
+        {/* 第八行：任务描述（占满） */}
         <FormField label="任务描述" error={errors.description}>
           <Textarea
             value={formData.description}
@@ -471,7 +477,7 @@ export function TempTaskFormModal({
           />
         </FormField>
 
-        {/* 第七行：备注（占满） */}
+        {/* 第九行：备注（占满） */}
         <FormField label="备注" error={errors.notes}>
           <Textarea
             value={formData.notes}
@@ -481,7 +487,7 @@ export function TempTaskFormModal({
           />
         </FormField>
 
-        {/* 第八行：必填反馈选项 */}
+        {/* 第十行：必填反馈选项 */}
         <div>
           <Label className="block text-sm font-bold text-red-600 mb-2">
             必填反馈 <span className="text-red-500">*</span>
