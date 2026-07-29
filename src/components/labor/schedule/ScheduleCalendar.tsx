@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
 import { todayLocal } from '../../../lib/dateUtils';
 import { useDispatchOccupations } from '../../../hooks/useDispatchOccupations';
+import { OccupationHoverCard } from './OccupationHoverCard';
+import type { ScheduleOccupation } from '../../../stores/scheduleStore';
 
 interface ScheduleCalendarProps {
   viewMode: ViewMode;
@@ -74,6 +76,9 @@ export function ScheduleCalendar({
   // ★ Batch 4 B4.2：拉取今日排班占用（用于单元格任务数角标）
   const today = todayLocal();
   const { occupations } = useDispatchOccupations(today);
+
+  // ★ 阶段 3：悬浮卡 hover 状态（记录当前 hover 的员工 occupation）
+  const [hoveredOccupation, setHoveredOccupation] = useState<ScheduleOccupation | null>(null);
 
   // 规范化数据（兼容snake_case和camelCase）
   const normalizedList = React.useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
@@ -163,6 +168,8 @@ export function ScheduleCalendar({
                     const taskCount = today
                       ? (occupations.find(o => o.workerId === schedule.staffId)?.assignedTaskCount ?? 0)
                       : 0;
+                    // ★ 阶段 3：查找当前员工的完整 occupation 数据（用于悬浮卡）
+                    const occupation = occupations.find(o => o.workerId === schedule.staffId);
                     return (
                       <div
                         key={schedule.id}
@@ -170,6 +177,8 @@ export function ScheduleCalendar({
                           e.stopPropagation();
                           onScheduleClick?.(schedule);
                         }}
+                        onMouseEnter={() => occupation && setHoveredOccupation(occupation)}
+                        onMouseLeave={() => setHoveredOccupation(null)}
                         className={`
                           relative text-xs px-1 py-0.5 rounded truncate text-white cursor-pointer
                           ${getShiftColor(schedule.shift, shiftConfigs)}
@@ -185,6 +194,13 @@ export function ScheduleCalendar({
                           >
                             {taskCount}
                           </span>
+                        )}
+                        {/* ★ 阶段 3：悬浮卡（hover 时显示该员工任务详情 + 工时进度条） */}
+                        {hoveredOccupation?.workerId === schedule.staffId && occupation && (
+                          <OccupationHoverCard
+                            occupation={occupation}
+                            shiftConfigs={shiftConfigs}
+                          />
                         )}
                       </div>
                     );
