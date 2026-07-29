@@ -134,6 +134,10 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   addedColumns += safeAddColumn(db, 'inventory_inbound_records', 'business_id', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'inventory_inbound_records', 'crop_id', 'TEXT') ? 1 : 0;
 
+  // ============ schedules（2026-07-29 排班-派工联动）============
+  // dispatch 端 PATCH /api/schedules/dispatch-tasks 写入；occupations 端读取
+  addedColumns += safeAddColumn(db, 'schedules', 'dispatched_task_ids', 'TEXT', `'[]'`) ? 1 : 0;
+
   // ============ 索引（GREEN 级：纯 CREATE INDEX）===========
   // 2026-07-19 P0-16：source_code UNIQUE 索引
   safeCreateIndex(db,

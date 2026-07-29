@@ -89,6 +89,229 @@ router.get('/', (req: Request, res: Response) => {
  * 获取单个排班
  * GET /api/schedules/:id
  */
+
+// ==================== 排班-派工联动 API（必须在 :id 之前注册，否则会被 :id 匹配） ====================
+// 2026-07-29 排班调度与智能派工双向联动 — BATCH 1 后端基础设施
+
+/**
+ * 工具：把 sql.js db.exec 结果转成对象数组
+ */
+function rowsToObjects(result: any[]): any[] {
+  if (!result || result.length === 0 || result[0].values.length === 0) return [];
+  const columns = result[0].columns;
+  return result[0].values.map((row: any[]) =>
+    columns.reduce((obj: any, col: string, idx: number) => {
+      obj[col] = row[idx];
+      return obj;
+    }, {})
+  );
+}
+
+/**
+ * GET /api/schedules/occupations?date=YYYY-MM-DD
+ *
+ * 聚合当日所有员工 + 当日所有已派发任务的占用情况。
+ * 用于智能派工侧展示员工排班状态（on_duty/off_duty/no_schedule），
+ * 以及排班日历侧显示当日已派任务数（角标）。
+ *
+ * 字段命名：响应走 camelCaseResponse 中间件，前端拿到的会是 camelCase。
+ */
+router.get('/occupations', (req: Request, res: Response) => {
+  const { date } = req.query;
+  if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ success: false, error: 'date 参数格式错误 (YYYY-MM-DD)' });
+  }
+
+  try {
+    const db = getDatabase();
+
+    // 1. 当日排班
+    const scheduleExec = db.exec(
+      'SELECT id, staff_id, staff_name, work_zone, shift, status, dispatched_task_ids FROM schedules WHERE date = ?',
+      [date]
+    );
+    const scheduleRows = rowsToObjects(scheduleExec);
+
+    // 2. 当日已派发的农事任务（farm_tasks.plan_date 是 TEXT 存 YYYY-MM-DD）
+    const farmTaskExec = db.exec(
+      `SELECT id, task_code, task_title, task_type, priority, status, assignee_id, assignee_name, estimated_hours
+         FROM farm_tasks
+        WHERE plan_date = ?
+          AND status IN ('pending', 'accepted', 'in_progress')
+          AND assignee_id IS NOT NULL
+          AND assignee_id != ''`,
+      [date]
+    );
+    const farmTasks = rowsToObjects(farmTaskExec);
+
+    // 3. 当日已派发的临时任务（temp_tasks.request_date 是 TEXT 存 YYYY-MM-DD）
+    const tempTaskExec = db.exec(
+      `SELECT id, task_code, task_title, task_type, priority, status, assignee_id, assignee_name, estimated_hours
+         FROM temp_tasks
+        WHERE request_date = ?
+          AND status IN ('pending', 'accepted', 'in_progress')
+          AND assignee_id IS NOT NULL
+          AND assignee_id != ''`,
+      [date]
+    );
+    const tempTasks = rowsToObjects(tempTaskExec);
+
+    // 4. 合并员工 + 任务清单
+    const allTasks: any[] = [...farmTasks, ...tempTasks];
+    const workerMap = new Map<string, any>();
+
+    // 4a. 有排班的员工先初始化
+    scheduleRows.forEach((row: any) => {
+      let dispatchedIds: string[] = [];
+      try {
+        dispatchedIds = JSON.parse(row.dispatched_task_ids || '[]');
+      } catch {
+        dispatchedIds = [];
+      }
+      const tasks = dispatchedIds
+        .map((id: string) => allTasks.find((t: any) => t.id === id))
+        .filter(Boolean);
+
+      workerMap.set(row.staff_id, {
+        workerId: row.staff_id,
+        workerName: row.staff_name,
+        workZone: row.work_zone || '',
+        scheduleStatus:
+          row.status === '已排班' || row.status === '已执行' ? 'on_duty' : 'off_duty',
+        shift: row.shift || '',
+        assignedTaskCount: tasks.length,
+        totalAssignedHours: tasks.reduce(
+          (s: number, t: any) => s + (Number(t.estimated_hours) || 0),
+          0
+        ),
+        tasks: tasks.map((t: any) => ({
+          taskId: t.id,
+          source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+          taskCode: t.task_code,
+          title: t.task_title,
+          priority: t.priority,
+          status: t.status,
+        })),
+      });
+    });
+
+    // 4b. 无排班但有任务的员工（no_schedule）
+    allTasks.forEach((t: any) => {
+      if (!workerMap.has(t.assignee_id)) {
+        workerMap.set(t.assignee_id, {
+          workerId: t.assignee_id,
+          workerName: t.assignee_name,
+          workZone: '',
+          scheduleStatus: 'no_schedule',
+          shift: '',
+          assignedTaskCount: 1,
+          totalAssignedHours: Number(t.estimated_hours) || 0,
+          tasks: [
+            {
+              taskId: t.id,
+              source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+              taskCode: t.task_code,
+              title: t.task_title,
+              priority: t.priority,
+              status: t.status,
+            },
+          ],
+        });
+      } else {
+        // 已有排班的员工补加任务（派发时间晚于排班写入）
+        const occ = workerMap.get(t.assignee_id);
+        if (!occ.tasks.find((ot: any) => ot.taskId === t.id)) {
+          occ.tasks.push({
+            taskId: t.id,
+            source: farmTasks.find((f: any) => f.id === t.id) ? 'farm' : 'tempTask',
+            taskCode: t.task_code,
+            title: t.task_title,
+            priority: t.priority,
+            status: t.status,
+          });
+          occ.assignedTaskCount = occ.tasks.length;
+          occ.totalAssignedHours += Number(t.estimated_hours) || 0;
+        }
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: { date, workers: Array.from(workerMap.values()) },
+    });
+  } catch (err) {
+    console.error('获取排班占用聚合失败:', err);
+    return res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : '获取排班占用聚合失败',
+    });
+  }
+});
+
+/**
+ * PATCH /api/schedules/dispatch-tasks
+ * Body: { workerId, taskId, action: 'add' | 'remove' }
+ *
+ * 派发/取消派发时同步 schedules.dispatched_task_ids 数组。
+ * 如果员工当日无排班记录，返回 200 + warning（前端继续主流程）。
+ */
+router.patch('/dispatch-tasks', (req: Request, res: Response) => {
+  const { workerId, taskId, action } = req.body;
+
+  if (!workerId || !taskId || !['add', 'remove'].includes(action)) {
+    return res.status(400).json({ success: false, error: '参数错误' });
+  }
+
+  // 使用本地日期，避免 UTC 错位（utc-timezone-id-bug 教训）
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  try {
+    const db = getDatabase();
+
+    const lookup = db.exec(
+      'SELECT id, dispatched_task_ids FROM schedules WHERE staff_id = ? AND date = ? LIMIT 1',
+      [workerId, date]
+    );
+    const rows = rowsToObjects(lookup);
+
+    if (rows.length === 0) {
+      return res.json({
+        success: true,
+        warning: '员工当日无排班记录，未写入 dispatched_task_ids',
+      });
+    }
+
+    const row = rows[0];
+    let ids: string[] = [];
+    try {
+      ids = JSON.parse(row.dispatched_task_ids || '[]');
+    } catch {
+      ids = [];
+    }
+
+    const newIds =
+      action === 'add'
+        ? Array.from(new Set([...ids, taskId]))
+        : ids.filter((id) => id !== taskId);
+
+    db.run('UPDATE schedules SET dispatched_task_ids = ? WHERE id = ?', [
+      JSON.stringify(newIds),
+      row.id,
+    ]);
+    saveDatabase();
+
+    return res.json({ success: true, data: { workerId, taskId, action, dispatchedTaskIds: newIds } });
+  } catch (err) {
+    console.error('同步派发任务失败:', err);
+    return res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : '同步派发任务失败',
+    });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
