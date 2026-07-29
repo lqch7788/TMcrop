@@ -127,7 +127,7 @@ export function ScheduleCalendar({
     }
 
     return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-visible">
         {/* 星期标题 */}
         <div className="grid grid-cols-7 bg-gray-50 border-b">
           {WEEKDAYS.map(day => (
@@ -224,7 +224,7 @@ export function ScheduleCalendar({
     const schedules = getScheduleForDate(selectedDate);
 
     return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-visible">
         {/* 星期选择器 */}
         <div className="grid grid-cols-7 bg-gray-50 border-b">
           {weekDateRange.map(dateStr => {
@@ -314,7 +314,7 @@ export function ScheduleCalendar({
     const date = new Date(selectedDate);
 
     return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-visible">
         <div className="p-4 border-b">
           <h3 className="text-xl font-medium text-gray-800">
             {date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}

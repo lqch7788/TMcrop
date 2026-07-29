@@ -6,7 +6,7 @@
  */
 
 import { AlertTriangle } from 'lucide-react';
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 
 export interface ScheduleConflictWarningProps {
   isOpen: boolean;
@@ -91,20 +91,18 @@ export function ScheduleConflictWarning({
           </div>
         )}
 
-        {/* 操作按钮 */}
+        {/* ★ WARN-5：操作按钮统一使用项目 UI 库的 Button 组件 */}
         <div className="flex gap-2 pt-2">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
-          >
+          <Button variant="secondary" size="sm" onClick={onCancel} className="flex-1">
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={onConfirm}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium text-white ${isOffDuty ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'}`}
+            className={`flex-1 text-white ${isOffDuty ? 'bg-red-500 hover:bg-red-600' : 'bg-amber-500 hover:bg-amber-600'}`}
           >
             确认派发
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>
