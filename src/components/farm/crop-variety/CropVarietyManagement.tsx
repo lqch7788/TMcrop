@@ -244,6 +244,9 @@ export default function CropVarietyManagement() {
   }, []);
 
   // 从 Store 数据计算统计
+  // 2026-07-29 死循环修复：deps 用 `store.items.length` + 顶层 items 引用，避免 store.items 数组引用变化
+  // 触发额外 setState（虽然 setStats 不改 store.items，但会触发 re-render 链上的其他 listener）
+  const storeItemsLength = store.items.length;
   useEffect(() => {
     const items = store.items;
     const statsData = {
@@ -259,7 +262,7 @@ export default function CropVarietyManagement() {
       statsData.byCategory[v.categoryName]++;
     }
     setStats(statsData);
-  }, [store.items, refreshKey]);
+  }, [storeItemsLength, store.items, refreshKey]);
 
   // 加载编码生成器选项
   useEffect(() => {

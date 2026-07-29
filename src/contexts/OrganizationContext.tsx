@@ -62,44 +62,73 @@ interface OrganizationContextValue {
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
-  const store = useOrganizationStore();
+  // 2026-07-29 死循环修复：改为 selector 单独订阅字段，避免 store 任意字段变化触发整 Provider 重渲染
+  const organizations = useOrganizationStore((s) => s.organizations);
+  const roles = useOrganizationStore((s) => s.roles);
+  const users = useOrganizationStore((s) => s.users);
+  const processes = useOrganizationStore((s) => s.processes);
+  const actions = useOrganizationStore((s) => s.actions);
+  const roleAuthorities = useOrganizationStore((s) => s.roleAuthorities);
+  const roleDataAuthorities = useOrganizationStore((s) => s.roleDataAuthorities);
+  const loading = useOrganizationStore((s) => s.loading);
+  const error = useOrganizationStore((s) => s.error);
+
+  const loadOrganizations = useOrganizationStore((s) => s.loadOrganizations);
+  const saveOrganization = useOrganizationStore((s) => s.saveOrganization);
+  const deleteOrganization = useOrganizationStore((s) => s.deleteOrganization);
+  const loadRoles = useOrganizationStore((s) => s.loadRoles);
+  const saveRole = useOrganizationStore((s) => s.saveRole);
+  const deleteRole = useOrganizationStore((s) => s.deleteRole);
+  const loadUsers = useOrganizationStore((s) => s.loadUsers);
+  const saveUser = useOrganizationStore((s) => s.saveUser);
+  const deleteUser = useOrganizationStore((s) => s.deleteUser);
+  const getUserRoles = useOrganizationStore((s) => s.getUserRoles);
+  const assignUserRoles = useOrganizationStore((s) => s.assignUserRoles);
+  const loadProcesses = useOrganizationStore((s) => s.loadProcesses);
+  const saveProcess = useOrganizationStore((s) => s.saveProcess);
+  const deleteProcess = useOrganizationStore((s) => s.deleteProcess);
+  const loadActions = useOrganizationStore((s) => s.loadActions);
+  const loadRoleAuthority = useOrganizationStore((s) => s.loadRoleAuthority);
+  const saveRoleAuthority = useOrganizationStore((s) => s.saveRoleAuthority);
+  const loadRoleDataAuthority = useOrganizationStore((s) => s.loadRoleDataAuthority);
+  const saveRoleDataAuthority = useOrganizationStore((s) => s.saveRoleDataAuthority);
 
   const value: OrganizationContextValue = {
-    organizations: store.organizations,
-    loadOrganizations: store.loadOrganizations,
-    saveOrganization: store.saveOrganization,
-    deleteOrganization: store.deleteOrganization,
+    organizations,
+    loadOrganizations,
+    saveOrganization,
+    deleteOrganization,
 
-    roles: store.roles,
-    loadRoles: store.loadRoles,
-    saveRole: store.saveRole,
-    deleteRole: store.deleteRole,
+    roles,
+    loadRoles,
+    saveRole,
+    deleteRole,
 
-    users: store.users,
-    loadUsers: store.loadUsers,
-    saveUser: store.saveUser,
-    deleteUser: store.deleteUser,
-    getUserRoles: store.getUserRoles,
-    assignUserRoles: store.assignUserRoles,
+    users,
+    loadUsers,
+    saveUser,
+    deleteUser,
+    getUserRoles,
+    assignUserRoles,
 
-    processes: store.processes,
-    loadProcesses: store.loadProcesses,
-    saveProcess: store.saveProcess,
-    deleteProcess: store.deleteProcess,
+    processes,
+    loadProcesses,
+    saveProcess,
+    deleteProcess,
 
-    actions: store.actions,
-    loadActions: store.loadActions,
+    actions,
+    loadActions,
 
-    roleAuthorities: store.roleAuthorities,
-    loadRoleAuthority: store.loadRoleAuthority,
-    saveRoleAuthority: store.saveRoleAuthority,
+    roleAuthorities,
+    loadRoleAuthority,
+    saveRoleAuthority,
 
-    roleDataAuthorities: store.roleDataAuthorities,
-    loadRoleDataAuthority: store.loadRoleDataAuthority,
-    saveRoleDataAuthority: store.saveRoleDataAuthority,
+    roleDataAuthorities,
+    loadRoleDataAuthority,
+    saveRoleDataAuthority,
 
-    loading: store.loading,
-    error: store.error,
+    loading,
+    error,
   };
 
   return (

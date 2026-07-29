@@ -52,60 +52,76 @@ export interface UseApprovalReturn {
 // ============================================================
 
 export function useApproval(): UseApprovalReturn {
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：改为 selector 单独订阅字段，避免 store 任意字段 set 触发整个 hook 重渲染
+  const approvals = useApprovalStore((s) => s.approvals);
+  const stats = useApprovalStore((s) => s.stats);
+  const filters = useApprovalStore((s) => s.filters);
+  const isLoading = useApprovalStore((s) => s.isLoading);
+  const error = useApprovalStore((s) => s.error);
+  const setFiltersAction = useApprovalStore((s) => s.setFilters);
+  const resetFiltersAction = useApprovalStore((s) => s.resetFilters);
+  const addApprovalAction = useApprovalStore((s) => s.addApproval);
+  const updateApprovalAction = useApprovalStore((s) => s.updateApproval);
+  const deleteApprovalAction = useApprovalStore((s) => s.deleteApproval);
+  const approveAction = useApprovalStore((s) => s.approve);
+  const rejectAction = useApprovalStore((s) => s.reject);
+  const cancelAction = useApprovalStore((s) => s.cancel);
+  const batchApproveAction = useApprovalStore((s) => s.batchApprove);
+  const batchRejectAction = useApprovalStore((s) => s.batchReject);
+  const fetchApprovalsAction = useApprovalStore((s) => s.fetchApprovals);
 
   // 查询方法（从 Store 的 approvals 派生）
   const getApprovalById = useCallback((id: string) => {
-    return store.approvals.find(a => a.id === id);
-  }, [store.approvals]);
+    return approvals.find(a => a.id === id);
+  }, [approvals]);
 
   const getApprovalsByType = useCallback((type: ApprovalType) => {
-    return store.approvals.filter(a => a.type === type);
-  }, [store.approvals]);
+    return approvals.filter(a => a.type === type);
+  }, [approvals]);
 
   const getApprovalsByStatus = useCallback((status: ApprovalStatus) => {
-    return store.approvals.filter(a => a.status === status);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === status);
+  }, [approvals]);
 
   const getPendingApprovals = useCallback(() => {
-    return store.approvals.filter(a => a.status === ApprovalStatus.PENDING);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === ApprovalStatus.PENDING);
+  }, [approvals]);
 
   const getApprovedApprovals = useCallback(() => {
-    return store.approvals.filter(a =>
+    return approvals.filter(a =>
       a.status === ApprovalStatus.APPROVED || a.status === ApprovalStatus.PARTIALLY_APPROVED
     );
-  }, [store.approvals]);
+  }, [approvals]);
 
   const getRejectedApprovals = useCallback(() => {
-    return store.approvals.filter(a => a.status === ApprovalStatus.REJECTED);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === ApprovalStatus.REJECTED);
+  }, [approvals]);
 
   const getMyApprovals = useCallback((userId: string) => {
-    return store.approvals.filter(a =>
+    return approvals.filter(a =>
       a.status === ApprovalStatus.PENDING &&
       a.approvers.some(approver => approver.userId === userId && approver.status === 'pending')
     );
-  }, [store.approvals]);
+  }, [approvals]);
 
   const getApprovalsByApplicant = useCallback((applicantId: string) => {
-    return store.approvals.filter(a => a.applicantId === applicantId);
-  }, [store.approvals]);
+    return approvals.filter(a => a.applicantId === applicantId);
+  }, [approvals]);
 
   return useMemo(() => ({
-    approvals: store.approvals,
-    stats: store.stats,
-    filters: store.filters,
-    setFilters: store.setFilters,
-    resetFilters: store.resetFilters,
-    addApproval: store.addApproval,
-    updateApproval: store.updateApproval,
-    deleteApproval: store.deleteApproval,
-    approve: store.approve,
-    reject: store.reject,
-    cancel: store.cancel,
-    batchApprove: store.batchApprove,
-    batchReject: store.batchReject,
+    approvals,
+    stats,
+    filters,
+    setFilters: setFiltersAction,
+    resetFilters: resetFiltersAction,
+    addApproval: addApprovalAction,
+    updateApproval: updateApprovalAction,
+    deleteApproval: deleteApprovalAction,
+    approve: approveAction,
+    reject: rejectAction,
+    cancel: cancelAction,
+    batchApprove: batchApproveAction,
+    batchReject: batchRejectAction,
     getApprovalById,
     getApprovalsByType,
     getApprovalsByStatus,
@@ -114,16 +130,15 @@ export function useApproval(): UseApprovalReturn {
     getRejectedApprovals,
     getMyApprovals,
     getApprovalsByApplicant,
-    refreshApprovals: store.fetchApprovals,
-    isLoading: store.isLoading,
-    error: store.error,
+    refreshApprovals: fetchApprovalsAction,
+    isLoading,
+    error,
   }), [
-    store.approvals, store.stats, store.filters,
-    store.setFilters, store.resetFilters,
-    store.addApproval, store.updateApproval, store.deleteApproval,
-    store.approve, store.reject, store.cancel,
-    store.batchApprove, store.batchReject,
-    store.fetchApprovals, store.isLoading, store.error,
+    approvals, stats, filters, isLoading, error,
+    setFiltersAction, resetFiltersAction,
+    addApprovalAction, updateApprovalAction, deleteApprovalAction,
+    approveAction, rejectAction, cancelAction,
+    batchApproveAction, batchRejectAction, fetchApprovalsAction,
     getApprovalById, getApprovalsByType, getApprovalsByStatus,
     getPendingApprovals, getApprovedApprovals, getRejectedApprovals,
     getMyApprovals, getApprovalsByApplicant,
@@ -135,18 +150,21 @@ export function useApproval(): UseApprovalReturn {
 // ============================================================
 
 export function usePendingApprovals() {
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：selector 化
+  const approvals = useApprovalStore((s) => s.approvals);
+  const approveAction = useApprovalStore((s) => s.approve);
+  const rejectAction = useApprovalStore((s) => s.reject);
   const pendingApprovals = useMemo(() =>
-    store.approvals.filter(a => a.status === ApprovalStatus.PENDING),
-    [store.approvals]
+    approvals.filter(a => a.status === ApprovalStatus.PENDING),
+    [approvals]
   );
 
   return {
     pendingApprovals,
     pendingCount: pendingApprovals.length,
-    getApprovalById: (id: string) => store.approvals.find(a => a.id === id),
-    approve: store.approve,
-    reject: store.reject,
+    getApprovalById: (id: string) => approvals.find(a => a.id === id),
+    approve: approveAction,
+    reject: rejectAction,
   };
 }
 
@@ -155,18 +173,19 @@ export function usePendingApprovals() {
 // ============================================================
 
 export function useApprovedApprovals() {
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：selector 化
+  const approvals = useApprovalStore((s) => s.approvals);
   const approvedApprovals = useMemo(() =>
-    store.approvals.filter(a =>
+    approvals.filter(a =>
       a.status === ApprovalStatus.APPROVED || a.status === ApprovalStatus.PARTIALLY_APPROVED
     ),
-    [store.approvals]
+    [approvals]
   );
 
   return {
     approvedApprovals,
     approvedCount: approvedApprovals.length,
-    getApprovalById: (id: string) => store.approvals.find(a => a.id === id),
+    getApprovalById: (id: string) => approvals.find(a => a.id === id),
   };
 }
 
@@ -179,22 +198,24 @@ interface UseMyApprovalsProps {
 }
 
 export function useMyApprovals(props?: UseMyApprovalsProps) {
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：selector 化
+  const approvals = useApprovalStore((s) => s.approvals);
+  const cancelAction = useApprovalStore((s) => s.cancel);
 
   const myApprovals = useMemo(() => {
     if (props?.applicantId) {
-      return store.approvals.filter(a => a.applicantId === props.applicantId);
+      return approvals.filter(a => a.applicantId === props.applicantId);
     }
     // 默认使用当前登录用户ID
     const userId = localStorage.getItem('userId') || 'current_user';
-    return store.approvals.filter(a => a.applicantId === userId);
-  }, [store.approvals, props?.applicantId]);
+    return approvals.filter(a => a.applicantId === userId);
+  }, [approvals, props?.applicantId]);
 
   return {
     myApprovals,
     mySubmittedCount: myApprovals.length,
-    getApprovalById: (id: string) => store.approvals.find(a => a.id === id),
-    cancel: store.cancel,
+    getApprovalById: (id: string) => approvals.find(a => a.id === id),
+    cancel: cancelAction,
   };
 }
 
@@ -203,11 +224,14 @@ export function useMyApprovals(props?: UseMyApprovalsProps) {
 // ============================================================
 
 export function useHrApprovals() {
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：selector 化
+  const approvals = useApprovalStore((s) => s.approvals);
+  const approveAction = useApprovalStore((s) => s.approve);
+  const rejectAction = useApprovalStore((s) => s.reject);
 
   const hrApprovals = useMemo(() =>
-    store.approvals.filter(a => a.category === 'hr'),
-    [store.approvals]
+    approvals.filter(a => a.category === 'hr'),
+    [approvals]
   );
 
   const leaveApprovals = useMemo(() =>
@@ -236,9 +260,9 @@ export function useHrApprovals() {
     overtimeApprovals,
     transferApprovals,
     resignApprovals,
-    getApprovalById: (id: string) => store.approvals.find(a => a.id === id),
-    approve: store.approve,
-    reject: store.reject,
+    getApprovalById: (id: string) => approvals.find(a => a.id === id),
+    approve: approveAction,
+    reject: rejectAction,
   };
 }
 
