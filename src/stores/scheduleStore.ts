@@ -502,10 +502,14 @@ export const useScheduleStore = create<ScheduleState>()(
             lastFetchedAt: { ...state.lastFetchedAt, [date]: Date.now() },
           }));
         } catch (err) {
-          set({
+          // ★ 防死循环：API 失败时也要写入 lastFetchedAt，
+          // 否则 getWorkerScheduleStatus cache miss 后每次 render 都会触发
+          // setTimeout(() => fetchOccupations(date), 0)，陷入无限重试循环
+          set((state) => ({
             occupationsError: (err as Error).message,
             occupationsLoading: false,
-          });
+            lastFetchedAt: { ...state.lastFetchedAt, [date]: Date.now() },
+          }));
         }
       },
 
