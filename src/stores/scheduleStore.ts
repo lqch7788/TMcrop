@@ -51,6 +51,25 @@ export interface Staff {
   workZone: string;
 }
 
+/** 排班占用情况（来自 GET /api/schedules/occupations） */
+export interface ScheduleOccupation {
+  workerId: string;
+  workerName: string;
+  workZone: string;
+  scheduleStatus: 'on_duty' | 'off_duty' | 'no_schedule';
+  shift: string;
+  assignedTaskCount: number;
+  totalAssignedHours: number;
+  tasks: Array<{
+    taskId: string;
+    source: 'farm' | 'tempTask';
+    taskCode: string;
+    title: string;
+    priority: string;
+    status: string;
+  }>;
+}
+
 // ========== 种子数据（保留原有mock数据）==========
 
 const DEFAULT_SHIFT_CONFIGS: ShiftConfig[] = [
@@ -178,6 +197,14 @@ interface ScheduleState {
   // Actions - 同步
   syncPendingChanges: () => Promise<void>;
 
+  // Actions - 排班占用（派工联动）
+  fetchOccupations: (date: string) => Promise<void>;
+  getWorkerScheduleStatus: (workerId: string, date: string) => {
+    scheduleStatus: 'on_duty' | 'off_duty' | 'no_schedule';
+    assignedTaskCount: number;
+  };
+  invalidateOccupations: (date: string) => void;
+
   // 内部方法
   _initializeSeedData: () => void;
 }
@@ -197,6 +224,12 @@ export const useScheduleStore = create<ScheduleState>()(
       error: null,
       isOnline: navigator.onLine,
       pendingSyncCount: 0,
+
+      // 排班占用（派工联动，按日期缓存，2 分钟 TTL）
+      occupations: {} as Record<string, ScheduleOccupation[]>,
+      occupationsLoading: false,
+      occupationsError: null as string | null,
+      lastFetchedAt: {} as Record<string, number>,
 
       // ========== 数据获取 ==========
 
@@ -415,6 +448,60 @@ export const useScheduleStore = create<ScheduleState>()(
 
       setSelectedDate: (date) => set({ selectedDate: date }),
       setViewMode: (mode) => set({ viewMode: mode }),
+
+      // ========== 排班占用（派工联动） ==========
+
+      fetchOccupations: async (date: string) => {
+        // 2 分钟 TTL 缓存：避免频繁请求同一日期
+        const lastTs = get().lastFetchedAt[date];
+        if (lastTs && Date.now() - lastTs < 2 * 60 * 1000) {
+          return;
+        }
+        set({ occupationsLoading: true, occupationsError: null });
+        try {
+          const params = new URLSearchParams({ date });
+          const response: any = await enhancedApiClient.get(
+            `/schedules/occupations?${params.toString()}`
+          );
+          // camelCaseResponse 中间件已自动解包，兼容嵌套 {data} 与扁平结构
+          const data = response?.data ?? response;
+          const workers = data?.workers ?? [];
+          set((state) => ({
+            occupations: { ...state.occupations, [date]: workers },
+            occupationsLoading: false,
+            lastFetchedAt: { ...state.lastFetchedAt, [date]: Date.now() },
+          }));
+        } catch (err) {
+          set({
+            occupationsError: (err as Error).message,
+            occupationsLoading: false,
+          });
+        }
+      },
+
+      getWorkerScheduleStatus: (workerId: string, date: string) => {
+        const occupations = get().occupations[date] ?? [];
+        const occ = occupations.find(o => o.workerId === workerId);
+        if (!occ) {
+          // 异步触发首次加载（不阻塞读取）
+          setTimeout(() => get().fetchOccupations(date), 0);
+          return { scheduleStatus: 'no_schedule' as const, assignedTaskCount: 0 };
+        }
+        return {
+          scheduleStatus: occ.scheduleStatus,
+          assignedTaskCount: occ.assignedTaskCount,
+        };
+      },
+
+      invalidateOccupations: (date: string) => {
+        set((state) => {
+          const nextTs = { ...state.lastFetchedAt };
+          delete nextTs[date];
+          const nextOcc = { ...state.occupations };
+          delete nextOcc[date];
+          return { lastFetchedAt: nextTs, occupations: nextOcc };
+        });
+      },
 
       // ========== 内部方法 ==========
 
