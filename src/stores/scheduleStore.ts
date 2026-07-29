@@ -432,6 +432,13 @@ export const useScheduleStore = create<ScheduleState>()(
         } catch (error) {
           console.warn('[ScheduleStore] 提交调班申请API失败:', error);
         }
+
+        // 联动失效：派工占用缓存（originalDate + targetDate 两个日期）
+        // 提交调班申请后这两个日期的占用可能发生变化，需重新拉取
+        setTimeout(() => {
+          const dates = [request.originalDate, request.targetDate].filter(Boolean);
+          dates.forEach(d => get().invalidateOccupations(d));
+        }, 0);
       },
 
       handleSwapRequest: async (id, status) => {
@@ -490,12 +497,12 @@ export const useScheduleStore = create<ScheduleState>()(
         set({ occupationsLoading: true, occupationsError: null });
         try {
           const params = new URLSearchParams({ date });
-          const response: any = await enhancedApiClient.get(
+          // enhancedApiClient 已自动解包一层 .data（统一响应格式 success/data 包装），
+          // 此处直接读取 camelCase 字段；response 类型固定为 {date, workers}，避免 any
+          const response = await enhancedApiClient.get<{ date: string; workers: ScheduleOccupation[] }>(
             `/schedules/occupations?${params.toString()}`
           );
-          // camelCaseResponse 中间件已自动解包，兼容嵌套 {data} 与扁平结构
-          const data = response?.data ?? response;
-          const workers = data?.workers ?? [];
+          const workers = response?.workers ?? [];
           set((state) => ({
             occupations: { ...state.occupations, [date]: workers },
             occupationsLoading: false,
