@@ -51,7 +51,9 @@ export interface DispatchBridgeOptions {
  *   syncAfterDispatch({ source: 'farm', sourceId: task.id }, workerId, { taskPlanDate: task.planDate });
  */
 export function useDispatchScheduleBridge() {
-  const scheduleStore = useScheduleStore();
+  // ★ 修复（B4 导航卡死死循环）：原整对象订阅 scheduleStore,
+  //   改为 selector 单独订阅 invalidateOccupations（action 引用稳定）。
+  const invalidateOccupations = useScheduleStore((s) => s.invalidateOccupations);
 
   const syncAfterDispatch = useCallback(
     async (task: DispatchTaskRef, workerId: string, options?: DispatchBridgeOptions) => {
@@ -80,9 +82,9 @@ export function useDispatchScheduleBridge() {
         // PATCH 成功后清理当日 + 任务计划日的占用缓存，下次 fetchOccupations 重新拉取
         // ★ Batch 3 C-1 修复：使用 todayLocal() 本地时区，避免 UTC split 在中国凌晨 0-8 点算出"昨天"
         const today = todayLocal();
-        scheduleStore.invalidateOccupations(today);
+        invalidateOccupations(today);
         if (options?.taskPlanDate && options.taskPlanDate !== today) {
-          scheduleStore.invalidateOccupations(options.taskPlanDate);
+          invalidateOccupations(options.taskPlanDate);
         }
       } catch (err: any) {
         // ★ 不抛错避免破坏主流程（派发已成功，仅占用同步失败）
@@ -99,7 +101,7 @@ export function useDispatchScheduleBridge() {
         }
       }
     },
-    [scheduleStore]
+    [invalidateOccupations]
   );
 
   return { syncAfterDispatch };

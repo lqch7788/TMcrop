@@ -82,18 +82,22 @@ export function WorkerAttendancePage() {
   const departmentOptions = ['全部', ...departments.map(d => d.name)];
 
   // ========== 排班对比数据（从农事管理模块读取排班，只读对比） ==========
-  const scheduleStore = useScheduleStore();
+  // ★ 修复（B4 导航卡死死循环）：原整对象订阅 scheduleStore,
+  //   改为 selector 单独订阅 schedules + fetchSchedules,
+  //   减少不必要重渲染（schedules 数组内容变化时才重渲染）。
+  const schedules = useScheduleStore((s) => s.schedules);
+  const fetchSchedules = useScheduleStore((s) => s.fetchSchedules);
   const todayStr = todayLocal();
 
   useEffect(() => {
-    if (scheduleStore.schedules.length === 0) {
-      scheduleStore.fetchSchedules();
+    if (schedules.length === 0) {
+      fetchSchedules();
     }
-  }, []);
+  }, [schedules.length, fetchSchedules]);
 
   // 计算今日排班 vs 考勤对比
   const scheduleComparison = useMemo(() => {
-    const todaySchedules = scheduleStore.schedules.filter(s => s.date === todayStr);
+    const todaySchedules = schedules.filter(s => s.date === todayStr);
     const scheduledIds = new Set(todaySchedules.map(s => s.staffId));
     const todayAttendance = attendanceData.filter(r => r.date === todayStr);
     const checkedInIds = new Set(todayAttendance.filter(r => r.checkIn).map(r => r.workerId));
@@ -108,7 +112,7 @@ export function WorkerAttendancePage() {
     const unscheduledCount = todayAttendance.filter(r => r.checkIn && !scheduledIds.has(r.workerId)).length;
 
     return { scheduledCount, checkedInCount, absentCount, unscheduledCount };
-  }, [scheduleStore.schedules, attendanceData, todayStr]);
+  }, [schedules, attendanceData, todayStr]);
 
   // Batch Edit handlers
   const handleBatchEditClick = () => {

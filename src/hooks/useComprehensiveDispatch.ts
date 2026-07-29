@@ -12,6 +12,7 @@ import { usePersistentAttendance } from './usePersistentAttendance';
 import { useEnvironmentData } from './useEnvironmentData';
 import { useWorkerStore } from '../stores/useWorkerStore';
 import { useScheduleStore } from '../stores/scheduleStore';
+import { todayLocal } from '../lib/dateUtils';
 import type { Task, TempTask } from './useTasks';
 import type { AttendanceEntry } from './usePersistentAttendance';
 import type { DispatchConfig, ConfidenceLevel, SuggestedAction, EnhancedRecommendation } from '../types/dispatch';
@@ -709,12 +710,20 @@ export function useComprehensiveDispatch() {
   } = useEnvironmentData();
 
   // 1.6 获取排班占用数据（派工联动：off_duty 扣 20 分）
-  const scheduleStore = useScheduleStore();
-  const today = new Date().toISOString().split('T')[0];
+  // ★ 修复（B4 导航卡死死循环）：原整对象订阅 scheduleStore,
+  //   store 任何字段变化都触发 useEffect 重跑 fetchOccupations → set → 再次重跑 → 死循环。
+  //   改为 selector 单独订阅 fetchOccupations + occupations,
+  //   useEffect 依赖 fetchOccupations 引用稳定（action 不会变），永不重跑。
+  const fetchOccupations = useScheduleStore((s) => s.fetchOccupations);
+  const occupationsByDateMap = useScheduleStore((s) => s.occupations);
+  const today = useMemo(() => todayLocal(), []);
   useEffect(() => {
-    scheduleStore.fetchOccupations(today);
-  }, [today, scheduleStore]);
-  const occupationsByDate = scheduleStore.occupations[today] ?? [];
+    fetchOccupations(today);
+  }, [today, fetchOccupations]);
+  const occupationsByDate = useMemo(
+    () => occupationsByDateMap[today] ?? [],
+    [occupationsByDateMap, today]
+  );
 
   // 2. 构建统一任务池（仅获取待派发状态的任务）
   // 注意：pending状态的任务表示已发布但执行人还未接受，需要派发
