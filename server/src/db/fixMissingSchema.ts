@@ -4120,6 +4120,19 @@ function fixApprovedProductionPlanStatus(): void {
   // 2026-07-16：库存 crop_name 数据错位迁移已移至独立脚本 server/scripts/migrateInventoryCropName.ts
   //   原因：fixMissingSchema 被启动白名单禁用（index.ts:173 注释：YELLOW 级含 UPDATE 迁移，c55 事故），
   //   即使把迁移函数加到这里，启动也不会跑。改用独立脚本，用户手动跑 npx tsx 执行。
+
+  // 2026-07-29：排班调度与智能派工联动 — schedules 表添加 dispatched_task_ids 列（JSON 数组）
+  // 迁移幂等保护：try/catch 吞 duplicate column 错误
+  try {
+    db.run(`ALTER TABLE schedules ADD COLUMN dispatched_task_ids TEXT DEFAULT '[]'`);
+    seedLog.info('✓ schedules 表添加 dispatched_task_ids 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• schedules.dispatched_task_ids 列已存在');
+    } else {
+      seedLog.skip('• schedules.dispatched_task_ids:', e.message);
+    }
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
