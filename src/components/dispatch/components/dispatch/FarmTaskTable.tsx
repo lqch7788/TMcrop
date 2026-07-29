@@ -8,6 +8,8 @@ import { Edit2, Trash2, Send, Eye } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { showConfirm } from '@/lib/dialogService';
+// ★ 排班联动：派发后同步 schedule 行
+import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 
 /**
  * 农事任务表格组件 Props
@@ -73,6 +75,9 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
 
   // 可派发状态列表
   const PUBLISHABLE_STATUSES = ['draft'];
+
+  // ★ 排班联动 hook：派发成功后 fire-and-forget 同步 schedule 行
+  const { syncAfterDispatch } = useDispatchScheduleBridge();
 
   if (tasks.length === 0) {
     return (
@@ -213,7 +218,15 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                     )}
                     {canPublish && (
                       <button
-                        onClick={() => onPublish(task.id)}
+                        onClick={() => {
+                          onPublish(task.id);
+                          // ★ 排班联动：派发成功后副作用（workerId 来自 task.assigneeId，patch 失败由 toast 兜底）
+                          void syncAfterDispatch(
+                            { source: 'farm', sourceId: task.id },
+                            task.assigneeId || '',
+                            { taskPlanDate: (task as any).planStart || task.dueDate }
+                          );
+                        }}
                         disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
                         className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="派发"
