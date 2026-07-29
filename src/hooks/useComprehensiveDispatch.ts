@@ -95,6 +95,10 @@ export interface WorkerRecommendation {
   weatherScore: number;            // 天气影响得分 0-100
   // 全维度因素详情
   factorsDetail: FactorsDetail;
+  /** 排班联动：员工当日排班状态 */
+  scheduleStatus?: 'on_duty' | 'off_duty' | 'no_schedule';
+  /** 排班联动：员工当日已派任务数 */
+  assignedTaskCount?: number;
 }
 
 /** 批量派发建议 */
