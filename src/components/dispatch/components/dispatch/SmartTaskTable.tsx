@@ -191,7 +191,7 @@ export const SmartTaskTable: React.FC<SmartTaskTableProps> = ({
                         void syncAfterDispatch(
                           { source: 'farm', sourceId: task.id },
                           task.assigneeId || '',
-                          { taskPlanDate: (task as any).planStart || task.dueDate }
+                          { taskPlanDate: task.planStart || task.dueDate }
                         );
                       }}
                       disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
