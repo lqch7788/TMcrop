@@ -5,12 +5,11 @@
  * 工时阈值动态计算：基于当前员工 shift 时长（从 shiftConfigs 读）。
  */
 
-import { useScheduleStore } from '../../../stores';
-import type { ScheduleOccupation } from '../../../stores/scheduleStore';
+import type { ScheduleOccupation, ShiftConfig } from '../../../stores/scheduleStore';
 
 interface OccupationHoverCardProps {
   occupation: ScheduleOccupation;
-  shiftConfigs: Array<{ name: string; startTime: string; endTime: string }>;
+  shiftConfigs: ShiftConfig[];
 }
 
 export function OccupationHoverCard({ occupation, shiftConfigs }: OccupationHoverCardProps) {
@@ -67,21 +66,11 @@ export function OccupationHoverCard({ occupation, shiftConfigs }: OccupationHove
         )}
       </div>
 
-      {/* 底部穿透链接 */}
+      {/* ★ BLOCK-2 修复：移除穿透死链（原按钮无消费者），改为只读提示文案 */}
       {occupation.tasks.length > 5 && (
-        <div className="mt-2 pt-2 border-t border-gray-100 text-center">
-          <button
-            onClick={() => {
-              // ★ 穿透到该员工当日任务列表（通过 URL 参数触发）
-              const params = new URLSearchParams({ workerId: occupation.workerId, date: '' });
-              window.history.pushState({}, '', `?${params.toString()}`);
-              window.dispatchEvent(new PopstateEvent('popstate'));
-            }}
-            className="text-xs text-blue-600 hover:text-blue-700"
-          >
-            查看全部 {occupation.tasks.length} 个任务
-          </button>
-        </div>
+        <p className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400 text-center">
+          还有 {occupation.tasks.length - 5} 个任务未显示
+        </p>
       )}
     </div>
   );
