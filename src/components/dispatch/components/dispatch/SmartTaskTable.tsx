@@ -7,6 +7,8 @@ import React from 'react';
 import { Edit2, Send, Eye } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
+// ★ 排班联动：派发后同步 schedule 行
+import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 
 /**
  * 推荐评分样式
@@ -45,6 +47,9 @@ export const SmartTaskTable: React.FC<SmartTaskTableProps> = ({
 
   // 可派发状态列表
   const PUBLISHABLE_STATUSES = ['draft'];
+
+  // ★ 排班联动 hook：派发成功后 fire-and-forget 同步 schedule 行
+  const { syncAfterDispatch } = useDispatchScheduleBridge();
 
   if (tasks.length === 0) {
     return (
@@ -180,7 +185,15 @@ export const SmartTaskTable: React.FC<SmartTaskTableProps> = ({
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onPublish(task.id)}
+                      onClick={() => {
+                        onPublish(task.id);
+                        // ★ 排班联动：派发成功后副作用（SmartTask 走 farm source；workerId 可能为空，patch 失败由 toast 兜底）
+                        void syncAfterDispatch(
+                          { source: 'farm', sourceId: task.id },
+                          task.assigneeId || '',
+                          { taskPlanDate: (task as any).planStart || task.dueDate }
+                        );
+                      }}
                       disabled={!PUBLISHABLE_STATUSES.includes(task.status)}
                       className="p-1 text-gray-400 hover:text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="派发"
