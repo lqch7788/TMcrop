@@ -11,6 +11,8 @@ import { Task } from '../../../../hooks/useTasks';
 import { useWorkerStore } from '../../../../stores';
 import { AIRecommendationPanel } from '../../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch } from '../../../../hooks/useComprehensiveDispatch';
+// ★ 排班联动：派发后同步 schedule.dispatched_task_ids
+import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 import type { WorkerRecommendation } from '../../../../hooks/useComprehensiveDispatch';
 import {
   Select,
@@ -66,6 +68,9 @@ export function SelectExecutorModal({
 
   // 使用综合派工Hook获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
+
+  // ★ 排班联动 hook：派发成功后 fire-and-forget 同步占用
+  const { syncAfterDispatch } = useDispatchScheduleBridge();
 
   // 获取AI推荐
   const fetchAIRecommendations = useCallback(() => {
@@ -142,10 +147,16 @@ export function SelectExecutorModal({
   };
 
   const handleSubmit = () => {
-    if (selectedAssignee) {
+    if (selectedAssignee && task) {
       const staff = taskDispatchStaff.find(s => s.id === selectedAssignee);
       if (staff) {
         onConfirm(selectedAssignee, staff.name);
+        // ★ 排班联动：派发成功后副作用，同步 schedule 行
+        void syncAfterDispatch(
+          { source: 'farm', sourceId: task.id },
+          selectedAssignee,
+          { taskPlanDate: task.planStart || task.dueDate }
+        );
         setSelectedAssignee('');
         setDispatchMode('ai_assisted');
         setAiRecommendations([]);
