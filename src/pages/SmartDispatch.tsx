@@ -27,6 +27,8 @@ import { useMaterialEquipment } from '../hooks/useMaterialEquipment';
 import { useDailyWorkOrderAnalysis, type DailyWorkOrderReport } from '../hooks/useDailyWorkOrderAnalysis';
 import { usePendingConfirmTasks, type PendingConfirmTask, type PendingConfirmStatus } from '../hooks/usePendingConfirmTasks';
 import { useDispatchActions } from '../hooks/useDispatchActions';
+// ★ 排班联动：派发后同步 schedule 行（Batch 4+5 接入）
+import { useDispatchScheduleBridge } from '../hooks/useDispatchScheduleBridge';
 
 // 子组件
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
@@ -408,6 +410,8 @@ export default function SmartDispatchPage() {
   const { generateDailyReport } = useDailyWorkOrderAnalysis();
   const { pendingTasks, stats: confirmStats, recommendedTasks, pendingAITasks, optimizationTasks } = usePendingConfirmTasks(getRecommendations);
   const { confirmDispatch, replaceWorker, delayTask, acceptOptimization, rejectOptimization } = useDispatchActions();
+  // ★ 排班联动 hook：派发成功后 fire-and-forget 同步 schedule 行
+  const { syncAfterDispatch } = useDispatchScheduleBridge();
 
   // ── 本地状态 ──
   const [selectedTask, setSelectedTask] = useState<PendingConfirmTask | null>(null);
@@ -587,6 +591,14 @@ export default function SmartDispatchPage() {
   const handleDispatch = (worker: WorkerRecommendation) => {
     if (!selectedTask) return;
     const result = confirmDispatch(selectedTask.id, worker.worker.id, worker.worker.name);
+    // ★ 排班联动：派发成功后副作用（silent skip：workerId/sourceId 为空时不会发请求）
+    if (selectedTask && result.success) {
+      void syncAfterDispatch(
+        { source: selectedTask.source === 'tempTask' ? 'tempTask' : 'farm', sourceId: selectedTask.sourceId || selectedTask.id },
+        worker.worker.id,
+        { taskPlanDate: (selectedTask as any).planDate || (selectedTask as any).dueDate }
+      );
+    }
     showResult(result);
     setSelectedTask(null);
   };
@@ -595,6 +607,14 @@ export default function SmartDispatchPage() {
     if (task.aiRecommendedWorkers?.length) {
       const topWorker = task.aiRecommendedWorkers[0];
       const result = confirmDispatch(task.id, topWorker.worker.id, topWorker.worker.name);
+      // ★ 排班联动：派发成功后副作用（silent skip：workerId/sourceId 为空时不会发请求）
+      if (result.success) {
+        void syncAfterDispatch(
+          { source: task.source === 'tempTask' ? 'tempTask' : 'farm', sourceId: task.sourceId || task.id },
+          topWorker.worker.id,
+          { taskPlanDate: (task as any).planDate || (task as any).dueDate }
+        );
+      }
       showResult(result);
     }
   };
