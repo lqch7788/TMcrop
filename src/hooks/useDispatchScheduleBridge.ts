@@ -14,6 +14,12 @@
  *   改用 todayLocal() 统一本地时区
  * - I-1 Important：alert() 阻塞 UI 线程，改用 useToastStore（不阻塞 + 视觉更友好）
  * - L-1 LOW：body 类型 Record<string, string> 弱类型化，显式声明字段 + 可选 date
+ *
+ * Batch 4+5 修复（2026-07-29）：
+ * - C-NEW CRITICAL：workerId 空串或 task.sourceId 缺失时，PATCH 必然 400 + 误导 toast。
+ *   表格派发按钮在 draft 状态且 assigneeId 未设置时，task.assigneeId || '' 是空串
+ *   → 后端 400 → toast.warning 误导用户。改为函数体开头 silent skip：
+ *   无 workerId 或无 sourceId → 直接 return，不发请求、不弹 toast。
  */
 
 import { useCallback } from 'react';
@@ -49,6 +55,13 @@ export function useDispatchScheduleBridge() {
 
   const syncAfterDispatch = useCallback(
     async (task: DispatchTaskRef, workerId: string, options?: DispatchBridgeOptions) => {
+      // ★ Silent skip：workerId 或 sourceId 为空时跳过（避免误导 toast）
+      // 场景：表格派发按钮在 draft 状态且 assigneeId 未设置时，
+      // task.assigneeId || '' 是空串 → 后端 400 → toast.warning 误导用户。
+      // 此时同步 schedule 没有意义（没有 worker 可同步），直接 return。
+      if (!workerId || !task.sourceId) {
+        return;
+      }
       try {
         const body: {
           workerId: string;
