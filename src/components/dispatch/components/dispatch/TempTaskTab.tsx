@@ -24,6 +24,8 @@ import { useTempTasks } from '../../../../hooks/useTempTasks';
 import { useTempTaskStore } from '../../../../stores';
 
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
+// ★ 排班联动：重新派发成功后同步 schedule 行
+import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 import type { Task, TaskRecord } from '../../../../types/task';
 import { TempTaskAcceptanceAdapter } from '../../../farm/hub/modals/TempTaskAcceptanceAdapter';
 import { VerifyTempTaskModal } from './VerifyTempTaskModal';
@@ -576,6 +578,8 @@ interface ReassignTaskModalProps {
 
 function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: ReassignTaskModalProps) {
   const [selectedAssignee, setSelectedAssignee] = useState('');
+  // ★ 排班联动 hook：重新派发成功后 fire-and-forget 同步 schedule 行
+  const { syncAfterDispatch } = useDispatchScheduleBridge();
 
   if (!isOpen || !task) return null;
 
@@ -584,6 +588,12 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
       const user = users.find(u => u.id === selectedAssignee);
       if (user) {
         onConfirm(selectedAssignee, user.name);
+        // ★ 排班联动：重新派发成功后副作用
+        void syncAfterDispatch(
+          { source: 'tempTask', sourceId: task.id },
+          selectedAssignee,
+          { taskPlanDate: task.dueDate }
+        );
         setSelectedAssignee('');
       }
     }
