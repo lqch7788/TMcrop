@@ -96,8 +96,24 @@ interface ApprovalProviderProps {
 export const clearApprovalsStorage = () => {};
 
 export function ApprovalProvider({ children, initialApprovals: _initialApprovals }: ApprovalProviderProps) {
-  // 直接使用 Zustand Store 作为唯一数据源
-  const store = useApprovalStore();
+  // 2026-07-29 死循环修复：改用 selector 单独订阅字段，避免 store 任意字段 set 触发整 Provider 重渲染
+  // （原 `const store = useApprovalStore()` 整对象订阅 + 30+ 个 useCallback/useMemo deps 包含 store.approvals，
+  //   会导致 store 任意字段变化 → Provider 重渲染 → 所有 useContext 子组件 re-render）
+  const approvals = useApprovalStore((s) => s.approvals);
+  const filters = useApprovalStore((s) => s.filters);
+  const isLoaded = useApprovalStore((s) => s.isLoaded);
+  const setFiltersAction = useApprovalStore((s) => s.setFilters);
+  const resetFiltersAction = useApprovalStore((s) => s.resetFilters);
+  const addApprovalAction = useApprovalStore((s) => s.addApproval);
+  const updateApprovalAction = useApprovalStore((s) => s.updateApproval);
+  const deleteApprovalAction = useApprovalStore((s) => s.deleteApproval);
+  const approveAction = useApprovalStore((s) => s.approve);
+  const rejectAction = useApprovalStore((s) => s.reject);
+  const partiallyApproveAction = useApprovalStore((s) => s.partiallyApprove);
+  const cancelAction = useApprovalStore((s) => s.cancel);
+  const batchApproveAction = useApprovalStore((s) => s.batchApprove);
+  const batchRejectAction = useApprovalStore((s) => s.batchReject);
+  const fetchApprovalsAction = useApprovalStore((s) => s.fetchApprovals);
 
   // 注册业务联动处理器（仅注册一次）
   useEffect(() => {
@@ -115,23 +131,24 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
   }, []);
 
   // 启动定时超时检查（从Store获取approvals）
-  useTimeoutChecker(store.approvals, handleTimeoutFound, 5 * 60 * 1000);
+  useTimeoutChecker(approvals, handleTimeoutFound, 5 * 60 * 1000);
 
   // 统计数据（从Store的approvals计算，含超时统计）
+  // 修复：deps 改用 `approvals` selector 引用，避免整个 Provider 在其他字段变化时重算
   const stats = useMemo<ApprovalStats>(() => {
-    const timeoutStats = approvalTimeoutService.getTimeoutStats(store.approvals);
+    const timeoutStats = approvalTimeoutService.getTimeoutStats(approvals);
     return {
-      total: store.approvals.length,
-      pending: store.approvals.filter(a => a.status === ApprovalStatus.PENDING).length,
-      approved: store.approvals.filter(a => a.status === ApprovalStatus.APPROVED).length,
-      rejected: store.approvals.filter(a => a.status === ApprovalStatus.REJECTED).length,
-      partiallyApproved: store.approvals.filter(a => a.status === ApprovalStatus.PARTIALLY_APPROVED).length,
+      total: approvals.length,
+      pending: approvals.filter(a => a.status === ApprovalStatus.PENDING).length,
+      approved: approvals.filter(a => a.status === ApprovalStatus.APPROVED).length,
+      rejected: approvals.filter(a => a.status === ApprovalStatus.REJECTED).length,
+      partiallyApproved: approvals.filter(a => a.status === ApprovalStatus.PARTIALLY_APPROVED).length,
       myPending: 0,
       mySubmitted: 0,
       overdue: timeoutStats.overdue + timeoutStats.ultimate,
-      urgent: store.approvals.filter(a => a.priority === 'urgent' && a.status === ApprovalStatus.PENDING).length,
+      urgent: approvals.filter(a => a.priority === 'urgent' && a.status === ApprovalStatus.PENDING).length,
     };
-  }, [store.approvals]);
+  }, [approvals]);
 
   // 获取当前状态快照（兼容旧接口）
   const getState = useCallback(() => ({
@@ -140,30 +157,31 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
   }), []);
 
   // 筛选方法 — 委托到Store
-  const setFilters = useCallback((filters: Partial<ApprovalFilters>) => {
-    store.setFilters(filters);
-  }, [store.setFilters]);
+  const setFilters = useCallback((newFilters: Partial<ApprovalFilters>) => {
+    setFiltersAction(newFilters);
+  }, [setFiltersAction]);
 
   const resetFilters = useCallback(() => {
-    store.resetFilters();
-  }, [store.resetFilters]);
+    resetFiltersAction();
+  }, [resetFiltersAction]);
 
   // CRUD 操作 — 委托到Store
   const addApproval = useCallback(async (approval: Approval) => {
-    await store.addApproval(approval);
-  }, [store.addApproval]);
+    await addApprovalAction(approval);
+  }, [addApprovalAction]);
 
   const updateApproval = useCallback(async (id: string, updates: Partial<Approval>) => {
-    await store.updateApproval(id, updates);
-  }, [store.updateApproval]);
+    await updateApprovalAction(id, updates);
+  }, [updateApprovalAction]);
 
   const deleteApproval = useCallback(async (id: string) => {
-    await store.deleteApproval(id);
-  }, [store.deleteApproval]);
+    await deleteApprovalAction(id);
+  }, [deleteApprovalAction]);
 
   // 审批操作 — 先执行业务联动（已注册到registry），再委托到Store
+  // 修复：deps 用 approvals selector 引用
   const approve = useCallback(async (id: string, comment?: string) => {
-    const approval = store.approvals.find(a => a.id === id);
+    const approval = approvals.find(a => a.id === id);
     try {
       if (approval) {
         executeApprovalIntegration('approved', approval, { comment });
@@ -171,11 +189,11 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     } catch (e) {
       logger.error('业务联动异常（不影响主流程）', e);
     }
-    await store.approve(id, comment);
-  }, [store.approvals, store.approve]);
+    await approveAction(id, comment);
+  }, [approvals, approveAction]);
 
   const reject = useCallback(async (id: string, comment: string) => {
-    const approval = store.approvals.find(a => a.id === id);
+    const approval = approvals.find(a => a.id === id);
     try {
       if (approval) {
         executeApprovalIntegration('rejected', approval, { reason: comment });
@@ -183,122 +201,123 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     } catch (e) {
       logger.error('业务联动异常（不影响主流程）', e);
     }
-    await store.reject(id, comment);
-  }, [store.approvals, store.reject]);
+    await rejectAction(id, comment);
+  }, [approvals, rejectAction]);
 
   const partiallyApprove = useCallback(async (id: string, items: Record<string, number>, comment?: string) => {
-    const approval = store.approvals.find(a => a.id === id);
+    const approval = approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
     // 2026-06-04 V2.1 铁律：写操作走 Store action（不再直接 await patch）
-    await store.partiallyApprove(id, items, comment);
-  }, [store.approvals, store.partiallyApprove]);
+    await partiallyApproveAction(id, items, comment);
+  }, [approvals, partiallyApproveAction]);
 
   const cancel = useCallback(async (id: string, reason?: string) => {
-    const approval = store.approvals.find(a => a.id === id);
+    const approval = approvals.find(a => a.id === id);
     if (approval) {
       executeApprovalIntegration('cancelled', approval, { reason });
     }
-    await store.cancel(id, reason);
-  }, [store.approvals, store.cancel]);
+    await cancelAction(id, reason);
+  }, [approvals, cancelAction]);
 
   // 批量操作 — 先执行业务联动，再委托到Store
   const batchApprove = useCallback(async (ids: string[], comment?: string) => {
     for (const id of ids) {
-      const approval = store.approvals.find(a => a.id === id);
+      const approval = approvals.find(a => a.id === id);
       if (approval) {
         executeApprovalIntegration('approved', approval, { comment });
       }
     }
-    await store.batchApprove(ids, comment);
-  }, [store.approvals, store.batchApprove]);
+    await batchApproveAction(ids, comment);
+  }, [approvals, batchApproveAction]);
 
   const batchReject = useCallback(async (ids: string[], comment: string) => {
     for (const id of ids) {
-      const approval = store.approvals.find(a => a.id === id);
+      const approval = approvals.find(a => a.id === id);
       if (approval) {
         executeApprovalIntegration('rejected', approval, { reason: comment });
       }
     }
-    await store.batchReject(ids, comment);
-  }, [store.approvals, store.batchReject]);
+    await batchRejectAction(ids, comment);
+  }, [approvals, batchRejectAction]);
 
   // 查询方法 — 从Store数据派生
   const getApprovalById = useCallback((id: string) => {
-    return store.approvals.find(a => a.id === id);
-  }, [store.approvals]);
+    return approvals.find(a => a.id === id);
+  }, [approvals]);
 
   const getApprovalsByType = useCallback((type: ApprovalType) => {
-    return store.approvals.filter(a => a.type === type);
-  }, [store.approvals]);
+    return approvals.filter(a => a.type === type);
+  }, [approvals]);
 
   const getApprovalsByStatus = useCallback((status: ApprovalStatus) => {
-    return store.approvals.filter(a => a.status === status);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === status);
+  }, [approvals]);
 
   const getPendingApprovals = useCallback(() => {
-    return store.approvals.filter(a => a.status === ApprovalStatus.PENDING);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === ApprovalStatus.PENDING);
+  }, [approvals]);
 
   const getApprovedApprovals = useCallback(() => {
-    return store.approvals.filter(a =>
+    return approvals.filter(a =>
       a.status === ApprovalStatus.APPROVED || a.status === ApprovalStatus.PARTIALLY_APPROVED
     );
-  }, [store.approvals]);
+  }, [approvals]);
 
   const getRejectedApprovals = useCallback(() => {
-    return store.approvals.filter(a => a.status === ApprovalStatus.REJECTED);
-  }, [store.approvals]);
+    return approvals.filter(a => a.status === ApprovalStatus.REJECTED);
+  }, [approvals]);
 
   const getMyApprovals = useCallback((userId: string) => {
-    return store.approvals.filter(a =>
+    return approvals.filter(a =>
       a.status === ApprovalStatus.PENDING &&
       a.approvers.some(approver => approver.userId === userId && approver.status === 'pending')
     );
-  }, [store.approvals]);
+  }, [approvals]);
 
   const getApprovalsByApplicant = useCallback((applicantId: string) => {
-    return store.approvals.filter(a => a.applicantId === applicantId);
-  }, [store.approvals]);
+    return approvals.filter(a => a.applicantId === applicantId);
+  }, [approvals]);
 
   // 获取筛选后的审批列表
+  // 修复：deps 拆成 approvals 和 filters 两个 selector
   const getFilteredApprovals = useCallback(() => {
-    let result = store.approvals;
-    const filters = store.filters;
+    let result = approvals;
+    const currentFilters = filters;
 
-    if (filters.keyword) {
-      const keyword = filters.keyword.toLowerCase();
+    if (currentFilters.keyword) {
+      const keyword = currentFilters.keyword.toLowerCase();
       result = result.filter(a =>
         a.title.toLowerCase().includes(keyword) ||
         a.applicantName.toLowerCase().includes(keyword) ||
         a.code.toLowerCase().includes(keyword)
       );
     }
-    if (filters.type?.length) {
-      result = result.filter(a => filters.type!.includes(a.type));
+    if (currentFilters.type?.length) {
+      result = result.filter(a => currentFilters.type!.includes(a.type));
     }
-    if (filters.status?.length) {
-      result = result.filter(a => filters.status!.includes(a.status));
+    if (currentFilters.status?.length) {
+      result = result.filter(a => currentFilters.status!.includes(a.status));
     }
-    if (filters.category?.length) {
-      result = result.filter(a => filters.category!.includes(a.category));
+    if (currentFilters.category?.length) {
+      result = result.filter(a => currentFilters.category!.includes(a.category));
     }
-    if (filters.department?.length) {
-      result = result.filter(a => filters.department!.includes(a.applicantDepartment));
+    if (currentFilters.department?.length) {
+      result = result.filter(a => currentFilters.department!.includes(a.applicantDepartment));
     }
-    if (filters.priority?.length) {
-      result = result.filter(a => filters.priority!.includes(a.priority));
+    if (currentFilters.priority?.length) {
+      result = result.filter(a => currentFilters.priority!.includes(a.priority));
     }
-    if (filters.startDate) {
-      result = result.filter(a => a.applyDate >= filters.startDate!);
+    if (currentFilters.startDate) {
+      result = result.filter(a => a.applyDate >= currentFilters.startDate!);
     }
-    if (filters.endDate) {
-      result = result.filter(a => a.applyDate <= filters.endDate!);
+    if (currentFilters.endDate) {
+      result = result.filter(a => a.applyDate <= currentFilters.endDate!);
     }
 
     return result;
-  }, [store.approvals, store.filters]);
+  }, [approvals, filters]);
 
   // 辅助方法：获取状态文本
   const getStatusText = useCallback((status: ApprovalStatus): string => {
@@ -330,15 +349,16 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
 
   // 刷新审批数据
   const refreshApprovals = useCallback(async () => {
-    await store.fetchApprovals();
-  }, [store.fetchApprovals]);
+    await fetchApprovalsAction();
+  }, [fetchApprovalsAction]);
 
   // 合并所有方法到 value
+  // 修复：deps 拆成精确字段（approvals, filters, isLoaded, stats），其他 callback 引用稳定
   const value = useMemo<ApprovalContextValue>(() => ({
-    approvals: store.approvals,
-    filters: store.filters,
+    approvals,
+    filters,
     stats,
-    isLoaded: store.isLoaded,
+    isLoaded,
     getState,
     setFilters,
     resetFilters,
@@ -364,9 +384,9 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     getTypeText,
     refreshApprovals,
   }), [
-    store.approvals,
-    store.filters,
-    store.isLoaded,
+    approvals,
+    filters,
+    isLoaded,
     stats,
     getState,
     setFilters,
