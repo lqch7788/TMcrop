@@ -325,6 +325,9 @@ export const useScheduleStore = create<ScheduleState>()(
             ),
           }));
 
+          // 联动失效：派工占用缓存
+          setTimeout(() => get().invalidateOccupations(record.date), 0);
+
           return normalizedRecord;
         } catch (error) {
           console.warn('[ScheduleStore] 创建排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
@@ -341,6 +344,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
       updateSchedule: async (id, updates) => {
         // 先乐观更新本地
+        const targetDate = get().schedules.find(s => s.id === id)?.date;
         set(state => ({
           schedules: state.schedules.map(s =>
             s.id === id ? { ...s, ...updates } : s
@@ -349,31 +353,47 @@ export const useScheduleStore = create<ScheduleState>()(
 
         try {
           await enhancedApiClient.put(`/schedules/${id}`, updates);
+          // 联动失效：派工占用缓存
+          if (targetDate) {
+            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          }
         } catch (error) {
           console.warn('[ScheduleStore] 更新排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
+          if (targetDate) {
+            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          }
         }
       },
 
       deleteSchedule: async (id) => {
         // 先乐观更新本地
+        const targetDate = get().schedules.find(s => s.id === id)?.date;
         set(state => ({
           schedules: state.schedules.filter(s => s.id !== id),
         }));
 
         try {
           await enhancedApiClient.delete(`/schedules/${id}`);
+          // 联动失效：派工占用缓存
+          if (targetDate) {
+            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          }
         } catch (error) {
           console.warn('[ScheduleStore] 删除排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
+          if (targetDate) {
+            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          }
         }
       },
 
       cancelSchedule: async (id) => {
+        // updateSchedule 内部已触发 invalidateOccupations
         await get().updateSchedule(id, { status: '已取消' });
       },
 
@@ -415,6 +435,7 @@ export const useScheduleStore = create<ScheduleState>()(
       },
 
       handleSwapRequest: async (id, status) => {
+        const request = get().swapRequests.find(r => r.id === id);
         set(state => ({
           swapRequests: state.swapRequests.map(req =>
             req.id === id ? { ...req, status } : req
@@ -425,18 +446,27 @@ export const useScheduleStore = create<ScheduleState>()(
           await enhancedApiClient.put(`/schedules/swap-requests/${id}`, { status });
 
           // 如果同意，执行调班
-          if (status === '已同意') {
-            const request = get().swapRequests.find(r => r.id === id);
-            if (request) {
-              const originalSchedule = get().schedules.find(
-                s => s.staffId === request.requesterId && s.date === request.originalDate
-              );
-              if (originalSchedule) {
-                await get().updateSchedule(originalSchedule.id, {
-                  staffId: request.targetId,
-                  staffName: request.targetName,
-                });
-              }
+          if (status === '已同意' && request) {
+            const originalSchedule = get().schedules.find(
+              s => s.staffId === request.requesterId && s.date === request.originalDate
+            );
+            if (originalSchedule) {
+              await get().updateSchedule(originalSchedule.id, {
+                staffId: request.targetId,
+                staffName: request.targetName,
+              });
+            }
+            // 失效 originalDate + targetDate 两个日期的占用缓存
+            if (request.originalDate) {
+              setTimeout(() => get().invalidateOccupations(request.originalDate), 0);
+            }
+            if (request.targetDate) {
+              setTimeout(() => get().invalidateOccupations(request.targetDate), 0);
+            }
+          } else if (request) {
+            // 即使拒绝，也失效调班日的缓存（状态变化会反映在前端）
+            if (request.originalDate) {
+              setTimeout(() => get().invalidateOccupations(request.originalDate), 0);
             }
           }
         } catch (error) {
