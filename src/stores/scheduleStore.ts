@@ -345,6 +345,7 @@ export const useScheduleStore = create<ScheduleState>()(
       updateSchedule: async (id, updates) => {
         // 先乐观更新本地
         const targetDate = get().schedules.find(s => s.id === id)?.date;
+        const newDate = updates.date ?? targetDate;
         set(state => ({
           schedules: state.schedules.map(s =>
             s.id === id ? { ...s, ...updates } : s
@@ -354,16 +355,28 @@ export const useScheduleStore = create<ScheduleState>()(
         try {
           await enhancedApiClient.put(`/schedules/${id}`, updates);
           // 联动失效：派工占用缓存
-          if (targetDate) {
-            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          // 如果排班改期（updates.date 变化），原日期 + 新日期两个日期都需要失效
+          const datesToInvalidate = new Set<string>();
+          if (targetDate) datesToInvalidate.add(targetDate);
+          if (newDate && newDate !== targetDate) datesToInvalidate.add(newDate);
+          if (datesToInvalidate.size > 0) {
+            setTimeout(() => {
+              datesToInvalidate.forEach(d => get().invalidateOccupations(d));
+            }, 0);
           }
         } catch (error) {
           console.warn('[ScheduleStore] 更新排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
-          if (targetDate) {
-            setTimeout(() => get().invalidateOccupations(targetDate), 0);
+          // 失败时也按相同逻辑失效缓存，保持一致性
+          const datesToInvalidate = new Set<string>();
+          if (targetDate) datesToInvalidate.add(targetDate);
+          if (newDate && newDate !== targetDate) datesToInvalidate.add(newDate);
+          if (datesToInvalidate.size > 0) {
+            setTimeout(() => {
+              datesToInvalidate.forEach(d => get().invalidateOccupations(d));
+            }, 0);
           }
         }
       },
