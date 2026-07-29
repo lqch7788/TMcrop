@@ -121,6 +121,11 @@ router.get('/occupations', (req: Request, res: Response) => {
   if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ success: false, error: 'date 参数格式错误 (YYYY-MM-DD)' });
   }
+  // 校验日期值合法性：防 2026-13-45 / 2026-02-30 等非法日期
+  const parsed = new Date(date);
+  if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    return res.status(400).json({ success: false, error: 'date 参数值非法（如 2026-13-45）' });
+  }
 
   try {
     const db = getDatabase();
@@ -256,16 +261,18 @@ router.get('/occupations', (req: Request, res: Response) => {
  * 如果员工当日无排班记录，返回 200 + warning（前端继续主流程）。
  */
 router.patch('/dispatch-tasks', (req: Request, res: Response) => {
-  const { workerId, taskId, action } = req.body;
+  const { workerId, taskId, action, date: reqDate } = req.body;
 
   if (!workerId || !taskId || !['add', 'remove'].includes(action)) {
     return res.status(400).json({ success: false, error: '参数错误' });
   }
 
-  // 使用本地日期，避免 UTC 错位（utc-timezone-id-bug 教训）
+  // 使用本地日期作为默认值（utc-timezone-id-bug 教训）；caller 可通过 reqDate 指定任务的 plan_date，
+  // 避免明天/后天任务被错误同步到当天排班行（Batch 1 review Issue 1）
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const localToday = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const date = typeof reqDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(reqDate) ? reqDate : localToday;
 
   try {
     const db = getDatabase();
@@ -279,7 +286,7 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
     if (rows.length === 0) {
       return res.json({
         success: true,
-        warning: '员工当日无排班记录，未写入 dispatched_task_ids',
+        warning: `员工当日（${date}）无排班记录，未写入 dispatched_task_ids`,
       });
     }
 
@@ -302,7 +309,10 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
     ]);
     saveDatabase();
 
-    return res.json({ success: true, data: { workerId, taskId, action, dispatchedTaskIds: newIds } });
+    return res.json({
+      success: true,
+      data: { workerId, taskId, action, date, dispatchedTaskIds: newIds },
+    });
   } catch (err) {
     console.error('同步派发任务失败:', err);
     return res.status(500).json({
