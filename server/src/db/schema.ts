@@ -2515,7 +2515,8 @@ export function initializeDatabase() {
       remarks TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      dispatched_task_ids TEXT DEFAULT '[]'
     )
   `);
 
