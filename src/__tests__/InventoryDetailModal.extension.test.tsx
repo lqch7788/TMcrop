@@ -84,13 +84,12 @@ function renderModal(stockOverride: Record<string, unknown> = {}) {
   );
 }
 
-describe('InventoryDetailModal 扩展信息 4 分组', () => {
-  it('basic tab 显示 4 个分组标题：财务信息 / 审计信息 / 业务信息 / 来源专属', () => {
+describe('InventoryDetailModal 扩展信息 3 分组（2026-07-09 重构）', () => {
+  it('basic tab 显示 3 个扩展分组标题：财务与来源专属 / 审计信息 / 品种信息', () => {
     const html = renderModal();
-    expect(html).toContain('财务信息');
+    expect(html).toContain('财务与来源专属');
     expect(html).toContain('审计信息');
-    expect(html).toContain('业务信息');
-    expect(html).toContain('来源专属');
+    expect(html).toContain('品种信息');
   });
 
   it('财务信息分组显示 5 个字段', () => {
@@ -118,11 +117,11 @@ describe('InventoryDetailModal 扩展信息 4 分组', () => {
     expect(html).toContain('更新时间');
   });
 
-  it('业务信息分组显示 4 个字段（备注/业务 ID/业务类型/业务编码）', () => {
+  // 2026-07-09：业务信息组已移除，业务ID/业务编号合并到"基础信息"组
+  it('基础信息分组显示业务ID/业务编号字段', () => {
     const html = renderModal();
-    expect(html).toContain('业务 ID');
-    expect(html).toContain('业务类型');
-    expect(html).toContain('业务编码');
+    expect(html).toContain('业务ID');
+    expect(html).toContain('业务编号');
   });
 
   it('来源专属分组显示 7 个字段（赠方/委托方/调出仓库/盘点单号/所属基地/种植模式/采收区域）', () => {

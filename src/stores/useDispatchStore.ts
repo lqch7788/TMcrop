@@ -8,6 +8,7 @@
  * 匹配算法等业务逻辑保留在Hook层
  */
 import { create } from 'zustand';
+import { enhancedApiClient } from '../lib/apiClient';
 // ========== 类型定义 ==========
 
 import type { SkillTag } from '../components/labor/skill/types';
@@ -34,6 +35,19 @@ export interface MockWorker {
   currentLoad: number;
   recentPerformance: number;
   distance: Record<string, number>;
+}
+
+/** 后端派工推荐端点返回的工人简化信息 */
+export interface DispatchWorkerRecommendation {
+  workerId: string;
+  employeeCode: string;
+  workerName: string;
+  /**
+   * 技能列表——后端以**逗号分隔字符串**形式返回（如 "采收,种植"），
+   * 调用方按需自行 split(',') 切分为数组。
+   * 注意：此处不是 string[]，与后端 dispatch.ts 实际响应保持一致。
+   */
+  skills: string;
 }
 
 // ========== 种子数据（从原useSmartDispatch.ts提取）==========
@@ -158,6 +172,16 @@ interface DispatchState {
 
   /** CRUD操作 - 工人 */
   updateWorker: (id: string, updates: Partial<MockWorker>) => void;
+
+  /**
+   * 调用后端派工推荐端点，并按可选班组缩窄候选池
+   * @param params 任务标识与可选班组标识列表
+   * @returns 后端返回的工人简化推荐列表
+   */
+  recommendWorkers: (params: {
+    taskId: string;
+    teamIds?: string[];
+  }) => Promise<DispatchWorkerRecommendation[]>;
 }
 
 export const useDispatchStore = create<DispatchState>()(
@@ -192,6 +216,25 @@ export const useDispatchStore = create<DispatchState>()(
         set((state) => ({
           workers: state.workers.map((w) => (w.id === id ? { ...w, ...updates } : w)),
         }));
+      },
+
+      /**
+       * 调用后端 /api/dispatch/recommend 端点（Task 6 后端实现）
+       * 透传 teamIds 缩窄候选池；返回 workers 简化列表
+       *
+       * 注意：本 action 当前阶段（Task 9）无调用方；Task 13 SmartDispatch 集成班组 chip 时会接入
+       */
+      recommendWorkers: async (params: { taskId: string; teamIds?: string[] }) => {
+        const res = await enhancedApiClient.post<{
+          recommendations: DispatchWorkerRecommendation[];
+          poolSource: 'team' | 'all';
+        }>('/dispatch/recommend', {
+          teamIds: params.teamIds ?? [],
+          // 后端不读 source/sourceId（Task 6 实施者已标注），但保留以备未来扩展
+          source: 'farm',
+          sourceId: params.taskId,
+        });
+        return res.recommendations;
       },
     })
 );

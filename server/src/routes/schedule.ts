@@ -117,7 +117,7 @@ function rowsToObjects(result: any[]): any[] {
  * 字段命名：响应走 camelCaseResponse 中间件，前端拿到的会是 camelCase。
  */
 router.get('/occupations', (req: Request, res: Response) => {
-  const { date } = req.query;
+  const { date, teamId } = req.query;
   if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ success: false, error: 'date 参数格式错误 (YYYY-MM-DD)' });
   }
@@ -130,10 +130,40 @@ router.get('/occupations', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
 
+    // 0. 如果传 teamId，先查班组 worker 池；空班组直接返回空 workers
+    let workerFilterIds: string[] | null = null;
+    if (teamId && typeof teamId === 'string') {
+      const teamMembersResult = db.exec(
+        'SELECT worker_id FROM team_members WHERE team_id = ?',
+        [teamId],
+      );
+      const teamMembersTable = Array.isArray(teamMembersResult)
+        ? teamMembersResult[0]
+        : teamMembersResult;
+      workerFilterIds = teamMembersTable
+        ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+        : [];
+
+      if (workerFilterIds.length === 0) {
+        return res.json({ success: true, data: { date, workers: [] } });
+      }
+    }
+
+    // 构造 staff_id IN (...) 子句复用片段
+    const staffInClause = workerFilterIds
+      ? ` AND staff_id IN (${workerFilterIds.map(() => '?').join(',')})`
+      : '';
+    const assigneeInClause = workerFilterIds
+      ? ` AND assignee_id IN (${workerFilterIds.map(() => '?').join(',')})`
+      : '';
+    const baseParams = workerFilterIds ? [date, ...workerFilterIds] : [date];
+
     // 1. 当日排班
     const scheduleExec = db.exec(
-      'SELECT id, staff_id, staff_name, work_zone, shift, status, dispatched_task_ids FROM schedules WHERE date = ?',
-      [date]
+      `SELECT id, staff_id, staff_name, work_zone, shift, status, dispatched_task_ids
+         FROM schedules
+        WHERE date = ?${staffInClause}`,
+      baseParams
     );
     const scheduleRows = rowsToObjects(scheduleExec);
 
@@ -144,8 +174,8 @@ router.get('/occupations', (req: Request, res: Response) => {
         WHERE plan_date = ?
           AND status IN ('pending', 'accepted', 'in_progress')
           AND assignee_id IS NOT NULL
-          AND assignee_id != ''`,
-      [date]
+          AND assignee_id != ''${assigneeInClause}`,
+      baseParams
     );
     const farmTasks = rowsToObjects(farmTaskExec);
 
@@ -156,8 +186,8 @@ router.get('/occupations', (req: Request, res: Response) => {
         WHERE request_date = ?
           AND status IN ('pending', 'accepted', 'in_progress')
           AND assignee_id IS NOT NULL
-          AND assignee_id != ''`,
-      [date]
+          AND assignee_id != ''${assigneeInClause}`,
+      baseParams
     );
     const tempTasks = rowsToObjects(tempTaskExec);
 
@@ -322,6 +352,73 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/schedules/batch-by-team
+ * 为整个班组批量创建某日某班次的排班，并跳过已排班工人。
+ */
+router.post('/batch-by-team', (req: Request, res: Response) => {
+  const { teamId, date, shift, workZone, skipOffDuty = true } = req.body || {};
+
+  // 校验批量排班的必填参数和日期格式。
+  if (!teamId || !date || !shift) {
+    return res.status(400).json({ success: false, error: 'teamId/date/shift 必填' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ success: false, error: 'date 格式必须为 YYYY-MM-DD' });
+  }
+
+  try {
+    const db = getDatabase();
+    const teamMembersResult = db.exec(
+      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      [teamId],
+    );
+    const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
+    const workerIds = teamMembersTable
+      ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+      : [];
+
+    if (workerIds.length === 0) {
+      return res.json({ success: true, data: { created: 0, skipped: [] } });
+    }
+
+    const placeholders = workerIds.map(() => '?').join(',');
+    // ★ 排班冲突检测（2026-07-31）：检测 (staff_id, date, shift) 重复，不仅是 (staff_id, date)
+    const existingResult = db.exec(
+      `SELECT staff_id FROM schedules WHERE date = ? AND shift = ? AND staff_id IN (${placeholders})`,
+      [date, shift, ...workerIds],
+    );
+    const existingTable = Array.isArray(existingResult) ? existingResult[0] : existingResult;
+    const existingWorkers = new Set(
+      existingTable
+        ? existingTable.values.map((row: unknown[]) => row[0] as string)
+        : [],
+    );
+    let created = 0;
+    const skipped: Array<{ workerId: string; reason: string }> = [];
+
+    for (const workerId of workerIds) {
+      if (existingWorkers.has(workerId) && skipOffDuty) {
+        skipped.push({ workerId, reason: '已排班' });
+        continue;
+      }
+      db.run(
+        `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+        [`batch-${Date.now()}-${workerId}`, workerId, date, shift, workZone || null, teamId, null],
+      );
+      created++;
+    }
+
+    saveDatabase();
+    return res.json({ success: true, data: { created, skipped } });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('批量按班组排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -349,18 +446,37 @@ router.get('/:id', (req: Request, res: Response) => {
 /**
  * 创建排班
  * POST /api/schedules
+ *
+ * 向后兼容：原有字段（staff_id/staff_name/status/check_in/check_out/remarks）保持位置不变。
+ * 2026-07-30 新增可选字段 team_id/team_name（排班调度 × 班组分配贯通），不传时为 null。
  */
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, staff_id, staff_name, date, shift, work_zone, status, check_in, check_out, remarks } = req.body;
+    // 字段解构：原有字段顺序保持不变，team_id/team_name 加在末尾
+    const { id, staff_id, staff_name, date, shift, work_zone, status, check_in, check_out, remarks, team_id, team_name } = req.body;
     const newId = id || `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
+
+    // ★ 排班冲突检测（2026-07-31）：同一员工同一日期同一班次不可重复排班
+    const existing = db.exec(
+      'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ? LIMIT 1',
+      [staff_id, date, shift],
+    );
+    if (existing[0]?.values?.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `员工 ${staff_name || staff_id} 在 ${date} ${shift} 已有排班记录`,
+        conflict: true,
+      });
+    }
+
+    // INSERT 语句：原有列保持位置不变，team_id/team_name 列加在末尾
     db.run(`
-      INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, check_in, check_out, remarks, version, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, staff_id, staff_name, date, shift, work_zone || null, status || '已排班', check_in || null, check_out || null, remarks || null, 1, now, now]);
+      INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, check_in, check_out, remarks, version, create_time, update_time, team_id, team_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [newId, staff_id, staff_name, date, shift, work_zone || null, status || '已排班', check_in || null, check_out || null, remarks || null, 1, now, now, team_id || null, team_name || null]);
 
     saveDatabase();
 
@@ -380,6 +496,8 @@ router.post('/', (req: Request, res: Response) => {
         version: 1,
         create_time: now,
         update_time: now,
+        team_id: team_id || null,
+        team_name: team_name || null,
       },
     });
   } catch (error) {
@@ -405,6 +523,16 @@ router.post('/batch', (req: Request, res: Response) => {
     const insertedIds: string[] = [];
 
     for (const schedule of schedules) {
+      // ★ 排班冲突检测（2026-07-31）：同一员工同一日期同一班次不可重复排班
+      const existing = db.exec(
+        'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ? LIMIT 1',
+        [schedule.staff_id, schedule.date, schedule.shift],
+      );
+      if (existing[0]?.values?.length > 0) {
+        // 跳过冲突记录，继续处理其它
+        continue;
+      }
+
       const newId = schedule.id || `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       db.run(`
         INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, remarks, version, create_time, update_time)

@@ -122,10 +122,9 @@ describe('AddStockModal FIELD_CONFIG 接入', () => {
     vi.clearAllMocks();
   });
 
-  it('默认来源=自产时显示"所属基地"、"种植模式"、"采收区域"', () => {
+  // 2026-07-13 v9："种植模式"字段已移除；"所属基地"通过 base-select 联动写入（不在表单显示标签）
+  it('默认来源=自产时显示"采收区域"', () => {
     const html = renderStatic();
-    expect(html).toContain('所属基地');
-    expect(html).toContain('种植模式');
     expect(html).toContain('采收区域');
   });
 

@@ -2516,7 +2516,10 @@ export function initializeDatabase() {
       version INTEGER DEFAULT 1,
       create_time TEXT,
       update_time TEXT,
-      dispatched_task_ids TEXT DEFAULT '[]'
+      dispatched_task_ids TEXT DEFAULT '[]',
+      -- 2026-07-30：排班调度 × 班组分配贯通：班组 ID/名称列
+      team_id TEXT,
+      team_name TEXT
     )
   `);
 
@@ -2545,6 +2548,48 @@ export function initializeDatabase() {
   } catch (e) {
     // 索引可能已存在
   }
+
+  // ★ 排班冲突防护（2026-07-31）：同一员工同一日期同一班次不可重复排班
+  // 数据库层最后防线：唯一索引拦截重复（即使后端逻辑有 bug 也能防止）
+  try {
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_schedules_staff_date_shift ON schedules(staff_id, date, shift)`);
+  } catch (e) {
+    // 索引可能已存在，或表中已有重复数据（需手动清理后重试）
+    console.warn('schedules 唯一索引创建失败（可能已有重复数据）:', e instanceof Error ? e.message : e);
+  }
+
+  // 排班调度 × 班组分配贯通（2026-07-30）：班组相关索引独立 try/catch，逐条报告
+  //   原因：原共享 try/catch 一旦失败会跳过后续索引，且不报告错误（Fail Loud 铁律）
+  const scheduleTeamIndexes = [
+    { name: 'idx_schedules_team_id', sql: 'CREATE INDEX IF NOT EXISTS idx_schedules_team_id ON schedules(team_id)' },
+    { name: 'idx_schedules_date_team', sql: 'CREATE INDEX IF NOT EXISTS idx_schedules_date_team ON schedules(date, team_id)' },
+  ];
+  for (const idx of scheduleTeamIndexes) {
+    try {
+      db.run(idx.sql);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      // IF NOT EXISTS 已处理重复；其他错误必须显式记录（Fail Loud 铁律）
+      console.error(`schedules 索引 ${idx.name} 创建失败: ${message}`);
+    }
+  }
+
+  // 排班调度 × 班组分配贯通（2026-07-30）：派工覆写日志表
+  //   用途：派工时接受了软警告，记录覆写决策便于复盘。
+  //   本次仅写 'off_duty'（休息日派工）；'overloaded'/'duplicate' 预留给未来扩展。
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dispatch_override_log (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      worker_id TEXT NOT NULL,
+      override_reason TEXT NOT NULL,
+      conflict_type TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_override_log_task_id ON dispatch_override_log(task_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_override_log_worker_id ON dispatch_override_log(worker_id)`);
 
   // ========== 仓库物料管理表 ==========
 

@@ -29,6 +29,10 @@ import { usePendingConfirmTasks, type PendingConfirmTask, type PendingConfirmSta
 import { useDispatchActions } from '../hooks/useDispatchActions';
 // ★ 排班联动：派发后同步 schedule 行（Batch 4+5 接入）
 import { useDispatchScheduleBridge } from '../hooks/useDispatchScheduleBridge';
+// ★ 班组分配贯通：selectedTeamIds 透传到后端 recommend 端点缩窄候选池
+import { useDispatchStore } from '../stores/useDispatchStore';
+// ★ 排班冲突提示（2026-07-31）
+import { showAlert } from '@/lib/dialogService';
 
 // 子组件
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
@@ -37,6 +41,8 @@ import { PredictedTasksPanel } from '../components/dispatch/PredictedTasksPanel'
 import { DispatchMetricsDashboard } from '../components/dispatch/DispatchMetricsDashboard';
 import { DispatchConfigPanel } from '../components/dispatch/DispatchConfigPanel';
 import { MaterialEquipmentPanel } from '../components/dispatch/MaterialEquipmentPanel';
+// ★ Task 13：班组 chip 多选组件（用于按班组筛选候选池）
+import { TeamChipMultiSelect } from '../components/dispatch/TeamChipMultiSelect';
 
 // ============================================
 // 常量定义
@@ -411,11 +417,17 @@ export default function SmartDispatchPage() {
   const { pendingTasks, stats: confirmStats, recommendedTasks, pendingAITasks, optimizationTasks } = usePendingConfirmTasks(getRecommendations);
   const { confirmDispatch, replaceWorker, delayTask, acceptOptimization, rejectOptimization } = useDispatchActions();
   // ★ 排班联动 hook：派发成功后 fire-and-forget 同步 schedule 行
-  const { syncAfterDispatch } = useDispatchScheduleBridge();
+  const { syncAfterDispatch, confirmDispatchWithSoftWarn } = useDispatchScheduleBridge();
+  // ★ Task 13：班组分配的服务器侧候选池筛选（透传 teamIds 到 /api/dispatch/recommend）
+  const recommendWorkers = useDispatchStore((s) => s.recommendWorkers);
 
   // ── 本地状态 ──
   const [selectedTask, setSelectedTask] = useState<PendingConfirmTask | null>(null);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  // ★ Task 13：按班组筛选候选池（透传到 useDispatchStore.recommendWorkers teamIds）
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  // ★ Task 13：服务器侧班组筛选的 worker ID 白名单（null 表示不过滤）
+  const [serverFilteredWorkerIds, setServerFilteredWorkerIds] = useState<string[] | null>(null);
   const [sourceFilter, setSourceFilter] = useState<DispatchTaskSource | 'all'>('all');
   const [dispatchResult, setDispatchResult] = useState<{ success: boolean; message: string } | null>(null);
   const [dispatchAction, setDispatchAction] = useState<'dispatch' | 'delay' | 'split' | 'dismiss' | null>(null);
@@ -564,10 +576,45 @@ export default function SmartDispatchPage() {
   // ── 计算属性 ──
   const filteredTasks = useMemo(() => filterBySource(sourceFilter as DispatchTaskSource), [filterBySource, sourceFilter]);
 
+  // ★ Task 13：班组 chip 变化 → 服务器侧缩窄候选池
+  // 后端 /api/dispatch/recommend 返回白名单 worker IDs，前端与本地 getRecommendations 取交集
+  useEffect(() => {
+    // 清空班组时撤销服务器侧过滤
+    if (selectedTeamIds.length === 0) {
+      setServerFilteredWorkerIds(null);
+      return;
+    }
+    // 没有选中任务时不发请求（taskId 必填）
+    if (!selectedTask) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const taskId = selectedTask.sourceId ?? selectedTask.id;
+        const recs = await recommendWorkers({ taskId, teamIds: selectedTeamIds });
+        if (cancelled) return;
+        setServerFilteredWorkerIds(recs.map((r) => r.workerId));
+      } catch (err: unknown) {
+        // 服务器端过滤失败回退到不过滤，不阻塞 UI
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('[SmartDispatch] 班组过滤请求失败，回退到全量候选池:', message);
+        if (!cancelled) setServerFilteredWorkerIds(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTask, selectedTeamIds, recommendWorkers]);
+
   const recommendations = useMemo<WorkerRecommendation[] | null>(() => {
     if (!selectedTask) return null;
-    return getRecommendations(selectedTask, 5);
-  }, [selectedTask, getRecommendations]);
+    const all = getRecommendations(selectedTask, 5);
+    // ★ Task 13：与服务器侧班组筛选白名单取交集，缩窄候选池
+    if (serverFilteredWorkerIds === null) return all;
+    if (serverFilteredWorkerIds.length === 0) return [];
+    return all.filter((rec) => serverFilteredWorkerIds.includes(rec.worker.id));
+  }, [selectedTask, getRecommendations, serverFilteredWorkerIds]);
 
   const dailyReport = useMemo<DailyWorkOrderReport>(() => {
     return generateDailyReport(new Date().toISOString().split('T')[0]);
@@ -590,32 +637,54 @@ export default function SmartDispatchPage() {
 
   const handleDispatch = (worker: WorkerRecommendation) => {
     if (!selectedTask) return;
-    const result = confirmDispatch(selectedTask.id, worker.worker.id, worker.worker.name);
-    // ★ 排班联动：派发成功后副作用（silent skip：workerId/sourceId 为空时不会发请求）
-    if (selectedTask && result.success) {
-      void syncAfterDispatch(
+    // ★ Task 13：派发前占用检查 + 软警告 + override 日志（用户取消则不发派工）
+    void (async () => {
+      const accepted = await confirmDispatchWithSoftWarn(
         { source: selectedTask.source === 'tempTask' ? 'tempTask' : 'farm', sourceId: selectedTask.sourceId || selectedTask.id },
         worker.worker.id,
-        { taskPlanDate: (selectedTask as any).planDate || (selectedTask as any).dueDate }
+        { taskPlanDate: (selectedTask as PendingConfirmTask & { planDate?: string }).planDate || (selectedTask as PendingConfirmTask & { dueDate?: string }).dueDate }
       );
-    }
-    showResult(result);
-    setSelectedTask(null);
+      if (!accepted) return; // 用户在软警告弹窗中取消
+      try {
+        const result = confirmDispatch(selectedTask.id, worker.worker.id, worker.worker.name);
+        showResult(result);
+        setSelectedTask(null);
+      } catch (err: unknown) {
+        // ★ 排班冲突（2026-07-31）：后端返回 409 时提示用户
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes('409') || message.includes('已有排班') || message.includes('conflict')) {
+          await showAlert('该员工在此时间段已有排班记录，无法重复排班');
+        } else {
+          await showAlert(`派工失败：${message}`);
+        }
+      }
+    })();
   };
 
   const handleAccept = (task: PendingConfirmTask) => {
     if (task.aiRecommendedWorkers?.length) {
       const topWorker = task.aiRecommendedWorkers[0];
-      const result = confirmDispatch(task.id, topWorker.worker.id, topWorker.worker.name);
-      // ★ 排班联动：派发成功后副作用（silent skip：workerId/sourceId 为空时不会发请求）
-      if (result.success) {
-        void syncAfterDispatch(
+      // ★ Task 13：派发前占用检查 + 软警告 + override 日志（用户取消则不发派工）
+      void (async () => {
+        const accepted = await confirmDispatchWithSoftWarn(
           { source: task.source === 'tempTask' ? 'tempTask' : 'farm', sourceId: task.sourceId || task.id },
           topWorker.worker.id,
-          { taskPlanDate: (task as any).planDate || (task as any).dueDate }
+          { taskPlanDate: (task as PendingConfirmTask & { planDate?: string }).planDate || (task as PendingConfirmTask & { dueDate?: string }).dueDate }
         );
-      }
-      showResult(result);
+        if (!accepted) return; // 用户在软警告弹窗中取消
+        try {
+          const result = confirmDispatch(task.id, topWorker.worker.id, topWorker.worker.name);
+          showResult(result);
+        } catch (err: unknown) {
+          // ★ 排班冲突（2026-07-31）：后端返回 409 时提示用户
+          const message = err instanceof Error ? err.message : String(err);
+          if (message.includes('409') || message.includes('已有排班') || message.includes('conflict')) {
+            await showAlert('该员工在此时间段已有排班记录，无法重复排班');
+          } else {
+            await showAlert(`派工失败：${message}`);
+          }
+        }
+      })();
     }
   };
 
@@ -697,6 +766,21 @@ export default function SmartDispatchPage() {
           >
             <Sparkles className="w-4 h-4" /> 配置中心
           </button>
+        </div>
+      </div>
+
+      {/* ★ Task 13：班组 chip 多选 → 透传 teamIds 到后端缩窄候选池 */}
+      <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
+        <div className="flex items-start gap-3">
+          <div className="text-sm font-medium text-gray-700 pt-1 shrink-0">按班组筛选</div>
+          <div className="flex-1">
+            <TeamChipMultiSelect value={selectedTeamIds} onChange={setSelectedTeamIds} />
+            {selectedTeamIds.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                已选 {selectedTeamIds.length} 个班组，AI 推荐候选池已缩窄。
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
