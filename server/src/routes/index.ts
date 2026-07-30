@@ -50,6 +50,7 @@ import announcementRouter from './announcement';
 import indicatorsRouter from './indicators';
 import indicatorEvaluationsRouter from './indicatorEvaluations';
 import scheduleRouter from './schedule';
+import dispatchRouter from './dispatch';
 import attendanceRouter from './attendance';
 import personnelRouter from './personnel';
 import onboardingRouter from './onboarding';
@@ -248,6 +249,9 @@ router.use('/indicator-evaluations', requireAuth, indicatorEvaluationsRouter);
 
 // 排班管理路由 - 需要认证
 router.use('/schedules', requireAuth, scheduleRouter);
+
+// 智能派工推荐路由 - 需要认证
+router.use('/dispatch', requireAuth, dispatchRouter);
 
 // 农事任务排班路由 - 需要认证
 router.use('/farm-task-schedules', requireAuth, farmTaskSchedulesRouter);

@@ -23,12 +23,13 @@ describe('validateBreedingForm', () => {
     expect(validateBreedingForm({ ...baseForm, recordDate: '', parentMaleCode: 'M1' })).toBe('请选择记录日期')
   })
 
-  it('失败：cross 缺父本', () => {
-    expect(validateBreedingForm({ ...baseForm, parentMaleCode: '' })).toBe('杂交/回交时父本编码必填')
+  // v5：cross/backcross 缺父本不再前端校验（由后端 seeds/plants 业务规则约束）
+  it('v5通过：cross 缺父本不拦截（后端约束）', () => {
+    expect(validateBreedingForm({ ...baseForm, parentMaleCode: '' })).toBeNull()
   })
 
-  it('失败：backcross 缺父本', () => {
-    expect(validateBreedingForm({ ...baseForm, operationType: 'backcross' })).toBe('杂交/回交时父本编码必填')
+  it('v5通过：backcross 缺父本不拦截（后端约束）', () => {
+    expect(validateBreedingForm({ ...baseForm, operationType: 'backcross' })).toBeNull()
   })
 
   it('通过：self 自交（无父本）', () => {

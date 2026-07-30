@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Eye, Plus, RotateCcw, Save, Search, Settings, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Calendar, Edit2, Eye, Plus, RotateCcw, Save, Search, Settings, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
@@ -69,6 +69,16 @@ export function TeamTable({
   });
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+  // ★ Task 15：跳到排班页 + 预填班组/日期/班次（url-deep-link-modal-pattern）
+  const handleBatchSchedule = (team: Team) => {
+    const today = new Date().toISOString().slice(0, 10);
+    navigate(
+      `/schedule?teamId=${encodeURIComponent(team.id)}` +
+        `&prefillDate=${today}` +
+        `&prefillShift=${encodeURIComponent('早班')}`,
+    );
+  };
 
   // 打开分配弹窗
   const openAssignModal = (team: Team) => {
@@ -422,6 +432,15 @@ export function TeamTable({
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
+                        {/* ★ Task 15：为该班组批量排班（跳到排班页 + 预填日期/班次） */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleBatchSchedule(team)}
+                          title="为该班组批量排班"
+                        >
+                          <Calendar className="w-4 h-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>

@@ -95,7 +95,16 @@ vi.mock('../stores/useToastStore', () => ({
 vi.mock('../lib/apiClient', () => ({
   enhancedApiClient: {
     patch: vi.fn(),
+    // Batch 6：confirmDispatchWithSoftWarn 新增使用 get/post
+    get: vi.fn(),
+    post: vi.fn(),
   },
+}));
+
+// Mock 派工软警告 Modal（提取到独立模块，便于拦截，避免测试中真实 DOM 渲染）
+const mockShowSoftWarnModal = vi.fn();
+vi.mock('../hooks/dispatchSoftWarnModal', () => ({
+  showSoftWarnModal: (...args: unknown[]) => mockShowSoftWarnModal(...args),
 }));
 
 // ============ 测试用例 ============
@@ -218,5 +227,167 @@ describe('useDispatchScheduleBridge', () => {
       expect.stringContaining('排班占用同步失败')
     );
     expect(mockToast.error).not.toHaveBeenCalled();
+  });
+});
+
+// ============ Batch 6 新增：confirmDispatchWithSoftWarn 测试 ============
+
+/**
+ * 测试策略：
+ * - enhancedApiClient.get mock 控制 occupation 响应
+ * - enhancedApiClient.post mock 记录 override 日志
+ * - showSoftWarnModal 通过 `vi.mock('../hooks/dispatchSoftWarnModal', ...)` 拦截
+ *   （提取到独立模块即可被 vitest 拦截，避免真实 DOM 渲染）
+ * - syncAfterDispatch 仍走真实路径，调 enhancedApiClient.patch（mock 掉的 vi.fn）
+ */
+describe('confirmDispatchWithSoftWarn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockState.invalidateOccupations = vi.fn();
+    // 重置 toast mocks
+    mockToast.success.mockReset();
+    mockToast.error.mockReset();
+    mockToast.warning.mockReset();
+    mockToast.info.mockReset();
+    // 重置 Modal mock
+    mockShowSoftWarnModal.mockReset();
+    // patch 默认可成功（syncAfterDispatch 真实路径会用到）
+    (enhancedApiClient.patch as any).mockResolvedValue({ success: true });
+    (enhancedApiClient.post as any).mockResolvedValue({ success: true });
+  });
+
+  it('on_duty 工人应跳过软警告直接调 syncAfterDispatch', async () => {
+    // ★ on_duty：不应该弹软警告 Modal
+    (enhancedApiClient.get as any).mockResolvedValue({
+      date: '2026-07-30',
+      workers: [
+        {
+          workerId: 'S001',
+          workerName: '郭靖',
+          workZone: '东区',
+          scheduleStatus: 'on_duty',
+          shift: '早班',
+          assignedTaskCount: 0,
+          totalAssignedHours: 0,
+          tasks: [],
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = await result.current!.confirmDispatchWithSoftWarn(
+        { source: 'farm', sourceId: 'FT-OK' },
+        'S001'
+      );
+    });
+
+    expect(accepted).toBe(true);
+    // ★ 关键断言：on_duty 时不应弹 Modal
+    expect(mockShowSoftWarnModal).not.toHaveBeenCalled();
+    // ★ syncAfterDispatch 主流程应被调用
+    expect(enhancedApiClient.patch).toHaveBeenCalledWith(
+      '/schedules/dispatch-tasks',
+      expect.objectContaining({ workerId: 'S001', taskId: 'FT-OK' })
+    );
+    expect(mockState.invalidateOccupations).toHaveBeenCalled();
+  });
+
+  it('off_duty 工人接受覆写时应写 override 日志并继续主流程', async () => {
+    // ★ off_duty：应弹软警告 Modal
+    (enhancedApiClient.get as any).mockResolvedValue({
+      date: '2026-07-30',
+      workers: [
+        {
+          workerId: 'S002',
+          workerName: '黄蓉',
+          workZone: '西区',
+          scheduleStatus: 'off_duty',
+          shift: '',
+          assignedTaskCount: 0,
+          totalAssignedHours: 0,
+          tasks: [],
+        },
+      ],
+    });
+
+    // mock Modal 返回用户已填的原因（模拟接受覆写）
+    mockShowSoftWarnModal.mockResolvedValue('紧急任务，工人已电话确认可出勤');
+
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = await result.current!.confirmDispatchWithSoftWarn(
+        { source: 'farm', sourceId: 'FT-OFF' },
+        'S002'
+      );
+    });
+
+    expect(accepted).toBe(true);
+    // ★ 弹了 Modal
+    expect(mockShowSoftWarnModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workerName: '黄蓉',
+        scheduleStatus: 'off_duty',
+      })
+    );
+    // ★ 接受覆写后 POST /dispatch/override 写日志
+    expect(enhancedApiClient.post).toHaveBeenCalledWith(
+      '/dispatch/override',
+      expect.objectContaining({
+        taskId: 'FT-OFF',
+        workerId: 'S002',
+        overrideReason: '紧急任务，工人已电话确认可出勤',
+        conflictType: 'off_duty',
+      })
+    );
+    // ★ 继续 syncAfterDispatch 主流程
+    expect(enhancedApiClient.patch).toHaveBeenCalledWith(
+      '/schedules/dispatch-tasks',
+      expect.objectContaining({ workerId: 'S002', taskId: 'FT-OFF' })
+    );
+  });
+
+  it('off_duty 工人取消时应不写 override 日志且不调 syncAfterDispatch', async () => {
+    (enhancedApiClient.get as any).mockResolvedValue({
+      date: '2026-07-30',
+      workers: [
+        {
+          workerId: 'S003',
+          workerName: '杨过',
+          workZone: '',
+          scheduleStatus: 'no_schedule',
+          shift: '',
+          assignedTaskCount: 0,
+          totalAssignedHours: 0,
+          tasks: [],
+        },
+      ],
+    });
+
+    // mock Modal 返回空字符串（模拟用户取消）
+    mockShowSoftWarnModal.mockResolvedValue('');
+
+    const { result } = renderHook(() => useDispatchScheduleBridge());
+
+    let accepted: boolean | undefined;
+    await act(async () => {
+      accepted = await result.current!.confirmDispatchWithSoftWarn(
+        { source: 'tempTask', sourceId: 'TT-CXL' },
+        'S003'
+      );
+    });
+
+    // ★ 用户取消应返回 false
+    expect(accepted).toBe(false);
+    // ★ Modal 弹过
+    expect(mockShowSoftWarnModal).toHaveBeenCalled();
+    // ★ 取消时不应 POST override 日志
+    expect(enhancedApiClient.post).not.toHaveBeenCalled();
+    // ★ 取消时不应调 syncAfterDispatch 主流程
+    expect(enhancedApiClient.patch).not.toHaveBeenCalled();
   });
 });

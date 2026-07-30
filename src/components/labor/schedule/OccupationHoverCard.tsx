@@ -3,8 +3,13 @@
  *
  * 日历单元格 hover 时显示该员工当日任务列表 + 工时进度条。
  * 工时阈值动态计算：基于当前员工 shift 时长（从 shiftConfigs 读）。
+ * 班组名（teamName）：当 URL 含 teamId 且 useTeamStore 已加载班组数据时，显示在工人姓名旁。
+ * 注：后端 /api/schedules/occupations 返回的 worker 对象不含 teamName 字段，
+ *   前端通过 URL teamId + useTeamStore 反查班组名，URL 无 teamId 则不显示。
  */
 
+import { useSearchParams } from 'react-router-dom';
+import { useTeamStore } from '@/stores';
 import type { ScheduleOccupation, ShiftConfig } from '../../../stores/scheduleStore';
 
 interface OccupationHoverCardProps {
@@ -13,6 +18,12 @@ interface OccupationHoverCardProps {
 }
 
 export function OccupationHoverCard({ occupation, shiftConfigs }: OccupationHoverCardProps) {
+  // 班组名解析：URL teamId → useTeamStore 反查
+  const [searchParams] = useSearchParams();
+  const teamIdParam = searchParams.get('teamId');
+  const teams = useTeamStore((s) => s.teams);
+  const teamName = teamIdParam ? teams.find((t) => t.oid === teamIdParam || t.id === teamIdParam)?.teamName : undefined;
+
   const shift = shiftConfigs.find(s => s.name === occupation.shift);
   // 解析 HH:mm 格式的小时数，计算班次时长（处理跨夜班次）
   const shiftDurationHours = shift
@@ -31,7 +42,12 @@ export function OccupationHoverCard({ occupation, shiftConfigs }: OccupationHove
     <div className="absolute z-20 bottom-full right-0 mb-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
       {/* 标题 */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-900">{occupation.workerName}</span>
+        <span className="text-sm font-medium text-gray-900">
+          {occupation.workerName}
+          {teamName && (
+            <span className="ml-1 text-xs text-emerald-600">({teamName})</span>
+          )}
+        </span>
         <span className="text-xs text-gray-500">{occupation.shift}</span>
       </div>
 

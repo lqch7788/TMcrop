@@ -198,12 +198,23 @@ interface ScheduleState {
   syncPendingChanges: () => Promise<void>;
 
   // Actions - 排班占用（派工联动）
-  fetchOccupations: (date: string) => Promise<void>;
+  fetchOccupations: (date: string, teamId?: string) => Promise<void>;
   getWorkerScheduleStatus: (workerId: string, date: string) => {
     scheduleStatus: 'on_duty' | 'off_duty' | 'no_schedule';
     assignedTaskCount: number;
   };
   invalidateOccupations: (date: string) => void;
+
+  // Actions - 按班组批量排班（Task 8 新增）
+  batchScheduleByTeam: (
+    teamId: string,
+    date: string,
+    shift: ShiftType,
+    workZone?: string,
+  ) => Promise<{
+    created: number;
+    skipped: Array<{ workerId: string; reason: string }>;
+  }>;
 
   // 内部方法
   _initializeSeedData: () => void;
@@ -501,7 +512,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
       // ========== 排班占用（派工联动） ==========
 
-      fetchOccupations: async (date: string) => {
+      fetchOccupations: async (date: string, teamId?: string) => {
         // 2 分钟 TTL 缓存：避免频繁请求同一日期
         const lastTs = get().lastFetchedAt[date];
         if (lastTs && Date.now() - lastTs < 2 * 60 * 1000) {
@@ -510,6 +521,7 @@ export const useScheduleStore = create<ScheduleState>()(
         set({ occupationsLoading: true, occupationsError: null });
         try {
           const params = new URLSearchParams({ date });
+          if (teamId) params.append('teamId', teamId);
           // enhancedApiClient 已自动解包一层 .data（统一响应格式 success/data 包装），
           // 此处直接读取 camelCase 字段；response 类型固定为 {date, workers}，避免 any
           const response = await enhancedApiClient.get<{ date: string; workers: ScheduleOccupation[] }>(
@@ -555,6 +567,40 @@ export const useScheduleStore = create<ScheduleState>()(
           delete nextOcc[date];
           return { lastFetchedAt: nextTs, occupations: nextOcc };
         });
+      },
+
+      // ========== 按班组批量排班（Task 8 新增） ==========
+
+      /**
+       * 按班组批量排班：将指定班组在某日某班次的所有工人批量排进排班表。
+       * 跳过当天已排班/冲突的工人，由后端返回 created + skipped 列表。
+       * 排班完成后立即失效当日占用缓存，确保前端 getWorkerScheduleStatus
+       * 下次读取时重新拉取最新数据。
+       *
+       * @param teamId 班组 ID
+       * @param date 日期 YYYY-MM-DD
+       * @param shift 班次类型
+       * @param workZone 可选工作区域
+       * @returns 后端返回的 created 数量与 skipped 明细
+       */
+      batchScheduleByTeam: async (
+        teamId: string,
+        date: string,
+        shift: ShiftType,
+        workZone?: string,
+      ) => {
+        const res = await enhancedApiClient.post<{
+          created: number;
+          skipped: Array<{ workerId: string; reason: string }>;
+        }>('/schedules/batch-by-team', {
+          teamId,
+          date,
+          shift,
+          workZone,
+        });
+        // 刷新当日占用缓存（V2.1 铁律：API 是数据唯一来源，立即失效前端缓存）
+        get().invalidateOccupations(date);
+        return res;
       },
 
       // ========== 内部方法 ==========

@@ -4120,6 +4120,32 @@ function fixApprovedProductionPlanStatus(): void {
   // 2026-07-16：库存 crop_name 数据错位迁移已移至独立脚本 server/scripts/migrateInventoryCropName.ts
   //   原因：fixMissingSchema 被启动白名单禁用（index.ts:173 注释：YELLOW 级含 UPDATE 迁移，c55 事故），
   //   即使把迁移函数加到这里，启动也不会跑。改用独立脚本，用户手动跑 npx tsx 执行。
+
+  // ========== 2026-07-30：schedules 表加 team_id / team_name 列（排班调度 × 班组分配贯通）==========
+  // 老 DB 启动时由 fixMissingSchema 调用（YELLOW 级，需手动跑 npx tsx src/db/fixMissingSchema.ts），
+  // 新库走 schema.ts 的 CREATE TABLE 即可，无需此迁移。
+  const schedulesColumnsToAdd = [
+    { name: 'team_id', sql: 'ALTER TABLE schedules ADD COLUMN team_id TEXT' },
+    { name: 'team_name', sql: 'ALTER TABLE schedules ADD COLUMN team_name TEXT' },
+  ];
+  for (const col of schedulesColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ schedules 表添加 ${col.name} 列`);
+    } catch (addErr: unknown) {
+      const message = addErr instanceof Error ? addErr.message : String(addErr);
+      if (message.includes('duplicate column')) {
+        seedLog.skip(`• schedules.${col.name} 列已存在`);
+        continue;
+      }
+      // 非幂等错误：显式记录并抛出，不静默吞错（Fail Loud 铁律）
+      seedLog.error(`schedules.${col.name} 列添加失败:`, message);
+      throw addErr;
+    }
+  }
+
+  // 排班调度 × 班组分配贯通（2026-07-30）：列添加完成，必须持久化（sql.js 内存数据库）
+  saveDatabase();
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
