@@ -375,6 +375,7 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
 
 // ============================================
 // 超时检测
+// 规则：按 OVERTIME_CONFIG（taskConfig.ts）分阶段 warn → critical
 // ============================================
 export function detectOvertime(task: Task): TaskTimeout | undefined {
   const now = new Date();
@@ -392,14 +393,19 @@ export function detectOvertime(task: Task): TaskTimeout | undefined {
   }
 
   // 2. 执行超时检测（in_progress状态）
+  // P1-5：工时优先 estimatedHours，兜底 estimatedDays × 8h/d（工作日非 24h/d）
+  // 超时判定：超过预估工时视为 critical，超过 80% 预估工时视为 warning
   if (task.status === 'in_progress' && task.acceptedAt) {
     const deadline = new Date(task.acceptedAt);
-    const estimatedHours = (task.estimatedDays || 1) * 24;
+    const estimatedHours = task.estimatedHours && task.estimatedHours > 0
+      ? task.estimatedHours
+      : (task.estimatedDays || 1) * 8;
     deadline.setHours(deadline.getHours() + estimatedHours);
     if (now > deadline) {
       return { type: 'execution', severity: 'critical', startedAt: task.updatedAt, deadline: deadline.toISOString() };
     }
-    // 预警：超过预计时间的80%
+    // 预警：超过预估工时的 80%
+    // 注：OVERTIME_CONFIG.executionWarningHours 是绝对小时阈值(24h)，此处用百分比语义(80%)
     const warningThreshold = estimatedHours * 0.8;
     const elapsedHours = (now.getTime() - new Date(task.acceptedAt).getTime()) / (1000 * 60 * 60);
     if (elapsedHours >= warningThreshold) {
@@ -775,15 +781,11 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'publish', task.status);
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post（自动 3 次重试 + 4xx/5xx 抛错 + 解包 data）
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/publish`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
       });
     }, 'publishTask');
 
@@ -806,16 +808,12 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'withdraw', task.status, { reason });
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/withdraw`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-          reason,
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/withdraw`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
+        reason,
       });
     }, 'withdrawTask');
 
@@ -839,16 +837,12 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'cancel', task.status, { reason });
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-          reason,
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/cancel`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
+        reason,
       });
     }, 'cancelTask');
 
@@ -874,15 +868,11 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'accept', task.status);
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assigneeId || '',
-          operator_name: task.assigneeName || '',
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/accept`, {
+        operator_id: task.assigneeId || '',
+        operator_name: task.assigneeName || '',
       });
     }, 'acceptTask');
 
@@ -1023,60 +1013,32 @@ export function useTasks(): UseTasksReturn {
     );
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post（4 个分支统一替换）
+    // P0-4：progress 端点额外传 status 字段，让前端状态机同步到后端（修 bug，不改业务）
     syncToApi(async () => {
+      const basePayload = {
+        operator_id: task.assigneeId || '',
+        operator_name: task.assigneeName || '',
+        progress,
+        comment: options?.remarks || '',
+        feedback: feedbackData,
+      };
       if (options?.isFinal) {
         // 最终提交：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
         if (isTempTask) {
-          await fetch(`/api/temp-tasks/${actualDbId}/submit-progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              operator_id: task.assigneeId || '',
-              operator_name: task.assigneeName || '',
-              progress,
-              comment: options?.remarks || '',
-              feedback: feedbackData,
-            }),
-          });
+          await enhancedApiClient.post(`/temp-tasks/${actualDbId}/submit-progress`, basePayload);
         } else {
-          await fetch(`/api/farm-tasks/${id}/submit-acceptance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              operator_id: task.assigneeId || '',
-              operator_name: task.assigneeName || '',
-              progress,
-              comment: options?.remarks || '',
-              feedback: feedbackData,
-            }),
-          });
+          await enhancedApiClient.post(`/farm-tasks/${id}/submit-acceptance`, basePayload);
         }
       } else {
         // 进度更新：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
         if (isTempTask) {
-          await fetch(`/api/temp-tasks/${actualDbId}/submit-progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              operator_id: task.assigneeId || '',
-              operator_name: task.assigneeName || '',
-              progress,
-              comment: options?.remarks || '',
-              feedback: feedbackData,
-            }),
-          });
+          await enhancedApiClient.post(`/temp-tasks/${actualDbId}/submit-progress`, basePayload);
         } else {
-          await fetch(`/api/farm-tasks/${id}/progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              operator_id: task.assigneeId || '',
-              operator_name: task.assigneeName || '',
-              progress,
-              comment: options?.remarks || '',
-              feedback: feedbackData,
-            }),
+          // P0-4：传 status 让后端同步状态机（修复刷新/重进页面 status 不更新 bug）
+          await enhancedApiClient.post(`/farm-tasks/${id}/progress`, {
+            ...basePayload,
+            status: newStatus,
           });
         }
       }
@@ -1200,16 +1162,12 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'complete', task.status, { comment: comments });
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-          comments: comments || '',
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/complete`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
+        comments: comments || '',
       });
     }, 'acceptCompletion');
 
@@ -1274,16 +1232,12 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'reject', task.status, { reason });
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-          reason,
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/reject`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
+        reason,
       });
     }, 'rejectForRework');
 
@@ -1309,15 +1263,11 @@ export function useTasks(): UseTasksReturn {
     const record = createTaskRecord(task, 'continue', task.status);
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/continue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assigneeId || '',
-          operator_name: task.assigneeName || '',
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/continue`, {
+        operator_id: task.assigneeId || '',
+        operator_name: task.assigneeName || '',
       });
     }, 'continueExecution');
 
@@ -1348,16 +1298,12 @@ export function useTasks(): UseTasksReturn {
     );
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${task.id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: executorId,
-          operator_name: executorName,
-          reason: rejectReason,
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${task.id}/reject`, {
+        operator_id: executorId,
+        operator_name: executorName,
+        reason: rejectReason,
       });
     }, 'rejectByExecutor');
 
@@ -1395,17 +1341,13 @@ export function useTasks(): UseTasksReturn {
     );
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // 调用后端 API 持久化操作记录
+    // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
-      await fetch(`/api/farm-tasks/${id}/reassign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: task.assignerId || '',
-          operator_name: task.assignerName || '',
-          new_assignee_id: finalAssigneeId,
-          new_assignee_name: finalAssigneeName,
-        }),
+      await enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
+        operator_id: task.assignerId || '',
+        operator_name: task.assignerName || '',
+        new_assignee_id: finalAssigneeId,
+        new_assignee_name: finalAssigneeName,
       });
     }, 'reassignTask');
 

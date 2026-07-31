@@ -8,6 +8,24 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+/**
+ * 事务包裹助手（修复 P0-1：状态变更无事务导致脏数据）
+ * - sql.js 支持 BEGIN IMMEDIATE（立即获取写锁，防止并发写竞争）
+ * - 参考 cropOrder.ts:309 既有事务写法
+ * - 失败自动 ROLLBACK，成功 COMMIT 后统一 saveDatabase()
+ */
+function runInTransaction(db: any, work: () => void): void {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    work();
+    db.exec('COMMIT');
+    saveDatabase();
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch { /* ROLLBACK 失败不掩盖原异常 */ }
+    throw err;
+  }
+}
+
 // 任务状态值标准化映射（中文 -> 英文）
 const TASK_STATUS_MAP: Record<string, string> = {
   '待处理': 'pending',
@@ -155,6 +173,20 @@ function parseJsonField(value: any, defaultValue: any): any {
   } catch {
     return defaultValue;
   }
+}
+
+/** P2-2：统一 JSON 序列化工具（消除 5 处重复的 Array.isArray/typeof===object 判断） */
+function toDbJson(value: any, fallback: string = '[]'): string {
+  if (value === undefined || value === null) return fallback;
+  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'string') {
+    // 已经是字符串，验证为合法 JSON 或返回原值
+    if (value.startsWith('[') || value.startsWith('{')) {
+      try { JSON.parse(value); return value; } catch { return fallback; }
+    }
+    return value;
+  }
+  return String(value);
 }
 
 router.get('/', (req: Request, res: Response) => {
@@ -345,21 +377,19 @@ router.post('/', (req: Request, res: Response) => {
       estimated_hours || estimatedHours || 0,
       estimated_days || estimatedDays || 0,
       remarks || '',
-      // JSON 字段序列化为字符串存储
-      Array.isArray(materials) ? JSON.stringify(materials) : (materials || ''),
-      Array.isArray(tools) ? JSON.stringify(tools) : (tools || ''),
+      // P2-2：统一 toDbJson() 序列化
+      toDbJson(materials),
+      toDbJson(tools),
       batch_id || batchId || newId,
       batch_code || batchCode || `PC-${newId}`,
       // 数据改造新增字段
       type_name || typeName || '',
       source_type || sourceType || 'dispatch',
       dispatch_mode || dispatchMode || 'farm',
-      Array.isArray(feedback_requirements || feedbackRequirements || requiredFeedback)
-        ? JSON.stringify(feedback_requirements || feedbackRequirements || requiredFeedback)
-        : (feedback_requirements || feedbackRequirements || requiredFeedback || '[]'),
-      Array.isArray(rework_history || reworkHistory) ? JSON.stringify(rework_history || reworkHistory) : (rework_history || reworkHistory || '[]'),
-      Array.isArray(deadline_extensions || deadlineExtensions) ? JSON.stringify(deadline_extensions || deadlineExtensions) : (deadline_extensions || deadlineExtensions || '[]'),
-      type_config || typeConfig ? (typeof (type_config || typeConfig) === 'object' ? JSON.stringify(type_config || typeConfig) : (type_config || typeConfig)) : '{}',
+      toDbJson(feedback_requirements || feedbackRequirements || requiredFeedback),
+      toDbJson(rework_history || reworkHistory),
+      toDbJson(deadline_extensions || deadlineExtensions),
+      toDbJson(type_config || typeConfig, '{}'),
       sop_content || sopContent || '',
       description || '',
       team_id || teamId || "",
@@ -557,18 +587,24 @@ router.get('/code/:taskCode', (req: Request, res: Response) => {
 
 /**
  * 获取任务统计
+ * P2-9：6 条独立 COUNT → 1 条 GROUP BY + 1 条 overdue（不同 WHERE 无法合并）
  */
 router.get('/stats', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
 
-    const total = execCount(db, 'SELECT COUNT(*) as count FROM farm_tasks', []);
-    const pending = execCount(db, "SELECT COUNT(*) as count FROM farm_tasks WHERE status = 'pending'", []);
-    const inProgress = execCount(db, "SELECT COUNT(*) as count FROM farm_tasks WHERE status = 'in_progress'", []);
-    const waitingAcceptance = execCount(db, "SELECT COUNT(*) as count FROM farm_tasks WHERE status = 'waiting_acceptance'", []);
-    const completed = execCount(db, "SELECT COUNT(*) as count FROM farm_tasks WHERE status = 'completed'", []);
+    // 一条查询搞定所有状态计数（替代 5 条独立 COUNT）
+    const statusRows = queryToObjects(db,
+      "SELECT status, COUNT(*) as cnt FROM farm_tasks GROUP BY status",
+      []);
+    const statusMap: Record<string, number> = {};
+    let total = 0;
+    for (const row of statusRows) {
+      statusMap[row.status] = Number(row.cnt) || 0;
+      total += Number(row.cnt) || 0;
+    }
 
-    // 逾期任务：已过期且未完成
+    // 逾期任务：已过期且未完成（不同 WHERE，单独查询）
     const today = new Date().toISOString().split('T')[0];
     const overdue = execCount(db,
       "SELECT COUNT(*) as count FROM farm_tasks WHERE plan_date < ? AND status NOT IN ('completed', 'cancelled', 'abandoned')",
@@ -578,11 +614,11 @@ router.get('/stats', (req: Request, res: Response) => {
       success: true,
       data: {
         total,
-        pending,
-        inProgress,
-        waitingAcceptance,
-        completed,
-        overdue
+        pending: statusMap['pending'] || 0,
+        inProgress: statusMap['in_progress'] || 0,
+        waitingAcceptance: statusMap['waiting_acceptance'] || 0,
+        completed: statusMap['completed'] || 0,
+        overdue,
       }
     });
   } catch (error) {
@@ -734,6 +770,7 @@ router.get('/batch', (req: Request, res: Response) => {
 /**
  * 批量更新农事任务
  * PUT /api/farm-tasks/batch
+ * P1-8：增加 toDbColumnName() 映射 + validDbColumns 过滤，与单条 PUT 保持一致
  */
 router.put('/batch', (req: Request, res: Response) => {
   try {
@@ -756,12 +793,39 @@ router.put('/batch', (req: Request, res: Response) => {
       normalizedUpdates.status = normalizeTaskStatus(normalizedUpdates.status);
     }
 
-    const fields = Object.keys(normalizedUpdates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    if (fields.length === 0) {
+    // P1-8：过滤有效字段 + 转 DB 列名（与单条 PUT 保持一致）
+    const validDbColumns = new Set([
+      'id', 'task_code', 'task_title', 'task_type', 'task_content',
+      'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name',
+      'greenhouse_id', 'greenhouse_name', 'area_name',
+      'plan_date', 'plan_time', 'priority', 'status',
+      'completion_date', 'completion_note',
+      'batch_id', 'batch_code', 'create_by',
+      'version', 'create_time', 'update_time',
+      'due_date', 'progress', 'crop', 'estimated_hours', 'estimated_days',
+      'remarks', 'materials', 'tools',
+      'type_name', 'source_type', 'dispatch_mode',
+      'feedback_requirements', 'rework_history', 'deadline_extensions',
+      'type_config', 'sop_content', 'description',
+      'team_id', 'team_name', 'tools_remarks',
+      'source_problem_id', 'source_inspection_id', 'source_id', 'source_code',
+      'cancelled_at', 'cancelled_by', 'cancelled_reason',
+      'abandoned_at', 'abandoned_by', 'abandoned_reason',
+      'rejected_at', 'rejected_by', 'rejected_reason',
+      'executor_reject_count', 'acceptance_record',
+    ]);
+    const validKeys = Object.keys(normalizedUpdates).filter(k => {
+      if (k === 'id' || normalizedUpdates[k] === undefined) return false;
+      const dbCol = toDbColumnName(k);
+      return validDbColumns.has(dbCol);
+    });
+
+    if (validKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(normalizedUpdates).filter(k => k !== 'id').map(k => normalizedUpdates[k]);
+    const fields = validKeys.map(k => `${toDbColumnName(k)} = ?`).join(', ');
+    const values = validKeys.map(k => toDbValue(normalizedUpdates[k]));
     values.push(now);
 
     const placeholders = ids.map(() => '?').join(',');
@@ -933,13 +997,15 @@ router.post('/:id/publish', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'pending', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹 UPDATE + 操作记录 INSERT，避免脏数据
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'pending', update_time = ? WHERE id = ?`,
+        [now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'publish', '发布任务', fromStatus, 'pending');
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'publish', '发布任务', fromStatus, 'pending');
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'pending' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '发布任务失败' });
@@ -970,13 +1036,15 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'draft', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'draft', update_time = ? WHERE id = ?`,
+        [now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'withdraw', '撤回任务', fromStatus, 'draft');
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'withdraw', '撤回任务', fromStatus, 'draft');
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'draft' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '撤回任务失败' });
@@ -1007,13 +1075,15 @@ router.post('/:id/accept', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'accepted', accepted_at = ?, update_time = ? WHERE id = ?`,
-      [now, now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'accepted', accepted_at = ?, update_time = ? WHERE id = ?`,
+        [now, now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'accept', '接受任务', fromStatus, 'accepted');
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'accept', '接受任务', fromStatus, 'accepted');
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'accepted' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '接受任务失败' });
@@ -1044,13 +1114,15 @@ router.post('/:id/start', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`,
+        [now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'start', '开始执行', fromStatus, 'in_progress');
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'start', '开始执行', fromStatus, 'in_progress');
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'in_progress' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '开始执行任务失败' });
@@ -1059,11 +1131,14 @@ router.post('/:id/start', (req: Request, res: Response) => {
 
 /**
  * 提交进度
+ * P0-4：新增可选 status 字段，让进度推进时同步后端任务状态
+ * （修复后端 status 不更新的 bug：前端状态机切到 in_progress/waiting_acceptance 后，
+ *   后端 status 仍是 accepted，导致刷新/重进页面后状态丢失）
  */
 router.post('/:id/progress', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { progress, feedback, operator_id, operator_name, comment } = req.body;
+    const { progress, feedback, operator_id, operator_name, comment, status } = req.body;
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
@@ -1080,18 +1155,30 @@ router.post('/:id/progress', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     const currentProgress = task.progress || 0;
+    const newProgress = progress || currentProgress;
 
-    db.run(`UPDATE farm_tasks SET progress = ?, update_time = ? WHERE id = ?`,
-      [progress || currentProgress, now, id]);
+    // P0-4：如果传了 status 字段，UPDATE 时一并更新（状态机推进）
+    // 若未传 status 则保持原 status 不变（向后兼容旧客户端）
+    const normalizedStatus = status ? normalizeTaskStatus(status) : undefined;
 
-    // 将 feedback 对象转为 JSON 字符串存储
-    const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'progress', '提交进度',
-      task.status, task.status, progress, comment, undefined, feedbackStr);
+    // P0-1：事务包裹；P0-4：可选 status
+    runInTransaction(db, () => {
+      if (normalizedStatus) {
+        db.run(`UPDATE farm_tasks SET progress = ?, status = ?, update_time = ? WHERE id = ?`,
+          [newProgress, normalizedStatus, now, id]);
+      } else {
+        db.run(`UPDATE farm_tasks SET progress = ?, update_time = ? WHERE id = ?`,
+          [newProgress, now, id]);
+      }
 
-    saveDatabase();
-    res.json({ success: true, data: { id, progress: progress || currentProgress } });
+      // 将 feedback 对象转为 JSON 字符串存储
+      const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'progress', '提交进度',
+        task.status, normalizedStatus || task.status, newProgress, comment, undefined, feedbackStr);
+    });
+
+    res.json({ success: true, data: { id, progress: newProgress, status: normalizedStatus || task.status } });
   } catch (error) {
     console.error('提交进度失败:', error);
     res.status(500).json({ success: false, error: '提交进度失败' });
@@ -1122,15 +1209,17 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, update_time = ? WHERE id = ?`,
+        [now, id]);
 
-    // 将 feedback 对象转为 JSON 字符串存储
-    const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment, undefined, feedbackStr);
+      // 将 feedback 对象转为 JSON 字符串存储
+      const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment, undefined, feedbackStr);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'waiting_acceptance' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '申请验收失败' });
@@ -1161,13 +1250,15 @@ router.post('/:id/complete', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100, update_time = ? WHERE id = ?`,
-      [now, now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100, update_time = ? WHERE id = ?`,
+        [now, now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'complete', '验收通过', fromStatus, 'completed', 100, comments);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'complete', '验收通过', fromStatus, 'completed', 100, comments);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'completed' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '验收通过失败' });
@@ -1202,13 +1293,16 @@ router.post('/:id/reject', (req: Request, res: Response) => {
     // 如果返工次数超过2次，则状态为 failed
     const newStatus = reworkCount >= 2 ? 'failed' : 'rejected';
 
-    db.run(`UPDATE farm_tasks SET status = ?, rework_count = ?, update_time = ? WHERE id = ?`,
-      [newStatus, reworkCount, now, id]);
+    // P0-1：事务包裹
+    // P1-9：驳回原因/操作人写入 rejected_* 审计列
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = ?, rework_count = ?, update_time = ?, rejected_at = ?, rejected_by = ?, rejected_reason = ? WHERE id = ?`,
+        [newStatus, reworkCount, now, now, operator_id || '', reason || '', id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'reject', '验收驳回', fromStatus, newStatus, undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'reject', '验收驳回', fromStatus, newStatus, undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: newStatus, reworkCount } });
   } catch (error) {
     res.status(500).json({ success: false, error: '验收驳回失败' });
@@ -1239,13 +1333,16 @@ router.post('/:id/cancel', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'cancelled', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    // P1-9：取消原因/操作人写入 cancelled_* 审计列
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'cancelled', update_time = ?, cancelled_at = ?, cancelled_by = ?, cancelled_reason = ? WHERE id = ?`,
+        [now, now, operator_id || '', reason || '', id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'cancel', '取消任务', fromStatus, 'cancelled', undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'cancel', '取消任务', fromStatus, 'cancelled', undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'cancelled' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '取消任务失败' });
@@ -1276,13 +1373,16 @@ router.post('/:id/abandon', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    // P1-9：放弃原因/操作人写入 abandoned_* 审计列
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ?, abandoned_at = ?, abandoned_by = ?, abandoned_reason = ? WHERE id = ?`,
+        [now, now, operator_id || '', reason || '', id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'abandon', '放弃任务', fromStatus, 'abandoned', undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'abandon', '放弃任务', fromStatus, 'abandoned', undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'abandoned' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '放弃任务失败' });
@@ -1323,12 +1423,14 @@ router.post('/:id/overtime-continue', (req: Request, res: Response) => {
     sql += ' WHERE id = ?';
     params.push(id);
 
-    db.run(sql, params);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(sql, params);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'overtime_continue', '超时继续', task.status, task.status);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'overtime_continue', '超时继续', task.status, task.status);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: '超时继续失败' });
@@ -1359,13 +1461,16 @@ router.post('/:id/overtime-abandon', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ? WHERE id = ?`,
-      [now, id]);
+    // P0-1：事务包裹
+    // P1-9：超时放弃原因/操作人写入 abandoned_* 审计列
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'abandoned', update_time = ?, abandoned_at = ?, abandoned_by = ?, abandoned_reason = ? WHERE id = ?`,
+        [now, now, operator_id || '', reason || '', id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'overtime_abandon', '超时放弃', fromStatus, 'abandoned', undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'overtime_abandon', '超时放弃', fromStatus, 'abandoned', undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, status: 'abandoned' } });
   } catch (error) {
     res.status(500).json({ success: false, error: '超时放弃失败' });
@@ -1395,13 +1500,15 @@ router.post('/:id/reassign', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET assignee_id = ?, assignee_name = ?, status = 'pending', update_time = ? WHERE id = ?`,
-      [assigneeId, assigneeName, now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET assignee_id = ?, assignee_name = ?, status = 'pending', update_time = ? WHERE id = ?`,
+        [assigneeId, assigneeName, now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'reassign', '重新派发', task.status, 'pending', undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'reassign', '重新派发', task.status, 'pending', undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, assigneeId, assigneeName } });
   } catch (error) {
     res.status(500).json({ success: false, error: '重新派发任务失败' });
@@ -1431,13 +1538,15 @@ router.post('/:id/extend-deadline', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
 
-    db.run(`UPDATE farm_tasks SET due_date = ?, update_time = ? WHERE id = ?`,
-      [newDeadline, now, id]);
+    // P0-1：事务包裹
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET due_date = ?, update_time = ? WHERE id = ?`,
+        [newDeadline, now, id]);
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'extend_deadline', '延期', task.status, task.status, undefined, reason);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'extend_deadline', '延期', task.status, task.status, undefined, reason);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, dueDate: newDeadline } });
   } catch (error) {
     res.status(500).json({ success: false, error: '延期任务失败' });
@@ -1465,10 +1574,12 @@ router.post('/:id/remind', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '农事任务不存在' });
     }
 
-    recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'remind', '催办', task.status, task.status, undefined, message);
+    // P0-1：事务包裹（只有操作记录写入，但仍包事务保证一致性）
+    runInTransaction(db, () => {
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'remind', '催办', task.status, task.status, undefined, message);
+    });
 
-    saveDatabase();
     res.json({ success: true, data: { id, reminded: true } });
   } catch (error) {
     res.status(500).json({ success: false, error: '催办任务失败' });

@@ -29,8 +29,9 @@ import { Modal } from '../../components/ui/Modal';
 import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
 import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
-import { format, parse, addDays, addHours } from 'date-fns';
 import { showAlert } from '@/lib/dialogService';
+import { enhancedApiClient } from '../../lib/apiClient';
+import { useFarmTaskStore } from '../../stores/farmTaskStore';
 
 // 导入弹窗适配器
 import { WithdrawCancelAdapter } from '../../components/farm/hub/modals/WithdrawCancelAdapter';
@@ -50,68 +51,6 @@ const TAB_CONFIG: { key: HubTab; label: string }[] = [
   { key: 'inspection', label: '巡查记录' },
   { key: 'problem', label: '问题管理' },
 ];
-
-// 辅助函数
-// 自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
-function autoGenerateTaskCode(tasks: Task[]): string {
-  const today = new Date();
-  // 年月日：20260416
-  const datePrefix = today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    today.getDate().toString().padStart(2, '0');
-
-  // 从 tasks 查找当天的最大流水号
-  let maxSequence = 0;
-  tasks.forEach(t => {
-    // 匹配格式：NS20260416-xxx
-    const taskId = t.taskCode || t.id || '';
-    if (taskId.startsWith('NS' + datePrefix + '-')) {
-      const seqStr = taskId.slice(-3);
-      const seq = parseInt(seqStr, 10);
-      if (!isNaN(seq) && seq > maxSequence) {
-        maxSequence = seq;
-      }
-    }
-  });
-
-  // 生成新的流水号
-  const newSequence = maxSequence + 1;
-  return `NS${datePrefix}-${String(newSequence).padStart(3, '0')}`;
-}
-
-function getTypeLabel(type: string): string {
-  const typeMap: Record<string, string> = {
-    'fertilization': '施肥',
-    'irrigation': '灌溉',
-    'pruning': '修剪',
-    'pesticide': '植保',
-    'rootIrrigation': '灌根',
-    'planting': '定植',
-    'harvest': '采收',
-    'weeding': '除草',
-    'other': '其他',
-    // 兼容旧格式
-    'fertilizing': '施肥',
-    'pest_control': '病虫害防治',
-    'harvesting': '采收',
-    'soil_management': '土壤管理',
-    'seedling': '育苗',
-    'transplanting': '移栽',
-  };
-  return typeMap[type] || type;
-}
-
-function calculateEndDateTime(startTime: string, days: number, hours: number, workHoursPerDay: number): string {
-  if (!startTime) return '';
-  try {
-    const start = parse(startTime, 'yyyy-MM-dd HH:mm', new Date());
-    const totalHours = days * workHoursPerDay + hours;
-    const end = addHours(start, totalHours);
-    return format(end, 'yyyy-MM-dd HH:mm');
-  } catch {
-    return '';
-  }
-}
 
 /**
  * 农事任务中心主组件
@@ -352,10 +291,22 @@ export function FarmTaskHub() {
     setShowBatchDispatchModal(true);
   };
 
-  const confirmBatchDispatch = (assigneeId: string, assigneeName: string) => {
-    batchDispatchTaskIds.forEach(taskId => {
-      tasksHook.acceptAndAssign(taskId, assigneeId, assigneeName);
-    });
+  const confirmBatchDispatch = async (assigneeId: string, assigneeName: string) => {
+    const now = new Date().toISOString();
+    const taskIdSet = new Set(batchDispatchTaskIds);
+    // P1-8：一次批量 API + 一次批量 setState 替代 N 次串行 PUT（性能优化）
+    try {
+      await enhancedApiClient.put('/farm-tasks/batch', {
+        ids: batchDispatchTaskIds,
+        updates: { assigneeId, assigneeName, status: 'pending' },
+      });
+    } catch { /* API 失败乐观更新仍生效 */ }
+    // 直接 setState 更新 store（不触发 N 次独立 API）
+    useFarmTaskStore.setState((prev: any) => ({
+      tasks: prev.tasks.map((t: any) =>
+        taskIdSet.has(t.id) ? { ...t, assigneeId, assigneeName, status: 'pending', updatedAt: now, version: (t.version || 1) + 1 } : t
+      ),
+    }));
     setShowBatchDispatchModal(false);
     setBatchDispatchTaskIds([]);
     hub.clearSelection();
@@ -367,10 +318,21 @@ export function FarmTaskHub() {
     setShowBatchVerifyConfirm(true);
   };
 
-  const confirmBatchVerify = () => {
-    batchVerifyTaskIds.forEach(taskId => {
-      tasksHook.acceptCompletion(taskId, '批量验收通过');
-    });
+  const confirmBatchVerify = async () => {
+    const now = new Date().toISOString();
+    const taskIdSet = new Set(batchVerifyTaskIds);
+    // P1-8：一次批量 API + 一次批量 setState 替代 N 次串行调用
+    try {
+      await enhancedApiClient.put('/farm-tasks/batch', {
+        ids: batchVerifyTaskIds,
+        updates: { status: 'completed', completedAt: now, progress: 100 },
+      });
+    } catch { /* API 失败乐观更新仍生效 */ }
+    useFarmTaskStore.setState((prev: any) => ({
+      tasks: prev.tasks.map((t: any) =>
+        taskIdSet.has(t.id) ? { ...t, status: 'completed', completedAt: now, progress: 100, updatedAt: now, version: (t.version || 1) + 1 } : t
+      ),
+    }));
     setShowBatchVerifyConfirm(false);
     setBatchVerifyTaskIds([]);
     hub.clearSelection();
@@ -387,10 +349,21 @@ export function FarmTaskHub() {
     setShowBatchReassignModal(true);
   };
 
-  const confirmBatchReassign = (newAssigneeId: string, newAssigneeName: string) => {
-    batchReassignTaskIds.forEach(taskId => {
-      tasksHook.reassignTask(taskId, newAssigneeId, newAssigneeName);
-    });
+  const confirmBatchReassign = async (newAssigneeId: string, newAssigneeName: string) => {
+    const now = new Date().toISOString();
+    const taskIdSet = new Set(batchReassignTaskIds);
+    // P1-8：一次批量 API + 一次批量 setState 替代 N 次串行调用
+    try {
+      await enhancedApiClient.put('/farm-tasks/batch', {
+        ids: batchReassignTaskIds,
+        updates: { assigneeId: newAssigneeId, assigneeName: newAssigneeName, status: 'pending' },
+      });
+    } catch { /* API 失败乐观更新仍生效 */ }
+    useFarmTaskStore.setState((prev: any) => ({
+      tasks: prev.tasks.map((t: any) =>
+        taskIdSet.has(t.id) ? { ...t, assigneeId: newAssigneeId, assigneeName: newAssigneeName, reworkCount: 0, reworkHistory: [], deadlineExtensions: [], status: 'pending', updatedAt: now, version: (t.version || 1) + 1 } : t
+      ),
+    }));
     setShowBatchReassignModal(false);
     setBatchReassignTaskIds([]);
     hub.clearSelection();

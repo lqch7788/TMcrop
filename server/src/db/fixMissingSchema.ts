@@ -1263,11 +1263,24 @@ export async function fixMissingSchema(): Promise<void> {
   }
 
   // 37. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
+  // P0-2 补充：审计追溯必需的取消/驳回/放弃原因 + 执行人拒绝计数 + 验收记录
   const farmTaskColumnsToAdd = [
     { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },
     { name: 'source_inspection_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_inspection_id TEXT' },
     { name: 'source_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_id TEXT' },
     { name: 'source_code', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_code TEXT' },
+    // P0-2：审计追溯字段（前端 useTasks 写 cancelledReason/abandonedReason 等，但后端没列）
+    { name: 'cancelled_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_at TEXT' },
+    { name: 'cancelled_by', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_by TEXT' },
+    { name: 'cancelled_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_reason TEXT' },
+    { name: 'abandoned_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_at TEXT' },
+    { name: 'abandoned_by', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_by TEXT' },
+    { name: 'abandoned_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_reason TEXT' },
+    { name: 'rejected_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN rejected_at TEXT' },
+    { name: 'rejected_by', sql: 'ALTER TABLE farm_tasks ADD COLUMN rejected_by TEXT' },
+    { name: 'rejected_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN rejected_reason TEXT' },
+    { name: 'executor_reject_count', sql: 'ALTER TABLE farm_tasks ADD COLUMN executor_reject_count INTEGER DEFAULT 0' },
+    { name: 'acceptance_record', sql: 'ALTER TABLE farm_tasks ADD COLUMN acceptance_record TEXT' },
   ];
   for (const col of farmTaskColumnsToAdd) {
     try {
