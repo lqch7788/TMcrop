@@ -17,67 +17,11 @@ import { todayLocal } from '@/lib/dateUtils';
 import { useUserStore, useTeamManageStore, useGreenhouseStore, usePlantingStore, useSeedlingStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import type { UseTasksReturn } from '../../../../hooks/useTasks';
-import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
+import { getTypeLabel, autoGenerateTaskCode, calculateEndDateTime } from '../../../../utils/farmTaskUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
-// 辅助函数：自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
-function autoGenerateTaskCode(tasks: Task[]): string {
-  const today = new Date();
-  const datePrefix = today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    today.getDate().toString().padStart(2, '0');
-
-  let maxSequence = 0;
-  tasks.forEach(t => {
-    const taskId = t.taskCode || t.id || '';
-    if (taskId.startsWith('NS' + datePrefix + '-')) {
-      const seqStr = taskId.slice(-3);
-      const seq = parseInt(seqStr, 10);
-      if (!isNaN(seq) && seq > maxSequence) {
-        maxSequence = seq;
-      }
-    }
-  });
-
-  const newSequence = maxSequence + 1;
-  return `NS${datePrefix}-${String(newSequence).padStart(3, '0')}`;
-}
-
-function getTypeLabel(type: string): string {
-  const typeMap: Record<string, string> = {
-    'fertilization': '施肥',
-    'irrigation': '灌溉',
-    'pruning': '修剪',
-    'pesticide': '植保',
-    'rootIrrigation': '灌根',
-    'planting': '定植',
-    'harvest': '采收',
-    'weeding': '除草',
-    'other': '其他',
-    'fertilizing': '施肥',
-    'pest_control': '病虫害防治',
-    'harvesting': '采收',
-    'soil_management': '土壤管理',
-    'seedling': '育苗',
-    'transplanting': '移栽',
-  };
-  return typeMap[type] || type;
-}
-
-function calculateEndDateTime(startTime: string, days: number, hours: number, workHoursPerDay: number): string {
-  if (!startTime) return '';
-  try {
-    const start = parse(startTime, 'yyyy-MM-dd HH:mm', new Date());
-    const totalHours = days * workHoursPerDay + hours;
-    const end = addHours(start, totalHours);
-    return format(end, 'yyyy-MM-dd HH:mm');
-  } catch {
-    return '';
-  }
-}
 
 // 2026-07-28 改造：种植/育苗多选订单接口（参照 FertilizerAddModal）
 interface SelectedArea {
@@ -490,7 +434,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     type="button"
                     variant="default"
                     size="sm"
-                    onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode(tasksHook.tasks) })}
+                    onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode(tasksHook.tasks.map((t: Task) => t.taskCode || t.id || '')) })}
                   >
                     <Wand2 className="w-4 h-4" /> 生成
                   </Button>
