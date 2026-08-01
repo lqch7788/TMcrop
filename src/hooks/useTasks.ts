@@ -30,8 +30,16 @@ import {
   REWORK_CONFIG,
   TASK_PERMISSIONS,
   TASK_ACTION_CONFIG,
-
+  STATUS_TRANSITIONS,
 } from '../config/taskConfig';
+
+// ============================================
+// P1-2：统一状态机校验（替代 24 个散落的 if status !== 'x' return）
+// ============================================
+function validateTransition(task: Task, targetStatus: string): boolean {
+  const allowed = STATUS_TRANSITIONS[task.status] || [];
+  return allowed.includes(targetStatus);
+}
 
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
 import { updateSeedling } from '../services/apiSeedlingService';
@@ -773,7 +781,8 @@ export function useTasks(): UseTasksReturn {
   // 发布任务
   const publishTask = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'draft') return;
+    if (!task) return;
+    if (!validateTransition(task, 'pending')) { console.error(`[状态机] 非法转换: ${task.status} → pending, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
@@ -800,7 +809,8 @@ export function useTasks(): UseTasksReturn {
   // 撤回任务（pending → cancelled，撤回原因记录在操作记录中）
   const withdrawTask = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'pending') return;
+    if (!task) return;
+    if (!validateTransition(task, 'cancelled')) { console.error(`[状态机] 非法转换: ${task.status} → cancelled, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
@@ -829,7 +839,8 @@ export function useTasks(): UseTasksReturn {
   // 取消任务（彻底取消，后续不再执行，保留执行人信息用于审计追溯）
   const cancelTask = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || !['pending', 'accepted', 'in_progress'].includes(task.status)) return;
+    if (!task) return;
+    if (!validateTransition(task, 'cancelled')) { console.error(`[状态机] 非法转换: ${task.status} → cancelled, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
@@ -858,7 +869,8 @@ export function useTasks(): UseTasksReturn {
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress
   const acceptTask = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'pending') return;
+    if (!task) return;
+    if (!validateTransition(task, 'accepted')) { console.error(`[状态机] 非法转换: ${task.status} → accepted, task=${id}`); return; }
 
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];
@@ -1110,7 +1122,9 @@ export function useTasks(): UseTasksReturn {
     options?: { reason?: string; newDeadline?: string }
   ) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'in_progress') return;
+    if (!task) return;
+    const targetStatus = action === 'continue' ? 'in_progress' : 'abandoned';
+    if (!validateTransition(task, targetStatus)) { console.error(`[状态机] 非法转换: ${task.status} → ${targetStatus}, task=${id}`); return; }
 
     const now = new Date().toISOString();
     const taskAction: TaskAction = action === 'continue' ? 'overtime_continue' : 'overtime_abandon';
@@ -1154,7 +1168,8 @@ export function useTasks(): UseTasksReturn {
   // 验收通过
   const acceptCompletion = useCallback((id: string, comments?: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'waiting_acceptance') return;
+    if (!task) return;
+    if (!validateTransition(task, 'completed')) { console.error(`[状态机] 非法转换: ${task.status} → completed, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
@@ -1214,7 +1229,8 @@ export function useTasks(): UseTasksReturn {
   // 验收驳回
   const rejectForRework = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'waiting_acceptance') return;
+    if (!task) return;
+    if (!validateTransition(task, 'rejected') && !validateTransition(task, 'failed')) { console.error(`[状态机] 非法转换: ${task.status} → rejected, task=${id}`); return; }
 
     const now = new Date().toISOString();
     const newReworkCount = task.reworkCount + 1;
@@ -1255,7 +1271,8 @@ export function useTasks(): UseTasksReturn {
   // 继续执行（返工后）
   const continueExecution = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task || task.status !== 'rejected') return;
+    if (!task) return;
+    if (!validateTransition(task, 'in_progress')) { console.error(`[状态机] 非法转换: ${task.status} → in_progress, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
@@ -1323,7 +1340,8 @@ export function useTasks(): UseTasksReturn {
   const reassignTask = useCallback((id: string, newAssigneeId: string, newAssigneeName: string) => {
     // logger.info('[reassignTask] called with:', id, newAssigneeId, newAssigneeName);
     const task = tasks.find(t => t.id === id);
-    if (!task || !['failed', 'abandoned', 'rejected'].includes(task.status)) return;
+    if (!task) return;
+    if (!validateTransition(task, 'pending')) { console.error(`[状态机] 非法转换: ${task.status} → pending, task=${id}`); return; }
 
     const now = new Date().toISOString();
 

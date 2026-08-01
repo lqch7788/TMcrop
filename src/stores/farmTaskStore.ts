@@ -144,6 +144,14 @@ export const useFarmTaskStore = create<FarmTaskState>()(
       // ========== 数据获取 ==========
 
       fetchTasks: async () => {
+        // P2-4：防重复调用 — 3 秒内连续 fetchTasks 跳过（消除 useTasks/useFarmHub/FarmTaskHub 三重触发）
+        const now = Date.now();
+        const lastFetch = ((get() as any)._lastFetchAt as number) || 0;
+        if (now - lastFetch < 3000) {
+          return;
+        }
+        (get() as any)._lastFetchAt = now;
+
         set({ isLoading: true, error: null });
 
         try {
@@ -226,18 +234,19 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
           return savedTask;
         } catch (error) {
-          console.warn('[FarmTaskStore] 创建任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
-
+          console.error('[FarmTaskStore] 创建任务API失败，回滚乐观更新:', error);
+          // P1-3：API 失败必须从 store 删除 tempId，否则用户看到幽灵数据（刷新后消失）
           set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
+            tasks: state.tasks.filter(t => t.id !== tempId),
+            error: (error as Error).message,
           }));
-
-          return newTask;
+          throw error;
         }
       },
 
       updateTask: async (id, updates) => {
-        // 先乐观更新本地
+        // 先乐观更新本地（保存旧值用于回滚）
+        const oldTask = get().tasks.find(t => t.id === id);
         set(state => ({
           tasks: state.tasks.map(t =>
             t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString(), version: t.version + 1 } : t
@@ -247,15 +256,21 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           await enhancedApiClient.put(`/farm-tasks/${id}`, updates);
         } catch (error) {
-          console.warn('[FarmTaskStore] 更新任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
-          set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
-          }));
+          console.error('[FarmTaskStore] 更新任务API失败，回滚乐观更新:', error);
+          // P1-3：API 失败回滚到旧值
+          if (oldTask) {
+            set(state => ({
+              tasks: state.tasks.map(t => t.id === id ? oldTask : t),
+            }));
+          }
+          set(state => ({ error: (error as Error).message }));
+          throw error;
         }
       },
 
       deleteTask: async (id) => {
-        // 先乐观更新本地
+        // 先乐观更新本地（保存旧值用于回滚）
+        const oldTask = get().tasks.find(t => t.id === id);
         set(state => ({
           tasks: state.tasks.filter(t => t.id !== id),
         }));
@@ -263,10 +278,15 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           await enhancedApiClient.delete(`/farm-tasks/${id}`);
         } catch (error) {
-          console.warn('[FarmTaskStore] 删除任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
-          set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
-          }));
+          console.error('[FarmTaskStore] 删除任务API失败，回滚乐观更新:', error);
+          // P1-3：API 失败恢复被删的任务
+          if (oldTask) {
+            set(state => ({
+              tasks: [...state.tasks, oldTask],
+            }));
+          }
+          set(state => ({ error: (error as Error).message }));
+          throw error;
         }
       },
 

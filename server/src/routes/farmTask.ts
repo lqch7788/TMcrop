@@ -191,7 +191,7 @@ function toDbJson(value: any, fallback: string = '[]'): string {
 
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { task_type, status, assignee_name, greenhouse_name, page = 1, limit = 50 } = req.query;
+    const { task_type, status, assignee_name, greenhouse_name, keyword, page = 1, limit = 50 } = req.query;
     const db = getDatabase();
 
     // 构建基础SQL和参数
@@ -216,6 +216,13 @@ router.get('/', (req: Request, res: Response) => {
     if (greenhouse_name) {
       sql += ' AND greenhouse_name LIKE ?';
       params.push(`%${greenhouse_name}%`);
+    }
+
+    // P1-6：keyword 全局搜索（任务编号 + 标题 + 执行人）
+    if (keyword) {
+      sql += ' AND (task_code LIKE ? OR task_title LIKE ? OR assignee_name LIKE ?)';
+      const kw = `%${keyword}%`;
+      params.push(kw, kw, kw);
     }
 
     // 保存原始SQL用于count查询
@@ -1306,6 +1313,41 @@ router.post('/:id/reject', (req: Request, res: Response) => {
     res.json({ success: true, data: { id, status: newStatus, reworkCount } });
   } catch (error) {
     res.status(500).json({ success: false, error: '验收驳回失败' });
+  }
+});
+
+/**
+ * 返工后继续执行 — rejected → in_progress
+ * 2026-08-02 补：前端 continueExecution 一直在调用此端点但后端从未注册
+ */
+router.post('/:id/continue', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { operator_id, operator_name } = req.body;
+
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) task = stmt.getAsObject();
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '农事任务不存在' });
+    }
+
+    const fromStatus = task.status;
+    const now = new Date().toISOString();
+
+    runInTransaction(db, () => {
+      db.run(`UPDATE farm_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`, [now, id]);
+      recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        operator_id || '', operator_name || '', 'continue', '继续执行', fromStatus, 'in_progress');
+    });
+
+    res.json({ success: true, data: { id, status: 'in_progress' } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '继续执行失败' });
   }
 });
 
