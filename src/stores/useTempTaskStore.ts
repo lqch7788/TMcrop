@@ -187,6 +187,12 @@ export const useTempTaskStore = create<TempTaskState>()(
       error: null,
 
       fetchTasks: async (filters) => {
+        // P2-4：防重复调用
+        const now = Date.now();
+        const lastFetch = ((get() as any)._lastFetchAt as number) || 0;
+        if (now - lastFetch < 3000) return;
+        (get() as any)._lastFetchAt = now;
+
         set({ isLoading: true, error: null });
         try {
           const params = new URLSearchParams();
