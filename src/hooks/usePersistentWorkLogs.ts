@@ -5,6 +5,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useLocalStorage, STORAGE_KEYS, clearAllPersistedData } from './useLocalStorage';
+import { todayLocal } from '@/lib/dateUtils';
 // 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useWorkLogStore 同步双写
 // Store 异步同步到后端（API → SQLite），失败不影响主流程（localStorage 仍是数据源）
 import { useWorkLogStore } from '../stores/useWorkLogStore';
@@ -176,8 +177,8 @@ export function usePersistentWorkLogs() {
 
   // 生成新的工单编号 (WL+年月日+3位数流水号)
   const generateWorkLogCode = useCallback(() => {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+    // 使用本地时区日期，避免 UTC 跨天导致编号日期错位
+    const dateStr = todayLocal().replace(/-/g, ''); // YYYYMMDD
 
     // 找出今天已有的最大流水号
     const todayPrefix = `WL${dateStr}`;
@@ -228,7 +229,8 @@ export function usePersistentWorkLogs() {
       workers?: number;
     }
   ): WorkLogEntry => {
-    const today = new Date().toISOString().slice(0, 10);
+    // 使用本地时区日期，避免 UTC 跨天导致日期错位
+    const today = todayLocal();
     const existingLog = workLogs.find(log => log.taskId === task.id);
 
     if (existingLog) {
