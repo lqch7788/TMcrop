@@ -164,6 +164,7 @@ export default function DailyWorkSummary() {
       if (s.workloadHours) parts.push(`${s.workloadHours}小时`);
       if (s.workers) parts.push(`${s.workers}人`);
       return {
+        id: s.id,
         '任务编号': s.taskCode,
         '任务类型': s.taskTypeName,
         '工作区域': s.greenhouse,

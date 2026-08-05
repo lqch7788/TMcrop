@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui';
 import { FileText, Package, Wrench, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Task } from '../../hooks/useTasks';
+import { TASK_STATUS_CONFIG } from '../../hooks/useTasks';
 import type { TaskRecord } from '../../types/task';
 import { TaskRecordTimeline } from '../common/TaskRecordTimeline';
 import { getTaskRecords } from '../../services/apiFarmTaskService';
@@ -51,24 +52,13 @@ export function DailyWorkDetailModal({ taskId, onClose, tasks }: DailyWorkDetail
           }));
           setRecords(formatted);
         }
-      }).catch(() => {
-        // 获取失败时静默处理
+      }).catch((err) => {
+        // Fail Loud：加载流转记录失败必须上报，禁止静默吞错
+        console.error('[DailyWorkDetailModal] 加载流转记录失败:', taskId, err);
+        setRecords([]);
       });
     }
   }, [taskId, tasks]);
-
-  // 状态标签映射
-  const statusMap: Record<string, { bg: string; color: string; label: string }> = {
-    draft: { bg: 'bg-gray-100', color: 'text-gray-600', label: '草稿' },
-    pending: { bg: 'bg-amber-100', color: 'text-amber-700', label: '待接受' },
-    accepted: { bg: 'bg-blue-100', color: 'text-blue-700', label: '已接受' },
-    in_progress: { bg: 'bg-blue-100', color: 'text-blue-700', label: '处理中' },
-    waiting_acceptance: { bg: 'bg-purple-100', color: 'text-purple-700', label: '待验收' },
-    completed: { bg: 'bg-green-100', color: 'text-green-700', label: '已完成' },
-    cancelled: { bg: 'bg-red-100', color: 'text-red-700', label: '已取消' },
-    abandoned: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已放弃' },
-    rework: { bg: 'bg-orange-100', color: 'text-orange-700', label: '返工中' },
-  };
 
   // 优先级映射
   const priorityMap: Record<string, { color: string; label: string }> = {
@@ -82,7 +72,8 @@ export function DailyWorkDetailModal({ taskId, onClose, tasks }: DailyWorkDetail
     return null;
   }
 
-  const statusInfo = statusMap[task.status] || { bg: 'bg-gray-100', color: 'text-gray-600', label: task.status };
+  // 状态标签：直接复用 useTasks 的 TASK_STATUS_CONFIG（含 rejected→返工中）
+  const statusInfo = TASK_STATUS_CONFIG[task.status] || { bg: 'bg-gray-100', color: 'text-gray-600', label: task.status };
   const priorityInfo = priorityMap[task.priority || 'normal'] || { color: 'text-gray-600', label: '普通' };
 
   return (

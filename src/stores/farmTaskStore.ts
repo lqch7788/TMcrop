@@ -160,7 +160,8 @@ export const useFarmTaskStore = create<FarmTaskState>()(
           const apiData = await enhancedApiClient.get<Task[]>('/farm-tasks');
 
           // 正确处理 API 返回的 { success, data, meta } 结构
-          if (Array.isArray(apiData) && apiData.length > 0) {
+          // API 正常返回（含空数组）即以此为准，空数组清空旧数据避免陈旧残留
+          if (Array.isArray(apiData)) {
             set({ tasks: apiData, isLoading: false });
             return;
           }

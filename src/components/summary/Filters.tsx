@@ -4,9 +4,7 @@
  */
 
 import { Search, Download } from 'lucide-react';
-import { DatePicker } from '@/components/ui';
-import { Label } from '@/components/ui';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { DatePicker, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Button } from '@/components/ui';
 import { FilterSelectConfig } from './types';
 
 /** 将日期字符串 (YYYY-MM-DD) 转换为 Date 对象 */
@@ -90,38 +88,41 @@ export function Filters({
         {/* 操作按钮 */}
         <div className="flex gap-2">
           {onSearch && (
-            <button
+            <Button
+              variant="secondary"
               onClick={onSearch}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              className="gap-2"
             >
               <Search className="w-4 h-4" />
               搜索
-            </button>
+            </Button>
           )}
           {showExportMode ? (
             <>
-              <button
+              <Button
+                variant="default"
                 onClick={onConfirmExport}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+                className="gap-2"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={onCancelExport}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : !hideExportButton ? (
-            <button
+            <Button
+              variant="secondary"
               onClick={onExportClick}
-              className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              className="gap-2"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>
