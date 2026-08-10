@@ -1,7 +1,7 @@
 // ApplicationTab 类型定义
 // 用于领料申请单管理的类型约束
 
-import type { MaterialItem, MaterialReceivingRecord } from '../../../types/materialReceiving';
+import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '../../../types/materialReceiving';
 import type { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
 
 // ============================================
@@ -71,9 +71,9 @@ export interface EditFormState {
   applicant: string;
   department: string;
   warehouseLocation: string;
-  plantArea: string;
+  /** 2026-08-10：选区域(多选) */
+  plantAreas: SelectedArea[];
   reviewer: string;
-  productionBatchCode: string;
   status: string;
   materials: MaterialItem[];
 }
@@ -85,9 +85,9 @@ export interface AddFormState {
   applicant: string;
   department: string;
   warehouseLocation: string;
-  plantArea: string;
+  /** 2026-08-10：选区域(多选) */
+  plantAreas: SelectedArea[];
   reviewer: string;
-  productionBatchCode: string;
   batchRemark: string;
   materials: MaterialItem[];
 }

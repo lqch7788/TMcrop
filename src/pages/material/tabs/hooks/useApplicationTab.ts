@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 
-import { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';
+import { MaterialItem, MaterialReceivingRecord, SelectedArea } from '@/types/materialReceiving';
 import { Approval, ApprovalType, ApprovalStatus } from '@/types/approval';
 import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
@@ -20,9 +20,10 @@ const getDefaultAddForm = () => ({
   applicant: '',
   department: '',
   warehouseLocation: '',
-  plantArea: '',
+  // 2026-08-10：plantArea → plantAreas 数组
+  plantAreas: [] as SelectedArea[],
   reviewer: '',
-  productionBatchCode: '',
+  // 2026-08-10：移除 productionBatchCode 字段
   batchRemark: '',
   materials: [] as MaterialItem[]
 });
@@ -136,9 +137,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     applicant: string;
     department: string;
     warehouseLocation: string;
-    plantArea: string;
+    /** 2026-08-10：选区域(多选) */
+    plantAreas: SelectedArea[];
     reviewer: string;
-    productionBatchCode: string;
     status: string;
     materials: MaterialItem[];
   }>({
@@ -146,9 +147,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
     applicant: '',
     department: '',
     warehouseLocation: '',
-    plantArea: '',
+    plantAreas: [],
     reviewer: '',
-    productionBatchCode: '',
     status: '',
     materials: [] as MaterialItem[]
   });
@@ -165,7 +165,17 @@ export function useApplicationTab(): UseApplicationTabReturn {
     return materialData.filter(item => {
       if (searchCode && !item.code.toLowerCase().includes(searchCode.toLowerCase())) return false;
       if (searchApplicant && !item.applicant.toLowerCase().includes(searchApplicant.toLowerCase())) return false;
-      if (searchBatchCode && !item.productionBatchCode.toLowerCase().includes(searchBatchCode.toLowerCase())) return false;
+      // 2026-08-10：移除 productionBatchCode 搜索——字段已删除
+      // 改为按 plantAreas 区域/作物搜索
+      if (searchBatchCode) {
+        const areas = item.plantAreas || [];
+        const match = areas.some((a: any) =>
+          (a.code || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
+          (a.cropName || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
+          (a.area || '').toLowerCase().includes(searchBatchCode.toLowerCase())
+        );
+        if (!match) return false;
+      }
       if (searchWarehouse && !item.warehouseLocation.toLowerCase().includes(searchWarehouse.toLowerCase())) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       return true;
@@ -231,7 +241,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const confirmExport = async () => {
     const exportData = materialData.filter(item => selectedRows.includes(item.id));
 
-    const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '生产批次号', '状态'];
+    const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '选区域(多选)', '状态'];
     const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'productionBatchCode', 'status'];
 
     const materialHeaders = ['物料编码', '物料名称', '批次号', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
@@ -369,8 +379,21 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 编辑
   // ============================================
   const handleEdit = (item: MaterialReceivingRecord) => {
-    if (item.status !== '待审批') {
-      setEditAlertMessage(`该领料单当前状态为「${item.status}」，非待审批状态无法编辑。如需处理，可选择「作废申请」。`);
+    // 2026-08-10 修复（第二次）：
+    //   Store normalize() 把后端英文 enum 转为中文（item.status='待审批'/'已审批'等），
+    //   原代码比对中文'待审批'应该能匹配，但弹窗 title 是"批量编辑警告"误导且与"非待审批"文案不一致。
+    //   改用 statusClass（英文 enum: pending/approved/rejected/voided/cancelled）作为状态判断标准，
+    //   显示文案用 statusTextMap 把 statusClass 翻译为中文。
+    if (item.statusClass !== 'pending') {
+      const statusTextMap: Record<string, string> = {
+        approved: '已审批',
+        pending: '待审批',
+        rejected: '已驳回',
+        voided: '已作废',
+        cancelled: '已取消',
+      };
+      const displayText = statusTextMap[item.statusClass || ''] || item.status || item.statusClass || '未知';
+      setEditAlertMessage(`该领料单当前状态为「${displayText}」，非待审批状态无法编辑。如需处理，可选择「作废申请」。`);
       setShowEditAlert(true);
       return;
     }
@@ -380,9 +403,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
       applicant: item.applicant,
       department: item.department,
       warehouseLocation: item.warehouseLocation,
-      plantArea: item.plantArea,
+      // 2026-08-10：plantArea 字符串 → plantAreas 数组
+      plantAreas: Array.isArray(item.plantAreas) ? [...item.plantAreas] : [],
       reviewer: item.reviewer,
-      productionBatchCode: item.productionBatchCode,
       status: item.status,
       materials: [...item.materials],
     });
@@ -476,10 +499,12 @@ export function useApplicationTab(): UseApplicationTabReturn {
       applicant: editForm.applicant,
       department: editForm.department,
       warehouseLocation: editForm.warehouseLocation,
-      plantArea: editForm.plantArea,
+      // 2026-08-10：plantArea → plantAreas 数组（Store denormalize 会序列化为 JSON）
+      plantAreas: editForm.plantAreas,
       reviewer: editForm.reviewer,
-      productionBatchCode: editForm.productionBatchCode,
-      status: '待审批',
+      // 2026-08-10：移除 productionBatchCode
+      // 2026-08-10 修复：DB 用英文 enum（pending），原代码写'待审批'会让后续状态比较失配
+      status: 'pending',
       statusClass: 'pending',
       materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
     };
@@ -510,7 +535,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
     }
     if (!selectedRecord) return;
 
-    await storeUpdateItem(selectedRecord.id, { status: '已作废', statusClass: 'voided' } as any);
+    // 2026-08-10 修复：DB 用英文 enum（cancelled），原代码写'已作废'会让状态比较失配
+    await storeUpdateItem(selectedRecord.id, { status: 'cancelled', statusClass: 'voided' } as any);
     await loadItems();
 
     setShowVoidModal(false);
@@ -559,9 +585,21 @@ export function useApplicationTab(): UseApplicationTabReturn {
 
   // ============================================
   // 生成领料单号
+  // 2026-08-10 修复：原代码用 `LL` 前缀 + 无连字符格式（LL20260810001 = 13字符），
+  //   与后端 `MR${YYYYMMDD}-${3位序号}`（14 字符）不一致，导致列表显示与弹窗不同。
+  //   改为按后端 generateMaterialRequestCode 格式生成（MR+8位日期+-连字符+3位序号）
   // ============================================
   const handleGenerateAddCode = () => {
-    const newCode = `LL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}${String(materialData.length + 1).padStart(3, '0')}`;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    // 当日序号 = 当日最大 + 1（避免重复）
+    const todayPrefix = `MR${dateStr}-`;
+    const todaySerials = (materialData || [])
+      .map((r) => r.code)
+      .filter((c) => typeof c === 'string' && c.startsWith(todayPrefix) && c.length === 14)
+      .map((c) => parseInt(c.slice(-3), 10) || 0);
+    const nextSerial = (todaySerials.length > 0 ? Math.max(...todaySerials) : 0) + 1;
+    const newCode = `${todayPrefix}${String(nextSerial).padStart(3, '0')}`;
     setAddForm({ ...addForm, code: newCode });
   };
 
@@ -588,9 +626,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
       applicant: applicantName,
       department: addForm.department,
       warehouseLocation: addForm.warehouseLocation,
-      plantArea: addForm.plantArea,
+      // 2026-08-10：plantArea → plantAreas 数组
+      plantAreas: addForm.plantAreas,
       reviewer: reviewerName,
-      productionBatchCode: addForm.productionBatchCode,
+      // 2026-08-10：移除 productionBatchCode
       materials: addForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
     });
 
@@ -602,6 +641,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     // 同步创建审批记录（核心联动功能）
     if (approvalContext) {
       try {
+        const areaSummary = (addForm.plantAreas || []).map((a: any) => `${a.cropName}·${a.area}`).join('; ');
         const approval: Approval = {
           id: `MAT-AP-${Date.now()}`,
           code: newRecord.code,
@@ -609,7 +649,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
           typeName: '领料单',
           category: 'business',
           title: `${applicantName}的领料申请`,
-          description: `申请从${addForm.warehouseLocation}领取物料，用于${addForm.plantArea}`,
+          description: `申请从${addForm.warehouseLocation}领取物料，用于${areaSummary || '未指定区域'}`,
           applicantId: addForm.applicant,
           applicantName: applicantName,
           applicantDepartment: addForm.department,
@@ -642,9 +682,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
             type: 'material',
             requestId: String(newRecord.id),
             requestCode: newRecord.code,
-            plantArea: addForm.plantArea,
+            // 2026-08-10：plantArea → plantAreas 摘要；productionBatchCode 移除
+            plantArea: areaSummary,
             warehouseLocation: addForm.warehouseLocation,
-            batchCode: addForm.productionBatchCode,
+            // batchCode: 已删除
             materials: addForm.materials.map(m => ({
               materialId: m.materialCode,
               materialCode: m.materialCode,

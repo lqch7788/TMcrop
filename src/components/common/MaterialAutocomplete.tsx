@@ -39,7 +39,7 @@ export interface MaterialAutocompleteProps {
   searchFields?: Array<keyof Material>;
   /** 仅显示指定 dataStatus 的物料，默认 '启用' */
   dataStatusFilter?: string;
-  /** 最多展示结果数，默认 8 */
+  /** 最多展示结果数，默认 50（足够覆盖物料库现有 21 条，2026-08-10 由 8 改 50） */
   maxResults?: number;
 }
 
@@ -55,7 +55,7 @@ export function MaterialAutocomplete({
   createLabel = '去添加',
   searchFields = ['name', 'code'],
   dataStatusFilter = '启用',
-  maxResults = 8,
+  maxResults = 50,
 }: MaterialAutocompleteProps) {
   const items = useWarehouseMaterialStore((s) => s.items);
   const loadItems = useWarehouseMaterialStore((s) => s.loadItems);

@@ -178,9 +178,10 @@ router.post('/', (req: Request, res: Response) => {
       create_by,
     } = req.body;
 
-    const newId = id || `MR${Date.now()}`;
     const now = new Date().toISOString();
     const requestCode = request_code || generateMaterialRequestCode();
+    // 2026-08-10 修复：id 默认等于 request_code（前端只传 request_code，避免 id 与 code 存不同值）
+    const newId = id || requestCode;
 
     console.log('【DEBUG】准备创建物料申请:', { newId, requestCode, request_title, request_type });
 

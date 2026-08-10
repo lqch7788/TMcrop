@@ -1,7 +1,7 @@
 // ApplicationModals 组件
 // 领料申请单的编辑弹窗和新增弹窗
 // 使用统一的 Modal 组件，支持拖动、调整大小、最大化功能
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Save, Send, Trash2, Wand2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Modal } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { UserSelect } from '@/components/common/settings/UserSelect';
-import type { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';
+import { AreaMultiSelectPicker } from '@/components/common/AreaMultiSelectPicker';
+import { useWarehouseMaterialStore } from '@/stores';
+import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '@/types/materialReceiving';
 
 // ============================================
 // 编辑弹窗组件
@@ -23,9 +25,9 @@ interface EditModalProps {
     applicant: string;
     department: string;
     warehouseLocation: string;
-    plantArea: string;
+    /** 2026-08-10：选区域(多选) */
+    plantAreas: SelectedArea[];
     reviewer: string;
-    productionBatchCode: string;
     status: string;
     materials: MaterialItem[];
   };
@@ -34,9 +36,8 @@ interface EditModalProps {
     applicant: string;
     department: string;
     warehouseLocation: string;
-    plantArea: string;
+    plantAreas: SelectedArea[];
     reviewer: string;
-    productionBatchCode: string;
     status: string;
     materials: MaterialItem[];
   }>>;
@@ -60,6 +61,33 @@ export function EditModal({
   onSave,
   onVoidApply,
 }: EditModalProps) {
+  // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
+  //   让用户"先输编码再补名称"成为可能，避免之前"输完编码保存后名称空"的 bug
+  useEffect(() => {
+    if (!editForm.materials?.length) return;
+    const libItems = (useWarehouseMaterialStore.getState() as any).items || [];
+    let changed = false;
+    const next = editForm.materials.map((m: any) => {
+      if (m.materialCode && !m.materialName && libItems.length) {
+        const found = libItems.find((it: any) => it.code === m.materialCode);
+        if (found) {
+          changed = true;
+          return {
+            ...m,
+            materialName: found.name || '',
+            spec: m.spec || found.specification || '',
+            unit: m.unit || found.unit || '',
+            unitPrice: m.unitPrice || Number(found.price) || 0,
+            warehousePosition: m.warehousePosition || found.location || '',
+          };
+        }
+      }
+      return m;
+    });
+    if (changed) onFormChange({ ...editForm, materials: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editForm.materials.map((m: any) => m.materialCode).join(','), isOpen]);
+
   // 编辑表单内容
   const renderFormContent = () => (
     <div className="grid grid-cols-2 gap-4">
@@ -104,14 +132,11 @@ export function EditModal({
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">种植区域/用途</Label>
-        <Input
-          type="text"
-          value={editForm.plantArea}
-          onChange={(e) => onFormChange({ ...editForm, plantArea: e.target.value })}
-          placeholder="如：1号棚-叶菜区"
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      <div className="col-span-2">
+        {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
+        <AreaMultiSelectPicker
+          value={editForm.plantAreas || []}
+          onChange={(areas) => onFormChange({ ...editForm, plantAreas: areas })}
         />
       </div>
       <div>
@@ -122,15 +147,7 @@ export function EditModal({
           placeholder="选择审核人"
         />
       </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
-        <Input
-          type="text"
-          value={editForm.productionBatchCode}
-          onChange={(e) => onFormChange({ ...editForm, productionBatchCode: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
-      </div>
+      {/* 2026-08-10：移除"生产计划批次号"字段——改为"针对实际的种植和育苗来统计对应的使用物料"的多选区域 */}
     </div>
   );
 
@@ -157,6 +174,7 @@ export function EditModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
@@ -181,12 +199,14 @@ export function EditModal({
                       onChange={(v) => onMaterialChange(idx, 'materialName', v)}
                       onSelect={(m) => {
                         onMaterialChange(idx, 'materialCode', m.code);
+                        onMaterialChange(idx, 'materialName', m.name);
                         onMaterialChange(idx, 'spec', m.specification);
                         onMaterialChange(idx, 'unit', m.unit);
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                        onMaterialChange(idx, 'warehousePosition', m.location || '');
                       }}
-                      placeholder="输入物料名称搜索"
+                      placeholder="输入物料名称搜索（必填）"
                       className="w-full"
                     />
                   </td>
@@ -321,9 +341,9 @@ interface AddModalProps {
     applicant: string;
     department: string;
     warehouseLocation: string;
-    plantArea: string;
+    /** 2026-08-10：选区域(多选) */
+    plantAreas: SelectedArea[];
     reviewer: string;
-    productionBatchCode: string;
     batchRemark: string;
     materials: MaterialItem[];
   };
@@ -333,9 +353,8 @@ interface AddModalProps {
     applicant: string;
     department: string;
     warehouseLocation: string;
-    plantArea: string;
+    plantAreas: SelectedArea[];
     reviewer: string;
-    productionBatchCode: string;
     batchRemark: string;
     materials: MaterialItem[];
   }>>;
@@ -358,6 +377,32 @@ export function AddModal({
   onGenerateCode,
   onSave,
 }: AddModalProps) {
+  // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
+  useEffect(() => {
+    if (!addForm.materials?.length) return;
+    const libItems = (useWarehouseMaterialStore.getState() as any).items || [];
+    let changed = false;
+    const next = addForm.materials.map((m: any) => {
+      if (m.materialCode && !m.materialName && libItems.length) {
+        const found = libItems.find((it: any) => it.code === m.materialCode);
+        if (found) {
+          changed = true;
+          return {
+            ...m,
+            materialName: found.name || '',
+            spec: m.spec || found.specification || '',
+            unit: m.unit || found.unit || '',
+            unitPrice: m.unitPrice || Number(found.price) || 0,
+            warehousePosition: m.warehousePosition || found.location || '',
+          };
+        }
+      }
+      return m;
+    });
+    if (changed) onFormChange({ ...addForm, materials: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addForm.materials.map((m: any) => m.materialCode).join(','), isOpen]);
+
   // 新增表单内容
   const renderFormContent = () => (
     <div className="grid grid-cols-2 gap-4">
@@ -412,14 +457,11 @@ export function AddModal({
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">种植区域/用途</Label>
-        <Input
-          type="text"
-          value={addForm.plantArea}
-          onChange={(e) => onFormChange({ ...addForm, plantArea: e.target.value })}
-          placeholder="如：1号棚-叶菜区"
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      <div className="col-span-2">
+        {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
+        <AreaMultiSelectPicker
+          value={addForm.plantAreas || []}
+          onChange={(areas) => onFormChange({ ...addForm, plantAreas: areas })}
         />
       </div>
       <div>
@@ -430,15 +472,7 @@ export function AddModal({
           placeholder="选择审核人"
         />
       </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
-        <Input
-          type="text"
-          value={addForm.productionBatchCode}
-          onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
-      </div>
+      {/* 2026-08-10：移除"生产计划批次号"字段——改为"针对实际的种植和育苗来统计对应的使用物料"的多选区域 */}
     </div>
   );
 
@@ -465,6 +499,7 @@ export function AddModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
@@ -489,12 +524,14 @@ export function AddModal({
                       onChange={(v) => onMaterialChange(idx, 'materialName', v)}
                       onSelect={(m) => {
                         onMaterialChange(idx, 'materialCode', m.code);
+                        onMaterialChange(idx, 'materialName', m.name);
                         onMaterialChange(idx, 'spec', m.specification);
                         onMaterialChange(idx, 'unit', m.unit);
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                        onMaterialChange(idx, 'warehousePosition', m.location || '');
                       }}
-                      placeholder="输入物料名称搜索"
+                      placeholder="输入物料名称搜索（必填）"
                       className="w-full"
                     />
                   </td>
@@ -548,6 +585,15 @@ export function AddModal({
                   </td>
                   <td className="px-2 py-2 text-sm text-emerald-700 bg-gray-50 font-medium">
                     ¥{subtotal.toFixed(2)}
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      type="text"
+                      value={material.warehousePosition || ''}
+                      onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
+                      placeholder="如：A-03-01"
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
                   </td>
                   <td className="px-2 py-2">
                     <Input

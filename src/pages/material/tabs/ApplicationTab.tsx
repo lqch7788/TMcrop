@@ -134,6 +134,7 @@ export default function ApplicationTab() {
       {hook.showEditAlert && (
         <EditWarningModal
           isOpen={hook.showEditAlert}
+          title="无法编辑"
           message={hook.editAlertMessage}
           onClose={() => hook.setShowEditAlert(false)}
         />

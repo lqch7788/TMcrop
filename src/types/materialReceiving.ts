@@ -13,6 +13,21 @@ export interface MaterialItem {
   remark?: string;
 }
 
+// 2026-08-10：选区域(多选)类型——与施肥管理「施肥区域(多选,支持不同作物不同区域)」对齐
+//   type: planting(种植批次) | seedling(育苗批次)
+//   cropName: 展示用作物品种名(优先 subVariety1Name/cropVariety,回退 cropName)
+//   area: 区域名(种植 rootName,育苗 siteName)
+//   code: 批次号(plantCode/seedlingCode)
+export interface SelectedArea {
+  type: 'planting' | 'seedling';
+  id: string;
+  code: string;
+  cropName: string;
+  area: string;
+  greenhouseId?: string;
+  greenhouseName?: string;
+}
+
 // 领料单类型
 export interface MaterialReceivingRecord {
   id: number;
@@ -21,9 +36,11 @@ export interface MaterialReceivingRecord {
   applicant: string;
   department: string;
   warehouseLocation: string;
-  plantArea: string;
+  /** 2026-08-10：已废弃(改为 plantAreas 多选区域)——保留用于旧数据兼容展示 */
+  plantArea?: string;
+  /** 2026-08-10：选区域(多选)——plant_area 列在 Store normalize 阶段从 JSON 字符串解析 */
+  plantAreas: SelectedArea[];
   reviewer: string;
-  productionBatchCode: string;
   status: string;
   statusClass: string;
   rejectReason?: string;
@@ -312,9 +329,9 @@ export interface MaterialRequestFormState {
   applicant: string;
   department: string;
   warehouseLocation: string;
-  plantArea: string;
+  /** 2026-08-10：选区域(多选) */
+  plantAreas: SelectedArea[];
   reviewer: string;
-  productionBatchCode: string;
   expectedDate: string;
   remarks: string;
   materials: MaterialItem[];
