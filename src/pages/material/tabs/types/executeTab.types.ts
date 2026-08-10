@@ -32,7 +32,6 @@ export interface ExecuteEditFormState {
   warehouseLocation: string;
   reviewer: string;
   operator: string;
-  productionBatchCode: string;
   executeStatus: string;
   materials: ExecuteMaterialItem[];
 }
@@ -45,7 +44,6 @@ export interface ExecuteAddFormState {
   warehouseLocation: string;
   reviewer: string;
   operator: string;
-  productionBatchCode: string;
   materials: ExecuteMaterialItem[];
 }
 

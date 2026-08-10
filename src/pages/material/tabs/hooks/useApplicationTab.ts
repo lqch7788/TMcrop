@@ -259,8 +259,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
       ).join('; ');
     });
 
-    const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '区域/用途', '状态'];
-    const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', '_areaDisplay', 'status'];
+    const headers = ['领料单号', '日期', '申领人', '部门', '审核人', '区域/用途', '状态'];
+    const fields = ['code', 'date', 'applicant', 'department', 'reviewer', '_areaDisplay', 'status'];
 
     const materialHeaders = ['物料编码', '物料名称', '批次号', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
     const materialFields = ['materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'warehousePosition', 'warehousePosition', 'remark'];

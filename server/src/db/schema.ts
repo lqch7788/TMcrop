@@ -991,6 +991,7 @@ export function initializeDatabase() {
       attachments TEXT,
       materials TEXT,
       reviewer TEXT,
+      dispatch_status TEXT,
       create_by TEXT,
       create_time TEXT,
       update_time TEXT

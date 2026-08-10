@@ -41,6 +41,7 @@ const FIELD_MAP: Record<string, string> = {
   createBy: 'createBy',
   createTime: 'createTime',
   updateTime: 'updateTime',
+  dispatchStatus: 'dispatchStatus',
 };
 
 /** 2026-08-10 修复：写操作字段映射——前端 camelCase → DB snake_case 列名。

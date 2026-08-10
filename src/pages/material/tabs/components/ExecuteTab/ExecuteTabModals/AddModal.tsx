@@ -1,6 +1,6 @@
 // ExecuteAddModal 组件
 // 领料出库新增弹窗 — 从已有领料申请单中选择物料进行出库
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Search, Send, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui';
 import { Modal } from '@/components/ui';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
+import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import type { ExecuteMaterialItem } from '@/types/materialReceiving';
 
 interface ExecuteAddModalProps {
@@ -22,7 +23,6 @@ interface ExecuteAddModalProps {
     warehouseLocation: string;
     reviewer: string;
     operator: string;
-    productionBatchCode: string;
     materials: ExecuteMaterialItem[];
   };
   onFormChange: React.Dispatch<React.SetStateAction<{
@@ -32,7 +32,6 @@ interface ExecuteAddModalProps {
     warehouseLocation: string;
     reviewer: string;
     operator: string;
-    productionBatchCode: string;
     materials: ExecuteMaterialItem[];
   }>>;
   // 物料池
@@ -81,14 +80,19 @@ export function ExecuteAddModal({
 }: ExecuteAddModalProps) {
   // 从 Store 获取领料申请单列表（代替 mock 数据）
   const applicationItems = useMaterialRequestDataStore((s) => s.items);
+  // 获取已有出库记录，用于计算已发数量
+  const executeItems = useExecuteDataStore((s) => s.items);
 
   // 搜索申请单
   const [appSearch, setAppSearch] = useState('');
 
-  // 过滤后的领料申请单列表 — 只显示已审批的（可出库状态）
-  // 依赖 applicationItems：Store 首次加载为空数组，缺此依赖会导致 useMemo 永远缓存空结果
+  // 过滤后的领料申请单列表 — 只显示已审批且未完全出库的
   const availableApplications = useMemo(() => {
     return applicationItems.filter(app => {
+      // 2026-08-10 P0修复：只允许从已审批通过的申请单出库（防审批绕过）
+      if (app.statusClass !== 'approved') return false;
+      // 已完全出库的不再显示（防止重复出库）
+      if ((app as any).dispatchStatus === 'complete') return false;
       if (appSearch && !app.code.toLowerCase().includes(appSearch.toLowerCase())) return false;
       return true;
     });
@@ -97,7 +101,22 @@ export function ExecuteAddModal({
   // 当前选中的领料申请单
   const selectedApplication = useMemo(() => {
     return applicationItems.find(app => app.code === selectedApplicationCode) || null;
-  }, [selectedApplicationCode]);
+  }, [selectedApplicationCode, applicationItems]);
+
+  // 计算已发数量：聚合所有出库记录中引用此申请单的物料实发量
+  const dispatchedMap = useMemo(() => {
+    const map: Record<string, number> = {}; // materialCode → 已发总量
+    if (!selectedApplicationCode) return map;
+    for (const exec of executeItems) {
+      const srcList = (exec as any).sourceApplicationCodes || [];
+      if (!srcList.includes(selectedApplicationCode)) continue;
+      for (const m of (exec.materials || [])) {
+        const code = m.materialCode || '';
+        map[code] = (map[code] || 0) + (Number(m.actualQuantity) || 0);
+      }
+    }
+    return map;
+  }, [selectedApplicationCode, executeItems]);
 
   // ============================================
   // 基本信息表单
@@ -170,16 +189,6 @@ export function ExecuteAddModal({
           valueField="name"
         />
       </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
-        <Input
-          type="text"
-          value={addForm.productionBatchCode}
-          onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
-          placeholder="如：FQ2024-001"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
-      </div>
     </div>
   );
 
@@ -213,7 +222,6 @@ export function ExecuteAddModal({
                 const updates: Record<string, string> = {};
                 if (app.applicant && !addForm.applicant) updates.applicant = app.applicant;
                 if (app.warehouseLocation && !addForm.warehouseLocation) updates.warehouseLocation = app.warehouseLocation;
-                if (app.productionBatchCode && !addForm.productionBatchCode) updates.productionBatchCode = app.productionBatchCode;
                 if (Object.keys(updates).length > 0) {
                   onFormChange({ ...addForm, ...updates });
                 }
@@ -252,16 +260,18 @@ export function ExecuteAddModal({
               <tr>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 w-8">
                   <Checkbox
-                    checked={selectedMaterialIndices.size === selectedApplication.materials.length && selectedApplication.materials.length > 0}
+                    checked={selectedMaterialIndices.size > 0 && selectedApplication.materials.every((_, i) => {
+                      const remaining = (selectedApplication.materials[i].requestedQuantity || 0) - (dispatchedMap[selectedApplication.materials[i].materialCode] || 0);
+                      return remaining <= 0 || selectedMaterialIndices.has(i);
+                    })}
                     onCheckedChange={(checked) => {
                       const isChecked = checked === true;
                       if (isChecked) {
-                        // 全选
-                        selectedApplication.materials.forEach((_, i) => {
-                          if (!selectedMaterialIndices.has(i)) onToggleMaterialIndex(i);
+                        selectedApplication.materials.forEach((m, i) => {
+                          const remaining = (m.requestedQuantity || 0) - (dispatchedMap[m.materialCode] || 0);
+                          if (remaining > 0 && !selectedMaterialIndices.has(i)) onToggleMaterialIndex(i);
                         });
                       } else {
-                        // 全不选
                         selectedApplication.materials.forEach((_, i) => {
                           if (selectedMaterialIndices.has(i)) onToggleMaterialIndex(i);
                         });
@@ -273,36 +283,58 @@ export function ExecuteAddModal({
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">物料名称</th>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">规格</th>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">单位</th>
-                <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">申领数量</th>
-                <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">当前库存</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">申领</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">已发</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">可发</th>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">本次实发</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {selectedApplication.materials.map((material, idx) => (
-                <tr key={idx} className={selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
+              {selectedApplication.materials.map((material, idx) => {
+                const requested = material.requestedQuantity || 0;
+                const dispatched = dispatchedMap[material.materialCode] || 0;
+                const remaining = Math.max(0, requested - dispatched);
+                const isFullyDispatched = remaining <= 0;
+                const defaultQty = materialActualQuantities[idx] !== undefined
+                  ? materialActualQuantities[idx]
+                  : remaining;
+                return (
+                <tr key={idx} className={`${selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''} ${isFullyDispatched ? 'opacity-50' : ''}`}>
                   <td className="px-2 py-2">
                     <Checkbox
                       checked={selectedMaterialIndices.has(idx)}
-                      onCheckedChange={() => onToggleMaterialIndex(idx)}
+                      onCheckedChange={() => !isFullyDispatched && onToggleMaterialIndex(idx)}
+                      disabled={isFullyDispatched}
                     />
                   </td>
                   <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.materialCode}</td>
                   <td className="px-2 py-2 text-xs text-gray-700">{material.materialName}</td>
                   <td className="px-2 py-2 text-xs text-gray-700">{material.spec}</td>
                   <td className="px-2 py-2 text-xs text-gray-700">{material.unit}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.requestedQuantity}</td>
-                  <td className="px-2 py-2 text-xs text-gray-700">{material.stockQuantity}</td>
+                  <td className="px-2 py-2 text-xs text-gray-700">{requested}</td>
+                  <td className={`px-2 py-2 text-xs ${dispatched > 0 ? 'text-emerald-700 font-medium' : 'text-gray-400'}`}>
+                    {dispatched > 0 ? dispatched : '-'}
+                  </td>
+                  <td className={`px-2 py-2 text-xs font-medium ${remaining > 0 ? 'text-blue-700' : 'text-red-500'}`}>
+                    {remaining > 0 ? remaining : '已发完'}
+                  </td>
                   <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      value={materialActualQuantities[idx] ?? material.requestedQuantity}
-                      onChange={(e) => onMaterialActualQuantityChange(idx, Number(e.target.value))}
-                      className="w-20 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
+                    {isFullyDispatched ? (
+                      <span className="text-xs text-gray-400">—</span>
+                    ) : (
+                      <Input
+                        type="number"
+                        value={defaultQty}
+                        onChange={(e) => {
+                          const val = Math.min(Number(e.target.value), remaining);
+                          onMaterialActualQuantityChange(idx, val);
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    )}
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

@@ -44,6 +44,8 @@ export interface MaterialReceivingRecord {
   status: string;
   statusClass: string;
   rejectReason?: string;
+  /** 出库状态：null(未出库) | 'partial'(部分出库) | 'complete'(已出库) */
+  dispatchStatus?: string;
   materials: MaterialItem[];
 }
 

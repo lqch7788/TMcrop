@@ -163,7 +163,6 @@ export function ExecuteTabTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">执行状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
@@ -199,7 +198,6 @@ export function ExecuteTabTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.warehouseLocation}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.reviewer}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.operator}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionBatchCode}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       item.executeStatusClass === 'completed' ? 'bg-green-100 text-green-700' :
@@ -235,27 +233,27 @@ export function ExecuteTabTable({
                 {/* 展开行 - 物料明细 */}
                 {expandedRows.has(item.id) && (
                   <tr key={`${item.id}-expanded`} className="bg-white">
-                    <td colSpan={(exportMode || batchEditMode) ? 14 : 13} className="px-4 py-3">
+                    <td colSpan={(exportMode || batchEditMode) ? 13 : 12} className="px-4 py-3">
                       <div className="text-sm">
                         <div className="font-medium text-blue-800 mb-2">物料明细</div>
                         {item.materials.length > 0 ? (
                           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                            <thead className="bg-[#F2F6FA]">
+                            <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
                               <tr>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">来源领料单号</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申请数量</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">实际库存</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">本次实发</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">差异</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">来源领料单号</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料编码</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料名称</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">批次号</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">规格</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单位</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">申请数量</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">实际库存</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">本次实发</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单价(元)</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">小计(元)</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">仓库货位</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">差异</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">备注</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">

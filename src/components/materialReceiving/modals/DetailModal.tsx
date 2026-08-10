@@ -37,10 +37,6 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
           <p className="font-semibold text-gray-900">{record.department}</p>
         </div>
         <div>
-          <Label className="text-sm text-gray-500">库存地点</Label>
-          <p className="font-semibold text-gray-900">{record.warehouseLocation}</p>
-        </div>
-        <div>
           <Label className="text-sm text-gray-500">物料种类</Label>
           <p className="font-semibold text-gray-900">{record.materials.length > 0 ? `${record.materials.length}种` : '-'}</p>
         </div>
