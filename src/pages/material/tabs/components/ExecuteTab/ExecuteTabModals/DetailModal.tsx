@@ -69,11 +69,15 @@ export function ExecuteDetailModal({
             </div>
             <div>
               <Label className="text-sm text-gray-500 mb-0">操作人</Label>
-              <p className="font-semibold text-gray-900">{record.operator}</p>
+              <p className="font-semibold text-gray-900">{record.operator || '-'}</p>
             </div>
             <div>
-              <Label className="text-sm text-gray-500 mb-0">生产计划批次号</Label>
-              <p className="font-semibold text-gray-900">{record.productionBatchCode}</p>
+              <Label className="text-sm text-gray-500 mb-0">来源申请单</Label>
+              <p className="font-semibold text-gray-900">
+                {record.sourceApplicationCodes?.length > 0
+                  ? record.sourceApplicationCodes.join(', ')
+                  : '-'}
+              </p>
             </div>
           </div>
 

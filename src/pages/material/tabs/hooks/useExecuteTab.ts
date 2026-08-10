@@ -7,7 +7,7 @@ import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStor
 import { showAlert } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
-import { fefoAllocate, batchDeduct } from '@/services/apiWarehouseMaterialService';
+import { fefoAllocate, batchDeduct, batchRestore } from '@/services/apiWarehouseMaterialService';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -70,7 +70,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     warehouseLocation: '',
     reviewer: '',
     operator: '',
-    productionBatchCode: '',
     executeStatus: '',
     materials: [] as ExecuteMaterialItem[]
   });
@@ -83,7 +82,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     warehouseLocation: '',
     reviewer: '',
     operator: '',
-    productionBatchCode: '',
     materials: [] as ExecuteMaterialItem[]
   });
 
@@ -155,8 +153,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
 
   const confirmExecuteExport = useCallback(async () => {
     const exportData = executeStore.items.filter(item => executeSelectedRows.includes(item.id));
-    const headers = ['出库单号', '日期', '申领人', '仓库地点', '审核人', '操作人', '生产批次号', '执行状态'];
-    const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'operator', 'productionBatchCode', 'executeStatus'];
+    const headers = ['出库单号', '日期', '申领人', '仓库地点', '审核人', '操作人', '执行状态'];
+    const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'operator', 'executeStatus'];
     const materialHeaders = ['来源领料单号', '物料编码', '物料名称', '批次号', '规格', '单位', '申请数量', '实际库存', '本次实发', '单价(元)', '仓库货位', '备注'];
     const materialFields = ['applicationCode', 'materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'actualQuantity', 'unitPrice', 'warehousePosition', 'remark'];
 
@@ -325,7 +323,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
         unit: material.unit,
         category: material.category,
         requestedQuantity: material.requestedQuantity,
-        stockQuantity: actualQty,
+        stockQuantity: material.stockQuantity ?? 0,  // 2026-08-10 修复：保持原申请单的库存快照，不与 actualQuantity 混用
         actualQuantity: actualQty,
         remark: actualQty === material.requestedQuantity ? '正常出库' : '部分出库',
         applicationCode: executeSelectedApplicationCode
@@ -393,7 +391,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       warehouseLocation: item.warehouseLocation,
       reviewer: item.reviewer,
       operator: item.operator || '',
-      productionBatchCode: item.productionBatchCode,
       executeStatus: item.executeStatus,
       materials: item.materials
     });
@@ -406,13 +403,44 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteShowDeleteConfirm(true);
   }, []);
 
-  const confirmExecuteDelete = useCallback(() => {
-    if (executeDeletingId !== null) {
-      executeStore.deleteItem(executeDeletingId);
+  const confirmExecuteDelete = useCallback(async () => {
+    if (executeDeletingId === null) return;
+
+    // 2026-08-10 P2修复：删除出库单前先恢复库存
+    const record = executeStore.items.find(i => i.id === executeDeletingId);
+    if (record?.materials?.length) {
+      const restores: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
+      for (const m of record.materials) {
+        if (m.batchNo && m.actualQuantity > 0) {
+          // 解析 batchNo 字符串 "BATCH001(5个),BATCH002(3袋)" → 逐条恢复
+          const matches = m.batchNo.matchAll(/([^(,\s]+)\((\d+(?:\.\d+)?)/g);
+          for (const match of matches) {
+            restores.push({ materialCode: m.materialCode, batchNo: match[1], quantity: Number(match[2]) });
+          }
+          // 如果解析不到批次细分，用整条恢复
+          if (restores.filter(r => r.materialCode === m.materialCode).length === 0) {
+            restores.push({ materialCode: m.materialCode, batchNo: '', quantity: m.actualQuantity });
+          }
+        }
+      }
+      if (restores.length > 0) {
+        try {
+          await batchRestore(restores);
+        } catch (e) {
+          console.warn('库存恢复失败（不影响删除）:', e);
+        }
+      }
+    }
+
+    const ok = await executeStore.deleteItem(executeDeletingId);
+    if (ok) {
+      // 删除后重新加载（触发 dispatch_status 重新计算）
+      await executeStore.fetchItems();
+      await materialRequestStore.loadItems();
     }
     setExecuteShowDeleteConfirm(false);
     setExecuteDeletingId(null);
-  }, [executeDeletingId, executeStore]);
+  }, [executeDeletingId, executeStore, materialRequestStore]);
 
   const handleExecuteSaveEdit = useCallback(() => {
     if (!executeSelectedRecord) return;
@@ -422,7 +450,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       warehouseLocation: executeEditForm.warehouseLocation,
       reviewer: executeEditForm.reviewer,
       operator: executeEditForm.operator,
-      productionBatchCode: executeEditForm.productionBatchCode,
       executeStatus: executeEditForm.executeStatus,
       materials: executeEditForm.materials,
     } as any);
@@ -437,17 +464,20 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     }
 
     // V14.0: FEFO 自动分配批次（按过期日期先进先出）
+    // 2026-08-10 P0修复：无批次记录的物料用空 batchNo 兜底，batch-deduct仍会扣减materials主表
     const fefoAllocations: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
     try {
       for (const m of executeMaterialPool) {
         if (m.actualQuantity > 0 && m.materialCode) {
           const result = await fefoAllocate(m.materialCode, m.actualQuantity);
           if (result.allocations.length > 0) {
-            // 将 FEFO 分配写入物料批次字段
             m.batchNo = result.allocations.map(a => `${a.batchNo}(${a.quantity}${a.unit})`).join(',');
             for (const alloc of result.allocations) {
               fefoAllocations.push({ materialCode: m.materialCode, batchNo: alloc.batchNo, quantity: alloc.quantity });
             }
+          } else {
+            // 无批次记录兜底：用空batchNo直接扣主表库存（batch-deduct在batchNo为空时跳过batch_inventory）
+            fefoAllocations.push({ materialCode: m.materialCode, batchNo: '', quantity: m.actualQuantity });
           }
         }
       }
@@ -467,7 +497,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       warehouseLocation: executeAddForm.warehouseLocation,
       reviewer: executeAddForm.reviewer || sourceApp?.reviewer || '',
       operator: executeAddForm.operator || '',
-      productionBatchCode: executeAddForm.productionBatchCode || sourceApp?.productionBatchCode || '',
       sourceApplicationCodes: sourceAppCodes,
       executeStatus: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? '部分出库' : '已出库' as string,
       executeStatusClass: executeMaterialPool.some(m => m.actualQuantity < m.requestedQuantity) ? 'partial' : 'completed' as string,
@@ -502,7 +531,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       warehouseLocation: '仓库A区',
       reviewer: '',
       operator: '',
-      productionBatchCode: '',
       materials: []
     });
     showAlert('新增成功');

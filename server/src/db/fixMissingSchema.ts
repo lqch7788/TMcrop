@@ -4164,6 +4164,7 @@ function fixApprovedProductionPlanStatus(): void {
   // schema.ts 的 CREATE TABLE IF NOT EXISTS 不含此列；老 DB 启动时补上
   const mrReviewerColumnsToAdd = [
     { name: 'reviewer', sql: 'ALTER TABLE material_requests ADD COLUMN reviewer TEXT' },
+    { name: 'dispatch_status', sql: 'ALTER TABLE material_requests ADD COLUMN dispatch_status TEXT' },
   ];
   for (const col of mrReviewerColumnsToAdd) {
     try {

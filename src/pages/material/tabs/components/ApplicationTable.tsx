@@ -144,7 +144,6 @@ export function ApplicationTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区域/用途</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
@@ -186,7 +185,6 @@ export function ApplicationTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.date}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicant}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.department}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.warehouseLocation}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.materials.length > 0 ? `${item.materials.length}种` : '-'}</td>
                   {/* 2026-08-10：选区域(多选)展示——以 chip 形式显示 plantAreas */}
                   <td className="px-4 py-3 text-xs text-gray-600">
@@ -225,6 +223,14 @@ export function ApplicationTable({
                       }`}>
                         {item.status}
                       </span>
+                      {/* 出库状态标签（后端聚合 dispatch_status 列） */}
+                      {(item as any).dispatchStatus && (
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${
+                          (item as any).dispatchStatus === 'complete' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {(item as any).dispatchStatus === 'complete' ? '已出库' : '部分出库'}
+                        </span>
+                      )}
                       {item.statusClass === 'rejected' && item.rejectReason && (
                         <span className="text-xs text-red-600 max-w-[150px] truncate" title={item.rejectReason}>
                           原因：{item.rejectReason}
@@ -250,24 +256,24 @@ export function ApplicationTable({
                 {/* 展开行 - 物料明细 */}
                 {expandedRows.has(item.id) && (
                   <tr key={`${item.id}-expanded`} className="bg-white">
-                    <td colSpan={(exportMode || batchEditMode) ? 13 : 12} className="px-4 py-3">
+                    <td colSpan={(exportMode || batchEditMode) ? 12 : 11} className="px-4 py-3">
                       <div className="text-sm">
                         <div className="font-medium text-blue-800 mb-2">物料明细</div>
                         {item.materials.length > 0 ? (
                           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                            <thead className="bg-[#F2F6FA]">
+                            <thead className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
                               <tr>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">当前库存</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
-                                <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料编码</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料名称</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">批次号</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">规格</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单位</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">申领数量</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">当前库存</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单价(元)</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">小计(元)</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">仓库货位</th>
+                                <th className="px-3 py-2 text-left text-sm font-semibold text-white">备注</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">

@@ -230,6 +230,7 @@ router.post('/batch-allocate', (req: Request, res: Response) => {
 
 /**
  * 扣减批次库存 — POST /api/materials/batch-deduct
+ * 同时更新 materials 主表 quantity（物料库存列表显示此字段）
  */
 router.post('/batch-deduct', (req: Request, res: Response) => {
   try {
@@ -248,6 +249,22 @@ router.post('/batch-deduct', (req: Request, res: Response) => {
       stmt.reset();
     }
     stmt.free();
+
+    // 同步扣减 materials 主表 quantity（按 materialCode 汇总）
+    const totalPerMaterial: Record<string, number> = {};
+    for (const alloc of allocations) {
+      totalPerMaterial[alloc.materialCode] = (totalPerMaterial[alloc.materialCode] || 0) + alloc.quantity;
+    }
+    const matStmt = db.prepare(
+      `UPDATE materials SET quantity = MAX(0, quantity - ?), lastUpdateTime = datetime('now','localtime') WHERE code = ?`
+    );
+    for (const [code, qty] of Object.entries(totalPerMaterial)) {
+      matStmt.bind([qty, code]);
+      matStmt.step();
+      matStmt.reset();
+    }
+    matStmt.free();
+
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
@@ -258,6 +275,7 @@ router.post('/batch-deduct', (req: Request, res: Response) => {
 
 /**
  * 恢复批次库存（退料用） — POST /api/materials/batch-restore
+ * 同时恢复 materials 主表 quantity
  */
 router.post('/batch-restore', (req: Request, res: Response) => {
   try {
@@ -276,6 +294,22 @@ router.post('/batch-restore', (req: Request, res: Response) => {
       stmt.reset();
     }
     stmt.free();
+
+    // 同步恢复 materials 主表 quantity
+    const totalPerMaterial: Record<string, number> = {};
+    for (const ret of returns) {
+      totalPerMaterial[ret.materialCode] = (totalPerMaterial[ret.materialCode] || 0) + ret.quantity;
+    }
+    const matStmt = db.prepare(
+      `UPDATE materials SET quantity = quantity + ?, lastUpdateTime = datetime('now','localtime') WHERE code = ?`
+    );
+    for (const [code, qty] of Object.entries(totalPerMaterial)) {
+      matStmt.bind([qty, code]);
+      matStmt.step();
+      matStmt.reset();
+    }
+    matStmt.free();
+
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
@@ -435,6 +469,112 @@ router.delete('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('删除物料失败:', error);
     res.status(500).json({ error: '删除物料失败' });
+  }
+});
+
+/**
+ * 查询物料出库记录 — GET /api/materials/:code/outbound-history
+ * 返回所有包含此物料编码的出库单明细（含来源申请单的区域/用途信息）
+ */
+router.get('/:code/outbound-history', (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    console.log(`[outbound-history] 查询物料: ${code}`);
+    const db = getDatabase();
+
+    // 读取所有出库记录
+    const execResults = db.exec('SELECT * FROM material_executes ORDER BY date DESC, create_time DESC');
+    const history: any[] = [];
+
+    if (execResults.length > 0) {
+      const cols = execResults[0].columns;
+      console.log(`[outbound-history] material_executes 列: ${cols.join(', ')}, 行数: ${execResults[0].values.length}`);
+
+      for (const row of execResults[0].values) {
+        try {
+          const exec: Record<string, unknown> = {};
+          cols.forEach((c: string, i: number) => { exec[c] = row[i]; });
+
+          // 解析 materials JSON（可能已是数组，兼容处理）
+          let materials: any[] = [];
+          const rawMaterials = exec.materials;
+          if (Array.isArray(rawMaterials)) {
+            materials = rawMaterials;
+          } else if (typeof rawMaterials === 'string' && rawMaterials.trim()) {
+            try { materials = JSON.parse(rawMaterials); } catch { materials = []; }
+          }
+
+          const matched = materials.filter((m: any) => m && m.materialCode === code);
+          if (matched.length === 0) continue;
+
+          // 解析来源申请单
+          let sourceApps: any[] = [];
+          const rawSrc = exec.source_application_codes;
+          if (Array.isArray(rawSrc)) {
+            sourceApps = rawSrc;
+          } else if (typeof rawSrc === 'string' && rawSrc.trim()) {
+            try { sourceApps = JSON.parse(rawSrc); } catch { sourceApps = []; }
+          }
+
+          // 获取区域/用途信息
+          const areaInfo: string[] = [];
+          for (const srcCode of sourceApps) {
+            try {
+              const reqStmt = db.prepare('SELECT plant_area, applicant_name, department_name FROM material_requests WHERE request_code = ?');
+              reqStmt.bind([String(srcCode)]);
+              if (reqStmt.step()) {
+                const req = reqStmt.getAsObject();
+                let areas: any[] = [];
+                const rawArea = req.plant_area;
+                if (Array.isArray(rawArea)) {
+                  areas = rawArea;
+                } else if (typeof rawArea === 'string' && rawArea.trim().startsWith('[')) {
+                  try { areas = JSON.parse(rawArea); } catch { areas = []; }
+                }
+                const areaNames = areas.filter((a: any) => a && a.cropName).map((a: any) =>
+                  a.type === 'custom' ? a.cropName : `${a.cropName}·${a.area || ''}`
+                ).join('; ');
+                if (areaNames) areaInfo.push(areaNames);
+                if (req.applicant_name) exec._srcApplicant = req.applicant_name as string;
+                if (req.department_name) exec._srcDepartment = req.department_name as string;
+              }
+              reqStmt.free();
+            } catch (innerErr) {
+              console.warn(`[outbound-history] 处理来源单 ${srcCode} 失败:`, innerErr);
+            }
+          }
+
+          for (const m of matched) {
+            if (!m) continue;
+            history.push({
+              executeCode: exec.code || '',
+              executeDate: exec.date || '',
+              executeStatus: exec.execute_status || '',
+              applicant: exec._srcApplicant || exec.applicant || '',
+              department: exec._srcDepartment || '',
+              operator: exec.operator || '',
+              warehouseLocation: exec.warehouse_location || '',
+              materialCode: m.materialCode || code,
+              materialName: m.materialName || '',
+              quantity: Number(m.actualQuantity) || Number(m.requestedQuantity) || 0,
+              unit: m.unit || '',
+              sourceApplicationCodes: sourceApps,
+              areaInfo: areaInfo.join('; ') || '-',
+              batchNo: m.batchNo || '',
+              applicationCode: m.applicationCode || '',
+            });
+          }
+        } catch (rowErr) {
+          console.warn('[outbound-history] 处理出库记录行失败:', rowErr);
+        }
+      }
+    }
+
+    console.log(`[outbound-history] 找到 ${history.length} 条记录`);
+    res.json({ success: true, data: history });
+  } catch (error) {
+    console.error('查询物料出库记录失败:', error);
+    res.status(500).json({ success: false, error: `查询物料出库记录失败: ${(error as Error).message}` });
   }
 });
 
