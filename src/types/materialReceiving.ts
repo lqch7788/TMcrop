@@ -14,12 +14,12 @@ export interface MaterialItem {
 }
 
 // 2026-08-10：选区域(多选)类型——与施肥管理「施肥区域(多选,支持不同作物不同区域)」对齐
-//   type: planting(种植批次) | seedling(育苗批次)
-//   cropName: 展示用作物品种名(优先 subVariety1Name/cropVariety,回退 cropName)
-//   area: 区域名(种植 rootName,育苗 siteName)
-//   code: 批次号(plantCode/seedlingCode)
+//   type: planting(种植批次) | seedling(育苗批次) | custom(其他用途,自由文本)
+//   cropName: 展示用作物品种名(planting/seedling) 或 用途说明文本(custom)
+//   area: 区域名(种植 rootName,育苗 siteName) 或 空字符串(custom)
+//   code: 批次号(plantCode/seedlingCode) 或 空字符串(custom)
 export interface SelectedArea {
-  type: 'planting' | 'seedling';
+  type: 'planting' | 'seedling' | 'custom';
   id: string;
   code: string;
   cropName: string;

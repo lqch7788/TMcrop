@@ -315,9 +315,11 @@ router.put('/:id', (req: Request, res: Response) => {
     const values = Object.keys(updates)
       .filter(k => !excludeFields.includes(k))
       .map(k => {
-        // 处理 attachments 数组序列化
-        if (k === 'attachments') {
-          return JSON.stringify(updates[k] || []);
+        // 处理 JSON 数组/对象字段序列化
+        if (k === 'attachments' || k === 'materials' || k === 'plant_area') {
+          const val = updates[k];
+          if (typeof val === 'string') return val; // 已是 JSON 字符串
+          return JSON.stringify(val ?? (k === 'attachments' ? [] : k === 'materials' ? [] : '[]'));
         }
         return updates[k];
       });

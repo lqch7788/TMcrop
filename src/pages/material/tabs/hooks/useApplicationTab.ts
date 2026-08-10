@@ -251,8 +251,16 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const confirmExport = async () => {
     const exportData = materialData.filter(item => selectedRows.includes(item.id));
 
-    const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '选区域(多选)', '状态'];
-    const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', 'productionBatchCode', 'status'];
+    // 为导出预处理：_areaDisplay 把 plantAreas 数组转为展示文本（种植/育苗区域 + 自定义用途）
+    exportData.forEach(row => {
+      const areas = (row as any).plantAreas || [];
+      (row as any)._areaDisplay = areas.map((a: any) =>
+        a.type === 'custom' ? `📝${a.cropName}` : `${a.type === 'planting' ? '🌱' : '🌿'}${a.cropName}·${a.area}`
+      ).join('; ');
+    });
+
+    const headers = ['领料单号', '日期', '申领人', '仓库地点', '审核人', '区域/用途', '状态'];
+    const fields = ['code', 'date', 'applicant', 'warehouseLocation', 'reviewer', '_areaDisplay', 'status'];
 
     const materialHeaders = ['物料编码', '物料名称', '批次号', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
     const materialFields = ['materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'warehousePosition', 'warehousePosition', 'remark'];
@@ -509,17 +517,18 @@ export function useApplicationTab(): UseApplicationTabReturn {
       applicant: editForm.applicant,
       department: editForm.department,
       warehouseLocation: editForm.warehouseLocation,
-      // 2026-08-10：plantArea → plantAreas 数组（Store denormalize 会序列化为 JSON）
       plantAreas: editForm.plantAreas,
       reviewer: editForm.reviewer,
-      // 2026-08-10：移除 productionBatchCode
-      // 2026-08-10 修复：DB 用英文 enum（pending），原代码写'待审批'会让后续状态比较失配
       status: 'pending',
-      statusClass: 'pending',
+      approvalStatus: 'pending',   // DB 列 approval_status
       materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
     };
 
-    await storeUpdateItem(selectedRecord.id, updates as any);
+    const ok = await storeUpdateItem(selectedRecord.id, updates as any);
+    if (!ok) {
+      await showAlert('保存失败，请稍后重试');
+      return;
+    }
     await loadItems();
 
     setShowEditModal(false);
@@ -669,7 +678,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     // 同步创建审批记录（核心联动功能）
     if (approvalContext) {
       try {
-        const areaSummary = (addForm.plantAreas || []).map((a: any) => `${a.cropName}·${a.area}`).join('; ');
+        const areaSummary = (addForm.plantAreas || []).map((a: any) => a.type === 'custom' ? a.cropName : `${a.cropName}·${a.area}`).join('; ');
         const approval: Approval = {
           id: `MAT-AP-${Date.now()}`,
           code: newRecord.code,

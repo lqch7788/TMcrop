@@ -1,7 +1,7 @@
 // ApplicationModals 组件
 // 领料申请单的编辑弹窗和新增弹窗
 // 使用统一的 Modal 组件，支持拖动、调整大小、最大化功能
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Plus, Save, Send, Trash2, Wand2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -13,6 +13,25 @@ import { UserSelect } from '@/components/common/settings/UserSelect';
 import { AreaMultiSelectPicker } from '@/components/common/AreaMultiSelectPicker';
 import { useWarehouseMaterialStore } from '@/stores';
 import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '@/types/materialReceiving';
+
+// 辅助函数：从 plantAreas 数组取/设单条自定义用途（'custom' 类型仅保留 0 或 1 条）
+function getCustomPurpose(plantAreas: SelectedArea[]): string {
+  return plantAreas.find(a => a.type === 'custom')?.cropName || '';
+}
+function setCustomPurpose(plantAreas: SelectedArea[], text: string): SelectedArea[] {
+  const others = plantAreas.filter(a => a.type !== 'custom');
+  const trimmed = text.trim();
+  if (!trimmed) return others;
+  // 保留已有 custom 条目的 id，确保编辑模式下不产生新 id
+  const existing = plantAreas.find(a => a.type === 'custom');
+  return [...others, {
+    type: 'custom' as const,
+    id: existing?.id || crypto.randomUUID(),
+    code: '',
+    cropName: trimmed,
+    area: '',
+  }];
+}
 
 // ============================================
 // 编辑弹窗组件
@@ -135,9 +154,25 @@ export function EditModal({
       <div className="col-span-2">
         {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
         <AreaMultiSelectPicker
-          value={editForm.plantAreas || []}
-          onChange={(areas) => onFormChange({ ...editForm, plantAreas: areas })}
+          value={(editForm.plantAreas || []).filter(a => a.type !== 'custom')}
+          onChange={(areas) => {
+            // 函数式 setState 防闭包过期：合并 custom 条目 + 新选中的 planting/seedling 条目
+            onFormChange(prev => ({ ...prev, plantAreas: [...areas, ...(prev.plantAreas || []).filter(a => a.type === 'custom')] }));
+          }}
         />
+        {/* 其他用途：单一自由文本输入（如设备维修、设施建设等非种植/育苗用途） */}
+        <div className="mt-3">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
+            其他用途 <span className="text-xs text-gray-400 font-normal">（非种植/育苗区域的领料用途）</span>
+          </Label>
+          <Input
+            type="text"
+            value={getCustomPurpose(editForm.plantAreas || [])}
+            onChange={(e) => onFormChange(prev => ({ ...prev, plantAreas: setCustomPurpose(prev.plantAreas || [], e.target.value) }))}
+            placeholder="输入用途说明（如：设备维修、设施建设、科研测试）"
+            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
@@ -460,9 +495,25 @@ export function AddModal({
       <div className="col-span-2">
         {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
         <AreaMultiSelectPicker
-          value={addForm.plantAreas || []}
-          onChange={(areas) => onFormChange({ ...addForm, plantAreas: areas })}
+          value={(addForm.plantAreas || []).filter(a => a.type !== 'custom')}
+          onChange={(areas) => {
+            // 函数式 setState 防闭包过期：合并 custom 条目 + 新选中的 planting/seedling 条目
+            onFormChange(prev => ({ ...prev, plantAreas: [...areas, ...(prev.plantAreas || []).filter(a => a.type === 'custom')] }));
+          }}
         />
+        {/* 其他用途：单一自由文本输入（如设备维修、设施建设等非种植/育苗用途） */}
+        <div className="mt-3">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
+            其他用途 <span className="text-xs text-gray-400 font-normal">（非种植/育苗区域的领料用途）</span>
+          </Label>
+          <Input
+            type="text"
+            value={getCustomPurpose(addForm.plantAreas || [])}
+            onChange={(e) => onFormChange(prev => ({ ...prev, plantAreas: setCustomPurpose(prev.plantAreas || [], e.target.value) }))}
+            placeholder="输入用途说明（如：设备维修、设施建设、科研测试）"
+            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
