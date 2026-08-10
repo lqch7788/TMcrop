@@ -15,16 +15,26 @@ const router = Router();
 
 // GET /api/material-code-categories — 获取全部分类（按层级组织为树形）
 // 支持 ?rule_type=material 或 ?rule_type=supplier 筛选
+// 2026-08-10 修复：早期种子脚本可能产生 (code, parent_code, level, rule_type) 重复行，
+//   导致前端 CodeRule 页面树形表显示重复大类、折叠按钮状态混乱（React 重复 key）。
+//   此处按 (code, parent_code, level, rule_type) 取最早一条（id 最小），保证数据唯一。
 router.get('/', (req, res) => {
   try {
     const db = getDatabase();
     const ruleType = (req.query.rule_type as string) || 'material';
     const result = db.exec(`
       SELECT id, code, name, name_en, parent_code, level, rule_type, sort_order, status, created_at, updated_at
-      FROM material_code_categories
+      FROM material_code_categories AS mcc
       WHERE status = 'active' AND rule_type = ?
+        AND id = (
+          SELECT MIN(id) FROM material_code_categories
+          WHERE status = 'active' AND rule_type = ?
+            AND code = mcc.code
+            AND parent_code = mcc.parent_code
+            AND level = mcc.level
+        )
       ORDER BY level, sort_order, code
-    `, [ruleType]);
+    `, [ruleType, ruleType]);
 
     if (result.length === 0) {
       return res.json({ success: true, data: [] });
