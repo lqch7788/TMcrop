@@ -254,7 +254,7 @@ export default function MaterialApproval() {
         toggleExpandRow={toggleExpandRow}
         handleViewDetail={handleViewDetail}
         handleRejectClick={handleRejectClick}
-        approve={handleApprove}
+        approve={approve}
         getStatusBadge={getStatusBadge}
         getReturnStatusBadge={getReturnStatusBadge}
         getReturnType={getReturnType}

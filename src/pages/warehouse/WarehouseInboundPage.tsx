@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Download, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Plus, Trash2, Download, ChevronDown, ChevronRight, X } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
 import { Button } from '@/components/ui';
 import { useWarehouseInbound } from './hooks/useWarehouseInbound';
@@ -101,6 +101,8 @@ export default function WarehouseInboundPage() {
     onConfirmExport,
     onViewRecord,
     onEditRecord,
+    // 2026-08-10：行内操作列回调，参考 useWarehouseInbound.ts onDeleteRecord
+    onDeleteRecord,
     onBatchDeleteRecords,
     onConfirmInboundDelete,
     onSaveInboundEdit,
@@ -206,10 +208,7 @@ export default function WarehouseInboundPage() {
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
-                <Button size="sm" variant="blue" onClick={() => setEditMode(true)}>
-                  <Edit2 className="w-4 h-4" />
-                  编辑
-                </Button>
+                {/* 2026-08-10 移除"编辑"按钮：编辑仅在行内操作列 */}
                 <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>
                   <Trash2 className="w-4 h-4" />
                   删除
@@ -221,17 +220,7 @@ export default function WarehouseInboundPage() {
               </>
             ) : (
               <>
-                {/* 编辑模式 */}
-                {editMode && (
-                  <>
-                    <Button size="sm" variant="blue" onClick={onConfirmEdit}>
-                      <Edit2 className="w-4 h-4" /> 确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={onCancelSelection}>
-                      <X className="w-4 h-4" /> 取消
-                    </Button>
-                  </>
-                )}
+                {/* 编辑模式已移除（2026-08-10）：编辑仅在行内进行；保留分支条件不报错 */}
                 {/* 删除模式 */}
                 {deleteMode && (
                   <>
@@ -274,6 +263,9 @@ export default function WarehouseInboundPage() {
           onSelectAll={onSelectAll}
           onSelectRow={onSelectRow}
           onViewRecord={onViewRecord}
+          // 2026-08-10：行内操作列回调
+          onEditRecord={onEditRecord}
+          onDeleteRecord={onDeleteRecord}
           page={inboundPage}
           pageSize={inboundPageSize}
           totalPages={totalPages}

@@ -190,7 +190,18 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
       onClose={onClose}
       title="删除确认"
       size="md"
-      showFooter={false}
+      // 2026-08-10 修复：按钮固定在弹窗底部（Modal 自带 footer slot，border-t + bg-gray-50 + flex-shrink-0）
+      showFooter={true}
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" /> 取消
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onConfirm}>
+            <Trash2 className="w-4 h-4" /> 确认删除
+          </Button>
+        </div>
+      }
     >
       <div className="flex items-start gap-3 mb-4">
         <span className="text-2xl">⚠️</span>
@@ -210,14 +221,6 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
       <p className="text-sm text-gray-500 mb-4">
         此操作不可撤销！请确认是否继续删除？
       </p>
-      <div className="flex gap-3">
-        <Button variant="secondary" onClick={onClose} className="flex-1">
-          <X className="w-4 h-4" /> 取消
-        </Button>
-        <Button variant="destructive" onClick={onConfirm} className="flex-1">
-          <Trash2 className="w-4 h-4" /> 确认删除
-        </Button>
-      </div>
     </UnifiedModal>
   );
 }
