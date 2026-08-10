@@ -140,11 +140,9 @@ export function useWarehouseInbound() {
 
   // 是否全选
   const isAllSelected = useMemo(() => {
-    if (deleteMode) {
-      return displayedRecords.filter(r => r.status === 'pending').every(r => selectedRows.includes(r.id));
-    }
+    // 2026-08-10 修复：删除模式不再限定 pending，取消过滤以保证"全选"逻辑与行复选框一致。
     return displayedRecords.length > 0 && selectedRows.length === displayedRecords.length;
-  }, [displayedRecords, selectedRows, deleteMode]);
+  }, [displayedRecords, selectedRows]);
 
   // 切换展开行
   const toggleExpandRow = useCallback((id: number) => {
