@@ -69,11 +69,26 @@ interface MaterialCodeRuleState {
 
 // ========== 工具函数: 扁平行转树形结构 ==========
 
+// 2026-08-10 修复：早期种子数据可能产生 (code, parentCode, level) 重复行，
+//   flatToTree 之前未去重，导致前端 BigCategory 列表出现重复大类、折叠按钮因 React 重复 key 失灵。
+//   这里在层内 Map 去重（保留 id 最小者，即最早写入），作为后端去重的兜底防御。
+function dedupeByKey<T extends { id: string; code: string; parentCode: string }>(rows: T[]): T[] {
+  const seen = new Map<string, T>();
+  for (const row of rows) {
+    const key = `${row.code}|${row.parentCode}`;
+    const existing = seen.get(key);
+    if (!existing || row.id < existing.id) {
+      seen.set(key, row);
+    }
+  }
+  return Array.from(seen.values());
+}
+
 function flatToTree(rows: MaterialCodeCategory[]): BigCategory[] {
-  // 第一遍：隔离各层级
-  const bigRows = rows.filter(r => r.level === 'big');
-  const midRows = rows.filter(r => r.level === 'mid');
-  const subRows = rows.filter(r => r.level === 'sub');
+  // 第一遍：隔离各层级（每层先按 code+parentCode 去重，防御性兜底）
+  const bigRows = dedupeByKey(rows.filter(r => r.level === 'big'));
+  const midRows = dedupeByKey(rows.filter(r => r.level === 'mid'));
+  const subRows = dedupeByKey(rows.filter(r => r.level === 'sub'));
 
   return bigRows.map(big => {
     const mids = midRows
