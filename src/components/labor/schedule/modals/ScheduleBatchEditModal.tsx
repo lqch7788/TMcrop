@@ -4,6 +4,8 @@ import { Check, Edit2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
+import { Input } from '@/components/ui';
 
 interface ScheduleBatchEditModalProps {
   isOpen: boolean;
@@ -66,21 +68,22 @@ export function ScheduleBatchEditModal({
       {/* Record Selector */}
       <div className="mb-3">
         <Label className="block text-xs font-medium text-gray-600 mb-1">选择排班记录</Label>
-        <select
+        <Select
           value={selectedRecordId || ''}
-          onChange={(e) => onSelectedRecordIdChange(e.target.value)}
-          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+          onValueChange={onSelectedRecordIdChange}
         >
-          <option value="">请选择记录</option>
-          {selectedRecords.map(record => (
-            <option key={record.id} value={record.id.toString()}>
-              {record.date} - {record.staffName} - {record.shift}{' '}
-              {editedRecordIds.includes(record.id.toString()) && (
-                <span className="bg-green-100 text-green-700">✅ 已编辑</span>
-              )}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full h-10">
+            <SelectValue placeholder="请选择记录" />
+          </SelectTrigger>
+          <SelectContent>
+            {selectedRecords.map(record => (
+              <SelectItem key={record.id} value={record.id.toString()}>
+                {record.date} - {record.staffName} - {record.shift}
+                {editedRecordIds.includes(record.id.toString()) ? ' ✅ 已编辑' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Content */}
@@ -101,17 +104,21 @@ export function ScheduleBatchEditModal({
           {/* 班次 - 可编辑 */}
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">班次</div>
-            <select
+            <Select
               value={editedData.shift ?? currentRecord.shift}
-              onChange={(e) => handleFieldChange('shift', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              onValueChange={(val) => handleFieldChange('shift', val)}
             >
-              {shiftConfigs.map(config => (
-                <option key={config.name} value={config.name}>
-                  {config.name} ({config.startTime}-{config.endTime})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-7">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {shiftConfigs.map(config => (
+                  <SelectItem key={config.name} value={config.name}>
+                    {config.name} ({config.startTime}-{config.endTime})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 工作区域 - 不可编辑 */}
@@ -123,36 +130,40 @@ export function ScheduleBatchEditModal({
           {/* 状态 - 可编辑 */}
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">状态</div>
-            <select
+            <Select
               value={editedData.status ?? currentRecord.status}
-              onChange={(e) => handleFieldChange('status', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              onValueChange={(val) => handleFieldChange('status', val)}
             >
-              <option value="已排班">已排班</option>
-              <option value="已执行">已执行</option>
-              <option value="已取消">已取消</option>
-            </select>
+              <SelectTrigger className="w-full h-7">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="已排班">已排班</SelectItem>
+                <SelectItem value="已执行">已执行</SelectItem>
+                <SelectItem value="已取消">已取消</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 签到时间 - 可编辑 */}
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">签到时间</div>
-            <input
+            <Input
               type="time"
               value={editedData.checkIn ?? currentRecord.checkIn ?? ''}
               onChange={(e) => handleFieldChange('checkIn', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              className="w-full h-7"
             />
           </div>
 
           {/* 签退时间 - 可编辑 */}
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">签退时间</div>
-            <input
+            <Input
               type="time"
               value={editedData.checkOut ?? currentRecord.checkOut ?? ''}
               onChange={(e) => handleFieldChange('checkOut', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
+              className="w-full h-7"
             />
           </div>
         </div>

@@ -3,11 +3,12 @@ import { Check, Clock, Edit2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ShiftConfig, ShiftType } from './types';
 import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { showAlert } from '@/lib/dialogService';
 
 interface ShiftEditorProps {
   shiftConfigs: ShiftConfig[];
   onUpdateConfig: (name: ShiftType, config: Partial<ShiftConfig>) => void;
-  onClose: () => void;
 }
 
 const SHIFT_COLORS = [
@@ -21,7 +22,7 @@ const SHIFT_COLORS = [
   { name: 'bg-teal-500', label: '青色' },
 ];
 
-export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEditorProps) {
+export function ShiftEditor({ shiftConfigs, onUpdateConfig }: ShiftEditorProps) {
   const [editingShift, setEditingShift] = useState<ShiftType | null>(null);
   const [tempConfig, setTempConfig] = useState<Partial<ShiftConfig>>({});
 
@@ -34,13 +35,16 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
     }
   };
 
-  // 保存编辑
+  // 保存编辑（校验时间必填，失败时提示用户）
   const handleSave = () => {
-    if (editingShift && tempConfig.startTime && tempConfig.endTime) {
-      onUpdateConfig(editingShift, tempConfig);
-      setEditingShift(null);
-      setTempConfig({});
+    if (!editingShift) return;
+    if (!tempConfig.startTime || !tempConfig.endTime) {
+      showAlert('请填写开始时间和结束时间');
+      return;
     }
+    onUpdateConfig(editingShift, tempConfig);
+    setEditingShift(null);
+    setTempConfig({});
   };
 
   // 取消编辑
@@ -95,11 +99,11 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                     </Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
+                      <Input
                         type="time"
                         value={tempConfig.startTime || ''}
                         onChange={e => setTempConfig(prev => ({ ...prev, startTime: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-9 pr-4 py-2"
                       />
                     </div>
                   </div>
@@ -109,11 +113,11 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                     </Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
+                      <Input
                         type="time"
                         value={tempConfig.endTime || ''}
                         onChange={e => setTempConfig(prev => ({ ...prev, endTime: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-9 pr-4 py-2"
                       />
                     </div>
                   </div>
@@ -132,10 +136,9 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                         size="icon"
                         onClick={() => setTempConfig(prev => ({ ...prev, color: color.name }))}
                         className={`
-                          w-8 h-8 rounded-full p-0
+                          w-8 h-8 rounded-full p-0 ${color.name}
                           ${tempConfig.color === color.name ? 'ring-2 ring-offset-2 ring-gray-400' : ''}
                         `}
-                        style={{ backgroundColor: color.name.replace('bg-', '') }}
                       >
                         {tempConfig.color === color.name && (
                           <Check className="w-4 h-4 text-white" />

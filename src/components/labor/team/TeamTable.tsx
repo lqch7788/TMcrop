@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Edit2, Eye, Plus, RotateCcw, Save, Search, Settings, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Calendar, Edit2, Eye, Plus, RotateCcw, Save, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
@@ -16,23 +16,20 @@ import { Pagination } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
-import { getWorkerName } from '@/stores/useTeamManageStore';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface TeamTableProps {
-  onBack?: () => void;
   // 权限控制props
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
-  canExport?: boolean;
 }
 
 export function TeamTable({
-  onBack,
   canCreate = true,
   canEdit = true,
   canDelete = true,
-  canExport = true,
 }: TeamTableProps) {
   const navigate = useNavigate();
   const {
@@ -47,12 +44,11 @@ export function TeamTable({
     updateTeam,
     deleteTeam,
     assignWorkers,
-    removeWorker,
+    filteredTeams,
   } = useTeam();
 
   // 批量选择状态
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [exportMode, setExportMode] = useState(false);
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -68,7 +64,8 @@ export function TeamTable({
     workZone: '',
   });
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  // P0-3 修复：当前用户从认证 Store 读取（V2.1 铁律：组件不直接读写 localStorage）
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   // ★ Task 15：跳到排班页 + 预填班组/日期/班次（url-deep-link-modal-pattern）
   const handleBatchSchedule = (team: Team) => {
@@ -111,9 +108,9 @@ export function TeamTable({
     setIsFormOpen(true);
   };
 
-  // 处理分配
+  // 处理分配（操作人取当前登录用户，realName 优先）
   const handleAssign = (teamId: string, workerIds: string[]) => {
-    assignWorkers(teamId, workerIds, currentUser.id, currentUser.name);
+    assignWorkers(teamId, workerIds, currentUser?.oid || '', currentUser?.realName || currentUser?.username || '');
   };
 
   // 处理创建/编辑
@@ -173,7 +170,6 @@ export function TeamTable({
 
   // 取消批量操作
   const handleCancelBatch = () => {
-    setExportMode(false);
     setBatchDeleteMode(false);
     setSelectedRows([]);
   };
@@ -277,12 +273,6 @@ export function TeamTable({
               <RotateCcw className="w-4 h-4" />
               重置
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {}}
-            >
-              <Search className="w-4 h-4" /> 搜索
-            </Button>
           </div>
         </div>
       </div>
@@ -331,46 +321,46 @@ export function TeamTable({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {batchDeleteMode && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold w-12">
+                  <TableHead className="px-4 py-3 text-sm font-semibold w-12 text-white">
                     <Checkbox
                       checked={selectedRows.length === teams.length && teams.length > 0}
                       onCheckedChange={handleSelectAll}
                       className="border-white rounded"
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold">班组名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">负责人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">作业区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">成员数量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">班组名称</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">负责人</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">作业区域</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">成员数量</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">描述</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white divide-y divide-gray-300">
               {paginatedData.length === 0 ? (
-                <tr>
-                  <td colSpan={batchDeleteMode ? 7 : 6} className="px-4 py-8 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={batchDeleteMode ? 7 : 6} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedData.map((team) => (
-                  <tr key={team.id} className="hover:bg-emerald-50 transition-colors">
+                  <TableRow key={team.id} className="hover:bg-emerald-50 transition-colors">
                     {batchDeleteMode && (
-                      <td className="px-4 py-3">
+                      <TableCell className="px-4 py-3">
                         <Checkbox
                           checked={selectedRows.includes(team.id)}
                           onCheckedChange={() => handleSelectRow(team.id)}
                           className="rounded"
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3">
                       <Button
                         variant="link"
                         size="sm"
@@ -379,22 +369,22 @@ export function TeamTable({
                       >
                         {team.name}
                       </Button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-900">
                       {team.leaderName}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">
                       {team.workZone || '-'}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
                         {team.memberCount}人
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
                       {team.description || '-'}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -442,18 +432,18 @@ export function TeamTable({
                           <Calendar className="w-4 h-4" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
-            共 {teams.length} 条记录
+            共 {filteredTeams.length} 条记录
           </div>
           <Pagination
             currentPage={pagination.currentPage}

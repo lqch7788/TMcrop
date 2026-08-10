@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Download, Edit2, Filter, Plus, Search, Trash2, X } from 'lucide-react';
+import { Download, Edit2, Plus, Search, Trash2, X } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
+import { normalizeRecord } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -13,7 +14,6 @@ interface ScheduleTableProps {
   shiftConfigs: ShiftConfig[];
   currentPage: number;
   pageSize: number;
-  totalCount: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
   onScheduleClick?: (record: ScheduleRecord) => void;
@@ -44,21 +44,11 @@ function getShiftColor(shift: string, configs: ShiftConfig[]): string {
   return config?.color || 'bg-gray-500';
 }
 
-// 规范化排班记录（兼容snake_case和camelCase）
-function normalizeRecord(record: any): ScheduleRecord {
-  return {
-    ...record,
-    staffName: record.staffName || record.staff_name || '',
-    workZone: record.workZone || record.work_zone || '',
-  };
-}
-
 export function ScheduleTable({
   scheduleList,
   shiftConfigs,
   currentPage,
   pageSize,
-  totalCount,
   onPageChange,
   onPageSizeChange,
   onScheduleClick,
@@ -125,13 +115,13 @@ export function ScheduleTable({
 
       return matchSearch && matchShift && matchStatus && matchDate;
     });
-  }, [scheduleList, searchTerm, shiftFilter, statusFilter, dateRange]);
+  }, [normalizedList, searchTerm, shiftFilter, statusFilter, dateRange]);
 
   // 分页数据
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage]);
+  }, [filteredData, currentPage, pageSize]);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const allSelected = paginatedData.length > 0 && paginatedData.every(r => selectedRows.includes(r.id));

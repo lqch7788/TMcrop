@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, CalendarDays, ChevronDown, Clock, List, Plus, Settings, Users, X } from 'lucide-react';
+import { Calendar, CalendarDays, Clock, List, Plus, Settings, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSchedule } from './hooks/useSchedule';
@@ -9,27 +9,18 @@ import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
 import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
-import type { ScheduleRecord, ShiftType } from './types';
+import type { ScheduleRecord, ScheduleRecordLike, ShiftType } from './types';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { useScheduleStore } from '@/stores';
 
-// 规范化排班记录（兼容snake_case和camelCase）
-function normalizeRecord(record: any): ScheduleRecord {
-  return {
-    ...record,
-    staffName: record.staffName || record.staff_name || '',
-    workZone: record.workZone || record.work_zone || '',
-  };
-}
-
-// 获取规范的员工名称
-function getStaffName(record: any): string {
+// 获取规范的员工名称（兼容 snake_case 与 camelCase）
+function getStaffName(record: ScheduleRecordLike): string {
   return record.staffName || record.staff_name || '-';
 }
 
-// 获取规范的工作区域
-function getWorkZone(record: any): string {
+// 获取规范的工作区域（兼容 snake_case 与 camelCase）
+function getWorkZone(record: ScheduleRecordLike): string {
   return record.workZone || record.work_zone || '-';
 }
 
@@ -59,9 +50,6 @@ export function SchedulePage() {
     submitSwapRequest,
     handleSwapRequest,
   } = useSchedule();
-
-  // 规范化数据（兼容snake_case和camelCase）
-  const normalizedScheduleList = useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
 
   // URL 参数 teamId：触发按班组过滤的排班占用拉取
   // 调用 store action（hook 未暴露 fetchOccupations，直接 getState 调用符合架构铁律）
@@ -131,26 +119,29 @@ export function SchedulePage() {
     setSelectedSchedule(record);
   };
 
-  // 处理添加排班
-  const handleAddSchedule = () => {
+  // 处理添加排班（请求失败时回滚已由 store 处理，此处仅提示用户）
+  const handleAddSchedule = async () => {
     if (!newSchedule.staffId || !newSchedule.date) {
       showAlert('请选择员工和日期');
       return;
     }
     const staff = staffList.find(s => s.id === newSchedule.staffId);
-    if (staff) {
-      addSchedule({
+    if (!staff) return;
+    try {
+      await addSchedule({
         ...newSchedule,
         staffName: staff.name,
         status: '已排班',
       });
       setShowAddModal(false);
       setNewSchedule({ staffId: '', staffName: '', date: '', shift: '早班', workZone: '' });
+    } catch (err) {
+      showAlert(`创建排班失败：${(err as Error).message}`);
     }
   };
 
   // 处理调班申请提交
-  const handleSwapSubmit = (data: {
+  const handleSwapSubmit = async (data: {
     requesterId: string;
     requesterName: string;
     targetId: string;
@@ -159,7 +150,30 @@ export function SchedulePage() {
     targetDate: string;
     reason: string;
   }) => {
-    submitSwapRequest(data);
+    try {
+      await submitSwapRequest(data);
+      showAlert('调班申请已提交');
+    } catch (err) {
+      showAlert(`提交调班申请失败：${(err as Error).message}`);
+    }
+  };
+
+  // 取消排班（包一层 catch，请求失败时提示用户）
+  const handleCancelSchedule = async (id: string) => {
+    try {
+      await cancelSchedule(id);
+    } catch (err) {
+      showAlert(`取消排班失败：${(err as Error).message}`);
+    }
+  };
+
+  // 处理调班申请审批（包一层 catch，请求失败时提示用户）
+  const handleSwapRequestWithAlert = async (id: string, status: '已同意' | '已拒绝') => {
+    try {
+      await handleSwapRequest(id, status);
+    } catch (err) {
+      showAlert(`处理调班申请失败：${(err as Error).message}`);
+    }
   };
 
   // 批量选择操作
@@ -187,13 +201,18 @@ export function SchedulePage() {
     setSelectedRows([]);
   };
 
-  // 确认删除
-  const handleConfirmDelete = () => {
+  // 确认删除（批量操作，任一失败则提示并中止）
+  const handleConfirmDelete = async () => {
     if (selectedRows.length === 0) return;
     // 删除选中项
-    selectedRows.forEach(id => {
-      deleteSchedule(id);
-    });
+    try {
+      for (const id of selectedRows) {
+        await deleteSchedule(id);
+      }
+    } catch (err) {
+      showAlert(`删除排班失败：${(err as Error).message}`);
+      return;
+    }
     handleCancelBatch();
   };
 
@@ -208,16 +227,21 @@ export function SchedulePage() {
     }
   };
 
-  const handleConfirmBatchEdit = () => {
+  const handleConfirmBatchEdit = async () => {
     // 保存编辑结果
     if (editedRecordIds.length > 0) {
       // 批量更新编辑过的记录
-      editedRecordIds.forEach(id => {
-        const updates = editedRecords[id];
-        if (updates) {
-          updateSchedule(id, updates);
+      try {
+        for (const id of editedRecordIds) {
+          const updates = editedRecords[id];
+          if (updates) {
+            await updateSchedule(id, updates);
+          }
         }
-      });
+      } catch (err) {
+        showAlert(`批量更新失败：${(err as Error).message}`);
+        return;
+      }
     }
     setShowBatchEditModal(false);
     setBatchEditMode(false);
@@ -324,8 +348,8 @@ export function SchedulePage() {
         a.click();
         URL.revokeObjectURL(url);
       }
-    } catch (err) {
-      // logger.error('Export failed:', err);
+    } catch {
+      // 直接下载失败时，降级为 Blob 下载
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -492,7 +516,6 @@ export function SchedulePage() {
                 shiftConfigs={shiftConfigs}
                 currentPage={currentPage}
                 pageSize={pageSize}
-                totalCount={scheduleList.length}
                 onPageChange={setCurrentPage}
                 onPageSizeChange={setPageSize}
                 onScheduleClick={handleScheduleClick}
@@ -605,7 +628,7 @@ export function SchedulePage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => cancelSchedule(selectedSchedule.id)}
+                    onClick={() => handleCancelSchedule(selectedSchedule.id)}
                     className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                   >
                     <X className="w-4 h-4" /> 取消排班
@@ -625,7 +648,7 @@ export function SchedulePage() {
             </div>
             <SwapRequestList
               requests={swapRequests}
-              onHandle={handleSwapRequest}
+              onHandle={handleSwapRequestWithAlert}
             />
           </div>
 
@@ -658,7 +681,6 @@ export function SchedulePage() {
         <ShiftEditor
           shiftConfigs={shiftConfigs}
           onUpdateConfig={updateShiftConfig}
-          onClose={() => setShowShiftEditor(false)}
         />
       </UnifiedModal>
 

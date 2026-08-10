@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
+import { normalizeRecord } from './types';
 import { todayLocal } from '../../../lib/dateUtils';
 import { useDispatchOccupations } from '../../../hooks/useDispatchOccupations';
 import { OccupationHoverCard } from './OccupationHoverCard';
@@ -27,15 +28,6 @@ function getShiftColor(shift: string, configs: ShiftConfig[]): string {
   return config?.color || 'bg-gray-500';
 }
 
-// 规范化排班记录（兼容snake_case和camelCase）
-function normalizeRecord(record: any): ScheduleRecord {
-  return {
-    ...record,
-    staffName: record.staffName || record.staff_name || '',
-    workZone: record.workZone || record.work_zone || '',
-  };
-}
-
 // 获取日期显示格式
 function formatDateDisplay(dateStr: string, viewMode: ViewMode): string {
   const date = new Date(dateStr);
@@ -45,9 +37,9 @@ function formatDateDisplay(dateStr: string, viewMode: ViewMode): string {
   return String(date.getDate());
 }
 
-// 判断是否是今天
+// 判断是否是今天（统一 YYYY-MM-DD 格式比较，修复无前导零导致的今日高亮失效）
 function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+  return dateStr === todayLocal();
 }
 
 // 判断是否是选中日期
@@ -93,7 +85,7 @@ export function ScheduleCalendar({
     } else {
       date.setMonth(date.getMonth() - 1);
     }
-    onDateChange(date.toLocaleDateString('zh-CN').replace(/\//g, '-'));
+    onDateChange(todayLocal(date));
   };
 
   // 下一天/下周/下月
@@ -106,12 +98,12 @@ export function ScheduleCalendar({
     } else {
       date.setMonth(date.getMonth() + 1);
     }
-    onDateChange(date.toLocaleDateString('zh-CN').replace(/\//g, '-'));
+    onDateChange(todayLocal(date));
   };
 
   // 回到今天
   const handleToday = () => {
-    onDateChange(new Date().toLocaleDateString('zh-CN').replace(/\//g, '-'));
+    onDateChange(todayLocal());
   };
 
   // 获取某天的排班记录
@@ -138,7 +130,7 @@ export function ScheduleCalendar({
         </div>
         {/* 日期网格 */}
         <div className="grid grid-cols-7">
-          {monthDateRange.map((dateStr, idx) => {
+          {monthDateRange.map((dateStr, _idx) => {
             const schedules = getScheduleForDate(dateStr);
             const today = isToday(dateStr);
             const selected = isSelected(dateStr, selectedDate);
