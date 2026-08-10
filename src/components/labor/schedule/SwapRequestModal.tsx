@@ -3,6 +3,8 @@ import { Calendar, Check, MessageSquare, Send, User, X, XCircle } from 'lucide-r
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import type { Staff, SwapRequest } from './types';
 import { Label } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
@@ -22,9 +24,6 @@ interface SwapRequestModalProps {
 }
 
 export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestModalProps) {
-  // 深度输入框样式
-  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
   const [formData, setFormData] = useState({
     requesterId: '',
     requesterName: '',
@@ -79,18 +78,18 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <Label className="block text-sm font-medium text-gray-600 mb-1">
           申请人
         </Label>
-        <select
-          value={formData.requesterId}
-          onChange={e => handleRequesterChange(e.target.value)}
-          className={deepInputClass}
-        >
-          <option value="">选择申请人</option>
-          {staffList.map(staff => (
-            <option key={staff.id} value={staff.id}>
-              {staff.name} - {staff.workZone}
-            </option>
-          ))}
-        </select>
+        <Select value={formData.requesterId} onValueChange={handleRequesterChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="选择申请人" />
+          </SelectTrigger>
+          <SelectContent>
+            {staffList.map(staff => (
+              <SelectItem key={staff.id} value={staff.id}>
+                {staff.name} - {staff.workZone}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 原排班日期 */}
@@ -118,18 +117,18 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <Label className="block text-sm font-medium text-gray-600 mb-1">
           调班对象
         </Label>
-        <select
-          value={formData.targetId}
-          onChange={e => handleTargetChange(e.target.value)}
-          className={deepInputClass}
-        >
-          <option value="">选择调班对象</option>
-          {staffList.filter(s => s.id !== formData.requesterId).map(staff => (
-            <option key={staff.id} value={staff.id}>
-              {staff.name} - {staff.workZone}
-            </option>
-          ))}
-        </select>
+        <Select value={formData.targetId} onValueChange={handleTargetChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="选择调班对象" />
+          </SelectTrigger>
+          <SelectContent>
+            {staffList.filter(s => s.id !== formData.requesterId).map(staff => (
+              <SelectItem key={staff.id} value={staff.id}>
+                {staff.name} - {staff.workZone}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 目标日期 */}
@@ -157,16 +156,13 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <Label className="block text-sm font-medium text-gray-600 mb-1">
           调班原因
         </Label>
-        <div className="relative">
-          <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-          <textarea
-            value={formData.reason}
-            onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-            placeholder="请输入调班原因..."
-            rows={3}
-            className={`${deepInputClass} w-full pl-9 pr-4 resize-none`}
-          />
-        </div>
+        <TextArea
+          value={formData.reason}
+          onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+          placeholder="请输入调班原因..."
+          rows={3}
+          className="w-full"
+        />
       </div>
     </div>
   );

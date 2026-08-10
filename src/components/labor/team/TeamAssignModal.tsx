@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui';
+import { UnifiedModal, Button } from '@/components/ui';
 import type { Team, UnassignedWorker } from './types';
-import { Button } from '../../../components/ui/button';
 
 interface TeamAssignModalProps {
   team: Team | null;

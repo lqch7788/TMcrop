@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { Team, TeamAssignment, TeamFilters, TeamPagination, UnassignedWorker } from '../types';
+import type { Team, TeamFilters, TeamPagination, UnassignedWorker } from '../types';
 import { useTeamManageStore } from '@/stores/useTeamManageStore';
 
 export interface UseTeamReturn {
@@ -44,12 +44,12 @@ export function useTeam(): UseTeamReturn {
     total: storeTeams.length,
   });
 
-  // 初次加载时初始化种子数据
+  // 初次加载时拉取数据（fetchData 为 store 稳定引用，不会触发重复加载）
   useEffect(() => {
     if (storeTeams.length === 0 && storeUnassigned.length === 0) {
       fetchData();
     }
-  }, []);
+  }, [fetchData, storeTeams.length, storeUnassigned.length]);
 
   // 过滤后的班组
   const filteredTeams = useMemo(() => {

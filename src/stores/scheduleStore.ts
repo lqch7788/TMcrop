@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { todayLocal } from '../lib/dateUtils';
 
 // ========== 类型定义 ==========
 
@@ -80,76 +81,6 @@ const DEFAULT_SHIFT_CONFIGS: ShiftConfig[] = [
   { name: '弹性', startTime: '09:00', endTime: '18:00', color: 'bg-purple-500' },
 ];
 
-// 生成模拟排班数据（基于真实工人列表，无工人时返回空数组）
-function generateMockSchedule(staffList: Staff[]): ScheduleRecord[] {
-  if (staffList.length === 0) return [];
-
-  const records: ScheduleRecord[] = [];
-  const today = new Date();
-  const shifts: ShiftType[] = ['早班', '中班', '晚班', '全天', '弹性'];
-
-  for (let weekOffset = 0; weekOffset < 2; weekOffset++) {
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + weekOffset * 7 + dayOffset);
-      const dateStr = date.toISOString().split('T')[0];
-
-      const staffCount = Math.min(2 + Math.floor(Math.random() * 3), staffList.length);
-      const selectedStaff = [...staffList].sort(() => Math.random() - 0.5).slice(0, staffCount);
-
-      selectedStaff.forEach((staff, idx) => {
-        const shift = shifts[Math.floor(Math.random() * shifts.length)];
-        const isToday = dateStr === today.toISOString().split('T')[0];
-        const isPast = date < today && !isToday;
-
-        records.push({
-          id: `SCH-${dateStr.replace(/-/g, '')}-${staff.id}`,
-          staffId: staff.id,
-          staffName: staff.name,
-          date: dateStr,
-          shift,
-          workZone: staff.workZone,
-          status: isPast ? '已执行' : (Math.random() > 0.1 ? '已排班' : '已取消'),
-          checkIn: isPast && Math.random() > 0.3 ? `${6 + idx}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}` : undefined,
-          checkOut: isPast && Math.random() > 0.5 ? `${14 + idx}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}` : undefined,
-        });
-      });
-    }
-  }
-
-  return records;
-}
-
-// 生成模拟调班申请（金庸武侠人物）
-function generateMockSwapRequests(): SwapRequest[] {
-  return [
-    {
-      id: 'SWAP001',
-      requesterId: 'S001',
-      requesterName: '郭靖',
-      targetId: 'S002',
-      targetName: '黄蓉',
-      originalDate: '2026-04-05',
-      targetDate: '2026-04-07',
-      reason: '家中有事，需要调班',
-      status: '待审批',
-      createTime: '2026-04-03 10:30:00',
-    },
-    {
-      id: 'SWAP002',
-      requesterId: 'S003',
-      requesterName: '杨过',
-      targetId: 'S004',
-      targetName: '小龙女',
-      originalDate: '2026-04-06',
-      targetDate: '2026-04-08',
-      reason: '临时会议冲突',
-      status: '已同意',
-      createTime: '2026-04-02 14:20:00',
-    },
-  ];
-}
-
 // ========== Store 类型 ==========
 
 interface ScheduleState {
@@ -166,10 +97,6 @@ interface ScheduleState {
   // 加载状态
   isLoading: boolean;
   error: string | null;
-
-  // 离线状态
-  isOnline: boolean;
-  pendingSyncCount: number;
 
   // Actions - 数据获取
   fetchSchedules: () => Promise<void>;
@@ -194,9 +121,6 @@ interface ScheduleState {
   setSelectedDate: (date: string) => void;
   setViewMode: (mode: 'month' | 'week' | 'day') => void;
 
-  // Actions - 同步
-  syncPendingChanges: () => Promise<void>;
-
   // Actions - 排班占用（派工联动）
   fetchOccupations: (date: string, teamId?: string) => Promise<void>;
   getWorkerScheduleStatus: (workerId: string, date: string) => {
@@ -215,9 +139,6 @@ interface ScheduleState {
     created: number;
     skipped: Array<{ workerId: string; reason: string }>;
   }>;
-
-  // 内部方法
-  _initializeSeedData: () => void;
 }
 
 // ========== Store 实现 ==========
@@ -229,12 +150,10 @@ export const useScheduleStore = create<ScheduleState>()(
       shiftConfigs: DEFAULT_SHIFT_CONFIGS,
       staffList: [],
       swapRequests: [],
-      selectedDate: new Date().toISOString().split('T')[0],
+      selectedDate: todayLocal(),
       viewMode: 'week',
       isLoading: false,
       error: null,
-      isOnline: navigator.onLine,
-      pendingSyncCount: 0,
 
       // 排班占用（派工联动，按日期缓存，2 分钟 TTL）
       occupations: {} as Record<string, ScheduleOccupation[]>,
@@ -247,44 +166,21 @@ export const useScheduleStore = create<ScheduleState>()(
       fetchSchedules: async () => {
         set({ isLoading: true, error: null });
 
-        // 先从真实工人库加载工人列表
+        // 先从真实工人库加载工人列表（供排班表单选择）
         await get().loadStaffFromWorkers();
 
         try {
-          // 尝试从API获取
-          const apiSchedules = await enhancedApiClient.get<ScheduleRecord[]>('/schedules');
+          // 从 API 获取（V2.1 铁律：API 是数据唯一来源，失败不降级为 mock）
+          const apiSchedules = await enhancedApiClient.get<ScheduleApiRow[]>('/schedules');
 
-          if (apiSchedules && Array.isArray(apiSchedules) && apiSchedules.length > 0) {
-            // 规范化API返回的snake_case数据为camelCase
-            const normalizedSchedules = apiSchedules.map((s: any) => ({
-              ...s,
-              staffId: s.staff_id || s.staffId,
-              staffName: s.staff_name || s.staffName,
-              workZone: s.work_zone || s.workZone,
-              checkIn: s.check_in || s.checkIn,
-              checkOut: s.check_out || s.checkOut,
-            }));
-            set({ schedules: normalizedSchedules, isLoading: false });
-            return;
-          }
-
-          // API返回空或失败，使用本地数据
-          const localSchedules = get().schedules;
-          if (localSchedules.length === 0) {
-            // 首次使用，初始化种子数据（使用真实工人列表）
-            get()._initializeSeedData();
-          } else {
-            set({ isLoading: false });
-          }
+          // 规范化API返回的snake_case数据为camelCase
+          const normalizedSchedules = (apiSchedules || []).map(row => normalizeScheduleRow(row));
+          set({ schedules: normalizedSchedules, isLoading: false });
         } catch (error) {
-          console.warn('[ScheduleStore] API获取失败，使用本地数据:', error);
-
-          // API失败，检查本地是否有数据
-          const localSchedules = get().schedules;
-          if (localSchedules.length === 0) {
-            get()._initializeSeedData();
-          }
-          set({ error: (error as Error).message, isLoading: false });
+          // 失败显式抛错（Fail Loud），错误信息已写入 store.error
+          const message = (error as Error).message;
+          set({ error: message, isLoading: false });
+          throw error;
         }
       },
 
@@ -316,20 +212,13 @@ export const useScheduleStore = create<ScheduleState>()(
             check_in: record.checkIn,
             check_out: record.checkOut,
           };
-          const savedRecord = await enhancedApiClient.post<ScheduleRecord>(
+          const savedRecord = await enhancedApiClient.post<ScheduleApiRow>(
             '/schedules',
             apiRecord
           );
 
           // API成功，用真实ID替换临时ID，并规范化字段
-          const normalizedRecord = {
-            ...savedRecord,
-            staffId: (savedRecord as any).staff_id || (savedRecord as any).staffId,
-            staffName: (savedRecord as any).staff_name || (savedRecord as any).staffName,
-            workZone: (savedRecord as any).work_zone || (savedRecord as any).workZone,
-            checkIn: (savedRecord as any).check_in || (savedRecord as any).checkIn,
-            checkOut: (savedRecord as any).check_out || (savedRecord as any).checkOut,
-          };
+          const normalizedRecord = normalizeScheduleRow(savedRecord);
           set(state => ({
             schedules: state.schedules.map(s =>
               s.id === tempId ? normalizedRecord : s
@@ -341,21 +230,20 @@ export const useScheduleStore = create<ScheduleState>()(
 
           return normalizedRecord;
         } catch (error) {
-          console.warn('[ScheduleStore] 创建排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
-
-          // 离线队列会处理同步，无需额外操作
-          // 标记为待同步
+          // 失败回滚乐观更新（V2.1 铁律：不允许本地假数据残留），并显式抛错（Fail Loud）
           set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
+            schedules: state.schedules.filter(s => s.id !== tempId),
+            error: (error as Error).message,
           }));
-
-          return newRecord;
+          throw error;
         }
       },
 
       updateSchedule: async (id, updates) => {
+        // 记录原值（失败时回滚用）
+        const original = get().schedules.find(s => s.id === id);
         // 先乐观更新本地
-        const targetDate = get().schedules.find(s => s.id === id)?.date;
+        const targetDate = original?.date;
         const newDate = updates.date ?? targetDate;
         set(state => ({
           schedules: state.schedules.map(s =>
@@ -376,25 +264,21 @@ export const useScheduleStore = create<ScheduleState>()(
             }, 0);
           }
         } catch (error) {
-          console.warn('[ScheduleStore] 更新排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
+          // 失败回滚乐观更新，并显式抛错（Fail Loud）
           set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
+            schedules: original
+              ? state.schedules.map(s => (s.id === id ? original : s))
+              : state.schedules,
+            error: (error as Error).message,
           }));
-          // 失败时也按相同逻辑失效缓存，保持一致性
-          const datesToInvalidate = new Set<string>();
-          if (targetDate) datesToInvalidate.add(targetDate);
-          if (newDate && newDate !== targetDate) datesToInvalidate.add(newDate);
-          if (datesToInvalidate.size > 0) {
-            setTimeout(() => {
-              datesToInvalidate.forEach(d => get().invalidateOccupations(d));
-            }, 0);
-          }
+          throw error;
         }
       },
 
       deleteSchedule: async (id) => {
-        // 先乐观更新本地
-        const targetDate = get().schedules.find(s => s.id === id)?.date;
+        // 记录原值（失败时回滚用）
+        const original = get().schedules.find(s => s.id === id);
+        const targetDate = original?.date;
         set(state => ({
           schedules: state.schedules.filter(s => s.id !== id),
         }));
@@ -406,13 +290,12 @@ export const useScheduleStore = create<ScheduleState>()(
             setTimeout(() => get().invalidateOccupations(targetDate), 0);
           }
         } catch (error) {
-          console.warn('[ScheduleStore] 删除排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
+          // 失败回滚乐观删除，并显式抛错（Fail Loud）
           set(state => ({
-            pendingSyncCount: state.pendingSyncCount + 1,
+            schedules: original ? [...state.schedules, original] : state.schedules,
+            error: (error as Error).message,
           }));
-          if (targetDate) {
-            setTimeout(() => get().invalidateOccupations(targetDate), 0);
-          }
+          throw error;
         }
       },
 
@@ -454,7 +337,12 @@ export const useScheduleStore = create<ScheduleState>()(
         try {
           await enhancedApiClient.post('/schedules/swap-requests', newRequest);
         } catch (error) {
-          console.warn('[ScheduleStore] 提交调班申请API失败:', error);
+          // 失败回滚乐观添加，并显式抛错（Fail Loud）
+          set(state => ({
+            swapRequests: state.swapRequests.filter(r => r.id !== newRequest.id),
+            error: (error as Error).message,
+          }));
+          throw error;
         }
 
         // 联动失效：派工占用缓存（originalDate + targetDate 两个日期）
@@ -501,7 +389,14 @@ export const useScheduleStore = create<ScheduleState>()(
             }
           }
         } catch (error) {
-          console.warn('[ScheduleStore] 处理调班申请API失败:', error);
+          // 失败回滚审批状态，并显式抛错（Fail Loud）
+          set(state => ({
+            swapRequests: state.swapRequests.map(req =>
+              req.id === id ? { ...req, status: request?.status ?? '待审批' } : req
+            ),
+            error: (error as Error).message,
+          }));
+          throw error;
         }
       },
 
@@ -605,18 +500,6 @@ export const useScheduleStore = create<ScheduleState>()(
 
       // ========== 内部方法 ==========
 
-      _initializeSeedData: () => {
-        const { staffList } = get();
-        const mockSchedules = generateMockSchedule(staffList);
-        const mockSwapRequests = generateMockSwapRequests();
-
-        set({
-          schedules: mockSchedules,
-          swapRequests: mockSwapRequests,
-          isLoading: false,
-        });
-      },
-
       // 从 useWorkerStore 加载真实工人列表，映射为排班 Staff 格式
       loadStaffFromWorkers: async () => {
         try {
@@ -630,7 +513,7 @@ export const useScheduleStore = create<ScheduleState>()(
           }
 
           if (workers && workers.length > 0) {
-            const staffList: Staff[] = workers.map((w: any) => ({
+            const staffList: Staff[] = workers.map((w: WorkerLike) => ({
               id: w.id || w.workerId || '',
               name: w.name || '',
               workZone: w.department || w.workArea || '',
@@ -646,6 +529,56 @@ export const useScheduleStore = create<ScheduleState>()(
 );
 
 // ========== 辅助函数 ==========
+
+// ========== Store 接收的后端行类型（snake_case 宽松类型，避免 any） ==========
+
+/** 排班 API 返回行：含 snake_case 字段，兼容 camelCase（宽松类型避免 any） */
+interface ScheduleApiRow {
+  id: string;
+  staff_id?: string | null;
+  staff_name?: string | null;
+  work_zone?: string | null;
+  check_in?: string | null;
+  check_out?: string | null;
+  staffId?: string | null;
+  staffName?: string | null;
+  workZone?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  date: string;
+  shift: ShiftType;
+  status: ScheduleStatus;
+  remarks?: string | null;
+}
+
+/** 工人列表结构（来自 useWorkerStore，宽松类型避免 any） */
+interface WorkerLike {
+  id?: string;
+  workerId?: string;
+  name?: string;
+  department?: string;
+  workArea?: string;
+}
+
+// ========== 辅助函数 ==========
+
+/**
+ * 规范化后端 snake_case 排班行为前端 camelCase 格式
+ */
+function normalizeScheduleRow(row: ScheduleApiRow): ScheduleRecord {
+  return {
+    id: row.id,
+    staffId: row.staff_id ?? row.staffId ?? '',
+    staffName: row.staff_name ?? row.staffName ?? '',
+    date: row.date,
+    shift: row.shift,
+    workZone: row.work_zone ?? row.workZone ?? '',
+    status: row.status,
+    checkIn: row.check_in ?? row.checkIn ?? undefined,
+    checkOut: row.check_out ?? row.checkOut ?? undefined,
+    remarks: row.remarks ?? undefined,
+  };
+}
 
 /**
  * 获取指定日期的排班

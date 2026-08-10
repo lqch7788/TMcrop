@@ -91,7 +91,8 @@ export function WorkerAttendancePage() {
 
   useEffect(() => {
     if (schedules.length === 0) {
-      fetchSchedules();
+      // 失败时错误已写入 store.error，此处 catch 防止未捕获的 Promise rejection
+      fetchSchedules().catch(() => {});
     }
   }, [schedules.length, fetchSchedules]);
 

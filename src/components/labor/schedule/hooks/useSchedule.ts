@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react';
 import { useScheduleStore, getWeekDateRange, getMonthDateRange } from '@/stores';
-import type { ScheduleRecord, ShiftType, SwapRequest } from '../types';
 
 export interface UseScheduleProps {
   initialDate?: string;
@@ -30,9 +29,9 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
   const submitSwapRequestAction = useScheduleStore((s) => s.submitSwapRequest);
   const handleSwapRequest = useScheduleStore((s) => s.handleSwapRequest);
 
-  // 组件挂载时初始化数据
+  // 组件挂载时初始化数据（失败时错误已写入 store.error，此处仅阻止未捕获的 Promise rejection）
   useEffect(() => {
-    fetchSchedules();
+    fetchSchedules().catch(() => {});
   }, [fetchSchedules]);
 
   // 同步初始日期
@@ -52,30 +51,18 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
     return schedules.find(record => record.staffId === staffId && record.date === date);
   };
 
-  // 添加排班（同步封装，hook层保持同步API）
-  const addSchedule = (record: Omit<ScheduleRecord, 'id'>) => {
-    const newRecord: ScheduleRecord = {
-      ...record,
-      id: `SCH-${record.date.replace(/-/g, '')}-${record.staffId}-${Date.now()}`,
-    };
-    addScheduleAction(newRecord);
-    return newRecord;
-  };
+  // 添加排班（透传 store action：id 由 store 内部生成临时 id，API 成功后替换为真实 id）
+  // ★ 修复（审核 P1-7）：原 hook 层生成 SCH-xxx 假 id 再传给 store，属无效口径，已移除
+  const addSchedule = addScheduleAction;
 
-  // 取消排班
-  const cancelScheduleById = (id: string) => {
-    cancelSchedule(id);
-  };
+  // 取消排班（透传 store action，保留原命名）
+  const cancelScheduleById = cancelSchedule;
 
-  // 删除排班
-  const deleteScheduleById = (id: string) => {
-    deleteSchedule(id);
-  };
+  // 删除排班（透传 store action，保留原命名）
+  const deleteScheduleById = deleteSchedule;
 
-  // 提交调班申请（同步封装）
-  const submitSwapRequest = (request: Omit<SwapRequest, 'id' | 'status' | 'createTime'>) => {
-    submitSwapRequestAction(request);
-  };
+  // 提交调班申请（透传 store action，错误由调用方 catch）
+  const submitSwapRequest = submitSwapRequestAction;
 
   // 获取周视图日期范围（保留useMemo优化）
   const weekDateRange = useMemo(() => getWeekDateRange(selectedDate), [selectedDate]);
