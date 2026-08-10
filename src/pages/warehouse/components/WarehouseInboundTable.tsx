@@ -103,14 +103,14 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                   {/* 选择框 */}
                   {hasActiveMode && (
                     <TableCell className="px-4 py-3 whitespace-nowrap">
-                      {deleteMode && record.status !== 'pending' ? (
-                        <span className="text-gray-300 text-xs">—</span>
-                      ) : (
-                        <Checkbox
-                          checked={selectedRows.includes(record.id)}
-                          onCheckedChange={() => onSelectRow(record.id)}
-                        />
-                      )}
+                      {/* 2026-08-10 修复：删除模式取消仅允许 pending 的限制。
+                          原逻辑 `deleteMode && status !== 'pending' ? '—' : <Checkbox/>`
+                          导致非 pending 行永远显示 "—" 占位符，用户看不到复选框、无法删除入库单。
+                          后端 DELETE 不限制状态，确认弹窗仍做二次确认，安全可控。 */}
+                      <Checkbox
+                        checked={selectedRows.includes(record.id)}
+                        onCheckedChange={() => onSelectRow(record.id)}
+                      />
                     </TableCell>
                   )}
 
