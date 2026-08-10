@@ -4159,6 +4159,29 @@ function fixApprovedProductionPlanStatus(): void {
 
   // 排班调度 × 班组分配贯通（2026-07-30）：列添加完成，必须持久化（sql.js 内存数据库）
   saveDatabase();
+
+  // ========== 2026-08-10：material_requests 表加 reviewer 列（领料编辑保存需要）==========
+  // schema.ts 的 CREATE TABLE IF NOT EXISTS 不含此列；老 DB 启动时补上
+  const mrReviewerColumnsToAdd = [
+    { name: 'reviewer', sql: 'ALTER TABLE material_requests ADD COLUMN reviewer TEXT' },
+  ];
+  for (const col of mrReviewerColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ material_requests 表添加 ${col.name} 列`);
+    } catch (addErr: unknown) {
+      const message = addErr instanceof Error ? addErr.message : String(addErr);
+      if (message.includes('duplicate column')) {
+        seedLog.skip(`• material_requests.${col.name} 列已存在`);
+        continue;
+      }
+      seedLog.error(`material_requests.${col.name} 列添加失败:`, message);
+      throw addErr;
+    }
+  }
+
+  // 列添加完成，必须持久化
+  saveDatabase();
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

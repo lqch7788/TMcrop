@@ -146,7 +146,7 @@ export function ApplicationTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">选区域(多选)</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区域/用途</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
               {/* 2026-08-10：移除"生产计划批次号"列——改为选区域(多选)展示 plantAreas */}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
@@ -195,10 +195,14 @@ export function ApplicationTable({
                         {item.plantAreas.map((a: any) => (
                           <span
                             key={a.id}
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-[10px] text-emerald-700"
-                            title={`${a.cropName} · ${a.area} · ${a.code}`}
+                            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 border rounded text-[10px] ${
+                              a.type === 'custom'
+                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                            }`}
+                            title={a.type === 'custom' ? a.cropName : `${a.cropName} · ${a.area} · ${a.code}`}
                           >
-                            {a.type === 'planting' ? '🌱' : '🌿'} {a.cropName}
+                            {a.type === 'planting' ? '🌱' : a.type === 'seedling' ? '🌿' : '📝'} {a.cropName}
                           </span>
                         ))}
                       </div>

@@ -52,10 +52,14 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
               {record.plantAreas.map((a) => (
                 <span
                   key={a.id}
-                  className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-700"
-                  title={`${a.cropName} · ${a.area} · ${a.code}`}
+                  className={`inline-flex items-center gap-0.5 px-2 py-0.5 border rounded-full text-xs ${
+                    a.type === 'custom'
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  }`}
+                  title={a.type === 'custom' ? a.cropName : `${a.cropName} · ${a.area} · ${a.code}`}
                 >
-                  {a.type === 'planting' ? '🌱' : '🌿'} {a.cropName} · {a.area}
+                  {a.type === 'planting' ? '🌱' : a.type === 'seedling' ? '🌿' : '📝'} {a.cropName}{a.type !== 'custom' ? ` · ${a.area}` : ''}
                 </span>
               ))}
             </div>

@@ -43,6 +43,34 @@ const FIELD_MAP: Record<string, string> = {
   updateTime: 'updateTime',
 };
 
+/** 2026-08-10 修复：写操作字段映射——前端 camelCase → DB snake_case 列名。
+ *  FIELD_MAP 是"读映射"（DB响应camelCase → 前端字段），denormalize 不应反向用它，
+ *  因为反向产物是中间 camelCase 名（如 applicantName），不是 DB 实际列名（applicant_name）。 */
+const WRITE_FIELD_MAP: Record<string, string> = {
+  code: 'request_code',
+  title: 'request_title',
+  requestType: 'request_type',
+  departmentId: 'department_id',
+  department: 'department_name',
+  applicantId: 'applicant_id',
+  applicant: 'applicant_name',
+  date: 'apply_date',
+  expectedDate: 'expected_date',
+  warehouseId: 'warehouse_id',
+  warehouseLocation: 'warehouse_name',
+  productionBatchCode: 'production_batch_code',
+  totalAmount: 'total_amount',
+  priority: 'priority',
+  rawStatus: 'status',
+  approvalStatus: 'approval_status',
+  remarks: 'remarks',
+  attachments: 'attachments',
+  materials: 'materials',
+  reviewer: 'reviewer',
+  createBy: 'create_by',
+  updateTime: 'update_time',
+};
+
 // ==================== 规范化函数 ====================
 
 /** 2026-08-10：解析 plant_area 字段——支持 JSON 数组(新)和纯字符串(旧数据) */
@@ -118,17 +146,19 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   return result as MaterialReceivingRecord;
 }
 
-/** 前端数据 → 后端数据 */
-function denormalize(data: Partial<MaterialReceivingRecord>): Record<string, unknown> {
-  const reverse: Record<string, string> = {};
-  for (const [snake, camel] of Object.entries(FIELD_MAP)) {
-    reverse[camel] = snake;
-  }
+/** 前端数据 → 后端数据（DB snake_case 列名） */
+function denormalize(data: Partial<MaterialReceivingRecord> & Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    const backendKey = reverse[key] || key;
+    // 优先用 WRITE_FIELD_MAP（精确的 camelCase → snake_case 列名），
+    // 若不在映射中则用原 key（可能是 DB 已有的 snake_case 或特殊字段）
+    const backendKey = WRITE_FIELD_MAP[key] || key;
     result[backendKey] = value;
   }
+  // 过滤前端专用字段（不存在于 DB 列中）
+  delete result.statusClass;
+  delete result.plantAreas;
+  delete result.plantAreaRaw;
   return result;
 }
 
@@ -240,19 +270,22 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
     // 更新
     updateItem: async (id, updates) => {
       const body = denormalize(updates);
-      // 2026-08-10：plantAreas → plant_area (JSON 字符串)，保留 production_batch_code=null 占位（后端 SQL 仍引用）
+      // plantAreas → plant_area (JSON 字符串)，denormalize 已过滤 plantAreas，手动设
       if (Array.isArray(updates.plantAreas)) {
         body.plant_area = JSON.stringify(updates.plantAreas);
       }
-      delete body.plantAreas;
-      delete body.plantAreaRaw;
+      // materials 数组 → JSON 字符串（DB 列是 TEXT，存的是 JSON）
+      if (body.materials !== undefined) {
+        body.materials = JSON.stringify(body.materials);
+      }
       body.production_batch_code = null;
-      // 2026-08-10 修复：PUT 是动态 fields 拼接，但保险起见显式补全关键字段
       body.update_time = new Date().toISOString();
 
+      // 乐观更新：去 statusClass（前端专用）再用 ...updates 合并
+      const { statusClass: _sc, ...cleanUpdates } = updates as any;
       set((s) => ({
         items: s.items.map((i) =>
-          i.id === id || i.code === id ? { ...i, ...updates } : i
+          i.id === id || i.code === id ? { ...i, ...cleanUpdates } : i
         ),
       }));
 

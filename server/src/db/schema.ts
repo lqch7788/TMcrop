@@ -990,6 +990,7 @@ export function initializeDatabase() {
       remarks TEXT,
       attachments TEXT,
       materials TEXT,
+      reviewer TEXT,
       create_by TEXT,
       create_time TEXT,
       update_time TEXT
