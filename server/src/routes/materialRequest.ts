@@ -21,23 +21,23 @@ function generateMaterialRequestCode(): string {
   const day = String(now.getDate()).padStart(2, '0');
   const dateStr = `${year}${month}${day}`;
 
-  // 查询当日最大序号: MR + 8位日期 + - + 3位序号 = 14 字符
+  // 2026-08-10：流水号 3 位 → 4 位。格式：MR + 8位日期 + - + 4位序号 = 15 字符
   const db = getDatabase();
-  const pattern = `MR${dateStr}-___`;
+  const pattern = `MR${dateStr}-____`;
   const stmt = db.prepare(`
     SELECT request_code FROM material_requests
-    WHERE request_code LIKE ? AND LENGTH(request_code) = 14
+    WHERE request_code LIKE ? AND LENGTH(request_code) = 15
     ORDER BY request_code DESC LIMIT 1
   `);
   stmt.bind([pattern]);
   let maxSerial = 0;
   if (stmt.step()) {
     const row = stmt.getAsObject() as { request_code: string };
-    maxSerial = parseInt(row.request_code.slice(-3), 10) || 0;
+    maxSerial = parseInt(row.request_code.slice(-4), 10) || 0;
   }
   stmt.free();
 
-  const seq = String(maxSerial + 1).padStart(3, '0');
+  const seq = String(maxSerial + 1).padStart(4, '0');
   return `MR${dateStr}-${seq}`;
 }
 
@@ -179,13 +179,31 @@ router.post('/', (req: Request, res: Response) => {
     } = req.body;
 
     const now = new Date().toISOString();
-    const requestCode = request_code || generateMaterialRequestCode();
+    let requestCode = request_code || generateMaterialRequestCode();
     // 2026-08-10 修复：id 默认等于 request_code（前端只传 request_code，避免 id 与 code 存不同值）
-    const newId = id || requestCode;
+    let newId = id || requestCode;
+    // 2026-08-10 修复：自动验重 —— 极端并发下前端拿到的列表可能落后于后端实际状态，
+    //   再次确认 code 不重复；若重复则循环递增生成新 code（PRIMARY KEY 冲突会直接 500）
+    const db = getDatabase();
+    const checkExists = (id: string) => {
+      // sql.js 的 stmt.bind() 不会自动 reset，循环里复用同一 stmt 会失效 —— 每次重新 prepare
+      const stmt = db.prepare('SELECT 1 FROM material_requests WHERE id = ? LIMIT 1');
+      stmt.bind([id]);
+      const exists = stmt.step();
+      stmt.free();
+      return exists;
+    };
+    for (let safety = 0; safety < 100; safety++) {
+      if (!checkExists(newId)) break;
+      // code 重复 —— 解析尾部序号 +1 重新生成（仅适用于 MR+日期+序号 格式）
+      const m = newId.match(/^(MR\d{8}-)(\d+)$/);
+      if (!m) break;
+      const nextSerial = String(parseInt(m[2], 10) + 1).padStart(m[2].length, '0');
+      newId = m[1] + nextSerial;
+      requestCode = newId;
+    }
 
     console.log('【DEBUG】准备创建物料申请:', { newId, requestCode, request_title, request_type });
-
-    const db = getDatabase();
 
     // 检查表是否存在
     try {

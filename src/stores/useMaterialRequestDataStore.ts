@@ -213,19 +213,18 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
 
         const result = await enhancedApiClient.post<Record<string, unknown>>('/material-requests', body);
 
+        // 2026-08-10 修复：normalize FIELD_MAP 改用 camelCase key（适配 camelCaseResponse 中间件），
+        //   所以传给 normalize 的对象必须用 camelCase 字段名（之前用 snake_case 导致主字段全空）
         const newItem = normalize({
           id: result?.data?.id || result?.id || `MR${Date.now()}`,
-          // 2026-08-10 修复：camelCaseResponseMiddleware 把后端响应转 camelCase
-          // 旧代码读 result.data.request_code（snake_case）→ undefined → fallback 到前端生成的 body.request_code（不同值）
-          // 修复：读 result.data.requestCode（camelCase）
-          request_code: result?.data?.requestCode || body.request_code,
-          request_title: body.request_title,
-          apply_date: body.apply_date,
-          applicant_name: body.applicant_name,
-          department_name: body.department_name,
-          warehouse_name: body.warehouse_name,
-          plant_area: body.plant_area,
-          approval_status: 'pending',
+          requestCode: result?.data?.requestCode || body.request_code,
+          requestTitle: body.request_title,
+          applyDate: body.apply_date,
+          applicantName: body.applicant_name,
+          departmentName: body.department_name,
+          warehouseName: body.warehouse_name,
+          plantArea: body.plant_area,
+          approvalStatus: 'pending',
           status: 'draft',
           materials: item.materials || [],
         } as Record<string, unknown>);

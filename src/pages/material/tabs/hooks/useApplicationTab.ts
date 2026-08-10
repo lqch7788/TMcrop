@@ -95,6 +95,16 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MaterialReceivingRecord | null>(null);
 
+  // 2026-08-10 修复：弹窗打开时自动 reset addForm + 按后端 MR 格式生成 code
+  //   注意：必须放在 showAddModal 声明之后，否则依赖数组里 [showAddModal] 会触发 TDZ
+  useEffect(() => {
+    if (showAddModal) {
+      setAddForm(getDefaultAddForm());
+      setTimeout(() => handleGenerateAddCode(), 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddModal]);
+
   // ============================================
   // 删除确认状态
   // ============================================
@@ -589,19 +599,33 @@ export function useApplicationTab(): UseApplicationTabReturn {
   //   与后端 `MR${YYYYMMDD}-${3位序号}`（14 字符）不一致，导致列表显示与弹窗不同。
   //   改为按后端 generateMaterialRequestCode 格式生成（MR+8位日期+-连字符+3位序号）
   // ============================================
-  const handleGenerateAddCode = () => {
+  const handleGenerateAddCode = useCallback(() => {
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    // 当日序号 = 当日最大 + 1（避免重复）
+    // 2026-08-10：流水号 3 位 → 4 位。格式：MR + 8位日期 + - + 4位序号 = 15 字符
     const todayPrefix = `MR${dateStr}-`;
-    const todaySerials = (materialData || [])
-      .map((r) => r.code)
-      .filter((c) => typeof c === 'string' && c.startsWith(todayPrefix) && c.length === 14)
-      .map((c) => parseInt(c.slice(-3), 10) || 0);
-    const nextSerial = (todaySerials.length > 0 ? Math.max(...todaySerials) : 0) + 1;
-    const newCode = `${todayPrefix}${String(nextSerial).padStart(3, '0')}`;
-    setAddForm({ ...addForm, code: newCode });
-  };
+    const existingCodes = new Set(
+      (materialData || [])
+        .map((r) => r.code)
+        .filter((c) => typeof c === 'string' && c.startsWith(todayPrefix) && c.length === 15)
+    );
+    // 2026-08-10 修复：自动验重 —— 从 maxSerial+1 开始 while 循环，跳过已存在 code，
+    //   防止并发保存另一条相同 maxSerial+1 导致冲突
+    let serial = 0;
+    for (const c of existingCodes) {
+      const n = parseInt(c.slice(-4), 10) || 0;
+      if (n > serial) serial = n;
+    }
+    serial += 1;
+    let newCode = `${todayPrefix}${String(serial).padStart(4, '0')}`;
+    // 防御性 while 循环：极端并发下 (前端拿到的列表落后于后端实际状态) 也保证不重复
+    while (existingCodes.has(newCode)) {
+      serial += 1;
+      newCode = `${todayPrefix}${String(serial).padStart(4, '0')}`;
+    }
+    // 2026-08-10 修复：useCallback + 函数式 setState 避免 useEffect 闭包 stale addForm
+    setAddForm((prev) => ({ ...prev, code: newCode }));
+  }, [materialData, setAddForm]);
 
   // ============================================
   // 保存新增
@@ -622,6 +646,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
 
     // 通过 Zustand Store 调用 API 创建记录（V2.1 铁律：API 直连无缓存）
     const newRecord = await storeAddItem({
+      code: addForm.code,  // 2026-08-10 修复：传递 code（弹窗 useEffect 自动生成的 MR 格式），之前不传导致 fallback 到 MR${Date.now()}
       date: addForm.date,
       applicant: applicantName,
       department: addForm.department,
@@ -637,6 +662,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
       await showAlert('保存领料单失败，请重试');
       return;
     }
+
+    // 2026-08-10 修复：保存成功后从后端 reload 列表，避免 addItem 内部 normalize 字段错位导致主字段全空
+    await loadItems();
 
     // 同步创建审批记录（核心联动功能）
     if (approvalContext) {
