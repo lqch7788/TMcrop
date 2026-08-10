@@ -9,39 +9,64 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
-import type { MaterialReceivingRecord, MaterialItem } from '../types/materialReceiving';
+import type { MaterialReceivingRecord, MaterialItem, SelectedArea } from '../types/materialReceiving';
 
 // ==================== 字段映射表 ====================
 
-/** 后端(snake_case) → 前端(camelCase) 字段名映射 */
+/** 2026-08-10 修复：后端响应经 camelCaseResponseMiddleware 转换（plant_area → plantArea），
+ *  所以 FIELD_MAP 键必须用 camelCase 形式（前端读到的实际 key），目标值仍是前端字段名。
+ *  之前用 snake_case key 导致 `plantAreaRaw` 永远是 undefined → 选区域信息丢失 */
 const FIELD_MAP: Record<string, string> = {
   id: 'id',
-  request_code: 'code',
-  request_title: 'title',
-  request_type: 'requestType',
-  department_id: 'departmentId',
-  department_name: 'department',
-  applicant_id: 'applicantId',
-  applicant_name: 'applicant',
-  apply_date: 'date',
-  expected_date: 'expectedDate',
-  warehouse_id: 'warehouseId',
-  warehouse_name: 'warehouseLocation',
-  plant_area: 'plantArea',
-  production_batch_code: 'productionBatchCode',
-  total_amount: 'totalAmount',
+  requestCode: 'code',
+  requestTitle: 'title',
+  requestType: 'requestType',
+  departmentId: 'departmentId',
+  departmentName: 'department',
+  applicantId: 'applicantId',
+  applicantName: 'applicant',
+  applyDate: 'date',
+  expectedDate: 'expectedDate',
+  warehouseId: 'warehouseId',
+  warehouseName: 'warehouseLocation',
+  plantArea: 'plantAreaRaw',     // 后端返回 plantArea（camelCase），normalize 阶段再解析为 plantAreas
+  productionBatchCode: 'productionBatchCode',
+  totalAmount: 'totalAmount',
   priority: 'priority',
   status: 'rawStatus',
-  approval_status: 'approvalStatus',
+  approvalStatus: 'approvalStatus',
   remarks: 'remarks',
   attachments: 'attachments',
   materials: 'materials',
-  create_by: 'createBy',
-  create_time: 'createTime',
-  update_time: 'updateTime',
+  createBy: 'createBy',
+  createTime: 'createTime',
+  updateTime: 'updateTime',
 };
 
 // ==================== 规范化函数 ====================
+
+/** 2026-08-10：解析 plant_area 字段——支持 JSON 数组(新)和纯字符串(旧数据) */
+function parsePlantArea(raw: unknown): SelectedArea[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    // 已经 SelectedArea[]
+    return raw as SelectedArea[];
+  }
+  if (typeof raw !== 'string') return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  // 尝试解析为 JSON 数组
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter((a: any) => a && a.id);
+    } catch {
+      // 解析失败则回退为纯字符串处理
+    }
+  }
+  // 旧数据纯字符串：包装为单条 unknown area(无 id，UI 不会显示删除按钮)
+  return [];
+}
 
 /** 后端数据 → 前端数据 */
 function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
@@ -57,6 +82,9 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   result.applicant = result.applicant || db.applicantName || db.applicant || '';
   result.department = result.department || db.departmentName || db.department || '';
   result.warehouseLocation = result.warehouseLocation || db.warehouseName || db.warehouseLocation || '';
+
+  // 2026-08-10：解析 plant_area 字符串为 plantAreas 数组
+  result.plantAreas = parsePlantArea(result.plantAreaRaw ?? db.plant_area);
 
   // 状态字段派生
   const approvalStatus = String(result.approvalStatus ?? db.approval_status ?? '');
@@ -151,27 +179,52 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
     addItem: async (item) => {
       try {
         const body = denormalize(item);
+        // 2026-08-10：清理 denormalize 多余字段，再写 plantArea
+        delete body.plantAreas;
+        delete body.plantAreaRaw;
+        // 2026-08-10 修复：保留 production_batch_code=null 占位（后端 SQL 24 个 ?，删值会触发 bind 错误）
+        body.production_batch_code = null;
+        // 2026-08-10 修复：id 默认 = request_code（不传 id，后端 newId = requestCode；之前前端传 MR${Date.now()} 作 id，导致 id 列与 code 列存了不同值）
         body.request_code = body.request_code || item.code || `MR${Date.now()}`;
+        delete body.id;
         body.request_type = body.request_type || '领料申请';
-        body.applicant_name = body.applicant_name || item.applicant || '';
+        // 2026-08-10 修复：request_title NOT NULL 约束——前端无 title 字段，给默认占位
+        body.request_title = body.request_title || item.title || '领料申请';
+        body.department_id = body.department_id || null;
         body.department_name = body.department_name || item.department || '';
-        body.warehouse_name = body.warehouse_name || item.warehouseLocation || '';
+        body.applicant_id = body.applicant_id || null;
+        body.applicant_name = body.applicant_name || item.applicant || '';
         body.apply_date = body.apply_date || item.date || new Date().toISOString().split('T')[0];
-        body.status = 'draft';
-        body.approval_status = 'pending';
+        body.expected_date = body.expected_date || null;
+        body.warehouse_id = body.warehouse_id || null;
+        body.warehouse_name = body.warehouse_name || item.warehouseLocation || '';
+        // 2026-08-10：plantArea → plant_area (JSON 字符串)
+        body.plant_area = JSON.stringify(item.plantAreas || []);
+        body.total_amount = body.total_amount || 0;
+        body.priority = body.priority || 'medium';
+        body.status = body.status || 'draft';
+        body.approval_status = body.approval_status || 'pending';
+        body.remarks = body.remarks || null;
+        body.attachments = body.attachments || null;
+        body.create_by = body.create_by || null;
+        body.create_time = new Date().toISOString();
+        body.update_time = new Date().toISOString();
         body.materials = JSON.stringify(body.materials || item.materials || []);
 
         const result = await enhancedApiClient.post<Record<string, unknown>>('/material-requests', body);
 
         const newItem = normalize({
           id: result?.data?.id || result?.id || `MR${Date.now()}`,
-          request_code: result?.data?.request_code || body.request_code,
+          // 2026-08-10 修复：camelCaseResponseMiddleware 把后端响应转 camelCase
+          // 旧代码读 result.data.request_code（snake_case）→ undefined → fallback 到前端生成的 body.request_code（不同值）
+          // 修复：读 result.data.requestCode（camelCase）
+          request_code: result?.data?.requestCode || body.request_code,
+          request_title: body.request_title,
           apply_date: body.apply_date,
           applicant_name: body.applicant_name,
           department_name: body.department_name,
           warehouse_name: body.warehouse_name,
-          plant_area: body.plant_area || item.plantArea || '',
-          production_batch_code: body.production_batch_code || item.productionBatchCode || '',
+          plant_area: body.plant_area,
           approval_status: 'pending',
           status: 'draft',
           materials: item.materials || [],
@@ -188,6 +241,15 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
     // 更新
     updateItem: async (id, updates) => {
       const body = denormalize(updates);
+      // 2026-08-10：plantAreas → plant_area (JSON 字符串)，保留 production_batch_code=null 占位（后端 SQL 仍引用）
+      if (Array.isArray(updates.plantAreas)) {
+        body.plant_area = JSON.stringify(updates.plantAreas);
+      }
+      delete body.plantAreas;
+      delete body.plantAreaRaw;
+      body.production_batch_code = null;
+      // 2026-08-10 修复：PUT 是动态 fields 拼接，但保险起见显式补全关键字段
+      body.update_time = new Date().toISOString();
 
       set((s) => ({
         items: s.items.map((i) =>

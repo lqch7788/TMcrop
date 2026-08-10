@@ -96,23 +96,6 @@ export function ApplicationTable({
               <X className="w-4 h-4" /> 取消
             </Button>
           </div>
-        ) : batchEditMode === 'edit' ? (
-          /* 批量编辑模式 */
-          <div className="flex gap-2">
-            <Button variant="blue" size="sm" onClick={() => {
-              if (selectedRows.length === 0) {
-                showAlert('请先选择要编辑的记录');
-                onBatchCancel();
-              } else {
-                onShowBatchEditModal();
-              }
-            }}>
-              <Edit2 className="w-4 h-4" /> 确认编辑
-            </Button>
-            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </div>
         ) : batchEditMode === 'delete' ? (
           /* 批量删除模式 */
           <div className="flex gap-2">
@@ -124,22 +107,16 @@ export function ApplicationTable({
             </Button>
           </div>
         ) : (
-          /* 默认模式 */
+          /* 默认模式 — 2026-08-10：移除"编辑"按钮（批量编辑入口），保留新增/批量删除/导出 */
           <div className="flex gap-2">
             <Button size="sm" onClick={onAddModalOpen}>
               <Plus className="w-4 h-4" />
               新增
             </Button>
-            <>
-              <Button variant="blue" size="sm" onClick={() => { onBatchEditModeChange('edit'); onShowEditWarning(); }}>
-                <Edit className="w-4 h-4" />
-                <Edit2 className="w-4 h-4" /> 编辑
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange('delete'); }}>
-                <Trash2 className="w-4 h-4" />
-                删除
-              </Button>
-            </>
+            <Button variant="destructive" size="sm" onClick={() => { onBatchEditModeChange('delete'); }}>
+              <Trash2 className="w-4 h-4" />
+              删除
+            </Button>
             <Button size="sm" onClick={() => onExportModeChange(true)}>
               <Download className="w-4 h-4" />
               导出
@@ -169,11 +146,13 @@ export function ApplicationTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域/用途</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">选区域(多选)</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
+              {/* 2026-08-10：移除"生产计划批次号"列——改为选区域(多选)展示 plantAreas */}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+              {/* 2026-08-10：操作列（参照物料库存页面，下沉编辑/删除按钮） */}
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
             </tr>
           </thead>
           {/* 表体 */}
@@ -209,9 +188,26 @@ export function ApplicationTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.department}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.warehouseLocation}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.materials.length > 0 ? `${item.materials.length}种` : '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.plantArea}</td>
+                  {/* 2026-08-10：选区域(多选)展示——以 chip 形式显示 plantAreas */}
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {item.plantAreas && item.plantAreas.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 max-w-[280px]">
+                        {item.plantAreas.map((a: any) => (
+                          <span
+                            key={a.id}
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-[10px] text-emerald-700"
+                            title={`${a.cropName} · ${a.area} · ${a.code}`}
+                          >
+                            {a.type === 'planting' ? '🌱' : '🌿'} {a.cropName}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.reviewer}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionBatchCode}</td>
+                  {/* 2026-08-10：移除"生产计划批次号"列 */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium w-fit ${
@@ -235,11 +231,22 @@ export function ApplicationTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {item.materials.length > 0 ? item.materials[0].remark : '-'}
                   </td>
+                  {/* 行内操作列：编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" title="编辑" onClick={() => onEdit(item)}>
+                        <Edit2 className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="删除" onClick={() => onDeleteClick(item.id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
                 {/* 展开行 - 物料明细 */}
                 {expandedRows.has(item.id) && (
                   <tr key={`${item.id}-expanded`} className="bg-white">
-                    <td colSpan={(exportMode || batchEditMode) ? 10 : 9} className="px-4 py-3">
+                    <td colSpan={(exportMode || batchEditMode) ? 13 : 12} className="px-4 py-3">
                       <div className="text-sm">
                         <div className="font-medium text-blue-800 mb-2">物料明细</div>
                         {item.materials.length > 0 ? (
@@ -274,7 +281,7 @@ export function ApplicationTable({
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.stockQuantity}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.unitPrice.toFixed(2)}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{subtotal.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-sm text-blue-800">{material.warehousePosition}</td>
+                                    <td className="px-3 py-2 text-sm text-blue-800">{material.warehousePosition || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-blue-800">{material.remark}</td>
                                   </tr>
                                 );
