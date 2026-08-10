@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -32,6 +32,12 @@ interface WarehouseInboundTableProps {
   onSelectAll: () => void;
   onSelectRow: (id: number) => void;
   onViewRecord: (record: InboundRecord) => void;
+  // 2026-08-10：行内操作列回调（参照物料库存页面模式）
+  onEditRecord?: (record: InboundRecord) => void;
+  onDeleteRecord?: (record: InboundRecord) => void;
+  // 权限控制
+  canEdit?: boolean;
+  canDelete?: boolean;
 
   // 分页
   page: number;
@@ -55,6 +61,10 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   onSelectAll,
   onSelectRow,
   onViewRecord,
+  onEditRecord,
+  onDeleteRecord,
+  canEdit = true,
+  canDelete = true,
   page,
   pageSize,
   totalPages,
@@ -92,6 +102,8 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              {/* 2026-08-10：操作列（参照物料库存页面，下沉编辑/删除按钮） */}
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -145,12 +157,37 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                       {getStatusText(record.status)}
                     </span>
                   </TableCell>
+                  {/* 行内操作列：编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      {canEdit && onEditRecord && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="编辑"
+                          onClick={() => onEditRecord(record)}
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </Button>
+                      )}
+                      {canDelete && onDeleteRecord && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="删除"
+                          onClick={() => onDeleteRecord(record)}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
 
                 {/* 展开的物料明细行 */}
                 {expandedRows.has(record.id) && (
                   <TableRow key={`${record.id}-expanded`} className="bg-white hover:bg-gray-50">
-                    <TableCell colSpan={hasActiveMode ? 8 : 7} className="px-4 py-3">
+                    <TableCell colSpan={hasActiveMode ? 9 : 8} className="px-4 py-3">
                       <div className="space-y-2">
                         <div className="text-sm font-medium text-gray-700 mb-2">
                           物料明细（共 {record.materials.length} 项）

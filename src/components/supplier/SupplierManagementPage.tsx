@@ -467,20 +467,12 @@ export default function SupplierManagementPage() {
 
           {/* 操作按钮 */}
           <div className="flex items-center gap-2">
-            {/* 正常模式 */}
+            {/* 正常模式 — 2026-08-10：移除"编辑""删除"按钮，仅保留新增+导出；编辑/删除走行内操作列 */}
             {!hasActiveMode ? (
               <>
                 <Button size="sm" onClick={handleAdd}>
                   <Plus className="w-4 h-4" />
                   新增
-                </Button>
-                <Button size="sm" variant="blue" onClick={() => setBatchEditMode(true)}>
-                  <Edit2 className="w-4 h-4" />
-                  编辑
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>
-                  <Trash2 className="w-4 h-4" />
-                  删除
                 </Button>
                 <Button size="sm" onClick={() => setExportMode(true)}>
                   <Download className="w-4 h-4" />
@@ -489,28 +481,8 @@ export default function SupplierManagementPage() {
               </>
             ) : (
               <>
-                {/* 编辑模式 */}
-                {batchEditMode && (
-                  <>
-                    <Button size="sm" variant="blue" onClick={handleBatchEdit}>
-                      <Edit2 className="w-4 h-4" /> 确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={handleCancelBatchEdit}>
-                      <X className="w-4 h-4" /> 取消
-                    </Button>
-                  </>
-                )}
-                {/* 删除模式 */}
-                {deleteMode && (
-                  <>
-                    <Button size="sm" variant="destructive" onClick={handleDelete}>
-                      <Trash2 className="w-4 h-4" /> 确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={handleCancelDelete}>
-                      <X className="w-4 h-4" /> 取消
-                    </Button>
-                  </>
-                )}
+                {/* 编辑模式已移除（2026-08-10）：编辑仅在行内进行；保留分支条件不报错 */}
+                {/* 删除模式已移除（2026-08-10）：删除仅在行内进行；保留分支条件不报错 */}
                 {/* 导出模式 */}
                 {exportMode && (
                   <>

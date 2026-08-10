@@ -1,6 +1,6 @@
 // useMaterialApproval Hook
 // 物料审批页面的状态管理和业务逻辑
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Package, ClipboardList, RotateCcw, ShoppingCart,
   Truck, Sprout, FileText, CheckCircle, XCircle, Clock, Eye
@@ -22,7 +22,13 @@ import type {
  * 管理物料审批页面的所有状态和业务逻辑
  */
 export function useMaterialApproval(): UseMaterialApprovalReturn {
-  const { approvals, approve, reject } = useApproval();
+  const { approvals, approve, reject, refreshApprovals, isLoading } = useApproval();
+
+  // 2026-08-10 修复：首次进入页面时自动拉取审批数据
+  //   之前 useApproval() 只读 store，无人触发 fetchApprovals，列表永远空白
+  useEffect(() => {
+    refreshApprovals();
+  }, [refreshApprovals]);
 
   // 权限检查 - 已取消，所有人可使用所有功能
   const canApprove = true;

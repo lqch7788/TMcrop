@@ -425,47 +425,39 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const db = getDatabase();
-    const {
-      id,
-      code,
-      type,
-      typeName,
-      category,
-      title,
-      description,
-      applicantId,
-      applicantName,
-      applicantDepartment,
-      applyDate,
-      applyTime,
-      currentStep,
-      totalSteps,
-      approvers,
-      records,
-      status,
-      // 2026-06-12 修复: 兼容 snake_case(camelCase 转译后的字段名)和原始 camelCase
-      // 根因: 前端 useApprovalStore.denormalizeApproval 把 businessLink 转 business_link,
-      //       但本路由解构用的是 camelCase,导致业务联动字段永远拿不到值
-      //       同样问题影响 approvers/records/attachments/relatedTaskIds/materials
-      //       全部优先取 camelCase,缺失时回退到 snake_case 版本
-      businessLink,
-      attachments,
-      relatedTaskIds,
-      materials,
-      priority,
-      dueDate,
-      relatedBatchCode,
-      amount,
-      workflowId,
-      workflowName,
-    } = req.body;
-    // 兜底: 前端 denormalizeApproval 会把 camelCase 转为 snake_case,这里两种都兼容
-    const businessLinkFinal = businessLink ?? req.body.business_link ?? null;
-    const approversFinal = approvers ?? req.body.approvers;
-    const recordsFinal = records ?? req.body.records;
-    const attachmentsFinal = attachments ?? req.body.attachments;
-    const relatedTaskIdsFinal = relatedTaskIds ?? req.body.related_task_ids;
-    const materialsFinal = materials ?? req.body.materials;
+    const body = req.body;
+    // 2026-08-10 修复：所有字段兼容 snake_case（前端 denormalizeApproval 把 camelCase 转 snake_case 发过来），
+    //   之前只对 5 个 JSON 字段做了兜底，普通字段（applicantName/applicantDepartment/code/title 等）
+    //   全部走 camelCase 解构 → undefined → 落库空字符串。修复：每个字段 camelCase 优先、缺失时回退 snake_case
+    const pick = (camel: string, snake: string, fallback?: unknown) =>
+      body[camel] ?? body[snake] ?? fallback;
+    const id = pick('id', 'id');
+    const code = pick('code', 'code');
+    const type = pick('type', 'type');
+    const typeName = pick('typeName', 'type_name', '');
+    const category = pick('category', 'category', 'business');
+    const title = pick('title', 'title');
+    const description = pick('description', 'description', '');
+    const applicantId = pick('applicantId', 'applicant_id', '');
+    const applicantName = pick('applicantName', 'applicant_name', '');
+    const applicantDepartment = pick('applicantDepartment', 'applicant_department', '');
+    const applyDate = pick('applyDate', 'apply_date', new Date().toISOString().substring(0, 10));
+    const applyTime = pick('applyTime', 'apply_time', new Date().toISOString().substring(11, 19));
+    const currentStep = pick('currentStep', 'current_step', 1);
+    const totalSteps = pick('totalSteps', 'total_steps', 1);
+    const approvers = pick('approvers', 'approvers');
+    const records = pick('records', 'records');
+    const status = pick('status', 'status', 'pending');
+    const businessLink = pick('businessLink', 'business_link', null);
+    const attachments = pick('attachments', 'attachments', []);
+    const relatedTaskIds = pick('relatedTaskIds', 'related_task_ids', []);
+    const materials = pick('materials', 'materials', []);
+    const priority = pick('priority', 'priority', 'normal');
+    const dueDate = pick('dueDate', 'due_date', '');
+    const relatedBatchCode = pick('relatedBatchCode', 'related_batch_code', '');
+    const amount = pick('amount', 'amount', '');
+    const workflowId = pick('workflowId', 'workflow_id', '');
+    const workflowName = pick('workflowName', 'workflow_name', '');
 
     if (!id || !type || !title) {
       return res.status(400).json({ success: false, error: 'ID、类型、标题不能为空' });
@@ -502,19 +494,19 @@ router.post('/', (req, res) => {
         applyTime || now.substring(11, 19),
         currentStep || 1,
         totalSteps || 1,
-        JSON.stringify(approversFinal || []),
-        JSON.stringify(recordsFinal || []),
+        JSON.stringify(approvers || []),
+        JSON.stringify(records || []),
         status || 'pending',
-        JSON.stringify(businessLinkFinal || null),
-        JSON.stringify(attachmentsFinal || []),
+        JSON.stringify(businessLink || null),
+        JSON.stringify(attachments || []),
         priority || 'normal',
         dueDate || '',
         0, // reminder_count
         relatedBatchCode || '',
-        JSON.stringify(relatedTaskIdsFinal || []),
+        JSON.stringify(relatedTaskIds || []),
         0, // notification_sent
         amount || '',
-        JSON.stringify(materialsFinal || []),
+        JSON.stringify(materials || []),
         workflowId || '',
         workflowName || '',
         now,
@@ -714,8 +706,34 @@ router.patch('/:id/action', (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const approvers: Approver[] = approval.approvers ? JSON.parse(approval.approvers as string) : [];
-    const records: ApprovalRecord[] = approval.records ? JSON.parse(approval.records as string) : [];
+    // 2026-08-10 修复：双层转义兼容。INSERT 端 L505 之前会 JSON.stringify(approversFinal || [])，
+    //   对已经是字符串的 approvers（前端未走 denormalize 路径）会双重转义存为 '"[]"'，
+    //   导致 SELECT 后 PATCH 端 L709 JSON.parse('"[]"') 仍得到字符串，findIndex 报错。
+    //   修复：智能判断字段类型 — 如果已经是数组直接用，否则反复 parse 字符串直到得到非字符串。
+    const parseJsonField = (raw: unknown): unknown[] => {
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw !== 'string' || !raw) return [];
+      let parsed: unknown = raw;
+      for (let i = 0; i < 3; i++) {
+        if (typeof parsed !== 'string') break;
+        try { parsed = JSON.parse(parsed); } catch { return []; }
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    };
+    // 2026-08-10：parseJsonObject — 同 parseJsonField 逻辑但返回对象（用于 business_link）
+    const parseJsonObject = (raw: unknown): Record<string, unknown> | null => {
+      if (!raw) return null;
+      if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+      if (typeof raw !== 'string') return null;
+      let parsed: unknown = raw;
+      for (let i = 0; i < 3; i++) {
+        if (typeof parsed !== 'string') break;
+        try { parsed = JSON.parse(parsed); } catch { return null; }
+      }
+      return (typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed as Record<string, unknown> : null;
+    };
+    const approvers: Approver[] = parseJsonField(approval.approvers);
+    const records: ApprovalRecord[] = parseJsonField(approval.records);
 
     let newStatus = approval.status as string;
     let newCurrentStep = approval.current_step as number;
@@ -842,7 +860,8 @@ router.patch('/:id/action', (req, res) => {
 
     // 审批操作完成后，调用审批联动更新业务表（覆盖所有业务类型）
     if (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'cancelled' || newStatus === 'partially_approved') {
-      const businessLink = approval.business_link ? JSON.parse(approval.business_link as string) : null;
+      // 2026-08-10 修复：用 parseJsonObject 兼容双层转义（之前 JSON.parse(business_link) 失败导致联动静默跳过）
+      const businessLink = parseJsonObject(approval.business_link) as { type?: string; requestId?: string; requestCode?: string };
       if (businessLink?.type && businessLink?.requestId) {
         try {
           const linkageAction = newStatus === 'approved' ? 'approved' as const
@@ -851,6 +870,8 @@ router.patch('/:id/action', (req, res) => {
             : 'partially_approved' as const;
           const result = updateBusinessTable(db, businessLink.type, businessLink.requestId, linkageAction, approval.code as string, businessLink);
           if (result.success) {
+            // 2026-08-10 修复：updateBusinessTable 只 UPDATE 内存 db，需显式 saveDatabase 落盘，否则列表刷新读到脏数据
+            saveDatabase();
             console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
           } else {
             console.warn(`【审批联动】${businessLink.type} 更新失败: ${result.message}`);

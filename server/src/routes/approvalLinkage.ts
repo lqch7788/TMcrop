@@ -73,18 +73,22 @@ function logOperation(
 
 /**
  * 更新物料申请状态
+ * 2026-08-10 修复：原代码更新 `approval_code` / `approved_at` 列，但 material_requests 表没有这两列（schema L988 只有 status + approval_status）。
+ *   修复：只更新 status（英文 enum: approved/rejected/cancelled/pending）+ approval_status 同步。
+ *   领料申请单列表 normalize() 根据 status 派生 '待审批'/'已审批'/'已作废'/'已取消' 中文字段。
  */
 function updateMaterialRequest(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
   try {
     const now = new Date().toISOString();
+    // 同步 status（业务主状态）+ approval_status（审批子状态），便于列表 / 详情按 status 派生中文
     db.run(`
       UPDATE material_requests SET
         status = ?,
-        approval_code = ?,
-        approved_at = ?,
+        approval_status = ?,
         update_time = ?
       WHERE id = ?
-    `, [status, approvalCode, now, now, id]);
+    `, [status, status, now, id]);
+    console.log(`【审批联动】material_request ${id} 状态已更新为 ${status}`);
     return true;
   } catch (e) {
     console.error('更新物料申请失败:', e);

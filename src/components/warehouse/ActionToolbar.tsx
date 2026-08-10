@@ -87,7 +87,7 @@ export default function ActionToolbar({
         )}
       </div>
       <div className="flex gap-2">
-        {/* 默认模式：新增、编辑、删除、导出 */}
+        {/* 默认模式：新增、删除、导出（2026-08-10 移除"编辑"按钮，编辑仅在每行操作列） */}
         {!batchEditMode && !deleteMode && !exportMode && (
           <>
             {canCreate && onAdd && (
@@ -96,12 +96,7 @@ export default function ActionToolbar({
                 新增
               </Button>
             )}
-            {canEdit && (
-              <Button size="sm" variant="blue" onClick={onBatchEdit}>
-                <Edit2 className="w-4 h-4" />
-                编辑
-              </Button>
-            )}
+            {/* 编辑按钮已下沉到行内操作列，工具栏不再提供批量编辑入口 */}
             {canDelete && (
               <Button size="sm" variant="destructive" onClick={onDelete}>
                 <Trash2 className="w-4 h-4" />
@@ -122,19 +117,8 @@ export default function ActionToolbar({
             )}
           </>
         )}
-        {/* 编辑模式 */}
-        {batchEditMode && (
-          <>
-            <Button size="sm" variant="blue" onClick={onConfirmBatchEdit}>
-              <Edit2 className="w-4 h-4" />
-              确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={onCancelBatchEdit}>
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </>
-        )}
-        {/* 删除模式（已知晓后） */}
+        {/* 编辑模式已移除（2026-08-10）：编辑仅在行内进行；保留分支条件不报错，避免调用方传 batchEditMode=true 出现未知行为 */}
+        {/* 删除模式（已知晓后）—— 保留批量删除入口 */}
         {deleteMode && !batchEditMode && (
           <>
             <Button size="sm" variant="destructive" onClick={onConfirmDelete}>

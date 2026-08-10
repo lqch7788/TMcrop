@@ -103,6 +103,8 @@ export function MaterialsTable({
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</TableHead>
+              {/* 2026-08-10：每行操作列，下沉编辑按钮（原仅依赖工具栏批量编辑入口） */}
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
@@ -154,6 +156,31 @@ export function MaterialsTable({
                   }`} title={item.dataStatus}>
                     {item.dataStatus}
                   </span>
+                </TableCell>
+                {/* 操作列：行内编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
+                <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="编辑"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Edit className="w-4 h-4 text-emerald-600" />
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="删除"
+                        onClick={() => onDelete(item)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
