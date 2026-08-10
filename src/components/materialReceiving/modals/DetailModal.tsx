@@ -46,16 +46,28 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
         </div>
         <div>
           <Label className="text-sm text-gray-500">种植区域/用途</Label>
-          <p className="font-semibold text-gray-900">{record.plantArea}</p>
+          {/* 2026-08-10：plantArea (JSON 字符串) → plantAreas 数组，chip 展示多选区域 */}
+          {record.plantAreas && record.plantAreas.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {record.plantAreas.map((a) => (
+                <span
+                  key={a.id}
+                  className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-700"
+                  title={`${a.cropName} · ${a.area} · ${a.code}`}
+                >
+                  {a.type === 'planting' ? '🌱' : '🌿'} {a.cropName} · {a.area}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">-</p>
+          )}
         </div>
         <div>
           <Label className="text-sm text-gray-500">审核人</Label>
           <p className="font-semibold text-gray-900">{record.reviewer}</p>
         </div>
-        <div>
-          <Label className="text-sm text-gray-500">生产计划批次号</Label>
-          <p className="font-semibold text-gray-900">{record.productionBatchCode}</p>
-        </div>
+        {/* 2026-08-10：移除"生产计划批次号"字段——已废弃，改"选区域(多选)" */}
         <div>
           <Label className="text-sm text-gray-500">状态</Label>
           <p className="font-semibold">
@@ -107,7 +119,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
                     <TableCell className="px-3 py-2 text-sm text-blue-700">{material.stockQuantity}</TableCell>
                     <TableCell className="px-3 py-2 text-sm text-blue-700">{material.unitPrice.toFixed(2)}</TableCell>
                     <TableCell className="px-3 py-2 text-sm text-blue-700">{subtotal.toFixed(2)}</TableCell>
-                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.warehousePosition}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.warehousePosition || '-'}</TableCell>
                     <TableCell className="px-3 py-2 text-sm text-blue-700">{material.remark || '-'}</TableCell>
                   </TableRow>
                 );
