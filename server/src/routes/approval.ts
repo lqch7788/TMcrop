@@ -732,8 +732,8 @@ router.patch('/:id/action', (req, res) => {
       }
       return (typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed as Record<string, unknown> : null;
     };
-    const approvers: Approver[] = parseJsonField(approval.approvers);
-    const records: ApprovalRecord[] = parseJsonField(approval.records);
+    const approvers = parseJsonField(approval.approvers) as unknown as Approver[];
+    const records = parseJsonField(approval.records) as unknown as ApprovalRecord[];
 
     let newStatus = approval.status as string;
     let newCurrentStep = approval.current_step as number;
