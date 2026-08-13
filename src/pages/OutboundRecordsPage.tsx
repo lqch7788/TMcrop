@@ -46,9 +46,10 @@ export function getThisMonthRange(): { from: string; to: string } {
 }
 
 export default function OutboundRecordsPage() {
-  // 默认本月（避免 from/to 空 → 400）
+  // 2026-08-13：默认清空时间筛选（显示全部出库记录），避免"只能看本月"误判
   const [query, setQuery] = useState<OutboundQuery>(() => ({
-    ...getThisMonthRange(),
+    from: '',
+    to: '',
     page: 1,
     limit: 50,
   }));
@@ -89,7 +90,8 @@ export default function OutboundRecordsPage() {
   }
 
   function handleReset() {
-    setQuery({ ...getThisMonthRange(), page: 1, limit: 50 });
+    // 2026-08-13：重置时清空所有筛选（包含日期），恢复"全部出库"初始状态
+    setQuery({ from: '', to: '', page: 1, limit: 50 });
   }
 
   function handleViewDetail(instanceId: string) {

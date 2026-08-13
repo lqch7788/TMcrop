@@ -74,12 +74,13 @@ export class InventoryTransactionRepository {
     } = query;
 
     // WHERE 子句条件（针对 transactions 表自身字段）
+    // 2026-08-13：from/to 改为可选——空时返回全部记录
     const where: string[] = [
       `t.transaction_type = 'outbound'`,
-      `t.operate_date >= ?`,
-      `t.operate_date <= ?`,
     ];
-    const whereParams: any[] = [from, to];
+    const whereParams: any[] = [];
+    if (from)         { where.push(`t.operate_date >= ?`);  whereParams.push(from); }
+    if (to)           { where.push(`t.operate_date <= ?`);  whereParams.push(to); }
     if (stockType)    { where.push(`t.stock_type = ?`);     whereParams.push(stockType); }
     if (operatorName) { where.push(`t.operator_name LIKE ?`); whereParams.push(`%${operatorName}%`); }
     if (businessType) { where.push(`t.business_type = ?`);  whereParams.push(businessType); }
@@ -147,10 +148,10 @@ export class InventoryTransactionRepository {
 
     const where: string[] = [
       `t.transaction_type = 'outbound'`,
-      `t.operate_date >= ?`,
-      `t.operate_date <= ?`,
     ];
-    const whereParams: any[] = [from, to];
+    const whereParams: any[] = [];
+    if (from)         { where.push(`t.operate_date >= ?`);  whereParams.push(from); }
+    if (to)           { where.push(`t.operate_date <= ?`);  whereParams.push(to); }
     if (stockType)    { where.push(`t.stock_type = ?`);     whereParams.push(stockType); }
     if (operatorName) { where.push(`t.operator_name LIKE ?`); whereParams.push(`%${operatorName}%`); }
     if (businessType) { where.push(`t.business_type = ?`);  whereParams.push(businessType); }
