@@ -39,15 +39,16 @@ export class InventoryTransactionService {
 
   /**
    * 参数校验
+   * 2026-08-13：from/to 改为可选——空时返回全部记录，不再"本月 1 号默认"
    */
   private validateQuery(query: TransactionQuery): void {
-    if (!query.from || !query.to) {
-      throw new Error('from 和 to 是必填参数');
+    if (query.from && !DATE_REGEX.test(query.from)) {
+      throw new Error('开始日期格式必须为 YYYY-MM-DD');
     }
-    if (!DATE_REGEX.test(query.from) || !DATE_REGEX.test(query.to)) {
-      throw new Error('日期格式必须为 YYYY-MM-DD');
+    if (query.to && !DATE_REGEX.test(query.to)) {
+      throw new Error('结束日期格式必须为 YYYY-MM-DD');
     }
-    if (query.from > query.to) {
+    if (query.from && query.to && query.from > query.to) {
       throw new Error('开始日期不能晚于结束日期');
     }
   }
