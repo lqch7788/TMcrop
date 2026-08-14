@@ -38,8 +38,9 @@ export async function addPlantingDailyRecord(
       `/plantings/${plantingId}/daily-records`,
       record
     );
-  } catch {
-    return null;
+  } catch (e) {
+    // 2026-08-14：错误上抛（与育苗对齐）— 弹窗显示具体失败原因（后端校验文案）
+    throw e instanceof Error ? e : new Error('添加每日记录请求失败');
   }
 }
 
@@ -54,8 +55,9 @@ export async function updatePlantingDailyRecord(
   try {
     await enhancedApiClient.put(`/plantings/${plantingId}/daily-records/${recordId}`, updates);
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    // 2026-08-14：错误上抛（与育苗对齐）
+    throw e instanceof Error ? e : new Error('更新每日记录请求失败');
   }
 }
 
@@ -66,7 +68,8 @@ export async function deletePlantingDailyRecord(plantingId: string, recordId: st
   try {
     await enhancedApiClient.delete(`/plantings/${plantingId}/daily-records/${recordId}`);
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    // 2026-08-14：错误上抛（与育苗对齐）
+    throw e instanceof Error ? e : new Error('删除每日记录请求失败');
   }
 }

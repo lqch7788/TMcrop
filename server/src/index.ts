@@ -198,6 +198,8 @@ async function start() {
       console.warn('[backfillSeedlingHarvestStocked] 启动回填失败（不影响主流程）:', e?.message || e);
     }
 
+    // （种植回填块已移到 fixSchemaColumns 之后，见下方）
+
     // 2026-07-19 P0-15：GREEN 级 schema 补齐（纯 ADD COLUMN + CREATE INDEX，无 UPDATE/DELETE）
     // 绕过 YELLOW 级 fixMissingSchema 禁用导致老/新 DB schema 不一致问题
     try {
@@ -206,6 +208,18 @@ async function start() {
       console.log(`[fixSchemaColumns] 启动补齐：新增 ${result.addedColumns} 列，新增 ${result.addedIndexes} 索引`);
     } catch (e: any) {
       console.warn('[fixSchemaColumns] 启动补齐失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-14：启动时回填种植"已入库量"（plantings.harvest_to_inventory_qty）
+    // plantings 表此前无此列、无任何累加路径（列表"已入库量"恒显示 '-'），本次闭环改造后一次性回填
+    // ⚠️ 顺序铁律：必须放在 fixSchemaColumns 之后（列由 GREEN 级补齐先添加，否则回填检测"列不存在"跳过）；
+    //   回填内的 saveDatabase 会连带把 fixSchemaColumns 新增列落盘（sql.js 内存库重启即失）
+    try {
+      const { backfillPlantingHarvestToInventory } = await import('./db/backfillPlantingHarvestToInventory');
+      const result = backfillPlantingHarvestToInventory();
+      console.log(`[backfillPlantingHarvestToInventory] 启动回填：${result.filledCount} 条记录，累计 ${result.totalQty}`);
+    } catch (e: any) {
+      console.warn('[backfillPlantingHarvestToInventory] 启动回填失败（不影响主流程）:', e?.message || e);
     }
 
     // Step 3: 启动后 db 状态对比

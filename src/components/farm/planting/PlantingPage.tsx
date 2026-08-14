@@ -667,6 +667,8 @@ export default function PlantingPage() {
 
       {currentRecord && (
         <EditModal
+          // 2026-08-14：key 按行强制重挂载（修复切换行后表单残留）
+          key={currentRecord.id}
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
@@ -676,6 +678,8 @@ export default function PlantingPage() {
 
       {currentRecord && (
         <DetailModal
+          // 2026-08-14：key 按行强制重挂载
+          key={currentRecord.id}
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           record={currentRecord}
@@ -685,6 +689,8 @@ export default function PlantingPage() {
       {/* V2 改造 (任务 16): 种植结束弹窗挂接 */}
       {currentRecord && (
         <HarvestRecordModal
+          // 2026-08-14：key 按行强制重挂载
+          key={currentRecord.id}
           isOpen={harvestModalOpen}
           onClose={() => setHarvestModalOpen(false)}
           onSuccess={loadItems}
@@ -780,6 +786,8 @@ export default function PlantingPage() {
       {/* 2026-06-28: 种植管理每日记录弹窗（与育苗管理 DailyRecordModal 一致；单池简化版） */}
       {dailyRecordModal.record && (
         <DailyRecordModal
+          // 2026-08-14：key 按行强制重挂载 — 修复切换行后表单残留上一行数据（与育苗同款 bug）
+          key={dailyRecordModal.record.id}
           isOpen={dailyRecordModal.open}
           onClose={closeDailyRecord}
           onSuccess={handleDailyRecordSuccess}
@@ -794,6 +802,8 @@ export default function PlantingPage() {
 
       {currentRecord && (
         <PrintLabelModal
+          // 2026-08-14：key 按行强制重挂载
+          key={currentRecord.id}
           isOpen={printModalOpen}
           onClose={() => setPrintModalOpen(false)}
           record={currentRecord}

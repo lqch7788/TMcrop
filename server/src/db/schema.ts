@@ -596,7 +596,10 @@ export function initializeDatabase() {
         CHECK(origin_path IN ('direct_from_seed','via_seedling')),
       -- 2026-06-28：种植管理每日记录累加字段（活体剩余 = planting_quantity + supplement_count - loss_count）
       loss_count INTEGER DEFAULT 0,
-      supplement_count INTEGER DEFAULT 0
+      supplement_count INTEGER DEFAULT 0,
+      -- 2026-08-14：种植"已入库量"（行级采收入库累加，与育苗 harvest_stocked_count 对齐）
+      harvest_to_inventory_qty INTEGER DEFAULT 0,
+      harvest_to_inventory_unit TEXT
     )
   `);
 

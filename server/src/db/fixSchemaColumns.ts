@@ -120,6 +120,10 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   addedColumns += safeAddColumn(db, 'seed_sources', 'original_supplier_name', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'seed_sources', 'original_production_plan_code', 'TEXT') ? 1 : 0;
 
+  // ============ plantings 已入库量（2026-08-14 种植已入库量闭环）===========
+  addedColumns += safeAddColumn(db, 'plantings', 'harvest_to_inventory_qty', 'INTEGER', '0') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'plantings', 'harvest_to_inventory_unit', 'TEXT') ? 1 : 0;
+
   // ============ crop_circulation_records（V3.0 合并）===========
   addedColumns += safeAddColumn(db, 'crop_circulation_records', 'merge_action', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'crop_circulation_records', 'generation', 'TEXT') ? 1 : 0;
