@@ -536,6 +536,10 @@ export function EditModal({
               return `母株池剩余 = ${Math.max(0, motherAvailable).toLocaleString()} 株 | 小苗池剩余 = ${Math.max(0, seedlingAvailable).toLocaleString()} 株（两池独立，不合并）`;
             })()}
           </p>
+          {/* 2026-08-14 H3 修复：手动修改累加字段的风险提示（与入库记录聚合/每日记录历史会不一致） */}
+          <p className="text-xs text-amber-600 mt-1">
+            ⚠️ 以上累计字段由每日记录/入库自动累加，手动修改仅用于纠错。修改后与每日记录历史、入库记录聚合可能不一致（已入库数量被改回 0 时，服务器重启会按入库记录自动回填）。
+          </p>
         </div>
 
         {/* 备注 - 占两列 */}

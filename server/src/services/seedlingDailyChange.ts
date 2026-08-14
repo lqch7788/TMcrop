@@ -36,7 +36,7 @@ export function validateSeedlingDailyChange(
 ): string | null {
   const db = getDatabase();
   const stmt = db.prepare(
-    'SELECT mother_plant_count, expanded_plant_count, seedling_quantity, mother_loss_count, seedling_loss_count, transplanted_count, harvest_stocked_count FROM seedlings WHERE id = ?',
+    'SELECT mother_plant_count, expanded_plant_count, mother_loss_count, seedling_loss_count, harvest_stocked_count FROM seedlings WHERE id = ?',
   );
   stmt.bind([seedlingId]);
   let row: any = null;
@@ -48,7 +48,6 @@ export function validateSeedlingDailyChange(
   const expandedCount = Number(row.expanded_plant_count || 0);
   const motherLoss = Number(row.mother_loss_count || 0);
   const seedlingLoss = Number(row.seedling_loss_count || 0);
-  const transplanted = Number(row.transplanted_count || 0);
   // 2026-08-14：小苗可用数扣除已入库量（与前端 DailyRecordModal 校验口径一致）
   const harvestStocked = Number(row.harvest_stocked_count || 0);
 
@@ -65,10 +64,11 @@ export function validateSeedlingDailyChange(
   // 2026-08-14：口径修复 — 小苗可用数从"初始数量"改为"累计产出池"
   // 根因：旧口径用 seedling_quantity（1:多 模式下是母株初始数，与小苗池无关），
   //   累计损耗超过初始数后 available 恒为 0，用户无法再录入任何小苗损耗（"添加记录失败，请重试" bug）
-  // 新口径与前端一致：产出 − 小苗损耗 − 定植 − 已入库
-  const availableSeedling = Math.max(0, expandedCount - seedlingLoss - transplanted - harvestStocked);
+  // 新口径与前端一致：产出 − 小苗损耗 − 已入库
+  // 2026-08-14 M1：去掉 transplanted 扣减（业务已停用定植统计，且前端公式/available-count 端点均不含定植）
+  const availableSeedling = Math.max(0, expandedCount - seedlingLoss - harvestStocked);
   if (sl > availableSeedling) {
-    return `小苗损耗 ${sl} 超过当前小苗剩余 ${availableSeedling}（产出 ${expandedCount} - 损耗 ${seedlingLoss} - 定植 ${transplanted} - 已入库 ${harvestStocked}）`;
+    return `小苗损耗 ${sl} 超过当前小苗剩余 ${availableSeedling}（产出 ${expandedCount} - 损耗 ${seedlingLoss} - 已入库 ${harvestStocked}）`;
   }
 
   return null;

@@ -286,10 +286,10 @@ export function AddModal({
     if (storeUsers.length === 0) loadUsers();
   }, [storePlans.length, fetchPlans, storeUsers.length, loadUsers]);
 
-  // 当前用户（从Store获取，后备从localStorage读取）
+  // 当前用户（从 Store 获取；2026-08-14 L1 修复：移除 localStorage 兜底，遵守 V2.1 缓存铁律）
   const currentUser = useMemo(() => ({
-    id: storeUsers[0]?.oid || localStorage.getItem('userOid') || 'U013',
-    name: storeUsers[0]?.name || localStorage.getItem('username') || '未知用户',
+    id: storeUsers[0]?.oid || '',
+    name: storeUsers[0]?.name || '未知用户',
     department: storeUsers[0]?.orgOid || '生产部',
   }), [storeUsers]);
 

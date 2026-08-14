@@ -8,15 +8,34 @@
  * - 本次改造已在 inventoryInboundFromSource.service 打通实时累加链路，
  *   本脚本负责一次性回填历史存量
  *
- * 幂等设计：仅回填 harvest_stocked_count 为 0/NULL 的行（不覆盖手工纠错为非 0 的值）；
- *           每次启动重算 0 值行，与历史入库记录保持一致（入库/删除动作自身已实时维护该字段）。
+ * 一次性设计（2026-08-14 M3 修复）：执行成功后写 system_configs 标记
+ *   （config_key = 'seedling_harvest_stocked_backfill_done'），之后启动永久跳过。
+ *   原因：此前"每次启动重算 0 值行"会把用户手工纠错改回 0 的值再次覆盖为聚合值，
+ *   且入库/删除动作已实时维护该字段，无需重复回填。
+ * 回填口径：仅回填 harvest_stocked_count 为 0/NULL 的行（不覆盖手工纠错为非 0 的值）
  * 启动方式：index.ts 启动白名单显式调用（对齐 backfillTransferInboundRecords 先例）
  */
 
 import { getDatabase, saveDatabase } from './index';
 
+/** 回填完成标记（system_configs.config_key） */
+const BACKFILL_DONE_KEY = 'seedling_harvest_stocked_backfill_done';
+
 export function backfillSeedlingHarvestStockedCount(): { filledCount: number; totalQty: number } {
   const db = getDatabase();
+
+  // 一次性标记：已回填过则永久跳过
+  try {
+    const doneStmt = db.prepare('SELECT config_key FROM system_configs WHERE config_key = ?');
+    doneStmt.bind([BACKFILL_DONE_KEY]);
+    if (doneStmt.step()) {
+      doneStmt.free();
+      return { filledCount: 0, totalQty: 0 };
+    }
+    doneStmt.free();
+  } catch {
+    // system_configs 表可能不存在（旧库），继续尝试回填
+  }
 
   // 安全检查：依赖列存在才执行
   try {
@@ -47,6 +66,8 @@ export function backfillSeedlingHarvestStockedCount(): { filledCount: number; to
   stmt.free();
 
   if (totals.size === 0) {
+    // 无育苗历史入库记录：仍写标记（避免每次启动重复扫描）
+    writeDoneMark(db);
     return { filledCount: 0, totalQty: 0 };
   }
 
@@ -65,6 +86,23 @@ export function backfillSeedlingHarvestStockedCount(): { filledCount: number; to
     }
   }
 
+  // 2026-08-14 M3：写入一次性完成标记（此后启动跳过，用户手工纠错值不会被再次覆盖）
+  writeDoneMark(db);
+
   saveDatabase();
   return { filledCount, totalQty };
+}
+
+/** 写入回填完成标记（system_configs），失败仅告警不影响回填结果 */
+function writeDoneMark(db: ReturnType<typeof getDatabase>): void {
+  const now = new Date().toISOString();
+  try {
+    db.run(
+      `INSERT OR IGNORE INTO system_configs (id, config_key, config_value, config_type, category, description, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, 'string', 'migration', '育苗已入库数量历史回填完成标记（一次性）', 1, ?, ?)`,
+      ['cfg-backfill-seedling-harvest-stocked', BACKFILL_DONE_KEY, now, now, now],
+    );
+  } catch (e) {
+    console.warn('[backfillSeedlingHarvestStockedCount] 写入完成标记失败（不影响回填结果）:', e);
+  }
 }
