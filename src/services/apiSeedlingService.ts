@@ -441,12 +441,14 @@ export async function getDailyRecords(seedlingId: string): Promise<DailyRecord[]
 /**
  * 添加每日记录
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
+ * 2026-08-14：不再吞错误 — 上抛具体失败原因（后端 400 校验文案、网络错误等），
+ *   否则弹窗只能显示笼统的"添加记录失败，请重试"，用户不知道真实原因
  */
 export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>): Promise<DailyRecord | null> {
   try {
     return await enhancedApiClient.post<DailyRecord>(`/seedlings/${seedlingId}/daily-records`, record);
-  } catch {
-    return null;
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('添加每日记录请求失败');
   }
 }
 

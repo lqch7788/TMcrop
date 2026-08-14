@@ -42,6 +42,7 @@ import { HARVEST_FORM_OPTIONS, SEED_FORM_OPTIONS } from '@/constants/seedFormDic
 import {
   submitUnifiedInbound,
   validateUnifiedInboundInput,
+  checkSeedlingInboundSoftLimit,
   type StockType,
   type SourceModule,
   type InboundProduct,
@@ -101,6 +102,10 @@ export interface UnifiedRowHarvestInboundModalProps {
     // 2026-07-09 v6：恢复 endTime/status type（弹窗内"补录"按钮判断用）
     endTime?: string
     status?: string
+    // 2026-08-14：育苗入库软校验用（仅育苗行传入；expandedPlantCount 为 undefined 时跳过校验）
+    expandedPlantCount?: number
+    seedlingLossCount?: number
+    harvestStockedCount?: number
   }
 }
 
@@ -357,6 +362,29 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
     if (!validation.ok) {
       setError(validation.error)
       return
+    }
+
+    // 2026-08-14：育苗入库软校验 — 入库量超出"剩余可入库（产出−损耗−已入库）"时弹确认框警告
+    // 设计意图（D 决策）：不硬拦截（农业现场每日记录滞后是常态，可入库=0 时硬拦截会卡死业务），
+    //   仅提示"可能未及时登记每日产出"，用户确认后放行；不扣减 expanded_plant_count（累计产出是历史事实值）
+    // 触发条件：sourceModule='seedling' 且调用方传入了 expandedPlantCount（字段缺失=不支持校验，种植/种源行自然跳过）
+    if (sourceModule === 'seedling' && sourceRecord.expandedPlantCount !== undefined) {
+      const totalQty = (input.products || []).reduce(
+        (sum, p) => sum + (Number(p.harvestQuantity) || 0),
+        0,
+      )
+      const softCheck = checkSeedlingInboundSoftLimit({
+        expandedPlantCount: sourceRecord.expandedPlantCount,
+        seedlingLossCount: sourceRecord.seedlingLossCount,
+        harvestStockedCount: sourceRecord.harvestStockedCount,
+        totalQty,
+      })
+      if (softCheck.exceeded) {
+        const ok = await showConfirm(
+          `可入库数量不足：当前可入库 ${softCheck.remaining}，本次入库 ${totalQty}，超出 ${softCheck.exceededBy}。\n可能未及时在每日记录中登记小苗产出。\n是否继续入库？`,
+        )
+        if (!ok) return
+      }
     }
 
     setSubmitting(true)

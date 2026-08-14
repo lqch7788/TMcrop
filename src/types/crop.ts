@@ -555,7 +555,7 @@ export interface Seedling {
   // 2026-06-15: 数量体系重构 — 5 业务字段 → 3 业务字段（2026-06-28 移除 transplantedCount/autoPlantedCount）
   motherLossCount?: number;    // 母株累计损耗（1:多模式专用）
   seedlingLossCount?: number;  // 小苗累计损耗
-  harvestStockedCount?: number; // 采收入库累计
+  harvestStockedCount?: number; // 已入库数量（采收入库弹窗累加，2026-08-14 起入库/删除实时维护）
   customMultiple?: number;     // 自定义扩繁倍数
 }
 

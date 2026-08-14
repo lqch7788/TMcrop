@@ -123,6 +123,37 @@ export function validateUnifiedInboundInput(input: UnifiedInboundInput): { ok: t
 }
 
 /**
+ * 2026-08-14：育苗入库软校验 — 计算"剩余可入库"并判断本次入库量是否超出
+ * 业务背景（D 决策）：不硬拦截（农业现场每日记录滞后是常态，可入库=0 时硬拦截会卡死业务），
+ *   仅由调用方弹确认框警告"可能未及时登记每日产出"，确认后放行。
+ * 剩余可入库 = max(0, 累计产出 − 小苗损耗 − 已入库)；不修改任何存储字段（扣减视角由列表派生列体现）
+ */
+export interface SeedlingInboundSoftCheckResult {
+  exceeded: boolean    // 是否超出剩余可入库（需弹确认框）
+  remaining: number    // 剩余可入库
+  exceededBy: number   // 超出量（未超出时为 0）
+}
+
+export function checkSeedlingInboundSoftLimit(params: {
+  expandedPlantCount?: number
+  seedlingLossCount?: number
+  harvestStockedCount?: number
+  totalQty: number
+}): SeedlingInboundSoftCheckResult {
+  const remaining = Math.max(0,
+    (params.expandedPlantCount || 0)
+    - (params.seedlingLossCount || 0)
+    - (params.harvestStockedCount || 0),
+  )
+  const exceeded = params.totalQty > 0 && params.totalQty > remaining
+  return {
+    exceeded,
+    remaining,
+    exceededBy: Math.max(0, params.totalQty - remaining),
+  }
+}
+
+/**
  * 提交行级采收入库
  * 调 POST /api/inventory/inbound-from-source
  * 成功后调 useInventoryStore.notifyChange() 触发跨页刷新

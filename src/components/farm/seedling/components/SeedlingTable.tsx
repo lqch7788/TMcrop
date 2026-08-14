@@ -434,19 +434,20 @@ export function SeedlingTable({
         </div>
       </div>
 
-      {/* 表格 — 2026-06-27：固定宽度 2400px + 强制横向滚动条
-    容器 1022px → 表格 2400px → 溢出 1378px 出滚动条
-    数值列 8% × 2400 = 192px（够 4-5 中文字符 + 千位数字）
-    关键列 9-10% = 216-240px（够 13 字符单据号） */}
+      {/* 表格 — 2026-06-27：固定宽度 + 强制横向滚动条（2026-08-14 新增"已入库数量"列 → 2400px → 2600px）
+    容器 1022px → 表格 2600px → 溢出 1578px 出滚动条
+    数值列 8% × 2600 ≈ 208px（够 4-5 中文字符 + 千位数字）
+    关键列 9-10% = 234-260px（够 13 字符单据号） */}
       <div className="overflow-x-auto" style={{ overflowX: 'auto', width: '100%' }}>
         <table
-          style={{ width: '2400px', tableLayout: 'fixed', minWidth: '2400px' }}
+          style={{ width: '2600px', tableLayout: 'fixed', minWidth: '2600px' }}
           className="text-sm"
         >
           {/* 2026-07-01 修复：colgroup 内联写法 — 去除行内 {/} 与 JSX 注释，避免 validateDOMNesting
               Whitespace text nodes cannot appear as a child of <colgroup> 警告
-              列宽分配：基本 8%+5%+6%+10%+9%+6%+9%+7%+4%=64%；数值 4 列×8%=32%；完成6%；状态5%；操作14% — 总和 121% 触发横向滚动 */}
-          <colgroup><>{showCheckbox && <col className="w-[2.5%]" />}<col className="w-[8%]" /><col className="w-[5%]" /><col className="w-[6%]" /><col className="w-[10%]" /><col className="w-[9%]" /><col className="w-[6%]" /><col className="w-[9%]" /><col className="w-[7%]" /><col className="w-[4%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[6%]" /><col className="w-[5%]" /><col className="w-[14%]" /></></colgroup>
+              2026-08-14：新增"已入库数量"列（8%），插在"小苗剩余数量"与"目标成苗数"之间
+              列宽分配：基本 8%+5%+6%+10%+9%+6%+9%+7%+4%=64%；数值 5 列×8%=40%；完成6%；状态5%；操作14% — 总和 129% 触发横向滚动 */}
+          <colgroup><>{showCheckbox && <col className="w-[2.5%]" />}<col className="w-[8%]" /><col className="w-[5%]" /><col className="w-[6%]" /><col className="w-[10%]" /><col className="w-[9%]" /><col className="w-[6%]" /><col className="w-[9%]" /><col className="w-[7%]" /><col className="w-[4%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[8%]" /><col className="w-[6%]" /><col className="w-[5%]" /><col className="w-[14%]" /></></colgroup>
           {/* thead 正常布局（不 sticky，避免和操作列 sticky 冲突） */}
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
@@ -469,13 +470,14 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池当前存活数">母株存活数</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计损耗">母株累计损耗</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计补栽">补苗累计</th>
-              {/* ===== 小苗池（5 列） — 绿色半透明背景标识 ===== */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计产出">小苗累计产出</th>
+              {/* ===== 小苗池（4 列） — 绿色半透明背景标识（2026-08-14 新增"已入库数量"列） ===== */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="可入库小苗数（按每日记录数量累计）">可入库小苗数</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 采收入库（2026-06-28 移除已定植统计）">小苗剩余数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 已入库（2026-06-28 移除已定植统计）">小苗剩余数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="采收入库弹窗累计入库的小苗总量">已入库数量</th>
               {/* ===== 派生 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="完成比例 = (小苗累计产出 − 小苗累计损耗) / 目标成苗数">完成比例</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="完成比例 = 已入库数量 / 目标成苗数（2026-08-14 公式变更）">完成比例</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">状态</th>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index，避免脱离 thead） */}
               <th className="sticky right-0 px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)]">操作</th>
@@ -484,7 +486,7 @@ export function SeedlingTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 21 : 20} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -581,8 +583,8 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-indigo-50/30">
                     {(record.replantCount || 0).toLocaleString()}
                   </td>
-                  {/* ===== 小苗池（5 列） — 与 thead bg-emerald-500/30 对应 ===== */}
-                  {/* 小苗累计产出 = expandedPlantCount */}
+                  {/* ===== 小苗池（4 列） — 与 thead bg-emerald-500/30 对应 ===== */}
+                  {/* 可入库小苗数 = expandedPlantCount（按每日记录累计，2026-08-14 列名变更，数值来源不变） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
                     {(record.expandedPlantCount || 0).toLocaleString()}
                   </td>
@@ -600,19 +602,21 @@ export function SeedlingTable({
                       return remaining.toLocaleString();
                     })()}
                   </td>
+                  {/* 已入库数量 = harvestStockedCount（2026-08-14 新增列，由采收入库弹窗入库累加） */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
+                    {(record.harvestStockedCount || 0).toLocaleString()}
+                  </td>
                   {/* ===== 派生 ===== */}
                   {/* 目标成苗数 = targetSurvivalCount */}
                   <td className="px-2 py-1.5 text-sm text-gray-500 text-center">
                     {(record.targetSurvivalCount ?? 0).toLocaleString()}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                    {/* 2026-06-28: 完成比例 = (累计产出 - 累计损耗) / 目标成苗数
-                          扣损耗反映"实际可用苗数"对目标的达成率，避免已死苗数虚增完成度 */}
+                    {/* 2026-08-14: 完成比例 = 已入库数量 / 目标成苗数
+                          以实际入库量衡量目标达成度（原公式 (累计产出-累计损耗)/目标 已于 2026-08-14 废弃） */}
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (() => {
-                      const expanded = Math.max(0, record.expandedPlantCount || 0);
-                      const loss = Math.max(0, record.seedlingLossCount || 0);
-                      const available = Math.max(0, expanded - loss);
-                      const ratio = available / record.targetSurvivalCount;
+                      const stocked = Math.max(0, record.harvestStockedCount || 0);
+                      const ratio = stocked / record.targetSurvivalCount;
                       return (
                         <span className={`font-medium ${
                           ratio >= 0.8 ? 'text-green-600' : ratio >= 0.5 ? 'text-amber-600' : 'text-red-600'

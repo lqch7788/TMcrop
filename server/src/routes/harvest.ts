@@ -100,9 +100,32 @@ router.delete('/:id', (req: Request, res: Response) => {
       });
     }
 
+    // 2026-08-14：删除前读取源记录信息，用于回退育苗"已入库数量"（seedlings.harvest_stocked_count）
+    const hrRows = queryToObjects<any>(db, 'SELECT source_id, source_module, products FROM harvest_records WHERE id = ?', [id]);
+    const hrRow = hrRows[0] || null;
+
     // 2026-07-14：4 表级联删除用事务包裹（修复 S7：此前无事务，DELETE 部分成功时数据不一致）
     try {
       db.run('BEGIN TRANSACTION');
+      // 2026-08-14：若删除的是育苗入库记录，同步回退 harvest_stocked_count（与入库累加逻辑对应，MAX 防负数）
+      // 注意：queryToObjects 返回 camelCase 字段（mapToCamelCase），必须读 sourceModule/sourceId
+      if (hrRow && hrRow.sourceModule === 'seedling') {
+        let totalQty = 0;
+        try {
+          const products = typeof hrRow.products === 'string' ? JSON.parse(hrRow.products) : (hrRow.products || []);
+          if (Array.isArray(products)) {
+            totalQty = products.reduce((s: number, p: any) => s + (Number(p?.harvestQuantity) || 0), 0);
+          }
+        } catch (parseErr) {
+          console.warn('[harvest] products JSON 解析失败，跳过数量回退:', parseErr);
+        }
+        if (totalQty > 0) {
+          db.run(
+            'UPDATE seedlings SET harvest_stocked_count = MAX(0, harvest_stocked_count - ?), update_time = ? WHERE id = ?',
+            [totalQty, new Date().toISOString(), hrRow.sourceId],
+          );
+        }
+      }
       db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [id]);
       db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [id]);
       db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [id]);

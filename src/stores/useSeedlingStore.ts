@@ -110,7 +110,8 @@ export const useSeedlingStore = create<SeedlingState>()(
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 新增每日记录失败:', error);
-        return null;
+        // 2026-08-14：错误上抛 — 弹窗需要显示具体失败原因（后端校验文案），不再吞成笼统报错
+        throw error;
       }
     },
 
