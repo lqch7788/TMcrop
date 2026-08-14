@@ -322,7 +322,6 @@ router.get('/available-count', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '育苗记录不存在' });
     }
 
-    const survivalQuantity = item.survival_quantity || 0;
     // 2026-06-28：业务规则变更，种植管理不再从育苗取苗，"可用定植"改为"可用苗数"：
     // 可用苗数 = 累计产出 - 累计损耗 - 采收入库累计（不含已定植，业务上已停止统计）
     const expanded = item.expanded_plant_count || 0;
@@ -371,11 +370,22 @@ router.get('/all-label-numbers', (req: Request, res: Response) => {
     const seedlingCode = item.seedling_code || item.id;
     const labelNumbers: string[] = [];
 
-    for (let i = 1; i <= survivalQuantity; i++) {
+    // 2026-08-14 M5 修复：数量上限保护 — 大数量（如 5 万）全量生成会导致内存与响应体积膨胀，
+    // 超出 MAX_LABEL_NUMBERS 只生成前 N 个，响应带 truncated 标记由前端提示
+    const MAX_LABEL_NUMBERS = 10000;
+    const totalLabels = Number(survivalQuantity) || 0;
+    const generateCount = Math.min(totalLabels, MAX_LABEL_NUMBERS);
+
+    for (let i = 1; i <= generateCount; i++) {
       labelNumbers.push(`${seedlingCode}-${String(i).padStart(4, '0')}`);
     }
 
-    res.json({ success: true, data: labelNumbers });
+    res.json({
+      success: true,
+      data: labelNumbers,
+      truncated: totalLabels > MAX_LABEL_NUMBERS,
+      total: totalLabels,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取标签编号失败' });
   }

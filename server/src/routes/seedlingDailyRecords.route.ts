@@ -96,6 +96,7 @@ router.post("/", (req: Request, res: Response) => {
     // 2026-06-14: 按 propagation_mode 累加到 seedlings 主表
     // 2026-06-15: 兼容旧字段名（survivalCountChange 等）→ 新字段名
     // 2026-07-14：修复静默吞错 — 添加 console.error 并传播错误
+    // 2026-08-14 M4 修复：累加失败写入 audit_log 告警（此前仅 console.error，用户无感知主表与记录不一致）
     if (data) {
       try {
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
@@ -103,34 +104,44 @@ router.post("/", (req: Request, res: Response) => {
         applyDailyChangeToSeedling(id, normalized, 1);
       } catch (e) {
         console.error('[seedling] applyDailyChangeToSeedling 失败（JSON 解析或数量更新异常）:', e);
+        try {
+          writeAuditLog({
+            businessType: 'seedling.daily_record',
+            businessId: id,
+            action: 'update',
+            operatorName: (req as any).body?.createBy || (req as any).user?.name,
+            opinion: `[告警] 每日记录主表数量累加失败: ${(e as Error)?.message || e}`,
+          });
+        } catch { /* audit_log 写入失败不阻断主流程 */ }
       }
     }
 
     // 2026-07-04 v3：状态机自动切换（合并 sown→in_progress 和 in_progress→transplant_ready）
     // 规则 1：首次添加每日记录 → sown → in_progress
-    // 规则 2：累计产出 ≥ 目标成苗数 → in_progress → transplant_ready（优先于规则 1，避免状态来回切换）
+    // 规则 2：已入库数量 ≥ 目标成苗数 → in_progress → transplant_ready（优先于规则 1，避免状态来回切换）
+    // 2026-08-14 H2 修复：口径从"累计产出"改为"已入库数量"，与列表完成比例（已入库/目标）一致
     // 失败不抛错：状态切换是"业务增强"，主流程（daily_records 写入）已成功
     // 2026-07-04：用后端原生字符串字面量，不依赖前端 SeedlingStatus 枚举（避免跨层耦合）
     const STATUS_SOWN = 'sown';
     const STATUS_IN_PROGRESS = 'in_progress';
     const STATUS_TRANSPLANT_READY = 'transplant_ready';
     try {
-      const sStmt = db.prepare('SELECT expanded_plant_count, target_survival_count, status FROM seedlings WHERE id = ?');
+      const sStmt = db.prepare('SELECT harvest_stocked_count, target_survival_count, status FROM seedlings WHERE id = ?');
       sStmt.bind([id]);
       let sRow: any = null;
       if (sStmt.step()) sRow = sStmt.getAsObject();
       sStmt.free();
 
       if (sRow) {
-        const expanded = Number(sRow.expanded_plant_count) || 0;
+        const stocked = Number(sRow.harvest_stocked_count) || 0;
         const target = Number(sRow.target_survival_count) || 0;
         const currentStatus = sRow.status;
 
         // 规则 2 优先（如果已满足出圃条件，直接跳到 transplant_ready）
-        if (target > 0 && expanded >= target && currentStatus === STATUS_IN_PROGRESS) {
+        if (target > 0 && stocked >= target && currentStatus === STATUS_IN_PROGRESS) {
           db.run(`UPDATE seedlings SET status = ?, update_time = ? WHERE id = ?`,
             [STATUS_TRANSPLANT_READY, now, id]);
-          seedLog.info(`✓ 育苗状态自动切换：${currentStatus} → ${STATUS_TRANSPLANT_READY}（${(seedling as any).seedling_code} 累计产出 ${expanded} ≥ 目标 ${target}）`);
+          seedLog.info(`✓ 育苗状态自动切换：${currentStatus} → ${STATUS_TRANSPLANT_READY}（${(seedling as any).seedling_code} 已入库 ${stocked} ≥ 目标 ${target}）`);
         }
         // 规则 1：首次添加每日记录
         else if (currentStatus === STATUS_SOWN) {

@@ -124,7 +124,8 @@ export const useSeedlingStore = create<SeedlingState>()(
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 更新每日记录失败:', error);
-        return false;
+        // 2026-08-14 M2 修复：错误上抛 — 弹窗显示具体失败原因，不再吞成笼统报错
+        throw error;
       }
     },
 
@@ -137,7 +138,8 @@ export const useSeedlingStore = create<SeedlingState>()(
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 删除每日记录失败:', error);
-        return false;
+        // 2026-08-14 M2 修复：错误上抛 — 弹窗显示具体失败原因，不再吞成笼统报错
+        throw error;
       }
     },
 

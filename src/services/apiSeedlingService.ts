@@ -203,7 +203,8 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlings(): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings');
+  // 2026-08-14 H1 修复：显式传 limit=500 — 后端默认 50 会静默截断列表（筛选/导出随之丢数据）
+  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings?limit=500');
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -455,19 +456,29 @@ export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecor
 /**
  * 删除每日记录
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
+ * 2026-08-14 M2 修复：错误上抛（与添加链路一致），弹窗显示具体失败原因
  */
 export async function deleteDailyRecord(seedlingId: string, recordId: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
-  return true;
+  try {
+    await enhancedApiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
+    return true;
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('删除每日记录请求失败');
+  }
 }
 
 /**
  * 更新每日记录
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
+ * 2026-08-14 M2 修复：错误上抛（与添加链路一致），弹窗显示具体失败原因
  */
 export async function updateDailyRecord(seedlingId: string, recordId: string, updates: Partial<DailyRecord>): Promise<boolean> {
-  await enhancedApiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
-  return true;
+  try {
+    await enhancedApiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
+    return true;
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('更新每日记录请求失败');
+  }
 }
 
 /**
