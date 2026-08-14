@@ -276,7 +276,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         operator: '',
       });
     } catch (error) {
-      await showAlert('添加记录失败，请重试');
+      // 2026-08-14：显示具体失败原因（后端校验文案如"损耗超过当前活体剩余"等）
+      const msg = (error as Error)?.message || '未知错误';
+      await showAlert(`添加记录失败：${msg}`);
       return;
     }
 
@@ -343,7 +345,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       setEditingRow({});
       handleSuccess();
     } catch (error) {
-      await showAlert('更新记录失败，请重试');
+      // 2026-08-14：显示具体失败原因（后端校验文案等）
+      const msg = (error as Error)?.message || '未知错误';
+      await showAlert(`更新记录失败：${msg}`);
     }
   };
 
@@ -358,7 +362,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       }
       handleSuccess();
     } catch (error) {
-      await showAlert('删除记录失败，请重试');
+      // 2026-08-14：显示具体失败原因（后端校验文案等）
+      const msg = (error as Error)?.message || '未知错误';
+      await showAlert(`删除记录失败：${msg}`);
     }
   };
 

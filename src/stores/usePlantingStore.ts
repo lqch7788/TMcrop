@@ -255,7 +255,8 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '添加每日记录失败' });
-        return null;
+        // 2026-08-14：错误上抛 — 弹窗显示具体失败原因（后端校验文案），不再吞成笼统报错
+        throw error;
       }
     },
 
@@ -268,7 +269,8 @@ export const usePlantingStore = create<PlantingState>()(
         return success;
       } catch (error) {
         set({ error: (error as Error).message || '更新每日记录失败' });
-        return false;
+        // 2026-08-14：错误上抛（与添加链路一致）
+        throw error;
       }
     },
 
@@ -281,7 +283,8 @@ export const usePlantingStore = create<PlantingState>()(
         return success;
       } catch (error) {
         set({ error: (error as Error).message || '删除每日记录失败' });
-        return false;
+        // 2026-08-14：错误上抛（与添加链路一致）
+        throw error;
       }
     },
   })

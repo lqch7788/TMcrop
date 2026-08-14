@@ -511,6 +511,8 @@ export default function SeedSourcePage() {
 
       {currentRecord && (
         <EditModal
+          // 2026-08-14：key 按行强制重挂载（修复切换行后表单残留，与育苗/种植同款修复）
+          key={currentRecord.id}
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
@@ -521,6 +523,8 @@ export default function SeedSourcePage() {
 
       {currentRecord && (
         <DetailModal
+          // 2026-08-14：key 按行强制重挂载
+          key={currentRecord.id}
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           record={currentRecord}
@@ -529,6 +533,8 @@ export default function SeedSourcePage() {
 
       {currentRecord && (
         <PrintLabelModal
+          // 2026-08-14：key 按行强制重挂载
+          key={currentRecord.id}
           isOpen={printModalOpen}
           onClose={() => setPrintModalOpen(false)}
           record={currentRecord}
@@ -558,6 +564,8 @@ export default function SeedSourcePage() {
       {/* 2026-06-25 v3: 调拨入库弹窗（append_existing 模式 — 不创建新种源，追加到目标） */}
       {transferModal.record && (
         <UnifiedModal
+          // 2026-08-14：key 按行强制重挂载
+          key={transferModal.record.id}
           isOpen={transferModal.open}
           onClose={handleTransferClose}
           title={`调拨入库 - ${transferModal.record.seedCode}（追加模式）`}
@@ -594,6 +602,8 @@ export default function SeedSourcePage() {
       {/* 2026-07-01: 种源标签管理弹窗 */}
       {labelManageModal.record && (
         <SeedSourceLabelManageModal
+          // 2026-08-14：key 按行强制重挂载
+          key={labelManageModal.record.id}
           isOpen={labelManageModal.open}
           onClose={() => setLabelManageModal({ open: false, record: null })}
           seedSourceId={labelManageModal.record.id}

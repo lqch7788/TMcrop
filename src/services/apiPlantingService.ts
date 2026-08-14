@@ -207,7 +207,8 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
  * 数据流：API → SQLite DB
  */
 export async function getPlantings(): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings');
+  // 2026-08-14 修复：显式传 limit=500 — 后端默认 50 会静默截断列表（与育苗同款 bug）
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings?limit=500');
   return transformPlantingFromBackend(data) as Planting[];
 }
 

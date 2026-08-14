@@ -331,27 +331,42 @@ export async function executeInboundFromSource(
     ]);
     writtenRecordIds.push(harvestRecordId);
 
-    // 2026-08-14：回写育苗源记录 seedlings.harvest_stocked_count（育苗列表"已入库数量"列数据源）
-    // 修复历史断链：原 2026-07-13 补录回写针对 harvest_to_inventory_qty —— 该列在 seedlings/plantings 表中均不存在，
+    // 2026-08-14：回写源记录"已入库量"（育苗列表"已入库数量"列 / 种植列表"已入库量"列数据源）
+    // 修复历史断链：原 2026-07-13 补录回写针对 harvest_to_inventory_qty —— 当时该列在 seedlings/plantings 表中均不存在，
     // 补录入库会触发 no such column 异常导致整单回滚（坏代码，已移除）
-    // 新逻辑：sourceModule='seedling' 的入库（普通入库 + 补录）统一累加 harvest_stocked_count；
-    // 种植模块的"已入库量"字段不在本次范围，不再回写
-    if (input.sourceModule === 'seedling') {
+    // 新逻辑：sourceModule='seedling' 累加 seedlings.harvest_stocked_count；
+    //         sourceModule='planting' 累加 plantings.harvest_to_inventory_qty（2026-08-14 种植闭环）
+    // 普通入库 + 补录统一累加；种源（seed_source）不入库，无需回写
+    if (input.sourceModule === 'seedling' || input.sourceModule === 'planting') {
       // 计算本次入库总量（跨所有 products）
       const totalQuantity = (input.products || []).reduce(
         (sum, p) => sum + (Number(p.harvestQuantity) || 0),
         0,
       );
       if (totalQuantity > 0) {
-        const updateStmt = db.prepare(
-          `UPDATE seedlings SET harvest_stocked_count = COALESCE(harvest_stocked_count, 0) + ?, update_time = ? WHERE id = ?`,
-        );
-        updateStmt.bind([totalQuantity, now, input.sourceRecordId]);
-        updateStmt.step();
-        updateStmt.free();
-        console.log(
-          `[育苗入库回写] seedlings[${input.sourceRecordId}].harvest_stocked_count += ${totalQuantity}`,
-        );
+        const tableName = input.sourceModule === 'planting' ? 'plantings' : 'seedlings';
+        if (input.sourceModule === 'planting') {
+          // 种植：累加数量 + 记录最近一次入库单位（列表"已入库量"列显示单位用）
+          const updateStmt = db.prepare(
+            `UPDATE plantings SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?, harvest_to_inventory_unit = ?, update_time = ? WHERE id = ?`,
+          );
+          updateStmt.bind([totalQuantity, input.unit || null, now, input.sourceRecordId]);
+          updateStmt.step();
+          updateStmt.free();
+          console.log(
+            `[种植入库回写] plantings[${input.sourceRecordId}].harvest_to_inventory_qty += ${totalQuantity}`,
+          );
+        } else {
+          const updateStmt = db.prepare(
+            `UPDATE seedlings SET harvest_stocked_count = COALESCE(harvest_stocked_count, 0) + ?, update_time = ? WHERE id = ?`,
+          );
+          updateStmt.bind([totalQuantity, now, input.sourceRecordId]);
+          updateStmt.step();
+          updateStmt.free();
+          console.log(
+            `[育苗入库回写] seedlings[${input.sourceRecordId}].harvest_stocked_count += ${totalQuantity}`,
+          );
+        }
       }
     }
 
