@@ -162,6 +162,8 @@ export const useFertilizerStore = create<FertilizerState>()(
       try {
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        // 2026-08-14：显式 limit=500 — 后端默认 20 会静默截断列表
+        if (!params.has('limit')) params.append('limit', '500');
         const response = await enhancedApiClient.get<any>(`/fertilizer?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
         set({ items: rawItems as FertilizerData[], isLoading: false });

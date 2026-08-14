@@ -56,6 +56,7 @@ export interface InventoryAggregation {
 
 /**
  * 获取库存列表
+ * 2026-08-14：默认 limit=500 — 后端默认 50 会静默截断列表（与育苗/种植同款 bug）
  */
 export async function getInventoryList(filters?: InventoryFilters): Promise<InventoryRecord[]> {
   const params: Record<string, string> = {};
@@ -64,6 +65,8 @@ export async function getInventoryList(filters?: InventoryFilters): Promise<Inve
   if (filters?.status) params.status = filters.status;
   if (filters?.page) params.page = String(filters.page);
   if (filters?.limit) params.limit = String(filters.limit);
+  // 未显式传 limit 时兜底 500（避免后端默认 50 截断）
+  if (!params.limit) params.limit = '500';
 
   const query = new URLSearchParams(params).toString();
   return await enhancedApiClient.get<InventoryRecord[]>(`/inventory${query ? `?${query}` : ''}`);

@@ -246,10 +246,23 @@ export default function PestControlPage() {
         <AddPestControlModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSaved={handleAddSaved} />
       )}
       {editTarget && (
-        <EditPestControlModal isOpen={!!editTarget} record={editTarget} onClose={() => setEditTarget(null)} onSaved={handleEditSaved} />
+        <EditPestControlModal
+          // 2026-08-14：key 按行强制重挂载（修复切换记录后表单残留）
+          key={editTarget.id}
+          isOpen={!!editTarget}
+          record={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={handleEditSaved}
+        />
       )}
       {detailTarget && (
-        <PestControlDetailModal isOpen={!!detailTarget} record={detailTarget} onClose={() => setDetailTarget(null)} />
+        <PestControlDetailModal
+          // 2026-08-14：key 按行强制重挂载
+          key={detailTarget.id}
+          isOpen={!!detailTarget}
+          record={detailTarget}
+          onClose={() => setDetailTarget(null)}
+        />
       )}
       <PestControlExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)}
         onConfirm={handleExportConfirm} selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length} />

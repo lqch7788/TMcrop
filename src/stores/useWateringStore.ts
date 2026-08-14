@@ -128,6 +128,8 @@ export const useWateringStore = create<WateringStoreState>((set, get) => ({
       Object.entries(filters).forEach(([k, v]) => {
         if (v != null && v !== '') params.append(k, String(v));
       });
+      // 2026-08-14：显式 pageSize=500 — 后端默认 pageSize 20 会静默截断列表（该路由用 pageSize 参数名）
+      if (!params.has('pageSize')) params.append('pageSize', '500');
 
       const url = `/watering${params.toString() ? `?${params}` : ''}`;
       // 2026-07-27 审核修复 C-2：enhancedApiClient 已解包 .data，信任其结果
