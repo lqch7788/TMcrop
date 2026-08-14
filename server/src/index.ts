@@ -187,6 +187,17 @@ async function start() {
       console.warn('[backfillTransferInboundRecords] 启动回填失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-08-14：启动时回填育苗"已入库数量"（seedlings.harvest_stocked_count）
+    // 历史入库记录从未累加该字段（旧补录回写指向不存在的 harvest_to_inventory_qty 列），
+    // 一次性按 harvest_records 聚合回填；幂等（仅回填 0/NULL 行，不覆盖手工纠错值）
+    try {
+      const { backfillSeedlingHarvestStockedCount } = await import('./db/backfillSeedlingHarvestStocked');
+      const result = backfillSeedlingHarvestStockedCount();
+      console.log(`[backfillSeedlingHarvestStocked] 启动回填：${result.filledCount} 条记录，累计 ${result.totalQty}`);
+    } catch (e: any) {
+      console.warn('[backfillSeedlingHarvestStocked] 启动回填失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-07-19 P0-15：GREEN 级 schema 补齐（纯 ADD COLUMN + CREATE INDEX，无 UPDATE/DELETE）
     // 绕过 YELLOW 级 fixMissingSchema 禁用导致老/新 DB schema 不一致问题
     try {

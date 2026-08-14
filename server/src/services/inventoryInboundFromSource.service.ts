@@ -331,26 +331,26 @@ export async function executeInboundFromSource(
     ]);
     writtenRecordIds.push(harvestRecordId);
 
-    // 2026-07-13：回写源记录的 harvest_to_inventory_qty 字段（让种植/育苗列表"已入库量"包含补录量）
-    // 之前补录入库只往 inventory_inbound_records 写 is_supplementary=1，但源记录的 harvest_to_inventory_qty 不更新
-    // 导致种植/育苗列表显示的"已入库量"遗漏了补录部分
-    // 注意：仅在 sourceModule='planting'/'seedling' 且 isSupplementary=true 时回写（种源不入库，无此字段）
-    if (input.isSupplementary && (input.sourceModule === 'planting' || input.sourceModule === 'seedling')) {
+    // 2026-08-14：回写育苗源记录 seedlings.harvest_stocked_count（育苗列表"已入库数量"列数据源）
+    // 修复历史断链：原 2026-07-13 补录回写针对 harvest_to_inventory_qty —— 该列在 seedlings/plantings 表中均不存在，
+    // 补录入库会触发 no such column 异常导致整单回滚（坏代码，已移除）
+    // 新逻辑：sourceModule='seedling' 的入库（普通入库 + 补录）统一累加 harvest_stocked_count；
+    // 种植模块的"已入库量"字段不在本次范围，不再回写
+    if (input.sourceModule === 'seedling') {
       // 计算本次入库总量（跨所有 products）
       const totalQuantity = (input.products || []).reduce(
         (sum, p) => sum + (Number(p.harvestQuantity) || 0),
         0,
       );
       if (totalQuantity > 0) {
-        const tableName = input.sourceModule === 'planting' ? 'plantings' : 'seedlings';
         const updateStmt = db.prepare(
-          `UPDATE ${tableName} SET harvest_to_inventory_qty = COALESCE(harvest_to_inventory_qty, 0) + ?, update_time = ? WHERE id = ?`,
+          `UPDATE seedlings SET harvest_stocked_count = COALESCE(harvest_stocked_count, 0) + ?, update_time = ? WHERE id = ?`,
         );
-        updateStmt.bind([totalQuantity, new Date().toISOString(), input.sourceRecordId]);
+        updateStmt.bind([totalQuantity, now, input.sourceRecordId]);
         updateStmt.step();
         updateStmt.free();
         console.log(
-          `[补录回写] ${tableName}[${input.sourceRecordId}].harvest_to_inventory_qty += ${totalQuantity}`,
+          `[育苗入库回写] seedlings[${input.sourceRecordId}].harvest_stocked_count += ${totalQuantity}`,
         );
       }
     }

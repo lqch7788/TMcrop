@@ -336,8 +336,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         seedlingLossCount: undefined,
       } as any);
     } catch (error) {
-      // logger.error('添加每日记录失败:', error);
-      await showAlert('添加记录失败，请重试');
+      // 2026-08-14：显示具体失败原因（后端 400 校验文案如"小苗损耗超过剩余可用"、网络错误等）
+      const msg = (error as Error)?.message || '未知错误';
+      await showAlert(`添加记录失败：${msg}`);
       return;
     }
 

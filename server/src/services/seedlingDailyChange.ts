@@ -36,7 +36,7 @@ export function validateSeedlingDailyChange(
 ): string | null {
   const db = getDatabase();
   const stmt = db.prepare(
-    'SELECT mother_plant_count, expanded_plant_count, seedling_quantity, mother_loss_count, seedling_loss_count, transplanted_count FROM seedlings WHERE id = ?',
+    'SELECT mother_plant_count, expanded_plant_count, seedling_quantity, mother_loss_count, seedling_loss_count, transplanted_count, harvest_stocked_count FROM seedlings WHERE id = ?',
   );
   stmt.bind([seedlingId]);
   let row: any = null;
@@ -46,10 +46,11 @@ export function validateSeedlingDailyChange(
 
   const motherCount = Number(row.mother_plant_count || 0);
   const expandedCount = Number(row.expanded_plant_count || 0);
-  const seedlingQty = Number(row.seedling_quantity || 0);
   const motherLoss = Number(row.mother_loss_count || 0);
   const seedlingLoss = Number(row.seedling_loss_count || 0);
   const transplanted = Number(row.transplanted_count || 0);
+  // 2026-08-14：小苗可用数扣除已入库量（与前端 DailyRecordModal 校验口径一致）
+  const harvestStocked = Number(row.harvest_stocked_count || 0);
 
   const ml = Math.max(0, Number(changeData.motherLossChange || 0));
   const sl = Math.max(0, Number(changeData.seedlingLossChange || 0));
@@ -61,9 +62,13 @@ export function validateSeedlingDailyChange(
     return `母株损耗 ${ml} 超过当前母株剩余 ${availableMother}（母株 ${motherCount} + 扩繁 ${expandedCount} - 损耗 ${motherLoss}）`;
   }
 
-  const availableSeedling = Math.max(0, seedlingQty - seedlingLoss - transplanted);
+  // 2026-08-14：口径修复 — 小苗可用数从"初始数量"改为"累计产出池"
+  // 根因：旧口径用 seedling_quantity（1:多 模式下是母株初始数，与小苗池无关），
+  //   累计损耗超过初始数后 available 恒为 0，用户无法再录入任何小苗损耗（"添加记录失败，请重试" bug）
+  // 新口径与前端一致：产出 − 小苗损耗 − 定植 − 已入库
+  const availableSeedling = Math.max(0, expandedCount - seedlingLoss - transplanted - harvestStocked);
   if (sl > availableSeedling) {
-    return `小苗损耗 ${sl} 超过当前小苗剩余 ${availableSeedling}（小苗 ${seedlingQty} - 损耗 ${seedlingLoss} - 定植 ${transplanted}）`;
+    return `小苗损耗 ${sl} 超过当前小苗剩余 ${availableSeedling}（产出 ${expandedCount} - 损耗 ${seedlingLoss} - 定植 ${transplanted} - 已入库 ${harvestStocked}）`;
   }
 
   return null;

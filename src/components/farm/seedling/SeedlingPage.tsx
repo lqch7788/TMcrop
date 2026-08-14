@@ -505,7 +505,7 @@ export default function SeedlingPage() {
     const headers = [
       '育苗批号', '繁殖模式', '关联生产计划', '关联种源', '作物编码', '作物名称', '作物品种', '品种路径',
       '育苗方式', '育苗区域', '单位', '开始日期', '预计结束日期', '实际结束日期',
-      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '小苗累计产出', '小苗累计损耗', '采收入库累计', '小苗剩余数量',
+      '初始数量', '母株存活数', '母株累计损耗', '补苗累计', '可入库小苗数', '小苗累计损耗', '已入库数量', '小苗剩余数量',
       '目标成苗数', '完成比例', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
@@ -537,12 +537,13 @@ export default function SeedlingPage() {
       '母株存活数': record.motherPlantCount || 0,
       '母株累计损耗': record.motherLossCount || 0,
       '补苗累计': record.replantCount || 0,
-      '小苗累计产出': record.expandedPlantCount || 0,
+      '可入库小苗数': record.expandedPlantCount || 0,
       '小苗累计损耗': record.seedlingLossCount || 0,
-      '采收入库累计': record.harvestStockedCount || 0,
+      '已入库数量': record.harvestStockedCount || 0,
       '小苗剩余数量': getRemainingCount(record),
       '目标成苗数': record.targetSurvivalCount ?? '-',
-      '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, ((record.expandedPlantCount || 0) - (record.seedlingLossCount || 0))) / record.targetSurvivalCount * 100)}%` : '-',
+      // 2026-08-14：完成比例公式变更为 已入库数量 / 目标成苗数（与列表一致）
+      '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round(Math.max(0, (record.harvestStockedCount || 0)) / record.targetSurvivalCount * 100)}%` : '-',
       '损耗率': `${record.lossRate}%`,
       '育苗结束': record.isFinished ? '是' : '否',
       '状态': (() => {
@@ -709,6 +710,8 @@ export default function SeedlingPage() {
 
       {currentRecord && (
         <DailyRecordModal
+          // 2026-08-14：key 按行强制重挂载 — 修复切换行后表单残留上一行数据（补苗/损耗等输入框）bug
+          key={currentRecord.id}
           isOpen={dailyRecordModalOpen}
           onClose={() => setDailyRecordModalOpen(false)}
           onSuccess={handleDailyRecordSuccess}
@@ -783,6 +786,10 @@ export default function SeedlingPage() {
             unit: undefined,
             endTime: inboundModal.record.endTime,
             status: inboundModal.record.status,
+            // 2026-08-14：育苗入库软校验 — 传入 3 个数量字段供弹窗计算剩余可入库
+            expandedPlantCount: inboundModal.record.expandedPlantCount,
+            seedlingLossCount: inboundModal.record.seedlingLossCount,
+            harvestStockedCount: inboundModal.record.harvestStockedCount,
           }}
         />
       )}
