@@ -194,6 +194,8 @@ export const usePestControlStore = create<PestControlState>()(
       try {
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        // 2026-08-14：显式 limit=500 — 后端默认 20 会静默截断列表
+        if (!params.has('limit')) params.append('limit', '500');
         const response = await enhancedApiClient.get<any>(`/pest-records?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
         // 2026-07-17：normalize — 字段名转 camelCase + pesticideTypes JSON 字符串→数组

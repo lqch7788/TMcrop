@@ -180,9 +180,10 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
       });
       onSaved();
     } catch(err) {
-      // 2026-07-16：UI 错误脱敏
+      // 2026-08-14：显示具体失败原因（原笼统文案掩盖了校验/网络等真实错误）
       console.error('[FertilizerEditModal] 保存出错:', err);
-      await showAlert('保存失败，请稍后重试。如持续出现请联系管理员。');
+      const msg = err instanceof Error ? err.message : String(err);
+      await showAlert(`保存失败：${msg}`);
     }
     finally { setSubmitting(false); }
   };

@@ -58,7 +58,8 @@ router.get('/', (req: Request, res: Response) => {
   try {
     const q = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(q.page ?? '1', 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(q.limit ?? '20', 10) || 20));
+    // 2026-08-14：上限 100 → 1000（前端全量加载 limit=500 曾被截到 100，数据超 100 条静默丢列表）
+    const limitNum = Math.min(1000, Math.max(1, parseInt(q.limit ?? '20', 10) || 20));
     // 2026-07-16：service.findAll 包含所有筛选 + 分页
     const list = fertilizerService.findAll(q, pageNum, limitNum);
     res.json({ success: true, data: list.rows, meta: { total: list.total, page: pageNum, limit: limitNum } });

@@ -745,6 +745,8 @@ export default function FertilizerPage() {
           )}
           {editTarget && (
             <FertilizerEditModal
+              // 2026-08-14：key 按行强制重挂载（修复切换记录后表单残留）
+              key={editTarget.id}
               isOpen={!!editTarget}
               record={editTarget}
               onClose={() => setEditTarget(null)}
@@ -753,6 +755,8 @@ export default function FertilizerPage() {
           )}
           {detailTarget && (
             <FertilizerDetailModal
+              // 2026-08-14：key 按行强制重挂载
+              key={detailTarget.id}
               isOpen={!!detailTarget}
               record={detailTarget}
               onClose={() => setDetailTarget(null)}
@@ -822,6 +826,8 @@ export default function FertilizerPage() {
           )}
           {waterEditTarget && (
             <WaterEditModal
+              // 2026-08-14：key 按行强制重挂载
+              key={waterEditTarget.id}
               isOpen={!!waterEditTarget}
               record={waterEditTarget}
               onClose={() => setWaterEditTarget(null)}
@@ -830,6 +836,8 @@ export default function FertilizerPage() {
           )}
           {waterDetailTarget && (
             <WaterDetailModal
+              // 2026-08-14：key 按行强制重挂载
+              key={waterDetailTarget.id}
               isOpen={!!waterDetailTarget}
               record={waterDetailTarget}
               onClose={() => setWaterDetailTarget(null)}

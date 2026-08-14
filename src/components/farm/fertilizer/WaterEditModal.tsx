@@ -271,7 +271,9 @@ export function WaterEditModal({ isOpen, record, onClose, onSaved }: {
       onClose();
     } catch (err) {
       console.error('[WaterEditModal] 保存出错:', err);
-      await showAlert('保存失败，请稍后重试。如持续出现请联系管理员。');
+      // 2026-08-14：显示具体失败原因（原笼统文案掩盖真实错误）
+      const msg = err instanceof Error ? err.message : String(err);
+      await showAlert(`保存失败：${msg}`);
     } finally {
       setSubmitting(false);
     }

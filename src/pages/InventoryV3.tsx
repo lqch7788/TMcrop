@@ -426,6 +426,8 @@ export default function InventoryV3Page() {
 
       {/* 冻结弹窗 */}
       <FreezeModal
+        // 2026-08-14：key 按库存实例强制重挂载（修复切换库存后字段残留）
+        key={selectedFreezeStock?.instanceId ?? selectedFreezeStock?.id ?? 'freeze'}
         isOpen={freezeModalOpen}
         stock={selectedFreezeStock}
         onClose={() => setFreezeModalOpen(false)}
@@ -469,6 +471,8 @@ export default function InventoryV3Page() {
 
       {/* 详情弹窗（合并原"追溯"功能） */}
       <InventoryDetailModal
+        // 2026-08-14：key 按库存实例强制重挂载（修复切换库存后详情/追溯 tab 残留）
+        key={detailStock?.instanceId ?? detailStock?.id ?? 'detail'}
         isOpen={detailModalOpen}
         stock={detailStock}
         onClose={() => {

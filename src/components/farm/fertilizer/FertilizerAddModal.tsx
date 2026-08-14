@@ -223,9 +223,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       });
       onSaved();
     } catch (err) {
-      // 2026-07-16：UI 错误脱敏 — 不向用户暴露 (err as Error).message（可能含内堆/SQL）
+      // 2026-08-14：显示具体失败原因（enhancedApiClient 的 message 已是后端业务文案，不含内堆/SQL 细节）
       console.error('[FertilizerAddModal] 保存出错:', err);
-      await showAlert('保存失败，请稍后重试。如持续出现请联系管理员。');
+      const msg = err instanceof Error ? err.message : String(err);
+      await showAlert(`保存失败：${msg}`);
     } finally {
       setSubmitting(false);
     }
