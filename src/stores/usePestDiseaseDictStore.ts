@@ -74,11 +74,11 @@ function parseImages(raw: unknown): string[] {
 
 function normalize(data: Record<string, unknown>): PestDiseaseDict {
   const result: Record<string, unknown> = {};
+  // 2026-08-15 修复：API 响应经 camelCase 中间件已是 camelCase key，
+  // 原实现只读 snake_case（data[dbKey]）恒为 undefined → 全字段 null → 列表数据全丢（空表）
   for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
-    result[camelKey] = data[dbKey] ?? null;
+    result[camelKey] = data[camelKey] ?? data[dbKey] ?? null;
   }
-  // camelCase 中间件可能已把 key 转 camel，双向兜底
-  if (result.images == null && data.images != null) result.images = data.images;
   result.images = parseImages(result.images);
   return result as unknown as PestDiseaseDict;
 }

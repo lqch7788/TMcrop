@@ -7,8 +7,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 
 import { X } from 'lucide-react';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -17,6 +15,8 @@ import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { ImageUploader } from '@/components/ui';
+// 2026-08-15：类型选项从共享常量导入（原 Add/Edit 两处硬编码且不一致，Add 缺「调节剂」）
+import { PESTICIDE_TYPE_OPTIONS, PesticideTypeCode } from '../constants';
 
 interface AddPestDiseaseModalProps {
   isOpen: boolean;
@@ -37,7 +37,11 @@ const defaultForm = {
 };
 
 export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddPestDiseaseModalProps) {
-  const store = usePestDiseaseDictStore();
+  // 2026-08-15 审核修复：改用 selector（整 store 订阅是页面已修复的反模式）
+  const createItem = usePestDiseaseDictStore((s) => s.createItem);
+  const fetchNextCode = usePestDiseaseDictStore((s) => s.fetchNextCode);
+  const updateRelations = usePestDiseaseDictStore((s) => s.updateRelations);
+  const storeError = usePestDiseaseDictStore((s) => s.error);
   const pesticideStore = usePesticideLibraryStore();
 
   const [form, setForm] = useState(defaultForm);
@@ -49,25 +53,14 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
 
   // 药剂搜索和过滤
   const [pesticideSearch, setPesticideSearch] = useState('');
-  // 2026-07-16：pesticide_typeFilter 字段对齐药剂库字典 dict_code（杀虫剂/杀菌剂/...）
-  // 旧的「化学/生物/物理」分类已废弃（项目早期字典遗留），改为药剂库实际分类
-  const PESTICIDE_TYPE_OPTIONS = [
-    { code: 'insecticide',  label: '杀虫剂',  emoji: '🐛', active: 'bg-red-500',    idle: 'bg-red-50 text-red-600 border-red-200' },
-    { code: 'fungicide',    label: '杀菌剂',  emoji: '🦠', active: 'bg-cyan-500',   idle: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
-    { code: 'herbicide',    label: '除草剂',  emoji: '🌿', active: 'bg-emerald-500',idle: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-    { code: 'acaricide',    label: '杀螨剂',  emoji: '🕷️', active: 'bg-purple-500', idle: 'bg-purple-50 text-purple-600 border-purple-200' },
-    { code: 'protective',   label: '保护剂',  emoji: '🛡️', active: 'bg-blue-500',   idle: 'bg-blue-50 text-blue-600 border-blue-200' },
-    { code: 'adjuvant',     label: '助剂',    emoji: '💧', active: 'bg-amber-500',  idle: 'bg-amber-50 text-amber-600 border-amber-200' },
-    { code: 'other',        label: '其他',    emoji: '📦', active: 'bg-gray-500',   idle: 'bg-gray-50 text-gray-600 border-gray-200' },
-  ] as const;
-  type PesticideTypeCode = typeof PESTICIDE_TYPE_OPTIONS[number]['code'];
+  // 2026-08-15：类型选项统一来自共享常量（对齐药剂库字典 dict_code，含调节剂）
   const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | PesticideTypeCode>('all');
 
   // 生成编码
   const generateCode = async () => {
     setGeneratingCode(true);
     try {
-      const nextCode = await store.fetchNextCode(form.dictType);
+      const nextCode = await fetchNextCode(form.dictType);
       if (!nextCode) {
         await showAlert('生成编码失败：后端返回为空，请稍后重试');
         return;
@@ -92,10 +85,11 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       // 确保药剂列表已加载（强制刷新获取所有药剂）
       pesticideStore.fetchItems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pesticideStore 是整 store 对象引用，加依赖会导致每次渲染重复拉取
   }, [isOpen, dictType]);
 
   // 更新表单字段
-  const updateField = useCallback((field: string, value: any) => {
+  const updateField = useCallback((field: string, value: string | string[]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
@@ -130,7 +124,7 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
     setSubmitting(true);
     try {
       // 创建病虫害记录（2026-07-16：含 images 字段）
-      const newItem = await store.createItem({
+      const newItem = await createItem({
         dictCode: form.dictCode,
         dictName: form.dictName,
         dictType: form.dictType,
@@ -142,13 +136,17 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
 
       // createItem 内部 catch 返回 null — 必须检查，否则失败也关弹窗（数据丢失感知）
       if (!newItem) {
-        await showAlert('创建失败：' + (store.error || '请稍后重试'));
+        await showAlert('创建失败：' + (storeError || '请稍后重试'));
         return;
       }
 
       // 如果有关联的药剂，建立关联
       if (selectedPesticides.length > 0) {
-        await store.updateRelations(newItem.id, selectedPesticides);
+        // 2026-08-15 审核修复：检查关联保存结果（原代码忽略返回值，关联失败用户无感知）
+        const ok = await updateRelations(newItem.id, selectedPesticides);
+        if (!ok) {
+          await showAlert('病虫害已保存，但关联药剂保存失败，请在编辑弹窗中重新关联');
+        }
       }
 
       onSaved();

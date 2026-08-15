@@ -17,6 +17,11 @@ import { useFertilizerLibraryStore, FertilizerSpec } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS, APPLICATION_TIMING_OPTIONS } from '../constants';
 
+/** 区域标题（2026-08-15：从组件内提取到文件级，避免每次渲染重建组件类型导致子树 remount） */
+function SectionTitle({ title, icon }: { title: string; icon: string }) {
+  return <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>;
+}
+
 interface EditFertilizerModalProps {
   isOpen: boolean;
   record: FertilizerSpec;
@@ -76,7 +81,9 @@ const buildInitialForm = (record: FertilizerSpec): SpecForm => ({
 });
 
 export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFertilizerModalProps) {
-  const store = useFertilizerLibraryStore();
+  // 2026-08-15 审核修复：改用 selector（整 store 订阅是页面 H22 已修复的反模式）
+  const updateItem = useFertilizerLibraryStore((s) => s.updateItem);
+  const storeError = useFertilizerLibraryStore((s) => s.error);
 
   const [form, setForm] = useState<SpecForm>(buildInitialForm(record));
   const [original, setOriginal] = useState<SpecForm>(buildInitialForm(record));
@@ -117,6 +124,11 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       await showAlert('请输入肥料名称');
       return;
     }
+    // 2026-08-15 审核修复：日期校验（对齐药剂库弹窗 — 过期日期不得早于生产日期）
+    if (form.productionDate && form.expirationDate && form.expirationDate < form.productionDate) {
+      await showAlert('过期日期不能早于生产日期，请检查日期填写');
+      return;
+    }
 
     if (!hasChanges()) {
       await showAlert('未检测到任何修改');
@@ -125,7 +137,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
 
     setSubmitting(true);
     try {
-      const result = await store.updateItem(record.id, {
+      const result = await updateItem(record.id, {
         fertilizerName: form.fertilizerName,
         fertilizerType: form.fertilizerType,
         applicationTiming: form.applicationTiming,
@@ -153,7 +165,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
       if (result) {
         onSaved();
       } else {
-        await showAlert('保存失败：' + (store.error || '请重试'));
+        await showAlert('保存失败：' + (storeError || '请重试'));
         return;
       }
     } catch (err) {
@@ -164,11 +176,6 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
   };
 
   if (!record) return null;
-
-  // 区域标题
-  const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
-    <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
-  );
 
   return (
     <UnifiedModal

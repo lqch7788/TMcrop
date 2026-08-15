@@ -7,6 +7,8 @@ import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { BusinessError } from '../services/fertilizer.service';
+// 2026-08-15 审核修复：统一本地时间戳（toISOString 是 UTC，中国时区显示少 8 小时 — utc-timezone-id-bug 教训）
+import { nowLocalTimestamp } from '../lib/timeUtils';
 
 const router = Router();
 
@@ -89,7 +91,7 @@ router.post('/', (req: Request, res: Response) => {
       return;
     }
     const code = generateFertilizerCode(db);
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     const id = `fs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     db.run(`INSERT INTO fertilizer_specs (
@@ -137,7 +139,7 @@ router.post('/:id/stock-in', (req: Request, res: Response) => {
     const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [id]);
     if (existing.length === 0) { res.status(404).json({ success: false, error: '肥料不存在' }); return; }
 
-    const now = new Date().toISOString();
+    const now = nowLocalTimestamp();
     const spec = existing[0];
 
     // 原子更新库存（避免并发读-改-写竞态）
@@ -240,7 +242,7 @@ router.put('/:id', (req: Request, res: Response) => {
        body.package_spec ?? existing[0].package_spec,
        body.stock_unit ?? existing[0].stock_unit ?? 'kg',
        body.status ?? existing[0].status,
-       new Date().toISOString(), id]
+       nowLocalTimestamp(), id]
     );
     const updated = queryToObjects(db, `SELECT * FROM fertilizer_specs WHERE id = ?`, [id]);
     saveDatabase();

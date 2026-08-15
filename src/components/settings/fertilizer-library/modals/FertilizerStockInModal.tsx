@@ -13,6 +13,8 @@ import { TextArea } from '@/components/ui';
 import { FertilizerSpec, useFertilizerLibraryStore, getDictItemName } from '@/stores';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { showAlert } from '@/lib/dialogService';
+// 2026-08-15：施肥时期 Badge 配色从共享常量导入（原 Detail/StockIn 两处重复定义）
+import { TIMING_BADGE_OPTIONS } from '../constants';
 
 interface FertilizerStockInModalProps {
   isOpen: boolean;
@@ -21,15 +23,9 @@ interface FertilizerStockInModalProps {
   onSaved: () => void;
 }
 
-// 施肥时期 Badge 配置（与详情弹窗一致）
-const TIMING_OPTIONS: Array<{ value: string; label: string; bg: string; text: string }> = [
-  { value: 'base', label: '底肥', bg: 'bg-amber-100', text: 'text-amber-700' },
-  { value: 'dressing', label: '追肥', bg: 'bg-green-100', text: 'text-green-700' },
-  { value: 'foliar', label: '叶面肥', bg: 'bg-blue-100', text: 'text-blue-700' },
-];
-
 export function FertilizerStockInModal({ isOpen, record, onClose, onSaved }: FertilizerStockInModalProps) {
-  const store = useFertilizerLibraryStore();
+  // 2026-08-15 审核修复：改用 selector（整 store 订阅是页面 H22 已修复的反模式）
+  const stockIn = useFertilizerLibraryStore((s) => s.stockIn);
   const [quantity, setQuantity] = useState<string>('');
   const [remark, setRemark] = useState('');
   // 2026-07-27：单价可编辑（默认填肥料库当前单价；采购入库允许填写实际购买价）
@@ -53,7 +49,7 @@ export function FertilizerStockInModal({ isOpen, record, onClose, onSaved }: Fer
     return (
       <div className="flex flex-wrap gap-1">
         {timings.map((t, idx) => {
-          const cfg = TIMING_OPTIONS.find((x) => x.value === t) || { bg: 'bg-gray-100', text: 'text-gray-700', label: t };
+          const cfg = TIMING_BADGE_OPTIONS.find((x) => x.value === t) || { bg: 'bg-gray-100', text: 'text-gray-700', label: t };
           return (
             <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
               {cfg.label}
@@ -81,7 +77,7 @@ export function FertilizerStockInModal({ isOpen, record, onClose, onSaved }: Fer
     try {
       // 2026-07-27：从 auth store 取当前操作人 + 弹窗里可编辑的单价，写入入库审计记录
       const user = useAuthStore.getState().user as { oid?: string; realName?: string } | null;
-      const newStock = await store.stockIn(record.id, qty, remark || undefined, {
+      const newStock = await stockIn(record.id, qty, remark || undefined, {
         unitPrice: price,
         operatorId: user?.oid,
         operatorName: user?.realName || user?.oid,

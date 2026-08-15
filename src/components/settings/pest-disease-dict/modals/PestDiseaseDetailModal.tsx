@@ -10,7 +10,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 // 2026-07-10：pesticideTypes 多值 label 翻译
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
-import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict, PesticideForRelation } from '@/stores';
+import { usePestDiseaseDictStore, PestDiseaseDict, PesticideForRelation } from '@/stores';
 
 interface PestDiseaseDetailModalProps {
   isOpen: boolean;
@@ -31,36 +31,6 @@ const getTypeBadge = (type: string) => {
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
           病害
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-          {type}
-        </span>
-      );
-  }
-};
-
-// 药剂类型 Badge
-const getPesticideTypeBadge = (type: string) => {
-  switch (type) {
-    case 'chemical':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-          化学防治
-        </span>
-      );
-    case 'bio':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-          生物防治
-        </span>
-      );
-    case 'physical':
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-          物理防治
         </span>
       );
     default:
@@ -126,6 +96,7 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
         dictState.loadDictionaries();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadRelatedPesticides 每次渲染重建，加依赖会无限重拉
   }, [isOpen, record]);
 
   const loadRelatedPesticides = async () => {
@@ -145,14 +116,15 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
   const images: string[] = Array.isArray(record.images) ? record.images : [];
 
   // 详情字段定义
+  // 2026-08-15：与药剂详情弹窗样式统一 — 删头部重复卡片、字段同行显示（label:value）、无背景无边框
   const fields = [
-    { label: '病虫害编码', value: record.dictCode || '-', mono: true },
-    { label: '病虫害名称', value: record.dictName || '-', bold: true },
-    { label: '类型', value: record.dictType, badge: true },
+    { label: '病虫害编码', value: <span className="font-mono">{record.dictCode || '-'}</span> },
+    { label: '病虫害名称', value: <span className="font-bold">{record.dictName || '-'}</span> },
+    { label: '类型', value: getTypeBadge(record.dictType) },
     { label: '适用作物', value: record.targetCrops || '-' },
-    { label: '描述', value: record.description || '-', fullWidth: true },
     { label: '状态', value: record.status === 'active' ? '启用' : '禁用' },
     { label: '创建时间', value: record.createTime ? new Date(record.createTime).toLocaleString() : '-' },
+    { label: '描述', value: record.description || '-' },
   ];
 
   return (
@@ -166,13 +138,14 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
       height={650}
       showFooter={false}
     >
-      {/* 编号头部 */}
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 mb-4 border border-orange-100">
-        <div className="text-xs text-gray-500 mb-1">病虫害编码</div>
-        <div className="text-xl font-mono font-bold text-orange-700">{record.dictCode || '-'}</div>
-        <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-          {record.dictName}
-          {getTypeBadge(record.dictType)}
+      {/* 2026-08-15：删除头部标题卡片（编码/名称/类型）— 与下方基础信息字段内容重复 */}
+
+      {/* 基础信息字段（同行显示，无背景无边框） */}
+      <div className="mb-4">
+        <div className="grid grid-cols-2 gap-x-6">
+          {fields.map((field, idx) => (
+            <FieldCell key={idx} label={field.label} value={field.value} />
+          ))}
         </div>
       </div>
 
@@ -233,43 +206,6 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
         </div>
       )}
 
-      {/* 详情网格 */}
-      <div className="grid grid-cols-2 gap-4">
-        {fields.map((field, idx) => {
-          if (field.fullWidth) {
-            return (
-              <div key={idx} className="col-span-2">
-                <Label className="text-xs text-gray-500">{field.label}</Label>
-                <div className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3 min-h-[40px]">
-                  {field.badge ? (
-                    getTypeBadge(field.value)
-                  ) : (
-                    field.value
-                  )}
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div key={idx}>
-              <Label className="text-xs text-gray-500">{field.label}</Label>
-              <div className={`text-sm ${field.highlight || 'text-gray-900'}`}>
-                {field.mono ? (
-                  <span className="font-mono">{field.value}</span>
-                ) : field.bold ? (
-                  <span className="font-bold">{field.value}</span>
-                ) : field.badge ? (
-                  getTypeBadge(field.value)
-                ) : (
-                  field.value
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {/* 底部关闭按钮 */}
       <div className="mt-6 flex justify-end">
         <Button
@@ -303,5 +239,15 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
         </div>
       )}
     </UnifiedModal>
+  );
+}
+
+/** 单个字段展示行 — 2026-08-15：标签与值同一行（"编码：xxx"）、无背景色无底框（对齐药剂详情弹窗） */
+function FieldCell({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 py-1">
+      <span className="text-xs text-gray-500 shrink-0">{label}：</span>
+      <span className="text-sm text-gray-900 flex-1 min-w-0 truncate">{value}</span>
+    </div>
   );
 }

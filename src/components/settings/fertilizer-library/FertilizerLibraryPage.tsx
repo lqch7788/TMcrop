@@ -66,14 +66,17 @@ export default function FertilizerLibraryPage() {
   // 2026-07-27 修复：依赖必须是稳定引用的 fetchItems selector，不能是整个 store 对象
   // 注意：activeTab 切换后需要保留关键字（肥料名称）作为后端 keyword 查询条件，
   // 否则 useEffect 拉的全 tab 列表会覆盖掉搜索结果，导致用户看不到匹配行。
+  // 2026-08-15 审核修复：提取 buildFetchFilters 统一「fertilizerName → keyword」转换，
+  // 此前 handleAddSaved/handleEditSaved/handleStockInSaved 直接把 fertilizerName 当参数名
+  // 传给后端（后端只认 keyword），保存后搜索结果被静默清空
+  const buildFetchFilters = useCallback((): Record<string, string> => ({
+    fertilizer_type: activeTab,
+    keyword: (filters.fertilizerName || '').trim(),
+  }), [activeTab, filters]);
+
   useEffect(() => {
-    const typeFilter = {
-      ...filters,
-      fertilizer_type: activeTab,
-      keyword: (filters.fertilizerName || '').trim(),
-    };
-    fetchItems(typeFilter);
-  }, [activeTab, filters, fetchItems]);
+    fetchItems(buildFetchFilters());
+  }, [buildFetchFilters, fetchItems]);
 
   useEffect(() => {
     if (error && error !== lastShownErrorRef.current) {
@@ -226,14 +229,17 @@ export default function FertilizerLibraryPage() {
 
   const handleStockInSaved = useCallback(() => {
     setStockInTarget(null);
-    fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, fetchItems]);
+    fetchItems(buildFetchFilters());
+  }, [buildFetchFilters, fetchItems]);
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const confirmed = await showConfirm('确认删除该肥料记录？此操作不可恢复。');
-      if (confirmed) {
-        deleteItem(id);
+      const confirmed = await showConfirm('确认删除该肥料记录？此操作不可恢复。\n\n删除后，相关防治/施肥记录中的使用追溯可能无法完整显示。');
+      if (!confirmed) return;
+      // 2026-08-15 审核修复：等待删除结果，失败给用户可见提示（原代码 fire-and-forget，失败静默）
+      const success = await deleteItem(id);
+      if (!success) {
+        await showAlert('删除失败：' + (useFertilizerLibraryStore.getState().error || '请稍后重试'));
       }
     },
     [deleteItem],
@@ -242,13 +248,13 @@ export default function FertilizerLibraryPage() {
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, fetchItems]);
+    fetchItems(buildFetchFilters());
+  }, [buildFetchFilters, fetchItems]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    fetchItems({ fertilizer_type: activeTab, ...filters });
-  }, [activeTab, filters, fetchItems]);
+    fetchItems(buildFetchFilters());
+  }, [buildFetchFilters, fetchItems]);
 
   // ========== Tab 切换 ==========
   const handleTabChange = useCallback((tab: string) => {
