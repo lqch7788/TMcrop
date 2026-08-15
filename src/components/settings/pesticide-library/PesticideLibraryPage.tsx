@@ -4,7 +4,7 @@
  * 对齐肥料库 FertilizerLibraryPage 模式
  * 每个 item = 一条完整的药剂规格，无折叠/展开
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ArrowLeft, Bug, Download, Plus, X, Search, RotateCcw, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
@@ -93,6 +93,31 @@ export default function PesticideLibraryPage() {
   const [exportFormat, setExportFormat] = useState('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
+  // ========== 2026-08-15 O3/O4：库存状态 + 有效期本地筛选 ==========
+  const [stockFilter, setStockFilter] = useState<string>('all');     // all | low | zero
+  const [expiryFilter, setExpiryFilter] = useState<string>('all');   // all | nearby | expired
+
+  const filteredItems = useMemo(() => {
+    return items.filter((r) => {
+      // 库存筛选：低库存（0<量<50）/ 零库存
+      const stock = r.stockQuantity ?? 0;
+      if (stockFilter === 'zero' && stock > 0) return false;
+      if (stockFilter === 'low' && !(stock > 0 && stock < 50)) return false;
+      // 有效期筛选：临期（0~30 天）/ 已过期
+      if (expiryFilter !== 'all') {
+        if (!r.expirationDate) return false;
+        const exp = new Date(r.expirationDate);
+        exp.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((exp.getTime() - today.getTime()) / 86400000);
+        if (expiryFilter === 'expired' && diffDays >= 0) return false;
+        if (expiryFilter === 'nearby' && (diffDays < 0 || diffDays > 30)) return false;
+      }
+      return true;
+    });
+  }, [items, stockFilter, expiryFilter]);
+
   // ========== 数据加载 ==========
   // TOP1+C2 修复：依赖数组补全 filters，filters 变化也能触发重拉；
   //               fetchItems 为 Zustand 稳定 action 引用，依赖稳定不会引发无限循环
@@ -132,21 +157,34 @@ export default function PesticideLibraryPage() {
   const handleAdd = useCallback(() => setShowAddModal(true), []);
 
   const handleEdit = useCallback(async (record: PesticideSpec) => {
+    // 2026-08-15 O2：详情加载失败时明确提示（原静默降级为列表不完整记录，用户无感知）
     const fullRecord = await fetchItemById(record.id);
-    setEditTarget(fullRecord || record);
-  }, [fetchItemById]);
+    if (!fullRecord) {
+      toast.error('药剂详情加载失败，请刷新后重试');
+      return;
+    }
+    setEditTarget(fullRecord);
+  }, [fetchItemById, toast]);
 
   const handleDetail = useCallback(async (record: PesticideSpec) => {
+    // 2026-08-15 O2：同上
     const fullRecord = await fetchItemById(record.id);
-    setDetailTarget(fullRecord || record);
-  }, [fetchItemById]);
+    if (!fullRecord) {
+      toast.error('药剂详情加载失败，请刷新后重试');
+      return;
+    }
+    setDetailTarget(fullRecord);
+  }, [fetchItemById, toast]);
 
   const handleDelete = useCallback(async (id: string) => {
     const confirmed = await showConfirm('确认删除该药剂记录？此操作不可恢复。');
-    if (confirmed) {
-      deleteItem(id);
+    if (!confirmed) return;
+    // 2026-08-15 O9：await 结果并显式提示失败（原实现不 await，失败仅靠间接 toast）
+    const ok = await deleteItem(id);
+    if (ok === false) {
+      toast.error('删除药剂失败，请重试');
     }
-  }, [deleteItem]);
+  }, [deleteItem, toast]);
 
   const handleStockIn = useCallback((record: PesticideSpec) => {
     setStockInTarget(record);
@@ -308,7 +346,8 @@ export default function PesticideLibraryPage() {
                 const cat = d.categoryCode || d.category_code || d.category;
                 const code = d.dictCode || d.dict_code;
                 const parentId = d.parentId || d.parent_id;
-                return cat === 'pesticide_type' && !parentId && code && code !== 'nematicide';
+                // 2026-08-15 O8：删除硬编码排除 nematicide — 分类 Tab 全部从字典动态生成
+                return cat === 'pesticide_type' && !parentId && code;
               })
               .sort((a: any, b: any) => {
                 const codeA = a.dictCode || a.dict_code;
@@ -364,10 +403,33 @@ export default function PesticideLibraryPage() {
           )}
 
           {/* 表头工具栏 */}
-          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+          <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
               <h3 className="text-lg font-semibold text-gray-900">药剂列表</h3>
-              <span className="text-sm text-gray-500">共 {items.length} 条记录</span>
+              <span className="text-sm text-gray-500">
+                共 {items.length} 条记录{filteredItems.length !== items.length ? `（当前筛选 ${filteredItems.length} 条）` : ''}
+              </span>
+              {/* 2026-08-15 O3/O4：库存状态 + 有效期筛选 */}
+              <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
+                className="h-8 px-2 border border-gray-300 rounded-md text-xs text-gray-700 focus:outline-none focus:border-emerald-500"
+                title="按库存状态筛选"
+              >
+                <option value="all">库存：全部</option>
+                <option value="low">库存：低库存(&lt;50)</option>
+                <option value="zero">库存：零库存</option>
+              </select>
+              <select
+                value={expiryFilter}
+                onChange={(e) => setExpiryFilter(e.target.value)}
+                className="h-8 px-2 border border-gray-300 rounded-md text-xs text-gray-700 focus:outline-none focus:border-emerald-500"
+                title="按有效期筛选"
+              >
+                <option value="all">有效期：全部</option>
+                <option value="nearby">有效期：临期(30天)</option>
+                <option value="expired">有效期：已过期</option>
+              </select>
             </div>
             <div className="flex items-center gap-2">
               {!exportMode ? (
@@ -395,9 +457,9 @@ export default function PesticideLibraryPage() {
             </div>
           </div>
 
-          {/* 表格 */}
+          {/* 表格（2026-08-15：data 改为过滤后列表） */}
           <PesticideLibraryTable
-            data={items}
+            data={filteredItems}
             isLoading={isLoading}
             onDetail={handleDetail}
             onEdit={handleEdit}
@@ -425,6 +487,8 @@ export default function PesticideLibraryPage() {
       )}
       {editTarget && (
         <EditPesticideModal
+          // 2026-08-15 O1：key 按药剂强制重挂载（修复切换药剂后表单残留）
+          key={editTarget.id}
           isOpen={!!editTarget}
           record={editTarget}
           onClose={() => setEditTarget(null)}
@@ -433,6 +497,8 @@ export default function PesticideLibraryPage() {
       )}
       {detailTarget && (
         <PesticideDetailModal
+          // 2026-08-15 O1：key 按药剂强制重挂载
+          key={detailTarget.id}
           isOpen={!!detailTarget}
           record={detailTarget}
           onClose={() => setDetailTarget(null)}
@@ -440,6 +506,8 @@ export default function PesticideLibraryPage() {
       )}
       {stockInTarget && (
         <PesticideStockInModal
+          // 2026-08-15 O1：key 按药剂强制重挂载
+          key={stockInTarget.id}
           isOpen={!!stockInTarget}
           record={stockInTarget}
           onClose={() => setStockInTarget(null)}

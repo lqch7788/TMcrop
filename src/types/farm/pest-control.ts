@@ -14,6 +14,8 @@ export interface PesticidePoolItem {
   manufacturer?: string;
   brandName?: string;
   dosage?: string;
+  // 2026-08-15：建议用量（药剂库规格自带，只读展示；与 dosage=用户实际用量 区分）
+  suggestedDosage?: string;
   unit?: string;
   dilutionRatio?: string;
   applicationMethod?: string;

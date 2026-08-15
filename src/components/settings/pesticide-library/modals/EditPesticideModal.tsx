@@ -203,6 +203,11 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
       await showAlert('请至少选择 1 个药剂类型');
       return;
     }
+    // 2026-08-15 O5：日期逻辑校验 — 过期日期必须晚于生产日期
+    if (form.productionDate && form.expirationDate && form.expirationDate < form.productionDate) {
+      await showAlert('过期日期不能早于生产日期，请检查');
+      return;
+    }
     if (!hasChanges()) {
       await showAlert('未检测到任何修改');
       return;

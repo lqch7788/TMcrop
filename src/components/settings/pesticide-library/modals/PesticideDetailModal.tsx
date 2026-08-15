@@ -2,18 +2,32 @@
  * 药剂详情查看弹窗组件（V2 扁平化 2026-07-12）
  * 只读视图，以网格形式展示全部字段
  * 对齐 FertlizerDetailModal 扁平模式
+ * 2026-08-15 O6：新增"使用记录"tab（药剂 ↔ 防治记录闭环追溯）
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
-import { UnifiedModal, Button } from '@/components/ui';
+import { UnifiedModal, Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { PesticideSpec } from '@/stores';
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 interface PesticideDetailModalProps {
   isOpen: boolean;
   record: PesticideSpec;
   onClose: () => void;
+}
+
+/** 使用记录行（后端 findPesticideUsageBySpec 返回结构，camelCase） */
+interface PesticideUsageRow {
+  recordId: string;
+  recordCode?: string;
+  cropName?: string;
+  greenhouseName?: string;
+  operatorName?: string;
+  sprayTime?: string;
+  dosage?: number;
+  unit?: string;
 }
 
 /**
@@ -90,12 +104,12 @@ function getStockColor(stock: number) {
   return 'text-emerald-600 font-semibold';
 }
 
-/** 单个字段展示格子 — 统一浅灰色线框 */
+/** 单个字段展示行 — 2026-08-15：标签与值同一行（"编码：xxx"）、无背景色无底框（纯文本行） */
 function FieldCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="border border-gray-300 rounded-lg p-3">
-      <div className="text-xs text-gray-500 mb-0.5">{label}</div>
-      <div className="text-sm text-gray-900">{value}</div>
+    <div className="flex items-center gap-1.5 py-1">
+      <span className="text-xs text-gray-500 shrink-0">{label}：</span>
+      <span className="text-sm text-gray-900 flex-1 min-w-0 truncate">{value}</span>
     </div>
   );
 }
@@ -103,6 +117,33 @@ function FieldCell({ label, value }: { label: string; value: React.ReactNode }) 
 export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetailModalProps) {
   // 触发字典 store 加载
   useDictionaryStore((s) => s.dictionaries);
+
+  // 2026-08-15 O6：使用记录 tab 状态（hooks 必须在任何条件 return 之前）
+  const [activeTab, setActiveTab] = useState<string>('basic');
+  const [usageRows, setUsageRows] = useState<PesticideUsageRow[]>([]);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageLoaded, setUsageLoaded] = useState(false);
+
+  // 打开弹窗且切到"使用记录"tab 时拉取一次
+  useEffect(() => {
+    if (!isOpen || !record || activeTab !== 'usage' || usageLoaded || !record.specId) return;
+    setUsageLoading(true);
+    (async () => {
+      try {
+        const res = await enhancedApiClient.get<any>(
+          `/pest-records/pesticide-usage-by-spec/${encodeURIComponent(String(record.specId))}`,
+        );
+        const list = Array.isArray(res) ? res : res?.data ?? [];
+        setUsageRows(list as PesticideUsageRow[]);
+        setUsageLoaded(true);
+      } catch (e) {
+        console.error('[PesticideDetailModal] 使用记录加载失败:', e);
+      } finally {
+        setUsageLoading(false);
+      }
+    })();
+  }, [isOpen, activeTab, usageLoaded, record]);
+
   if (!record) return null;
 
   return (
@@ -110,36 +151,26 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
       isOpen={isOpen}
       onClose={onClose}
       title="药剂详情"
-      size="lg"
+      // 2026-08-15：弹窗扩大一倍（lg 700px → xxxl 1350px，接近 2 倍宽度）
+      size="xxxl"
       showFooter={false}
     >
-      {/* 编号头部 — 单行展示：编码 + 名称 + 类型 chips */}
-      <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-lg p-4 mb-5">
-        <div className="flex items-center gap-3 flex-wrap text-white">
-          <span className="text-sm font-mono font-bold">{record.pesticideCode || '-'}</span>
-          <span className="text-white/50 text-lg">|</span>
-          <span className="text-base font-bold">{record.pesticideName || '-'}</span>
-          {normalizeTypes(record.pesticideTypes).length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {normalizeTypes(record.pesticideTypes).map(t => (
-                <span
-                  key={t}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white border border-white/30"
-                >
-                  {getDictLabel('pesticide_type', t) || t}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* 2026-08-15：删除头部标题卡片（编码/名称/类型 chips）— 与下方"基础信息"区内容重复 */}
 
+      {/* 2026-08-15 O6：基本信息 / 使用记录 双 tab */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
+        <TabsList selectedValue={activeTab} onValueChange={(v) => setActiveTab(v)} className="mb-4">
+          <TabsTrigger value="basic">📋 基本信息</TabsTrigger>
+          <TabsTrigger value="usage">🧾 使用记录</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="basic" forceMount>
       {/* 内容区域 */}
-      <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-5">
-        {/* 基础信息 */}
+      <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-5">
+        {/* 基础信息 — 2026-08-15：纯文本行（无背景色无底框） */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-2">📋 基础信息</h4>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-x-6">
             <FieldCell label="编码" value={<span className="font-mono">{record.pesticideCode || '-'}</span>} />
             <FieldCell label="名称" value={<span className="font-bold">{record.pesticideName || '-'}</span>} />
             <FieldCell label="药剂类型" value={renderPesticideTypeChips(record.pesticideTypes)} />
@@ -183,32 +214,72 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
           </div>
         </div>
 
-        {/* 功能与禁忌 */}
+        {/* 功能与禁忌 — 2026-08-15：同行显示 + 无背景色无底框 */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-2">📝 功能与禁忌</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="border border-gray-300 rounded-lg p-3 col-span-2">
-              <div className="text-xs text-gray-500 mb-0.5">功能说明</div>
-              <div className="text-sm text-gray-900 min-h-[40px]">{record.functionDesc || '-'}</div>
+          <div className="grid grid-cols-1 gap-1">
+            <div className="flex items-start gap-1.5">
+              <span className="text-xs text-gray-500 shrink-0">功能说明：</span>
+              <span className="text-sm text-gray-900 flex-1 min-w-0">{record.functionDesc || '-'}</span>
             </div>
-            <div className="border border-gray-300 rounded-lg p-3 col-span-2">
-              <div className="text-xs text-gray-500 mb-0.5">使用禁忌</div>
-              <div className="text-sm text-gray-900 min-h-[40px]">{record.tabooDesc || '-'}</div>
+            <div className="flex items-start gap-1.5">
+              <span className="text-xs text-gray-500 shrink-0">使用禁忌：</span>
+              <span className="text-sm text-gray-900 flex-1 min-w-0">{record.tabooDesc || '-'}</span>
             </div>
           </div>
         </div>
 
-        {/* 备注 */}
+        {/* 备注 — 2026-08-15：同行显示 + 无背景色无底框 */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-2">💬 备注</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="border border-gray-300 rounded-lg p-3 col-span-2">
-              <div className="text-xs text-gray-500 mb-0.5">备注</div>
-              <div className="text-sm text-gray-900 min-h-[40px]">{record.remark || '-'}</div>
-            </div>
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs text-gray-500 shrink-0">备注：</span>
+            <span className="text-sm text-gray-900 flex-1 min-w-0">{record.remark || '-'}</span>
           </div>
         </div>
       </div>
+        </TabsContent>
+
+        {/* 2026-08-15 O6：使用记录 tab — 药剂被哪些防治记录使用过（用量/作物/时间） */}
+        <TabsContent value="usage" forceMount>
+          <div className="max-h-[55vh] overflow-y-auto">
+            {usageLoading ? (
+              <div className="text-center py-10 text-sm text-gray-400">加载中...</div>
+            ) : usageRows.length === 0 ? (
+              <div className="text-center py-10 text-sm text-gray-400">
+                {usageLoaded ? '暂无使用记录' : '未加载（点击上方"使用记录"tab 查看）'}
+              </div>
+            ) : (
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-emerald-500 text-white sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">防治时间</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">单据号</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">作物</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">温室</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">操作员</th>
+                    <th className="px-3 py-2 text-right font-semibold whitespace-nowrap">用量</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {usageRows.map((row) => (
+                    <tr key={row.recordId} className="hover:bg-emerald-50">
+                      <td className="px-3 py-2 whitespace-nowrap">{row.sprayTime || '-'}</td>
+                      <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{row.recordCode || '-'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.cropName || '-'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.greenhouseName || '-'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.operatorName || '-'}</td>
+                      <td className="px-3 py-2 text-right font-mono whitespace-nowrap text-orange-600 font-medium">
+                        {row.dosage ?? '-'}{row.unit ? ` ${row.unit}` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* 底部关闭按钮 */}
       <div className="mt-6 flex justify-end">

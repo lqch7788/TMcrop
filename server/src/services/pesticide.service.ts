@@ -981,6 +981,34 @@ export class PesticideService {
     // 参数顺序：[specId(分支1), specId(分支2), ...dateParams]
     return queryToObjects(db, sql, [specId, specId, ...dateParams]);
   }
+
+  /**
+   * 2026-08-15 O6：药剂使用记录追溯 — 查使用过某药剂规格的所有防治记录
+   * 数据源：pesticide_records.pesticide_list JSON 池的 specId 匹配（json_each 展开）
+   * 用途：药剂库详情弹窗"使用记录"tab（药剂 ↔ 防治记录闭环）
+   */
+  findPesticideUsageBySpec(specId: string): any[] {
+    const db = getDatabase();
+    const sql = `
+      SELECT
+        pesticide_records.id AS recordId,
+        pesticide_records.record_code AS recordCode,
+        pesticide_records.crop_name AS cropName,
+        pesticide_records.greenhouse_name AS greenhouseName,
+        pesticide_records.operator_name AS operatorName,
+        pesticide_records.spray_time AS sprayTime,
+        CAST(COALESCE(json_extract(pj.value, '$.dosage'), '0') AS REAL) AS dosage,
+        json_extract(pj.value, '$.unit') AS unit
+      FROM pesticide_records, json_each(pesticide_records.pesticide_list) AS pj
+      WHERE COALESCE(
+        NULLIF(json_extract(pj.value, '$.specId'), ''),
+        ''
+      ) = ?
+      ORDER BY spray_time DESC
+      LIMIT 200
+    `;
+    return queryToObjects(db, sql, [specId]);
+  }
 }
 
 export const pesticideService = new PesticideService();
