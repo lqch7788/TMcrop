@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePestDiseaseDictStore, PestDiseaseDict } from '@/stores';
-import { showConfirm } from '@/lib/dialogService';
+import { showConfirm, showAlert } from '@/lib/dialogService';
 import { PestDiseaseDictTable } from './PestDiseaseDictTable';
 import { AddPestDiseaseModal } from './modals/AddPestDiseaseModal';
 import { EditPestDiseaseModal } from './modals/EditPestDiseaseModal';
@@ -26,7 +26,6 @@ export default function PestDiseaseDictPage() {
   const items = usePestDiseaseDictStore((s) => s.items);
   const isLoading = usePestDiseaseDictStore((s) => s.isLoading);
   const error = usePestDiseaseDictStore((s) => s.error);
-  const clearError = usePestDiseaseDictStore((s) => s.clearError);
   // 2026-07-28 修复 Maximum update depth exceeded：
   // 单独 selector 提取 actions，每个都是稳定引用（函数在 store 中不会改变）
   const fetchItems = usePestDiseaseDictStore((s) => s.fetchItems);
@@ -35,6 +34,8 @@ export default function PestDiseaseDictPage() {
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<TabType>('pest');
   const [filters, setFilters] = useState<Record<string, string>>({ dictType: 'pest' });
+  // 搜索触发计数器：点击搜索/重置时 +1，传给表格把分页重置到第 1 页
+  const [searchKey, setSearchKey] = useState(0);
 
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,6 +49,8 @@ export default function PestDiseaseDictPage() {
   //   （之前传 dictType=activeTab，导致 items 只含一个 tab 的数据，另一个永远 0）
   // - Tab 切换：只更新 filters.dictType（供搜索使用），不再触发重新拉取
   //   —— 前端 filteredItems = items.filter(it => it.dictType === activeTab) 已做 tab 过滤
+  // - 2026-08-15 审核修复：保存/删除后也只拉全集（不带 dictType），
+  //   否则 items 被替换成单 tab 数据，另一 tab 列表和统计全部丢失
   useEffect(() => {
     fetchItems({ limit: '10000' });
   }, [fetchItems]);
@@ -58,16 +61,16 @@ export default function PestDiseaseDictPage() {
   }, [activeTab]);
 
   // ========== 筛选处理 ==========
-  // H10 修复：去掉 searchKeyword 本地 state，搜索词走 filters.keyword；
-  // 搜索框实时回车或点击「搜索」触发，handleSearch 直接传 keyword。
+  // 2026-08-15 审核修复：搜索/作物/状态筛选改为本地过滤（items 恒为全集，stats 恒正确；
+  // 此前把筛选条件传给后端过滤，保存后刷新会覆盖 items 导致另一 tab 数据丢失）
   const handleSearch = useCallback(() => {
-    fetchItems({ ...filters, limit: '10000' });
-  }, [filters, fetchItems]);
+    setSearchKey((k) => k + 1); // 触发表格分页重置到第 1 页
+  }, []);
 
   const handleReset = useCallback(() => {
     setFilters({ dictType: activeTab });
-    fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, fetchItems]);
+    setSearchKey((k) => k + 1);
+  }, [activeTab]);
 
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
     setFilters({ ...newFilters, dictType: activeTab });
@@ -86,24 +89,38 @@ export default function PestDiseaseDictPage() {
 
   const handleDelete = useCallback(async (id: string) => {
     const ok = await showConfirm('确定删除该病虫害吗？\n\n删除后，被引用的信息将无法完整显示。');
-    if (ok) {
-      deleteItem(id);
+    if (!ok) return;
+    // 2026-08-15 审核修复：等待删除结果，失败给用户可见提示（原代码 fire-and-forget，失败静默）
+    const success = await deleteItem(id);
+    if (!success) {
+      await showAlert('删除失败：' + (usePestDiseaseDictStore.getState().error || '请稍后重试'));
     }
   }, [deleteItem]);
 
   // ========== 编辑保存后刷新 ==========
+  // 2026-08-15 审核修复：保存后拉全集（不带 dictType），避免 items 被单 tab 数据覆盖
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, fetchItems]);
+    fetchItems({ limit: '10000' });
+  }, [fetchItems]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    fetchItems({ dictType: activeTab, limit: '10000' });
-  }, [activeTab, fetchItems]);
+    fetchItems({ limit: '10000' });
+  }, [fetchItems]);
 
-  // ========== 根据Tab过滤数据 ==========
-  const filteredItems = items.filter(item => item.dictType === activeTab);
+  // ========== 根据Tab + 筛选条件过滤数据 ==========
+  // 2026-08-15 审核修复：筛选全部本地完成（后端返回全集恒存于 items），
+  // 支持 关键词（名称/编码）、适用作物、状态 三个条件
+  const filteredItems = items.filter((item) => {
+    if (item.dictType !== activeTab) return false;
+    const kw = (filters.keyword || '').trim().toLowerCase();
+    if (kw && !(item.dictName || '').toLowerCase().includes(kw) && !(item.dictCode || '').toLowerCase().includes(kw)) return false;
+    const crops = (filters.targetCrops || '').trim().toLowerCase();
+    if (crops && !(item.targetCrops || '').toLowerCase().includes(crops)) return false;
+    if (filters.status && item.status !== filters.status) return false;
+    return true;
+  });
 
   // ========== 统计数据 ==========
   const stats = {
@@ -232,6 +249,7 @@ export default function PestDiseaseDictPage() {
           onDetail={handleDetail}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          searchKey={searchKey}
         />
       </div>
 

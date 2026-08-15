@@ -116,7 +116,9 @@ function generateDictCode(db: any, dictType: string): string {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { dictType, dict_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
+    // 2026-08-15 审核修复：前端筛选栏传 targetCrops/status（camelCase 参数名），
+    // 原后端只读 dictType/dict_name/keyword，导致「适用作物」「状态」筛选静默失效
+    const { dictType, dict_name, keyword, targetCrops, status, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(10000, Math.max(1, parseInt(limit, 10) || 20));
@@ -125,7 +127,9 @@ router.get('/', (req: Request, res: Response) => {
 
     if (dictType) { conditions.push('dict_type = ?'); params.push(dictType); }
     if (dict_name) { conditions.push("dict_name LIKE '%' || ? || '%'"); params.push(dict_name); }
-    if (keyword) { conditions.push("dict_name LIKE '%' || ? || '%'"); params.push(keyword); }
+    if (keyword) { conditions.push("(dict_name LIKE '%' || ? || '%' OR dict_code LIKE '%' || ? || '%')"); params.push(keyword, keyword); }
+    if (targetCrops) { conditions.push("target_crops LIKE '%' || ? || '%'"); params.push(targetCrops); }
+    if (status) { conditions.push('status = ?'); params.push(status); }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = execCount(db, `SELECT * FROM pest_disease_dict ${whereClause}`, params);

@@ -208,9 +208,34 @@ export function FertilizerLibraryTable({ data, isLoading, onDetail, onEdit, onDe
                 <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                   {record.productionDate || '-'}
                 </TableCell>
-                {/* 16. 过期日期 */}
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {record.expirationDate || '-'}
+                {/* 16. 过期日期 — 2026-08-15：过期/临期预警标记（与药剂库表格一致） */}
+                <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                  {(() => {
+                    const exp = record.expirationDate;
+                    if (!exp) return <span className="text-gray-600">-</span>;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const expDate = new Date(exp);
+                    expDate.setHours(0, 0, 0, 0);
+                    const diffDays = Math.round((expDate.getTime() - today.getTime()) / 86400000);
+                    if (diffDays < 0) {
+                      return (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-red-600 font-semibold">{exp}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">已过期</span>
+                        </span>
+                      );
+                    }
+                    if (diffDays <= 30) {
+                      return (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-amber-600 font-semibold">{exp}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">临期</span>
+                        </span>
+                      );
+                    }
+                    return <span className="text-gray-600">{exp}</span>;
+                  })()}
                 </TableCell>
                 {/* 17. 备注 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={record.remark || ''}>

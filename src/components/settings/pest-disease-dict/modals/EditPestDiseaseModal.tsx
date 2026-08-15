@@ -7,8 +7,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 
 import { X } from 'lucide-react';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -17,6 +15,8 @@ import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { ImageUploader } from '@/components/ui';
+// 2026-08-15：类型选项从共享常量导入（原 Add/Edit 两处硬编码且不一致）
+import { PESTICIDE_TYPE_OPTIONS, PesticideTypeCode } from '../constants';
 
 interface EditPestDiseaseModalProps {
   isOpen: boolean;
@@ -45,21 +45,7 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
 
   // 药剂搜索和过滤
   const [pesticideSearch, setPesticideSearch] = useState('');
-  // 2026-07-16：pesticide_typeFilter 字段对齐药剂库字典 dict_code（杀虫剂/杀菌剂/...）
-  // 旧的「化学/生物/物理」分类已废弃
-  // 2026-07-17：增加「调节剂」分类（GB/T 19378 国标 04 类 - 植物生长调节剂）
-  // 数据源：ChemicalBook 植物生长调节剂目录 + 中国农药信息网登记品种
-  const PESTICIDE_TYPE_OPTIONS = [
-    { code: 'insecticide',  label: '杀虫剂',  emoji: '🐛', active: 'bg-red-500',    idle: 'bg-red-50 text-red-600 border-red-200' },
-    { code: 'fungicide',    label: '杀菌剂',  emoji: '🦠', active: 'bg-cyan-500',   idle: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
-    { code: 'herbicide',    label: '除草剂',  emoji: '🌿', active: 'bg-emerald-500',idle: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-    { code: 'acaricide',    label: '杀螨剂',  emoji: '🕷️', active: 'bg-purple-500', idle: 'bg-purple-50 text-purple-600 border-purple-200' },
-    { code: 'plant_growth_regulator', label: '调节剂', emoji: '🌱', active: 'bg-violet-500', idle: 'bg-violet-50 text-violet-600 border-violet-200' },
-    { code: 'protective',   label: '保护剂',  emoji: '🛡️', active: 'bg-blue-500',   idle: 'bg-blue-50 text-blue-600 border-blue-200' },
-    { code: 'adjuvant',     label: '助剂',    emoji: '💧', active: 'bg-amber-500',  idle: 'bg-amber-50 text-amber-600 border-amber-200' },
-    { code: 'other',        label: '其他',    emoji: '📦', active: 'bg-gray-500',   idle: 'bg-gray-50 text-gray-600 border-gray-200' },
-  ] as const;
-  type PesticideTypeCode = typeof PESTICIDE_TYPE_OPTIONS[number]['code'];
+  // 2026-08-15：类型选项统一来自共享常量（对齐药剂库字典 dict_code，含调节剂）
   const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | PesticideTypeCode>('all');
 
   // 预填充数据
@@ -97,7 +83,7 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
   };
 
   // 更新表单字段
-  const updateField = useCallback((field: string, value: any) => {
+  const updateField = useCallback((field: string, value: string | string[]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
@@ -142,7 +128,11 @@ export function EditPestDiseaseModal({ isOpen, record, onClose, onSaved }: EditP
         return;
       }
       // 更新关联的药剂
-      await store.updateRelations(record.id, selectedPesticides);
+      // 2026-08-15 审核修复：检查关联保存结果（原代码忽略返回值，关联失败用户无感知）
+      const relationsOk = await store.updateRelations(record.id, selectedPesticides);
+      if (!relationsOk) {
+        await showAlert('病虫害已保存，但关联药剂保存失败，请重试关联');
+      }
       onSaved();
     } catch (err) {
       console.error('[EditPestDiseaseModal] 保存失败:', err);

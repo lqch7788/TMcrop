@@ -16,6 +16,11 @@ import { useFertilizerLibraryStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { FERTILIZER_TYPE_OPTIONS, STOCK_UNIT_OPTIONS, APPLICATION_TIMING_OPTIONS } from '../constants';
 
+/** 区域标题（2026-08-15：从组件内提取到文件级，避免每次渲染重建组件类型导致子树 remount） */
+function SectionTitle({ title, icon }: { title: string; icon: string }) {
+  return <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>;
+}
+
 interface AddFertilizerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -49,7 +54,9 @@ const INITIAL_FORM = {
 };
 
 export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerModalProps) {
-  const store = useFertilizerLibraryStore();
+  // 2026-08-15 审核修复：改用 selector（整 store 订阅是页面 H22 已修复的反模式）
+  const createItem = useFertilizerLibraryStore((s) => s.createItem);
+  const storeError = useFertilizerLibraryStore((s) => s.error);
 
   // 表单状态：单条 spec 的全部字段
   const [form, setForm] = useState(INITIAL_FORM);
@@ -74,10 +81,15 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
       await showAlert('请输入肥料名称');
       return;
     }
+    // 2026-08-15 审核修复：日期校验（对齐药剂库弹窗 — 过期日期不得早于生产日期）
+    if (form.productionDate && form.expirationDate && form.expirationDate < form.productionDate) {
+      await showAlert('过期日期不能早于生产日期，请检查日期填写');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const newSpec = await store.createItem({
+      const newSpec = await createItem({
         fertilizerName: form.fertilizerName,
         fertilizerType: form.fertilizerType,
         applicationTiming: form.applicationTiming,
@@ -106,7 +118,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
         onSaved();
       } else {
         // H30 修复：失败时使用 store.error 给具体原因（保留原 setSubmitting(false) 顺序）
-        await showAlert('保存失败：' + (store.error || '请重试'));
+        await showAlert('保存失败：' + (storeError || '请重试'));
         return;
       }
     } catch (err) {
@@ -115,11 +127,6 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
       setSubmitting(false);
     }
   };
-
-  // 区域标题
-  const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
-    <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
-  );
 
   return (
     <UnifiedModal

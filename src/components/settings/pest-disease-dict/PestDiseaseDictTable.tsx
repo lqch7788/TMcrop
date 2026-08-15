@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 import { Eye, Edit2, Trash2 } from 'lucide-react';
 import { PestDiseaseDict } from '@/stores';
 import { Button } from '@/components/ui';
-import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -17,6 +16,8 @@ interface PestDiseaseDictTableProps {
   onDetail: (record: PestDiseaseDict) => void;
   onEdit: (record: PestDiseaseDict) => void;
   onDelete: (id: string) => void;
+  /** 每次新搜索/重置时由父组件自增，把分页重置到第 1 页（2026-08-15 新增） */
+  searchKey?: number;
 }
 
 export function PestDiseaseDictTable({
@@ -25,12 +26,18 @@ export function PestDiseaseDictTable({
   onDetail,
   onEdit,
   onDelete,
+  searchKey,
 }: PestDiseaseDictTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const startIdx = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIdx, startIdx + pageSize);
+
+  // 搜索/重置时把分页重置到第 1 页（避免筛选结果落在后面页面看不到）
+  React.useEffect(() => {
+    if (searchKey !== undefined && searchKey > 0) setCurrentPage(1);
+  }, [searchKey]);
 
   // 切换页面时重置
   React.useEffect(() => {

@@ -73,15 +73,6 @@ const FIELD_MAP: Record<string, string> = {
   update_time: 'updateTime',
 };
 
-// 规范化：DB 行 → 前端对象
-function normalize(data: Record<string, unknown>, fieldMap: Record<string, string>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [dbKey, camelKey] of Object.entries(fieldMap)) {
-    result[camelKey] = data[dbKey] ?? null;
-  }
-  return result;
-}
-
 // 反规范化：前端对象 → DB 行
 function denormalize(item: Partial<FertilizerSpec>, fieldMap: Record<string, string>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -120,7 +111,7 @@ interface FertilizerLibraryState {
 }
 
 export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
-  (set, get) => ({
+  (set) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -218,39 +209,28 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
     },
 
     // 2026-07-22：使用记录 — 替代组件内直接调 enhancedApiClient，遵守 V2.1 铁律
+    // 2026-08-15 审核修复：rethrow 错误（原 catch 吞错返回 []，详情弹窗的 toast 错误分支
+    // 永远不触发，加载失败被静默显示成「暂无使用记录」— Rule 12 静默失败）
     fetchUsageRecords: async (specId: string) => {
-      try {
-        const response: any = await enhancedApiClient.get(`/pest-records/by-spec/${specId}`);
-        return Array.isArray(response) ? response : (response?.data ?? []);
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return [];
-      }
+      const response: any = await enhancedApiClient.get(`/pest-records/by-spec/${specId}`);
+      return Array.isArray(response) ? response : (response?.data ?? []);
     },
 
     // 2026-07-27：入库记录 — 详情弹窗入库 Tab 使用
+    // 2026-08-15 审核修复：同上 rethrow（失败静默显示「暂无入库记录」）
     fetchStockInRecords: async (specId: string) => {
-      try {
-        const response: any = await enhancedApiClient.get(`/fertilizer-specs/${specId}/stock-in-records`);
-        return Array.isArray(response) ? response : (response?.data ?? []);
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return [];
-      }
+      const response: any = await enhancedApiClient.get(`/fertilizer-specs/${specId}/stock-in-records`);
+      return Array.isArray(response) ? response : (response?.data ?? []);
     },
 
     // 2026-07-22：删除单条使用记录（按 source 路由到不同表）
-    deleteUsageRecord: async (usageId: string, source: string) => {
-      try {
-        const url = source === 'fertilization'
-          ? `/fertilizer/${usageId}`
-          : `/pest-records/${usageId}`;
-        await enhancedApiClient.delete(url);
-        return true;
-      } catch (err) {
-        set({ error: (err as Error).message });
-        return false;
-      }
+    // 2026-08-15 审核修复：rethrow + 返回值由调用方判断（此前组件绕过此函数直调 API，此函数成死代码）
+    deleteUsageRecord: async (usageId: string, source: string): Promise<boolean> => {
+      const url = source === 'fertilization'
+        ? `/fertilizer/${usageId}`
+        : `/pest-records/${usageId}`;
+      await enhancedApiClient.delete(url);
+      return true;
     },
   })
 );

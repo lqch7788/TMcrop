@@ -13,14 +13,14 @@ import { History, Package, Loader2, Download, X as XIcon, Trash2, ArrowDownToLin
 
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { FertilizerSpec, useToastStore, useFertilizerLibraryStore } from '@/stores';
 import { getDictItemName } from '@/stores';
-import { enhancedApiClient } from '@/lib/apiClient';
 import { exportXlsx, exportCsv } from '@/services/exporters';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+// 2026-08-15：施肥时期 Badge 配色从共享常量导入（原 Detail/StockIn 两处重复定义）
+import { TIMING_BADGE_OPTIONS } from '../constants';
 
 interface FertilizerDetailModalProps {
   isOpen: boolean;
@@ -28,15 +28,8 @@ interface FertilizerDetailModalProps {
   onClose: () => void;
 }
 
-// 施肥时期 Badge 配置
-const TIMING_OPTIONS = [
-  { value: 'base', label: '底肥', bg: 'bg-amber-100', text: 'text-amber-700' },
-  { value: 'dressing', label: '追肥', bg: 'bg-green-100', text: 'text-green-700' },
-  { value: 'foliar', label: '叶面肥', bg: 'bg-blue-100', text: 'text-blue-700' },
-];
-
 const getTimingBadgeConfig = (timing: string) => {
-  const found = TIMING_OPTIONS.find(t => t.value === timing);
+  const found = TIMING_BADGE_OPTIONS.find(t => t.value === timing);
   return found || { bg: 'bg-gray-100', text: 'text-gray-700', label: timing };
 };
 
@@ -72,6 +65,15 @@ const getStockColor = (stock: number) => {
   return 'text-emerald-600 font-semibold';
 };
 
+// 2026-08-15：时间显示格式化 — 存量数据是 ISO UTC 字符串（如 2026-07-12T07:58:37.762Z），
+// 新数据是本地时间戳（如 2026-08-15 21:30:00），统一转为本地时间显示
+function formatTimeDisplay(t?: string): string {
+  if (!t) return '-';
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return t;
+  return d.toLocaleString();
+}
+
 // 统一字段配置（不再区分 fullWidth/highlight）
 interface DetailField {
   label: string;
@@ -87,8 +89,11 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   const [stockInLoading, setStockInLoading] = useState(false);
   const [stockInFormat, setStockInFormat] = useState<'xlsx' | 'csv'>('xlsx'); // 用户最新选择：默认 Excel
   const [stockInExportOpen, setStockInExportOpen] = useState(false); // 控制格式选择弹窗
-  // 删除记录后刷新肥料库列表（让库存数量变化可见）
-  const libStore = useFertilizerLibraryStore();
+  // 2026-08-15 审核修复：改用 selector 取 store 字段/actions（整 store 订阅是页面 H22 已修复的反模式）
+  const fetchUsageRecords = useFertilizerLibraryStore((s) => s.fetchUsageRecords);
+  const fetchStockInRecords = useFertilizerLibraryStore((s) => s.fetchStockInRecords);
+  const deleteUsageRecord = useFertilizerLibraryStore((s) => s.deleteUsageRecord);
+  const fetchLibItems = useFertilizerLibraryStore((s) => s.fetchItems);
   // 2026-07-22：把 toast 上移到 useEffect 之前（C9 修复后 useEffect 内要调 toast?.error）
   const toast = useToastStore((s: any) => s.toast);
   // 翻页状态
@@ -100,14 +105,14 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
 
   // 切到「使用记录」tab 时拉数据
   // C9 修复：走 store.fetchUsageRecords，不再绕过 store 直接 fetch
+  // 2026-08-15 审核修复：store 已 rethrow（原吞错返回 [] 导致此处 catch 永不触发，失败被显示成「暂无使用记录」）
   useEffect(() => {
     if (!isOpen || !record || activeTab !== 'usage') return;
     setUsageLoading(true);
     setCurrentPage(1);  // 每次拉数据重置翻页
     setExportMode(false);  // 切 tab 时退出导出模式
     setSelectedRecordIds([]);
-    libStore
-      .fetchUsageRecords(record.id)
+    fetchUsageRecords(record.id)
       .then((arr) => {
         setUsageRecords(arr);
       })
@@ -117,15 +122,14 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       })
       .finally(() => setUsageLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, record?.id, activeTab]);
+  }, [isOpen, record?.id, activeTab, fetchUsageRecords]);
 
   // 2026-07-27：切到「入库记录」tab 时拉数据
   useEffect(() => {
     if (!isOpen || !record || activeTab !== 'stockIn') return;
     setStockInLoading(true);
     setStockInExportOpen(false); // 切 tab 时关闭导出选择弹窗
-    libStore
-      .fetchStockInRecords(record.id)
+    fetchStockInRecords(record.id)
       .then((arr) => {
         setStockInRecords(arr);
       })
@@ -134,7 +138,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       })
       .finally(() => setStockInLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, record?.id, activeTab]);
+  }, [isOpen, record?.id, activeTab, fetchStockInRecords]);
 
   // 2026-07-27：入库记录统计聚合（顶部 stat 卡用）
   const stockInStats = useMemo(() => {
@@ -269,6 +273,8 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   // 2026-07-17：删除单条使用记录（按 source 调对应表的 DELETE 端点）
   // - source=pest_control → DELETE /api/pest-records/:id（删除整条防治记录 + 回补库存）
   // - source=fertilization → DELETE /api/fertilizer/:id（删除整条施肥记录 + 回补库存）
+  // 2026-08-15 审核修复：改走 store.deleteUsageRecord + store.fetchUsageRecords
+  // （原代码绕过 store 直调 enhancedApiClient，违反 V2.1 架构铁律）
   const handleDeleteRecord = async (r: any) => {
     const isFert = r.source === 'fertilization';
     const sourceLabel = isFert ? '施肥记录' : '防治记录';
@@ -276,17 +282,13 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
     const ok = await showConfirm(confirmMsg, { title: '确认删除', confirmText: '删除', cancelText: '取消' });
     if (!ok) return;
     try {
-      const url = isFert
-        ? `/fertilizer/${r.recordId}`
-        : `/pest-records/${r.recordId}`;
-      await enhancedApiClient.delete(url);
+      await deleteUsageRecord(r.recordId, r.source);
       toast?.success?.(`已删除${sourceLabel}，库存已恢复`);
       // 刷新肥料库列表（让库存数字实时更新）
-      libStore.fetchItems();
+      fetchLibItems();
       // 重新拉取使用记录
       setUsageLoading(true);
-      const resp: any = await enhancedApiClient.get(`/pest-records/by-spec/${record.id}`);
-      const arr = Array.isArray(resp) ? resp : (resp?.data ?? []);
+      const arr = await fetchUsageRecords(record.id);
       setUsageRecords(arr);
       setCurrentPage(1);
     } catch (err) {
@@ -323,8 +325,8 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
     { label: '使用禁忌', value: record.tabooDesc || '-' },
     { label: '供应商信息', value: record.supplierInfo || '-' },
     { label: '备注', value: record.remark || '-' },
-    { label: '创建时间', value: record.createTime || '-' },
-    { label: '更新时间', value: record.updateTime || '-' },
+    { label: '创建时间', value: formatTimeDisplay(record.createTime) },
+    { label: '更新时间', value: formatTimeDisplay(record.updateTime) },
   ];
 
   return (
@@ -335,22 +337,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
       size="xxxl"
       showFooter={false}
     >
-      {/* 编号头部 — 单行展示：编码 + 名称 + 类型 */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-5 mb-4 border border-amber-100">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">编码</span>
-            <span className="text-xl font-mono font-bold text-amber-700">{record.fertilizerCode || '-'}</span>
-          </div>
-          <span className="text-gray-300 text-lg">|</span>
-          <span className="text-base font-bold text-gray-800">{record.fertilizerName || '-'}</span>
-          {record.fertilizerType && (
-            <span className="px-2.5 py-1 bg-amber-100 text-amber-700 rounded text-sm font-medium">
-              {getFertilizerTypeLabel(record.fertilizerType)}
-            </span>
-          )}
-        </div>
-      </div>
+      {/* 2026-08-15：删除头部标题卡片（编码/名称/类型）— 与下方"基础信息"字段内容重复（对齐药剂详情弹窗） */}
 
       {/* Tab 切换栏 */}
       <div className="flex items-center gap-1 mb-4 border-b border-gray-200">
@@ -714,14 +701,12 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
   );
 }
 
-/** 单个字段展示格子 — 统一浅灰色线框 */
+/** 单个字段展示行 — 2026-08-15：标签与值同一行（"编码：xxx"）、无背景色无底框（对齐药剂详情弹窗） */
 function FieldCell({ field }: { field: DetailField }) {
   return (
-    <div>
-      <Label className="text-sm text-gray-500 mb-0.5">{field.label}</Label>
-      <div className="text-base rounded-lg p-3 min-h-[44px] border border-gray-300 text-gray-800">
-        {field.value}
-      </div>
+    <div className="flex items-center gap-1.5 py-1">
+      <span className="text-xs text-gray-500 shrink-0">{field.label}：</span>
+      <span className="text-sm text-gray-900 flex-1 min-w-0 truncate">{field.value}</span>
     </div>
   );
 }

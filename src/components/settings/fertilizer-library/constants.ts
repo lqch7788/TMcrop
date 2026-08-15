@@ -35,5 +35,12 @@ export const APPLICATION_TIMING_OPTIONS = [
   { value: 'foliar', label: '叶面肥' },
 ] as const;
 
+/** 施肥时期 Badge 配色（2026-08-15 从 Detail/StockIn 两弹窗重复定义中提取） */
+export const TIMING_BADGE_OPTIONS = [
+  { value: 'base', label: '底肥', bg: 'bg-amber-100', text: 'text-amber-700' },
+  { value: 'dressing', label: '追肥', bg: 'bg-green-100', text: 'text-green-700' },
+  { value: 'foliar', label: '叶面肥', bg: 'bg-blue-100', text: 'text-blue-700' },
+] as const;
+
 /** Tab 分类类型 */
 export type FertilizerType = 'organic' | 'inorganic' | 'water_soluble' | 'compound' | 'bio' | 'slow_release' | 'trace';
