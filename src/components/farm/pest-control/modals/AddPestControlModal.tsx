@@ -264,7 +264,9 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
         formulation: spec?.formulation,
         manufacturer: spec?.manufacturer,
         brandName: spec?.brandName,
-        dosage: spec?.suggestedDosage || '',
+        // 2026-08-15：用量拆分 — dosage 为用户实际填写（初始空）；suggestedDosage 为药剂库建议用量（只读参考，不保存）
+        dosage: '',
+        suggestedDosage: spec?.suggestedDosage || '',
         unit: spec?.dosageUnit || '',
         dilutionRatio: spec?.suggestedRatio || '',
         applicationMethod: '',
@@ -1160,13 +1162,14 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                       </button>
                     </div>
                     <div className="grid grid-cols-12 gap-2">
-                      <div className="col-span-3">
+                      {/* 2026-08-15：用量拆分 — "用量"为用户实际填写（与单位紧挨）；"建议用量"（单位后面）只读展示药剂库自带值（含单位），不保存 */}
+                      <div className="col-span-2">
                         <Label className="text-xs text-gray-600">用量</Label>
                         <Input
                           type="text"
                           value={item.dosage || ''}
                           onChange={(e) => updatePoolField(idx, 'dosage', e.target.value)}
-                          placeholder="如 50"
+                          placeholder="参考建议用量"
                           className="px-2 py-1.5 border border-gray-300 rounded text-xs"
                         />
                       </div>
@@ -1179,6 +1182,17 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                           className="text-xs"
                         />
                       </div>
+                      <div className="col-span-3">
+                        <Label className="text-xs text-gray-600">建议用量</Label>
+                        <div
+                          className="px-2 py-1.5 border border-gray-200 bg-gray-50 rounded text-xs text-gray-600 min-h-[30px] leading-[18px]"
+                          title="药剂库规格自带建议用量，仅供参考，不保存"
+                        >
+                          {item.suggestedDosage
+                            ? `${item.suggestedDosage} ${item.unit || ''}`.trim()
+                            : '-'}
+                        </div>
+                      </div>
                       <div className="col-span-2">
                         <Label className="text-xs text-gray-600">稀释倍数</Label>
                         <Input
@@ -1189,7 +1203,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                           className="px-2 py-1.5 border border-gray-300 rounded text-xs"
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-3">
                         <Label className="text-xs text-gray-600">使用方法</Label>
                         <DictSelect
                           category="application_method"
@@ -1198,7 +1212,9 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: {
                           placeholder="请选择"
                         />
                       </div>
-                      <div className="col-span-3">
+                    </div>
+                    <div className="grid grid-cols-12 gap-2 mt-2">
+                      <div className="col-span-6">
                         <Label className="text-xs text-gray-600">备注</Label>
                         <Input
                           type="text"

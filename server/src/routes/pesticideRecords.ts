@@ -186,6 +186,21 @@ router.get('/fertilizer-stats', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/pest-records/pesticide-usage-by-spec/:specId — 药剂使用记录追溯（2026-08-15 O6）
+ * 查使用过某药剂规格的所有防治记录（药剂库详情弹窗"使用记录"tab 用）
+ * 必须在 /:id 之前注册（避免被通配截胡）
+ */
+router.get('/pesticide-usage-by-spec/:specId', (req: Request, res: Response) => {
+  try {
+    const { specId } = req.params;
+    const data = pesticideService.findPesticideUsageBySpec(specId);
+    res.json({ success: true, data, meta: { total: data.length } });
+  } catch (error) {
+    handleServiceError(res, error);
+  }
+});
+
+/**
  * GET /api/pest-records/by-spec/:specId — 单条肥料反向追溯
  * 2026-07-17 新增：找用过某 spec 肥料的所有防治记录（聚合每条记录的总用量/费用）
  */
