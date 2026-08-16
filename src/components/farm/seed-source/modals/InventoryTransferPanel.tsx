@@ -326,16 +326,13 @@ export function InventoryTransferPanel({
 
   return (
     <div className="space-y-4">
-      {/* ============ 顶部状态条 ============ */}
+      {/* ============ 顶部状态条（仅追加模式提示 + 已选条数；可调拨总条数已移至库存类型行右侧） ============ */}
       <div className="flex items-center gap-2 flex-wrap">
         {mode === 'append_existing' && (
           <Badge className="bg-amber-100 text-amber-800 text-xs">
             模式：追加到现有种源（不创建新记录）
           </Badge>
         )}
-        <Badge variant="outline" className="text-xs">
-          {loading ? '加载中…' : `共 ${rows.length} 条可调拨`}
-        </Badge>
         {totalCount > 0 && (
           <Badge className="bg-emerald-500 text-white text-xs">
             已选 {totalCount} 条
@@ -346,7 +343,7 @@ export function InventoryTransferPanel({
       {/* ============ 筛选器 ============ */}
       <Card className="p-4">
         <div className="space-y-3">
-          {/* stockType 多选 toggle */}
+          {/* stockType 多选 toggle + 可调拨统计（2026-08-16：统计从顶部状态条移到此行，靠右） */}
           <div className="flex items-center gap-3 flex-wrap">
             <Label className="text-sm text-gray-700 whitespace-nowrap">库存类型：</Label>
             {(['seed', 'seedling', 'product'] as TransferStockType[]).map((type) => {
@@ -366,6 +363,10 @@ export function InventoryTransferPanel({
                 </button>
               );
             })}
+            {/* 2026-08-16：可调拨统计移到库存类型 3 个 toggle 后面，靠右显示 */}
+            <Badge variant="outline" className="text-xs ml-auto">
+              {loading ? '加载中…' : `共 ${rows.length} 条可调拨`}
+            </Badge>
           </div>
 
           {/* 关键字 + 日期范围 */}

@@ -467,7 +467,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         recordDate,
         destination: inputDestination,
         subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
-        generation: destination === 'planting_self_kept' ? (generation || null) : null,  // 2026-07-18: 种源合并键
+        generation: destination === 'planting_self_kept' ? (generation || '') : '',  // 2026-07-18: 种源合并键 — 2026-08-16 后端 Zod schema 用 z.string().optional()，不接 null
         forceNew: destination === 'planting_self_kept' ? forceNew : undefined,  // 2026-07-18: 用户选择强制新建
         seedForm: (requiresSelfKept || destination === 'harvest') ? sourceForm : undefined,  // 2026-07-02: harvest 分支也写形态
         warehouseId: requiresWarehouse ? warehouseId : undefined,
@@ -597,6 +597,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         )
       })()}
       size="xxxl"
+      // 2026-08-16：关闭拖拽（useCenteredLayout=true）— size=xxxl 1350px 在 1280 视口下
+      // centerX=(1280-1350)/2=-35，弹窗 absolute 定位超出左边界 → 用户看不到关闭/最大化按钮
+      // Modal 内部 useCenteredLayout 分支已有 Math.min(width, window.innerWidth-32) 自适应视口
+      enableDrag={false}
+      // 2026-08-16：同时禁用手动 resize（弹窗已用最大 xxxl 尺寸，resize 手柄在边界外更糟）
+      enableResize={false}
       showFooter={true}
       onSubmit={handleAdd}
       submitText={submitting ? '处理中...' : '添加记录'}
@@ -941,7 +947,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             保证采收入库可保存到作物库存（用户核心诉求） */}
         {destination === 'harvest' && (
           <div className="space-y-3">
-            {/* 产品明细（单条锁死，种植行单一作物）— 列顺序与独立采收入库页面 AddModal 一致：作物编码/品种/作物品种/采收量/单位/品质/备注（2026-07-06：单价字段已删除）
+            {/* 产品明细（单条锁死，种植行单一作物）— 列顺序：作物编码/作物/品种/采收量/单位/品质/备注（2026-08-16：作物品种列改名"作物"并上移到品种前面；2026-07-06：单价字段已删除）
                 顶部基础字段已选"采收形态"，此处不重复该列；不显示添加/删除按钮（单条固定） */}
             <div>
               <div className="space-y-2">
@@ -958,23 +964,23 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                           className={deepInputClass + ' font-mono'}
                         />
                       </div>
-                      {/* 2. 品种（类型名 cropName） */}
+                      {/* 2. 作物（最细化名 cropVariety） — 2026-08-16 重命名「作物品种」→「作物」并提到品种前面 */}
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">作物</div>
+                        <Input
+                          value={p.cropVariety || ''}
+                          onChange={(e) => updateProduct(idx, { cropVariety: e.target.value })}
+                          placeholder="最细化名"
+                          className={deepInputClass}
+                        />
+                      </div>
+                      {/* 3. 品种（类型名 cropName） */}
                       <div>
                         <div className="text-xs text-gray-500 mb-1">品种</div>
                         <Input
                           value={p.cropName || ''}
                           onChange={(e) => updateProduct(idx, { cropName: e.target.value })}
                           placeholder="类型名"
-                          className={deepInputClass}
-                        />
-                      </div>
-                      {/* 3. 作物品种（最细化名 cropVariety） */}
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                        <Input
-                          value={p.cropVariety || ''}
-                          onChange={(e) => updateProduct(idx, { cropVariety: e.target.value })}
-                          placeholder="最细化名"
                           className={deepInputClass}
                         />
                       </div>

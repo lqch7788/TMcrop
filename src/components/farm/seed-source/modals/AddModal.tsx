@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { X, Upload, RefreshCw, Search, Check, Leaf, ArrowLeftRight } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf } from 'lucide-react';
 import { SeedSource, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { todayLocal } from '@/lib/dateUtils';
@@ -439,65 +439,27 @@ export function AddModal({
         cancelText="取消"
       >
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {/* ========== 2026-07-07 V3.4 顶部提示条（占两列，emerald 主色，与育苗/种植一致）
-              2026-07-08 V3.4 UI 改造：前端隐藏 banner 文字（用户决定），仅保留代码注释说明业务背景
-              原显示文字：
-              内部种源仅支持 库存调拨 入库。
+          {/* ========== 2026-08-16 V3.6 顶部提示条（占两列，emerald 主色）
+              原 V3.5：去掉入库方式 UI 控件后，弹窗顶部补回提示文案
+              现 V3.6：删除中间冗余"入库方式：库存调拨"小标签，与 banner 重复；banner 单独承载所有说明 ========== */}
+          <div className="col-span-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
+            <div className="font-medium mb-1">📦 内部种源仅支持「库存调拨」入库</div>
+            <div className="text-emerald-600 leading-relaxed">
               外部采购请通过「作物库存 → 新建入库」完成，再调拨入种源。
-              自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。 ========== */}
-
-          {/* 入库方式 - 紧凑按钮（2026-07-08 V3.4 紧凑化），与种源批号同行 */}
-          <div>
-            <Label className="text-gray-900">入库方式</Label>
-            {/* 2026-07-07 V3.4：取消外购入库选项，仅保留库存调拨 */}
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                // 2026-06-24: 库存调拨 — 从作物库存 3 种 stock_type 调入种源（移动语义）
-                { value: PropagationType.TRANSFER_FROM_INVENTORY, label: '库存调拨', desc: '从作物库存调入', Icon: ArrowLeftRight },
-              ].map((opt) => {
-                const IconComponent = opt.Icon;
-                return (
-                <Button
-                  key={opt.value}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // 2026-06-24: sourceOrigin 简化为只跟 propagationType 走（去掉 self_produced 分支）
-                    // 2026-07-14：opt 数组只有 TRANSFER_FROM_INVENTORY，三元永远走 else 分支 → 直接赋值
-                    const newSourceOrigin: SourceOrigin = 'inventory_transfer';
-                    setFormData(prev => ({
-                      ...prev,
-                      propagationType: opt.value,
-                      propagationMethod: '',
-                      sourceOrigin: newSourceOrigin,
-                      supplierId: '',
-                      supplierName: '',
-                    }));
-                    setSelectedSupplier(null);
-                  }}
-                  className={`p-2 border-2 text-left w-full h-auto ${
-                    formData.propagationType === opt.value
-                      ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-50'
-                      : 'border-gray-200 bg-white hover:border-gray-400 hover:bg-white'
-                  }`}
-                >
-                  {/* 2026-07-08 V3.4 紧凑化：icon + label + desc 单行展示，去掉垂直堆叠 */}
-                  <div className="flex items-center gap-1.5">
-                    <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
-                    <span className="text-sm font-medium text-gray-900">{opt.label}</span>
-                    <span className="text-xs text-gray-400">· {opt.desc}</span>
-                  </div>
-                </Button>
-                );
-              })}
+              <br />
+              自有种源请通过「种植/育苗 → 行级采收入库 → 作物库存 → 调拨」入种源。
             </div>
           </div>
 
-          {/* 种源批号 - 可点击生成 - 与入库方式同行（2026-07-08 V3.4 布局调整） */}
+          {/* 2026-08-16 V3.5：移除「入库方式」UI 区块（v3.4 已压成单选"库存调拨"，控件无意义）
+              2026-08-16 V3.6：删除中间"入库方式：库存调拨"小标签（与 banner 重复）
+              propagationType 在 INITIAL_FORM_DATA 仍默认 TRANSFER_FROM_INVENTORY，数据模型不变 */}
+
+          {/* 种源批号 - 可点击生成（独占第一列） */}
           <div>
             <Label className="text-gray-900">
               种源批号
-              {/* 格式说明用括号样式紧跟 Label 同行展示，保留原文 text-xs text-gray-400 颜色 */}
+              {/* 格式说明用括号样式紧跟 Label 同行展示 */}
               <span className="ml-2 text-xs font-normal text-gray-400 whitespace-nowrap">
                 格式：ZZ + 年月日(8位) + "-" + 流水号(3位)
               </span>
@@ -520,6 +482,9 @@ export function AddModal({
               </Button>
             </div>
           </div>
+
+          {/* 占位列（与种源批号同一行，保持 grid 2 列对齐） */}
+          <div />
 
           {/* ===== 库存调拨分支（2026-06-24）=====
               选中「库存调拨」时独占显示面板；隐藏所有其他字段
