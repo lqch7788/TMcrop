@@ -69,14 +69,40 @@ router.get('/trace', (req: Request, res: Response) => {
     );
     const total = Number(countRows[0]?.values?.[0]?.[0] || 0);
     const truncated = total > TRACE_LIMIT;
+    // 2026-08-16 修复：correction 行（冲销/撤销回流）写入时只存 crop_name 不存 crop_variety，
+    //   导致种源时间线「作物品种」列只显示"草莓"没有品种。查询时按 target 种源 JOIN 兜底补品种名。
+    //   同时 JOIN users 把 created_by 的用户 ID（USER_ADMIN_001）翻译为姓名，修复「操作员」列显示 ID 问题。
+    //   使用 sv_ 别名避免与 fl.* 重名歧义，JS 侧仅在原值为空时覆盖
     const rows = db.exec(
-      `SELECT * FROM material_flow_log WHERE source_code = ? OR target_code = ? ORDER BY created_at ASC LIMIT ?`,
+      `SELECT fl.*, ss.crop_variety AS sv_crop_variety, ss.crop_name AS sv_crop_name,
+              u.real_name AS sv_operator_name
+       FROM material_flow_log fl
+       LEFT JOIN seed_sources ss
+         ON ss.id = fl.target_id AND fl.target_type = 'seed_source'
+       LEFT JOIN users u
+         ON u.id = fl.created_by OR u.oid = fl.created_by
+       WHERE fl.source_code = ? OR fl.target_code = ?
+       ORDER BY fl.created_at ASC LIMIT ?`,
       [code, code, TRACE_LIMIT]
     );
     const list = rows[0]?.values?.map((row) => {
       const cols = rows[0].columns;
       const obj: Record<string, any> = {};
       cols.forEach((c, i) => { obj[c] = row[i]; });
+      // 兜底：原字段为空时才用 JOIN 结果覆盖
+      if (!obj.crop_variety && obj.sv_crop_variety) {
+        obj.crop_variety = obj.sv_crop_variety;
+      }
+      if (!obj.crop_name && obj.sv_crop_name) {
+        obj.crop_name = obj.sv_crop_name;
+      }
+      // 操作员姓名（供前端「操作员」列显示，created_by 保留原 ID 不污染语义）
+      if (obj.sv_operator_name) {
+        obj.operator_name = obj.sv_operator_name;
+      }
+      delete obj.sv_crop_variety;
+      delete obj.sv_crop_name;
+      delete obj.sv_operator_name;
       return obj;
     }) || [];
     res.json({ success: true, data: list, truncated, total });
