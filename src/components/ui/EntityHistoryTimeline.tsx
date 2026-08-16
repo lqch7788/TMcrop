@@ -83,6 +83,9 @@ const ACTION_LABELS: Record<string, string> = {
   adjustment: '库存调整',
   harvest: '采收',
   manual: '手动操作',
+  // 2026-08-16：audit_logs 可能写入英文 action（打印/阶段推进），补中文兜底
+  print: '打印',
+  propagation_stage: '阶段推进',
 };
 
 function fmtAction(action?: string): string {

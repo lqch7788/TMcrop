@@ -74,6 +74,12 @@ const SOURCE_MODULE_CN: Record<string, string> = {
   inventory_transfer: '库存调拨',
 };
 
+/** print_records / seed_source_print_records.print_type → 中文（2026-08-16 修复「打印 new ×1」英文显示） */
+const PRINT_TYPE_CN: Record<string, string> = {
+  new: '新增',
+  seedling_label: '种苗标签',
+};
+
 /**
  * 查询实体历史（按 business_id 关联的 3-4 表 UNION）
  */
@@ -255,7 +261,11 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         // 优先级：variety_name（品种）> crop_name（作物）
         cropName: r.variety_name ? String(r.variety_name) : (r.crop_name ? String(r.crop_name) : undefined),
         // 2026-07-16：填 inboundSource（库存来源类型，前端 fmtInboundSource 翻译）
-        inboundSource: r.stock_source_type ? String(r.stock_source_type) : bizType || undefined,
+        // 2026-08-16 修复：stock_source_type 为空时 fallback bizType 需给中文
+        //   （冲销/撤销行 bizType='inbound_record'/'circulation_record'，原来直出英文到「来源」列）
+        inboundSource: r.stock_source_type
+          ? String(r.stock_source_type)
+          : (SOURCE_MODULE_CN[bizType] || bizType || undefined),
       });
     }
     stmt.free();
@@ -290,7 +300,7 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         LEFT JOIN seed_sources ss_new
           ON ss_new.id = cc.new_source_id
         LEFT JOIN users u
-          ON u.id = cc.operator_id
+          ON u.id = cc.operator_id OR u.oid = cc.operator_id
         WHERE cc.parent_source_id = ? OR cc.new_source_id = ?
         ORDER BY cc.created_at DESC LIMIT ?
       `);
@@ -312,15 +322,16 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           refModule: sourceModuleCn,
           // 2026-07-18 修复：operatorName 从 users.real_name 取
           operatorName: String(r.operator_name || ''),
-          // 2026-07-18 修复：cropName 显示完整「作物+品种」路径
-          // 优先级：variety_name（品种）> crop_name（作物）
+          // 2026-08-16 修复：cropName 与 inbound/transaction 行统一为「品种名优先」
+          // （原「作物 › 品种」格式与表格其他行不一致，用户要求统一显示品种名）
           cropName: r.variety_name
-            ? `${r.crop_name ? String(r.crop_name) + ' › ' : ''}${String(r.variety_name)}`
+            ? String(r.variety_name)
             : (r.crop_name ? String(r.crop_name) : undefined),
           // 2026-07-18 修复：inboundSource（来源）与 refModule 同步（中文）
           inboundSource: sourceModuleCn,
+          // 2026-08-16 修复：撤销回流写入的 [REVOKE] / [REVOKE-ORPHAN] 英文前缀翻译为中文
           remarks: [
-                r.notes,
+                String(r.notes || '').replace(/\[REVOKE-ORPHAN\]/, '【已撤销-孤儿】').replace(/\[REVOKE\]/, '【已撤销】'),
                 r.disposition ? `处置方式：${DISPOSITION_CN[String(r.disposition)] || r.disposition}` : null,
               ].filter(Boolean).join(' ｜ '),
         });
@@ -437,7 +448,8 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           occurredAt: String(r.create_time || ''),
           source: 'entity',
           category: 'print',
-          action: `打印 ${r.print_type || ''} ×${copies}`,
+          // 2026-08-16：print_type 英文（new/seedling_label）翻译为中文
+          action: `打印 ${PRINT_TYPE_CN[String(r.print_type || '')] || r.print_type || ''} ×${copies}`,
           operatorName: String(r.create_by || ''),
           remarks: '',
         });
@@ -466,7 +478,8 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
           occurredAt: String(r.create_time || r.print_time || ''),
           source: 'entity',
           category: 'print',
-          action: `打印 ${r.print_type || ''} ×${cnt}`,
+          // 2026-08-16：print_type 英文（new 等）翻译为中文
+          action: `打印 ${PRINT_TYPE_CN[String(r.print_type || '')] || r.print_type || ''} ×${cnt}`,
           operatorName: String(r.operator || ''),
           remarks: '',
         });

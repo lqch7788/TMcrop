@@ -53,6 +53,7 @@ interface FlowLogRow {
   targetUnit?: string;
   createdAt: string;
   createdBy?: string;
+  operatorName?: string;      // 2026-08-16：trace 端点 JOIN users 补的操作员姓名
 }
 
 /**
@@ -85,6 +86,7 @@ const FLOW_TYPE_CN: Record<string, string> = {
   'seed_source→harvest': '种源 → 采收',
   'plan→seed_source': '计划 → 种源',
   'planting→seed_source': '种植 → 种源',
+  'inventory→freeze': '库存 → 冻结',
   correction: '数量修正',
 };
 
@@ -115,10 +117,9 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
     return rows.map((r: FlowLogRow) => {
       // 2026-07-16 修复：flowType 第一段即"来源"（如 seed_source→seedling → 'seed_source' → '种源'）
       const sourceKey = r.flowType ? r.flowType.split('→')[0] : '';
-      // 2026-07-23 修复：拼接 cropName + cropVariety 让"作物品种"列显示完整名（如"草莓-红颜"）
-      const fullCropName = r.cropName && r.cropVariety
-        ? `${r.cropName}-${r.cropVariety}`
-        : (r.cropName || r.cropVariety || '');
+      // 2026-08-16 修复：与后端 history 各数据源统一为「品种名优先」
+      // （原"作物-品种"拼接与其他行"品种名"格式不一致，且 correction 行缺品种时只剩光杆作物名）
+      const fullCropName = r.cropVariety || r.cropName || '';
       // 2026-07-23 修复：refCode 优先用 targetCode（用户视角"这条记录关联的本订单"）
       // 之前 sourceCode || targetCode 对种植实体显示的是种源单号（如 ZZ20260723-002），
       // 用户期望的是种植单 ZZ20260723-003 自身
@@ -132,7 +133,8 @@ async function fetchFlowLogs(code: string): Promise<HistoryItem[]> {
         unit: r.targetUnit || r.sourceUnit,
         refCode: r.targetCode || r.sourceCode,
         refModule: undefined,
-        operatorName: r.createdBy,
+        // 2026-08-16：优先用 trace 端点 JOIN users 补的姓名（原来直出 createdBy 用户 ID 如 USER_ADMIN_001）
+        operatorName: r.operatorName || r.createdBy,
         // 2026-07-23：完整作物+品种名
         cropName: fullCropName,
         // 2026-07-16 修复：从 flowType 推断入库来源，让表格"来源"列展示有意义的标签
