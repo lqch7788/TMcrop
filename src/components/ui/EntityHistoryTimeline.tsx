@@ -3,7 +3,7 @@
  *
  * 功能：
  * - 双视图切换：时间线 ↔ 表格
- * - 分类筛选：全部 / 创建修改 / 入库 / 库存流水 / 回流 / 流转
+ * - 分类筛选：全部 / 创建修改 / 入库 / 库存流水 / 回流 / 流转（可按 entity 隐藏分类、改写说明：hiddenCategories / categoryDescriptions）
  * - 导出 Excel（表格视图下可用）
  * - 刷新按钮
  */
@@ -104,6 +104,9 @@ export interface TypeColumnConfig {
   value: string;
 }
 
+/** 追溯时间线分类 key（2026-08-16 导出，供调用方隐藏分类 / 改写悬停说明） */
+export type CategoryKey = 'all' | 'lifecycle' | 'inbound' | 'transaction' | 'circulation' | 'flow';
+
 interface EntityHistoryTimelineProps {
   /** 实体标识（seed-sources / seedlings / plantings） */
   entity: 'seed-sources' | 'seedlings' | 'plantings';
@@ -117,11 +120,23 @@ interface EntityHistoryTimelineProps {
    * - 传了则按 label 显示列标题，value 显示单元格内容
    */
   typeColumn?: TypeColumnConfig;
+  /**
+   * 需要隐藏的分类（2026-08-16）
+   * - 不传则显示全部 6 个分类
+   * - 'all' 不可隐藏（渲染时兜底忽略）
+   */
+  hiddenCategories?: CategoryKey[];
+  /**
+   * 分类悬停说明改写（2026-08-16）
+   * - 不传则用 CATEGORY_FILTERS 默认 description
+   * - 仅覆盖传入的 key，未覆盖的保持默认
+   */
+  categoryDescriptions?: Partial<Record<CategoryKey, string>>;
 }
 
-/** 分类筛选配置（含悬停说明） */
+/** 分类筛选配置（默认悬停说明，2026-08-16 起可被 categoryDescriptions 按 entity 覆盖；分类可被 hiddenCategories 隐藏） */
 const CATEGORY_FILTERS: ReadonlyArray<{
-  key: string;
+  key: CategoryKey;
   label: string;
   description: string;
 }> = [
@@ -166,9 +181,9 @@ function catBadge(cat: string): string {
   }
 }
 
-export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn }: EntityHistoryTimelineProps) {
+export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn, hiddenCategories, categoryDescriptions }: EntityHistoryTimelineProps) {
   const [view, setView] = useState<'timeline' | 'table'>('timeline');
-  const [filter, setFilter] = useState<string>('all');
+  const [filter, setFilter] = useState<CategoryKey>('all');
   const [loading, setLoading] = useState(false);
   // 2026-07-28 审核 M：error 状态 + 用户可见提示（修复静默吞错）
   const [error, setError] = useState<string | null>(null);
@@ -213,10 +228,22 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
     return () => { cancelled = true; };
   }, [load]);
 
+  // 2026-08-16：按 entity 隐藏分类 + 改写悬停说明
+  // - 种源传 hiddenCategories=['inbound','circulation']（与主 Tab「入库记录」重复）
+  // - 育苗/种植不传 → 6 个分类全显，行为与之前完全一致
+  const hiddenSet = useMemo(() => new Set(hiddenCategories ?? []), [hiddenCategories]);
+  const visibleFilters = useMemo(
+    () => CATEGORY_FILTERS.filter((f) => f.key === 'all' || !hiddenSet.has(f.key)),
+    [hiddenSet],
+  );
+  // 防御：若当前筛选分类被隐藏（仅 hiddenCategories 运行时变化才会发生），回退到「全部」
+  // 种源弹窗以 key={record.id} 强制重挂载，同实例 hiddenCategories 恒定，无需 useEffect 重置
+  const effectiveFilter = visibleFilters.some((f) => f.key === filter) ? filter : 'all';
+
   // 筛选
   const filtered = useMemo(
-    () => (filter === 'all' ? items : items.filter((i) => i.category === filter)),
-    [items, filter],
+    () => (effectiveFilter === 'all' ? items : items.filter((i) => i.category === effectiveFilter)),
+    [items, effectiveFilter],
   );
 
   // 导出 Excel
@@ -307,12 +334,12 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
         {/* 第二行：数据分类筛选 */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-gray-500 shrink-0">数据分类：</span>
-          {CATEGORY_FILTERS.map((f) => (
-            <Tooltip key={f.key} content={f.description} position="top" multiline>
+          {visibleFilters.map((f) => (
+            <Tooltip key={f.key} content={categoryDescriptions?.[f.key] ?? f.description} position="top" multiline>
               <button
                 onClick={() => setFilter(f.key)}
                 className={`px-3 py-1.5 text-sm font-semibold rounded-full border transition-colors ${
-                  filter === f.key
+                  effectiveFilter === f.key
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
                     : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
@@ -327,7 +354,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
       {/* 统计摘要 */}
       <div className="text-xs text-gray-500">
         共 {filtered.length} 条记录
-        {filter !== 'all' && `（已筛选：${CATEGORY_FILTERS.find((f) => f.key === filter)?.label}）`}
+        {effectiveFilter !== 'all' && `（已筛选：${CATEGORY_FILTERS.find((f) => f.key === effectiveFilter)?.label}）`}
       </div>
 
       {/* 内容区 */}

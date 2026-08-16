@@ -5,7 +5,7 @@
  * 数据源：
  *   - audit_logs: business_id + business_type（lifecycle）
  *   - inventory_inbound_records: business_id（inbound）
- *   - inventory_transaction: business_id（transaction）
+ *   - inventory_transaction: business_id（transaction；seed_source 额外按 instance_id 匹配育苗使用/冲销/撤销回流行）
  *   - crop_circulation_records: seed_source_id（circulation，仅种源）
  *
  * 注意：material_flow_log 不在此端点，单独通过 /material-flow-log/trace 查询
@@ -67,6 +67,11 @@ const SOURCE_MODULE_CN: Record<string, string> = {
   seedling: '育苗',
   inventory: '库存',
   seed_source: '种源',
+  // 2026-08-16：transaction 行 business_type 补中文（冲销/撤销回流 instance_id 匹配后可见，否则「关联模块」列显示英文）
+  inbound_record: '入库记录',
+  circulation_record: '回流记录',
+  transfer: '库存调拨',
+  inventory_transfer: '库存调拨',
 };
 
 /**
@@ -160,16 +165,27 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
   // 2026-07-16：补 LEFT JOIN 关联表（seedlings/plantings/seed_sources/inventory_stock），
   //   让 cropName / inboundSource / refCode / refModule 4 个字段不再为空，
   //   修复「库存流水」Tab 的 4 列空数据问题（YM20260716-001 实际数据：业务=育苗 → JOIN seedlings 拿到 crop_name='宁玉'）
+  // 2026-08-16：仅 seed_source 补 instance_id 匹配（3 种键形状）：
+  //   ① tx.business_id = 种源ID（调拨转入 transfer_in、追加调拨 outbound 的既有匹配）
+  //   ② tx.instance_id = 'seed_source:<ID>'（育苗使用种源的 outbound，business_id 是育苗ID，原查询漏掉）
+  //   ③ tx.instance_id = 裸种源ID（冲销 reverse_inbound / 撤销回流 reverse_circulation，business_id 是单据ID，原查询漏掉）
+  //   seedlings / plantings / inventory_stock 保持原 WHERE（隔离，不改变其查询行为）
   try {
+    const isSeedSource = entityType === 'seed_source';
+    const instanceMatch = isSeedSource
+      ? ' OR tx.instance_id = ? OR tx.instance_id = ?'
+      : '';
     const stmt = db.prepare(`
       SELECT
         tx.id, tx.transaction_type, tx.business_type, tx.business_code,
         tx.quantity, tx.balance_before, tx.balance_after,
         tx.operate_date, tx.remarks, tx.operator_name, tx.create_time,
         -- 2026-07-16：JOIN 关联业务表取作物名（按 business_type 分支优先匹配）
-        COALESCE(sd.crop_name, sp.crop_name, ss.crop_name, stk.crop_name) AS crop_name,
+        -- 2026-08-16：ss_inst 为 instance_id 裸匹配行（冲销/撤销回流）提供作物名；
+        --   育苗使用行由 sd（business_type='seedling'）覆盖，调拨转入行由 stk 覆盖
+        COALESCE(sd.crop_name, sp.crop_name, ss.crop_name, ss_inst.crop_name, stk.crop_name) AS crop_name,
         -- 2026-07-16：JOIN 关联业务表取品种名（最后一级，优先于 crop_name）
-        COALESCE(sd.crop_variety, sp.crop_variety, ss.crop_variety, stk.variety_name) AS variety_name,
+        COALESCE(sd.crop_variety, sp.crop_variety, ss.crop_variety, ss_inst.crop_variety, stk.variety_name) AS variety_name,
         -- 2026-07-16：JOIN inventory_stock 取入库来源类型（外购/调拨/自产等）
         stk.source_type AS stock_source_type
       FROM inventory_transaction tx
@@ -179,12 +195,18 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
         ON sp.id = tx.business_id AND tx.business_type = 'planting'
       LEFT JOIN seed_sources ss
         ON ss.id = tx.business_id AND tx.business_type = 'seed_source'
+      LEFT JOIN seed_sources ss_inst
+        ON ss_inst.id = tx.instance_id
       LEFT JOIN inventory_stock stk
         ON stk.instance_id = tx.instance_id
-      WHERE tx.business_id = ?
+      WHERE tx.business_id = ?${instanceMatch}
       ORDER BY tx.create_time DESC LIMIT ?
     `);
-    stmt.bind([entityId, limit]);
+    if (isSeedSource) {
+      stmt.bind([entityId, entityId, `seed_source:${entityId}`, limit]);
+    } else {
+      stmt.bind([entityId, limit]);
+    }
     while (stmt.step()) {
       const r = stmt.getAsObject() as Record<string, unknown>;
       const txnType = String(r.transaction_type || '');
@@ -206,14 +228,21 @@ export function queryEntityHistory(entityType: EntityType, entityId: string, lim
                 ? '冻结'
                 : txnType === 'unfreeze'
                   ? '解冻'
-                  : txnType;
+                  // 2026-08-16：补冲销/撤销回流的类型中文映射（instance_id 匹配后这些行变为可见）
+                  : txnType === 'reverse_inbound'
+                    ? '冲销入库'
+                    : txnType === 'reverse_circulation'
+                      ? '撤销回流'
+                      : txnType;
       results.push({
         id: String(r.id || ''),
         occurredAt: String(r.create_time || r.operate_date || ''),
         source: 'entity',
         category: 'transaction',
         action: actionLabel,
-        quantityDelta: txnType === 'transfer_out' || txnType === 'outbound' ? -qty : qty,
+        // 2026-08-16：出库/调拨出行入库时已存负数（如 -safeCount），-qty 会翻成正数；
+        // 改用 -Math.abs 保证出库恒为负（兼容历史上存正数的数据）
+        quantityDelta: txnType === 'transfer_out' || txnType === 'outbound' ? -Math.abs(qty) : qty,
         unit: '',
         // 2026-07-16：填 refCode（业务单号，如 YM20260716-001）
         refCode: String(r.business_code || ''),
