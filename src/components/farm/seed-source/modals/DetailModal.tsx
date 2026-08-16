@@ -2,8 +2,10 @@
  * 种源详情弹窗（2026-07-02 重构）
  * 种源已退化为纯仓库角色，移除繁育种源相关字段。
  * 三入口模式：外购入库 / 库存调拨 / 种植留种
- * Tab：基本信息 / 来源详情（条件）/ 调拨来源（条件）/ 使用记录 / 操作历史
+ * Tab：基本信息 / 追溯时间线（种源隐藏"入库""回流"两个重复分类，见 SEED_SOURCE_HIDDEN_CATEGORIES）
+ *      / 溯源链 / 调拨来源（条件）/ 入库记录 / 使用记录
  * 2026-07-05: "调入种植" Tab 改名为 "使用记录"（更准确反映被育苗/种植使用两种场景）
+ * 2026-08-16: 追溯时间线分类按"两来源"现实优化注释（见 SEED_SOURCE_CATEGORY_DESCRIPTIONS）
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -19,6 +21,8 @@ import { useSeedSourceStore } from '@/stores/useSeedSourceStore';
 import { Alert, AlertDescription, Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
 import { EntityDetailModal } from '@/components/ui/EntityDetailModal';
+// 2026-08-16：种源隐藏「入库」「回流」两个重复分类 + 改写保留分类悬停说明
+import type { CategoryKey } from '@/components/ui/EntityHistoryTimeline';
 import { SeedSource } from '../../../../types/crop';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP, TRANSFERRED_FROM_BUSINESS_TYPE_MAP, ORIGINAL_SOURCE_MODULE_MAP } from '../../../../constants/cropConstants';
 // 2026-07-16：种源形态字段 seedForm 后端可能存中文（来自 product_form）或英文（来自 stock_type），
@@ -59,6 +63,26 @@ const MODE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color:
   transfer_from_inventory: { label: '库存调拨', icon: <ArrowLeftRight className="w-4 h-4" />, color: 'text-cyan-700 bg-cyan-50' },
   external_purchase:    { label: '外购入库', icon: <Store className="w-4 h-4" />,         color: 'text-blue-700 bg-blue-50' },
   external:             { label: '外购入库', icon: <Store className="w-4 h-4" />,         color: 'text-blue-700 bg-blue-50' },
+};
+
+/**
+ * 2026-08-16：种源专属「追溯时间线」分类配置
+ * - 隐藏「入库」「回流」：与主 Tab「入库记录」逐行重复
+ *   （时间线 inbound 查 inventory_inbound_records，circulation 查 crop_circulation_records PROPAGATION，
+ *    主 Tab getInboundRecords 正是这两表 UNION）
+ * - 改写保留分类悬停说明：内部种源仅「库存调拨」「种植留种」两个创建来源，
+ *   二者均由服务层直写数据表，创建时刻不产生审计/流水/流转记录，文案如实交代"可能为空"
+ */
+const SEED_SOURCE_HIDDEN_CATEGORIES: CategoryKey[] = ['inbound', 'circulation'];
+
+const SEED_SOURCE_CATEGORY_DESCRIPTIONS: Partial<Record<CategoryKey, string>> = {
+  lifecycle: '种源审计记录（数据源：audit_logs）：仅含后续的修改、删除、打印、状态变更等操作。'
+    + '库存调拨与种植留种两种创建方式由服务层直写数据表，不产生"创建"记录；未发生上述操作时本分类可能为空。',
+  transaction: '种源库存数量变动流水（数据源：inventory_transaction）：'
+    + '调拨入库（含追加/合并）、入库冲销、撤销留种回流、被育苗使用的出库扣减等。'
+    + '调拨/留种创建时本身不产生本类流水；未发生冲销、撤销或使用等操作时本分类可能为空。',
+  flow: '全链路物料流转日志（数据源：material_flow_log）：种植留种产生"种植 → 种源"，'
+    + '被育苗/种植使用时产生"种源 → 育苗/种植"，冲销与撤销回流产生"数量修正"。库存调拨创建种源不写流转日志。',
 };
 
 interface DetailModalProps {
@@ -1198,6 +1222,9 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
         label: '入库方式',
         value: mode.label,
       }}
+      // 2026-08-16：种源隐藏「入库」「回流」两个与主 Tab「入库记录」重复的分类 + 专属悬停说明
+      historyHiddenCategories={SEED_SOURCE_HIDDEN_CATEGORIES}
+      historyCategoryDescriptions={SEED_SOURCE_CATEGORY_DESCRIPTIONS}
       extraTabs={extraTabs}
       // 2026-07-05: 弹窗宽度 +30%（xl → xxxl：max-w-4xl → max-w-6xl）让"使用记录" Tab 字段完整展示
       size="xxxl"
