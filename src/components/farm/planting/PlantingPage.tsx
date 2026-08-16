@@ -21,8 +21,6 @@ import { DailyRecordModal } from './modals/DailyRecordModal';
 import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
-// 2026-07-10 P1-2：抽取筛选 Hook
-import { useFilteredPlantings } from '@/hooks/useFilteredPlantings';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 // 2026-07-10 P1-1：抽取公共导出函数
@@ -85,8 +83,17 @@ export default function PlantingPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 从 Zustand Store 获取种植数据
-  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
+  // 从 Zustand Store 获取种植数据（2026-08-16 修复 Maximum update depth：
+  // 整 store 解构是反模式——每次 set({isLoading}) 都让 store 引用变，全组件重渲染，子组件 useEffect
+  // 依赖 store action 引用变化 → 死循环。改用 selector 单独订阅每个字段/action）
+  const plantings = usePlantingStore((s) => s.items);
+  const loading = usePlantingStore((s) => s.isLoading);
+  const error = usePlantingStore((s) => s.error);
+  const clearError = usePlantingStore((s) => s.clearError);
+  const loadItems = usePlantingStore((s) => s.loadItems);
+  const deleteItem = usePlantingStore((s) => s.deleteItem);
+  const deleteItems = usePlantingStore((s) => s.deleteItems);
+  const updateItem = usePlantingStore((s) => s.updateItem);
   // 2026-06-06: 监听 store 错误并弹 Toast
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
@@ -243,8 +250,27 @@ export default function PlantingPage() {
   const [printMode, setPrintMode] = useState(false);
   const [printRecords, setPrintRecords] = useState<Planting[]>([]);
 
-  // 2026-07-10 P1-2：抽到 useFilteredPlantings Hook
-  const filteredData = useFilteredPlantings(plantings, filters);
+  // 2026-08-16：原 useFilteredPlantings Hook 文件已删除但 import 未清理（调用 undefined()）
+  // 改为 inline useMemo 实现筛选 + 去重（同一 id 重复行只保留第一条，避免 React key 冲突）
+  const filteredData = useMemo(() => {
+    const kw = (filters.plantCode || '').trim().toLowerCase();
+    const srcKw = (filters.sourceCode || '').trim().toLowerCase();
+    const seen = new Set<string>();
+    const result: Planting[] = [];
+    for (const item of plantings) {
+      if (seen.has(item.id)) continue;
+      if (kw && !(item.plantCode || '').toLowerCase().includes(kw)) continue;
+      if (srcKw && !(item.sourceCode || '').toLowerCase().includes(srcKw)) continue;
+      if (filters.cropName && item.cropName !== filters.cropName) continue;
+      if (filters.areaOid && item.areaOid !== filters.areaOid) continue;
+      if (filters.isHarvest === 'true' && !item.isHarvest) continue;
+      if (filters.isHarvest === 'false' && item.isHarvest) continue;
+      if (filters.transplantDate && item.transplantDate !== filters.transplantDate) continue;
+      seen.add(item.id);
+      result.push(item);
+    }
+    return result;
+  }, [plantings, filters.plantCode, filters.sourceCode, filters.cropName, filters.areaOid, filters.isHarvest, filters.transplantDate]);
 
   // 统计卡片数据
   const statsData = useMemo(() => {
@@ -668,7 +694,8 @@ export default function PlantingPage() {
       {currentRecord && (
         <EditModal
           // 2026-08-14：key 按行强制重挂载（修复切换行后表单残留）
-          key={currentRecord.id}
+          // 2026-08-16：key 加 modal 类型前缀 — 同一行同时挂多个 modal 时避免 React key 冲突
+          key={`edit-${currentRecord.id}`}
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
@@ -679,7 +706,7 @@ export default function PlantingPage() {
       {currentRecord && (
         <DetailModal
           // 2026-08-14：key 按行强制重挂载
-          key={currentRecord.id}
+          key={`detail-${currentRecord.id}`}
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           record={currentRecord}
@@ -690,7 +717,7 @@ export default function PlantingPage() {
       {currentRecord && (
         <HarvestRecordModal
           // 2026-08-14：key 按行强制重挂载
-          key={currentRecord.id}
+          key={`harvest-${currentRecord.id}`}
           isOpen={harvestModalOpen}
           onClose={() => setHarvestModalOpen(false)}
           onSuccess={loadItems}
@@ -744,7 +771,7 @@ export default function PlantingPage() {
           必须打开采收弹窗，弹窗内"补录"按钮才能跳转（用户 v6 设计） */}
       {inboundUnifiedRecord && (
         <UnifiedRowHarvestInboundModal
-          key={inboundUnifiedRecord.id}
+          key={`inbound-${inboundUnifiedRecord.id}`}
           isOpen={inboundUnifiedOpen}
           onClose={() => {
             setInboundUnifiedOpen(false)
@@ -787,7 +814,7 @@ export default function PlantingPage() {
       {dailyRecordModal.record && (
         <DailyRecordModal
           // 2026-08-14：key 按行强制重挂载 — 修复切换行后表单残留上一行数据（与育苗同款 bug）
-          key={dailyRecordModal.record.id}
+          key={`daily-${dailyRecordModal.record.id}`}
           isOpen={dailyRecordModal.open}
           onClose={closeDailyRecord}
           onSuccess={handleDailyRecordSuccess}
@@ -803,7 +830,7 @@ export default function PlantingPage() {
       {currentRecord && (
         <PrintLabelModal
           // 2026-08-14：key 按行强制重挂载
-          key={currentRecord.id}
+          key={`print-${currentRecord.id}`}
           isOpen={printModalOpen}
           onClose={() => setPrintModalOpen(false)}
           record={currentRecord}
