@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle, Layers, History } from 'lucide-react';
+import { ArrowLeftRight, MoveRight, Store, Sprout, Download, Package, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useToastStore } from '@/stores/useToastStore';
 // 2026-07-19 P2：导入 todayLocal 避免运行时 ReferenceError
 import { todayLocal } from '@/lib/dateUtils';
@@ -234,20 +234,29 @@ function SeedSourceBasicInfo({ record }: { record: SeedSource }) {
             </div>
           )}
           {record.mergedFromIds && record.mergedFromIds.length > 0 && (
-            <div className="col-span-2 flex items-start">
-              <span className="text-sm text-gray-500 w-24 flex-shrink-0">合并历史：</span>
-              <div className="flex flex-wrap gap-1">
+            <div className="col-span-2 flex flex-col gap-2">
+              <div className="flex items-start">
+                <span className="text-sm text-gray-500 w-24 flex-shrink-0">合并历史：</span>
                 <Badge variant="secondary" className="text-xs">
-                  合并了 {record.mergedFromIds.length} 条历史种源
+                  合并了 {record.mergedFromIds.length} 条历史种源（已归档）
                 </Badge>
-                {record.mergedFromIds.slice(0, 3).map((id, idx) => (
-                  <code key={idx} className="text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
-                    {id.substring(0, 16)}...
-                  </code>
-                ))}
-                {record.mergedFromIds.length > 3 && (
-                  <span className="text-xs text-gray-500">等 {record.mergedFromIds.length} 条</span>
-                )}
+              </div>
+              {/* 2026-08-16：完整显示所有 ID 列表（不再截断 16 字符、不限前 3 条）
+                  每条 ID 全行展示 + archived 徽章，方便用户复制完整 ID 去数据库追溯 */}
+              <div className="ml-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50/50">
+                <div className="max-h-48 overflow-y-auto divide-y divide-gray-100">
+                  {record.mergedFromIds.map((id, idx) => (
+                    <div key={idx} className="px-3 py-1.5 text-sm flex items-center justify-between hover:bg-gray-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-gray-400 text-xs w-8 shrink-0">#{idx + 1}</span>
+                        <code className="text-xs font-mono text-gray-700 truncate" title={id}>
+                          {id}
+                        </code>
+                      </div>
+                      <Badge variant="secondary" className="text-xs shrink-0">已归档</Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -524,6 +533,132 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
   const [reversingRecord, setReversingRecord] = useState<InboundRecord | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reverseSubmitting, setReverseSubmitting] = useState(false);
+  // 2026-08-16：作废行展开 — 紧贴对应入库记录行下方（用 flatMap + array 返回多个 tr）
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // 2026-08-16：作废审计日志（懒加载 — 首次展开时拉取）
+  const [auditLogs, setAuditLogs] = useState<InboundEditLog[]>([]);
+  const [auditLoaded, setAuditLoaded] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  // 2026-08-16：首次展开时拉取审计日志
+  const ensureAuditLoaded = async () => {
+    if (auditLoaded || auditLoading) return;
+    setAuditLoading(true);
+    try {
+      const data = await getInboundEditLogs(seedSourceId);
+      setAuditLogs(Array.isArray(data) ? data : []);
+      setAuditLoaded(true);
+    } catch (e) {
+      console.error('[InboundRecordsPanel] 加载作废审计失败:', e);
+      toast.error('加载作废审计失败');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+  // 2026-08-16：根据入库记录 id 查该行的作废审计
+  const getAuditForRecord = (recordId: string): InboundEditLog[] =>
+    auditLogs.filter(l => l.inboundId === recordId);
+
+  // 2026-08-16 v3：渲染"作废审计"折叠行 — 直接放在对应入库记录行下方（flatMap + array）
+  const renderAuditRow = (record: InboundRecord): React.ReactNode => {
+    const audits = getAuditForRecord(record.id);
+    return (
+      <tr key={`${record.id}-audit`} className="bg-red-50/40">
+        <td colSpan={17} className="px-3 py-2">
+          <div className="overflow-x-auto border border-red-100 rounded-lg bg-white">
+            <table className="w-full text-xs">
+              <thead className="bg-red-50 text-red-800">
+                <tr>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">操作时间</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">操作</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">来源</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">单据号</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">单据日期</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">作物/品种</th>
+                  <th className="px-2 py-1.5 text-right whitespace-nowrap">原数量</th>
+                  <th className="px-2 py-1.5 text-right whitespace-nowrap">数量变化</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">单位</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">供应商/源</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">回流方式</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap">操作人</th>
+                  <th className="px-2 py-1.5 text-left whitespace-nowrap" style={{ minWidth: '180px' }}>撤回原因</th>
+                </tr>
+              </thead>
+              {audits.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={13} className="px-2 py-1.5 text-gray-500 text-center">
+                      已冲销（{record.reversedAt ? new Date(record.reversedAt).toLocaleString('zh-CN') : '-'}）· 详细审计数据待同步
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+              <tbody className="divide-y divide-gray-100">
+                {audits.map((log) => {
+                  const before = log.beforeQuantity;
+                  const after = log.afterQuantity ?? 0;
+                  const delta = after - before;
+                  const sign = delta > 0 ? '+' : '';
+                  const qtyChange = `${before ?? '-'} → ${after}${log.unit ? ` ${log.unit}` : ''}（${sign}${delta}）`;
+                  const actionLabel = log.sourceType === 'crop_circulation_records'
+                    ? (log.action === 'reverse' ? '撤销' : '修改')
+                    : (log.action === 'reverse' ? '冲销' : '修改');
+                  const sourceLabel = log.sourceType === 'crop_circulation_records' ? '留种回流' : '调拨入库';
+                  const cropDisplay = log.cropName
+                    ? `${log.cropName}${log.varietyName ? ` / ${log.varietyName}` : ''}`
+                    : (log.sourceType === 'crop_circulation_records' ? '（见种源）' : '-');
+                  return (
+                    <tr key={log.id} className="hover:bg-red-50/30">
+                      <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                        {log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '-'}
+                      </td>
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <Badge variant="destructive" className="text-xs">{actionLabel}</Badge>
+                      </td>
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <Badge variant="outline" className="text-xs text-gray-500">{sourceLabel}</Badge>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <code className="text-xs font-mono text-gray-700">{log.inboundId}</code>
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                        {log.recordDate ? log.recordDate.split('T')[0] : '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-700" style={{ maxWidth: '180px' }}>
+                        {cropDisplay}
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-gray-700 whitespace-nowrap">
+                        {log.originalQuantity != null ? log.originalQuantity.toLocaleString() : '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                        <span className="text-red-600 font-medium">{qtyChange}</span>
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">{log.unit || '-'}</td>
+                      <td className="px-2 py-1.5 text-gray-600" style={{ maxWidth: '120px' }} title={log.supplierName || log.sourceId || ''}>
+                        {log.supplierName || log.sourceId || '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                        {log.mergeAction === 'create_new' ? '新建种源' : log.mergeAction === 'merge_into_existing' ? '合并命中' : '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                        {log.editedByName || log.editedBy || '-'}
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-700" style={{ maxWidth: '240px' }}>
+                        <div className="line-clamp-2" title={log.reason || ''}>
+                          {log.reason || '-'}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              )}
+            </table>
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   // 2026-07-18: 冲销处理函数；2026-07-19: 按 recordSource 路由（调拨 → reverseInbound；留种回流 → revokeCirculation）
   // 2026-07-28 审核 LOW：函数声明会 hoist 到模块顶部，对 useState 引用安全；这里仅注释说明
@@ -706,6 +841,8 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
         <table className="w-full text-sm">
           <thead className="bg-blue-500 text-white sticky top-0">
             <tr>
+              {/* 2026-08-16 v3：行首展开列（已作废行点击展开下方"作废审计"折叠面板） */}
+              <th className="px-1 py-2 w-8" />
               <th className="px-2 py-2 text-left">日期</th>
               <th className="px-2 py-2 text-left">入库方式</th>
               <th className="px-2 py-2 text-left">入库单号</th>
@@ -725,10 +862,38 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
             </tr>
           </thead>
           <tbody>
-            {records.map((r) => {
+            {records.flatMap((r) => {
               const returnable = (r.quantity || 0) - (r.returnedQuantity || 0);
-              return (
-                <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+              const isReversed = !!r.reversedAt;
+              const isExpanded = expandedIds.has(r.id);
+              return [
+                <tr
+                  key={r.id}
+                  // 2026-08-16：已作废行整行红色背景 + hover 略深红 — 视觉强化区别
+                  className={`border-b border-gray-100 hover:bg-gray-50 ${isReversed ? 'bg-red-50/60' : ''}`}
+                >
+                  {/* 2026-08-16 v3：行首展开按钮 — 已作废行点击展开下方"作废审计"折叠面板 */}
+                  <td className="px-1 py-1.5 text-center w-8">
+                    {isReversed ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await ensureAuditLoaded();
+                          setExpandedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(r.id)) next.delete(r.id); else next.add(r.id);
+                            return next;
+                          });
+                        }}
+                        className="w-7 h-7 inline-flex items-center justify-center rounded text-lg font-bold text-gray-600 hover:bg-red-100 hover:text-red-700"
+                        title={isExpanded ? '折叠作废审计' : '展开作废审计（含原冲销记录全部字段）'}
+                      >
+                        {isExpanded ? '▾' : '▸'}
+                      </button>
+                    ) : (
+                      <span className="text-gray-300 text-sm">·</span>
+                    )}
+                  </td>
                   <td className="px-2 py-1.5">{r.recordDate || '-'}</td>
                   <td className="px-2 py-1.5">
                     <span className="px-1.5 py-0.5 bg-cyan-50 text-cyan-700 rounded text-xs">
@@ -774,7 +939,9 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                       （移除 recordSource 禁用，禁用条件只剩"已退完 / 不可操作"两类） */}
                   <td className="px-2 py-1.5">
                     {r.reversedAt ? (
-                      <Badge variant="destructive" className="text-xs">已冲销</Badge>
+                      <Badge variant="destructive" className="text-xs">
+                        {r.recordSource === 'crop_circulation_records' ? '已撤销' : '已冲销'}
+                      </Badge>
                     ) : (
                       (() => {
                         const isCirculation = r.recordSource === 'crop_circulation_records';
@@ -785,6 +952,8 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                           <Button
                             size="sm"
                             variant="ghost"
+                            // 2026-08-16：蓝色高亮提示可点击（之前 ghost 灰色看不出来）
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200"
                             onClick={() => {
                               if (disabledReason) {
                                 toast.error(disabledReason);
@@ -798,13 +967,17 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                             }
                           >
                             <RotateCcw className="w-3 h-3" />
+                            <span className="text-xs">
+                              {isCirculation ? '撤销' : '冲销'}
+                            </span>
                           </Button>
                         );
                       })()
                     )}
                   </td>
-                </tr>
-              );
+                </tr>,
+                isReversed && isExpanded ? renderAuditRow(r) : null,
+              ];
             })}
           </tbody>
         </table>
@@ -949,211 +1122,6 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
   )
 }
 
-/**
- * 2026-07-18: 合并历史 Tab
- * 显示本种源历史合并过的种源 ID 列表（来自 planting_self_kept 重复种源合并）
- */
-function MergeHistoryPanel({ record }: { record: SeedSource }) {
-  const ids = record.mergedFromIds || [];
-  return (
-    <div className="space-y-3">
-      <Alert className="border-cyan-200 bg-cyan-50">
-        <Layers className="w-4 h-4 text-cyan-600" />
-        <AlertDescription>
-          <div className="font-medium text-cyan-900">种源合并说明</div>
-          <div className="mt-1 text-sm text-cyan-700">
-            本种源 <code className="font-mono">{record.seedCode}</code> 是由 <strong>{ids.length}</strong> 条历史重复种源合并而成。
-            合并操作由「内部种源去重迁移脚本」或运行时写时合并触发。
-          </div>
-          <div className="mt-2 text-xs text-cyan-600">
-            <div>• 合并时间：{record.lastReflowAt || '未知'}</div>
-            <div>• 合并回流次数：<strong>{record.reflowCount ?? 0}</strong> 次</div>
-            <div>• 合并后总数量：<strong>{(record.quantity || 0).toLocaleString()}</strong> {record.unit}</div>
-          </div>
-        </AlertDescription>
-      </Alert>
-
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-200">
-          被合并的历史种源（共 {ids.length} 条）
-        </div>
-        <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
-          {ids.map((id, idx) => (
-            <div key={idx} className="px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400 text-xs w-8">#{idx + 1}</span>
-                <code className="text-xs font-mono text-gray-700">{id}</code>
-              </div>
-              <Badge variant="secondary" className="text-xs">archived</Badge>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs text-gray-500">
-        被合并的种源记录已标记为 archived，不再在种源列表显示，但保留追溯链路。如需恢复，请联系管理员。
-      </p>
-    </div>
-  );
-}
-
-/**
- * 2026-07-19 改名：入库审计 → 冲销记录
- * - 涵盖 inbound_edit_log（调拨/外购入库冲销）+ circulation_edit_log（留种回流撤销）
- * - 种源详情弹窗的入库记录 Tab 中所有来源都支持作废操作
- */
-function InboundAuditPanel({ seedSourceId }: { seedSourceId: string }) {
-  // 2026-07-19 P2：InboundAuditPanel 独立使用全局 toast
-  const toast = useToastStore((s) => s.toast);
-  const [logs, setLogs] = useState<InboundEditLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!seedSourceId) return;
-    setLoading(true);
-    setError(null);
-    getInboundEditLogs(seedSourceId)
-      .then((data) => setLogs(Array.isArray(data) ? data : []))
-      .catch((e) => {
-        console.error('[DetailModal] 审计日志加载失败:', e);
-        const msg = e instanceof Error ? e.message : '加载失败';
-        setError(msg);
-        // 2026-07-19 P1：不再静默吞错，弹 toast 提示用户
-        toast.error(`加载冲销记录失败：${msg}`);
-      })
-      .finally(() => setLoading(false));
-  }, [seedSourceId]);
-
-  if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中…</div>;
-  }
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-  if (logs.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
-        <History className="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <div className="text-sm">暂无审计日志</div>
-        <div className="text-xs mt-1 text-gray-400">
-          入库流水被冲销或修改时会记录在此
-        </div>
-      </div>
-    );
-  }
-
-  // 格式化数量变化（带正负号 + 单位）
-  const formatQtyChange = (log: InboundEditLog): string => {
-    if (log.beforeQuantity == null) return '-';
-    const before = log.beforeQuantity;
-    const after = log.afterQuantity ?? 0;
-    const delta = after - before;
-    const sign = delta > 0 ? '+' : '';
-    return `${before} → ${after}（${sign}${delta}）`;
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-200 flex justify-between">
-          <span>冲销记录（{logs.length} 条）</span>
-          <span className="text-xs text-gray-500">按时间倒序 · 调拨冲销 + 留种回流撤销</span>
-        </div>
-        <div className="overflow-x-auto max-h-[32rem] overflow-y-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
-              <tr>
-                <th className="px-2 py-2 text-left whitespace-nowrap">操作时间</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">操作</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">来源</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">单据号</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">单据日期</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">作物/品种</th>
-                <th className="px-2 py-2 text-right whitespace-nowrap">原数量</th>
-                <th className="px-2 py-2 text-right whitespace-nowrap">数量变化</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">单位</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">供应商/源</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">回流方式</th>
-                <th className="px-2 py-2 text-left whitespace-nowrap">操作人</th>
-                <th className="px-2 py-2 text-left" style={{ minWidth: '180px' }}>撤回原因</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {logs.map((log) => {
-                const actionLabel = log.sourceType === 'crop_circulation_records'
-                  ? (log.action === 'reverse' ? '撤销' : '修改')
-                  : (log.action === 'reverse' ? '冲销' : '修改');
-                const sourceLabel = SOURCE_MODULE_MAP[log.sourceModule || ''] || log.sourceModule || '-';
-                const cropDisplay = log.cropName
-                  ? `${log.cropName}${log.varietyName ? ` / ${log.varietyName}` : ''}`
-                  : (log.sourceType === 'crop_circulation_records' ? '（作物信息见种源）' : '-');
-                return (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
-                      {log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '-'}
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <Badge
-                        variant={log.action === 'reverse' ? 'destructive' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {actionLabel}
-                      </Badge>
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <Badge variant="outline" className="text-xs text-gray-500">
-                        {log.sourceType === 'crop_circulation_records' ? '留种回流' : '调拨入库'}
-                      </Badge>
-                    </td>
-                    <td className="px-2 py-2">
-                      <code className="text-xs font-mono text-gray-700">{log.inboundId}</code>
-                    </td>
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
-                      {log.recordDate ? log.recordDate.split('T')[0] : '-'}
-                    </td>
-                    <td className="px-2 py-2 text-gray-700" style={{ maxWidth: '180px' }}>
-                      {cropDisplay}
-                    </td>
-                    <td className="px-2 py-2 text-right text-gray-700 whitespace-nowrap">
-                      {log.originalQuantity != null ? log.originalQuantity.toLocaleString() : '-'}
-                    </td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">
-                      <span className={log.action === 'reverse' ? 'text-red-600 font-medium' : 'text-amber-600'}>
-                        {formatQtyChange(log)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
-                      {log.unit || '-'}
-                    </td>
-                    <td className="px-2 py-2 text-gray-600" style={{ maxWidth: '120px' }} title={log.supplierName || log.sourceId || ''}>
-                      {log.supplierName || log.sourceId || '-'}
-                    </td>
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
-                      {log.mergeAction === 'create_new' ? '新建种源' : log.mergeAction === 'merge_into_existing' ? '合并命中' : '-'}
-                    </td>
-                    <td className="px-2 py-2 text-gray-600 whitespace-nowrap">
-                      {log.editedByName || log.editedBy || '-'}
-                    </td>
-                    <td className="px-2 py-2 text-gray-700" style={{ maxWidth: '240px' }}>
-                      <div className="line-clamp-2" title={log.reason || ''}>
-                        {log.reason || '-'}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
   const hasTransferSource = !!record.transferredFromStockId;
@@ -1197,25 +1165,11 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     content: <InboundRecordsPanel seedSourceId={record.id} seedCode={record.seedCode} />,
   })
 
-  // 2026-07-18: 种源合并历史 Tab（仅当有 mergedFromIds 时显示）
-  if (record.mergedFromIds && record.mergedFromIds.length > 0) {
-    extraTabs.push({
-      key: 'merge-history',
-      label: `合并历史 (${record.mergedFromIds.length})`,
-      icon: <Layers className="w-4 h-4" />,
-      tooltip: '本种源历史合并过的种源 ID 列表（来自 planting_self_kept 重复种源合并）',
-      content: <MergeHistoryPanel record={record} />,
-    });
-  }
+  // 2026-08-16：删除独立的"合并历史"Tab — 信息密度太低（每行只有 ID+徽章）
+  // 完整 ID 列表已集成到基本信息区（带可滚动容器 + 序号 + 已归档徽章）
 
-  // 2026-07-19 改名：入库审计 → 冲销记录（涵盖调拨冲销 + 留种回流撤销）
-  extraTabs.push({
-    key: 'inbound-audit',
-    label: '冲销记录',
-    icon: <History className="w-4 h-4" />,
-    tooltip: '入库流水的作废记录（调拨/外购冲销 + 留种回流撤销）',
-    content: <InboundAuditPanel seedSourceId={record.id} />,
-  });
+  // 2026-08-16 v4：删除独立的"冲销记录"Tab — 已合并到入库记录 Tab 行的折叠面板内
+  // （原 13 字段全部保留 + 可独立导出）
 
   // 使用记录 tab — 所有种源都显示（被育苗使用 + 种植移入/移出）
   extraTabs.push({

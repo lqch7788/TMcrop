@@ -97,6 +97,11 @@ export function Modal({
   const modalRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<number | null>(null);
   const BOUNDARY_PADDING = 30;
+  // 2026-08-16：header 按钮 DOM 引用 + 原生 click handler 备份
+  // 根因：Radix Popover/Portal 全局监听器干扰 React 合成事件，导致最大化/关闭按钮 click 无效
+  // 修复：用 native addEventListener 绑定 click，绕过 React 合成事件系统的 propagation 链
+  const maximizeBtnRef = useRef<HTMLButtonElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   // ESC key to close modal
   useEffect(() => {
@@ -108,6 +113,33 @@ export function Modal({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // 2026-08-16：原生事件绑定（修复 Radix portal 干扰 React 合成事件）
+  // 用 capture phase 确保先于 Radix 的全局监听器执行
+  useEffect(() => {
+    const maxBtn = maximizeBtnRef.current;
+    const closeBtn = closeBtnRef.current;
+    if (!maxBtn && !closeBtn) return;
+
+    const onMaxClick = (e: MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      handleMaximize();
+    };
+    const onCloseClick = (e: MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onClose();
+    };
+
+    // 用 capture + native 监听（不依赖 React 合成事件）
+    maxBtn?.addEventListener('click', onMaxClick, { capture: true });
+    closeBtn?.addEventListener('click', onCloseClick, { capture: true });
+    return () => {
+      maxBtn?.removeEventListener('click', onMaxClick, { capture: true } as any);
+      closeBtn?.removeEventListener('click', onCloseClick, { capture: true } as any);
+    };
+  }, [isOpen]);
 
   // Initialize position when modal opens
   useEffect(() => {
@@ -281,7 +313,7 @@ export function Modal({
       >
         {/* Header - Double click to maximize */}
         <div
-          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl ${enableDrag ? 'cursor-move' : 'cursor-default'} select-none`}
+          className={`modal-header flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl ${enableDrag ? 'cursor-move' : 'cursor-default'} select-none relative z-[60]`}
           onDoubleClick={handleMaximize}
         >
           <h3 className="text-lg font-semibold text-white">{title}</h3>
@@ -291,11 +323,15 @@ export function Modal({
               <>
                 {/* Maximize/Restore Button */}
                 <Button
+                  ref={maximizeBtnRef}
                   variant="ghost"
                   size="icon"
-                  onClick={handleMaximize}
+                  // 2026-08-16：onClick 留空（避免与 Radix 合成事件冲突），改由 useEffect
+                  // 绑原生 click + capture phase（line 121-138）
+                  type="button"
                   title={isMaximized ? '还原窗口' : '最大化窗口'}
-                  className="text-white hover:bg-emerald-500"
+                  aria-label={isMaximized ? '还原窗口' : '最大化窗口'}
+                  className="text-white hover:bg-emerald-500 relative z-[60] pointer-events-auto"
                 >
                   {isMaximized ? (
                     <Minimize2 className="w-4 h-4" />
@@ -308,10 +344,14 @@ export function Modal({
             {/* Close Button */}
             {showCloseButton && (
               <Button
+                ref={closeBtnRef}
                 variant="ghost"
                 size="icon"
-                onClick={onClose}
-                className="text-white hover:bg-emerald-500"
+                // 2026-08-16：同最大化按钮 — 改由 useEffect 绑原生 click + capture phase
+                type="button"
+                aria-label="关闭弹窗"
+                title="关闭"
+                className="text-white hover:bg-emerald-500 relative z-[60] pointer-events-auto"
               >
                 <X className="w-5 h-5" />
               </Button>
