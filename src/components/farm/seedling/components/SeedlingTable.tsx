@@ -470,10 +470,10 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池当前存活数">母株存活数</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计损耗">母株累计损耗</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计补栽">补苗累计</th>
-              {/* ===== 小苗池（4 列） — 绿色半透明背景标识（2026-08-14 新增"已入库数量"列） ===== */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="可入库小苗数（按每日记录数量累计）">可入库小苗数</th>
+              {/* ===== 小苗池（4 列） — 绿色半透明背景标识（2026-08-14 新增"已入库数量"列；2026-08-17 "可入库小苗数"移到"已入库数量"前） ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 已入库（2026-06-28 移除已定植统计）">小苗剩余数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="可入库小苗数（按每日记录数量累计）">可入库小苗数</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="采收入库弹窗累计入库的小苗总量">已入库数量</th>
               {/* ===== 派生 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
@@ -583,11 +583,7 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-indigo-50/30">
                     {(record.replantCount || 0).toLocaleString()}
                   </td>
-                  {/* ===== 小苗池（4 列） — 与 thead bg-emerald-500/30 对应 ===== */}
-                  {/* 可入库小苗数 = expandedPlantCount（按每日记录累计，2026-08-14 列名变更，数值来源不变） */}
-                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
-                    {(record.expandedPlantCount || 0).toLocaleString()}
-                  </td>
+                  {/* ===== 小苗池（4 列） — 与 thead bg-emerald-500/30 对应（2026-08-17 "可入库小苗数"移到"已入库数量"前） ===== */}
                   {/* 小苗累计损耗 = seedlingLossCount */}
                   <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
                     {(record.seedlingLossCount || 0).toLocaleString()}
@@ -601,6 +597,10 @@ export function SeedlingTable({
                       const remaining = Math.max(0, expanded - loss - harvest);
                       return remaining.toLocaleString();
                     })()}
+                  </td>
+                  {/* 可入库小苗数 = expandedPlantCount（按每日记录累计，2026-08-14 列名变更，数值来源不变） */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
+                    {(record.expandedPlantCount || 0).toLocaleString()}
                   </td>
                   {/* 已入库数量 = harvestStockedCount（2026-08-14 新增列，由采收入库弹窗入库累加） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
