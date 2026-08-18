@@ -56,9 +56,13 @@ const OP_GUIDE: Record<OpType, { title: string; subtitle: string; effect: string
       '若字段无变化直接提交 → 后端返回 {changed: false}，不写入任何记录',
   },
   mark: {
-    title: '打标记',
-    subtitle: '给当前标签贴一个状态标签（正常/关注/问题/优质）',
-    effect: '提交后：标签立即显示该颜色徽标，方便后续筛选与重点关注',
+    title: '标记状态',
+    subtitle: '登记这批标签的生长/健康状态（如健康、病害、长势、品质等，可多选）',
+    effect:
+      '从 6 大类里多选（健康/病害/长势/品质/事件/状态）\n' +
+      '健康子项：长势优良/长势一般等\n' +
+      '病害子项：蚜虫/白粉病/腐烂病/黄叶病等\n' +
+      '提交后：标签立即显示对应颜色徽标，方便后续筛选与重点关注',
   },
   void: {
     title: '作废标签',
@@ -83,6 +87,13 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
   const [addPatchMarkIds, setAddPatchMarkIds] = useState<string[]>([]);
   const [addPatchToArea, setAddPatchToArea] = useState('');
   const [addPatchMarkDate, setAddPatchMarkDate] = useState(todayLocal());
+
+  // 2026-08-18：标记状态 — 2 个下拉（1 父 + 1 子）
+  const [addMarkCategory, setAddMarkCategory] = useState<string>('');
+
+  // 2026-08-18：标记状态 Tab — 激活大类的 cat.id（null=全收起）
+  const [addActiveMarkCategory, setAddActiveMarkCategory] = useState<string | null>(null);
+  const [addActivePatchCategory, setAddActivePatchCategory] = useState<string | null>(null);
   const [markTree, setMarkTree] = useState<MarkDictCategory[]>([]);
   const [addMarkIds, setAddMarkIds] = useState<number[]>([]); // 多选 mark id（实际是 dictionaries.id，需后端用字符串 id）
   useEffect(() => {
@@ -132,6 +143,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
       setQuantityChange('');
       setReason('');
       setAddPhotoBase64(null);
+      setAddActiveMarkCategory(null);
     }
     if (t === 'patch') {
       // 2026-08-17：补录现有属性模式：预填当前标记 + 移出位置
@@ -144,6 +156,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
       if (curMoveOut) {
         setAddPatchToArea(curMoveOut);
       }
+      setAddActivePatchCategory(null);
     }
   };
 
@@ -289,7 +302,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         {([
           { v: 'move' as OpType, label: '位置变更', icon: <ArrowRightLeft className="w-3 h-3" />, cls: 'bg-emerald-100 text-emerald-700' },
           { v: 'patch' as OpType, label: '补录现有属性', icon: <Stamp className="w-3 h-3" />, cls: 'bg-amber-100 text-amber-700' },
-          { v: 'mark' as OpType, label: '打标记', icon: <Stamp className="w-3 h-3" />, cls: 'bg-purple-100 text-purple-700' },
+          { v: 'mark' as OpType, label: '标记状态', icon: <Stamp className="w-3 h-3" />, cls: 'bg-purple-100 text-purple-700' },
           { v: 'void' as OpType, label: '作废', icon: <Trash2 className="w-3 h-3" />, cls: 'bg-gray-200 text-gray-700' },
         ]).map((opt) => (
           <button
@@ -358,168 +371,162 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
           </>
         )}
 
-        {/* 标记选择（2026-08-17：字典加载 + 父节点分组 + 多选） */}
-        {addOpType === 'mark' && (
-          <div className="flex flex-wrap gap-2">
+        {/* 标记选择（2026-08-18：2 个下拉菜单 — 1 父单选 + 1 子多选） */}
+        {addOpType === "mark" && (
+          <div className="flex flex-row gap-2 max-w-2xl flex-wrap">
             {markTree.length === 0 && (
               <span className="text-xs text-amber-600">暂无标记（系统设置 → 数据字典 → 标记状态 配置）</span>
             )}
-            {markTree.map((cat) => (
-              <div key={cat.id} className="flex flex-col gap-1">
-                <span className="text-xs text-gray-500 font-medium">{cat.dict_label}</span>
-                <div className="flex flex-wrap gap-1">
-                  {cat.children.map((child) => {
-                    const selected = addMarkIds.includes(child.id);
-                    return (
-                      <button
-                        key={child.id}
-                        type="button"
-                        title={`${cat.dict_label} / ${child.dict_label}`}
-                        onClick={() => setAddMarkIds((prev) =>
-                          selected ? prev.filter((x) => x !== child.id) : [...prev, child.id]
-                        )}
-                        className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                          selected ? 'ring-2 ring-offset-1 ring-emerald-400' : 'opacity-70'
-                        }`}
-                        style={{ backgroundColor: child.color || '#9ca3af' }}
-                      >
-                        {child.dict_label}
-                      </button>
-                    );
-                  })}
+            {/* 第一个下拉：大类（单选） */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>标记大类</span>
+              <select
+                value={addMarkCategory || ""}
+                onChange={(e) => { setAddMarkCategory(e.target.value); setAddMarkIds([]); }}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white"
+              >
+                <option value="">— 请选择大类 —</option>
+                {markTree.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.dictLabel}</option>
+                ))}
+              </select>
+            </div>
+            {/* 第二个下拉：选中大类的子项（复选框列表 — 2026-08-18 用户要求 checkbox 模式） */}
+            {addMarkCategory && (() => {
+              const activeCat = markTree.find((c) => c.id === addMarkCategory);
+              if (!activeCat) return null;
+              return (
+                <div className="flex flex-col gap-1 min-w-[180px]">
+                  <span className="text-xs text-gray-600 font-medium">子项（{activeCat.dictLabel} · 多选）</span>
+                  <div className="flex flex-col gap-0.5 border border-gray-200 rounded p-1.5 bg-white max-h-32 overflow-y-auto">
+                    {activeCat.children.map((child) => {
+                      const checked = addMarkIds.includes(child.id);
+                      return (
+                        <label
+                          key={child.id}
+                          className="flex items-center gap-1.5 px-1 py-0.5 hover:bg-emerald-50 rounded cursor-pointer text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setAddMarkIds((prev) =>
+                                checked ? prev.filter((x) => x !== child.id) : [...prev, child.id]
+                              )
+                            }
+                            className="w-3.5 h-3.5"
+                          />
+                          <span>{child.dictLabel}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
+              );
+            })()}
+            {/* 已选 chip */}
+            {addMarkIds.length > 0 && (
+              <div className="ml-[88px] flex flex-wrap gap-1">
+                {addMarkIds.map((id) => {
+                  const c = markTree.flatMap((cat) => cat.children).find((ch) => ch.id === id);
+                  if (!c) return null;
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs">
+                      {c.dictLabel}
+                      <button type="button" onClick={() => setAddMarkIds((prev) => prev.filter((x) => x !== id))} className="text-emerald-500 hover:text-red-500" title="移除">×</button>
+                    </span>
+                  );
+                })}
               </div>
-            ))}
+            )}
+            {addMarkIds.length > 0 && (
+              <div className="text-[11px] text-gray-500 ml-[88px]">已选 {addMarkIds.length} 项</div>
+            )}
           </div>
         )}
 
-        {/* 补录现有属性（2026-08-17：标记状态多选 + 移出位置 + 标记日期） */}
-        {addOpType === 'patch' && (
-          <div className="flex flex-wrap gap-2 items-start">
-            {/* 标记状态多选 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">标记状态（多选）</span>
-              {markTree.length === 0 ? (
-                <span className="text-xs text-amber-600">暂无标记（系统设置 → 数据字典 → 标记状态 配置）</span>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {markTree.map((cat) => (
-                    <div key={cat.id} className="flex flex-col gap-0.5">
-                      <span className="text-xs text-gray-500">{cat.dict_label}</span>
-                      <div className="flex flex-wrap gap-1">
-                        {cat.children.map((child) => {
-                          const selected = addPatchMarkIds.includes(child.id);
-                          return (
-                            <button
-                              key={child.id}
-                              type="button"
-                              title={`${cat.dict_label} / ${child.dict_label}`}
-                              onClick={() => setAddPatchMarkIds((prev) =>
-                                selected ? prev.filter((x) => x !== child.id) : [...prev, child.id]
-                              )}
-                              className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                                selected ? 'ring-2 ring-offset-1 ring-amber-400' : 'opacity-70'
-                              }`}
-                              style={{ backgroundColor: child.color || '#9ca3af' }}
-                            >
-                              {child.dict_label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+        {/* 补录现有属性（2026-08-18：2 个下拉 + 移出位置 + 标记日期） */}
+        {addOpType === "patch" && (
+          <div className="flex flex-row gap-2 max-w-2xl flex-wrap">
+            {markTree.length === 0 && (
+              <span className="text-xs text-amber-600">暂无标记（系统设置 → 数据字典 → 标记状态 配置）</span>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>标记大类</span>
+              <select
+                value={addActivePatchCategory || ""}
+                onChange={(e) => { setAddActivePatchCategory(e.target.value); setAddPatchMarkIds([]); }}
+                className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white"
+              >
+                <option value="">— 请选择大类 —</option>
+                {markTree.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.dictLabel}</option>
+                ))}
+              </select>
+            </div>
+            {addActivePatchCategory && (() => {
+              const activeCat = markTree.find((c) => c.id === addActivePatchCategory);
+              if (!activeCat) return null;
+              return (
+                <div className="flex flex-col gap-1 min-w-[180px]">
+                  <span className="text-xs text-gray-600 font-medium">子项（{activeCat.dictLabel} · 多选）</span>
+                  <div className="flex flex-col gap-0.5 border border-gray-200 rounded p-1.5 bg-white max-h-32 overflow-y-auto">
+                    {activeCat.children.map((child) => {
+                      const checked = addPatchMarkIds.includes(child.id);
+                      return (
+                        <label
+                          key={child.id}
+                          className="flex items-center gap-1.5 px-1 py-0.5 hover:bg-amber-50 rounded cursor-pointer text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setAddPatchMarkIds((prev) =>
+                                checked ? prev.filter((x) => x !== child.id) : [...prev, child.id]
+                              )
+                            }
+                            className="w-3.5 h-3.5"
+                          />
+                          <span>{child.dictLabel}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              );
+            })()}
+            {addPatchMarkIds.length > 0 && (
+              <div className="ml-[88px] flex flex-wrap gap-1">
+                {addPatchMarkIds.map((id) => {
+                  const c = markTree.flatMap((cat) => cat.children).find((ch) => ch.id === id);
+                  if (!c) return null;
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-xs">
+                      {c.dictLabel}
+                      <button type="button" onClick={() => setAddPatchMarkIds((prev) => prev.filter((x) => x !== id))} className="text-amber-500 hover:text-red-500" title="移除">×</button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {addPatchMarkIds.length > 0 && (
+              <div className="text-[11px] text-gray-500 ml-[88px]">已选 {addPatchMarkIds.length} 项</div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>移出位置</span>
+              <input type="text" value={addPatchToArea} onChange={(e) => setAddPatchToArea(e.target.value)} placeholder="如：西区-B区" className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
             </div>
-            {/* 移出位置 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">移出位置（修改）</span>
-              <Input
-                type="text"
-                value={addPatchToArea}
-                onChange={(e) => setAddPatchToArea(e.target.value)}
-                placeholder="如：西区-B区"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
-              />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>标记日期</span>
+              <input type="date" value={addPatchMarkDate} onChange={(e) => setAddPatchMarkDate(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
             </div>
-            {/* 标记日期 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">标记日期</span>
-              <Input
-                type="date"
-                value={addPatchMarkDate}
-                onChange={(e) => setAddPatchMarkDate(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
-              />
-            </div>
-            {/* 原因 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">原因</span>
-              <Input
-                type="text"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="如：补录历史数据"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
-              />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>原因</span>
+              <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="如：补录历史数据" className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
             </div>
           </div>
-        )}
-
-        {/* 数量变更（位置变更 / 作废时显示；2026-08-17 加 quantity 上下文与范围校验） */}
-        {addOpType !== 'mark' && (() => {
-          // 2026-08-17：标签当前 quantity 单株通常为 1，提示用户输入范围
-          const currentQty = selectedLabel?.quantity ?? 0;
-          const parsed = quantityChange === '' ? null : Number(quantityChange);
-          const overLimit = parsed !== null && Math.abs(parsed) > currentQty;
-          const hintText = currentQty === 1
-            ? '此标签为单株标签（当前数量=1），通常 -1 表示死亡/消耗；只能填 -1 或 0'
-            : `此标签当前数量=${currentQty}，变更范围 -${currentQty} ~ +${currentQty}`;
-          return (
-            <div className="flex flex-col gap-0.5">
-              <Input
-                type="number"
-                value={quantityChange}
-                onChange={(e) => setQuantityChange(e.target.value)}
-                min={-currentQty}
-                max={currentQty}
-                placeholder={currentQty === 1 ? '数量变更（单株：通常填 -1）' : `数量变更（-${currentQty} ~ +${currentQty}）`}
-                title={hintText}
-                className={`px-2 py-1 border rounded text-xs h-7 w-40 ${
-                  overLimit ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {overLimit && (
-                <span className="text-xs text-red-600">
-                  ⚠ 超出当前数量（${currentQty}），提交会被后端拒绝
-                </span>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* 原因（位置变更 / 作废时显示） */}
-        {addOpType !== 'mark' && (
-          <Input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="原因（如：移栽损耗）"
-            className="px-2 py-1 border border-gray-300 rounded text-xs h-7 flex-1 min-w-[120px]"
-          />
-        )}
-
-        {/* 备注 */}
-        <Input
-          type="text"
-          value={addRemarks}
-          onChange={(e) => setAddRemarks(e.target.value)}
-          placeholder="备注（可选）"
-          className="px-2 py-1 border border-gray-300 rounded text-xs h-7 flex-1 min-w-[120px]"
-        />
-
-        {/* 拍照 */}
+        )}        {/* 拍照 */}
         <input
           ref={photoInputRef}
           type="file"
