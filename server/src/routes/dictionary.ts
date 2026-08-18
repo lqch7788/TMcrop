@@ -197,6 +197,49 @@ router.post('/dictionaries', (req, res) => {
   }
 });
 
+/**
+ * 2026-08-17：获取标记状态树形分类（iAGS 标记截图 3 完整实现）
+ * - category_code = 'plant_mark_status'
+ * - 父节点（parent_id 为空字符串）作为 4 大类（长势/事件/状态/品质）
+ * - 子节点 parent_id 指向父节点
+ * - 返回树形结构：{ category, code, label, color, children: [...] }
+ */
+router.get('/dictionaries/mark-status', (req, res) => {
+  const db = getDatabase();
+  try {
+    const stmt = db.prepare(
+      `SELECT id, dict_code, dict_label, dict_value, color, parent_id, sort_order
+       FROM dictionaries
+       WHERE category_code = 'plant_mark_status' AND status = 'active'
+       ORDER BY sort_order ASC, id ASC`
+    );
+    const items: Record<string, unknown>[] = [];
+    while (stmt.step()) items.push(stmt.getAsObject());
+    stmt.free();
+
+    // 拼树：父节点（parent_id 为空字符串 / null / 0）作为顶层
+    const byId = new Map<string, Record<string, unknown> & { children: unknown[] }>();
+    const roots: Array<Record<string, unknown> & { children: unknown[] }> = [];
+    for (const item of items) {
+      const node = { ...item, children: [] as unknown[] };
+      byId.set(String(item.id), node);
+    }
+    for (const item of items) {
+      const node = byId.get(String(item.id))!;
+      const pid = item.parent_id ? String(item.parent_id) : '';
+      if (pid && byId.has(pid)) {
+        (byId.get(pid) as { children: unknown[] }).children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    res.json({ category: 'plant_mark_status', total: items.length, tree: roots });
+  } catch (error) {
+    console.error('获取标记状态失败:', error);
+    res.status(500).json({ error: '获取标记状态失败' });
+  }
+});
+
 // ============================================
 // 系统配置管理
 // ============================================

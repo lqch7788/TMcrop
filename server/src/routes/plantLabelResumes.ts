@@ -59,10 +59,36 @@ router.post('/:id/resumes', (req: Request, res: Response) => {
     }
 
     const qtyChange = quantity_change ? Number(quantity_change) : 0;
-    const newQuantity = Math.max(0, currentQuantity - qtyChange);
 
-    // 位置更新
-    if (operation_type === 'move_in') {
+    // 2026-08-17：数量变更范围校验（防 UI/API 直调写入脏数据）
+    // 标签 quantity 字段语义 = "本标签代表的当前数量"（单株通常为 1）
+    // 拒绝 |qtyChange| > currentQuantity 的请求（除 0 外的所有非空 qtyChange 必须 ≤ currentQuantity）
+    if (quantity_change !== undefined && quantity_change !== null && qtyChange !== 0) {
+      if (Math.abs(qtyChange) > currentQuantity) {
+        res.status(400).json({
+          success: false,
+          error: `数量变更绝对值（${Math.abs(qtyChange)}）超出当前标签数量（${currentQuantity}）。`
+            + `单株标签只能填 -1（死亡/消耗），批量标签请确认是否选错标签。`,
+          currentQuantity,
+        });
+        return;
+      }
+    }
+
+    // 2026-08-17：BUG 修复 — qtyChange 自带符号（-1 表示扣减、+1 表示增加），
+    //   原代码用 currentQuantity - qtyChange 导致 -1 时数量反而增加（1 - (-1) = 2）
+    //   应为 currentQuantity + qtyChange；Math.max(0, ...) 防越界
+    const newQuantity = Math.max(0, currentQuantity + qtyChange);
+
+    // 2026-08-17：合并 move_in/move_out 为统一 'move'（AddResumeForm 位置变更 Tab）
+    //   起点 (from_area_name) 默认 = 标签当前区域，用户可手动改
+    //   终点 (to_area_name) = 新位置
+    //   标签表更新：move_out_area_name = 终点（"最新已知位置"语义）
+    //   兼容旧 move_in/move_out：依然按原逻辑写入（保持历史行为）
+    if (operation_type === 'move') {
+      db.run(`UPDATE plant_labels SET move_out_area_name = ?, move_out_date = ?, quantity = ? WHERE id = ?`,
+        [to_area_name || '', operation_date, newQuantity, labelId]);
+    } else if (operation_type === 'move_in') {
       db.run(`UPDATE plant_labels SET move_in_area_name = ?, move_in_date = ? WHERE id = ?`,
         [to_area_name || '', operation_date, labelId]);
     } else if (operation_type === 'move_out') {
@@ -74,7 +100,8 @@ router.post('/:id/resumes', (req: Request, res: Response) => {
     let newStatus: string = label[0].status || 'active';
     if (operation_type === 'void') {
       newStatus = 'voided';
-    } else if (operation_type === 'move_out' && !quantity_change) {
+    } else if ((operation_type === 'move_out' || operation_type === 'move') && !quantity_change) {
+      // 2026-08-17：move 也算"位置变更完成" → 状态变 moved_out（若无数量扣减）
       newStatus = 'moved_out';
     } else if (newQuantity === 0) {
       newStatus = 'voided';

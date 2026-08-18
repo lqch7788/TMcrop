@@ -2594,6 +2594,92 @@ function seedDictionaries() {
 }
 
 /**
+ * 2026-08-17：导入标记状态字典（plant_mark_status 分类）
+ * - 4 个父节点（长势/事件/状态/品质） + 20 个子节点
+ * - 对齐 iAGS 标记截图 3
+ * - 用户可在系统设置 → 数据字典 自由增删改
+ */
+export async function seedMarkStatus() {
+  const db = getDatabase();
+  // 2026-08-17：幂等种子 — 已存在父节点则保留（防止用户改字典后被覆盖），只补缺失的子节点
+  const existing = db.exec(`SELECT COUNT(*) FROM dictionaries WHERE category_code = 'plant_mark_status'`);
+  const existingCount = Number(existing[0]?.values[0]?.[0]) || 0;
+  const alreadyHasParents = existingCount > 0;
+
+  const now = new Date().toISOString();
+  // 4 父节点
+  const parents = [
+    { id: 'pm-cat-growth',  code: 'mark_category_growth',  label: '长势', color: '#22c55e', sort: 1 },
+    { id: 'pm-cat-event',   code: 'mark_category_event',   label: '事件', color: '#f59e0b', sort: 2 },
+    { id: 'pm-cat-status',  code: 'mark_category_status',  label: '状态', color: '#3b82f6', sort: 3 },
+    { id: 'pm-cat-quality', code: 'mark_category_quality', label: '品质', color: '#8b5cf6', sort: 4 },
+  ];
+  const existingParentIds = new Set<string>();
+  if (alreadyHasParents) {
+    const pids = db.exec(`SELECT id FROM dictionaries WHERE category_code = 'plant_mark_status' AND (parent_id IS NULL OR parent_id = '')`);
+    pids[0]?.values?.forEach((r) => existingParentIds.add(String(r[0])));
+  } else {
+    for (const p of parents) {
+      db.run(
+        `INSERT INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, color, parent_id, sort_order, status, created_at, updated_at)
+         VALUES (?, 'plant_mark_status', ?, ?, ?, ?, '', ?, 'active', ?, ?)`,
+        [p.id, p.code, p.label, p.label, p.color, p.sort, now, now]
+      );
+      existingParentIds.add(p.id);
+    }
+  }
+  // 20 子节点
+  const children = [
+    // 长势
+    { pid: 'mark_category_growth', code: 'mark_growth_excellent', label: '长势优良', color: '#22c55e', sort: 1 },
+    { pid: 'mark_category_growth', code: 'mark_growth_normal',    label: '长势一般', color: '#84cc16', sort: 2 },
+    { pid: 'mark_category_growth', code: 'mark_growth_poor',      label: '长势差',   color: '#65a30d', sort: 3 },
+    // 事件
+    { pid: 'mark_category_event', code: 'mark_event_pest',       label: '病虫害',   color: '#ef4444', sort: 1 },
+    { pid: 'mark_category_event', code: 'mark_event_warn',       label: '警告',     color: '#f97316', sort: 2 },
+    { pid: 'mark_category_event', code: 'mark_event_disinfect',   label: '消杀',     color: '#a855f7', sort: 3 },
+    { pid: 'mark_category_event', code: 'mark_event_move',       label: '迁移至',   color: '#06b6d4', sort: 4 },
+    { pid: 'mark_category_event', code: 'mark_event_shelter',    label: '避难',     color: '#eab308', sort: 5 },
+    { pid: 'mark_category_event', code: 'mark_event_shelter_on', label: '避难(现场)', color: '#ca8a04', sort: 6 },
+    // 状态（mark_aid 兼容字段：harvest/removed 与 plant_marks 旧枚举对齐）
+    { pid: 'mark_category_status', code: 'mark_status_normal',    label: '一切正常', color: '#3b82f6', sort: 1 },
+    { pid: 'mark_category_status', code: 'mark_status_harvest',   label: '已采收',   color: '#0ea5e9', sort: 2, aid: 'harvest' },
+    { pid: 'mark_category_status', code: 'mark_status_removed',   label: '已移除',   color: '#6b7280', sort: 3, aid: 'removed' },
+    // 品质
+    { pid: 'mark_category_quality', code: 'mark_quality_leaf',    label: '叶片肥大', color: '#8b5cf6', sort: 1 },
+    { pid: 'mark_category_quality', code: 'mark_quality_stem',    label: '植茎粗壮', color: '#a78bfa', sort: 2 },
+    { pid: 'mark_category_quality', code: 'mark_quality_yield',   label: '结果率高', color: '#9333ea', sort: 3 },
+    { pid: 'mark_category_quality', code: 'mark_quality_breed',   label: '品种优良', color: '#7c3aed', sort: 4 },
+    { pid: 'mark_category_quality', code: 'mark_quality_shape',   label: '果型正',   color: '#c084fc', sort: 5 },
+    { pid: 'mark_category_quality', code: 'mark_quality_size',    label: '果实大',   color: '#a855f7', sort: 6 },
+    { pid: 'mark_category_quality', code: 'mark_quality_stalk',   label: '果柄粗',   color: '#d946ef', sort: 7 },
+    { pid: 'mark_category_quality', code: 'mark_quality_aroma',   label: '香味浓郁', color: '#c026d3', sort: 8 },
+  ];
+  const pidMap = new Map(parents.map((p) => [p.code, p.id]));
+  // 已有子节点 dict_code 集合（用于幂等插入）
+  const existingChildCodes = new Set<string>();
+  if (alreadyHasParents) {
+    const codes = db.exec(`SELECT dict_code FROM dictionaries WHERE category_code = 'plant_mark_status' AND parent_id IS NOT NULL AND parent_id != ''`);
+    codes[0]?.values?.forEach((r) => existingChildCodes.add(String(r[0])));
+  }
+  let insertedChildren = 0;
+  for (const c of children) {
+    const pid = pidMap.get(c.pid);
+    if (!pid) { console.warn('[seedMarkStatus] 找不到父节点 pid=' + c.pid); continue; }
+    if (existingChildCodes.has(c.code)) continue; // 已存在则跳过（幂等）
+    const dictValue = c.aid ? `${c.code}|${c.aid}` : c.code;
+    db.run(
+      `INSERT INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, color, parent_id, sort_order, status, created_at, updated_at)
+       VALUES (?, 'plant_mark_status', ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+      [`pm-${c.code}`, c.code, c.label, dictValue, c.color, pid, c.sort, now, now]
+    );
+    insertedChildren++;
+  }
+  seedLog.info(`已导入标记状态字典 ${parents.length + insertedChildren} 条（父节点 ${parents.length - (alreadyHasParents ? parents.length : 0)} + 新增子节点 ${insertedChildren}）`);
+  seedLog.info(`已导入标记状态字典 ${parents.length + children.length} 条`);
+}
+
+/**
  * 导入系统配置数据
  */
 function seedSystemConfigs() {
@@ -4423,7 +4509,7 @@ function seedFertilizerAndMarks() {
     );
   }
 
-  // === plant_marks 标记种子数据 ===
+  // === plant_marks 标记种子数据（保留旧 plant_marks 表，向后兼容老履历数据） ===
   const existingMarks = db.exec('SELECT COUNT(*) FROM plant_marks');
   if ((existingMarks[0]?.values[0]?.[0] ?? 0) === 0) {
     const marks = [
@@ -5677,6 +5763,7 @@ export function exportDatabase() {
   seedCropInstances();
   seedInventory();
   seedDictionaries();
+  seedMarkStatus();
   seedGreenhouses();
   seedZones();
   seedSystemConfigs();

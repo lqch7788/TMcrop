@@ -11,7 +11,8 @@ import { MapPin, Tag, ArrowRight, ArrowLeft, Image as ImageIcon } from 'lucide-r
 
 export interface LabelResumeEntry {
   id: number;
-  operationType: 'move_in' | 'move_out' | 'mark' | 'void';
+  // 2026-08-17：新增 'move'（位置变更）、'patch'（属性补录）、'reprint'（补印）
+  operationType: 'move' | 'patch' | 'reprint' | 'move_in' | 'move_out' | 'mark' | 'void';
   fromAreaName?: string;
   toAreaName?: string;
   areaName?: string;
@@ -38,10 +39,13 @@ export interface LabelResumeTimelineProps {
 // ========== 操作类型配置 ==========
 
 const OPERATION_CONFIG: Record<string, { label: string; icon: React.ReactNode; bgClass: string; textClass: string }> = {
-  move_in:   { label: '移入', icon: <ArrowRight className="w-3 h-3" />, bgClass: 'bg-emerald-100', textClass: 'text-emerald-700' },
-  move_out:  { label: '移出', icon: <ArrowLeft className="w-3 h-3" />,  bgClass: 'bg-orange-100',  textClass: 'text-orange-700' },
-  mark:      { label: '标记', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-purple-100',  textClass: 'text-purple-700' },
-  void:      { label: '作废', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-red-100',     textClass: 'text-red-700' },
+  move:      { label: '位置变更', icon: <ArrowRight className="w-3 h-3" />, bgClass: 'bg-emerald-100', textClass: 'text-emerald-700' },
+  patch:     { label: '属性补录', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-amber-100',   textClass: 'text-amber-700' },
+  reprint:   { label: '补印',     icon: <MapPin className="w-3 h-3" />,       bgClass: 'bg-slate-100',   textClass: 'text-slate-700' },
+  move_in:   { label: '移入（历史）', icon: <ArrowRight className="w-3 h-3" />, bgClass: 'bg-emerald-100', textClass: 'text-emerald-700' },
+  move_out:  { label: '移出（历史）', icon: <ArrowLeft className="w-3 h-3" />,  bgClass: 'bg-orange-100',  textClass: 'text-orange-700' },
+  mark:      { label: '标记',     icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-purple-100',  textClass: 'text-purple-700' },
+  void:      { label: '作废',     icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-red-100',     textClass: 'text-red-700' },
 };
 
 // ========== 组件 ==========

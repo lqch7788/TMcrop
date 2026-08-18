@@ -30,7 +30,8 @@ export interface PlantLabel {
 export interface PlantLabelResume {
   id: number;
   labelId: number;
-  operationType: 'move_in' | 'move_out' | 'mark' | 'void';
+  // 2026-08-17：新增 'move'（位置变更）取代旧 move_in/move_out 二分；旧值保留以兼容历史履历
+  operationType: 'move' | 'move_in' | 'move_out' | 'mark' | 'void';
   fromAreaName: string | null;
   toAreaName: string | null;
   markId: number | null;

@@ -304,4 +304,221 @@ router.post('/batch-create', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 2026-08-17：PATCH /:id/patch — 补录现有属性（iAGS 标记01 截图核心）
+ *
+ * 仿 iAGS shareSaveMoveMarkData 的「修改+条件追加」机制：
+ *   - 读当前 plant_labels.mark_ids / move_in_area_name / move_out_area_name
+ *   - 对比每个字段，仅当新值 ≠ 当前值时 UPDATE 标签表 + INSERT 履历行
+ *   - 这样不会重复产生空履历（iAGS 截图 1 第6 步验收）
+ *
+ * Body: {
+ *   mark_ids: ['pm-mark_growth_excellent', 'pm-mark_event_pest'],  // 主+次标记（dictionaries.id 字符串数组）
+ *   to_area_name: '西区-B区',                                       // 移出位置（修改 move_out_area_name）
+ *   mark_date: '2026-08-17',                                       // 标记日期（独立于 operation_date）
+ *   operation_date: '2026-08-17',                                  // 履历日期（用户填的；默认今天）
+ *   operator_name: '陆启闯',
+ *   reason: '补录标记',
+ * }
+ */
+router.post('/:id/patch', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const labelId = parseInt(req.params.id, 10);
+    const { mark_ids, to_area_name, mark_date, operation_date, operator_name, reason } = req.body;
+
+    if (!labelId || isNaN(labelId)) {
+      res.status(400).json({ success: false, error: 'label_id 必填且为整数' });
+      return;
+    }
+
+    const label = db.exec('SELECT id, label_number, mark_ids, move_out_area_name FROM plant_labels WHERE id = ?', [labelId]);
+    if (label.length === 0 || label[0].values.length === 0) {
+      res.status(404).json({ success: false, error: '标签不存在' });
+      return;
+    }
+    const [, , curMarkIds, curMoveOutArea] = label[0].values[0];
+
+    const newMarkIdsCsv = Array.isArray(mark_ids) && mark_ids.length > 0 ? mark_ids.join(',') : '';
+    const newMoveOut = typeof to_area_name === 'string' ? to_area_name.trim() : '';
+
+    const markChanged = (newMarkIdsCsv !== (curMarkIds || ''));
+    const moveChanged = (newMoveOut !== (curMoveOutArea || ''));
+
+    if (!markChanged && !moveChanged) {
+      // 没有任何变化：不 UPDATE、不 INSERT 履历（iAGS 条件追加模式）
+      res.json({ success: true, data: { changed: false, mark_changed: false, move_changed: false, reason: '字段无变化，未写入' } });
+      return;
+    }
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const opDate = operation_date || new Date().toISOString().split('T')[0];
+    const resumeDate = mark_date || opDate;
+
+    // 仅当字段实际变化时才 UPDATE + INSERT
+    const changes: string[] = [];
+    if (markChanged) {
+      db.run('UPDATE plant_labels SET mark_ids = ? WHERE id = ?', [newMarkIdsCsv, labelId]);
+      // mark_ids 变化 → 插入一条 'patch' 履历
+      db.run(
+        `INSERT INTO plant_label_resume (label_id, operation_type, mark_id, mark_name, mark_color, operation_date, reason)
+         VALUES (?, 'patch', ?, ?, ?, ?, ?)`,
+        [labelId, mark_ids[0] || null, '补录标记', null, opDate, reason || '属性补录']
+      );
+      changes.push('mark');
+    }
+    if (moveChanged) {
+      db.run('UPDATE plant_labels SET move_out_area_name = ?, move_out_date = ? WHERE id = ?', [newMoveOut, opDate, labelId]);
+      // 移出位置变化 → 插入一条 'patch' 履历
+      db.run(
+        `INSERT INTO plant_label_resume (label_id, operation_type, from_area_name, to_area_name, operation_date, reason)
+         VALUES (?, 'patch', ?, ?, ?, ?)`,
+        [labelId, curMoveOutArea || null, newMoveOut, opDate, reason || '位置补录']
+      );
+      changes.push('move');
+    }
+
+    // mark_date 单独记录（与 mark 一起）
+    if (markChanged && mark_date) {
+      // 标记日期用 operation_date 字段记录
+      // 实际 mark_date 字段已存在于 resume.operation_date（与 mark 同时变）
+      // 此处预留扩展空间
+    }
+
+    saveDatabase();
+    res.json({
+      success: true,
+      data: {
+        changed: true,
+        changes,
+        mark_changed: markChanged,
+        move_changed: moveChanged,
+      },
+    });
+  } catch (error) {
+    console.error('[plantLabels] PATCH 失败:', error);
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/**
+ * 2026-08-17：POST /reprint — 补印标签（iAGS 标记02 截图核心）
+ * 仿 iAGS shareFunction.updatePrintNum 逻辑：
+ *   - 读源标签（source_label_id）
+ *   - 生成 N 个新 label_number：原号 + `-R{1..N}`
+ *   - INSERT N 个新 plant_labels（继承源标签的 planting_id/seedling_id/seed_source_id/move_in_area_name 等）
+ *   - INSERT N 个 print_records（related_type='plant_label'，related_id=新 ID）
+ *   - INSERT N 个 plant_label_resume（operation_type='reprint'，备注含原 source_label_id）
+ *
+ * Body: {
+ *   source_label_id: 4,
+ *   copy_count: 3,
+ *   mark_date: '2026-08-17',  // 可选
+ *   operator_name: '陆启闯',
+ * }
+ */
+router.post('/reprint', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { source_label_id, copy_count, mark_date, operator_name } = req.body;
+
+    const sourceId = parseInt(String(source_label_id), 10);
+    const count = parseInt(String(copy_count), 10);
+
+    if (!sourceId || isNaN(sourceId)) {
+      res.status(400).json({ success: false, error: 'source_label_id 必填且为整数' });
+      return;
+    }
+    if (!count || count < 1 || count > 50) {
+      res.status(400).json({ success: false, error: 'copy_count 必须在 1-50 之间' });
+      return;
+    }
+
+    // 读源标签
+    const srcStmt = db.prepare(
+      `SELECT id, label_number, planting_id, seedling_id, seed_source_id, move_in_area_name, move_in_date, quantity
+       FROM plant_labels WHERE id = ?`
+    );
+    srcStmt.bind([sourceId]);
+    if (!srcStmt.step()) {
+      srcStmt.free();
+      res.status(404).json({ success: false, error: '源标签不存在' });
+      return;
+    }
+    const srcRow = srcStmt.getAsObject() as Record<string, unknown>;
+    srcStmt.free();
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const reprintDate = mark_date || new Date().toISOString().split('T')[0];
+    const srcLabelNumber = String(srcRow.label_number || '');
+
+    const newLabelIds: number[] = [];
+    const newLabelNumbers: string[] = [];
+
+    // 同事务批量插入
+    db.run('BEGIN TRANSACTION');
+    try {
+      for (let i = 1; i <= count; i++) {
+        const newLabelNumber = `${srcLabelNumber}-R${i}`;
+        db.run(
+          `INSERT INTO plant_labels (
+            label_number, planting_id, seedling_id, seed_source_id,
+            move_in_area_name, move_in_date, quantity, status, create_time
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+          [
+            newLabelNumber,
+            srcRow.planting_id ? String(srcRow.planting_id) : null,
+            srcRow.seedling_id ? String(srcRow.seedling_id) : null,
+            srcRow.seed_source_id ? String(srcRow.seed_source_id) : null,
+            srcRow.move_in_area_name ? String(srcRow.move_in_area_name) : null,
+            srcRow.move_in_date ? String(srcRow.move_in_date) : null,
+            Number(srcRow.quantity) || 1,
+            now,
+          ]
+        );
+        // 取 last_insert_rowid
+        const idRes = db.exec('SELECT last_insert_rowid() as id');
+        const newId = Number(idRes[0]?.values[0]?.[0]) || 0;
+        newLabelIds.push(newId);
+        newLabelNumbers.push(newLabelNumber);
+
+        // 写 print_records（追溯来源）
+        // 2026-08-17：补 oid 字段（print_records.oid UNIQUE NOT NULL）
+        const printOid = `pr-${srcLabelNumber}-R${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        db.run(
+          `INSERT INTO print_records (oid, print_type, related_type, related_id, copies, create_by, create_time)
+           VALUES (?, ?, 'plant_label', ?, 1, ?, ?)`,
+          [printOid, `reprint-${srcLabelNumber}`, newId, operator_name || 'system', now]
+        );
+
+        // 写 resume（operation_type='reprint'）
+        db.run(
+          `INSERT INTO plant_label_resume (label_id, operation_type, operation_date, operator_name, reason)
+           VALUES (?, 'reprint', ?, ?, ?)`,
+          [newId, reprintDate, operator_name || 'system', `补印自 ${srcLabelNumber}`]
+        );
+      }
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      throw e;
+    }
+
+    saveDatabase();
+    res.status(201).json({
+      success: true,
+      data: {
+        source_label_id: sourceId,
+        source_label_number: srcLabelNumber,
+        reprinted: count,
+        new_label_ids: newLabelIds,
+        new_label_numbers: newLabelNumbers,
+      },
+    });
+  } catch (error) {
+    console.error('[plantLabels] 补印失败:', error);
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 export default router;

@@ -172,6 +172,17 @@ async function start() {
     initializeDatabase();
     console.log('[启动白名单] 临时禁用 fixMissingSchema（YELLOW 级含 UPDATE 迁移）');
 
+    // 2026-08-17：启动时执行 GREEN 级 seedMarkStatus（标记状态字典种子，幂等）
+    // seedDictionaries 在 YELLOW 阶段被白名单禁用，所以 plant_mark_status 分类种子无法自动跑
+    // 此函数自检 existingCount>0 跳过，与字典总表种子一致
+    try {
+      const { seedMarkStatus } = await import('./db/seedData');
+      await seedMarkStatus();
+      console.log('[seedMarkStatus] 已跑标记状态字典种子');
+    } catch (e: any) {
+      console.warn('[seedMarkStatus] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-07-19：启动时自动回填 inventory_transfer → inventory_inbound_records 流水
     // 老数据通过 inventoryTransfer 调拨生成的种源没写 inventory_inbound_records，
     // 导致 listReturnableInboundRecords 查不到、种源退库弹窗空白

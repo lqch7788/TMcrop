@@ -183,8 +183,8 @@ router.use('/basic-data', optionalAuth, basicDataRouter);
 // 编码生成器路由
 router.use('/code-generator', codeGeneratorRouter);
 
-// 数据字典路由 - 需要认证
-router.use('/dictionary', requireAuth, dictionaryRouter);
+// 数据字典路由 - 可选认证（演示模式免登录；字典本身是公共数据）
+router.use('/dictionary', optionalAuth, dictionaryRouter);
 
 // 组织与权限路由 - 公开（登录/验证接口）
 router.use('/authority', authorityRouter);
