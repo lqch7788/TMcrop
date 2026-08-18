@@ -18,6 +18,8 @@ import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
 import type { PlantLabel, PlantLabelResume } from '@/stores/usePlantLabelStore';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { enhancedApiClient } from '@/lib/apiClient';
+import { useAuthStore } from '@/stores/useAuthStore';
 // 跨目录 import 种苗 4 子组件（保持原位避免目录重构）
 import { LabelTable } from '../../seedling/modals/LabelTable';
 import { LabelResumePanel } from '../../seedling/modals/LabelResumePanel';
@@ -47,10 +49,11 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   archived: '已归档',
   disabled: '已停用',
 };
-// plant_label_resume.operation_type 枚举
+// plant_label_resume.operation_type 枚举（2026-08-17 新增 'move' 取代旧 move_in/move_out）
 const OPERATION_TYPE_MAP: Record<string, string> = {
-  move_in: '移入',
-  move_out: '移出',
+  move: '位置变更',
+  move_in: '移入（历史）',
+  move_out: '移出（历史）',
   mark: '标记',
   void: '作废',
 };
@@ -88,6 +91,40 @@ export default function PlantingLabelManageModal({
   const [batchCount, setBatchCount] = useState('10');
   const [batchAreaName, setBatchAreaName] = useState('');
   const [batchGenerating, setBatchGenerating] = useState(false);
+
+  // ---------- 补印状态（2026-08-17） ----------
+  const [showReprint, setShowReprint] = useState(false);
+  const [reprintCount, setReprintCount] = useState('3');
+  const [reprintDate, setReprintDate] = useState(todayLocal());
+  const [reprinting, setReprinting] = useState(false);
+
+  const handleReprint = async () => {
+    if (!selectedLabelId) { showAlert('请先在左侧选择一个标签'); return; }
+    const n = parseInt(reprintCount, 10);
+    if (!n || n < 1 || n > 50) { showAlert('补印数量必须在 1-50 之间'); return; }
+    setReprinting(true);
+    try {
+      const operatorName = useAuthStore.getState().currentUser?.realName ||
+                           useAuthStore.getState().currentUser?.username || 'system';
+      const res: any = await enhancedApiClient.post('/plant-labels/reprint', {
+        source_label_id: selectedLabelId,
+        copy_count: n,
+        mark_date: reprintDate,
+        operator_name: operatorName,
+      });
+      if (res?.success !== false) {
+        showAlert(`补印成功：${res?.data?.reprinted || n} 个标签\n新批号：${(res?.data?.new_label_numbers || []).join(', ')}`);
+        setShowReprint(false);
+        if (plantingId) await loadLabels({ plantingId });
+      } else {
+        showAlert('补印失败：' + (res?.error || '未知错误'));
+      }
+    } catch (e: any) {
+      showAlert('网络错误：' + e.message);
+    } finally {
+      setReprinting(false);
+    }
+  };
 
   // ---------- 自动选中（扫码跳转，仅执行一次） ----------
   const hasAutoSelected = useRef(false);
@@ -167,8 +204,11 @@ export default function PlantingLabelManageModal({
     if (selectedLabelId !== null) {
       await loadResumesForLabels([selectedLabelId]);
     }
+    // 2026-08-17：位置变更/冲销会改标签 quantity、move_out_area_name 等字段，
+    //   必须刷新标签列表，否则 selectedLabel 缓存会让下次提交触发乐观锁 409
+    await loadLabels({ plantingId });
     setShowAddResume(false);
-  }, [selectedLabelId, loadResumesForLabels]);
+  }, [selectedLabelId, loadResumesForLabels, loadLabels, plantingId]);
 
   // ---------- 导出 ----------
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -406,6 +446,39 @@ export default function PlantingLabelManageModal({
           </div>
         )}
 
+        {/* 2026-08-17：补印弹窗 */}
+        {showReprint && (
+          <div className="px-4 py-3 border-t border-amber-200 bg-amber-50 flex-shrink-0">
+            <div className="text-xs font-semibold text-amber-900 mb-2">补印标签</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="number"
+                value={reprintCount}
+                onChange={(e) => setReprintCount(e.target.value)}
+                placeholder="补印数量"
+                min={1}
+                max={50}
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-24"
+              />
+              <Input
+                type="date"
+                value={reprintDate}
+                onChange={(e) => setReprintDate(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
+              />
+              <span className="text-xs text-gray-500">
+                新批号格式：原号 + -R{1..N}
+              </span>
+              <Button onClick={handleReprint} disabled={reprinting} size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                {reprinting ? '补印中...' : '确认补印'}
+              </Button>
+              <Button onClick={() => setShowReprint(false)} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                取消
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* 底部 */}
         <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
           <span className="text-xs text-gray-400">
@@ -433,6 +506,18 @@ export default function PlantingLabelManageModal({
             >
               <Plus className="w-4 h-4" /> 补充生成
             </Button>
+            )}
+            {!readOnly && (
+              <Button
+                onClick={() => setShowReprint((v) => !v)}
+                variant="outline"
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                disabled={!selectedLabelId}
+                title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签补印'}
+              >
+                <Plus className="w-4 h-4" /> 补印
+              </Button>
             )}
             <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
               <X className="w-4 h-4" /> 关闭

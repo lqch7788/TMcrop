@@ -9,10 +9,13 @@ import { LabelResumeTimeline } from '@/components/ui';
 import type { LabelResumeEntry } from '@/components/ui/LabelResumeTimeline';
 import type { PlantLabel, PlantLabelResume } from '@/stores/usePlantLabelStore';
 
-// 操作类型中文映射（与 LabelResumeTimeline 内部一致）
+// 操作类型中文映射（与 LabelResumeTimeline 内部一致；2026-08-17 新增 'move'/'patch'/'reprint'）
 const OP_LABEL: Record<string, string> = {
-  move_in: '移入',
-  move_out: '移出',
+  move: '位置变更',
+  patch: '属性补录',
+  reprint: '补印',
+  move_in: '移入（历史）',
+  move_out: '移出（历史）',
   mark: '标记',
   void: '作废',
 };

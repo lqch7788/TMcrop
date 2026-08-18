@@ -67,6 +67,8 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
       'planting_status', 'process_type', 'propagation_multiple',
       'seedling_plan_type', 'seedling_site', 'seedling_type', 'survival_rate_target',
       'planting_source_type', 'production_plan_type', 'calculate_mode',
+      // 2026-08-17：标记状态字典（iAGS 标记截图 3，长势/事件/状态/品质 4 大类 + ~20 子节点）
+      'plant_mark_status',
       // 生产汇总表配置（V8.0新增）
       'problem_config', 'yield_config', 'cost_config', 'labor_config',
       'batch_summary_config', 'alert_threshold', 'report_display_config',

@@ -2881,7 +2881,10 @@ export function initializeDatabase() {
       move_out_date TEXT,
       quantity INTEGER DEFAULT 1,
       status TEXT DEFAULT 'active',
-      create_time TEXT DEFAULT (datetime('now','localtime'))
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      -- 2026-08-17：多标记（主+次标记），CSV 字符串如 "12,15,20"
+      -- 旧的 mark_id 字段保留（plant_label_resume 单值向后兼容）
+      mark_ids TEXT DEFAULT ''
     )
   `);
 

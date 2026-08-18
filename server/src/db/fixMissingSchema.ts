@@ -2372,6 +2372,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'quantity_change', sql: 'ALTER TABLE plant_label_resume ADD COLUMN quantity_change INTEGER' },
     { name: 'quantity_after', sql: 'ALTER TABLE plant_label_resume ADD COLUMN quantity_after INTEGER' },
     { name: 'reason', sql: 'ALTER TABLE plant_label_resume ADD COLUMN reason TEXT' },
+    // 2026-08-17：多标记（主+次标记），CSV 字符串如 "12,15,20"；存量标签 mark_ids 默认 ''
+    { name: 'mark_ids', sql: "ALTER TABLE plant_labels ADD COLUMN mark_ids TEXT DEFAULT ''" },
   ];
   for (const col of labelCols) {
     try {

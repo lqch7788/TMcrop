@@ -43,8 +43,9 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   disabled: '已停用',
 };
 const OPERATION_TYPE_MAP: Record<string, string> = {
-  move_in: '移入',
-  move_out: '移出',
+  move: '位置变更',
+  move_in: '移入（历史）',
+  move_out: '移出（历史）',
   mark: '标记',
   void: '作废',
 };
@@ -87,6 +88,40 @@ export default function SeedSourceLabelManageModal({
   const [batchCount, setBatchCount] = useState('10');
   const [batchAreaName, setBatchAreaName] = useState('');
   const [batchGenerating, setBatchGenerating] = useState(false);
+
+  // ---------- 补印状态（2026-08-17） ----------
+  const [showReprint, setShowReprint] = useState(false);
+  const [reprintCount, setReprintCount] = useState('3');
+  const [reprintDate, setReprintDate] = useState(todayLocal());
+  const [reprinting, setReprinting] = useState(false);
+
+  const handleReprint = async () => {
+    if (!selectedLabelId) { showAlert('请先在左侧选择一个标签'); return; }
+    const n = parseInt(reprintCount, 10);
+    if (!n || n < 1 || n > 50) { showAlert('补印数量必须在 1-50 之间'); return; }
+    setReprinting(true);
+    try {
+      const operatorName = useAuthStore.getState().currentUser?.realName ||
+                           useAuthStore.getState().currentUser?.username || 'system';
+      const res: any = await enhancedApiClient.post('/plant-labels/reprint', {
+        source_label_id: selectedLabelId,
+        copy_count: n,
+        mark_date: reprintDate,
+        operator_name: operatorName,
+      });
+      if (res?.success !== false) {
+        showAlert(`补印成功：${res?.data?.reprinted || n} 个标签\n新批号：${(res?.data?.new_label_numbers || []).join(', ')}`);
+        setShowReprint(false);
+        if (seedSourceId) await loadLabels({ seedSourceId });
+      } else {
+        showAlert('补印失败：' + (res?.error || '未知错误'));
+      }
+    } catch (e: any) {
+      showAlert('网络错误：' + e.message);
+    } finally {
+      setReprinting(false);
+    }
+  };
 
   // ---------- 导出弹窗状态 ----------
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -235,8 +270,10 @@ export default function SeedSourceLabelManageModal({
     if (selectedLabelId !== null) {
       await loadResumesForLabels([selectedLabelId]);
     }
+    // 2026-08-17：刷新标签列表，避免 selectedLabel.quantity 过期导致下次提交 409
+    await loadLabels({ seedSourceId });
     setShowAddResume(false);
-  }, [selectedLabelId, loadResumesForLabels]);
+  }, [selectedLabelId, loadResumesForLabels, loadLabels, seedSourceId]);
 
   // ---------- 导出 ----------
   const handleOpenExport = () => setExportModalOpen(true);
@@ -458,6 +495,39 @@ export default function SeedSourceLabelManageModal({
         </div>
       )}
 
+      {/* 2026-08-17：补印弹窗 */}
+      {showReprint && (
+        <div className="px-4 py-3 border-t border-amber-200 bg-amber-50 flex-shrink-0">
+          <div className="text-xs font-semibold text-amber-900 mb-2">补印标签</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="number"
+              value={reprintCount}
+              onChange={(e) => setReprintCount(e.target.value)}
+              placeholder="补印数量"
+              min={1}
+              max={50}
+              className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-24"
+            />
+            <Input
+              type="date"
+              value={reprintDate}
+              onChange={(e) => setReprintDate(e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
+            />
+            <span className="text-xs text-gray-500">
+              新批号格式：原号 + -R{1..N}
+            </span>
+            <Button onClick={handleReprint} disabled={reprinting} size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+              {reprinting ? '补印中...' : '确认补印'}
+            </Button>
+            <Button onClick={() => setShowReprint(false)} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+              取消
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* 底部操作栏 */}
       <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
         <span className="text-xs text-gray-400">
@@ -485,6 +555,16 @@ export default function SeedSourceLabelManageModal({
             className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
           >
             <Plus className="w-4 h-4" /> 补充生成
+          </Button>
+          <Button
+            onClick={() => setShowReprint((v) => !v)}
+            variant="outline"
+            size="sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+            disabled={!selectedLabelId || selectedIds.size > 0}
+            title={!selectedLabelId ? '请先在左侧选择标签' : '为当前标签补印（iAGS 标记02）'}
+          >
+            <Plus className="w-4 h-4" /> 补印
           </Button>
           <Button
             onClick={handleOpenExport}
