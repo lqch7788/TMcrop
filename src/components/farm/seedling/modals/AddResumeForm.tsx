@@ -8,7 +8,7 @@
  *  - 按钮名 + 引导横幅 + 校验 零歧义
  */
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { ArrowRightLeft, Stamp, Camera, Trash2, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowRightLeft, Stamp, Camera, Trash2, Info, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -43,7 +43,7 @@ const OP_GUIDE: Record<OpType, { title: string; subtitle: string; effect: string
       '⚠ 与"标记状态"的区别：本 Tab 是「补漏」语义，每次保存前会对比当前值\n' +
       '  → 字段无变化 → 后端返回 {changed: false}，不写入任何记录（避免空履历）\n' +
       '  → 字段有变化 → UPDATE 标签表 + INSERT 履历\n' +
-      '标记日期：可指定历史某天（默认今天）\n' +
+      '日期：统一用顶部"履历日期"\n' +
       '原因：必须填写，说明为什么补录\n' +
       '拍照：可选现场取证（最多 5 张）',
   },
@@ -77,9 +77,10 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
   const [addFromAreaName, setAddFromAreaName] = useState('');
   const [addToAreaName, setAddToAreaName] = useState('');
   // 2026-08-17：补录现有属性字段
+  // 2026-08-19：删除 addPatchMarkDate（标记日期）— 与顶部通用"履历日期"重复，
+  //   且后端 INSERT 履历只用 operation_date，mark_date 从未写入（冗余字段）
   const [addPatchMarkIds, setAddPatchMarkIds] = useState<string[]>([]);
   const [addPatchToArea, setAddPatchToArea] = useState('');
-  const [addPatchMarkDate, setAddPatchMarkDate] = useState(todayLocal());
 
   // 2026-08-19：2 个下拉（大类单选 → 子项复选框），勾选后不显示 chip（复选框即勾选态）
   const [addMarkCategory, setAddMarkCategory] = useState<string>('');
@@ -116,11 +117,24 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
   const photoInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 5;
 
-  // 当前位置：move_out_area_name 优先（最近一次移出目的地），fallback 到 move_in_area_name
+  // 当前位置：moveOutAreaName 优先（最近一次移出目的地），fallback 到 moveInAreaName
+  // 2026-08-19 修正：运行时字段是 camelCase（后端 camelCaseResponseMiddleware 转换）！
+  //   PlantLabel TS 类型定义是 snake_case（历史遗留），但 API 返回经中间件转 camelCase，
+  //   读 snake_case 永远 undefined → 起点预填失败
   const currentLocation = useMemo(() => {
     if (!selectedLabel) return '';
-    return selectedLabel.move_out_area_name || selectedLabel.move_in_area_name || '';
+    const cur = selectedLabel as any; // 运行时 camelCase
+    return cur.moveOutAreaName || cur.moveInAreaName || '';
   }, [selectedLabel]);
+
+  // 2026-08-19：位置变更起点自动预填当前标签的移入位置（打开表单/切换标签时自动获取，无需手动填写）
+  //   原逻辑只在"点击 tab 按钮"时预填 — 打开表单时 addOpType 保持上次值不触发，起点为空
+  useEffect(() => {
+    if (addOpType === 'move') {
+      setAddFromAreaName(currentLocation);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLabel?.id, addOpType]);
 
   // 切换操作类型时清空 + 预填起点
   const handleOpTypeChange = (t: OpType) => {
@@ -138,8 +152,9 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
     }
     if (t === 'patch') {
       // 2026-08-17：补录现有属性模式：预填当前标记 + 移出位置
+      // 2026-08-19 修正：运行时字段 camelCase（markIds 非 mark_ids）
       const cur = (selectedLabel as any);
-      const curMarkCsv: string = cur?.mark_ids || '';
+      const curMarkCsv: string = cur?.markIds || '';
       if (curMarkCsv) {
         setAddPatchMarkIds(curMarkCsv.split(',').filter(Boolean));
       }
@@ -251,8 +266,8 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         const patchPayload: Record<string, any> = {
           mark_ids: addPatchMarkIds,
           to_area_name: addPatchToArea.trim() || undefined,
+          // 2026-08-19：日期统一用顶部"履历日期"（addOpDate）— 原 mark_date 从未生效，已删
           operation_date: addOpDate,
-          mark_date: addPatchMarkDate,
           reason: reason.trim() || '属性补录',
           // 2026-08-19：patch Tab 支持拍照（最多 5 张，JSON 数组），与 mark Tab 共用同一 addPhotos state
           image_base64: addPhotos.length > 0 ? JSON.stringify(addPhotos) : null,
@@ -316,6 +331,17 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         新增履历 — 当前标签：{selectedLabelNumber}
       </div>
 
+      {/* 2026-08-19：已移出标签警示文字（无底色，红色文字，始终可见） */}
+      {(selectedLabel as any)?.moveOutAreaName ? (
+        <div className="mb-2 text-xs flex items-start gap-1">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="leading-relaxed">
+            <span className="font-semibold text-red-600">该标签已移出本区域，当前位置：「{(selectedLabel as any)?.moveOutAreaName}」</span>
+            <span className="text-red-500"> — 操作前请确认标签实物位置</span>
+          </div>
+        </div>
+      ) : null}
+
       {/* Tab 按钮 + 引导说明开关（2026-08-19：引导横幅默认隐藏） */}
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {([
@@ -373,35 +399,38 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {/* 日期 */}
-        <Input
-          type="date"
-          value={addOpDate}
-          onChange={(e) => setAddOpDate(e.target.value)}
-          className="px-2 py-1 border border-gray-300 rounded text-xs h-7"
-        />
+        {/* 2026-08-19：日期 + 位置输入框包成同一行（flex-nowrap），日期在位置框前面 */}
+        <div className="flex items-center gap-2 flex-nowrap">
+          {/* 日期 */}
+          <Input
+            type="date"
+            value={addOpDate}
+            onChange={(e) => setAddOpDate(e.target.value)}
+            className="px-2 py-1 border border-gray-300 rounded text-xs h-7"
+          />
 
-        {/* 位置变更：起点 + 终点 */}
-        {addOpType === 'move' && (
-          <>
-            <Input
-              type="text"
-              value={addFromAreaName}
-              onChange={(e) => setAddFromAreaName(e.target.value)}
-              placeholder="起点（默认当前区域）"
-              title="起点区域：默认是当前最新已知区域，可手动改成其他区域（=补录来源）"
-              className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
-            />
-            <span className="text-gray-400 text-xs">→</span>
-            <Input
-              type="text"
-              value={addToAreaName}
-              onChange={(e) => setAddToAreaName(e.target.value)}
-              placeholder="终点（新位置，如：西区-B区）"
-              className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
-            />
-          </>
-        )}
+          {/* 位置变更：起点 + 终点 */}
+          {addOpType === 'move' && (
+            <>
+              <Input
+                type="text"
+                value={addFromAreaName}
+                onChange={(e) => setAddFromAreaName(e.target.value)}
+                placeholder="起点（默认当前区域）"
+                title="起点区域：默认是当前最新已知区域，可手动改成其他区域（=补录来源）"
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
+              />
+              <span className="text-gray-400 text-xs">→</span>
+              <Input
+                type="text"
+                value={addToAreaName}
+                onChange={(e) => setAddToAreaName(e.target.value)}
+                placeholder="终点（新位置，如：西区-B区）"
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-44"
+              />
+            </>
+          )}
+        </div>
 
         {/* 标记选择（2026-08-19：大类下拉单选 → 子项复选框多选）— 抽到共享组件 MarkCategoryPicker */}
         {addOpType === "mark" && (
@@ -415,9 +444,9 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
           />
         )}
 
-        {/* 补录现有属性（2026-08-19：大类下拉 → 子项复选框 + 移出位置 + 标记日期）— 选择器抽到共享组件 */}
+        {/* 补录现有属性（2026-08-19：标记大类 + 移出位置 + 原因 全部同一行，横向模式）— 选择器抽到共享组件 */}
         {addOpType === "patch" && (
-          <div className="flex flex-col gap-2 max-w-xl">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <MarkCategoryPicker
               markTree={markTree}
               selectedCategory={addActivePatchCategory}
@@ -425,17 +454,14 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
               selectedIds={addPatchMarkIds}
               onIdsChange={setAddPatchMarkIds}
               accent="amber"
+              layout="horizontal"
             />
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>移出位置</span>
-              <input type="text" value={addPatchToArea} onChange={(e) => setAddPatchToArea(e.target.value)} placeholder="如：西区-B区" className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-600 whitespace-nowrap w-14">移出位置</span>
+              <input type="text" value={addPatchToArea} onChange={(e) => setAddPatchToArea(e.target.value)} placeholder="如：西区-B区" className="w-32 px-2 py-1.5 border border-gray-300 rounded text-xs" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>标记日期</span>
-              <input type="date" value={addPatchMarkDate} onChange={(e) => setAddPatchMarkDate(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>原因</span>
+            <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+              <span className="text-xs text-gray-600 whitespace-nowrap w-14">原因</span>
               <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="如：补录历史数据" className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs" />
             </div>
           </div>

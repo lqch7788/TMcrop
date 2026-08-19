@@ -104,6 +104,8 @@ export function LabelTable({
                   <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold cursor-help" title="该植株被种植到的具体地块位置（如：东区-A区-3号畦），非育苗温室区域">?</span>
                 </TableHead>
                 <TableHead className="px-3 py-2 text-xs">移入日期</TableHead>
+                {/* 2026-08-19：新增移出位置列（标签位置变更后显示最新移出位置） */}
+                <TableHead className="px-3 py-2 text-xs">移出位置</TableHead>
                 <TableHead className="px-3 py-2 text-xs">数量/状态</TableHead>
               </TableRow>
             </TableHeader>
@@ -129,6 +131,7 @@ export function LabelTable({
                   <TableCell className="px-3 py-2 font-mono text-xs">{label.labelNumber}</TableCell>
                   <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInAreaName || '-'}</TableCell>
                   <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInDate || '-'}</TableCell>
+                  <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveOutAreaName || '-'}</TableCell>
                   <TableCell className="px-3 py-2">
                     <LabelBadge status={label.status} quantity={label.quantity} unit={unit} />
                   </TableCell>

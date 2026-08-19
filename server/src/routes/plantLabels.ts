@@ -8,80 +8,8 @@ import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
-/** POST /generate-batch — 批量生成标签（育苗/种植标签打印，生产域名兼容） */
-router.post('/generate-batch', (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const { seedling_id, planting_id, seed_source_id, count, crop_name, area_name, start_date } = req.body;
-
-    if (!count || count <= 0) {
-      res.status(400).json({ success: false, error: 'count 必须大于 0' });
-      return;
-    }
-
-    let existingCount = 0;
-    if (seedling_id) {
-      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE seedling_id = ?', [String(seedling_id)]);
-      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
-    } else if (planting_id) {
-      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE planting_id = ?', [String(planting_id)]);
-      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
-    } else if (seed_source_id) {
-      // 2026-07-01: 种源标签计数
-      const cntResult = db.exec('SELECT COUNT(*) as cnt FROM plant_labels WHERE seed_source_id = ?', [String(seed_source_id)]);
-      existingCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
-    }
-
-    // 确定标签编号前缀：优先查 seedling_code / planting_code / seed_code，兜底 crop_name，最后 LABEL
-    let codePrefix = crop_name || 'LABEL';
-    if (seedling_id) {
-      const seedlingResult = db.exec('SELECT seedling_code FROM seedlings WHERE id = ?', [String(seedling_id)]);
-      const seedlingCode = seedlingResult[0]?.values?.[0]?.[0];
-      if (seedlingCode) codePrefix = String(seedlingCode);
-    } else if (planting_id) {
-      const plantingResult = db.exec('SELECT planting_code FROM plantings WHERE id = ?', [String(planting_id)]);
-      const plantingCode = plantingResult[0]?.values?.[0]?.[0];
-      if (plantingCode) codePrefix = String(plantingCode);
-    } else if (seed_source_id) {
-      // 2026-07-01: 种源标签 — 用 source_code 作为标签前缀
-      const seedResult = db.exec('SELECT source_code FROM seed_sources WHERE id = ?', [String(seed_source_id)]);
-      const seedCode = seedResult[0]?.values?.[0]?.[0];
-      if (seedCode) codePrefix = String(seedCode);
-    }
-
-    const labels: any[] = [];
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-
-    for (let i = 0; i < count; i++) {
-      const seq = existingCount + i + 1;
-      // 育苗/种植批号格式: YM20260615-001-0001 / ZZ20260615-001-0001（4位序号）
-      const labelNumber = `${codePrefix}-${String(seq).padStart(4, '0')}`;
-
-      db.run(
-        `INSERT INTO plant_labels (label_number, planting_id, seedling_id, seed_source_id, move_in_area_name, move_in_date, quantity, create_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [labelNumber, planting_id || null, seedling_id || null, seed_source_id || null, area_name || null, start_date || null, 1, now]
-      );
-
-      labels.push({
-        labelNumber,
-        qrContent: labelNumber,
-        cropName: crop_name || '',
-        areaName: area_name || '',
-        startDate: start_date || '',
-        seq,
-      });
-    }
-
-    saveDatabase();
-    res.status(201).json({
-      success: true,
-      data: { labels, totalPrinted: existingCount + count },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
-  }
-});
+// 2026-08-19：POST /generate-batch（补充生成）已删除 — 与标签打印 batch 模式（/batch-create）功能重复，
+//   标签生成统一走标签打印 → /batch-create 入库
 
 /** GET / — 标签列表（支持 planting_id / seedling_id 筛选 + 分页） */
 router.get('/', (req: Request, res: Response) => {
@@ -350,14 +278,47 @@ router.post('/batch-create', (req: Request, res: Response) => {
     const rows: string[] = [];
     const params: any[] = [];
     for (const item of toInsert) {
+      // 2026-08-19：兜底 — 前端未传 moveInAreaName/moveInDate 时，从关联主表自动补
+      //   （种植 → plantings.area_name/planting_date；育苗 → seedlings.area_name/seedling_date；
+      //     种源 → seed_sources.supplier_name/purchase_date）
+      let moveInAreaName = item.moveInAreaName || null;
+      let moveInDate = item.moveInDate || null;
+      if (!moveInAreaName || !moveInDate) {
+        try {
+          if (item.plantingId) {
+            const src = db.exec('SELECT area_name, planting_date FROM plantings WHERE id = ?', [String(item.plantingId)]);
+            const row = src[0]?.values?.[0];
+            if (row) {
+              if (!moveInAreaName) moveInAreaName = row[0] || null;
+              if (!moveInDate) moveInDate = row[1] || null;
+            }
+          } else if (item.seedlingId) {
+            const src = db.exec('SELECT area_name, seedling_date FROM seedlings WHERE id = ?', [String(item.seedlingId)]);
+            const row = src[0]?.values?.[0];
+            if (row) {
+              if (!moveInAreaName) moveInAreaName = row[0] || null;
+              if (!moveInDate) moveInDate = row[1] || null;
+            }
+          } else if (item.seedSourceId) {
+            const src = db.exec('SELECT supplier_name, purchase_date FROM seed_sources WHERE id = ?', [String(item.seedSourceId)]);
+            const row = src[0]?.values?.[0];
+            if (row) {
+              if (!moveInAreaName) moveInAreaName = row[0] || null;
+              if (!moveInDate) moveInDate = row[1] || null;
+            }
+          }
+        } catch {
+          // 兜底查询失败不影响入库（保持原值）
+        }
+      }
       rows.push('(?, ?, ?, ?, ?, ?, ?, ?)');
       params.push(
         item.labelNumber,
         item.plantingId || null,
         item.seedlingId || null,
         item.seedSourceId || null,
-        item.moveInAreaName || null,
-        item.moveInDate || null,
+        moveInAreaName,
+        moveInDate,
         item.quantity ?? 1,
         now
       );
@@ -388,7 +349,7 @@ router.post('/batch-create', (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('[plantLabels] 补充生成失败:', error);
+    console.error('[plantLabels] 批量入库失败:', error);
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });

@@ -9,9 +9,10 @@
  */
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { enhancedApiClient } from '@/lib/apiClient';
+import { todayLocal } from '@/lib/dateUtils';
 
 export interface ReprintLabelDetail {
   labelId: number;
@@ -123,6 +124,59 @@ export function ReprintLabelInline({
     setTriggerPrint(true);
   };
 
+  // 2026-08-19：导出 Excel（格式与标签打印导出一致，用于打印补印标签）
+  //   导出内容 = 需要重复打印的标签（copies 份同一标签号，每行一份）
+  const handleExportExcel = () => {
+    const n = Math.max(1, Math.min(50, copies));
+    const baseUrl = (detail.qrUrl || window.location.origin).split('?')[0];
+    const rows = Array.from({ length: n }, (_, i) => ({
+      index: i + 1,
+      label: detail.labelNumber,
+      url: `${baseUrl}?labelNumber=${encodeURIComponent(detail.labelNumber)}`,
+    }));
+    const areaName = detail.areaName || detail.moveOutAreaName || '-';
+
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>补印标签</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  body { font-family: 'Microsoft YaHei', sans-serif; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #999; padding: 8px 10px; text-align: center; vertical-align: middle; }
+  th { background-color: #d97706; color: #fff; font-weight: bold; }
+  td a { color: #2563eb; text-decoration: underline; }
+  tr:nth-child(even) { background-color: #fffbeb; }
+  .print-btn { display: inline-block; margin: 10px; padding: 8px 16px; background: #d97706; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  @media print { .no-print { display: none; } }
+</style></head><body>
+  <div class="no-print" style="text-align:center;padding:10px;">
+    <button class="print-btn" onclick="window.print()">打印此页</button>
+    <span style="color:#666;font-size:12px;">共 ${rows.length} 个标签 | 扫描功能码为URL链接，可用在线工具生成QR码</span>
+  </div>
+  <table>
+    <thead><tr>
+      <th>序号</th><th>作物名称</th><th>区域/场地</th>
+      <th>扫描功能码</th><th>标签号</th><th>日期</th>
+    </tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td>${r.index}</td>
+      <td>${escapeHtml(detail.cropName || '-')}</td>
+      <td>${escapeHtml(areaName)}</td>
+      <td><a href="${escapeHtml(r.url)}" target="_blank">${escapeHtml(r.url)}</a></td>
+      <td style="font-family:monospace;font-size:11px;">${escapeHtml(r.label)}</td>
+      <td>${escapeHtml(detail.plantingDate || '-')}</td>
+    </tr>`).join('')}</tbody>
+  </table>
+</body></html>`;
+
+    const blob = new Blob(['﻿' + htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `补印标签_${detail.cropName || '标签'}_${todayLocal()}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="px-4 py-3 border-t border-amber-200 bg-amber-50/60 flex-shrink-0">
       {/* 顶部控制行 */}
@@ -159,6 +213,10 @@ export function ReprintLabelInline({
           ))}
           <Button variant="default" size="sm" className="h-6 bg-amber-600 hover:bg-amber-700 text-white" onClick={handlePrint} disabled={copies < 1}>
             <Printer className="w-3 h-3" /> 打印 {copies} 份
+          </Button>
+          {/* 2026-08-19：导出按钮（格式与标签打印导出一致，导出需重复打印的标签数据） */}
+          <Button variant="blue" size="sm" className="h-6" onClick={handleExportExcel} disabled={copies < 1}>
+            <Download className="w-3 h-3" /> 导出
           </Button>
           <Button variant="secondary" size="sm" className="h-6" onClick={onClose}>
             <X className="w-3 h-3" /> 收起
@@ -273,6 +331,16 @@ export function ReprintLabelInline({
       `}</style>
     </div>
   );
+}
+
+/** HTML 转义（导出 Excel 用，与标签打印一致） */
+function escapeHtml(str: string): string {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export default ReprintLabelInline;

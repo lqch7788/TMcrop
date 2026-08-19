@@ -86,12 +86,6 @@ export default function SeedSourceLabelManageModal({
   const [batchVoidReason, setBatchVoidReason] = useState('');
   const [batchVoiding, setBatchVoiding] = useState(false);
 
-  // ---------- 补充生成状态 ----------
-  const [showBatchGenerate, setShowBatchGenerate] = useState(false);
-  const [batchCount, setBatchCount] = useState('10');
-  const [batchAreaName, setBatchAreaName] = useState('');
-  const [batchGenerating, setBatchGenerating] = useState(false);
-
   // ---------- 补印状态（2026-08-19 重构：补印 = 重打 N 份相同标签） ----------
   const [showReprint, setShowReprint] = useState(false);
   const [reprintCount, setReprintCount] = useState('1');
@@ -282,7 +276,6 @@ export default function SeedSourceLabelManageModal({
   // 切换标签时收起表单
   useEffect(() => {
     setShowAddResume(false);
-    setShowBatchGenerate(false);
   }, [selectedLabelId]);
 
   // 履历提交成功回调
@@ -409,36 +402,6 @@ export default function SeedSourceLabelManageModal({
     setExportModalOpen(false);
   }, [selectedExportFields, exportScope, paginatedLabels, filteredLabels, selectedIds, resumeMap, loadResumesForLabels, seedSourceCode]);
 
-  // ---------- 补充生成 ----------
-  const handleBatchGenerate = async () => {
-    const count = parseInt(batchCount, 10);
-    if (!count || count < 1) { showAlert('请输入有效的生成数量'); return; }
-    setBatchGenerating(true);
-    try {
-      const store = usePlantLabelStore.getState();
-      const result = await store.generateBatchLabels({
-        seed_source_id: seedSourceId,
-        count,
-        area_name: batchAreaName.trim() || undefined,
-        start_date: todayLocal(),
-      });
-      if (result) {
-        showAlert(`成功生成 ${result.totalPrinted} 个标签`);
-        await loadLabels({ seedSourceId });
-        setShowBatchGenerate(false);
-        setBatchAreaName('');
-      } else {
-        showAlert('生成失败，请重试');
-      }
-    } catch (e) {
-      console.error('[SeedSourceLabelManageModal] 补充生成失败:', e);
-      const msg = e instanceof Error ? e.message : String(e);
-      showAlert('网络错误：' + msg);
-    } finally {
-      setBatchGenerating(false);
-    }
-  };
-
   // ---------- 渲染 ----------
   if (!isOpen) return null;
 
@@ -494,38 +457,6 @@ export default function SeedSourceLabelManageModal({
         />
       )}
 
-      {/* 补充生成表单 */}
-      {showBatchGenerate && (
-        <div className="px-4 py-3 border-t border-blue-200 bg-blue-50 flex-shrink-0">
-          <div className="text-xs font-semibold text-blue-900 mb-2">补充生成标签</div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              type="number"
-              value={batchCount}
-              onChange={(e) => setBatchCount(e.target.value)}
-              placeholder="生成数量"
-              className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-24"
-            />
-            <div className="flex items-center gap-1">
-              <Input
-                type="text"
-                value={batchAreaName}
-                onChange={(e) => setBatchAreaName(e.target.value)}
-                placeholder="区域（如：A区-1号架）"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
-              />
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold cursor-help" title="该种源标签所在的具体仓库位置（如：A区-1号架-3层），非育苗温室区域">?</span>
-            </div>
-            <Button onClick={handleBatchGenerate} disabled={batchGenerating} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-              {batchGenerating ? '生成中...' : '生成'}
-            </Button>
-            <Button onClick={() => setShowBatchGenerate(false)} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-              取消
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* 2026-08-17：补印弹窗 */}
       {showReprint && (
         <div className="px-4 py-3 border-t border-amber-200 bg-amber-50 flex-shrink-0">
@@ -578,14 +509,6 @@ export default function SeedSourceLabelManageModal({
             }
           >
             <Plus className="w-4 h-4" /> 新增履历
-          </Button>
-          <Button
-            onClick={() => setShowBatchGenerate((v) => !v)}
-            variant="outline"
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-          >
-            <Plus className="w-4 h-4" /> 补充生成
           </Button>
           <Button
             onClick={() => setShowReprint((v) => !v)}

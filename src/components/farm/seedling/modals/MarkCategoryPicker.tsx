@@ -39,6 +39,8 @@ interface MarkCategoryPickerProps {
   accent?: MarkAccent;
   /** 标签文案，默认"标记大类"/"子项" */
   labels?: { category?: string; child?: string };
+  /** 2026-08-19：布局模式 — vertical（纵向，默认）horizontal（横向，与其他字段同一行） */
+  layout?: 'vertical' | 'horizontal';
 }
 
 const ACCENT_CLASS: Record<MarkAccent, { hover: string }> = {
@@ -54,6 +56,7 @@ export function MarkCategoryPicker({
   onIdsChange,
   accent = 'purple',
   labels,
+  layout = 'vertical',
 }: MarkCategoryPickerProps) {
   const labelCategory = labels?.category ?? '标记大类';
   const labelChild = labels?.child ?? '子项';
@@ -68,18 +71,20 @@ export function MarkCategoryPicker({
   }
 
   const activeCat = selectedCategory ? markTree.find((c) => c.id === selectedCategory) : null;
+  // 2026-08-19：横向模式（与其他字段同一行）— 大类行和子项行都参与外层 flex-wrap
+  const isHorizontal = layout === 'horizontal';
 
   return (
-    <div className="flex flex-col gap-2 max-w-xl">
+    <div className={isHorizontal ? 'flex flex-wrap items-center gap-x-2 gap-y-1.5' : 'flex flex-col gap-2 max-w-xl'}>
       {/* 大类下拉（单选） */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80 }}>
+        <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: isHorizontal ? 56 : 80 }}>
           {labelCategory}
         </span>
         <select
           value={selectedCategory || ''}
           onChange={(e) => onCategoryChange(e.target.value || null)}
-          className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white"
+          className={isHorizontal ? 'px-2 py-1.5 border border-gray-300 rounded text-xs bg-white w-36' : 'flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white'}
         >
           <option value="">— 请选择大类 —</option>
           {markTree.map((cat) => (
@@ -90,8 +95,8 @@ export function MarkCategoryPicker({
 
       {/* 选中大类后：子项复选框列表 */}
       {activeCat && (
-        <div className="flex items-start gap-2">
-          <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: 80, marginTop: 6 }}>
+        <div className={isHorizontal ? 'flex items-start gap-2 flex-1 min-w-[200px]' : 'flex items-start gap-2'}>
+          <span className="text-xs text-gray-600 whitespace-nowrap" style={{ width: isHorizontal ? 56 : 80, marginTop: 6 }}>
             {labelChild}
           </span>
           <div className="flex-1 flex flex-wrap gap-x-3 gap-y-0.5 border border-gray-200 rounded p-1.5 bg-white">
