@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { LabelTable } from '../../seedling/modals/LabelTable';
 import { LabelResumePanel } from '../../seedling/modals/LabelResumePanel';
 import { AddResumeForm } from '../../seedling/modals/AddResumeForm';
+import { ReprintLabelInline, type ReprintLabelDetail } from '../../seedling/modals/ReprintLabelInline';
 
 const PAGE_SIZE = 20;
 
@@ -49,11 +50,13 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   archived: '已归档',
   disabled: '已停用',
 };
-// plant_label_resume.operation_type 枚举（2026-08-17 新增 'move' 取代旧 move_in/move_out）
+// plant_label_resume.operation_type 枚举（2026-08-19 补 patch / reprint）
 const OPERATION_TYPE_MAP: Record<string, string> = {
   move: '位置变更',
   move_in: '移入（历史）',
   move_out: '移出（历史）',
+  patch: '属性补录',
+  reprint: '补印',
   mark: '标记',
   void: '作废',
 };
@@ -92,16 +95,18 @@ export default function PlantingLabelManageModal({
   const [batchAreaName, setBatchAreaName] = useState('');
   const [batchGenerating, setBatchGenerating] = useState(false);
 
-  // ---------- 补印状态（2026-08-17） ----------
+  // ---------- 补印状态（2026-08-19 重构：补印 = 重打 N 份相同标签） ----------
   const [showReprint, setShowReprint] = useState(false);
-  const [reprintCount, setReprintCount] = useState('3');
+  const [reprintCount, setReprintCount] = useState('1');
   const [reprintDate, setReprintDate] = useState(todayLocal());
   const [reprinting, setReprinting] = useState(false);
+  // 补印成功后保存源标签详情，打开预览+打印弹窗（用户选 N 份重打）
+  const [reprintDetail, setReprintDetail] = useState<ReprintLabelDetail | null>(null);
 
   const handleReprint = async () => {
     if (!selectedLabelId) { showAlert('请先在左侧选择一个标签'); return; }
     const n = parseInt(reprintCount, 10);
-    if (!n || n < 1 || n > 50) { showAlert('补印数量必须在 1-50 之间'); return; }
+    if (!n || n < 1 || n > 50) { showAlert('打印份数必须在 1-50 之间'); return; }
     setReprinting(true);
     try {
       const operatorName = useAuthStore.getState().currentUser?.realName ||
@@ -113,9 +118,24 @@ export default function PlantingLabelManageModal({
         operator_name: operatorName,
       });
       if (res?.success !== false) {
-        showAlert(`补印成功：${res?.data?.reprinted || n} 个标签\n新批号：${(res?.data?.new_label_numbers || []).join(', ')}`);
+        // 2026-08-19：响应经 camelCase 中间件转换，兼容两种 key（防御中间件配置变化）
+        let detail = res?.data?.sourceLabelDetail || res?.data?.source_label_detail;
+        // 兜底：如果 /reprint 响应没带 detail（防御性），直接 GET /:id/detail 端点拿详情
+        // ⚠️ enhancedApiClient 自动解包 .data，detailRes 直接就是 detail 对象！
+        if (!detail) {
+          try {
+            const detailRes: any = await enhancedApiClient.get(`/plant-labels/${selectedLabelId}/detail`);
+            detail = detailRes?.labelNumber ? detailRes : undefined;
+          } catch (e: any) {
+            console.error('[reprint] 兜底获取 detail 失败:', e);
+          }
+        }
+        // 2026-08-19：无论 detail 是否完整，强制打开 modal（modal 容忍空字段用 placeholder）
+        //   不再用 alert 阻塞；alert 只用于真正的 /reprint 失败（success=false）
+        setReprintDetail(detail || { labelId: selectedLabelId, labelNumber: '(加载失败)', quantity: 1 });
         setShowReprint(false);
-        if (plantingId) await loadLabels({ plantingId });
+        // 调试日志（用户可在 DevTools Console 看到）
+        console.log('[reprint] success, detail:', detail);
       } else {
         showAlert('补印失败：' + (res?.error || '未知错误'));
       }
@@ -277,8 +297,20 @@ export default function PlantingLabelManageModal({
                 : '';
               const reason = r.reason ? ` 备注:${r.reason}` : '';
               const operator = r.operatorName ? ` 操作人:${r.operatorName}` : '';
+              // 2026-08-19：mark 与 patch（补录现有属性）都可能含 markName
+              // 2026-08-19：patch 现在是合并履历（mark + 位置在同一行），4 种情况
               if (r.operationType === 'mark') {
                 return `${opTypeCn} ${markName || '-'}${qtyChange}${operator}${reason}`;
+              }
+              if (r.operationType === 'patch') {
+                const hasArea = !!(r.fromAreaName || r.toAreaName);
+                if (markName && hasArea) {
+                  return `${opTypeCn} ${markName} ${fromArea}→${toArea} ${date}${qtyChange}${operator}${reason}`;
+                }
+                if (markName) {
+                  return `${opTypeCn} ${markName}${qtyChange}${operator}${reason}`;
+                }
+                return `${opTypeCn} ${fromArea}→${toArea} ${date}${qtyChange}${operator}${reason}`;
               }
               return `${opTypeCn} ${fromArea}→${toArea} ${date}${qtyChange}${operator}${reason}`;
             })
@@ -514,7 +546,7 @@ export default function PlantingLabelManageModal({
                 disabled={!selectedLabelId}
                 title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签补印'}
               >
-                <Plus className="w-4 h-4" /> 补印
+                <Plus className="w-4 h-4" /> 补印标签
               </Button>
             )}
             <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
@@ -524,6 +556,16 @@ export default function PlantingLabelManageModal({
         </div>
       </div>
       </Modal>
+
+      {/* 2026-08-19：补印标签预览+打印弹窗（重打 N 份相同标签，DB 不入库新行） */}
+      {/* 2026-08-19：补印标签预览+打印内联面板（不弹新 Modal，避免弹窗重叠/联动拖动） */}
+      {reprintDetail && (
+        <ReprintLabelInline
+          sourceDetail={reprintDetail}
+          sourceLabelId={selectedLabelId || undefined}
+          onClose={() => setReprintDetail(null)}
+        />
+      )}
 
       {/* 2026-06-28：导出弹窗（选择字段 + 范围） */}
       {exportModalOpen && (

@@ -76,6 +76,10 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   addedColumns += safeAddColumn(db, 'planting_harvest_records', 'circulation_revoked_by', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'planting_harvest_records', 'circulation_revoke_reason', 'TEXT') ? 1 : 0;
 
+  // ============ plant_labels（2026-08-19 标记多选字典化）===========
+  // 原在 fixMissingSchema（YELLOW）— 启动白名单禁用后老库漏列；/assign 写入必报 "no such column"
+  addedColumns += safeAddColumn(db, 'plant_labels', 'mark_ids', "TEXT", "''") ? 1 : 0;
+
   // ============ seed_sources（V3.0 合并功能）===========
   addedColumns += safeAddColumn(db, 'seed_sources', 'reflow_count', 'INTEGER', '0') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'seed_sources', 'last_reflow_at', 'TEXT') ? 1 : 0;

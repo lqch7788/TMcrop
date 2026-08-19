@@ -100,7 +100,12 @@ export default function LabelResumeTimeline({
           const isLeft = i % 2 === 0;
           const isLast = i === entries.length - 1;
           const config = OPERATION_CONFIG[entry.operationType] || OPERATION_CONFIG.move_in;
-          const lineColor = entry.markColor || '#d1d5db';
+          // 2026-08-19：连线圆点颜色优先 mark_color（mark/patch 含 mark 时），其次按 operationType 兜底色
+          const lineColor = entry.markColor
+            || (entry.operationType === 'patch' ? '#f59e0b'    // patch 琥珀
+            : entry.operationType === 'reprint' ? '#64748b'    // reprint 灰蓝
+            : entry.operationType === 'void' ? '#ef4444'       // void 红
+            : '#d1d5db');
           const areaLabel = entry.toAreaName || entry.fromAreaName || entry.areaName || '-';
 
           return (
@@ -168,16 +173,23 @@ function ResumeCard({
   config: { label: string; icon: React.ReactNode; bgClass: string; textClass: string };
   align: 'left' | 'right';
 }) {
+  // 2026-08-19：patch 履历也可能含 mark_name（补录现有属性 Tab 支持补 mark）
   const isMark = entry.operationType === 'mark';
+  // 任意类型只要有 markName 就算"有标记信息"
+  const hasMarkInfo = !!entry.markName;
+  const isMove = entry.operationType === 'move' || entry.operationType === 'move_in' || entry.operationType === 'move_out';
+  // 2026-08-19：patch 可能含 to/from 区域（位置补录）；只有 to/from 都不为空才显示位置行
+  // 避免出现"无位置变化"这种冗余噪音
+  const hasAreaInfo = !!(entry.toAreaName || entry.fromAreaName || entry.areaName);
 
   return (
     <div
       className={cn(
         'bg-white border rounded-lg p-3 shadow-sm',
-        isMark && entry.markColor ? 'border-l-2' : 'border-gray-100',
+        hasMarkInfo && entry.markColor ? 'border-l-2' : 'border-gray-100',
         align === 'right' ? 'text-right' : 'text-left'
       )}
-      style={isMark && entry.markColor ? { borderLeftColor: entry.markColor } : undefined}
+      style={hasMarkInfo && entry.markColor ? { borderLeftColor: entry.markColor } : undefined}
     >
       {/* 操作类型标签 */}
       <div className={cn('flex items-center gap-1.5 mb-1', align === 'right' && 'justify-end')}>
@@ -185,7 +197,8 @@ function ResumeCard({
           {config.icon}
           {config.label}
         </span>
-        {isMark && entry.markName && (
+        {/* 2026-08-19：mark + patch 都显示 markName 徽标（patch 也可补 mark） */}
+        {hasMarkInfo && entry.markName && (
           <span
             className="px-1.5 py-0.5 rounded text-xs text-white font-medium"
             style={{ backgroundColor: entry.markColor || '#9ca3af' }}
@@ -195,11 +208,14 @@ function ResumeCard({
         )}
       </div>
 
-      {/* 区域名称 */}
-      <p className="text-sm text-gray-700">
-        <MapPin className="w-3 h-3 inline mr-1 text-gray-400" />
-        {areaLabel}
-      </p>
+      {/* 区域名称（move/move_in/move_out/patch 涉及位置的都显示） */}
+      {/* 2026-08-19：只有真的有位置信息才显示，避免"无位置变化"冗余 */}
+      {(isMove || entry.operationType === 'patch') && hasAreaInfo && (
+        <p className="text-sm text-gray-700">
+          <MapPin className="w-3 h-3 inline mr-1 text-gray-400" />
+          {areaLabel}
+        </p>
+      )}
 
       {/* 2026-07-01: 数量变化 + 剩余 + 原因/备注 */}
       {(entry.quantityChange != null || entry.quantityAfter != null || entry.reason) && (
@@ -226,22 +242,45 @@ function ResumeCard({
         {entry.operatorName && <span> · {entry.operatorName}</span>}
       </p>
 
-      {/* 现场照片缩略图（点击放大） */}
-      {entry.imageBase64 && (
-        <a
-          href={entry.imageBase64}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-block"
-          title="点击查看大图"
-        >
-          <img
-            src={entry.imageBase64}
-            alt="现场照片"
-            className="w-24 h-24 object-cover rounded border border-gray-200 hover:border-emerald-400 transition-colors cursor-zoom-in"
-          />
-        </a>
-      )}
+      {/* 现场照片缩略图（点击放大）— 支持 JSON 数组（多张）和旧单张字符串两种格式 */}
+      {entry.imageBase64 && (() => {
+        // 解析：JSON 数组 ['data:..', ...] → 数组；旧单张字符串 → [单张]
+        const photos = (() => {
+          const v = entry.imageBase64;
+          if (typeof v !== 'string' || !v) return [];
+          const trimmed = v.trim();
+          if (trimmed.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string' && x) : [v];
+            } catch {
+              return [v]; // 解析失败 → 兼容旧单张
+            }
+          }
+          return [v];
+        })();
+        if (photos.length === 0) return null;
+        return (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {photos.map((src, idx) => (
+              <a
+                key={idx}
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+                title={`点击查看大图 ${idx + 1}/${photos.length}`}
+              >
+                <img
+                  src={src}
+                  alt={`现场照片 ${idx + 1}`}
+                  className="w-24 h-24 object-cover rounded border border-gray-200 hover:border-emerald-400 transition-colors cursor-zoom-in"
+                />
+              </a>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
