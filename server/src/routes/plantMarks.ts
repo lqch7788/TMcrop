@@ -22,59 +22,84 @@ router.get('/all', (req: Request, res: Response) => {
 });
 
 /**
- * POST /assign — 分配标记给标签（2026-08-17：支持 mark_ids 数组，主+次标记）
- * Body: { mark_ids: [12,15,20], label_ids: [1,2,3] } 或向后兼容 { mark_id: 12, label_ids: [1,2,3] }
- * - mark_ids 写入 plant_labels.mark_ids（CSV 字符串）
- * - 为每个标签 + 每个 mark_id 插入一条 plant_label_resume (operation_type='mark')
+ * POST /assign — 分配标记给标签
+ * 2026-08-19：标记改为字典驱动（plant_mark_status 分类），mark_ids 是字典字符串 id 数组
+ * Body: { mark_ids: ['pm-mark_growth_excellent', ...], label_ids: [1,2,3] }
+ *       向后兼容旧 { mark_id: 12, label_ids: [1,2,3] }（数字 plant_marks.id）
+ * - mark_ids 写入 plant_labels.mark_ids（CSV 字符串，保留原顺序）
+ * - 每个 label 合并写 1 条 plant_label_resume (operation_type='mark')：
+ *   mark_name 用「、」拼接多个字典 label（前端展示按 string 用）；
+ *   mark_color 取第一个（主标记的颜色，iAGS 主+次 设计）；
+ *   mark_id 写 NULL（INTEGER 列装不下 TEXT id）；
+ *   CSV 在 plant_labels.mark_ids 是 source of truth
  */
 router.post('/assign', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const { mark_id, mark_ids: markIdsArr, label_ids } = req.body;
 
-    // 兼容旧单 mark_id 与新 mark_ids 数组
-    let markIds: number[] = [];
+    // 解析输入 id：统一为字符串数组
+    const inputIds: string[] = [];
     if (Array.isArray(markIdsArr) && markIdsArr.length > 0) {
-      markIds = markIdsArr.map((x) => Number(x)).filter((x) => x > 0);
-    } else if (mark_id) {
-      markIds = [Number(mark_id)];
+      inputIds.push(...markIdsArr.map((x) => String(x)).filter(Boolean));
+    } else if (mark_id !== undefined && mark_id !== null && mark_id !== '') {
+      inputIds.push(String(mark_id));
     }
-    if (markIds.length === 0 || !Array.isArray(label_ids) || label_ids.length === 0) {
+    if (inputIds.length === 0 || !Array.isArray(label_ids) || label_ids.length === 0) {
       res.status(400).json({ success: false, error: 'mark_ids 数组（或 mark_id）与 label_ids 数组为必填项' });
       return;
     }
 
-    // 校验 mark_ids 全部存在（优先从 plant_marks 软兼容；Phase 1.3 后切到字典表）
-    const markIdList = markIds.join(',');
-    const marks = queryToObjects(db,
-      `SELECT id, name, color FROM plant_marks WHERE id IN (${markIdList})`
+    // 2026-08-19：标记操作支持多张照片（JSON 数组字符串），单张时也用 JSON 包装以保持存储一致
+    const imageBase64 = typeof req.body?.image_base64 === 'string' && req.body.image_base64
+      ? req.body.image_base64
+      : null;
+
+    // 字典驱动：从 dictionaries 找（category_code = 'plant_mark_status'，active）
+    // 用占位符防 SQL 注入（不能用 IN ('a,b,c') 字符串拼接）
+    // 注意：queryToObjects 自动 snake_case → camelCase，所以返回的键是 id/dictLabel/color
+    const placeholders = inputIds.map(() => '?').join(',');
+    const dictRows = queryToObjects(
+      db,
+      `SELECT id, dict_label, color
+       FROM dictionaries
+       WHERE category_code = 'plant_mark_status' AND status = 'active' AND id IN (${placeholders})`,
+      inputIds
     );
-    if (marks.length !== markIds.length) {
-      res.status(404).json({ success: false, error: '部分 mark_id 不存在' });
+    if (dictRows.length !== inputIds.length) {
+      const foundIds = new Set(dictRows.map((r) => String(r.id)));
+      const missing = inputIds.filter((id) => !foundIds.has(id));
+      res.status(404).json({ success: false, error: `部分 mark_id 不存在: ${missing.join(', ')}` });
       return;
     }
-    const markCsv = markIds.join(',');
-    const firstMark = marks[0];
 
+    // 保持原 inputIds 顺序（前端按勾选顺序展示，履历也要一致）
+    const dictMap = new Map(dictRows.map((r) => [String(r.id), r]));
+    const orderedMarks = inputIds.map((id) => dictMap.get(id)!);
+
+    // mark_ids CSV：直接用原始字符串 id 串（与 plant_labels.mark_ids TEXT 列兼容）
+    const markCsv = inputIds.join(',');
     const now = new Date().toISOString().split('T')[0];
+
     let count = 0;
+    // 多选合并：mark_name 用「、」拼接多个字典 label，mark_color 取第一个（主标记）
+    const markName = orderedMarks.map((m) => m.dictLabel).filter(Boolean).join('、');
+    const markColor = orderedMarks[0]?.color || null;
     for (const labelId of label_ids) {
-      // 写入 plant_labels.mark_ids（覆盖式）
+      // 覆盖式写入 plant_labels.mark_ids
       db.run(`UPDATE plant_labels SET mark_ids = ? WHERE id = ?`, [markCsv, labelId]);
-      // 写履历（每个 mark 写一行）
-      for (const m of marks) {
-        db.run(
-          `INSERT INTO plant_label_resume (label_id, operation_type, mark_id, mark_name, mark_color, operation_date)
-           VALUES (?, 'mark', ?, ?, ?, ?)`,
-          [labelId, m.id, m.name, m.color, now]
-        );
-      }
+      // 每个 label 合并写 1 条 mark 履历（mark_id 列 INTEGER 装不下 TEXT → 写 NULL）
+      db.run(
+        `INSERT INTO plant_label_resume (label_id, operation_type, mark_id, mark_name, mark_color, operation_date, image_base64)
+         VALUES (?, 'mark', NULL, ?, ?, ?, ?)`,
+        [labelId, markName, markColor, now, imageBase64]
+      );
       count++;
     }
 
     res.status(201).json({
       success: true,
-      data: { mark_ids: markIds, mark_csv: markCsv, label_count: count },
+      data: { mark_ids: inputIds, mark_csv: markCsv, label_count: count },
     });
     saveDatabase();
   } catch (error) {

@@ -184,6 +184,95 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 2026-08-19：标签完整详情 SQL（planting → seedling → seed_source 优先级）
+ * 与 GET /:id/detail 共享，避免 SQL 重复
+ * 注：planting/seedling 实际列名为 planting_code/seedling_code，日期列分别是 planting_date/seedling_date，数量是 planting_quantity/seedling_quantity
+ */
+const LABEL_DETAIL_SQL = `
+  SELECT
+    pl.id              AS label_id,
+    pl.label_number    AS label_number,
+    pl.quantity        AS quantity,
+    pl.mark_ids        AS mark_ids,
+    pl.move_in_area_name AS move_in_area_name,
+    pl.move_in_date    AS move_in_date,
+    pl.move_out_area_name AS move_out_area_name,
+    pl.move_out_date   AS move_out_date,
+    pl.status          AS status,
+    pl.create_time     AS create_time,
+    COALESCE(planting.id, seedling.id, seed.id)            AS record_id,
+    COALESCE(planting.planting_code, seedling.seedling_code, seed.source_code) AS record_code,
+    COALESCE(planting.crop_name, seedling.crop_name, seed.crop_name)         AS crop_name,
+    COALESCE(planting.crop_variety, seedling.crop_variety, seed.crop_variety) AS crop_variety,
+    COALESCE(planting.crop_code, seedling.crop_code, seed.crop_code)         AS crop_code,
+    COALESCE(planting.area_name, seedling.area_name, NULL)                  AS area_name,
+    COALESCE(planting.planting_date, seedling.seedling_date, seed.purchase_date) AS planting_date,
+    COALESCE(planting.planting_quantity, seedling.seedling_quantity, seed.quantity) AS planting_count,
+    COALESCE(planting.supplement_count, seedling.replant_count, 0)            AS supplement_count,
+    COALESCE(planting.loss_count, seedling.loss_count, 0)                    AS loss_count,
+    CASE
+      WHEN planting.id IS NOT NULL THEN 'planting'
+      WHEN seedling.id IS NOT NULL THEN 'seedling'
+      WHEN seed.id    IS NOT NULL THEN 'seed_source'
+      ELSE NULL
+    END AS source_module
+  FROM plant_labels pl
+  LEFT JOIN plantings    planting ON planting.id = pl.planting_id
+  LEFT JOIN seedlings    seedling ON seedling.id = pl.seedling_id
+  LEFT JOIN seed_sources seed     ON seed.id     = pl.seed_source_id
+  WHERE pl.id = ?
+`;
+
+/** 标签详情 + QR URL 的后处理（共享给 /:id/detail 和 /reprint）
+ *  注意：queryToObjects 自动 snake_case → camelCase，所以这里用 r.plantingCount / r.sourceModule
+ */
+function enrichLabelDetail(r: Record<string, any>, req: Request) {
+  const plantingCount = Number(r.plantingCount) || 0;
+  const supplementCount = Number(r.supplementCount) || 0;
+  const lossCount = Number(r.lossCount) || 0;
+  const currentSurviving = Math.max(0, plantingCount + supplementCount - lossCount);
+  // QR URL 用前端 base URL：优先 env > Origin header > req.host
+  const originHeader = (req.headers.origin || '').trim();
+  const envBase = (process.env.FRONTEND_BASE_URL || '').trim();
+  const origin = envBase || originHeader || `${req.protocol}://${req.get('host')}`;
+  const moduleRoute = r.sourceModule === 'planting' ? 'planting'
+                    : r.sourceModule === 'seedling' ? 'seedling'
+                    : r.sourceModule === 'seed_source' ? 'seed-source'
+                    : '';
+  const qrUrl = `${origin}/crop/${moduleRoute}?labelNumber=${encodeURIComponent(String(r.labelNumber || ''))}`;
+  return { ...r, currentSurviving, qrUrl };
+}
+
+/**
+ * 2026-08-19：GET /:id/detail — 标签完整详情（含关联作物/区域/批号/数量等）
+ * 用于补印预览：复刻 PrintLabelModal 的字段，渲染 QR Code + 标签详情。
+ *
+ * 返回字段（与 Planting/Seedling/SeedSource 主数据视图对齐）：
+ *   - 标签自身：labelNumber, labelId, quantity, markIds, moveIn/Out
+ *   - 关联作物（按优先级 planting → seedling → seed_source 取首个非空）
+ *   - QR Code URL：扫码跳转对应主页 + 自动开标签管理弹窗
+ */
+router.get('/:id/detail', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const labelId = parseInt(String(req.params.id), 10);
+    if (!labelId || isNaN(labelId)) {
+      res.status(400).json({ success: false, error: 'id 必填且为整数' });
+      return;
+    }
+
+    const items = queryToObjects(db, LABEL_DETAIL_SQL, [labelId]);
+    if (items.length === 0) {
+      res.status(404).json({ success: false, error: '标签不存在' });
+      return;
+    }
+    res.json({ success: true, data: enrichLabelDetail(items[0] as Record<string, any>, req) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 /** DELETE /:id — 删除标签（同时删除履历） */
 router.delete('/:id', (req: Request, res: Response) => {
   try {
@@ -325,7 +414,30 @@ router.post('/:id/patch', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const labelId = parseInt(req.params.id, 10);
-    const { mark_ids, to_area_name, mark_date, operation_date, operator_name, reason } = req.body;
+    const { mark_ids, to_area_name, mark_date, operation_date, operator_name, reason, image_base64 } = req.body;
+
+    // 2026-08-19：照片（JSON 数组，最多 5 张），单张兼容旧 base64 字符串
+    const photoJson = typeof image_base64 === 'string' && image_base64 ? image_base64 : null;
+
+    // 2026-08-19：mark_name 拼接字典 label（而非字典 id），与 /assign 行为一致
+    let markNameForLog = '补录标记';
+    if (Array.isArray(mark_ids) && mark_ids.length > 0) {
+      try {
+        const placeholders = mark_ids.map(() => '?').join(',');
+        const dictRows = queryToObjects(
+          db,
+          `SELECT id, dict_label FROM dictionaries
+           WHERE category_code = 'plant_mark_status' AND status = 'active' AND id IN (${placeholders})`,
+          mark_ids
+        );
+        const dictMap = new Map(dictRows.map((r) => [String(r.id), String(r.dictLabel)]));
+        // 保持原 mark_ids 顺序拼接，找不到的 fallback 用原 id
+        markNameForLog = mark_ids.map((id: string) => dictMap.get(String(id)) || String(id)).join('、');
+      } catch {
+        // 字典查不动 → 用原 id（兜底）
+        markNameForLog = mark_ids.join('、');
+      }
+    }
 
     if (!labelId || isNaN(labelId)) {
       res.status(400).json({ success: false, error: 'label_id 必填且为整数' });
@@ -355,28 +467,35 @@ router.post('/:id/patch', (req: Request, res: Response) => {
     const opDate = operation_date || new Date().toISOString().split('T')[0];
     const resumeDate = mark_date || opDate;
 
-    // 仅当字段实际变化时才 UPDATE + INSERT
+    // 2026-08-19：mark + 位置合并为 1 条履历（用户期望"一次补录 = 一条记录"）
+    // UPDATE 仍按字段分别执行（plant_labels 字段独立），但履历只插一行
     const changes: string[] = [];
     if (markChanged) {
       db.run('UPDATE plant_labels SET mark_ids = ? WHERE id = ?', [newMarkIdsCsv, labelId]);
-      // mark_ids 变化 → 插入一条 'patch' 履历
-      db.run(
-        `INSERT INTO plant_label_resume (label_id, operation_type, mark_id, mark_name, mark_color, operation_date, reason)
-         VALUES (?, 'patch', ?, ?, ?, ?, ?)`,
-        [labelId, mark_ids[0] || null, '补录标记', null, opDate, reason || '属性补录']
-      );
       changes.push('mark');
     }
     if (moveChanged) {
       db.run('UPDATE plant_labels SET move_out_area_name = ?, move_out_date = ? WHERE id = ?', [newMoveOut, opDate, labelId]);
-      // 移出位置变化 → 插入一条 'patch' 履历
-      db.run(
-        `INSERT INTO plant_label_resume (label_id, operation_type, from_area_name, to_area_name, operation_date, reason)
-         VALUES (?, 'patch', ?, ?, ?, ?)`,
-        [labelId, curMoveOutArea || null, newMoveOut, opDate, reason || '位置补录']
-      );
       changes.push('move');
     }
+    // 写 1 条合并履历（mark 字段和 from/to 字段按需填 NULL）
+    db.run(
+      `INSERT INTO plant_label_resume (
+        label_id, operation_type,
+        mark_id, mark_name, mark_color,
+        from_area_name, to_area_name,
+        operation_date, reason, image_base64
+       ) VALUES (?, 'patch', NULL, ?, NULL, ?, ?, ?, ?, ?)`,
+      [
+        labelId,
+        markChanged ? markNameForLog : null,           // 只有 mark 变化时填 mark_name
+        moveChanged ? (curMoveOutArea || null) : null, // 移出前位置（from）
+        moveChanged ? newMoveOut : null,                // 移出后位置（to）
+        opDate,
+        reason || '属性补录',
+        photoJson,
+      ]
+    );
 
     // mark_date 单独记录（与 mark 一起）
     if (markChanged && mark_date) {
@@ -402,18 +521,21 @@ router.post('/:id/patch', (req: Request, res: Response) => {
 });
 
 /**
- * 2026-08-17：POST /reprint — 补印标签（iAGS 标记02 截图核心）
- * 仿 iAGS shareFunction.updatePrintNum 逻辑：
+ * 2026-08-19 重构：POST /reprint — 补印标签（重打 N 份相同标签号）
+ * 真正的业务含义：实物标签丢失/污损/需要多份时，**重打 N 份同一标签号 A** 的副本
+ * （不再是生成 A-R1/R2/R3 新标签号，那是批量生成场景，归 PrintLabelModal）
+ *
+ * 逻辑：
  *   - 读源标签（source_label_id）
- *   - 生成 N 个新 label_number：原号 + `-R{1..N}`
- *   - INSERT N 个新 plant_labels（继承源标签的 planting_id/seedling_id/seed_source_id/move_in_area_name 等）
- *   - INSERT N 个 print_records（related_type='plant_label'，related_id=新 ID）
- *   - INSERT N 个 plant_label_resume（operation_type='reprint'，备注含原 source_label_id）
+ *   - 不创建新 plant_labels（DB 唯一记录，N 份实物副本不占 DB 行）
+ *   - INSERT 1 条 print_records（related_type='plant_label'，copies=N 记录打印份数）
+ *   - INSERT 1 条 plant_label_resume（operation_type='reprint'，reason 含份数）
+ *   - 返回源标签完整详情（含 JOIN 关联作物 + QR URL），前端用于打印预览
  *
  * Body: {
  *   source_label_id: 4,
- *   copy_count: 3,
- *   mark_date: '2026-08-17',  // 可选
+ *   copy_count: 3,           // 打印份数（1-50）
+ *   mark_date: '2026-08-19', // 可选，默认今天
  *   operator_name: '陆启闯',
  * }
  */
@@ -423,22 +545,19 @@ router.post('/reprint', (req: Request, res: Response) => {
     const { source_label_id, copy_count, mark_date, operator_name } = req.body;
 
     const sourceId = parseInt(String(source_label_id), 10);
-    const count = parseInt(String(copy_count), 10);
+    const copies = parseInt(String(copy_count), 10);
 
     if (!sourceId || isNaN(sourceId)) {
       res.status(400).json({ success: false, error: 'source_label_id 必填且为整数' });
       return;
     }
-    if (!count || count < 1 || count > 50) {
+    if (!copies || copies < 1 || copies > 50) {
       res.status(400).json({ success: false, error: 'copy_count 必须在 1-50 之间' });
       return;
     }
 
-    // 读源标签
-    const srcStmt = db.prepare(
-      `SELECT id, label_number, planting_id, seedling_id, seed_source_id, move_in_area_name, move_in_date, quantity
-       FROM plant_labels WHERE id = ?`
-    );
+    // 读源标签（验证存在）
+    const srcStmt = db.prepare(`SELECT id, label_number FROM plant_labels WHERE id = ?`);
     srcStmt.bind([sourceId]);
     if (!srcStmt.step()) {
       srcStmt.free();
@@ -447,57 +566,25 @@ router.post('/reprint', (req: Request, res: Response) => {
     }
     const srcRow = srcStmt.getAsObject() as Record<string, unknown>;
     srcStmt.free();
+    const srcLabelNumber = String(srcRow.label_number || '');
 
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
     const reprintDate = mark_date || new Date().toISOString().split('T')[0];
-    const srcLabelNumber = String(srcRow.label_number || '');
 
-    const newLabelIds: number[] = [];
-    const newLabelNumbers: string[] = [];
-
-    // 同事务批量插入
+    // 事务：写 1 条 print_records + 1 条 plant_label_resume（不创建新 plant_labels）
     db.run('BEGIN TRANSACTION');
     try {
-      for (let i = 1; i <= count; i++) {
-        const newLabelNumber = `${srcLabelNumber}-R${i}`;
-        db.run(
-          `INSERT INTO plant_labels (
-            label_number, planting_id, seedling_id, seed_source_id,
-            move_in_area_name, move_in_date, quantity, status, create_time
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
-          [
-            newLabelNumber,
-            srcRow.planting_id ? String(srcRow.planting_id) : null,
-            srcRow.seedling_id ? String(srcRow.seedling_id) : null,
-            srcRow.seed_source_id ? String(srcRow.seed_source_id) : null,
-            srcRow.move_in_area_name ? String(srcRow.move_in_area_name) : null,
-            srcRow.move_in_date ? String(srcRow.move_in_date) : null,
-            Number(srcRow.quantity) || 1,
-            now,
-          ]
-        );
-        // 取 last_insert_rowid
-        const idRes = db.exec('SELECT last_insert_rowid() as id');
-        const newId = Number(idRes[0]?.values[0]?.[0]) || 0;
-        newLabelIds.push(newId);
-        newLabelNumbers.push(newLabelNumber);
-
-        // 写 print_records（追溯来源）
-        // 2026-08-17：补 oid 字段（print_records.oid UNIQUE NOT NULL）
-        const printOid = `pr-${srcLabelNumber}-R${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        db.run(
-          `INSERT INTO print_records (oid, print_type, related_type, related_id, copies, create_by, create_time)
-           VALUES (?, ?, 'plant_label', ?, 1, ?, ?)`,
-          [printOid, `reprint-${srcLabelNumber}`, newId, operator_name || 'system', now]
-        );
-
-        // 写 resume（operation_type='reprint'）
-        db.run(
-          `INSERT INTO plant_label_resume (label_id, operation_type, operation_date, operator_name, reason)
-           VALUES (?, 'reprint', ?, ?, ?)`,
-          [newId, reprintDate, operator_name || 'system', `补印自 ${srcLabelNumber}`]
-        );
-      }
+      const printOid = `pr-${srcLabelNumber}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      db.run(
+        `INSERT INTO print_records (oid, print_type, related_type, related_id, copies, create_by, create_time)
+         VALUES (?, ?, 'plant_label', ?, ?, ?, ?)`,
+        [printOid, `reprint-${srcLabelNumber}`, sourceId, copies, operator_name || 'system', now]
+      );
+      db.run(
+        `INSERT INTO plant_label_resume (label_id, operation_type, operation_date, operator_name, reason)
+         VALUES (?, 'reprint', ?, ?, ?)`,
+        [sourceId, reprintDate, operator_name || 'system', `补印 ${copies} 份`]
+      );
       db.run('COMMIT');
     } catch (e) {
       db.run('ROLLBACK');
@@ -505,14 +592,22 @@ router.post('/reprint', (req: Request, res: Response) => {
     }
 
     saveDatabase();
+
+    // 返回源标签完整详情（含关联作物 + QR URL），前端打印预览直接渲染
+    const srcDetailRows = queryToObjects(db, LABEL_DETAIL_SQL, [sourceId]);
+    const sourceLabelDetail = srcDetailRows.length > 0
+      ? enrichLabelDetail(srcDetailRows[0] as Record<string, any>, req)
+      : null;
+
     res.status(201).json({
       success: true,
       data: {
         source_label_id: sourceId,
         source_label_number: srcLabelNumber,
-        reprinted: count,
-        new_label_ids: newLabelIds,
-        new_label_numbers: newLabelNumbers,
+        // 2026-08-19 重命名：copies 替代 reprinted（更清晰）
+        copies,
+        // 不再有 new_label_ids/new_label_numbers（DB 不创建新标签）
+        source_label_detail: sourceLabelDetail,
       },
     });
   } catch (error) {
