@@ -12,7 +12,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { X, Download, Plus, Lock } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
 import type { PlantLabel, PlantLabelResume } from '@/stores/usePlantLabelStore';
@@ -345,21 +345,19 @@ export default function PlantingLabelManageModal({
   };
 
   // ---------- 渲染 ----------
-  if (!isOpen) return null;
+  // 2026-08-19：改用 Modal 组件（自带拖动 + 最大化 + 缩放），与育苗标签管理弹窗一致
+  if (!isOpen && !exportModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[85vh] flex flex-col">
-        {/* 标题栏 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
-          <h3 className="text-lg font-semibold text-white">
-            种植标签管理 - {plantingCode}
-          </h3>
-          <Button onClick={onClose} variant="ghost" size="icon" className="text-white hover:bg-emerald-700">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`种植标签管理 - ${plantingCode}`}
+        size="xxl"
+        showFooter={false}
+      >
+        <div className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[85vh] flex flex-col">
         {/* 2026-07-03：只读模式横幅（已结束的记录） */}
         {readOnly && (
           <div className="px-4 py-2 bg-gray-100 border-b border-gray-300 flex items-center gap-2">
@@ -525,6 +523,7 @@ export default function PlantingLabelManageModal({
           </div>
         </div>
       </div>
+      </Modal>
 
       {/* 2026-06-28：导出弹窗（选择字段 + 范围） */}
       {exportModalOpen && (
@@ -625,6 +624,6 @@ export default function PlantingLabelManageModal({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
