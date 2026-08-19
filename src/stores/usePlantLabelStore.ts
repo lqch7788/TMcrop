@@ -108,16 +108,6 @@ interface PlantLabelState {
     quantity?: number;  // 2026-06-23: 标签代表的苗数
   }>) => Promise<{ inserted: number; insertedIds: number[] } | null>;
 
-  /** 批量生成标签 */
-  generateBatchLabels: (params: {
-    seed_source_id?: string;
-    seedling_id?: string;
-    planting_id?: string;
-    count: number;
-    crop_name?: string;
-    area_name?: string;
-    start_date?: string;
-  }) => Promise<{ labels: any[]; totalPrinted: number } | null>;
 }
 
 export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
@@ -235,22 +225,6 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
       return false;
     } catch {
       return false;
-    }
-  },
-
-  /** 批量生成标签（育苗/种植标签打印） */
-  generateBatchLabels: async (params) => {
-    try {
-      // 2026-06-29: enhancedApiClient.post 已自动解包 {success, data} envelope
-      // res 直接是 data 内容（即 {labels, totalPrinted}），不再有 .success 字段
-      const data = await enhancedApiClient.post('/plant-labels/generate-batch', params);
-      if (data && typeof data === 'object' && 'labels' in data) {
-        await get().loadLabels();
-        return data as { labels: unknown[]; totalPrinted: number };
-      }
-      return null;
-    } catch {
-      return null;
     }
   },
 

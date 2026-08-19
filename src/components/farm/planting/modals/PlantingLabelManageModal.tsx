@@ -89,12 +89,6 @@ export default function PlantingLabelManageModal({
   const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
   const [showAddResume, setShowAddResume] = useState(false);
 
-  // ---------- 补充生成状态 ----------
-  const [showBatchGenerate, setShowBatchGenerate] = useState(false);
-  const [batchCount, setBatchCount] = useState('10');
-  const [batchAreaName, setBatchAreaName] = useState('');
-  const [batchGenerating, setBatchGenerating] = useState(false);
-
   // ---------- 补印状态（2026-08-19 重构：补印 = 重打 N 份相同标签） ----------
   const [showReprint, setShowReprint] = useState(false);
   const [reprintCount, setReprintCount] = useState('1');
@@ -216,7 +210,6 @@ export default function PlantingLabelManageModal({
   // 切换标签时收起表单
   useEffect(() => {
     setShowAddResume(false);
-    setShowBatchGenerate(false);
   }, [selectedLabelId]);
 
   // 履历提交成功回调：刷新履历
@@ -348,34 +341,6 @@ export default function PlantingLabelManageModal({
     setExportModalOpen(false);
   }, [selectedExportFields, exportScope, paginatedLabels, filteredLabels, resumeMap, loadResumesForLabels, plantingCode]);
 
-  // ---------- 补充生成 ----------
-  const handleBatchGenerate = async () => {
-    const count = parseInt(batchCount, 10);
-    if (!count || count < 1) { showAlert('请输入有效的生成数量'); return; }
-    setBatchGenerating(true);
-    try {
-      const store = usePlantLabelStore.getState();
-      const result = await store.generateBatchLabels({
-        planting_id: plantingId,
-        count,
-        area_name: batchAreaName.trim() || undefined,
-        start_date: todayLocal(),
-      });
-      if (result) {
-        showAlert(`成功生成 ${result.totalPrinted} 个标签`);
-        await loadLabels({ plantingId });
-        setShowBatchGenerate(false);
-        setBatchAreaName('');
-      } else {
-        showAlert('生成失败，请重试');
-      }
-    } catch (e) {
-      showAlert('网络错误：' + (e as Error).message);
-    } finally {
-      setBatchGenerating(false);
-    }
-  };
-
   // ---------- 渲染 ----------
   // 2026-08-19：改用 Modal 组件（自带拖动 + 最大化 + 缩放），与育苗标签管理弹窗一致
   if (!isOpen && !exportModalOpen) return null;
@@ -447,35 +412,6 @@ export default function PlantingLabelManageModal({
           />
         )}
 
-        {/* 补充生成小表单 */}
-        {showBatchGenerate && (
-          <div className="px-4 py-3 border-t border-blue-200 bg-blue-50 flex-shrink-0">
-            <div className="text-xs font-semibold text-blue-900 mb-2">补充生成标签</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="number"
-                value={batchCount}
-                onChange={(e) => setBatchCount(e.target.value)}
-                placeholder="生成数量"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-24"
-              />
-              <Input
-                type="text"
-                value={batchAreaName}
-                onChange={(e) => setBatchAreaName(e.target.value)}
-                placeholder="移入区域（如：东区-A区）"
-                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-40"
-              />
-              <Button onClick={handleBatchGenerate} disabled={batchGenerating} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                {batchGenerating ? '生成中...' : '生成'}
-              </Button>
-              <Button onClick={() => setShowBatchGenerate(false)} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-                取消
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* 2026-08-17：补印弹窗 */}
         {showReprint && (
           <div className="px-4 py-3 border-t border-amber-200 bg-amber-50 flex-shrink-0">
@@ -526,16 +462,6 @@ export default function PlantingLabelManageModal({
               >
                 <Plus className="w-4 h-4" /> 新增履历
               </Button>
-            )}
-            {!readOnly && (
-              <Button
-                onClick={() => setShowBatchGenerate((v) => !v)}
-              variant="outline"
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              <Plus className="w-4 h-4" /> 补充生成
-            </Button>
             )}
             {!readOnly && (
               <Button
