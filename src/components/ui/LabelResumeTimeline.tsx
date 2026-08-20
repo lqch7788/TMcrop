@@ -36,9 +36,9 @@ export interface LabelResumeTimelineProps {
   className?: string;
 }
 
-// ========== 操作类型配置 ==========
+// ========== 操作类型配置（2026-08-20：恢复 — 每条记录显示彩色 chip，与底部图例互为补充） ==========
 
-const OPERATION_CONFIG: Record<string, { label: string; icon: React.ReactNode; bgClass: string; textClass: string }> = {
+const OPERATION_CONFIG: Record<LabelResumeEntry['operationType'], { label: string; icon: React.ReactNode; bgClass: string; textClass: string }> = {
   move:      { label: '位置变更', icon: <ArrowRight className="w-3 h-3" />, bgClass: 'bg-emerald-100', textClass: 'text-emerald-700' },
   patch:     { label: '属性补录', icon: <Tag className="w-3 h-3" />,         bgClass: 'bg-amber-100',   textClass: 'text-amber-700' },
   reprint:   { label: '补印',     icon: <MapPin className="w-3 h-3" />,       bgClass: 'bg-slate-100',   textClass: 'text-slate-700' },
@@ -99,7 +99,6 @@ export default function LabelResumeTimeline({
         {entries.map((entry, i) => {
           const isLeft = i % 2 === 0;
           const isLast = i === entries.length - 1;
-          const config = OPERATION_CONFIG[entry.operationType] || OPERATION_CONFIG.move_in;
           // 2026-08-19：连线圆点颜色优先 mark_color（mark/patch 含 mark 时），其次按 operationType 兜底色
           const lineColor = entry.markColor
             || (entry.operationType === 'patch' ? '#f59e0b'    // patch 琥珀
@@ -114,7 +113,7 @@ export default function LabelResumeTimeline({
               <div className="flex items-start">
                 {/* 左侧内容（奇数条目） */}
                 <div className="flex-1 pr-8" style={{ minWidth: 0 }}>
-                  {isLeft && <ResumeCard entry={entry} areaLabel={areaLabel} config={config} align="right" />}
+                  {isLeft && <ResumeCard entry={entry} areaLabel={areaLabel} align="right" />}
                 </div>
 
                 {/* 中间圆点 */}
@@ -127,7 +126,7 @@ export default function LabelResumeTimeline({
 
                 {/* 右侧内容（偶数条目） */}
                 <div className="flex-1 pl-8" style={{ minWidth: 0 }}>
-                  {!isLeft && <ResumeCard entry={entry} areaLabel={areaLabel} config={config} align="left" />}
+                  {!isLeft && <ResumeCard entry={entry} areaLabel={areaLabel} align="left" />}
                 </div>
               </div>
 
@@ -148,14 +147,7 @@ export default function LabelResumeTimeline({
         })}
       </div>
 
-      {/* 图例 */}
-      <div className="flex items-center gap-4 mt-6 pt-4 border-t border-gray-100 px-2">
-        {Object.entries(OPERATION_CONFIG).map(([key, cfg]) => (
-          <div key={key} className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className={cn('px-1.5 py-0.5 rounded', cfg.bgClass, cfg.textClass)}>{cfg.label}</span>
-          </div>
-        ))}
-      </div>
+      {/* 2026-08-20：图例已移至 LabelResumePanel 容器底部（更"右侧底部"），此处不再渲染 */}
     </div>
   );
 }
@@ -165,22 +157,20 @@ export default function LabelResumeTimeline({
 function ResumeCard({
   entry,
   areaLabel,
-  config,
   align,
 }: {
   entry: LabelResumeEntry;
   areaLabel: string;
-  config: { label: string; icon: React.ReactNode; bgClass: string; textClass: string };
   align: 'left' | 'right';
 }) {
-  // 2026-08-19：patch 履历也可能含 mark_name（补录现有属性 Tab 支持补 mark）
-  const isMark = entry.operationType === 'mark';
   // 任意类型只要有 markName 就算"有标记信息"
   const hasMarkInfo = !!entry.markName;
   const isMove = entry.operationType === 'move' || entry.operationType === 'move_in' || entry.operationType === 'move_out';
   // 2026-08-19：patch 可能含 to/from 区域（位置补录）；只有 to/from 都不为空才显示位置行
   // 避免出现"无位置变化"这种冗余噪音
   const hasAreaInfo = !!(entry.toAreaName || entry.fromAreaName || entry.areaName);
+  // 2026-08-20：恢复 — 操作类型 chip（彩色背景+图标+文字）
+  const opConfig = OPERATION_CONFIG[entry.operationType];
 
   return (
     <div
@@ -191,13 +181,12 @@ function ResumeCard({
       )}
       style={hasMarkInfo && entry.markColor ? { borderLeftColor: entry.markColor } : undefined}
     >
-      {/* 操作类型标签 */}
+      {/* 2026-08-20：操作类型彩色 chip（恢复）+ markName 徽标 */}
       <div className={cn('flex items-center gap-1.5 mb-1', align === 'right' && 'justify-end')}>
-        <span className={cn('inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium', config.bgClass, config.textClass)}>
-          {config.icon}
-          {config.label}
+        <span className={cn('inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium', opConfig.bgClass, opConfig.textClass)}>
+          {opConfig.icon}
+          {opConfig.label}
         </span>
-        {/* 2026-08-19：mark + patch 都显示 markName 徽标（patch 也可补 mark） */}
         {hasMarkInfo && entry.markName && (
           <span
             className="px-1.5 py-0.5 rounded text-xs text-white font-medium"

@@ -365,7 +365,8 @@ export default function PlantingLabelManageModal({
         size="xxl"
         showFooter={false}
       >
-        <div className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[85vh] flex flex-col">
+        {/* 2026-08-20：去掉嵌套 max-w-6xl + max-h-[85vh] 容器（之前会让 Modal 放大/拖大后内部不跟随）
+            Modal 自身的 body 容器已 flex-1 + overflow-y-auto + flex flex-col，无需再套一层 */}
         {/* 2026-07-03：只读模式横幅（已结束的记录） */}
         {readOnly && (
           <div className="px-4 py-2 bg-gray-100 border-b border-gray-300 flex items-center gap-2">
@@ -374,23 +375,10 @@ export default function PlantingLabelManageModal({
           </div>
         )}
 
-        {/* 工具栏: 导出 */}
-        <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-end">
-          <Button
-            onClick={handleOpenExport}
-            variant="blue"
-            size="sm"
-            className="text-xs"
-          >
-            <Download className="w-4 h-4 mr-1" />
-            导出
-          </Button>
-        </div>
-
         {/* 主体：左侧标签列表 + 右侧履历时间线 */}
         <div className="flex-1 overflow-hidden flex">
-          {/* 左侧：标签列表（含搜索） */}
-          <div className="w-2/5 border-r border-gray-200">
+          {/* 左侧：标签列表（含搜索） — 2026-08-20：与 Seedling/SeedSource 统一 50/50 */}
+          <div className="w-1/2 border-r border-gray-200">
             <LabelTable
               labels={paginatedLabels as any}
               selectedLabelId={selectedLabelId}
@@ -401,11 +389,73 @@ export default function PlantingLabelManageModal({
               onPageChange={setLabelPage}
               onSelectLabel={handleSelectLabel}
               loading={labelsLoading}
+              topbarActions={
+                <>
+                  {/* 2026-08-20：履历/补印 2 个按钮移至搜索框右侧（种植无批量作废） */}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        let targetId: number | null = selectedLabelId;
+                        if (!targetId && filteredLabels[0]) {
+                          targetId = (filteredLabels[0] as any).id;
+                          setSelectedLabelId(targetId);
+                        }
+                        if (!targetId) { showAlert('暂无标签可操作'); return; }
+                        setShowAddResume((v) => !v);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="default"
+                      size="sm"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可操作标签'
+                        : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                        : '请先在左侧选择标签'
+                      }
+                    >
+                      <Plus className="w-4 h-4" /> 履历
+                    </Button>
+                  )}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        let targetId: number | null = selectedLabelId;
+                        if (!targetId && filteredLabels[0]) {
+                          targetId = (filteredLabels[0] as any).id;
+                          setSelectedLabelId(targetId);
+                        }
+                        if (!targetId) { showAlert('请先在左侧选择标签'); return; }
+                        setShowReprint((v) => !v);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="outline"
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可补印标签'
+                        : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                        : '请先在左侧选择标签'
+                      }
+                    >
+                      <Plus className="w-4 h-4" /> 补印标签
+                    </Button>
+                  )}
+                  {/* 2026-08-20：导出按钮移至补印标签后面（种植无批量作废，导出紧随补印标签） */}
+                  <Button
+                    onClick={handleOpenExport}
+                    variant="blue"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    导出
+                  </Button>
+                </>
+              }
             />
           </div>
 
-          {/* 右侧：标签履历时间线 */}
-          <div className="w-3/5 overflow-y-auto p-4">
+          {/* 右侧：标签履历时间线 — 2026-08-20：与左侧各占一半 */}
+          <div className="w-1/2 overflow-y-auto p-4">
             <LabelResumePanel
               selectedLabel={selectedLabel}
               resumes={selectedResumes}
@@ -456,63 +506,22 @@ export default function PlantingLabelManageModal({
           </div>
         )}
 
-        {/* 底部 */}
-        <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+        {/* 底部 — 左侧：标签数；右侧：操作类型图例（2026-08-20） */}
+        <div className="px-4 py-2 border-t border-gray-200 flex items-center justify-between flex-shrink-0 gap-4">
           <span className="text-xs text-gray-400">
             共 {filteredLabels.length} 个标签
           </span>
-          <div className="flex items-center gap-2">
-            {/* 2026-08-20：方案 C — 按键始终可用，按"单标签/多标签"语义自适应 */}
-            {!readOnly && (
-              <Button
-                onClick={() => {
-                  let targetId: number | null = selectedLabelId;
-                  if (!targetId && filteredLabels[0]) {
-                    targetId = (filteredLabels[0] as any).id;
-                    setSelectedLabelId(targetId);
-                  }
-                  if (!targetId) { showAlert('暂无标签可操作'); return; }
-                  setShowAddResume((v) => !v);
-                }}
-                disabled={filteredLabels.length === 0}
-                variant="default"
-                size="sm"
-                title={
-                  filteredLabels.length === 0 ? '暂无可操作标签'
-                  : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
-                  : '请先在左侧选择标签'
-                }
-              >
-                <Plus className="w-4 h-4" /> 新增履历
-              </Button>
-            )}
-            {!readOnly && (
-              <Button
-                onClick={() => {
-                  let targetId: number | null = selectedLabelId;
-                  if (!targetId && filteredLabels[0]) {
-                    targetId = (filteredLabels[0] as any).id;
-                    setSelectedLabelId(targetId);
-                  }
-                  if (!targetId) { showAlert('请先在左侧选择标签'); return; }
-                  setShowReprint((v) => !v);
-                }}
-                disabled={filteredLabels.length === 0}
-                variant="outline"
-                size="sm"
-                className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
-                title={
-                  filteredLabels.length === 0 ? '暂无可补印标签'
-                  : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
-                  : '请先在左侧选择标签'
-                }
-              >
-                <Plus className="w-4 h-4" /> 补印标签
-              </Button>
-            )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-gray-500">图例：</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">位置变更</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700">属性补录</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">补印</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">移入（历史）</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-orange-100 text-orange-700">移出（历史）</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700">标记</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700">作废</span>
           </div>
         </div>
-      </div>
       </Modal>
 
       {/* 2026-08-19：补印标签预览+打印弹窗（重打 N 份相同标签，DB 不入库新行） */}

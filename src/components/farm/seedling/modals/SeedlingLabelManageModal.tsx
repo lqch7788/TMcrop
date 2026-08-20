@@ -478,6 +478,116 @@ export default function SeedlingLabelManageModal({
               onToggleSelect={toggleSelectLabel}
               onToggleSelectAll={toggleSelectAll}
               onClearSelection={clearSelection}
+              topbarActions={
+                <>
+                  {/* 2026-08-20：3 个单/多标签操作按钮移至搜索框右侧 */}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        if (selectedIds.size > 1) {
+                          showAlert('新增履历是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                          return;
+                        }
+                        let targetId: number | null = null;
+                        if (selectedIds.size === 1) {
+                          targetId = Array.from(selectedIds)[0];
+                          setSelectedLabelId(targetId);
+                        } else if (selectedLabelId) {
+                          targetId = selectedLabelId;
+                        } else if (filteredLabels[0]) {
+                          targetId = (filteredLabels[0] as any).id;
+                          setSelectedLabelId(targetId);
+                        }
+                        if (!targetId) { showAlert('暂无标签可操作'); return; }
+                        setShowAddResume((v) => !v);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="default"
+                      size="sm"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可操作标签'
+                        : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+                        : selectedIds.size === 1 ? `为勾选的 1 个标签新增履历`
+                        : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                        : '请先在左侧选择标签'
+                      }
+                    >
+                      <Plus className="w-4 h-4" /> 履历
+                    </Button>
+                  )}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        if (selectedIds.size > 1) {
+                          showAlert('补印是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                          return;
+                        }
+                        let targetId: number | null = null;
+                        if (selectedIds.size === 1) {
+                          targetId = Array.from(selectedIds)[0];
+                          setSelectedLabelId(targetId);
+                        } else if (selectedLabelId) {
+                          targetId = selectedLabelId;
+                        } else if (filteredLabels[0]) {
+                          targetId = (filteredLabels[0] as any).id;
+                          setSelectedLabelId(targetId);
+                        }
+                        if (!targetId) { showAlert('请先在左侧选择标签'); return; }
+                        setShowReprint((v) => !v);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="outline"
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可补印标签'
+                        : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+                        : selectedIds.size === 1 ? '为勾选的 1 个标签补印'
+                        : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                        : '请先在左侧选择标签'
+                      }
+                    >
+                      <Plus className="w-4 h-4" /> 补印标签
+                    </Button>
+                  )}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        if (selectedIds.size === 0) {
+                          showAlert('批量作废需要勾选标签（左侧复选框）');
+                          return;
+                        }
+                        setBatchVoidReason('');
+                        setShowBatchVoid(true);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="outline"
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可作废标签'
+                        : selectedIds.size === 0 ? '请先勾选要作废的标签（左侧复选框）'
+                        : `批量作废已选 ${selectedIds.size} 个标签`
+                      }
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                    </Button>
+                  )}
+                  {/* 2026-08-20：导出按钮移至批量作废后面 */}
+                  <Button
+                    onClick={handleOpenExport}
+                    variant="outline"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                    title={
+                      selectedIds.size > 0 ? `导出已勾选的 ${selectedIds.size} 个标签`
+                      : '导出全部可见标签（弹窗可选范围和字段）'
+                    }
+                  >
+                    <Download className="w-4 h-4 mr-1" /> 导出
+                  </Button>
+                </>
+              }
             />
           </div>
 
@@ -533,122 +643,20 @@ export default function SeedlingLabelManageModal({
           </div>
         )}
 
-        {/* 底部 */}
-        <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+        {/* 底部 — 左侧：标签数；右侧：操作类型图例（2026-08-20） */}
+        <div className="px-4 py-2 border-t border-gray-200 flex items-center justify-between flex-shrink-0 gap-4">
           <span className="text-xs text-gray-400">
             共 {filteredLabels.length} 个标签
           </span>
-          <div className="flex items-center gap-2">
-            {/* 2026-08-20：方案 C — 按键始终可用，按"单标签/多标签"语义自适应
-                单标签操作：selectedLabelId（默认选中第 1 个标签）或多选只勾 1 个
-                多标签操作：selectedIds（批量作废、批量导出）
-                用户点按钮时按当前模式自动判定目标 */}
-            {!readOnly && (
-              <Button
-                onClick={() => {
-                  // 多选 > 1 时强制单标签操作（提示先清勾选）
-                  if (selectedIds.size > 1) {
-                    showAlert('新增履历是单标签操作，请只勾选 1 个标签或点击行选择单标签');
-                    return;
-                  }
-                  // 优先级：selectedIds.size===1 优先 > selectedLabelId > 第 1 个标签
-                  let targetId: number | null = null;
-                  if (selectedIds.size === 1) {
-                    targetId = Array.from(selectedIds)[0];
-                    setSelectedLabelId(targetId);
-                  } else if (selectedLabelId) {
-                    targetId = selectedLabelId;
-                  } else if (filteredLabels[0]) {
-                    targetId = (filteredLabels[0] as any).id;
-                    setSelectedLabelId(targetId);
-                  }
-                  if (!targetId) { showAlert('暂无标签可操作'); return; }
-                  setShowAddResume((v) => !v);
-                }}
-                disabled={filteredLabels.length === 0}
-                variant="default"
-                size="sm"
-                title={
-                  filteredLabels.length === 0 ? '暂无可操作标签'
-                  : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
-                  : selectedIds.size === 1 ? `为勾选的 1 个标签新增履历`
-                  : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
-                  : '请先在左侧选择标签'
-                }
-              >
-                <Plus className="w-4 h-4" /> 新增履历
-              </Button>
-            )}
-            {!readOnly && (
-              <Button
-                onClick={() => {
-                  if (selectedIds.size > 1) {
-                    showAlert('补印是单标签操作，请只勾选 1 个标签或点击行选择单标签');
-                    return;
-                  }
-                  let targetId: number | null = null;
-                  if (selectedIds.size === 1) {
-                    targetId = Array.from(selectedIds)[0];
-                    setSelectedLabelId(targetId);
-                  } else if (selectedLabelId) {
-                    targetId = selectedLabelId;
-                  } else if (filteredLabels[0]) {
-                    targetId = (filteredLabels[0] as any).id;
-                    setSelectedLabelId(targetId);
-                  }
-                  if (!targetId) { showAlert('请先在左侧选择标签'); return; }
-                  setShowReprint((v) => !v);
-                }}
-                disabled={filteredLabels.length === 0}
-                variant="outline"
-                size="sm"
-                className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
-                title={
-                  filteredLabels.length === 0 ? '暂无可补印标签'
-                  : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
-                  : selectedIds.size === 1 ? '为勾选的 1 个标签补印'
-                  : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
-                  : '请先在左侧选择标签'
-                }
-              >
-                <Plus className="w-4 h-4" /> 补印标签
-              </Button>
-            )}
-            <Button
-              onClick={handleOpenExport}
-              variant="outline"
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
-              title={
-                selectedIds.size > 0 ? `导出已勾选的 ${selectedIds.size} 个标签`
-                : '导出全部可见标签（弹窗可选范围和字段）'
-              }
-            >
-              <Download className="w-4 h-4 mr-1" /> 导出
-            </Button>
-            {!readOnly && (
-              <Button
-                onClick={() => {
-                  if (selectedIds.size === 0) {
-                    showAlert('批量作废需要勾选标签（左侧复选框）');
-                    return;
-                  }
-                  setBatchVoidReason('');
-                  setShowBatchVoid(true);
-                }}
-                disabled={filteredLabels.length === 0}
-                variant="outline"
-                size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-                title={
-                  filteredLabels.length === 0 ? '暂无可作废标签'
-                  : selectedIds.size === 0 ? '请先勾选要作废的标签（左侧复选框）'
-                  : `批量作废已选 ${selectedIds.size} 个标签`
-                }
-              >
-                <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-              </Button>
-            )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-gray-500">图例：</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">位置变更</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700">属性补录</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-700">补印</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">移入（历史）</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-orange-100 text-orange-700">移出（历史）</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700">标记</span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700">作废</span>
           </div>
         </div>
 

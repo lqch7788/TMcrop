@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Tag, List, Clock } from 'lucide-react';
 import { LabelResumeTimeline } from '@/components/ui';
-import type { LabelResumeEntry } from '@/components/ui/LabelResumeTimeline';
+import type { LabelResumeEntry } from '@/components/ui';
 import type { PlantLabel, PlantLabelResume } from '@/stores/usePlantLabelStore';
 
 // 操作类型中文映射（与 LabelResumeTimeline 内部一致；2026-08-17 新增 'move'/'patch'/'reprint'）
@@ -66,7 +66,7 @@ export function LabelResumePanel({ selectedLabel, resumes, loading }: LabelResum
 
   return (
     <div>
-      {/* 视图切换 */}
+      {/* 视图切换（2026-08-20：右侧仅保留 tab，导出按钮已移至左侧 topbarActions） */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-gray-700">
           履历记录（{resumes.length} 条）
