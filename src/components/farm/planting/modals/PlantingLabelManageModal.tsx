@@ -11,7 +11,7 @@
  *  后续如需重构可搬到 src/components/farm/labels/ 公共目录。
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Download, Plus, Lock } from 'lucide-react';
+import { X, Download, Plus, Lock, Trash2 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { usePlantLabelStore } from '@/stores/usePlantLabelStore';
@@ -82,12 +82,20 @@ export default function PlantingLabelManageModal({
 }: PlantingLabelManageModalProps) {
   const { labels, labelsLoading, resumeMap, resumeLoading, loadLabels, loadResumesForLabels } =
     usePlantLabelStore();
+  // 2026-08-20：currentUser 用于批量作废 API 调用
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   // ---------- 标签列表状态 ----------
   const [searchText, setSearchText] = useState('');
   const [labelPage, setLabelPage] = useState(1);
   const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
+  // 2026-08-20：多选（批量作废用）
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showAddResume, setShowAddResume] = useState(false);
+  // 2026-08-20：批量作废弹窗状态（与育苗 Modal 对齐）
+  const [showBatchVoid, setShowBatchVoid] = useState(false);
+  const [batchVoidReason, setBatchVoidReason] = useState('');
+  const [batchVoiding, setBatchVoiding] = useState(false);
 
   // ---------- 补印状态（2026-08-19 重构：补印 = 重打 N 份相同标签） ----------
   const [showReprint, setShowReprint] = useState(false);
@@ -188,6 +196,9 @@ export default function PlantingLabelManageModal({
     (l: any) => l.id === selectedLabelId
   ) as PlantLabel | undefined;
 
+  // 2026-08-20：已作废标签检测（禁止继续履历/补印/批量作废；后端中间件已转 camelCase）
+  const isVoided = (l: any) => l?.status === 'void' || l?.status === 'voided';
+
   const selectedResumes: PlantLabelResume[] = useMemo(() => {
     if (selectedLabelId === null) return [];
     return resumeMap[selectedLabelId] || [];
@@ -196,11 +207,76 @@ export default function PlantingLabelManageModal({
   // ---------- 事件处理 ----------
   const handleSelectLabel = useCallback(
     async (labelId: number) => {
+      // 2026-08-20：点击行 = 单标签模式，自动清空勾选状态（避免模式混淆）
+      setSelectedIds(new Set());
       setSelectedLabelId(labelId);
       await loadResumesForLabels([labelId]);
     },
     [loadResumesForLabels]
   );
+
+  // 2026-08-20：多选切换（批量作废用）
+  const toggleSelectLabel = useCallback((labelId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(labelId)) next.delete(labelId);
+      else next.add(labelId);
+      return next;
+    });
+  }, []);
+
+  // 2026-08-20：清除所有多选
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // 2026-08-20：全选/取消当前页
+  const toggleSelectAll = useCallback(() => {
+    const pageIds = new Set(paginatedLabels.map((l: any) => l.id));
+    const allSelected = paginatedLabels.every((l: any) => selectedIds.has(l.id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...pageIds]));
+    }
+  }, [paginatedLabels, selectedIds]);
+
+  // 2026-08-20：批量作废（与育苗 Modal 对齐）
+  const handleBatchVoid = async () => {
+    if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
+    if (!batchVoidReason.trim()) { showAlert('请填写作废原因'); return; }
+    setBatchVoiding(true);
+    let success = 0;
+    let fail = 0;
+    try {
+      for (const labelId of selectedIds) {
+        try {
+          await enhancedApiClient.post(`/plant-labels/${labelId}/resumes`, {
+            operation_type: 'void',
+            operation_date: todayLocal(),
+            operator_name: currentUser?.realName || 'system',
+            reason: batchVoidReason.trim(),
+            quantity_change: 0,
+          });
+          success++;
+        } catch { fail++; }
+      }
+      showAlert(`批量作废完成：成功 ${success} 个${fail > 0 ? `，失败 ${fail} 个` : ''}`);
+      setShowBatchVoid(false);
+      setBatchVoidReason('');
+      setSelectedIds(new Set());
+      await loadLabels({ plantingId });
+      if (selectedLabelId && selectedIds.has(selectedLabelId)) {
+        setSelectedLabelId(null);
+      }
+    } catch (e) {
+      showAlert('网络错误：' + (e as Error).message);
+    } finally {
+      setBatchVoiding(false);
+    }
+  };
 
   const handleSearchChange = useCallback((v: string) => {
     setSearchText(v);
@@ -389,25 +465,50 @@ export default function PlantingLabelManageModal({
               onPageChange={setLabelPage}
               onSelectLabel={handleSelectLabel}
               loading={labelsLoading}
+              // 2026-08-20：批量作废多选支持（与 Seedling Modal 对齐）
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelectLabel}
+              onToggleSelectAll={toggleSelectAll}
+              onClearSelection={clearSelection}
               topbarActions={
                 <>
-                  {/* 2026-08-20：履历/补印 2 个按钮移至搜索框右侧（种植无批量作废） */}
+                  {/* 2026-08-20：履历/补印/批量作废/导出 4 个按钮（与 Seedling/SeedSource 对齐） */}
                   {!readOnly && (
                     <Button
                       onClick={() => {
-                        let targetId: number | null = selectedLabelId;
-                        if (!targetId && filteredLabels[0]) {
+                        if (selectedIds.size > 1) {
+                          showAlert('新增履历是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                          return;
+                        }
+                        // 2026-08-20：已作废标签禁止继续操作
+                        if (isVoided(selectedLabel)) {
+                          showAlert(`标签「${(selectedLabel as any)?.labelNumber || ''}」已作废，禁止新增履历`);
+                          return;
+                        }
+                        let targetId: number | null = null;
+                        if (selectedIds.size === 1) {
+                          targetId = Array.from(selectedIds)[0];
+                          setSelectedLabelId(targetId);
+                        } else if (selectedLabelId) {
+                          targetId = selectedLabelId;
+                        } else if (filteredLabels[0]) {
                           targetId = (filteredLabels[0] as any).id;
                           setSelectedLabelId(targetId);
                         }
                         if (!targetId) { showAlert('暂无标签可操作'); return; }
-                        setShowAddResume((v) => !v);
+                        // 2026-08-20：履历 ↔ 补印 行内面板互斥
+                        if (showAddResume) { setShowAddResume(false); return; }
+                        setShowAddResume(true);
+                        setShowReprint(false);
                       }}
                       disabled={filteredLabels.length === 0}
                       variant="default"
                       size="sm"
                       title={
                         filteredLabels.length === 0 ? '暂无可操作标签'
+                        : isVoided(selectedLabel) ? '已作废标签禁止操作'
+                        : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+                        : selectedIds.size === 1 ? '为勾选的 1 个标签新增履历'
                         : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
                         : '请先在左侧选择标签'
                       }
@@ -418,13 +519,30 @@ export default function PlantingLabelManageModal({
                   {!readOnly && (
                     <Button
                       onClick={() => {
-                        let targetId: number | null = selectedLabelId;
-                        if (!targetId && filteredLabels[0]) {
+                        if (selectedIds.size > 1) {
+                          showAlert('补印是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                          return;
+                        }
+                        // 2026-08-20：已作废标签禁止继续操作
+                        if (isVoided(selectedLabel)) {
+                          showAlert(`标签「${(selectedLabel as any)?.labelNumber || ''}」已作废，禁止补印`);
+                          return;
+                        }
+                        let targetId: number | null = null;
+                        if (selectedIds.size === 1) {
+                          targetId = Array.from(selectedIds)[0];
+                          setSelectedLabelId(targetId);
+                        } else if (selectedLabelId) {
+                          targetId = selectedLabelId;
+                        } else if (filteredLabels[0]) {
                           targetId = (filteredLabels[0] as any).id;
                           setSelectedLabelId(targetId);
                         }
                         if (!targetId) { showAlert('请先在左侧选择标签'); return; }
-                        setShowReprint((v) => !v);
+                        // 2026-08-20：履历 ↔ 补印 行内面板互斥
+                        if (showReprint) { setShowReprint(false); return; }
+                        setShowReprint(true);
+                        setShowAddResume(false);
                       }}
                       disabled={filteredLabels.length === 0}
                       variant="outline"
@@ -432,6 +550,9 @@ export default function PlantingLabelManageModal({
                       className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
                       title={
                         filteredLabels.length === 0 ? '暂无可补印标签'
+                        : isVoided(selectedLabel) ? '已作废标签禁止操作'
+                        : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+                        : selectedIds.size === 1 ? '为勾选的 1 个标签补印'
                         : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
                         : '请先在左侧选择标签'
                       }
@@ -439,7 +560,37 @@ export default function PlantingLabelManageModal({
                       <Plus className="w-4 h-4" /> 补印标签
                     </Button>
                   )}
-                  {/* 2026-08-20：导出按钮移至补印标签后面（种植无批量作废，导出紧随补印标签） */}
+                  {!readOnly && (
+                    <Button
+                      onClick={() => {
+                        if (selectedIds.size === 0) {
+                          showAlert('批量作废需要勾选标签（左侧复选框）');
+                          return;
+                        }
+                        // 2026-08-20：勾选中含已作废标签则提示
+                        const voidedInSelection = Array.from(selectedIds)
+                          .map((id) => plantingLabels.find((l: any) => l.id === id))
+                          .filter((l) => isVoided(l));
+                        if (voidedInSelection.length > 0) {
+                          showAlert(`已勾选的 ${voidedInSelection.length} 个标签已是「已作废」状态，无须重复作废`);
+                          return;
+                        }
+                        setBatchVoidReason('');
+                        setShowBatchVoid(true);
+                      }}
+                      disabled={filteredLabels.length === 0}
+                      variant="outline"
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                      title={
+                        filteredLabels.length === 0 ? '暂无可作废标签'
+                        : selectedIds.size === 0 ? '请先勾选要作废的标签（左侧复选框）'
+                        : `批量作废已选 ${selectedIds.size} 个标签`
+                      }
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                    </Button>
+                  )}
                   <Button
                     onClick={handleOpenExport}
                     variant="blue"
@@ -532,6 +683,51 @@ export default function PlantingLabelManageModal({
           sourceLabelId={selectedLabelId || undefined}
           onClose={() => setReprintDetail(null)}
         />
+      )}
+
+      {/* 2026-08-20：批量作废弹窗（与 Seedling Modal 对齐） */}
+      {showBatchVoid && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-xl w-full max-w-sm shadow-xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-red-500 to-red-600 rounded-t-xl">
+              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                批量作废 {selectedIds.size} 个标签
+              </h3>
+              <Button onClick={() => setShowBatchVoid(false)} variant="ghost" size="icon" className="text-white hover:bg-red-700">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">作废原因 *</label>
+                <Input
+                  value={batchVoidReason}
+                  onChange={(e) => setBatchVoidReason(e.target.value)}
+                  placeholder="如：标签重复、植株死亡、录入错误等"
+                  className="px-3 py-2 border border-gray-400 rounded-lg text-sm w-full"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                将对已选的 {selectedIds.size} 个标签执行作废操作，操作后标签状态变为"已作废"且不可再添加履历。
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowBatchVoid(false)} disabled={batchVoiding}>
+                取消
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleBatchVoid}
+                disabled={batchVoiding || !batchVoidReason.trim()}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {batchVoiding ? '作废中...' : '确认作废'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 2026-06-28：导出弹窗（选择字段 + 范围） */}

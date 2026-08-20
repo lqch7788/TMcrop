@@ -192,6 +192,9 @@ export default function SeedSourceLabelManageModal({
     (l: any) => l.id === selectedLabelId
   ) as PlantLabel | undefined;
 
+  // 2026-08-20：已作废标签检测（禁止继续履历/补印/批量作废；后端中间件已转 camelCase）
+  const isVoided = (l: any) => l?.status === 'void' || l?.status === 'voided';
+
   const selectedResumes: PlantLabelResume[] = useMemo(() => {
     if (selectedLabelId === null) return [];
     return resumeMap[selectedLabelId] || [];
@@ -457,6 +460,11 @@ export default function SeedSourceLabelManageModal({
                       showAlert('新增履历是单标签操作，请只勾选 1 个标签或点击行选择单标签');
                       return;
                     }
+                    // 2026-08-20：已作废标签禁止继续操作
+                    if (isVoided(selectedLabel)) {
+                      showAlert(`标签「${(selectedLabel as any)?.labelNumber || ''}」已作废，禁止新增履历`);
+                      return;
+                    }
                     let targetId: number | null = null;
                     if (selectedIds.size === 1) {
                       targetId = Array.from(selectedIds)[0];
@@ -468,13 +476,17 @@ export default function SeedSourceLabelManageModal({
                       setSelectedLabelId(targetId);
                     }
                     if (!targetId) { showAlert('暂无标签可操作'); return; }
-                    setShowAddResume((v) => !v);
+                    // 2026-08-20：履历 ↔ 补印 行内面板互斥
+                    if (showAddResume) { setShowAddResume(false); return; }
+                    setShowAddResume(true);
+                    setShowReprint(false);
                   }}
                   disabled={filteredLabels.length === 0}
                   variant="default"
                   size="sm"
                   title={
                     filteredLabels.length === 0 ? '暂无可操作标签'
+                    : isVoided(selectedLabel) ? '已作废标签禁止操作'
                     : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
                     : selectedIds.size === 1 ? `为勾选的 1 个标签新增履历`
                     : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
@@ -489,6 +501,11 @@ export default function SeedSourceLabelManageModal({
                       showAlert('补印是单标签操作，请只勾选 1 个标签或点击行选择单标签');
                       return;
                     }
+                    // 2026-08-20：已作废标签禁止继续操作
+                    if (isVoided(selectedLabel)) {
+                      showAlert(`标签「${(selectedLabel as any)?.labelNumber || ''}」已作废，禁止补印`);
+                      return;
+                    }
                     let targetId: number | null = null;
                     if (selectedIds.size === 1) {
                       targetId = Array.from(selectedIds)[0];
@@ -500,7 +517,10 @@ export default function SeedSourceLabelManageModal({
                       setSelectedLabelId(targetId);
                     }
                     if (!targetId) { showAlert('请先在左侧选择标签'); return; }
-                    setShowReprint((v) => !v);
+                    // 2026-08-20：履历 ↔ 补印 行内面板互斥
+                    if (showReprint) { setShowReprint(false); return; }
+                    setShowReprint(true);
+                    setShowAddResume(false);
                   }}
                   disabled={filteredLabels.length === 0}
                   variant="outline"
@@ -508,6 +528,7 @@ export default function SeedSourceLabelManageModal({
                   className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
                   title={
                     filteredLabels.length === 0 ? '暂无可补印标签'
+                    : isVoided(selectedLabel) ? '已作废标签禁止操作'
                     : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
                     : selectedIds.size === 1 ? '为勾选的 1 个标签补印'
                     : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
@@ -520,6 +541,14 @@ export default function SeedSourceLabelManageModal({
                   onClick={() => {
                     if (selectedIds.size === 0) {
                       showAlert('批量作废需要勾选标签（左侧复选框）');
+                      return;
+                    }
+                    // 2026-08-20：勾选中含已作废标签则提示
+                    const voidedInSelection = Array.from(selectedIds)
+                      .map((id) => seedSourceLabels.find((l: any) => l.id === id))
+                      .filter((l) => isVoided(l));
+                    if (voidedInSelection.length > 0) {
+                      showAlert(`已勾选的 ${voidedInSelection.length} 个标签已是「已作废」状态，无须重复作废`);
                       return;
                     }
                     setBatchVoidReason('');
