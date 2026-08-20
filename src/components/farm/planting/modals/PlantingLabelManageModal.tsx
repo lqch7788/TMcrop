@@ -207,6 +207,17 @@ export default function PlantingLabelManageModal({
     setLabelPage(1);
   }, []);
 
+  // 2026-08-20：打开弹窗时自动选中第 1 个标签（无需用户先点行）— 单标签操作零摩擦
+  useEffect(() => {
+    if (!isOpen || plantingLabels.length === 0) return;
+    if (autoSelectLabelNumber) return; // 扫码跳转优先（下面的逻辑处理）
+    if (selectedLabelId !== null) return; // 已选中不覆盖
+    const first = plantingLabels[0] as any;
+    setSelectedLabelId(first.id);
+    loadResumesForLabels([first.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, plantingLabels.length]);
+
   // 切换标签时收起表单
   useEffect(() => {
     setShowAddResume(false);
@@ -451,33 +462,54 @@ export default function PlantingLabelManageModal({
             共 {filteredLabels.length} 个标签
           </span>
           <div className="flex items-center gap-2">
-            {/* 2026-07-03：只读模式下隐藏所有"写"操作按钮（新增履历、批量生成） */}
+            {/* 2026-08-20：方案 C — 按键始终可用，按"单标签/多标签"语义自适应 */}
             {!readOnly && (
               <Button
-                onClick={() => setShowAddResume((v) => !v)}
-                disabled={!selectedLabelId}
+                onClick={() => {
+                  let targetId: number | null = selectedLabelId;
+                  if (!targetId && filteredLabels[0]) {
+                    targetId = (filteredLabels[0] as any).id;
+                    setSelectedLabelId(targetId);
+                  }
+                  if (!targetId) { showAlert('暂无标签可操作'); return; }
+                  setShowAddResume((v) => !v);
+                }}
+                disabled={filteredLabels.length === 0}
                 variant="default"
                 size="sm"
-                title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签新增履历'}
+                title={
+                  filteredLabels.length === 0 ? '暂无可操作标签'
+                  : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                  : '请先在左侧选择标签'
+                }
               >
                 <Plus className="w-4 h-4" /> 新增履历
               </Button>
             )}
             {!readOnly && (
               <Button
-                onClick={() => setShowReprint((v) => !v)}
+                onClick={() => {
+                  let targetId: number | null = selectedLabelId;
+                  if (!targetId && filteredLabels[0]) {
+                    targetId = (filteredLabels[0] as any).id;
+                    setSelectedLabelId(targetId);
+                  }
+                  if (!targetId) { showAlert('请先在左侧选择标签'); return; }
+                  setShowReprint((v) => !v);
+                }}
+                disabled={filteredLabels.length === 0}
                 variant="outline"
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
-                disabled={!selectedLabelId}
-                title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签补印'}
+                title={
+                  filteredLabels.length === 0 ? '暂无可补印标签'
+                  : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+                  : '请先在左侧选择标签'
+                }
               >
                 <Plus className="w-4 h-4" /> 补印标签
               </Button>
             )}
-            <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-              <X className="w-4 h-4" /> 关闭
-            </Button>
           </div>
         </div>
       </div>
