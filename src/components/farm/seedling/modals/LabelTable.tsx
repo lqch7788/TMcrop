@@ -25,6 +25,8 @@ interface LabelTableProps {
   onClearSelection?: () => void;
   /** 标签单位（默认"株"，种源可能为"粒/颗/kg"等） */
   unit?: string;
+  /** 2026-08-20：搜索框右侧动作按钮（履历/补印/批量作废 等单/多标签操作） */
+  topbarActions?: React.ReactNode;
 }
 
 export function LabelTable({
@@ -42,12 +44,13 @@ export function LabelTable({
   onToggleSelectAll,
   onClearSelection,
   unit = '株',
+  topbarActions,
 }: LabelTableProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* 搜索框 */}
-      <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0">
-        <div className="relative">
+      {/* 搜索框 + 顶部动作按钮（2026-08-20：搜索框占满剩余空间，4 个按钮靠右不缩） */}
+      <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0 flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             value={searchText}
@@ -55,6 +58,9 @@ export function LabelTable({
             placeholder="搜索标签编号..."
             className="pl-9 pr-3 py-2 border border-gray-400 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {topbarActions}
         </div>
       </div>
 

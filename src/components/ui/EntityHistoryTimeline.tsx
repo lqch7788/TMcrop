@@ -64,14 +64,28 @@ const INBOUND_SOURCE_LABELS: Record<string, string> = {
 
 /**
  * 2026-07-23：action 本地化兜底
- * 部分数据源（audit_log 等）可能写入英文 action（create/update/delete 等）
- * 后端已经返回"移入/移出"等中文，但保险起见前端再兜底一次
+ * 部分数据源（audit_log 等）后端只翻译了 create/update/delete，其他英文 action 直出
+ * 2026-08-20：补全所有 audit_log 实际写入的 action 值（grep server/src 全量统计）
  */
 const ACTION_LABELS: Record<string, string> = {
+  // audit_logs 写入值（后端 entityHistory.service.ts 仅翻译 create/update/delete，其余原样）
   create: '创建',
   update: '修改',
   delete: '删除',
   soft_delete: '软删除',
+  print: '打印',
+  move: '移动',
+  end: '结束',
+  transplant: '定植',
+  propagation: '繁殖',
+  propagation_stage: '阶段推进',
+  complete_propagation: '完成繁殖',
+  decrease_available: '可种数扣减',
+  harvest_create: '采收登记',
+  daily_record_change: '日常记录变更',
+  breeding: '育种',
+  seed_saving: '留种',
+  // inventory_transaction / flow 等
   move_in: '区域调入',
   move_out: '区域调出',
   inbound: '入库',
@@ -83,9 +97,6 @@ const ACTION_LABELS: Record<string, string> = {
   adjustment: '库存调整',
   harvest: '采收',
   manual: '手动操作',
-  // 2026-08-16：audit_logs 可能写入英文 action（打印/阶段推进），补中文兜底
-  print: '打印',
-  propagation_stage: '阶段推进',
 };
 
 function fmtAction(action?: string): string {
@@ -380,7 +391,7 @@ export function EntityHistoryTimeline({ entity, entityId, entityCode, typeColumn
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-gray-400 font-mono">{fmtTime(item.occurredAt)}</span>
                   <span className={`px-1.5 py-0.5 text-xs rounded border ${catBadge(item.category)}`}>
-                    {item.action}
+                    {fmtAction(item.action)}
                   </span>
                   {item.quantityDelta != null && (
                     <span className={`text-xs font-medium ${item.quantityDelta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
