@@ -200,6 +200,8 @@ export default function SeedSourceLabelManageModal({
   // ---------- 事件处理 ----------
   const handleSelectLabel = useCallback(
     async (labelId: number) => {
+      // 2026-08-20：点击行 = 单标签模式，自动清空勾选状态（避免模式混淆）
+      setSelectedIds(new Set());
       setSelectedLabelId(labelId);
       await loadResumesForLabels([labelId]);
     },
@@ -272,6 +274,17 @@ export default function SeedSourceLabelManageModal({
     setSearchText(v);
     setLabelPage(1);
   }, []);
+
+  // 2026-08-20：打开弹窗时自动选中第 1 个标签（无需用户先点行）— 单标签操作零摩擦
+  useEffect(() => {
+    if (!isOpen || seedSourceLabels.length === 0) return;
+    if (autoSelectLabelNumber) return; // 扫码跳转优先（下面的逻辑处理）
+    if (selectedLabelId !== null) return; // 已选中不覆盖
+    const first = seedSourceLabels[0] as any;
+    setSelectedLabelId(first.id);
+    loadResumesForLabels([first.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, seedSourceLabels.length]);
 
   // 切换标签时收起表单
   useEffect(() => {
@@ -496,27 +509,69 @@ export default function SeedSourceLabelManageModal({
           共 {filteredLabels.length} 个标签
         </span>
         <div className="flex items-center gap-2">
+          {/* 2026-08-20：方案 C — 按键始终可用，按"单标签/多标签"语义自适应 */}
           <Button
-            onClick={() => setShowAddResume((v) => !v)}
-            disabled={!selectedLabelId || selectedLabel?.status === 'voided' || selectedIds.size > 0}
+            onClick={() => {
+              if (selectedIds.size > 1) {
+                showAlert('新增履历是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                return;
+              }
+              let targetId: number | null = null;
+              if (selectedIds.size === 1) {
+                targetId = Array.from(selectedIds)[0];
+                setSelectedLabelId(targetId);
+              } else if (selectedLabelId) {
+                targetId = selectedLabelId;
+              } else if (filteredLabels[0]) {
+                targetId = (filteredLabels[0] as any).id;
+                setSelectedLabelId(targetId);
+              }
+              if (!targetId) { showAlert('暂无标签可操作'); return; }
+              setShowAddResume((v) => !v);
+            }}
+            disabled={filteredLabels.length === 0}
             variant="default"
             size="sm"
             title={
-              selectedIds.size > 0 ? '多选模式下请先取消勾选，再点击行选择单个标签'
-              : !selectedLabelId ? '请先在左侧选择标签'
-              : selectedLabel?.status === 'voided' ? '已作废标签无法添加履历'
-              : '为当前标签新增履历'
+              filteredLabels.length === 0 ? '暂无可操作标签'
+              : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+              : selectedIds.size === 1 ? '为勾选的 1 个标签新增履历'
+              : selectedLabelId ? `为选中标签新增履历（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+              : '请先在左侧选择标签'
             }
           >
             <Plus className="w-4 h-4" /> 新增履历
           </Button>
           <Button
-            onClick={() => setShowReprint((v) => !v)}
+            onClick={() => {
+              if (selectedIds.size > 1) {
+                showAlert('补印是单标签操作，请只勾选 1 个标签或点击行选择单标签');
+                return;
+              }
+              let targetId: number | null = null;
+              if (selectedIds.size === 1) {
+                targetId = Array.from(selectedIds)[0];
+                setSelectedLabelId(targetId);
+              } else if (selectedLabelId) {
+                targetId = selectedLabelId;
+              } else if (filteredLabels[0]) {
+                targetId = (filteredLabels[0] as any).id;
+                setSelectedLabelId(targetId);
+              }
+              if (!targetId) { showAlert('请先在左侧选择标签'); return; }
+              setShowReprint((v) => !v);
+            }}
+            disabled={filteredLabels.length === 0}
             variant="outline"
             size="sm"
             className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
-            disabled={!selectedLabelId || selectedIds.size > 0}
-            title={!selectedLabelId ? '请先在左侧选择标签' : '为当前标签补印（iAGS 标记02）'}
+            title={
+              filteredLabels.length === 0 ? '暂无可补印标签'
+              : selectedIds.size > 1 ? '单标签操作 — 请只勾选 1 个标签或点击行选择单标签'
+              : selectedIds.size === 1 ? '为勾选的 1 个标签补印'
+              : selectedLabelId ? `为选中标签补印（标签号 ${(selectedLabel as any)?.labelNumber || ''}）`
+              : '请先在左侧选择标签'
+            }
           >
             <Plus className="w-4 h-4" /> 补印标签
           </Button>
@@ -525,25 +580,33 @@ export default function SeedSourceLabelManageModal({
             variant="outline"
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+            title={
+              selectedIds.size > 0 ? `导出已勾选的 ${selectedIds.size} 个标签`
+              : '导出全部可见标签（弹窗可选范围和字段）'
+            }
           >
             <Download className="w-4 h-4 mr-1" /> 导出
           </Button>
           <Button
             onClick={() => {
-              if (selectedIds.size === 0) { showAlert('请先勾选要作废的标签'); return; }
+              if (selectedIds.size === 0) {
+                showAlert('批量作废需要勾选标签（左侧复选框）');
+                return;
+              }
               setBatchVoidReason('');
               setShowBatchVoid(true);
             }}
-            disabled={selectedIds.size === 0}
+            disabled={filteredLabels.length === 0}
             variant="outline"
             size="sm"
             className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-            title={selectedIds.size === 0 ? '请先勾选标签' : `批量作废已选 ${selectedIds.size} 个标签`}
+            title={
+              filteredLabels.length === 0 ? '暂无可作废标签'
+              : selectedIds.size === 0 ? '请先勾选要作废的标签（左侧复选框）'
+              : `批量作废已选 ${selectedIds.size} 个标签`
+            }
           >
             <Trash2 className="w-4 h-4 mr-1" /> 批量作废{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-          </Button>
-          <Button onClick={onClose} variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       </div>
