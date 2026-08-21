@@ -70,7 +70,7 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
             <input type="radio" name="preservationMode" value="seed" checked={mode === 'seed'}
               onChange={() => switchMode('seed')} className="w-4 h-4 text-amber-600" />
             <span className="text-sm font-bold text-gray-900">种子保存</span>
-            <span className="text-xs text-gray-500">（种子/果实 — 干燥贮藏，适用于粮食/蔬菜/花卉种子）</span>
+            <span className="text-xs text-gray-500">（种子 — 干燥贮藏，适用于粮食/蔬菜/花卉种子）</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="radio" name="preservationMode" value="vegetative" checked={mode === 'vegetative'}
@@ -113,9 +113,10 @@ export function SeedSavingFields({ form, onChange, deepInputClass }: SeedSavingF
           </Select>
         </div>
 
-        {/* Row 2：采收部位 | 数量 | 单位 | 成熟度/规格 */}
+        {/* Row 2：采收部位（营养体模式）/ 采收形态（种子模式）| 数量 | 单位 | 成熟度/规格 */}
         <div>
-          <Label className="text-gray-700">采收部位</Label>
+          {/* 2026-08-21：种子保存模式字段名改为"采收形态"，与下拉只含"种子"语义对齐 */}
+          <Label className="text-gray-700">{mode === 'seed' ? '采收形态' : '采收部位'}</Label>
           <Select value={form.harvestPart ?? 'seed'}
             onValueChange={(v) => onChange({ ...form, harvestPart: v as SeedSavingPart })}>
             <SelectTrigger className={deepInputClass}><SelectValue /></SelectTrigger>

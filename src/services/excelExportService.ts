@@ -39,10 +39,15 @@ export function exportPlantingDailyRecordsToExcel(
       .join('; ');
     return {
       日期: r.recordDate,
-      温度: r.temperature != null ? `${r.temperature}℃` : '',
-      湿度: r.humidity != null ? `${r.humidity}%` : '',
-      pH值: r.phValue ?? '',
-      EC值: r.ecValue != null ? `${r.ecValue} mS/cm` : '',
+      // 2026-08-21：环境参数 8 字段（新字段优先，旧字段 fallback 兼容历史数据）
+      空气温度: r.airTemperature ?? r.temperature ?? '',
+      空气湿度: r.airHumidity ?? r.humidity ?? '',
+      光照度: r.lightIntensity != null ? `${r.lightIntensity} lux` : '',
+      CO2含量: r.co2 != null ? `${r.co2} ppm` : '',
+      土壤温度: r.soilTemperature != null ? `${r.soilTemperature}℃` : '',
+      土壤湿度: r.soilHumidity != null ? `${r.soilHumidity}%` : '',
+      土壤pH值: r.soilPhValue ?? r.phValue ?? '',
+      土壤EC值: r.soilEcValue ?? r.ecValue != null ? `${r.soilEcValue} mS/cm` : '',
       浇水: r.watering ? '是' : '否',
       浇水方式: r.watering
         ? WATERING_METHOD_MAP[r.wateringMethod as string] || r.wateringMethod || '-'
@@ -67,10 +72,14 @@ export function exportPlantingDailyRecordsToExcel(
   // 设置列宽
   ws['!cols'] = [
     { wch: 12 }, // 日期
-    { wch: 8 }, // 温度
-    { wch: 8 }, // 湿度
-    { wch: 6 }, // pH
-    { wch: 10 }, // EC
+    { wch: 9 }, // 空气温度
+    { wch: 9 }, // 空气湿度
+    { wch: 10 }, // 光照度
+    { wch: 10 }, // CO2
+    { wch: 9 }, // 土壤温度
+    { wch: 9 }, // 土壤湿度
+    { wch: 9 }, // 土壤pH
+    { wch: 10 }, // 土壤EC
     { wch: 6 }, // 浇水
     { wch: 12 }, // 浇水方式
     { wch: 14 }, // 浇水量

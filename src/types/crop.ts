@@ -381,8 +381,24 @@ export interface DailyRecord {
   id: string;
   seedlingId: string;         // 育苗ID
   recordDate: string;         // 记录日期
-  temperature?: number;       // 温度
-  humidity?: number;          // 湿度
+  // 2026-08-21：环境参数 8 字段（替代旧 4 字段 temperature/humidity/phValue/ecValue）
+  airTemperature?: number;    // 空气温度 ℃
+  airHumidity?: number;       // 空气湿度 %
+  lightIntensity?: number;    // 光照度 lux
+  co2?: number;               // CO2 含量 ppm
+  soilTemperature?: number;   // 土壤温度 ℃
+  soilHumidity?: number;      // 土壤湿度 %
+  soilPhValue?: number;       // 土壤 pH 值
+  soilEcValue?: number;       // 土壤 EC 值 mS/cm
+  // 旧字段保留兼容（已废弃，不再写入；只用于读取历史数据）
+  /** @deprecated 用 airTemperature */
+  temperature?: number;
+  /** @deprecated 用 airHumidity */
+  humidity?: number;
+  /** @deprecated 用 soilPhValue */
+  phValue?: number;
+  /** @deprecated 用 soilEcValue */
+  ecValue?: number;
   watering: boolean;          // 是否浇水
   abnormality?: string;       // 异常情况
   // 数量变化字段（2026-06-28 移除 plantedCountChange）
@@ -391,12 +407,9 @@ export interface DailyRecord {
   runnerIncreaseCount?: number;  // 2026-06-05: 扩繁小苗数量（草莓匍匐茎育苗等无性繁殖场景，记录当天新增的小苗数）
   replantChange?: number;     // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
   remarks?: string;           // 备注
-  // 水质参数（补充）
-  phValue?: number;          // pH值
   // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储在 daily_records.data JSON）
   fertilizerRecords?: FertilizerRecordItem[];
   pesticideRecords?: PesticideRecordItem[];
-  ecValue?: number;           // EC值 (电导率)
   // 操作信息（补充）
   operator?: string;          // 操作人员
 
@@ -747,11 +760,24 @@ export interface PlantingDailyRecord {
   id: string;
   plantingId: string;                  // 关联种植ID
   recordDate: string;                  // 记录日期
-  // 环境参数
-  temperature?: number;                // 温度 ℃
-  humidity?: number;                   // 湿度 %
-  phValue?: number;                    // pH 值
-  ecValue?: number;                    // EC 值 mS/cm
+  // 2026-08-21：环境参数 8 字段（替代旧 4 字段 temperature/humidity/phValue/ecValue）
+  airTemperature?: number;             // 空气温度 ℃
+  airHumidity?: number;                // 空气湿度 %
+  lightIntensity?: number;             // 光照度 lux
+  co2?: number;                        // CO2 含量 ppm
+  soilTemperature?: number;            // 土壤温度 ℃
+  soilHumidity?: number;               // 土壤湿度 %
+  soilPhValue?: number;                // 土壤 pH 值
+  soilEcValue?: number;                // 土壤 EC 值 mS/cm
+  // 旧字段保留兼容（已废弃）
+  /** @deprecated 用 airTemperature */
+  temperature?: number;
+  /** @deprecated 用 airHumidity */
+  humidity?: number;
+  /** @deprecated 用 soilPhValue */
+  phValue?: number;
+  /** @deprecated 用 soilEcValue */
+  ecValue?: number;
   // 浇水
   watering?: boolean;
   wateringMethod?: string;

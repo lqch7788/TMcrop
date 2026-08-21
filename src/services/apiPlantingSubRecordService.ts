@@ -23,8 +23,9 @@ export type PropagationMethod =
 // 2026-07-03 v3：繁殖模式
 export type ReproductionMode = 'sexual' | 'asexual';
 // 2026-07-03 v4：扩枚举（加无性繁殖器官）
+// 2026-08-21：新增 'tuberous_root'（块根 — 甘薯/木薯/葛根等；与块茎形态学独立）
 export type SeedSavingPart = 'fruit' | 'seed' | 'whole_plant' | 'root' | 'stem' | 'leaf' | 'other'
-  | 'tuber' | 'bulb' | 'corm' | 'rhizome' | 'cutting' | 'stolon';
+  | 'tuber' | 'tuberous_root' | 'bulb' | 'corm' | 'rhizome' | 'cutting' | 'stolon';
 // 2026-07-03 v4：保存模式
 export type SeedPreservationMode = 'seed' | 'vegetative';
 

@@ -9,17 +9,24 @@
 import type { SeedSavingPart } from '@/services/apiPlantingSubRecordService'
 
 // ============ 模式分类 ============
-export const VEGETATIVE_HARVEST_PARTS: SeedSavingPart[] = ['tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf', 'whole_plant']
-export const SEED_HARVEST_PARTS: SeedSavingPart[] = ['seed', 'fruit']
+// 2026-08-21：新增 'tuberous_root'（块根 — 甘薯/木薯/葛根等；与块茎形态学独立）
+export const VEGETATIVE_HARVEST_PARTS: SeedSavingPart[] = [
+  'tuber', 'tuberous_root', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon',
+  'root', 'stem', 'leaf', 'whole_plant',
+]
+// 2026-08-21：种子保存模式只保留"种子"（去掉"果实"，与 SeedSavingFields 采收形态字段语义一致）
+export const SEED_HARVEST_PARTS: SeedSavingPart[] = ['seed']
 
 // ============ 采收部位文案 ============
+// 2026-08-21：修正 — 块茎去掉"甘薯"（实际是块根）；新增"块根（甘薯/木薯/葛根/牛蒡）"
 export const HARVEST_PART_LABELS: Record<SeedSavingPart, string> = {
   // 有性
   fruit: '果实',
   seed: '种子',
   whole_plant: '全株',
   // 无性器官（v4 新增）
-  tuber: '块茎（马铃薯/甘薯/山药）',
+  tuber: '块茎（马铃薯/山药/菊芋/魔芋）',
+  tuberous_root: '块根（甘薯/木薯/葛根/牛蒡）',
   bulb: '鳞茎（大蒜/洋葱/百合）',
   corm: '球茎（芋头/荸荠/唐菖蒲）',
   rhizome: '根茎（生姜/莲藕/鸢尾）',

@@ -160,14 +160,20 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
 
   const [formData, setFormData] = useState({
     recordDate: todayLocal(),
-    temperature: undefined as number | undefined,
-    humidity: undefined as number | undefined,
+    // 2026-08-21：环境参数 8 字段
+    airTemperature: undefined as number | undefined,
+    airHumidity: undefined as number | undefined,
+    lightIntensity: undefined as number | undefined,
+    co2: undefined as number | undefined,
+    soilTemperature: undefined as number | undefined,
+    soilHumidity: undefined as number | undefined,
+    soilPhValue: undefined as number | undefined,
+    soilEcValue: undefined as number | undefined,
     // 2026-06-28：浇水方式 + 浇水量（PR1）
-    // watering=false 时隐藏方式/量；watering=true 时显示
     watering: false,
-    wateringMethod: undefined as string | undefined,  // 浇水方式：spray/drip/flood/mist/dip/pot
-    wateringAmount: undefined as number | undefined,  // 浇水量（数值）
-    wateringUnit: 'L' as string | undefined,          // 单位：L/ml/kg/pot
+    wateringMethod: undefined as string | undefined,
+    wateringAmount: undefined as number | undefined,
+    wateringUnit: 'L' as string | undefined,
     // 2026-06-28：施肥/用药记录子表（1:N 嵌套，存储到 daily_records.data JSON）
     fertilizerRecords: [] as FeedRecordItem[],
     pesticideRecords: [] as FeedRecordItem[],
@@ -175,10 +181,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
     survivalCountChange: undefined as number | undefined,
     lossCountChange: undefined as number | undefined,
     runnerIncreaseCount: undefined as number | undefined,
-    replantChange: undefined as number | undefined,  // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
+    replantChange: undefined as number | undefined,
     remarks: '',
-    phValue: undefined as number | undefined,
-    ecValue: undefined as number | undefined,
     operator: '',
     // 兼容字段：母株/小苗数量统计别名（2026-06-30 tsc 兼容）
     motherLossCount: undefined as number | undefined,
@@ -250,8 +254,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       // 2026-06-28：浇水推断 — 填了方式或量就算浇了（不再依赖复选框 watering 字段）
       const hasWatering = !!(formData.wateringMethod || formData.wateringAmount != null);
       const bizData: any = {
-        temperature: formData.temperature,
-        humidity: formData.humidity,
+        // 2026-08-21：环境参数 8 字段
+        airTemperature: formData.airTemperature,
+        airHumidity: formData.airHumidity,
+        lightIntensity: formData.lightIntensity,
+        co2: formData.co2,
+        soilTemperature: formData.soilTemperature,
+        soilHumidity: formData.soilHumidity,
+        soilPhValue: formData.soilPhValue,
+        soilEcValue: formData.soilEcValue,
         watering: hasWatering,
         // 2026-06-28：浇水方式 + 浇水量（PR1）— 仅当 hasWatering 时写入
         wateringMethod: hasWatering ? formData.wateringMethod : undefined,
@@ -296,8 +307,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         survivalCountChange: sc,
         lossCountChange: lc,
         runnerIncreaseCount: ri,
-        phValue: formData.phValue,
-        ecValue: formData.ecValue,
         operator: formData.operator || undefined,
       };
       const result = await addDailyRecord(String(record.id), {
@@ -309,11 +318,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         await showAlert('添加记录失败，请重试');
         return;
       }
-      // 重置表单（2026-06-28 修复：必须重置施肥/用药子表数组，否则下次新建会残留上次数据）
+      // 重置表单（2026-08-21：环境参数 8 字段）
       setFormData({
         recordDate: todayLocal(),
-        temperature: undefined,
-        humidity: undefined,
+        airTemperature: undefined,
+        airHumidity: undefined,
+        lightIntensity: undefined,
+        co2: undefined,
+        soilTemperature: undefined,
+        soilHumidity: undefined,
+        soilPhValue: undefined,
+        soilEcValue: undefined,
         watering: false,
         wateringMethod: undefined,
         wateringAmount: undefined,
@@ -326,8 +341,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         runnerIncreaseCount: undefined,
         replantChange: undefined,
         remarks: '',
-        phValue: undefined,
-        ecValue: undefined,
         operator: '',
         // 兼容字段（同步添加 — 2026-06-30 tsc 兼容）
         motherLossCount: undefined,
@@ -459,10 +472,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
         .join('; ');
       return {
         '日期': r.recordDate,
-        '温度(℃)': r.temperature ?? '',
-        '湿度(%)': r.humidity ?? '',
-        'pH值': r.phValue ?? '',
-        'EC值(mS/cm)': r.ecValue ?? '',
+        // 2026-08-21：环境参数 8 字段（新字段优先，旧字段 fallback 兼容历史数据）
+        '空气温度(℃)': r.airTemperature ?? r.temperature ?? '',
+        '空气湿度(%)': r.airHumidity ?? r.humidity ?? '',
+        '光照度(lux)': r.lightIntensity ?? '',
+        'CO₂含量(ppm)': r.co2 ?? '',
+        '土壤温度(℃)': r.soilTemperature ?? '',
+        '土壤湿度(%)': r.soilHumidity ?? '',
+        '土壤pH值': r.soilPhValue ?? r.phValue ?? '',
+        '土壤EC值(mS/cm)': r.soilEcValue ?? r.ecValue ?? '',
         '浇水': r.watering ? '是' : '否',
         // 2026-06-28：PR1 浇水方式 + 量（参考字典）
         '浇水方式': r.watering ? (WATERING_METHOD_MAP[r.wateringMethod as string] || r.wateringMethod || '-') : '-',
@@ -545,6 +563,12 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
       );
     }
     if (value === undefined || value === null || value === '') return '-';
+    if (field === 'airTemperature' || field === 'soilTemperature') return `${value}℃`;
+    if (field === 'airHumidity' || field === 'soilHumidity') return `${value}%`;
+    if (field === 'lightIntensity') return `${value} lux`;
+    if (field === 'co2') return `${value} ppm`;
+    if (field === 'soilEcValue') return `${value} mS/cm`;
+    // 兼容旧字段
     if (field === 'temperature') return `${value}℃`;
     if (field === 'humidity') return `${value}%`;
     return value;
@@ -608,69 +632,85 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                 className={deepInputClass}
               />
             </div>
-            {/* 2026-06-28：环境参数折叠面板（参照施肥/用药模式）— 默认展开 */}
+            {/* 2026-08-21：环境参数折叠面板 — 8 字段（空气×4 + 土壤×4）*/}
             <details
               className="md:col-span-3 border border-blue-100 rounded-lg bg-blue-50/20 overflow-hidden"
               open
             >
               <summary className="cursor-pointer select-none px-3 py-2 bg-blue-50/50 hover:bg-blue-50 text-sm font-semibold text-blue-800 flex items-center justify-between">
-                <span>▼ 环境参数（温度/湿度/pH/EC — 4 项）</span>
+                <span>▼ 环境参数 — 空气×4 + 土壤×4（共 8 项）</span>
                 <span className="text-xs text-blue-600 font-normal">
-                  {formData.temperature != null ? `${formData.temperature}℃` : '-'}
-                  {' / '}
-                  {formData.humidity != null ? `${formData.humidity}%` : '-'}
-                  {' / pH '}{formData.phValue ?? '-'}
-                  {' / EC '}{formData.ecValue ?? '-'}
+                  空气 {formData.airTemperature != null ? `${formData.airTemperature}℃` : '-'}/
+                  {formData.airHumidity != null ? `${formData.airHumidity}%` : '-'}/
+                  {formData.lightIntensity != null ? `${formData.lightIntensity}lux` : '-'}/
+                  {formData.co2 != null ? `${formData.co2}ppm` : '-'}
+                  {' | '}
+                  土壤 {formData.soilTemperature != null ? `${formData.soilTemperature}℃` : '-'}/
+                  {formData.soilHumidity != null ? `${formData.soilHumidity}%` : '-'}/
+                  pH {formData.soilPhValue ?? '-'}/
+                  EC {formData.soilEcValue ?? '-'}
                 </span>
               </summary>
-              <div className="p-3 grid grid-cols-4 gap-3">
+              <div className="p-3 space-y-3">
+                {/* 空气组 4 字段 */}
                 <div>
-                  <Label className="text-gray-700">温度（℃）</Label>
-                  <Input
-                    type="number"
-                    value={formData.temperature || ''}
-                    onChange={(e) => setFormData({ ...formData, temperature: Number(e.target.value) })}
-                    placeholder="如：25"
-                    className={deepInputClass}
-                  />
+                  <div className="text-xs font-medium text-gray-500 mb-1.5">空气参数</div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-gray-700">空气温度（℃）</Label>
+                      <Input type="number" step="0.1" value={formData.airTemperature ?? ''}
+                        onChange={(e) => setFormData({ ...formData, airTemperature: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：25" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">空气湿度（%）</Label>
+                      <Input type="number" step="0.1" value={formData.airHumidity ?? ''}
+                        onChange={(e) => setFormData({ ...formData, airHumidity: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：65" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">光照度（lux）</Label>
+                      <Input type="number" value={formData.lightIntensity ?? ''}
+                        onChange={(e) => setFormData({ ...formData, lightIntensity: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：12000" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">CO₂ 含量（ppm）</Label>
+                      <Input type="number" value={formData.co2 ?? ''}
+                        onChange={(e) => setFormData({ ...formData, co2: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：400" className={deepInputClass} />
+                    </div>
+                  </div>
                 </div>
+                {/* 土壤组 4 字段 */}
                 <div>
-                  <Label className="text-gray-700">湿度（%）</Label>
-                  <Input
-                    type="number"
-                    value={formData.humidity || ''}
-                    onChange={(e) => setFormData({ ...formData, humidity: Number(e.target.value) })}
-                    placeholder="如：65"
-                    className={deepInputClass}
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-700">pH值</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.phValue ?? ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      phValue: e.target.value ? Number(e.target.value) : undefined
-                    })}
-                    placeholder="如：6.5"
-                    className={deepInputClass}
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-700">EC值（mS/cm）</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.ecValue ?? ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ecValue: e.target.value ? Number(e.target.value) : undefined
-                    })}
-                    placeholder="如：2.0"
-                    className={deepInputClass}
-                  />
+                  <div className="text-xs font-medium text-gray-500 mb-1.5">土壤参数</div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-gray-700">土壤温度（℃）</Label>
+                      <Input type="number" step="0.1" value={formData.soilTemperature ?? ''}
+                        onChange={(e) => setFormData({ ...formData, soilTemperature: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：22" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">土壤湿度（%）</Label>
+                      <Input type="number" step="0.1" value={formData.soilHumidity ?? ''}
+                        onChange={(e) => setFormData({ ...formData, soilHumidity: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：55" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">土壤 pH 值</Label>
+                      <Input type="number" step="0.1" value={formData.soilPhValue ?? ''}
+                        onChange={(e) => setFormData({ ...formData, soilPhValue: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：6.5" className={deepInputClass} />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700">土壤 EC（mS/cm）</Label>
+                      <Input type="number" step="0.1" value={formData.soilEcValue ?? ''}
+                        onChange={(e) => setFormData({ ...formData, soilEcValue: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="如：2.0" className={deepInputClass} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </details>
@@ -976,10 +1016,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                 <thead className="bg-blue-500 text-white sticky top-0">
                   <tr>
                     <th className="px-2 py-2 text-left font-semibold w-24">日期</th>
-                    <th className="px-2 py-2 text-left font-semibold">温度</th>
-                    <th className="px-2 py-2 text-left font-semibold">湿度</th>
-                    <th className="px-2 py-2 text-left font-semibold">pH</th>
-                    <th className="px-2 py-2 text-left font-semibold">EC</th>
+                    {/* 2026-08-21：环境参数 8 列（空气×4 + 土壤×4）*/}
+                    <th className="px-2 py-2 text-left font-semibold">空气温</th>
+                    <th className="px-2 py-2 text-left font-semibold">空气湿</th>
+                    <th className="px-2 py-2 text-left font-semibold">光照</th>
+                    <th className="px-2 py-2 text-left font-semibold">CO₂</th>
+                    <th className="px-2 py-2 text-left font-semibold">土壤温</th>
+                    <th className="px-2 py-2 text-left font-semibold">土壤湿</th>
+                    <th className="px-2 py-2 text-left font-semibold">土壤pH</th>
+                    <th className="px-2 py-2 text-left font-semibold">土壤EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
                     {/* 2026-06-28：PR1 浇水方式 + 量（新增两列） */}
                     <th className="px-2 py-2 text-left font-semibold w-24">浇水方式</th>
@@ -1012,18 +1057,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record, readOnly 
                           />
                         ) : r.recordDate}
                       </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'temperature', r.temperature)}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'humidity', r.humidity)}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'phValue', r.phValue)}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'ecValue', r.ecValue)}
-                      </td>
+                      {/* 2026-08-21：环境参数 8 列单元格（新字段优先，旧字段 fallback 兼容历史）*/}
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'airTemperature', r.airTemperature ?? r.temperature)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'airHumidity', r.airHumidity ?? r.humidity)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'lightIntensity', r.lightIntensity)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'co2', r.co2)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'soilTemperature', r.soilTemperature)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'soilHumidity', r.soilHumidity)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'soilPhValue', r.soilPhValue ?? r.phValue)}</td>
+                      <td className="px-2 py-1.5">{renderEditableCell(r, 'soilEcValue', r.soilEcValue ?? r.ecValue)}</td>
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'watering', r.watering)}
                       </td>
