@@ -278,7 +278,7 @@ function seedSeedSources() {
   const seedSources = [
     {
       id: 'SS001',
-      source_code: 'ZZ20260115-001',
+      source_code: 'ZY20260115-001',
       source_name: '红果番茄种子',
       source_type: 'seed',
       source_origin: 'external_purchase',
@@ -305,7 +305,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS002',
-      source_code: 'ZZ20260201-001',
+      source_code: 'ZY20260201-001',
       source_name: '大叶生菜种子',
       source_type: 'seed',
       source_origin: 'external_purchase',
@@ -332,7 +332,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS003',
-      source_code: 'ZZ20260215-001',
+      source_code: 'ZY20260215-001',
       source_name: '水果黄瓜种子',
       source_type: 'seed',
       source_origin: 'external_purchase',
@@ -359,7 +359,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS004',
-      source_code: 'ZZ20260301-001',
+      source_code: 'ZY20260301-001',
       source_name: '紫长茄子种子',
       source_type: 'seed',
       source_origin: 'external_purchase',
@@ -386,7 +386,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS005',
-      source_code: 'ZZ20260310-001',
+      source_code: 'ZY20260310-001',
       source_name: '大叶空心菜扦插苗',
       source_type: 'cutting',
       source_origin: 'self_produced',
@@ -413,7 +413,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS006',
-      source_code: 'ZZ20260315-001',
+      source_code: 'ZY20260315-001',
       source_name: '黑美人西瓜嫁接苗',
       source_type: 'grafting',
       source_origin: 'commissioned',
@@ -440,7 +440,7 @@ function seedSeedSources() {
     },
     {
       id: 'SS007',
-      source_code: 'ZZ20260320-001',
+      source_code: 'ZY20260320-001',
       source_name: '奶油生菜组培苗',
       source_type: 'tissue_culture',
       source_origin: 'gift',
@@ -504,7 +504,7 @@ function seedPropagationSeedSources() {
   const propagationSources = [
     // ===== 3条育种计划产出 (breeding) =====
     {
-      id: 'SS008', source_code: 'ZZ20260401-001', source_name: 'F1杂交辣椒种子',
+      id: 'SS008', source_code: 'ZY20260401-001', source_name: 'F1杂交辣椒种子',
       source_type: 'seed', source_origin: 'internal_seed',
       crop_category: '蔬菜类', type_name: '茄果类', variety_name: '辣椒',
       crop_name: '杂交辣椒F1', crop_variety: '辣椒', crop_code: 'PD030200100',
@@ -514,13 +514,13 @@ function seedPropagationSeedSources() {
       status: 'depleted', production_plan_code: 'JZB2026-001',
       create_by: '李明辉', create_time: '2026-04-01T08:00:00.000Z', update_time: '2026-04-01T08:00:00.000Z',
       propagation_type: 'breeding', propagation_status: 'planned', propagation_method: 'crossbreeding',
-      parent_male_id: 'SS001', parent_male_code: 'ZZ20260115-001',
-      parent_female_id: 'SS004', parent_female_code: 'ZZ20260215-003',
+      parent_male_id: 'SS001', parent_male_code: 'ZY20260115-001',
+      parent_female_id: 'SS004', parent_female_code: 'ZY20260215-003',
       propagation_start_date: '2026-04-01', expected_harvest_date: '2026-06-15',
       breeding_location: '育种温室A区', target_traits: '抗病性强、果实均匀、辣度适中', generation: 'F1',
     },
     {
-      id: 'SS009', source_code: 'ZZ20260410-002', source_name: '选择育种番茄种子',
+      id: 'SS009', source_code: 'ZY20260410-002', source_name: '选择育种番茄种子',
       source_type: 'seed', source_origin: 'internal_seed',
       crop_category: '蔬菜类', type_name: '茄果类', variety_name: '番茄',
       crop_name: '大红番茄908', crop_variety: '番茄', crop_code: 'PD030100400',
@@ -530,12 +530,12 @@ function seedPropagationSeedSources() {
       status: 'depleted', production_plan_code: 'JZB2026-002',
       create_by: '陈建国', create_time: '2026-04-10T09:00:00.000Z', update_time: '2026-04-10T09:00:00.000Z',
       propagation_type: 'breeding', propagation_status: 'in_progress', propagation_method: 'selection',
-      parent_female_id: 'SS002', parent_female_code: 'ZZ20260120-002',
+      parent_female_id: 'SS002', parent_female_code: 'ZY20260120-002',
       propagation_start_date: '2026-04-10', expected_harvest_date: '2026-07-01',
       breeding_location: '育种温室B区', target_traits: '大果型、耐储运、高产', generation: 'F3',
     },
     {
-      id: 'SS010', source_code: 'ZZ20260420-003', source_name: '回交育种黄瓜种子',
+      id: 'SS010', source_code: 'ZY20260420-003', source_name: '回交育种黄瓜种子',
       source_type: 'seed', source_origin: 'internal_seed',
       crop_category: '蔬菜类', type_name: '瓜类', variety_name: '黄瓜',
       crop_name: '抗病黄瓜BC2', crop_variety: '黄瓜', crop_code: 'PD030300200',
@@ -545,14 +545,14 @@ function seedPropagationSeedSources() {
       status: 'depleted', production_plan_code: 'JZB2026-003',
       create_by: '李明辉', create_time: '2026-04-20T10:00:00.000Z', update_time: '2026-04-20T10:00:00.000Z',
       propagation_type: 'breeding', propagation_status: 'in_progress', propagation_method: 'backcross',
-      parent_male_id: 'SS005', parent_male_code: 'ZZ20260301-001',
-      parent_female_id: 'SS003', parent_female_code: 'ZZ20260201-002',
+      parent_male_id: 'SS005', parent_male_code: 'ZY20260301-001',
+      parent_female_id: 'SS003', parent_female_code: 'ZY20260201-002',
       propagation_start_date: '2026-04-20', expected_harvest_date: '2026-07-20',
       breeding_location: '育种温室A区', target_traits: '白粉病抗性、早熟', generation: 'BC2',
     },
     // ===== 1条种植留种 (seed_saving) =====
     {
-      id: 'SS011', source_code: 'ZZ20260501-001', source_name: '大叶菠菜留种',
+      id: 'SS011', source_code: 'ZY20260501-001', source_name: '大叶菠菜留种',
       source_type: 'seed', source_origin: 'internal_seed',
       crop_category: '蔬菜类', type_name: '叶菜类', variety_name: '菠菜',
       crop_name: '大叶菠菜', crop_variety: '菠菜', crop_code: 'PD010100300',
@@ -568,7 +568,7 @@ function seedPropagationSeedSources() {
     },
     // ===== 2条无性繁殖 (asexual) =====
     {
-      id: 'SS012', source_code: 'ZZ20260505-001', source_name: '玫瑰香葡萄扦插苗',
+      id: 'SS012', source_code: 'ZY20260505-001', source_name: '玫瑰香葡萄扦插苗',
       source_type: 'cutting', source_origin: 'cutting',
       crop_category: '果树类', type_name: '浆果类', variety_name: '葡萄',
       crop_name: '玫瑰香葡萄', crop_variety: '葡萄', crop_code: 'GS010100200',
@@ -578,12 +578,12 @@ function seedPropagationSeedSources() {
       status: 'depleted', production_plan_code: '',
       create_by: '赵志强', create_time: '2026-05-05T08:00:00.000Z', update_time: '2026-05-05T08:00:00.000Z',
       propagation_type: 'asexual', propagation_status: 'planned', propagation_method: 'cutting',
-      mother_plant_id: 'SS006', mother_plant_code: 'ZZ20260315-001',
+      mother_plant_id: 'SS006', mother_plant_code: 'ZY20260315-001',
       propagation_start_date: '2026-05-05', expected_harvest_date: '2026-06-15',
       breeding_location: '育苗温室C区', target_traits: '根系发达、成活率高', generation: '',
     },
     {
-      id: 'SS013', source_code: 'ZZ20260510-002', source_name: '红富士苹果嫁接苗',
+      id: 'SS013', source_code: 'ZY20260510-002', source_name: '红富士苹果嫁接苗',
       source_type: 'grafting', source_origin: 'grafting',
       crop_category: '果树类', type_name: '仁果类', variety_name: '苹果',
       crop_name: '红富士苹果', crop_variety: '苹果', crop_code: 'GS020100100',
@@ -593,7 +593,7 @@ function seedPropagationSeedSources() {
       status: 'depleted', production_plan_code: '',
       create_by: '赵志强', create_time: '2026-05-10T09:00:00.000Z', update_time: '2026-05-10T09:00:00.000Z',
       propagation_type: 'asexual', propagation_status: 'in_progress', propagation_method: 'grafting',
-      mother_plant_id: 'SS007', mother_plant_code: 'ZZ20260320-001',
+      mother_plant_id: 'SS007', mother_plant_code: 'ZY20260320-001',
       propagation_start_date: '2026-05-10', expected_harvest_date: '2026-06-30',
       breeding_location: '果园嫁接区', target_traits: '矮化砧木、早果性强', generation: '',
     },

@@ -8,10 +8,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Package, Leaf, Sprout, History, GitBranch, Info,
   TrendingUp, TrendingDown, Snowflake, Lock, Unlock, Edit3,
-  RefreshCw, AlertCircle, HelpCircle, ArrowUpRight,
+  RefreshCw, AlertCircle, HelpCircle, ArrowUpRight, FileSpreadsheet,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { Tooltip } from '@/components/ui';
+import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
 import { showConfirm } from '@/lib/dialogService';
 // 2026-07-10 P1-4：抽到 LoadingSpinner 共享组件
@@ -724,9 +725,72 @@ function HistoryTab({ transactions, loading, error, onRetry }: {
     groups[key].push(tx);
   });
 
+  // 2026-08-21：导出 Excel — 包含所有 9 列字段（类型/数量/变动前/变动后/业务类型/业务单号/操作人/时间/备注）
+  const handleExportExcel = () => {
+    if (transactions.length === 0) return;
+    const rows = transactions.map((tx) => {
+      const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType };
+      const bizLabel = BUSINESS_TYPE_META[tx.businessType]?.label || (tx.businessType ? '其他' : '');
+      // 格式化时间（与表格一致）
+      let timeStr = '-';
+      const tryFmt = (raw?: string) => {
+        if (!raw) return null;
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+        const m = String(raw).match(/^(\d{4})(\d{2})(\d{2})$/);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+        return null;
+      };
+      timeStr = tryFmt(tx.operateDate) || tryFmt(tx.createTime) || '-';
+      return {
+        类型: meta.label,
+        数量: tx.quantity > 0 ? `+${tx.quantity}` : tx.quantity,
+        变动前: tx.balanceBefore ?? '',
+        变动后: tx.balanceAfter ?? '',
+        业务类型: bizLabel,
+        业务单号: tx.businessCode || '',
+        操作人: tx.operatorName || '',
+        时间: timeStr,
+        备注: tx.remarks || '',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 14 }, // 类型
+      { wch: 8 },  // 数量
+      { wch: 8 },  // 变动前
+      { wch: 8 },  // 变动后
+      { wch: 14 }, // 业务类型
+      { wch: 18 }, // 业务单号
+      { wch: 10 }, // 操作人
+      { wch: 18 }, // 时间
+      { wch: 30 }, // 备注
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '操作历史');
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `库存操作历史_${today}.xlsx`);
+  };
+
   return (
     <div className="space-y-3">
-      <div className="text-xs text-gray-500">共 {transactions.length} 条操作记录（按时间倒序）</div>
+      {/* 2026-08-21：标题行右侧加导出 Excel 按钮（操作历史所有 9 列字段） */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500">共 {transactions.length} 条操作记录（按时间倒序）</div>
+        <Button
+          size="sm"
+          variant="default"
+          onClick={handleExportExcel}
+          disabled={transactions.length === 0}
+          className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+          title="导出操作历史为 Excel（包含全部 9 列字段）"
+        >
+          <FileSpreadsheet className="w-3.5 h-3.5" />
+          导出 Excel
+        </Button>
+      </div>
       <div className="overflow-x-auto border border-gray-200 rounded-lg">
         <table className="w-full text-sm">
           {/* 2026-07-14：表头渐变蓝背景色（与作物库存列表表头一致） */}

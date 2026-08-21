@@ -189,10 +189,10 @@ export class SeedSourceService {
       }
 
       // 从当前 code 提取日期 + 重试生成
-      const codeMatch = sourceCodeToUse.match(/^(ZZ\d{8})-(\d{3})$/);
+      const codeMatch = sourceCodeToUse.match(/^(ZY\d{8})-(\d{3})$/);
       if (codeMatch) {
         const datePart = codeMatch[1];
-        const maxSerial = await this.repository.getTodayMaxSerial(datePart.slice(2)); // 去 ZZ 前缀
+        const maxSerial = await this.repository.getTodayMaxSerial(datePart.slice(2)); // 去 ZY 前缀
         const nextSerial = maxSerial + 1 + retry;
         sourceCodeToUse = `${datePart}-${nextSerial.toString().padStart(3, '0')}`;
       } else {
@@ -333,12 +333,14 @@ export class SeedSourceService {
   /**
    * 生成种源编码
    * @param dateStr 日期字符串 (YYYYMMDD)
-   * @returns 生成的编码，如 ZZ20260513-001；重试耗尽时返回 null
+   * @returns 生成的编码，如 ZY20260513-001；重试耗尽时返回 null
    *
    * 2026-06-22 修复 8 处查重：
    * - getTodayMaxSerial 已过滤 deleted_at IS NULL（仅 active）
    * - 候选号若与全表（含 soft-deleted）冲突则 +1 重试
    * - 最多 10 次重试
+   *
+   * 2026-08-21：种源编码前缀 ZZ → ZY（"种源"拼音首字母；避免与种植 ZZ 编码冲突）
    */
   async generateCode(dateStr: string): Promise<string | null> {
     const db = getDatabase();
@@ -348,8 +350,8 @@ export class SeedSourceService {
       // 获取当日最大序号（仅 active）
       const maxSerial = await this.repository.getTodayMaxSerial(dateStr);
       const nextSerial = maxSerial + 1 + attempt;
-      // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
-      const candidate = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
+      // 格式: ZY + 日期(8位) + "-" + 流水号(3位)（种源；与种植 ZZ 区分）
+      const candidate = `ZY${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
 
       // 2026-07-06: UNIQUE 约束不认软删 — 查全部行，软删占位号永久消耗
       const stmt = db.prepare(`

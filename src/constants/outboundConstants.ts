@@ -38,8 +38,9 @@ export function mapLegacyBusinessType(legacy: string | null | undefined): Outbou
 // 2026-07-16：库存类型 meta — 从 OutboundRecordsComponents 抽出复用
 // 改为深底白字（500 级实色 + 白字），与"业务"列浅底深字形成对比，且解决组件硬编码 text-white
 // 与浅底色叠加导致白字看不清的问题
+// 2026-08-21：成品由 emerald-500 改 blue-500（之前与种苗 green-500 视觉上难区分）
 export const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: string }> = {
   seed:     { label: '种源', color: 'bg-amber-500 text-white',    icon: '🌱' },
   seedling: { label: '种苗', color: 'bg-green-500 text-white',    icon: '🌿' },
-  product:  { label: '成品', color: 'bg-emerald-500 text-white',  icon: '📦' },
+  product:  { label: '成品', color: 'bg-blue-500 text-white',     icon: '📦' },
 };
