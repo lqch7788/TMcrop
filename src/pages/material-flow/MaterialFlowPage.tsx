@@ -6,7 +6,7 @@
  *   - 所有表格列宽固定 colgroup + 全部内容居中
  *   - 聚合 tab 禁用复选框/单条删除（数据无 id），按钮保留仅触发说明提示
  */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, BarChart3, TrendingUp, Package, Trash2, Download, X, RotateCcw } from 'lucide-react';
 import { Button, Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Pagination, Checkbox, UnifiedModal, DeleteConfirmModal } from '@/components/ui';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
@@ -50,6 +50,7 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'plan→seed_source': '计划→种源',
   'planting→seed_source': '种植→种源',
   'inventory→freeze': '库存→冻结',
+  'inventory→unfreeze': '库存→解冻',  // 2026-08-21：解冻流水补漏
   'harvest→inventory': '采收→入库',
   'other': '其他',
 };
@@ -97,6 +98,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   transfer: '调拨',
   planting: '种植',
   other: '其他',
+  // 2026-08-21：兜底映射（之前 DB 里这些英文值没被翻译，原样显示）
+  planting_self_kept: '自留种植',
+  seed_source: '种源',
+  seedling: '育苗',
 };
 
 const labelFlowType = (v: string) => FLOW_TYPE_LABELS[v] || v || '-';
@@ -128,6 +133,11 @@ const TYPE_LABELS: Record<string, string> = {
   manual_freeze: '手动冻结',
   order: '订单冻结',
   customer_sale: '客户销售',
+  // 2026-08-21：兜底映射（之前 DB 里这些英文值没翻译，原样显示）
+  inbound_record: '入库记录',
+  circulation_record: '流转记录',
+  external_purchase: '外购',
+  self_produced: '自产',
 };
 const CODE_PREFIX_TYPE: Record<string, string> = {
   SS: '种源',
@@ -205,7 +215,8 @@ const CodeCell: React.FC<{
   );
 };
 
-type TabKey = 'logs' | 'trace' | 'seedling' | 'planting' | 'annual';
+// 2026-08-21：批次追溯 tab 已合并到流转记录 tab 的「批次号」筛选字段，TabKey 移除 'trace'
+type TabKey = 'logs' | 'seedling' | 'planting' | 'annual';
 
 // 2026-06-15: 标准表格壳 — 接收 colgroup + 全部居中
 function StdTableShell({
@@ -303,7 +314,7 @@ function ExportFormatModal({
 
 export default function MaterialFlowPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('logs');
-  const { logs, total, loading, traceData, statsData, loadLogs, loadTrace, loadCropStats, loadSourceStats, loadAnnualStats, batchDeleteLogs } = useMaterialFlowStore();
+  const { logs, total, loading, statsData, loadLogs, loadCropStats, loadSourceStats, loadAnnualStats, batchDeleteLogs } = useMaterialFlowStore();
 
   // 流转记录筛选
   const [page, setPage] = useState(1);
@@ -314,8 +325,8 @@ export default function MaterialFlowPage() {
   const [endDate, setEndDate] = useState('');
 
   // 批次追溯
-  const [traceCode, setTraceCode] = useState('');
-  const traceInputRef = useRef<HTMLInputElement>(null);
+  // 2026-08-21：批次号筛选字段（合并原批次追溯 tab 功能），输入后点击"查询"按 source_code OR target_code 过滤
+  const [batchCode, setBatchCode] = useState('');
 
   // 年度
   const currentYear = new Date().getFullYear();
@@ -346,9 +357,8 @@ export default function MaterialFlowPage() {
   // 各 tab 的原始数据
   const currentRows = useMemo<any[]>(() => {
     if (activeTab === 'logs') return logs;
-    if (activeTab === 'trace') return traceData;
     return statsData;
-  }, [activeTab, logs, traceData, statsData]);
+  }, [activeTab, logs, statsData]);
 
   // 分页后展示的数据：logs 走服务端分页（数据已切好），其他 tab 走客户端切片
   const pagedData = useMemo<any[]>(() => {
@@ -387,24 +397,7 @@ export default function MaterialFlowPage() {
   // 数据加载（logs 依赖筛选条件 + 分页，其他 tab 依赖年度 + 主动触发）
   useEffect(() => {
     if (activeTab === 'logs') {
-      loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
-    } else if (activeTab === 'trace') {
-      // 2026-06-15: 进入批次追溯 tab 时若尚未有数据，自动取最近一条 source_code 加载示例，避免空表
-      if (traceData.length === 0 && !traceCode) {
-        const seed = logs[0]?.sourceCode || logs[0]?.source_code;
-        if (seed) {
-          setTraceCode(seed);
-          loadTrace(seed);
-        } else {
-          // logs 还没拉过，临时拉第 1 条用作种子
-          // 2026-07-10 P0-6 修复：catch(() => {}) → catch(e) { console.error(...) }
-          // 2026-07-10 bugfix：补回 else 块闭合符（之前漏了导致 TS1128 编译错误）
-          loadLogs({ page: 1, pageSize: 1 }).then(() => {
-            const c = useMaterialFlowStore.getState().logs[0]?.sourceCode;
-            if (c) { setTraceCode(c); loadTrace(c); }
-          }).catch((e) => { console.error('[MaterialFlowPage] 初始 logs 拉取失败:', e); });
-        }
-      }
+      loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, batchCode: batchCode.trim() || undefined, startDate, endDate });
     } else if (activeTab === 'seedling') {
       loadCropStats(statYear);
     } else if (activeTab === 'planting') {
@@ -413,22 +406,17 @@ export default function MaterialFlowPage() {
       loadAnnualStats(statYear);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, page, pageSize, flowType, cropName, startDate, endDate, statYear]);
+  }, [activeTab, page, pageSize, flowType, cropName, batchCode, startDate, endDate, statYear]);
 
   const handleSearch = () => {
     setPage(1);
     cancelSelection();
-    loadLogs({ page: 1, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
+    loadLogs({ page: 1, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, batchCode: batchCode.trim() || undefined, startDate, endDate });
   };
   const handleReset = () => {
-    setFlowType('all'); setCropName(''); setStartDate(''); setEndDate(''); setPage(1);
+    setFlowType('all'); setCropName(''); setBatchCode(''); setStartDate(''); setEndDate(''); setPage(1);
     cancelSelection();
-    loadLogs({ page: 1, pageSize, flowType: undefined, cropName: '', startDate: '', endDate: '' });
-  };
-
-  const handleTrace = () => {
-    const v = (traceInputRef.current?.value ?? traceCode).trim();
-    if (v) loadTrace(v);
+    loadLogs({ page: 1, pageSize, flowType: undefined, cropName: '', batchCode: undefined, startDate: '', endDate: '' });
   };
 
   const handleExportClick = () => {
@@ -499,7 +487,7 @@ export default function MaterialFlowPage() {
       headers = { createdAt: '时间', flowType: '流转', sourceCode: '起点', sourceQuantity: '消耗', targetCode: '去向', sourceCategory: '来源' };
       title = '批次追溯';
     } else {
-      const tk = activeTab as Exclude<TabKey, 'logs' | 'trace'>;
+      const tk = activeTab as Exclude<TabKey, 'logs'>;
       const H: Record<typeof tk, Record<string, string>> = {
         // 2026-07-21 修复：删除不存在的 batchCount 字段（后端返回无此字段）
         seedling: { cropName: '作物', sourceCategory: '来源', totalQty: '总用量', sourceUnit: '单位' },
@@ -672,70 +660,6 @@ export default function MaterialFlowPage() {
     );
   };
 
-  // 批次追溯 表格
-  const renderTraceTable = () => {
-    const totalCols = effectiveHasActiveMode ? 7 : 6;
-    const colGroup = (
-      <colgroup>
-        {effectiveHasActiveMode && <col className="w-12" />}
-        <col className="w-24" />
-        <col className="w-28" />
-        <col className="w-32" />
-        <col className="w-24" />
-        <col className="w-32" />
-        <col className="w-20" />
-      </colgroup>
-    );
-    if (loading && traceData.length === 0) {
-      return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, '追溯中...')}</StdTableShell>;
-    }
-    if (pagedData.length === 0) {
-      return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, traceCode ? '未找到相关流转记录' : '输入批次号后点击追溯')}</StdTableShell>;
-    }
-    return (
-      <StdTableShell colSpan={totalCols} colGroup={colGroup}>
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
-          <tr>
-            {effectiveHasActiveMode && <StdTh width="3rem"><Checkbox checked={allSelected} ref={(el) => { if (el) el.indeterminate = someSelected; }} onCheckedChange={toggleAll} className="border-white rounded" /></StdTh>}
-            <StdTh>时间</StdTh>
-            <StdTh>流转</StdTh>
-            <StdTh>起点</StdTh>
-            <StdTh>消耗</StdTh>
-            <StdTh>去向</StdTh>
-            <StdTh>来源</StdTh>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-300">
-          {pagedData.map((item: any, i: number) => {
-            const key = keyOf(item, i);
-            const isSelected = selectedIds.includes(key);
-            return (
-              <tr key={key} className={`hover:bg-emerald-50 transition-colors ${isSelected ? 'bg-emerald-50' : ''}`}>
-                {effectiveHasActiveMode && (
-                  <StdTd><Checkbox checked={isSelected} onCheckedChange={() => toggleRow(key)} className="rounded" /></StdTd>
-                )}
-                <StdTd className="text-gray-600 tabular-nums">{item.createdAt?.split('T')[0]}</StdTd>
-                <StdTd>
-                  <span className={`px-2 py-0.5 ${FLOW_TYPE_COLOR[item.flowType] || 'bg-slate-500'} text-white text-xs rounded-full inline-block whitespace-nowrap`}>
-                    {labelFlowType(item.flowType)}
-                  </span>
-                </StdTd>
-                <StdTd><CodeCell type={item.sourceType} code={item.sourceCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
-                <StdTd className="font-medium text-emerald-600 tabular-nums">
-                  {item.sourceQuantity != null ? `${item.sourceQuantity} ${item.sourceUnit || ''}` : '-'}
-                </StdTd>
-                <StdTd><CodeCell type={item.targetType} code={item.targetCode} onInventoryClick={handleViewInventoryDetail} /></StdTd>
-                <StdTd>
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full inline-block whitespace-nowrap">{labelCategory(item.sourceCategory)}</span>
-                </StdTd>
-              </tr>
-            );
-          })}
-        </tbody>
-      </StdTableShell>
-    );
-  };
-
   // 统计 通用表格
   const renderStatsTable = (
     _title: string,
@@ -810,7 +734,6 @@ export default function MaterialFlowPage() {
 
   const tabToolbarTitle: Record<TabKey, string> = {
     logs: '流转记录列表',
-    trace: '批次追溯结果',
     seedling: '育苗用料统计',
     planting: '种植用料统计',
     annual: '年度总览',
@@ -868,13 +791,11 @@ export default function MaterialFlowPage() {
             </span>
             <div className="flex items-center gap-1">
               {([
-                { key: 'trace' as TabKey, label: '批次追溯', icon: Search, hint: '按批次号追踪完整链路', color: 'blue' },
                 { key: 'seedling' as TabKey, label: '育苗用料', icon: BarChart3, hint: '种源→育苗消耗统计', color: 'green' },
                 { key: 'planting' as TabKey, label: '种植用料', icon: BarChart3, hint: '种源/种苗→种植消耗统计', color: 'amber' },
                 { key: 'annual' as TabKey, label: '年度总览', icon: TrendingUp, hint: '全链路年度汇总', color: 'purple' },
               ]).map(tab => {
                 const colorMap: Record<string, { bg: string; border: string; text: string }> = {
-                  blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700' },
                   green:  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
                   amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700' },
                   purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
@@ -932,6 +853,22 @@ export default function MaterialFlowPage() {
                     <Label className="text-gray-700">作物</Label>
                     <Input value={cropName} onChange={e => setCropName(e.target.value)} placeholder="品种名模糊搜索" className="border-gray-300" />
                   </div>
+                  {/* 2026-08-21：批次号筛选 — 合并原批次追溯 tab 功能，输入后查询按 source_code OR target_code 过滤 */}
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-gray-700">
+                      批次号
+                      <span className="text-gray-400 text-xs font-normal ml-2">
+                        填则按起点/去向任一匹配
+                      </span>
+                    </Label>
+                    <Input
+                      value={batchCode}
+                      onChange={e => setBatchCode(e.target.value)}
+                      placeholder="如: ZZ20260630-001 / IPR-20260821-0001"
+                      className="border-gray-300"
+                      onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSearch}><Search className="w-4 h-4" /> 查询</Button>
                     <Button variant="warning" size="sm" onClick={handleReset} className="whitespace-nowrap">
@@ -943,37 +880,6 @@ export default function MaterialFlowPage() {
 
               {renderToolbar(tabToolbarTitle.logs, true)}
               {renderLogsTable()}
-              {renderPagination()}
-            </div>
-          )}
-
-          {/* 批次追溯 Tab */}
-          {activeTab === 'trace' && (
-            <div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div className="flex-1 min-w-[200px]">
-                    <Label className="text-gray-700">
-                      批次号
-                      <span className="text-gray-400 text-xs font-normal ml-2">
-                        输入种源/育苗/种植/计划编码，追溯该批次的完整流转链路
-                      </span>
-                    </Label>
-                    <Input
-                      value={traceCode}
-                      onChange={e => setTraceCode(e.target.value)}
-                      ref={traceInputRef}
-                      placeholder="如: ZZ20260630-001 / YM20260701-001 / PL1782974079098"
-                      className="border-gray-300"
-                      onKeyDown={e => e.key === 'Enter' && handleTrace()}
-                    />
-                  </div>
-                  <Button size="sm" onClick={handleTrace}><Search className="w-4 h-4" /> 追溯</Button>
-                </div>
-              </div>
-
-              {renderToolbar(tabToolbarTitle.trace, true)}
-              {renderTraceTable()}
               {renderPagination()}
             </div>
           )}
@@ -1140,7 +1046,7 @@ export default function MaterialFlowPage() {
   );
 }
 
-const STATS_TITLE: Record<Exclude<TabKey, 'logs' | 'trace'>, string> = {
+const STATS_TITLE: Record<Exclude<TabKey, 'logs'>, string> = {
   seedling: '育苗用料',
   planting: '种植用料',
   annual: '年度总览',

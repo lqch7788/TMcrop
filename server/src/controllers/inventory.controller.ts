@@ -36,13 +36,31 @@ export class InventoryController {
           source_category: mapInventorySourceToCategory(body.source_type || body.sourceType),
           target_type: 'inventory_stock',
           target_id: result.instanceId || '',
-          target_code: body.business_code || body.businessCode || '',
+          // 2026-08-21 修复 B：target_code 用 instanceId（IPR-xxx）而非 business_code（HS-xxx），
+          // 让用户在「批次追溯」tab 输入库存实例编码能直接命中该条流水
+          target_code: result.instanceId || body.business_code || body.businessCode || '',
           target_quantity: body.quantity || 0,
           target_unit: body.unit || '',
           business_code: body.business_code || body.businessCode || '',
           created_by: body.create_by || body.createBy || '',
         });
-      } catch (e) { console.error('[inventory.controller] writeFlowLog 失败:', (e as any)?.message || e); }
+      } catch (e: any) {
+        console.error('[inventory.controller] writeFlowLog 失败:', e?.message || e);
+        // 2026-08-21 修复 A：流水写入失败不能让前端误以为入库成功，
+        // 返回 500 + warning，前端可提示「库存已入但追溯流水缺失」并触发补录
+        res.status(500).json({
+          success: false,
+          error: '库存入库成功，但流转追溯流水写入失败，请联系管理员补录追溯链',
+          data: {
+            instanceId: result.instanceId,
+            transactionId: result.transactionId,
+            currentQuantity: result.currentQuantity,
+            availableQuantity: result.availableQuantity,
+          },
+          warning: 'FLOW_LOG_WRITE_FAILED',
+        });
+        return;
+      }
 
       res.json({
         success: true,

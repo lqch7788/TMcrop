@@ -412,8 +412,8 @@ async function executePropagation(input: CirculationInput, circId: string): Prom
         source_code: input.sourceRecordCode || input.sourceId || null,
         source_quantity: input.quantity ?? null,
         source_unit: unit,
-        source_category: input.sourceModule === 'planting' ? 'planting'
-          : input.sourceModule === 'seedling' ? 'seedling' : 'seed_source',
+        source_category: input.sourceModule === 'planting' ? '种植'
+          : input.sourceModule === 'seedling' ? '育苗' : '种源',  // 2026-08-21：改为中文持久化
         target_type: 'seed_source',
         target_id: finalStockId,
         target_code: newSourceCode || (mergeable?.sourceCode ?? ''),
@@ -475,7 +475,7 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
       source_code: input.sourceRecordCode || input.sourceId || null,
       source_quantity: quantity,
       source_unit: input.unit || null,
-      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
+      source_category: input.sourceModule === 'planting' ? '种植' : (input.sourceModule === 'seedling' ? '育苗' : '种源'),  // 2026-08-21：改为中文持久化
       target_type: 'seed_source',
       target_id: input.parentSourceId || '',
       target_code: input.parentSourceId || '',
@@ -546,7 +546,7 @@ function executeDisposal(input: CirculationInput, circId: string): CirculationRe
       source_code: input.sourceRecordCode || input.sourceId || null,
       source_quantity: -quantity, // 处置为减少
       source_unit: input.unit || null,
-      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
+      source_category: input.sourceModule === 'planting' ? '种植' : (input.sourceModule === 'seedling' ? '育苗' : '种源'),  // 2026-08-21：改为中文持久化
       target_type: 'disposal',
       target_id: circId,
       target_code: circId,

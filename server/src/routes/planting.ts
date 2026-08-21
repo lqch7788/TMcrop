@@ -712,7 +712,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
           crop_variety: String(old.crop_variety || ''),
           source_type: 'planting', source_id: id, source_code: plantCode,
           source_quantity: Number(quantity), source_unit: String(unit || harvestUnit),
-          source_category: 'planting',
+          source_category: '种植',  // 2026-08-21：改为中文持久化
           target_type: 'harvest', target_id: generatedHarvestId, target_code: harvestCode,
           target_quantity: Number(quantity), target_unit: String(unit || harvestUnit),
           business_code: harvestCode, created_by: String(old.create_by || 'system'),
@@ -723,7 +723,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
           crop_variety: String(old.crop_variety || ''),
           source_type: 'harvest', source_id: generatedHarvestId, source_code: harvestCode,
           source_quantity: Number(quantity), source_unit: String(unit || harvestUnit),
-          source_category: 'self_produced',
+          source_category: '自产',  // 2026-08-21：改为中文持久化
           target_type: 'inventory_stock', target_id: generatedStockId, target_code: instanceId,
           target_quantity: Number(quantity), target_unit: String(unit || harvestUnit),
           business_code: harvestCode, created_by: String(old.create_by || 'system'),
@@ -1412,6 +1412,55 @@ router.delete('/:id', (req: Request, res: Response) => {
       }
     }
 
+    // 2026-08-21 修复：软删种植写 material_flow_log correction（反向回流到上游种源/育苗）
+    if (row && Number(row.planting_quantity) > 0 && row.source_id) {
+      const qty = Number(row.planting_quantity) || 0;
+      const stype = String(row.source_type || '').toLowerCase();
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        // 查种植编码（target_code）+ 上游编码（source_code）+ 作物名
+        const pRows = db.exec(
+          `SELECT planting_code, crop_name, crop_variety, unit FROM plantings WHERE id = ?`,
+          [id]
+        );
+        const pCode = pRows[0]?.values?.[0]?.[0] || `PL${id}`;
+        const pCrop = pRows[0]?.values?.[0]?.[1] || '';
+        const pVariety = pRows[0]?.values?.[0]?.[2] || '';
+        const pUnit = pRows[0]?.values?.[0]?.[3] || '';
+        let upstreamCode = '';
+        let upstreamType = stype;
+        if (stype === 'seed') {
+          const ssRows = db.exec(`SELECT source_code FROM seed_sources WHERE id = ?`, [row.source_id]);
+          upstreamCode = String(ssRows[0]?.values?.[0]?.[0] || '');
+        } else if (stype === 'seedling') {
+          // 育苗无编码字段，用 ID
+          upstreamCode = row.source_id;
+        } else {
+          upstreamCode = row.source_id;
+        }
+        writeFlowLog({
+          flow_type: 'correction',
+          crop_name: pCrop,
+          crop_variety: pVariety,
+          source_type: upstreamType || 'seed',
+          source_id: row.source_id,
+          source_code: upstreamCode,
+          source_quantity: qty,           // 上游数量回流（增加）
+          source_unit: pUnit,
+          source_category: '手动',  // 2026-08-21：改为中文持久化
+          target_type: 'planting',
+          target_id: id,
+          target_code: pCode,
+          target_quantity: -qty,          // 种植数量被取消（减少）
+          target_unit: pUnit,
+          business_code: `PL-DELETE-${id}`,
+          created_by: (req as any).user?.name || '',
+        });
+      } catch (flowErr: any) {
+        console.warn('[planting DELETE] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+      }
+    }
+
     saveDatabase();
     // 2026-07-22：追溯修复 - planting 删除补 audit_log
     writeAuditLog({
@@ -1901,7 +1950,7 @@ router.post('/:id/end', async (req, res) => {
           source_code: String(planting.planting_code || id),
           source_quantity: harvestQty,
           source_unit: String(harvestUnit),
-          source_category: 'planting',
+          source_category: '种植',  // 2026-08-21：改为中文持久化
           target_type: 'harvest',
           target_id: harvestId,
           target_code: harvestCode,
@@ -1920,7 +1969,7 @@ router.post('/:id/end', async (req, res) => {
           source_code: harvestCode,
           source_quantity: harvestQty,
           source_unit: String(harvestUnit),
-          source_category: 'self_produced',
+          source_category: '自产',  // 2026-08-21：改为中文持久化
           target_type: 'inventory_stock',
           target_id: stockId,
           target_code: instanceId,

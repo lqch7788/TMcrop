@@ -16,6 +16,8 @@ import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository } from '../repositories/inventoryTransaction.repository';
 import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
+import { writeFlowLog } from './flowLogService';
+import { mapInventorySourceToCategory } from '../lib/sourceCategoryMapper';
 
 /**
  * 2026-07-16：库存 cropName 归一化（防"宁玉（宁玉）"类数据错位）
@@ -548,6 +550,40 @@ export async function executeInboundFromSource(
         now,
       ]);
       writtenTransactionIds.push(txId);
+
+      // 2026-08-21 修复：补写 material_flow_log（之前 inbound-from-source 完全没写追溯链，
+      // 导致批次追溯 tab 缺失 harvest→inventory 等流水 — 用户报告 "批次追溯只看到种植新增"）
+      // 与 inventory.controller.ts 的 inbound 不同，这里写每条 product 一条流水（多产品入库）
+      try {
+        const flowType = (input.sourceModule === 'planting' && input.stockType === 'product')
+          ? 'harvest→inventory'
+          : `${input.sourceModule}→inventory`;
+        writeFlowLog({
+          flow_type: flowType,
+          crop_name: normalizedCrop.cropName || '',
+          crop_variety: normalizedCrop.varietyName || '',
+          source_type: input.sourceModule,
+          source_id: input.sourceRecordId,
+          source_code: input.sourceRecordCode,
+          source_quantity: product.harvestQuantity,
+          source_unit: product.unit,
+          source_category: (input as any).inboundSourceType
+            ? mapInventorySourceToCategory((input as any).inboundSourceType)
+            : (input.sourceModule === 'planting' ? '种植'
+              : input.sourceModule === 'seedling' ? '育苗'
+              : input.sourceModule === 'seed_source' ? '种源' : null),
+          target_type: 'inventory_stock',
+          target_id: instanceId,
+          target_code: instanceId,
+          target_quantity: product.harvestQuantity,
+          target_unit: product.unit,
+          business_code: harvestCode,
+          created_by: operator,
+        });
+      } catch (flowErr: any) {
+        // 流水失败不应阻断主流程（库存已入），但必须 console.warn 让问题可见
+        console.warn('[executeInboundFromSource] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+      }
     }
 
     // 2026-07-06：种源行级入库 — 回写 seed_sources 的 quantity 和 remaining_quantity

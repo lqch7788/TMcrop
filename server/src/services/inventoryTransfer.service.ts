@@ -631,6 +631,32 @@ export async function executeTransferToSource(
       );
       // writtenTxIds 不再需要（事务化后 ROLLBACK 由 SQLite 自动处理）
 
+      // 2026-08-21 修复：补写 material_flow_log（之前 transfer_to_source 完全没写追溯链）
+      // 一条流水代表整个 transfer_to_source：source=原库存扣减，target=新种源流入
+      try {
+        const { writeFlowLog } = require('./flowLogService');
+        writeFlowLog({
+          flow_type: 'inventory→seed_source',
+          crop_name: sourceStock.crop_name || '',
+          crop_variety: sourceStock.variety_name || '',
+          source_type: 'inventory_stock',
+          source_id: sourceStock.id || sourceStock.instance_id,
+          source_code: sourceStock.instance_id,
+          source_quantity: -item.transferQuantity,
+          source_unit: sourceUnit,
+          source_category: '调拨出库',  // 2026-08-21：改为中文持久化
+          target_type: 'seed_source',
+          target_id: newSeedSourceId,
+          target_code: newCode,
+          target_quantity: item.transferQuantity,
+          target_unit: sourceUnit,
+          business_code: outTxId,
+          created_by: operator.name || operator.id || '',
+        });
+      } catch (flowErr: any) {
+        console.warn('[inventoryTransfer] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+      }
+
       results.push({
         newSeedSourceId,
         newSeedSourceCode: newCode,

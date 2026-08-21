@@ -91,7 +91,7 @@ export function writeCorrection(params: {
     crop_variety: params.crop_variety,
     source_type: params.source_type ?? null,
     source_id: params.source_id ?? null,
-    source_category: 'manual',
+    source_category: '手动',  // 2026-08-21：改为中文持久化
     source_quantity: params.source_quantity_delta,
     source_unit: params.source_unit ?? null,
     target_type: params.target_type,
