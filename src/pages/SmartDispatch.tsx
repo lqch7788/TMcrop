@@ -7,7 +7,7 @@
  * UI：Tailwind CSS + lucide-react（不使用 antd）
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot,
   Send, CalendarClock, Split, X, ChevronRight, ChevronDown,

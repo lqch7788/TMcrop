@@ -11,6 +11,7 @@ import {
   getSeedSavingRateColor,
   VEGETATIVE_HARVEST_PARTS,
   SEED_HARVEST_PARTS,
+  HARVEST_PART_LABELS,
 } from '@/components/farm/planting/modals/seedSavingConstants'
 import type { SeedSavingFormState } from '@/components/farm/planting/modals/seedSavingConstants'
 
@@ -57,14 +58,19 @@ describe('getSeedSavingRateColor', () => {
 })
 
 describe('harvest part classification', () => {
-  it('VEGETATIVE 含 10 个营养体部位', () => {
-    expect(VEGETATIVE_HARVEST_PARTS.length).toBe(10)
+  it('VEGETATIVE 含 11 个营养体部位（2026-08-21 新增块根）', () => {
+    expect(VEGETATIVE_HARVEST_PARTS.length).toBe(11)
     expect(VEGETATIVE_HARVEST_PARTS).toContain('tuber')
+    expect(VEGETATIVE_HARVEST_PARTS).toContain('tuberous_root')
     expect(VEGETATIVE_HARVEST_PARTS).toContain('whole_plant')
   })
-  it('SEED 含 2 个有性器官', () => {
-    expect(SEED_HARVEST_PARTS.length).toBe(2)
+  it('块茎不应包含甘薯（甘薯是块根）', () => {
+    expect(HARVEST_PART_LABELS.tuber).not.toMatch(/甘薯/)
+    expect(HARVEST_PART_LABELS.tuberous_root).toMatch(/甘薯/)
+  })
+  it('SEED 含 1 个有性器官（种子）— 2026-08-21 已去掉果实', () => {
+    expect(SEED_HARVEST_PARTS.length).toBe(1)
     expect(SEED_HARVEST_PARTS).toContain('seed')
-    expect(SEED_HARVEST_PARTS).toContain('fruit')
+    expect(SEED_HARVEST_PARTS).not.toContain('fruit')
   })
 })

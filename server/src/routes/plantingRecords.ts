@@ -26,10 +26,11 @@ const BreedingOperationType = z.enum([
   'clonal', 'cutting', 'grafting', 'layering', 'tissue', 'division',
 ]);
 // 2026-07-03 v4：留种模式
+// 2026-08-21：新增 'tuberous_root'（块根 — 甘薯/木薯/葛根等；与块茎形态学独立）
 const SeedSavingPart = z.enum([
   'fruit', 'seed', 'whole_plant', 'root', 'stem', 'leaf', 'other',
   // 2026-07-03 v4：无性繁殖器官
-  'tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon',
+  'tuber', 'tuberous_root', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon',
 ]);
 const SeedSavingMode = z.enum(['seed', 'vegetative']);
 
@@ -527,7 +528,8 @@ router.post('/:id/seed-saving-records', (req: Request, res: Response) => {
     }
     const data = parsed.data;
     // 2026-07-03 v4：判断保存模式
-    const VEGETATIVE_PARTS = ['tuber', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf']
+    // 2026-08-21：新增 'tuberous_root'（块根）+ 'whole_plant'（之前前端营养体列表含全株但后端遗漏，导致保存模式错判为种子）
+const VEGETATIVE_PARTS = ['tuber', 'tuberous_root', 'bulb', 'corm', 'rhizome', 'cutting', 'stolon', 'root', 'stem', 'leaf', 'whole_plant']
     const preservationMode = data.preservationMode || (VEGETATIVE_PARTS.includes(data.harvestPart || '') ? 'vegetative' : 'seed')
     // 业务校验
     if (preservationMode === 'seed' && data.germinationRate === undefined && data.thousandSeedWeight === undefined) {
