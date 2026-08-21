@@ -425,10 +425,10 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
     try {
       const flowType = isExternalMode ? 'external→seedling' : 'seed_source→seedling';
-      let sourceCategory = 'other';
+      let sourceCategory = '其他';  // 2026-08-21：改为中文持久化
       let finalSourceCode: string = effectiveSourceId;
       if (isExternalMode) {
-        sourceCategory = 'external';
+        sourceCategory = '外部';  // 2026-08-21：改为中文持久化
         finalSourceCode = (externalSource as any).code || (externalSource as any).seedCode || effectiveSourceId;
       } else {
         const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [effectiveSourceId]);
@@ -1195,7 +1195,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
           flow_type: 'external→seedling',
           crop_name: crop_name,
           source_type: null, source_id: null, source_code: external_seed_code || null,
-          source_quantity: external_seed_quantity ?? null, source_category: 'external',
+          source_quantity: external_seed_quantity ?? null, source_category: '外部',  // 2026-08-21：改为中文持久化
           target_type: 'seedling', target_id: newId, target_code: seedling_code,
           target_quantity: seedling_quantity || 0, target_unit: '株',
           business_code: seedling_code, created_by: create_by || '',
@@ -1205,7 +1205,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
       try {
         const { writeFlowLog } = require('../services/flowLogService');
         const { mapPropagationToCategory } = require('../lib/sourceCategoryMapper');
-        let sourceCategory = 'external_purchase';
+        let sourceCategory = '外购';  // 2026-08-21：改为中文持久化
         try {
           const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [source_id]);
           if (srcInfo[0]?.values?.[0]) { sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string); }
@@ -1439,6 +1439,46 @@ router.delete('/:id', (req: Request, res: Response) => {
       } catch (e) {
         console.error('[seedling DELETE] 清理关联防治记录 ERROR:', e);
       }
+
+      // 2026-08-21 修复：软删育苗写 material_flow_log correction（反向回流到种源）
+      // - 仅 internal 模式且有扣减量时写（外购/外部育苗不涉及种源回流）
+      if (row && row.source_mode === 'internal' && row.source_id) {
+        const deducted = Number(row.source_deducted_quantity) || 0;
+        if (deducted > 0) {
+          try {
+            const { writeFlowLog } = require('../services/flowLogService');
+            // 反查种源编码（source_code 用作 target_code，方便追溯链查源头）
+            const ssRows = db.exec(
+              `SELECT source_code, crop_name, crop_variety FROM seed_sources WHERE id = ?`,
+              [row.source_id]
+            );
+            const ssCode = ssRows[0]?.values?.[0]?.[0] || '';
+            const ssCrop = ssRows[0]?.values?.[0]?.[1] || '';
+            const ssVariety = ssRows[0]?.values?.[0]?.[2] || '';
+            writeFlowLog({
+              flow_type: 'correction',
+              crop_name: ssCrop,
+              crop_variety: ssVariety,
+              source_type: 'seed_source',
+              source_id: row.source_id,
+              source_code: ssCode,
+              source_quantity: deducted,
+              source_unit: null,
+              source_category: '手动',  // 2026-08-21：改为中文持久化
+              target_type: 'seedling',
+              target_id: id,
+              target_code: id,
+              target_quantity: -deducted,
+              target_unit: null,
+              business_code: `SD-DELETE-${id}`,
+              created_by: (req as any).user?.name || '',
+            });
+          } catch (flowErr: any) {
+            console.warn('[seedling DELETE] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+          }
+        }
+      }
+
       db.exec('COMMIT');
       saveDatabase();
       // 2026-07-22：追溯修复 - seedling 删除补 audit_log

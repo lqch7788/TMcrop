@@ -783,7 +783,7 @@ router.post('/freeze', async (req: Request, res: Response) => {
           source_code: body.instanceId,
           source_quantity: body.freezeQuantity,
           source_unit: stock.unit || '',
-          source_category: 'manual',
+          source_category: '手动',  // 2026-08-21：改为中文持久化
           target_type: body.freezeType === 'order' ? 'order' : 'manual_freeze',
           target_id: body.orderId || freezeId,
           target_code: body.freezeType === 'order' ? (orderCode || body.orderId || '订单冻结') : (body.purpose || '手动冻结'),
@@ -910,6 +910,32 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
         body.remarks || `解冻${unfreezeQty}`,
         now,
       ]);
+
+      // 2026-08-21 修复：补写 material_flow_log（之前 unfreeze 完全没写追溯链）
+      // source_quantity 取负（库存冻结量减少 N），target_quantity 为正（可用量恢复 N）
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        writeFlowLog({
+          flow_type: 'inventory→unfreeze',
+          crop_name: stock.crop_name || '',
+          crop_variety: stock.variety_name || '',
+          source_type: 'inventory_stock',
+          source_id: freeze.instance_id,
+          source_code: freeze.instance_id,
+          source_quantity: -unfreezeQty,
+          source_unit: stock.unit,
+          source_category: '手动冻结',  // 2026-08-21：改为中文持久化
+          target_type: 'inventory_stock',
+          target_id: stock.id || freeze.instance_id,
+          target_code: freeze.instance_id,
+          target_quantity: unfreezeQty,
+          target_unit: stock.unit,
+          business_code: txId,
+          created_by: body.operatorName || '',
+        });
+      } catch (flowErr: any) {
+        console.error('[unfreeze] writeFlowLog 失败:', flowErr?.message || flowErr);
+      }
 
       db.exec('COMMIT');  // 2026-07-21 修复：事务提交
       saveDatabase();
@@ -1278,9 +1304,57 @@ router.put('/:id', (req: Request, res: Response) => {
     }
     fields.push('update_time = ?', 'version = version + 1');
     values.push(new Date().toISOString());
+    // 2026-08-21 修复：先查老 current_quantity，UPDATE 后对比 delta 写 material_flow_log correction
+    const oldStockRows = db.exec(
+      `SELECT id, instance_id, current_quantity, crop_name, variety_name, unit, stock_type
+       FROM inventory_stock WHERE id = ? OR instance_id = ? LIMIT 1`,
+      [id, id]
+    );
+    const oldStock = oldStockRows[0]?.values?.[0];
+    const oldCols = oldStockRows[0]?.columns || [];
+    const oldStockObj: Record<string, any> = {};
+    oldCols.forEach((c, i) => { oldStockObj[c] = (oldStock as any[])?.[i]; });
+
     db.run(`UPDATE inventory_stock SET ${fields.join(', ')} WHERE id = ? OR instance_id = ?`,
       [...values, id, id]);
     saveDatabase();
+
+    // 2026-08-21：current_quantity 变化写 material_flow_log correction（之前完全没写，库存修改无追溯链）
+    const qtyChanged = fields.some(f => f.startsWith('current_quantity'));
+    if (qtyChanged && oldStockObj.id) {
+      try {
+        const newQtyRows = db.exec(
+          `SELECT current_quantity FROM inventory_stock WHERE id = ?`,
+          [oldStockObj.id]
+        );
+        const newQty = Number(newQtyRows[0]?.values?.[0]?.[0]) || 0;
+        const oldQty = Number(oldStockObj.current_quantity) || 0;
+        const delta = newQty - oldQty;
+        if (Math.abs(delta) > 0.001) {
+          const { writeFlowLog } = require('../services/flowLogService');
+          writeFlowLog({
+            flow_type: 'correction',
+            crop_name: oldStockObj.crop_name || '',
+            crop_variety: oldStockObj.variety_name || '',
+            source_type: 'inventory_stock',
+            source_id: oldStockObj.id,
+            source_code: oldStockObj.instance_id,
+            source_quantity: delta,
+            source_unit: oldStockObj.unit,
+            source_category: '手动',  // 2026-08-21：改为中文持久化
+            target_type: 'inventory_stock',
+            target_id: oldStockObj.id,
+            target_code: oldStockObj.instance_id,
+            target_quantity: delta,
+            target_unit: oldStockObj.unit,
+            business_code: `STK-MANUAL-${oldStockObj.id}`,
+            created_by: (req as any).user?.name || '',
+          });
+        }
+      } catch (flowErr: any) {
+        console.warn('[inventory PUT /:id] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+      }
+    }
 
     // 2026-07-14：方案 C — 如果修改了数量/冻结字段，重算 status
     const needRecompute = fields.some(f => f.startsWith('current_quantity') || f.startsWith('frozen_quantity'));
@@ -1296,6 +1370,8 @@ router.put('/:id', (req: Request, res: Response) => {
       operatorName: (req as any).user?.name,
       opinion: `更新库存 ${req.params.id}`,
     });
+    // 2026-08-21 修复：原代码遗漏 res.json()，导致前端超时 30s（enhancedApiClient 3 次重试 × 30s = 90s+）
+    res.json({ success: true, data: { id, updated: true } });
   } catch (error) {
     console.error('[inventory] 兼容 PUT /:id 失败:', error);
     res.status(500).json({ success: false, error: '更新库存失败' });

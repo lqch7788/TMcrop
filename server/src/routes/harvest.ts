@@ -111,8 +111,8 @@ router.delete('/:id', (req: Request, res: Response) => {
       // - seedling → seedlings.harvest_stocked_count
       // - planting → plantings.harvest_to_inventory_qty（2026-08-14 种植闭环）
       // 注意：queryToObjects 返回 camelCase 字段（mapToCamelCase），必须读 sourceModule/sourceId
+      let totalQty = 0;
       if (hrRow && (hrRow.sourceModule === 'seedling' || hrRow.sourceModule === 'planting')) {
-        let totalQty = 0;
         try {
           const products = typeof hrRow.products === 'string' ? JSON.parse(hrRow.products) : (hrRow.products || []);
           if (Array.isArray(products)) {
@@ -135,6 +135,44 @@ router.delete('/:id', (req: Request, res: Response) => {
           }
         }
       }
+
+      // 2026-08-21 修复：删除采收记录前查关联库存实例 + 写 material_flow_log correction（反向流水）
+      // - source_quantity 取负（库存被删除 N），target_quantity 取负（源头 harvest_to_inventory_qty -N）
+      try {
+        const stockRows = db.exec(
+          `SELECT id, instance_id, current_quantity, crop_name, variety_name, unit, stock_type
+           FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`,
+          [id]
+        );
+        const stock = stockRows[0]?.values?.[0];
+        const stockCols = stockRows[0]?.columns || [];
+        const stockObj: Record<string, any> = {};
+        stockCols.forEach((c, i) => { stockObj[c] = (stock as any[])?.[i]; });
+        if (stockObj.id && totalQty > 0) {
+          const { writeFlowLog } = require('../services/flowLogService');
+          writeFlowLog({
+            flow_type: 'correction',
+            crop_name: stockObj.crop_name || '',
+            crop_variety: stockObj.variety_name || '',
+            source_type: 'inventory_stock',
+            source_id: stockObj.id,
+            source_code: stockObj.instance_id,
+            source_quantity: -totalQty,
+            source_unit: stockObj.unit,
+            source_category: '手动',  // 2026-08-21：改为中文持久化
+            target_type: hrRow?.sourceModule || 'planting',
+            target_id: hrRow?.sourceId || '',
+            target_code: hrRow?.sourceModule === 'planting' ? `PL${hrRow?.sourceId}` : '',
+            target_quantity: -totalQty,
+            target_unit: stockObj.unit,
+            business_code: `HR-DELETE-${id}`,
+            created_by: '',
+          });
+        }
+      } catch (flowErr: any) {
+        console.warn('[harvest DELETE] writeFlowLog failed (non-blocking):', flowErr?.message || flowErr);
+      }
+
       db.run(`DELETE FROM inventory_transaction WHERE business_id = ? AND business_type = 'harvest'`, [id]);
       db.run(`DELETE FROM inventory_stock WHERE business_id = ? AND business_type = 'harvest'`, [id]);
       db.run(`DELETE FROM inventory_inbound_records WHERE business_id = ?`, [id]);

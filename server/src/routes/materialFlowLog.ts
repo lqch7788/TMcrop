@@ -15,13 +15,15 @@ router.get('/', (req: Request, res: Response) => {
     const db = getDatabase();
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
-    const { flowType, cropName, sourceCode, targetCode, startDate, endDate } = req.query;
+    const { flowType, cropName, sourceCode, targetCode, batchCode, startDate, endDate } = req.query;
 
     let where = 'WHERE 1=1';
     const params: any[] = [];
 
     if (flowType && flowType !== 'all') { where += ' AND flow_type = ?'; params.push(flowType); }
     if (cropName) { where += ' AND crop_name LIKE ?'; params.push(`%${cropName}%`); }
+    // 2026-08-21：批次号筛选（合并批次追溯 tab 功能）— OR 查询，命中起点或去向任一
+    if (batchCode) { where += ' AND (source_code = ? OR target_code = ?)'; params.push(batchCode, batchCode); }
     if (sourceCode) { where += ' AND source_code = ?'; params.push(sourceCode); }
     if (targetCode) { where += ' AND target_code = ?'; params.push(targetCode); }
     if (startDate) { where += ' AND created_at >= ?'; params.push(startDate); }
@@ -31,8 +33,10 @@ router.get('/', (req: Request, res: Response) => {
     const countRows = db.exec(`SELECT COUNT(*) as cnt FROM material_flow_log ${where}`, params);
     const total = Number(countRows[0]?.values?.[0]?.[0] || 0);
 
+    // 2026-08-21：批次号模式按 created_at ASC（链路正向）；其他按 DESC（最新优先）
+    const orderBy = batchCode ? 'created_at ASC' : 'created_at DESC';
     const rows = db.exec(
-      `SELECT * FROM material_flow_log ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM material_flow_log ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
       [...params, pageSize, offset]
     );
 

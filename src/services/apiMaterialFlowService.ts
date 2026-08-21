@@ -7,6 +7,8 @@ import { enhancedApiClient } from '../lib/apiClient';
 export async function getFlowLogs(params: {
   page?: number; pageSize?: number; flowType?: string;
   cropName?: string; sourceCode?: string; targetCode?: string;
+  // 2026-08-21：批次号合并筛选（替代原批次追溯 tab 的 /trace 端点功能）
+  batchCode?: string;
   startDate?: string; endDate?: string;
 }) {
   // enhancedApiClient.get 不支持 params 参数，必须用 URLSearchParams 拼到 URL
@@ -17,6 +19,7 @@ export async function getFlowLogs(params: {
   if (params.cropName) qs.set('cropName', params.cropName);
   if (params.sourceCode) qs.set('sourceCode', params.sourceCode);
   if (params.targetCode) qs.set('targetCode', params.targetCode);
+  if (params.batchCode) qs.set('batchCode', params.batchCode);
   if (params.startDate) qs.set('startDate', params.startDate);
   if (params.endDate) qs.set('endDate', params.endDate);
   const query = qs.toString();
