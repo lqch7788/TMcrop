@@ -14,8 +14,9 @@
  * - 操作人 T3 暂硬编码 'system'（T5 接 useAuthStore，已在 65a1e6d9 完成）
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Modal, FormField, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, TextArea, NumberInput } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { Package, AlertCircle } from 'lucide-react';
 import {
   useWarehouseStore,
@@ -85,6 +86,122 @@ interface AddStockModalProps {
 }
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
+/**
+ * 供应商搜索 + 下拉选择（2026-08-21）
+ * 原因：外购入库模式下供应商可能有几百家，普通 Select 难查找。
+ * 实现：输入名称过滤 → 显示前 50 条匹配 → 点击选中。
+ * 选完联动写入 supplierId + supplierName（与原 Select 行为一致）。
+ */
+function SupplierSelectField({
+  value,
+  suppliers,
+  onChange,
+  onMultiFieldChange,
+}: {
+  value: string;
+  suppliers: Array<{ id: string; name: string }>;
+  onChange: (v: string) => void;
+  onMultiFieldChange?: (patch: Record<string, any>) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 当前选中的供应商名称
+  const selectedName = suppliers.find((s) => s.id === value)?.name || '';
+
+  // 过滤 + 限制最多 50 条
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q ? suppliers.filter((s) => s.name.toLowerCase().includes(q)) : suppliers;
+    return list.slice(0, 50);
+  }, [query, suppliers]);
+
+  // 点击外部关闭
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleSelect = (s: { id: string; name: string }) => {
+    onChange(s.id);
+    if (onMultiFieldChange) {
+      onMultiFieldChange({ supplierId: s.id, supplierName: s.name });
+    }
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* 已选时显示名称 + 清除按钮；未选时显示输入框 */}
+      {value && !open ? (
+        <div className={cn(deepInputClass, 'flex items-center justify-between')}>
+          <span className="truncate">{selectedName}</span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange('');
+              if (onMultiFieldChange) onMultiFieldChange({ supplierId: '', supplierName: '' });
+            }}
+            className="ml-2 text-gray-400 hover:text-red-500 shrink-0"
+            title="清除选择"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <Input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={value ? selectedName : '搜索供应商名称...'}
+          className={deepInputClass}
+        />
+      )}
+
+      {/* 下拉列表 */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-500">
+              {query ? `无匹配"${query}"的供应商` : '暂无供应商数据'}
+            </div>
+          ) : (
+            <>
+              {filtered.map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => handleSelect(s)}
+                  className={`px-3 py-2 text-sm cursor-pointer hover:bg-emerald-50 ${
+                    value === s.id ? 'bg-emerald-50 font-medium' : ''
+                  }`}
+                >
+                  {s.name}
+                </div>
+              ))}
+              {suppliers.length > 50 && filtered.length === 50 && (
+                <div className="px-3 py-1.5 text-xs text-gray-400 border-t border-gray-100">
+                  仅显示前 50 条匹配，共 {suppliers.length} 家供应商
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * 字段渲染：根据 FieldConfig.type 派发到对应 UI 组件。
@@ -294,27 +411,15 @@ function renderFieldByType(
         </div>
       );
     case 'supplier-select':
-      // T3 简化版：使用 Select；T4 可升级为带搜索的下拉
-      // 2026-07-09：选完同时写 supplierId + supplierName（修复详情弹窗供应商字段为空）
+      // 2026-08-21：改为搜索 + 下拉（供应商多时难查找，按名称过滤；限制最多 50 条匹配）
+      // 选完同时写 supplierId + supplierName（修复详情弹窗供应商字段为空）
       return (
-        <Select value={value || ''} onValueChange={(v) => {
-          onChange(v)
-          const found = ctx.suppliers.find(s => s.id === v)
-          if (found && ctx.onMultiFieldChange) {
-            ctx.onMultiFieldChange({ supplierId: v, supplierName: found.name })
-          }
-        }}>
-          <SelectTrigger>
-            <SelectValue placeholder="选择供应商" />
-          </SelectTrigger>
-          <SelectContent>
-            {ctx.suppliers.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SupplierSelectField
+          value={value}
+          suppliers={ctx.suppliers}
+          onChange={onChange}
+          onMultiFieldChange={ctx.onMultiFieldChange}
+        />
       );
     case 'base-select':
       // 2026-07-09：选完同时写 baseId + baseName（修复详情弹窗所属基地字段为空）

@@ -558,12 +558,7 @@ export function PlantingTable({
           }
           return (
             <div className="flex gap-1">
-              {/* 读操作 — 始终可用 */}
-              {record.pictures && record.pictures.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={() => onImageClick(record.pictures)} title="查看图片">
-                  <Image className="w-4 h-4" />
-                </Button>
-              )}
+              {/* 2026-08-21：移除"查看图片"按钮（详情弹窗已含图片信息，无需操作列重复入口）*/}
               {onDailyRecord && (
                 <Button variant="ghost" size="icon" onClick={() => onDailyRecord(record)} title={`每日记录${isEnded ? '（只读）' : ''}`}>
                   <Calendar className={`w-4 h-4 ${isEnded ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -1122,14 +1117,6 @@ export function PlantingTable({
                       return (
                         <div className="flex gap-1">
                           {/* 读操作 — 始终可用 */}
-                          {record.pictures && record.pictures.length > 0 && (
-                            <ActionIconButton
-                              variant="view"
-                              icon={<Image className="w-4 h-4" />}
-                              onClick={() => onImageClick(record.pictures)}
-                              title="查看图片"
-                            />
-                          )}
                           {onDailyRecord && (
                             <ActionIconButton
                               variant="record"

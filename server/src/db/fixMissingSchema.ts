@@ -3015,7 +3015,92 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• 2026-07-25 zone-area-oid:', e.message);
   }
 
+  // 2026-08-21：种源编码前缀 ZZ → ZY（避免与种植 ZZ 编码冲突）
+  try {
+    migrateSeedSourceCodeZZtoZY(db);
+    seedLog.info('✓ 2026-08-21 种源编码 ZZ→ZY 迁移完成');
+  } catch (e: any) {
+    seedLog.skip('• 2026-08-21 种源编码 ZZ→ZY:', e.message);
+  }
+
   saveDatabase();
+}
+
+/**
+ * 2026-08-21：种源编码前缀 ZZ → ZY 迁移
+ *
+ * 历史 bug：seed_sources.source_code 与 plantings.planting_code 都用 ZZ 前缀，导致
+ * 跨 entity 编码可能视觉/系统层面冲突（虽然 entity 区分但语义混乱）。
+ * 修复：种源改 ZY（"种源"拼音首字母），种植保持 ZZ。
+ *
+ * 迁移步骤：
+ * 1. seed_sources.source_code: ZZ\d{8}-\d{3} → ZY\d{8}-\d{3}
+ * 2. 关联表同步（保留原 ZZ 格式的关联引用）：
+ *    - material_flow_log.source_code / target_code
+ *    - inventory_inbound_records.business_code（外购入库 type=种源时）
+ *    - seed_source_return.source_code
+ *    - seed_circulation_records.source_code（如果有）
+ *
+ * 幂等：用 LIKE 'ZZ%' 过滤只改 ZZ 开头的行，已是 ZY 的不动。
+ */
+function migrateSeedSourceCodeZZtoZY(db: any): void {
+  // Step 1：建立 ZZ → ZY 映射（按 8 位日期 + 3 位流水唯一区分）
+  // 只处理 14 字符的种源编码格式：ZZ + YYYYMMDD + - + NNN
+  const selectStmt = db.prepare(`
+    SELECT id, source_code FROM seed_sources
+    WHERE source_code LIKE 'ZZ________-___'
+      AND deleted_at IS NULL
+  `);
+  const updates: Array<{ id: string; oldCode: string; newCode: string }> = [];
+  while (selectStmt.step()) {
+    const row = selectStmt.getAsObject() as { id: string; source_code: string };
+    const oldCode = row.source_code;
+    const newCode = 'ZY' + oldCode.slice(2);
+    updates.push({ id: row.id, oldCode, newCode });
+  }
+  selectStmt.free();
+
+  if (updates.length === 0) {
+    seedLog.info('  无 ZZ 编码需要迁移（已是 ZY 或无数据）');
+    return;
+  }
+  seedLog.info(`  发现 ${updates.length} 条种源 ZZ 编码，开始迁移...`);
+
+  // Step 2：先更新 seed_sources 表
+  const updateSourceStmt = db.prepare(`UPDATE seed_sources SET source_code = ? WHERE id = ?`);
+  for (const u of updates) {
+    try {
+      updateSourceStmt.run([u.newCode, u.id]);
+    } catch (e: any) {
+      seedLog.error(`  迁移失败 id=${u.id} ${u.oldCode} → ${u.newCode}: ${e.message}`);
+    }
+  }
+  updateSourceStmt.free();
+
+  // Step 3：同步关联表（每个映射更新所有引用表）
+  // 用 prepared statement 缓存以提速（一次 prepare + N 次 run）
+  const updateFlowSrc = db.prepare(`UPDATE material_flow_log SET source_code = ? WHERE source_code = ?`);
+  const updateFlowTgt = db.prepare(`UPDATE material_flow_log SET target_code = ? WHERE target_code = ?`);
+  const updateInboundBiz = db.prepare(`UPDATE inventory_inbound_records SET business_code = ? WHERE business_code = ? AND source_type = ?`);
+  const updateReturnSrc = db.prepare(`UPDATE seed_source_return SET source_code = ? WHERE source_code = ?`);
+  let flowSrc = 0, flowTgt = 0, inboundBiz = 0, returnSrc = 0;
+
+  for (const u of updates) {
+    try {
+      updateFlowSrc.run([u.newCode, u.oldCode]); flowSrc += updateFlowSrc.changes || 0;
+      updateFlowTgt.run([u.newCode, u.oldCode]); flowTgt += updateFlowTgt.changes || 0;
+      updateInboundBiz.run([u.newCode, u.oldCode, 'seed_source']); inboundBiz += updateInboundBiz.changes || 0;
+      updateReturnSrc.run([u.newCode, u.oldCode]); returnSrc += updateReturnSrc.changes || 0;
+    } catch (e: any) {
+      seedLog.error(`  关联表更新失败 ${u.oldCode}: ${e.message}`);
+    }
+  }
+  updateFlowSrc.free();
+  updateFlowTgt.free();
+  updateInboundBiz.free();
+  updateReturnSrc.free();
+
+  seedLog.info(`  迁移完成：seed_sources ${updates.length} 条 + material_flow_log source ${flowSrc}/target ${flowTgt} + inbound_records ${inboundBiz} + seed_source_return ${returnSrc}`);
 }
 
 /**

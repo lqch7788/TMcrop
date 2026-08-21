@@ -416,9 +416,10 @@ export class SeedSourceRepository {
    */
   async getTodayMaxSerial(dateStr: string): Promise<number> {
     const db = getDatabase();
-    // 匹配格式: ZZ + 日期(8位) + - + 序号(3位) = 14 字符
+    // 匹配格式: ZY + 日期(8位) + - + 序号(3位) = 14 字符
     // 2026-06-24 修复: 去掉错误的 LENGTH=16 过滤（实际长度 14），导致永远查不到 max
-    const pattern = `ZZ${dateStr}-___`;
+    // 2026-08-21：种源编码前缀 ZZ → ZY（避免与种植 ZZ 冲突）
+    const pattern = `ZY${dateStr}-___`;
     const stmt = db.prepare(`
       SELECT source_code FROM seed_sources
       WHERE source_code LIKE ? AND deleted_at IS NULL
