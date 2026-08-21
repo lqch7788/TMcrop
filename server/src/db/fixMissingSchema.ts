@@ -3101,6 +3101,28 @@ function migrateSeedSourceCodeZZtoZY(db: any): void {
   updateReturnSrc.free();
 
   seedLog.info(`  迁移完成：seed_sources ${updates.length} 条 + material_flow_log source ${flowSrc}/target ${flowTgt} + inbound_records ${inboundBiz} + seed_source_return ${returnSrc}`);
+
+  // 2026-08-21：同步迁移 plant_labels.label_number（种源关联标签）
+  // 仅改 seed_source_id 非空且 planting_id 为空的标签（不误改种植标签 ZZ 编码）
+  const labelSelect = db.prepare(`
+    SELECT id, label_number FROM plant_labels
+    WHERE label_number LIKE 'ZZ________-___-____'
+      AND seed_source_id IS NOT NULL AND seed_source_id != ''
+      AND (planting_id IS NULL OR planting_id = '')
+  `);
+  const labelUpdate = db.prepare(`UPDATE plant_labels SET label_number = ? WHERE id = ?`);
+  let labelCount = 0;
+  while (labelSelect.step()) {
+    const r = labelSelect.getAsObject() as { id: number; label_number: string };
+    const newCode = 'ZY' + r.label_number.slice(2);
+    try {
+      labelUpdate.run([newCode, r.id]);
+      labelCount++;
+    } catch (e) { /* skip */ }
+  }
+  labelSelect.free();
+  labelUpdate.free();
+  seedLog.info(`  同步迁移 plant_labels.label_number：${labelCount} 条 ZZ→ZY（仅种源关联标签，不动种植标签）`);
 }
 
 /**
