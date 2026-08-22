@@ -50,6 +50,8 @@ import announcementRouter from './announcement';
 // 2026-08-22：AI 模块（智能任务中心 P0）
 import aiWorkhourRouter from './ai/workhour';
 import aiDispatchRouter from './ai/dispatch';
+import aiGrowthRouter from './ai/growth';
+import aiRouteRouter from './ai/route';
 import indicatorsRouter from './indicators';
 import indicatorEvaluationsRouter from './indicatorEvaluations';
 import scheduleRouter from './schedule';
@@ -156,6 +158,8 @@ router.use('/farm-tasks', requireAuth, farmTaskRouter);
 // 2026-08-22：AI 模块路由（智能任务中心 P0）
 router.use('/ai/workhour', requireAuth, aiWorkhourRouter);
 router.use('/ai/dispatch', requireAuth, aiDispatchRouter);
+router.use('/ai/growth', requireAuth, aiGrowthRouter);
+router.use('/ai/route', requireAuth, aiRouteRouter);
 
 // 巡查记录路由 - 需要认证
 router.use('/inspections', requireAuth, inspectionRouter);
