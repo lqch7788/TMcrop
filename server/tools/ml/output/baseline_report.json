@@ -1,0 +1,45 @@
+{
+  "date": "2026-08-22",
+  "model_type": "linear_regression_baseline",
+  "data_source": "V1.1 SQLite farm_tasks",
+  "total_samples": 10,
+  "train_samples": 7,
+  "test_samples": 3,
+  "features": [
+    "F1_task_type",
+    "F2_area",
+    "F3_priority",
+    "F4_skill_match",
+    "F5_hist_mean",
+    "F6_hist_std",
+    "F7_worker_eff",
+    "F8_progress"
+  ],
+  "metrics": {
+    "train": {
+      "n": 7,
+      "MAPE": 161.34453781512607,
+      "MAE": 3.047619047619049,
+      "R2": 0.5175013462574043
+    },
+    "test": {
+      "n": 3,
+      "MAPE": 33.607268260371264,
+      "MAE": 7.378124192606207,
+      "R2": -2.4628885322826117
+    },
+    "coefficients": {
+      "bias": 1.1102230246251565e-15,
+      "F1_task_type": 0.0746354513893881,
+      "F2_area": -2.220446049250313e-16,
+      "F3_priority": -2.0727483580536683,
+      "F4_skill_match": 0.0,
+      "F5_hist_mean": 1.5099021982139562,
+      "F6_hist_std": 0.20141006476163048,
+      "F7_worker_eff": 1.8662780770411516,
+      "F8_day_of_week": 0.9702409158768784
+    }
+  },
+  "ppt_target_mape": 20.0,
+  "meets_target": "False"
+}

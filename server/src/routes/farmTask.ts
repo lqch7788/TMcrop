@@ -1239,7 +1239,7 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
 router.post('/:id/complete', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { comments, operator_id, operator_name } = req.body;
+    const { comments, operator_id, operator_name, actual_hours } = req.body;
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
@@ -1257,16 +1257,35 @@ router.post('/:id/complete', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
 
+    // 2026-08-22：AI-06 工时预测 — 收集实际工时（AI 训练 target）
+    // 同时计算 estimated_vs_actual_ratio 供 AI 特征工程使用
+    let actualHoursValue: number | null = null;
+    let ratioValue: number | null = null;
+    if (actual_hours !== undefined && actual_hours !== null) {
+      const ah = Number(actual_hours);
+      if (!isNaN(ah) && ah > 0) {
+        actualHoursValue = ah;
+        const estimated = Number(task.estimated_hours) || 0;
+        if (estimated > 0) {
+          ratioValue = ah / estimated;
+        }
+      }
+    }
+
     // P0-1：事务包裹
     runInTransaction(db, () => {
-      db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100, update_time = ? WHERE id = ?`,
-        [now, now, id]);
+      db.run(`UPDATE farm_tasks SET status = 'completed', completed_at = ?, progress = 100,
+                                   actual_hours = ?, actual_hours_recorded_at = ?, actual_hours_recorded_by = ?,
+                                   estimated_vs_actual_ratio = ?, update_time = ?
+                                   WHERE id = ?`,
+        [now, actualHoursValue, actualHoursValue ? now : null, actualHoursValue ? (operator_id || '') : null,
+         ratioValue, now, id]);
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
         operator_id || '', operator_name || '', 'complete', '验收通过', fromStatus, 'completed', 100, comments);
     });
 
-    res.json({ success: true, data: { id, status: 'completed' } });
+    res.json({ success: true, data: { id, status: 'completed', actual_hours: actualHoursValue, estimated_vs_actual_ratio: ratioValue } });
   } catch (error) {
     res.status(500).json({ success: false, error: '验收通过失败' });
   }
