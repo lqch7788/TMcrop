@@ -1,0 +1,111 @@
+{
+  "date": "2026-08-22T15:27:53.157430",
+  "total": 25,
+  "passed": 23,
+  "failed": 2,
+  "pass_rate_percent": 92.0,
+  "results": [
+    {
+      "name": "AI-01 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-02 happy",
+      "status": "FAIL",
+      "reason": "validator 失败"
+    },
+    {
+      "name": "AI-04 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-05 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-06 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-07 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-08 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-09 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-10 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-11 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-12 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-13 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-14 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-15 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-03 happy",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-01 missing task_type",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-04 missing crop_type",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-05 missing crop_type",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-06 missing task_type",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-11 missing text",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-03 missing fields",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-13 missing type",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-01 XAI",
+      "status": "FAIL",
+      "reason": "validator 失败"
+    },
+    {
+      "name": "AI-06 XAI",
+      "status": "PASS"
+    },
+    {
+      "name": "AI-13 XAI",
+      "status": "PASS"
+    }
+  ]
+}
