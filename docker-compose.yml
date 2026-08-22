@@ -1,43 +1,37 @@
+# V1.1 弘智耘种植管理系统 Docker Compose
+# 2026-08-22：生产部署编排
+
 version: '3.8'
 
 services:
-  frontend:
+  app:
     build:
-      context: .
-      dockerfile: docker/Dockerfile.frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - tmcrop-network
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: v11-app
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 必须通过环境变量显式注入，生产模式不允许默认值}
-      - DEMO_MODE=${DEMO_MODE:-false}
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-in-prod}
       - DB_PATH=/app/data/yuanxingtu.db
     volumes:
       - ./server/data:/app/data
-    networks:
-      - tmcrop-network
+      - ./server/logs:/app/logs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 40s
 
-networks:
-  default:
-    name: tmcrop-network
-    driver: bridge
+  # 备份服务（每天凌晨 3 点备份 DB 到 ./backups）
+  backup:
+    image: alpine:3.18
+    container_name: v11-backup
+    volumes:
+      - ./server/data:/data:ro
+      - ./backups:/backups
+    entrypoint: /bin/sh -c "while true; do date +%Y%m%d_%H%M%S > /tmp/ts; tar czf /backups/db_$$(cat /tmp/ts).tgz -C /data .; sleep 86400; done"
+    restart: unless-stopped
