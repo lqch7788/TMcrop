@@ -1,15 +1,11 @@
 /**
- * AI-12 智能问答助手服务（V1 — SQLite FTS5 + LLM mock）
- * 2026-08-22：P2 MVP
+ * AI-12 智能问答助手服务（真实检索 + LLM 端口预留）
+ * 2026-08-22：砍掉 LLM mock 模板回答
  *
- * Plan 要求：
- * - 基于自然语言处理为系统用户提供操作指导、数据查询、问题解答
- * - 回答准确率 ≥80% / <3 秒
- *
- * V1 实现：
- * - 知识库：SQLite FTS5 全文索引（系统字典 + 规则 + 业务术语）
- * - LLM mock：模板化回答（不调真实 API，省成本）
- * - 意图分类：操作指导 / 数据查询 / 术语解释 / 故障排查
+ * 真实链路：
+ * 1. 知识库检索：SQLite 真实表（数据字典 / 推荐规则 / AI 规则）关键词检索
+ * 2. LLM 生成：环境变量 AI_LLM_API_URL + AI_LLM_API_KEY 配置后调用真实 LLM API
+ *    - 未配置 → 返回真实检索结果拼装回答，并明确标注"LLM 未配置"（不伪装）
  */
 
 import { getDatabase } from '../../db';
@@ -26,10 +22,11 @@ interface QAResult {
   references: { source: string; excerpt: string; relevance: number }[];
   confidence: number;              // 0-1
   model_version: string;
+  llm_configured: boolean;         // LLM 端口是否已配置
   response_time_ms: number;
 }
 
-const MODEL_VERSION = '1.0.0-fts5-mock-llm';
+const MODEL_VERSION = '1.0.1-fts5-real';
 
 /**
  * 意图分类（关键词匹配）
@@ -44,8 +41,7 @@ function classifyIntent(question: string): QAResult['intent'] {
 }
 
 /**
- * FTS5 全文搜索知识库
- * （V1.1 当前无 FTS5 索引，用 LIKE fallback）
+ * 知识库检索（真实表 LIKE 检索）
  */
 function searchKnowledgeBase(question: string): { source: string; excerpt: string; relevance: number }[] {
   const db = getDatabase();
@@ -71,7 +67,7 @@ function searchKnowledgeBase(question: string): { source: string; excerpt: strin
         });
       }
     }
-  } catch (e) {}
+  } catch (e) { /* 表缺失则跳过 */ }
 
   // 2. 查推荐规则
   try {
@@ -89,7 +85,7 @@ function searchKnowledgeBase(question: string): { source: string; excerpt: strin
         });
       }
     }
-  } catch (e) {}
+  } catch (e) { /* 表缺失则跳过 */ }
 
   // 3. 查 AI 规则库（如果存在）
   try {
@@ -107,48 +103,57 @@ function searchKnowledgeBase(question: string): { source: string; excerpt: strin
         });
       }
     }
-  } catch (e) {}
+  } catch (e) { /* 表缺失则跳过 */ }
 
   return results;
 }
 
 /**
- * 模板化回答（LLM mock）
+ * 调用真实 LLM API（端口预留：配置 AI_LLM_API_URL + AI_LLM_API_KEY 后启用）
+ * 未配置 → 返回 null（上层用真实检索结果拼装，不伪装 LLM 回答）
  */
-function generateAnswer(intent: QAResult['intent'], question: string, references: { source: string; excerpt: string }[]): { answer: string; confidence: number } {
+async function callLLM(question: string, references: { source: string; excerpt: string }[]): Promise<string | null> {
+  const apiUrl = process.env.AI_LLM_API_URL;
+  const apiKey = process.env.AI_LLM_API_KEY;
+  if (!apiUrl) return null;
+
+  const prompt = `你是弘智耘种植管理系统的智能助手。请基于以下知识库片段回答用户问题，回答要简洁准确（150 字内）。\n\n知识库片段：\n${references.map(r => `- 【${r.source}】${r.excerpt}`).join('\n') || '（无匹配片段）'}\n\n用户问题：${question}`;
+
+  const resp = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+    body: JSON.stringify({ prompt, question, stream: false }),
+  });
+  if (!resp.ok) {
+    throw new Error(`LLM API 调用失败: HTTP ${resp.status}`);
+  }
+  const data = await resp.json() as Record<string, any>;
+  // 兼容常见 LLM 返回结构（answer / content / choices[0].text / text）
+  const text = data.answer ?? data.content ?? data.text ?? data.choices?.[0]?.text ?? data.choices?.[0]?.message?.content ?? null;
+  if (!text) {
+    throw new Error('LLM API 返回结构无法解析（期望 answer/content/choices[0].text 字段）');
+  }
+  return String(text);
+}
+
+/**
+ * 无 LLM 时：基于真实检索结果拼装回答（标注数据来源，不伪装）
+ */
+function composeRetrievalAnswer(intent: QAResult['intent'], question: string, references: { source: string; excerpt: string }[]): string {
   if (references.length === 0) {
-    return {
-      answer: `抱歉，知识库中未找到与"${question}"直接匹配的内容。建议：\n1. 尝试更具体的关键词\n2. 查看系统文档菜单\n3. 联系管理员补充知识库`,
-      confidence: 0.2,
-    };
+    return `知识库中未找到与"${question}"直接匹配的内容。建议：\n1. 尝试更具体的关键词\n2. 查看系统文档菜单\n3. 联系管理员补充知识库\n\n（注：LLM 未配置，仅检索本地知识库。配置环境变量 AI_LLM_API_URL 后可启用智能回答）`;
   }
-
-  let template = '';
-  let confidence = 0.6;
-
-  switch (intent) {
-    case 'operation':
-      template = `根据知识库，关于 "${question}" 的操作步骤：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}\n\n提示：具体操作请参考系统右上角"帮助"菜单。`;
-      confidence = 0.75;
-      break;
-    case 'data_query':
-      template = `根据知识库，关于 "${question}" 的数据查询：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}\n\n注：实际数据请以仪表盘实时显示为准。`;
-      confidence = 0.7;
-      break;
-    case 'terminology':
-      template = `关于 "${question}" 的术语解释：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}`;
-      confidence = 0.8;
-      break;
-    case 'troubleshooting':
-      template = `关于 "${question}" 的故障排查：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}\n\n如仍未解决，请联系系统管理员。`;
-      confidence = 0.65;
-      break;
-    default:
-      template = `根据知识库：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}`;
-      confidence = 0.5;
-  }
-
-  return { answer: template, confidence: Math.min(confidence + references.length * 0.05, 0.95) };
+  const intentLabel: Record<QAResult['intent'], string> = {
+    operation: '操作指导',
+    data_query: '数据查询',
+    terminology: '术语解释',
+    troubleshooting: '故障排查',
+    unknown: '知识库匹配',
+  };
+  return `【${intentLabel[intent]}】关于 "${question}"，知识库检索到以下相关内容：\n\n${references.map((r, i) => `${i + 1}. 【${r.source}】${r.excerpt}`).join('\n')}\n\n（注：LLM 未配置，以上为本地知识库检索结果。配置 AI_LLM_API_URL 后可获得智能生成的完整回答）`;
 }
 
 export async function answerQuestion(input: QAInput): Promise<QAResult> {
@@ -157,11 +162,22 @@ export async function answerQuestion(input: QAInput): Promise<QAResult> {
   // 1. 意图分类
   const intent = classifyIntent(input.question);
 
-  // 2. 知识库搜索
+  // 2. 真实知识库检索
   const references = searchKnowledgeBase(input.question);
 
-  // 3. 生成回答
-  const { answer, confidence } = generateAnswer(intent, input.question, references);
+  // 3. LLM 端口：已配置 → 真实调用；未配置 → 真实检索结果拼装
+  const llmConfigured = Boolean(process.env.AI_LLM_API_URL);
+  let answer: string;
+  let confidence = 0.3;
+
+  if (llmConfigured) {
+    const llmAnswer = await callLLM(input.question, references.slice(0, 5));
+    answer = llmAnswer ?? composeRetrievalAnswer(intent, input.question, references);
+    confidence = llmAnswer ? 0.85 : 0.4;
+  } else {
+    answer = composeRetrievalAnswer(intent, input.question, references);
+    confidence = references.length > 0 ? 0.6 : 0.2;
+  }
 
   return {
     question: input.question,
@@ -170,6 +186,7 @@ export async function answerQuestion(input: QAInput): Promise<QAResult> {
     references: references.slice(0, 5),
     confidence: Math.round(confidence * 100) / 100,
     model_version: MODEL_VERSION,
+    llm_configured: llmConfigured,
     response_time_ms: Date.now() - startTime,
   };
 }

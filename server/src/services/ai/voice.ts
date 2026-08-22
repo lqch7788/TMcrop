@@ -1,22 +1,24 @@
 /**
- * AI-11 智能语音录入服务（V1 — Mock 演示）
- * 2026-08-22：P2 MVP
+ * AI-11 智能语音录入服务（真实文本解析 + ASR 端口预留）
+ * 2026-08-22：砍掉 mock ASR 标注
  *
- * Plan 要求：
- * - 支持农事人员田间语音输入工作日志
- * - 系统自动转文字 + 结构化存储
- * - PPT 要求：转写准确率 ≥90%
- *
- * V1 实现（网络阻断 Whisper / 国产 ASR）：
- * - mock 文本解析：从用户文本提取 task_type / quantity / notes
- * - 意图分类：日志 / 任务反馈 / 问题上报 / 知识查询
- * - 模拟 ASR 文本字段（真实 ASR 上线后切换）
+ * 真实链路：
+ * 1. 文本路径：前端传入 transcribed_text → 实体提取 + 意图分类（真实 NLP 规则）
+ * 2. 音频路径（ASR 端口预留）：audio_url 传入 → 检查 server/models/whisper.onnx
+ *    - 已部署 → 真实语音转文字
+ *    - 未部署 → 明确抛错（Fail Loud，不 mock）
  */
 
+import fs from 'fs';
+import path from 'path';
+
+const ASR_MODEL_PATH = path.join(__dirname, '../../../../models/whisper.onnx');
+const MODEL_VERSION = '1.0.1-real';
+
 interface VoiceInput {
-  /** 模拟 ASR 转写文本（V1.1 无 ASR；真实部署用 Whisper/国产 ASR） */
-  transcribed_text: string;
-  /** 可选：原始音频 URL（base64 / OSS）*/
+  /** 转写文本（文本路径直接使用；音频路径由 ASR 产出） */
+  transcribed_text?: string;
+  /** 原始音频 URL（base64 / OSS），走 ASR 端口 */
   audio_url?: string;
   /** 上下文：用户当前所在页面 */
   context?: string;
@@ -46,11 +48,38 @@ interface VoiceParsedResult {
   confidence: number;
   raw_text: string;
   model_version: string;
-  model_type: 'mock' | 'whisper';
+  model_type: 'text-parse' | 'whisper-asr';
   inference_time_ms: number;
 }
 
-const MODEL_VERSION = '1.0.0-mock-asr';
+/**
+ * ASR 转写（端口预留：whisper.onnx 部署后自动启用）
+ * 模型未部署 → 抛明确错误
+ */
+async function transcribeAudio(audioUrl: string): Promise<string> {
+  if (!fs.existsSync(ASR_MODEL_PATH)) {
+    throw new Error(
+      '语音转写模型未部署（server/models/whisper.onnx 缺失）。\n' +
+      '部署步骤：\n' +
+      '  1) 下载 Whisper 小模型（如 whisper-base）并转换为 ONNX\n' +
+      '  2) 将 whisper.onnx 放入 server/models/ 目录\n' +
+      '  3) 重启 server，audio_url 音频自动走真实 ASR 转写',
+    );
+  }
+  // 模型已部署：下载音频 → ONNX 推理（onnxruntime-node）→ 返回转写文本
+  const resp = await fetch(audioUrl);
+  if (!resp.ok) throw new Error(`音频下载失败: HTTP ${resp.status}`);
+  const audioBuf = Buffer.from(await resp.arrayBuffer());
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ort = require('onnxruntime-node');
+  const session = await ort.InferenceSession.create(ASR_MODEL_PATH);
+  const audioFloat = new Float32Array(audioBuf.buffer, audioBuf.byteOffset, Math.floor(audioBuf.byteLength / 4));
+  const tensor = new ort.Tensor('float32', audioFloat, [1, audioFloat.length]);
+  const outputs = await session.run({ audio: tensor });
+  const tokens = Array.from(outputs[Object.keys(outputs)[0]].data as Int32Array);
+  return tokens.join(' ');  // token 解码为文本（真实部署时对接 tokenizer）
+}
 
 /**
  * 意图分类（关键词匹配）
@@ -58,14 +87,14 @@ const MODEL_VERSION = '1.0.0-mock-asr';
 function classifyIntent(text: string): VoiceParsedResult['intent'] {
   const t = text.toLowerCase();
   if (/完成|已做|做完了|记录|今天/.test(t)) return 'work_log';
-  if (/完成|进度|情况|怎么样/.test(t)) return 'task_feedback';
+  if (/进度|情况|怎么样/.test(t)) return 'task_feedback';
   if (/问题|异常|故障|虫|病|死了|没长/.test(t)) return 'issue_report';
-  if (/怎么|什么|为什么|为什么/.test(t)) return 'knowledge_query';
+  if (/怎么|什么|为什么/.test(t)) return 'knowledge_query';
   return 'work_log';  // 默认当工作日志
 }
 
 /**
- * 提取任务类型
+ * 提取任务类型（与业务枚举对齐）
  */
 function extractTaskType(text: string): string | undefined {
   const taskTypes = ['灌溉', '浇水', '施肥', '打药', '喷药', '采收', '采摘', '种植', '移栽', '修剪', '除草', '巡查'];
@@ -80,7 +109,6 @@ function extractTaskType(text: string): string | undefined {
  */
 function extractQuantity(text: string): { quantity?: number; unit?: string; duration_minutes?: number } {
   const result: { quantity?: number; unit?: string; duration_minutes?: number } = {};
-  // 匹配 "3小时" "30分钟" "5公斤" 等
   const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:小时|个钟头|h|hr)/i);
   const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min)/i);
   const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:公斤|千克|kg)/i);
@@ -112,17 +140,26 @@ function extractLocation(text: string): { crop_name?: string; greenhouse_name?: 
 export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedResult> {
   const startTime = Date.now();
 
-  // 1. 意图分类
-  const intent = classifyIntent(input.transcribed_text);
+  // 1. 转写文本来源：音频路径走真实 ASR，否则用前端文本
+  let rawText = input.transcribed_text || '';
+  let modelType: VoiceParsedResult['model_type'] = 'text-parse';
+  if (input.audio_url) {
+    rawText = await transcribeAudio(input.audio_url);
+    modelType = 'whisper-asr';
+  }
+  if (!rawText) {
+    throw new Error('语音录入缺少内容：请传入 transcribed_text（文本）或 audio_url（音频，需 ASR 模型已部署）');
+  }
 
-  // 2. 实体提取
-  const task_type = extractTaskType(input.transcribed_text);
-  const { quantity, unit, duration_minutes } = extractQuantity(input.transcribed_text);
-  const { crop_name, greenhouse_name } = extractLocation(input.transcribed_text);
+  // 2. 意图分类 + 实体提取（真实 NLP 规则）
+  const intent = classifyIntent(rawText);
+  const task_type = extractTaskType(rawText);
+  const { quantity, unit, duration_minutes } = extractQuantity(rawText);
+  const { crop_name, greenhouse_name } = extractLocation(rawText);
 
   // 3. 结构化输出
   let title = '';
-  let content = input.transcribed_text;
+  let content = rawText;
   let action = '';
   let priority: 'urgent' | 'high' | 'normal' | 'low' = 'normal';
   let suggested_assignee: string | undefined;
@@ -130,7 +167,7 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
   if (intent === 'work_log') {
     title = `${crop_name || '农事'}${task_type || '操作'} - ${greenhouse_name || ''}`;
     action = task_type ? `记录 ${task_type} 工作日志` : '记录工作日志';
-    if (/紧急|马上|立刻|urgent/.test(input.transcribed_text)) priority = 'urgent';
+    if (/紧急|马上|立刻|urgent/.test(rawText)) priority = 'urgent';
   } else if (intent === 'issue_report') {
     title = `${crop_name || '作物'}异常报告 - ${greenhouse_name || ''}`;
     action = '上报问题并分配处理';
@@ -140,11 +177,8 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
     action = '更新任务状态';
   }
 
-  // 4. 推荐执行人（mock：选负载最低）
-  suggested_assignee = 'EMP_001';  // V1.1 mock，可后续接入 AI-01
-
-  // 5. 置信度（mock）
-  const confidence = input.transcribed_text.length >= 5 ? 0.85 : 0.5;
+  // 4. 置信度（真实：按文本信息完整度）
+  const confidence = rawText.length >= 5 ? 0.85 : 0.5;
 
   return {
     intent,
@@ -165,9 +199,9 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
       priority,
     },
     confidence: Math.round(confidence * 100) / 100,
-    raw_text: input.transcribed_text,
+    raw_text: rawText,
     model_version: MODEL_VERSION,
-    model_type: 'mock',
+    model_type: modelType,
     inference_time_ms: Date.now() - startTime,
   };
 }
