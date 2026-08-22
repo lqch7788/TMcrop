@@ -44,22 +44,31 @@ export async function predictWorkhour(input: WorkhourPredictInput): Promise<Work
 
   try {
     // 1. 查询同类型任务历史平均工时
-    const histRows = db.exec(`
+    // 2026-08-22 双修复：
+    //   a) synthetic 行 id 为 NULL，`id != COALESCE(?, '')` 过滤掉 NULL → 仅当 task_id 有值才排除
+    //   b) sql.js db.exec 中文参数绑定失败（'采收' 查不到，'planting' 能查到）
+    //      → 改用 db.prepare + bind（与 plantings 路由同模式，中文安全）
+    const excludeClause = input.task_id ? 'AND id != ?' : '';
+    const sql = `
       SELECT actual_hours, estimated_hours, rework_count, priority
       FROM farm_tasks
       WHERE task_type = ?
         AND actual_hours IS NOT NULL AND actual_hours > 0
-        AND id != COALESCE(?, '')
+        ${excludeClause}
       ORDER BY completed_at DESC
       LIMIT 50
-    `, [input.task_type, input.task_id || '']);
-    const histCols = histRows[0]?.columns || [];
-    const histValues = histRows[0]?.values || [];
-    const hist = histValues.map((row: any[]) => {
-      const obj: any = {};
-      histCols.forEach((c, i) => { obj[c] = row[i]; });
-      return obj;
-    });
+    `;
+    const stmt = db.prepare(sql);
+    if (input.task_id) {
+      stmt.bind([input.task_type, input.task_id]);
+    } else {
+      stmt.bind([input.task_type]);
+    }
+    const hist: any[] = [];
+    while (stmt.step()) {
+      hist.push(stmt.getAsObject());
+    }
+    stmt.free();
 
     if (hist.length === 0) {
       // 降级：返回 V1.1 estimated_hours 字段（安全网）

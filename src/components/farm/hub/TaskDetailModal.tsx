@@ -13,6 +13,8 @@ import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
 import type { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
 import { TaskRecordTimeline } from '../../common/TaskRecordTimeline';
+// 2026-08-22：AI 实际工时录入 UI
+import { ActualHoursRecorder } from '../../../components/farm/ai/ActualHoursRecorder';
 
 interface TaskDetailModalProps {
   taskId: string;
@@ -518,6 +520,17 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
             </Button>
           )}
         </div>
+      </div>
+
+      {/* ★ 2026-08-22：AI 实际工时录入（任务完成后员工填入） */}
+      <div className="mt-4 px-1">
+        <ActualHoursRecorder
+          taskId={taskId}
+          taskType={task.taskType || '其他'}
+          taskCode={task.taskCode}
+          estimatedHours={task.estimatedHours}
+          onSuccess={() => onRefresh?.()}
+        />
       </div>
     </div>
   );
