@@ -160,6 +160,33 @@ export const aiApi = {
     optimize: (input: RouteOptimizeInput): Promise<{ success: boolean; data: RouteOptimizeResult }> =>
       enhancedApiClient.post('/ai/route/optimize', input),
   },
+
+  pest: {
+    /**
+     * AI-05 病虫害预警（规则版，V1.1 无 IoT → mock 环境数据）
+     * 输入：作物类型 + 可选环境数据 → 输出：风险评分 + 预警等级 + 推荐操作
+     */
+    alert: (input: { crop_type: string; greenhouse_id?: string; env_data?: any; history_days?: number }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/pest/alert', input),
+  },
+
+  qa: {
+    /**
+     * AI-12 智能问答助手（FTS5 + LLM mock）
+     * 输入：自然语言问题 → 输出：意图分类 + 模板化回答 + 知识库引用
+     */
+    ask: (input: { question: string; context?: string }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/qa/ask', input),
+  },
+
+  report: {
+    /**
+     * AI-13 智能报告生成（模板化 + 数据聚合）
+     * 输入：报告类型 + 时间段 → 输出：报告 sections + insights + recommendations
+     */
+    generate: (input: { report_type: 'daily' | 'weekly' | 'monthly' | 'custom'; start_date?: string; end_date?: string; crop_type?: string; greenhouse_id?: string }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/report/generate', input),
+  },
 };
 
 export default aiApi;
