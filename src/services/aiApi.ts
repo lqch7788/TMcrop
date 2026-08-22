@@ -163,7 +163,7 @@ export const aiApi = {
 
   pest: {
     /**
-     * AI-05 病虫害预警（规则版，V1.1 无 IoT → mock 环境数据）
+     * AI-05 病虫害预警（真实 IoT 传感器数据 + 植保规则）
      * 输入：作物类型 + 可选环境数据 → 输出：风险评分 + 预警等级 + 推荐操作
      */
     alert: (input: { crop_type: string; greenhouse_id?: string; env_data?: any; history_days?: number }): Promise<{ success: boolean; data: any }> =>
@@ -172,7 +172,7 @@ export const aiApi = {
 
   qa: {
     /**
-     * AI-12 智能问答助手（FTS5 + LLM mock）
+     * AI-12 智能问答助手（真实知识库检索 + LLM 端口预留）
      * 输入：自然语言问题 → 输出：意图分类 + 模板化回答 + 知识库引用
      */
     ask: (input: { question: string; context?: string }): Promise<{ success: boolean; data: any }> =>
@@ -208,7 +208,7 @@ export const aiApi = {
 
   image: {
     /**
-     * AI-09 病虫害图像识别（V1 mock 演示）
+     * AI-09 病虫害图像识别（ONNX 模型端口，未部署时明确报错）
      * 输入：image_id + 可选文件名/特征 → 输出：top-3 病虫害预测 + 置信度
      */
     identify: (input: { image_id: string; image_name?: string; crop_type?: string; image_features?: any }): Promise<{ success: boolean; data: any }> =>
@@ -217,7 +217,7 @@ export const aiApi = {
 
   growthState: {
     /**
-     * AI-10 作物生长状态识别（mock + 缺素检测）
+     * AI-10 作物生长状态识别（真实 daily_records 数据驱动）
      */
     identify: (input: { crop_type: string; batch_id?: string; greenhouse_id?: string; current_gdd?: number }): Promise<{ success: boolean; data: any }> =>
       enhancedApiClient.post('/ai/growth-state/identify', input),
@@ -225,7 +225,7 @@ export const aiApi = {
 
   voice: {
     /**
-     * AI-11 智能语音录入（mock ASR）
+     * AI-11 智能语音录入（文本解析 + ASR 端口预留）
      * 输入：转写文本 → 输出：意图 + 结构化字段 + 推荐执行人
      */
     transcribe: (input: { transcribed_text: string; audio_url?: string; context?: string; submitter_id?: string }): Promise<{ success: boolean; data: any }> =>

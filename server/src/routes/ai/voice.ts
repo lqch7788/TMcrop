@@ -13,8 +13,8 @@ const router = Router();
 router.post('/transcribe', async (req: Request, res: Response) => {
   try {
     const input = req.body || {};
-    if (!input.transcribed_text) {
-      return res.status(400).json({ success: false, error: 'transcribed_text 必填（mock ASR）' });
+    if (!input.transcribed_text && !input.audio_url) {
+      return res.status(400).json({ success: false, error: 'transcribed_text（文本）或 audio_url（音频，需 ASR 模型）至少填一个' });
     }
     const result = await transcribeVoice(input);
     res.json({ success: true, data: result });

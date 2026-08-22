@@ -1,32 +1,18 @@
 /**
- * AI-05 病虫害智能预警服务（V1 — 规则版）
- * 2026-08-22：P0 核心 MVP
+ * AI-05 病虫害智能预警服务（真实数据版）
+ * 2026-08-22：砍掉 mock 环境数据，接入真实 IoT 传感器读数
  *
- * Plan 要求：环境数据（温度/湿度/光照/CO2）+ 历史病虫害记录 + 作物类型
- * → 预警准确率 ≥80% / 提前 3 天
- *
- * 现实约束：V1.1 iot_sensors = 0 行（完全无环境数据）
- * 降级实现：
- *   - 用 mock 环境数据演示（基于季节 + 地点规则）
- *   - 用现有 usePestAlert 的规则引擎（PEST_ALERT_RULES）作为后端版
- *   - 待 IoT 部署后接入真实传感器流
+ * 数据流：前端传 greenhouse_id → iot_sensor_readings 最近 24h 真实聚合 → 规则引擎 → 预警
+ * - 环境数据缺失 / 温室无传感器 → 明确抛错（Fail Loud，不再 mock 降级）
+ * - 规则引擎为真实农业植保规则（温度/湿度与病虫害发生的专业阈值）
  */
 
 import { getDatabase } from '../../db';
 
 interface PestAlertInput {
   crop_type: string;               // 必填
-  greenhouse_id?: string;
-  /** 模拟环境数据（不传则用季节默认值） */
-  env_data?: {
-    temperature?: number;
-    humidity?: number;
-    light?: number;
-    co2?: number;
-    soil_moisture?: number;
-  };
-  /** 历史预警查询天数 */
-  history_days?: number;
+  greenhouse_id: string;           // 必填（IoT 数据按温室查询）
+  history_days?: number;           // 历史预警查询天数（保留接口）
 }
 
 interface PestAlert {
@@ -47,14 +33,14 @@ interface PestAlertResult {
   alerts: PestAlert[];
   recommended_actions: string[];
   model_version: string;
-  model_type: 'rule-based' | 'onnx-xgboost';
+  model_type: 'rule-based';
   xai_reasons: string[];
-  data_source: 'mock' | 'iot_sensors';
+  data_source: 'iot_sensors';
 }
 
-const MODEL_VERSION = '1.0.0-rule-pest';
+const MODEL_VERSION = '1.0.1-real-iot';
 
-// 病虫害风险规则（基于 V1.1 usePestAlert.ts 的 PEST_ALERT_RULES）
+// 病虫害风险规则（真实植保阈值，与 V1.1 usePestAlert.ts 的 PEST_ALERT_RULES 同源）
 const PEST_RULES: { pest: string; condition: (temp: number, hum: number) => number; actions: string[] }[] = [
   {
     pest: '白粉病',
@@ -74,7 +60,7 @@ const PEST_RULES: { pest: string; condition: (temp: number, hum: number) => numb
   {
     pest: '蚜虫',
     condition: (temp, hum) => (temp >= 18 && temp <= 26 && hum <= 70 ? 60 : 20),
-    actions: ['释放瓢虫天敌', '悬挂黄板诱杀', '喷施吡虫�'],
+    actions: ['释放瓢虫天敌', '悬挂黄板诱杀', '喷施吡虫啉'],
   },
   {
     pest: '红蜘蛛',
@@ -83,75 +69,80 @@ const PEST_RULES: { pest: string; condition: (temp: number, hum: number) => numb
   },
 ];
 
-/**
- * 生成 mock 环境数据（基于季节 + 温室类型）
- */
-function mockEnvData(greenhouseId?: string, month?: number): {
-  temperature: number;
-  humidity: number;
-  light: number;
-  co2: number;
-  soil_moisture: number;
-} {
-  const m = month || new Date().getMonth() + 1;
-  // 季节经验值
-  let temp = 22;
-  if ([6, 7, 8].includes(m)) temp = 30;
-  else if ([12, 1, 2].includes(m)) temp = 12;
-  else if ([3, 4, 5].includes(m)) temp = 18;
-  else temp = 24;
+/** 查询温室最近 24h 真实传感器聚合值（prepare + bind，中文/特殊 ID 安全） */
+function queryEnvSnapshot(greenhouseId: string): { temp: number; hum: number; light: number; co2: number; soil: number } | null {
+  const db = getDatabase();
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const stmt = db.prepare(`
+    SELECT sensor_type, AVG(value) AS avg_val, COUNT(*) AS n
+    FROM iot_sensor_readings
+    WHERE greenhouse_id = ? AND recorded_at >= ?
+    GROUP BY sensor_type
+  `);
+  stmt.bind([greenhouseId, since]);
+  const agg: Record<string, number> = {};
+  let total = 0;
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    const sensorType = String(row.sensor_type || '');  // sql.js 返回 Uint8Array|null，需转字符串
+    if (!sensorType) continue;
+    agg[sensorType] = Number(row.avg_val) || 0;
+    total += Number(row.n) || 0;
+  }
+  stmt.free();
+  if (total === 0) return null;
 
   return {
-    temperature: temp + Math.random() * 4 - 2,  // ±2 扰动
-    humidity: 65 + Math.random() * 20,
-    light: 30000 + Math.random() * 20000,
-    co2: 400 + Math.random() * 200,
-    soil_moisture: 55 + Math.random() * 20,
+    temp: agg.temperature ?? 0,
+    hum: agg.humidity ?? 0,
+    light: agg.light ?? 0,
+    co2: agg.co2 ?? 0,
+    soil: agg.soil_moisture ?? 0,
   };
 }
 
 export async function predictPestAlert(input: PestAlertInput): Promise<PestAlertResult> {
-  // 1. 环境数据：优先用传入，否则查 iot_sensors，否则用 mock
   const db = getDatabase();
-  let env: { temperature: number; humidity: number; light: number; co2: number; soil_moisture: number };
-  let dataSource: 'mock' | 'iot_sensors' = 'mock';
 
-  if (input.env_data && input.env_data.temperature !== undefined) {
-    env = {
-      temperature: input.env_data.temperature,
-      humidity: input.env_data.humidity || 70,
-      light: input.env_data.light || 40000,
-      co2: input.env_data.co2 || 500,
-      soil_moisture: input.env_data.soil_moisture || 60,
-    };
-  } else if (input.greenhouse_id) {
-    const iotRows = db.exec(`
-      SELECT sensor_type, value FROM iot_sensor_readings
-      WHERE greenhouse_id = ?
-        AND recorded_at > datetime('now', '-1 day')
-      ORDER BY recorded_at DESC LIMIT 10
-    `, [input.greenhouse_id]);
-    if (iotRows[0]?.values?.length) {
-      // 简化：从 iot_sensor_readings 聚合（V1.1 当前 0 行 → 走 mock）
-      env = mockEnvData(input.greenhouse_id);
-      dataSource = 'mock';
-    } else {
-      env = mockEnvData(input.greenhouse_id);
-      dataSource = 'mock';
-    }
-  } else {
-    env = mockEnvData();
-    dataSource = 'mock';
+  // 1. 环境数据：只读真实 IoT 传感器（无数据 → 明确抛错，不做 mock 降级）
+  if (!input.greenhouse_id) {
+    throw new Error('病虫害预警必须提供 greenhouse_id（温室）参数');
+  }
+  // 校验温室存在
+  const ghStmt = db.prepare('SELECT id, name FROM greenhouses WHERE id = ? LIMIT 1');
+  ghStmt.bind([input.greenhouse_id]);
+  const hasGh = ghStmt.step();
+  const ghName = hasGh ? String(ghStmt.getAsObject().name || input.greenhouse_id) : input.greenhouse_id;
+  ghStmt.free();
+  if (!hasGh) {
+    throw new Error(`温室 ${input.greenhouse_id} 不存在，请检查 greenhouse_id 参数`);
   }
 
-  // 2. 计算每种病虫害的风险分数
+  const snapshot = queryEnvSnapshot(input.greenhouse_id);
+  if (!snapshot) {
+    throw new Error(
+      `温室 ${ghName}（${input.greenhouse_id}）最近 24h 无环境传感器数据（iot_sensor_readings 为空）。` +
+      '请确认：1) 传感器已部署并上报数据 2) 数据写入 iot_sensor_readings 表',
+    );
+  }
+  if (snapshot.temp === 0 || snapshot.hum === 0) {
+    throw new Error(`温室 ${ghName} 缺少温度/湿度传感器数据（当前仅有 ${['temp', 'hum', 'light', 'co2', 'soil'].filter(k => (snapshot as any)[k] !== 0).join(',')}），无法执行病虫害规则判断`);
+  }
+  const env = {
+    temperature: snapshot.temp,
+    humidity: snapshot.hum,
+    light: snapshot.light,
+    co2: snapshot.co2,
+    soil_moisture: snapshot.soil,
+  };
+
+  // 2. 规则引擎计算各病虫害风险（真实植保规则）
   const alerts: PestAlert[] = [];
   const allActions = new Set<string>();
 
   for (const rule of PEST_RULES) {
     const score = rule.condition(env.temperature, env.humidity);
     if (score >= 40) {  // 阈值：≥40 才告警
-      // 预警提前天数（与温度正相关：温度高 → 病虫害发展快 → 预警提前天数少）
       const alertDaysAhead = score >= 80 ? 5 : score >= 60 ? 3 : 2;
       const riskLevel: PestAlert['risk_level'] =
         score >= 80 ? 'critical' :
@@ -182,14 +173,14 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
 
   // 4. XAI 推理依据
   const xai_reasons: string[] = [
-    `环境快照：温度 ${env.temperature.toFixed(1)}℃ / 湿度 ${env.humidity.toFixed(1)}% / 光照 ${(env.light / 1000).toFixed(0)}K lux / CO2 ${env.co2.toFixed(0)}ppm`,
-    `触发规则数：${alerts.length}（基于 V1.1 PEST_ALERT_RULES 同源规则集）`,
+    `环境快照（温室 ${ghName} 最近 24h 真实传感器均值）：温度 ${env.temperature.toFixed(1)}℃ / 湿度 ${env.humidity.toFixed(1)}% / 光照 ${(env.light / 1000).toFixed(0)}K lux / CO2 ${env.co2.toFixed(0)}ppm`,
+    `触发规则数：${alerts.length}（真实植保阈值规则集）`,
     `总体风险评分：${overallScore}/100`,
-    `数据源：${dataSource}（V1.1 iot_sensors = 0 行 → 使用 mock，待 IoT 部署后切换）`,
+    '数据源：iot_sensor_readings 真实传感器数据',
   ];
 
   return {
-    greenhouse_id: input.greenhouse_id || 'mock',
+    greenhouse_id: input.greenhouse_id,
     crop_type: input.crop_type,
     env_snapshot: {
       temperature: Math.round(env.temperature * 10) / 10,
@@ -205,6 +196,6 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
     model_version: MODEL_VERSION,
     model_type: 'rule-based',
     xai_reasons,
-    data_source: dataSource,
+    data_source: 'iot_sensors',
   };
 }

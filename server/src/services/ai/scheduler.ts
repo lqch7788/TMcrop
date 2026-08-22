@@ -9,7 +9,7 @@
  * V1 实现：
  * - 输入：员工列表 + 任务列表 + 排班规则
  * - 算法：贪心分配（按当前负荷从低到高排）
- * - V1.1 只有 6 员工 — 用 mock 30 员工演示（生成更多员工）
+ * - 2026-08-22：砍掉 mock 员工扩充，员工池只使用真实员工（不足时明确标注）
  * - 约束：最大连续工作天数（默认 6 天）+ 最小休息间隔（默认 1 天）
  */
 
@@ -38,7 +38,6 @@ interface ScheduleInput {
   days?: number;                    // 排班天数（默认 7）
   employees: EmployeeInput[];
   tasks: TaskInput[];
-  use_mock_employees?: boolean;     // V1.1 员工不足时用 mock 扩充到 30
 }
 
 interface DailySchedule {
@@ -65,25 +64,7 @@ interface ScheduleResult {
   xai_reasons: string[];
 }
 
-const MODEL_VERSION = '1.0.0-csp-greedy';
-
-/**
- * 生成 mock 员工（V1.1 只有 6 员工，PPT 要求 30）
- */
-function generateMockEmployees(): EmployeeInput[] {
-  const skills = ['种植', '采收', '施肥', '灌溉', '巡查', '喷药', '修剪', '病虫害防治', '仓储管理', '物料管理'];
-  const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十', '郑十一', '王十二',
-                 '李十三', '张十四', '刘十五', '陈十六', '杨十七', '黄十八', '周十九', '吴二十',
-                 '徐二十一', '孙二十二', '马二十三', '朱二十四', '胡二十五', '郭二十六', '林二十七', '何二十八', '高二十九', '罗三十'];
-  return names.map((name, i) => ({
-    employee_id: `EMP_MOCK_${(i + 1).toString().padStart(3, '0')}`,
-    name,
-    skills: [skills[i % skills.length], skills[(i + 3) % skills.length]],
-    current_load: Math.floor(Math.random() * 60),
-    max_consecutive_days: 6,
-    preferred_off_days: [i % 7],  // 错开休息日
-  }));
-}
+const MODEL_VERSION = '1.0.1-csp-greedy-real';
 
 /**
  * 贪心分配算法
@@ -115,12 +96,10 @@ function assignTask(task: TaskInput, employees: EmployeeInput[], employeeHours: 
 }
 
 export async function generateSchedule(input: ScheduleInput): Promise<ScheduleResult> {
-  // 1. 员工准备（V1.1 不足时用 mock）
-  let employees = input.employees;
-  if (employees.length < 30 && input.use_mock_employees !== false) {
-    const mock = generateMockEmployees();
-    const realIds = new Set(employees.map(e => e.employee_id));
-    employees = [...employees, ...mock.filter(m => !realIds.has(m.employee_id))];
+  // 1. 员工池：只使用真实员工（2026-08-22 砍掉 mock 扩充，Fail Loud）
+  const employees = input.employees;
+  if (employees.length === 0) {
+    throw new Error('排班需要至少 1 名真实员工（employees 为空，请从员工管理导入）');
   }
 
   // 2. 日期范围
@@ -201,7 +180,7 @@ export async function generateSchedule(input: ScheduleInput): Promise<ScheduleRe
   // 6. XAI 推理
   const xai_reasons = [
     `排班天数：${days} 天（${startDate.toISOString().split('T')[0]} ~ ${dailySchedule[dailySchedule.length - 1]?.date || ''}）`,
-    `员工池：${employees.length} 人（${input.use_mock_employees !== false ? '含 mock 扩充' : '用户指定'}）`,
+    `员工池：${employees.length} 人（真实员工，无 mock 扩充）`,
     `总分配任务：${totalAssignments} 个`,
     `合规率：${(complianceRate * 100).toFixed(1)}%（PPT 要求 ≥98%）`,
     `工作量均衡 CV：${workloadCv}（PPT 要求 ≤0.15）`,
