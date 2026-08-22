@@ -35,6 +35,33 @@ export interface WorkhourFeedbackInput {
   accepted: boolean;
 }
 
+// ============ AI-01 派工推荐 ============
+
+export interface DispatchRecommendInput {
+  task_type: string;               // 必填
+  required_skills?: string[];       // 任务所需技能
+  greenhouse_id?: string;
+  priority?: 'urgent' | 'high' | 'normal' | 'low';
+  batch_id?: string;
+  estimated_hours?: number;
+  due_date?: string;
+  team_ids?: string[];              // 班组过滤
+}
+
+export interface WorkerRecommendation {
+  worker_id: string;
+  worker_name: string;
+  match_score: number;
+  factor_scores: Record<string, number>;
+  xai_reasons: string[];
+}
+
+export interface DispatchRecommendResult {
+  recommendations: WorkerRecommendation[];
+  algorithm_version: string;
+  total_candidates: number;
+}
+
 // ============ AI API 封装 ============
 
 export const aiApi = {
@@ -58,6 +85,15 @@ export const aiApi = {
      */
     list: (taskId: string): Promise<{ success: boolean; data: { task: any; predictions: any[] } }> =>
       enhancedApiClient.get(`/ai/workhour/predictions?task_id=${taskId}`),
+  },
+
+  dispatch: {
+    /**
+     * AI-01 派工推荐（7 因子加权评分）
+     * 输入：任务信息 → 输出：推荐员工列表（按 match_score 降序）
+     */
+    recommend: (input: DispatchRecommendInput): Promise<{ success: boolean; data: DispatchRecommendResult }> =>
+      enhancedApiClient.post('/ai/dispatch/recommend', input),
   },
 };
 

@@ -36,6 +36,8 @@ import { showAlert } from '@/lib/dialogService';
 
 // 子组件
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
+// 2026-08-22：AI-06 工时预测 UI
+import { WorkhourPredictor } from '../components/farm/ai/WorkhourPredictor';
 import { EnvironmentPanel } from '../components/dispatch/EnvironmentPanel';
 import { PredictedTasksPanel } from '../components/dispatch/PredictedTasksPanel';
 import { DispatchMetricsDashboard } from '../components/dispatch/DispatchMetricsDashboard';
@@ -170,6 +172,15 @@ function TaskCard({
               <span className="text-sm font-medium text-gray-900">
                 {task.aiRecommendedWorkers[0].worker.name}
               </span>
+              {/* 2026-08-22：AI-06 工时预测（紧凑标签） */}
+              <WorkhourPredictor
+                taskType={task.taskType || '其他'}
+                priority={task.priority}
+                greenhouseId={task.greenhouseId}
+                assigneeId={task.aiRecommendedWorkers[0].worker.id}
+                taskId={task.id}
+                compact
+              />
             </div>
           </div>
         )}
