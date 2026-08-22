@@ -58,6 +58,11 @@ import aiReportRouter from './ai/report';
 import aiScheduleRouter from './ai/schedule';
 import aiResourceRouter from './ai/resource';
 import aiImageRouter from './ai/image';
+import aiGrowthStateRouter from './ai/growthState';
+import aiVoiceRouter from './ai/voice';
+import aiAnomalyRouter from './ai/anomaly';
+import aiAttendanceRouter from './ai/attendance';
+import aiApprovalRouter from './ai/approval';
 import indicatorsRouter from './indicators';
 import indicatorEvaluationsRouter from './indicatorEvaluations';
 import scheduleRouter from './schedule';
@@ -172,6 +177,11 @@ router.use('/ai/report', requireAuth, aiReportRouter);
 router.use('/ai/schedule', requireAuth, aiScheduleRouter);
 router.use('/ai/resource', requireAuth, aiResourceRouter);
 router.use('/ai/image', requireAuth, aiImageRouter);
+router.use('/ai/growth-state', requireAuth, aiGrowthStateRouter);
+router.use('/ai/voice', requireAuth, aiVoiceRouter);
+router.use('/ai/anomaly', requireAuth, aiAnomalyRouter);
+router.use('/ai/attendance', requireAuth, aiAttendanceRouter);
+router.use('/ai/approval', requireAuth, aiApprovalRouter);
 
 // 巡查记录路由 - 需要认证
 router.use('/inspections', requireAuth, inspectionRouter);
