@@ -377,7 +377,10 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
       const mod = allModules.find(m => m.key === key);
       if (!mod) return;
       const res = await mod.call({ cropType, taskId, taskType });
-      setResult({ key, data: res.data });
+      // 2026-08-22 修复：enhancedApiClient 已自动解包 data（apiClient.ts:243）
+      // → res 可能直接是 data 对象（无 .data 层），兼容两种情况
+      const payload = (res as any)?.data ?? res;
+      setResult({ key, data: payload });
     } catch (e: any) {
       setError(e?.message || '调用失败');
     } finally {
@@ -465,7 +468,9 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
               </span>
             )}
           </div>
-          {activeModule.render(result.data)}
+          {result.data ? activeModule.render(result.data) : (
+            <p className="text-xs text-red-600">⚠️ 返回数据为空，请重试</p>
+          )}
         </div>
       )}
     </div>
