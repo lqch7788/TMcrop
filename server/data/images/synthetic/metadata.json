@@ -1,0 +1,110 @@
+{
+  "total": 5500,
+  "classes": [
+    {
+      "name": "白粉病",
+      "type": "disease",
+      "color": [
+        255,
+        255,
+        240
+      ]
+    },
+    {
+      "name": "霜霉病",
+      "type": "disease",
+      "color": [
+        200,
+        230,
+        200
+      ]
+    },
+    {
+      "name": "炭疽病",
+      "type": "disease",
+      "color": [
+        139,
+        90,
+        43
+      ]
+    },
+    {
+      "name": "蚜虫",
+      "type": "pest",
+      "color": [
+        120,
+        200,
+        80
+      ]
+    },
+    {
+      "name": "红蜘蛛",
+      "type": "pest",
+      "color": [
+        255,
+        100,
+        100
+      ]
+    },
+    {
+      "name": "锈病",
+      "type": "disease",
+      "color": [
+        255,
+        165,
+        0
+      ]
+    },
+    {
+      "name": "病毒病",
+      "type": "disease",
+      "color": [
+        180,
+        180,
+        220
+      ]
+    },
+    {
+      "name": "青枯病",
+      "type": "disease",
+      "color": [
+        100,
+        80,
+        60
+      ]
+    },
+    {
+      "name": "叶斑病",
+      "type": "disease",
+      "color": [
+        180,
+        100,
+        100
+      ]
+    },
+    {
+      "name": "白粉虱",
+      "type": "pest",
+      "color": [
+        240,
+        240,
+        220
+      ]
+    },
+    {
+      "name": "健康叶",
+      "type": "healthy",
+      "color": [
+        60,
+        160,
+        60
+      ]
+    }
+  ],
+  "image_size": [
+    128,
+    128
+  ],
+  "note": "M1.5 synthetic data (PlantVillage 真实数据下载失败后 fallback)",
+  "created_at": "2026-08-22"
+}
