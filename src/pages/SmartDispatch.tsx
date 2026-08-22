@@ -38,6 +38,8 @@ import { showAlert } from '@/lib/dialogService';
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
 // 2026-08-22：AI-06 工时预测 UI
 import { WorkhourPredictor } from '../components/farm/ai/WorkhourPredictor';
+// 2026-08-22：AI 统一助手面板（10 模块一键调用）
+import { AIPanel } from '../components/farm/ai/AIPanel';
 import { EnvironmentPanel } from '../components/dispatch/EnvironmentPanel';
 import { PredictedTasksPanel } from '../components/dispatch/PredictedTasksPanel';
 import { DispatchMetricsDashboard } from '../components/dispatch/DispatchMetricsDashboard';
@@ -794,6 +796,9 @@ export default function SmartDispatchPage() {
           </div>
         </div>
       </div>
+
+      {/* ★ 2026-08-22：AI 智能助手面板（10 模块一键调用） */}
+      <AIPanel cropType="番茄" />
 
       {/* 监控仪表板 */}
       <DispatchMetricsDashboard />
