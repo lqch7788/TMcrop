@@ -187,6 +187,33 @@ export const aiApi = {
     generate: (input: { report_type: 'daily' | 'weekly' | 'monthly' | 'custom'; start_date?: string; end_date?: string; crop_type?: string; greenhouse_id?: string }): Promise<{ success: boolean; data: any }> =>
       enhancedApiClient.post('/ai/report/generate', input),
   },
+
+  schedule: {
+    /**
+     * AI-02 智能排班（CSP 贪心）
+     * 输入：员工列表 + 任务列表 + 排班规则 → 输出：7 日排班表 + 合规率 + CV
+     */
+    generate: (input: any): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/schedule/generate', input),
+  },
+
+  resource: {
+    /**
+     * AI-07 资源优化配置（库存预警 + 采购建议）
+     * 输入：可选物料名/仓库 ID → 输出：预警列表 + 采购建议 + 估算成本
+     */
+    optimize: (input: any): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/resource/optimize', input),
+  },
+
+  image: {
+    /**
+     * AI-09 病虫害图像识别（V1 mock 演示）
+     * 输入：image_id + 可选文件名/特征 → 输出：top-3 病虫害预测 + 置信度
+     */
+    identify: (input: { image_id: string; image_name?: string; crop_type?: string; image_features?: any }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/image/identify', input),
+  },
 };
 
 export default aiApi;
