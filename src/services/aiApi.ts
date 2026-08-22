@@ -62,6 +62,53 @@ export interface DispatchRecommendResult {
   total_candidates: number;
 }
 
+// ============ AI-04 作物生长预测 ============
+
+export interface GrowthPredictInput {
+  crop_type: string;               // 必填：番茄/草莓/黄瓜/...
+  batch_id?: string;
+  greenhouse_id?: string;
+  plant_date?: string;              // 种植日期
+  expected_harvest_date?: string;
+  base_temperature?: number;
+  variety?: string;
+}
+
+export interface GrowthPredictResult {
+  cropType: string;
+  currentStage: string;
+  daysSincePlanting: number;
+  cumulativeGdd: number;
+  expectedHarvestDate: string;
+  daysToHarvest: number;
+  yieldPredictionKg: number;
+  yieldConfidenceLow: number;
+  yieldConfidenceHigh: number;
+  stageEstimate: { stageName: string; stageStart: string; stageEnd: string; cumulativeGdd: number }[];
+  alerts: string[];
+  modelVersion: string;
+  modelType: 'rule-based' | 'onnx-xgboost';
+  xaiReasons: string[];
+}
+
+// ============ AI-08 路径优化 ============
+
+export interface RouteOptimizeInput {
+  worker_start: { lat: number; lng: number };
+  tasks: { task_id: string; lat: number; lng: number; name?: string }[];
+  original_order?: string[];
+}
+
+export interface RouteOptimizeResult {
+  optimizedOrder: string[];
+  optimizedSteps: { taskId: string; name?: string; distanceFromPrevKm: number; cumulativeDistanceKm: number }[];
+  totalDistanceKm: number;
+  originalDistanceKm: number;
+  savingsPercent: number;
+  algorithm: string;
+  modelVersion: string;
+}
+
 // ============ AI API 封装 ============
 
 export const aiApi = {
@@ -94,6 +141,24 @@ export const aiApi = {
      */
     recommend: (input: DispatchRecommendInput): Promise<{ success: boolean; data: DispatchRecommendResult }> =>
       enhancedApiClient.post('/ai/dispatch/recommend', input),
+  },
+
+  growth: {
+    /**
+     * AI-04 作物生长预测（GDD 积温 + 历史产量）
+     * 输入：作物类型 + 种植日期 → 输出：当前阶段 + 预期采收 + 产量预测 + 异常预警
+     */
+    predict: (input: GrowthPredictInput): Promise<{ success: boolean; data: GrowthPredictResult }> =>
+      enhancedApiClient.post('/ai/growth/predict', input),
+  },
+
+  route: {
+    /**
+     * AI-08 路径优化（最近邻 + 2-opt）
+     * 输入：工人起点 + 任务位置列表 → 输出：最优顺序 + 节省距离 %
+     */
+    optimize: (input: RouteOptimizeInput): Promise<{ success: boolean; data: RouteOptimizeResult }> =>
+      enhancedApiClient.post('/ai/route/optimize', input),
   },
 };
 
