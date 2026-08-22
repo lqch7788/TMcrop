@@ -11,6 +11,7 @@ import {
   MessageCircle, FileText, ShieldAlert, Calendar, Bot, X, Loader2,
 } from 'lucide-react';
 import { aiApi } from '../../../services/aiApi';
+import { useGreenhouseStore } from '../../../stores/useGreenhouseStore';
 
 interface AIPanelProps {
   cropType?: string;
@@ -91,7 +92,12 @@ const AI_MODULES = [
   },
   {
     key: 'pest', name: 'AI-05 病虫害预警', icon: Bug, color: 'red',
-    call: (p: any) => aiApi.pest.alert({ crop_type: p.cropType || '番茄', env_data: { temperature: 22, humidity: 85 } }),
+    call: (p: any) => {
+      // 2026-08-22：真实 IoT 数据链路，greenhouse_id 必填（取第一个活动温室）
+      const gh = useGreenhouseStore.getState().greenhouses.find(g => g.status === 'active')
+        || useGreenhouseStore.getState().greenhouses[0];
+      return aiApi.pest.alert({ crop_type: p.cropType || '番茄', greenhouse_id: gh?.id || '' });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -147,7 +153,8 @@ const AI_MODULES = [
   },
   {
     key: 'image', name: 'AI-09 图像识别', icon: ImageIcon, color: 'purple',
-    call: () => aiApi.image.identify({ image_id: `IMG-${Date.now()}`, image_name: 'demo.jpg' }),
+    // 2026-08-22：模型未部署时后端返回明确错误（"模型未部署"指引），前端直接展示
+    call: () => aiApi.image.identify({ image_id: `IMG-${Date.now()}` }),
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">识别耗时：{d.inferenceTimeMs}ms</p>
@@ -179,6 +186,7 @@ const AI_MODULES = [
         <p className="text-[10px] text-gray-400">
           意图：{d.intent === 'operation' ? '操作指导' : d.intent === 'data_query' ? '数据查询' : d.intent === 'terminology' ? '术语解释' : d.intent === 'troubleshooting' ? '故障排查' : '其他'}
           · 置信度 {(d.confidence * 100).toFixed(0)}%
+          {!d.llmConfigured && <span className="ml-1 text-amber-600">（LLM 未配置，本地知识库检索）</span>}
         </p>
         {d.references?.length > 0 && (
           <p className="text-[10px] text-gray-400">📚 引用 {d.references.length} 条知识库记录</p>
@@ -283,6 +291,9 @@ const EXTRA_MODULES = [
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">🎙 转写文本：{d.rawText}</p>
+        <p className="text-[10px] text-gray-400">
+          来源：{d.modelType === 'whisper-asr' ? 'Whisper ASR 音频转写' : '文本解析（ASR 模型未部署，audio_url 不可用）'}
+        </p>
         <div className="bg-sky-50 rounded p-2">
           <p className="text-sm font-medium text-gray-800">📋 {d.structuredOutput?.title}</p>
           <p className="text-[10px] text-sky-600">动作：{d.structuredOutput?.action}</p>
@@ -362,12 +373,36 @@ function CheckSquareIcon(props: any) {
   return <Calendar {...props} />;
 }
 
+// 模块彩色图标配色（与模块定义 color 字段对应，Tailwind 完整类名不可动态拼接）
+const MODULE_COLORS: Record<string, { bg: string; text: string }> = {
+  blue:    { bg: 'bg-blue-100',    text: 'text-blue-600' },
+  emerald: { bg: 'bg-emerald-100', text: 'text-emerald-600' },
+  green:   { bg: 'bg-green-100',   text: 'text-green-600' },
+  red:     { bg: 'bg-red-100',     text: 'text-red-600' },
+  orange:  { bg: 'bg-orange-100',  text: 'text-orange-600' },
+  purple:  { bg: 'bg-purple-100',  text: 'text-purple-600' },
+  cyan:    { bg: 'bg-cyan-100',    text: 'text-cyan-600' },
+  indigo:  { bg: 'bg-indigo-100',  text: 'text-indigo-600' },
+  pink:    { bg: 'bg-pink-100',    text: 'text-pink-600' },
+  amber:   { bg: 'bg-amber-100',   text: 'text-amber-600' },
+  teal:    { bg: 'bg-teal-100',    text: 'text-teal-600' },
+  sky:     { bg: 'bg-sky-100',     text: 'text-sky-600' },
+  rose:    { bg: 'bg-rose-100',    text: 'text-rose-600' },
+  violet:  { bg: 'bg-violet-100',  text: 'text-violet-600' },
+  lime:    { bg: 'bg-lime-100',    text: 'text-lime-600' },
+};
+
 export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false }: AIPanelProps) {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [result, setResult] = useState<{ key: string; data: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const allModules = [...AI_MODULES, ...EXTRA_MODULES];
+  // 按 AI-序号 排列（AI-01 ~ AI-15），与定义顺序解耦
+  const allModules = [...AI_MODULES, ...EXTRA_MODULES].sort((a, b) => {
+    const na = Number(a.name.match(/AI-(\d+)/)?.[1] || 0);
+    const nb = Number(b.name.match(/AI-(\d+)/)?.[1] || 0);
+    return na - nb;
+  });
 
   const callAI = async (key: string) => {
     setLoadingKey(key);
@@ -392,19 +427,22 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
   if (compact) {
     return (
       <div className="flex flex-wrap gap-1">
-        {allModules.map((m) => (
-          <button
-            key={m.key}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); callAI(m.key); }}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50"
-            disabled={loadingKey === m.key}
-            title={m.name}
-          >
-            <m.icon className="w-3 h-3" />
-            {loadingKey === m.key ? '调用中' : m.name.replace(/^AI-\d+\s/, '')}
-          </button>
-        ))}
+        {allModules.map((m) => {
+          const c = MODULE_COLORS[m.color] || MODULE_COLORS.blue;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); callAI(m.key); }}
+              className={`inline-flex items-center gap-1 px-2 py-1 text-xs ${c.bg} ${c.text} rounded hover:opacity-80 disabled:opacity-50`}
+              disabled={loadingKey === m.key}
+              title={m.name}
+            >
+              <m.icon className="w-3 h-3" />
+              {loadingKey === m.key ? '调用中' : m.name.replace(/^AI-\d+\s/, '')}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -431,6 +469,7 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
           const Icon = m.icon;
           const isLoading = loadingKey === m.key;
           const isActive = result?.key === m.key;
+          const c = MODULE_COLORS[m.color] || MODULE_COLORS.blue;
           return (
             <button
               key={m.key}
@@ -441,7 +480,10 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
                 isActive ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
               } disabled:opacity-50`}
             >
-              {isLoading ? <Loader2 className="w-5 h-5 text-gray-400 animate-spin" /> : <Icon className="w-5 h-5 text-gray-600" />}
+              {/* 彩色图标：淡色圆底 + 彩色图标 */}
+              <span className={`w-9 h-9 rounded-full flex items-center justify-center ${c.bg}`}>
+                {isLoading ? <Loader2 className="w-5 h-5 text-gray-400 animate-spin" /> : <Icon className={`w-5 h-5 ${c.text}`} />}
+              </span>
               <span className="text-[11px] text-gray-700 text-center">{m.name}</span>
             </button>
           );
@@ -463,7 +505,10 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
             <span className="text-sm font-semibold text-gray-800">{activeModule.name} 结果</span>
             {result.data?.modelType && (
               <span className="text-[10px] text-gray-400 ml-auto">
-                {result.data.modelType === 'rule-based' ? '规则引擎' : result.data.modelType === 'mock' ? '演示模型' : result.data.modelType}
+                {result.data.modelType === 'rule-based' ? '规则引擎' :
+                 result.data.modelType === 'onnx-mlp' ? 'MLP 神经网络' :
+                 result.data.modelType === 'data-driven' ? '真实数据驱动' :
+                 result.data.modelType === 'iot_sensors' ? 'IoT 实时数据' : result.data.modelType}
                 {result.data.modelVersion ? ` · ${result.data.modelVersion}` : ''}
               </span>
             )}
