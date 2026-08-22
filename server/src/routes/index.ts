@@ -52,6 +52,9 @@ import aiWorkhourRouter from './ai/workhour';
 import aiDispatchRouter from './ai/dispatch';
 import aiGrowthRouter from './ai/growth';
 import aiRouteRouter from './ai/route';
+import aiPestRouter from './ai/pest';
+import aiQaRouter from './ai/qa';
+import aiReportRouter from './ai/report';
 import indicatorsRouter from './indicators';
 import indicatorEvaluationsRouter from './indicatorEvaluations';
 import scheduleRouter from './schedule';
@@ -160,6 +163,9 @@ router.use('/ai/workhour', requireAuth, aiWorkhourRouter);
 router.use('/ai/dispatch', requireAuth, aiDispatchRouter);
 router.use('/ai/growth', requireAuth, aiGrowthRouter);
 router.use('/ai/route', requireAuth, aiRouteRouter);
+router.use('/ai/pest', requireAuth, aiPestRouter);
+router.use('/ai/qa', requireAuth, aiQaRouter);
+router.use('/ai/report', requireAuth, aiReportRouter);
 
 // 巡查记录路由 - 需要认证
 router.use('/inspections', requireAuth, inspectionRouter);
