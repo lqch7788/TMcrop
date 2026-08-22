@@ -2,9 +2,9 @@
   "date": "2026-08-22",
   "model_type": "linear_regression_baseline",
   "data_source": "V1.1 SQLite farm_tasks",
-  "total_samples": 10,
-  "train_samples": 7,
-  "test_samples": 3,
+  "total_samples": 510,
+  "train_samples": 357,
+  "test_samples": 153,
   "features": [
     "F1_task_type",
     "F2_area",
@@ -17,29 +17,29 @@
   ],
   "metrics": {
     "train": {
-      "n": 7,
-      "MAPE": 161.34453781512607,
-      "MAE": 3.047619047619049,
-      "R2": 0.5175013462574043
+      "n": 357,
+      "MAPE": 19.473595463305752,
+      "MAE": 0.6085014645965358,
+      "R2": 0.8210108379274146
     },
     "test": {
-      "n": 3,
-      "MAPE": 33.607268260371264,
-      "MAE": 7.378124192606207,
-      "R2": -2.4628885322826117
+      "n": 153,
+      "MAPE": 17.14222136573114,
+      "MAE": 0.6666208270473931,
+      "R2": 0.8604170310495698
     },
     "coefficients": {
-      "bias": 1.1102230246251565e-15,
-      "F1_task_type": 0.0746354513893881,
-      "F2_area": -2.220446049250313e-16,
-      "F3_priority": -2.0727483580536683,
-      "F4_skill_match": 0.0,
-      "F5_hist_mean": 1.5099021982139562,
-      "F6_hist_std": 0.20141006476163048,
-      "F7_worker_eff": 1.8662780770411516,
-      "F8_day_of_week": 0.9702409158768784
+      "bias": 0.0,
+      "F1_task_type": 0.017405175092043312,
+      "F2_area": 0.5769799367064417,
+      "F3_priority": -0.5366999496376417,
+      "F4_skill_match": -1.7763568394002505e-15,
+      "F5_hist_mean": 2.5598767555944844,
+      "F6_hist_std": -0.22706999606784262,
+      "F7_worker_eff": 0.7138595911283417,
+      "F8_day_of_week": -0.0898594553730104
     }
   },
   "ppt_target_mape": 20.0,
-  "meets_target": "False"
+  "meets_target": "True"
 }
