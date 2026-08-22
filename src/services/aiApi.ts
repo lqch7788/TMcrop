@@ -214,6 +214,47 @@ export const aiApi = {
     identify: (input: { image_id: string; image_name?: string; crop_type?: string; image_features?: any }): Promise<{ success: boolean; data: any }> =>
       enhancedApiClient.post('/ai/image/identify', input),
   },
+
+  growthState: {
+    /**
+     * AI-10 作物生长状态识别（mock + 缺素检测）
+     */
+    identify: (input: { crop_type: string; batch_id?: string; greenhouse_id?: string; current_gdd?: number }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/growth-state/identify', input),
+  },
+
+  voice: {
+    /**
+     * AI-11 智能语音录入（mock ASR）
+     * 输入：转写文本 → 输出：意图 + 结构化字段 + 推荐执行人
+     */
+    transcribe: (input: { transcribed_text: string; audio_url?: string; context?: string; submitter_id?: string }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/voice/transcribe', input),
+  },
+
+  anomaly: {
+    /**
+     * AI-14 异常检测系统（Z-score + IQR）
+     */
+    detect: (input?: { check_dimension?: string; lookback_days?: number; threshold_sigma?: number }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/anomaly/detect', input || {}),
+  },
+
+  attendance: {
+    /**
+     * AI-15 出勤异常检测（滑动窗口）
+     */
+    detect: (input?: { lookback_days?: number; z_threshold?: number }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/attendance/detect', input || {}),
+  },
+
+  approval: {
+    /**
+     * AI-03 智能审批辅助（规则 + 历史匹配）
+     */
+    suggest: (input: { approval_id?: string; applicant_id: string; applicant_role?: string; approval_type: string; amount?: number; duration_days?: number; reason?: string }): Promise<{ success: boolean; data: any }> =>
+      enhancedApiClient.post('/ai/approval/suggest', input),
+  },
 };
 
 export default aiApi;
