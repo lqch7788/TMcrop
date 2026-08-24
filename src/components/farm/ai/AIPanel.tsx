@@ -610,7 +610,11 @@ const EXTRA_MODULES = [
 ];
 
 function CheckSquareIcon(props: any) {
-  return <Calendar {...props} />;
+  // 2026-08-24 PR-D：修复 icon 复用 bug（之前实现是返回 <Calendar />，导致 AI-03 显示错误）
+  // → 改用 lucide-react 的 CheckSquare 真实图标
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { CheckSquare } = require('lucide-react');
+  return <CheckSquare {...props} />;
 }
 
 // 模块彩色图标配色（与模块定义 color 字段对应，Tailwind 完整类名不可动态拼接）
