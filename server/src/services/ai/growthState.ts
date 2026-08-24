@@ -122,8 +122,35 @@ export async function identifyGrowthState(input: GrowthStateInput): Promise<Grow
   const db = getDatabase();
   const xai_reasons: string[] = [];
 
-  // 1. 生长阶段（GDD 积温，真实计算）
-  const gdd = input.current_gdd ?? 500;
+  // 1. 生长阶段（GDD 积温，2026-08-24 PR3：优先 iot_sensor_readings 真实数据）
+  // 优先级：input.current_gdd → iot_sensor_readings 累积 → daily_records.data JSON → 抛错
+  let gdd = input.current_gdd;
+  if (gdd === undefined && input.greenhouse_id) {
+    // 从 iot_sensor_readings 累积真实 GDD
+    const stmt = db.prepare(`
+      SELECT DATE(recorded_at) AS day, AVG(value) AS avg_temp
+      FROM iot_sensor_readings
+      WHERE greenhouse_id = ? AND sensor_type = 'temperature'
+        AND recorded_at >= datetime('now', '-180 day')
+      GROUP BY DATE(recorded_at)
+      ORDER BY day
+    `);
+    stmt.bind([input.greenhouse_id]);
+    // 用作物基准温度 10℃（番茄默认）累加；可由 input.base_temperature 覆盖
+    const baseTemp = (input as any).base_temperature ?? 10;
+    let totalGdd = 0;
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      totalGdd += Math.max(0, (Number(row.avg_temp) || 0) - baseTemp);
+    }
+    stmt.free();
+    if (totalGdd > 0) gdd = Math.round(totalGdd);
+  }
+  if (gdd === undefined) {
+    throw new Error(
+      'AI-10 生长状态识别缺少 GDD 数据源：请传入 current_gdd 或 greenhouse_id（用于读取 iot_sensor_readings）',
+    );
+  }
   let stage = '苗期';
   if (gdd >= 1200) stage = '成熟期';
   else if (gdd >= 700) stage = '结果期';

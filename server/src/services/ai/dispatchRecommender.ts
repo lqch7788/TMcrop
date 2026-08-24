@@ -1,6 +1,11 @@
 /**
- * AI-01 派工推荐服务（V1 — 7 因子算法）
+ * AI-01 派工推荐服务（V2 — 7 因子真实数据版）
  * 2026-08-22：P0 核心 MVP
+ * 2026-08-24 PR2：4 个因子真实化（替换硬编码）
+ *   - F2 地理位置：greenhouses 真实 lat/lng + 员工常驻温室（最近任务最多）haversine 距离
+ *   - F4 历史表现：performance_records 最近 90 天平均 total_score
+ *   - F6 批次熟悉度：farm_tasks 该员工 batch_id 历史完成数
+ *   - F7 周期适配：schedules 最近 30 天 shift 覆盖度
  *
  * 与 V1.1 现有 useComprehensiveDispatch.ts 算法一致（7 因子加权评分）：
  *   - 技能匹配 30%
@@ -10,8 +15,6 @@
  *   - 紧急程度 10%
  *   - 批次熟悉 3%
  *   - 周期适配 2%
- *
- * 区别：后端 SQL 实现，可独立部署；前端 hook 版用于 mock/演示。
  */
 
 import { getDatabase } from '../../db';
@@ -27,15 +30,7 @@ const WEIGHTS = {
   cycle_fit: 0.02,
 };
 
-interface Worker {
-  id: string;
-  name: string;
-  skills: string[];
-  performance_score: number;
-  current_load: number;
-  batch_familiarity: number;
-  distance_km: number;
-}
+const EARTH_RADIUS_KM = 6371;
 
 interface DispatchRecommendInput {
   task_type: string;
@@ -57,10 +52,116 @@ interface WorkerRecommendation {
 }
 
 /**
- * 计算派工推荐（7 因子加权评分）
+ * Haversine 距离（公里）—— 用于 F2 真实地理位置计算
+ */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * c;
+}
+
+/**
+ * F2 地理位置分数（0-100）：任务温室 vs 员工常驻温室
+ * - 员工常驻温室 = 该员工历史任务中访问次数最多的 greenhouse
+ * - 距离 0km → 100 分；50km → 0 分（线性衰减）
+ */
+function calcLocationScore(db: ReturnType<typeof getDatabase>, workerId: string, taskGreenhouseId: string): { score: number; distanceKm: number } {
+  // 任务温室坐标
+  const ghRows = db.exec(`SELECT lat, lng FROM greenhouses WHERE id = ?`, [taskGreenhouseId]);
+  const taskLat = Number(ghRows[0]?.values?.[0]?.[0] || 0);
+  const taskLng = Number(ghRows[0]?.values?.[0]?.[1] || 0);
+  if (taskLat === 0 && taskLng === 0) return { score: 60, distanceKm: -1 };
+
+  // 员工常驻温室（最近任务最多访问的）
+  const empGhRows = db.exec(`
+    SELECT g.lat, g.lng
+    FROM farm_tasks t
+    JOIN greenhouses g ON g.id = t.greenhouse_id
+    WHERE t.assignee_id = ? AND g.lat != 0 AND g.lng != 0
+    GROUP BY g.id
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+  `, [workerId]);
+  if (!empGhRows[0]?.values?.length) {
+    return { score: 60, distanceKm: -1 };  // 无历史任务 → 中等分
+  }
+  const empLat = Number(empGhRows[0].values[0][0]);
+  const empLng = Number(empGhRows[0].values[0][1]);
+  const distanceKm = haversineDistance(empLat, empLng, taskLat, taskLng);
+  const score = Math.max(0, Math.min(100, Math.round(100 - distanceKm * 2)));
+  return { score, distanceKm };
+}
+
+/**
+ * F4 历史表现分数（0-100）：performance_records 最近 90 天平均 total_score
+ * - 无记录 → 70（中性默认）
+ */
+function calcPerformanceScore(db: ReturnType<typeof getDatabase>, workerId: string): number {
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 7);  // YYYY-MM
+  const rows = db.exec(`
+    SELECT AVG(total_score) AS avg_score, COUNT(*) AS n
+    FROM performance_records
+    WHERE staff_id = ?
+      AND status = '已评估'
+      AND deleted_at IS NULL
+      AND month >= ?
+  `, [workerId, ninetyDaysAgo]);
+  const avg = Number(rows[0]?.values?.[0]?.[0] || 0);
+  const n = Number(rows[0]?.values?.[0]?.[1] || 0);
+  if (n === 0) return 70;  // 无历史绩效 → 中性
+  return Math.max(0, Math.min(100, Math.round(avg)));
+}
+
+/**
+ * F6 批次熟悉度（0-100）：farm_tasks 该员工 batch_id 历史完成数
+ * - 无 batch_id → 50（中性）
+ * - 每完成 1 个任务 +20 分，封顶 100
+ */
+function calcBatchFamiliarity(db: ReturnType<typeof getDatabase>, workerId: string, batchId?: string): number {
+  if (!batchId) return 50;
+  const rows = db.exec(`
+    SELECT COUNT(*) AS n FROM farm_tasks
+    WHERE assignee_id = ? AND batch_id = ? AND status = 'completed'
+  `, [workerId, batchId]);
+  const n = Number(rows[0]?.values?.[0]?.[0] || 0);
+  return Math.min(100, 30 + n * 20);  // 至少 30 分（参与过该批次）
+}
+
+/**
+ * F7 周期适配（0-100）：schedules 最近 30 天 shift 覆盖度
+ * - 无排班记录 → 50
+ * - shift 种类越多分越高（多班次适应能力）
+ */
+function calcCycleFit(db: ReturnType<typeof getDatabase>, workerId: string): number {
+  const rows = db.exec(`
+    SELECT COUNT(DISTINCT shift) AS shift_count, COUNT(*) AS total
+    FROM schedules
+    WHERE staff_id = ? AND date > datetime('now', '-30 day')
+  `, [workerId]);
+  const shiftCount = Number(rows[0]?.values?.[0]?.[0] || 0);
+  const total = Number(rows[0]?.values?.[0]?.[1] || 0);
+  if (total === 0) return 50;  // 无排班记录 → 中性
+  // 基础 50，每多一种 shift +15，封顶 100
+  return Math.min(100, 50 + shiftCount * 15);
+}
+
+/**
+ * 计算派工推荐（7 因子加权评分，全部真实数据驱动）
  */
 export async function recommendDispatch(input: DispatchRecommendInput): Promise<WorkerRecommendation[]> {
   const db = getDatabase();
+
+  // 0. 参数校验：缺少 task_type / greenhouse_id 时抛错（避免 fallback 到假数据）
+  if (!input.task_type) {
+    throw new Error('AI-01 派工推荐必须提供 task_type 参数');
+  }
+  if (!input.greenhouse_id) {
+    throw new Error('AI-01 派工推荐必须提供 greenhouse_id（任务所属温室）参数');
+  }
 
   // 1. 查询候选员工（含班组过滤）
   let workerRows: any[] = [];
@@ -87,42 +188,42 @@ export async function recommendDispatch(input: DispatchRecommendInput): Promise<
     return [];
   }
 
-  // 2. 计算每个候选人的 7 因子分数
+  // 2. 计算每个候选人的 7 因子分数（全部真实数据驱动）
   const recommendations: WorkerRecommendation[] = [];
 
   for (const w of workerRows) {
     const skills = w.skills ? w.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
-    // F1: 技能匹配度（0-100）
+    // F1: 技能匹配度（0-100）—— 真实
     const required = input.required_skills || [];
     const skillMatch = required.length === 0
       ? 70  // 无要求时给中等分
       : Math.round((skills.filter((s: string) => required.includes(s)).length / required.length) * 100);
 
-    // F2: 地理位置（默认 80，简化）
-    const location = 80;
+    // F2: 地理位置（0-100）—— 2026-08-24 PR2 真实化
+    const { score: location, distanceKm } = calcLocationScore(db, w.id, input.greenhouse_id);
 
-    // F3: 当前负荷（从历史任务统计，0=空，100=满）
+    // F3: 当前负荷（0-100）—— 真实
     const workloadResult = db.exec(`
       SELECT COUNT(*) AS active_tasks
       FROM farm_tasks
       WHERE assignee_id = ? AND status IN ('accepted', 'in_progress', 'pending_acceptance')
     `, [w.id]);
     const activeTasks = Number(workloadResult[0]?.values?.[0]?.[0] || 0);
-    const workload = Math.max(0, 100 - activeTasks * 20);  // 每个活跃任务扣 20%
+    const workload = Math.max(0, 100 - activeTasks * 20);
 
-    // F4: 历史表现（V1.1 employees 表无 performance_score 字段，用默认 70；Phase 2 接入实际评分）
-    const performance = 70;
+    // F4: 历史表现（0-100）—— 2026-08-24 PR2 真实化
+    const performance = calcPerformanceScore(db, w.id);
 
-    // F5: 紧急程度（基于 task.priority）
+    // F5: 紧急程度（0-100）—— 真实（基于 priority）
     const urgencyMap: Record<string, number> = { urgent: 100, high: 80, normal: 60, low: 40 };
     const urgency = urgencyMap[input.priority || 'normal'] || 60;
 
-    // F6: 批次熟悉度（暂用 50 默认）
-    const batchFamiliarity = 50;
+    // F6: 批次熟悉度（0-100）—— 2026-08-24 PR2 真实化
+    const batchFamiliarity = calcBatchFamiliarity(db, w.id, input.batch_id);
 
-    // F7: 周期适配（暂用 70 默认）
-    const cycleFit = 70;
+    // F7: 周期适配（0-100）—— 2026-08-24 PR2 真实化
+    const cycleFit = calcCycleFit(db, w.id);
 
     // 加权总分
     const matchScore = Math.round(
@@ -154,12 +255,16 @@ export async function recommendDispatch(input: DispatchRecommendInput): Promise<
       return `${factorNames[k]}: ${v}分（权重 ${((WEIGHTS as any)[k] * 100).toFixed(0)}%）`;
     });
 
-    // 活跃任务数说明（如果有）
+    // 活跃任务数说明
     if (activeTasks > 0) {
       xaiReasons.push(`当前 ${activeTasks} 个进行中任务（负荷已扣减）`);
     }
     if (skills.length > 0) {
       xaiReasons.push(`持有技能 ${skills.length} 项：${skills.slice(0, 3).join('、')} 等`);
+    }
+    // 距离信息（F2 真实化后才有意义）
+    if (distanceKm >= 0) {
+      xaiReasons.push(`距任务温室 ${distanceKm.toFixed(1)}km（基于常驻温室）`);
     }
 
     recommendations.push({

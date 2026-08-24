@@ -101,34 +101,82 @@ const CROP_STAGES: Record<string, { base_temp: number; total_gdd: number; stages
 const MODEL_VERSION = '1.0.0-rule-gdd';
 
 /**
- * GDD 累积（基于历史同期日均温 + 基准温度）
- * 简化：用过去 N 天的"日均温"近似累积 GDD
+ * 从 iot_sensor_readings 读取真实历史日均温（按 greenhouse_id）
+ * 2026-08-24 PR3：替换 V1 季节经验值（夏季 28/春秋 18/冬季 8℃）
+ * - 数据源：iot_sensor_readings.sensor_type='temperature'，按日聚合
+ * - 无数据 → 返回 null（由调用方决定是否 Fail Loud）
  */
-function estimateCumulativeGdd(plantDate: Date, baseTemp: number): number {
+function queryHistoricalDailyTemp(greenhouseId: string, startDate: Date, endDate: Date): { date: string; avgTemp: number }[] {
+  const db = getDatabase();
+  const start = startDate.toISOString();
+  const end = endDate.toISOString();
+  const stmt = db.prepare(`
+    SELECT DATE(recorded_at) AS day, AVG(value) AS avg_temp
+    FROM iot_sensor_readings
+    WHERE greenhouse_id = ? AND sensor_type = 'temperature'
+      AND recorded_at >= ? AND recorded_at <= ?
+    GROUP BY DATE(recorded_at)
+    ORDER BY day
+  `);
+  stmt.bind([greenhouseId, start, end]);
+  const result: { date: string; avgTemp: number }[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    result.push({ date: String(row.day), avgTemp: Number(row.avg_temp) || 0 });
+  }
+  stmt.free();
+  return result;
+}
+
+/**
+ * GDD 累积（2026-08-24 PR3：优先 iot_sensor_readings 真实数据，无数据抛错）
+ * - 有 greenhouseId + iot 数据 → 用真实日均温累加 GDD（每天 max(0, temp - baseTemp) 求和）
+ * - 无 greenhouseId 或无 iot 数据 → 抛错（Fail Loud，禁止 mock）
+ */
+function estimateCumulativeGdd(plantDate: Date, baseTemp: number, greenhouseId?: string): number {
   const today = new Date();
   const daysSince = Math.floor((today.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24));
   if (daysSince <= 0) return 0;
 
-  // V1.1 无 daily_records 环境数据，用季节经验值估算
-  // 春秋季日均温约 18℃，夏季 28℃，冬季 8℃
-  const month = today.getMonth() + 1;  // 1-12
-  let dailyAvgTemp = 18;
-  if ([6, 7, 8].includes(month)) dailyAvgTemp = 28;
-  else if ([12, 1, 2].includes(month)) dailyAvgTemp = 8;
+  if (!greenhouseId) {
+    throw new Error(
+      'AI-04 生长预测需要 greenhouse_id 才能读取 iot_sensor_readings 真实温度数据；' +
+      '如该任务未关联温室，请联系前端补充上下文',
+    );
+  }
+  const dailyTemps = queryHistoricalDailyTemp(greenhouseId, plantDate, today);
+  if (dailyTemps.length === 0) {
+    throw new Error(
+      `温室 ${greenhouseId} 在 ${plantDate.toISOString().split('T')[0]} ~ ${today.toISOString().split('T')[0]} 期间` +
+      '无 iot_sensor_readings 温度数据，无法计算真实 GDD。请确认传感器已部署并上报数据',
+    );
+  }
 
-  const dailyGdd = Math.max(0, dailyAvgTemp - baseTemp);
-  return Math.round(dailyGdd * daysSince);
+  // 用真实日均温累加 GDD
+  let totalGdd = 0;
+  for (const { avgTemp } of dailyTemps) {
+    totalGdd += Math.max(0, avgTemp - baseTemp);
+  }
+  return Math.round(totalGdd);
 }
 
 export async function predictGrowth(input: GrowthPredictInput): Promise<GrowthPredictResult> {
+  // 2026-08-24 PR3：Fail Loud 校验，缺 crop_type 直接抛错（前端能看到明确提示）
+  if (!input.crop_type) {
+    throw new Error('AI-04 生长预测必须提供 crop_type（作物类型）参数');
+  }
+  if (!input.greenhouse_id) {
+    throw new Error('AI-04 生长预测必须提供 greenhouse_id 才能读取 iot_sensor_readings 真实温度数据');
+  }
+
   const cropProfile = CROP_STAGES[input.crop_type] || CROP_STAGES['默认'];
   const baseTemp = input.base_temperature || cropProfile.base_temp;
   const plantDate = input.plant_date ? new Date(input.plant_date) : new Date();
   const today = new Date();
   const daysSince = Math.max(0, Math.floor((today.getTime() - plantDate.getTime()) / (1000 * 60 * 60 * 24)));
 
-  // 1. 累积 GDD
-  const cumulativeGdd = estimateCumulativeGdd(plantDate, baseTemp);
+  // 1. 累积 GDD（2026-08-24 PR3：优先真实 iot 数据，无数据抛错）
+  const cumulativeGdd = estimateCumulativeGdd(plantDate, baseTemp, input.greenhouse_id);
 
   // 2. 当前阶段
   let currentStage = '萌发';
@@ -140,10 +188,18 @@ export async function predictGrowth(input: GrowthPredictInput): Promise<GrowthPr
   }
   if (cumulativeGdd > cropProfile.total_gdd) currentStage = '成熟（采收期）';
 
-  // 3. 预期采收日期（基于 GDD 累积速率推算）
-  const remainingGdd = cropProfile.total_gdd - cumulativeGdd;
-  const dailyAvgTempEstimate = 18;  // 简化
+  // 3. 预期采收日期（基于 iot 真实日均温推算未来 GDD 累积速率）
+  // → 用最近 7 天真实日均温均值（替换 V1 简化值 18℃）
+  const recentTemps = queryHistoricalDailyTemp(input.greenhouse_id,
+    new Date(today.getTime() - 7 * 24 * 3600 * 1000), today);
+  const dailyAvgTempEstimate = recentTemps.length > 0
+    ? recentTemps.reduce((s, d) => s + d.avgTemp, 0) / recentTemps.length
+    : 0;
+  if (dailyAvgTempEstimate === 0) {
+    throw new Error(`温室 ${input.greenhouse_id} 最近 7 天无温度数据，无法预测采收日期`);
+  }
   const dailyGddAvg = Math.max(1, dailyAvgTempEstimate - baseTemp);
+  const remainingGdd = cropProfile.total_gdd - cumulativeGdd;
   const daysToHarvest = remainingGdd > 0 ? Math.ceil(remainingGdd / dailyGddAvg) : 0;
   const harvestDate = new Date(today.getTime() + daysToHarvest * 24 * 60 * 60 * 1000);
 
