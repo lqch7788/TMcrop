@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Clock, Truck, Bug, TrendingUp, MapPin, Image as ImageIcon,
   MessageCircle, FileText, ShieldAlert, Calendar, Bot, X, Loader2,
+  CheckSquare,
 } from 'lucide-react';
 import { aiApi } from '../../../services/aiApi';
 import { useGreenhouseStore } from '../../../stores/useGreenhouseStore';
@@ -611,9 +612,7 @@ const EXTRA_MODULES = [
 
 function CheckSquareIcon(props: any) {
   // 2026-08-24 PR-D：修复 icon 复用 bug（之前实现是返回 <Calendar />，导致 AI-03 显示错误）
-  // → 改用 lucide-react 的 CheckSquare 真实图标
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { CheckSquare } = require('lucide-react');
+  // → 改用 lucide-react 的 CheckSquare 真实图标（ESM 静态 import，避免浏览器 require 报错）
   return <CheckSquare {...props} />;
 }
 
