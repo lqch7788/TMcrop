@@ -109,13 +109,41 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
     throw new Error('病虫害预警必须提供 greenhouse_id（温室）参数');
   }
   // 校验温室存在
-  const ghStmt = db.prepare('SELECT id, name FROM greenhouses WHERE id = ? LIMIT 1');
+  const ghStmt = db.prepare('SELECT id, name, crop FROM greenhouses WHERE id = ? LIMIT 1');
   ghStmt.bind([input.greenhouse_id]);
   const hasGh = ghStmt.step();
-  const ghName = hasGh ? String(ghStmt.getAsObject().name || input.greenhouse_id) : input.greenhouse_id;
+  const ghRow = hasGh ? ghStmt.getAsObject() : null;
+  const ghName = ghRow ? String(ghRow.name || input.greenhouse_id) : input.greenhouse_id;
   ghStmt.free();
   if (!hasGh) {
     throw new Error(`温室 ${input.greenhouse_id} 不存在，请检查 greenhouse_id 参数`);
+  }
+
+  // 2026-08-24 PR3：缺 crop_type 时，从该温室当前种植作物反查（替换前端硬编码 '番茄'）
+  // 优先级：input.crop_type → greenhouses.crop → plantings 当前在种作物
+  let cropType = input.crop_type;
+  if (!cropType) {
+    if (ghRow?.crop) {
+      cropType = String(ghRow.crop);
+    } else {
+      const plantStmt = db.prepare(`
+        SELECT crop_name FROM plantings
+        WHERE greenhouse_name = ? AND status = 'growing'
+        ORDER BY planting_date DESC LIMIT 1
+      `);
+      plantStmt.bind([ghName]);
+      if (plantStmt.step()) {
+        const cropName = plantStmt.getAsObject().crop_name;
+        if (cropName) cropType = String(cropName);
+      }
+      plantStmt.free();
+    }
+    if (!cropType) {
+      throw new Error(
+        `温室 ${ghName}（${input.greenhouse_id}）未提供 crop_type，且无法从 greenhouses.crop 或 plantings 当前批次反查到作物名。` +
+        '请前端传 crop_type 或在温室/种植表中补充当前作物',
+      );
+    }
   }
 
   const snapshot = queryEnvSnapshot(input.greenhouse_id);
@@ -181,7 +209,7 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
 
   return {
     greenhouse_id: input.greenhouse_id,
-    crop_type: input.crop_type,
+    crop_type: cropType,
     env_snapshot: {
       temperature: Math.round(env.temperature * 10) / 10,
       humidity: Math.round(env.humidity * 10) / 10,

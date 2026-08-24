@@ -18,6 +18,7 @@ import { getDatabase } from '../../db';
 interface AttendanceInput {
   lookback_days?: number;
   z_threshold?: number;
+  team_id?: string;                // 2026-08-24 PR5：按班组过滤（JOIN team_members）
 }
 
 interface AttendanceAnomaly {
@@ -52,12 +53,22 @@ export async function detectAttendanceAnomalies(input: AttendanceInput): Promise
   const threshold = input.z_threshold || 2.0;
   const anomalies: AttendanceAnomaly[] = [];
 
-  // 1. 查询所有在职员工的考勤统计
-  const empRows = db.exec(`
-    SELECT e.id, e.name
-    FROM employees e
-    WHERE e.status IN ('在职', 'active')
-  `);
+  // 1. 查询所有在职员工的考勤统计（2026-08-24 PR5：支持按班组过滤）
+  const empSql = input.team_id
+    ? `
+      SELECT DISTINCT e.id, e.name
+      FROM employees e
+      INNER JOIN team_members tm ON tm.worker_id = e.id
+      WHERE e.status IN ('在职', 'active') AND tm.team_id = ?
+    `
+    : `
+      SELECT e.id, e.name
+      FROM employees e
+      WHERE e.status IN ('在职', 'active')
+    `;
+  const empRows = input.team_id
+    ? db.exec(empSql, [input.team_id])
+    : db.exec(empSql);
   const employees: { id: string; name: string }[] = [];
   if (empRows[0]) {
     for (const row of empRows[0].values) {
@@ -159,10 +170,10 @@ export async function detectAttendanceAnomalies(input: AttendanceInput): Promise
   };
 
   const xai_reasons = [
-    `扫描员工：${employees.length} 人（V1.1 仅 ${employees.length} 在职员工）`,
+    `扫描员工：${employees.length} 人${input.team_id ? `（班组 ${input.team_id} 过滤）` : '（V1.1 仅在职员工）'}`,
     `历史窗口：${lookback} 天`,
     `异常阈值：连续缺勤 ≥3 天 / 迟到 ≥5 次 / 请假 ≥3 次 / 缺勤率 ≥30%`,
-    `检测方法：滑动窗口 + Z-score（V1.1 attendance_records 仅 23 行，样本不足）`,
+    `检测方法：滑动窗口 + Z-score（V1.1 attendance_records 样本稀疏）`,
     `检出异常：${anomalies.length} 个（low=${summary.low}, medium=${summary.medium}, high=${summary.high}）`,
   ];
 

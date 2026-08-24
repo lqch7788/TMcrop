@@ -16,7 +16,7 @@
 import { getDatabase } from '../../db';
 
 interface AnomalyInput {
-  check_dimension?: 'task_duration' | 'yield' | 'inventory_change' | 'all';
+  check_dimension?: 'task_duration' | 'yield' | 'inventory_change' | 'attendance' | 'all';
   lookback_days?: number;
   threshold_sigma?: number;         // Z-score 阈值（默认 2.0）
 }
@@ -138,6 +138,92 @@ export async function detectAnomalies(input: AnomalyInput): Promise<AnomalyResul
     }
   }
 
+  // 3. 库存变化异常（2026-08-24 PR4 新增维度）
+  //    按 instance_id 分组，统计日均 outbound 数量；最近 7 天偏离则告警
+  let inventoryCheckCount = 0;
+  if (input.check_dimension === 'inventory_change' || input.check_dimension === 'all' || !input.check_dimension) {
+    const invRows = db.exec(`
+      SELECT instance_id,
+             AVG(ABS(quantity)) AS mean_q, COUNT(*) AS n,
+             MIN(ABS(quantity)) AS min_q, MAX(ABS(quantity)) AS max_q
+      FROM inventory_transaction
+      WHERE transaction_type = 'outbound'
+        AND create_time > datetime('now', '-${lookbackDays} day')
+      GROUP BY instance_id
+      HAVING n >= 5
+    `);
+    if (invRows[0]) {
+      for (const row of invRows[0].values) {
+        const instanceId = String(row[0]);
+        const mean = Number(row[1]);
+        const min = Number(row[3]);
+        const max = Number(row[4]);
+        const std = (max - min) / 4 || 1;
+        inventoryCheckCount++;
+
+        // 检查最近 7 天 outbound
+        const recentInv = db.exec(`
+          SELECT ABS(quantity) FROM inventory_transaction
+          WHERE instance_id = ? AND transaction_type = 'outbound'
+            AND create_time > datetime('now', '-7 day')
+        `, [instanceId]);
+        for (const r of recentInv[0]?.values || []) {
+          const v = Number(r[0]);
+          const z = (v - mean) / std;
+          if (Math.abs(z) > threshold) {
+            anomalies.push({
+              dimension: 'inventory_change',
+              anomaly_type: z > 0 ? 'consumption_spike' : 'consumption_drop',
+              severity: Math.abs(z) > 3 ? 'critical' : 'warning',
+              value: v,
+              expected_range: [mean - std * 2, mean + std * 2],
+              z_score: Math.round(z * 100) / 100,
+              description: `物料 ${instanceId} 消耗 ${v} 偏离历史均值 ${mean.toFixed(1)}（σ=${z.toFixed(2)}）`,
+              recommended_action: z > 0 ? '排查异常消耗（漏记/浪费/失窃）' : '检查领用流程是否停滞',
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 4. 出勤异常（2026-08-24 PR4 新增维度）
+  //    按 worker_id 分组，统计日均缺勤次数
+  let attendanceCheckCount = 0;
+  if (input.check_dimension === 'attendance' || input.check_dimension === 'all' || !input.check_dimension) {
+    const attRows = db.exec(`
+      SELECT worker_id,
+             SUM(CASE WHEN status = '缺勤' OR status = 'absent' THEN 1 ELSE 0 END) AS mean_abs,
+             COUNT(*) AS total_days
+      FROM attendance_records
+      WHERE date > datetime('now', '-${lookbackDays} day')
+      GROUP BY worker_id
+      HAVING total_days >= 10
+    `);
+    if (attRows[0]) {
+      for (const row of attRows[0].values) {
+        const workerId = String(row[0]);
+        const totalAbs = Number(row[1]);
+        const totalDays = Number(row[2]);
+        // 缺勤率阈值：>20% 视为异常
+        const absenceRate = totalDays > 0 ? (totalAbs / totalDays) * 100 : 0;
+        attendanceCheckCount++;
+        if (absenceRate > 20) {
+          anomalies.push({
+            dimension: 'attendance',
+            anomaly_type: 'high_absence_rate',
+            severity: absenceRate > 40 ? 'critical' : 'warning',
+            value: Math.round(absenceRate * 10) / 10,
+            expected_range: [0, 20],
+            z_score: 0,  // 简化版：用固定阈值代替 Z-score
+            description: `员工 ${workerId} 缺勤率 ${absenceRate.toFixed(1)}%（${totalAbs}/${totalDays} 天）`,
+            recommended_action: '了解缺勤原因，必要时调整排班',
+          });
+        }
+      }
+    }
+  }
+
   const summary = {
     warning: anomalies.filter(a => a.severity === 'warning').length,
     critical: anomalies.filter(a => a.severity === 'critical').length,
@@ -152,7 +238,7 @@ export async function detectAnomalies(input: AnomalyInput): Promise<AnomalyResul
   ];
 
   return {
-    total_checks: (durationRows[0]?.values.length || 0) + (yieldRows[0]?.values.length || 0),
+    total_checks: (durationRows[0]?.values.length || 0) + (yieldRows[0]?.values.length || 0) + inventoryCheckCount + attendanceCheckCount,
     anomalies,
     summary,
     model_version: MODEL_VERSION,

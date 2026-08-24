@@ -5,7 +5,7 @@
  * V2 改进：每个模块结果用中文卡片展示（替代 V1 原始 JSON）
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Clock, Truck, Bug, TrendingUp, MapPin, Image as ImageIcon,
   MessageCircle, FileText, ShieldAlert, Calendar, Bot, X, Loader2,
@@ -18,13 +18,57 @@ interface AIPanelProps {
   taskId?: string;
   taskType?: string;
   compact?: boolean;
+  // 2026-08-24 PR1 新增：上下文注入字段（用于真实数据接入，向后兼容）
+  greenhouseId?: string;                                       // 优先级：task.greenhouseId > batch.greenhouse_id > store
+  priority?: 'urgent' | 'high' | 'normal' | 'low';
+  requiredSkills?: string[];                                   // 任务技能要求（AI-01 用）
+  estimatedHours?: number;                                     // 任务预计工时
+  batchId?: string;                                            // 当前批次 ID（AI-04/10 用）
+  batchCode?: string;
+  plantDate?: string;                                          // 批次种植日期（AI-04 用，移除硬编码 '2026-05-01'）
+  expectedHarvestDate?: string;
+  variety?: string;
+  workerId?: string;                                           // 当前工人 ID（AI-08 路径优化起点）
+  workerLat?: number;
+  workerLng?: number;
+  employeeId?: string;                                         // 当前用户员工 ID（AI-03 审批辅助）
+  approvalType?: 'leave' | 'material' | 'contract' | 'farm_task';
+  approvalAmount?: number;
+  approvalDurationDays?: number;
+  context?: string;                                            // 当前页面路径（AI-12 问答上下文）
+  lookbackDays?: number;                                       // 历史窗口（AI-07/14/15 用）
+  teamIds?: string[];                                          // 班组过滤（AI-01 用，从 SmartDispatch 顶部 TeamChipMultiSelect 透传）
+  anomalyCheckDimension?: 'task_duration' | 'yield' | 'inventory_change' | 'attendance' | 'all';  // AI-14 检查维度
+  thresholdSigma?: number;                                     // AI-14 Z-score 阈值（默认 2.0）
+  reportType?: 'daily' | 'weekly' | 'monthly' | 'custom';    // AI-13 报告类型
+  reportStartDate?: string;                                    // AI-13 报告起始日期
+  reportEndDate?: string;                                      // AI-13 报告结束日期
+  teamId?: string;                                             // AI-15 出勤异常班组过滤（PR5）
+  // 自动化触发（PR1 基础设施）
+  autoTrigger?: boolean;                                       // 默认 false；true 时关键 props 变化自动调用
+  autoTriggerKeys?: Array<
+    'workhour' | 'dispatch' | 'pest' | 'growth' | 'growthState' | 'attendance' | 'approval' | 'resource'
+  >;
 }
 
 // 模块定义（含调用函数 + 中文渲染）
 const AI_MODULES = [
   {
     key: 'workhour', name: 'AI-06 工时预测', icon: Clock, color: 'blue',
-    call: (p: any) => aiApi.workhour.predict({ task_type: p.taskType || '灌溉', priority: 'normal', task_id: p.taskId }),
+    // 2026-08-24 PR2：移除硬编码 task_type='灌溉' / priority='normal'，全部读 buildCallParams() 透传值
+    // → task_id 关键：传了走 ML 模型真实特征，不传后端才 fallback 到"同类型平均"
+    call: (p: any) => {
+      if (!p.taskType && !p.taskId) {
+        throw new Error('AI-06 工时预测需要任务类型或任务 ID（taskType / taskId 至少一个）');
+      }
+      return aiApi.workhour.predict({
+        task_type: p.taskType,
+        priority: p.priority,
+        greenhouse_id: p.greenhouseId,
+        assignee_id: p.workerId,
+        task_id: p.taskId,
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -47,7 +91,24 @@ const AI_MODULES = [
   },
   {
     key: 'dispatch', name: 'AI-01 派工推荐', icon: Sparkles, color: 'emerald',
-    call: (p: any) => aiApi.dispatch.recommend({ task_type: p.taskType || '灌溉', priority: 'normal' }),
+    // 2026-08-24 PR2：移除硬编码 task_type='灌溉' / priority='normal'，全部读 buildCallParams() 透传值
+    call: (p: any) => {
+      if (!p.taskType) {
+        throw new Error('AI-01 派工推荐需要选定任务（taskType 必填），请先在左侧任务池选择任务');
+      }
+      if (!p.greenhouseId) {
+        throw new Error('AI-01 派工推荐需要任务所属温室（greenhouseId 必填），当前任务未关联温室');
+      }
+      return aiApi.dispatch.recommend({
+        task_type: p.taskType,
+        required_skills: p.requiredSkills,
+        greenhouse_id: p.greenhouseId,
+        priority: p.priority || 'normal',
+        batch_id: p.batchId,
+        estimated_hours: p.estimatedHours,
+        team_ids: p.teamIds,
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">候选员工：{d.totalCandidates} 人</p>
@@ -65,7 +126,24 @@ const AI_MODULES = [
   },
   {
     key: 'growth', name: 'AI-04 生长预测', icon: TrendingUp, color: 'green',
-    call: (p: any) => aiApi.growth.predict({ crop_type: p.cropType || '番茄', plant_date: '2026-05-01' }),
+    // 2026-08-24 PR3：移除 plant_date='2026-05-01' 硬编码，全部读 buildCallParams() 透传值
+    // → crop_type / greenhouse_id / plant_date 全部由前端透传，缺 greenhouse_id 后端会抛错（Fail Loud）
+    call: (p: any) => {
+      if (!p.cropType) {
+        throw new Error('AI-04 生长预测需要作物类型（cropType 必填），请先选中任务或批次');
+      }
+      if (!p.greenhouseId) {
+        throw new Error('AI-04 生长预测需要任务所属温室（greenhouseId 必填），当前任务未关联温室');
+      }
+      return aiApi.growth.predict({
+        crop_type: p.cropType,
+        batch_id: p.batchId,
+        greenhouse_id: p.greenhouseId,
+        plant_date: p.plantDate,             // 从 plantings.planting_date 透传
+        expected_harvest_date: p.expectedHarvestDate,
+        variety: p.variety,
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -92,11 +170,25 @@ const AI_MODULES = [
   },
   {
     key: 'pest', name: 'AI-05 病虫害预警', icon: Bug, color: 'red',
+    // 2026-08-24 PR3：greenhouseId 优先级 props.greenhouseId > store.active > store[0]；缺时抛错
+    // → 后端 pestAlert 已支持从 greenhouses.crop / plantings 当前批次反查作物类型（不再硬编码 '番茄'）
     call: (p: any) => {
-      // 2026-08-22：真实 IoT 数据链路，greenhouse_id 必填（取第一个活动温室）
-      const gh = useGreenhouseStore.getState().greenhouses.find(g => g.status === 'active')
-        || useGreenhouseStore.getState().greenhouses[0];
-      return aiApi.pest.alert({ crop_type: p.cropType || '番茄', greenhouse_id: gh?.id || '' });
+      let greenhouseId = p.greenhouseId;
+      if (!greenhouseId) {
+        const store = useGreenhouseStore.getState();
+        const active = store.greenhouses.find(g => g.status === 'active');
+        greenhouseId = active?.id || store.greenhouses[0]?.id;
+      }
+      if (!greenhouseId) {
+        throw new Error(
+          'AI-05 病虫害预警需要指定温室（greenhouseId 必填）。\n' +
+          '当前 props / useGreenhouseStore 都未找到温室，请先选中任务或激活温室。',
+        );
+      }
+      return aiApi.pest.alert({
+        crop_type: p.cropType,   // 不再 || '番茄'：后端 fallback 到 greenhouse/plantings 反查
+        greenhouse_id: greenhouseId,
+      });
     },
     render: (d: any) => (
       <div className="space-y-2">
@@ -123,14 +215,39 @@ const AI_MODULES = [
   },
   {
     key: 'route', name: 'AI-08 路径优化', icon: MapPin, color: 'orange',
-    call: () => aiApi.route.optimize({
-      worker_start: { lat: 30.27, lng: 120.15 },
-      tasks: [
-        { task_id: 'T1', lat: 30.28, lng: 120.16, name: 'A温室' },
-        { task_id: 'T2', lat: 30.30, lng: 120.18, name: 'B温室' },
-        { task_id: 'T3', lat: 30.26, lng: 120.14, name: 'C温室' },
-      ],
-    }),
+    // 2026-08-24 PR4：调 /api/dispatch/worker-tasks-and-location 获取真实工人位置+今日任务
+    // → 移除硬编码 lat 30.27/120.15 + 假任务 T1/T2/T3
+    call: async (p: any) => {
+      if (!p.workerId) {
+        throw new Error('AI-08 路径优化需要指定工人（workerId 必填），请先在中间列选中推荐员工');
+      }
+      // 调后端新端点取工人位置 + 今日任务
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { enhancedApiClient } = require('../lib/apiClient');
+      const date = new Date().toISOString().split('T')[0];
+      const resp = await enhancedApiClient.post('/dispatch/worker-tasks-and-location', {
+        worker_id: p.workerId,
+        date,
+      });
+      const data = (resp as any)?.data ?? resp;
+      const worker = data?.worker;
+      const tasks = data?.tasks || [];
+      if (!worker || (worker.lat === 0 && worker.lng === 0)) {
+        throw new Error(`工人 ${p.workerId} 无可用坐标，无法启动路径优化`);
+      }
+      if (tasks.length === 0) {
+        throw new Error(`工人 ${worker.name} 今日无可执行任务，无需优化路径`);
+      }
+      return aiApi.route.optimize({
+        worker_start: { lat: worker.lat, lng: worker.lng },
+        tasks: tasks.map((t: any) => ({
+          task_id: t.id,
+          lat: t.lat,
+          lng: t.lng,
+          name: t.name,
+        })),
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -153,8 +270,16 @@ const AI_MODULES = [
   },
   {
     key: 'image', name: 'AI-09 图像识别', icon: ImageIcon, color: 'purple',
-    // 2026-08-22：模型未部署时后端返回明确错误（"模型未部署"指引），前端直接展示
-    call: () => aiApi.image.identify({ image_id: `IMG-${Date.now()}` }),
+    // 2026-08-24 PR6：点击按钮触发文件选择 → 上传 → 识别（详见 handleImageUpload）
+    // → 此处的 call 仅作为 fallback（手动传入 image_id 时使用）；UI 走特殊流程
+    call: (p: any) => {
+      if (!p.imageId) {
+        throw new Error(
+          'AI-09 图像识别需要图片：请点击"AI-09 图像识别"按钮选择本地图片上传（base64）',
+        );
+      }
+      return aiApi.image.identify({ image_id: p.imageId });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">识别耗时：{d.inferenceTimeMs}ms</p>
@@ -177,7 +302,19 @@ const AI_MODULES = [
   },
   {
     key: 'qa', name: 'AI-12 问答助手', icon: MessageCircle, color: 'cyan',
-    call: (p: any) => aiApi.qa.ask({ question: `关于${p.cropType || '番茄'}种植的最佳实践？` }),
+    // 2026-08-24 PR5：改为交互式（用户输入 question），移除硬编码模板问题
+    // → p.question 来自 UI 输入框（结果区域下方的"再问一个问题"输入框）
+    // → 缺 question 抛错（不允许模板化假问题）
+    call: (p: any) => {
+      const q = (p.question || '').trim();
+      if (!q) {
+        throw new Error('AI-12 问答助手需要用户输入问题（question 必填），请在下方输入框填写');
+      }
+      return aiApi.qa.ask({
+        question: q,
+        context: p.context || '智能派工',
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="bg-cyan-50 rounded p-3">
@@ -196,7 +333,14 @@ const AI_MODULES = [
   },
   {
     key: 'report', name: 'AI-13 报告生成', icon: FileText, color: 'indigo',
-    call: () => aiApi.report.generate({ report_type: 'weekly' }),
+    // 2026-08-24 PR5：透传 reportType/startDate/endDate/cropType/greenhouseId；移除硬编码 weekly
+    call: (p: any) => aiApi.report.generate({
+      report_type: p.reportType || 'weekly',
+      ...(p.reportStartDate ? { start_date: p.reportStartDate } : {}),
+      ...(p.reportEndDate ? { end_date: p.reportEndDate } : {}),
+      crop_type: p.cropType,
+      greenhouse_id: p.greenhouseId,
+    }),
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-sm font-medium text-gray-700">📄 {d.summary}</p>
@@ -214,12 +358,49 @@ const AI_MODULES = [
   },
   {
     key: 'schedule', name: 'AI-02 智能排班', icon: Calendar, color: 'pink',
-    call: () => aiApi.schedule.generate({
-      start_date: new Date().toISOString().split('T')[0],
-      days: 3,
-      employees: [],
-      tasks: [{ task_id: 'T1', task_type: '灌溉', estimated_hours: 4 }],
-    }),
+    // 2026-08-24 PR4：从 useWorkerStore + useDispatchStore 取真实员工+任务，移除硬编码
+    call: (p: any) => {
+      // 从 store 取真实数据（延迟导入避免循环依赖）
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { useWorkerStore } = require('../stores/useWorkerStore');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { useDispatchStore } = require('../stores/useDispatchStore');
+      const workers = useWorkerStore.getState().workers;
+      const dispatchState = useDispatchStore.getState() as any;
+      const pendingTasks = dispatchState.unassignedTasks
+        || dispatchState.pendingTasks
+        || dispatchState.tasks
+        || [];
+
+      // 2026-08-24 PR4：Fail Loud —— 空池子直接抛错（不静默用 mock 任务）
+      if (!workers || workers.length === 0) {
+        throw new Error(
+          'AI-02 智能排班需要员工池：请先在员工管理中维护员工数据，' +
+          '或检查 useWorkerStore 是否已加载（loadWorkers 未调用）',
+        );
+      }
+
+      return aiApi.schedule.generate({
+        start_date: new Date().toISOString().split('T')[0],
+        days: 7,                                            // 一周排班
+        employees: workers.map((w: any) => ({
+          employee_id: w.id,
+          name: w.name,
+          skills: w.skills || [],
+          current_load: w.currentLoad ?? 0,
+          max_consecutive_days: 6,
+          preferred_off_days: w.preferredOffDays || [0],
+        })),
+        // tasks 可为空（生成空排班表），不抛错
+        tasks: pendingTasks.map((t: any) => ({
+          task_id: t.id,
+          task_type: t.taskType || t.type || '其他',
+          estimated_hours: t.estimatedHours || 4,
+          priority: t.priority || 'normal',
+          required_skills: t.requiredSkills,
+        })),
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex gap-2">
@@ -242,7 +423,13 @@ const AI_MODULES = [
   },
   {
     key: 'anomaly', name: 'AI-14 异常检测', icon: ShieldAlert, color: 'amber',
-    call: () => aiApi.anomaly.detect({}),
+    // 2026-08-24 PR4：透传 checkDimension / lookbackDays / thresholdSigma
+    // → 移除空参默认；后端已支持 task_duration / yield / inventory_change / attendance / all
+    call: (p: any) => aiApi.anomaly.detect({
+      check_dimension: p.anomalyCheckDimension || p.checkDimension || 'all',
+      lookback_days: p.lookbackDays || 30,
+      threshold_sigma: p.thresholdSigma || 2.0,
+    }),
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">检测项：{d.totalChecks} · 异常 {d.anomalies.length} 个</p>
@@ -266,7 +453,19 @@ const AI_MODULES = [
 const EXTRA_MODULES = [
   {
     key: 'growthState', name: 'AI-10 生长状态', icon: Bot, color: 'teal',
-    call: (p: any) => aiApi.growthState.identify({ crop_type: p.cropType || '番茄', current_gdd: 900 }),
+    // 2026-08-24 PR3：移除 current_gdd=900 默认值；后端从 iot_sensor_readings 累积真实 GDD
+    // → 仅透传 cropType/batchId/greenhouseId，无数据时后端明确抛错（Fail Loud）
+    call: (p: any) => {
+      if (!p.cropType) {
+        throw new Error('AI-10 生长状态识别需要作物类型（cropType 必填），请先选中任务或批次');
+      }
+      return aiApi.growthState.identify({
+        crop_type: p.cropType,
+        batch_id: p.batchId,
+        greenhouse_id: p.greenhouseId,
+        // current_gdd 不再前端传：后端从 iot_sensor_readings 真实计算
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -287,7 +486,19 @@ const EXTRA_MODULES = [
   },
   {
     key: 'voice', name: 'AI-11 语音录入', icon: MessageCircle, color: 'sky',
-    call: () => aiApi.voice.transcribe({ transcribed_text: '今天上午在2号棚灌溉番茄用了3小时' }),
+    // 2026-08-24 PR6：移除硬编码 transcribed_text；复用 AI-12 交互模式（结果区下方输入框）
+    // → 文本路径走真实 NLP 规则；音频路径需 whisper.onnx 模型部署（暂未启用）
+    call: (p: any) => {
+      const text = (p.voiceText || '').trim();
+      if (!text) {
+        throw new Error('AI-11 语音录入需要文本内容（voiceText 必填），请在下方输入框填写');
+      }
+      return aiApi.voice.transcribe({
+        transcribed_text: text,
+        context: p.context,
+        submitter_id: p.employeeId,
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">🎙 转写文本：{d.rawText}</p>
@@ -307,7 +518,12 @@ const EXTRA_MODULES = [
   },
   {
     key: 'attendance', name: 'AI-15 出勤异常', icon: Calendar, color: 'rose',
-    call: () => aiApi.attendance.detect({}),
+    // 2026-08-24 PR5：透传 lookbackDays + teamId；后端 attendance.ts 支持按班组过滤
+    call: (p: any) => aiApi.attendance.detect({
+      lookback_days: p.lookbackDays || 30,
+      z_threshold: 2.0,
+      ...(p.teamId ? { team_id: p.teamId } : {}),
+    }),
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">扫描员工：{d.totalEmployees} 人</p>
@@ -327,7 +543,24 @@ const EXTRA_MODULES = [
   },
   {
     key: 'approval', name: 'AI-03 审批辅助', icon: CheckSquareIcon, color: 'violet',
-    call: () => aiApi.approval.suggest({ applicant_id: 'E001', approval_type: 'leave', duration_days: 5 }),
+    // 2026-08-24 PR5：移除硬编码 applicant_id='E001' / approval_type='leave' / duration_days=5
+    // → 全部读 buildCallParams() 透传值；缺 employeeId 抛错（审批详情页调用）
+    call: (p: any) => {
+      if (!p.employeeId) {
+        throw new Error('AI-03 审批辅助需要申请人 ID（employeeId 必填），请在审批详情页调用');
+      }
+      if (!p.approvalType) {
+        throw new Error('AI-03 审批辅助需要审批类型（approvalType 必填），如 leave/material/contract/farm_task');
+      }
+      return aiApi.approval.suggest({
+        applicant_id: p.employeeId,
+        applicant_role: (p as any).applicantRole,
+        approval_type: p.approvalType,
+        amount: p.approvalAmount,
+        duration_days: p.approvalDurationDays,
+        reason: (p as any).reason,
+      });
+    },
     render: (d: any) => (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -350,7 +583,14 @@ const EXTRA_MODULES = [
   },
   {
     key: 'resource', name: 'AI-07 资源优化', icon: Truck, color: 'lime',
-    call: () => aiApi.resource.optimize({ lookback_days: 30 }),
+    // 2026-08-24 PR4：透传 lookbackDays / forecastDays / cropType / warehouseId，移除空参
+    call: (p: any) => aiApi.resource.optimize({
+      lookback_days: p.lookbackDays || 30,
+      forecast_days: 14,
+      // 可选过滤：material_name 模糊匹配 inventory_stock.crop_name
+      ...(p.cropType ? { material_name: p.cropType } : {}),
+      ...(p.warehouseId ? { warehouse_id: p.warehouseId } : {}),
+    }),
     render: (d: any) => (
       <div className="space-y-2">
         <p className="text-xs text-gray-400">扫描物料：{d.totalMaterials} 种 · 预警 {d.alerts?.length} 种</p>
@@ -392,10 +632,51 @@ const MODULE_COLORS: Record<string, { bg: string; text: string }> = {
   lime:    { bg: 'bg-lime-100',    text: 'text-lime-600' },
 };
 
-export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false }: AIPanelProps) {
+export function AIPanel(props: AIPanelProps) {
+  const {
+    cropType = '番茄',
+    taskId,
+    taskType,
+    compact = false,
+    // 2026-08-24 PR1：上下文注入字段（向后兼容，默认值保持旧行为）
+    greenhouseId,
+    priority,
+    requiredSkills,
+    estimatedHours,
+    batchId,
+    batchCode,
+    plantDate,
+    expectedHarvestDate,
+    variety,
+    workerId,
+    workerLat,
+    workerLng,
+    employeeId,
+    approvalType,
+    approvalAmount,
+    approvalDurationDays,
+    context,
+    lookbackDays,
+    teamIds,
+    anomalyCheckDimension,
+    thresholdSigma,
+    reportType,
+    reportStartDate,
+    reportEndDate,
+    teamId,
+    autoTrigger = false,
+    autoTriggerKeys,
+  } = props;
+
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [result, setResult] = useState<{ key: string; data: any } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 2026-08-24 PR5：AI-12 问答助手交互式输入（用户提问文本）
+  const [qaQuestion, setQaQuestion] = useState<string>('');
+  // 2026-08-24 PR6：AI-11 语音录入交互式输入（用户文本）
+  const [voiceText, setVoiceText] = useState<string>('');
+  // 2026-08-24 PR6：AI-09 图像识别——文件输入 ref（点击 AI-09 按钮触发文件选择对话框）
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // 按 AI-序号 排列（AI-01 ~ AI-15），与定义顺序解耦
   const allModules = [...AI_MODULES, ...EXTRA_MODULES].sort((a, b) => {
@@ -404,24 +685,130 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
     return na - nb;
   });
 
-  const callAI = async (key: string) => {
+  // 2026-08-24 PR1：构造模块调用参数对象（统一传递所有上下文）
+  // → 模块内部 call 函数读取需要的字段，不再各自 || '灌溉' 兜底
+  const buildCallParams = () => ({
+    cropType,
+    taskId,
+    taskType,
+    greenhouseId,
+    priority,
+    requiredSkills,
+    estimatedHours,
+    batchId,
+    batchCode,
+    plantDate,
+    expectedHarvestDate,
+    variety,
+    workerId,
+    workerLat,
+    workerLng,
+    employeeId,
+    approvalType,
+    approvalAmount,
+    approvalDurationDays,
+    context,
+    lookbackDays,
+    teamIds,
+    anomalyCheckDimension,
+    thresholdSigma,
+    reportType,
+    reportStartDate,
+    reportEndDate,
+    teamId,
+    question: qaQuestion,                                     // PR5：AI-12 问答用户输入
+    voiceText,                                                // PR6：AI-11 语音录入文本
+  });
+
+  const callAI = async (key: string, isAuto = false) => {
     setLoadingKey(key);
-    setError(null);
-    setResult(null);
+    if (!isAuto) {
+      // 手动点击：清空旧结果 + 清除错误
+      setError(null);
+      setResult(null);
+    }
     try {
       const mod = allModules.find(m => m.key === key);
       if (!mod) return;
-      const res = await mod.call({ cropType, taskId, taskType });
+      const res = await mod.call(buildCallParams());
       // 2026-08-22 修复：enhancedApiClient 已自动解包 data（apiClient.ts:243）
       // → res 可能直接是 data 对象（无 .data 层），兼容两种情况
       const payload = (res as any)?.data ?? res;
-      setResult({ key, data: payload });
+      if (isAuto) {
+        // 2026-08-24 PR1：自动触发不覆盖用户手动点击的结果（用户的主动选择优先）
+        setResult((prev) => (prev ? prev : { key, data: payload }));
+      } else {
+        setResult({ key, data: payload });
+      }
     } catch (e: any) {
-      setError(e?.message || '调用失败');
+      if (isAuto) {
+        // 自动触发失败：仅 console.warn，不打扰用户（避免错误条闪烁）
+        console.warn(`[AIPanel autoTrigger] ${key} 失败:`, e?.message);
+      } else {
+        setError(e?.message || '调用失败');
+      }
     } finally {
       setLoadingKey(null);
     }
   };
+
+  // 2026-08-24 PR6：AI-09 图像识别——文件选择 → 上传 → 识别
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // 清空 value 以便选同一文件再次触发
+    e.target.value = '';
+    if (!file) return;
+
+    setLoadingKey('image');
+    setError(null);
+    setResult(null);
+    try {
+      // 读 base64
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      // 上传获取真实 image_id
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { enhancedApiClient } = require('../lib/apiClient');
+      const uploadRes = await enhancedApiClient.post('/ai/image/upload', {
+        filename: file.name,
+        data: dataUrl,
+      });
+      const uploadData = (uploadRes as any)?.data ?? uploadRes;
+      const imageId = uploadData?.image_id;
+      if (!imageId) {
+        throw new Error('图片上传成功但未返回 image_id，请检查后端 upload 端点');
+      }
+      // 调识别（后端模型未部署时会抛"模型未部署"——Fail Loud）
+      const res = await aiApi.image.identify({ image_id: imageId });
+      const payload = (res as any)?.data ?? res;
+      setResult({ key: 'image', data: { ...payload, uploaded_filename: file.name } });
+    } catch (err: any) {
+      setError(err?.message || '图像识别失败');
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
+  // 2026-08-24 PR1：autoTrigger 自动触发
+  // - 监听关键上下文字段变化（任务/温室/批次/工人/优先级）
+  // - 200ms debounce 防抖（连续点击/快速切换不重复请求）
+  // - cleanup 取消未完成的 setTimeout（避免组件卸载后仍触发 setState）
+  // - 仅触发 autoTriggerKeys 列出的模块（节省资源）
+  useEffect(() => {
+    if (!autoTrigger || !autoTriggerKeys || autoTriggerKeys.length === 0) return;
+    const timer = setTimeout(() => {
+      autoTriggerKeys.forEach((key) => {
+        void callAI(key, true);
+      });
+    }, 200);
+    return () => clearTimeout(timer);
+    // 故意只依赖关键触发字段，避免其他 props 变化触发重复请求
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTrigger, taskId, greenhouseId, batchId, batchCode, workerId, priority]);
 
   // 紧凑模式：仅图标按钮列表
   if (compact) {
@@ -450,6 +837,15 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
   const activeModule = result ? allModules.find(m => m.key === result.key) : null;
 
   return (
+    <>
+      {/* 2026-08-24 PR6：隐藏的文件输入框（AI-09 图像上传用） */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
     <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -474,7 +870,14 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
             <button
               key={m.key}
               type="button"
-              onClick={() => callAI(m.key)}
+              onClick={() => {
+                // 2026-08-24 PR6：AI-09 走特殊文件上传流程（不是直接 callAI）
+                if (m.key === 'image') {
+                  imageInputRef.current?.click();
+                } else {
+                  callAI(m.key);
+                }
+              }}
               disabled={isLoading}
               className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
                 isActive ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
@@ -516,9 +919,58 @@ export function AIPanel({ cropType = '番茄', taskId, taskType, compact = false
           {result.data ? activeModule.render(result.data) : (
             <p className="text-xs text-red-600">⚠️ 返回数据为空，请重试</p>
           )}
+          {/* 2026-08-24 PR5：AI-12 问答助手交互式输入框（仅当结果为 AI-12 时显示） */}
+          {result.key === 'qa' && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={qaQuestion}
+                onChange={(e) => setQaQuestion(e.target.value)}
+                placeholder="再问一个问题..."
+                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-cyan-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && qaQuestion.trim()) {
+                    callAI('qa');
+                  }
+                }}
+              />
+              <button
+                onClick={() => callAI('qa')}
+                disabled={loadingKey === 'qa' || !qaQuestion.trim()}
+                className="px-2 py-1 text-xs bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:opacity-50"
+              >
+                提问
+              </button>
+            </div>
+          )}
+          {/* 2026-08-24 PR6：AI-11 语音录入交互式输入框（仅当结果为 AI-11 时显示） */}
+          {result.key === 'voice' && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={voiceText}
+                onChange={(e) => setVoiceText(e.target.value)}
+                placeholder="输入语音转写文本（如：今天上午在2号棚灌溉番茄用了3小时）"
+                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-sky-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && voiceText.trim()) {
+                    callAI('voice');
+                  }
+                }}
+              />
+              <button
+                onClick={() => callAI('voice')}
+                disabled={loadingKey === 'voice' || !voiceText.trim()}
+                className="px-2 py-1 text-xs bg-sky-500 text-white rounded hover:bg-sky-600 disabled:opacity-50"
+              >
+                解析
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
+    </>
   );
 }
 

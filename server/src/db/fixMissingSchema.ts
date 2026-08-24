@@ -4291,6 +4291,27 @@ function fixApprovedProductionPlanStatus(): void {
   }
 
   // 列添加完成，必须持久化
+
+  // ========== 2026-08-24 PR6：AI-09 病虫害图像上传表 ==========
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pest_images (
+        id TEXT PRIMARY KEY,
+        file_path TEXT NOT NULL,
+        original_filename TEXT,
+        size_bytes INTEGER DEFAULT 0,
+        uploaded_at TEXT NOT NULL,
+        status TEXT DEFAULT 'uploaded',
+        identified_at TEXT,
+        identified_result TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_pest_images_uploaded_at ON pest_images (uploaded_at)`);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[fixMissingSchema] pest_images 表创建失败（已存在则忽略）:', e);
+  }
+
   saveDatabase();
 }
 
