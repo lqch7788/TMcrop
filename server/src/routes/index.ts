@@ -60,6 +60,7 @@ import aiResourceRouter from './ai/resource';
 import aiImageRouter from './ai/image';
 import aiGrowthStateRouter from './ai/growthState';
 import aiVoiceRouter from './ai/voice';
+import aiConfigRouter from './ai/config';
 import aiAnomalyRouter from './ai/anomaly';
 import aiAttendanceRouter from './ai/attendance';
 import aiApprovalRouter from './ai/approval';
@@ -181,6 +182,7 @@ router.use('/ai/growth-state', requireAuth, aiGrowthStateRouter);
 router.use('/ai/voice', requireAuth, aiVoiceRouter);
 router.use('/ai/anomaly', requireAuth, aiAnomalyRouter);
 router.use('/ai/attendance', requireAuth, aiAttendanceRouter);
+router.use('/ai/config', requireAuth, aiConfigRouter);
 router.use('/ai/approval', requireAuth, aiApprovalRouter);
 
 // 巡查记录路由 - 需要认证
