@@ -3,11 +3,15 @@
  * 包含：月度规划、每日规划、智能派工
  * 路径：/task-center（属于农事管理模块）
  * 工作流程：月度规划 → 每日规划 → 智能派工
+ *
+ * 2026-08-24 PR7：顶部加 AIPanel 共享入口（覆盖 AI-04 生长预测 + AI-13 报告生成 + AI-12 问答）
+ * 智能派工 tab 已内嵌 SmartDispatchPage，自带 AIPanel（覆盖 AI-01/06 等）
  */
 
 import { useState } from 'react';
 import { ClipboardList, Sparkles, Calendar, Clock } from 'lucide-react';
 import { TabHeader } from '../../components/common/TabHeader';
+import { AIPanel } from '../../components/farm/ai/AIPanel';
 import SmartDispatchPage from '../../pages/SmartDispatch';
 import MonthlyPlanningPage from '../../pages/MonthlyPlanningPage';
 import DailyPlanningPage from '../../pages/DailyPlanningPage';
@@ -31,6 +35,12 @@ export default function TaskCenterPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+
+      {/* ★ 2026-08-24 PR7：AIPanel 共享入口（覆盖月度/每日规划 tab 的 AI-04/05/10/13/14） */}
+      {/*   智能派工 tab 自带 AIPanel（SmartDispatchPage 内部），此处省略避免重复 */}
+      {activeTab !== 'smart-dispatch' && (
+        <AIPanel context="智能任务中心" />
+      )}
 
       {/* Tab内容区域 */}
       <div>

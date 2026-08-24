@@ -4312,6 +4312,59 @@ function fixApprovedProductionPlanStatus(): void {
     console.warn('[fixMissingSchema] pest_images 表创建失败（已存在则忽略）:', e);
   }
 
+  // ========== 2026-08-24 PR B：AI-12 问答助手 + AI-01 F4 性能数据支持 ==========
+  // 知识库 3 张表（qaAssistant.ts 引用）：
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS data_dictionary (
+        id TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        dict_code TEXT NOT NULL,
+        dict_name TEXT NOT NULL,
+        dict_label TEXT,
+        description TEXT,
+        sort_number INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_data_dictionary_category ON data_dictionary (category)`);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS recommendation_rules (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        title TEXT,
+        action TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_recommendation_rules_type ON recommendation_rules (type)`);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ai_recommendation_rules (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        title TEXT,
+        action TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_ai_recommendation_rules_type ON ai_recommendation_rules (type)`);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[fixMissingSchema] 知识库 3 张表创建失败（已存在则忽略）:', e);
+  }
+
   saveDatabase();
 }
 
