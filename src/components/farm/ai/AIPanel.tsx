@@ -677,6 +677,14 @@ export function AIPanel(props: AIPanelProps) {
   const [voiceText, setVoiceText] = useState<string>('');
   // 2026-08-24 PR6：AI-09 图像识别——文件输入 ref（点击 AI-09 按钮触发文件选择对话框）
   const imageInputRef = useRef<HTMLInputElement>(null);
+  // 2026-08-24 PR-C：AI 模型部署状态（顶部横幅）
+  const [aiConfigStatus, setAiConfigStatus] = useState<{
+    deployed: number;
+    total: number;
+    percent: number;
+    modules: { code: string; name: string; deployed: boolean; setupGuide?: string }[];
+  } | null>(null);
+  const [showSetupGuide, setShowSetupGuide] = useState<string | null>(null);
 
   // 按 AI-序号 排列（AI-01 ~ AI-15），与定义顺序解耦
   const allModules = [...AI_MODULES, ...EXTRA_MODULES].sort((a, b) => {
@@ -810,6 +818,25 @@ export function AIPanel(props: AIPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoTrigger, taskId, greenhouseId, batchId, batchCode, workerId, priority]);
 
+  // 2026-08-24 PR-C：加载 AI 模型部署状态（仅加载一次，不重试）
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { enhancedApiClient } = require('../lib/apiClient');
+        const resp = await enhancedApiClient.get('/ai/config/status');
+        const data = (resp as any)?.data ?? resp;
+        if (!cancelled && data?.overall) {
+          setAiConfigStatus(data);
+        }
+      } catch {
+        // 静默失败：部署状态是辅助信息，不影响主功能
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // 紧凑模式：仅图标按钮列表
   if (compact) {
     return (
@@ -858,6 +885,49 @@ export function AIPanel(props: AIPanelProps) {
           </button>
         )}
       </div>
+
+      {/* 2026-08-24 PR-C：AI 模型部署状态横幅 */}
+      {aiConfigStatus && (
+        <div className={`mb-3 px-3 py-2 rounded-lg text-xs ${
+          aiConfigStatus.percent === 100 ? 'bg-green-50 border border-green-200' :
+          aiConfigStatus.percent >= 70 ? 'bg-amber-50 border border-amber-200' :
+          'bg-red-50 border border-red-200'
+        }`}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-medium text-gray-700">
+              AI 模型部署：{aiConfigStatus.deployed}/{aiConfigStatus.total} 已就绪 ({aiConfigStatus.percent}%)
+            </span>
+            {aiConfigStatus.percent < 100 && (
+              <span className="text-gray-500">点击 ❌ 查看部署</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {aiConfigStatus.modules.map((m) => (
+              <button
+                key={m.code}
+                onClick={() => !m.deployed && setShowSetupGuide(showSetupGuide === m.code ? null : m.code)}
+                title={m.deployed ? `${m.name}：已部署` : `${m.name}：未部署（点击查看部署指南）`}
+                className={`px-1.5 py-0.5 rounded text-[10px] ${
+                  m.deployed
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
+                }`}
+              >
+                {m.deployed ? '✅' : '❌'} {m.name.replace(/^AI-\d+\s/, '')}
+              </button>
+            ))}
+          </div>
+          {showSetupGuide && (() => {
+            const m = aiConfigStatus.modules.find((x) => x.code === showSetupGuide);
+            return m?.setupGuide ? (
+              <div className="mt-2 p-2 bg-white border border-amber-300 rounded text-[11px] text-gray-700 whitespace-pre-wrap">
+                <div className="font-medium text-amber-700 mb-1">📖 {m.name} 部署指南：</div>
+                {m.setupGuide}
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       {/* 模块按钮网格 */}
       <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
