@@ -9,7 +9,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot,
+  Sparkles, MapPin, Clock, AlertTriangle, CheckCircle2, Zap, Bot, Loader2,
   Send, CalendarClock, Split, X, ChevronRight, ChevronDown,
   RefreshCw, Lightbulb
 } from 'lucide-react';
@@ -448,6 +448,15 @@ export default function SmartDispatchPage() {
   const [sourceFilter, setSourceFilter] = useState<DispatchTaskSource | 'all'>('all');
   const [dispatchResult, setDispatchResult] = useState<{ success: boolean; message: string } | null>(null);
   const [dispatchAction, setDispatchAction] = useState<'dispatch' | 'delay' | 'split' | 'dismiss' | null>(null);
+  // ★ 2026-08-24 PR8：AI-08 路径优化结果（中间列"📍 路径"按钮触发）
+  const [routeResult, setRouteResult] = useState<{
+    workerName: string;
+    totalKm: number;
+    originalKm: number;
+    savingsPercent: number;
+    steps: { name?: string; taskId: string; distanceFromPrevKm: number; cumulativeDistanceKm: number }[];
+  } | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<WorkerRecommendation | null>(null);
   const [showDelayModal, setShowDelayModal] = useState(false);
   const [delayDays, setDelayDays] = useState(1);
@@ -769,6 +778,49 @@ export default function SmartDispatchPage() {
     setSelectedTasks(new Set());
   };
 
+  // ★ 2026-08-24 PR8：调 AI-08 路径优化（中间列"📍 路径"按钮触发）
+  // → 调 /api/dispatch/worker-tasks-and-location 拿工人位置 + 今日任务
+  // → 调 /api/ai/route/optimize 算最优路径
+  const handleShowRoute = async (worker: { id: string; name: string }) => {
+    setRouteLoading(true);
+    setRouteResult(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { enhancedApiClient } = require('../lib/apiClient');
+      const date = new Date().toISOString().split('T')[0];
+      // 1. 拿工人位置 + 今日任务
+      const locResp = await enhancedApiClient.post('/dispatch/worker-tasks-and-location', {
+        worker_id: worker.id,
+        date,
+      });
+      const locData = (locResp as any)?.data ?? locResp;
+      const tasks = locData?.tasks || [];
+      if (tasks.length === 0) {
+        await showAlert(`${worker.name} 今日（${date}）无待执行任务，无需路径优化`);
+        return;
+      }
+      // 2. 调 AI-08 路径优化
+      const routeResp = await enhancedApiClient.post('/ai/route/optimize', {
+        worker_start: { lat: locData.worker.lat, lng: locData.worker.lng },
+        tasks: tasks.map((t: any) => ({
+          task_id: t.id, lat: t.lat, lng: t.lng, name: t.name,
+        })),
+      });
+      const routeData = (routeResp as any)?.data ?? routeResp;
+      setRouteResult({
+        workerName: worker.name,
+        totalKm: routeData.totalDistanceKm,
+        originalKm: routeData.originalDistanceKm,
+        savingsPercent: routeData.savingsPercent,
+        steps: routeData.optimizedSteps || [],
+      });
+    } catch (e: any) {
+      await showAlert(`路径优化失败：${e?.message || '未知错误'}`);
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
   // ── 渲染 ──
   return (
     <div className="space-y-4">
@@ -1042,6 +1094,15 @@ export default function SmartDispatchPage() {
                           >
                             <Send className="w-3 h-3" /> 派发
                           </button>
+                          {/* ★ 2026-08-24 PR8：AI-08 路径优化按钮（中间列 → 触发路径优化） */}
+                          <button
+                            onClick={() => handleShowRoute(rec.worker)}
+                            disabled={routeLoading}
+                            title="AI-08 路径优化：根据今日任务和工人位置算最优执行顺序"
+                            className="px-2 py-1.5 rounded text-xs font-medium bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 flex items-center justify-center gap-1 disabled:opacity-50"
+                          >
+                            <MapPin className="w-3 h-3" /> 路径
+                          </button>
                           <button
                             onClick={() => { setDispatchAction('delay'); setSelectedRecommendation(rec); setShowDelayModal(true); }}
                             className="flex-1 py-1.5 rounded text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center justify-center gap-1"
@@ -1061,6 +1122,35 @@ export default function SmartDispatchPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                   <p>暂无可用员工</p>
+                </div>
+              )}
+
+              {/* ★ 2026-08-24 PR8：AI-08 路径优化结果展示区 */}
+              {routeLoading && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded text-xs text-orange-700 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" /> AI-08 路径优化计算中...
+                </div>
+              )}
+              {routeResult && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm font-semibold text-orange-800">📍 {routeResult.workerName} 最优路径</span>
+                    </div>
+                    <button onClick={() => setRouteResult(null)} className="text-xs text-orange-500 hover:text-orange-700">关闭</button>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-orange-700 mb-2">
+                    <span>原 {routeResult.originalKm.toFixed(1)}km → 优 {routeResult.totalKm.toFixed(1)}km</span>
+                    <span className="px-1.5 py-0.5 bg-orange-100 rounded font-medium">节省 {routeResult.savingsPercent}%</span>
+                  </div>
+                  <div className="space-y-1">
+                    {routeResult.steps.map((s, i) => (
+                      <p key={i} className="text-xs text-orange-700">
+                        {i + 1}. {s.name || s.taskId} <span className="text-orange-500">（距上站 {s.distanceFromPrevKm.toFixed(1)}km · 累计 {s.cumulativeDistanceKm.toFixed(1)}km）</span>
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
