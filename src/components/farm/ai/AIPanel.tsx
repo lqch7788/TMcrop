@@ -827,7 +827,17 @@ export function AIPanel(props: AIPanelProps) {
         const resp = await enhancedApiClient.get('/ai/config/status');
         const data = (resp as any)?.data ?? resp;
         if (!cancelled && data?.overall) {
-          setAiConfigStatus(data);
+          // 后端返回 {success, data: {overall: {...}, modules: [...]}}
+          // enhancedApiClient 已自动解包外层 data，所以 resp 已经是 {overall, modules}
+          // 但 setAiConfigStatus 字段是扁平的 deployed/total/percent
+          // → 需要把 overall 字段提到顶层
+          const { overall, modules } = data;
+          setAiConfigStatus({
+            deployed: overall.deployed,
+            total: overall.total,
+            percent: overall.percent,
+            modules: modules || [],
+          });
         }
       } catch {
         // 静默失败：部署状态是辅助信息，不影响主功能
