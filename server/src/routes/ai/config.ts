@@ -57,7 +57,8 @@ function checkFile(relativePath: string): boolean {
 
 function getModelStatuses(): ModelStatus[] {
   const workhourOk = checkFile('models/workhour_weights.json') && checkFile('models/workhour_meta.json');
-  const pestImageOk = checkFile('models/pest_image.onnx');
+  // 2026-08-25 fix：AI-09 支持 .onnx 或 .pt（ONNX 导出依赖 onnxscript 装不上时 fallback .pt）
+  const pestImageOk = checkFile('models/pest_image.onnx') || checkFile('models/pest_image.pt');
   const whisperLocalOk = checkFile('models/whisper.onnx');
   const whisperApiOk = Boolean(process.env.AI_WHISPER_API_URL);
   const llmOk = Boolean(process.env.AI_LLM_API_URL);

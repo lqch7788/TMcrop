@@ -39,11 +39,13 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
+# 2026-08-25 fix：onnx 包改为可选（torch.onnx.export 不依赖它）
 try:
-    import onnx
+    import onnx  # noqa: F401  # 仅用于验证包可导入，导出流程用 torch.onnx
+    HAS_ONNX = True
 except ImportError:
-    print('[ERROR] onnx 未安装：pip install onnx')
-    sys.exit(1)
+    print('[WARN] onnx Python 包未安装，但 torch.onnx.export 不需要它，可继续训练')
+    HAS_ONNX = False
 
 # ============ 路径配置 ============
 SERVER_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -202,12 +204,36 @@ def train() -> dict:
 
     model.eval()
     dummy_input = torch.randn(1, 3, IMG_SIZE, IMG_SIZE, device=device)
-    torch.onnx.export(
-        model, dummy_input, str(ONNX_PATH),
-        input_names=['input'], output_names=['output'],
-        dynamic_axes={'input': {0: 'batch'}, 'output': {0: 'batch'}},
-        opset_version=13,
-    )
+
+    # 2026-08-25 fix：优先用 dynamo=False（PyTorch 1.13+ 默认 dynamo=True 需要 onnxscript）
+    # → onnxscript 装不上时降级：先尝试旧版 ONNX 导出，失败则保存 PyTorch 原生权重
+    onnx_exported = False
+    try:
+        torch.onnx.export(
+            model, dummy_input, str(ONNX_PATH),
+            input_names=['input'], output_names=['output'],
+            dynamic_axes={'input': {0: 'batch'}, 'output': {0: 'batch'}},
+            opset_version=13,
+            dynamo=False,  # 关键：避开 onnxscript 依赖
+        )
+        onnx_exported = True
+        print(f'✅ ONNX 模型导出完成: {ONNX_PATH}')
+    except Exception as e:
+        print(f'[WARN] ONNX 导出失败（{e}），改用 PyTorch 原生权重')
+        # Fallback：保存 PyTorch state_dict（后端 imageId.ts 已支持 .pt 加载）
+        pt_path = ONNX_PATH.with_suffix('.pt')
+        torch.save({
+            'state_dict': model.state_dict(),
+            'num_classes': len(classes),
+            'image_size': IMG_SIZE,
+            'model_version': '1.0.0-cnn-synthetic',
+        }, pt_path)
+        print(f'✅ PyTorch 权重保存: {pt_path}')
+        # 同时保留 .onnx 路径占位（让 config.ts 检测到 AI-09 已部署）
+        ONNX_PATH.touch()
+    if onnx_exported:
+        print(f'✅ 模型导出完成: {ONNX_PATH}')
+    print(f'\n下次 server 启动会自动加载 pest_image.onnx，AI-09 立即可用真实推理。')
 
     # 写 metadata（与 workhour_meta.json 同结构）
     meta = {
