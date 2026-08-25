@@ -5,10 +5,12 @@
  * 数据流: getState()惰性快照 → Map缓存 → 类型转换 → 返回值+兜底
  *
  * 使用场景: apiClient.ts / taskConfig.ts / approvalTimeout.ts 等非React模块
- * 关键约束: 不在模块顶层调用（避免循环依赖），在函数内部惰性读取
- *
- * V1.1借鉴: CustomEvent监听缓存失效 + 惰性缓存 + 向后兼容旧key
+ * 2026-08-25 fix：原注释"避免循环依赖"已过时（已验证 useSystemConfigStore 不依赖本文件），
+ *   改为顶部静态 import（浏览器 require not defined）。函数内惰性 getState() 行为不变。
  */
+
+// 2026-08-25 fix：顶部静态 import（替代底部 require，浏览器 Vite 不支持 require）
+import { useSystemConfigStore } from '../stores/useSystemConfigStore';
 
 // ==================== 缓存层 ====================
 
@@ -117,8 +119,7 @@ export function getSystemConfigValue(key: string, defaultValue: string): string 
   if (cached !== undefined) return cached ?? defaultValue;
 
   try {
-    // 惰性读取Store（不在模块顶层import，避免循环依赖）
-    const { useSystemConfigStore } = require('../stores/useSystemConfigStore');
+    // 2026-08-25 fix：删除底部 require（浏览器不支持），顶部已静态 import useSystemConfigStore
     const state = useSystemConfigStore.getState();
     const configs = state.configs || [];
 
@@ -191,7 +192,7 @@ export function getSystemConfigValueBoolean(key: string, defaultValue: boolean):
  */
 export function getSystemConfigValuesByPrefix(prefix: string): Record<string, string> {
   try {
-    const { useSystemConfigStore } = require('../stores/useSystemConfigStore');
+    // 2026-08-25 fix：删除底部 require，顶部已静态 import
     const state = useSystemConfigStore.getState();
     const configs = state.configs || [];
 
