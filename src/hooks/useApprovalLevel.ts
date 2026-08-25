@@ -72,8 +72,7 @@ export function useApprovalLevel(): UseApprovalLevelReturn {
 
   // 获取审批类型是否支持批量审批
   const isBatchSupported = useCallback((type: ApprovalType): boolean => {
-    // 导入在函数内部避免循环依赖
-    const { isBatchApprovalSupported } = require('../utils/approvalLevelResolver');
+    // 2026-08-25 fix：删除底部 require（顶部 L16 已有静态 import），浏览器不支持 require
     return isBatchApprovalSupported(type);
   }, []);
 
