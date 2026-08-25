@@ -228,7 +228,16 @@ router.get('/', (req: Request, res: Response) => {
     // 保存原始SQL用于count查询
     const countSql = sql;
 
-    sql += ' ORDER BY plan_date DESC, plan_time DESC';
+    // 2026-08-25 fix：按状态优先级排序（待派工任务排最前，避免空 plan_date 排到最后被 LIMIT 漏掉）
+    // CASE WHEN 优先级：waiting_acceptance=1（待接受）/ pending=2（待派工）/ 其他=3
+    sql += ` ORDER BY
+      CASE status
+        WHEN 'waiting_acceptance' THEN 1
+        WHEN 'pending' THEN 2
+        ELSE 3
+      END ASC,
+      plan_date DESC,
+      plan_time DESC`;
 
     // 获取总数
     const total = execCount(db, countSql, params);
