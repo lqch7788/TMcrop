@@ -4,6 +4,8 @@
 
 import { useState } from 'react';
 import { BarChart3, Download } from 'lucide-react';
+// ★ 2026-08-25 PR-D2：接入 AIPanel（AI-13 报告生成 + AI-12 问答）
+import { AIPanel } from '../components/farm/ai/AIPanel';
 import {
   PageHeader,
   ReportTabs,
@@ -286,6 +288,12 @@ export default function Reports() {
           <div className="mt-4 text-sm text-gray-500">已选择 {selectedRows.length} 个报表</div>
         </div>
       )}
+
+      {/* ★ 2026-08-25 PR-D2：AI 助手（覆盖 AI-13 报告生成 + AI-12 问答） */}
+      <AIPanel
+        context="报告中心"
+        reportType={reportType as 'daily' | 'weekly' | 'monthly' | 'custom'}
+      />
 
       <ReportTabs tabs={REPORT_TABS} activeTab={reportType} onTabChange={setReportType} />
 

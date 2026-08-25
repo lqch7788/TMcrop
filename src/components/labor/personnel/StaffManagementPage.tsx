@@ -13,6 +13,8 @@ import { todayLocal } from '@/lib/dateUtils';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
+// ★ 2026-08-25 PR-D3：接入 AIPanel
+import { AIPanel } from '../../farm/ai/AIPanel';
 
 export function StaffManagementPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -260,6 +262,9 @@ export function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
+      {/* ★ 2026-08-25 PR-D3：AI 助手（覆盖 AI-15 出勤异常 + AI-12 问答 + AI-02 排班） */}
+      <AIPanel context="员工管理" />
+
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <div className="bg-blue-50 rounded-lg p-2">
