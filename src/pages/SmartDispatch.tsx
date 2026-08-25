@@ -35,6 +35,8 @@ import { useDispatchStore } from '../stores/useDispatchStore';
 import { useGreenhouseStore } from '../stores/useGreenhouseStore';
 // ★ 排班冲突提示（2026-07-31）
 import { showAlert } from '@/lib/dialogService';
+// ★ 2026-08-25 fix：AI-08 路径按钮需要 enhancedApiClient（顶部静态 import，删除底部 require）
+import { enhancedApiClient } from '../lib/apiClient';
 
 // 子组件
 import { DispatchTaskPool } from '../components/dispatch/DispatchTaskPool';
@@ -785,8 +787,7 @@ export default function SmartDispatchPage() {
     setRouteLoading(true);
     setRouteResult(null);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { enhancedApiClient } = require('../lib/apiClient');
+      // 2026-08-25 fix：删除底部 require（浏览器不支持），顶部已静态 import enhancedApiClient
       const date = new Date().toISOString().split('T')[0];
       // 1. 拿工人位置 + 今日任务
       const locResp = await enhancedApiClient.post('/dispatch/worker-tasks-and-location', {
