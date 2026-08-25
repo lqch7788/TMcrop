@@ -728,13 +728,14 @@ export function useComprehensiveDispatch() {
   // 2. 构建统一任务池（仅获取待派发状态的任务）
   // 注意：pending状态的任务表示已发布但执行人还未接受，需要派发
   // 农事任务和临时任务在创建时可能已设置assigneeId，但仍处于pending状态等待执行人确认
+  // 2026-08-25 fix：兼容 V1 旧版 'waiting_acceptance' 状态名（DB 中 23 条历史数据，否则任务池永远为空，AI-01 无法用）
   const taskPool = useMemo(() => {
     const unifiedTasks: UnifiedDispatchTask[] = [];
 
-    // 农事任务 - 待发布状态（pending）
+    // 农事任务 - 待发布状态（pending / waiting_acceptance）
     // 移除 !assigneeId 条件，因为任务创建时可能已设置执行人但仍需派发确认
     const pendingFarmTasks = farmTasks.filter(
-      t => t.status === 'pending'
+      t => t.status === 'pending' || t.status === 'waiting_acceptance'
     );
     unifiedTasks.push(...pendingFarmTasks.map(normalizeFarmTask));
 
