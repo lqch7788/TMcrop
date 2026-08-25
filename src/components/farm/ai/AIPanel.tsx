@@ -12,7 +12,10 @@ import {
   CheckSquare,
 } from 'lucide-react';
 import { aiApi } from '../../../services/aiApi';
+import { enhancedApiClient } from '../../../lib/apiClient';
 import { useGreenhouseStore } from '../../../stores/useGreenhouseStore';
+import { useWorkerStore } from '../../../stores/useWorkerStore';
+import { useDispatchStore } from '../../../stores/useDispatchStore';
 
 interface AIPanelProps {
   cropType?: string;
@@ -223,8 +226,7 @@ const AI_MODULES = [
         throw new Error('AI-08 路径优化需要指定工人（workerId 必填），请先在中间列选中推荐员工');
       }
       // 调后端新端点取工人位置 + 今日任务
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { enhancedApiClient } = require('../lib/apiClient');
+      // 2026-08-25 fix：删除 require（浏览器不支持），顶部已静态 import enhancedApiClient
       const date = new Date().toISOString().split('T')[0];
       const resp = await enhancedApiClient.post('/dispatch/worker-tasks-and-location', {
         worker_id: p.workerId,
@@ -272,7 +274,7 @@ const AI_MODULES = [
   {
     key: 'image', name: 'AI-09 图像识别', icon: ImageIcon, color: 'purple',
     // 2026-08-24 PR6：点击按钮触发文件选择 → 上传 → 识别（详见 handleImageUpload）
-    // → 此处的 call 仅作为 fallback（手动传入 image_id 时使用）；UI 走特殊流程
+    // 2026-08-25 fix：删除底部 require（浏览器不支持），顶部已静态 import enhancedApiClient
     call: (p: any) => {
       if (!p.imageId) {
         throw new Error(
@@ -361,11 +363,7 @@ const AI_MODULES = [
     key: 'schedule', name: 'AI-02 智能排班', icon: Calendar, color: 'pink',
     // 2026-08-24 PR4：从 useWorkerStore + useDispatchStore 取真实员工+任务，移除硬编码
     call: (p: any) => {
-      // 从 store 取真实数据（延迟导入避免循环依赖）
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { useWorkerStore } = require('../stores/useWorkerStore');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { useDispatchStore } = require('../stores/useDispatchStore');
+      // 2026-08-25 fix：删除底部 require（浏览器不支持），顶部已静态 import
       const workers = useWorkerStore.getState().workers;
       const dispatchState = useDispatchStore.getState() as any;
       const pendingTasks = dispatchState.unassignedTasks
@@ -782,8 +780,7 @@ export function AIPanel(props: AIPanelProps) {
         reader.readAsDataURL(file);
       });
       // 上传获取真实 image_id
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { enhancedApiClient } = require('../lib/apiClient');
+      // 2026-08-25 fix：删除 require（浏览器不支持），顶部已静态 import enhancedApiClient
       const uploadRes = await enhancedApiClient.post('/ai/image/upload', {
         filename: file.name,
         data: dataUrl,
@@ -826,8 +823,7 @@ export function AIPanel(props: AIPanelProps) {
     let cancelled = false;
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { enhancedApiClient } = require('../lib/apiClient');
+        // 2026-08-25 fix：删除 require（浏览器不支持），顶部已静态 import enhancedApiClient
         const resp = await enhancedApiClient.get('/ai/config/status');
         const data = (resp as any)?.data ?? resp;
         if (!cancelled && data?.overall) {
