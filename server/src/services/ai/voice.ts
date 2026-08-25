@@ -57,13 +57,40 @@ interface VoiceParsedResult {
  * 模型未部署 → 抛明确错误
  */
 async function transcribeAudio(audioUrl: string): Promise<string> {
+  // 2026-08-25 PR-C：增加 OpenAI Whisper API 路径（Node.js 原生 fetch，无需本地模型）
+  const apiUrl = process.env.AI_WHISPER_API_URL;
+  const apiKey = process.env.AI_WHISPER_API_KEY;
+  if (apiUrl && apiKey) {
+    // OpenAI Whisper API 路径
+    const resp = await fetch(audioUrl);
+    if (!resp.ok) throw new Error(`音频下载失败: HTTP ${resp.status}`);
+    const audioBuf = Buffer.from(await resp.arrayBuffer());
+
+    const formData = new FormData();
+    formData.append('file', new Blob([new Uint8Array(audioBuf)], { type: 'audio/mpeg' }), 'audio.mp3');
+    formData.append('model', 'whisper-1');
+
+    const apiResp = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: formData,
+    });
+    if (!apiResp.ok) {
+      const errBody = await apiResp.text();
+      throw new Error(`Whisper API 失败: HTTP ${apiResp.status} ${errBody.slice(0, 200)}`);
+    }
+    const data = (await apiResp.json()) as { text?: string };
+    return data.text || '';
+  }
+
+  // 本地 whisper.onnx 路径
   if (!fs.existsSync(ASR_MODEL_PATH)) {
     throw new Error(
-      '语音转写模型未部署（server/models/whisper.onnx 缺失）。\n' +
-      '部署步骤：\n' +
-      '  1) 下载 Whisper 小模型（如 whisper-base）并转换为 ONNX\n' +
-      '  2) 将 whisper.onnx 放入 server/models/ 目录\n' +
-      '  3) 重启 server，audio_url 音频自动走真实 ASR 转写',
+      '语音转写模型未部署（server/models/whisper.onnx 缺失，且未配置 AI_WHISPER_API_URL/KEY）。\n' +
+      '部署方案 A（推荐 30min）：在 .env 配置 OpenAI Whisper API：\n' +
+      '  AI_WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions\n' +
+      '  AI_WHISPER_API_KEY=sk-xxxxxxxx\n' +
+      '方案 B（4-8h）：本地部署 whisper.onnx（参考 docs/deploy-ai-models.md）',
     );
   }
   // 模型已部署：下载音频 → ONNX 推理（onnxruntime-node）→ 返回转写文本
