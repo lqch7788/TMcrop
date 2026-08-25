@@ -46,10 +46,12 @@ interface ModelStatus {
 
 /**
  * 检查本地模型文件是否存在
- * @param relativePath 相对于 server/ 的路径
+ * @param relativePath 相对于 server/ 的路径（如 'models/workhour_weights.json'）
+ * __dirname = server/src/routes/ai/，需 ../../../ 共 3 层跳到 server/ 根
  */
 function checkFile(relativePath: string): boolean {
-  const fullPath = path.join(__dirname, '../../../..', relativePath);
+  // 2026-08-25 fix：原用 4 层跳到 repo 根（V1.1/models/），应 3 层跳到 server/ 根
+  const fullPath = path.join(__dirname, '../../..', relativePath);
   return fs.existsSync(fullPath);
 }
 
