@@ -998,56 +998,57 @@ export function AIPanel(props: AIPanelProps) {
           {result.data ? activeModule.render(result.data) : (
             <p className="text-xs text-red-600">⚠️ 返回数据为空，请重试</p>
           )}
-          {/* 2026-08-24 PR5：AI-12 问答助手交互式输入框（仅当结果为 AI-12 时显示） */}
-          {result.key === 'qa' && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="text"
-                value={qaQuestion}
-                onChange={(e) => setQaQuestion(e.target.value)}
-                placeholder="再问一个问题..."
-                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-cyan-400"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && qaQuestion.trim()) {
-                    callAI('qa');
-                  }
-                }}
-              />
-              <button
-                onClick={() => callAI('qa')}
-                disabled={loadingKey === 'qa' || !qaQuestion.trim()}
-                className="px-2 py-1 text-xs bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:opacity-50"
-              >
-                提问
-              </button>
-            </div>
-          )}
-          {/* 2026-08-24 PR6：AI-11 语音录入交互式输入框（仅当结果为 AI-11 时显示） */}
-          {result.key === 'voice' && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="text"
-                value={voiceText}
-                onChange={(e) => setVoiceText(e.target.value)}
-                placeholder="输入语音转写文本（如：今天上午在2号棚灌溉番茄用了3小时）"
-                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-sky-400"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && voiceText.trim()) {
-                    callAI('voice');
-                  }
-                }}
-              />
-              <button
-                onClick={() => callAI('voice')}
-                disabled={loadingKey === 'voice' || !voiceText.trim()}
-                className="px-2 py-1 text-xs bg-sky-500 text-white rounded hover:bg-sky-600 disabled:opacity-50"
-              >
-                解析
-              </button>
-            </div>
-          )}
+          {/* 2026-08-24 PR5：AI-12 问答助手交互式输入框
+              2026-08-25 fix：改为常驻显示（不依赖 result），用户点击 AI-12 立即可见输入框 */}
         </div>
       )}
+      {/* AI-12 + AI-11 输入框常驻显示在结果区外面（PR6+PR5 增强） */}
+      <div className="mt-3 p-2 bg-cyan-50 border border-cyan-200 rounded text-xs space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-cyan-700 font-medium shrink-0">💬 AI-12 问答：</span>
+          <input
+            type="text"
+            value={qaQuestion}
+            onChange={(e) => setQaQuestion(e.target.value)}
+            placeholder="输入问题（按 Enter 或点'提问'，如：番茄白粉病怎么防治？）"
+            className="flex-1 px-2 py-1 border border-cyan-300 rounded focus:outline-none focus:border-cyan-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && qaQuestion.trim()) {
+                callAI('qa');
+              }
+            }}
+          />
+          <button
+            onClick={() => callAI('qa')}
+            disabled={loadingKey === 'qa' || !qaQuestion.trim()}
+            className="px-2 py-1 bg-cyan-500 text-white rounded hover:bg-cyan-600 disabled:opacity-50"
+          >
+            提问
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sky-700 font-medium shrink-0">🎙 AI-11 语音：</span>
+          <input
+            type="text"
+            value={voiceText}
+            onChange={(e) => setVoiceText(e.target.value)}
+            placeholder="输入语音转写文本（如：今天上午在2号棚灌溉番茄用了3小时）"
+            className="flex-1 px-2 py-1 border border-sky-300 rounded focus:outline-none focus:border-sky-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && voiceText.trim()) {
+                callAI('voice');
+              }
+            }}
+          />
+          <button
+            onClick={() => callAI('voice')}
+            disabled={loadingKey === 'voice' || !voiceText.trim()}
+            className="px-2 py-1 bg-sky-500 text-white rounded hover:bg-sky-600 disabled:opacity-50"
+          >
+            解析
+          </button>
+        </div>
+      </div>
     </div>
     </>
   );
