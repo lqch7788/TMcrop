@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, ChevronRight,
-  Wifi, Eye, Video, Cloud, Droplets, Wind, Battery,
-  History, Gauge, AlertTriangle, Thermometer, Cog
+  Wifi, Video, Cloud, Battery,
+  History, Gauge, AlertTriangle, Cog
 } from 'lucide-react';
 
 /**
  * 智能环境监测系统左侧菜单
- * - 菜单结构/数据：保留 IoT 4 大组（首页概览 / 物联网监控 / 环境监控 / 视频监控）
+ * - 菜单结构/数据：保留 IoT 3 大组（首页概览 / 环境监测 / 视频监控）
+ * - 已删除：环控策略管理（与智能控制系统重复）、环境监控组（环境监控中心与环境监测重复）、
+ *   物联网监控中心（环境监测的劣化 mock 子集）、土壤水质（环境监测已有土壤列）、
+ *   气象监测（环境监测已有气象卡片）
  * - 视觉样式：与 V1.1 主 Sidebar（种植管理系统入口）100% 一致（CSS 变量、active、hover、宽度、间距）
  * - path 字段：适配 V1.1 现有路由
  */
@@ -21,7 +24,7 @@ const IoTSidebar = ({ collapsed, onToggle }: IoTSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   // 默认全部展开，与 V1.1 主 Sidebar 的"全部展开"默认行为一致
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['iot', 'environment', 'video']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['iot', 'video']);
 
   const toggleMenu = (key: string) => {
     setExpandedMenus(prev =>
@@ -43,27 +46,14 @@ const IoTSidebar = ({ collapsed, onToggle }: IoTSidebarProps) => {
     {
       key: 'iot',
       icon: Wifi,
-      label: '物联网监控',
+      label: '环境监测',
       children: [
-        { key: 'iot-monitor', icon: Wifi, label: '物联网监控中心', path: '/iot-monitor' },
         { key: 'device-monitor', icon: Gauge, label: '设备监控中心', path: '/device-monitor' },
         { key: 'alert-info', icon: AlertTriangle, label: '预警信息中心', path: '/alert-info' },
-        { key: 'env-control', icon: Thermometer, label: '环控策略管理', path: '/env-control' },
         { key: 'env-monitoring', icon: Cloud, label: '环境监测', path: '/environment-monitor' },
-        { key: 'soil-water', icon: Droplets, label: '土壤水质', path: '/iot/soil-water' },
-        { key: 'weather-monitoring', icon: Wind, label: '气象监测', path: '/iot/weather' },
         { key: 'energy-monitoring', icon: Battery, label: '能耗监测', path: '/iot/energy' },
         { key: 'history-data', icon: History, label: '历史数据', path: '/iot/history' },
         { key: 'monitoring-config', icon: Cog, label: '监测配置', path: '/iot/config' },
-      ]
-    },
-    {
-      key: 'environment',
-      icon: Eye,
-      label: '环境监控',
-      children: [
-        { key: 'env-monitor', icon: Eye, label: '环境监控中心', path: '/environment-monitor' },
-        { key: 'env-alert', icon: AlertTriangle, label: '环境预警', path: '/alert-info' },
       ]
     },
     {

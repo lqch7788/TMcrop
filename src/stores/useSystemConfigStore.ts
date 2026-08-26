@@ -138,7 +138,8 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           set({ configs: normalized, loading: false, lastFetch: now, isReady: true });
         } catch (error) {
           // logger.warn('[SystemConfigStore] API 获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
-          set({ error: (error as Error).message, loading: false });
+          // 失败也更新 lastFetch：避免 429/网络错误后每次挂载都重试，造成限流自我放大循环
+          set({ error: (error as Error).message, loading: false, lastFetch: now });
         }
       },
 

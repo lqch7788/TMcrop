@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Search, RefreshCw, Home, ArrowLeft, Download, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Zap, Search, RefreshCw, Home, Download, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 
 const energyData = [
   { id: 'EN-001', deviceName: '1号温室空调系统', power: 45.2, voltage: 380, current: 68.5, powerFactor: 0.92, todayUsage: 320, status: 'running', updateTime: '2025-01-15 14:30:00' },
@@ -45,9 +45,6 @@ export default function EnergyMonitoring() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">能耗监测</h1>
             <p className="text-gray-500 mt-1">设备能耗监测</p>

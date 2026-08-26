@@ -1,26 +1,44 @@
-import { useState } from 'react'
-import { Search, Plus, Download, Eye, Edit, Trash2, Globe, Store, ShoppingBag, Monitor, Building, PieChart } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Download, Eye, Edit, Trash2, Globe, Store, ShoppingBag, Monitor, Building, PieChart, RefreshCw, AlertCircle } from 'lucide-react'
+import { getChannels, Channel } from '@/services/marketApiService'
 
 const SalesChannel = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
-  const [selectedChannel, setSelectedChannel] = useState<any>(null)
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
   const [typeFilter, setTypeFilter] = useState('全部')
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 销售渠道数据 - 10条真实数据
-  const channels = [
-    { id: '1', code: 'CH001', name: '物美超市', type: '超市', region: '华北', contact: '张经理', phone: '138-0012-3456', products: '番茄、黄瓜、辣椒', monthlySales: 280000, orderCount: 45, status: '合作中', joinDate: '2024-01-15' },
-    { id: '2', code: 'CH002', name: '永辉超市', type: '超市', region: '华东', contact: '李总监', phone: '139-8876-5432', products: '番茄、茄子、生菜', monthlySales: 320000, orderCount: 52, status: '合作中', joinDate: '2023-11-20' },
-    { id: '3', code: 'CH003', name: '京东生鲜', type: '电商', region: '全国', contact: '刘采购', phone: '135-9988-7766', products: '樱桃番茄、红椒、草莓', monthlySales: 580000, orderCount: 128, status: '合作中', joinDate: '2023-06-01' },
-    { id: '4', code: 'CH004', name: '盒马鲜生', type: '超市', region: '华东', contact: '陈主管', phone: '158-2233-4455', products: '西瓜、葡萄、草莓', monthlySales: 420000, orderCount: 78, status: '合作中', joinDate: '2023-08-15' },
-    { id: '5', code: 'CH005', name: '江南市场批发商', type: '批发商', region: '华南', contact: '王老板', phone: '136-7654-3210', products: '生菜、菠菜、白菜', monthlySales: 180000, orderCount: 65, status: '合作中', joinDate: '2024-02-01' },
-    { id: '6', code: 'CH006', name: '美团优选', type: '电商', region: '全国', contact: '吴小姐', phone: '150-7788-9900', products: '番茄、黄瓜、土豆', monthlySales: 650000, orderCount: 156, status: '合作中', joinDate: '2023-05-20' },
-    { id: '7', code: 'CH007', name: '华润万家', type: '超市', region: '华南', contact: '赵经理', phone: '137-5544-3322', products: '西瓜、葡萄、茄子', monthlySales: 240000, orderCount: 38, status: '暂停', joinDate: '2024-01-10' },
-    { id: '8', code: 'CH008', name: '多多买菜', type: '电商', region: '全国', contact: '周运营', phone: '189-6677-8899', products: '白菜、萝卜、西红柿', monthlySales: 520000, orderCount: 142, status: '合作中', joinDate: '2023-07-01' },
-    { id: '9', code: 'CH009', name: '学校食堂供应商', type: '食堂', region: '华中', contact: '冯师傅', phone: '133-4455-6677', products: '土豆、白菜、萝卜', monthlySales: 95000, orderCount: 24, status: '合作中', joinDate: '2024-03-01' },
-    { id: '10', code: 'CH010', name: '社区生鲜店', type: '个体', region: '华北', contact: '郑老板', phone: '150-7788-9900', products: '时令蔬菜、水果', monthlySales: 68000, orderCount: 32, status: '合作中', joinDate: '2024-02-15' },
-  ]
+  // 销售渠道数据 - 从 API 加载
+  useEffect(() => {
+    let cancelled = false
+    const loadChannels = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getChannels()
+        if (!cancelled) {
+          setChannels(data)
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : '加载销售渠道数据失败'
+          setError(message)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+    loadChannels()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const channelTypes = ['全部', '超市', '电商', '批发商', '个体', '食堂']
   const regions = ['全部', '华北', '华东', '华南', '华中', '全国']
@@ -53,13 +71,13 @@ const SalesChannel = () => {
     { type: '食堂', amount: 95000, percentage: 2.5, color: 'bg-orange-500' },
   ]
 
-  const handleView = (item: any) => {
+  const handleView = (item: Channel) => {
     setSelectedChannel(item)
     setModalType('view')
     setShowModal(true)
   }
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: Channel) => {
     setSelectedChannel(item)
     setModalType('edit')
     setShowModal(true)
@@ -154,6 +172,23 @@ const SalesChannel = () => {
 
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {loading && (
+          <div className="text-center py-12">
+            <RefreshCw className="w-12 h-12 text-gray-300 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-500">加载中...</p>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="text-center py-12">
+            <AlertCircle className="w-12 h-12 text-red-300 mx-auto mb-4" />
+            <p className="text-red-600">加载失败：{error}</p>
+            <p className="text-gray-400 text-sm mt-2">请检查网络或后端服务后重试</p>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
@@ -216,6 +251,8 @@ const SalesChannel = () => {
             ))}
           </tbody>
         </table>
+          </>
+        )}
 
         {filteredChannels.length === 0 && (
           <div className="text-center py-12">

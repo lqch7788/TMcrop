@@ -1,30 +1,50 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Download, Eye, Edit, Trash2, BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { getTrends, Trend } from '@/services/marketApiService'
 
 const MarketSituation = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
-  const [selectedMarket, setSelectedMarket] = useState<any>(null)
+  const [selectedMarket, setSelectedMarket] = useState<Trend | null>(null)
   const [regionFilter, setRegionFilter] = useState('全部')
 
-  // 市场行情数据 - 10条真实数据
-  const marketData = [
-    { id: '1', marketName: '北京新发地市场', region: '华北', avgPrice: 6.5, volume: 2500, trend: '上涨', trendIcon: 'up', topProduct: '番茄、黄瓜', updateTime: '2026-03-25', status: '正常' },
-    { id: '2', marketName: '上海江桥市场', region: '华东', avgPrice: 7.2, volume: 3200, trend: '上涨', trendIcon: 'up', topProduct: '辣椒、茄子', updateTime: '2026-03-25', status: '正常' },
-    { id: '3', marketName: '广州江南市场', region: '华南', avgPrice: 8.5, volume: 4100, trend: '平稳', trendIcon: 'stable', topProduct: '生菜、草莓', updateTime: '2026-03-25', status: '正常' },
-    { id: '4', marketName: '武汉白沙洲市场', region: '华中', avgPrice: 5.8, volume: 2800, trend: '下跌', trendIcon: 'down', topProduct: '叶菜类', updateTime: '2026-03-25', status: '正常' },
-    { id: '5', marketName: '成都雨润市场', region: '西南', avgPrice: 7.8, volume: 1900, trend: '上涨', trendIcon: 'up', topProduct: '樱桃番茄、葡萄', updateTime: '2026-03-25', status: '正常' },
-    { id: '6', marketName: '郑州万邦市场', region: '华中', avgPrice: 6.2, volume: 3500, trend: '下跌', trendIcon: 'down', topProduct: '西瓜、哈密瓜', updateTime: '2026-03-25', status: '正常' },
-    { id: '7', marketName: '南京众彩市场', region: '华东', avgPrice: 7.5, volume: 2100, trend: '平稳', trendIcon: 'stable', topProduct: '葡萄、草莓', updateTime: '2026-03-25', status: '正常' },
-    { id: '8', marketName: '深圳海吉星市场', region: '华南', avgPrice: 9.2, volume: 4500, trend: '上涨', trendIcon: 'up', topProduct: '樱桃番茄、蓝莓', updateTime: '2026-03-25', status: '正常' },
-    { id: '9', marketName: '长沙海吉星市场', region: '华中', avgPrice: 5.5, volume: 2300, trend: '平稳', trendIcon: 'stable', topProduct: '菠菜、生菜', updateTime: '2026-03-25', status: '正常' },
-    { id: '10', marketName: '重庆双福市场', region: '西南', avgPrice: 6.8, volume: 2600, trend: '上涨', trendIcon: 'up', topProduct: '辣椒、番茄', updateTime: '2026-03-25', status: '正常' },
-  ]
+  // 趋势列表状态（V2.1 铁律：API 直连，无缓存）
+  const [trends, setTrends] = useState<Trend[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 加载市场行情趋势数据
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getTrends()
+        if (!cancelled) {
+          setTrends(data ?? [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : '加载市场行情失败'
+          setError(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const regions = ['全部', '华北', '华东', '华南', '华中', '西南', '西北', '东北']
 
-  const getTrendIcon = (trend: string) => {
+  const getTrendIcon = (trend?: string) => {
     switch (trend) {
       case '上涨': return <TrendingUp className="w-4 h-4 text-red-500" />
       case '下跌': return <TrendingDown className="w-4 h-4 text-green-500" />
@@ -32,7 +52,7 @@ const MarketSituation = () => {
     }
   }
 
-  const getTrendBg = (trend: string) => {
+  const getTrendBg = (trend?: string) => {
     switch (trend) {
       case '上涨': return 'bg-red-50'
       case '下跌': return 'bg-green-50'
@@ -52,21 +72,27 @@ const MarketSituation = () => {
     '暂停': 'bg-gray-100 text-gray-700',
   }
 
-  const filteredData = marketData.filter(m => {
+  const filteredData = trends.filter(m => {
     const matchesRegion = regionFilter === '全部' || m.region === regionFilter
     const matchesSearch = !searchKeyword ||
-      m.marketName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      m.topProduct.toLowerCase().includes(searchKeyword.toLowerCase())
+      (m.marketName ?? '').toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      (m.topProduct ?? '').toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesRegion && matchesSearch
   })
 
-  const handleView = (item: any) => {
+  // 概览统计：按 trend 字段聚合
+  const upCount = trends.filter(m => m.trend === '上涨').length
+  const downCount = trends.filter(m => m.trend === '下跌').length
+  const stableCount = trends.filter(m => m.trend === '平稳').length
+  const totalCount = trends.length
+
+  const handleView = (item: Trend) => {
     setSelectedMarket(item)
     setModalType('view')
     setShowModal(true)
   }
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: Trend) => {
     setSelectedMarket(item)
     setModalType('edit')
     setShowModal(true)
@@ -101,7 +127,7 @@ const MarketSituation = () => {
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-800">6</p>
+          <p className="text-2xl font-bold text-gray-800">{upCount}</p>
           <p className="text-sm text-gray-500 mt-1">价格上涨市场</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -110,7 +136,7 @@ const MarketSituation = () => {
               <TrendingDown className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-800">2</p>
+          <p className="text-2xl font-bold text-gray-800">{downCount}</p>
           <p className="text-sm text-gray-500 mt-1">价格下跌市场</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -119,7 +145,7 @@ const MarketSituation = () => {
               <Minus className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-800">2</p>
+          <p className="text-2xl font-bold text-gray-800">{stableCount}</p>
           <p className="text-sm text-gray-500 mt-1">价格平稳市场</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -128,7 +154,7 @@ const MarketSituation = () => {
               <BarChart3 className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-800">10</p>
+          <p className="text-2xl font-bold text-gray-800">{totalCount}</p>
           <p className="text-sm text-gray-500 mt-1">监测市场总数</p>
         </div>
       </div>
@@ -167,6 +193,13 @@ const MarketSituation = () => {
         </div>
       </div>
 
+      {/* 错误提示 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          加载失败：{error}
+        </div>
+      )}
+
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
@@ -185,59 +218,69 @@ const MarketSituation = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-[#2B5D3A]" />
-                    <span className="text-sm font-medium text-gray-800">{item.id}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.marketName}</td>
-                <td className="px-4 py-3">
-                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">{item.region}</span>
-                </td>
-                <td className="px-4 py-3 text-sm font-bold text-gray-800">¥{item.avgPrice}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.volume.toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${getTrendBg(item.trend)}`}>
-                    {getTrendIcon(item.trend)}
-                    <span className={`text-xs font-medium ${
-                      item.trend === '上涨' ? 'text-red-600' : item.trend === '下跌' ? 'text-green-600' : 'text-blue-600'
-                    }`}>
-                      {item.trend}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate">{item.topProduct}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[item.status]}`}>{item.status}</span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => handleView(item)} className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors" title="查看">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {loading ? (
+              <tr>
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                  加载中...
                 </td>
               </tr>
-            ))}
+            ) : filteredData.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                  <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p>暂无数据</p>
+                </td>
+              </tr>
+            ) : (
+              filteredData.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[#2B5D3A]" />
+                      <span className="text-sm font-medium text-gray-800">{item.id}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.marketName ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">{item.region ?? '-'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm font-bold text-gray-800">¥{item.avgPrice ?? 0}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{(item.volume ?? 0).toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${getTrendBg(item.trend)}`}>
+                      {getTrendIcon(item.trend)}
+                      <span className={`text-xs font-medium ${
+                        item.trend === '上涨' ? 'text-red-600' : item.trend === '下跌' ? 'text-green-600' : 'text-blue-600'
+                      }`}>
+                        {item.trend ?? '平稳'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate">{item.topProduct ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[item.status ?? '正常'] ?? 'bg-gray-100 text-gray-700'}`}>
+                      {item.status ?? '正常'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleView(item)} className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors" title="查看">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-
-        {filteredData.length === 0 && (
-          <div className="text-center py-12">
-            <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">暂无数据</p>
-          </div>
-        )}
       </div>
 
       {/* 分页 */}
@@ -268,15 +311,15 @@ const MarketSituation = () => {
                   <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl p-6 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-2xl font-bold">{selectedMarket.marketName}</h4>
+                        <h4 className="text-2xl font-bold">{selectedMarket.marketName ?? '-'}</h4>
                         <p className="text-emerald-100 mt-1">市场编号：{selectedMarket.id}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="px-3 py-1 text-sm font-medium rounded-full bg-white/20">
-                          {selectedMarket.region}
+                          {selectedMarket.region ?? '-'}
                         </span>
                         <span className={`px-3 py-1 text-sm font-medium rounded-full bg-white/20`}>
-                          {selectedMarket.status}
+                          {selectedMarket.status ?? '正常'}
                         </span>
                       </div>
                     </div>
@@ -285,27 +328,27 @@ const MarketSituation = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">均价</p>
-                      <p className="text-lg font-bold text-[#2B5D3A]">¥{selectedMarket.avgPrice}/kg</p>
+                      <p className="text-lg font-bold text-[#2B5D3A]">¥{selectedMarket.avgPrice ?? 0}/kg</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">成交量</p>
-                      <p className="text-lg font-bold text-gray-800">{selectedMarket.volume.toLocaleString()} 吨</p>
+                      <p className="text-lg font-bold text-gray-800">{(selectedMarket.volume ?? 0).toLocaleString()} 吨</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">市场走势</p>
                       <div className={`inline-flex items-center gap-1 ${getTrendBg(selectedMarket.trend)} px-2 py-1 rounded`}>
                         {getTrendIcon(selectedMarket.trend)}
-                        <span className="text-sm font-medium">{selectedMarket.trend}</span>
+                        <span className="text-sm font-medium">{selectedMarket.trend ?? '平稳'}</span>
                       </div>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">热门产品</p>
-                      <p className="text-lg font-bold text-gray-800">{selectedMarket.topProduct}</p>
+                      <p className="text-lg font-bold text-gray-800">{selectedMarket.topProduct ?? '-'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 text-sm text-gray-500 pt-4 border-t border-gray-200">
-                    <span>更新时间：{selectedMarket.updateTime}</span>
+                    <span>更新时间：{selectedMarket.updateTime ?? '-'}</span>
                   </div>
                 </div>
               ) : (
@@ -315,7 +358,7 @@ const MarketSituation = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">市场名称 <span className="text-red-500">*</span></label>
                       <input
                         type="text"
-                        defaultValue={selectedMarket?.marketName || ''}
+                        defaultValue={selectedMarket?.marketName ?? ''}
                         placeholder="请输入市场名称"
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       />
@@ -323,7 +366,7 @@ const MarketSituation = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">所在区域 <span className="text-red-500">*</span></label>
                       <select
-                        defaultValue={selectedMarket?.region || '华北'}
+                        defaultValue={selectedMarket?.region ?? '华北'}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       >
                         <option value="华北">华北</option>
@@ -342,7 +385,7 @@ const MarketSituation = () => {
                       <input
                         type="number"
                         step="0.1"
-                        defaultValue={selectedMarket?.avgPrice || ''}
+                        defaultValue={selectedMarket?.avgPrice ?? ''}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       />
                     </div>
@@ -350,7 +393,7 @@ const MarketSituation = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">成交量(吨)</label>
                       <input
                         type="number"
-                        defaultValue={selectedMarket?.volume || ''}
+                        defaultValue={selectedMarket?.volume ?? ''}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       />
                     </div>
@@ -359,7 +402,7 @@ const MarketSituation = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">市场走势</label>
                       <select
-                        defaultValue={selectedMarket?.trend || '平稳'}
+                        defaultValue={selectedMarket?.trend ?? '平稳'}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       >
                         <option value="上涨">上涨</option>
@@ -370,7 +413,7 @@ const MarketSituation = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
                       <select
-                        defaultValue={selectedMarket?.status || '正常'}
+                        defaultValue={selectedMarket?.status ?? '正常'}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                       >
                         <option value="正常">正常</option>
@@ -383,7 +426,7 @@ const MarketSituation = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">热门产品</label>
                     <input
                       type="text"
-                      defaultValue={selectedMarket?.topProduct || ''}
+                      defaultValue={selectedMarket?.topProduct ?? ''}
                       placeholder="如：番茄、黄瓜"
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
                     />
