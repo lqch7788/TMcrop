@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, Home, ArrowLeft, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight, Monitor, AlertCircle } from 'lucide-react';
+import { Search, RefreshCw, Home, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight, Monitor, AlertCircle } from 'lucide-react';
 
 const monitoringConfig = [
   { id: 'CFG-001', name: '温室环境监测配置', type: '环境监测', sensors: ['温度传感器', '湿度传感器', 'CO2传感器', '光照传感器'], interval: 60, enabled: true, alertEnabled: true, updateTime: '2025-01-10 10:00:00' },
@@ -37,9 +37,6 @@ export default function MonitoringConfig() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">监测配置</h1>
             <p className="text-gray-500 mt-1">监测设备配置</p>

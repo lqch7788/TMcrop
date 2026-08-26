@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Droplets, Leaf, Search, RefreshCw, Home, ArrowLeft, Download, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Droplets, Leaf, Search, RefreshCw, Home, Download, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const soilWaterData = [
   { id: 'SW-001', location: '1号大棚-1区', soilMoisture: 45, soilTemp: 18.5, ph: 6.8, ec: 2.2, waterLevel: 85, status: 'normal', updateTime: '2025-01-15 14:30:00' },
@@ -43,9 +43,6 @@ export default function SoilWater() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">土壤水质</h1>
             <p className="text-gray-500 mt-1">土壤水质监测</p>

@@ -1,26 +1,39 @@
-import { useState } from 'react'
-import { Search, Plus, Download, Eye, Edit, Trash2, Calendar, CheckCircle, Clock, XCircle, Truck } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Download, Eye, Edit, Trash2, Calendar, CheckCircle, Clock, XCircle, Truck, AlertCircle } from 'lucide-react'
+import { getOrders, Order } from '@/services/marketApiService'
 
 const OrderManagement = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
-  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [statusFilter, setStatusFilter] = useState('全部')
 
-  // 订单数据 - 10条真实数据
-  const orders = [
-    { id: '1', orderNo: 'SO20260301', customer: '北京物美超市', contact: '张经理', phone: '138-0012-3456', product: '番茄500kg+黄瓜300kg', quantity: 800, unitPrice: 9, amount: 7200, status: '已完成', createDate: '2026-03-20', deliveryDate: '2026-03-21', remark: '番茄A级品，黄瓜新鲜' },
-    { id: '2', orderNo: 'SO20260302', customer: '上海永辉超市', contact: '李总监', phone: '139-8876-5432', product: '辣椒400kg+茄子200kg', quantity: 600, unitPrice: 9, amount: 5400, status: '配送中', createDate: '2026-03-19', deliveryDate: '2026-03-22', remark: '辣椒微辣，茄子优品' },
-    { id: '3', orderNo: 'SO20260303', customer: '广州江南市场', contact: '王老板', phone: '136-7654-3210', product: '生菜300kg+草莓100kg', quantity: 400, unitPrice: 14.5, amount: 5800, status: '已完成', createDate: '2026-03-18', deliveryDate: '2026-03-19', remark: '生菜有机认证' },
-    { id: '4', orderNo: 'SO20260304', customer: '京东生鲜', contact: '刘采购', phone: '135-9988-7766', product: '樱桃番茄200kg+红椒150kg', quantity: 350, unitPrice: 15, amount: 5250, status: '已完成', createDate: '2026-03-17', deliveryDate: '2026-03-18', remark: '京东专供包装' },
-    { id: '5', orderNo: 'SO20260305', customer: '盒马鲜生', contact: '陈主管', phone: '158-2233-4455', product: '西瓜500kg+葡萄300kg', quantity: 800, unitPrice: 12, amount: 9600, status: '待发货', createDate: '2026-03-16', deliveryDate: '2026-03-23', remark: '西瓜冰镇后口感更佳' },
-    { id: '6', orderNo: 'SO20260306', customer: '深圳华润万家', contact: '赵经理', phone: '137-5544-3322', product: '白菜300kg+萝卜200kg', quantity: 500, unitPrice: 5, amount: 2500, status: '待审核', createDate: '2026-03-15', deliveryDate: '-', remark: '批量采购优惠' },
-    { id: '7', orderNo: 'SO20260307', customer: '成都伊藤洋华堂', contact: '周部长', phone: '189-6677-8899', product: '菠菜250kg+芹菜200kg', quantity: 450, unitPrice: 8, amount: 3600, status: '已完成', createDate: '2026-03-14', deliveryDate: '2026-03-15', remark: '新鲜直供' },
-    { id: '8', orderNo: 'SO20260308', customer: '杭州世纪联华', contact: '吴小姐', phone: '136-1122-3344', product: '番茄400kg+黄瓜400kg+辣椒200kg', quantity: 1000, unitPrice: 8.5, amount: 8500, status: '配送中', createDate: '2026-03-13', deliveryDate: '2026-03-21', remark: '周三固定配送' },
-    { id: '9', orderNo: 'SO20260309', customer: '武汉中百仓储', contact: '冯经理', phone: '133-4455-6677', product: '生菜500kg+草莓200kg', quantity: 700, unitPrice: 13, amount: 9100, status: '已取消', createDate: '2026-03-12', deliveryDate: '-', remark: '客户取消订单' },
-    { id: '10', orderNo: 'SO20260310', customer: '南京苏果超市', contact: '郑主管', phone: '150-7788-9900', product: '西瓜600kg+葡萄400kg', quantity: 1000, unitPrice: 11, amount: 11000, status: '待发货', createDate: '2026-03-11', deliveryDate: '2026-03-24', remark: '周末促销备货' },
-  ]
+  // 订单数据 - 从 API 加载
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // 页面挂载时从后端拉取订单列表
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    getOrders()
+      .then(data => {
+        if (cancelled) return
+        setOrders(data)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('[OrderManagement] 加载订单失败:', err)
+        setLoadError(err instanceof Error ? err.message : '加载订单失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const statuses = ['全部', '待审核', '待发货', '配送中', '已完成', '已取消']
 
@@ -44,13 +57,13 @@ const OrderManagement = () => {
     }
   }
 
-  const handleView = (item: any) => {
+  const handleView = (item: Order) => {
     setSelectedOrder(item)
     setModalType('view')
     setShowModal(true)
   }
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: Order) => {
     setSelectedOrder(item)
     setModalType('edit')
     setShowModal(true)
@@ -174,7 +187,22 @@ const OrderManagement = () => {
           </tbody>
         </table>
 
-        {filteredOrders.length === 0 && (
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block w-8 h-8 border-4 border-[#2B5D3A]/30 border-t-[#2B5D3A] rounded-full animate-spin mb-3" />
+            <p className="text-gray-500">加载中...</p>
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="text-center py-12">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+            <p className="text-red-600 mb-2">加载订单失败</p>
+            <p className="text-gray-500 text-sm">{loadError}</p>
+          </div>
+        )}
+
+        {!loading && !loadError && filteredOrders.length === 0 && (
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无数据</p>

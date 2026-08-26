@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Cloud, Wind, Droplets, Snowflake, Thermometer, Search, RefreshCw, Home, ArrowLeft, Download, Eye } from 'lucide-react';
+import { Sun, Cloud, Wind, Droplets, Snowflake, Thermometer, Search, RefreshCw, Home, Download, Eye } from 'lucide-react';
 
 const weatherData = [
   { id: 'WX-001', location: '北京顺义基地', temp: -2, feelsLike: -6, humidity: 45, windSpeed: 12, windDir: '北风', pressure: 1025, visibility: 10, condition: 'sunny', updateTime: '2025-01-15 14:30:00' },
@@ -43,9 +43,6 @@ export default function WeatherMonitoring() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">气象监测</h1>
             <p className="text-gray-500 mt-1">气象数据监测</p>

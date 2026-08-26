@@ -2,7 +2,7 @@
  * 销售统计页面 - 使用 shadcn/ui 组件重构
  * 展示产品销售数据分析、统计概览
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Search,
   Download,
@@ -17,9 +17,6 @@ import {
 } from 'lucide-react'
 import {
   Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
   Badge,
   Button,
@@ -37,130 +34,7 @@ import {
   DialogFooter,
   useToast,
 } from '@/components/ui'
-
-// 销售统计数据
-const statisticsData = [
-  {
-    id: 'ST001',
-    productName: '番茄',
-    category: '茄果类',
-    totalSales: 125600,
-    totalVolume: 18800,
-    orderCount: 156,
-    avgPrice: 6.68,
-    trend: '上涨',
-    share: '23.5%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST002',
-    productName: '黄瓜',
-    category: '瓜菜类',
-    totalSales: 98600,
-    totalVolume: 23400,
-    orderCount: 134,
-    avgPrice: 4.21,
-    trend: '下跌',
-    share: '18.4%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST003',
-    productName: '草莓',
-    category: '浆果类',
-    totalSales: 87200,
-    totalVolume: 3480,
-    orderCount: 89,
-    avgPrice: 25.06,
-    trend: '上涨',
-    share: '16.3%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST004',
-    productName: '辣椒',
-    category: '茄果类',
-    totalSales: 65400,
-    totalVolume: 7680,
-    orderCount: 98,
-    avgPrice: 8.52,
-    trend: '平稳',
-    share: '12.2%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST005',
-    productName: '生菜',
-    category: '叶菜类',
-    totalSales: 42800,
-    totalVolume: 8560,
-    orderCount: 67,
-    avgPrice: 5.0,
-    trend: '下跌',
-    share: '8.0%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST006',
-    productName: '西瓜',
-    category: '瓜果类',
-    totalSales: 35600,
-    totalVolume: 7120,
-    orderCount: 45,
-    avgPrice: 5.0,
-    trend: '下跌',
-    share: '6.6%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST007',
-    productName: '葡萄',
-    category: '浆果类',
-    totalSales: 28400,
-    totalVolume: 2360,
-    orderCount: 34,
-    avgPrice: 12.03,
-    trend: '上涨',
-    share: '5.3%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST008',
-    productName: '茄子',
-    category: '茄果类',
-    totalSales: 21200,
-    totalVolume: 2940,
-    orderCount: 56,
-    avgPrice: 7.21,
-    trend: '平稳',
-    share: '4.0%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST009',
-    productName: '菠菜',
-    category: '叶菜类',
-    totalSales: 15600,
-    totalVolume: 3460,
-    orderCount: 43,
-    avgPrice: 4.51,
-    trend: '上涨',
-    share: '2.9%',
-    period: '2026年3月',
-  },
-  {
-    id: 'ST010',
-    productName: '樱桃番茄',
-    category: '茄果类',
-    totalSales: 12800,
-    totalVolume: 920,
-    orderCount: 28,
-    avgPrice: 13.91,
-    trend: '上涨',
-    share: '2.4%',
-    period: '2026年3月',
-  },
-]
+import { getStatistics, Statistic } from '@/services/marketApiService'
 
 // 类别徽章颜色映射
 const categoryVariants: Record<string, 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline' | 'ghost'> = {
@@ -171,7 +45,7 @@ const categoryVariants: Record<string, 'default' | 'secondary' | 'success' | 'wa
 }
 
 // 趋势徽章映射
-const getTrendBadgeVariant = (trend: string): 'success' | 'destructive' | 'default' => {
+const getTrendBadgeVariant = (trend?: string): 'success' | 'destructive' | 'default' => {
   switch (trend) {
     case '上涨':
       return 'success'
@@ -183,7 +57,7 @@ const getTrendBadgeVariant = (trend: string): 'success' | 'destructive' | 'defau
 }
 
 // 趋势图标组件
-const TrendIcon = ({ trend }: { trend: string }) => {
+const TrendIcon = ({ trend }: { trend?: string }) => {
   if (trend === '上涨') {
     return <TrendingUp className="w-3 h-3" />
   }
@@ -200,14 +74,47 @@ const SalesStatistics = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
-  const [selectedStat, setSelectedStat] = useState<typeof statisticsData[0] | null>(null)
+  const [selectedStat, setSelectedStat] = useState<Statistic | null>(null)
   const [timeFilter, setTimeFilter] = useState('本月')
   const { toast } = useToast()
+
+  // 销售统计数据状态（V2.1 铁律：API 直连，无缓存）
+  const [statistics, setStatistics] = useState<Statistic[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 加载销售统计数据
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getStatistics()
+        if (!cancelled) {
+          setStatistics(data ?? [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : '加载销售统计失败'
+          setError(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const timeRanges = ['今日', '本周', '本月', '本季', '本年']
 
   // 筛选数据
-  const filteredData = statisticsData.filter((s) => {
+  const filteredData = statistics.filter((s) => {
     const matchesSearch =
       !searchKeyword ||
       s.productName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -219,49 +126,40 @@ const SalesStatistics = () => {
   const totalSales = filteredData.reduce((sum, s) => sum + s.totalSales, 0)
   const totalVolume = filteredData.reduce((sum, s) => sum + s.totalVolume, 0)
   const totalOrders = filteredData.reduce((sum, s) => sum + s.orderCount, 0)
+  // 计算每个产品占比（用于"占比"列展示，Statistic 接口未包含 share 字段）
+  const calcShare = (sales: number): string => {
+    if (totalSales <= 0) return '0.0%'
+    return ((sales / totalSales) * 100).toFixed(1) + '%'
+  }
 
   // 操作处理
-  const handleView = (item: typeof statisticsData[0]) => {
+  const handleView = (item: Statistic) => {
     setSelectedStat(item)
     setModalType('view')
     setShowModal(true)
   }
 
-  const handleEdit = (item: typeof statisticsData[0]) => {
+  const handleEdit = (item: Statistic) => {
     setSelectedStat(item)
     setModalType('edit')
     setShowModal(true)
   }
 
-  const handleDelete = (item: typeof statisticsData[0]) => {
-    toast({
-      title: '删除确认',
-      description: `确定要删除 ${item.productName} 的统计数据吗？`,
-      variant: 'destructive',
-    })
+  const handleDelete = (item: Statistic) => {
+    toast.warning(`确定要删除 ${item.productName} 的统计数据吗？`)
   }
 
   const handleSave = () => {
     setShowModal(false)
-    toast({
-      title: '保存成功',
-      description: '数据已成功保存',
-      variant: 'success',
-    })
+    toast.success('数据已成功保存')
   }
 
   const handleExport = () => {
-    toast({
-      title: '导出成功',
-      description: '销售报表已成功导出',
-      variant: 'success',
-    })
+    toast.success('销售报表已成功导出')
   }
 
   return (
     <div className="p-page space-y-section">
-      <Toaster />
-
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
@@ -284,6 +182,13 @@ const SalesStatistics = () => {
           </Button>
         </div>
       </div>
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          加载失败：{error}
+        </div>
+      )}
 
       {/* 统计概览卡片 */}
       <div className="grid grid-cols-4 gap-4">
@@ -348,7 +253,9 @@ const SalesStatistics = () => {
                 -2.1%
               </Badge>
             </div>
-            <p className="text-2xl font-bold">¥{(totalSales / totalVolume).toFixed(2)}</p>
+            <p className="text-2xl font-bold">
+              ¥{totalVolume > 0 ? (totalSales / totalVolume).toFixed(2) : '0.00'}
+            </p>
             <p className="text-amber-100 text-sm mt-1">平均单价</p>
           </CardContent>
         </Card>
@@ -406,87 +313,100 @@ const SalesStatistics = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-[var(--color-accent)]" />
-                    <span className="font-medium text-[var(--color-text-primary)]">
-                      {item.productName}
-                    </span>
-                  </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-12 text-[var(--color-text-muted)]">
+                  加载中...
                 </TableCell>
-                <TableCell>
-                  <Badge variant={categoryVariants[item.category] || 'default'}>
-                    {item.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-bold text-[var(--color-accent)]">
-                  ¥{item.totalSales.toLocaleString()}
-                </TableCell>
-                <TableCell className="text-right text-[var(--color-text-secondary)]">
-                  {item.totalVolume.toLocaleString()} kg
-                </TableCell>
-                <TableCell className="text-right text-[var(--color-text-secondary)]">
-                  {item.orderCount}
-                </TableCell>
-                <TableCell className="text-right text-[var(--color-text-secondary)]">
-                  ¥{item.avgPrice}/kg
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getTrendBadgeVariant(item.trend)} className="flex items-center gap-1 w-fit">
-                    <TrendIcon trend={item.trend} />
-                    {item.trend}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 bg-[var(--color-background-tertiary)] rounded-full h-2">
-                      <div
-                        className="bg-[var(--color-accent)] h-2 rounded-full transition-all"
-                        style={{ width: item.share }}
-                      />
-                    </div>
-                    <span className="text-sm text-[var(--color-text-muted)]">{item.share}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleView(item)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(item)}
-                    >
-                      <Trash2 className="w-4 h-4 text-[var(--color-error)]" />
-                    </Button>
+              </TableRow>
+            ) : filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <div className="text-center py-12">
+                    <BarChart3 className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-4" />
+                    <p className="text-[var(--color-text-muted)]">暂无数据</p>
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredData.map((item) => {
+                const share = calcShare(item.totalSales)
+                const shareNum = parseFloat(share)
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[var(--color-accent)]" />
+                        <span className="font-medium text-[var(--color-text-primary)]">
+                          {item.productName}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={categoryVariants[item.category] || 'default'}>
+                        {item.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-[var(--color-accent)]">
+                      ¥{item.totalSales.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right text-[var(--color-text-secondary)]">
+                      {item.totalVolume.toLocaleString()} kg
+                    </TableCell>
+                    <TableCell className="text-right text-[var(--color-text-secondary)]">
+                      {item.orderCount}
+                    </TableCell>
+                    <TableCell className="text-right text-[var(--color-text-secondary)]">
+                      ¥{item.avgPrice}/kg
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getTrendBadgeVariant(item.trend)} className="flex items-center gap-1 w-fit">
+                        <TrendIcon trend={item.trend} />
+                        {item.trend ?? '平稳'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 bg-[var(--color-background-tertiary)] rounded-full h-2">
+                          <div
+                            className="bg-[var(--color-accent)] h-2 rounded-full transition-all"
+                            style={{ width: `${Math.min(shareNum, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-[var(--color-text-muted)]">{share}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleView(item)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(item)}
+                        >
+                          <Trash2 className="w-4 h-4 text-[var(--color-error)]" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
           </TableBody>
         </Table>
-
-        {/* 空状态 */}
-        {filteredData.length === 0 && (
-          <div className="text-center py-12">
-            <BarChart3 className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-4" />
-            <p className="text-[var(--color-text-muted)]">暂无数据</p>
-          </div>
-        )}
       </Card>
 
       {/* 分页 */}
@@ -513,7 +433,7 @@ const SalesStatistics = () => {
               {modalType === 'add' ? '添加统计' : modalType === 'edit' ? '编辑统计' : '统计详情'}
             </DialogTitle>
           </DialogHeader>
-          <DialogBody>
+          <div className="space-y-4">
             {modalType === 'view' && selectedStat ? (
               /* 查看模式 */
               <div className="space-y-6">
@@ -522,7 +442,7 @@ const SalesStatistics = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-2xl font-bold">{selectedStat.productName}</h4>
-                      <p className="text-green-100 mt-1">统计周期：{selectedStat.period}</p>
+                      <p className="text-green-100 mt-1">统计周期：{timeFilter}</p>
                     </div>
                     <Badge
                       variant={
@@ -535,7 +455,7 @@ const SalesStatistics = () => {
                       className="bg-white/20 text-white border-0"
                     >
                       <TrendIcon trend={selectedStat.trend} />
-                      {selectedStat.trend}
+                      {selectedStat.trend ?? '平稳'}
                     </Badge>
                   </div>
                 </div>
@@ -577,7 +497,7 @@ const SalesStatistics = () => {
                   <Card>
                     <CardContent className="p-4">
                       <p className="text-sm text-[var(--color-text-muted)] mb-1">销售占比</p>
-                      <p className="text-lg font-bold">{selectedStat.share}</p>
+                      <p className="text-lg font-bold">{calcShare(selectedStat.totalSales)}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -590,13 +510,13 @@ const SalesStatistics = () => {
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       产品名称
                     </label>
-                    <Input defaultValue={selectedStat?.productName || ''} />
+                    <Input defaultValue={selectedStat?.productName ?? ''} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       类别
                     </label>
-                    <Input defaultValue={selectedStat?.category || '茄果类'} />
+                    <Input defaultValue={selectedStat?.category ?? '茄果类'} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -604,13 +524,13 @@ const SalesStatistics = () => {
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       销售额
                     </label>
-                    <Input type="number" defaultValue={selectedStat?.totalSales || ''} />
+                    <Input type="number" defaultValue={selectedStat?.totalSales ?? ''} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       销售量
                     </label>
-                    <Input type="number" defaultValue={selectedStat?.totalVolume || ''} />
+                    <Input type="number" defaultValue={selectedStat?.totalVolume ?? ''} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -618,13 +538,13 @@ const SalesStatistics = () => {
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       订单数
                     </label>
-                    <Input type="number" defaultValue={selectedStat?.orderCount || ''} />
+                    <Input type="number" defaultValue={selectedStat?.orderCount ?? ''} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       平均单价
                     </label>
-                    <Input type="number" step="0.01" defaultValue={selectedStat?.avgPrice || ''} />
+                    <Input type="number" step="0.01" defaultValue={selectedStat?.avgPrice ?? ''} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -632,18 +552,18 @@ const SalesStatistics = () => {
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       走势
                     </label>
-                    <Input defaultValue={selectedStat?.trend || '平稳'} />
+                    <Input defaultValue={selectedStat?.trend ?? '平稳'} />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1 block">
                       占比
                     </label>
-                    <Input defaultValue={selectedStat?.share || ''} placeholder="如：23.5%" />
+                    <Input defaultValue={selectedStat ? calcShare(selectedStat.totalSales) : ''} placeholder="自动计算" />
                   </div>
                 </div>
               </div>
             )}
-          </DialogBody>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>
               取消

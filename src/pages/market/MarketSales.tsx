@@ -1,37 +1,116 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Download, BarChart3, TrendingUp, ShoppingCart, Users, DollarSign, Eye, Edit, Trash2 } from 'lucide-react'
+import { getSalesOverview, SalesOverview } from '@/services/marketApiService'
 
+/**
+ * 市场销售中心（销售总览页）
+ *
+ * 数据流（V2.1 铁律）：getSalesOverview() → enhancedApiClient → GET /api/market/sales
+ * 派生 3 块数据：4 张统计卡片 + 销售趋势柱状图 + 近期订单表格
+ *
+ * 注意：SalesOverview.trend 项是 { month, amount, orders }；
+ *      SalesOverview.recentOrders 项是 Order[]（含 orderNo/customer/amount/createDate/status 等）。
+ */
 const MarketSales = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
+  // 销售总览数据（单一对象，API 返回）
+  const [overview, setOverview] = useState<SalesOverview | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 销售统计数据
+  // 组件挂载时拉取销售总览
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getSalesOverview()
+        if (!cancelled) setOverview(data)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : '加载失败')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // 从 API 派生的统计卡片数据（change 字段 API 未提供，按 "-" 占位）
   const salesStats = [
-    { label: '本月销售额', value: '¥1,258,600', change: '+12.5%', icon: <DollarSign className="w-5 h-5" />, color: 'from-green-500 to-emerald-600' },
-    { label: '订单总数', value: '486', change: '+8.2%', icon: <ShoppingCart className="w-5 h-5" />, color: 'from-blue-500 to-indigo-600' },
-    { label: '客户数量', value: '128', change: '+5.3%', icon: <Users className="w-5 h-5" />, color: 'from-purple-500 to-violet-600' },
-    { label: '平均单价', value: '¥8.6/kg', change: '-2.1%', icon: <TrendingUp className="w-5 h-5" />, color: 'from-orange-500 to-amber-600' },
+    {
+      label: '本月销售额',
+      value: overview ? `¥${overview.monthSales.toLocaleString()}` : '-',
+      change: '-',
+      icon: <DollarSign className="w-5 h-5" />,
+      color: 'from-green-500 to-emerald-600',
+    },
+    {
+      label: '订单总数',
+      value: overview ? String(overview.orderCount) : '-',
+      change: '-',
+      icon: <ShoppingCart className="w-5 h-5" />,
+      color: 'from-blue-500 to-indigo-600',
+    },
+    {
+      label: '客户数量',
+      value: overview ? String(overview.customerCount) : '-',
+      change: '-',
+      icon: <Users className="w-5 h-5" />,
+      color: 'from-purple-500 to-violet-600',
+    },
+    {
+      label: '平均单价',
+      value: overview ? `¥${overview.avgPrice}/kg` : '-',
+      change: '-',
+      icon: <TrendingUp className="w-5 h-5" />,
+      color: 'from-orange-500 to-amber-600',
+    },
   ]
 
-  // 销售走势数据
-  const salesTrend = [
-    { month: '1月', amount: 98, orders: 42 },
-    { month: '2月', amount: 105, orders: 48 },
-    { month: '3月', amount: 92, orders: 38 },
-    { month: '4月', amount: 118, orders: 52 },
-    { month: '5月', amount: 125, orders: 56 },
-    { month: '6月', amount: 132, orders: 58 },
-  ]
+  // 销售趋势数据（API trend 字段）
+  const salesTrend = overview?.trend ?? []
+  const maxAmount = salesTrend.length > 0 ? Math.max(...salesTrend.map((d) => d.amount)) : 0
 
-  // 近期订单
-  const recentOrders = [
-    { id: 'SO20260301', customer: '北京物美超市', product: '番茄500kg+黄瓜300kg', amount: 7200, date: '2026-03-20', status: '已完成' },
-    { id: 'SO20260302', customer: '上海永辉超市', product: '辣椒400kg+茄子200kg', amount: 5400, date: '2026-03-19', status: '配送中' },
-    { id: 'SO20260303', customer: '广州江南市场', product: '生菜300kg+草莓100kg', amount: 5800, date: '2026-03-18', status: '已完成' },
-    { id: 'SO20260304', customer: '京东生鲜', product: '樱桃番茄200kg+红椒150kg', amount: 5250, date: '2026-03-17', status: '已完成' },
-    { id: 'SO20260305', customer: '盒马鲜生', product: '西瓜500kg+葡萄300kg', amount: 9600, date: '2026-03-16', status: '待发货' },
-  ]
+  // 近期订单数据（API recentOrders 字段，类型 Order[]）
+  const recentOrders = overview?.recentOrders ?? []
 
-  const maxAmount = Math.max(...salesTrend.map(d => d.amount))
+  // 加载中
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">市场销售中心</h1>
+            <p className="text-gray-500 mt-1">实时掌握销售动态与业绩概览</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center text-gray-500">
+          加载中...
+        </div>
+      </div>
+    )
+  }
+
+  // 加载失败
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">市场销售中心</h1>
+            <p className="text-gray-500 mt-1">实时掌握销售动态与业绩概览</p>
+          </div>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700">
+          加载失败：{error}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6">
@@ -94,7 +173,7 @@ const MarketSales = () => {
                 <div className="flex flex-col items-center">
                   <div
                     className="w-12 bg-gradient-to-t from-[#2B5D3A] to-emerald-400 rounded-t-md transition-all hover:opacity-80"
-                    style={{ height: `${(item.amount / maxAmount) * 140}px` }}
+                    style={{ height: `${maxAmount > 0 ? (item.amount / maxAmount) * 140 : 0}px` }}
                   ></div>
                   <span className="text-xs text-gray-600 mt-1">{item.amount}</span>
                 </div>
@@ -142,11 +221,11 @@ const MarketSales = () => {
           <tbody className="divide-y divide-slate-200">
             {recentOrders.map((order) => (
               <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-sm text-gray-600 font-mono">{order.id}</td>
+                <td className="px-6 py-4 text-sm text-gray-600 font-mono">{order.orderNo}</td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{order.customer}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{order.product}</td>
                 <td className="px-6 py-4 text-sm font-bold text-[#2B5D3A]">¥{order.amount.toLocaleString()}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{order.date}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{order.createDate}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
                     order.status === '已完成' ? 'bg-green-100 text-green-700' :

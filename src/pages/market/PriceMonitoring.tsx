@@ -1,25 +1,43 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Download, TrendingUp, TrendingDown, Minus, Eye, Edit, RefreshCw, Bell, BellOff } from 'lucide-react'
+import { getPrices, Price } from '@/services/marketApiService'
 
 const PriceMonitoring = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [selectedPrice, setSelectedPrice] = useState<any>(null)
+  const [selectedPrice, setSelectedPrice] = useState<Price | null>(null)
   const [categoryFilter, setCategoryFilter] = useState('全部')
+  const [prices, setPrices] = useState<Price[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 价格监测数据 - 10条真实数据
-  const priceData = [
-    { id: '1', cropName: '番茄', category: '茄果类', market: '北京新发地', unit: '元/kg', currentPrice: 6.5, yesterdayPrice: 6.2, weekPrice: 6.0, monthPrice: 5.8, trend: 'up', changeRate: '+4.84%', alertStatus: '正常' },
-    { id: '2', cropName: '黄瓜', category: '瓜类', market: '上海江桥', unit: '元/kg', currentPrice: 4.2, yesterdayPrice: 4.5, weekPrice: 4.8, monthPrice: 5.0, trend: 'down', changeRate: '-6.67%', alertStatus: '正常' },
-    { id: '3', cropName: '辣椒', category: '茄果类', market: '广州江南', unit: '元/kg', currentPrice: 8.5, yesterdayPrice: 8.0, weekPrice: 7.5, monthPrice: 7.2, trend: 'up', changeRate: '+6.25%', alertStatus: '预警' },
-    { id: '4', cropName: '茄子', category: '茄果类', market: '武汉白沙洲', unit: '元/kg', currentPrice: 5.8, yesterdayPrice: 5.8, weekPrice: 5.5, monthPrice: 5.3, trend: 'stable', changeRate: '0.00%', alertStatus: '正常' },
-    { id: '5', cropName: '生菜', category: '叶菜类', market: '成都雨润', unit: '元/kg', currentPrice: 4.5, yesterdayPrice: 4.0, weekPrice: 3.8, monthPrice: 3.5, trend: 'up', changeRate: '+12.50%', alertStatus: '预警' },
-    { id: '6', cropName: '草莓', category: '浆果类', market: '杭州勾庄', unit: '元/kg', currentPrice: 22.0, yesterdayPrice: 23.0, weekPrice: 25.0, monthPrice: 28.0, trend: 'down', changeRate: '-4.35%', alertStatus: '正常' },
-    { id: '7', cropName: '西瓜', category: '瓜类', market: '深圳海吉星', unit: '元/kg', currentPrice: 4.8, yesterdayPrice: 5.0, weekPrice: 5.2, monthPrice: 5.5, trend: 'down', changeRate: '-4.00%', alertStatus: '正常' },
-    { id: '8', cropName: '葡萄', category: '浆果类', market: '郑州万邦', unit: '元/kg', currentPrice: 12.0, yesterdayPrice: 11.5, weekPrice: 11.0, monthPrice: 10.5, trend: 'up', changeRate: '+4.35%', alertStatus: '正常' },
-    { id: '9', cropName: '白菜', category: '叶菜类', market: '南京众彩', unit: '元/kg', currentPrice: 2.5, yesterdayPrice: 2.8, weekPrice: 3.0, monthPrice: 3.2, trend: 'down', changeRate: '-10.71%', alertStatus: '正常' },
-    { id: '10', cropName: '樱桃番茄', category: '茄果类', market: '西安欣桥', unit: '元/kg', currentPrice: 14.0, yesterdayPrice: 13.5, weekPrice: 13.0, monthPrice: 12.5, trend: 'up', changeRate: '+3.70%', alertStatus: '正常' },
-  ]
+  // 价格监测数据 - 从 API 加载
+  useEffect(() => {
+    let cancelled = false
+    const loadPrices = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getPrices()
+        if (!cancelled) {
+          setPrices(data)
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : '加载价格数据失败'
+          setError(message)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+    loadPrices()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const categories = ['全部', '茄果类', '瓜类', '叶菜类', '浆果类']
 
@@ -39,7 +57,7 @@ const PriceMonitoring = () => {
     }
   }
 
-  const filteredData = priceData.filter(item => {
+  const filteredData = prices.filter(item => {
     const matchesCategory = categoryFilter === '全部' || item.category === categoryFilter
     const matchesSearch = !searchKeyword ||
       item.cropName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -47,7 +65,7 @@ const PriceMonitoring = () => {
     return matchesCategory && matchesSearch
   })
 
-  const handleView = (item: any) => {
+  const handleView = (item: Price) => {
     setSelectedPrice(item)
     setShowModal(true)
   }
@@ -150,6 +168,23 @@ const PriceMonitoring = () => {
 
       {/* 价格数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {loading && (
+          <div className="text-center py-12">
+            <RefreshCw className="w-12 h-12 text-gray-300 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-500">加载中...</p>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="text-center py-12">
+            <Bell className="w-12 h-12 text-red-300 mx-auto mb-4" />
+            <p className="text-red-600">加载失败：{error}</p>
+            <p className="text-gray-400 text-sm mt-2">请检查网络或后端服务后重试</p>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
@@ -215,6 +250,8 @@ const PriceMonitoring = () => {
             ))}
           </tbody>
         </table>
+          </>
+        )}
 
         {filteredData.length === 0 && (
           <div className="text-center py-12">

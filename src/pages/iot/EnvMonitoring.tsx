@@ -1,10 +1,9 @@
 /**
- * 从 V1.3 100% 一致复制（仅 path 适配 V1.1）
- * 原路径 /iot/monitor 返回按钮 → /iot-monitor（V1.1 现有 IoTMonitor）
+ * 从 V1.3 100% 一致复制（已删除返回按钮——原指向已删除的物联网监控中心页面）
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Thermometer, Droplets, Wind, Search, RefreshCw, Home, ArrowLeft, Download, Bell, TrendingUp, TrendingDown } from 'lucide-react';
+import { Thermometer, Droplets, Wind, Search, RefreshCw, Home, Download, Bell, TrendingUp, TrendingDown } from 'lucide-react';
 
 // 环境监测数据
 const envData = [
@@ -50,9 +49,6 @@ export default function EnvMonitoring() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">环境监测</h1>
             <p className="text-gray-500 mt-1">环境数据实时监测</p>

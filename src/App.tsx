@@ -171,7 +171,6 @@ import Performance from './pages/Performance';
 import Efficiency from './pages/Efficiency';
 import Risk from './pages/Risk';
 // 懒加载组件 - 优化 bundle 分割，按需加载非常用页面
-const IoTMonitor = lazy(() => import('./pages/IoTMonitor'));
 const EnvControl = lazy(() => import('./pages/EnvControl'));
 const AgricultureRecord = lazy(() => import('./pages/AgricultureRecord'));
 const SmartDispatch = lazy(() => import('./pages/SmartDispatch'));
@@ -251,7 +250,6 @@ function AppContent() {
   // 从 V1.3 复制：包括物联网监控/环境监控/视频监控三大模块
   const isIoTRoute =
     location.pathname === '/environment-monitor' ||
-    location.pathname === '/iot-monitor' ||
     location.pathname === '/device-monitor' ||
     location.pathname === '/alert-info' ||
     location.pathname.startsWith('/iot/') ||
@@ -311,7 +309,6 @@ function AppContent() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* 物联网监控 */}
-            <Route path="/iot-monitor" element={<IoTMonitor />} />
             <Route path="/device-monitor" element={<DeviceMonitor />} />
             <Route path="/alert-info" element={<AlertInfo />} />
             <Route path="/iot/env-monitoring" element={<EnvMonitoring />} />
@@ -554,9 +551,10 @@ function AppContent() {
           <Route path="/materials" element={<Materials />} />
           <Route path="/inspection" element={<FarmTaskHub />} />
           <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
+          {/* 物联网监控中心已删除（与环境监测重复），旧链接重定向到环境监测 */}
+          <Route path="/iot-monitor" element={<Navigate to="/environment-monitor" replace />} />
 
           <Route path="/produce-code-rule" element={<ProduceCodeRule />} />
-          <Route path="/iot-monitor" element={<IoTMonitor />} />
           <Route path="/env-control" element={<EnvControl />} />
           <Route path="/agriculture-record" element={<AgricultureRecord />} />
           <Route path="/dispatch" element={<DispatchPage />} />

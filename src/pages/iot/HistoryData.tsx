@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, Search, RefreshCw, Home, ArrowLeft, Download, TrendingUp, Clock } from 'lucide-react';
+import { Database, Search, RefreshCw, Home, Download, TrendingUp, Clock } from 'lucide-react';
 
 const historyData = [
   { id: 'H-001', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 24.5, humidity: 62, co2: 415, timestamp: '2025-01-15 08:00:00' },
@@ -44,9 +44,6 @@ export default function HistoryData() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/iot-monitor')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">历史数据</h1>
             <p className="text-gray-500 mt-1">监测历史数据查询</p>

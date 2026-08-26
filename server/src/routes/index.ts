@@ -111,6 +111,7 @@ import codeGeneratorRouter from './codeGenerator';
 import dailyPlansRouter from './dailyPlans';
 import monthlyPlansRouter from './monthlyPlans';
 import customerRouter from './customer.routes';
+import marketRouter from './market.routes';
 import deliveryRouter from './delivery.routes';
 import qualityRouter from './quality.routes';
 import acceptanceRouter from './acceptance.routes';
@@ -396,6 +397,9 @@ router.use('/monthly-plans', requireAuth, monthlyPlansRouter);
 
 // 客户档案路由
 router.use('/customers', requireAuth, customerRouter);
+
+// 销售协同系统路由（销售订单/客户/价格/渠道/行情/统计/总览）- 需要认证
+router.use('/market', requireAuth, marketRouter);
 
 // 交付记录路由
 router.use('/delivery-records', requireAuth, deliveryRouter);

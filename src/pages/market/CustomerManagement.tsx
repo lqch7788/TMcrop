@@ -1,26 +1,39 @@
-import { useState } from 'react'
-import { Search, Plus, Download, Eye, Edit, Trash2, Users, Building, ShoppingBag, Monitor, Store, User, Utensils } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Download, Eye, Edit, Trash2, Users, Building, ShoppingBag, Monitor, Store, User, Utensils, AlertCircle } from 'lucide-react'
+import { getCustomers, Customer } from '@/services/marketApiService'
 
 const CustomerManagement = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [typeFilter, setTypeFilter] = useState('全部')
 
-  // 客户数据 - 10条真实数据
-  const customers = [
-    { id: '1', code: 'C2026001', name: '北京物美超市', type: '超市', contact: '张经理', phone: '138-0012-3456', address: '北京市朝阳区建国路88号', creditLevel: 'AAA', totalAmount: 158000, orderCount: 28, lastOrder: '2026-03-20', status: '正常' },
-    { id: '2', code: 'C2026002', name: '上海永辉超市', type: '超市', contact: '李总监', phone: '139-8876-5432', address: '上海市浦东新区世纪大道1000号', creditLevel: 'AA', totalAmount: 98000, orderCount: 19, lastOrder: '2026-03-19', status: '正常' },
-    { id: '3', code: 'C2026003', name: '广州江南市场', type: '农贸市场', contact: '王老板', phone: '136-7654-3210', address: '广州市白云区增槎路江南市场A区', creditLevel: 'A', totalAmount: 76000, orderCount: 15, lastOrder: '2026-03-18', status: '正常' },
-    { id: '4', code: 'C2026004', name: '京东生鲜', type: '电商', contact: '刘采购', phone: '135-9988-7766', address: '北京市亦庄经济开发区京东总部', creditLevel: 'AAA', totalAmount: 235000, orderCount: 42, lastOrder: '2026-03-17', status: '正常' },
-    { id: '5', code: 'C2026005', name: '盒马鲜生', type: '超市', contact: '陈主管', phone: '158-2233-4455', address: '上海市长宁区遵义路100号南丰城', creditLevel: 'AAA', totalAmount: 189000, orderCount: 35, lastOrder: '2026-03-16', status: '正常' },
-    { id: '6', code: 'C2026006', name: '深圳华润万家', type: '超市', contact: '赵经理', phone: '137-5544-3322', address: '深圳市南山区华润大厦', creditLevel: 'AA', totalAmount: 67000, orderCount: 12, lastOrder: '2026-03-15', status: '正常' },
-    { id: '7', code: 'C2026007', name: '老王蔬菜批发', type: '批发商', contact: '王建国', phone: '136-1122-3344', address: '武汉市洪山区白沙洲农副产品大市场', creditLevel: 'A', totalAmount: 89000, orderCount: 22, lastOrder: '2026-03-14', status: '正常' },
-    { id: '8', code: 'C2026008', name: '小李水果店', type: '个体', contact: '李明', phone: '135-5566-7788', address: '成都市锦江区红星路四段76号', creditLevel: 'BB', totalAmount: 23000, orderCount: 8, lastOrder: '2026-03-12', status: '暂停' },
-    { id: '9', code: 'C2026009', name: '杭州外国语学校食堂', type: '食堂', contact: '周师傅', phone: '189-6677-8899', address: '杭州市西湖区余杭塘路18号', creditLevel: 'AA', totalAmount: 45000, orderCount: 10, lastOrder: '2026-03-10', status: '正常' },
-    { id: '10', code: 'C2026010', name: '美团优选', type: '电商', contact: '吴小姐', phone: '150-7788-9900', address: '北京市海淀区中关村软件园二期', creditLevel: 'AAA', totalAmount: 312000, orderCount: 56, lastOrder: '2026-03-09', status: '正常' },
-  ]
+  // 客户数据 - 从 API 加载
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // 页面挂载时从后端拉取客户列表
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    getCustomers()
+      .then(data => {
+        if (cancelled) return
+        setCustomers(data)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('[CustomerManagement] 加载客户失败:', err)
+        setLoadError(err instanceof Error ? err.message : '加载客户失败')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const customerTypes = ['全部', '批发商', '超市', '电商', '农贸市场', '个体', '食堂']
 
@@ -55,13 +68,13 @@ const CustomerManagement = () => {
     return matchesType && matchesSearch
   })
 
-  const handleView = (item: any) => {
+  const handleView = (item: Customer) => {
     setSelectedCustomer(item)
     setModalType('view')
     setShowModal(true)
   }
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: Customer) => {
     setSelectedCustomer(item)
     setModalType('edit')
     setShowModal(true)
@@ -194,7 +207,22 @@ const CustomerManagement = () => {
           </tbody>
         </table>
 
-        {filteredCustomers.length === 0 && (
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block w-8 h-8 border-4 border-[#2B5D3A]/30 border-t-[#2B5D3A] rounded-full animate-spin mb-3" />
+            <p className="text-gray-500">加载中...</p>
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="text-center py-12">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+            <p className="text-red-600 mb-2">加载客户失败</p>
+            <p className="text-gray-500 text-sm">{loadError}</p>
+          </div>
+        )}
+
+        {!loading && !loadError && filteredCustomers.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无数据</p>
