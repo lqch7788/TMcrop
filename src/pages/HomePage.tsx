@@ -12,15 +12,13 @@ interface ModuleCardProps {
   color: string;
   gradient: string;
   onClick?: () => void;
-  disabled?: boolean;
-  actionText?: string;
 }
 
-function ModuleCard({ icon, title, description, color, gradient, onClick, disabled, actionText }: ModuleCardProps) {
+function ModuleCard({ icon, title, description, color, gradient, onClick }: ModuleCardProps) {
   return (
     <div
-      onClick={disabled ? undefined : onClick}
-      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 group ${gradient} ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-2xl'}`}
+      onClick={onClick}
+      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group ${gradient}`}
     >
       {/* 背景装饰 */}
       <div className="absolute inset-0 opacity-10">
@@ -44,14 +42,8 @@ function ModuleCard({ icon, title, description, color, gradient, onClick, disabl
 
         {/* 箭头指示器 */}
         <div className="flex items-center text-white/60 text-sm group-hover:text-white transition-colors">
-          {disabled ? (
-            <span>{actionText}</span>
-          ) : (
-            <>
-              <span>{actionText}</span>
-              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </>
-          )}
+          <span>进入</span>
+          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
 
@@ -104,8 +96,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-cyan-500 to-blue-600',
       gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
       onClick: () => navigate('/environment-monitor'),
-      disabled: true,
-      actionText: t.envMonitorStatus
     },
     {
       icon: <Settings className="w-8 h-8 text-white" />,
@@ -114,8 +104,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-orange-500 to-red-600',
       gradient: 'bg-gradient-to-br from-orange-500 via-red-500 to-pink-600',
       onClick: () => navigate('/env-control'),
-      disabled: true,
-      actionText: t.controlSystemStatus
     },
     {
       icon: <Leaf className="w-8 h-8 text-white" />,
@@ -124,8 +112,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-emerald-500 to-green-600',
       gradient: 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600',
       onClick: () => navigate('/dashboard'),
-      disabled: false,
-      actionText: t.plantingManagementStatus
     },
     {
       icon: <Sprout className="w-8 h-8 text-white" />,
@@ -134,8 +120,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-lime-500 to-green-600',
       gradient: 'bg-gradient-to-br from-lime-500 via-green-500 to-emerald-600',
       onClick: () => navigate('/traceability'),
-      disabled: true,
-      actionText: t.traceabilityStatus
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-white" />,
@@ -144,8 +128,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-blue-500 to-cyan-600',
       gradient: 'bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-600',
       onClick: () => navigate('/reports'),
-      disabled: true,
-      actionText: t.dataAnalysisStatus
     },
     {
       icon: <GraduationCap className="w-8 h-8 text-white" />,
@@ -154,8 +136,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-amber-500 to-orange-600',
       gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
       onClick: () => navigate('/tech-solution'),
-      disabled: true,
-      actionText: t.expertAIStatus
     },
     {
       icon: <Video className="w-8 h-8 text-white" />,
@@ -164,8 +144,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-purple-500 to-indigo-600',
       gradient: 'bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-600',
       onClick: () => navigate('/device-monitor'),
-      disabled: true,
-      actionText: t.costAccountingStatus
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-white" />,
@@ -174,8 +152,6 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-pink-500 to-rose-600',
       gradient: 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600',
       onClick: () => navigate('/market-sales'),
-      disabled: true,
-      actionText: t.marketSalesStatus
     },
   ];
 
