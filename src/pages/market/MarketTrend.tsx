@@ -8,6 +8,8 @@ const MarketSituation = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
   const [selectedMarket, setSelectedMarket] = useState<Trend | null>(null)
   const [regionFilter, setRegionFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 趋势列表状态（V2.1 铁律：API 直连，无缓存）
   const [trends, setTrends] = useState<Trend[]>([])
@@ -79,6 +81,9 @@ const MarketSituation = () => {
       (m.topProduct ?? '').toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesRegion && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // 概览统计：按 trend 字段聚合
   const upCount = trends.filter(m => m.trend === '上涨').length
@@ -232,7 +237,7 @@ const MarketSituation = () => {
                 </td>
               </tr>
             ) : (
-              filteredData.map((item) => (
+              paginatedData.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -285,11 +290,35 @@ const MarketSituation = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+            className="ml-3 px-2 py-1 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+          >
+            <option value={10}>10 条</option>
+            <option value={20}>20 条</option>
+            <option value={50}>50 条</option>
+            <option value={100}>100 条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">{currentPage}</button>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
         </div>
       </div>
 

@@ -7,6 +7,8 @@ const TrendAnalysis = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [trendFilter, setTrendFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const trendTypes = ['全部', '产量趋势', '价格趋势', '环境趋势', '生长趋势', '成本趋势']
 
@@ -32,6 +34,10 @@ const TrendAnalysis = () => {
       t.trendNo.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesType && matchesSearch
   })
+
+  // 分页派生
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const getDirectionBadge = (direction: string) => {
     switch (direction) {
@@ -84,7 +90,7 @@ const TrendAnalysis = () => {
               {trendTypes.map(type => (
                 <button
                   key={type}
-                  onClick={() => setTrendFilter(type)}
+                  onClick={() => { setTrendFilter(type); setCurrentPage(1); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     trendFilter === type
                       ? 'bg-[#2B5D3A] text-white'
@@ -96,13 +102,13 @@ const TrendAnalysis = () => {
               ))}
             </div>
           </div>
-          <div className="relative min-w-[250px]">
+          <div className="relative min-w-[280px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="搜索趋势名称或编号..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -127,7 +133,7 @@ const TrendAnalysis = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => {
+            {paginatedData.map((item) => {
               const directionBadge = getDirectionBadge(item.direction)
               return (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -191,13 +197,35 @@ const TrendAnalysis = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             上一页
           </button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             下一页
           </button>
         </div>

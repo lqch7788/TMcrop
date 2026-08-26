@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Plus, Download, Edit, Trash2, Eye, BookOpen, FileText, Video, Image } from 'lucide-react'
+import { Search, Plus, Download, Edit, Trash2, Eye, BookOpen, FileText, Video, Image, Calendar, CheckCircle, Clock } from 'lucide-react'
 
 // 知识库数据
 const knowledgeData = [
@@ -23,6 +23,10 @@ const KnowledgeBase = () => {
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'delete'>('view')
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [formData, setFormData] = useState({
     title: '', category: '', crops: '', author: '', content: '', tags: ''
   })
@@ -63,6 +67,38 @@ const KnowledgeBase = () => {
     console.log('导出数据')
   }
 
+  const knowledgeStatuses = ['全部', '已发布', '草稿']
+
+  // 按搜索关键字 + 状态筛选
+  const filteredData = knowledgeData.filter(item => {
+    const matchesStatus = statusFilter === '全部' || item.status === statusFilter
+    const kw = searchKeyword.toLowerCase()
+    const matchesSearch = !searchKeyword ||
+      item.docNo.toLowerCase().includes(kw) ||
+      item.title.toLowerCase().includes(kw) ||
+      item.category.toLowerCase().includes(kw) ||
+      item.crops.toLowerCase().includes(kw) ||
+      item.author.toLowerCase().includes(kw)
+    return matchesStatus && matchesSearch
+  })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case '已发布': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> }
+      case '草稿': return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock className="w-3 h-3" /> }
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> }
+    }
+  }
+
+  const getCategoryBadge = (category: string) => {
+    if (category === '病害防治') return { bg: 'bg-red-100', text: 'text-red-700' }
+    if (category === '虫害防治') return { bg: 'bg-green-100', text: 'text-green-700' }
+    return { bg: 'bg-blue-100', text: 'text-blue-700' }
+  }
+
   return (
     <div className="p-6">
       {/* 页面标题 */}
@@ -87,118 +123,136 @@ const KnowledgeBase = () => {
         </div>
       </div>
 
-      {/* 搜索栏 */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">文档编号</label>
+      {/* 筛选区域 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">状态：</span>
+            <div className="flex gap-2 flex-wrap">
+              {knowledgeStatuses.map(status => (
+                <button
+                  key={status}
+                  onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    statusFilter === status
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="relative min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="请输入编号"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+              placeholder="搜索编号、标题、分类、作物或作者..."
+              value={searchKeyword}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">知识分类</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">适用作物</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {crops.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">作者</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {persons.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">发布日期</label>
-            <input
-              type="date"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-3 mt-4">
-          <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors">
-            重置
-          </button>
-          <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm hover:bg-[#245038] transition-colors flex items-center gap-2">
-            <Search className="w-4 h-4" /> 搜索
-          </button>
         </div>
       </div>
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-slate-200">
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">文档编号</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">标题</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">分类</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">适用作物</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">作者</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">发布日期</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">浏览量</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">状态</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {knowledgeData.map((record) => (
-                <tr key={record.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-4 text-sm text-gray-800 font-medium">{record.docNo}</td>
-                  <td className="py-3 px-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">文档编号</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">标题</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">分类</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">适用作物</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">作者</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">发布日期</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">浏览量</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">状态</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {paginatedData.map((record) => {
+              const statusBadge = getStatusBadge(record.status)
+              const categoryBadge = getCategoryBadge(record.category)
+              return (
+                <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.docNo}</td>
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-gray-800 hover:text-[#2B5D3A] cursor-pointer">{record.title}</span>
+                      <span className="text-sm font-medium text-gray-800 hover:text-[#2B5D3A] cursor-pointer">{record.title}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                      record.category === '病害防治' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${categoryBadge.bg} ${categoryBadge.text}`}>
                       {record.category}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{record.crops}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{record.author}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{record.publishDate}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{record.views}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                      record.status === '已发布' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.crops}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.author}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.publishDate}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.views}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+                      {statusBadge.icon}
                       {record.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleView(record)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="查看">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleView(record)} className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors" title="查看">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleEdit(record)} className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors" title="编辑">
+                      <button onClick={() => handleEdit(record)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(record)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
+                      <button onClick={() => handleDelete(record)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              )
+            })}
+          </tbody>
+        </table>
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">暂无数据</p>
+          </div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
 

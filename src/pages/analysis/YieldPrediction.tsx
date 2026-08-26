@@ -8,6 +8,8 @@ const YieldPrediction = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [baseFilter, setBaseFilter] = useState('全部')
   const [cropFilter, setCropFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const bases = ['全部', '北京基地1号', '北京基地2号', '山东寿光基地', '河南新乡基地', '江苏南京基地', '山东青岛基地', '云南昆明基地', '云南大理基地']
   const crops = ['全部', '番茄', '黄瓜', '辣椒', '生菜', '茄子', '草莓', '西瓜', '葡萄']
@@ -35,6 +37,10 @@ const YieldPrediction = () => {
       d.crop.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesBase && matchesCrop && matchesSearch
   })
+
+  // 分页派生
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleView = (item: any) => {
     setSelectedItem(item)
@@ -79,7 +85,7 @@ const YieldPrediction = () => {
                 {bases.slice(0, 5).map(base => (
                   <button
                     key={base}
-                    onClick={() => setBaseFilter(base)}
+                    onClick={() => { setBaseFilter(base); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       baseFilter === base
                         ? 'bg-[#2B5D3A] text-white'
@@ -97,7 +103,7 @@ const YieldPrediction = () => {
                 {crops.slice(0, 5).map(crop => (
                   <button
                     key={crop}
-                    onClick={() => setCropFilter(crop)}
+                    onClick={() => { setCropFilter(crop); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       cropFilter === crop
                         ? 'bg-[#2B5D3A] text-white'
@@ -110,13 +116,13 @@ const YieldPrediction = () => {
               </div>
             </div>
           </div>
-          <div className="relative min-w-[250px]">
+          <div className="relative min-w-[280px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="搜索预测编号或作物..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -141,7 +147,7 @@ const YieldPrediction = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => (
+            {paginatedData.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.predictNo}</td>
                 <td className="px-4 py-3">
@@ -204,13 +210,35 @@ const YieldPrediction = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             上一页
           </button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             下一页
           </button>
         </div>

@@ -1,9 +1,12 @@
 /**
- * 从 V1.3 100% 一致复制
+ * 监测配置 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, Home, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight, Monitor, AlertCircle } from 'lucide-react';
+import {
+  Search, Home, Download, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight,
+  Monitor, AlertCircle, CheckCircle, Calendar,
+} from 'lucide-react';
 
 const monitoringConfig = [
   { id: 'CFG-001', name: '温室环境监测配置', type: '环境监测', sensors: ['温度传感器', '湿度传感器', 'CO2传感器', '光照传感器'], interval: 60, enabled: true, alertEnabled: true, updateTime: '2025-01-10 10:00:00' },
@@ -16,18 +19,27 @@ const monitoringConfig = [
 
 const statistics = { totalConfigs: 6, enabledConfigs: 5, disabledConfigs: 1, alertEnabled: 4, alertDisabled: 2 };
 
+// 状态筛选（与表格徽章标签一一对应）
+const statuses = ['全部', '已启用', '已禁用'];
+
 export default function MonitoringConfig() {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('全部');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
 
   const filteredData = monitoringConfig.filter(item => {
     const matchSearch = item.name.toLowerCase().includes(searchKeyword.toLowerCase()) || item.type.toLowerCase().includes(searchKeyword.toLowerCase());
-    const matchStatus = statusFilter === 'all' || (statusFilter === 'enabled' && item.enabled) || (statusFilter === 'disabled' && !item.enabled);
+    const statusLabel = item.enabled ? '已启用' : '已禁用';
+    const matchStatus = statusFilter === '全部' || statusLabel === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleToggle = (id: string) => alert(`切换监测配置 ${id} 状态`);
   const handleEdit = () => { setModalType('edit'); setShowModal(true); };
@@ -35,18 +47,26 @@ export default function MonitoringConfig() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">监测配置</h1>
-            <p className="text-gray-500 mt-1">监测设备配置</p>
-          </div>
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">监测配置</h1>
+          <p className="text-gray-500 mt-1">监测设备配置</p>
         </div>
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-50 rounded-lg transition-colors">
-          <Home className="w-5 h-5" /><span className="text-sm font-medium">返回主页</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Download className="w-4 h-4" /> 导出
+          </button>
+          <button
+            onClick={() => { setModalType('add'); setShowModal(true); }}
+            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> 新增配置
+          </button>
+        </div>
       </div>
 
+      {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { Icon: Monitor, bg: 'bg-blue-100', text: 'text-blue-600', label: '配置总数', value: statistics.totalConfigs, valColor: 'text-gray-800' },
@@ -68,42 +88,60 @@ export default function MonitoringConfig() {
         ))}
       </div>
 
+      {/* 筛选区域 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input type="text" placeholder="搜索配置名称..." value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">状态：</span>
+            <div className="flex gap-2">
+              {statuses.map(status => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    statusFilter === status
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
             </div>
           </div>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent">
-            <option value="all">全部状态</option><option value="enabled">已启用</option><option value="disabled">已禁用</option>
-          </select>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"><RefreshCw size={16} />刷新</button>
-          <button onClick={() => { setModalType('add'); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-[#6366F1] text-white rounded-lg hover:bg-[#4F46E5] transition-colors"><Plus size={16} />新增配置</button>
+          <div className="relative min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索配置名称或类型..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            />
+          </div>
         </div>
       </div>
 
+      {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">配置ID</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">配置名称</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">类型</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">关联传感器</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">采集间隔(秒)</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">告警</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">更新时间</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">操作</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">配置ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">配置名称</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">类型</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">关联传感器</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">采集间隔(秒)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">状态</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">告警</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">更新时间</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {filteredData.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.id}</td>
+          <tbody className="divide-y divide-slate-200">
+            {paginatedData.map(item => (
+              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
                 <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.type}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
@@ -116,54 +154,124 @@ export default function MonitoringConfig() {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.interval}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => handleToggle(item.id)} className={`flex items-center gap-1 ${item.enabled ? 'text-green-600' : 'text-gray-400'}`}>
-                    {item.enabled ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                    <span className="text-xs">{item.enabled ? '启用' : '禁用'}</span>
+                  <button onClick={() => handleToggle(item.id)} className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${item.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {item.enabled ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
+                    {item.enabled ? '已启用' : '已禁用'}
                   </button>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.alertEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${item.alertEnabled ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {item.alertEnabled ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                     {item.alertEnabled ? '已启用' : '已禁用'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <button onClick={handleView} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="查看"><Eye size={16} /></button>
-                    <button onClick={handleEdit} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="编辑"><Edit size={16} /></button>
-                    <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除"><Trash2 size={16} /></button>
+                  <div className="flex items-center justify-center gap-1">
+                    <button onClick={handleView} className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors" title="查看">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={handleEdit} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">暂无数据</p>
+          </div>
+        )}
       </div>
 
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page
+                  ? 'bg-[#2B5D3A] text-white'
+                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+
+      {/* 新增/编辑/查看弹窗（保留原有业务逻辑） */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-lg mx-4">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gray-50">
+              <h3 className="font-semibold text-gray-800">
                 {modalType === 'add' ? '新增监测配置' : modalType === 'edit' ? '编辑监测配置' : '配置详情'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <span className="text-2xl">&times;</span>
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">配置名称</label>
-                <input type="text" placeholder="请输入配置名称" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent" />
+                <input type="text" placeholder="请输入配置名称" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">监测类型</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent">
-                  <option value="">请选择</option><option value="env">环境监测</option><option value="soil">土壤监测</option>
-                  <option value="weather">气象监测</option><option value="energy">能耗监测</option><option value="water">水质监测</option>
+                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+                  <option value="">请选择</option>
+                  <option value="env">环境监测</option>
+                  <option value="soil">土壤监测</option>
+                  <option value="weather">气象监测</option>
+                  <option value="energy">能耗监测</option>
+                  <option value="water">水质监测</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">采集间隔(秒)</label>
-                <input type="number" placeholder="请输入采集间隔" defaultValue={60} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent" />
+                <input type="number" placeholder="请输入采集间隔" defaultValue={60} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">关联传感器</label>
@@ -176,9 +284,9 @@ export default function MonitoringConfig() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">取消</button>
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-[#6366F1] text-white rounded-lg hover:bg-[#4F46E5] transition-colors">{modalType === 'view' ? '关闭' : '保存'}</button>
+            <div className="px-6 py-4 border-t border-slate-200 bg-gray-50 flex justify-end gap-3">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm transition-colors">取消</button>
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm hover:bg-[#245038] transition-colors">{modalType === 'view' ? '关闭' : '保存'}</button>
             </div>
           </div>
         </div>

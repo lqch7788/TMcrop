@@ -1,8 +1,12 @@
 /**
- * 温室控制 — 从 V1.3 100% 一致复制，path 适配 V1.1
+ * 温室控制 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  */
 import { useState } from 'react';
-import { Thermometer, Plus, Search, Edit2, Trash2, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Thermometer, Plus, Search, Edit2, Trash2, Download, Home, AlertCircle, Calendar,
+  CheckCircle, AlertTriangle, Clock,
+} from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 
 interface GreenhouseDevice {
@@ -30,10 +34,13 @@ const operators = ['张建国', '李秀英', '王志强', '赵红梅', '陈伟�
 const statuses = ['运行中', '待机', '告警', '离线'];
 
 export default function GreenhouseControl() {
+  const navigate = useNavigate();
   const [data, setData] = useState<GreenhouseDevice[]>(initialData);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchBase, setSearchBase] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedItem, setSelectedItem] = useState<GreenhouseDevice | null>(null);
@@ -46,6 +53,9 @@ export default function GreenhouseControl() {
       item.greenhouse.toLowerCase().includes(searchTerm.toLowerCase());
     return matchSearch && (searchBase === '' || item.base === searchBase) && (searchStatus === '' || item.status === searchStatus);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleOpenModal = (type: 'add' | 'edit' | 'delete', item?: GreenhouseDevice) => {
     setModalType(type); setSelectedItem(item || null);
@@ -73,99 +83,206 @@ export default function GreenhouseControl() {
     link.href = URL.createObjectURL(blob); link.download = '温室控制设备数据.csv'; link.click();
   };
 
+  // 状态徽章：与订单管理风格一致（带 icon）
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      '运行中': 'bg-green-100 text-green-700',
-      '告警': 'bg-red-100 text-red-700',
-      '待机': 'bg-gray-100 text-gray-600',
-      '离线': 'bg-gray-100 text-gray-500',
-    };
-    return styles[status] || 'bg-gray-100 text-gray-600';
+    switch (status) {
+      case '运行中': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" />, label: '运行中' };
+      case '告警': return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertTriangle className="w-3 h-3" />, label: '告警' };
+      case '待机': return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" />, label: '待机' };
+      case '离线': return { bg: 'bg-gray-100', text: 'text-gray-500', icon: <Clock className="w-3 h-3" />, label: '离线' };
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" />, label: status };
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">温室控制</h1>
+          <p className="text-gray-500 mt-1">温室环境监测与设备控制</p>
+        </div>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-            <Thermometer className="w-6 h-6 text-white" />
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" /> 导出
+          </button>
+          <button
+            onClick={() => handleOpenModal('add')}
+            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> 新增设备
+          </button>
+        </div>
+      </div>
+
+      {/* 筛选区域 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-gray-600">状态：</span>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => { setSearchStatus(''); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  searchStatus === ''
+                    ? 'bg-[#2B5D3A] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                全部状态
+              </button>
+              {statuses.map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setSearchStatus(s); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    searchStatus === s
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">温室控制</h1>
-            <p className="text-gray-500">温室环境监测与设备控制</p>
+          <div className="flex items-center gap-3">
+            <select
+              value={searchBase}
+              onChange={(e) => { setSearchBase(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value="">全部基地</option>
+              {bases.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <div className="relative min-w-[280px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜索设备编号、名称..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" placeholder="搜索设备编号、名称..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-            </div>
-            <select value={searchBase} onChange={(e) => setSearchBase(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">全部基地</option>
-              {bases.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            <select value={searchStatus} onChange={(e) => setSearchStatus(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">全部状态</option>
-              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => handleOpenModal('add')} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
-              <Plus className="w-4 h-4" /> 新增
-            </button>
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-          </div>
-        </div>
-
+      {/* 数据表格 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备编号</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备名称</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">温室</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">基地</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">温度</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">湿度</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">CO₂</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">光照</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作员</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">更新时间</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">操作</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备编号</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备名称</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">温室</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">基地</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">温度(°C)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">湿度(%)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">CO₂(ppm)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">光照(Lux)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">状态</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">操作员</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">更新时间</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.deviceCode}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.deviceName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.greenhouse}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.base}</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{item.temperature}°C</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{item.humidity}%</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{item.co2}ppm</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{item.light}Lux</td>
-                <td className="px-4 py-3"><span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(item.status)}`}>{item.status}</span></td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.operator}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
-                    <button onClick={() => handleOpenModal('edit', item)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleOpenModal('delete', item)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {paginatedData.map((item) => {
+              const badge = getStatusBadge(item.status);
+              return (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.deviceCode}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.deviceName}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.greenhouse}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.base}</td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{item.temperature}°C</td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{item.humidity}%</td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{item.co2}</td>
+                  <td className="px-4 py-3 text-sm text-gray-800">{item.light.toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badge.bg} ${badge.text}`}>
+                      {badge.icon}
+                      {badge.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.operator}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => handleOpenModal('edit', item)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleOpenModal('delete', item)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        <div className="px-4 py-3 border-t border-slate-200 text-sm text-gray-500">共 {filteredData.length} 条记录</div>
+
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">暂无数据</p>
+          </div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page
+                  ? 'bg-[#2B5D3A] text-white'
+                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
+        </div>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={

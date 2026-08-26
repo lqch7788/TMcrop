@@ -34,6 +34,11 @@ export default function ConsumerQuery() {
   const [searchInput, setSearchInput] = useState('');
   const [searchResult, setSearchResult] = useState<any>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const totalPages = Math.ceil(queryHistoryData.length / pageSize);
+  const paginatedHistory = queryHistoryData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleSearch = () => {
     if (!searchInput.trim()) return;
@@ -152,7 +157,7 @@ export default function ConsumerQuery() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {queryHistoryData.map((item) => (
+            {paginatedHistory.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm font-mono text-blue-600">{item.traceCode}</td>
                 <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.product}</td>
@@ -163,6 +168,36 @@ export default function ConsumerQuery() {
             ))}
           </tbody>
         </table>
+        {paginatedHistory.length === 0 && (
+          <div className="text-center py-12"><QrCode className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">暂无数据</p></div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {queryHistoryData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded text-sm ${currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
+        </div>
       </div>
     </div>
   );

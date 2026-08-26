@@ -2,7 +2,7 @@
  * 种植档案 — 从 V1.3 100% 一致复制
  */
 import { useState } from 'react';
-import { Search, Plus, Download, Package, Eye, Edit, Trash2, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Download, Package, Eye, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
 
 const plantingData = [
   { id: '1', traceCode: 'TY20260301001', batch: 'P20260301001', product: '番茄', variety: '千禧樱桃番茄', farm: '北京基地1号', area: '50亩', plantDate: '2026-03-01', harvestDate: '2026-06-15', status: '采收中', yield: '50000kg', worker: '张伟' },
@@ -29,7 +29,7 @@ const getStatusBadge = (status: string) => {
 export default function PlantingArchive() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredData = plantingData.filter(item =>
     !searchKeyword || item.traceCode.includes(searchKeyword) || item.product.includes(searchKeyword) || item.batch.includes(searchKeyword) || item.farm.includes(searchKeyword)
@@ -112,13 +112,28 @@ export default function PlantingArchive() {
       </div>
 
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录，第 {currentPage}/{totalPages || 1} 页</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"><ChevronLeft className="w-4 h-4" /> 上一页</button>
-          {[...Array(totalPages || 1)].map((_, i) => (
-            <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-9 h-9 rounded-lg text-sm ${currentPage === i + 1 ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{i + 1}</button>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded text-sm ${currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{page}</button>
           ))}
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1">下一页 <ChevronRight className="w-4 h-4" /></button>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
     </div>

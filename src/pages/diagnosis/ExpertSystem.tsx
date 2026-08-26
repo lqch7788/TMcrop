@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Plus, Download, Calendar, Eye, Edit, Trash2, Stethoscope, User, CheckCircle, Clock, MessageSquare } from 'lucide-react'
+import { Search, Plus, Download, Calendar, Eye, Edit, Trash2, Stethoscope, User, CheckCircle, Clock } from 'lucide-react'
 
 const ExpertSystem = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -8,6 +8,8 @@ const ExpertSystem = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [typeFilter, setTypeFilter] = useState('全部')
   const [statusFilter, setStatusFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const experts = [
     { id: '1', caseNo: 'ES202403001', title: '番茄叶片发黄诊断', crop: '番茄', disease: '早疫病', expertName: '张建国', expertLevel: '高级农艺师', caseType: '病害诊断', patientDesc: '叶片出现黄褐色斑点，逐渐扩大', aiResult: '疑似早疫病', expertResult: '确认早疫病，建议使用代森锰锌', status: '已完成', submitTime: '2024-03-20 09:00', completeTime: '2024-03-20 09:30' },
@@ -36,6 +38,9 @@ const ExpertSystem = () => {
       e.expertName.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesType && matchesStatus && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -88,7 +93,7 @@ const ExpertSystem = () => {
                 {types.map(type => (
                   <button
                     key={type}
-                    onClick={() => setTypeFilter(type)}
+                    onClick={() => { setTypeFilter(type); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       typeFilter === type
                         ? 'bg-[#2B5D3A] text-white'
@@ -106,7 +111,7 @@ const ExpertSystem = () => {
                 {statuses.map(status => (
                   <button
                     key={status}
-                    onClick={() => setStatusFilter(status)}
+                    onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       statusFilter === status
                         ? 'bg-[#2B5D3A] text-white'
@@ -125,7 +130,7 @@ const ExpertSystem = () => {
               type="text"
               placeholder="搜索案例编号、标题、作物或专家..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -150,7 +155,7 @@ const ExpertSystem = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => {
+            {paginatedData.map((item) => {
               const statusBadge = getStatusBadge(item.status)
               return (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -210,11 +215,30 @@ const ExpertSystem = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
 

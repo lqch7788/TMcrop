@@ -1,9 +1,9 @@
 /**
- * 智能控制中心 — 从 V1.3 100% 一致复制，path 适配 V1.1
+ * 智能控制中心 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Thermometer, Droplets, Sun, Wind, Zap, Radio, ChevronLeft, ChevronRight, Home, ArrowLeft } from 'lucide-react';
+import { Settings, Thermometer, Droplets, Sun, Wind, Zap, Radio, Home, Download, CheckCircle, AlertTriangle, Clock, Power } from 'lucide-react';
 
 const controlStats = [
   { label: '温室控制器', value: 48, unit: '台', icon: Thermometer, color: 'from-red-500 to-orange-500' },
@@ -26,45 +26,46 @@ const deviceStatus = [
 export default function ControlCenter() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
-  const totalPages = Math.ceil(deviceStatus.length / pageSize);
+  const [pageSize, setPageSize] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(deviceStatus.length / pageSize));
   const paginatedData = deviceStatus.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  // 状态徽章：与订单管理风格一致
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      '运行中': 'bg-green-100 text-green-700',
-      '告警': 'bg-red-100 text-red-700',
-      '待机': 'bg-gray-100 text-gray-600',
-      '离线': 'bg-gray-100 text-gray-500',
-    };
-    return styles[status] || 'bg-gray-100 text-gray-600';
+    switch (status) {
+      case '运行中': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
+      case '告警': return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertTriangle className="w-3 h-3" /> };
+      case '待机': return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> };
+      case '离线': return { bg: 'bg-gray-100', text: 'text-gray-500', icon: <Power className="w-3 h-3" /> };
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> };
+    }
   };
 
   return (
     <div className="p-6 space-y-6">
+      {/* 页面标题 — 与订单管理风格一致 */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="p-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Settings className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">智能控制中心</h1>
-              <p className="text-gray-500">温室环境与灌溉施肥设备智能控制</p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">智能控制中心</h1>
+          <p className="text-gray-500 mt-1">温室环境与灌溉施肥设备智能控制</p>
         </div>
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-50 rounded-lg transition-colors">
-          <Home className="w-5 h-5" /><span className="text-sm font-medium">返回主页</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Download className="w-4 h-4" /> 导出
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" /> 返回主页
+          </button>
+        </div>
       </div>
 
+      {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {controlStats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl p-4 shadow-sm">
+          <div key={stat.label} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
                 <stat.icon className="w-5 h-5 text-white" />
@@ -78,56 +79,104 @@ export default function ControlCenter() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200"><h3 className="text-lg font-semibold text-gray-900">控制器状态概览</h3></div>
+      {/* 控制器状态表格 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-gray-900">控制器状态概览</h3>
+        </div>
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备编号</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备名称</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">设备类型</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">所属基地</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">主要参数</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备编号</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备名称</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备类型</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">所属基地</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">状态</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">主要参数</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {paginatedData.map((device) => (
-              <tr key={device.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{device.id}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{device.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{device.type}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{device.base}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(device.status)}`}>{device.status}</span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {'temp' in device && `温度${device.temp}°C`}
-                  {'humidity' in device && `湿度${device.humidity}%`}
-                  {'flow' in device && `流量${device.flow}L/h`}
-                  {'pressure' in device && `压力${device.pressure}MPa`}
-                  {'ec' in device && `EC${device.ec}`}
-                  {'ph' in device && `pH${device.ph}`}
-                  {'linked' in device && `联动${device.linked}台`}
-                </td>
-              </tr>
-            ))}
+            {paginatedData.map((device) => {
+              const badge = getStatusBadge(device.status);
+              return (
+                <tr key={device.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{device.id}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{device.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{device.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{device.base}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badge.bg} ${badge.text}`}>
+                      {badge.icon}
+                      {device.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {'temp' in device && `温度${device.temp}°C`}
+                    {'humidity' in device && `湿度${device.humidity}%`}
+                    {'flow' in device && `流量${device.flow}L/h`}
+                    {'pressure' in device && `压力${device.pressure}MPa`}
+                    {'ec' in device && `EC${device.ec}`}
+                    {'ph' in device && `pH${device.ph}`}
+                    {'linked' in device && `联动${device.linked}台`}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+
+        {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-          <div className="text-sm text-gray-500">共 {deviceStatus.length} 条记录，第 {currentPage}/{totalPages} 页</div>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-500">共 {deviceStatus.length} 条记录</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">每页</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+              >
+                <option value={5}>5 条</option>
+                <option value={10}>10 条</option>
+                <option value={20}>20 条</option>
+                <option value={50}>50 条</option>
+              </select>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"><ChevronLeft className="w-4 h-4" /></button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-9 h-9 rounded-lg text-sm font-medium ${currentPage === i + 1 ? 'bg-emerald-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{i + 1}</button>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              上一页
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1 rounded text-sm ${
+                  currentPage === page
+                    ? 'bg-[#2B5D3A] text-white'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
             ))}
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"><ChevronRight className="w-4 h-4" /></button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              下一页
+            </button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">快速操作</h3>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => navigate('/smart-greenhouse')} className="p-4 rounded-lg border border-gray-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors text-left">
@@ -153,7 +202,7 @@ export default function ControlCenter() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">系统状态</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">

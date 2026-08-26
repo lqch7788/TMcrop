@@ -17,6 +17,9 @@ const MarketSales = () => {
   const [overview, setOverview] = useState<SalesOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 近期订单表格分页
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 组件挂载时拉取销售总览
   useEffect(() => {
@@ -77,6 +80,20 @@ const MarketSales = () => {
 
   // 近期订单数据（API recentOrders 字段，类型 Order[]）
   const recentOrders = overview?.recentOrders ?? []
+
+  // 搜索过滤（按订单号/客户名）
+  const filteredRecentOrders = recentOrders.filter(o => {
+    if (!searchKeyword) return true
+    const kw = searchKeyword.toLowerCase()
+    return (
+      o.orderNo.toLowerCase().includes(kw) ||
+      o.customer.toLowerCase().includes(kw)
+    )
+  })
+
+  // 分页派生
+  const totalPages = Math.max(1, Math.ceil(filteredRecentOrders.length / pageSize))
+  const paginatedRecentOrders = filteredRecentOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // 加载中
   if (loading) {
@@ -219,7 +236,7 @@ const MarketSales = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {recentOrders.map((order) => (
+            {paginatedRecentOrders.map((order) => (
               <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 text-sm text-gray-600 font-mono">{order.orderNo}</td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{order.customer}</td>
@@ -253,11 +270,35 @@ const MarketSales = () => {
           </tbody>
         </table>
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-          <p className="text-sm text-gray-500">共 {recentOrders.length} 条记录</p>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-            <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-            <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+            <p className="text-sm text-gray-500">共 {filteredRecentOrders.length} 条记录</p>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+              className="ml-3 px-2 py-1 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条/页</option>
+              <option value={20}>20 条/页</option>
+              <option value={50}>50 条/页</option>
+              <option value={100}>100 条/页</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              上一页
+            </button>
+            <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">{currentPage}</button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              下一页
+            </button>
           </div>
         </div>
       </div>

@@ -8,6 +8,8 @@ const GrowthAnalysis = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [cropFilter, setCropFilter] = useState('全部')
   const [statusFilter, setStatusFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const analyses = [
     { id: '1', reportNo: 'GA202403001', crop: '番茄', cropArea: 'A区-1号温室', growthStage: '开花期', healthScore: 92, growthTrend: '上升', vsLastWeek: 5.2, vsLastMonth: 12.8, analyzeTime: '2024-03-20 09:00', operator: '张建国', status: '正常', remark: '生长势头良好' },
@@ -36,6 +38,9 @@ const GrowthAnalysis = () => {
     return matchesCrop && matchesStatus && matchesSearch
   })
 
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case '上升': return <TrendingUp className="w-4 h-4 text-green-500" />
@@ -54,10 +59,10 @@ const GrowthAnalysis = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case '正常': return { bg: 'bg-green-100', text: 'text-green-700' }
-      case '关注': return { bg: 'bg-yellow-100', text: 'text-yellow-700' }
-      case '预警': return { bg: 'bg-red-100', text: 'text-red-700' }
-      default: return { bg: 'bg-gray-100', text: 'text-gray-600' }
+      case '正常': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> }
+      case '关注': return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock className="w-3 h-3" /> }
+      case '预警': return { bg: 'bg-red-100', text: 'text-red-700', icon: <Clock className="w-3 h-3" /> }
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> }
     }
   }
 
@@ -104,7 +109,7 @@ const GrowthAnalysis = () => {
                 {crops.map(crop => (
                   <button
                     key={crop}
-                    onClick={() => setCropFilter(crop)}
+                    onClick={() => { setCropFilter(crop); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       cropFilter === crop
                         ? 'bg-[#2B5D3A] text-white'
@@ -122,7 +127,7 @@ const GrowthAnalysis = () => {
                 {statuses.map(status => (
                   <button
                     key={status}
-                    onClick={() => setStatusFilter(status)}
+                    onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       statusFilter === status
                         ? 'bg-[#2B5D3A] text-white'
@@ -141,7 +146,7 @@ const GrowthAnalysis = () => {
               type="text"
               placeholder="搜索报告编号、作物或区域..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -167,7 +172,7 @@ const GrowthAnalysis = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => {
+            {paginatedData.map((item) => {
               const statusBadge = getStatusBadge(item.status)
               return (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -210,7 +215,8 @@ const GrowthAnalysis = () => {
                   <td className="px-4 py-3 text-sm text-gray-600">{item.analyzeTime}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.operator}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+                      {statusBadge.icon}
                       {item.status}
                     </span>
                   </td>
@@ -243,11 +249,30 @@ const GrowthAnalysis = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
 
