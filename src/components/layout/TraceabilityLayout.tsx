@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import SmartSidebar from './SmartSidebar';
+import TraceabilitySidebar from './TraceabilitySidebar';
 import { GlobalTopBar } from './GlobalTopBar';
 
 /**
- * 智能控制系统布局 — 与 IoTLayout 同一模式
+ * 溯源管理系统布局 — 与 IoTLayout/SmartLayout 同模式
  * - Header: top-12, h-12 — 与 V1.1 主 Header 对齐
  * - Sidebar: top-12, w-16/w-52 — 与 V1.1 主 Sidebar 对齐
  */
-export default function SmartLayout({ children }: { children: React.ReactNode }) {
+export default function TraceabilityLayout({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
   const sidebarWidth = sidebarCollapsed ? 64 : 208;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SmartSidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <TraceabilitySidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       <header
         className="fixed top-0 left-0 right-0 z-30 h-12 bg-[var(--header-bg,#ffffff)] border-b border-gray-200"

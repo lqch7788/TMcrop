@@ -1,0 +1,208 @@
+/**
+ * 顶部栏 - 与 V1.1 Header 一致（移植到专用布局）
+ * 7 个专用系统（IoT/Smart/Traceability/BigData/AI/Management/Market）的 Layout 复用
+ * 移除了 sticky 定位（由父级 Layout 控制）
+ */
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Bell, ChevronDown, LogOut, User, Settings, Home, ClipboardList, ListTodo
+} from 'lucide-react';
+import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
+import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
+
+const styles = `
+  @keyframes bellRing {
+    0%, 100% { color: #374151; }
+    50% { color: #ef4444; }
+  }
+  .bell-ringing {
+    animation: bellRing 1s ease-in-out infinite;
+  }
+`;
+
+export function GlobalTopBar() {
+  const navigate = useNavigate();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isBellRinging, setIsBellRinging] = useState(false);
+
+  // ★ V3.0 Phase 1: 系统名称从DB动态读取（兜底值保持原硬编码名称）
+  const systemName = useSystemConfigValue('system.name', '弘讯智能种植云');
+
+  // 从 Zustand Store 获取公告数据
+  const announcements = useAnnouncementStore((s) => s.announcements);
+  const fetchAnnouncements = useAnnouncementStore((s) => s.fetchAnnouncements);
+
+  useEffect(() => {
+    if (announcements.length === 0) {
+      fetchAnnouncements();
+    }
+  }, []);
+
+  const recentNotices = announcements.slice(0, 5).map(a => ({
+    id: a.id,
+    title: a.title,
+    content: a.content || '',
+    sendTime: a.create_time || a.date || '',
+    type: a.type || 'notice',
+    isRead: a.status === '已发布',
+  }));
+
+  const unreadCount = announcements.filter(a => a.status !== '已发布').length;
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('username');
+    setShowUserMenu(false);
+    navigate('/');
+  };
+
+  useEffect(() => {
+    if (unreadCount > 0) {
+      setIsBellRinging(true);
+    } else {
+      setIsBellRinging(false);
+    }
+  }, [unreadCount]);
+
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="flex items-center justify-between h-full pl-2">
+        {/* Left section */}
+        <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <img
+              src="/弘智耘LOGO.png"
+              alt="弘智耘Logo"
+              className="h-8 w-auto"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="text-base font-semibold text-gray-900">{systemName}</span>
+              <span className="text-[10px] text-gray-500">Techmation Intelligent Crop Cloud</span>
+            </div>
+            <button
+              onClick={() => navigate('/')}
+              className="ml-3 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
+              title="返回主页"
+            >
+              <Home className="w-5 h-5 text-emerald-600" />
+            </button>
+            <button
+              onClick={() => navigate('/park-archive')}
+              className="ml-2 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline"
+              title="返回园区总览"
+            >
+              宁波北仑基地 &gt;&gt;
+            </button>
+          </div>
+        </div>
+
+        {/* Right section */}
+        <div className="flex items-center gap-2 lg:gap-4">
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Bell className={`w-5 h-5 ${isBellRinging ? 'bell-ringing' : 'text-gray-600'}`} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h3 className="font-semibold text-gray-900">消息通知</h3>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {recentNotices.map((msg) => (
+                    <Link
+                      key={msg.id}
+                      to="/messages"
+                      onClick={() => setShowNotifications(false)}
+                      className={`block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 ${
+                        !msg.isRead ? 'bg-emerald-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
+                          msg.type === 'alert' ? 'bg-red-500' :
+                          msg.type === 'approval' ? 'bg-blue-500' :
+                          msg.type === 'task' ? 'bg-emerald-500' : 'bg-gray-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{msg.title}</p>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">{msg.content}</p>
+                          <p className="text-xs text-gray-400 mt-1">{msg.sendTime}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <Link
+                  to="/messages"
+                  onClick={() => setShowNotifications(false)}
+                  className="block px-4 py-3 text-center text-sm text-emerald-600 hover:bg-gray-50 font-medium"
+                >
+                  查看全部消息
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* User Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-medium">
+                LQC
+              </div>
+              <span className="hidden md:block text-sm font-medium text-gray-700">陆启闯</span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="font-medium text-gray-900">陆启闯</p>
+                  <p className="text-sm text-gray-500">经理 · 生产部 · 宁波帮帮忙公司</p>
+                </div>
+                <div className="py-1">
+                  <Link to="/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <User className="w-4 h-4" />个人中心
+                  </Link>
+                  <Link to="/my-tasks" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <ListTodo className="w-4 h-4" />我的任务
+                  </Link>
+                  <Link to="/messages" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <Bell className="w-4 h-4" />消息中心
+                  </Link>
+                  <Link to="/my-applications" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <ClipboardList className="w-4 h-4" />我的申请
+                  </Link>
+                  <Link to="/settings" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <Settings className="w-4 h-4" />系统设置
+                  </Link>
+                  <hr className="my-1" />
+                  <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full">
+                    <LogOut className="w-4 h-4" />退出登录
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default GlobalTopBar;
