@@ -127,7 +127,7 @@ export default function HomePage() {
       description: t.dataAnalysisDesc,
       color: 'bg-gradient-to-br from-blue-500 to-cyan-600',
       gradient: 'bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-600',
-      onClick: () => navigate('/reports'),
+      onClick: () => navigate('/bigdata/analysis'),
     },
     {
       icon: <GraduationCap className="w-8 h-8 text-white" />,
@@ -135,7 +135,7 @@ export default function HomePage() {
       description: t.expertAIDesc,
       color: 'bg-gradient-to-br from-amber-500 to-orange-600',
       gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
-      onClick: () => navigate('/tech-solution'),
+      onClick: () => navigate('/ai/expert'),
     },
     {
       icon: <Video className="w-8 h-8 text-white" />,
@@ -143,7 +143,7 @@ export default function HomePage() {
       description: t.costAccountingDesc,
       color: 'bg-gradient-to-br from-purple-500 to-indigo-600',
       gradient: 'bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-600',
-      onClick: () => navigate('/device-monitor'),
+      onClick: () => navigate('/manage/cost'),
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-white" />,
@@ -151,7 +151,7 @@ export default function HomePage() {
       description: t.marketSalesDesc,
       color: 'bg-gradient-to-br from-pink-500 to-rose-600',
       gradient: 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600',
-      onClick: () => navigate('/market-sales'),
+      onClick: () => navigate('/market/order'),
     },
   ];
 

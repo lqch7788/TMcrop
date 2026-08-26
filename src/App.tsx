@@ -77,6 +77,53 @@ import SmartLinkage from './pages/smart/LinkageControl';
 import SmartStrategy from './pages/smart/ControlStrategy';
 import SmartLog from './pages/smart/ControlLog';
 
+// 溯源管理系统 - 从 V1.3 复制的子页面（Traceability 布局专用）
+import TraceabilityLayout from './components/layout/TraceabilityLayout';
+import TraceabilityPage from './pages/traceability/Traceability';
+import PlantingArchive from './pages/traceability/PlantingArchive';
+import ProcessingArchive from './pages/traceability/ProcessingArchive';
+import CirculationTrace from './pages/traceability/CirculationTrace';
+import TraceCode from './pages/traceability/TraceCode';
+import ConsumerQuery from './pages/traceability/ConsumerQuery';
+
+// 大数据分析系统 - 从 V1.3 复制的子页面（BigData 布局专用）
+import BigDataLayout from './components/layout/BigDataLayout';
+import DataAnalysis from './pages/analysis/DataAnalysis';
+import AnalysisModel from './pages/analysis/AnalysisModel';
+import YieldPrediction from './pages/analysis/YieldPrediction';
+import TrendAnalysis from './pages/analysis/TrendAnalysis';
+import DecisionSupport from './pages/analysis/DecisionSupport';
+import EnvironmentAnalysis from './pages/analysis/EnvironmentAnalysis';
+import BigDataCostAnalysis from './pages/analysis/CostAnalysis';
+import BenefitAnalysis from './pages/analysis/BenefitAnalysis';
+
+// AI/专家诊断系统 - 从 V1.3 复制的子页面（AI 布局专用）
+import AILayout from './components/layout/AILayout';
+import PestIdentify from './pages/diagnosis/PestIdentify';
+import GrowthAnalysis from './pages/diagnosis/GrowthAnalysis';
+import ExpertSystem from './pages/diagnosis/ExpertSystem';
+import TreatmentRecommend from './pages/diagnosis/TreatmentRecommend';
+import OnlineConsult from './pages/diagnosis/OnlineConsult';
+import KnowledgeBase from './pages/diagnosis/KnowledgeBase';
+
+// 经营核算系统 - 从 V1.3 复制的子页面（Management 布局专用）
+import ManagementLayout from './components/layout/ManagementLayout';
+import CostAccounting from './pages/business/CostAccounting';
+import IncomeManagement from './pages/business/IncomeManagement';
+import FinancialAnalysisPage from './pages/business/FinancialAnalysis';
+import InputOutputAnalysis from './pages/business/InputOutputAnalysis';
+import OperationReport from './pages/business/OperationReport';
+
+// 销售协同系统 - 从 V1.3 sales 复制的子页面（Market 布局专用）
+import MarketLayout from './components/layout/MarketLayout';
+import MarketSales from './pages/market/MarketSales';
+import OrderManagement from './pages/market/OrderManagement';
+import CustomerManagement from './pages/market/CustomerManagement';
+import PriceMonitoring from './pages/market/PriceMonitoring';
+import SalesChannel from './pages/market/SalesChannel';
+import MarketTrend from './pages/market/MarketTrend';
+import SalesStatistics from './pages/market/SalesStatistics';
+
 import CodeRule from './pages/CodeRule';
 import TechSolution from './pages/TechSolution';
 import PurchasePlan from './pages/PurchasePlan';
@@ -222,6 +269,32 @@ function AppContent() {
     location.pathname === '/smart-strategy' ||
     location.pathname === '/smart-log';
 
+  // 溯源管理系统路由（使用专用 Traceability 布局：左侧 TraceabilitySidebar + 顶部 Header）
+  // 从 V1.3 复制：产品溯源档案/种植/加工/流通/追溯码/消费者查询 6 子项
+  const isTraceRoute =
+    location.pathname === '/traceability' ||
+    location.pathname.startsWith('/traceability/');
+
+  // 大数据分析系统路由（使用专用 BigData 布局：左侧 BigDataSidebar + 顶部 Header）
+  // 从 V1.3 复制：数据分析/分析模型/产量预测/趋势分析/决策支持/环境分析/成本分析/效益分析 8 子项
+  const isBigDataRoute =
+    location.pathname.startsWith('/bigdata/');
+
+  // AI/专家诊断系统路由（使用专用 AI 布局：左侧 AIDiagnosisSidebar + 顶部 Header）
+  // 从 V1.3 复制：病虫害识别/长势分析/专家系统/防治推荐/在线咨询/知识库 6 子项
+  const isAiRoute =
+    location.pathname.startsWith('/ai/');
+
+  // 经营核算系统路由（使用专用 Management 布局：左侧 ManagementSidebar + 顶部 Header）
+  // 从 V1.3 复制：成本核算/收入管理/财务分析/投入产出分析/经营报表 5 子项
+  const isManagementRoute =
+    location.pathname.startsWith('/manage/');
+
+  // 销售协同系统路由（使用专用 Market 布局：左侧 MarketSidebar + 顶部 Header）
+  // 从 V1.3 复制：订单管理/客户管理/价格监测/销售渠道/市场行情/销售统计 6 子项
+  const isMarketRoute =
+    location.pathname.startsWith('/market/');
+
   // 主页和登录页独立显示，不带侧边栏
   if (isHomePage) {
     return <HomePage />;
@@ -275,6 +348,98 @@ function AppContent() {
           </Routes>
         </Suspense>
       </SmartLayout>
+    );
+  }
+
+  // 溯源管理系统走 Traceability 专用布局（从 V1.3 100% 一致复制）
+  if (isTraceRoute) {
+    return (
+      <TraceabilityLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/traceability" element={<TraceabilityPage />} />
+            <Route path="/traceability/planting" element={<PlantingArchive />} />
+            <Route path="/traceability/processing" element={<ProcessingArchive />} />
+            <Route path="/traceability/circulation" element={<CirculationTrace />} />
+            <Route path="/traceability/code" element={<TraceCode />} />
+            <Route path="/traceability/consumer" element={<ConsumerQuery />} />
+          </Routes>
+        </Suspense>
+      </TraceabilityLayout>
+    );
+  }
+
+  // 大数据分析系统走 BigData 专用布局（从 V1.3 100% 一致复制）
+  if (isBigDataRoute) {
+    return (
+      <BigDataLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/bigdata/analysis" element={<DataAnalysis />} />
+            <Route path="/bigdata/model" element={<AnalysisModel />} />
+            <Route path="/bigdata/yield" element={<YieldPrediction />} />
+            <Route path="/bigdata/trend" element={<TrendAnalysis />} />
+            <Route path="/bigdata/decision" element={<DecisionSupport />} />
+            <Route path="/bigdata/environment" element={<EnvironmentAnalysis />} />
+            <Route path="/bigdata/cost" element={<BigDataCostAnalysis />} />
+            <Route path="/bigdata/benefit" element={<BenefitAnalysis />} />
+          </Routes>
+        </Suspense>
+      </BigDataLayout>
+    );
+  }
+
+  // AI/专家诊断系统走 AI 专用布局（从 V1.3 100% 一致复制）
+  if (isAiRoute) {
+    return (
+      <AILayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/ai/pest" element={<PestIdentify />} />
+            <Route path="/ai/growth" element={<GrowthAnalysis />} />
+            <Route path="/ai/expert" element={<ExpertSystem />} />
+            <Route path="/ai/prevention" element={<TreatmentRecommend />} />
+            <Route path="/ai/consult" element={<OnlineConsult />} />
+            <Route path="/ai/knowledge" element={<KnowledgeBase />} />
+          </Routes>
+        </Suspense>
+      </AILayout>
+    );
+  }
+
+  // 经营核算系统走 Management 专用布局（从 V1.3 100% 一致复制）
+  if (isManagementRoute) {
+    return (
+      <ManagementLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/manage/cost" element={<CostAccounting />} />
+            <Route path="/manage/income" element={<IncomeManagement />} />
+            <Route path="/manage/financial" element={<FinancialAnalysisPage />} />
+            <Route path="/manage/input-output" element={<InputOutputAnalysis />} />
+            <Route path="/manage/report" element={<OperationReport />} />
+          </Routes>
+        </Suspense>
+      </ManagementLayout>
+    );
+  }
+
+  // 销售协同系统走 Market 专用布局（从 V1.3 100% 一致复制）
+  if (isMarketRoute) {
+    return (
+      <MarketLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/market/order" element={<OrderManagement />} />
+            <Route path="/market/customer" element={<CustomerManagement />} />
+            <Route path="/market/price" element={<PriceMonitoring />} />
+            <Route path="/market/channel" element={<SalesChannel />} />
+            <Route path="/market/trend" element={<MarketTrend />} />
+            <Route path="/market/statistics" element={<SalesStatistics />} />
+            <Route path="/market/sales" element={<MarketSales />} />
+          </Routes>
+        </Suspense>
+      </MarketLayout>
     );
   }
 
@@ -356,7 +521,7 @@ function AppContent() {
           {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}
           <Route path="/daily-problem-summary" element={<Navigate to="/summary/problems" replace />} />
           <Route path="/plan-summary" element={<Navigate to="/summary/batch" replace />} />
-          <Route path="/reports" element={<Navigate to="/summary/overview" replace />} />
+          <Route path="/reports" element={<Navigate to="/bigdata/analysis" replace />} />
           <Route path="/worker-attendance" element={<WorkerAttendance />} />
           <Route path="/work-log" element={<WorkLog />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />

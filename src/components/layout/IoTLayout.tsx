@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import IoTSidebar from './IoTSidebar';
+import { GlobalTopBar } from './GlobalTopBar';
 
 /**
  * 智能环境监测系统布局
@@ -20,27 +21,9 @@ export default function IoTLayout({ children }: { children: React.ReactNode }) {
 
       {/* 顶部 Header — 与 V1.1 主 Header 同位置 (top-0, h-12)，所以 sidebar 从 top-12 开始 */}
       <header
-        className="fixed top-0 right-0 z-30 h-12 bg-[var(--header-bg,#ffffff)] border-b border-gray-200 flex items-center justify-between px-6"
-        style={{ left: sidebarWidth, transition: 'left 0.3s ease-in-out' }}
+        className="fixed top-0 left-0 right-0 z-30 h-12 bg-[var(--header-bg,#ffffff)] border-b border-gray-200"
       >
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-700 font-medium">智能环境监测系统</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (window.confirm('确认退出登录？')) {
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('currentUser');
-                window.location.href = '/login';
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#F34065] hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogoutIcon />
-            <span>退出登录</span>
-          </button>
-        </div>
+        <GlobalTopBar />
       </header>
 
       {/* 右侧内容区：用 inline marginLeft 避开固定 Sidebar */}

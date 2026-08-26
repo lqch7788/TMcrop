@@ -66,7 +66,7 @@ const laborSubItems = [
 // 生产汇总表 V1.1 - 5页面（TAB合并）
 const summarySubItems = [
   { icon: LayoutDashboard, label: '汇总看板', path: '/summary/overview' },
-  { icon: TrendingUp, label: '经营分析', path: '/summary/business-analysis' },
+  { icon: TrendingUp, label: '经营分析', path: '/bigdata/analysis' },
   { icon: Layers, label: '批次管理', path: '/summary/batch-management' },
   { icon: AlertTriangle, label: '问题汇总', path: '/summary/problems' },
   { icon: Gauge, label: '指标看板', path: '/summary/indicators' },
