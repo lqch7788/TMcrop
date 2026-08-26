@@ -56,6 +56,27 @@ import AlertInfo from './pages/AlertInfo';
 import Indicators from './pages/Indicators';
 import Announcement from './pages/Announcement';
 
+// 物联网监控系统 - 从 V1.3 复制的子页面（IoT 布局专用）
+import IoTLayout from './components/layout/IoTLayout';
+import EnvMonitoring from './pages/iot/EnvMonitoring';
+import SoilWater from './pages/iot/SoilWater';
+import WeatherMonitoring from './pages/iot/WeatherMonitoring';
+import EnergyMonitoring from './pages/iot/EnergyMonitoring';
+import HistoryData from './pages/iot/HistoryData';
+import MonitoringConfig from './pages/iot/MonitoringConfig';
+import VideoMonitor from './pages/video/VideoMonitor';
+import VideoPlayback from './pages/video/VideoPlayback';
+
+// 智能控制系统 - 从 V1.3 复制的子页面（Smart 布局专用）
+import SmartLayout from './components/layout/SmartLayout';
+import SmartCenter from './pages/smart/ControlCenter';
+import SmartGreenhouse from './pages/smart/GreenhouseControl';
+import SmartIrrigation from './pages/smart/IrrigationControl';
+import SmartFertilizer from './pages/smart/FertilizerControl';
+import SmartLinkage from './pages/smart/LinkageControl';
+import SmartStrategy from './pages/smart/ControlStrategy';
+import SmartLog from './pages/smart/ControlLog';
+
 import CodeRule from './pages/CodeRule';
 import TechSolution from './pages/TechSolution';
 import PurchasePlan from './pages/PurchasePlan';
@@ -179,6 +200,28 @@ function AppContent() {
   const isProfilePage = location.pathname === '/profile';
   const isSettingsPage = location.pathname.startsWith('/settings');
 
+  // 物联网监控系统路由（使用专用 IoT 布局：左侧 IoTSidebar + 顶部 Header）
+  // 从 V1.3 复制：包括物联网监控/环境监控/视频监控三大模块
+  const isIoTRoute =
+    location.pathname === '/environment-monitor' ||
+    location.pathname === '/iot-monitor' ||
+    location.pathname === '/device-monitor' ||
+    location.pathname === '/alert-info' ||
+    location.pathname.startsWith('/iot/') ||
+    location.pathname.startsWith('/video/');
+
+  // 智能控制系统路由（使用专用 Smart 布局：左侧 SmartSidebar + 顶部 Header）
+  // 从 V1.3 复制：控制中心/温室/灌溉/施肥/联动/策略/日志 7 子项 + V1.1 原生环控策略管理
+  const isSmartRoute =
+    location.pathname === '/env-control' ||
+    location.pathname === '/smart-center' ||
+    location.pathname === '/smart-greenhouse' ||
+    location.pathname === '/smart-irrigation' ||
+    location.pathname === '/smart-fertilizer' ||
+    location.pathname === '/smart-linkage' ||
+    location.pathname === '/smart-strategy' ||
+    location.pathname === '/smart-log';
+
   // 主页和登录页独立显示，不带侧边栏
   if (isHomePage) {
     return <HomePage />;
@@ -186,6 +229,53 @@ function AppContent() {
 
   if (isLoginPage) {
     return <Login />;
+  }
+
+  // 物联网监控系统走 IoT 专用布局（从 V1.3 100% 一致复制）
+  if (isIoTRoute) {
+    return (
+      <IoTLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* 物联网监控 */}
+            <Route path="/iot-monitor" element={<IoTMonitor />} />
+            <Route path="/device-monitor" element={<DeviceMonitor />} />
+            <Route path="/alert-info" element={<AlertInfo />} />
+            <Route path="/iot/env-monitoring" element={<EnvMonitoring />} />
+            <Route path="/iot/soil-water" element={<SoilWater />} />
+            <Route path="/iot/weather" element={<WeatherMonitoring />} />
+            <Route path="/iot/energy" element={<EnergyMonitoring />} />
+            <Route path="/iot/history" element={<HistoryData />} />
+            <Route path="/iot/config" element={<MonitoringConfig />} />
+            {/* 环境监控 */}
+            <Route path="/environment-monitor" element={<EnvironmentMonitor />} />
+            {/* 视频监控 */}
+            <Route path="/video/monitor" element={<VideoMonitor />} />
+            <Route path="/video/playback" element={<VideoPlayback />} />
+          </Routes>
+        </Suspense>
+      </IoTLayout>
+    );
+  }
+
+  // 智能控制系统走 Smart 专用布局（从 V1.3 100% 一致复制）
+  if (isSmartRoute) {
+    return (
+      <SmartLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/env-control" element={<EnvControl />} />
+            <Route path="/smart-center" element={<SmartCenter />} />
+            <Route path="/smart-greenhouse" element={<SmartGreenhouse />} />
+            <Route path="/smart-irrigation" element={<SmartIrrigation />} />
+            <Route path="/smart-fertilizer" element={<SmartFertilizer />} />
+            <Route path="/smart-linkage" element={<SmartLinkage />} />
+            <Route path="/smart-strategy" element={<SmartStrategy />} />
+            <Route path="/smart-log" element={<SmartLog />} />
+          </Routes>
+        </Suspense>
+      </SmartLayout>
+    );
   }
 
   // 个人中心和系统设置页面只显示Header，不显示侧边栏

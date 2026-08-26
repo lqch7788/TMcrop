@@ -12,7 +12,8 @@ import {
   Leaf, Flower2, Trees,
   DollarSign, Layers, Link as LinkIcon,
   Bug,
-  FileDown
+  FileDown,
+  Zap
 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 
@@ -24,6 +25,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { icon: Zap, label: '智能控制', path: '/smart-center', category: 'smart' },
   { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
   { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
