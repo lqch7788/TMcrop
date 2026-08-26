@@ -8,6 +8,8 @@ const CustomerManagement = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [typeFilter, setTypeFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 客户数据 - 从 API 加载
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -67,6 +69,9 @@ const CustomerManagement = () => {
       customer.contact.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesType && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize))
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleView = (item: Customer) => {
     setSelectedCustomer(item)
@@ -154,7 +159,7 @@ const CustomerManagement = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredCustomers.map((customer) => {
+            {paginatedCustomers.map((customer) => {
               const creditBadge = getCreditBadge(customer.creditLevel)
               return (
                 <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
@@ -222,7 +227,7 @@ const CustomerManagement = () => {
           </div>
         )}
 
-        {!loading && !loadError && filteredCustomers.length === 0 && (
+        {!loading && !loadError && paginatedCustomers.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无数据</p>
@@ -232,11 +237,35 @@ const CustomerManagement = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredCustomers.length} 条记录</p>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <p className="text-sm text-gray-500">共 {filteredCustomers.length} 条记录</p>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+            className="ml-3 px-2 py-1 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+          >
+            <option value={10}>10 条</option>
+            <option value={20}>20 条</option>
+            <option value={50}>50 条</option>
+            <option value={100}>100 条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">{currentPage}</button>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
         </div>
       </div>
 

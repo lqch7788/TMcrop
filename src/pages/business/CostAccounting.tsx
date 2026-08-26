@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Download, Eye, Edit, Trash2, Wallet, Sprout, Users, Zap, Package } from 'lucide-react'
 
 const CostAccounting = () => {
@@ -7,6 +7,8 @@ const CostAccounting = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [cropFilter, setCropFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 成本核算数据（基于提供的成本参考数据）
   const costData = [
@@ -31,6 +33,15 @@ const CostAccounting = () => {
       item.recorder.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesCrop && matchesSearch
   })
+
+  // 筛选条件变化时重置分页到第 1 页
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [cropFilter, searchKeyword])
+
+  // 分页派生
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', minimumFractionDigits: 0 }).format(value)
@@ -102,7 +113,7 @@ const CostAccounting = () => {
               ))}
             </div>
           </div>
-          <div className="relative min-w-[250px]">
+          <div className="relative min-w-[280px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -134,7 +145,7 @@ const CostAccounting = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => (
+            {paginatedData.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -190,13 +201,39 @@ const CostAccounting = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+              className="border border-gray-200 rounded text-sm px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+            <span className="text-sm text-gray-500">条</span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             上一页
           </button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">
+          <span className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">
+            第 {currentPage} / {totalPages} 页
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             下一页
           </button>
         </div>

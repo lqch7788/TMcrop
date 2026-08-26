@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Plus, Download, Edit, Trash2, Eye, MessageCircle, Send, Phone, User, Clock, Image } from 'lucide-react'
+import { Search, Plus, Download, Edit, Trash2, Eye, MessageCircle, Send, Phone, User, Clock, Image, Calendar, CheckCircle } from 'lucide-react'
 
 // 在线咨询数据
 const consultData = [
@@ -17,12 +17,16 @@ const consultData = [
 
 const crops = ['番茄', '黄瓜', '辣椒', '茄子', '草莓', '生菜', '西瓜', '葡萄']
 const experts = ['张建国', '李秀英', '王志强', '赵红梅', '陈伟明', '周小燕', '吴海峰', '郑晓丽']
-const consultStatuses = ['待回复', '咨询中', '已回复']
+const consultStatuses = ['全部', '待回复', '咨询中', '已回复']
 
 const OnlineConsult = () => {
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'delete'>('view')
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [formData, setFormData] = useState({
     user: '', crop: '', problem: '', status: '', expert: ''
   })
@@ -72,12 +76,28 @@ const OnlineConsult = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case '待回复': return 'bg-yellow-100 text-yellow-700'
-      case '咨询中': return 'bg-blue-100 text-blue-700'
-      case '已回复': return 'bg-green-100 text-green-700'
-      default: return 'bg-gray-100 text-gray-700'
+      case '待回复': return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock className="w-3 h-3" /> }
+      case '咨询中': return { bg: 'bg-blue-100', text: 'text-blue-700', icon: <MessageCircle className="w-3 h-3" /> }
+      case '已回复': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> }
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> }
     }
   }
+
+  // 按搜索关键字 + 状态筛选
+  const filteredData = consultData.filter(item => {
+    const matchesStatus = statusFilter === '全部' || item.status === statusFilter
+    const kw = searchKeyword.toLowerCase()
+    const matchesSearch = !searchKeyword ||
+      item.consultNo.toLowerCase().includes(kw) ||
+      item.user.toLowerCase().includes(kw) ||
+      item.crop.toLowerCase().includes(kw) ||
+      item.problem.toLowerCase().includes(kw) ||
+      item.expert.toLowerCase().includes(kw)
+    return matchesStatus && matchesSearch
+  })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <div className="p-6">
@@ -103,114 +123,135 @@ const OnlineConsult = () => {
         </div>
       </div>
 
-      {/* 搜索栏 */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">咨询编号</label>
+      {/* 筛选区域 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">咨询状态：</span>
+            <div className="flex gap-2 flex-wrap">
+              {consultStatuses.map(status => (
+                <button
+                  key={status}
+                  onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    statusFilter === status
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="relative min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="请输入编号"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+              placeholder="搜索编号、用户、作物、问题或专家..."
+              value={searchKeyword}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {crops.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">咨询状态</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {consultStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">咨询专家</label>
-            <select className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
-              <option value="">全部</option>
-              {experts.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">咨询日期</label>
-            <input
-              type="date"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-3 mt-4">
-          <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors">
-            重置
-          </button>
-          <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm hover:bg-[#245038] transition-colors flex items-center gap-2">
-            <Search className="w-4 h-4" /> 搜索
-          </button>
         </div>
       </div>
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-slate-200">
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">咨询编号</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">咨询用户</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">作物</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">问题描述</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">咨询专家</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">咨询状态</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">创建时间</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">回复次数</th>
-                <th className="text-left py-4 px-4 text-sm font-medium text-gray-500">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {consultData.map((record) => (
-                <tr key={record.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-4 text-sm text-gray-800 font-medium">{record.consultNo}</td>
-                  <td className="py-3 px-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">咨询编号</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">咨询用户</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">作物</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">问题描述</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">咨询专家</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">咨询状态</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">创建时间</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">回复次数</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {paginatedData.map((record) => {
+              const statusBadge = getStatusBadge(record.status)
+              return (
+                <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.consultNo}</td>
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-800">{record.user}</span>
+                      <span className="text-sm font-medium text-gray-800">{record.user}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-800">{record.crop}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">{record.problem}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{record.expert}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusBadge(record.status)}`}>
+                  <td className="px-4 py-3 text-sm text-gray-800">{record.crop}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{record.problem}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.expert}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+                      {statusBadge.icon}
                       {record.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{record.createTime}</td>
-                  <td className="py-3 px-4 text-sm text-center">
+                  <td className="px-4 py-3 text-sm text-gray-600">{record.createTime}</td>
+                  <td className="px-4 py-3 text-sm text-center">
                     <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       {record.replyCount}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleView(record)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="查看">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleView(record)} className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors" title="查看">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleEdit(record)} className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors" title="编辑">
+                      <button onClick={() => handleEdit(record)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(record)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
+                      <button onClick={() => handleDelete(record)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              )
+            })}
+          </tbody>
+        </table>
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">暂无数据</p>
+          </div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
 
@@ -261,9 +302,14 @@ const OnlineConsult = () => {
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">咨询状态</label>
-                        <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusBadge(selectedRecord.status)}`}>
-                          {selectedRecord.status}
-                        </span>
+                        {(() => {
+                          const sb = getStatusBadge(selectedRecord.status)
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${sb.bg} ${sb.text}`}>
+                              {sb.icon}{selectedRecord.status}
+                            </span>
+                          )
+                        })()}
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">创建时间</label>

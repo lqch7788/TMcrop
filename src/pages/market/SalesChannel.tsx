@@ -11,6 +11,8 @@ const SalesChannel = () => {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 销售渠道数据 - 从 API 加载
   useEffect(() => {
@@ -61,6 +63,9 @@ const SalesChannel = () => {
       channel.code.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesType && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredChannels.length / pageSize))
+  const paginatedChannels = filteredChannels.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // 渠道销售占比统计
   const channelStats = [
@@ -206,7 +211,7 @@ const SalesChannel = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredChannels.map((channel) => (
+            {paginatedChannels.map((channel) => (
               <tr key={channel.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-gray-600 font-mono">{channel.code}</td>
                 <td className="px-4 py-3">
@@ -254,7 +259,7 @@ const SalesChannel = () => {
           </>
         )}
 
-        {filteredChannels.length === 0 && (
+        {paginatedChannels.length === 0 && !loading && !error && (
           <div className="text-center py-12">
             <Store className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无数据</p>
@@ -264,11 +269,35 @@ const SalesChannel = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredChannels.length} 条记录</p>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <p className="text-sm text-gray-500">共 {filteredChannels.length} 条记录</p>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+            className="ml-3 px-2 py-1 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+          >
+            <option value={10}>10 条</option>
+            <option value={20}>20 条</option>
+            <option value={50}>50 条</option>
+            <option value={100}>100 条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">{currentPage}</button>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
         </div>
       </div>
 

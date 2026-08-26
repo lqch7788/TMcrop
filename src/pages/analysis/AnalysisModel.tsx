@@ -7,6 +7,8 @@ const AnalysisModel = () => {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('view')
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [modelFilter, setModelFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const modelTypes = ['全部', '病虫害识别', '长势评估', '环境预测', '灌溉优化', '采收预测', '品质分级', '市场预测', '成本分析', '其他']
 
@@ -30,6 +32,10 @@ const AnalysisModel = () => {
       m.modelNo.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesType && matchesSearch
   })
+
+  // 分页派生
+  const totalPages = Math.max(1, Math.ceil(filteredModels.length / pageSize))
+  const paginatedModels = filteredModels.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -82,7 +88,7 @@ const AnalysisModel = () => {
               {modelTypes.map(type => (
                 <button
                   key={type}
-                  onClick={() => setModelFilter(type)}
+                  onClick={() => { setModelFilter(type); setCurrentPage(1); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     modelFilter === type
                       ? 'bg-[#2B5D3A] text-white'
@@ -94,13 +100,13 @@ const AnalysisModel = () => {
               ))}
             </div>
           </div>
-          <div className="relative min-w-[250px]">
+          <div className="relative min-w-[280px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="搜索模型名称或编号..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -123,7 +129,7 @@ const AnalysisModel = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredModels.map((model) => {
+            {paginatedModels.map((model) => {
               const statusBadge = getStatusBadge(model.status)
               return (
                 <tr key={model.id} className="hover:bg-gray-50 transition-colors">
@@ -195,13 +201,35 @@ const AnalysisModel = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredModels.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredModels.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             上一页
           </button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             下一页
           </button>
         </div>

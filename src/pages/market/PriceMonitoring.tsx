@@ -10,6 +10,8 @@ const PriceMonitoring = () => {
   const [prices, setPrices] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   // 价格监测数据 - 从 API 加载
   useEffect(() => {
@@ -64,6 +66,9 @@ const PriceMonitoring = () => {
       item.market.toLowerCase().includes(searchKeyword.toLowerCase())
     return matchesCategory && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleView = (item: Price) => {
     setSelectedPrice(item)
@@ -144,7 +149,7 @@ const PriceMonitoring = () => {
                   onClick={() => setCategoryFilter(cat)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     categoryFilter === cat
-                      ? 'bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0] text-white shadow-lg shadow-blue-500/20'
+                      ? 'bg-[#2B5D3A] text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
@@ -201,7 +206,7 @@ const PriceMonitoring = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {filteredData.map((item) => (
+            {paginatedData.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -253,7 +258,7 @@ const PriceMonitoring = () => {
           </>
         )}
 
-        {filteredData.length === 0 && (
+        {paginatedData.length === 0 && !loading && !error && (
           <div className="text-center py-12">
             <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无数据</p>
@@ -263,11 +268,35 @@ const PriceMonitoring = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+            className="ml-3 px-2 py-1 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+          >
+            <option value={10}>10 条</option>
+            <option value={20}>20 条</option>
+            <option value={50}>50 条</option>
+            <option value={100}>100 条</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">{currentPage}</button>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
         </div>
       </div>
 

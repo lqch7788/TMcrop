@@ -8,6 +8,9 @@ const PestIdentify = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [pestFilter, setPestFilter] = useState('全部')
   const [cropFilter, setCropFilter] = useState('全部')
+  const [resultFilter, setResultFilter] = useState('全部')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const pests = [
     { id: '1', recordNo: 'PI202403001', crop: '番茄', cropArea: 'A区-1号温室', pestName: '早疫病', pestType: '真菌性病害', confidence: 96.8, image: '叶片发黄', identifyTime: '2024-03-20 09:30', operator: '张建国', result: '已确认', remark: '早期发现，建议立即用药' },
@@ -29,12 +32,16 @@ const PestIdentify = () => {
   const filteredData = pests.filter(p => {
     const matchesPest = pestFilter === '全部' || p.pestName === pestFilter
     const matchesCrop = cropFilter === '全部' || p.crop === cropFilter
+    const matchesResult = resultFilter === '全部' || p.result === resultFilter
     const matchesSearch = !searchKeyword ||
       p.recordNo.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       p.pestName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       p.crop.toLowerCase().includes(searchKeyword.toLowerCase())
-    return matchesPest && matchesCrop && matchesSearch
+    return matchesPest && matchesCrop && matchesResult && matchesSearch
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize))
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const getResultBadge = (result: string) => {
     switch (result) {
@@ -83,11 +90,11 @@ const PestIdentify = () => {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">病虫害类型：</span>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 {pestTypes.map(type => (
                   <button
                     key={type}
-                    onClick={() => setPestFilter(type)}
+                    onClick={() => { setPestFilter(type); setCurrentPage(1); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       pestFilter === type
                         ? 'bg-[#2B5D3A] text-white'
@@ -101,13 +108,39 @@ const PestIdentify = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">作物：</span>
-              <select
-                value={cropFilter}
-                onChange={(e) => setCropFilter(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20"
-              >
-                {crops.map(crop => <option key={crop} value={crop}>{crop}</option>)}
-              </select>
+              <div className="flex gap-1 flex-wrap">
+                {crops.map(crop => (
+                  <button
+                    key={crop}
+                    onClick={() => { setCropFilter(crop); setCurrentPage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      cropFilter === crop
+                        ? 'bg-[#2B5D3A] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {crop}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">结果：</span>
+              <div className="flex gap-1 flex-wrap">
+                {results.map(r => (
+                  <button
+                    key={r}
+                    onClick={() => { setResultFilter(r); setCurrentPage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      resultFilter === r
+                        ? 'bg-[#2B5D3A] text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="relative min-w-[280px]">
@@ -116,7 +149,7 @@ const PestIdentify = () => {
               type="text"
               placeholder="搜索记录编号、病害名称或作物..."
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
             />
           </div>
@@ -141,7 +174,7 @@ const PestIdentify = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {filteredData.map((item) => {
+            {paginatedData.map((item) => {
               const resultBadge = getResultBadge(item.result)
               return (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
@@ -203,11 +236,30 @@ const PestIdentify = () => {
 
       {/* 分页 */}
       <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]">
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>上一页</button>
-          <button className="px-3 py-1 bg-[#2B5D3A] text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">下一页</button>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">上一页</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button key={page} onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page ? 'bg-[#2B5D3A] text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}>{page}</button>
+          ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">下一页</button>
         </div>
       </div>
 

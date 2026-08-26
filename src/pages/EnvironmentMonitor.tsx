@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
-  Search, Plus, Eye, AlertTriangle, Thermometer, Droplets, Sun, Wind,
-  MapPin, Calendar, User, Camera, Filter, X, Gauge, CloudRain, Compass, ChevronLeft, ChevronRight, CloudSnow, CloudSun, Cloud, RefreshCw
+  Search, Plus, Download, AlertTriangle, Thermometer, Droplets, Sun, Wind,
+  MapPin, Calendar, Filter, X, Gauge, CloudRain, Compass, RefreshCw, CloudSnow, CloudSun, Cloud, CheckCircle, AlertCircle, Clock,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useIotStore, useProductionPlanStore } from '@/stores';
@@ -73,18 +73,18 @@ export default function EnvironmentMonitor() {
     fetchPlans();
   }, [fetchDevices, fetchPlans]);
 
+  // 状态徽章：与订单管理风格一致（rounded-full + icon）
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'normal':
-        return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>;
+        return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" />, label: '正常' };
       case 'warning':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">注意</span>;
       case 'attention':
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">注意</span>;
+        return { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock className="w-3 h-3" />, label: '注意' };
       case 'critical':
-        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">告警</span>;
+        return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertCircle className="w-3 h-3" />, label: '告警' };
       default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">未知</span>;
+        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" />, label: '未知' };
     }
   };
 
@@ -171,17 +171,60 @@ export default function EnvironmentMonitor() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Eye className="w-6 h-6 text-white" />
+      {/* 页面标题 — 与订单管理风格一致 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">环境监测</h1>
+          <p className="text-gray-500 mt-1">IoT传感器数据监控和环境监测记录</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Download className="w-4 h-4" /> 导出
+          </button>
+          <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
+            <Plus className="w-4 h-4" /> 新增监测点
+          </button>
+        </div>
+      </div>
+
+      {/* 筛选区域 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">区域：</span>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => { setSelectedRegion(''); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedRegion === ''
+                    ? 'bg-[#2B5D3A] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                全部区域
+              </button>
+              {greenhouseList.map(gh => (
+                <button
+                  key={gh.id}
+                  onClick={() => { setSelectedRegion(gh.id); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selectedRegion === gh.id
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {gh.name}
+                </button>
+              ))}
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">环境监测</h1>
-              <p className="text-gray-500">IoT传感器数据监控和环境监测记录</p>
-            </div>
+          </div>
+          <div className="relative min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索区域名称..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            />
           </div>
         </div>
       </div>
@@ -252,117 +295,101 @@ export default function EnvironmentMonitor() {
           </div>
 
       {/* 温室内环境参数表 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-            <div className="p-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">温室内环境参数表</h3>
-            </div>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
                   <tr>
-                    <th className="px-2 py-2 text-center text-base font-bold text-gray-900">区域选择</th>
-                    <th className="px-4 py-3 text-center text-base font-bold text-gray-900" colSpan={4}>空气环境参数</th>
-                    <th className="px-1 py-3"></th>
-                    <th className="px-4 py-3 text-center text-base font-bold text-gray-900" colSpan={4}>土壤环境参数</th>
-                    <th className="px-4 py-3 text-center text-base font-bold text-gray-900">状态</th>
-                    <th className="px-4 py-3 text-center text-base font-bold text-gray-900">更新时间</th>
-                    <th className="px-4 py-3 text-center text-base font-bold text-gray-900">详情</th>
-                  </tr>
-                  <tr className="bg-gray-50">
-                    <th className="px-2 py-2">
-                      <select
-                        value={selectedRegion}
-                        onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                      >
-                        <option value="">全部区域</option>
-                        {greenhouseList.map(gh => (
-                          <option key={gh.id} value={gh.id}>{gh.name}</option>
-                        ))}
-                      </select>
-                    </th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">温度(°C)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">湿度(%)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">光照度(Lux)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">CO2(ppm)</th>
-                    <th className="px-1 py-2"></th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">温度(°C)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">湿度(%)</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">EC值</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-700">PH值</th>
-                    <th className="px-4 py-2"></th>
-                    <th className="px-4 py-2"></th>
-                    <th className="px-4 py-2"></th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">监测区域</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">空气温度(°C)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">空气湿度(%)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">光照度(Lux)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">CO2(ppm)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">土壤温度(°C)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">土壤湿度(%)</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">EC值</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">PH值</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">状态</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">更新时间</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {paginatedGreenhouseData.map((gh) => (
-                    <tr key={gh.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-emerald-600" />
-                          <span className="font-medium text-gray-900">{gh.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.airTemp?.status === 'normal' ? 'text-gray-900' : gh.airTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.airTemp?.value ?? '-'}{gh.airTemp?.unit ? ` ${gh.airTemp.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.airHumidity?.status === 'normal' ? 'text-gray-900' : gh.airHumidity?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.airHumidity?.value ?? '-'}{gh.airHumidity?.unit ? ` ${gh.airHumidity.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.light?.status === 'normal' ? 'text-gray-900' : gh.light?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.light?.value ?? '-'}{gh.light?.unit ? ` ${gh.light.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.co2?.status === 'normal' ? 'text-gray-900' : gh.co2?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.co2?.value ?? '-'}{gh.co2?.unit ? ` ${gh.co2.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-1 py-3"></td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.soilTemp?.status === 'normal' ? 'text-gray-900' : gh.soilTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.soilTemp?.value ?? '-'}{gh.soilTemp?.unit ? ` ${gh.soilTemp.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.soilMoisture?.status === 'normal' ? 'text-gray-900' : gh.soilMoisture?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.soilMoisture?.value ?? '-'}{gh.soilMoisture?.unit ? ` ${gh.soilMoisture.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.soilEc?.status === 'normal' ? 'text-gray-900' : gh.soilEc?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.soilEc?.value ?? '-'}{gh.soilEc?.unit ? ` ${gh.soilEc.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-sm font-medium ${gh.soilPh?.status === 'normal' ? 'text-gray-900' : gh.soilPh?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {gh.soilPh?.value ?? '-'}{gh.soilPh?.unit ? ` ${gh.soilPh.unit}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">{getStatusBadge(gh.status)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">{gh.lastUpdate}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleDetailClick(gh.id)}
-                          className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
-                        >
-                          详情
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-200">
+                  {paginatedGreenhouseData.map((gh) => {
+                    const badge = getStatusBadge(gh.status);
+                    return (
+                      <tr key={gh.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-emerald-600" />
+                            <span className="font-medium text-gray-800">{gh.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.airTemp?.status === 'normal' ? 'text-gray-800' : gh.airTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.airTemp?.value ?? '-'}{gh.airTemp?.unit ? ` ${gh.airTemp.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.airHumidity?.status === 'normal' ? 'text-gray-800' : gh.airHumidity?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.airHumidity?.value ?? '-'}{gh.airHumidity?.unit ? ` ${gh.airHumidity.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.light?.status === 'normal' ? 'text-gray-800' : gh.light?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.light?.value ?? '-'}{gh.light?.unit ? ` ${gh.light.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.co2?.status === 'normal' ? 'text-gray-800' : gh.co2?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.co2?.value ?? '-'}{gh.co2?.unit ? ` ${gh.co2.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.soilTemp?.status === 'normal' ? 'text-gray-800' : gh.soilTemp?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.soilTemp?.value ?? '-'}{gh.soilTemp?.unit ? ` ${gh.soilTemp.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.soilMoisture?.status === 'normal' ? 'text-gray-800' : gh.soilMoisture?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.soilMoisture?.value ?? '-'}{gh.soilMoisture?.unit ? ` ${gh.soilMoisture.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.soilEc?.status === 'normal' ? 'text-gray-800' : gh.soilEc?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.soilEc?.value ?? '-'}{gh.soilEc?.unit ? ` ${gh.soilEc.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-sm font-medium ${gh.soilPh?.status === 'normal' ? 'text-gray-800' : gh.soilPh?.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {gh.soilPh?.value ?? '-'}{gh.soilPh?.unit ? ` ${gh.soilPh.unit}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badge.bg} ${badge.text}`}>
+                            {badge.icon}
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{gh.lastUpdate}</td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleDetailClick(gh.id)}
+                            className="p-1.5 text-gray-400 hover:text-[#2B5D3A] hover:bg-[#2B5D3A]/10 rounded transition-colors"
+                            title="详情"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-              <div className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条记录</div>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
+              <p className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条记录</p>
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalGreenhousePages}

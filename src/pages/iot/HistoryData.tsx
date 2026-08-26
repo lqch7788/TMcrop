@@ -1,9 +1,11 @@
 /**
- * 从 V1.3 100% 一致复制
+ * 历史数据 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, Search, RefreshCw, Home, Download, TrendingUp, Clock } from 'lucide-react';
+import {
+  Database, Search, Home, Download, TrendingUp, Clock, Calendar,
+} from 'lucide-react';
 
 const historyData = [
   { id: 'H-001', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 24.5, humidity: 62, co2: 415, timestamp: '2025-01-15 08:00:00' },
@@ -22,38 +24,58 @@ const historyData = [
 
 const statistics = { totalRecords: 12580, todayRecords: 3256, avgRecordsPerDay: 2850, dataSize: '2.8GB' };
 
+// 数据类型 pill 筛选（包含"全部"）
+const dataTypes = ['全部', '温湿度', '土壤', '气象', '能耗'];
+
 export default function HistoryData() {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [dataTypeFilter, setDataTypeFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('today');
+  const [dataTypeFilter, setDataTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-  const dataTypes = ['温湿度', '土壤', '气象', '能耗'];
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredData = historyData.filter(item => {
     const matchSearch = item.sensorName.toLowerCase().includes(searchKeyword.toLowerCase()) || item.sensorId.toLowerCase().includes(searchKeyword.toLowerCase());
-    const matchType = dataTypeFilter === 'all' || item.dataType === dataTypeFilter;
+    const matchType = dataTypeFilter === '全部' || item.dataType === dataTypeFilter;
     return matchSearch && matchType;
   });
 
   const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
+  // 数据类型徽章（带颜色）
+  const getDataTypeBadge = (type: string) => {
+    switch (type) {
+      case '温湿度': return 'bg-blue-100 text-blue-700';
+      case '土壤': return 'bg-amber-100 text-amber-700';
+      case '气象': return 'bg-cyan-100 text-cyan-700';
+      case '能耗': return 'bg-indigo-100 text-indigo-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">历史数据</h1>
-            <p className="text-gray-500 mt-1">监测历史数据查询</p>
-          </div>
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">历史数据</h1>
+          <p className="text-gray-500 mt-1">监测历史数据查询</p>
         </div>
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-[#6366F1] hover:bg-gray-50 rounded-lg transition-colors">
-          <Home className="w-5 h-5" /><span className="text-sm font-medium">返回主页</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Download className="w-4 h-4" /> 导出
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" /> 返回主页
+          </button>
+        </div>
       </div>
 
+      {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
           { Icon: Database, bg: 'bg-blue-100', text: 'text-blue-600', label: '总记录数', value: statistics.totalRecords.toLocaleString(), valColor: 'text-gray-800' },
@@ -75,55 +97,66 @@ export default function HistoryData() {
         ))}
       </div>
 
+      {/* 筛选区域 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input type="text" placeholder="搜索传感器名称或ID..." value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">数据类型：</span>
+            <div className="flex gap-2 flex-wrap">
+              {dataTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setDataTypeFilter(type); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    dataTypeFilter === type
+                      ? 'bg-[#2B5D3A] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
           </div>
-          <select value={dataTypeFilter} onChange={e => setDataTypeFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent">
-            <option value="all">全部类型</option>
-            {dataTypes.map(type => (<option key={type} value={type}>{type}</option>))}
-          </select>
-          <select value={dateRange} onChange={e => setDateRange(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6366F1] focus:border-transparent">
-            <option value="today">今日</option><option value="yesterday">昨日</option><option value="week">本周</option><option value="month">本月</option><option value="custom">自定义</option>
-          </select>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"><RefreshCw size={16} />刷新</button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#6366F1] text-white rounded-lg hover:bg-[#4F46E5] transition-colors"><Download size={16} />导出</button>
+          <div className="relative min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索传感器名称或ID..."
+              value={searchKeyword}
+              onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            />
+          </div>
         </div>
       </div>
 
+      {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">记录ID</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">传感器</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">数据类型</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">温度(°C)</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">湿度(%)</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">CO₂/其他</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">时间戳</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">记录ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">传感器</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">数据类型</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">温度(°C)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">湿度(%)</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">CO₂/其他</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">时间戳</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-slate-200">
             {paginatedData.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.id}</td>
+              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
                 <td className="px-4 py-3">
                   <div className="text-sm font-medium text-gray-800">{item.sensorName}</div>
                   <div className="text-xs text-gray-500">{item.sensorId}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    item.dataType === '温湿度' ? 'bg-blue-100 text-blue-700' :
-                    item.dataType === '土壤' ? 'bg-amber-100 text-amber-700' :
-                    item.dataType === '气象' ? 'bg-cyan-100 text-cyan-700' :
-                    'bg-indigo-100 text-indigo-700'
-                  }`}>{item.dataType}</span>
+                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getDataTypeBadge(item.dataType)}`}>
+                    {item.dataType}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.temp !== undefined ? item.temp : item.soilTemp !== undefined ? item.soilTemp : '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.humidity !== undefined ? item.humidity : item.soilMoisture !== undefined ? item.soilMoisture : '-'}</td>
@@ -139,15 +172,60 @@ export default function HistoryData() {
           </tbody>
         </table>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-gray-500">显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredData.length)} 条，共 {filteredData.length} 条</div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
-              <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded ${currentPage === page ? 'bg-[#6366F1] text-white' : 'border hover:bg-gray-50'}`}>{page}</button>
-            ))}
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+        {filteredData.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">暂无数据</p>
           </div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">共 {filteredData.length} 条记录</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+            >
+              <option value={10}>10 条</option>
+              <option value={20}>20 条</option>
+              <option value={50}>50 条</option>
+              <option value={100}>100 条</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === page
+                  ? 'bg-[#2B5D3A] text-white'
+                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
         </div>
       </div>
     </div>
