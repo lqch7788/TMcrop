@@ -30,7 +30,7 @@ export default function IoTLayout({ children }: { children: React.ReactNode }) {
       <div
         style={{
           marginLeft: sidebarWidth,
-          marginTop: 48, // h-12 header
+          marginTop: 24, // mt-6 — 与 MainLayout main 的 mt-6 完全一致
           minHeight: 'calc(100vh - 48px)',
           transition: 'margin-left 0.3s ease-in-out',
         }}

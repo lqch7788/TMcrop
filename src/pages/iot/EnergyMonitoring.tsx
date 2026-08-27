@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, Search, Home, Download, TrendingUp, TrendingDown, AlertTriangle,
+  Zap, Search, Home, Download, Plus, TrendingUp, TrendingDown, AlertTriangle,
   CheckCircle, Clock, XCircle, Calendar,
 } from 'lucide-react';
 
@@ -58,23 +58,30 @@ export default function EnergyMonitoring() {
   };
 
   return (
-    <div className="p-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">能耗监测</h1>
-          <p className="text-gray-500 mt-1">设备能耗监测</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-            <Download className="w-4 h-4" /> 导出
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
-          >
-            <Home className="w-4 h-4" /> 返回主页
-          </button>
+    <div className="pt-0 px-6 pb-6">
+      {/* 页面标题 - 带大图标卡（与订单管理设计标准一致） */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">能耗监测</h1>
+              <p className="text-gray-500 mt-1">设备能耗监测</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" /> 导出
+            </button>
+            <button
+              onClick={() => alert('新增能耗设备')}
+              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> 新增设备
+            </button>
+          </div>
         </div>
       </div>
 

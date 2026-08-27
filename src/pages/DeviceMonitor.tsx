@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import {
   Search, Plus, Download, Power, Wifi, XCircle, CheckCircle, AlertCircle, Calendar, FileText,
+  Monitor,
 } from 'lucide-react';
 
 const deviceData = [
@@ -54,73 +55,80 @@ export default function DeviceMonitor() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">设备监控中心</h1>
-          <p className="text-gray-500 mt-1">实时监控温室各类设备运行状态</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-            <Download className="w-4 h-4" /> 导出
-          </button>
-          <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" /> 添加设备
-          </button>
+    <div className="pt-0 px-6 pb-6 space-y-6">
+      {/* 页面标题 - 带大图标卡（与订单管理设计标准一致） */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Monitor className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">设备监控中心</h1>
+              <p className="text-gray-500 mt-1">实时监控温室各类设备运行状态</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" /> 导出
+            </button>
+            <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
+              <Plus className="w-4 h-4" /> 添加设备
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <Power className="w-5 h-5 text-green-500" />
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <Power className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">28</p>
-              <p className="text-xs text-gray-500">运行中</p>
+              <p className="text-sm text-gray-500">运行中</p>
+              <p className="text-xl font-bold text-gray-800">28</p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-              <Wifi className="w-5 h-5 text-gray-500" />
+            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Wifi className="w-5 h-5 text-gray-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">12</p>
-              <p className="text-xs text-gray-500">待机</p>
+              <p className="text-sm text-gray-500">待机</p>
+              <p className="text-xl font-bold text-gray-800">12</p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-500" />
+            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+              <XCircle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">3</p>
-              <p className="text-xs text-gray-500">离线</p>
+              <p className="text-sm text-gray-500">离线</p>
+              <p className="text-xl font-bold text-gray-800">3</p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">2</p>
-              <p className="text-xs text-gray-500">告警</p>
+              <p className="text-sm text-gray-500">告警</p>
+              <p className="text-xl font-bold text-gray-800">2</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* 筛选区域 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">状态：</span>
