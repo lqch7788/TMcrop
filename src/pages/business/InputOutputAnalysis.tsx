@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Plus, Download, Eye, Edit, Trash2, Percent, TrendingUp, TrendingDown, Sprout, DollarSign } from 'lucide-react'
+import { Search, Plus, Download, Eye, Edit, Trash2, Percent, TrendingUp, TrendingDown, Sprout, DollarSign, BarChart3 } from 'lucide-react'
 
 const InputOutputAnalysis = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -68,14 +68,20 @@ const InputOutputAnalysis = () => {
   const avgRatio = filteredData.length > 0 ? (totalOutput / totalInput).toFixed(2) : 0
 
   return (
-    <div className="p-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">投入产出分析</h1>
-          <p className="text-gray-500 mt-1">分析各作物投入产出效益</p>
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="pt-0 px-6 pb-6">
+      {/* 页面标题 - 带大图标卡 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">投入产出分析</h1>
+              <p className="text-gray-500 mt-1">分析各作物投入产出效益</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
           <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" /> 导出分析报告
           </button>
@@ -86,6 +92,7 @@ const InputOutputAnalysis = () => {
             <Plus className="w-4 h-4" /> 新增分析记录
           </button>
         </div>
+      </div>
       </div>
 
       {/* 统计卡片 */}

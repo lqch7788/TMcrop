@@ -25,7 +25,7 @@ export default function ManagementLayout({ children }: { children: React.ReactNo
       <div
         style={{
           marginLeft: sidebarWidth,
-          marginTop: 48,
+          marginTop: 24,
           minHeight: 'calc(100vh - 48px)',
           transition: 'margin-left 0.3s ease-in-out',
         }}

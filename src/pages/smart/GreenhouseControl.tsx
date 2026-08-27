@@ -95,26 +95,33 @@ export default function GreenhouseControl() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">温室控制</h1>
-          <p className="text-gray-500 mt-1">温室环境监测与设备控制</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" /> 导出
-          </button>
-          <button
-            onClick={() => handleOpenModal('add')}
-            className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> 新增设备
-          </button>
+    <div className="pt-0 px-6 pb-6 space-y-6">
+      {/* 页面标题 — 大图标卡（与订单管理风格一致） */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Thermometer className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">温室控制</h1>
+              <p className="text-gray-500 mt-1">温室环境监测与设备控制</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExport}
+              className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" /> 导出
+            </button>
+            <button
+              onClick={() => handleOpenModal('add')}
+              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> 新增设备
+            </button>
+          </div>
         </div>
       </div>
 

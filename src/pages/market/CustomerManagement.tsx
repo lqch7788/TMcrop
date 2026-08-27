@@ -86,14 +86,20 @@ const CustomerManagement = () => {
   }
 
   return (
-    <div className="p-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">客户管理</h1>
-          <p className="text-gray-500 mt-1">管理客户信息与信用等级</p>
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="pt-0 px-6 pb-6">
+      {/* 页面标题 - 带大图标卡 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">客户管理</h1>
+              <p className="text-gray-500 mt-1">管理客户信息与信用等级</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
           <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" /> 导出
           </button>
@@ -104,6 +110,7 @@ const CustomerManagement = () => {
             <Plus className="w-4 h-4" /> 新增客户
           </button>
         </div>
+      </div>
       </div>
 
       {/* 筛选区域 */}

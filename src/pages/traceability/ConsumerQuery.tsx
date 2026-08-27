@@ -51,10 +51,19 @@ export default function ConsumerQuery() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">消费者查询</h1>
-        <p className="text-gray-500 mt-1">扫描二维码或输入追溯码查询农产品信息</p>
+    <div className="pt-0 px-6 pb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Search className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">消费者查询</h1>
+              <p className="text-gray-500 mt-1">扫描二维码或输入追溯码查询农产品信息</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
