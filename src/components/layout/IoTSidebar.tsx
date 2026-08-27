@@ -48,9 +48,9 @@ const IoTSidebar = ({ collapsed, onToggle }: IoTSidebarProps) => {
       icon: Wifi,
       label: '环境监测',
       children: [
+        { key: 'env-monitoring', icon: Cloud, label: '环境监测总览', path: '/environment-monitor' },
         { key: 'device-monitor', icon: Gauge, label: '设备监控中心', path: '/device-monitor' },
         { key: 'alert-info', icon: AlertTriangle, label: '预警信息中心', path: '/alert-info' },
-        { key: 'env-monitoring', icon: Cloud, label: '环境监测', path: '/environment-monitor' },
         { key: 'energy-monitoring', icon: Battery, label: '能耗监测', path: '/iot/energy' },
         { key: 'history-data', icon: History, label: '历史数据', path: '/iot/history' },
         { key: 'monitoring-config', icon: Cog, label: '监测配置', path: '/iot/config' },
