@@ -19,12 +19,12 @@ const iconMap = {
 
 const SoilEnvironmentPanel: React.FC<SoilEnvironmentPanelProps> = ({ params }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col min-h-0">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2 flex-shrink-0">
         <span className="w-1 h-4 bg-emerald-500 rounded-full" />
         棚内土壤综合环境
       </h3>
-      <div className="space-y-1">
+      <div className="space-y-1 flex-1 flex flex-col justify-center min-h-0">
         {params.map(p => (
           <EnvRangeBar
             key={p.type}

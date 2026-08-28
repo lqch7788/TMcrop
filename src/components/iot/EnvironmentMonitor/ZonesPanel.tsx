@@ -21,9 +21,10 @@ const ZonesPanel: React.FC<ZonesPanelProps> = ({
   onMoreClick,
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 h-full flex flex-col">
-      <h3 className="text-sm font-semibold text-gray-800 mb-3 px-1">大棚分区概览</h3>
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex-1 flex flex-col min-h-0">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3 px-1 flex-shrink-0">大棚分区概览</h3>
+      {/* 2026-08-28：删除 overflow-y-auto，避免滚动条占空间撑高卡片；分页每页固定 3 个，全部展开 */}
+      <div className="space-y-3 pr-1">
         {zones.map(zone => (
           <div key={zone.id} className="border border-slate-200 rounded-lg overflow-hidden">
             {/* 蓝色标题栏 */}
@@ -72,7 +73,7 @@ const ZonesPanel: React.FC<ZonesPanelProps> = ({
 
       {/* 底部圆点分页 */}
       {totalZonePages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-slate-100 flex-shrink-0">
           {Array.from({ length: totalZonePages }, (_, i) => i + 1).map(page => (
             <button
               key={page}
