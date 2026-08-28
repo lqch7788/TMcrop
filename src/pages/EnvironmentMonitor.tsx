@@ -12,7 +12,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Search, Plus, Download, MapPin, Cloud, RefreshCw, Sun, Wind,
+  Plus, Download, MapPin, Cloud, RefreshCw, Sun, Wind,
   Droplets, Thermometer, Gauge, CloudRain, Compass, Filter, CloudSnow, CloudSun,
   CheckCircle, AlertTriangle, Calendar, X, Loader2, AlertCircle,
 } from 'lucide-react';
@@ -54,9 +54,6 @@ export default function EnvironmentMonitor() {
   // 顶部基地 Tab
   const [activeBase, setActiveBase] = useState(bases[0].id);
 
-  // 区域 pill（保留 V1.1 筛选）
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
-
   // 分区列表分页
   const [zonePage, setZonePage] = useState(1);
   const zonesPerPage = 3;
@@ -85,15 +82,6 @@ export default function EnvironmentMonitor() {
     // 进入页面拉一次天气（内部有 10 分钟缓存）
     loadWeather();
   }, [fetchDevices, fetchPlans, loadWeather]);
-
-  // 派生：唯一大棚列表（保留 V1.1 筛选）
-  const greenhouseList = useMemo(() => {
-    const uniqueIds = Array.from(new Set(devices.map(s => s.greenhouseId)));
-    return uniqueIds.map(id => {
-      const sensor = devices.find(s => s.greenhouseId === id);
-      return { id, name: sensor?.greenhouseName || '' };
-    }).filter(gh => gh.name);
-  }, [devices]);
 
   // 分区分页
   const totalZonePages = Math.ceil(greenhouseZones.length / zonesPerPage);
@@ -178,47 +166,8 @@ export default function EnvironmentMonitor() {
       {/* 顶部基地 Tab */}
       <BaseTabs bases={bases} activeBase={activeBase} onChange={setActiveBase} />
 
-      {/* 筛选区域（保留 V1.1 区域 pill + 搜索框） */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">区域：</span>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setSelectedRegion('')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  selectedRegion === ''
-                    ? 'bg-[#2B5D3A] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                全部区域
-              </button>
-              {greenhouseList.map(gh => (
-                <button
-                  key={gh.id}
-                  onClick={() => setSelectedRegion(gh.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    selectedRegion === gh.id
-                      ? 'bg-[#2B5D3A] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {gh.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="relative min-w-[280px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索区域名称..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
-            />
-          </div>
-        </div>
-      </div>
+      {/* 设备运行状态横栏（2026-08-28 移到顶部，整行单排 9 个设备） */}
+      <DeviceStatusRow devices={deviceStatusList} />
 
       {/* 主区域三列布局 */}
       <div className="grid grid-cols-12 gap-4">
@@ -321,10 +270,10 @@ export default function EnvironmentMonitor() {
           </div>
         </div>
 
-        {/* 中列：设备运行状态 + 棚内空气 + 棚内土壤 */}
-        <div className="col-span-6 space-y-4">
-          {/* 设备运行状态横栏（9 设备） */}
-          <DeviceStatusRow devices={deviceStatusList} />
+        {/* 中列：综合参数 + 棚内空气 + 棚内土壤（2026-08-28 改为 flex，让 SoilEnvironmentPanel flex-1 与右列 ZonesPanel 等高对齐） */}
+        <div className="col-span-6 flex flex-col gap-4 min-h-0">
+          {/* 大棚综合参数 + 3D 占位（2026-08-28 从右列移到中列顶部） */}
+          <GreenhouseOverviewCard info={greenhouseOverview} />
 
           {/* 棚内空气综合环境 */}
           <AirEnvironmentPanel params={airEnvParams} />
@@ -333,13 +282,10 @@ export default function EnvironmentMonitor() {
           <SoilEnvironmentPanel params={soilEnvParams} />
         </div>
 
-        {/* 右列：综合参数 + 分区列表 */}
-        <div className="col-span-3 space-y-4">
-          {/* 大棚综合参数 + 3D 占位 */}
-          <GreenhouseOverviewCard info={greenhouseOverview} />
-
-          {/* 大棚分区列表 */}
-          <div className="h-[480px]">
+        {/* 右列：分区列表（2026-08-28 设备卡已移到顶部整行） */}
+        <div className="col-span-3 flex flex-col gap-4 min-h-0">
+          {/* 大棚分区列表：flex-1 填满中列底部剩余空间，与棚内土壤卡片底部齐平 */}
+          <div className="flex-1 min-h-0">
             <ZonesPanel
               zones={pagedZones}
               zonePage={zonePage}
