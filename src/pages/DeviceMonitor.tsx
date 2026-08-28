@@ -3,9 +3,11 @@
  */
 import { useState } from 'react';
 import {
-  Search, Plus, Download, Power, Wifi, XCircle, CheckCircle, AlertCircle, Calendar, FileText,
+  Search, Power, Wifi, XCircle, CheckCircle, AlertCircle, Calendar, FileText,
   Monitor,
 } from 'lucide-react';
+import DeviceStatusRow from '@/components/iot/EnvironmentMonitor/DeviceStatusRow';
+import { deviceStatusList } from '@/components/iot/EnvironmentMonitor/mockData';
 
 const deviceData = [
   { id: 'D001', name: '温室1号通风扇', type: '通风设备', location: '1号温室-A区', status: '运行中', online: true, lastUpdate: '2026-03-14 10:30' },
@@ -67,14 +69,6 @@ export default function DeviceMonitor() {
               <h1 className="text-2xl font-bold text-gray-800">设备监控中心</h1>
               <p className="text-gray-500 mt-1">实时监控温室各类设备运行状态</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 添加设备
-            </button>
           </div>
         </div>
       </div>
@@ -160,6 +154,9 @@ export default function DeviceMonitor() {
           </div>
         </div>
       </div>
+
+      {/* 设备运行状态横栏（2026-08-28 从环境监测页移到此处，位于表格上方） */}
+      <DeviceStatusRow devices={deviceStatusList} />
 
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

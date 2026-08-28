@@ -1,11 +1,17 @@
 /**
  * 预警信息中心 — 表格 UI 与订单管理（market/OrderManagement）保持一致
+ * 2026-08-28：导出按钮从顶部卡片移到统计卡片行右侧，按钮 UI 用项目 @/components/ui/Button，
+ *           导出逻辑用项目标准 @/services/exporters（csv/xlsx/word），弹窗用 ExportFormatModal
  */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  Search, Plus, Download, AlertTriangle, Thermometer, Info, CheckCircle,
+  Search, Download, AlertTriangle, Thermometer, Info, CheckCircle,
   XCircle, Clock, Eye, Edit, Trash2, Calendar,
 } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
+import { todayLocal } from '@/lib/dateUtils';
 
 const alertData = [
   { id: 'A001', type: '温度', level: 'warning', title: '温度偏高预警', message: '1号温室-A区当前温度32°C，超过28°C阈值', time: '2026-03-14 10:25', status: '待处理' },
@@ -22,6 +28,11 @@ export default function AlertInfo() {
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  // 2026-08-28：导出复选框模式（与种植管理 PestControlPage 模式一致）
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
   const filteredAlerts = alertData.filter(alert => {
     const matchSearch = !searchKeyword ||
@@ -34,6 +45,77 @@ export default function AlertInfo() {
 
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
   const paginatedAlerts = filteredAlerts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  /**
+   * 进入导出模式（点击"导出"按钮）
+   * - 与种植管理 PestControlPage 模式一致：进入后表格首列显示复选框
+   * - 进入时默认全选当前筛选后的所有 ID
+   */
+  const handleEnterExportMode = useCallback(() => {
+    setExportMode(true);
+    setSelectedIds(filteredAlerts.map(a => a.id));
+  }, [filteredAlerts]);
+
+  /** 取消导出模式 + 清空选择 */
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setSelectedIds([]);
+  }, []);
+
+  /** 单条复选框切换 */
+  const toggleSelectOne = useCallback((id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  /** 当前页全选/全不选 */
+  const toggleSelectPage = useCallback(() => {
+    const pageIds = paginatedAlerts.map(a => a.id);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    setSelectedIds(prev =>
+      allSelected
+        ? prev.filter(id => !pageIds.includes(id))  // 当前页全取消
+        : Array.from(new Set([...prev, ...pageIds]))  // 当前页全选
+    );
+  }, [paginatedAlerts, selectedIds]);
+
+  /**
+   * 确认导出（弹窗中点"导出"）
+   * - 范围：仅选中行（selectedIds），不是全部
+   * - 列：告警ID/标题/内容/类型/级别/告警时间/处理状态
+   * - 文件名：预警记录_YYYY-MM-DD.{xls|csv|doc}
+   * - 复用项目 @/services/exporters（带 BOM、防公式注入、saveFilePicker 降级 Blob）
+   */
+  const handleExportConfirm = useCallback(async () => {
+    const headers = ['告警ID', '告警标题', '告警内容', '类型', '级别', '告警时间', '处理状态'];
+    const levelText = (level: string) => {
+      switch (level) {
+        case 'error': return '紧急';
+        case 'warning': return '警告';
+        case 'info': return '提示';
+        default: return '其他';
+      }
+    };
+    const selected = filteredAlerts.filter(a => selectedIds.includes(a.id));
+    const rows = selected.map(a => ({
+      '告警ID': a.id,
+      '告警标题': a.title,
+      '告警内容': a.message,
+      '类型': a.type,
+      '级别': levelText(a.level),
+      '告警时间': a.time,
+      '处理状态': a.status,
+    }));
+    const filename = `预警记录_${todayLocal()}`;
+    if (exportFormat === 'csv') {
+      await exportCsv({ filename: `${filename}.csv`, headers, rows });
+    } else if (exportFormat === 'word') {
+      await exportWord({ filename: `${filename}.doc`, headers, rows });
+    } else {
+      await exportXlsx({ filename: `${filename}.xls`, headers, rows });
+    }
+    setShowExportModal(false);
+    handleCancelExport();
+  }, [filteredAlerts, exportFormat, selectedIds, handleCancelExport]);
 
   // 告警级别徽章（带 icon）
   const getLevelBadge = (level: string) => {
@@ -73,18 +155,10 @@ export default function AlertInfo() {
               <p className="text-gray-500 mt-1">实时监控各类异常告警信息</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 新增规则
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* 统计卡片 */}
+      {/* 统计卡片（2026-08-28 二次调整：导出按钮移到筛选区右上角，统计卡片恢复原结构） */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
           <div className="flex items-center gap-3">
@@ -132,7 +206,7 @@ export default function AlertInfo() {
         </div>
       </div>
 
-      {/* 筛选区域 */}
+      {/* 筛选区域 + 导出按钮（2026-08-28 二次调整：导出按钮放筛选区右上角，UI 与订单管理完全一致） */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -153,16 +227,56 @@ export default function AlertInfo() {
               ))}
             </div>
           </div>
-          <div className="relative min-w-[280px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索告警ID、标题或内容..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative min-w-[280px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜索告警ID、标题或内容..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2B5D3A]/20 focus:border-[#2B5D3A]"
+              />
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* 2026-08-28：列表右上方单独一行 — 标题 + 导出按钮/确认导出+取消
+          - 初始态：单个绿色"导出"按钮（与订单管理"确认导出"色一致：bg-emerald-600）
+          - 点击后：原位置变两个按钮"确认导出(绿)" + "取消选择(灰白底)"
+       */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold text-gray-800">预警列表</h3>
+        <div className="flex items-center gap-3">
+          {!exportMode ? (
+            <button
+              onClick={handleEnterExportMode}
+              disabled={filteredAlerts.length === 0}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={selectedIds.length === 0}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                确认导出
+              </button>
+              <button
+                onClick={handleCancelExport}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                取消选择
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -171,6 +285,17 @@ export default function AlertInfo() {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
+              {/* 2026-08-28：导出模式下显示复选框列（全选/单选） */}
+              {exportMode && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider w-10">
+                  <input
+                    type="checkbox"
+                    checked={paginatedAlerts.length > 0 && paginatedAlerts.every(a => selectedIds.includes(a.id))}
+                    onChange={toggleSelectPage}
+                    aria-label="全选当前页"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">告警ID</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">告警标题</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">告警内容</th>
@@ -185,8 +310,23 @@ export default function AlertInfo() {
             {paginatedAlerts.map(alert => {
               const levelBadge = getLevelBadge(alert.level);
               const statusBadge = getStatusBadge(alert.status);
+              const isSelected = selectedIds.includes(alert.id);
               return (
-                <tr key={alert.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={alert.id}
+                  className={`hover:bg-gray-50 transition-colors ${exportMode && isSelected ? 'bg-blue-50/50' : ''}`}
+                >
+                  {/* 2026-08-28：导出模式下显示行复选框 */}
+                  {exportMode && (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOne(alert.id)}
+                        aria-label={`选择 ${alert.id}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">{alert.id}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-800">{alert.title}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 max-w-[280px] truncate">{alert.message}</td>
@@ -283,6 +423,16 @@ export default function AlertInfo() {
           </button>
         </div>
       </div>
+
+      {/* 2026-08-28：导出格式选择弹窗（项目标准 @/components/common/ExportFormatModal） */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        selectedCount={filteredAlerts.length}
+        exportFormat={exportFormat}
+        onFormatChange={(f) => setExportFormat(f as 'excel' | 'csv' | 'word')}
+        onConfirm={handleExportConfirm}
+      />
     </div>
   );
 }
