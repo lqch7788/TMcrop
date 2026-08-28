@@ -117,6 +117,7 @@ import qualityRouter from './quality.routes';
 import acceptanceRouter from './acceptance.routes';
 import materialFlowLogRouter from './materialFlowLog';
 import wateringRouter from './watering';
+import weatherRouter from './weather';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -415,6 +416,9 @@ router.use('/material-flow-log', requireAuth, materialFlowLogRouter);
 
 // 浇水记录路由 - 2026-07-20 Phase 1
 router.use('/watering', requireAuth, wateringRouter);
+
+// 天气路由 — 和风天气代理（环境监测卡片用）
+router.use('/weather', requireAuth, weatherRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {
