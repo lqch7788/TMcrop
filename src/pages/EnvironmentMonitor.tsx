@@ -14,9 +14,9 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Download, MapPin, Cloud, RefreshCw, Sun, Wind,
   Droplets, Thermometer, Gauge, CloudRain, Compass, Filter, CloudSnow, CloudSun,
-  CheckCircle, AlertTriangle, Calendar, X,
+  CheckCircle, AlertTriangle, Calendar, X, Loader2, AlertCircle,
 } from 'lucide-react';
-import { useIotStore, useProductionPlanStore } from '@/stores';
+import { useIotStore, useProductionPlanStore, useWeatherStore } from '@/stores';
 
 import BaseTabs from '@/components/iot/EnvironmentMonitor/BaseTabs';
 import DeviceStatusRow from '@/components/iot/EnvironmentMonitor/DeviceStatusRow';
@@ -34,21 +34,6 @@ import {
   greenhouseZones,
   ZoneInfo,
 } from '@/components/iot/EnvironmentMonitor/mockData';
-
-// 当地天气预报（保留 V1.1 原有）
-const weatherForecast = {
-  location: '北京市通州区',
-  currentTemp: 18,
-  weather: '多云',
-  date: '2024年3月15日 星期五',
-  forecast: [
-    { day: '周三', weather: '晴', icon: Sun, tempHigh: 21, tempLow: 7 },
-    { day: '周四', weather: '晴', icon: CloudSun, tempHigh: 19, tempLow: 9 },
-    { day: '周五', weather: '多云', icon: Cloud, tempHigh: 20, tempLow: 8 },
-    { day: '周六', weather: '小雨', icon: CloudRain, tempHigh: 15, tempLow: 10 },
-    { day: '周日', weather: '阴', icon: Cloud, tempHigh: 18, tempLow: 11 },
-  ],
-};
 
 // 外部气象站 10 项参数（保留 V1.1 原有）
 const rainfallValue = 0;
@@ -85,10 +70,21 @@ export default function EnvironmentMonitor() {
   const plans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
+  // 天气 Store（2026-08-28 改造：原硬编码 weatherForecast 改为真实和风天气）
+  const weatherNow = useWeatherStore((s) => s.now);
+  const weatherForecast = useWeatherStore((s) => s.forecast);
+  const weatherLoading = useWeatherStore((s) => s.loading);
+  const weatherError = useWeatherStore((s) => s.error);
+  const weatherLocationSource = useWeatherStore((s) => s.locationSource);
+  const loadWeather = useWeatherStore((s) => s.loadWeather);
+  const refreshWeather = useWeatherStore((s) => s.refresh);
+
   useEffect(() => {
     fetchDevices();
     fetchPlans();
-  }, [fetchDevices, fetchPlans]);
+    // 进入页面拉一次天气（内部有 10 分钟缓存）
+    loadWeather();
+  }, [fetchDevices, fetchPlans, loadWeather]);
 
   // 派生：唯一大棚列表（保留 V1.1 筛选）
   const greenhouseList = useMemo(() => {
@@ -102,6 +98,57 @@ export default function EnvironmentMonitor() {
   // 分区分页
   const totalZonePages = Math.ceil(greenhouseZones.length / zonesPerPage);
   const pagedZones = greenhouseZones.slice((zonePage - 1) * zonesPerPage, zonePage * zonesPerPage);
+
+  // 天气图标映射（WMO 数字码 → lucide 图标）
+  // 2026-08-28：从字符串匹配改为 code 映射，与后端 WMO_WEATHER.icon 对应
+  const weatherIconFor = (code: number) => {
+    const map: Record<number, typeof Cloud> = {
+      0: Sun,
+      1: CloudSun, 2: CloudSun, 3: Cloud,
+      45: Cloud, 48: Cloud,
+      51: CloudRain, 53: CloudRain, 55: CloudRain,
+      56: CloudSnow, 57: CloudSnow,
+      61: CloudRain, 63: CloudRain, 65: CloudRain,
+      66: CloudSnow, 67: CloudSnow,
+      71: CloudSnow, 73: CloudSnow, 75: CloudSnow, 77: CloudSnow,
+      80: CloudRain, 81: CloudRain, 82: CloudRain,
+      85: CloudSnow, 86: CloudSnow,
+      95: CloudRain, 96: CloudRain, 99: CloudRain,
+    };
+    return map[code] ?? Cloud;
+  };
+
+  // 5 天预报展示数据（取前 5 天，今天是 day 0）
+  const forecastDays = useMemo(() => {
+    return weatherForecast.slice(0, 5).map((d) => {
+      // 日期 → "周一" 等显示
+      const dt = new Date(d.date);
+      const weekMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const dayLabel = isNaN(dt.getTime())
+        ? d.date.slice(5) // 兜底：YYYY-MM-DD → MM-DD
+        : `${weekMap[dt.getDay()]} ${d.date.slice(5)}`;
+      return {
+        ...d,
+        dayLabel,
+        icon: weatherIconFor(d.weatherCode),
+      };
+    });
+  }, [weatherForecast]);
+
+  // 当前显示文案
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    const weekMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${weekMap[now.getDay()]}`;
+  }, []);
+
+  // 定位来源说明
+  const locationHint = {
+    geolocation: null,
+    denied: '已拒绝定位权限，显示默认城市',
+    unsupported: '当前浏览器不支持定位，显示默认城市',
+    default: '定位失败，显示默认城市',
+  }[weatherLocationSource];
 
   return (
     <div className="pt-0 px-6 pb-6 space-y-4">
@@ -177,37 +224,76 @@ export default function EnvironmentMonitor() {
       <div className="grid grid-cols-12 gap-4">
         {/* 左列：外部气象站 + 天气预报（保留 V1.1 原有） */}
         <div className="col-span-3 space-y-4">
-          {/* 天气预报 */}
+          {/* 天气预报（2026-08-28 改造：和风天气真实数据） */}
           <div className="bg-emerald-50 rounded-xl p-4 shadow-sm border border-emerald-100 relative">
-            <button className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600">
-              <RefreshCw className="w-4 h-4" />
+            <button
+              onClick={() => refreshWeather()}
+              disabled={weatherLoading}
+              className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              title="刷新天气"
+            >
+              <RefreshCw className={`w-4 h-4 ${weatherLoading ? 'animate-spin' : ''}`} />
             </button>
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm font-bold text-gray-900">{weatherForecast.location}</span>
+
+            {/* 城市名 + 定位来源提示 */}
+            <div className="flex items-center gap-2 mb-3 pr-6">
+              <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-sm font-bold text-gray-900 truncate">
+                {weatherNow?.locationName || '加载中...'}
+              </span>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <Cloud className="w-12 h-12 text-gray-400" />
-                <span className="text-4xl font-bold text-gray-900">{weatherForecast.currentTemp}°</span>
+
+            {/* 错误状态 */}
+            {weatherError ? (
+              <div className="flex items-start gap-2 py-4">
+                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-gray-600 leading-relaxed">
+                  <p className="font-medium text-gray-800 mb-1">天气获取失败</p>
+                  <p>{weatherError}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-base font-bold text-gray-900">{weatherForecast.weather}</p>
+            ) : !weatherNow ? (
+              /* 加载中状态 */
+              <div className="flex items-center justify-center gap-2 py-8 text-gray-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">正在获取天气...</span>
               </div>
-            </div>
-            <p className="text-sm font-bold text-gray-500 mb-4">{weatherForecast.date}</p>
-            {/* 5天预报 */}
-            <div className="border-t border-emerald-100 pt-3">
-              <div className="grid grid-cols-5 gap-1">
-                {weatherForecast.forecast.map((day, idx) => (
-                  <div key={idx} className="text-center">
-                    <p className="text-xs text-gray-500 mb-1">{day.day}</p>
-                    <day.icon className="w-5 h-5 mx-auto text-gray-400 mb-1" />
-                    <p className="text-xs text-gray-700">{day.tempLow}~{day.tempHigh}°</p>
+            ) : (
+              /* 正常状态 */
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const Icon = weatherIconFor(weatherNow.weatherCode);
+                      return <Icon className="w-12 h-12 text-gray-500" />;
+                    })()}
+                    <span className="text-4xl font-bold text-gray-900">{weatherNow.temp}°</span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="text-right">
+                    <p className="text-base font-bold text-gray-900">{weatherNow.weather}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">体感 {weatherNow.feelsLike}°</p>
+                  </div>
+                </div>
+                <p className="text-sm font-bold text-gray-500 mb-1">{todayLabel}</p>
+                {locationHint && (
+                  <p className="text-xs text-amber-600 mb-3">{locationHint}</p>
+                )}
+                {/* 5天预报 */}
+                <div className="border-t border-emerald-100 pt-3">
+                  <div className="grid grid-cols-5 gap-1">
+                    {forecastDays.map((day, idx) => (
+                      <div key={idx} className="text-center">
+                        <p className="text-xs text-gray-500 mb-1 truncate" title={day.dayLabel}>
+                          {idx === 0 ? '今天' : day.dayLabel.split(' ')[0]}
+                        </p>
+                        <day.icon className="w-5 h-5 mx-auto text-gray-400 mb-1" />
+                        <p className="text-xs text-gray-700">{day.tempMin}~{day.tempMax}°</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 外部气象站参数 */}
