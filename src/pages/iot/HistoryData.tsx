@@ -1,11 +1,15 @@
 /**
  * 历史数据 — 表格 UI 与订单管理（market/OrderManagement）保持一致
+ * 2026-08-28：复刻预警信息中心导出功能（复选框模式 + 列表右上方按钮组 + 弹窗选格式）
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Database, Search, Home, Download, Plus, TrendingUp, Clock, Calendar,
+  Database, Search, Home, Download, XCircle, TrendingUp, Clock, Calendar,
 } from 'lucide-react';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
+import { todayLocal } from '@/lib/dateUtils';
 
 const historyData = [
   { id: 'H-001', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 24.5, humidity: 62, co2: 415, timestamp: '2025-01-15 08:00:00' },
@@ -33,6 +37,11 @@ export default function HistoryData() {
   const [dataTypeFilter, setDataTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  // 2026-08-28：导出复选框模式（与预警信息中心 100% 一致）
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
   const filteredData = historyData.filter(item => {
     const matchSearch = item.sensorName.toLowerCase().includes(searchKeyword.toLowerCase()) || item.sensorId.toLowerCase().includes(searchKeyword.toLowerCase());
@@ -42,6 +51,73 @@ export default function HistoryData() {
 
   const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalPages = Math.ceil(filteredData.length / pageSize);
+
+  /**
+   * 进入导出模式（点击"导出"按钮）— 与预警信息中心 100% 一致
+   */
+  const handleEnterExportMode = useCallback(() => {
+    setExportMode(true);
+    setSelectedIds(filteredData.map(d => d.id));
+  }, [filteredData]);
+
+  /** 取消导出模式 + 清空选择 */
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setSelectedIds([]);
+  }, []);
+
+  /** 单条复选框切换 */
+  const toggleSelectOne = useCallback((id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  /** 当前页全选/全不选 */
+  const toggleSelectPage = useCallback(() => {
+    const pageIds = paginatedData.map(d => d.id);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    setSelectedIds(prev =>
+      allSelected
+        ? prev.filter(id => !pageIds.includes(id))
+        : Array.from(new Set([...prev, ...pageIds]))
+    );
+  }, [paginatedData, selectedIds]);
+
+  /**
+   * 确认导出（弹窗中点"导出"）— 与预警信息中心 100% 一致
+   * 历史数据行字段不固定（温湿度/土壤/气象/能耗），按实际存在的字段写出
+   */
+  const handleExportConfirm = useCallback(async () => {
+    const headers = ['记录ID', '传感器ID', '传感器名称', '数据类型', '温度(°C)', '湿度(%)', 'CO₂(ppm)', '土壤湿度(%)', '土壤温度(°C)', 'pH', 'EC(dS/m)', '风速(km/h)', '功率(kW)', '电压(V)', '电流(A)', '时间戳'];
+    const selected = filteredData.filter(d => selectedIds.includes(d.id));
+    const rows = selected.map(d => ({
+      '记录ID': d.id,
+      '传感器ID': d.sensorId,
+      '传感器名称': d.sensorName,
+      '数据类型': d.dataType,
+      '温度(°C)': d.temp ?? '',
+      '湿度(%)': d.humidity ?? '',
+      'CO₂(ppm)': d.co2 ?? '',
+      '土壤湿度(%)': d.soilMoisture ?? '',
+      '土壤温度(°C)': d.soilTemp ?? '',
+      'pH': d.ph ?? '',
+      'EC(dS/m)': d.ec ?? '',
+      '风速(km/h)': d.windSpeed ?? '',
+      '功率(kW)': d.power ?? '',
+      '电压(V)': d.voltage ?? '',
+      '电流(A)': d.current ?? '',
+      '时间戳': d.timestamp,
+    }));
+    const filename = `历史数据_${todayLocal()}`;
+    if (exportFormat === 'csv') {
+      await exportCsv({ filename: `${filename}.csv`, headers, rows });
+    } else if (exportFormat === 'word') {
+      await exportWord({ filename: `${filename}.doc`, headers, rows });
+    } else {
+      await exportXlsx({ filename: `${filename}.xls`, headers, rows });
+    }
+    setShowExportModal(false);
+    handleCancelExport();
+  }, [filteredData, exportFormat, selectedIds, handleCancelExport]);
 
   // 数据类型徽章（带颜色）
   const getDataTypeBadge = (type: string) => {
@@ -67,17 +143,6 @@ export default function HistoryData() {
               <h1 className="text-2xl font-bold text-gray-800">历史数据</h1>
               <p className="text-gray-500 mt-1">监测历史数据查询</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button
-              onClick={() => alert('导出历史数据')}
-              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" /> 导出数据
-            </button>
           </div>
         </div>
       </div>
@@ -138,11 +203,57 @@ export default function HistoryData() {
         </div>
       </div>
 
+      {/* 2026-08-28：列表右上方单独一行 — 标题 + 导出按钮（与预警信息中心 100% 一致） */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold text-gray-800">历史数据列表</h3>
+        <div className="flex items-center gap-3">
+          {!exportMode ? (
+            <button
+              onClick={handleEnterExportMode}
+              disabled={filteredData.length === 0}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={selectedIds.length === 0}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                确认导出
+              </button>
+              <button
+                onClick={handleCancelExport}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                取消选择
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
+              {/* 2026-08-28：导出模式下显示复选框列（与预警信息中心一致） */}
+              {exportMode && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider w-10">
+                  <input
+                    type="checkbox"
+                    checked={paginatedData.length > 0 && paginatedData.every(d => selectedIds.includes(d.id))}
+                    onChange={toggleSelectPage}
+                    aria-label="全选当前页"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">记录ID</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">传感器</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">数据类型</th>
@@ -154,7 +265,21 @@ export default function HistoryData() {
           </thead>
           <tbody className="divide-y divide-slate-200">
             {paginatedData.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+              <tr
+                key={item.id}
+                className={`hover:bg-gray-50 transition-colors ${exportMode && selectedIds.includes(item.id) ? 'bg-blue-50/50' : ''}`}
+              >
+                {/* 2026-08-28：导出模式下显示行复选框 */}
+                {exportMode && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={() => toggleSelectOne(item.id)}
+                      aria-label={`选择 ${item.id}`}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
                 <td className="px-4 py-3">
                   <div className="text-sm font-medium text-gray-800">{item.sensorName}</div>
@@ -235,6 +360,16 @@ export default function HistoryData() {
           </button>
         </div>
       </div>
+
+      {/* 2026-08-28：导出格式选择弹窗（与预警信息中心一致） */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        selectedCount={selectedIds.length}
+        exportFormat={exportFormat}
+        onFormatChange={(f) => setExportFormat(f as 'excel' | 'csv' | 'word')}
+        onConfirm={handleExportConfirm}
+      />
     </div>
   );
 }

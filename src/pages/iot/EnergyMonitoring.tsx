@@ -1,12 +1,16 @@
 /**
  * 能耗监测 — 表格 UI 与订单管理（market/OrderManagement）保持一致
+ * 2026-08-28：复刻预警信息中心导出功能（复选框模式 + 列表右上方按钮组 + 弹窗选格式）
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, Search, Home, Download, Plus, TrendingUp, TrendingDown, AlertTriangle,
+  Zap, Search, Home, Download, TrendingUp, TrendingDown, AlertTriangle,
   CheckCircle, Clock, XCircle, Calendar,
 } from 'lucide-react';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
+import { todayLocal } from '@/lib/dateUtils';
 
 const energyData = [
   { id: 'EN-001', deviceName: '1号温室空调系统', power: 45.2, voltage: 380, current: 68.5, powerFactor: 0.92, todayUsage: 320, status: 'running', updateTime: '2025-01-15 14:30:00' },
@@ -32,6 +36,11 @@ export default function EnergyMonitoring() {
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  // 2026-08-28：导出复选框模式（与预警信息中心 100% 一致）
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
   const filteredData = energyData.filter(item => {
     const matchSearch = item.deviceName.toLowerCase().includes(searchKeyword.toLowerCase());
@@ -42,6 +51,75 @@ export default function EnergyMonitoring() {
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  /**
+   * 进入导出模式（点击"导出"按钮）— 与预警信息中心 100% 一致
+   * 进入后默认全选当前筛选后的所有 ID
+   */
+  const handleEnterExportMode = useCallback(() => {
+    setExportMode(true);
+    setSelectedIds(filteredData.map(d => d.id));
+  }, [filteredData]);
+
+  /** 取消导出模式 + 清空选择 */
+  const handleCancelExport = useCallback(() => {
+    setExportMode(false);
+    setSelectedIds([]);
+  }, []);
+
+  /** 单条复选框切换 */
+  const toggleSelectOne = useCallback((id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }, []);
+
+  /** 当前页全选/全不选 */
+  const toggleSelectPage = useCallback(() => {
+    const pageIds = paginatedData.map(d => d.id);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    setSelectedIds(prev =>
+      allSelected
+        ? prev.filter(id => !pageIds.includes(id))
+        : Array.from(new Set([...prev, ...pageIds]))
+    );
+  }, [paginatedData, selectedIds]);
+
+  /**
+   * 确认导出（弹窗中点"导出"）— 与预警信息中心 100% 一致
+   * 仅导出选中行，列：设备ID/名称/功率/电压/电流/功率因数/今日用电/状态/更新时间
+   */
+  const handleExportConfirm = useCallback(async () => {
+    const headers = ['设备ID', '设备名称', '功率(kW)', '电压(V)', '电流(A)', '功率因数', '今日用电(kWh)', '状态', '更新时间'];
+    const statusText = (status: string) => {
+      switch (status) {
+        case 'running': return '运行中';
+        case 'idle': return '待机';
+        case 'fault': return '故障';
+        default: return '未知';
+      }
+    };
+    const selected = filteredData.filter(d => selectedIds.includes(d.id));
+    const rows = selected.map(d => ({
+      '设备ID': d.id,
+      '设备名称': d.deviceName,
+      '功率(kW)': d.power,
+      '电压(V)': d.voltage,
+      '电流(A)': d.current,
+      '功率因数': d.powerFactor,
+      '今日用电(kWh)': d.todayUsage,
+      '状态': statusText(d.status),
+      '更新时间': d.updateTime,
+    }));
+    const filename = `能耗监测_${todayLocal()}`;
+    if (exportFormat === 'csv') {
+      await exportCsv({ filename: `${filename}.csv`, headers, rows });
+    } else if (exportFormat === 'word') {
+      await exportWord({ filename: `${filename}.doc`, headers, rows });
+    } else {
+      await exportXlsx({ filename: `${filename}.xls`, headers, rows });
+    }
+    setShowExportModal(false);
+    handleCancelExport();
+  }, [filteredData, exportFormat, selectedIds, handleCancelExport]);
 
   // 状态徽章：与订单管理风格一致
   const getStatusBadge = (status: string) => {
@@ -70,17 +148,6 @@ export default function EnergyMonitoring() {
               <h1 className="text-2xl font-bold text-gray-800">能耗监测</h1>
               <p className="text-gray-500 mt-1">设备能耗监测</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button
-              onClick={() => alert('新增能耗设备')}
-              className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> 新增设备
-            </button>
           </div>
         </div>
       </div>
@@ -143,11 +210,57 @@ export default function EnergyMonitoring() {
         </div>
       </div>
 
+      {/* 2026-08-28：列表右上方单独一行 — 标题 + 导出按钮（与预警信息中心 100% 一致） */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold text-gray-800">设备能耗列表</h3>
+        <div className="flex items-center gap-3">
+          {!exportMode ? (
+            <button
+              onClick={handleEnterExportMode}
+              disabled={filteredData.length === 0}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              导出
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowExportModal(true)}
+                disabled={selectedIds.length === 0}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                确认导出
+              </button>
+              <button
+                onClick={handleCancelExport}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                取消选择
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gradient-to-r from-[#1E6FD9] to-[#3B8DE0]">
             <tr>
+              {/* 2026-08-28：导出模式下显示复选框列（与预警信息中心一致） */}
+              {exportMode && (
+                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider w-10">
+                  <input
+                    type="checkbox"
+                    checked={paginatedData.length > 0 && paginatedData.every(d => selectedIds.includes(d.id))}
+                    onChange={toggleSelectPage}
+                    aria-label="全选当前页"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备ID</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">设备名称</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">功率(kW)</th>
@@ -162,8 +275,23 @@ export default function EnergyMonitoring() {
           <tbody className="divide-y divide-slate-200">
             {paginatedData.map(item => {
               const badge = getStatusBadge(item.status);
+              const isSelected = selectedIds.includes(item.id);
               return (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={item.id}
+                  className={`hover:bg-gray-50 transition-colors ${exportMode && isSelected ? 'bg-blue-50/50' : ''}`}
+                >
+                  {/* 2026-08-28：导出模式下显示行复选框 */}
+                  {exportMode && (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOne(item.id)}
+                        aria-label={`选择 ${item.id}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.deviceName}</td>
                   <td className="px-4 py-3 text-sm">
@@ -244,6 +372,16 @@ export default function EnergyMonitoring() {
           </button>
         </div>
       </div>
+
+      {/* 2026-08-28：导出格式选择弹窗（与预警信息中心一致） */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        selectedCount={selectedIds.length}
+        exportFormat={exportFormat}
+        onFormatChange={(f) => setExportFormat(f as 'excel' | 'csv' | 'word')}
+        onConfirm={handleExportConfirm}
+      />
     </div>
   );
 }

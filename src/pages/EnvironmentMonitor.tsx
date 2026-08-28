@@ -12,14 +12,13 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Plus, Download, MapPin, Cloud, RefreshCw, Sun, Wind,
+  MapPin, Cloud, RefreshCw, Sun, Wind,
   Droplets, Thermometer, Gauge, CloudRain, Compass, Filter, CloudSnow, CloudSun,
   CheckCircle, AlertTriangle, Calendar, X, Loader2, AlertCircle,
 } from 'lucide-react';
 import { useIotStore, useProductionPlanStore, useWeatherStore } from '@/stores';
 
 import BaseTabs from '@/components/iot/EnvironmentMonitor/BaseTabs';
-import DeviceStatusRow from '@/components/iot/EnvironmentMonitor/DeviceStatusRow';
 import AirEnvironmentPanel from '@/components/iot/EnvironmentMonitor/AirEnvironmentPanel';
 import SoilEnvironmentPanel from '@/components/iot/EnvironmentMonitor/SoilEnvironmentPanel';
 import GreenhouseOverviewCard from '@/components/iot/EnvironmentMonitor/GreenhouseOverviewCard';
@@ -152,22 +151,11 @@ export default function EnvironmentMonitor() {
               <p className="text-gray-500 mt-1">IoT 传感器数据实时监控与大棚环境分析</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 新增监测点
-            </button>
-          </div>
         </div>
       </div>
 
       {/* 顶部基地 Tab */}
       <BaseTabs bases={bases} activeBase={activeBase} onChange={setActiveBase} />
-
-      {/* 设备运行状态横栏（2026-08-28 移到顶部，整行单排 9 个设备） */}
-      <DeviceStatusRow devices={deviceStatusList} />
 
       {/* 主区域三列布局 */}
       <div className="grid grid-cols-12 gap-4">
