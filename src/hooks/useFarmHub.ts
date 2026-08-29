@@ -308,17 +308,24 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
 
   // 使用 useTasks 作为统一数据源（通过 enhancedApiClient 无缓存层（V2.1 铁律））
   // 添加 refreshKey 依赖，当 hub.refresh() 被调用时会重新计算
+  // 2026-08-29：去掉 taskCode.startsWith('NS') 硬编码前缀过滤
+  //   原过滤只显示 NS 开头任务，但 TK 开头（示例任务）和 TEMP-xxx（新建乐观更新）
+  //   都被过滤掉，导致"新建任务后不显示"+ "种子 TK001~TK010 不显示"。
+  //   改为只按 dispatchMode === 'farm' 过滤，符合"农事任务中心"语义。
+  // 2026-08-29：农事任务中心 = 人工派发任务，绝不显示 AI 训练样本
+//   AI 训练样本（synthetic=1）由 synthesize_historical_tasks.py 生成，
+//   用于"智能任务中心"的 AI 派工模型训练，与"农事任务中心"业务无关。
+//   在 useFarmHub 永久过滤，避免人工派发列表被 AI 样本污染。
   const tasks = useMemo(() => {
-    // 从 useTasks 获取数据（useTasks 内部使用 farmTaskStore -> enhancedApiClient）
-    // 农事任务TAB只显示 NS 开头的任务（农事任务编号格式：NS+年月日+流水号）
     const farmTasks = useTasksData
       .filter(t => {
         const dispatchMode = t.dispatchMode || 'farm';
-        const taskCode = t.taskCode || t.id || '';
-        return dispatchMode === 'farm' && taskCode.startsWith('NS');
+        if (dispatchMode !== 'farm') return false;
+        // 永久过滤 AI 训练样本（农事任务中心不需要显示）
+        if (t.synthetic === 1) return false;
+        return true;
       })
       .sort(sortByCreatedAt);
-    // tasks from useTasks（V2.1 铁律：API 直连）
     return farmTasks;
   }, [useTasksData, refreshKey]);
 
