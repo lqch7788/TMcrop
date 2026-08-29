@@ -12,7 +12,8 @@ import { Button } from '@/components/ui';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
-import { useIotAlertStore, STATUS_LABEL as ALERT_STATUS_LABEL, type IotAlert } from '@/stores';
+import { useIotAlertStore, type IotAlert } from '@/stores';
+import { STATUS_LABEL as ALERT_STATUS_LABEL } from '@/services/apiIotAlertsService';
 
 // 状态筛选（与表格徽章标签一一对应）
 const STATUS_OPTIONS = [
