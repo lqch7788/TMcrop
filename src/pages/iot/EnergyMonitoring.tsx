@@ -11,7 +11,8 @@ import {
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
-import { useIotEnergyStore, STATUS_LABEL as ENERGY_STATUS_LABEL, type IotEnergyReading } from '@/stores';
+import { useIotEnergyStore, type IotEnergyReading } from '@/stores';
+import { STATUS_LABEL as ENERGY_STATUS_LABEL } from '@/services/apiIotEnergyReadingsService';
 
 const statistics = { totalDevices: 10, runningDevices: 6, idleDevices: 3, faultDevices: 1, totalPower: 208.7, todayTotalUsage: 2011, avgPowerFactor: 0.89 };
 
@@ -29,6 +30,11 @@ export default function EnergyMonitoring() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+
+  // 2026-08-29：从 Store 读 IoT 能耗读数（V2.1 铁律：纯内存）
+  const readings = useIotEnergyStore((s) => s.readings);
+  const fetchReadings = useIotEnergyStore((s) => s.fetchReadings);
+  useEffect(() => { fetchReadings(); }, [fetchReadings]);
 
   const filteredData = readings.filter((item: IotEnergyReading) => {
     const matchSearch = item.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -48,11 +54,6 @@ export default function EnergyMonitoring() {
     setExportMode(true);
     setSelectedIds(filteredData.map(d => d.id));
   }, [filteredData]);
-
-  // 2026-08-29：从 Store 读 IoT 能耗读数（V2.1 铁律：纯内存）
-  const readings = useIotEnergyStore((s) => s.readings);
-  const fetchReadings = useIotEnergyStore((s) => s.fetchReadings);
-  useEffect(() => { fetchReadings(); }, [fetchReadings]);
 
   /** 取消导出模式 + 清空选择 */
   const handleCancelExport = useCallback(() => {
@@ -96,7 +97,7 @@ export default function EnergyMonitoring() {
       '设备名称': d.deviceName,
       '功率(kW)': d.power,
       '电压(V)': d.voltage,
-      '电流(A)': d.current,
+      '电流(A)': d.currentValue,
       '功率因数': d.powerFactor,
       '今日用电(kWh)': d.todayUsage,
       '状态': statusText(d.status),
