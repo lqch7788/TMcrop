@@ -6,7 +6,7 @@
  */
 import { useState, useEffect } from 'react';
 import {
-  Search, Plus, Download, Video, Power, Wifi, XCircle, CheckCircle, AlertCircle,
+  Search, Video, Power, Wifi, XCircle, CheckCircle, AlertCircle,
   Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
   Maximize2, Repeat, LayoutGrid, Grid2X2, Grid3X3, VideoOff, Monitor,
 } from 'lucide-react';
@@ -183,15 +183,18 @@ function LayoutPanel({ layout, onChange }: { layout: 1 | 4 | 6 | 9; onChange: (l
 }
 
 /**
- * 状态徽章
+ * 摄像头状态英文→中文映射 + 徽章（2026-08-29：API 返回英文 enum）
  */
+const CAMERA_STATUS_LABEL: Record<string, string> = { running: '运行中', idle: '待机', alarm: '告警', offline: '离线' };
+
 function getRunStatusBadge(status: string) {
+  const label = CAMERA_STATUS_LABEL[status] ?? '未知';
   switch (status) {
-    case '运行中': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
-    case '待机': return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Power className="w-3 h-3" /> };
-    case '告警': return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <AlertCircle className="w-3 h-3" /> };
-    case '离线': return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle className="w-3 h-3" /> };
-    default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Power className="w-3 h-3" /> };
+    case 'running': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" />, label };
+    case 'idle': return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Power className="w-3 h-3" />, label };
+    case 'alarm': return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <AlertCircle className="w-3 h-3" />, label };
+    case 'offline': return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle className="w-3 h-3" />, label };
+    default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Power className="w-3 h-3" />, label };
   }
 }
 
@@ -256,14 +259,6 @@ export default function VideoMonitor() {
               <h1 className="text-2xl font-bold text-gray-800">视频监控中心</h1>
               <p className="text-gray-500 mt-1">实时监控全场视频设备运行状态</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-              <Download className="w-4 h-4" /> 导出
-            </button>
-            <button className="px-4 py-2 bg-[#2B5D3A] text-white rounded-lg text-sm font-medium hover:bg-[#245038] transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 添加设备
-            </button>
           </div>
         </div>
       </div>
