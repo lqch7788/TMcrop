@@ -343,6 +343,30 @@ export { useFertilizerLibraryStore as useFertilizerSpecStore } from './useFertil
 export { useWeatherStore } from './useWeatherStore';
 export type { LocationSource } from './useWeatherStore';
 
+// 2026-08-29：设备监控中心 Store（对接 /api/monitoring/devices）
+export { useMonitoringDeviceStore } from './useMonitoringDeviceStore';
+export type { MonitoringDevice, MonitoringDeviceStatus } from '@/services/apiMonitoringDevicesService';
+
+// 2026-08-29：预警信息中心 Store（对接 /api/iot-alerts）
+export { useIotAlertStore } from './useIotAlertStore';
+export type { IotAlert, AlertStatus, AlertLevel } from '@/services/apiIotAlertsService';
+
+// 2026-08-29：能耗监测 Store（对接 /api/iot-energy-readings）
+export { useIotEnergyStore } from './useIotEnergyStore';
+export type { IotEnergyReading, EnergyStatus } from '@/services/apiIotEnergyReadingsService';
+
+// 2026-08-29：历史数据 Store（对接 /api/iot-history）
+export { useIotHistoryStore } from './useIotHistoryStore';
+export type { IotHistory, HistoryDataType } from '@/services/apiIotHistoryService';
+
+// 2026-08-29：监测配置 Store（对接 /api/iot-monitoring-configs）
+export { useIotMonitoringConfigStore } from './useIotMonitoringConfigStore';
+export type { IotMonitoringConfig } from '@/services/apiIotMonitoringConfigsService';
+
+// 2026-08-29：视频监控 Store（对接 /api/iot-cameras）
+export { useIotCameraStore } from './useIotCameraStore';
+export type { IotCamera } from '@/services/apiIotCamerasService';
+
 // 2026-06-18: 库存入库审计 Store（按模块下沉入库）
 export { useInventoryInboundStore } from './useInventoryInboundStore';
 export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord } from '../types/inventoryInbound';

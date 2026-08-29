@@ -2,26 +2,15 @@
  * 视频监控中心 — Tab 结构：
  *   - Tab 1: 视频预览总览（视频墙 + PTZ 控制 + 布局切换 1/4/6/9）
  *   - Tab 2: 设备列表（与 DeviceMonitor 表格 100% 一致）
+ * 2026-08-29：接入 API（iot_cameras 表，替换原 mockData）
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search, Plus, Download, Video, Power, Wifi, XCircle, CheckCircle, AlertCircle,
   Camera, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
   Maximize2, Repeat, LayoutGrid, Grid2X2, Grid3X3, VideoOff, Monitor,
 } from 'lucide-react';
-
-// 设备数据（含环境数据）
-const deviceData = [
-  { id: 'V001', name: '温室1号球机', location: '一棚_01区', base: '一号温室-A区', crop: '五色绥纷', variety: 'JUN11-124', stage: '结果期', airTemp: '27.1', airHumi: '93.5', soilTemp: '28.55', soilHumi: '47.05', light: '8469', status: '运行中', online: true, streamStatus: 'loading', channel: 1 },
-  { id: 'V002', name: '温室1号枪机', location: '一棚_01区', base: '一号温室-B区', crop: '迷迭香', variety: '迷迭香', stage: '育苗期', airTemp: '27.1', airHumi: '93.5', soilTemp: '28.55', soilHumi: '47.05', light: '8469', status: '运行中', online: true, streamStatus: 'loading', channel: 2 },
-  { id: 'V003', name: '温室2号球机', location: '一棚_02区', base: '二号温室', crop: '草莓', variety: '红颜', stage: '开花期', airTemp: '30.6', airHumi: '88.5', soilTemp: '28.25', soilHumi: '2.6', light: '6350', status: '运行中', online: true, streamStatus: 'loading', channel: 3 },
-  { id: 'V004', name: '大棚1号枪机', location: '一棚_03区', base: '一号大棚', crop: '番茄', variety: '粉冠', stage: '苗期', airTemp: '27.1', airHumi: '93.5', soilTemp: '28.55', soilHumi: '47.05', light: '8469', status: '离线', online: false, streamStatus: 'offline', channel: 4 },
-  { id: 'V005', name: '大棚2号球机', location: '一棚_04区', base: '二号大棚', crop: '黄瓜', variety: '水果', stage: '开花期', airTemp: '30.6', airHumi: '88.5', soilTemp: '28.25', soilHumi: '2.6', light: '6350', status: '运行中', online: true, streamStatus: 'loading', channel: 5 },
-  { id: 'V006', name: '办公区球机', location: '一棚_05区', base: '办公楼', crop: '-', variety: '-', stage: '-', airTemp: '-', airHumi: '-', soilTemp: '-', soilHumi: '-', light: '-', status: '告警', online: true, streamStatus: 'loading', channel: 6 },
-  { id: 'V007', name: '仓库枪机', location: '一棚_06区', base: '仓库', crop: '-', variety: '-', stage: '-', airTemp: '-', airHumi: '-', soilTemp: '-', soilHumi: '-', light: '-', status: '告警', online: true, streamStatus: 'loading', channel: 7 },
-  { id: 'V008', name: '大门口球机', location: '一棚_07区', base: '大门口', crop: '-', variety: '-', stage: '-', airTemp: '-', airHumi: '-', soilTemp: '-', soilHumi: '-', light: '-', status: '运行中', online: true, streamStatus: 'loading', channel: 8 },
-  { id: 'V009', name: '二号棚球机', location: '一棚_08区', base: '二号棚', crop: '-', variety: '-', stage: '-', airTemp: '-', airHumi: '-', soilTemp: '-', soilHumi: '-', light: '-', status: '待机', online: false, streamStatus: 'offline', channel: 9 },
-];
+import { useIotCameraStore, type IotCamera } from '@/stores';
 
 // 顶部基地选项
 const bases = [
@@ -35,9 +24,9 @@ const statusFilters = ['全部', '运行中', '待机', '告警', '离线'];
 /**
  * 视频窗（黑色背景 + 红色文字 + 右上角关闭）
  */
-function VideoCell({ device, onClose }: { device: typeof deviceData[number]; onClose: () => void }) {
+function VideoCell({ device, onClose }: { device: IotCamera; onClose: () => void }) {
   const hasEnv = device.crop !== '-';
-  const isOffline = !device.online;
+  const isOffline = !device.isOnline;
   return (
     <div className="relative bg-black overflow-hidden h-full w-full">
       <button
@@ -57,7 +46,7 @@ function VideoCell({ device, onClose }: { device: typeof deviceData[number]; onC
         <>
           <div className="absolute inset-0 p-3 text-[11px] leading-relaxed text-red-500 font-mono overflow-hidden">
             <p>区域名称：{device.location}</p>
-            <p>设备名称：{device.name}</p>
+            <p>设备名称：{device.deviceName}</p>
             {hasEnv && (
               <>
                 <p>种植作物：{device.crop}{device.variety && device.variety !== '-' && `（${device.variety}）`}</p>
@@ -82,7 +71,7 @@ function VideoCell({ device, onClose }: { device: typeof deviceData[number]; onC
 /**
  * 视频墙网格（1/4/6/9 宫格切换）
  */
-function VideoWall({ devices, layout, onClose }: { devices: typeof deviceData; layout: 1 | 4 | 6 | 9; onClose: (id: string) => void }) {
+function VideoWall({ devices, layout, onClose }: { devices: IotCamera[]; layout: 1 | 4 | 6 | 9; onClose: (id: string) => void }) {
   const gridClass: Record<1 | 4 | 6 | 9, string> = {
     1: 'grid-cols-1 grid-rows-1',
     4: 'grid-cols-2 grid-rows-2',
@@ -223,14 +212,19 @@ export default function VideoMonitor() {
   const [layout, setLayout] = useState(6);
   const [closedIds, setClosedIds] = useState([]);
 
-  const visibleDevices = deviceData.filter(d => !closedIds.includes(d.id));
+  // 2026-08-29：从 Store 读 IoT 摄像头列表
+  const cameras = useIotCameraStore((s) => s.cameras);
+  const fetchCameras = useIotCameraStore((s) => s.fetchCameras);
+  useEffect(() => { fetchCameras(); }, [fetchCameras]);
+
+  const visibleDevices = cameras.filter(d => !closedIds.includes(d.id));
 
   const filteredDevices = visibleDevices.filter(device => {
     const matchSearch = !searchKeyword ||
       device.id.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      device.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       device.location.toLowerCase().includes(searchKeyword.toLowerCase());
-    const matchStatus = statusFilter === '全部' || device.status === statusFilter;
+    const matchStatus = statusFilter === '全部' || CAMERA_STATUS_LABEL[device.status] === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -385,17 +379,17 @@ export default function VideoMonitor() {
               <tbody className="divide-y divide-slate-200">
                 {paginatedDevices.map(device => {
                   const runBadge = getRunStatusBadge(device.status);
-                  const onlineBadge = getOnlineBadge(device.online);
+                  const onlineBadge = getOnlineBadge(device.isOnline);
                   return (
                     <tr key={device.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-sm text-gray-600 font-mono">{device.id}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{device.name}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{device.deviceName}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">CH-{device.channel}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{device.location}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${runBadge.bg} ${runBadge.text}`}>
                           {runBadge.icon}
-                          {device.status}
+                          {runBadge.label}
                         </span>
                       </td>
                       <td className="px-4 py-3">

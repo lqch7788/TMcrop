@@ -3,7 +3,7 @@
  * 2026-08-28：导出按钮从顶部卡片移到统计卡片行右侧，按钮 UI 用项目 @/components/ui/Button，
  *           导出逻辑用项目标准 @/services/exporters（csv/xlsx/word），弹窗用 ExportFormatModal
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Search, Download, AlertTriangle, Thermometer, Info, CheckCircle,
   XCircle, Clock, Eye, Edit, Trash2, Calendar,
@@ -12,16 +12,15 @@ import { Button } from '@/components/ui';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
-
-const alertData = [
-  { id: 'A001', type: '温度', level: 'warning', title: '温度偏高预警', message: '1号温室-A区当前温度32°C，超过28°C阈值', time: '2026-03-14 10:25', status: '待处理' },
-  { id: 'A002', type: '设备', level: 'error', title: '设备离线告警', message: '灌溉水泵1号已离线超过1小时', time: '2026-03-14 09:15', status: '处理中' },
-  { id: 'A003', type: '湿度', level: 'info', title: '湿度提醒', message: '2号温室-B区湿度65%，低于适宜湿度', time: '2026-03-14 08:30', status: '已处理' },
-  { id: 'A004', type: '病虫害', level: 'warning', title: '病虫害预警', message: '检测到黄瓜叶片有轻微白粉病斑', time: '2026-03-13 16:00', status: '已处理' },
-];
+import { useIotAlertStore, STATUS_LABEL as ALERT_STATUS_LABEL, type IotAlert } from '@/stores';
 
 // 状态筛选（与表格徽章标签一一对应）
-const statuses = ['全部', '待处理', '处理中', '已处理'];
+const STATUS_OPTIONS = [
+  { label: '全部', value: '全部' },
+  { label: ALERT_STATUS_LABEL.pending, value: 'pending' },
+  { label: ALERT_STATUS_LABEL.processing, value: 'processing' },
+  { label: ALERT_STATUS_LABEL.processed, value: 'processed' },
+];
 
 export default function AlertInfo() {
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -34,11 +33,22 @@ export default function AlertInfo() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
-  const filteredAlerts = alertData.filter(alert => {
+  // 2026-08-29：从 Store 读 IoT 预警（V2.1 铁律：纯内存，无 IndexedDB / localStorage）
+  const alerts = useIotAlertStore((s) => s.alerts);
+  const alertsLoading = useIotAlertStore((s) => s.loading);
+  const alertsError = useIotAlertStore((s) => s.error);
+  const fetchAlerts = useIotAlertStore((s) => s.fetchAlerts);
+
+  // 进入页面拉一次（10 分钟内存缓存）
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
+  const filteredAlerts = alerts.filter((alert: IotAlert) => {
     const matchSearch = !searchKeyword ||
-      alert.id.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      alert.alertCode.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       alert.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      alert.message.toLowerCase().includes(searchKeyword.toLowerCase());
+      (alert.message && alert.message.toLowerCase().includes(searchKeyword.toLowerCase()));
     const matchStatus = statusFilter === '全部' || alert.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -131,12 +141,12 @@ export default function AlertInfo() {
     }
   };
 
-  // 处理状态徽章
+  // 处理状态徽章（2026-08-29：改为接收英文 enum）
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case '待处理': return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertTriangle className="w-3 h-3" /> };
-      case '处理中': return { bg: 'bg-amber-100', text: 'text-amber-700', icon: <Clock className="w-3 h-3" /> };
-      case '已处理': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
+      case 'pending': return { bg: 'bg-red-100', text: 'text-red-700', icon: <AlertTriangle className="w-3 h-3" /> };
+      case 'processing': return { bg: 'bg-amber-100', text: 'text-amber-700', icon: <Clock className="w-3 h-3" /> };
+      case 'processed': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
       default: return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> };
     }
   };
@@ -212,17 +222,17 @@ export default function AlertInfo() {
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">状态：</span>
             <div className="flex gap-2">
-              {statuses.map(status => (
+              {STATUS_OPTIONS.map(opt => (
                 <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
+                  key={opt.value}
+                  onClick={() => setStatusFilter(opt.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    statusFilter === status
+                    statusFilter === opt.value
                       ? 'bg-[#2B5D3A] text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {status}
+                  {opt.label}
                 </button>
               ))}
             </div>
@@ -332,7 +342,7 @@ export default function AlertInfo() {
                   <td className="px-4 py-3 text-sm text-gray-600 max-w-[280px] truncate">{alert.message}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
-                      {alert.type}
+                      {alert.typeName}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -345,7 +355,7 @@ export default function AlertInfo() {
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
                       {statusBadge.icon}
-                      {alert.status}
+                      {alert.statusLabel}
                     </span>
                   </td>
                   <td className="px-4 py-3">

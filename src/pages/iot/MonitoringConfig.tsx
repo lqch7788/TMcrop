@@ -2,7 +2,7 @@
  * 监测配置 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  * 2026-08-28：复刻预警信息中心导出功能（复选框模式 + 列表右上方按钮组 + 弹窗选格式）
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Home, Download, XCircle, Edit, Trash2, Eye, ToggleLeft, ToggleRight,
@@ -11,15 +11,9 @@ import {
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
+import { useIotMonitoringConfigStore, type IotMonitoringConfig } from '@/stores';
 
-const monitoringConfig = [
-  { id: 'CFG-001', name: '温室环境监测配置', type: '环境监测', sensors: ['温度传感器', '湿度传感器', 'CO2传感器', '光照传感器'], interval: 60, enabled: true, alertEnabled: true, updateTime: '2025-01-10 10:00:00' },
-  { id: 'CFG-002', name: '土壤监测配置', type: '土壤监测', sensors: ['土壤湿度传感器', '土壤温度传感器', 'EC传感器', 'pH传感器'], interval: 30, enabled: true, alertEnabled: true, updateTime: '2025-01-10 10:00:00' },
-  { id: 'CFG-003', name: '气象站监测配置', type: '气象监测', sensors: ['温度传感器', '湿度传感器', '风速传感器', '气压传感器', '雨量传感器'], interval: 300, enabled: true, alertEnabled: false, updateTime: '2025-01-08 14:00:00' },
-  { id: 'CFG-004', name: '能耗监测配置', type: '能耗监测', sensors: ['功率传感器', '电压传感器', '电流传感器'], interval: 60, enabled: true, alertEnabled: true, updateTime: '2025-01-12 09:00:00' },
-  { id: 'CFG-005', name: '水培区监测配置', type: '水质监测', sensors: ['水温传感器', '溶解氧传感器', '浊度传感器', 'pH传感器'], interval: 30, enabled: true, alertEnabled: true, updateTime: '2025-01-11 11:00:00' },
-  { id: 'CFG-006', name: '灌溉系统监测配置', type: '设备监测', sensors: ['流量传感器', '压力传感器', '液位传感器'], interval: 60, enabled: false, alertEnabled: false, updateTime: '2025-01-05 16:00:00' },
-];
+const monitoringConfig: never[] = []; // 2026-08-29：删除 mockData，改用 iot_monitoring_configs API
 
 const statistics = { totalConfigs: 6, enabledConfigs: 5, disabledConfigs: 1, alertEnabled: 4, alertDisabled: 2 };
 
@@ -40,8 +34,14 @@ export default function MonitoringConfig() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
-  const filteredData = monitoringConfig.filter(item => {
-    const matchSearch = item.name.toLowerCase().includes(searchKeyword.toLowerCase()) || item.type.toLowerCase().includes(searchKeyword.toLowerCase());
+  // 2026-08-29：从 Store 读 IoT 监测配置
+  const configs = useIotMonitoringConfigStore((s) => s.configs);
+  const fetchConfigs = useIotMonitoringConfigStore((s) => s.fetchConfigs);
+  useEffect(() => { fetchConfigs(); }, [fetchConfigs]);
+
+  const filteredData = configs.filter((item: IotMonitoringConfig) => {
+    const matchSearch = item.configName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.configType.toLowerCase().includes(searchKeyword.toLowerCase());
     const statusLabel = item.enabled ? '已启用' : '已禁用';
     const matchStatus = statusFilter === '全部' || statusLabel === statusFilter;
     return matchSearch && matchStatus;
@@ -92,10 +92,10 @@ export default function MonitoringConfig() {
     const selected = filteredData.filter(d => selectedIds.includes(d.id));
     const rows = selected.map(d => ({
       '配置ID': d.id,
-      '配置名称': d.name,
-      '类型': d.type,
+      '配置名称': d.configName,
+      '类型': d.configType,
       '关联传感器': d.sensors.join('、'),
-      '采集间隔(秒)': d.interval,
+      '采集间隔(秒)': d.intervalSeconds,
       '状态': d.enabled ? '已启用' : '已禁用',
       '告警': d.alertEnabled ? '已启用' : '已禁用',
       '更新时间': d.updateTime,
@@ -265,8 +265,8 @@ export default function MonitoringConfig() {
                   </td>
                 )}
                 <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.type}</td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.configName}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{item.configType}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   <div className="flex flex-wrap gap-1">
                     {item.sensors.slice(0, 3).map((sensor, idx) => (
@@ -275,7 +275,7 @@ export default function MonitoringConfig() {
                     {item.sensors.length > 3 && (<span className="px-2 py-0.5 bg-blue-100 text-blue-600 rounded text-xs">+{item.sensors.length - 3}</span>)}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.interval}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{item.intervalSeconds}</td>
                 <td className="px-4 py-3">
                   <button onClick={() => handleToggle(item.id)} className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${item.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {item.enabled ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
