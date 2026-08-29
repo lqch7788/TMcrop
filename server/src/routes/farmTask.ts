@@ -161,6 +161,9 @@ function transformTaskFields(item: any): any {
     tools: parseJsonField(item.tools, []),
     // 创建者
     createdBy: item.createBy || '',
+    // 2026-08-29：AI 训练样本标记（synthesize_historical_tasks.py 生成的 synthetic=1 数据）
+    //   前端 useFarmHub 用此字段过滤，避免 AI 样本污染"农事任务中心"列表
+    synthetic: item.synthetic ?? 0,
   };
 }
 
@@ -567,9 +570,36 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    db.run('DELETE FROM farm_tasks WHERE id = ?', [id]);
+
+    // 2026-08-29：兼容 task_code 删除（AI 训练样本的 id 是 NULL，SQL WHERE id = NULL 匹配不到任何行）
+    //   先按 id 查；查不到再按 task_code 查；查不到才返回 404
+    let stmt = db.prepare('SELECT id FROM farm_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let targetId: string | null = null;
+    if (stmt.step()) {
+      const row: any = stmt.getAsObject();
+      targetId = row.id;
+    }
+    stmt.free();
+
+    if (!targetId) {
+      // 兜底：按 task_code 查（处理 NULL id 的 AI 样本）
+      stmt = db.prepare('SELECT id FROM farm_tasks WHERE task_code = ?');
+      stmt.bind([id]);
+      if (stmt.step()) {
+        const row: any = stmt.getAsObject();
+        targetId = row.id;
+      }
+      stmt.free();
+    }
+
+    if (!targetId) {
+      return res.status(404).json({ success: false, error: '农事任务不存在' });
+    }
+
+    db.run('DELETE FROM farm_tasks WHERE id = ?', [targetId]);
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, data: { id: targetId } });
   } catch (error) {
     res.status(500).json({ success: false, error: '删除农事任务失败' });
   }
