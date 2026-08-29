@@ -7,6 +7,30 @@ import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
 
+/**
+ * 2026-08-29：备注英文 enum → 中文映射
+ * DB 里 remarks 字段是中文自由文本，但夹杂英文 enum 值（如 seedling/plug/direct/tissue/ground）
+ * TASK_TYPES 只覆盖 8 个常见值（fertilization/irrigation/.../harvest/other），缺少 seedling 等
+ * 兜底翻译：行级正则匹配，按单词边界替换避免误伤中文同字母
+ */
+const REMARKS_DICT: Record<string, string> = {
+  seedling: '育苗',
+  plug: '穴盘',
+  direct: '直播',
+  tissue: '组织培养',
+  ground: '地栽',
+  mother_plant_count: '母株数量',
+  propagation_mode: '扩繁模式',
+};
+function translateRemarks(text: string): string {
+  if (!text) return '';
+  let result = text;
+  Object.entries(REMARKS_DICT).forEach(([en, zh]) => {
+    result = result.replace(new RegExp(`\\b${en}\\b`, 'g'), zh);
+  });
+  return result;
+}
+
 interface ProductionTaskTableRowProps {
   task: TaskDispatchTask | Task;
   onAccept: (task: TaskDispatchTask) => void;
@@ -122,9 +146,9 @@ export function ProductionTaskTableRow({
           {STATUS_MAP[task.status]?.label || task.status}
         </span>
       </td>
-      {/* 备注 */}
-      <td className="px-3 py-3 text-sm text-gray-600 max-w-[150px] truncate" title={task.typeLabel || '-'}>
-        {task.typeLabel || '-'}
+      {/* 备注（2026-08-29：改显示 task.remarks，不再显示 task.typeLabel；英文 enum 翻译为中文） */}
+      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={task.remarks || '-'}>
+        {translateRemarks(task.remarks) || '-'}
       </td>
       {/* 作业标准 */}
       <td className="px-3 py-3 whitespace-nowrap">

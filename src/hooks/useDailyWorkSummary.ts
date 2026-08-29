@@ -67,7 +67,11 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
 
         return {
           id: task.id,
-          date: task.dueDate || '',
+          // 2026-08-29：日期字段用"完成日期"优先于"计划到期日期"
+          //   原实现用 task.dueDate，但任务实际完成日期可能远晚于 dueDate（如今天完成 dueDate 是上周）
+          //   例：NS20260829-002 due_date='2026-08-08'，但 2026-08-29 完成，按 dueDate 查 8-29 看不到
+          //   优先级：completedAt（已完成） > dueDate（计划到期） > planEnd（计划结束）
+          date: (task.completedAt ? task.completedAt.slice(0, 10) : '') || task.dueDate || task.planEnd || '',
           taskId: task.id,
           taskCode: task.taskCode || task.id || '-',
           greenhouse: task.greenhouseName || '-',

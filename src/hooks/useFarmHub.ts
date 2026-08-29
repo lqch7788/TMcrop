@@ -416,14 +416,16 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       getTodayTaskRecords().then(taskRecords => {
         const records: UnifiedOperationRecord[] = (taskRecords || []).map((record: any) => ({
           id: record.id || `task-${Date.now()}-${Math.random()}`,
-          timestamp: record.action_time || record.created_at || '',
-          operatorName: record.operator_name || '未知',
+          // 2026-08-29：服务端 camelCase 中间件已把 snake_case 转 camelCase，前端必须读 camelCase
+          //   旧代码用 snake_case（action_time/operator_name/...）全部 undefined，导致"Invalid Date 未知未知"
+          timestamp: record.actionTime || record.createTime || '',
+          operatorName: record.operatorName || '未知',
           operatorType: 'user',
           actionType: mapTaskActionToType(record.action),
           targetType: 'task',
-          targetCode: record.task_code || '',
-          targetTitle: record.task_title || '',
-          content: `${record.operator_name || '未知'} ${getActionText(record.action)} 任务【${record.task_title || ''}】`,
+          targetCode: record.taskCode || '',
+          targetTitle: record.taskTitle || '',
+          content: `${record.operatorName || '未知'} ${getActionText(record.action)} 任务【${record.taskTitle || ''}】`,
           extra: record,
         }));
         setTodayTaskRecords(records);
@@ -435,14 +437,15 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       getAllTaskRecords().then(taskRecords => {
         const records: UnifiedOperationRecord[] = (taskRecords || []).map((record: any) => ({
           id: record.id || `task-${Date.now()}-${Math.random()}`,
-          timestamp: record.action_time || record.created_at || '',
-          operatorName: record.operator_name || '未知',
+          // 2026-08-29：读 camelCase（同上 getTodayTaskRecords 修复原因）
+          timestamp: record.actionTime || record.createTime || '',
+          operatorName: record.operatorName || '未知',
           operatorType: 'user',
           actionType: mapTaskActionToType(record.action),
           targetType: 'task',
-          targetCode: record.task_code || '',
-          targetTitle: record.task_title || '',
-          content: `${record.operator_name || '未知'} ${getActionText(record.action)} 任务【${record.task_title || ''}】`,
+          targetCode: record.taskCode || '',
+          targetTitle: record.taskTitle || '',
+          content: `${record.operatorName || '未知'} ${getActionText(record.action)} 任务【${record.taskTitle || ''}】`,
           extra: record,
         }));
         setAllTaskRecords(records);
