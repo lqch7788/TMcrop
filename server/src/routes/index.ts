@@ -118,6 +118,12 @@ import acceptanceRouter from './acceptance.routes';
 import materialFlowLogRouter from './materialFlowLog';
 import wateringRouter from './watering';
 import weatherRouter from './weather';
+import monitoringDevicesRouter from './monitoringDevices';
+import iotAlertsRouter from './iotAlerts';
+import iotEnergyReadingsRouter from './iotEnergyReadings';
+import iotHistoryRouter from './iotHistory';
+import iotMonitoringConfigsRouter from './iotMonitoringConfigs';
+import iotCamerasRouter from './iotCameras';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -419,6 +425,24 @@ router.use('/watering', requireAuth, wateringRouter);
 
 // 天气路由 — 和风天气代理（环境监测卡片用）
 router.use('/weather', requireAuth, weatherRouter);
+
+// 设备监控中心路由（2026-08-29）
+router.use('/monitoring', requireAuth, monitoringDevicesRouter);
+
+// 预警信息中心路由（2026-08-29）— 路径用 iot-alerts 避开与 iot/* 子路由冲突
+router.use('/iot-alerts', requireAuth, iotAlertsRouter);
+
+// 能耗监测路由（2026-08-29）— 实时能耗读数
+router.use('/iot-energy-readings', requireAuth, iotEnergyReadingsRouter);
+
+// 历史数据路由（2026-08-29）
+router.use('/iot-history', requireAuth, iotHistoryRouter);
+
+// 监测配置路由（2026-08-29）
+router.use('/iot-monitoring-configs', requireAuth, iotMonitoringConfigsRouter);
+
+// 视频监控路由（2026-08-29）
+router.use('/iot-cameras', requireAuth, iotCamerasRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

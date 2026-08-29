@@ -183,6 +183,84 @@ async function start() {
       console.warn('[seedMarkStatus] 启动种子失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-08-29：GREEN 级独立 seed — 设备监控中心 monitoring_devices 种子（绕过 YELLOW 级 fixMissingSchema 禁用）
+    try {
+      const { seedMonitoringDevicesStandalone } = await import('./db/seedData');
+      const result = await seedMonitoringDevicesStandalone();
+      if (!result.skipped) {
+        console.log(`[seedMonitoringDevices] 已导入 ${result.inserted} 条监控设备种子`);
+      } else {
+        console.log(`[seedMonitoringDevices] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedMonitoringDevices] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-29：GREEN 级独立 seed — 预警信息中心 iot_alerts 种子
+    try {
+      const { seedIotAlertsStandalone } = await import('./db/seedData');
+      const result = await seedIotAlertsStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotAlerts] 已导入 ${result.inserted} 条预警种子`);
+      } else {
+        console.log(`[seedIotAlerts] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotAlerts] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-29：GREEN 级独立 seed — 能耗监测 iot_energy_readings 种子
+    try {
+      const { seedIotEnergyReadingsStandalone } = await import('./db/seedData');
+      const result = await seedIotEnergyReadingsStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotEnergyReadings] 已导入 ${result.inserted} 条能耗读数`);
+      } else {
+        console.log(`[seedIotEnergyReadings] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotEnergyReadings] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-29：GREEN 级独立 seed — 历史数据 iot_history 种子
+    try {
+      const { seedIotHistoryStandalone } = await import('./db/seedData');
+      const result = await seedIotHistoryStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotHistory] 已导入 ${result.inserted} 条历史数据`);
+      } else {
+        console.log(`[seedIotHistory] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotHistory] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-29：GREEN 级独立 seed — 监测配置 iot_monitoring_configs 种子
+    try {
+      const { seedIotMonitoringConfigsStandalone } = await import('./db/seedData');
+      const result = await seedIotMonitoringConfigsStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotMonitoringConfigs] 已导入 ${result.inserted} 条配置`);
+      } else {
+        console.log(`[seedIotMonitoringConfigs] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotMonitoringConfigs] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-08-29：GREEN 级独立 seed — 视频监控 iot_cameras 种子（9 个摄像头）
+    try {
+      const { seedIotCamerasStandalone } = await import('./db/seedData');
+      const result = await seedIotCamerasStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotCameras] 已导入 ${result.inserted} 个摄像头`);
+      } else {
+        console.log(`[seedIotCameras] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotCameras] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-07-19：启动时自动回填 inventory_transfer → inventory_inbound_records 流水
     // 老数据通过 inventoryTransfer 调拨生成的种源没写 inventory_inbound_records，
     // 导致 listReturnableInboundRecords 查不到、种源退库弹窗空白

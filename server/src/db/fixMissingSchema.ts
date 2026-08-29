@@ -612,6 +612,27 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• iot_sensors:', e.message);
   }
 
+  // 2026-08-29：设备监控中心表（IoT 设备监控元数据，与 iot_sensors 传感器表分开）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS monitoring_devices (
+        id TEXT PRIMARY KEY,
+        device_code TEXT NOT NULL UNIQUE,
+        device_name TEXT NOT NULL,
+        device_type TEXT NOT NULL,
+        location TEXT,
+        status TEXT DEFAULT 'idle',
+        is_online INTEGER DEFAULT 1,
+        last_update TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    seedLog.info('✓ monitoring_devices 表创建成功（设备监控中心）');
+  } catch (e: any) {
+    seedLog.skip('• monitoring_devices:', e.message);
+  }
+
   // 18.5 确保 material_code_categories 表存在
   try {
     db.run(`
