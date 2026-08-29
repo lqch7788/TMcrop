@@ -4126,6 +4126,126 @@ export function initializeDatabase() {
   // 2026-07-19 P1：source_module CHECK 约束（防止非法值写入导致查询漏报）
   // 注：SQLite CHECK 约束在 ALTER TABLE ADD COLUMN 时不能加，只能 CREATE TABLE 时加
   // 此处仅做文档化说明，运行时由 service 层校验
+
+  // 2026-08-29：设备监控中心表（设备监控元数据，前端 DeviceMonitor.tsx 真实数据源）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS monitoring_devices (
+      id TEXT PRIMARY KEY,
+      device_code TEXT NOT NULL UNIQUE,
+      device_name TEXT NOT NULL,
+      device_type TEXT NOT NULL,
+      location TEXT,
+      status TEXT DEFAULT 'idle',
+      is_online INTEGER DEFAULT 1,
+      last_update TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 2026-08-29：预警信息中心表（IoT 告警数据，前端 AlertInfo.tsx 真实数据源）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_alerts (
+      id TEXT PRIMARY KEY,
+      alert_code TEXT NOT NULL UNIQUE,
+      alert_type TEXT NOT NULL,
+      alert_type_name TEXT,
+      level TEXT NOT NULL DEFAULT 'warning',
+      title TEXT NOT NULL,
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      create_time TEXT NOT NULL,
+      update_time TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 2026-08-29：能耗监测表（IoT 设备实时能耗读数，前端 EnergyMonitoring.tsx 真实数据源）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_energy_readings (
+      id TEXT PRIMARY KEY,
+      device_code TEXT NOT NULL UNIQUE,
+      device_name TEXT NOT NULL,
+      power REAL NOT NULL,
+      voltage REAL NOT NULL,
+      current_value REAL NOT NULL,
+      power_factor REAL NOT NULL,
+      today_usage REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      update_time TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 2026-08-29：历史数据表（IoT 传感器历史读数，前端 HistoryData.tsx 真实数据源）
+  // 字段：通用字段 + JSON detail 存不同类型（温湿度/土壤/气象/能耗）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_history (
+      id TEXT PRIMARY KEY,
+      record_code TEXT NOT NULL UNIQUE,
+      sensor_code TEXT NOT NULL,
+      sensor_name TEXT NOT NULL,
+      data_type TEXT NOT NULL,
+      temp REAL,
+      humidity REAL,
+      co2 REAL,
+      soil_moisture REAL,
+      soil_temp REAL,
+      ph REAL,
+      ec REAL,
+      wind_speed REAL,
+      power REAL,
+      voltage REAL,
+      current_value REAL,
+      timestamp TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 2026-08-29：监测配置表（前端 MonitoringConfig.tsx 真实数据源）
+  // sensors 用 JSON 数组字符串存
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_monitoring_configs (
+      id TEXT PRIMARY KEY,
+      config_code TEXT NOT NULL UNIQUE,
+      config_name TEXT NOT NULL,
+      config_type TEXT NOT NULL,
+      sensors TEXT NOT NULL DEFAULT '[]',
+      interval_seconds INTEGER NOT NULL DEFAULT 60,
+      enabled INTEGER DEFAULT 1,
+      alert_enabled INTEGER DEFAULT 1,
+      update_time TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 2026-08-29：视频监控设备表（前端 VideoMonitor.tsx 真实数据源）
+  // 注意：前端 mockData 还含 airTemp/airHumi/soilTemp/soilHumi/light（环境数据冗余）
+  // 为简化存储，只保留摄像头核心字段 + JSON detail 存冗余
+  db.run(`
+    CREATE TABLE IF NOT EXISTS iot_cameras (
+      id TEXT PRIMARY KEY,
+      device_code TEXT NOT NULL UNIQUE,
+      device_name TEXT NOT NULL,
+      location TEXT,
+      base TEXT,
+      crop TEXT,
+      variety TEXT,
+      stage TEXT,
+      air_temp TEXT,
+      air_humi TEXT,
+      soil_temp TEXT,
+      soil_humi TEXT,
+      light TEXT,
+      status TEXT NOT NULL DEFAULT 'running',
+      is_online INTEGER DEFAULT 1,
+      stream_status TEXT DEFAULT 'loading',
+      channel INTEGER,
+      update_time TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
 }
 
 export { createMaterialFlowLogTable };
+

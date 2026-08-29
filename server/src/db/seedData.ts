@@ -5954,3 +5954,282 @@ function seedPlantingAreaStocks() {
   const count = Number(countResult[0]?.values[0]?.[0]) || 0;
   seedLog.info(`[seedData] planting_area_stocks 当前总数: ${count}`);
 }
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema/seedAllBusinessData 禁用）
+ * 用于设备监控中心 monitoring_devices 表
+ */
+export async function seedMonitoringDevicesStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM monitoring_devices');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• monitoring_devices 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const devices = [
+    { device_code: 'D001', device_name: '温室1号通风扇', device_type: '通风设备', location: '1号温室-A区', status: 'running', is_online: 1, last_update: '2026-08-29 10:30:00' },
+    { device_code: 'D002', device_name: '温室1号遮阳网', device_type: '遮阳设备', location: '1号温室-A区', status: 'idle', is_online: 1, last_update: '2026-08-29 10:28:00' },
+    { device_code: 'D003', device_name: '温室2号加热器', device_type: '温控设备', location: '2号温室', status: 'running', is_online: 1, last_update: '2026-08-29 10:30:00' },
+    { device_code: 'D004', device_name: '灌溉水泵1号', device_type: '灌溉设备', location: '1号温室', status: 'offline', is_online: 0, last_update: '2026-08-29 09:15:00' },
+    { device_code: 'D005', device_name: 'CO₂发生器', device_type: '环控设备', location: '1号温室-B区', status: 'running', is_online: 1, last_update: '2026-08-29 10:29:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO monitoring_devices (id, device_code, device_name, device_type, location, status, is_online, last_update)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const d of devices) {
+    stmt.run([
+      `MON-${d.device_code}`,
+      d.device_code,
+      d.device_name,
+      d.device_type,
+      d.location,
+      d.status,
+      d.is_online,
+      d.last_update,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入监控设备种子数据: ${devices.length}条`);
+  return { inserted: devices.length, skipped: false };
+}
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
+ * 预警信息中心 iot_alerts 种子
+ */
+export async function seedIotAlertsStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM iot_alerts');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_alerts 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const alerts = [
+    { alert_code: 'A001', alert_type: 'temperature', alert_type_name: '温度', level: 'warning', title: '温度偏高预警', message: '1号温室-A区当前温度32°C，超过28°C阈值', status: 'pending', create_time: '2026-08-29 10:25:00' },
+    { alert_code: 'A002', alert_type: 'device', alert_type_name: '设备', level: 'error', title: '设备离线告警', message: '灌溉水泵1号已离线超过1小时', status: 'processing', create_time: '2026-08-29 09:15:00' },
+    { alert_code: 'A003', alert_type: 'humidity', alert_type_name: '湿度', level: 'info', title: '湿度提醒', message: '2号温室-B区湿度65%，低于适宜湿度', status: 'processed', create_time: '2026-08-29 08:30:00' },
+    { alert_code: 'A004', alert_type: 'pest', alert_type_name: '病虫害', level: 'warning', title: '病虫害预警', message: '检测到黄瓜叶片有轻微白粉病斑', status: 'processed', create_time: '2026-08-28 16:00:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO iot_alerts (id, alert_code, alert_type, alert_type_name, level, title, message, status, create_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const a of alerts) {
+    stmt.run([
+      `ALERT-${a.alert_code}`,
+      a.alert_code,
+      a.alert_type,
+      a.alert_type_name,
+      a.level,
+      a.title,
+      a.message,
+      a.status,
+      a.create_time,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入 IoT 预警种子数据: ${alerts.length}条`);
+  return { inserted: alerts.length, skipped: false };
+}
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
+ * 能耗监测 iot_energy_readings 种子
+ */
+export async function seedIotEnergyReadingsStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM iot_energy_readings');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_energy_readings 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const readings = [
+    { device_code: 'EN-001', device_name: '1号温室空调系统', power: 45.2, voltage: 380, current_value: 68.5, power_factor: 0.92, today_usage: 320, status: 'running', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-002', device_name: '2号温室空调系统', power: 38.5, voltage: 380, current_value: 58.2, power_factor: 0.91, today_usage: 285, status: 'running', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-003', device_name: '灌溉系统-1号区', power: 12.8, voltage: 220, current_value: 58.2, power_factor: 0.88, today_usage: 156, status: 'running', update_time: '2026-08-29 10:29:00' },
+    { device_code: 'EN-004', device_name: '施肥系统', power: 8.5, voltage: 220, current_value: 38.6, power_factor: 0.85, today_usage: 95, status: 'idle', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-005', device_name: '通风机-1号', power: 22.0, voltage: 380, current_value: 33.5, power_factor: 0.90, today_usage: 180, status: 'running', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-006', device_name: '通风机-2号', power: 18.5, voltage: 380, current_value: 28.2, power_factor: 0.89, today_usage: 150, status: 'fault', update_time: '2026-08-29 10:28:00' },
+    { device_code: 'EN-007', device_name: '补光灯系统', power: 35.0, voltage: 220, current_value: 159.1, power_factor: 0.95, today_usage: 420, status: 'running', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-008', device_name: 'CO2发生器', power: 5.5, voltage: 220, current_value: 25.0, power_factor: 0.82, today_usage: 65, status: 'idle', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-009', device_name: '水泵站', power: 15.0, voltage: 380, current_value: 22.8, power_factor: 0.88, today_usage: 220, status: 'running', update_time: '2026-08-29 10:30:00' },
+    { device_code: 'EN-010', device_name: '办公区用电', power: 8.2, voltage: 220, current_value: 37.3, power_factor: 0.90, today_usage: 120, status: 'running', update_time: '2026-08-29 10:30:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO iot_energy_readings (id, device_code, device_name, power, voltage, current_value, power_factor, today_usage, status, update_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const r of readings) {
+    stmt.run([
+      `ENERGY-${r.device_code}`,
+      r.device_code,
+      r.device_name,
+      r.power,
+      r.voltage,
+      r.current_value,
+      r.power_factor,
+      r.today_usage,
+      r.status,
+      r.update_time,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入 IoT 能耗读数种子: ${readings.length}条`);
+  return { inserted: readings.length, skipped: false };
+}
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
+ * 历史数据 iot_history 种子（温湿度/土壤/气象/能耗 各类型示例）
+ */
+export async function seedIotHistoryStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM iot_history');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_history 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const records = [
+    { record_code: 'H-001', sensor_code: 'ENV-001', sensor_name: '1号温室-A区环境', data_type: '温湿度', temp: 24.5, humidity: 62, co2: 415, timestamp: '2026-08-29 08:00:00' },
+    { record_code: 'H-002', sensor_code: 'ENV-001', sensor_name: '1号温室-A区环境', data_type: '温湿度', temp: 25.2, humidity: 65, co2: 420, timestamp: '2026-08-29 12:00:00' },
+    { record_code: 'H-003', sensor_code: 'ENV-001', sensor_name: '1号温室-A区环境', data_type: '温湿度', temp: 26.1, humidity: 68, co2: 425, timestamp: '2026-08-29 14:00:00' },
+    { record_code: 'H-004', sensor_code: 'SW-001', sensor_name: '1号大棚-1区土壤', data_type: '土壤', soil_moisture: 42, soil_temp: 18.2, ph: 6.8, ec: 2.2, timestamp: '2026-08-29 08:00:00' },
+    { record_code: 'H-005', sensor_code: 'SW-001', sensor_name: '1号大棚-1区土壤', data_type: '土壤', soil_moisture: 45, soil_temp: 18.5, ph: 6.8, ec: 2.2, timestamp: '2026-08-29 14:00:00' },
+    { record_code: 'H-006', sensor_code: 'WX-001', sensor_name: '基地气象站', data_type: '气象', temp: 28.0, humidity: 48, wind_speed: 10, timestamp: '2026-08-29 08:00:00' },
+    { record_code: 'H-007', sensor_code: 'WX-001', sensor_name: '基地气象站', data_type: '气象', temp: 30.5, humidity: 45, wind_speed: 12, timestamp: '2026-08-29 14:00:00' },
+    { record_code: 'H-008', sensor_code: 'EN-001', sensor_name: '1号温室空调系统', data_type: '能耗', power: 42.5, voltage: 380, current_value: 64.5, timestamp: '2026-08-29 08:00:00' },
+    { record_code: 'H-009', sensor_code: 'EN-001', sensor_name: '1号温室空调系统', data_type: '能耗', power: 45.2, voltage: 380, current_value: 68.5, timestamp: '2026-08-29 14:00:00' },
+    { record_code: 'H-010', sensor_code: 'ENV-002', sensor_name: '1号温室-B区环境', data_type: '温湿度', temp: 24.0, humidity: 64, co2: 410, timestamp: '2026-08-28 14:00:00' },
+    { record_code: 'H-011', sensor_code: 'ENV-002', sensor_name: '1号温室-B区环境', data_type: '温湿度', temp: 24.8, humidity: 68, co2: 415, timestamp: '2026-08-28 20:00:00' },
+    { record_code: 'H-012', sensor_code: 'SW-002', sensor_name: '1号大棚-2区土壤', data_type: '土壤', soil_moisture: 35, soil_temp: 19.0, ph: 6.5, ec: 2.5, timestamp: '2026-08-28 14:00:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO iot_history (id, record_code, sensor_code, sensor_name, data_type, temp, humidity, co2, soil_moisture, soil_temp, ph, ec, wind_speed, power, voltage, current_value, timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const r of records) {
+    stmt.run([
+      `HIST-${r.record_code}`,
+      r.record_code,
+      r.sensor_code,
+      r.sensor_name,
+      r.data_type,
+      r.temp ?? null,
+      r.humidity ?? null,
+      r.co2 ?? null,
+      r.soil_moisture ?? null,
+      r.soil_temp ?? null,
+      r.ph ?? null,
+      r.ec ?? null,
+      r.wind_speed ?? null,
+      r.power ?? null,
+      r.voltage ?? null,
+      r.current_value ?? null,
+      r.timestamp,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入 IoT 历史数据种子: ${records.length}条`);
+  return { inserted: records.length, skipped: false };
+}
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
+ * 监测配置 iot_monitoring_configs 种子
+ */
+export async function seedIotMonitoringConfigsStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM iot_monitoring_configs');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_monitoring_configs 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const configs = [
+    { config_code: 'CFG-001', config_name: '温室环境监测配置', config_type: '环境监测', sensors: ['温度传感器', '湿度传感器', 'CO2传感器', '光照传感器'], interval_seconds: 60, enabled: 1, alert_enabled: 1, update_time: '2026-08-29 10:00:00' },
+    { config_code: 'CFG-002', config_name: '土壤监测配置', config_type: '土壤监测', sensors: ['土壤湿度传感器', '土壤温度传感器', 'EC传感器', 'pH传感器'], interval_seconds: 30, enabled: 1, alert_enabled: 1, update_time: '2026-08-29 10:00:00' },
+    { config_code: 'CFG-003', config_name: '气象站监测配置', config_type: '气象监测', sensors: ['温度传感器', '湿度传感器', '风速传感器', '气压传感器', '雨量传感器'], interval_seconds: 300, enabled: 1, alert_enabled: 0, update_time: '2026-08-29 10:00:00' },
+    { config_code: 'CFG-004', config_name: '能耗监测配置', config_type: '能耗监测', sensors: ['功率传感器', '电压传感器', '电流传感器'], interval_seconds: 60, enabled: 1, alert_enabled: 1, update_time: '2026-08-29 10:00:00' },
+    { config_code: 'CFG-005', config_name: '水培区监测配置', config_type: '水质监测', sensors: ['水温传感器', '溶解氧传感器', '浊度传感器', 'pH传感器'], interval_seconds: 30, enabled: 1, alert_enabled: 1, update_time: '2026-08-29 10:00:00' },
+    { config_code: 'CFG-006', config_name: '灌溉系统监测配置', config_type: '设备监测', sensors: ['流量传感器', '压力传感器', '液位传感器'], interval_seconds: 60, enabled: 0, alert_enabled: 0, update_time: '2026-08-29 10:00:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO iot_monitoring_configs (id, config_code, config_name, config_type, sensors, interval_seconds, enabled, alert_enabled, update_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const c of configs) {
+    stmt.run([
+      `CFG-${c.config_code}`,
+      c.config_code,
+      c.config_name,
+      c.config_type,
+      JSON.stringify(c.sensors),
+      c.interval_seconds,
+      c.enabled,
+      c.alert_enabled,
+      c.update_time,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入 IoT 监测配置种子: ${configs.length}条`);
+  return { inserted: configs.length, skipped: false };
+}
+
+/**
+ * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
+ * 视频监控 iot_cameras 种子（9 个摄像头）
+ */
+export async function seedIotCamerasStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) FROM iot_cameras');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_cameras 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+  const cameras = [
+    { device_code: 'V001', device_name: '温室1号球机', location: '一棚_01区', base: '一号温室-A区', crop: '五色绥纷', variety: 'JUN11-124', stage: '结果期', air_temp: '27.1', air_humi: '93.5', soil_temp: '28.55', soil_humi: '47.05', light: '8469', status: 'running', is_online: 1, stream_status: 'loading', channel: 1, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V002', device_name: '温室1号枪机', location: '一棚_01区', base: '一号温室-B区', crop: '迷迭香', variety: '迷迭香', stage: '育苗期', air_temp: '27.1', air_humi: '93.5', soil_temp: '28.55', soil_humi: '47.05', light: '8469', status: 'running', is_online: 1, stream_status: 'loading', channel: 2, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V003', device_name: '温室2号球机', location: '一棚_02区', base: '二号温室', crop: '草莓', variety: '红颜', stage: '开花期', air_temp: '30.6', air_humi: '88.5', soil_temp: '28.25', soil_humi: '2.6', light: '6350', status: 'running', is_online: 1, stream_status: 'loading', channel: 3, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V004', device_name: '大棚1号枪机', location: '一棚_03区', base: '一号大棚', crop: '番茄', variety: '粉冠', stage: '苗期', air_temp: '27.1', air_humi: '93.5', soil_temp: '28.55', soil_humi: '47.05', light: '8469', status: 'offline', is_online: 0, stream_status: 'offline', channel: 4, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V005', device_name: '大棚2号球机', location: '一棚_04区', base: '二号大棚', crop: '黄瓜', variety: '水果', stage: '开花期', air_temp: '30.6', air_humi: '88.5', soil_temp: '28.25', soil_humi: '2.6', light: '6350', status: 'running', is_online: 1, stream_status: 'loading', channel: 5, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V006', device_name: '办公区球机', location: '一棚_05区', base: '办公楼', crop: '-', variety: '-', stage: '-', air_temp: '-', air_humi: '-', soil_temp: '-', soil_humi: '-', light: '-', status: 'alarm', is_online: 1, stream_status: 'loading', channel: 6, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V007', device_name: '仓库枪机', location: '一棚_06区', base: '仓库', crop: '-', variety: '-', stage: '-', air_temp: '-', air_humi: '-', soil_temp: '-', soil_humi: '-', light: '-', status: 'alarm', is_online: 1, stream_status: 'loading', channel: 7, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V008', device_name: '大门口球机', location: '一棚_07区', base: '大门口', crop: '-', variety: '-', stage: '-', air_temp: '-', air_humi: '-', soil_temp: '-', soil_humi: '-', light: '-', status: 'running', is_online: 1, stream_status: 'loading', channel: 8, update_time: '2026-08-29 10:30:00' },
+    { device_code: 'V009', device_name: '二号棚球机', location: '一棚_08区', base: '二号棚', crop: '-', variety: '-', stage: '-', air_temp: '-', air_humi: '-', soil_temp: '-', soil_humi: '-', light: '-', status: 'idle', is_online: 0, stream_status: 'offline', channel: 9, update_time: '2026-08-29 10:30:00' },
+  ];
+  const stmt = db.prepare(
+    `INSERT INTO iot_cameras (id, device_code, device_name, location, base, crop, variety, stage, air_temp, air_humi, soil_temp, soil_humi, light, status, is_online, stream_status, channel, update_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const c of cameras) {
+    stmt.run([
+      `CAM-${c.device_code}`,
+      c.device_code,
+      c.device_name,
+      c.location,
+      c.base,
+      c.crop,
+      c.variety,
+      c.stage,
+      c.air_temp,
+      c.air_humi,
+      c.soil_temp,
+      c.soil_humi,
+      c.light,
+      c.status,
+      c.is_online,
+      c.stream_status,
+      c.channel,
+      c.update_time,
+    ]);
+  }
+  stmt.free();
+  seedLog.info(`已导入 IoT 摄像头种子: ${cameras.length}条`);
+  return { inserted: cameras.length, skipped: false };
+}
