@@ -2,7 +2,7 @@
  * 能耗监测 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  * 2026-08-28：复刻预警信息中心导出功能（复选框模式 + 列表右上方按钮组 + 弹窗选格式）
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, Search, Home, Download, TrendingUp, TrendingDown, AlertTriangle,
@@ -11,19 +11,7 @@ import {
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
-
-const energyData = [
-  { id: 'EN-001', deviceName: '1号温室空调系统', power: 45.2, voltage: 380, current: 68.5, powerFactor: 0.92, todayUsage: 320, status: 'running', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-002', deviceName: '2号温室空调系统', power: 38.5, voltage: 380, current: 58.2, powerFactor: 0.91, todayUsage: 285, status: 'running', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-003', deviceName: '灌溉系统-1号区', power: 12.8, voltage: 220, current: 58.2, powerFactor: 0.88, todayUsage: 156, status: 'running', updateTime: '2025-01-15 14:29:00' },
-  { id: 'EN-004', deviceName: '施肥系统', power: 8.5, voltage: 220, current: 38.6, powerFactor: 0.85, todayUsage: 95, status: 'idle', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-005', deviceName: '通风机-1号', power: 22.0, voltage: 380, current: 33.5, powerFactor: 0.90, todayUsage: 180, status: 'running', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-006', deviceName: '通风机-2号', power: 18.5, voltage: 380, current: 28.2, powerFactor: 0.89, todayUsage: 150, status: 'fault', updateTime: '2025-01-15 14:28:00' },
-  { id: 'EN-007', deviceName: '补光灯系统', power: 35.0, voltage: 220, current: 159.1, powerFactor: 0.95, todayUsage: 420, status: 'running', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-008', deviceName: 'CO2发生器', power: 5.5, voltage: 220, current: 25.0, powerFactor: 0.82, todayUsage: 65, status: 'idle', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-009', deviceName: '水泵站', power: 15.0, voltage: 380, current: 22.8, powerFactor: 0.88, todayUsage: 220, status: 'running', updateTime: '2025-01-15 14:30:00' },
-  { id: 'EN-010', deviceName: '办公区用电', power: 8.2, voltage: 220, current: 37.3, powerFactor: 0.90, todayUsage: 120, status: 'running', updateTime: '2025-01-15 14:30:00' },
-];
+import { useIotEnergyStore, STATUS_LABEL as ENERGY_STATUS_LABEL, type IotEnergyReading } from '@/stores';
 
 const statistics = { totalDevices: 10, runningDevices: 6, idleDevices: 3, faultDevices: 1, totalPower: 208.7, todayTotalUsage: 2011, avgPowerFactor: 0.89 };
 
@@ -42,10 +30,10 @@ export default function EnergyMonitoring() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
-  const filteredData = energyData.filter(item => {
-    const matchSearch = item.deviceName.toLowerCase().includes(searchKeyword.toLowerCase());
-    const statusLabel = item.status === 'running' ? '运行中' : item.status === 'idle' ? '待机' : '故障';
-    const matchStatus = statusFilter === '全部' || statusLabel === statusFilter;
+  const filteredData = readings.filter((item: IotEnergyReading) => {
+    const matchSearch = item.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.deviceCode.toLowerCase().includes(searchKeyword.toLowerCase());
+    const matchStatus = statusFilter === '全部' || ENERGY_STATUS_LABEL[item.status] === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -60,6 +48,11 @@ export default function EnergyMonitoring() {
     setExportMode(true);
     setSelectedIds(filteredData.map(d => d.id));
   }, [filteredData]);
+
+  // 2026-08-29：从 Store 读 IoT 能耗读数（V2.1 铁律：纯内存）
+  const readings = useIotEnergyStore((s) => s.readings);
+  const fetchReadings = useIotEnergyStore((s) => s.fetchReadings);
+  useEffect(() => { fetchReadings(); }, [fetchReadings]);
 
   /** 取消导出模式 + 清空选择 */
   const handleCancelExport = useCallback(() => {
@@ -121,17 +114,17 @@ export default function EnergyMonitoring() {
     handleCancelExport();
   }, [filteredData, exportFormat, selectedIds, handleCancelExport]);
 
-  // 状态徽章：与订单管理风格一致
+  // 状态徽章：与订单管理风格一致（2026-08-29：英文 enum → 中文 label）
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" />, label: '运行中' };
+        return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
       case 'idle':
-        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" />, label: '待机' };
+        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> };
       case 'fault':
-        return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle className="w-3 h-3" />, label: '故障' };
+        return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle className="w-3 h-3" /> };
       default:
-        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" />, label: '未知' };
+        return { bg: 'bg-gray-100', text: 'text-gray-600', icon: <Clock className="w-3 h-3" /> };
     }
   };
 
@@ -298,7 +291,7 @@ export default function EnergyMonitoring() {
                     <span className={`font-medium ${item.power > 30 ? 'text-amber-600' : 'text-gray-800'}`}>{item.power}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.voltage}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.current}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.currentValue}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`${item.powerFactor < 0.85 ? 'text-amber-600' : 'text-gray-600'}`}>{item.powerFactor}</span>
                   </td>
@@ -306,7 +299,7 @@ export default function EnergyMonitoring() {
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badge.bg} ${badge.text}`}>
                       {badge.icon}
-                      {badge.label}
+                      {item.statusLabel}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">{item.updateTime}</td>

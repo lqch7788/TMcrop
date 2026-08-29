@@ -2,7 +2,7 @@
  * 历史数据 — 表格 UI 与订单管理（market/OrderManagement）保持一致
  * 2026-08-28：复刻预警信息中心导出功能（复选框模式 + 列表右上方按钮组 + 弹窗选格式）
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Database, Search, Home, Download, XCircle, TrendingUp, Clock, Calendar,
@@ -10,31 +10,17 @@ import {
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { exportCsv, exportXlsx, exportWord } from '@/services/exporters';
 import { todayLocal } from '@/lib/dateUtils';
-
-const historyData = [
-  { id: 'H-001', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 24.5, humidity: 62, co2: 415, timestamp: '2025-01-15 08:00:00' },
-  { id: 'H-002', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 25.2, humidity: 65, co2: 420, timestamp: '2025-01-15 12:00:00' },
-  { id: 'H-003', sensorId: 'ENV-001', sensorName: '1号温室-A区环境', dataType: '温湿度', temp: 26.1, humidity: 68, co2: 425, timestamp: '2025-01-15 14:00:00' },
-  { id: 'H-004', sensorId: 'SW-001', sensorName: '1号大棚-1区土壤', dataType: '土壤', soilMoisture: 42, soilTemp: 18.2, ph: 6.8, ec: 2.2, timestamp: '2025-01-15 08:00:00' },
-  { id: 'H-005', sensorId: 'SW-001', sensorName: '1号大棚-1区土壤', dataType: '土壤', soilMoisture: 45, soilTemp: 18.5, ph: 6.8, ec: 2.2, timestamp: '2025-01-15 14:00:00' },
-  { id: 'H-006', sensorId: 'WX-001', sensorName: '北京顺义基地气象', dataType: '气象', temp: -1, humidity: 48, windSpeed: 10, timestamp: '2025-01-15 08:00:00' },
-  { id: 'H-007', sensorId: 'WX-001', sensorName: '北京顺义基地气象', dataType: '气象', temp: -2, humidity: 45, windSpeed: 12, timestamp: '2025-01-15 14:00:00' },
-  { id: 'H-008', sensorId: 'EN-001', sensorName: '1号温室空调系统', dataType: '能耗', power: 42.5, voltage: 380, current: 64.5, timestamp: '2025-01-15 08:00:00' },
-  { id: 'H-009', sensorId: 'EN-001', sensorName: '1号温室空调系统', dataType: '能耗', power: 45.2, voltage: 380, current: 68.5, timestamp: '2025-01-15 14:00:00' },
-  { id: 'H-010', sensorId: 'ENV-002', sensorName: '1号温室-B区环境', dataType: '温湿度', temp: 24.0, humidity: 64, co2: 410, timestamp: '2025-01-14 14:00:00' },
-  { id: 'H-011', sensorId: 'ENV-002', sensorName: '1号温室-B区环境', dataType: '温湿度', temp: 24.8, humidity: 68, co2: 415, timestamp: '2025-01-14 20:00:00' },
-  { id: 'H-012', sensorId: 'SW-002', sensorName: '1号大棚-2区土壤', dataType: '土壤', soilMoisture: 35, soilTemp: 19.0, ph: 6.5, ec: 2.5, timestamp: '2025-01-14 14:00:00' },
-];
+import { useIotHistoryStore, type IotHistory, type HistoryDataType } from '@/stores';
 
 const statistics = { totalRecords: 12580, todayRecords: 3256, avgRecordsPerDay: 2850, dataSize: '2.8GB' };
 
 // 数据类型 pill 筛选（包含"全部"）
-const dataTypes = ['全部', '温湿度', '土壤', '气象', '能耗'];
+const dataTypes: Array<HistoryDataType | '全部'> = ['全部', '温湿度', '土壤', '气象', '能耗'];
 
 export default function HistoryData() {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [dataTypeFilter, setDataTypeFilter] = useState('全部');
+  const [dataTypeFilter, setDataTypeFilter] = useState<HistoryDataType | '全部'>('全部');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   // 2026-08-28：导出复选框模式（与预警信息中心 100% 一致）
@@ -43,8 +29,15 @@ export default function HistoryData() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
 
-  const filteredData = historyData.filter(item => {
-    const matchSearch = item.sensorName.toLowerCase().includes(searchKeyword.toLowerCase()) || item.sensorId.toLowerCase().includes(searchKeyword.toLowerCase());
+  // 2026-08-29：从 Store 读 IoT 历史数据
+  const records = useIotHistoryStore((s) => s.records);
+  const fetchHistory = useIotHistoryStore((s) => s.fetchHistory);
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  const filteredData = records.filter((item: IotHistory) => {
+    const matchSearch = item.sensorName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.sensorCode.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.recordCode.toLowerCase().includes(searchKeyword.toLowerCase());
     const matchType = dataTypeFilter === '全部' || item.dataType === dataTypeFilter;
     return matchSearch && matchType;
   });
@@ -290,14 +283,9 @@ export default function HistoryData() {
                     {item.dataType}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.temp !== undefined ? item.temp : item.soilTemp !== undefined ? item.soilTemp : '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.humidity !== undefined ? item.humidity : item.soilMoisture !== undefined ? item.soilMoisture : '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {item.co2 !== undefined ? `${item.co2}ppm` :
-                   item.ec !== undefined ? `EC:${item.ec}` :
-                   item.windSpeed !== undefined ? `${item.windSpeed}km/h` :
-                   item.power !== undefined ? `${item.power}kW` : '-'}
-                </td>
+                <td className="px-4 py-3 text-sm text-gray-600">{item.tempDisplay ?? '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{item.humidityDisplay ?? '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{item.otherDisplay}</td>
                 <td className="px-4 py-3 text-sm text-gray-500">{item.timestamp}</td>
               </tr>
             ))}
