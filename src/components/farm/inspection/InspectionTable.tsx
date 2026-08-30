@@ -260,10 +260,17 @@ export function InspectionTable({
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-gray-600 whitespace-nowrap">{record.checkDate}</td>
                 <td className="px-4 py-3 text-center">
+                  {/* 2026-08-30：状态映射统一（与详情 getStatusBadge 4 种对齐） */}
                   {record.status === 'normal' ? (
                     <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">正常</span>
-                  ) : (
+                  ) : record.status === 'warning' ? (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">注意</span>
+                  ) : record.status === 'attention' ? (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">需关注</span>
+                  ) : record.status === 'critical' ? (
                     <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">异常</span>
+                  ) : (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">未知</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">

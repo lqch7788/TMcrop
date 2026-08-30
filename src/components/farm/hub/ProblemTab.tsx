@@ -933,33 +933,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
     const problem = detailModal.problem;
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden">
-          {/* 弹窗头部 - 绿色背景 */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  问题详情
-                </h3>
-                <p className="text-sm text-white/80 font-mono">{problem.problemCode}</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDetailModal({ isOpen: false, problem: null })}
-              className="hover:bg-white/20 rounded-full"
-            >
-              <X className="w-4 h-4 text-white" />
-            </Button>
-          </div>
-
+      <Modal
+        isOpen={detailModal.isOpen && !!problem}
+        onClose={() => setDetailModal({ isOpen: false, problem: null })}
+        title={`问题详情 - ${problem.problemCode || ''}`}
+        size="xl"
+        showFooter={false}
+      >
+      <div className="space-y-4">
           {/* 弹窗内容 - 优化视觉设计 */}
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div className="flex-1 overflow-y-auto bg-gray-50">
             {/* 来源信息 - 灰色背景 */}
             <div className="mb-4">
               <SourceBadge problem={problem} />
@@ -1081,18 +1064,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               />
             </div>
           </div>
-
-          {/* 弹窗底部 */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
-            <Button
-              variant="secondary"
-              onClick={() => setDetailModal({ isOpen: false, problem: null })}
-            >
-              <X className="w-4 h-4" /> 关闭
-            </Button>
-          </div>
-        </div>
       </div>
+      </Modal>
     );
   };
 

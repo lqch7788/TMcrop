@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, FileText } from 'lucide-react';
 
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -123,117 +123,233 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
   const getProblemStatusBadge = (status: string) => {
     switch (status) {
       case '待处理':
+      case 'pending':
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">待处理</span>;
       case '处理中':
+      case 'in_progress':
+      case 'processing':
         return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">处理中</span>;
       case '待验收':
+      case 'waiting_acceptance':
+      case 'pending_acceptance':
         return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">待验收</span>;
       case '已处理':
+      case 'completed':
+      case 'resolved':
+      case 'completed_success':
         return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已处理</span>;
       default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">{status}</span>;
+        // 2026-08-30：fallback 用灰色"未知"而不是显示原文（避免英文 bug）
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">未知</span>;
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="记录详情" size="xxxl">
+    <Modal isOpen={isOpen} onClose={onClose} title={`记录详情 - ${record.recordCode || ''}`} size="xl">
       <div className="space-y-6">
-        {/* 巡查类型标签 */}
-        <div className="flex items-center gap-2">
+        {/* 巡查类型 - 2026-08-30：与列表 InspectionTable 翻译对齐（简洁版），并加 label 标识字段名 */}
+        <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+          <span className="text-sm text-gray-600">巡查类型：</span>
           {record.inspectionType === 'farm' && (
-            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm rounded-full">种植区域巡查</span>
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm rounded-full">种植</span>
           )}
           {record.inspectionType === 'equipment' && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">设备保养巡查</span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">设备</span>
           )}
           {record.inspectionType === 'infrastructure' && (
-            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full">基础设施巡检</span>
+            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full">设施</span>
+          )}
+          {record.inspectionType === 'other' && (
+            <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">其他</span>
           )}
           {!record.inspectionType && (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">传统巡查</span>
           )}
         </div>
 
-        {/* 基本信息 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">巡查人员</span>
-            <span className="text-sm font-medium text-gray-900">{record.inspectorName}</span>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">巡查区域</span>
-            <span className="text-sm font-medium text-gray-900">{record.greenhouseName}</span>
-          </div>
-
-          {/* 种植区域特有 */}
-          {record.inspectionType === 'farm' && (
-            <>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">作物名称</span>
-                <span className="text-sm font-medium text-gray-900">{record.cropName}</span>
+        {/* 基本信息 - 2026-08-30：布局样式与农事任务/临时任务详情弹窗对齐（蓝色背景 + h4 + grid-cols-2 md:grid-cols-4） */}
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+          <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            基本信息
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {record.inspectorName && (
+              <div>
+                <label className="text-xs text-blue-600">巡查人员</label>
+                <p className="font-semibold text-gray-900">{record.inspectorName}</p>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">作物状态</span>
-                <span className="text-sm font-medium text-gray-900">{record.cropStatus}</span>
+            )}
+            {record.greenhouseName && (
+              <div>
+                <label className="text-xs text-blue-600">巡查区域</label>
+                <p className="font-semibold text-gray-900">{record.greenhouseName}</p>
               </div>
-              {record.plantHeight && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">株高</span>
-                  <span className="text-sm font-medium text-gray-900">{record.plantHeight} cm</span>
+            )}
+
+            {/* 种植区域特有 */}
+            {record.inspectionType === 'farm' && (
+              <>
+                {record.cropName && (
+                  <div>
+                    <label className="text-xs text-blue-600">作物名称</label>
+                    <p className="font-semibold text-gray-900">{record.cropName}</p>
+                  </div>
+                )}
+                {record.cropStatus && (
+                  <div>
+                    <label className="text-xs text-blue-600">作物状态</label>
+                    <p className="font-semibold text-gray-900">{record.cropStatus}</p>
+                  </div>
+                )}
+                {record.plantHeight && record.plantHeight > 0 && (
+                  <div>
+                    <label className="text-xs text-blue-600">株高</label>
+                    <p className="font-semibold text-gray-900">{record.plantHeight} cm</p>
+                  </div>
+                )}
+                {record.leafCount && record.leafCount > 0 && (
+                  <div>
+                    <label className="text-xs text-blue-600">叶片数</label>
+                    <p className="font-semibold text-gray-900">{record.leafCount} 片</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 设备保养特有 */}
+            {record.inspectionType === 'equipment' && record.equipmentName && (
+              <div>
+                <label className="text-xs text-blue-600">设备名称</label>
+                <p className="font-semibold text-gray-900">{record.equipmentName}</p>
+              </div>
+            )}
+
+            {/* 基础设施巡检特有 */}
+            {record.inspectionType === 'infrastructure' && record.infrastructureName && (
+              <div>
+                <label className="text-xs text-blue-600">设施名称</label>
+                <p className="font-semibold text-gray-900">{record.infrastructureName}</p>
+              </div>
+            )}
+
+            {record.checkDate && (
+              <div>
+                <label className="text-xs text-blue-600">巡查日期</label>
+                <p className="font-semibold text-gray-900">{record.checkDate}</p>
+              </div>
+            )}
+            {record.status && (
+              <div>
+                <label className="text-xs text-blue-600">状态</label>
+                <p className="font-semibold text-gray-900">{getStatusBadge(record.status)}</p>
+              </div>
+            )}
+            {record.issueStatus && (
+              <div>
+                <label className="text-xs text-blue-600">问题处理</label>
+                <p>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    record.issueStatus === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
+                    record.issueStatus === 'processing' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {record.issueStatus === 'resolved' ? '已解决' :
+                     record.issueStatus === 'processing' ? '处理中' : '待处理'}
+                  </span>
+                </p>
+              </div>
+            )}
+            {/* 2026-08-30：严重程度合并到基本信息 */}
+            {record.issueSeverity && (
+              <div>
+                <label className="text-xs text-blue-600">严重程度</label>
+                <p>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    record.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
+                    record.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {record.issueSeverity}
+                  </span>
+                </p>
+              </div>
+            )}
+            {/* 2026-08-30：反馈人员合并到基本信息 */}
+            {record.feedbackUsers && record.feedbackUsers.length > 0 && (
+              <div>
+                <label className="text-xs text-blue-600">反馈人员</label>
+                <p className="font-semibold text-gray-900 flex flex-wrap gap-1">
+                  {record.feedbackUsers.map(userId => {
+                    const user = users.find(u => u.id === userId);
+                    return (
+                      <span key={userId} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full font-normal">
+                        {user?.name || userId}
+                      </span>
+                    );
+                  })}
+                </p>
+              </div>
+            )}
+            {/* 2026-08-30：反馈状态（与列表 InspectionTable line 318-358 一致） */}
+            {problem?.flowRecords && (() => {
+              const submitRecord = [...(problem.flowRecords || [])]
+                .reverse()
+                .find(r => r.action === 'submit' && (r as any).feedbackData);
+              const feedbackData = submitRecord ? (submitRecord as any).feedbackData : null;
+              if (!feedbackData) return null;
+              const items: Array<{ icon: string; color: string; title: string }> = [];
+              if (feedbackData.gpsLocation) items.push({ icon: '📍', color: 'text-emerald-600', title: 'GPS已打卡' });
+              if (feedbackData.photosBefore && feedbackData.photosBefore.length > 0) items.push({ icon: '📷', color: 'text-blue-600', title: `作业前照片${feedbackData.photosBefore.length}张` });
+              if (feedbackData.photosAfter && feedbackData.photosAfter.length > 0) items.push({ icon: '📷', color: 'text-orange-600', title: `作业后照片${feedbackData.photosAfter.length}张` });
+              if (feedbackData.materialCode) items.push({ icon: '📦', color: 'text-purple-600', title: '物资已扫码' });
+              if (feedbackData.voiceNote) items.push({ icon: '🎤', color: 'text-red-600', title: '语音备注' });
+              if (items.length === 0) return null;
+              return (
+                <div>
+                  <label className="text-xs text-blue-600">反馈状态</label>
+                  <p className="font-semibold text-gray-900 flex items-center gap-1">
+                    {items.map((it, idx) => (
+                      <span key={idx} title={it.title} className={it.color}>{it.icon}</span>
+                    ))}
+                  </p>
                 </div>
-              )}
-              {record.leafCount && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">叶片数</span>
-                  <span className="text-sm font-medium text-gray-900">{record.leafCount} 片</span>
+              );
+            })()}
+            {record.duration && record.duration > 0 && (
+              <div>
+                <label className="text-xs text-blue-600">巡检时长</label>
+                <p className="font-semibold text-gray-900">{record.duration} 分钟</p>
+              </div>
+            )}
+            {/* 2026-08-30：处理进度（与列表 InspectionTable line 380-405 一致） */}
+            {problem && (() => {
+              const progressMap: Record<string, number> = {
+                '待处理': 0, 'pending': 0,
+                '处理中': 50, 'in_progress': 50, 'processing': 50,
+                '待验收': 100, 'waiting_acceptance': 100,
+                '已处理': 100, 'completed': 100, 'resolved': 100,
+              };
+              const statusColors: Record<string, string> = {
+                '待处理': 'bg-gray-400',
+                '处理中': 'bg-blue-500',
+                '待验收': 'bg-amber-500',
+                '已处理': 'bg-green-500',
+              };
+              const progress = progressMap[problem.status] ?? 0;
+              return (
+                <div>
+                  <label className="text-xs text-blue-600">处理进度</label>
+                  <p className="font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="w-12 bg-gray-200 rounded-full h-1.5 overflow-hidden inline-block">
+                      <span className={`block h-full ${statusColors[problem.status] || 'bg-gray-400'} rounded-full`} style={{ width: `${progress}%` }}></span>
+                    </span>
+                    <span className="text-xs text-gray-500">{progress}%</span>
+                  </p>
                 </div>
-              )}
-            </>
-          )}
-
-          {/* 设备保养特有 */}
-          {record.inspectionType === 'equipment' && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">设备名称</span>
-              <span className="text-sm font-medium text-gray-900">{record.equipmentName}</span>
-            </div>
-          )}
-
-          {/* 基础设施巡检特有 */}
-          {record.inspectionType === 'infrastructure' && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">设施名称</span>
-              <span className="text-sm font-medium text-gray-900">{record.infrastructureName}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">巡查日期</span>
-            <span className="text-sm font-medium text-gray-900">{record.checkDate}</span>
+              );
+            })()}
           </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">状态</span>
-            {getStatusBadge(record.status)}
-          </div>
-          {record.issueStatus && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">问题处理</span>
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                record.issueStatus === 'resolved' ? 'bg-emerald-100 text-emerald-700' :
-                record.issueStatus === 'processing' ? 'bg-blue-100 text-blue-700' :
-                'bg-yellow-100 text-yellow-700'
-              }`}>
-                {record.issueStatus === 'resolved' ? '已解决' :
-                 record.issueStatus === 'processing' ? '处理中' : '待处理'}
-              </span>
-            </div>
-          )}
-          {record.duration && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">巡检时长</span>
-              <span className="text-sm font-medium text-gray-900">{record.duration} 分钟</span>
-            </div>
-          )}
         </div>
 
         {/* 生长环境参数 - 仅种植区域显示 */}
@@ -363,8 +479,27 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
           </div>
         )}
 
-        {/* 发现问题 */}
-        {record.issues && record.issues.length > 0 && (
+        {/* 发现问题 - 2026-08-30：改用 issueCategories（带翻译），与列表 InspectionTable 问题分类对齐 */}
+        {record.issueCategories && record.issueCategories.length > 0 ? (
+          <div>
+            <h4 className="text-base font-semibold text-gray-900 mb-3">问题分类</h4>
+            <div className="flex gap-2 flex-wrap">
+              {(() => {
+                // 与列表 InspectionTable 一致的翻译字典
+                const categoryLabels: Record<string, string> = {
+                  disease: '病害', pest: '虫害', environment: '环境',
+                  growth: '长势', equipment: '设备', other: '其他',
+                };
+                return record.issueCategories!.map((cat, idx) => (
+                  <span key={idx} className="px-3 py-1.5 bg-red-50 text-red-700 text-sm rounded-full">
+                    {categoryLabels[cat] || cat}
+                  </span>
+                ));
+              })()}
+            </div>
+          </div>
+        ) : record.issues && record.issues.length > 0 ? (
+          /* 兜底：兼容旧数据（只有 issues 没有 issueCategories） */
           <div>
             <h4 className="text-base font-semibold text-gray-900 mb-3">发现问题</h4>
             <div className="flex gap-2 flex-wrap">
@@ -373,7 +508,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* 问题描述 */}
         {record.issueText && (
@@ -383,37 +518,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
           </div>
         )}
 
-        {/* 严重程度 */}
-        {record.issueSeverity && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">严重程度：</span>
-            <span className={`px-3 py-1 text-sm rounded-full ${
-              record.issueSeverity === '严重' ? 'bg-red-100 text-red-700' :
-              record.issueSeverity === '中等' ? 'bg-amber-100 text-amber-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>
-              {record.issueSeverity}
-            </span>
-          </div>
-        )}
-
-        {/* 反馈人员 */}
-        {record.feedbackUsers && record.feedbackUsers.length > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">反馈人员：</span>
-            <div className="flex flex-wrap gap-1">
-              {record.feedbackUsers.map(userId => {
-                const user = users.find(u => u.id === userId);
-                return (
-                  <span key={userId} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
-                    {user?.name || userId}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+        {/* 2026-08-30：严重程度/反馈人员已合并到基本信息，删除独立 section */}
         {/* 问题照片 */}
         {record.issuePhotos && record.issuePhotos.length > 0 && (
           <div>
@@ -440,7 +545,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                 </h4>
                 {getProblemStatusBadge(problem.status)}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg">
                   <span className="text-sm text-gray-600">问题编号</span>
                   <span className="text-sm font-mono font-medium text-gray-900">{problem.problemCode}</span>

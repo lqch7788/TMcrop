@@ -194,7 +194,7 @@ function toDbJson(value: any, fallback: string = '[]'): string {
 
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { task_type, status, assignee_name, greenhouse_name, keyword, page = 1, limit = 50 } = req.query;
+    const { task_type, status, assignee_name, greenhouse_name, keyword, page = 1, limit = 200 } = req.query;
     const db = getDatabase();
 
     // 构建基础SQL和参数
@@ -233,14 +233,17 @@ router.get('/', (req: Request, res: Response) => {
 
     // 2026-08-25 fix：按状态优先级排序（待派工任务排最前，避免空 plan_date 排到最后被 LIMIT 漏掉）
     // CASE WHEN 优先级：waiting_acceptance=1（待接受）/ pending=2（待派工）/ 其他=3
+    // 2026-08-30 fix：第二排序键由 plan_date DESC 改为 update_time DESC
+    //   原 plan_date DESC 让"刚发布的任务（plan_date=今天）"排到最后，因为 plan_date 是历史默认值
+    //   改 update_time DESC 后，新创建/状态变化/刚完成的任务排最前，不再被 limit=50 截断
+    //   例：NS20260829-001 plan_date='2026-08-01' 但 update_time='2026-08-29' → 排到前部
     sql += ` ORDER BY
       CASE status
         WHEN 'waiting_acceptance' THEN 1
         WHEN 'pending' THEN 2
         ELSE 3
       END ASC,
-      plan_date DESC,
-      plan_time DESC`;
+      update_time DESC`;
 
     // 获取总数
     const total = execCount(db, countSql, params);

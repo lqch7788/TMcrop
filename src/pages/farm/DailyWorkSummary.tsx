@@ -40,6 +40,8 @@ interface DailySummaryRow {
   progress: number;
   status: string;
   dueDate?: string;
+  // 2026-08-30：用于按"最新时间"排序（最新活动排最前）
+  updateTime?: string;
 }
 
 export default function DailyWorkSummary() {
@@ -56,8 +58,13 @@ export default function DailyWorkSummary() {
 
   // 主数据源：任务列表（任务 → 汇总行）
   const summaries = useMemo((): DailySummaryRow[] => {
-    return tasks
-      .filter(task => task.id && task.title) // 过滤无效任务
+    const rows = tasks
+      // 2026-08-30：过滤临时任务（TT 开头）+ 巡查任务，问题任务
+      //   每日工单汇总 = 农事任务中心的工单，只显示农事任务（dispatchMode='farm'）
+      //   临时任务（TT）在"临时任务"模块看，巡查/问题在对应模块看
+      .filter(task => task.id && task.title && task.dispatchMode !== 'tempTask' && !task.id?.startsWith('TT'))
+      // 2026-08-30：只显示 dispatchMode='farm' 的农事任务（problem/inspection/smart 等在各自模块看）
+      .filter(task => !task.dispatchMode || task.dispatchMode === 'farm')
       .map(task => {
         // 从工作日志中查找关联记录，用于补充工时/人数
         const matchedLogs = workLogs.filter(
@@ -87,9 +94,24 @@ export default function DailyWorkSummary() {
           workers: totalWorkers || undefined,
           progress: task.progress || 0,
           status,
-          dueDate: task.dueDate || undefined,
+          // 2026-08-30：日期字段用"完成日期"优先于"计划到期日期"
+          //   旧实现用 task.dueDate，但任务实际完成日期可能远晚于 dueDate
+          //   例：NS20260829-001 due_date='2026-08-04'，但 2026-08-29 完成 → 按 dueDate 查 8-29 看不到
+          //   优先级：completedAt（已完成日期） > dueDate（计划到期）
+          dueDate: (task.completedAt ? task.completedAt.slice(0, 10) : '') || task.dueDate || undefined,
+          // 2026-08-30：透传 updatedAt 用于按"最新时间"排序
+          updateTime: task.updatedAt || task.createdAt || '',
         };
       });
+
+    // 2026-08-30：按任务编号（taskCode）字符串 DESC 排序
+    //   用户诉求："任务编号按照最新时间的排在最前面"
+    //   解读：NS+yyyyMMdd-NNN 格式编码里日期部分决定排序，NS20260829 > NS20260317
+    //   按 updateTime DESC 会被 cancel/accept 等操作打乱顺序（NS20260317-002 因 8-29 cancel 排第 1）
+    //   按 taskCode DESC 才是稳定可预期的"最新任务编号排最前"
+    rows.sort((a, b) => b.taskCode.localeCompare(a.taskCode));
+
+    return rows;
   }, [tasks, workLogs]);
 
   // 应用筛选
@@ -123,8 +145,9 @@ export default function DailyWorkSummary() {
 
   // 筛选选项（从 tasks 提取）
   const filterOptions = useMemo(() => {
-    // 日期选项（从截止日期提取）
-    const dates = [...new Set(tasks.map(t => t.dueDate).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
+    // 日期选项：从完成日期提取（与汇总行的 dueDate 字段同源，保持一致）
+    const taskDates = tasks.map(t => t.completedAt ? t.completedAt.slice(0, 10) : t.dueDate);
+    const dates = [...new Set(taskDates.filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
     const dateOptions = [
       { value: '', label: '全部' },
       ...dates.map(d => ({ value: d || '', label: d || '' })),
@@ -153,7 +176,10 @@ export default function DailyWorkSummary() {
 
   // 分页状态（SummaryTable 内部处理分页）
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // 2026-08-30：pageSize 默认 10 → 25
+  //   原默认 10 时，limit=50 拉到 50 条，NS20260829-001/002 在位置 25/27，第一页（10 条）看不到
+  //   改为 25 后第一页能看到最新 25 条活动
+  const [pageSize, setPageSize] = useState(25);
   const totalPages = Math.ceil(filteredSummaries.length / pageSize);
 
   // 导出 Hook

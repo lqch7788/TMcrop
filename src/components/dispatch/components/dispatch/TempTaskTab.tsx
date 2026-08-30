@@ -7,7 +7,8 @@ import { useState, useReducer, useEffect, useCallback } from 'react';
 import { AlertTriangle, Camera, Check, Clock, Download, Edit2, FileText, MapPin, Mic, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
-import { TEMP_TASK_TYPES } from '../../../../types';
+import { TEMP_TASK_TYPES, TEMP_TASK_URGENCY_CONFIG } from '../../../../types';
+import { TEMP_TASK_STATUS_CONFIG, getTaskOverdueDesc } from '../../../../hooks/useTempTasks';
 import { type TempTask } from '../../../../hooks/useTempTasks';
 import { useUserStore } from '../../../../stores';
 import { TempTaskFilters } from '../../../labor/tempTask/TempTaskFilters';
@@ -46,6 +47,9 @@ const statusMap: Record<string, { bg: string; color: string; label: string }> = 
 
 // 优先级映射
 const priorityMap: Record<string, { color: string; label: string }> = {
+  // 2026-08-30：补 critical 条目（用户截图反馈"优先级 critical"显示英文）
+  //   dispatch 模块下的 TempTaskTab 和 labor 模块下的 TempTaskPage 都有同样的 priorityMap，都需要补
+  critical: { color: 'text-red-700', label: '非常紧急' },
   urgent: { color: 'text-red-500', label: '紧急' },
   high: { color: 'text-orange-500', label: '高' },
   medium: { color: 'text-yellow-500', label: '中' },
@@ -53,30 +57,20 @@ const priorityMap: Record<string, { color: string; label: string }> = {
   normal: { color: 'text-gray-500', label: '普通' },
 };
 
-// 任务类型定义
-const taskTypes = [
-  { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
-  { value: 'irrigation', label: '灌溉', color: 'bg-blue-500' },
-  { value: 'pruning', label: '修剪', color: 'bg-purple-500' },
-  { value: 'pesticide', label: '植保', color: 'bg-red-500' },
-  { value: 'rootIrrigation', label: '灌根', color: 'bg-cyan-500' },
-  { value: 'planting', label: '定植', color: 'bg-lime-500' },
-  { value: 'harvest', label: '采收', color: 'bg-orange-500' },
-  { value: 'weeding', label: '除草', color: 'bg-emerald-500' },
-  { value: 'other', label: '其他', color: 'bg-gray-500' },
-];
-
-// 获取任务类型颜色
-const getTypeColor = (type: string): string => {
-  const taskType = taskTypes.find(t => t.value === type);
-  return taskType?.color || 'bg-gray-500';
-};
+// 任务类型定义（2026-08-30：改用 types/index.ts 已 export 的 TEMP_TASK_TYPES 字典）
+//   原因：本地 taskTypes 字典只覆盖 8 个农事类型，缺 farm_repair/equipment_repair 等临时任务类型，
+//   导致 getTypeLabel('farm_repair') 找不到 fallback 返回英文 "farm_repair"
+//   TEMP_TASK_TYPES 已包含 7 个临时任务类型值（farm_repair→农事抢修 等），统一用此字典避免重复维护
+function getTypeColor(_type: string): string {
+  // TEMP_TASK_TYPES 没有 color 字段，临时任务类型统一用紫色
+  return 'bg-purple-500';
+}
 
 // 获取任务类型标签
-const getTypeLabel = (type: string): string => {
-  const taskType = taskTypes.find(t => t.value === type);
+function getTypeLabel(type: string): string {
+  const taskType = TEMP_TASK_TYPES.find(t => t.value === type);
   return taskType?.label || type;
-};
+}
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -1589,17 +1583,41 @@ export const TempTaskTab: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-xs text-blue-600">任务区域</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || '-'}</p>
+                  {/* 2026-08-30：加 greenhouseName fallback，与列表一致 */}
+                  <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || selectedTask.greenhouseName || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-blue-600">发布人</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.assignerName || '-'}</p>
                 </div>
                 <div>
                   <label className="text-xs text-blue-600">执行人</label>
                   <p className="font-semibold text-gray-900">{selectedTask.assigneeName || '待分配'}</p>
                 </div>
+                {/* 2026-08-30：预计天数（与列表对齐） */}
                 <div>
-                  <label className="text-xs text-blue-600">优先级</label>
-                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
-                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority || '普通'}
-                  </p>
+                  <label className="text-xs text-blue-600">预计天数</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.estimatedDays || 0}天</p>
+                </div>
+                {/* 2026-08-30：人工（与列表对齐） */}
+                <div>
+                  <label className="text-xs text-blue-600">人工</label>
+                  <p className="font-semibold text-gray-900">{selectedTask.workerCount || 1}人</p>
+                </div>
+                {/* 2026-08-30：紧急程度合并到基本信息区，使用 TEMP_TASK_URGENCY_CONFIG（与列表对齐） */}
+                <div>
+                  <label className="text-xs text-blue-600">紧急程度</label>
+                  {/* 2026-08-30：inline-block → block，让色块在 label 下方独立换行（用户原话"换行在字段信息下面显示"） */}
+                  <span className={`block w-fit px-3 py-1.5 rounded text-sm font-medium ${
+                    TEMP_TASK_URGENCY_CONFIG[selectedTask.urgency as keyof typeof TEMP_TASK_URGENCY_CONFIG]?.color || 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {TEMP_TASK_URGENCY_CONFIG[selectedTask.urgency as keyof typeof TEMP_TASK_URGENCY_CONFIG]?.label || selectedTask.urgency}
+                  </span>
+                </div>
+                {/* 2026-08-30：超时状态（与列表对齐） */}
+                <div>
+                  <label className="text-xs text-blue-600">超时</label>
+                  <p className="font-semibold text-gray-900">{getTaskOverdueDesc(selectedTask) || '-'}</p>
                 </div>
               </div>
             </div>
@@ -1611,26 +1629,10 @@ export const TempTaskTab: React.FC = () => {
                 任务类型
               </h4>
               <div className="flex flex-wrap gap-2">
-                <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.tempTaskType || 'other')}`}>
-                  {getTypeLabel(selectedTask.tempTaskType || 'other')}
-                </span>
-              </div>
-            </div>
-
-            {/* 紧急程度 - 橙色背景 */}
-            <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
-              <h4 className="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                紧急程度
-              </h4>
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1.5 rounded text-sm font-medium ${
-                  (selectedTask.urgency as any) === 'critical' ? 'bg-red-100 text-red-700' :
-                  selectedTask.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {(selectedTask.urgency as any) === 'critical' ? '非常紧急' :
-                   selectedTask.urgency === 'urgent' ? '紧急' : '普通'}
+                {/* 2026-08-30：用 selectedTask.type 而非 tempTaskType（mapStoreTaskToTempTask 只设了 type，没设 tempTaskType，导致详情显示"其他"）
+                     列表显示 'task.typeName || task.type' = "农事抢修"，详情显示 "其他"——与列表对齐 */}
+                <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.type || 'other')}`}>
+                  {getTypeLabel(selectedTask.type || 'other')}
                 </span>
               </div>
             </div>
@@ -1657,22 +1659,33 @@ export const TempTaskTab: React.FC = () => {
                   <label className="text-xs text-sky-600">派发时间</label>
                   <p className="font-semibold text-gray-900">{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString('zh-CN') : '-'}</p>
                 </div>
+                {/* 2026-08-30：截止日期格式化（与列表一致 yyyy-MM-dd HH:00） */}
                 <div>
                   <label className="text-xs text-sky-600">截止日期</label>
-                  <p className="font-semibold text-gray-900">{selectedTask.dueDate || '-'}</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedTask.dueDate ? (
+                      selectedTask.dueDate.includes('T')
+                        ? `${selectedTask.dueDate.split('T')[0]} ${selectedTask.dueDate.split('T')[1]?.substring(0, 2) || '00'}:00`
+                        : selectedTask.dueDate.length > 13
+                          ? `${selectedTask.dueDate.substring(0, 10)} ${selectedTask.dueDate.substring(11, 13)}:00`
+                          : selectedTask.dueDate
+                    ) : '-'}
+                  </p>
                 </div>
+                {/* 2026-08-30：状态字典统一用 TEMP_TASK_STATUS_CONFIG（与列表对齐） */}
                 <div>
                   <label className="text-xs text-sky-600">状态</label>
                   <p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || 'bg-gray-100'} ${statusMap[selectedTask.status]?.color || 'text-gray-600'}`}>
-                      {statusMap[selectedTask.status]?.label || selectedTask.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.bg || 'bg-gray-100'} ${TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.color || 'text-gray-600'}`}>
+                      {TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.label || selectedTask.status}
                     </span>
                   </p>
                 </div>
+                {/* 2026-08-30：总工时统一公式（与列表对齐：天数*8 + 小时，再乘以人工） */}
                 <div>
-                  <label className="text-xs text-sky-600">预估时长</label>
-                  <p className="font-semibold text-gray-900">
-                    {selectedTask.estimatedHours ? `${selectedTask.estimatedHours}小时` : '-'}
+                  <label className="text-xs text-sky-600">总工时</label>
+                  <p className="font-semibold text-emerald-600">
+                    {((selectedTask.estimatedDays || 0) * 8 + (selectedTask.estimatedHours || 0)) * (selectedTask.workerCount || 1)}h
                   </p>
                 </div>
               </div>
