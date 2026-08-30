@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Task, type TaskRecord } from '../../../hooks/useTasks';
 import { Camera, CheckCircle, Download, FileText, MapPin, Mic, User, X } from 'lucide-react';
-import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Button, Label, Modal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
@@ -208,27 +208,21 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* 主内容区 */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
-        {/* 头部 */}
-        <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">任务详情</h3>
-            <span className={`px-2 py-0.5 text-xs rounded ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
-              {statusMap[task.status]?.label || task.status}
-            </span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-4 h-4 text-white" />
-          </Button>
-        </div>
-
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-4">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="任务详情"
+      size="xl"
+      showMaximize={true}
+      headerAction={(
+        <span className={`px-2 py-0.5 text-xs rounded ${statusMap[task.status]?.bg || 'bg-gray-100'} ${statusMap[task.status]?.color || 'text-gray-600'}`}>
+          {statusMap[task.status]?.label || task.status}
+        </span>
+      )}
+    >
+      <>
+      {/* 内容区域 */}
+      <div className="space-y-4">
             {/* 基本信息 - 白色背景，蓝色标题 */}
             <div className="bg-white rounded-lg p-4 border border-gray-100">
               <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2">
@@ -504,8 +498,6 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             )}
           </div>
-        </div>
-
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <Button variant="secondary" onClick={onClose}>
@@ -520,19 +512,19 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
             </Button>
           )}
         </div>
-      </div>
 
-      {/* ★ 2026-08-22：AI 实际工时录入（任务完成后员工填入） */}
-      <div className="mt-4 px-1">
-        <ActualHoursRecorder
-          taskId={taskId}
-          taskType={task.taskType || '其他'}
-          taskCode={task.taskCode}
-          estimatedHours={task.estimatedHours}
-          onSuccess={() => onRefresh?.()}
-        />
-      </div>
-    </div>
+        {/* ★ 2026-08-22：AI 实际工时录入（任务完成后员工填入） */}
+        <div className="mt-4 px-1">
+          <ActualHoursRecorder
+            taskId={taskId}
+            taskType={task.taskType || '其他'}
+            taskCode={task.taskCode}
+            estimatedHours={task.estimatedHours}
+            onSuccess={() => onRefresh?.()}
+          />
+        </div>
+      </>
+    </Modal>
   );
 }
 

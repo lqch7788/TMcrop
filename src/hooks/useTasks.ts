@@ -173,6 +173,9 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     assignerId: t.assignerId || '',
     assignerName: t.assignerName || '',
     dueDate: t.dueDate || '',
+    // 2026-08-30：透传 completedAt（后端 transformTaskFields 已返回）
+    //   每日工单汇总页面用此字段按"完成日期"过滤，避免 dueDate 早于 completedAt 导致任务不显示
+    completedAt: t.completedAt || '',
     startTime: t.startTime || undefined,
     greenhouseId: t.greenhouseId || '',
     greenhouseName: t.greenhouseName || '',

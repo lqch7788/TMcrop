@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Check, CheckCircle, Clock, Download, Edit2, FileText, Plus, Send, Trash2, X, XCircle } from 'lucide-react';
-import { TEMP_TASK_TYPES } from '../../../types';
+import { TEMP_TASK_TYPES, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
+import { TEMP_TASK_STATUS_CONFIG, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { type TempTask } from '../../../hooks/useTempTasks';
 import { useUserStore } from '../../../stores';
 import { TempTaskFilters } from './TempTaskFilters';
@@ -42,6 +43,8 @@ const statusMap: Record<string, { bg: string; color: string; label: string }> = 
 
 // 优先级映射
 const priorityMap: Record<string, { color: string; label: string }> = {
+  // 2026-08-30：补 critical 条目（用户报告"优先级 critical"显示英文，原因是 priorityMap 没有 critical，fallback 显示原文）
+  critical: { color: 'text-red-700', label: '非常紧急' },
   urgent: { color: 'text-red-500', label: '紧急' },
   high: { color: 'text-orange-500', label: '高' },
   medium: { color: 'text-yellow-500', label: '中' },
@@ -49,30 +52,20 @@ const priorityMap: Record<string, { color: string; label: string }> = {
   normal: { color: 'text-gray-500', label: '普通' },
 };
 
-// 任务类型定义
-const taskTypes = [
-  { value: 'fertilization', label: '施肥', color: 'bg-green-500' },
-  { value: 'irrigation', label: '灌溉', color: 'bg-blue-500' },
-  { value: 'pruning', label: '修剪', color: 'bg-purple-500' },
-  { value: 'pesticide', label: '植保', color: 'bg-red-500' },
-  { value: 'rootIrrigation', label: '灌根', color: 'bg-cyan-500' },
-  { value: 'planting', label: '定植', color: 'bg-lime-500' },
-  { value: 'harvest', label: '采收', color: 'bg-orange-500' },
-  { value: 'weeding', label: '除草', color: 'bg-emerald-500' },
-  { value: 'other', label: '其他', color: 'bg-gray-500' },
-];
-
-// 获取任务类型颜色
-const getTypeColor = (type: string): string => {
-  const taskType = taskTypes.find(t => t.value === type);
-  return taskType?.color || 'bg-gray-500';
-};
+// 任务类型定义（2026-08-30：改用 types/index.ts 已 export 的 TEMP_TASK_TYPES 字典）
+//   原因：本地 taskTypes 字典只覆盖 8 个农事类型，缺 farm_repair/equipment_repair 等临时任务类型，
+//   导致 getTypeLabel('farm_repair') 找不到 fallback 返回英文 "farm_repair"
+//   TEMP_TASK_TYPES 已包含 7 个临时任务类型值（farm_repair→农事抢修 等），统一用此字典避免重复维护
+function getTypeColor(_type: string): string {
+  // TEMP_TASK_TYPES 没有 color 字段，临时任务类型统一用紫色
+  return 'bg-purple-500';
+}
 
 // 获取任务类型标签
-const getTypeLabel = (type: string): string => {
-  const taskType = taskTypes.find(t => t.value === type);
+function getTypeLabel(type: string): string {
+  const taskType = TEMP_TASK_TYPES.find(t => t.value === type);
   return taskType?.label || type;
-};
+}
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -1308,17 +1301,40 @@ export function TempTaskPage() {
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">任务区域</Label>
-                  <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || '-'}</p>
+                  {/* 2026-08-30：加 greenhouseName fallback，与列表一致 */}
+                  <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || selectedTask.greenhouseName || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">发布人</Label>
+                  <p className="font-semibold text-gray-900">{selectedTask.assignerName || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">执行人</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.assigneeName || '待分配'}</p>
                 </div>
+                {/* 2026-08-30：预计天数（与列表对齐） */}
                 <div>
-                  <Label className="text-xs text-gray-500">优先级</Label>
-                  <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
-                    {priorityMap[selectedTask.priority]?.label || selectedTask.priority || '普通'}
-                  </p>
+                  <Label className="text-xs text-gray-500">预计天数</Label>
+                  <p className="font-semibold text-gray-900">{selectedTask.estimatedDays || 0}天</p>
+                </div>
+                {/* 2026-08-30：人工（与列表对齐） */}
+                <div>
+                  <Label className="text-xs text-gray-500">人工</Label>
+                  <p className="font-semibold text-gray-900">{selectedTask.workerCount || 1}人</p>
+                </div>
+                {/* 2026-08-30：紧急程度用 TEMP_TASK_URGENCY_CONFIG（与列表对齐） */}
+                <div>
+                  <Label className="text-xs text-gray-500">紧急程度</Label>
+                  <span className={`block w-fit px-3 py-1.5 rounded text-sm font-medium ${
+                    TEMP_TASK_URGENCY_CONFIG[selectedTask.urgency as keyof typeof TEMP_TASK_URGENCY_CONFIG]?.color || 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {TEMP_TASK_URGENCY_CONFIG[selectedTask.urgency as keyof typeof TEMP_TASK_URGENCY_CONFIG]?.label || selectedTask.urgency}
+                  </span>
+                </div>
+                {/* 2026-08-30：超时状态（与列表对齐） */}
+                <div>
+                  <Label className="text-xs text-gray-500">超时</Label>
+                  <p className="font-semibold text-gray-900">{getTaskOverdueDesc(selectedTask) || '-'}</p>
                 </div>
               </div>
             </div>
@@ -1327,23 +1343,10 @@ export function TempTaskPage() {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型</h4>
               <div className="flex flex-wrap gap-2">
-                <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.tempTaskType || 'other')}`}>
-                  {getTypeLabel(selectedTask.tempTaskType || 'other')}
-                </span>
-              </div>
-            </div>
-
-            {/* 紧急程度 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">紧急程度</h4>
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1.5 rounded text-sm font-medium ${
-                  (selectedTask.urgency as any) === 'critical' ? 'bg-red-100 text-red-700' :
-                  selectedTask.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {(selectedTask.urgency as any) === 'critical' ? '非常紧急' :
-                   selectedTask.urgency === 'urgent' ? '紧急' : '普通'}
+                {/* 2026-08-30：用 selectedTask.type 而非 tempTaskType（mapStoreTaskToTempTask 只设了 type）
+                     列表显示 typeName '农事抢修'，详情显示 '其他'——与列表对齐 */}
+                <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.type || 'other')}`}>
+                  {getTypeLabel(selectedTask.type || 'other')}
                 </span>
               </div>
             </div>
@@ -1366,22 +1369,33 @@ export function TempTaskPage() {
                   <Label className="text-xs text-gray-500">派发时间</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString('zh-CN') : '-'}</p>
                 </div>
+                {/* 2026-08-30：截止日期格式化（与列表一致 yyyy-MM-dd HH:00） */}
                 <div>
                   <Label className="text-xs text-gray-500">截止日期</Label>
-                  <p className="font-semibold text-gray-900">{selectedTask.dueDate || '-'}</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedTask.dueDate ? (
+                      selectedTask.dueDate.includes('T')
+                        ? `${selectedTask.dueDate.split('T')[0]} ${selectedTask.dueDate.split('T')[1]?.substring(0, 2) || '00'}:00`
+                        : selectedTask.dueDate.length > 13
+                          ? `${selectedTask.dueDate.substring(0, 10)} ${selectedTask.dueDate.substring(11, 13)}:00`
+                          : selectedTask.dueDate
+                    ) : '-'}
+                  </p>
                 </div>
+                {/* 2026-08-30：状态字典统一用 TEMP_TASK_STATUS_CONFIG（与列表对齐） */}
                 <div>
                   <Label className="text-xs text-gray-500">状态</Label>
                   <p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || 'bg-gray-100'} ${statusMap[selectedTask.status]?.color || 'text-gray-600'}`}>
-                      {statusMap[selectedTask.status]?.label || selectedTask.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.bg || 'bg-gray-100'} ${TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.color || 'text-gray-600'}`}>
+                      {TEMP_TASK_STATUS_CONFIG[selectedTask.status]?.label || selectedTask.status}
                     </span>
                   </p>
                 </div>
+                {/* 2026-08-30：总工时统一公式（与列表对齐：天数*8 + 小时，再乘以人工） */}
                 <div>
-                  <Label className="text-xs text-gray-500">预估时长</Label>
-                  <p className="font-semibold text-gray-900">
-                    {selectedTask.estimatedHours ? `${selectedTask.estimatedHours}小时` : '-'}
+                  <Label className="text-xs text-gray-500">总工时</Label>
+                  <p className="font-semibold text-emerald-600">
+                    {((selectedTask.estimatedDays || 0) * 8 + (selectedTask.estimatedHours || 0)) * (selectedTask.workerCount || 1)}h
                   </p>
                 </div>
               </div>
