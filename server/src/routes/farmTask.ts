@@ -5,8 +5,15 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+// v0.3 前置 3 + 前置 5：租户上下文 + RBAC 权限守卫
+import { tenantContext } from '../middleware/tenantContext';
+import { permissionGuard } from '../middleware/permissionGuard';
 
 const router = Router();
+
+// v0.3 阶段 4：注入租户上下文（仅追加 req.tenantId，不改现有行为）
+// 注意：现有 handler 不依赖 req.tenantId，所以不破坏任何现有功能
+router.use(tenantContext);
 
 /**
  * 事务包裹助手（修复 P0-1：状态变更无事务导致脏数据）

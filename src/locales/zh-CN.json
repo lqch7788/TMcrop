@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "name": "简体中文",
+    "code": "zh-CN",
+    "version": "v0.3-stage0-2026-08-31"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "新增",
+    "search": "搜索",
+    "reset": "重置",
+    "submit": "提交",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "operationSuccess": "操作成功",
+    "operationFailed": "操作失败"
+  },
+  "farm": {
+    "task": {
+      "title": "农事任务",
+      "tab": {
+        "task": "农事任务",
+        "tempTask": "临时任务",
+        "inspection": "巡查记录",
+        "problem": "问题管理"
+      },
+      "status": {
+        "pending": "待开始",
+        "in_progress": "进行中",
+        "paused": "已暂停",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      },
+      "priority": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "urgent": "紧急"
+      },
+      "action": {
+        "start": "开始",
+        "pause": "暂停",
+        "resume": "续做",
+        "complete": "完成",
+        "viewSop": "查看 SOP",
+        "scanReport": "扫码上报",
+        "viewTimeline": "时间线"
+      },
+      "progress": "进度",
+      "estimatedHours": "预计工时",
+      "actualHours": "实际工时",
+      "pauseReason": "暂停原因"
+    },
+    "operation": {
+      "title": "农事操作记录",
+      "type": {
+        "planting": "种植",
+        "irrigation": "灌溉",
+        "fertilization": "施肥",
+        "pest_control": "病虫害防治",
+        "pruning": "修剪",
+        "harvest": "采收",
+        "weeding": "除草",
+        "farm_repair": "农场维护",
+        "equipment_repair": "设备维修",
+        "other": "其他"
+      },
+      "workers": "工人数",
+      "duration": "持续时长",
+      "materials": "使用物料",
+      "photos": "照片",
+      "qualityScore": "质量评分"
+    }
+  },
+  "pesticide": {
+    "title": "农药管理",
+    "safetyInterval": "采收安全间隔期（天）",
+    "maxUsePerSeason": "每季最多使用次数",
+    "retryInterval": "推荐复配间隔（天）",
+    "warning": {
+      "intervalTooShort": "距上次用药仅 {days} 天（推荐 ≥ {interval} 天）",
+      "harvestTooClose": "距采收仅 {days} 天（要求 ≥ {interval} 天）",
+      "seasonExceeded": "本季已使用 {count} 次（上限 {limit} 次）",
+      "incompatible": "与 {pesticide} 不可混用"
+    },
+    "confirmAnyway": "我确认仍要使用"
+  },
+  "sop": {
+    "title": "SOP 标准作业程序",
+    "step": "步骤",
+    "estimatedMinutes": "预计耗时（分钟）",
+    "safety": "安全提示",
+    "dosage": "用量",
+    "dilution": "稀释比例"
+  },
+  "issue": {
+    "title": "问题管理",
+    "rectification": "整改",
+    "progress": "整改进度",
+    "recheck": "复检",
+    "board": {
+      "pending": "待派",
+      "inProgress": "整改中",
+      "recheckPending": "待复核",
+      "closed": "已闭环",
+      "recurrence": "已复发"
+    }
+  },
+  "cost": {
+    "title": "成本管理",
+    "material": "物料成本",
+    "labor": "人工成本",
+    "outsource": "外包成本",
+    "equipmentDepreciation": "设备折旧",
+    "total": "总成本",
+    "perUnit": "单株成本",
+    "coverage": "人工成本覆盖率"
+  },
+  "reminder": {
+    "title": "提醒中心",
+    "rule": "规则",
+    "active": "启用",
+    "inactive": "停用",
+    "cooldown": "冷却时间（分钟）"
+  },
+  "weather": {
+    "title": "气象预警",
+    "alert": {
+      "blue": "蓝色预警",
+      "yellow": "黄色预警",
+      "orange": "橙色预警",
+      "red": "红色预警"
+    }
+  },
+  "review": {
+    "title": "复盘报告",
+    "autoSummary": "自动汇总",
+    "manualConclusion": "复盘结论",
+    "improvements": "改进项"
+  },
+  "permission": {
+    "denied": "权限不足",
+    "loginRequired": "请先登录",
+    "crossTenant": "跨租户访问被拒绝"
+  },
+  "system": {
+    "loadingFailed": "数据加载失败",
+    "networkError": "网络错误",
+    "confirmDelete": "确认删除？此操作不可恢复",
+    "success": "成功",
+    "failed": "失败"
+  }
+}

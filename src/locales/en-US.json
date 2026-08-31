@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "name": "English (US)",
+    "code": "en-US",
+    "version": "v0.3-stage0-2026-08-31"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "reset": "Reset",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "loading": "Loading...",
+    "noData": "No data",
+    "operationSuccess": "Operation successful",
+    "operationFailed": "Operation failed"
+  },
+  "farm": {
+    "task": {
+      "title": "Farm Tasks",
+      "tab": {
+        "task": "Tasks",
+        "tempTask": "Temporary Tasks",
+        "inspection": "Inspections",
+        "problem": "Issues"
+      },
+      "status": {
+        "pending": "Pending",
+        "in_progress": "In Progress",
+        "paused": "Paused",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "priority": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "action": {
+        "start": "Start",
+        "pause": "Pause",
+        "resume": "Resume",
+        "complete": "Complete",
+        "viewSop": "View SOP",
+        "scanReport": "Scan & Report",
+        "viewTimeline": "Timeline"
+      },
+      "progress": "Progress",
+      "estimatedHours": "Estimated Hours",
+      "actualHours": "Actual Hours",
+      "pauseReason": "Pause Reason"
+    },
+    "operation": {
+      "title": "Operation Records",
+      "type": {
+        "planting": "Planting",
+        "irrigation": "Irrigation",
+        "fertilization": "Fertilization",
+        "pest_control": "Pest Control",
+        "pruning": "Pruning",
+        "harvest": "Harvest",
+        "weeding": "Weeding",
+        "farm_repair": "Farm Repair",
+        "equipment_repair": "Equipment Repair",
+        "other": "Other"
+      },
+      "workers": "Workers",
+      "duration": "Duration",
+      "materials": "Materials",
+      "photos": "Photos",
+      "qualityScore": "Quality Score"
+    }
+  },
+  "pesticide": {
+    "title": "Pesticide Management",
+    "safetyInterval": "Safety Interval (days)",
+    "maxUsePerSeason": "Max Use Per Season",
+    "retryInterval": "Retry Interval (days)",
+    "warning": {
+      "intervalTooShort": "Only {days} days since last use (recommended ≥ {interval} days)",
+      "harvestTooClose": "Only {days} days to harvest (required ≥ {interval} days)",
+      "seasonExceeded": "Used {count} times this season (limit {limit})",
+      "incompatible": "Incompatible with {pesticide}"
+    },
+    "confirmAnyway": "I confirm to use anyway"
+  },
+  "sop": {
+    "title": "SOP Standard Operating Procedure",
+    "step": "Step",
+    "estimatedMinutes": "Estimated Minutes",
+    "safety": "Safety Notes",
+    "dosage": "Dosage",
+    "dilution": "Dilution Ratio"
+  },
+  "issue": {
+    "title": "Issue Management",
+    "rectification": "Rectification",
+    "progress": "Progress",
+    "recheck": "Recheck",
+    "board": {
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "recheckPending": "Recheck Pending",
+      "closed": "Closed",
+      "recurrence": "Recurrence"
+    }
+  },
+  "cost": {
+    "title": "Cost Management",
+    "material": "Material",
+    "labor": "Labor",
+    "outsource": "Outsource",
+    "equipmentDepreciation": "Equipment Depreciation",
+    "total": "Total",
+    "perUnit": "Cost per Unit",
+    "coverage": "Labor Cost Coverage"
+  },
+  "reminder": {
+    "title": "Reminder Center",
+    "rule": "Rule",
+    "active": "Active",
+    "inactive": "Inactive",
+    "cooldown": "Cooldown (minutes)"
+  },
+  "weather": {
+    "title": "Weather Alerts",
+    "alert": {
+      "blue": "Blue Alert",
+      "yellow": "Yellow Alert",
+      "orange": "Orange Alert",
+      "red": "Red Alert"
+    }
+  },
+  "review": {
+    "title": "Review Report",
+    "autoSummary": "Auto Summary",
+    "manualConclusion": "Manual Conclusion",
+    "improvements": "Improvements"
+  },
+  "permission": {
+    "denied": "Permission Denied",
+    "loginRequired": "Please login first",
+    "crossTenant": "Cross-tenant access denied"
+  },
+  "system": {
+    "loadingFailed": "Data loading failed",
+    "networkError": "Network error",
+    "confirmDelete": "Confirm delete? This cannot be undone",
+    "success": "Success",
+    "failed": "Failed"
+  }
+}
