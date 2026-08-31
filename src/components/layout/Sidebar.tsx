@@ -13,7 +13,9 @@ import {
   DollarSign, Layers, Link as LinkIcon,
   Bug,
   FileDown,
-  Zap
+  Zap,
+  // v0.3 新增图标（lucide-react 命名，非 antd 命名）
+  LayoutGrid,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 
@@ -91,12 +93,15 @@ const materialsSubItems = [
 
 // 农事管理子菜单（排班调度、班组分配从人工管理模块移入，与任务派发形成生产劳动力闭环）
 // 注意：农事任务派发、巡查记录、问题分派已统一到农事任务中心，临时任务派发保留独立入口
+// v0.3：新增 SOP / 时间线 / 整改 / 提醒 / 成本 / 合规 / 备份 / 快速完成 / 纸单 等工具（不删改现有项）
 const farmSubItems = [
   { icon: BarChart3, label: '农事任务中心', path: '/farm-hub' },
   { icon: ClipboardList, label: '智能任务中心', path: '/task-center' },
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
+  // v0.3 其他管理（8 个工具 Tab 聚合入口）
+  { icon: LayoutGrid, label: '其他管理', path: '/agronomy/other-management' },
 ];
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {

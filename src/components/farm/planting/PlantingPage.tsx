@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Calendar, AlertTriangle } from 'lucide-react';
 // 2026-07-01 修复：endConfirm 弹窗里用了 <Button> 但未导入，触发 "Button is not defined"
 // 统一从 UI 库导入
@@ -43,6 +43,8 @@ import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
 export default function PlantingPage() {
   // 2026-06-29：扫码跳转 — 解析 URL ?labelNumber= 参数（参考 SeedlingPage）
   const [searchParams] = useSearchParams();
+  // v0.3 P0-1：批次时间线跳转
+  const navigate = useNavigate();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // 2026-07-01 P2-8 修复：原 useAuthPermission hook 是死代码（已 hardcode 全部 true），删除
@@ -212,6 +214,12 @@ export default function PlantingPage() {
     open: boolean;
     record: Planting | null;
   }>({ open: false, record: null });
+  const handleTimeline = (record: Planting) => {
+    if (record.batchCode) {
+      navigate(`/agronomy/batch-timeline/${encodeURIComponent(record.batchCode)}`);
+    }
+  };
+
   const handleDailyRecord = (record: Planting) => {
     setDailyRecordModal({ open: true, record });
   };
@@ -665,6 +673,7 @@ export default function PlantingPage() {
         onBreedingRecord={handleBreedingRecord}
         onSeedSavingRecord={handleSeedSavingRecord}
         onDailyRecord={handleDailyRecord}
+        onTimeline={handleTimeline}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}

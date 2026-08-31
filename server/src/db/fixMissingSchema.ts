@@ -4386,6 +4386,235 @@ function fixApprovedProductionPlanStatus(): void {
     console.warn('[fixMissingSchema] 知识库 3 张表创建失败（已存在则忽略）:', e);
   }
 
+  // ========== v0.3 P0-3：离线队列表（mobile/operation-report 暂存）==========
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS operation_record_offline_queue (
+        id TEXT PRIMARY KEY,
+        client_id TEXT UNIQUE NOT NULL,
+        payload TEXT NOT NULL,
+        client_created_at DATETIME,
+        sync_status TEXT DEFAULT 'pending',  -- pending / synced / failed
+        conflict_reason TEXT,
+        synced_at DATETIME,
+        server_record_id TEXT,
+        created_at DATETIME DEFAULT (datetime('now', 'localtime'))
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_offline_queue_status ON operation_record_offline_queue (sync_status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_offline_queue_client ON operation_record_offline_queue (client_id)`);
+    seedLog.info('✓ v0.3 P0-3 operation_record_offline_queue 表创建完成');
+  } catch (e) {
+    seedLog.skip('• operation_record_offline_queue 创建失败:', (e as Error).message);
+  }
+
+  // ========== v0.3 P1-1：SOP 库 3 张表 ==========
+  try {
+    // 1. SOP 主表
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sop_library (
+        id TEXT PRIMARY KEY,
+        sop_code TEXT UNIQUE NOT NULL,
+        sop_name TEXT NOT NULL,
+        crop_code TEXT,
+        crop_variety TEXT,
+        growth_stage TEXT,
+        task_type TEXT NOT NULL,
+        version INTEGER DEFAULT 1,
+        effective_date TEXT,
+        expiry_date TEXT,
+        status TEXT DEFAULT 'active',
+        description TEXT,
+        warning_notes TEXT,
+        creator_id TEXT,
+        creator_name TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sop_library_crop ON sop_library(crop_code)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sop_library_task_type ON sop_library(task_type)`);
+
+    // 2. SOP 步骤
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sop_steps (
+        id TEXT PRIMARY KEY,
+        sop_id TEXT NOT NULL,
+        step_order INTEGER NOT NULL,
+        step_title TEXT NOT NULL,
+        step_content TEXT,
+        step_images TEXT,
+        step_video_url TEXT,
+        pesticide_code TEXT,
+        dosage TEXT,
+        dilution_ratio TEXT,
+        estimated_minutes INTEGER,
+        safety_notes TEXT,
+        FOREIGN KEY (sop_id) REFERENCES sop_library(id) ON DELETE CASCADE
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sop_steps_sop ON sop_steps(sop_id)`);
+
+    // 3. SOP 任务绑定
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sop_task_bindings (
+        id TEXT PRIMARY KEY,
+        sop_id TEXT NOT NULL,
+        task_id TEXT NOT NULL,
+        binding_type TEXT DEFAULT 'recommended',  -- recommended / mandatory
+        bound_at TEXT,
+        bound_by TEXT,
+        UNIQUE(sop_id, task_id),
+        FOREIGN KEY (sop_id) REFERENCES sop_library(id) ON DELETE CASCADE
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_sop_bindings_task ON sop_task_bindings(task_id)`);
+
+    seedLog.info('✓ v0.3 P1-1 SOP 库 3 张表创建完成');
+  } catch (e) {
+    seedLog.skip('• SOP 库表创建失败:', (e as Error).message);
+  }
+
+  // ========== v0.3 P0-1：批次统一时间线视图（5 表 UNION ALL）==========
+  // 依赖字段（已由 migrateV03.ts 一次性迁移完成）：
+  //   - farm_tasks.progress_pct, status, plan_date, batch_code
+  //   - farm_operation_records.operation_date, batch_code
+  //   - daily_records.related_code, related_type
+  //   - harvest_records.harvest_date, batch_code
+  //   - planting_move_records.operation_date, planting_id
+  // 按 ADR-004 约定：视图在依赖字段 ALTER 之后创建
+  try {
+    db.run(`
+      CREATE VIEW IF NOT EXISTS batch_timeline_view AS
+      -- 1. 农事任务事件
+      SELECT
+        'farm_task' AS event_type,
+        id,
+        batch_code,
+        plan_date AS event_date,
+        task_title AS title,
+        task_type AS subtype,
+        CASE WHEN status = 'completed' THEN 100 ELSE COALESCE(progress_pct, 0) END AS progress,
+        status,
+        assignee_name AS operator,
+        NULL AS quantity,
+        NULL AS unit,
+        json_object(
+          'task_type', task_type,
+          'priority', priority,
+          'plan_time', plan_time,
+          'completion_date', completion_date
+        ) AS detail
+      FROM farm_tasks
+      WHERE batch_code IS NOT NULL
+
+      UNION ALL
+
+      -- 2. 作业流水事件
+      SELECT
+        'operation' AS event_type,
+        id,
+        batch_code,
+        operation_date AS event_date,
+        operation_type_name AS title,
+        operation_type AS subtype,
+        NULL AS progress,
+        status,
+        operator_name AS operator,
+        workload AS quantity,
+        unit AS unit,
+        json_object(
+          'operation_type', operation_type,
+          'workers', workers,
+          'duration_hours', duration,
+          'workload', workload,
+          'workload_unit', unit
+        ) AS detail
+      FROM farm_operation_records
+      WHERE batch_code IS NOT NULL
+
+      UNION ALL
+
+      -- 3. 每日记录事件
+      SELECT
+        'daily_record' AS event_type,
+        id,
+        related_code AS batch_code,
+        record_date AS event_date,
+        '种植每日记录' AS title,
+        record_type AS subtype,
+        NULL AS progress,
+        'completed' AS status,
+        COALESCE(json_extract(data, '$.operator'), '系统') AS operator,
+        NULL AS quantity,
+        NULL AS unit,
+        data AS detail
+      FROM daily_records
+      WHERE related_type = 'planting' AND related_code IS NOT NULL
+
+      UNION ALL
+
+      -- 4. 采收事件
+      SELECT
+        'harvest' AS event_type,
+        id,
+        batch_code,
+        harvest_date AS event_date,
+        '采收' AS title,
+        harvest_form AS subtype,
+        NULL AS progress,
+        'completed' AS status,
+        harvester_names AS operator,
+        harvest_quantity AS quantity,
+        unit AS unit,
+        json_object(
+          'quality_grade', quality_grade,
+          'buyer_name', buyer_name,
+          'sales_channel', sales_channel
+        ) AS detail
+      FROM harvest_records
+      WHERE batch_code IS NOT NULL
+
+      UNION ALL
+
+      -- 5. 移入移出事件
+      SELECT
+        'move' AS event_type,
+        id,
+        CAST(planting_id AS TEXT) AS batch_code,
+        operation_date AS event_date,
+        CASE operation_type
+          WHEN 'move_in' THEN '移入'
+          WHEN 'move_out' THEN '移出'
+          ELSE COALESCE(operation_type, '移栽')
+        END AS title,
+        to_area_name AS subtype,
+        NULL AS progress,
+        'completed' AS status,
+        operator_name AS operator,
+        quantity AS quantity,
+        '株' AS unit,
+        json_object(
+          'from_area', from_area_name,
+          'to_area', to_area_name,
+          'quantity', quantity,
+          'unit', '株'
+        ) AS detail
+      FROM planting_move_records
+      WHERE planting_id IS NOT NULL
+    `);
+
+    // 索引：farm_tasks.batch_code + plan_date（按批次查时间线核心索引）
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_batch_date ON farm_tasks(batch_code, plan_date DESC) WHERE batch_code IS NOT NULL`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_op_records_batch_date ON farm_operation_records(batch_code, operation_date DESC) WHERE batch_code IS NOT NULL`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_harvest_batch_date ON harvest_records(batch_code, harvest_date DESC) WHERE batch_code IS NOT NULL`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_daily_records_batch_date ON daily_records(related_code, record_date DESC) WHERE related_type = 'planting' AND related_code IS NOT NULL`);
+
+    seedLog.info('✓ v0.3 P0-1 batch_timeline_view 视图 + 4 个复合索引创建完成');
+  } catch (e) {
+    seedLog.skip('• batch_timeline_view 创建失败:', (e as Error).message);
+  }
+
   saveDatabase();
 }
 

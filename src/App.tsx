@@ -184,6 +184,26 @@ const Team = lazy(() => import('./pages/Team'));
 const TempTask = lazy(() => import('./pages/TempTask'));
 const TaskCenterPage = lazy(() => import('./pages/farm/TaskCenterPage'));
 const FarmTaskHub = lazy(() => import('./pages/farm/FarmTaskHub'));
+// v0.3 P0-1：批次统一时间线
+const BatchTimelinePage = lazy(() => import('./pages/agronomy/BatchTimelinePage'));
+// v0.3 P0-2：快速完成任务工具
+const QuickTaskCompletePage = lazy(() => import('./pages/agronomy/QuickTaskCompletePage'));
+// v0.3 P0-B：纸单兜底录入工具
+const PaperReportPage = lazy(() => import('./pages/agronomy/PaperReportPage'));
+// v0.3 P1-1：SOP 库浏览
+const SopLibraryPage = lazy(() => import('./pages/agronomy/SopLibraryPage'));
+// v0.3 P1-2：提醒规则管理
+const ReminderRulesPage = lazy(() => import('./pages/agronomy/ReminderRulesPage'));
+// v0.3 P1-4：批次成本分析
+const BatchCostAnalysisPage = lazy(() => import('./pages/agronomy/BatchCostAnalysisPage'));
+// v0.3 P1-5：问题整改看板
+const IssueTrackingBoard = lazy(() => import('./pages/agronomy/IssueTrackingBoard'));
+// v0.3 P0-R + P0-S：合规报告
+const ComplianceReportPage = lazy(() => import('./pages/agronomy/ComplianceReportPage'));
+// v0.3 P2-X：数据库备份中心
+const BackupCenterPage = lazy(() => import('./pages/agronomy/BackupCenterPage'));
+// v0.3 其他管理聚合页（8 个工具 Tab）
+const OtherManagementPage = lazy(() => import('./pages/agronomy/OtherManagementPage'));
 const AttendancePage = lazy(() => import('./pages/labor/AttendancePage'));
 const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
 const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
@@ -509,6 +529,26 @@ function AppContent() {
           {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
           <Route path="/task-center" element={<TaskCenterPage />} />
           <Route path="/farm-hub" element={<FarmTaskHub />} />
+          {/* v0.3 P0-1：批次统一时间线 */}
+          <Route path="/agronomy/batch-timeline/:batchCode" element={<BatchTimelinePage />} />
+          {/* v0.3 P0-2：快速完成任务工具 */}
+          <Route path="/agronomy/quick-complete" element={<QuickTaskCompletePage />} />
+          {/* v0.3 P0-B：纸单兜底录入工具 */}
+          <Route path="/agronomy/paper-report" element={<PaperReportPage />} />
+          {/* v0.3 P1-1：SOP 库 */}
+          <Route path="/agronomy/sop-library" element={<SopLibraryPage />} />
+          {/* v0.3 P1-2：提醒规则 */}
+          <Route path="/agronomy/reminders" element={<ReminderRulesPage />} />
+          {/* v0.3 P1-4：批成本分析 */}
+          <Route path="/agronomy/batch-cost" element={<BatchCostAnalysisPage />} />
+          {/* v0.3 P1-5：问题整改看板 */}
+          <Route path="/agronomy/issue-board" element={<IssueTrackingBoard />} />
+          {/* v0.3 P0-R + P0-S：合规报告 */}
+          <Route path="/agronomy/compliance-report" element={<ComplianceReportPage />} />
+          {/* v0.3 P2-X：备份中心 */}
+          <Route path="/agronomy/backup-center" element={<BackupCenterPage />} />
+          {/* v0.3 其他管理聚合页（8 个工具 Tab） */}
+          <Route path="/agronomy/other-management" element={<OtherManagementPage />} />
           {/* 病虫害防治管理 */}
           <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />

@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, StopCircle, Tag, Trash2, Wheat, X } from 'lucide-react';
+import { Calendar, Clock, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Sprout, StopCircle, Tag, Trash2, Wheat, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ActionIconButton } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
@@ -64,6 +64,8 @@ interface PlantingTableProps {
   onSeedSavingRecord?: (record: Planting) => void;
   // 2026-06-28: 每日记录回调
   onDailyRecord?: (record: Planting) => void;
+  // v0.3 P0-1：批次时间线跳转回调（可选，未传则不显示按钮）
+  onTimeline?: (record: Planting) => void;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -109,6 +111,8 @@ export function PlantingTable({
   onBreedingRecord,
   onSeedSavingRecord,
   onDailyRecord,
+  // v0.3 P0-1：批次时间线（可选）
+  onTimeline,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -630,6 +634,17 @@ export function PlantingTable({
                   title="结束"
                 >
                   <StopCircle className="w-4 h-4" />
+                </Button>
+              )}
+              {/* v0.3 P0-1：批次时间线跳转按钮（可选，按需显示） */}
+              {onTimeline && record.batchCode && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onTimeline(record)}
+                  title="时间线"
+                >
+                  <Clock className="w-4 h-4" />
                 </Button>
               )}
             </div>

@@ -113,3 +113,5 @@ sqlite3.exe
 tsconfig.tsbuildinfo
 *.db-shm
 *.db-wal
+server/data/yuanxingtu.db.backup-*
+server/data/yuanxingtu.db.save.tmp

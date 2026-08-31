@@ -102,6 +102,26 @@ import projectDebugRouter from './projectDebug';
 import deviceDistributionRouter from './deviceDistribution';
 import farmTaskSchedulesRouter from './farmTaskSchedules';
 import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
+// v0.3 P0-1：批次统一时间线路由
+import batchTimelineRouter from './batchTimeline';
+// v0.3 P0-2：任务进度跟踪路由
+import taskProgressRouter from './taskProgress';
+// v0.3 P0-R + P0-S：监管报告 + 合规血缘
+import complianceReportRouter from './complianceReport';
+// v0.3 P0-3：移动端离线队列同步
+import offlineSyncRouter from './offlineSync';
+// v0.3 P0-B：纸单兜底（班组长代填）
+import paperReportRouter from './paperReport';
+// v0.3 P1-1：SOP 库
+import sopLibraryRouter from './sopLibrary';
+// v0.3 P1-4：批次成本归集
+import batchCostRouter from './batchCost';
+// v0.3 P1-2：提醒引擎
+import remindersRouter from './reminders';
+// v0.3 P1-5：问题整改追踪
+import issueTrackingRouter from './issueTracking';
+// v0.3 P1-A：考勤数据接入
+import attendanceIntegrationRouter from './attendanceIntegration';
 import pestRecordsRouter from './pesticideRecords';
 import pesticideLibraryRouter from './pesticideLibrary';
 import fertilizerSpecsRouter from './fertilizerSpecs';
@@ -175,6 +195,29 @@ router.use('/crop-instances', requireAuth, cropInstanceRouter);
 
 // 农事任务路由 - 需要认证
 router.use('/farm-tasks', requireAuth, farmTaskRouter);
+// v0.3 P0-1：批次统一时间线
+router.use('/batch-timeline', requireAuth, batchTimelineRouter);
+// v0.3 P0-2：任务进度跟踪（必须先注册，因为端点路径如 /:id/progress 与 farmTaskRouter 冲突）
+// 注意：taskProgressRouter 使用 v0.3 新增字段 progress_pct，farmTaskRouter 使用旧字段 progress
+// v0.3 路径覆盖 v0.2 路径（taskProgressRouter 先注册优先匹配）
+router.use('/farm-tasks', requireAuth, taskProgressRouter);
+router.use('/farm-tasks', requireAuth, farmTaskRouter);
+// v0.3 P0-R + P0-S：监管报告导出 + 合规血缘
+router.use('/compliance-report', requireAuth, complianceReportRouter);
+// v0.3 P0-3：移动端离线队列同步
+router.use('/offline-sync', requireAuth, offlineSyncRouter);
+// v0.3 P0-B：纸单兜底（班组长代填）
+router.use('/paper-report', requireAuth, paperReportRouter);
+// v0.3 P1-1：SOP 库
+router.use('/sop', requireAuth, sopLibraryRouter);
+// v0.3 P1-4：批次成本归集
+router.use('/batch-cost', requireAuth, batchCostRouter);
+// v0.3 P1-2：提醒引擎（注意：必须挂在 /reminders/rules 之前，避免 /rules 被 /:id 拦截）
+router.use('/reminders', requireAuth, remindersRouter);
+// v0.3 P1-5：问题整改追踪
+router.use('/issues', requireAuth, issueTrackingRouter);
+// v0.3 P1-A：考勤数据接入
+router.use('/attendance', requireAuth, attendanceIntegrationRouter);
 // 2026-08-22：AI 模块路由（智能任务中心 P0）
 router.use('/ai/workhour', requireAuth, aiWorkhourRouter);
 router.use('/ai/dispatch', requireAuth, aiDispatchRouter);
