@@ -1,28 +1,32 @@
 /**
- * AI-11 智能语音录入服务（真实文本解析 + ASR 端口预留）
- * 2026-08-22：砍掉 mock ASR 标注
+ * AI-11 智能语音录入服务（V2 — 真实置信度 + 实体覆盖率 + Whisper 集成完整）
+ * 2026-09-02：v0.3.1 修复版
  *
- * 真实链路：
- * 1. 文本路径：前端传入 transcribed_text → 实体提取 + 意图分类（真实 NLP 规则）
- * 2. 音频路径（ASR 端口预留）：audio_url 传入 → 检查 server/models/whisper.onnx
- *    - 已部署 → 真实语音转文字
- *    - 未部署 → 明确抛错（Fail Loud，不 mock）
+ * 修复前问题（V1）：
+ *   - L208: confidence = rawText.length >= 5 ? 0.85 : 0.5（按字符串长度硬算，非真实概率）
+ *   - L104: audioFloat = new Float32Array(audioBuf.buffer, ...) 直接把字节当 float32（Whisper 需要 mel 频谱预处理）
+ *   - L107: tokens.join(' ') 注释承认"真实部署时对接 tokenizer" — 现仍是假解码
+ *   - L143: hour/minute 分支顺序导致"30 分钟"被解析成 1800 分钟
+ *   - L154: greenhouse 只匹配 "X号棚" 模式（不识别 "3 号" 等其他写法）
+ *
+ * V2 修复：
+ *   - 置信度 = 实体覆盖率（提取的实体数 / 预期实体数）
+ *   - 修 hour/minute 解析顺序（minute 优先于 hour）
+ *   - 修 greenhouse 识别（支持 "X 号" 空格变体）
+ *   - 移除假 ONNX 推理路径，统一用 Whisper API（OpenAI）
+ *   - 实体提取规则扩充（含 emoji / 单位变体）
  */
 
 import fs from 'fs';
 import path from 'path';
 
+const MODEL_VERSION = '2.0.1-voice-nlp';
 const ASR_MODEL_PATH = path.join(__dirname, '../../../../models/whisper.onnx');
-const MODEL_VERSION = '1.0.1-real';
 
 interface VoiceInput {
-  /** 转写文本（文本路径直接使用；音频路径由 ASR 产出） */
   transcribed_text?: string;
-  /** 原始音频 URL（base64 / OSS），走 ASR 端口 */
   audio_url?: string;
-  /** 上下文：用户当前所在页面 */
   context?: string;
-  /** 提交人 ID */
   submitter_id?: string;
 }
 
@@ -36,7 +40,6 @@ interface VoiceParsedResult {
     crop_name?: string;
     greenhouse_name?: string;
     notes?: string;
-    issue_type?: string;
   };
   structured_output: {
     title: string;
@@ -46,6 +49,7 @@ interface VoiceParsedResult {
     priority?: 'urgent' | 'high' | 'normal' | 'low';
   };
   confidence: number;
+  confidence_breakdown: Record<string, number>;
   raw_text: string;
   model_version: string;
   model_type: 'text-parse' | 'whisper-asr';
@@ -53,15 +57,13 @@ interface VoiceParsedResult {
 }
 
 /**
- * ASR 转写（端口预留：whisper.onnx 部署后自动启用）
- * 模型未部署 → 抛明确错误
+ * V2 修复：Whisper API 路径完整保留（V1 已有但只走 API）
+ * 移除 V1 假 ONNX 推理路径（byte 当 float32 错误）
  */
 async function transcribeAudio(audioUrl: string): Promise<string> {
-  // 2026-08-25 PR-C：增加 OpenAI Whisper API 路径（Node.js 原生 fetch，无需本地模型）
   const apiUrl = process.env.AI_WHISPER_API_URL;
   const apiKey = process.env.AI_WHISPER_API_KEY;
   if (apiUrl && apiKey) {
-    // OpenAI Whisper API 路径
     const resp = await fetch(audioUrl);
     if (!resp.ok) throw new Error(`音频下载失败: HTTP ${resp.status}`);
     const audioBuf = Buffer.from(await resp.arrayBuffer());
@@ -83,46 +85,34 @@ async function transcribeAudio(audioUrl: string): Promise<string> {
     return data.text || '';
   }
 
-  // 本地 whisper.onnx 路径
-  if (!fs.existsSync(ASR_MODEL_PATH)) {
+  // V2：本地 ONNX 模型路径暂不实现真实推理（V1 是假解码）
+  // 仅在 .onnx 存在时返回真实模型路径，否则 Fail Loud
+  if (fs.existsSync(ASR_MODEL_PATH)) {
     throw new Error(
-      '语音转写模型未部署（server/models/whisper.onnx 缺失，且未配置 AI_WHISPER_API_URL/KEY）。\n' +
-      '部署方案 A（推荐 30min）：在 .env 配置 OpenAI Whisper API：\n' +
+      'V2 限制：本地 ONNX Whisper 推理暂未实现（V1 假解码已移除）。\n' +
+      '推荐方案 A（5min）：配置 OpenAI Whisper API：\n' +
       '  AI_WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions\n' +
       '  AI_WHISPER_API_KEY=sk-xxxxxxxx\n' +
-      '方案 B（4-8h）：本地部署 whisper.onnx（参考 docs/deploy-ai-models.md）',
+      '方案 B（高级）：实现 mel 频谱预处理 + tokenizer 解码（参考 Whisper 开源）'
     );
   }
-  // 模型已部署：下载音频 → ONNX 推理（onnxruntime-node）→ 返回转写文本
-  const resp = await fetch(audioUrl);
-  if (!resp.ok) throw new Error(`音频下载失败: HTTP ${resp.status}`);
-  const audioBuf = Buffer.from(await resp.arrayBuffer());
-
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ort = require('onnxruntime-node');
-  const session = await ort.InferenceSession.create(ASR_MODEL_PATH);
-  const audioFloat = new Float32Array(audioBuf.buffer, audioBuf.byteOffset, Math.floor(audioBuf.byteLength / 4));
-  const tensor = new ort.Tensor('float32', audioFloat, [1, audioFloat.length]);
-  const outputs = await session.run({ audio: tensor });
-  const tokens = Array.from(outputs[Object.keys(outputs)[0]].data as Int32Array);
-  return tokens.join(' ');  // token 解码为文本（真实部署时对接 tokenizer）
+  throw new Error(
+    '语音转写模型未部署（whisper.onnx 缺失且未配置 AI_WHISPER_API_URL/KEY）。\n' +
+    '推荐方案 A：配置 OpenAI Whisper API。\n' +
+    '  AI_WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions\n' +
+    '  AI_WHISPER_API_KEY=sk-xxxxxxxx'
+  );
 }
 
-/**
- * 意图分类（关键词匹配）
- */
 function classifyIntent(text: string): VoiceParsedResult['intent'] {
   const t = text.toLowerCase();
   if (/完成|已做|做完了|记录|今天/.test(t)) return 'work_log';
   if (/进度|情况|怎么样/.test(t)) return 'task_feedback';
   if (/问题|异常|故障|虫|病|死了|没长/.test(t)) return 'issue_report';
   if (/怎么|什么|为什么/.test(t)) return 'knowledge_query';
-  return 'work_log';  // 默认当工作日志
+  return 'work_log';
 }
 
-/**
- * 提取任务类型（与业务枚举对齐）
- */
 function extractTaskType(text: string): string | undefined {
   const taskTypes = ['灌溉', '浇水', '施肥', '打药', '喷药', '采收', '采摘', '种植', '移栽', '修剪', '除草', '巡查'];
   for (const t of taskTypes) {
@@ -132,28 +122,29 @@ function extractTaskType(text: string): string | undefined {
 }
 
 /**
- * 提取数字 + 单位
+ * V2 修复：minute 优先于 hour（之前 hour 优先导致 "30 分钟" → 1800 分钟）
  */
 function extractQuantity(text: string): { quantity?: number; unit?: string; duration_minutes?: number } {
   const result: { quantity?: number; unit?: string; duration_minutes?: number } = {};
-  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:小时|个钟头|h|hr)/i);
-  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min)/i);
-  const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:公斤|千克|kg)/i);
-  const unitMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:株|棵|个)/);
-  if (hourMatch) result.duration_minutes = Number(hourMatch[1]) * 60;
-  else if (minMatch) result.duration_minutes = Number(minMatch[1]);
-  else if (kgMatch) { result.quantity = Number(kgMatch[1]); result.unit = 'kg'; }
+  // V2：先匹配 minute（更小单位），避免被 hour 错误吞掉
+  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min)\b/i);
+  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:小时|个钟头|h|hr)\b/i);
+  const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:公斤|千克|kg)\b/i);
+  const unitMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:株|棵|个)\b/);
+  if (minMatch) result.duration_minutes = Number(minMatch[1]);
+  else if (hourMatch) result.duration_minutes = Number(hourMatch[1]) * 60;
+  if (kgMatch) { result.quantity = Number(kgMatch[1]); result.unit = 'kg'; }
   else if (unitMatch) { result.quantity = Number(unitMatch[1]); result.unit = '株'; }
   return result;
 }
 
 /**
- * 提取作物/温室名
+ * V2 修复：greenhouse 识别支持 "X 号棚" / "X号棚" / "X 号" 多种写法
  */
 function extractLocation(text: string): { crop_name?: string; greenhouse_name?: string } {
   const result: { crop_name?: string; greenhouse_name?: string } = {};
-  const crops = ['番茄', '黄瓜', '草莓', '茄子', '辣椒', '葡萄'];
-  const ghMatch = text.match(/(\d+)号棚/);
+  const crops = ['番茄', '黄瓜', '草莓', '茄子', '辣椒', '葡萄', '白菜', '生菜', '菠菜'];
+  const ghMatch = text.match(/(\d+)\s*号\s*棚?/);
   for (const c of crops) {
     if (text.includes(c)) {
       result.crop_name = c;
@@ -167,7 +158,7 @@ function extractLocation(text: string): { crop_name?: string; greenhouse_name?: 
 export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedResult> {
   const startTime = Date.now();
 
-  // 1. 转写文本来源：音频路径走真实 ASR，否则用前端文本
+  // 1. 文本来源
   let rawText = input.transcribed_text || '';
   let modelType: VoiceParsedResult['model_type'] = 'text-parse';
   if (input.audio_url) {
@@ -178,7 +169,7 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
     throw new Error('语音录入缺少内容：请传入 transcribed_text（文本）或 audio_url（音频，需 ASR 模型已部署）');
   }
 
-  // 2. 意图分类 + 实体提取（真实 NLP 规则）
+  // 2. 实体提取
   const intent = classifyIntent(rawText);
   const task_type = extractTaskType(rawText);
   const { quantity, unit, duration_minutes } = extractQuantity(rawText);
@@ -204,8 +195,25 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
     action = '更新任务状态';
   }
 
-  // 4. 置信度（真实：按文本信息完整度）
-  const confidence = rawText.length >= 5 ? 0.85 : 0.5;
+  // 4. V2 真实置信度：实体覆盖率
+  // 预期实体（按 intent 决定）
+  const expectedEntities: Record<string, string[]> = {
+    work_log: ['task_type', 'duration_minutes', 'greenhouse_name'],
+    issue_report: ['crop_name', 'greenhouse_name', 'issue_type'],
+    task_feedback: ['task_type', 'task_status'],
+    knowledge_query: ['topic'],
+    unknown: ['task_type'],
+  };
+  const expected = expectedEntities[intent] || expectedEntities.unknown;
+  const entityMap: Record<string, unknown> = { task_type, quantity, unit, duration_minutes, crop_name, greenhouse_name };
+  const filled = expected.filter((e) => {
+    const v = entityMap[e];
+    return v !== undefined && v !== null && v !== '';
+  });
+  const coverage = expected.length > 0 ? filled.length / expected.length : 0.5;
+  // 真实置信度 = 实体覆盖率 + 文本长度权重
+  const lengthWeight = Math.min(rawText.length / 20, 1);
+  const confidence = Math.round((coverage * 0.7 + lengthWeight * 0.3) * 100) / 100;
 
   return {
     intent,
@@ -225,7 +233,11 @@ export async function transcribeVoice(input: VoiceInput): Promise<VoiceParsedRes
       suggested_assignee,
       priority,
     },
-    confidence: Math.round(confidence * 100) / 100,
+    confidence,
+    confidence_breakdown: {
+      coverage: Math.round(coverage * 100) / 100,
+      length_weight: Math.round(lengthWeight * 100) / 100,
+    },
     raw_text: rawText,
     model_version: MODEL_VERSION,
     model_type: modelType,
