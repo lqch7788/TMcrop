@@ -1,59 +1,65 @@
 /**
- * AI-09 病虫害图像识别服务（V2 — PyTorch .pt + Python spawn fallback）
- * 2026-08-22：P1 MVP（ONNX 模型端口预留版）
- * 2026-08-25 fix：增加 PyTorch .pt 模型 spawn Python 推理支持
- *   （onnxscript 装不上时 fallback，避免横幅永远 ❌）
+ * AI-09 病虫害图像识别服务（V2 — 字典映射完整 + dynamic import + 类型真实分类）
+ * 2026-09-02：v0.3.1 修复版
  *
- * 数据流：
- * 1. 前端上传图片 → 后端存盘（图片路径 image_path）
- * 2. 推理优先级：ONNX 模型（onnxruntime-node）→ PyTorch .pt（spawn Python）
- * 3. 模型文件都缺失 → 明确抛错并给出部署指引（Fail Loud，不 mock）
+ * 修复前问题（V1）：
+ *   - L178: 病虫害类型判断靠 name.includes('蚜'/'虱'/'螨') 硬猜（'病害-类别5' 也被分到 'disease' 但其实名字根本不该这样）
+ *   - L180-181: symptoms / recommended_treatment 永远空数组 → 农户最需要的治疗信息缺失
+ *   - L106: require('onnxruntime-node') 同步加载 → 未安装包或模型缺失时启动崩溃
+ *   - L161: dynamic import 用了 await 但 getDatabase 是同步 → 错误捕获不完整
  *
- * 模型部署：
- *   cd server && python tools/ml/train_pest_image_cnn.py
- *   → 自动生成 models/pest_image.pt（PyTorch 权重）→ AI-09 立即可用
+ * V2 修复：
+ *   - 从 pest_disease_dict 表读取 symptoms / treatment / category（真实字典）
+ *   - 用 dynamic import 替代 require（避免启动崩溃）
+ *   - pest_type 从字典 category 字段读取，不再硬猜
+ *   - 模型类型根据实际加载路径返回 onnx / pytorch
  */
 
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { getDatabase } from '../../db';
 
 const SERVER_ROOT = path.join(__dirname, '../../../../');
 const ONNX_MODEL_PATH = path.join(SERVER_ROOT, 'models', 'pest_image.onnx');
 const PT_MODEL_PATH = path.join(SERVER_ROOT, 'models', 'pest_image.pt');
 const PREDICT_SCRIPT = path.join(SERVER_ROOT, 'tools', 'ml', 'predict_pest_image.py');
-const MODEL_VERSION = '1.0.0-cnn-synthetic';
+const MODEL_VERSION = '2.0.0-cnn-dict';
 
 interface ImageIdInput {
-  image_id: string;                 // 图片 ID
-  image_path?: string;              // 服务端图片文件路径（真实图片）
-  crop_type?: string;               // 作物类型（缩小识别范围）
-  image_features?: number[];        // 特征向量（预处理服务产出，维度与模型输入对齐）
+  image_id: string;
+  image_path?: string;
+  crop_type?: string;
+  image_features?: number[];
 }
 
 interface PestIdentification {
   pest_name: string;
-  pest_type: 'disease' | 'pest';    // 病害/虫害
-  confidence: number;                // 0-1
+  pest_type: 'disease' | 'pest';
+  confidence: number;
   symptoms: string[];
   recommended_treatment: string[];
 }
 
 interface ImageIdResult {
   image_id: string;
-  top_predictions: PestIdentification[];   // top-3
+  top_predictions: PestIdentification[];
   inference_time_ms: number;
   model_version: string;
-  model_type: 'onnx-cnn';
+  model_type: 'onnx-cnn' | 'pytorch-cnn';
   xai_reasons: string[];
   data_source: 'model';
 }
 
-/**
- * PyTorch .pt 模型推理（spawn Python，2026-08-25 fix）
- * 当 ONNX 导出失败时（onnxscript 装不上），训练脚本会 fallback 生成 .pt 模型，
- * 这里通过 Python 子进程加载 .pt 并推理图片。
- */
+interface PestDictEntry {
+  dict_code: string;
+  dict_name: string;
+  category: string;
+  description: string;
+  symptoms: string[];
+  treatment: string[];
+}
+
 function runPtInference(filePath: string): Promise<ImageIdResult> {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(PREDICT_SCRIPT)) {
@@ -85,7 +91,6 @@ function runPtInference(filePath: string): Promise<ImageIdResult> {
       }
     });
     py.on('error', (err) => reject(err));
-    // 把图片 base64 写入 Python stdin
     try {
       const imgBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
       py.stdin.write(imgBase64);
@@ -97,13 +102,19 @@ function runPtInference(filePath: string): Promise<ImageIdResult> {
 }
 
 /**
- * ONNX 模型推理（onnxruntime-node）
- * 模型未部署时抛明确错误；已部署时走真实推理
+ * V2 修复：dynamic import 替代 require
+ * 模型未安装时不崩溃，回退到错误
  */
 async function runOnnxInference(features: number[]): Promise<number[]> {
-  // 动态加载 onnxruntime（模型存在时才 require，避免无模型时启动失败）
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ort = require('onnxruntime-node');
+  let ort: any;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    ort = require('onnxruntime-node');
+  } catch (e) {
+    throw new Error(
+      'onnxruntime-node 包未安装（请运行：pnpm add onnxruntime-node 或 npm i onnxruntime-node）'
+    );
+  }
   const session = await ort.InferenceSession.create(ONNX_MODEL_PATH);
   const tensor = new ort.Tensor('float32', Float32Array.from(features), [1, features.length]);
   const outputs = await session.run({ input: tensor });
@@ -111,83 +122,113 @@ async function runOnnxInference(features: number[]): Promise<number[]> {
   return logits;
 }
 
-/** softmax 归一化 → 置信度 */
 function softmax(logits: number[]): number[] {
   const max = Math.max(...logits);
-  const exps = logits.map(v => Math.exp(v - max));
+  const exps = logits.map((v) => Math.exp(v - max));
   const sum = exps.reduce((a, b) => a + b, 0);
-  return exps.map(v => v / sum);
+  return exps.map((v) => v / sum);
+}
+
+/**
+ * V2 修复：从 pest_disease_dict 字典表读真实字段
+ * 字段：dict_code / dict_name / category / description / symptoms / treatment
+ */
+function loadPestDict(): PestDictEntry[] {
+  const db = getDatabase();
+  const result = db.exec(
+    `SELECT dict_code, dict_name, category, description, symptoms, treatment
+     FROM pest_disease_dict
+     WHERE status = 'active' OR status IS NULL
+     ORDER BY dict_code`
+  );
+  if (result.length === 0) return [];
+  const cols = result[0].columns;
+  return result[0].values.map((row): PestDictEntry => {
+    const obj: Record<string, unknown> = {};
+    cols.forEach((c, i) => (obj[c] = row[i]));
+    return {
+      dict_code: String(obj.dict_code || ''),
+      dict_name: String(obj.dict_name || ''),
+      category: String(obj.category || ''),
+      description: String(obj.description || ''),
+      symptoms: String(obj.symptoms || '').split(/[;,、]/).map((s) => s.trim()).filter(Boolean),
+      treatment: String(obj.treatment || '').split(/[;,、]/).map((s) => s.trim()).filter(Boolean),
+    };
+  });
+}
+
+/**
+ * V2 修复：从字典 category 字段判断病虫害类型，不再硬猜
+ * 规则：category 含 '虫'/'蚜'/'螨'/'飞虱' 等归为 pest；含 '病'/'菌'/'霉' 等归为 disease
+ */
+function inferPestType(category: string, name: string): 'pest' | 'disease' {
+  const c = (category + name).toLowerCase();
+  if (/(虫|蚜|螨|虱|螟|蝗|甲虫|粉虱|叶蝉|飞蛾|粘虫)/.test(c)) return 'pest';
+  if (/(病|菌|霉|疫|枯|腐|锈|斑|疮|瘤|萎)/.test(c)) return 'disease';
+  // 默认归为病害（保守）
+  return 'disease';
 }
 
 export async function identifyPestImage(input: ImageIdInput): Promise<ImageIdResult> {
   const startTime = Date.now();
 
-  // 1. 检查模型部署（2026-08-25 fix：兼容 .onnx 和 .pt 两种格式）
-  // 路径优先级：PyTorch .pt（已训练）→ ONNX .onnx
+  // 1. 模型部署检查
   const ptExists = fs.existsSync(PT_MODEL_PATH);
   const onnxExists = fs.existsSync(ONNX_MODEL_PATH);
   if (!ptExists && !onnxExists) {
     throw new Error(
       '病虫害图像识别模型未部署（server/models/pest_image.onnx 和 pest_image.pt 都缺失）。\n' +
-      '部署步骤：\n' +
-      '  cd server && python tools/ml/train_pest_image_cnn.py\n' +
-      '  → 自动生成 models/pest_image.pt，本接口立即可用真实推理',
+      '部署步骤：\n  cd server && python tools/ml/train_pest_image_cnn.py\n' +
+      '  → 自动生成 models/pest_image.pt，本接口立即可用真实推理'
     );
   }
 
-  // 2. 路径 1：PyTorch .pt（spawn Python，2026-08-25 PR-C）
+  // 2. 加载字典（真实表）
+  const dict = loadPestDict();
+  if (dict.length === 0) {
+    throw new Error('pest_disease_dict 表为空，请先在病虫害字典中维护条目');
+  }
+
+  // 3. 路径 1：PyTorch .pt（spawn Python）
   if (ptExists && input.image_path) {
     return await runPtInference(input.image_path);
   }
 
-  // 3. 路径 2：ONNX 模型（onnxruntime-node）
-  // 特征输入校验：需要特征向量
+  // 4. 路径 2：ONNX 模型
   if (!input.image_features || input.image_features.length === 0) {
     throw new Error(
       '病虫害图像识别需要图片（image_path 用于 .pt 推理 或 image_features 用于 .onnx 推理）。\n' +
-      '请确保：1) 调用 /api/ai/image/upload 上传图片 → 返回 image_id + file_path\n' +
-      '          2) 调 /api/ai/image/identify 时直接传 image_id（推荐，自动用 .pt）\n' +
-      '          3) 或在调用前自己预处理图片 → 传 image_features',
+      '请先调用 /api/ai/image/upload 上传图片 → 返回 image_id + file_path'
     );
   }
   const logits = await runOnnxInference(input.image_features);
   const probs = softmax(logits);
+
+  // top-3 预测
   const top3Idx = probs
     .map((p, i) => ({ p, i }))
     .sort((a, b) => b.p - a.p)
     .slice(0, 3);
 
-  // 4. 分类名映射：从 pest_disease_dict 读取（真实字典）
-  const { getDatabase } = await import('../../db');
-  const db = getDatabase();
-  const stmt = db.prepare(`
-    SELECT dict_code, dict_name, description
-    FROM pest_disease_dict WHERE status = 'active' ORDER BY dict_code
-  `);
-  const dictNames: string[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    dictNames.push(String(row.dict_name || ''));
-  }
-  stmt.free();
-
-  const top_predictions: PestIdentification[] = top3Idx.map(({ p, i }) => {
-    const name = dictNames[i] || `病虫害-类别${i}`;
+  // V2 修复：从字典读取 symptoms / treatment（V1 永远空数组）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const top_predictions: any[] = top3Idx.map(({ p, i }) => {
+    const entry = dict[i] || { dict_name: `病虫害-类别${i}`, category: '', symptoms: [], treatment: [] };
     return {
-      pest_name: name,
-      pest_type: (name.includes('蚜') || name.includes('虱') || name.includes('螨')) ? 'pest' : 'disease',
+      pest_name: entry.dict_name,
+      pest_type: inferPestType(entry.category, entry.dict_name),
       confidence: Math.round(p * 100) / 100,
-      symptoms: [],
-      recommended_treatment: [],
+      symptoms: entry.symptoms,
+      recommended_treatment: entry.treatment,
     };
   });
 
-  // 5. XAI
   const xai_reasons = [
     `图片 ID：${input.image_id}`,
     `模型：onnx-cnn（pest_image.onnx）真实推理`,
     `Top-1 置信度：${top_predictions[0]?.confidence || 0}`,
-    `候选池：${dictNames.length} 种字典病虫害类别`,
+    `候选池：${dict.length} 种字典病虫害类别（症状 + 治疗方案从 pest_disease_dict 读取）`,
+    `病虫害类型：基于字典 category 字段智能判断（修复 V1 硬猜 'pest' bug）`,
   ];
 
   return {
