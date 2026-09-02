@@ -1,0 +1,27 @@
+{
+  "model_version": "1.0.0-cnn-synthetic",
+  "model_type": "onnx-cnn",
+  "classes": [
+    "健康叶",
+    "叶斑病",
+    "炭疽病",
+    "病毒病",
+    "白粉病",
+    "白粉虱",
+    "红蜘蛛",
+    "蚜虫",
+    "锈病",
+    "霜霉病",
+    "青枯病"
+  ],
+  "num_classes": 11,
+  "image_size": 128,
+  "metrics": {
+    "best_val_accuracy": 97.18,
+    "total_samples": 5500,
+    "train_samples": 4400,
+    "val_samples": 1100
+  },
+  "trained_at": "2026-09-02T19:44:38.144775",
+  "note": "PR-C 训练；合成图数据集（M1.5 fallback），真实 PlantVillage 数据可后续替换"
+}

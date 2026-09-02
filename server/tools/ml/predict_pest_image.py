@@ -15,6 +15,11 @@ import base64
 from pathlib import Path
 from io import BytesIO
 
+# 2026-09-02 fix：统一 UTF-8 输出（Windows GBK 控制台 / Node spawn 中文 JSON 安全）
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 import torch
 import torch.nn as nn
 from PIL import Image
@@ -80,6 +85,25 @@ def main():
         print(json.dumps({'success': False, 'error': f'模型加载失败: {e}'}))
         sys.exit(1)
 
+    # 2026-09-02 fix：类别名从模型文件读取（训练时写入），不再硬编码
+    # 修复：V1 硬编码 class_names 顺序与 sorted(目录名) 不一致 → 预测张冠李戴
+    class_names = ckpt.get('classes')
+    if not class_names or len(class_names) != num_classes:
+        # fallback：从 meta.json 读
+        meta_path = MODEL_PATH.with_name('pest_image_meta.json')
+        try:
+            meta = json.loads(meta_path.read_text(encoding='utf-8'))
+            class_names = meta.get('classes')
+        except Exception:
+            class_names = None
+    if not class_names or len(class_names) != num_classes:
+        # 最后兜底：硬编码（顺序必须与 sorted(目录名) 一致 = 训练时的类别顺序）
+        print(json.dumps({
+            'success': False,
+            'error': f'模型文件缺少 classes 字段且 meta.json 不可用，无法对齐类别顺序（num_classes={num_classes}）',
+        }))
+        sys.exit(1)
+
     # 预处理
     transform = transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
@@ -93,15 +117,7 @@ def main():
         logits = model(x)
         probs = torch.softmax(logits, dim=1)[0]
 
-    # 从 DB 读类别名（11 类：10 病虫害 + 1 健康）
-    # 类别索引按 train_pest_image_cnn.py 生成的 generate_synthetic_images.py 顺序
-    class_names = [
-        '白粉病', '霜霉病', '炭疽病', '蚜虫', '红蜘蛛',
-        '锈病', '病毒病', '青枯病', '叶斑病', '白粉虱',
-        '健康叶',
-    ]
-
-    # top-3
+    # top-3（class_names 已在上方从模型/meta 读取，与训练类别顺序一致）
     top3_probs, top3_indices = torch.topk(probs, min(3, num_classes))
     predictions = []
     for p, idx in zip(top3_probs.tolist(), top3_indices.tolist()):
