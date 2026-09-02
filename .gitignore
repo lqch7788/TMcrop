@@ -116,3 +116,4 @@ tsconfig.tsbuildinfo
 server/data/yuanxingtu.db.backup-*
 server/data/yuanxingtu.db.save.tmp
 uploads/
+server/models/pest_image.onnx

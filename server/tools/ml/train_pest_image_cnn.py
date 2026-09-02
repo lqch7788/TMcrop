@@ -33,6 +33,12 @@ import random
 from pathlib import Path
 from typing import List, Tuple
 
+# 2026-09-02 fix：Windows GBK 控制台 print emoji 崩溃（UnicodeEncodeError）
+# 统一 UTF-8 输出，避免训练到一半崩在 print
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -225,6 +231,7 @@ def train() -> dict:
         torch.save({
             'state_dict': model.state_dict(),
             'num_classes': len(classes),
+            'classes': classes,              # 2026-09-02 fix：保存类别顺序，预测脚本按此对齐
             'image_size': IMG_SIZE,
             'model_version': '1.0.0-cnn-synthetic',
         }, pt_path)
