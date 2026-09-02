@@ -23,6 +23,8 @@ interface QAResult {
   confidence: number;              // 0-1
   model_version: string;
   llm_configured: boolean;         // LLM 端口是否已配置
+  llm_model?: string;              // V2 新增：实际调用的模型名
+  llm_tokens?: number;             // V2 新增：实际 token 用量
   response_time_ms: number;
 }
 
@@ -109,34 +111,83 @@ function searchKnowledgeBase(question: string): { source: string; excerpt: strin
 }
 
 /**
- * 调用真实 LLM API（端口预留：配置 AI_LLM_API_URL + AI_LLM_API_KEY 后启用）
+ * 调用真实 LLM API（V2 增强：超时控制 + 兼容 OpenAI 标准格式 + 详细错误）
+ * 配置 AI_LLM_API_URL + AI_LLM_API_KEY 后启用
  * 未配置 → 返回 null（上层用真实检索结果拼装，不伪装 LLM 回答）
  */
-async function callLLM(question: string, references: { source: string; excerpt: string }[]): Promise<string | null> {
+async function callLLM(question: string, references: { source: string; excerpt: string }[]): Promise<{ text: string; model: string; tokens: number } | null> {
   const apiUrl = process.env.AI_LLM_API_URL;
   const apiKey = process.env.AI_LLM_API_KEY;
   if (!apiUrl) return null;
 
-  const prompt = `你是弘智耘种植管理系统的智能助手。请基于以下知识库片段回答用户问题，回答要简洁准确（150 字内）。\n\n知识库片段：\n${references.map(r => `- 【${r.source}】${r.excerpt}`).join('\n') || '（无匹配片段）'}\n\n用户问题：${question}`;
+  // 系统提示词
+  const systemPrompt = `你是弘智耘种植管理系统的智能助手。请基于以下知识库片段回答用户问题，回答要简洁准确（150 字内）。\n如知识库无相关内容，请明确说明并给出建议。\n`;
 
-  const resp = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({ prompt, question, stream: false }),
-  });
-  if (!resp.ok) {
-    throw new Error(`LLM API 调用失败: HTTP ${resp.status}`);
+  // 用户提示（含检索结果 + 问题）
+  const userPrompt = `知识库片段：\n${references.map(r => `- 【${r.source}】${r.excerpt}`).join('\n') || '（无匹配片段）'}\n\n用户问题：${question}`;
+
+  // 检测调用格式：OpenAI 兼容（/v1/chat/completions）vs 自定义（POST {prompt}）
+  const isOpenAI = apiUrl.includes('/chat/completions') || apiUrl.includes('openai.com');
+  const modelName = process.env.AI_LLM_MODEL || 'gpt-3.5-turbo';
+  const timeoutMs = Number(process.env.AI_LLM_TIMEOUT_MS) || 30000;
+
+  let body: any;
+  let url = apiUrl;
+  if (isOpenAI) {
+    body = {
+      model: modelName,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    };
+  } else {
+    url = apiUrl;
+    body = { prompt: systemPrompt + userPrompt, question, stream: false, model: modelName };
   }
-  const data = await resp.json() as Record<string, any>;
-  // 兼容常见 LLM 返回结构（answer / content / choices[0].text / text）
-  const text = data.answer ?? data.content ?? data.text ?? data.choices?.[0]?.text ?? data.choices?.[0]?.message?.content ?? null;
-  if (!text) {
-    throw new Error('LLM API 返回结构无法解析（期望 answer/content/choices[0].text 字段）');
+
+  // 控制器（30s 超时）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '');
+      throw new Error(`LLM API 调用失败: HTTP ${resp.status} ${errBody.slice(0, 200)}`);
+    }
+
+    const data = await resp.json() as Record<string, any>;
+    // 兼容常见 LLM 返回结构
+    const text = data.answer ?? data.content ?? data.text ?? data.choices?.[0]?.text ?? data.choices?.[0]?.message?.content ?? null;
+    if (!text) {
+      throw new Error('LLM API 返回结构无法解析（期望 answer/content/choices[0].text 字段）');
+    }
+
+    // token 用量（OpenAI 标准）
+    const tokens = data.usage?.total_tokens ?? data.total_tokens ?? 0;
+    const model = data.model ?? modelName;
+
+    return { text: String(text), model, tokens };
+  } catch (e: any) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      throw new Error(`LLM API 超时（${timeoutMs}ms）`);
+    }
+    throw e;
   }
-  return String(text);
 }
 
 /**
@@ -169,11 +220,25 @@ export async function answerQuestion(input: QAInput): Promise<QAResult> {
   const llmConfigured = Boolean(process.env.AI_LLM_API_URL);
   let answer: string;
   let confidence = 0.3;
+  let llmMeta: { model: string; tokens: number } | null = null;
 
   if (llmConfigured) {
-    const llmAnswer = await callLLM(input.question, references.slice(0, 5));
-    answer = llmAnswer ?? composeRetrievalAnswer(intent, input.question, references);
-    confidence = llmAnswer ? 0.85 : 0.4;
+    try {
+      const result = await callLLM(input.question, references.slice(0, 5));
+      if (result) {
+        answer = result.text;
+        confidence = 0.85;
+        llmMeta = { model: result.model, tokens: result.tokens };
+      } else {
+        answer = composeRetrievalAnswer(intent, input.question, references);
+        confidence = 0.4;
+      }
+    } catch (e: any) {
+      // LLM 调用失败 → 降级到检索结果（不伪装）
+      console.warn('[AI-12] LLM 调用失败，降级到检索结果:', e.message);
+      answer = composeRetrievalAnswer(intent, input.question, references) + `\n\n（注：LLM 调用失败: ${e.message}）`;
+      confidence = 0.3;
+    }
   } else {
     answer = composeRetrievalAnswer(intent, input.question, references);
     confidence = references.length > 0 ? 0.6 : 0.2;
@@ -187,6 +252,8 @@ export async function answerQuestion(input: QAInput): Promise<QAResult> {
     confidence: Math.round(confidence * 100) / 100,
     model_version: MODEL_VERSION,
     llm_configured: llmConfigured,
+    llm_model: llmMeta?.model,
+    llm_tokens: llmMeta?.tokens,
     response_time_ms: Date.now() - startTime,
   };
 }

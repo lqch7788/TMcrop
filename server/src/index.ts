@@ -437,6 +437,15 @@ async function start() {
             console.log(`⚠  默认端口 ${PORT} 已被占用，已自动切换到 ${currentPort}`);
           }
           console.log('========================================');
+
+          // v0.3 P2-X：启动 cron 调度（每日备份 + 每月备份 + 提醒扫描 + 启动补偿）
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const scheduler = require('./services/schedulerService');
+            scheduler.startScheduler();
+          } catch (e: any) {
+            console.warn('[scheduler] 调度服务启动失败（备份功能不可用，但 API 正常）:', e.message);
+          }
           console.log('可用的 API 端点:');
           console.log('  GET    /api/crop-varieties - 获取作物品种列表');
           console.log('  GET    /api/inventory      - 获取库存列表');
