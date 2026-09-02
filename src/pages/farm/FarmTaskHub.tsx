@@ -546,6 +546,18 @@ export function FarmTaskHub() {
           </div>
         </div>
 
+        {/* v0.3 工具快捷栏：与现有功能 0 冲突，只增不删 */}
+        <div className="flex items-center gap-2 px-2 py-2 mb-3 bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg">
+          <span className="text-xs font-medium text-emerald-700 shrink-0">v0.3 工具：</span>
+          <button onClick={() => window.location.href = '/agronomy/sop-library'} className="text-xs px-3 py-1 bg-white border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50">📖 SOP 标准库</button>
+          <button onClick={() => window.location.href = '/agronomy/issue-board'} className="text-xs px-3 py-1 bg-white border border-orange-300 text-orange-700 rounded hover:bg-orange-50">⚠️ 问题整改看板</button>
+          <button onClick={() => window.location.href = '/agronomy/reminders'} className="text-xs px-3 py-1 bg-white border border-green-300 text-green-700 rounded hover:bg-green-50">🔔 智能提醒</button>
+          <button onClick={() => window.location.href = '/agronomy/batch-cost'} className="text-xs px-3 py-1 bg-white border border-pink-300 text-pink-700 rounded hover:bg-pink-50">💰 批次成本</button>
+          <button onClick={() => window.location.href = '/agronomy/compliance-report'} className="text-xs px-3 py-1 bg-white border border-purple-300 text-purple-700 rounded hover:bg-purple-50">📋 合规报告</button>
+          <button onClick={() => window.location.href = '/agronomy/backup-center'} className="text-xs px-3 py-1 bg-white border border-cyan-300 text-cyan-700 rounded hover:bg-cyan-50">💾 数据备份</button>
+          <button onClick={() => window.location.href = '/agronomy/other-management'} className="text-xs px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 ml-auto">查看全部 →</button>
+        </div>
+
         {/* 今日操作记录 */}
         <TodayOperationRecords
           records={hub.state.recentRecords as any}

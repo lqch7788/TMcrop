@@ -115,3 +115,4 @@ tsconfig.tsbuildinfo
 *.db-wal
 server/data/yuanxingtu.db.backup-*
 server/data/yuanxingtu.db.save.tmp
+uploads/
