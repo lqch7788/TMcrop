@@ -204,6 +204,8 @@ const ComplianceReportPage = lazy(() => import('./pages/agronomy/ComplianceRepor
 const BackupCenterPage = lazy(() => import('./pages/agronomy/BackupCenterPage'));
 // v0.3 其他管理聚合页（8 个工具 Tab）
 const OtherManagementPage = lazy(() => import('./pages/agronomy/OtherManagementPage'));
+// v0.3 P0-3 移动端：田间作业上报（PWA H5）
+const OperationReportPage = lazy(() => import('./pages/mobile/OperationReportPage'));
 const AttendancePage = lazy(() => import('./pages/labor/AttendancePage'));
 const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
 const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
@@ -549,6 +551,8 @@ function AppContent() {
           <Route path="/agronomy/backup-center" element={<BackupCenterPage />} />
           {/* v0.3 其他管理聚合页（8 个工具 Tab） */}
           <Route path="/agronomy/other-management" element={<OtherManagementPage />} />
+          {/* v0.3 P0-3 移动端：田间作业上报 */}
+          <Route path="/m/operation-report" element={<OperationReportPage />} />
           {/* 病虫害防治管理 */}
           <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />

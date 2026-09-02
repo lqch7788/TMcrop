@@ -18,6 +18,7 @@ import {
   DatabaseOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
+  MobileOutlined,
   RightOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -86,6 +87,14 @@ const TOOLS = [
     icon: <FileTextOutlined style={{ color: '#fa541c' }} />,
     path: '/agronomy/paper-report',
     tag: 'P0-B',
+  },
+  {
+    key: 'mobile',
+    label: '📱 田间上报',
+    desc: '移动端扫码作业上报',
+    icon: <MobileOutlined style={{ color: '#13c2c2' }} />,
+    path: '/m/operation-report',
+    tag: 'P0-3',
   },
 ];
 
