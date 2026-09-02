@@ -861,39 +861,9 @@ export default function SmartDispatchPage() {
         </div>
       </div>
 
-      {/* ★ 2026-08-22：AI 智能助手面板（10 模块一键调用）
-          ★ 2026-08-24 PR2：透传 selectedTask 真实上下文 + autoTrigger 自动化
-            - 选中任务变化 → 200ms debounce → 自动调 AI-01 派工 + AI-06 工时（无需点按钮）
-            - 班组筛选 → 透传 teamIds 缩窄候选池
-            - 缺 greenhouseId 时 AI-01 会明确提示用户（Fail Loud） */}
-      <AIPanel
-        cropType={selectedTask?.cropName || '番茄'}
-        taskId={selectedTask?.id}
-        taskType={selectedTask?.type}
-        greenhouseId={selectedGreenhouseId}
-        priority={selectedTask?.priority}
-        requiredSkills={selectedTask?.requiredSkills}
-        estimatedHours={selectedTask?.estimatedHours}
-        batchId={selectedTask?.batchId}
-        batchCode={selectedTask?.batchCode}
-        teamIds={selectedTeamIds}
-        autoTrigger
-        autoTriggerKeys={['workhour', 'dispatch', 'growth', 'pest', 'growthState']}
-        // ★ 2026-08-24 PR4+PR5+PR6：P2/P3/P4 模块不进 autoTriggerKeys → 独立触发场景：
-        //   P2：
-        //   - AI-02：点击"生成周排班"按钮触发
-        //   - AI-07：物料页面进入时自动加载（5min 轮询）
-        //   - AI-08：中间列选中推荐员工后，由"查看路径"按钮触发
-        //   - AI-14：监控仪表板 DispatchMetricsDashboard 顶部自动轮询
-        //   P3：
-        //   - AI-03：在审批详情页挂载 AIPanel compact 模式，透传 employeeId/approvalType
-        //   - AI-12：用户在问答输入框输入 question 后手动提问
-        //   - AI-13：在报告中心页面挂载，透传 reportType/dateRange
-        //   - AI-15：在员工管理页面挂载，可选传 teamId 班组过滤
-        //   P4：
-        //   - AI-09：点击按钮触发文件选择对话框 → 上传 base64 → 调识别（不自动）
-        //   - AI-11：用户在语音文本框输入 transcribed_text → 手动解析（不自动）
-      />
+      {/* ★ 2026-09-02 拆分：AI 智能助手模块已迁出 SmartDispatch
+          原 AIPanel（含 AI-01 派工 / AI-06 工时等 10+ 模块）独立到 TaskCenterPage 第 4 个 tab
+          SmartDispatch 仅保留调度核心功能（任务池 + 推荐列表 + 派工确认） */}
 
       {/* 监控仪表板 */}
       <DispatchMetricsDashboard />
