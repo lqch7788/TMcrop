@@ -31,10 +31,14 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-const DB_PATH = path.join(__dirname, '../../../data/yuanxingtu.db');
-const BACKUP_DIR = path.join(__dirname, '../../../data/backups');
-const TS_SCRIPT = path.join(__dirname, '../../db/backupDatabase.ts');
-const REMINDER_RUN_SCRIPT = path.join(__dirname, '../../routes/reminders');
+// 路径计算：__dirname = server/src/services
+// ../../data = server/data ✓（2 级）
+const DB_PATH = path.join(__dirname, '../../data/yuanxingtu.db');
+const BACKUP_DIR = path.join(__dirname, '../../data/backups');
+// 修复 2026-09-02：__dirname = server/src/services，backupDatabase.ts 在 server/src/db
+// 正确相对路径：../db/backupDatabase.ts（不要写 ../../db）
+const TS_SCRIPT = path.join(__dirname, '../db/backupDatabase.ts');
+const REMINDER_RUN_SCRIPT = path.join(__dirname, '../routes/reminders');
 
 let dailyJob: any = null;
 let monthlyJob: any = null;
