@@ -64,17 +64,25 @@ async function transcribeAudio(audioUrl: string): Promise<string> {
   const apiUrl = process.env.AI_WHISPER_API_URL;
   const apiKey = process.env.AI_WHISPER_API_KEY;
   if (apiUrl && apiKey) {
+    // 兼容 OpenAI / Azure OpenAI / 自托管 OpenAI 兼容 ASR：
+    //   AI_WHISPER_MODEL — 模型名，默认 whisper-1（Azure 部署名/自托管模型名可覆盖）
+    //   AI_WHISPER_AUTH_HEADER — 认证 header 名，默认 Bearer（Azure 改为 api-key）
+    //   AI_WHISPER_AUTH_PREFIX — 认证值前缀，默认空字符串（Bearer 时填 "Bearer "，
+    //     api-key 时填 "" 或 "Key "）
+    const modelName = process.env.AI_WHISPER_MODEL || 'whisper-1';
+    const authHeader = process.env.AI_WHISPER_AUTH_HEADER || 'Authorization';
+    const authPrefix = process.env.AI_WHISPER_AUTH_PREFIX ?? 'Bearer ';
     const resp = await fetch(audioUrl);
     if (!resp.ok) throw new Error(`音频下载失败: HTTP ${resp.status}`);
     const audioBuf = Buffer.from(await resp.arrayBuffer());
 
     const formData = new FormData();
     formData.append('file', new Blob([new Uint8Array(audioBuf)], { type: 'audio/mpeg' }), 'audio.mp3');
-    formData.append('model', 'whisper-1');
+    formData.append('model', modelName);
 
     const apiResp = await fetch(apiUrl, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { [authHeader]: `${authPrefix}${apiKey}` },
       body: formData,
     });
     if (!apiResp.ok) {
@@ -127,10 +135,11 @@ function extractTaskType(text: string): string | undefined {
 function extractQuantity(text: string): { quantity?: number; unit?: string; duration_minutes?: number } {
   const result: { quantity?: number; unit?: string; duration_minutes?: number } = {};
   // V2：先匹配 minute（更小单位），避免被 hour 错误吞掉
-  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min)\b/i);
-  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:小时|个钟头|h|hr)\b/i);
-  const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:公斤|千克|kg)\b/i);
-  const unitMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:株|棵|个)\b/);
+  // 2026-09-03 修复：去掉 \b（JS 的 \b 只看 ASCII word boundary，中文末尾不匹配导致 "30分钟"/"3小时" 全部漏检）
+  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分|min)/i);
+  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:小时|个钟头|h|hr)/i);
+  const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:公斤|千克|kg)/i);
+  const unitMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:株|棵|个)/);
   if (minMatch) result.duration_minutes = Number(minMatch[1]);
   else if (hourMatch) result.duration_minutes = Number(hourMatch[1]) * 60;
   if (kgMatch) { result.quantity = Number(kgMatch[1]); result.unit = 'kg'; }
