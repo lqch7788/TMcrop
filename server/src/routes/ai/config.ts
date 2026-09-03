@@ -93,7 +93,11 @@ function getModelStatuses(): ModelStatus[] {
       envVar: whisperApiOk ? 'AI_WHISPER_API_URL' : 'AI_WHISPER_API_URL',
       setupGuide: (whisperLocalOk || whisperApiOk)
         ? undefined
-        : '方案 A（推荐）：在 .env 配置 AI_WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions + AI_WHISPER_API_KEY\n方案 B：本地部署 whisper.onnx（参考 docs/deploy-ai-models.md）',
+        : '方案 A（推荐）：在 .env 配置 AI_WHISPER_API_URL + AI_WHISPER_API_KEY，兼容 OpenAI 官方 / Azure OpenAI / 自托管 OpenAI 兼容 ASR（faster-whisper-server 等）。\n' +
+          '  OpenAI：AI_WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions\n' +
+          '  Azure：AI_WHISPER_API_URL=https://{resource}.openai.azure.com/openai/deployments/{deploy}/audio/transcriptions?api-version=2024-06-01 + AI_WHISPER_AUTH_HEADER=api-key + AI_WHISPER_AUTH_PREFIX= + AI_WHISPER_MODEL={deploy}\n' +
+          '  自托管：AI_WHISPER_API_URL=http://localhost:8000/v1/audio/transcriptions + AI_WHISPER_MODEL={模型名}\n' +
+          '方案 B：本地部署 whisper.onnx（参考 docs/deploy-ai-models.md）',
     },
     {
       code: 'llm',
