@@ -13,7 +13,6 @@ import {
   DollarSign, Layers, Link as LinkIcon,
   Bug,
   FileDown,
-  Zap,
   // v0.3 新增图标（lucide-react 命名，非 antd 命名）
   LayoutGrid,
 } from 'lucide-react';
@@ -27,7 +26,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: Zap, label: '智能控制', path: '/smart-center', category: 'smart' },
+  // 2026-09-04 移除智能控制顶级菜单 — /smart-* 路由由 SmartLayout + SmartSidebar 接管（CLAUDE.md 多系统架构）
   { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
   { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },

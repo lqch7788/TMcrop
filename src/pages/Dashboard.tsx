@@ -10,7 +10,6 @@ import { ProductionProgressCard } from '../components/dashboard/cards/Production
 import { EnergyCard } from '../components/dashboard/cards/EnergyCard';
 import { TodayTasksCard } from '../components/dashboard/cards/TodayTasksCard';
 import { AlertsCard } from '../components/dashboard/cards/AlertsCard';
-import { V3QuickAccessCard } from '../components/dashboard/cards/V3QuickAccessCard';
 import { WeatherWidget } from '../components/dashboard/widgets/WeatherWidget';
 import { ImageEnlargementModal } from '../components/dashboard/ImageEnlargementModal';
 
@@ -113,7 +112,6 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <TodayTasksCard />
         <AlertsCard />
-        <V3QuickAccessCard />
         <EquipmentStatusCard />
         <InventoryAlertCard />
         <ProductionProgressCard />
