@@ -23,7 +23,6 @@ import {
   Row,
   Col,
   message,
-  Modal,
   Alert,
 } from 'antd';
 import {
@@ -46,6 +45,7 @@ interface BackupRecord {
 export default function BackupCenterPage() {
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [triggerLoading, setTriggerLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
   const load = async () => {
@@ -69,12 +69,26 @@ export default function BackupCenterPage() {
   }, []);
 
   const triggerBackup = async () => {
-    Modal.confirm({
-      title: '触发新备份',
-      content: '备份工具脚本由后端调用，请通过 SSH/CD 在服务器上执行 `npx tsx src/db/backupDatabase.ts daily`',
-      okText: '我已了解',
-      cancelText: '取消',
-    });
+    // 2026-09-04 升级：直接调后端 POST /backup/create（server/src/routes/backup.ts:94 用 sql.js db.export() 内存 dump，无 better-sqlite3 CLI 依赖）
+    setTriggerLoading(true);
+    try {
+      const result = await enhancedApiClient.post<{ success: boolean; data: BackupRecord }>(
+        '/backup/create',
+        { remark: '手动备份' }
+      );
+      if (result?.success && result.data) {
+        messageApi.success(
+          `备份完成（${result.data.size}，耗时 ${result.data.duration}）`
+        );
+        await load(); // 刷新列表
+      } else {
+        messageApi.error('备份失败：返回数据异常');
+      }
+    } catch (err: unknown) {
+      messageApi.error('备份失败：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setTriggerLoading(false);
+    }
   };
 
   // 统计
@@ -136,8 +150,9 @@ export default function BackupCenterPage() {
               onClick={triggerBackup}
               block
               size="large"
+              loading={triggerLoading}
             >
-              触发新备份
+              {triggerLoading ? '备份中...' : '触发新备份'}
             </Button>
           </Card>
         </Col>
