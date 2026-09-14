@@ -22,6 +22,8 @@ import type { Staff, SwapRequest } from './types';
 
 interface SwapRequestModalProps {
   staffList: Staff[];
+  // 2026-09-14：行尾发起调班时预填的 requester
+  initialRequester?: { id: string; name: string } | null;
   onSubmit: (request: {
     requesterId: string;
     requesterName: string;
@@ -55,10 +57,10 @@ function futureISO(daysAhead: number): string {
   return `${year}-${month}-${day}`;
 }
 
-export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestModalProps) {
+export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClose }: SwapRequestModalProps) {
   const [formData, setFormData] = useState({
-    requesterId: '',
-    requesterName: '',
+    requesterId: initialRequester?.id || '',
+    requesterName: initialRequester?.name || '',
     requesterType: 'staff' as 'staff' | 'team', // 2026-09-14：申请人类型
     targetId: '',
     targetName: '',

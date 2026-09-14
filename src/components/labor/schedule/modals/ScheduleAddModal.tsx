@@ -17,7 +17,7 @@ import { DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-import { useScheduleStore, useTeamStore, useWorkerStore } from '@/stores';
+import { useScheduleStore, useTeamStore, useWorkerStore, useDictionaryStore, getDictItems } from '@/stores';
 import type { ShiftType } from '../types';
 
 type AddMode = 'single' | 'team';
@@ -114,6 +114,14 @@ export function ScheduleAddModal({
   // 工人原始数据（含 team 字段），用于"按班组排班"按班组名过滤 workerIds
   const workers = useWorkerStore((s) => s.workers);
   const loadWorkers = useWorkerStore((s) => s.loadWorkers);
+  // 2026-09-14：字典订阅（planting_area 工作区域下拉）
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
+  const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries);
+  const plantingAreas = useMemo(
+    () => getDictItems('planting_area'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dictionaries],
+  );
 
   // 打开时重置表单
   useEffect(() => {
@@ -128,6 +136,9 @@ export function ScheduleAddModal({
       }
       if (workers.length === 0) {
         void loadWorkers();
+      }
+      if (dictionaries.length === 0) {
+        void loadDictionaries();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -660,13 +671,52 @@ export function ScheduleAddModal({
           </Select>
         </FormField>
 
-        {/* 工作区域 */}
+        {/* 工作区域（2026-09-14 重构）：手输 + 字典下拉联动 */}
         <FormField label={mode === 'team' ? '工作区域（可选）' : '工作区域'}>
-          <Input
-            value={form.workZone}
-            onChange={(e) => setForm(prev => ({ ...prev, workZone: e.target.value }))}
-            placeholder={mode === 'team' ? '留空则不指定区域' : '留空则使用员工默认区域'}
-          />
+          <div className="flex gap-2">
+            <Input
+              value={form.workZone}
+              onChange={(e) => setForm(prev => ({ ...prev, workZone: e.target.value }))}
+              placeholder={mode === 'team' ? '留空或从右侧下拉选择种植区域' : '留空或从右侧下拉选择种植区域'}
+              className="flex-1"
+            />
+            <Select
+              value=""
+              onValueChange={(val) => {
+                if (val === '__custom__') {
+                  // 用户希望继续手输，不需要任何操作
+                  return;
+                }
+                if (val) {
+                  setForm(prev => ({ ...prev, workZone: val }));
+                }
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder={plantingAreas.length === 0 ? '字典加载中' : '📋 从字典选择'} />
+              </SelectTrigger>
+              <SelectContent>
+                {plantingAreas.length === 0 ? (
+                  <SelectItem value="__custom__" disabled>
+                    暂无种植区域字典
+                  </SelectItem>
+                ) : (
+                  <>
+                    {plantingAreas.map(area => (
+                      <SelectItem key={area.id} value={area.dictLabel || area.dictValue || ''}>
+                        {area.dictLabel || area.dictValue}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          {plantingAreas.length > 0 && (
+            <div className="text-xs text-gray-400 mt-1">
+              💡 可手动输入任意区域名，或从右侧字典下拉选择
+            </div>
+          )}
         </FormField>
 
         {/* 跳过选项（仅日期段/周重复） */}

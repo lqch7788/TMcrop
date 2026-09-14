@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, CalendarDays, Clock, List, Plus, Settings, Users, X } from 'lucide-react';
+import { Calendar, CalendarDays, Clock, Download, List, Plus, Settings, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSchedule } from './hooks/useSchedule';
@@ -8,7 +8,7 @@ import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
-import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
+import { ScheduleAddModal, ScheduleBatchEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ScheduleRecordLike, ShiftType } from './types';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -82,6 +82,10 @@ export function SchedulePage() {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [displayMode, setDisplayMode] = useState<'calendar' | 'table'>('table');
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleRecord | null>(null);
+  // 2026-09-14：签到/签退弹窗
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  // 2026-09-14：行尾发起调班时预填的 requester（ScheduleRecord）
+  const [swapRequester, setSwapRequester] = useState<ScheduleRecord | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -431,43 +435,12 @@ export function SchedulePage() {
               日历视图
             </Button>
           </div>
-
-          {/* 右侧操作 */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowSwapModal(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
-            >
-              <Users className="w-4 h-4" />
-              调班申请
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowShiftEditor(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              <Settings className="w-4 h-4" />
-              班次设置
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus className="w-4 h-4" />
-              新增排班
-            </Button>
-          </div>
         </div>
       </div>
 
-      {/* 主内容区 */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* 日历/表格视图 */}
-        <div className="col-span-2">
+      {/* 主内容区（2026-09-14：单列布局，表格占满宽度） */}
+      <div className="space-y-4">
+        <div>
           {displayMode === 'calendar' ? (
             <ScheduleCalendar
               viewMode={viewMode}
@@ -524,6 +497,19 @@ export function SchedulePage() {
                 }}
                 onCancelBatchEdit={handleCancelBatch}
                 onCancelBatchDelete={handleCancelBatch}
+                onCancelBatchExport={handleCancelBatch}
+                // 2026-09-14：行尾操作列回调
+                onCheckInClick={(record) => {
+                  setSelectedSchedule(record);
+                  setShowCheckInModal(true);
+                }}
+                onCancelRowClick={(record) => handleCancelSchedule(record.id)}
+                onSwapRowClick={(record) => {
+                  // 2026-09-14：行尾发起调班，自动预填 requester = 当前员工
+                  setSwapRequester(record);
+                  setShowSwapModal(true);
+                }}
+                onShiftConfigClick={() => setShowShiftEditor(true)}
               />
 
               {/* 批量操作提示栏 */}
@@ -547,69 +533,8 @@ export function SchedulePage() {
           )}
         </div>
 
-        {/* 侧边栏 */}
-        <div className="space-y-6">
-          {/* 排班详情 */}
-          {selectedSchedule && (
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-medium text-gray-800 mb-3">排班详情</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">员工:</span>
-                  <span className="font-medium text-gray-800">{getStaffName(selectedSchedule)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">日期:</span>
-                  <span className="text-gray-800">{selectedSchedule.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">班次:</span>
-                  <span className="font-medium text-gray-800">{selectedSchedule.shift}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">工作区:</span>
-                  <span className="text-gray-800">{getWorkZone(selectedSchedule)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">状态:</span>
-                  <span className={`
-                    px-2 py-0.5 rounded text-xs
-                    ${selectedSchedule.status === '已排班' ? 'bg-blue-100 text-blue-700' : ''}
-                    ${selectedSchedule.status === '已执行' ? 'bg-green-100 text-green-700' : ''}
-                    ${selectedSchedule.status === '已取消' ? 'bg-gray-100 text-gray-600' : ''}
-                  `}>
-                    {selectedSchedule.status}
-                  </span>
-                </div>
-                {selectedSchedule.checkIn && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">签到:</span>
-                    <span className="text-green-600">{selectedSchedule.checkIn}</span>
-                  </div>
-                )}
-                {selectedSchedule.checkOut && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">签退:</span>
-                    <span className="text-red-600">{selectedSchedule.checkOut}</span>
-                  </div>
-                )}
-              </div>
-              {selectedSchedule.status === '已排班' && (
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancelSchedule(selectedSchedule.id)}
-                    className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <X className="w-4 h-4" /> 取消排班
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 调班申请列表 */}
+        {/* 2026-09-14：表格下方放调班申请列表（替代侧边栏） */}
+        {displayMode === 'table' && (
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-gray-800">调班申请</h3>
@@ -622,23 +547,7 @@ export function SchedulePage() {
               onHandle={handleSwapRequestWithAlert}
             />
           </div>
-
-          {/* 班次图例 */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-medium text-gray-800 mb-3">班次图例</h3>
-            <div className="space-y-2">
-              {shiftConfigs.map(config => (
-                <div key={config.name} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded ${config.color}`} />
-                  <span className="text-sm text-gray-600">{config.name}</span>
-                  <span className="text-xs text-gray-400 ml-auto">
-                    {config.startTime}-{config.endTime}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 模态框 */}
@@ -658,10 +567,18 @@ export function SchedulePage() {
       {showSwapModal && (
         <SwapRequestModal
           staffList={staffList}
+          initialRequester={swapRequester ? { id: swapRequester.staffId, name: swapRequester.staffName || '' } : null}
           onSubmit={handleSwapSubmit}
-          onClose={() => setShowSwapModal(false)}
+          onClose={() => { setShowSwapModal(false); setSwapRequester(null); }}
         />
       )}
+
+      {/* 签到 / 签退弹窗（2026-09-14 新增） */}
+      <CheckInModal
+        isOpen={showCheckInModal}
+        onClose={() => setShowCheckInModal(false)}
+        schedule={selectedSchedule}
+      />
 
       {/* 新增排班弹窗（含个人/班组双模式，2026-09-13 重构） */}
       <ScheduleAddModal
