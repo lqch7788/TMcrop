@@ -17,6 +17,8 @@ export interface ScheduleRecord {
   status: ScheduleStatus;
   checkIn?: string;       // 签到时间 HH:mm
   checkOut?: string;      // 签退时间 HH:mm
+  teamId?: string;        // 班组 ID（2026-09-13 加，按班组排班后写入）
+  teamName?: string;      // 班组名称
 }
 
 // 班次配置
@@ -37,6 +39,7 @@ export interface SwapRequest {
   requesterName: string;
   targetId: string;
   targetName: string;
+  targetType: 'staff' | 'team'; // 2026-09-14 加：target 是个人还是班组
   originalDate: string;
   targetDate: string;
   reason: string;

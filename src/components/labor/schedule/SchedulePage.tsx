@@ -80,7 +80,7 @@ export function SchedulePage() {
   // UI状态
   const [showShiftEditor, setShowShiftEditor] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
-  const [displayMode, setDisplayMode] = useState<'calendar' | 'table'>('calendar');
+  const [displayMode, setDisplayMode] = useState<'calendar' | 'table'>('table');
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleRecord | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
@@ -105,39 +105,9 @@ export function SchedulePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // 新排班表单状态
-  const [newSchedule, setNewSchedule] = useState({
-    staffId: '',
-    staffName: '',
-    date: '',
-    shift: '早班' as ShiftType,
-    workZone: '',
-  });
-
   // 处理排班点击
   const handleScheduleClick = (record: ScheduleRecord) => {
     setSelectedSchedule(record);
-  };
-
-  // 处理添加排班（请求失败时回滚已由 store 处理，此处仅提示用户）
-  const handleAddSchedule = async () => {
-    if (!newSchedule.staffId || !newSchedule.date) {
-      showAlert('请选择员工和日期');
-      return;
-    }
-    const staff = staffList.find(s => s.id === newSchedule.staffId);
-    if (!staff) return;
-    try {
-      await addSchedule({
-        ...newSchedule,
-        staffName: staff.name,
-        status: '已排班',
-      });
-      setShowAddModal(false);
-      setNewSchedule({ staffId: '', staffName: '', date: '', shift: '早班', workZone: '' });
-    } catch (err) {
-      showAlert(`创建排班失败：${(err as Error).message}`);
-    }
   };
 
   // 处理调班申请提交
@@ -146,6 +116,7 @@ export function SchedulePage() {
     requesterName: string;
     targetId: string;
     targetName: string;
+    targetType: 'staff' | 'team';
     originalDate: string;
     targetDate: string;
     reason: string;
@@ -378,61 +349,6 @@ export function SchedulePage() {
         </div>
       </div>
 
-      {/* 快捷操作栏 */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          {/* 左侧操作 */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant={displayMode === 'calendar' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDisplayMode('calendar')}
-            >
-              <CalendarDays className="w-4 h-4" />
-              日历视图
-            </Button>
-            <Button
-              variant={displayMode === 'table' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDisplayMode('table')}
-            >
-              <List className="w-4 h-4" />
-              表格视图
-            </Button>
-          </div>
-
-          {/* 右侧操作 */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowSwapModal(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
-            >
-              <Users className="w-4 h-4" />
-              调班申请
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowShiftEditor(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-            >
-              <Settings className="w-4 h-4" />
-              班次设置
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus className="w-4 h-4" />
-              新增排班
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 - 淡彩底 */}
       <div className="grid grid-cols-4 gap-3">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -489,6 +405,61 @@ export function SchedulePage() {
                 }).length}
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 快捷操作栏 */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* 左侧操作 */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={displayMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDisplayMode('table')}
+            >
+              <List className="w-4 h-4" />
+              表格视图
+            </Button>
+            <Button
+              variant={displayMode === 'calendar' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setDisplayMode('calendar')}
+            >
+              <CalendarDays className="w-4 h-4" />
+              日历视图
+            </Button>
+          </div>
+
+          {/* 右侧操作 */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowSwapModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+            >
+              <Users className="w-4 h-4" />
+              调班申请
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowShiftEditor(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            >
+              <Settings className="w-4 h-4" />
+              班次设置
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Plus className="w-4 h-4" />
+              新增排班
+            </Button>
           </div>
         </div>
       </div>
@@ -692,15 +663,13 @@ export function SchedulePage() {
         />
       )}
 
-      {/* 新增排班弹窗 */}
+      {/* 新增排班弹窗（含个人/班组双模式，2026-09-13 重构） */}
       <ScheduleAddModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSubmit={handleAddSchedule}
-        formData={newSchedule}
         staffList={staffList}
         shiftConfigs={shiftConfigs}
-        onFormChange={(field, value) => setNewSchedule(prev => ({ ...prev, [field]: value }))}
+        defaultDate={selectedDate}
       />
 
       {/* 批量编辑弹窗 */}

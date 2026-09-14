@@ -135,15 +135,38 @@ function cleanOldBackups(prefix: string, keepDays: number): void {
 
 /**
  * 提醒规则扫描任务（每 5 分钟）
- * 通过 spawn 触发 reminders.run，避免与 sql.js 进程冲突
+ * 2026-09-04 修复：schedulerService.ts 之前只打 tick 日志不真扫
+ * （历史遗留 — reminders 路由写完后没人回去接 scheduler）。
+ * 现改为 fetch 自调 POST /api/reminders/run（与前端手动触发同 API，零路径分叉）
  */
 function scheduleReminderScan(): void {
   reminderJob = cron.schedule(
     '*/5 * * * *',
     () => {
-      // 当前 reminders.ts 是路由层，调用方式是 fetch
-      // 实际生产可通过 fetch 触发，这里仅打日志（避免无谓 IPC）
-      console.log('[scheduler] 提醒扫描 tick（每 5 分钟，实际扫描需外部触发器或扩展 reminders.ts）');
+      // 自调本机 3001（scheduler 与 server 同进程，端口走环境变量或默认）
+      const port = process.env.PORT || 3001;
+      // 响应字段经 apiCamelcaseMiddleware 转 camelCase（scanned/triggered/skippedCooldown）
+      fetch(`http://localhost:${port}/api/reminders/run`, { method: 'POST' })
+        .then((r) =>
+          r.json() as Promise<{
+            success: boolean;
+            data?: {
+              stats?: { scanned: number; triggered: number; skippedCooldown: number };
+            };
+          }>
+        )
+        .then((data) => {
+          // 响应格式：{ success: true, data: { stats: {...} } }
+          const stats = data?.data?.stats;
+          if (stats) {
+            console.log(
+              `[scheduler] 提醒扫描完成 — scanned=${stats.scanned} triggered=${stats.triggered} skippedCooldown=${stats.skippedCooldown}`
+            );
+          } else {
+            console.log('[scheduler] 提醒扫描返回异常:', JSON.stringify(data));
+          }
+        })
+        .catch((e: Error) => console.error('[scheduler] 提醒扫描失败:', e.message));
     },
     { timezone: 'Asia/Shanghai' }
   );

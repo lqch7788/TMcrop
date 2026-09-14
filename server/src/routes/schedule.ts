@@ -357,7 +357,7 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
  * 为整个班组批量创建某日某班次的排班，并跳过已排班工人。
  */
 router.post('/batch-by-team', (req: Request, res: Response) => {
-  const { teamId, date, shift, workZone, skipOffDuty = true } = req.body || {};
+  const { teamId, date, shift, workZone, skipOffDuty = true, workerIds: inputWorkerIds } = req.body || {};
 
   // 校验批量排班的必填参数和日期格式。
   if (!teamId || !date || !shift) {
@@ -374,9 +374,11 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
       [teamId],
     );
     const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
-    const workerIds = teamMembersTable
-      ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
-      : [];
+    const workerIds: string[] = Array.isArray(inputWorkerIds) && inputWorkerIds.length > 0
+      ? inputWorkerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0)
+      : (teamMembersTable
+        ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+        : []);
 
     if (workerIds.length === 0) {
       return res.json({ success: true, data: { created: 0, skipped: [] } });
@@ -416,6 +418,505 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : String(err);
     console.error('批量按班组排班失败:', message);
     return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
+/**
+ * 日期段/周重复 共享工具（2026-09-13 新增）
+ * 用于 batch-by-date-range / batch-by-team-and-date-range / batch-by-weekday / batch-by-team-and-weekday。
+ */
+const MAX_DATE_RANGE_DAYS = 365; // 硬限：单次请求日期跨度最多 365 天
+
+function parseDate(s: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(s + 'T00:00:00');
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+function formatDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function expandDates(startDate: string, endDate: string, weekdays?: number[]): string[] {
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (!start || !end || start > end) return [];
+  const result: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const day = cursor.getDay(); // 0=周日
+    if (!weekdays || weekdays.length === 0 || weekdays.includes(day)) {
+      result.push(formatDate(cursor));
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
+/**
+ * POST /api/schedules/batch-by-date-range
+ * 单人日期段批量排班。
+ */
+router.post('/batch-by-date-range', (req: Request, res: Response) => {
+  const { staffId, startDate, endDate, shift, workZone, skipExisting = true } = req.body || {};
+
+  if (!staffId || !startDate || !endDate || !shift) {
+    return res.status(400).json({ success: false, error: 'staffId/startDate/endDate/shift 必填' });
+  }
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (!start || !end) {
+    return res.status(400).json({ success: false, error: '日期格式必须为 YYYY-MM-DD' });
+  }
+  if (start > end) {
+    return res.status(400).json({ success: false, error: '开始日期不能晚于结束日期' });
+  }
+  const dates = expandDates(startDate, endDate);
+  if (dates.length === 0) {
+    return res.status(400).json({ success: false, error: '日期段为空' });
+  }
+  if (dates.length > MAX_DATE_RANGE_DAYS) {
+    return res.status(400).json({ success: false, error: `日期段最多 ${MAX_DATE_RANGE_DAYS} 天` });
+  }
+
+  try {
+    const db = getDatabase();
+    let created = 0;
+    const skipped: Array<{ date: string; reason: string }> = [];
+
+    for (const date of dates) {
+      if (skipExisting) {
+        const exist = db.exec(
+          'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ?',
+          [staffId, date, shift],
+        );
+        const existTable = Array.isArray(exist) ? exist[0] : exist;
+        if (existTable && existTable.values.length > 0) {
+          skipped.push({ date, reason: '已排班' });
+          continue;
+        }
+      }
+      db.run(
+        `INSERT INTO schedules (id, staff_id, date, shift, work_zone, status, version, create_time, update_time)
+         VALUES (?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+        [`range-${Date.now()}-${date}-${staffId}`, staffId, date, shift, workZone || null],
+      );
+      created++;
+    }
+    saveDatabase();
+    return res.json({
+      success: true,
+      data: {
+        created,
+        skipped,
+        total: dates.length,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('单人日期段批量排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
+/**
+ * POST /api/schedules/batch-by-team-and-date-range
+ * 班组日期段批量排班。
+ */
+router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
+  const { teamId, startDate, endDate, shift, workZone, skipExisting = true, workerIds: inputWorkerIds } = req.body || {};
+
+  if (!teamId || !startDate || !endDate || !shift) {
+    return res.status(400).json({ success: false, error: 'teamId/startDate/endDate/shift 必填' });
+  }
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (!start || !end) {
+    return res.status(400).json({ success: false, error: '日期格式必须为 YYYY-MM-DD' });
+  }
+  if (start > end) {
+    return res.status(400).json({ success: false, error: '开始日期不能晚于结束日期' });
+  }
+  const dates = expandDates(startDate, endDate);
+  if (dates.length === 0) {
+    return res.status(400).json({ success: false, error: '日期段为空' });
+  }
+  if (dates.length > MAX_DATE_RANGE_DAYS) {
+    return res.status(400).json({ success: false, error: `日期段最多 ${MAX_DATE_RANGE_DAYS} 天` });
+  }
+
+  try {
+    const db = getDatabase();
+    const teamMembersResult = db.exec(
+      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      [teamId],
+    );
+    const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
+    const workerIds: string[] = Array.isArray(inputWorkerIds) && inputWorkerIds.length > 0
+      ? inputWorkerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0)
+      : (teamMembersTable
+        ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+        : []);
+
+    if (workerIds.length === 0) {
+      return res.json({ success: true, data: { created: 0, skipped: [], total: 0 } });
+    }
+
+    let created = 0;
+    const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
+
+    for (const date of dates) {
+      if (skipExisting) {
+        const placeholders = workerIds.map(() => '?').join(',');
+        const exist = db.exec(
+          `SELECT staff_id FROM schedules WHERE date = ? AND shift = ? AND staff_id IN (${placeholders})`,
+          [date, shift, ...workerIds],
+        );
+        const existTable = Array.isArray(exist) ? exist[0] : exist;
+        const existingSet = new Set<string>(
+          existTable ? existTable.values.map((row: unknown[]) => row[0] as string) : [],
+        );
+        for (const wid of workerIds) {
+          if (existingSet.has(wid)) {
+            skipped.push({ workerId: wid, date, reason: '已排班' });
+          } else {
+            db.run(
+              `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+               VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+              [`teamrange-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+            );
+            created++;
+          }
+        }
+      } else {
+        for (const wid of workerIds) {
+          db.run(
+            `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+            [`teamrange-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+          );
+          created++;
+        }
+      }
+    }
+    saveDatabase();
+    return res.json({
+      success: true,
+      data: {
+        created,
+        skipped,
+        total: dates.length * workerIds.length,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('班组日期段批量排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
+/**
+ * POST /api/schedules/batch-by-weekday
+ * 单人周重复批量排班。
+ */
+router.post('/batch-by-weekday', (req: Request, res: Response) => {
+  const { staffId, startDate, endDate, weekdays, shift, workZone, skipExisting = true } = req.body || {};
+
+  if (!staffId || !startDate || !endDate || !shift || !Array.isArray(weekdays) || weekdays.length === 0) {
+    return res.status(400).json({ success: false, error: 'staffId/startDate/endDate/weekdays/shift 必填' });
+  }
+  // 校验 weekdays：必须是 0-6 整数数组
+  const validWeekdays: number[] = [];
+  for (const d of weekdays as unknown[]) {
+    if (typeof d === 'number' && Number.isInteger(d) && d >= 0 && d <= 6) {
+      validWeekdays.push(d);
+    }
+  }
+  if (validWeekdays.length === 0) {
+    return res.status(400).json({ success: false, error: 'weekdays 必须是非空 0-6 整数数组（0=周日）' });
+  }
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (!start || !end) {
+    return res.status(400).json({ success: false, error: '日期格式必须为 YYYY-MM-DD' });
+  }
+  if (start > end) {
+    return res.status(400).json({ success: false, error: '开始日期不能晚于结束日期' });
+  }
+  const dates = expandDates(startDate, endDate, validWeekdays);
+  if (dates.length === 0) {
+    return res.status(400).json({ success: false, error: '未匹配到任何日期' });
+  }
+  if (dates.length > MAX_DATE_RANGE_DAYS) {
+    return res.status(400).json({ success: false, error: `日期段最多 ${MAX_DATE_RANGE_DAYS} 天` });
+  }
+
+  try {
+    const db = getDatabase();
+    let created = 0;
+    const skipped: Array<{ date: string; reason: string }> = [];
+
+    for (const date of dates) {
+      if (skipExisting) {
+        const exist = db.exec(
+          'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ?',
+          [staffId, date, shift],
+        );
+        const existTable = Array.isArray(exist) ? exist[0] : exist;
+        if (existTable && existTable.values.length > 0) {
+          skipped.push({ date, reason: '已排班' });
+          continue;
+        }
+      }
+      db.run(
+        `INSERT INTO schedules (id, staff_id, date, shift, work_zone, status, version, create_time, update_time)
+         VALUES (?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+        [`weekday-${Date.now()}-${date}-${staffId}`, staffId, date, shift, workZone || null],
+      );
+      created++;
+    }
+    saveDatabase();
+    return res.json({
+      success: true,
+      data: { created, skipped, total: dates.length },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('单人周重复批量排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
+/**
+ * POST /api/schedules/batch-by-team-and-weekday
+ * 班组周重复批量排班。
+ */
+router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
+  const { teamId, startDate, endDate, weekdays, shift, workZone, skipExisting = true, workerIds: inputWorkerIds } = req.body || {};
+
+  if (!teamId || !startDate || !endDate || !shift || !Array.isArray(weekdays) || weekdays.length === 0) {
+    return res.status(400).json({ success: false, error: 'teamId/startDate/endDate/weekdays/shift 必填' });
+  }
+  const validWeekdays: number[] = [];
+  for (const d of weekdays as unknown[]) {
+    if (typeof d === 'number' && Number.isInteger(d) && d >= 0 && d <= 6) {
+      validWeekdays.push(d);
+    }
+  }
+  if (validWeekdays.length === 0) {
+    return res.status(400).json({ success: false, error: 'weekdays 必须是非空 0-6 整数数组（0=周日）' });
+  }
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (!start || !end) {
+    return res.status(400).json({ success: false, error: '日期格式必须为 YYYY-MM-DD' });
+  }
+  if (start > end) {
+    return res.status(400).json({ success: false, error: '开始日期不能晚于结束日期' });
+  }
+  const dates = expandDates(startDate, endDate, validWeekdays);
+  if (dates.length === 0) {
+    return res.status(400).json({ success: false, error: '未匹配到任何日期' });
+  }
+  if (dates.length > MAX_DATE_RANGE_DAYS) {
+    return res.status(400).json({ success: false, error: `日期段最多 ${MAX_DATE_RANGE_DAYS} 天` });
+  }
+
+  try {
+    const db = getDatabase();
+    const teamMembersResult = db.exec(
+      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      [teamId],
+    );
+    const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
+    const workerIds: string[] = Array.isArray(inputWorkerIds) && inputWorkerIds.length > 0
+      ? inputWorkerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0)
+      : (teamMembersTable
+        ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+        : []);
+
+    if (workerIds.length === 0) {
+      return res.json({ success: true, data: { created: 0, skipped: [], total: 0 } });
+    }
+
+    let created = 0;
+    const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
+
+    for (const date of dates) {
+      if (skipExisting) {
+        const placeholders = workerIds.map(() => '?').join(',');
+        const exist = db.exec(
+          `SELECT staff_id FROM schedules WHERE date = ? AND shift = ? AND staff_id IN (${placeholders})`,
+          [date, shift, ...workerIds],
+        );
+        const existTable = Array.isArray(exist) ? exist[0] : exist;
+        const existingSet = new Set<string>(
+          existTable ? existTable.values.map((row: unknown[]) => row[0] as string) : [],
+        );
+        for (const wid of workerIds) {
+          if (existingSet.has(wid)) {
+            skipped.push({ workerId: wid, date, reason: '已排班' });
+          } else {
+            db.run(
+              `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+               VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+              [`teamwd-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+            );
+            created++;
+          }
+        }
+      } else {
+        for (const wid of workerIds) {
+          db.run(
+            `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+            [`teamwd-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+          );
+          created++;
+        }
+      }
+    }
+    saveDatabase();
+    return res.json({
+      success: true,
+      data: {
+        created,
+        skipped,
+        total: dates.length * workerIds.length,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('班组周重复批量排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+  }
+});
+
+/**
+ * POST /api/schedules/preview-batch
+ * 批量排班预览（2026-09-13 新增）：不写入，只返回冲突计划
+ *
+ * 入参支持 4 种组合：
+ *   - { mode: 'single', staffId, date, shift }
+ *   - { mode: 'single-team', teamId, date, shift, workerIds? }
+ *   - { mode: 'range', staffId|teamId, startDate, endDate, shift, workerIds? }
+ *   - { mode: 'weekday', staffId|teamId, startDate, endDate, weekdays, shift, workerIds? }
+ *
+ * 返回：{ toCreate: number, willSkip: [{workerId, date, reason}], dates: [...] }
+ */
+router.post('/preview-batch', (req: Request, res: Response) => {
+  const body = req.body || {};
+  const { mode } = body;
+
+  // 校验 mode
+  if (!['single', 'single-team', 'range', 'weekday'].includes(mode)) {
+    return res.status(400).json({ success: false, error: 'mode 必须是 single/single-team/range/weekday' });
+  }
+
+  try {
+    const db = getDatabase();
+    const willSkip: Array<{ workerId: string; date: string; reason: string }> = [];
+    const willCreate: Array<{ workerId: string; date: string; shift: string }> = [];
+
+    // 计算目标员工 ID 列表
+    let targetWorkerIds: string[] = [];
+    if (mode === 'single') {
+      if (!body.staffId) return res.status(400).json({ success: false, error: 'staffId 必填' });
+      targetWorkerIds = [body.staffId];
+    } else {
+      // 班组模式：优先用传入的 workerIds，否则查 team_members
+      if (Array.isArray(body.workerIds) && body.workerIds.length > 0) {
+        targetWorkerIds = body.workerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0);
+      } else if (body.teamId) {
+        const tm = db.exec('SELECT worker_id FROM team_members WHERE team_id = ?', [body.teamId]);
+        const tmTable = Array.isArray(tm) ? tm[0] : tm;
+        targetWorkerIds = tmTable ? tmTable.values.map((row: unknown[]) => row[0] as string) : [];
+      } else {
+        return res.status(400).json({ success: false, error: 'teamId 或 workerIds 必填其一' });
+      }
+    }
+    if (targetWorkerIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          toCreate: 0,
+          willSkip: [],
+          willCreate: [],
+          total: 0,
+          message: '无目标员工',
+        },
+      });
+    }
+
+    // 计算目标日期列表
+    let targetDates: string[] = [];
+    if (mode === 'single' || mode === 'single-team') {
+      if (!body.date) return res.status(400).json({ success: false, error: 'date 必填' });
+      targetDates = [body.date];
+    } else {
+      if (!body.startDate || !body.endDate) {
+        return res.status(400).json({ success: false, error: 'startDate/endDate 必填' });
+      }
+      if (!Array.isArray(body.weekdays) || body.weekdays.length === 0) {
+        targetDates = expandDates(body.startDate, body.endDate);
+      } else {
+        const validWeekdays: number[] = [];
+        for (const d of body.weekdays as unknown[]) {
+          if (typeof d === 'number' && Number.isInteger(d) && d >= 0 && d <= 6) {
+            validWeekdays.push(d);
+          }
+        }
+        targetDates = expandDates(body.startDate, body.endDate, validWeekdays);
+      }
+    }
+    if (targetDates.length === 0) {
+      return res.json({
+        success: true,
+        data: { toCreate: 0, willSkip: [], willCreate: [], total: 0, message: '日期范围为空' },
+      });
+    }
+
+    // shift 必填
+    if (!body.shift) return res.status(400).json({ success: false, error: 'shift 必填' });
+    const shift = body.shift;
+
+    // 对每个日期检测冲突
+    for (const date of targetDates) {
+      const placeholders = targetWorkerIds.map(() => '?').join(',');
+      const exist = db.exec(
+        `SELECT staff_id FROM schedules WHERE date = ? AND shift = ? AND staff_id IN (${placeholders})`,
+        [date, shift, ...targetWorkerIds],
+      );
+      const existTable = Array.isArray(exist) ? exist[0] : exist;
+      const existingSet = new Set<string>(
+        existTable ? existTable.values.map((row: unknown[]) => row[0] as string) : [],
+      );
+      for (const wid of targetWorkerIds) {
+        if (existingSet.has(wid)) {
+          willSkip.push({ workerId: wid, date, reason: '已排班' });
+        } else {
+          willCreate.push({ workerId: wid, date, shift });
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        toCreate: willCreate.length,
+        willSkip,
+        willCreate,
+        total: targetDates.length * targetWorkerIds.length,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('预览批量排班失败:', message);
+    return res.status(500).json({ success: false, error: message || '预览失败' });
   }
 });
 
@@ -723,7 +1224,16 @@ router.get('/swap-requests/list', (req: Request, res: Response) => {
  */
 router.post('/swap-requests', (req: Request, res: Response) => {
   try {
-    const { id, requester_id, requester_name, target_id, target_name, original_date, target_date, reason } = req.body;
+    // 兼容 camelCase 和 snake_case（前端 store spread camelCase；旧逻辑用 snake_case）
+    const body = req.body || {};
+    const id = body.id;
+    const requester_id = body.requester_id ?? body.requesterId;
+    const requester_name = body.requester_name ?? body.requesterName;
+    const target_id = body.target_id ?? body.targetId;
+    const target_name = body.target_name ?? body.targetName;
+    const original_date = body.original_date ?? body.originalDate;
+    const target_date = body.target_date ?? body.targetDate;
+    const reason = body.reason;
     const newId = id || `SWAP-${Date.now()}`;
     const now = new Date().toISOString();
 

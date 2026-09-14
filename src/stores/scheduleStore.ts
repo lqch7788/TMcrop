@@ -128,6 +128,7 @@ interface ScheduleState {
     assignedTaskCount: number;
   };
   invalidateOccupations: (date: string) => void;
+  invalidateDateRange: (startDate: string, endDate: string) => void;
 
   // Actions - 按班组批量排班（Task 8 新增）
   batchScheduleByTeam: (
@@ -135,9 +136,86 @@ interface ScheduleState {
     date: string,
     shift: ShiftType,
     workZone?: string,
+    workerIds?: string[],
   ) => Promise<{
     created: number;
     skipped: Array<{ workerId: string; reason: string }>;
+  }>;
+
+  // Actions - 日期段/周重复批量排班（2026-09-13 新增）
+  batchScheduleByDateRange: (
+    staffId: string,
+    startDate: string,
+    endDate: string,
+    shift: ShiftType,
+    workZone?: string,
+    skipExisting?: boolean,
+  ) => Promise<{
+    created: number;
+    skipped: Array<{ date: string; reason: string }>;
+    total: number;
+  }>;
+
+  batchScheduleByTeamAndDateRange: (
+    teamId: string,
+    startDate: string,
+    endDate: string,
+    shift: ShiftType,
+    workZone?: string,
+    skipExisting?: boolean,
+    workerIds?: string[],
+  ) => Promise<{
+    created: number;
+    skipped: Array<{ workerId: string; date: string; reason: string }>;
+    total: number;
+  }>;
+
+  batchScheduleByWeekday: (
+    staffId: string,
+    startDate: string,
+    endDate: string,
+    weekdays: number[],
+    shift: ShiftType,
+    workZone?: string,
+    skipExisting?: boolean,
+  ) => Promise<{
+    created: number;
+    skipped: Array<{ date: string; reason: string }>;
+    total: number;
+  }>;
+
+  batchScheduleByTeamAndWeekday: (
+    teamId: string,
+    startDate: string,
+    endDate: string,
+    weekdays: number[],
+    shift: ShiftType,
+    workZone?: string,
+    skipExisting?: boolean,
+    workerIds?: string[],
+  ) => Promise<{
+    created: number;
+    skipped: Array<{ workerId: string; date: string; reason: string }>;
+    total: number;
+  }>;
+
+  // 预览批量排班（2026-09-13 新增）：不写入，只返回计划
+  previewBatchSchedule: (params: {
+    mode: 'single' | 'single-team' | 'range' | 'weekday';
+    staffId?: string;
+    teamId?: string;
+    workerIds?: string[];
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    weekdays?: number[];
+    shift: ShiftType;
+  }) => Promise<{
+    toCreate: number;
+    willSkip: Array<{ workerId: string; date: string; reason: string }>;
+    willCreate: Array<{ workerId: string; date: string; shift: ShiftType }>;
+    total: number;
+    message?: string;
   }>;
 }
 
@@ -464,6 +542,30 @@ export const useScheduleStore = create<ScheduleState>()(
         });
       },
 
+      // 日期段占用缓存失效（2026-09-13 新增）：用于日期段/周重复批量排班后
+      invalidateDateRange: (startDate: string, endDate: string) => {
+        const cursor = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T00:00:00');
+        if (isNaN(cursor.getTime()) || isNaN(end.getTime())) return;
+        const dates: string[] = [];
+        while (cursor <= end) {
+          const year = cursor.getFullYear();
+          const month = String(cursor.getMonth() + 1).padStart(2, '0');
+          const day = String(cursor.getDate()).padStart(2, '0');
+          dates.push(`${year}-${month}-${day}`);
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        set((state) => {
+          const nextTs = { ...state.lastFetchedAt };
+          const nextOcc = { ...state.occupations };
+          for (const d of dates) {
+            delete nextTs[d];
+            delete nextOcc[d];
+          }
+          return { lastFetchedAt: nextTs, occupations: nextOcc };
+        });
+      },
+
       // ========== 按班组批量排班（Task 8 新增） ==========
 
       /**
@@ -483,6 +585,7 @@ export const useScheduleStore = create<ScheduleState>()(
         date: string,
         shift: ShiftType,
         workZone?: string,
+        workerIds?: string[],
       ) => {
         const res = await enhancedApiClient.post<{
           created: number;
@@ -492,9 +595,97 @@ export const useScheduleStore = create<ScheduleState>()(
           date,
           shift,
           workZone,
+          workerIds,
         });
         // 刷新当日占用缓存（V2.1 铁律：API 是数据唯一来源，立即失效前端缓存）
         get().invalidateOccupations(date);
+        return res;
+      },
+
+      // ========== 日期段/周重复批量排班（2026-09-13 新增） ==========
+
+      batchScheduleByDateRange: async (staffId, startDate, endDate, shift, workZone, skipExisting = true) => {
+        const res = await enhancedApiClient.post<{
+          created: number;
+          skipped: Array<{ date: string; reason: string }>;
+          total: number;
+        }>('/schedules/batch-by-date-range', {
+          staffId,
+          startDate,
+          endDate,
+          shift,
+          workZone,
+          skipExisting,
+        });
+        // 失效日期段内所有日期的占用缓存
+        get().invalidateDateRange(startDate, endDate);
+        return res;
+      },
+
+      batchScheduleByTeamAndDateRange: async (teamId, startDate, endDate, shift, workZone, skipExisting = true, workerIds) => {
+        const res = await enhancedApiClient.post<{
+          created: number;
+          skipped: Array<{ workerId: string; date: string; reason: string }>;
+          total: number;
+        }>('/schedules/batch-by-team-and-date-range', {
+          teamId,
+          startDate,
+          endDate,
+          shift,
+          workZone,
+          skipExisting,
+          workerIds,
+        });
+        get().invalidateDateRange(startDate, endDate);
+        return res;
+      },
+
+      batchScheduleByWeekday: async (staffId, startDate, endDate, weekdays, shift, workZone, skipExisting = true) => {
+        const res = await enhancedApiClient.post<{
+          created: number;
+          skipped: Array<{ date: string; reason: string }>;
+          total: number;
+        }>('/schedules/batch-by-weekday', {
+          staffId,
+          startDate,
+          endDate,
+          weekdays,
+          shift,
+          workZone,
+          skipExisting,
+        });
+        get().invalidateDateRange(startDate, endDate);
+        return res;
+      },
+
+      batchScheduleByTeamAndWeekday: async (teamId, startDate, endDate, weekdays, shift, workZone, skipExisting = true, workerIds) => {
+        const res = await enhancedApiClient.post<{
+          created: number;
+          skipped: Array<{ workerId: string; date: string; reason: string }>;
+          total: number;
+        }>('/schedules/batch-by-team-and-weekday', {
+          teamId,
+          startDate,
+          endDate,
+          weekdays,
+          shift,
+          workZone,
+          skipExisting,
+          workerIds,
+        });
+        get().invalidateDateRange(startDate, endDate);
+        return res;
+      },
+
+      // ========== 预览（2026-09-13 新增） ==========
+      previewBatchSchedule: async (params) => {
+        const res = await enhancedApiClient.post<{
+          toCreate: number;
+          willSkip: Array<{ workerId: string; date: string; reason: string }>;
+          willCreate: Array<{ workerId: string; date: string; shift: string }>;
+          total: number;
+          message?: string;
+        }>('/schedules/preview-batch', params);
         return res;
       },
 
@@ -549,6 +740,11 @@ interface ScheduleApiRow {
   shift: ShiftType;
   status: ScheduleStatus;
   remarks?: string | null;
+  // 2026-09-13：按班组排班贯通（teamId/teamName 后端 2026-07-30 已加列）
+  team_id?: string | null;
+  team_name?: string | null;
+  teamId?: string | null;
+  teamName?: string | null;
 }
 
 /** 工人列表结构（来自 useWorkerStore，宽松类型避免 any） */
@@ -577,6 +773,8 @@ function normalizeScheduleRow(row: ScheduleApiRow): ScheduleRecord {
     checkIn: row.check_in ?? row.checkIn ?? undefined,
     checkOut: row.check_out ?? row.checkOut ?? undefined,
     remarks: row.remarks ?? undefined,
+    teamId: row.team_id ?? row.teamId ?? undefined,
+    teamName: row.team_name ?? row.teamName ?? undefined,
   };
 }
 
