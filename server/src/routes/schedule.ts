@@ -399,15 +399,18 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
     let created = 0;
     const skipped: Array<{ workerId: string; reason: string }> = [];
 
+    // 2026-09-14：补 staff_name / team_name
+    const { staffNameMap, teamName } = enrichScheduleNames(db, workerIds, teamId);
+
     for (const workerId of workerIds) {
       if (existingWorkers.has(workerId) && skipOffDuty) {
         skipped.push({ workerId, reason: '已排班' });
         continue;
       }
       db.run(
-        `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-        [`batch-${Date.now()}-${workerId}`, workerId, date, shift, workZone || null, teamId, null],
+        `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+        [`batch-${Date.now()}-${workerId}`, workerId, staffNameMap.get(workerId) || null, date, shift, workZone || null, teamId, teamName],
       );
       created++;
     }
@@ -455,6 +458,36 @@ function expandDates(startDate: string, endDate: string, weekdays?: number[]): s
     cursor.setDate(cursor.getDate() + 1);
   }
   return result;
+}
+
+/**
+ * 批量排班写入辅助（2026-09-14 修复）：从 employees/teams 表查名字，补到 INSERT
+ * 返回 { staffNameMap: {staffId -> name}, teamName }
+ */
+function enrichScheduleNames(db: any, workerIds: string[], teamId: string | null): { staffNameMap: Map<string, string>; teamName: string | null } {
+  const staffNameMap = new Map<string, string>();
+  if (workerIds.length > 0) {
+    const placeholders = workerIds.map(() => '?').join(',');
+    const empRes = db.exec(
+      `SELECT id, name FROM employees WHERE id IN (${placeholders})`,
+      workerIds,
+    );
+    const empTable = Array.isArray(empRes) ? empRes[0] : empRes;
+    if (empTable) {
+      for (const row of empTable.values) {
+        staffNameMap.set(row[0] as string, row[1] as string);
+      }
+    }
+  }
+  let teamName: string | null = null;
+  if (teamId) {
+    const tRes = db.exec('SELECT team_name FROM teams WHERE id = ?', [teamId]);
+    const tTable = Array.isArray(tRes) ? tRes[0] : tRes;
+    if (tTable && tTable.values.length > 0) {
+      teamName = tTable.values[0][0] as string;
+    }
+  }
+  return { staffNameMap, teamName };
 }
 
 /**
@@ -566,6 +599,9 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
       return res.json({ success: true, data: { created: 0, skipped: [], total: 0 } });
     }
 
+    // 2026-09-14：补 staff_name / team_name
+    const { staffNameMap, teamName } = enrichScheduleNames(db, workerIds, teamId);
+
     let created = 0;
     const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
 
@@ -585,9 +621,9 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
             skipped.push({ workerId: wid, date, reason: '已排班' });
           } else {
             db.run(
-              `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-               VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-              [`teamrange-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+              `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+              [`teamrange-${Date.now()}-${date}-${wid}`, wid, staffNameMap.get(wid) || null, date, shift, workZone || null, teamId, teamName],
             );
             created++;
           }
@@ -595,9 +631,9 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
       } else {
         for (const wid of workerIds) {
           db.run(
-            `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-             VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-            [`teamrange-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+            `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+            [`teamrange-${Date.now()}-${date}-${wid}`, wid, staffNameMap.get(wid) || null, date, shift, workZone || null, teamId, teamName],
           );
           created++;
         }
@@ -657,6 +693,8 @@ router.post('/batch-by-weekday', (req: Request, res: Response) => {
 
   try {
     const db = getDatabase();
+    // 2026-09-14：补 staff_name
+    const { staffNameMap } = enrichScheduleNames(db, [staffId], null);
     let created = 0;
     const skipped: Array<{ date: string; reason: string }> = [];
 
@@ -673,9 +711,9 @@ router.post('/batch-by-weekday', (req: Request, res: Response) => {
         }
       }
       db.run(
-        `INSERT INTO schedules (id, staff_id, date, shift, work_zone, status, version, create_time, update_time)
-         VALUES (?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-        [`weekday-${Date.now()}-${date}-${staffId}`, staffId, date, shift, workZone || null],
+        `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, version, create_time, update_time)
+         VALUES (?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+        [`weekday-${Date.now()}-${date}-${staffId}`, staffId, staffNameMap.get(staffId) || null, date, shift, workZone || null],
       );
       created++;
     }
@@ -743,6 +781,9 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
       return res.json({ success: true, data: { created: 0, skipped: [], total: 0 } });
     }
 
+    // 2026-09-14：补 staff_name / team_name
+    const { staffNameMap, teamName } = enrichScheduleNames(db, workerIds, teamId);
+
     let created = 0;
     const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
 
@@ -762,9 +803,9 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
             skipped.push({ workerId: wid, date, reason: '已排班' });
           } else {
             db.run(
-              `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-               VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-              [`teamwd-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+              `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+              [`teamwd-${Date.now()}-${date}-${wid}`, wid, staffNameMap.get(wid) || null, date, shift, workZone || null, teamId, teamName],
             );
             created++;
           }
@@ -772,9 +813,9 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
       } else {
         for (const wid of workerIds) {
           db.run(
-            `INSERT INTO schedules (id, staff_id, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-             VALUES (?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-            [`teamwd-${Date.now()}-${date}-${wid}`, wid, date, shift, workZone || null, teamId, null],
+            `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+            [`teamwd-${Date.now()}-${date}-${wid}`, wid, staffNameMap.get(wid) || null, date, shift, workZone || null, teamId, teamName],
           );
           created++;
         }
@@ -1073,7 +1114,19 @@ router.post('/batch', (req: Request, res: Response) => {
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    // 2026-09-14：兼容 camelCase / snake_case 入参
+    const raw = req.body || {};
+    const updates = {
+      staff_id: raw.staff_id ?? raw.staffId,
+      staff_name: raw.staff_name ?? raw.staffName,
+      date: raw.date,
+      shift: raw.shift,
+      work_zone: raw.work_zone ?? raw.workZone,
+      status: raw.status,
+      check_in: raw.check_in ?? raw.checkIn,
+      check_out: raw.check_out ?? raw.checkOut,
+      remarks: raw.remarks,
+    };
     const now = new Date().toISOString();
 
     const db = getDatabase();
@@ -1108,6 +1161,27 @@ router.put('/:id', (req: Request, res: Response) => {
     if (fields.length === 0) {
       res.status(400).json({ success: false, error: '没有需要更新的字段' });
       return;
+    }
+
+    // 2026-09-14：签到/签退后自动设 status='已执行'（仅当请求里带了 check_in 或 check_out）
+    // 业务语义：员工登记了签到或签退时间，表示该班次已执行
+    if ((updates.check_in !== undefined && updates.check_in) ||
+        (updates.check_out !== undefined && updates.check_out)) {
+      // 检查现有 status（避免覆盖"已取消"）
+      const curRes = db.exec('SELECT status FROM schedules WHERE id = ?', [id]);
+      const curTable = Array.isArray(curRes) ? curRes[0] : curRes;
+      const curStatus = curTable && curTable.values.length > 0 ? curTable.values[0][0] as string : null;
+      if (curStatus !== '已取消') {
+        // 移除原 updates.status 加入 '已执行'
+        const idx = fields.indexOf('status = ?');
+        if (idx >= 0) {
+          fields[idx] = 'status = ?';
+          values[idx] = '已执行';
+        } else {
+          fields.push('status = ?');
+          values.push('已执行');
+        }
+      }
     }
 
     db.run(`UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`, values);

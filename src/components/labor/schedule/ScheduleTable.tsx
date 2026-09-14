@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Edit2, Plus, Search, Trash2, X } from 'lucide-react';
+import { Clock, Download, Edit2, LogIn, Plus, RefreshCw, Search, Settings, Trash2, X } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
 import { normalizeRecord } from './types';
 import { Button } from '@/components/ui';
@@ -32,11 +32,19 @@ interface ScheduleTableProps {
   onBatchExportClick?: () => void;
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
+  // 2026-09-14：导出模式取消回调（之前漏了导致按钮无效）
+  onCancelBatchExport?: () => void;
   // 权限控制props
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canExport?: boolean;
+  // 2026-09-14：行尾操作列回调
+  onCheckInClick?: (record: ScheduleRecord) => void;
+  onCancelRowClick?: (record: ScheduleRecord) => void;
+  onSwapRowClick?: (record: ScheduleRecord) => void;
+  // 2026-09-14：班次设置回调（顶部右侧按钮调用）
+  onShiftConfigClick?: () => void;
 }
 
 // 获取班次颜色
@@ -67,6 +75,11 @@ export function ScheduleTable({
   onBatchExportClick,
   onCancelBatchEdit,
   onCancelBatchDelete,
+  onCancelBatchExport,
+  onCheckInClick,
+  onCancelRowClick,
+  onSwapRowClick,
+  onShiftConfigClick,
   canCreate = true,
   canEdit = true,
   canDelete = true,
@@ -206,7 +219,7 @@ export function ScheduleTable({
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={onBatchExportClick}
+                    onClick={onCancelBatchExport}
                   >
                     <X className="w-4 h-4" /> 取消
                   </Button>
@@ -216,30 +229,19 @@ export function ScheduleTable({
           ) : (
             <>
               {canCreate && onAddClick && (
-                <Button
-                  size="sm"
-                  onClick={onAddClick}
-                >
+                <Button size="sm" onClick={onAddClick}>
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
               {canEdit && onBatchEditClick && (
-                <Button
-                  size="sm"
-                  variant="blue"
-                  onClick={onBatchEditClick}
-                >
+                <Button size="sm" variant="blue" onClick={onBatchEditClick}>
                   <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}
               {canDelete && onBatchDeleteClick && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={onBatchDeleteClick}
-                >
+                <Button size="sm" variant="destructive" onClick={onBatchDeleteClick}>
                   <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
@@ -248,9 +250,17 @@ export function ScheduleTable({
                 <Button
                   size="sm"
                   onClick={onExport}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
                 >
                   <Download className="w-4 h-4" />
                   导出
+                </Button>
+              )}
+              {/* 2026-09-14：班次设置移到导出后面 */}
+              {onShiftConfigClick && (
+                <Button size="sm" onClick={onShiftConfigClick}>
+                  <Settings className="w-4 h-4" />
+                  班次设置
                 </Button>
               )}
             </>
@@ -258,39 +268,24 @@ export function ScheduleTable({
         </div>
       </div>
 
-      {/* 工具栏 */}
+      {/* 工具栏 + 筛选器（2026-09-14 重构：搜索 + 日期范围同行，搜索在前） */}
       <div className="p-4 space-y-3">
-        {/* 搜索和操作 */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="搜索员工、区域、日期..."
-                value={searchTerm}
-                onChange={e => {
-                  setSearchTerm(e.target.value);
-                  onPageChange?.(1);
-                }}
-                className="pl-9 pr-4"
-              />
-            </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* 搜索框（2026-09-14 移到日期范围前） */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="搜索员工、区域、日期..."
+              value={searchTerm}
+              onChange={e => {
+                setSearchTerm(e.target.value);
+                onPageChange?.(1);
+              }}
+              className="pl-9 pr-4 w-[220px]"
+            />
           </div>
-          {onExport && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExport}
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </Button>
-          )}
-        </div>
 
-        {/* 筛选器 */}
-        <div className="flex items-center gap-4 flex-wrap">
           {/* 日期范围 */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
@@ -402,12 +397,18 @@ export function ScheduleTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 签到/签退
               </TableHead>
+              {/* 2026-09-14：操作列（签到/取消/调班 行尾图标按钮） */}
+              {!exportMode && !batchEditMode && !batchDeleteMode && (
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-32">
+                  操作
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-400">
+                <TableCell colSpan={showCheckbox ? 10 : 9} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -470,6 +471,46 @@ export function ScheduleTable({
                     <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.checkIn || '-'} / {record.checkOut || '-'}
                     </TableCell>
+                    {/* 2026-09-14：行尾操作列 */}
+                    {!exportMode && !batchEditMode && !batchDeleteMode && (
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          {/* 签到/签退：仅已排班/已执行显示 */}
+                          {(record.status === '已排班' || record.status === '已执行') && onCheckInClick && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onCheckInClick(record); }}
+                              title={record.status === '已执行' ? '修改签到/签退' : '签到 / 签退'}
+                              className="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors"
+                            >
+                              <LogIn className="w-4 h-4" />
+                            </button>
+                          )}
+                          {/* 调班申请：所有状态可发起 */}
+                          {onSwapRowClick && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onSwapRowClick(record); }}
+                              title="调班申请"
+                              className="p-1.5 rounded hover:bg-purple-100 text-purple-600 transition-colors"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </button>
+                          )}
+                          {/* 取消排班：仅已排班显示（已执行/已取消不显示） */}
+                          {record.status === '已排班' && onCancelRowClick && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onCancelRowClick(record); }}
+                              title="取消排班"
+                              className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -488,6 +529,18 @@ export function ScheduleTable({
           onPageSizeChange={onPageSizeChange}
           showPageSize={true}
         />
+      </div>
+
+      {/* 2026-09-14：班次图例（表格下方紧凑条） */}
+      <div className="px-4 pb-4 flex items-center gap-4 text-xs text-gray-600 flex-wrap">
+        <span className="font-medium">班次图例：</span>
+        {shiftConfigs.map(config => (
+          <span key={config.name} className="inline-flex items-center gap-1.5">
+            <span className={`inline-block w-3 h-3 rounded ${config.color}`} />
+            <span>{config.name}</span>
+            <span className="text-gray-400">({config.startTime}-{config.endTime})</span>
+          </span>
+        ))}
       </div>
     </div>
   );
