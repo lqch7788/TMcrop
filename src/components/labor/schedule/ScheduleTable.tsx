@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { useTeamStore } from '@/stores';
 
 interface ScheduleTableProps {
   scheduleList: ScheduleRecord[];
@@ -74,24 +75,33 @@ export function ScheduleTable({
   // 规范化数据（兼容snake_case和camelCase）
   const normalizedList = useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
 
+  // 班组 ID → 名称 映射（2026-09-13 加）：后端写入了 teamId 但 teamName 是 null
+  const teams = useTeamStore((s) => s.teams);
+  const teamNameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of teams) m[t.id] = t.teamName;
+    return m;
+  }, [teams]);
+
   // 筛选状态
   const [searchTerm, setSearchTerm] = useState('');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // 修复 2026-09-13：原默认本周一~周日，新建非本周日期的排班在表格视图看不到。
+  // 改为本月1日~本月最后一日，容纳任意日期新建的排班。
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
     const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1);
-    // 使用本地日期方法，避免 toISOString() 的 UTC 时区问题
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     return {
-      start: formatDate(weekStart),
-      end: formatDate(new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000)),
+      start: formatDate(monthStart),
+      end: formatDate(monthEnd),
     };
   });
 
@@ -102,7 +112,9 @@ export function ScheduleTable({
       const matchSearch =
         record.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.workZone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.date.includes(searchTerm);
+        record.date.includes(searchTerm) ||
+        ((record.teamName || (record.teamId ? teamNameMap[record.teamId] : '') || '')
+          .toLowerCase().includes(searchTerm.toLowerCase()));
 
       // 班次筛选
       const matchShift = shiftFilter === 'all' || record.shift === shiftFilter;
@@ -373,6 +385,9 @@ export function ScheduleTable({
                 员工
               </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
+                班组
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 班次
               </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
@@ -392,7 +407,7 @@ export function ScheduleTable({
           <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 8 : 7} className="px-4 py-8 text-center text-gray-400">
+                <TableCell colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -420,6 +435,13 @@ export function ScheduleTable({
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.staffName}</div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">
+                        {record.teamName
+                          || (record.teamId ? teamNameMap[record.teamId] : null)
+                          || '-'}
+                      </div>
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`
