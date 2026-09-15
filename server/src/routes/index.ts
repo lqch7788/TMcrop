@@ -77,6 +77,12 @@ import materialsRouter from './materials';
 import resignationRouter from './resignation';
 import recruitmentRouter from './recruitment';
 import teamMembersRouter from './teamMembers';
+// 2026-09-15：班组分配管理完整性 Phase 2 - 5 个新模块路由
+import teamZonesRouter from './teamZones';
+import teamCapabilitiesRouter from './teamCapabilities';
+import workerTeamsRouter from './workerTeams';
+import teamMemberChangesRouter from './teamMemberChanges';
+import teamAvailabilityRouter from './teamAvailability';
 import contractRenewalRouter from './contractRenewal';
 import contractRouter from './contract';
 import performanceRouter from './performance';
@@ -376,6 +382,13 @@ router.use('/recruitment', requireAuth, recruitmentRouter);
 
 // 团队成员路由 - 需要认证
 router.use('/team-members', requireAuth, teamMembersRouter);
+
+// 2026-09-15：班组分配管理完整性 Phase 2 - 新增 5 组路由
+router.use('/teams', requireAuth, teamZonesRouter);
+router.use('/teams', requireAuth, teamCapabilitiesRouter);
+router.use('/workers', requireAuth, workerTeamsRouter);
+router.use('/teams', requireAuth, teamMemberChangesRouter);
+router.use('/teams', requireAuth, teamAvailabilityRouter);
 
 // 合同续签路由 - 需要认证
 router.use('/contract-renewal', requireAuth, contractRenewalRouter);
