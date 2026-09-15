@@ -61,6 +61,8 @@ interface TaskTabProps {
   onViewSop?: (sopContent: string) => void;
   onSelectExecutor?: (task: Task) => void;
   onPublish?: (task: Task) => void;  // 发布草稿任务
+  // 2026-09-15：批量任务分配（#9）
+  onBatchAssign?: (task: Task) => void;
   // 批量操作回调
   onBatchDispatch?: (taskIds: string[]) => void;
   onBatchVerify?: (taskIds: string[]) => void;
@@ -93,12 +95,14 @@ export function TaskTab({
   onCancel,
   onReassign,
   onOvertime,
+  onBatchAssign,
   onContinue,
   onAccept,
   onRemind,
   onViewSop,
   onSelectExecutor,
   onPublish,
+  onBatchAssign,
   onBatchDispatch,
   onBatchVerify,
   onBatchDelete,
@@ -540,6 +544,7 @@ export function TaskTab({
         onReassign={handleReassign as any}
         onSelectExecutor={handleSelectExecutor as any}
         onPublish={handlePublish as any}
+        onBatchAssign={onBatchAssign as any}
         isMyTasksView={false}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
