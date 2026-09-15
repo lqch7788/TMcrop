@@ -8,8 +8,46 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+import { refreshAvailability } from '../services/teamAvailabilityService';
 
 const router = Router();
+
+/**
+ * 2026-09-15：排班事件触发班组可用性刷新（异步，不阻塞响应）
+ * 通过 worker_team_assignments 反查工人所属班组（含主职+兼职），对每个班组刷新当天可用性
+ * 失败仅日志（不抛错）—— 可用性刷新是辅助，不应阻断主流程
+ */
+function refreshAvailabilityForStaffAsync(staffId: string, date: string): void {
+  setImmediate(() => {
+    try {
+      const db = getDatabase();
+      const teamRes = db.exec(
+        `SELECT DISTINCT team_id FROM worker_team_assignments WHERE worker_id = ? AND left_at IS NULL`,
+        [staffId],
+      );
+      if (!teamRes[0] || teamRes[0].values.length === 0) return;
+      for (const row of teamRes[0].values) {
+        const teamId = String(row[0]);
+        refreshAvailability(teamId, date).catch((e) => {
+          console.warn(`[可用性刷新失败] team=${teamId} date=${date}:`, (e as Error).message);
+        });
+      }
+    } catch (e) {
+      console.warn(`[可用性刷新异常] staff=${staffId} date=${date}:`, (e as Error).message);
+    }
+  });
+}
+
+/**
+ * 2026-09-15：直接按班组触发可用性刷新（用于 batch-by-team 路径，已有 teamId）
+ */
+function refreshAvailabilityForTeamAsync(teamId: string, date: string): void {
+  setImmediate(() => {
+    refreshAvailability(teamId, date).catch((e) => {
+      console.warn(`[可用性刷新失败] team=${teamId} date=${date}:`, (e as Error).message);
+    });
+  });
+}
 
 /**
  * 获取排班列表
@@ -416,6 +454,11 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
     }
 
     saveDatabase();
+    // 2026-09-15：批量按班组排班后，触发该班组当天可用性刷新
+    if (created > 0) {
+      const date = req.body?.startDate || req.body?.date;
+      if (date) refreshAvailabilityForTeamAsync(teamId, date);
+    }
     return res.json({ success: true, data: { created, skipped } });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -1128,6 +1171,8 @@ router.post('/', (req: Request, res: Response) => {
     `, [newId, staff_id, staff_name, date, shift, work_zone || null, status || '已排班', check_in || null, check_out || null, remarks || null, 1, now, now, team_id || null, team_name || null]);
 
     saveDatabase();
+    // 2026-09-15：触发班组可用性刷新（异步）
+    refreshAvailabilityForStaffAsync(staff_id, date);
 
     res.status(201).json({
       success: true,
@@ -1297,6 +1342,12 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(`UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
+    // 2026-09-15：触发班组可用性刷新（异步，staff_id/date 变化时）
+    const newStaffId = (updates.staff_id as string) || req.body?.staff_id;
+    const newDate = (updates.date as string) || req.body?.date;
+    if (newStaffId && newDate) {
+      refreshAvailabilityForStaffAsync(newStaffId, newDate);
+    }
 
     // 返回更新后的记录
     const result = db.exec('SELECT * FROM schedules WHERE id = ?', [id]);
@@ -1328,9 +1379,17 @@ router.delete('/:id', (req: Request, res: Response) => {
       res.status(404).json({ success: false, error: '排班记录不存在' });
       return;
     }
+    // 2026-09-15：取出 staff_id + date 用于触发可用性刷新
+    const recordColumns = checkResult[0].columns;
+    const staffIdIdx = recordColumns.indexOf('staff_id');
+    const dateIdx = recordColumns.indexOf('date');
+    const deletedStaffId = String(checkResult[0].values[0][staffIdIdx]);
+    const deletedDate = String(checkResult[0].values[0][dateIdx]);
 
     db.run('DELETE FROM schedules WHERE id = ?', [id]);
     saveDatabase();
+    // 2026-09-15：触发班组可用性刷新（异步）
+    refreshAvailabilityForStaffAsync(deletedStaffId, deletedDate);
 
     res.json({ success: true, data: { id } });
   } catch (error) {

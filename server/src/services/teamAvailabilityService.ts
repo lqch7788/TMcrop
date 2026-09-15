@@ -53,11 +53,12 @@ export async function refreshAvailability(teamId: string, date: string): Promise
     let busy_hours = 0;
     const uniqueWorkers = new Set<string>();
     if (shiftsRes[0]) {
-      const shiftHoursStmt = db.prepare(`SELECT name, start_time, end_time FROM shift_configs WHERE name = ?`);
       for (const row of shiftsRes[0].values) {
         const shiftName = row[0] as string;
         const workerId = row[1] as string;
         uniqueWorkers.add(workerId);
+        // 2026-09-15：每次循环重新 prepare（sql.js 的 prepared statement bind 后 step 一次需 reset 才能复用）
+        const shiftHoursStmt = db.prepare(`SELECT shift_name, start_time, end_time FROM shifts WHERE shift_name = ?`);
         shiftHoursStmt.bind([shiftName]);
         if (shiftHoursStmt.step()) {
           const r = shiftHoursStmt.getAsObject() as { start_time: string; end_time: string };
@@ -67,9 +68,8 @@ export async function refreshAvailability(teamId: string, date: string): Promise
           if (mins < 0) mins += 24 * 60; // 跨日班处理
           busy_hours += Math.round(mins / 60);
         }
-        shiftHoursStmt.reset();
+        shiftHoursStmt.free();
       }
-      shiftHoursStmt.free();
     }
     const available_hours = Math.max(0, total_worker_count * 8 - busy_hours);
     const scheduled_worker_count = uniqueWorkers.size;
