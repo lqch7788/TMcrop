@@ -37,14 +37,26 @@ router.get('/teams/:teamId/members', requireAuth, async (req, res) => {
 router.post('/teams/:teamId/members', requireAuth, async (req, res) => {
   try {
     const { teamId } = req.params;
-    const { workerId, role = 'member', operatorId, operatorName } = req.body;
+    // 2026-09-15：role 接受扩展枚举（leader/deputy/safety/quality/member）；写日志 + 写主职兼职关联
+    const {
+      workerId,
+      role = 'member',
+      isPrimary = true,
+      percentage = 100,
+      operatorId,
+      operatorName,
+      reason,
+    } = req.body;
 
     if (!workerId) {
       return res.status(400).json({ success: false, error: 'workerId不能为空' });
     }
 
-    const member = await teamMemberService.addTeamMember(teamId, workerId, role);
-    res.json({ success: true, data: member });
+    const result = await teamMemberService.addTeamMemberWithLog(
+      teamId, workerId, role,
+      { isPrimary, percentage, operatorId, operatorName, reason },
+    );
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('添加成员失败:', error);
     res.status(500).json({ success: false, error: '添加成员失败' });
@@ -58,7 +70,7 @@ router.post('/teams/:teamId/members', requireAuth, async (req, res) => {
 router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
   try {
     const { teamId } = req.params;
-    const { workerIds, operatorId, operatorName } = req.body;
+    const { workerIds, role = 'member', operatorId, operatorName } = req.body;
 
     if (!workerIds || !Array.isArray(workerIds)) {
       return res.status(400).json({ success: false, error: 'workerIds必须为数组' });
@@ -67,7 +79,9 @@ router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: 'workerIds不能为空数组' });
     }
 
-    const members = await teamMemberService.addTeamMembers(teamId, workerIds, operatorId, operatorName);
+    const members = await teamMemberService.addTeamMembersWithLog(
+      teamId, workerIds, role, { operatorId, operatorName },
+    );
     res.json({ success: true, data: members });
   } catch (error) {
     console.error('批量添加成员失败:', error);
@@ -82,9 +96,12 @@ router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
 router.delete('/teams/:teamId/members/:workerId', requireAuth, async (req, res) => {
   try {
     const { teamId, workerId } = req.params;
-    const { operatorId, operatorName } = req.query;
-    await teamMemberService.removeTeamMember(teamId, workerId);
-    // TODO: 后续可添加审计日志，记录 operatorId/operatorName
+    const { operatorId, operatorName, reason } = req.query;
+    // 2026-09-15：移除成员同时写变更日志 + 软删除 team_members + 关闭主职兼职关联
+    await teamMemberService.removeTeamMemberWithLog(
+      teamId, workerId,
+      { operatorId: operatorId as string, operatorName: operatorName as string, reason: reason as string },
+    );
     res.json({ success: true });
   } catch (error) {
     console.error('移除成员失败:', error);
