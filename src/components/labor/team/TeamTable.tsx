@@ -337,6 +337,8 @@ export function TeamTable({
                 <TableHead className="px-4 py-3 text-sm font-semibold text-white">负责人</TableHead>
                 <TableHead className="px-4 py-3 text-sm font-semibold text-white">作业区域</TableHead>
                 <TableHead className="px-4 py-3 text-sm font-semibold text-white">成员数量</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">日产能</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold text-white">技能标签</TableHead>
                 <TableHead className="px-4 py-3 text-sm font-semibold text-white">描述</TableHead>
                 <TableHead className="px-4 py-3 text-sm font-semibold text-white">操作</TableHead>
               </TableRow>
@@ -344,7 +346,7 @@ export function TeamTable({
             <TableBody className="bg-white divide-y divide-gray-300">
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={batchDeleteMode ? 7 : 6} className="px-4 py-8 text-center text-gray-500">
+                  <TableCell colSpan={batchDeleteMode ? 8 : 7} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
                   </TableCell>
                 </TableRow>
@@ -380,6 +382,29 @@ export function TeamTable({
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
                         {team.memberCount}人
                       </span>
+                    </TableCell>
+                    {/* 2026-09-15：日产能上限（h/天） */}
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm">
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">
+                        {team.dailyCapacityHours ?? 8}h/天
+                      </span>
+                    </TableCell>
+                    {/* 2026-09-15：技能标签 chips */}
+                    <TableCell className="px-4 py-3">
+                      {team.capabilityTags && team.capabilityTags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {team.capabilityTags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">
+                              {tag}
+                            </span>
+                          ))}
+                          {team.capabilityTags.length > 3 && (
+                            <span className="text-xs text-gray-500">+{team.capabilityTags.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
                       {team.description || '-'}

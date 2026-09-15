@@ -1051,6 +1051,7 @@ router.get('/teams', (req, res) => {
     const db = getDatabase();
     const result = db.exec(`
       SELECT t.id, t.oid, t.team_code, t.team_name, t.department_oid, t.leader_id, t.leader_name, t.shift_type, t.member_count, t.status, t.created_at,
+             t.capability_tags, t.daily_capacity_hours, t.weekly_capacity_hours, t.coverage_radius_km,
              d.name as department_name
       FROM teams t
       LEFT JOIN departments d ON t.department_oid = d.oid
@@ -1069,6 +1070,13 @@ router.get('/teams', (req, res) => {
         const camelCol = col.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
         obj[camelCol] = row[i];
       });
+      // 2026-09-15：capability_tags 是 JSON 字符串，解析为数组方便前端使用
+      if (obj.capabilityTags && typeof obj.capabilityTags === 'string') {
+        try {
+          const parsed = JSON.parse(obj.capabilityTags);
+          if (Array.isArray(parsed)) obj.capabilityTags = parsed;
+        } catch { /* ignore parse error */ }
+      }
       return obj;
     });
 
