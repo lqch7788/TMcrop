@@ -17,7 +17,7 @@ import { DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-import { useScheduleStore, useTeamStore, useWorkerStore, useDictionaryStore, getDictItems } from '@/stores';
+import { useScheduleStore, useTeamStore, useDictionaryStore, getDictItems } from '@/stores';
 import type { ShiftType } from '../types';
 
 type AddMode = 'single' | 'team';
@@ -111,9 +111,6 @@ export function ScheduleAddModal({
 
   const teams = useTeamStore((s) => s.teams);
   const loadTeams = useTeamStore((s) => s.loadTeams);
-  // 工人原始数据（含 team 字段），用于"按班组排班"按班组名过滤 workerIds
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
   // 2026-09-14：字典订阅（planting_area 工作区域下拉）
   const dictionaries = useDictionaryStore((s) => s.dictionaries);
   const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries);
@@ -133,9 +130,6 @@ export function ScheduleAddModal({
       setPreviewResult(null);
       if (teams.length === 0) {
         void loadTeams();
-      }
-      if (workers.length === 0) {
-        void loadWorkers();
       }
       if (dictionaries.length === 0) {
         void loadDictionaries();
@@ -185,15 +179,13 @@ export function ScheduleAddModal({
   };
 
   // 预览数据
-  // 班组模式下的 workerIds（用于预览：显示匹配员工数）
+  // 班组模式下的 workerIds（用于预览：显示该班组实际成员数，2026-09-15：从按部门过滤改为按 team_members 真值）
   const teamPreviewCount = useMemo(() => {
     if (mode !== 'team' || !form.teamId) return 0;
     const team = teams.find(t => t.id === form.teamId);
     if (!team) return 0;
-    return workers.filter(
-      (w: unknown) => (w as { departmentName?: string }).departmentName === team.departmentName
-    ).length;
-  }, [mode, form.teamId, teams, workers]);
+    return team.memberIds?.length ?? 0;
+  }, [mode, form.teamId, teams]);
 
   const preview = useMemo(() => {
     if (!form.startDate || !form.endDate) return null;
@@ -241,17 +233,7 @@ export function ScheduleAddModal({
       return;
     }
 
-    // 计算 workerIds（与 handleSubmit 同逻辑）
-    let effectiveWorkers = workers;
-    if (mode === 'team') {
-      const storeWorkers = useWorkerStore.getState().workers;
-      effectiveWorkers = storeWorkers.length > 0 ? storeWorkers : workers;
-      if (effectiveWorkers.length === 0) {
-        showAlert('工人数据未加载，请稍后重试');
-        return;
-      }
-    }
-
+    // 计算 workerIds（2026-09-15：改用 team.memberIds 真值，不再过滤 employees）
     setPreviewing(true);
     try {
       let teamWorkerIds: string[] | undefined;
@@ -262,12 +244,9 @@ export function ScheduleAddModal({
           setPreviewing(false);
           return;
         }
-        teamWorkerIds = effectiveWorkers
-          .filter((w: unknown) => (w as { departmentName?: string }).departmentName === team.departmentName)
-          .map((w: { id?: string }) => w.id)
-          .filter((id): id is string => !!id);
+        teamWorkerIds = team.memberIds || [];
         if (teamWorkerIds.length === 0) {
-          showAlert(`班组 ${team.teamName} 所属部门暂无员工`);
+          showAlert(`班组 ${team.teamName} 暂无成员`);
           setPreviewing(false);
           return;
         }
@@ -359,28 +338,9 @@ export function ScheduleAddModal({
       const isTeam = mode === 'team';
       const wid = isTeam ? form.teamId : form.staffId;
 
-      // 班组模式：提交前确保 workers 已加载（防止弹窗打开时还没拿到数据）
-      // 必须从 store 重读，因 setState 后 closure 内 workers 仍是旧值
-      let effectiveWorkers = workers;
-      if (isTeam) {
-        const storeWorkers = useWorkerStore.getState().workers;
-        if (storeWorkers.length > 0) {
-          effectiveWorkers = storeWorkers;
-        } else {
-          try {
-            await useWorkerStore.getState().loadWorkers();
-            effectiveWorkers = useWorkerStore.getState().workers;
-          } catch {
-            // loadWorkers 内部已捕获错误
-          }
-        }
-      }
-
-      // 班组模式：从 useWorkerStore 按班组所属部门过滤得到 workerIds（2026-09-13 修复）
-      // 历史问题：
-      //   1. 前端班组下拉 ID (T001) 与 team_members.team_id (TEAM_001) 维度不一致
-      //   2. 工人 API 返回的是 employee 表，无 team 字段，只有 departmentName
-      // 当前方案：按 departmentName 匹配班组所属部门，拿到该部门所有员工作为排班对象。
+      // 班组模式：从 useTeamStore.teams[i].memberIds 获取班组成员（2026-09-15：数据已迁移，可直接读 team_members）
+      // 历史方案（2026-09-13）：team_members.team_id 维度不一致 → 按部门过滤 employees 兜底（bug：变成按部门排班）
+      // 现方案（2026-09-15）：team_members 数据已按 teams/employees 维度对齐 → memberIds 即为真实班组成员
       let teamWorkerIds: string[] | undefined;
       if (isTeam) {
         const team = teams.find(t => t.id === wid);
@@ -389,12 +349,9 @@ export function ScheduleAddModal({
           setSubmitting(false);
           return;
         }
-        teamWorkerIds = effectiveWorkers
-          .filter((w: unknown) => (w as { departmentName?: string }).departmentName === team.departmentName)
-          .map((w: { id?: string }) => w.id)
-          .filter((id): id is string => !!id);
+        teamWorkerIds = team.memberIds || [];
         if (teamWorkerIds.length === 0) {
-          showAlert(`班组 ${team.teamName} 所属部门暂无员工，请先在员工管理中分配`);
+          showAlert(`班组 ${team.teamName} 暂无成员，请先在员工管理中分配`);
           setSubmitting(false);
           return;
         }

@@ -28,11 +28,14 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
   const updateShiftConfig = useScheduleStore((s) => s.updateShiftConfig);
   const submitSwapRequestAction = useScheduleStore((s) => s.submitSwapRequest);
   const handleSwapRequest = useScheduleStore((s) => s.handleSwapRequest);
+  // 2026-09-15：拉取历史调班申请（修复刷新后数据丢失）
+  const fetchSwapRequests = useScheduleStore((s) => s.fetchSwapRequests);
 
   // 组件挂载时初始化数据（失败时错误已写入 store.error，此处仅阻止未捕获的 Promise rejection）
   useEffect(() => {
     fetchSchedules().catch(() => {});
-  }, [fetchSchedules]);
+    fetchSwapRequests().catch(() => {});
+  }, [fetchSchedules, fetchSwapRequests]);
 
   // 同步初始日期
   useEffect(() => {
@@ -96,6 +99,7 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
     updateShiftConfig,
     submitSwapRequest,
     handleSwapRequest,
+    fetchSwapRequests,
   };
 }
 

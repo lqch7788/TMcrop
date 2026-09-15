@@ -10,14 +10,17 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, Check, ChevronDown, MessageSquare, Send, User, Users, X, XCircle } from 'lucide-react';
+import { Calendar, Check, ChevronDown, Download, Send, User, Users, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
-import { useScheduleStore, useTeamStore, useWorkerStore } from '@/stores';
+import { useScheduleStore, useTeamStore } from '@/stores';
 import type { Staff, SwapRequest } from './types';
 
 interface SwapRequestModalProps {
@@ -72,8 +75,6 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
 
   const teams = useTeamStore((s) => s.teams);
   const loadTeams = useTeamStore((s) => s.loadTeams);
-  const workers = useWorkerStore((s) => s.workers);
-  const loadWorkers = useWorkerStore((s) => s.loadWorkers);
 
   // 申请人未来 30 天排班
   const [requesterSchedules, setRequesterSchedules] = useState<
@@ -97,10 +98,19 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
     if (teams.length === 0) {
       void loadTeams();
     }
-    if (workers.length === 0) {
-      void loadWorkers();
+  }, [teams.length, loadTeams]);
+
+  // 2026-09-15：行尾预填 initialRequester 时，自动加载该员工未来排班
+  // 历史 bug：仅预填 formData.requesterId 但未触发 loadStaffSchedules → requesterSchedules 空 → 弹窗显示「该员工未来 30 天无排班」
+  useEffect(() => {
+    if (initialRequester?.id) {
+      setLoadingRequester(true);
+      void loadStaffSchedules(initialRequester.id).then((data) => {
+        setRequesterSchedules(data);
+        setLoadingRequester(false);
+      });
     }
-  }, [teams.length, workers.length, loadTeams, loadWorkers]);
+  }, [initialRequester?.id]);
 
   // 加载某个员工 ID 的未来 30 天排班
   const loadStaffSchedules = async (staffId: string): Promise<
@@ -113,8 +123,9 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
       // 通过 scheduleStore 的 fetchSchedulesByDate 不够，需要按员工过滤
       // 复用 store action batchScheduleByDateRange 不合适；改用直接 enhancedApiClient
       const { enhancedApiClient } = await import('@/lib/apiClient');
+      // 2026-09-15：后端路由读 snake_case query（staff_id/start_date/end_date），不是 camelCase
       const rows = await enhancedApiClient.get<unknown[]>(
-        `/schedules?staffId=${encodeURIComponent(staffId)}&startDate=${start}&endDate=${end}&limit=100`,
+        `/schedules?staff_id=${encodeURIComponent(staffId)}&start_date=${start}&end_date=${end}&limit=100`,
       );
       return (rows || []).map((row: unknown) => {
         const r = row as Record<string, unknown>;
@@ -131,28 +142,23 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
     }
   };
 
-  // 加载班组全员未来 30 天排班（去重日期）
+  // 加载班组全员未来 30 天排班（2026-09-15：按 team.memberIds 真值，不再按 departmentName 过滤）
   const loadTeamSchedules = async (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return [];
-    // 找出班组部门下的员工
-    const teamWorkers = workers
-      .filter((w: unknown) => (w as { departmentName?: string }).departmentName === team.departmentName)
-      .map((w: { id?: string; name?: string }) => ({ id: w.id || '', name: w.name || '' }))
-      .filter(w => w.id);
-
-    if (teamWorkers.length === 0) return [];
+    const memberIds = team.memberIds || [];
+    if (memberIds.length === 0) return [];
 
     const start = todayLocalISO();
     const end = futureISO(FUTURE_DAYS);
     const { enhancedApiClient } = await import('@/lib/apiClient');
+    // 2026-09-15：后端路由读 snake_case query
     const rows = await enhancedApiClient.get<unknown[]>(
-      `/schedules?startDate=${start}&endDate=${end}&limit=500`,
+      `/schedules?start_date=${start}&end_date=${end}&limit=500`,
     );
     const allRows = (rows || []) as Array<Record<string, unknown>>;
     // 过滤：本班组员工
-    const memberSet = new Set(teamWorkers.map(w => w.id));
-    const nameMap = new Map(teamWorkers.map(w => [w.id, w.name]));
+    const memberSet = new Set(memberIds);
     return allRows
       .filter(r => {
         const sid = (r.staffId ?? r.staff_id) as string | undefined;
@@ -164,40 +170,41 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
         shift: (r.shift as string) || '',
         workZone: ((r.workZone ?? r.work_zone) as string | null) || null,
         staffId: ((r.staffId ?? r.staff_id) as string) || '',
-        staffName: nameMap.get((r.staffId ?? r.staff_id) as string) || '',
+        staffName: '',
       }));
   };
 
-  // 加载原日期当天所有排班，构建空闲度（2026-09-14 重构）
+  // 加载原日期当天所有排班，构建空闲度（2026-09-15 修复：班组空闲度按 team.memberIds 匹配）
   // 个人：staffMap[staffId] = 该员工当天是否有排班
-  // 班组：teamMap[teamId] = 该班组部门当天是否有任意排班
+  // 班组：teamMap[teamId] = 该班组真实成员中是否有任一人当天有排班
+  // 历史 bug（2026-09-15 修复）：用 team.departmentName 匹配 deptHasSchedule，导致同部门多班组共用判断 → T003（生产C组，成员=空）也会显示「✓ 当天有安排」
   const loadOriginalDateAvailability = async (date: string) => {
     setLoadingAvailability(true);
     try {
       const { enhancedApiClient } = await import('@/lib/apiClient');
+      // 2026-09-15：后端路由读 snake_case query
       const rows = await enhancedApiClient.get<unknown[]>(
-        `/schedules?startDate=${date}&endDate=${date}&limit=500`,
+        `/schedules?start_date=${date}&end_date=${date}&limit=500`,
       );
       const allRows = (rows || []) as Array<Record<string, unknown>>;
 
-      // 个人空闲度
+      // 个人空闲度：staffMap[staffId] = 该员工当天是否有排班
       const staffMap = new Map<string, boolean>();
-      // 部门 → 是否有任意排班（班组空闲度用）
-      const deptHasSchedule = new Set<string>();
+      const scheduledStaffIds = new Set<string>();
       for (const r of allRows) {
         const sid = ((r.staffId ?? r.staff_id) as string) || '';
-        if (sid) staffMap.set(sid, true);
-        // 工人数据里读 departmentName
-        const w = workers.find(
-          (x: unknown) => (x as { id?: string }).id === sid,
-        ) as { departmentName?: string } | undefined;
-        if (w?.departmentName) deptHasSchedule.add(w.departmentName);
+        if (sid) {
+          staffMap.set(sid, true);
+          scheduledStaffIds.add(sid);
+        }
       }
 
-      // 班组空闲度：teamMap[teamId] = team.departmentName ∈ deptHasSchedule
+      // 班组空闲度：teamMap[teamId] = team.memberIds ∩ scheduledStaffIds 非空
       const teamMap = new Map<string, boolean>();
       for (const t of teams) {
-        teamMap.set(t.id, deptHasSchedule.has(t.departmentName || ''));
+        const memberIds = t.memberIds || [];
+        const hasAny = memberIds.some((mid) => scheduledStaffIds.has(mid));
+        teamMap.set(t.id, hasAny);
       }
 
       setAvailability({ staffMap, teamMap });
@@ -237,8 +244,9 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
   // 加载 target 在原日期当天的排班（2026-09-14 重构）
   const loadTargetOnOriginalDate = async (originalDate: string) => {
     const { enhancedApiClient } = await import('@/lib/apiClient');
+    // 2026-09-15：后端路由读 snake_case query
     const rows = await enhancedApiClient.get<unknown[]>(
-      `/schedules?startDate=${originalDate}&endDate=${originalDate}&limit=500`,
+      `/schedules?start_date=${originalDate}&end_date=${originalDate}&limit=500`,
     );
     return ((rows || []) as Array<Record<string, unknown>>).map(r => ({
       id: (r.id as string) || '',
@@ -271,16 +279,10 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
     setTargetOriginalDateSchedules([]);
     if (!formData.originalDate) return;
     void (async () => {
-      const teamWorkers = workers
-        .filter((w: unknown) => (w as { departmentName?: string }).departmentName === team.departmentName)
-        .map((w: { id?: string; name?: string }) => ({ id: w.id || '', name: w.name || '' }))
-        .filter(w => w.id);
-      const memberSet = new Set(teamWorkers.map(w => w.id));
-      const nameMap = new Map(teamWorkers.map(w => [w.id, w.name]));
+      // 2026-09-15：按 team.memberIds 真值过滤，不再按 departmentName 兜底
+      const memberSet = new Set(team.memberIds || []);
       const all = await loadTargetOnOriginalDate(formData.originalDate);
-      const filtered = all
-        .filter(r => r.staffId && memberSet.has(r.staffId))
-        .map(r => ({ ...r, staffName: nameMap.get(r.staffId) || '' }));
+      const filtered = all.filter(r => r.staffId && memberSet.has(r.staffId));
       setTargetOriginalDateSchedules(filtered);
     })();
   };
@@ -289,6 +291,12 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
   const handleSubmit = () => {
     if (!formData.requesterId || !formData.targetId || !formData.originalDate) {
       showAlert('请填写完整信息');
+      return;
+    }
+    // 2026-09-15：个人 target 时，先校验 target 在原日期是否有班（无班则无法调班）
+    // 历史 bug：target 原日期无班时下拉框为空、placeholder 提示不够醒目，用户点提交只看到「请选择目标日期」而非根本原因
+    if (formData.targetType === 'staff' && availability.staffMap.get(formData.targetId) === false) {
+      showAlert(`调班对象 ${formData.targetName} 在 ${formData.originalDate} 当天无班可换，无法调班。请选择其他调班对象。`);
       return;
     }
     // 班组 target 时 targetDate 可为空（部门级调班，具体由班组内部决定）
@@ -301,10 +309,10 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
       showAlert('不能与自己调班');
       return;
     }
-    if (formData.targetDate && formData.originalDate === formData.targetDate) {
-      showAlert('原日期与目标日期不能相同');
-      return;
-    }
+    // 2026-09-15：删掉「原日期与目标日期不能相同」校验
+    // 业务语义冲突：UI/数据源暗示「调班 = target 替 requester 在原日期上班」（targetDate === originalDate 是主流程）
+    //   原校验假设「调班 = A 与 B 互换两天班」与 UI 文案矛盾，阻止合法场景
+    // 后端 (server/src/routes/farmTaskSwapRequests.ts) 无此校验
     onSubmit(formData);
     onClose();
   };
@@ -677,13 +685,81 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
   );
 }
 
-// 调班申请列表组件（不变）
+// 调班申请列表组件（2026-09-15：与排班记录导出完全一致 — 进入 exportMode 显示 checkbox + 「确认导出」「取消」）
 interface SwapRequestListProps {
   requests: SwapRequest[];
   onHandle: (id: string, status: '已同意' | '已拒绝') => void;
+  // 2026-09-15：导出模式（受控），与 ScheduleTable 一致
+  exportMode?: boolean;
+  selectedRows?: string[];
+  onSelectAll?: () => void;
+  onSelectRow?: (id: string) => void;
+  onEnterExportMode?: () => void;
+  onConfirmExport?: () => void;
+  onCancelExport?: () => void;
 }
 
-export function SwapRequestList({ requests, onHandle }: SwapRequestListProps) {
+type SwapStatusFilter = '全部' | '待审批' | '已同意' | '已拒绝';
+
+// 状态徽章样式（表格里复用）
+function StatusBadge({ status }: { status: SwapRequest['status'] }) {
+  const cls =
+    status === '待审批' ? 'bg-yellow-100 text-yellow-700'
+    : status === '已同意' ? 'bg-green-100 text-green-700'
+    : status === '已拒绝' ? 'bg-red-100 text-red-700'
+    : 'bg-gray-100 text-gray-600';
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+export function SwapRequestList({
+  requests,
+  onHandle,
+  exportMode = false,
+  selectedRows = [],
+  onSelectAll,
+  onSelectRow,
+  onEnterExportMode,
+  onConfirmExport,
+  onCancelExport,
+}: SwapRequestListProps) {
+  // 状态过滤 tab（仅在非导出模式下展示，避免与导出工具栏冲突）
+  const [filter, setFilter] = useState<SwapStatusFilter>('全部');
+  // 2026-09-15：分页状态（与排班记录一致，默认 10 条/页）
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // 切换 tab 时重置 currentPage = 1，避免跨 tab 翻页错位
+  const handleFilterChange = (tab: SwapStatusFilter) => {
+    setFilter(tab);
+    setCurrentPage(1);
+  };
+
+  // 按 tab 过滤 + 按创建时间倒序（最新在最上面，2026-09-15）
+  const filtered = useMemo(() => {
+    const base = filter === '全部' ? requests : requests.filter(r => r.status === filter);
+    return [...base].sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
+  }, [requests, filter]);
+
+  // 分页数据（2026-09-15：与排班记录列表底部同款分页）
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+
+  // 各状态计数（用于 tab 标签）
+  const counts = useMemo(() => ({
+    全部: requests.length,
+    待审批: requests.filter(r => r.status === '待审批').length,
+    已同意: requests.filter(r => r.status === '已同意').length,
+    已拒绝: requests.filter(r => r.status === '已拒绝').length,
+  }), [requests]);
+
   if (requests.length === 0) {
     return (
       <div className="text-center py-8 text-gray-400">
@@ -692,69 +768,205 @@ export function SwapRequestList({ requests, onHandle }: SwapRequestListProps) {
     );
   }
 
-  return (
-    <div className="space-y-3">
-      {requests.map(request => (
-        <div
-          key={request.id}
-          className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <span className="font-medium text-gray-800">{request.requesterName}</span>
-                <span className="text-gray-400">与</span>
-                <span className="font-medium text-gray-800">{request.targetName}</span>
-                <span className={`
-                  px-2 py-0.5 rounded text-xs font-medium
-                  ${request.status === '待审批' ? 'bg-yellow-100 text-yellow-700' : ''}
-                  ${request.status === '已同意' ? 'bg-green-100 text-green-700' : ''}
-                  ${request.status === '已拒绝' ? 'bg-red-100 text-red-700' : ''}
-                `}>
-                  {request.status}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600 grid grid-cols-2 gap-2">
-                <span>原日期: {request.originalDate}</span>
-                <span>目标日期: {request.targetDate}</span>
-              </div>
-              {request.reason && (
-                <p className="text-sm text-gray-500 mt-2 flex items-start gap-1">
-                  <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  {request.reason}
-                </p>
-              )}
-              <p className="text-xs text-gray-400 mt-2">
-                申请时间: {request.createTime}
-              </p>
-            </div>
+  const selectedSet = new Set(selectedRows);
+  const filteredIds = filtered.map(r => r.id);
+  const allFilteredSelected = exportMode && filteredIds.length > 0 && filteredIds.every(id => selectedSet.has(id));
+  const someFilteredSelected = exportMode && filteredIds.some(id => selectedSet.has(id));
 
-            {request.status === '待审批' && (
-              <div className="flex gap-2 ml-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onHandle(request.id, '已同意')}
-                  className="text-green-600 hover:bg-green-50"
-                  title="同意"
+  return (
+    <div>
+      {/* 顶部工具栏：导出模式下显示「确认导出/取消」；非导出模式显示 tab + 「导出」入口 */}
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        {exportMode ? (
+          <>
+            <div className="text-sm text-gray-600">
+              已选择 <strong className="text-emerald-600">{selectedRows.length}</strong> 项
+              （请勾选要导出的调班申请）
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onCancelExport}
+              >
+                <X className="w-4 h-4" /> 取消
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={onConfirmExport}
+                disabled={selectedRows.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                确认导出
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              {(['全部', '待审批', '已同意', '已拒绝'] as SwapStatusFilter[]).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => handleFilterChange(tab)}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                    filter === tab
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
                 >
-                  <Check className="w-5 h-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onHandle(request.id, '已拒绝')}
-                  className="text-red-600 hover:bg-red-50"
-                  title="拒绝"
-                >
-                  <XCircle className="w-5 h-5" />
-                </Button>
-              </div>
+                  {tab}
+                  <span className={`ml-1 text-[10px] ${
+                    filter === tab ? 'text-blue-500' : 'text-gray-400'
+                  }`}>
+                    {counts[tab]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {onEnterExportMode && (
+              <Button
+                size="sm"
+                onClick={onEnterExportMode}
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
             )}
-          </div>
+          </>
+        )}
+      </div>
+
+      {/* 表格 */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-6 text-gray-400 text-sm">
+          「{filter}」状态下暂无调班申请
         </div>
-      ))}
+      ) : (
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                {exportMode && (
+                  <TableHead className="px-3 py-2 w-10">
+                    <Checkbox
+                      checked={allFilteredSelected}
+                      ref={(el) => {
+                        if (el) (el as HTMLInputElement).indeterminate = !allFilteredSelected && someFilteredSelected;
+                      }}
+                      onCheckedChange={() => onSelectAll?.()}
+                    />
+                  </TableHead>
+                )}
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  状态
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  申请人
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  调班对象
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  原日期
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  目标日期
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  原因
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                  申请时间
+                </TableHead>
+                <TableHead className="px-3 py-2 text-xs font-semibold text-gray-700 whitespace-nowrap w-24 text-center">
+                  操作
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white divide-y divide-gray-200">
+              {paginatedData.map(request => (
+                <TableRow
+                  key={request.id}
+                  className={`hover:bg-blue-50 transition-colors ${exportMode && selectedSet.has(request.id) ? 'bg-blue-50/50' : ''}`}
+                >
+                  {exportMode && (
+                    <TableCell className="px-3 py-2">
+                      <Checkbox
+                        checked={selectedSet.has(request.id)}
+                        onCheckedChange={() => onSelectRow?.(request.id)}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                    <StatusBadge status={request.status} />
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-gray-800">
+                    {request.requesterName}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-gray-800">
+                    {request.targetName}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                    {request.originalDate}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                    {request.targetDate}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600 max-w-[200px] truncate" title={request.reason || ''}>
+                    {request.reason || '—'}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                    {request.createTime}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-center">
+                    {request.status === '待审批' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onHandle(request.id, '已同意')}
+                          className="p-1 rounded text-green-600 hover:bg-green-100 transition-colors"
+                          title="同意"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onHandle(request.id, '已拒绝')}
+                          className="p-1 rounded text-red-600 hover:bg-red-100 transition-colors"
+                          title="拒绝"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* 2026-09-15：分页（与排班记录 ScheduleTable 同款 Pagination 组件，单页也显示便于调整每页条数） */}
+      {filtered.length > 0 && (
+        <div className="px-3 py-3 border-t border-gray-200">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            showPageSize={true}
+          />
+        </div>
+      )}
     </div>
   );
 }

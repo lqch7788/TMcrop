@@ -961,6 +961,113 @@ router.post('/preview-batch', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 调班申请路由（2026-09-15：必须注册在 GET /:id 之前，否则 /swap-requests 被当成 :id='swap-requests' 匹配到 schedules 表返回「排班记录不存在」）
+ */
+// 获取调班申请列表
+router.get('/swap-requests', (req: Request, res: Response) => {
+  try {
+    const { status, page = '1', limit = '50' } = req.query;
+    const db = getDatabase();
+
+    let sql = 'SELECT * FROM swap_requests WHERE 1=1';
+    const params: any[] = [];
+
+    if (status) {
+      sql += ' AND status = ?';
+      params.push(status);
+    }
+
+    sql += ' ORDER BY create_time DESC';
+
+    const offset = (Number(page) - 1) * Number(limit);
+    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+
+    const result = db.exec(sql, params);
+    const records = result.length > 0 ? result[0].values.map((row: any) => {
+      const columns = result[0].columns;
+      return columns.reduce((obj: any, col: string, idx: number) => {
+        obj[col] = row[idx];
+        return obj;
+      }, {});
+    }) : [];
+
+    res.json({ success: true, data: records });
+  } catch (error) {
+    console.error('获取调班申请列表失败:', error);
+    res.status(500).json({ success: false, error: '获取调班申请列表失败' });
+  }
+});
+
+// 提交调班申请
+router.post('/swap-requests', (req: Request, res: Response) => {
+  try {
+    // 兼容 camelCase 和 snake_case（前端 store spread camelCase；旧逻辑用 snake_case）
+    const body = req.body || {};
+    const id = body.id;
+    const requester_id = body.requester_id ?? body.requesterId;
+    const requester_name = body.requester_name ?? body.requesterName;
+    const target_id = body.target_id ?? body.targetId;
+    const target_name = body.target_name ?? body.targetName;
+    const original_date = body.original_date ?? body.originalDate;
+    const target_date = body.target_date ?? body.targetDate;
+    const reason = body.reason;
+    const newId = id || `SWAP-${Date.now()}`;
+    const now = new Date().toISOString();
+
+    const db = getDatabase();
+    db.run(`
+      INSERT INTO swap_requests (id, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [newId, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, '待审批', now, now]);
+
+    saveDatabase();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: newId,
+        requester_id,
+        requester_name,
+        target_id,
+        target_name,
+        original_date,
+        target_date,
+        reason,
+        status: '待审批',
+        create_time: now,
+      },
+    });
+  } catch (error) {
+    console.error('提交调班申请失败:', error);
+    res.status(500).json({ success: false, error: '提交调班申请失败' });
+  }
+});
+
+// 处理调班申请
+router.put('/swap-requests/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const now = new Date().toISOString();
+
+    const db = getDatabase();
+
+    if (!['已同意', '已拒绝'].includes(status)) {
+      res.status(400).json({ success: false, error: '无效的审批状态' });
+      return;
+    }
+
+    db.run('UPDATE swap_requests SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+    saveDatabase();
+
+    res.json({ success: true, data: { id, status } });
+  } catch (error) {
+    console.error('处理调班申请失败:', error);
+    res.status(500).json({ success: false, error: '处理调班申请失败' });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -1126,6 +1233,8 @@ router.put('/:id', (req: Request, res: Response) => {
       check_in: raw.check_in ?? raw.checkIn,
       check_out: raw.check_out ?? raw.checkOut,
       remarks: raw.remarks,
+      // 2026-09-15：调班申请 ID 关联，调班审批通过时写入
+      swap_record_id: raw.swap_record_id ?? raw.swapRecordId,
     };
     const now = new Date().toISOString();
 
@@ -1151,6 +1260,8 @@ router.put('/:id', (req: Request, res: Response) => {
     if (updates.check_in !== undefined) { fields.push('check_in = ?'); values.push(updates.check_in); }
     if (updates.check_out !== undefined) { fields.push('check_out = ?'); values.push(updates.check_out); }
     if (updates.remarks !== undefined) { fields.push('remarks = ?'); values.push(updates.remarks); }
+    // 2026-09-15：调班申请 ID 关联写入
+    if (updates.swap_record_id !== undefined) { fields.push('swap_record_id = ?'); values.push(updates.swap_record_id); }
 
     // 版本号递增（乐观锁）
     fields.push('version = version + 1');
@@ -1257,8 +1368,9 @@ router.delete('/batch', (req: Request, res: Response) => {
 /**
  * 获取调班申请列表
  * GET /api/schedules/swap-requests
+ * 2026-09-15：路径从 /swap-requests/list 改为 /swap-requests（与 POST/PUT 统一 REST 风格）
  */
-router.get('/swap-requests/list', (req: Request, res: Response) => {
+router.get('/swap-requests', (req: Request, res: Response) => {
   try {
     const { status, page = '1', limit = '50' } = req.query;
     const db = getDatabase();
