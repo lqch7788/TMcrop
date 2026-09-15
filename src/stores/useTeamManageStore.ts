@@ -33,6 +33,11 @@ export interface Team {
   workZone?: string;
   createdAt: string;
   updatedAt: string;
+  // 2026-09-15：班组分配完整性 Phase 2 字段（来自 teams.capability_tags 等）
+  capabilityTags?: string[];
+  dailyCapacityHours?: number;
+  weeklyCapacityHours?: number;
+  coverageRadiusKm?: number;
 }
 
 export interface UnassignedWorker {
@@ -56,11 +61,77 @@ interface ApiTeamMember {
   updated_at: string;
 }
 
+// 2026-09-15：班组分配完整性 - 新增类型
+export interface TeamZoneAssignment {
+  id: string;
+  team_id: string;
+  zone_id: string;
+  role: 'primary' | 'allowed';
+  created_at: string;
+}
+
+export interface TeamTaskCapability {
+  id: string;
+  team_id: string;
+  task_type: string;
+  created_at: string;
+}
+
+export interface TeamMemberChange {
+  id: string;
+  team_id: string;
+  worker_id: string;
+  change_type: 'add' | 'remove' | 'role_change' | 'become_primary';
+  old_value: string | null;
+  new_value: string | null;
+  operator_id: string | null;
+  operator_name: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface TeamDailyAvailability {
+  id: string;
+  team_id: string;
+  date: string;
+  available_hours: number;
+  busy_hours: number;
+  on_leave_count: number;
+  scheduled_worker_count: number;
+  total_worker_count: number;
+  updated_at: string;
+}
+
+export interface WorkerTeamAssignment {
+  id: string;
+  worker_id: string;
+  team_id: string;
+  role: string;
+  is_primary: number;
+  percentage: number;
+  joined_at: string;
+  left_at: string | null;
+  created_at: string;
+}
+
 /**
  * 后端班组记录 → 前端 Team 映射
  * workZone 使用后端 departmentName（班组所属部门作为作业区域展示）
+ * 2026-09-15：加 capability_tags / daily_capacity_hours / weekly_capacity_hours / coverage_radius_km 字段映射
  */
-function mapApiTeam(api: ApiTeam): Team {
+function mapApiTeam(api: ApiTeam & {
+  capability_tags?: string | null;
+  daily_capacity_hours?: number | null;
+  weekly_capacity_hours?: number | null;
+  coverage_radius_km?: number | null;
+}): Team {
+  let capabilityTags: string[] | undefined;
+  if (api.capability_tags) {
+    try {
+      const parsed = JSON.parse(api.capability_tags);
+      if (Array.isArray(parsed)) capabilityTags = parsed as string[];
+    } catch { /* ignore parse error */ }
+  }
   return {
     id: api.id,
     name: api.teamName,
@@ -72,6 +143,10 @@ function mapApiTeam(api: ApiTeam): Team {
     workZone: api.departmentName,
     createdAt: api.createdAt ?? '',
     updatedAt: api.createdAt ?? '',
+    capabilityTags,
+    dailyCapacityHours: api.daily_capacity_hours ?? 8,
+    weeklyCapacityHours: api.weekly_capacity_hours ?? 40,
+    coverageRadiusKm: api.coverage_radius_km ?? 0,
   };
 }
 
@@ -98,6 +173,20 @@ interface TeamManageState {
   deleteTeam: (id: string) => Promise<void>;
   assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => Promise<void>;
   removeWorker: (teamId: string, workerId: string) => Promise<void>;
+
+  // 2026-09-15：班组分配完整性 Phase 3 - 新增 actions
+  // #1 作业区域
+  fetchZones: (teamId: string) => Promise<TeamZoneAssignment[]>;
+  addZone: (teamId: string, zoneId: string, role?: 'primary' | 'allowed') => Promise<void>;
+  removeZone: (teamId: string, zoneId: string, role: string) => Promise<void>;
+  // #3 任务类型能力
+  fetchCapabilities: (teamId: string) => Promise<TeamTaskCapability[]>;
+  addCapability: (teamId: string, taskType: string) => Promise<void>;
+  removeCapability: (teamId: string, taskType: string) => Promise<void>;
+  // #7 变更历史
+  fetchMemberChanges: (teamId: string, limit?: number) => Promise<TeamMemberChange[]>;
+  // #8 可用性
+  fetchAvailability: (teamId: string, date: string) => Promise<TeamDailyAvailability | null>;
 }
 
 // ========== Store 实现 ==========
@@ -284,6 +373,138 @@ export const useTeamManageStore = create<TeamManageState>()(
         });
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '移除班组成员失败' });
+      }
+    },
+
+    // ============ 2026-09-15：班组分配完整性 Phase 3 新增 actions ============
+
+    /** #1 获取班组作业区域 */
+    fetchZones: async (teamId) => {
+      try {
+        const data = await enhancedApiClient.get<Array<{
+          id: string; teamId: string; zoneId: string; role: string; createdAt: string;
+        }>>(`/teams/${teamId}/zones`);
+        return (data || []).map((z) => ({
+          id: z.id,
+          team_id: z.teamId,
+          zone_id: z.zoneId,
+          role: (z.role === 'primary' ? 'primary' : 'allowed') as 'primary' | 'allowed',
+          created_at: z.createdAt,
+        }));
+      } catch (error) {
+        console.error('[fetchZones] 失败:', error);
+        return [];
+      }
+    },
+
+    /** #1 添加作业区域 */
+    addZone: async (teamId, zoneId, role = 'allowed') => {
+      try {
+        await enhancedApiClient.post(`/teams/${teamId}/zones`, { zoneId, role });
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '添加作业区域失败' });
+        throw error;
+      }
+    },
+
+    /** #1 移除作业区域 */
+    removeZone: async (teamId, zoneId, role) => {
+      try {
+        await enhancedApiClient.delete(`/teams/${teamId}/zones/${zoneId}?role=${role}`);
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '移除作业区域失败' });
+        throw error;
+      }
+    },
+
+    /** #3 获取班组任务能力 */
+    fetchCapabilities: async (teamId) => {
+      try {
+        const data = await enhancedApiClient.get<Array<{
+          id: string; teamId: string; taskType: string; createdAt: string;
+        }>>(`/teams/${teamId}/capabilities`);
+        return (data || []).map((c) => ({
+          id: c.id,
+          team_id: c.teamId,
+          task_type: c.taskType,
+          created_at: c.createdAt,
+        }));
+      } catch (error) {
+        console.error('[fetchCapabilities] 失败:', error);
+        return [];
+      }
+    },
+
+    /** #3 添加任务能力 */
+    addCapability: async (teamId, taskType) => {
+      try {
+        await enhancedApiClient.post(`/teams/${teamId}/capabilities`, { taskType });
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '添加任务能力失败' });
+        throw error;
+      }
+    },
+
+    /** #3 移除任务能力 */
+    removeCapability: async (teamId, taskType) => {
+      try {
+        await enhancedApiClient.delete(`/teams/${teamId}/capabilities/${taskType}`);
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '移除任务能力失败' });
+        throw error;
+      }
+    },
+
+    /** #7 获取班组成员变更历史 */
+    fetchMemberChanges: async (teamId, limit = 50) => {
+      try {
+        const data = await enhancedApiClient.get<Array<{
+          id: string; teamId: string; workerId: string; changeType: string;
+          oldValue: string | null; newValue: string | null;
+          operatorId: string | null; operatorName: string | null;
+          reason: string | null; createdAt: string;
+        }>>(`/teams/${teamId}/member-changes?limit=${limit}`);
+        return (data || []).map((c) => ({
+          id: c.id,
+          team_id: c.teamId,
+          worker_id: c.workerId,
+          change_type: c.changeType as TeamMemberChange['change_type'],
+          old_value: c.oldValue,
+          new_value: c.newValue,
+          operator_id: c.operatorId,
+          operator_name: c.operatorName,
+          reason: c.reason,
+          created_at: c.createdAt,
+        }));
+      } catch (error) {
+        console.error('[fetchMemberChanges] 失败:', error);
+        return [];
+      }
+    },
+
+    /** #8 获取班组某天可用性 */
+    fetchAvailability: async (teamId, date) => {
+      try {
+        const data = await enhancedApiClient.get<{
+          id: string; teamId: string; date: string;
+          availableHours: number; busyHours: number; onLeaveCount: number;
+          scheduledWorkerCount: number; totalWorkerCount: number; updatedAt: string;
+        } | null>(`/teams/${teamId}/availability?date=${date}`);
+        if (!data) return null;
+        return {
+          id: data.id,
+          team_id: data.teamId,
+          date: data.date,
+          available_hours: data.availableHours,
+          busy_hours: data.busyHours,
+          on_leave_count: data.onLeaveCount,
+          scheduled_worker_count: data.scheduledWorkerCount,
+          total_worker_count: data.totalWorkerCount,
+          updated_at: data.updatedAt,
+        };
+      } catch (error) {
+        console.error('[fetchAvailability] 失败:', error);
+        return null;
       }
     },
   })
