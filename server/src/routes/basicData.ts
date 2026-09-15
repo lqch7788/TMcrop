@@ -1086,7 +1086,14 @@ router.get('/teams', (req, res) => {
 router.post('/teams', (req, res) => {
   try {
     const db = getDatabase();
-    const { teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description } = req.body;
+    // 2026-09-15：加 4 个字段（capability_tags / daily_capacity_hours / weekly_capacity_hours / coverage_radius_km）
+    const {
+      teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description,
+      capabilityTags = null,
+      dailyCapacityHours = 8,
+      weeklyCapacityHours = 40,
+      coverageRadiusKm = 0,
+    } = req.body;
 
     if (!teamName || !teamCode) {
       return res.status(400).json({ success: false, error: '班组名称和编码不能为空' });
@@ -1097,9 +1104,14 @@ router.post('/teams', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`
-      INSERT INTO teams (id, oid, team_code, team_name, department_oid, leader_name, shift_type, member_count, description, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
-    `, [id, oid, teamCode, teamName, departmentOid || '', leaderName || '', shiftType || '', memberCount || 0, description || '', now, now]);
+      INSERT INTO teams (id, oid, team_code, team_name, department_oid, leader_name, shift_type, member_count, description, status, capability_tags, daily_capacity_hours, weekly_capacity_hours, coverage_radius_km, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
+    `, [
+      id, oid, teamCode, teamName, departmentOid || '', leaderName || '', shiftType || '', memberCount || 0, description || '',
+      capabilityTags ? JSON.stringify(capabilityTags) : null,
+      dailyCapacityHours, weeklyCapacityHours, coverageRadiusKm,
+      now, now,
+    ]);
 
     res.json({ success: true, message: '班组创建成功', data: { id, oid, teamCode, teamName } });
   } catch (error) {
@@ -1116,9 +1128,18 @@ router.put('/teams/:id', (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
-    const { teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status } = req.body;
+    const {
+      teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status,
+      capabilityTags,
+      dailyCapacityHours, weeklyCapacityHours, coverageRadiusKm,
+    } = req.body;
 
     const now = new Date().toISOString();
+
+    // 2026-09-15：capabilityTags 接受数组或字符串，存 JSON；其他 3 个新字段 COALESCE
+    const capJson = Array.isArray(capabilityTags)
+      ? JSON.stringify(capabilityTags)
+      : (typeof capabilityTags === 'string' ? capabilityTags : null);
 
     db.run(`
       UPDATE teams
@@ -1130,9 +1151,13 @@ router.put('/teams/:id', (req, res) => {
           member_count = COALESCE(?, member_count),
           description = COALESCE(?, description),
           status = COALESCE(?, status),
+          capability_tags = COALESCE(?, capability_tags),
+          daily_capacity_hours = COALESCE(?, daily_capacity_hours),
+          weekly_capacity_hours = COALESCE(?, weekly_capacity_hours),
+          coverage_radius_km = COALESCE(?, coverage_radius_km),
           updated_at = ?
       WHERE id = ?
-    `, [teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status, now, id]);
+    `, [teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status, capJson, dailyCapacityHours, weeklyCapacityHours, coverageRadiusKm, now, id]);
 
     res.json({ success: true, message: '班组更新成功' });
   } catch (error) {

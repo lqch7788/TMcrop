@@ -199,6 +199,171 @@ function updateTeamMemberCount(teamId: string): void {
 }
 
 /**
+ * 2026-09-15：增强版 addTeamMember — 同步写主职兼职关联 + 变更日志
+ */
+export async function addTeamMemberWithLog(
+  teamId: string,
+  workerId: string,
+  role: string = 'member',
+  ctx: { isPrimary?: boolean; percentage?: number; operatorId?: string; operatorName?: string; reason?: string } = {},
+): Promise<TeamMember> {
+  try {
+    const db = getDatabase();
+    const id = generateId('TM');
+    const now = new Date().toISOString();
+    const { isPrimary = true, percentage = 100, operatorId, operatorName, reason } = ctx;
+
+    // 1. 写主表 team_members
+    db.run(
+      `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, teamId, workerId, role, now, now, now],
+    );
+
+    // 2. 写主职/兼职关联 worker_team_assignments
+    const wtaId = generateId('WTA');
+    db.run(
+      `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [wtaId, workerId, teamId, role, isPrimary ? 1 : 0, percentage, now, now],
+    );
+
+    // 3. 写变更日志
+    await recordMemberChange(teamId, workerId, 'add', null, { role, isPrimary, percentage }, operatorId, operatorName, reason);
+
+    // 4. 更新 member_count
+    updateTeamMemberCount(teamId);
+
+    return { id, team_id: teamId, worker_id: workerId, role, joined_at: now, created_at: now, updated_at: now };
+  } catch (error) {
+    return handleServiceError(error, '添加班组成员（含日志）');
+  }
+}
+
+/**
+ * 2026-09-15：增强版 addTeamMembers（批量，使用事务）
+ */
+export async function addTeamMembersWithLog(
+  teamId: string,
+  workerIds: string[],
+  role: string = 'member',
+  ctx: { operatorId?: string; operatorName?: string } = {},
+): Promise<TeamMember[]> {
+  try {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const results: TeamMember[] = [];
+    const { operatorId, operatorName } = ctx;
+
+    db.run('BEGIN TRANSACTION');
+    try {
+      for (const workerId of workerIds) {
+        const id = generateId('TM');
+        db.run(
+          `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [id, teamId, workerId, role, now, now, now],
+        );
+        // 同步写 worker_team_assignments
+        const wtaId = generateId('WTA');
+        db.run(
+          `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
+           VALUES (?, ?, ?, ?, 1, 100, ?, ?)`,
+          [wtaId, workerId, teamId, role, now, now],
+        );
+        await recordMemberChange(teamId, workerId, 'add', null, { role }, operatorId, operatorName);
+        results.push({ id, team_id: teamId, worker_id: workerId, role, joined_at: now, created_at: now, updated_at: now });
+      }
+
+      // 更新 member_count
+      const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ?');
+      countStmt.bind([teamId]);
+      countStmt.step();
+      const count = (countStmt.getAsObject() as { count: number }).count;
+      countStmt.free();
+
+      db.run('UPDATE teams SET member_count = ?, updated_at = ? WHERE id = ?', [count, now, teamId]);
+      db.run('COMMIT');
+    } catch (error) {
+      db.run('ROLLBACK');
+      throw error;
+    }
+    return results;
+  } catch (error) {
+    return handleServiceError(error, '批量添加班组成员（含日志）');
+  }
+}
+
+/**
+ * 2026-09-15：增强版 removeTeamMember — 软删除 + 关闭兼职 + 写日志
+ */
+export async function removeTeamMemberWithLog(
+  teamId: string,
+  workerId: string,
+  ctx: { operatorId?: string; operatorName?: string; reason?: string } = {},
+): Promise<void> {
+  try {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const { operatorId, operatorName, reason } = ctx;
+
+    // 1. 软删除 team_members（保留历史，置 left_at）
+    db.run(
+      `UPDATE team_members SET left_at = ?, left_reason = ?, updated_at = ? WHERE team_id = ? AND worker_id = ?`,
+      [now, reason || null, now, teamId, workerId],
+    );
+
+    // 2. 关闭 worker_team_assignments 兼职关联
+    db.run(
+      `UPDATE worker_team_assignments SET left_at = ? WHERE worker_id = ? AND team_id = ? AND left_at IS NULL`,
+      [now, workerId, teamId],
+    );
+
+    // 3. 写变更日志
+    await recordMemberChange(teamId, workerId, 'remove', { reason: '主动移除' }, null, operatorId, operatorName, reason);
+
+    // 4. 更新 member_count（统计在职）
+    updateTeamMemberCountActive(teamId);
+  } catch (error) {
+    return handleServiceError(error, '移除班组成员（含日志）');
+  }
+}
+
+/**
+ * 2026-09-15：辅助 - 写变更日志（直接调用 teamMemberChangeService.recordChange）
+ */
+async function recordMemberChange(
+  teamId: string,
+  workerId: string,
+  changeType: string,
+  oldValue: unknown,
+  newValue: unknown,
+  operatorId?: string,
+  operatorName?: string,
+  reason?: string,
+): Promise<void> {
+  try {
+    const { recordChange } = await import('./teamMemberChangeService');
+    await recordChange(teamId, workerId, changeType, operatorId || null, operatorName || null, reason || null, oldValue, newValue);
+  } catch {
+    // recordChange 内部已 handleServiceError 但不应阻断主流程
+  }
+}
+
+/**
+ * 2026-09-15：辅助 - 更新 teams.member_count（仅统计 left_at IS NULL 的在职成员）
+ */
+function updateTeamMemberCountActive(teamId: string): void {
+  const db = getDatabase();
+  const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ? AND left_at IS NULL');
+  countStmt.bind([teamId]);
+  countStmt.step();
+  const result = countStmt.getAsObject() as { count: number };
+  countStmt.free();
+  db.run('UPDATE teams SET member_count = ?, updated_at = ? WHERE id = ?', [result.count, new Date().toISOString(), teamId]);
+}
+
+/**
  * 获取班组的技能标签汇总
  */
 export async function getTeamSkillTags(teamId: string): Promise<string[]> {
