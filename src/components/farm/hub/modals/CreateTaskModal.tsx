@@ -906,6 +906,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
               </p>
             )}
+            {/* 2026-09-15：班组能力匹配 + 当日可用工时预览（实时校验派工合理性） */}
+            <TeamCapabilityPreview teamId={newTask.teamId} taskType={newTask.taskType} />
             {/* 执行人 | 备注（2列对齐） */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1252,5 +1254,70 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         )}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * 2026-09-15：班组能力匹配 + 当日可用性预览（实时校验派工合理性）
+ * 选择班组后自动拉取该组的 task_capabilities（#3）+ team_daily_availability（#8）
+ * 与当前选中的 taskType 比对，给出匹配/不匹配提示 + 可用工时警告
+ */
+function TeamCapabilityPreview({ teamId, taskType }: { teamId: string; taskType: string }) {
+  const fetchCapabilities = useTeamManageStore((s) => s.fetchCapabilities);
+  const fetchAvailability = useTeamManageStore((s) => s.fetchAvailability);
+  const [caps, setCaps] = useState<string[]>([]);
+  const [avail, setAvail] = useState<{ available_hours: number; busy_hours: number; total_worker_count: number } | null>(null);
+  const today = todayLocal();
+
+  useEffect(() => {
+    if (!teamId) return;
+    let cancelled = false;
+    void (async () => {
+      const [c, a] = await Promise.all([
+        fetchCapabilities(teamId),
+        fetchAvailability(teamId, today),
+      ]);
+      if (cancelled) return;
+      setCaps(c.map((x) => x.task_type));
+      if (a) setAvail({ available_hours: a.available_hours, busy_hours: a.busy_hours, total_worker_count: a.total_worker_count });
+      else setAvail(null);
+    })();
+    return () => { cancelled = true; };
+  }, [teamId, today, fetchCapabilities, fetchAvailability]);
+
+  if (!teamId) return null;
+
+  const matched = taskType && caps.includes(taskType);
+  const noCapSet = caps.length === 0;
+  const warning = avail && avail.available_hours <= 0;
+
+  return (
+    <div className="text-xs bg-emerald-50 border border-emerald-200 rounded p-2 -mt-2 space-y-1">
+      {taskType && (
+        <div>
+          {matched ? (
+            <span className="text-emerald-700">✓ 该班组可承接「{taskType}」任务</span>
+          ) : noCapSet ? (
+            <span className="text-gray-500">⚠ 该班组未配置任务能力（建议先在班组详情页添加）</span>
+          ) : (
+            <span className="text-orange-700">⚠ 该班组未声明可承接「{taskType}」（已有能力：{caps.join('、')}）</span>
+          )}
+        </div>
+      )}
+      {caps.length > 0 && (
+        <div className="text-gray-600">班组能力：{caps.join('、')}</div>
+      )}
+      <div>
+        {avail ? (
+          warning ? (
+            <span className="text-red-700">⚠ 该班组今日已满排（可用 {avail.available_hours}h / 已排 {avail.busy_hours}h）</span>
+          ) : (
+            <span className="text-gray-700">今日可用工时：{avail.available_hours}h / 已排 {avail.busy_hours}h（成员 {avail.total_worker_count} 人）</span>
+          )
+        ) : (
+          <span className="text-gray-400">今日暂无该班组排班数据</span>
+        )}
+      </div>
+    </div>
   );
 }
