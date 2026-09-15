@@ -4693,6 +4693,167 @@ function fixApprovedProductionPlanStatus(): void {
     }
   }
 
+  // 2026-09-15：班组分配管理完整性 Phase 1 - 数据模型迁移（10 个缺口修复）
+  // 新增 4 张表 + 7 个字段 ALTER，全部幂等
+
+  // teams 表加 4 个字段（capability_tags / capacity / coverage）
+  const teamColumnsToAdd = [
+    { name: 'capability_tags', sql: 'ALTER TABLE teams ADD COLUMN capability_tags TEXT' },
+    { name: 'daily_capacity_hours', sql: 'ALTER TABLE teams ADD COLUMN daily_capacity_hours INTEGER DEFAULT 8' },
+    { name: 'weekly_capacity_hours', sql: 'ALTER TABLE teams ADD COLUMN weekly_capacity_hours INTEGER DEFAULT 40' },
+    { name: 'coverage_radius_km', sql: 'ALTER TABLE teams ADD COLUMN coverage_radius_km REAL DEFAULT 0' },
+  ];
+  for (const col of teamColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ teams 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• teams.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // team_members 表加软删除字段
+  const teamMemberColumnsToAdd = [
+    { name: 'left_at', sql: 'ALTER TABLE team_members ADD COLUMN left_at TEXT' },
+    { name: 'left_reason', sql: 'ALTER TABLE team_members ADD COLUMN left_reason TEXT' },
+  ];
+  for (const col of teamMemberColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ team_members 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• team_members.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 新表 1：team_zone_assignments（#1 区域关联）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS team_zone_assignments (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        zone_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'allowed',
+        created_at TEXT NOT NULL,
+        UNIQUE(team_id, zone_id, role)
+      )
+    `);
+    seedLog.info('✓ team_zone_assignments 表创建成功（#1 区域关联）');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      seedLog.skip('• team_zone_assignments:', e.message);
+    }
+  }
+
+  // 新表 2：team_task_capabilities（#3 任务类型能力矩阵）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS team_task_capabilities (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        task_type TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(team_id, task_type)
+      )
+    `);
+    seedLog.info('✓ team_task_capabilities 表创建成功（#3 任务类型能力）');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      seedLog.skip('• team_task_capabilities:', e.message);
+    }
+  }
+
+  // 新表 3：worker_team_assignments（#10 跨班组成员共享）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS worker_team_assignments (
+        id TEXT PRIMARY KEY,
+        worker_id TEXT NOT NULL,
+        team_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'member',
+        is_primary INTEGER NOT NULL DEFAULT 0,
+        percentage INTEGER DEFAULT 100,
+        joined_at TEXT NOT NULL,
+        left_at TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(worker_id, team_id, role)
+      )
+    `);
+    seedLog.info('✓ worker_team_assignments 表创建成功（#10 跨班组共享）');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      seedLog.skip('• worker_team_assignments:', e.message);
+    }
+  }
+
+  // 新表 4：team_member_changes（#7 人员变动历史）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS team_member_changes (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        worker_id TEXT NOT NULL,
+        change_type TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        operator_id TEXT,
+        operator_name TEXT,
+        reason TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+    seedLog.info('✓ team_member_changes 表创建成功（#7 变动历史）');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      seedLog.skip('• team_member_changes:', e.message);
+    }
+  }
+
+  // 新表 5：team_daily_availability（#8 可用性日历）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS team_daily_availability (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        available_hours INTEGER DEFAULT 8,
+        busy_hours INTEGER DEFAULT 0,
+        on_leave_count INTEGER DEFAULT 0,
+        scheduled_worker_count INTEGER DEFAULT 0,
+        total_worker_count INTEGER DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        UNIQUE(team_id, date)
+      )
+    `);
+    seedLog.info('✓ team_daily_availability 表创建成功（#8 可用性日历）');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      seedLog.skip('• team_daily_availability:', e.message);
+    }
+  }
+
+  // 索引：高频查询加速
+  const newIndexes = [
+    { name: 'idx_team_zones_team', sql: 'CREATE INDEX IF NOT EXISTS idx_team_zones_team ON team_zone_assignments(team_id)' },
+    { name: 'idx_team_zones_zone', sql: 'CREATE INDEX IF NOT EXISTS idx_team_zones_zone ON team_zone_assignments(zone_id)' },
+    { name: 'idx_team_capabilities_team', sql: 'CREATE INDEX IF NOT EXISTS idx_team_capabilities_team ON team_task_capabilities(team_id)' },
+    { name: 'idx_worker_team_assignments_worker', sql: 'CREATE INDEX IF NOT EXISTS idx_wta_worker ON worker_team_assignments(worker_id)' },
+    { name: 'idx_worker_team_assignments_team', sql: 'CREATE INDEX IF NOT EXISTS idx_wta_team ON worker_team_assignments(team_id)' },
+    { name: 'idx_team_member_changes_team', sql: 'CREATE INDEX IF NOT EXISTS idx_tmc_team ON team_member_changes(team_id, created_at DESC)' },
+    { name: 'idx_team_daily_availability', sql: 'CREATE INDEX IF NOT EXISTS idx_tda_team_date ON team_daily_availability(team_id, date)' },
+  ];
+  for (const idx of newIndexes) {
+    try {
+      db.run(idx.sql);
+    } catch (e: any) {
+      seedLog.skip(`• ${idx.name}:`, e.message);
+    }
+  }
+
   saveDatabase();
 }
 
