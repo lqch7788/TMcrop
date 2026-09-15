@@ -22,6 +22,7 @@ import { ProblemDispatchModal } from '../../components/farm/hub/ProblemDispatchM
 import { InspectionDetailModal } from '../../components/farm/hub/InspectionDetailModal';
 import { SelectExecutorModal } from '../../components/farm/hub/modals/SelectExecutorModal';
 import { CreateTaskModal } from '../../components/farm/hub/modals/CreateTaskModal';
+import { BatchAssignModal } from '../../components/farm/hub/modals/BatchAssignModal';
 import { TodayOperationRecords } from '../../components/farm/hub/TodayOperationRecords';
 import { BatchImportModal, ImportRow } from '../../components/farm/hub/modals/BatchImportModal';
 import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
@@ -167,6 +168,10 @@ export function FarmTaskHub() {
 
   // 新建任务状态
   const [showCreateModal, setShowCreateModal] = useState(false);
+  // 2026-09-15：批量任务分配（#9）
+  const [showBatchAssignModal, setShowBatchAssignModal] = useState(false);
+  const [batchAssignTaskId, setBatchAssignTaskId] = useState<string | null>(null);
+  const [batchAssignTaskInfo, setBatchAssignTaskInfo] = useState<{ id: string; taskName?: string; taskType?: string } | null>(null);
 
   // AI推荐相关状态
   const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>('manual');
@@ -457,6 +462,11 @@ export function FarmTaskHub() {
                 onViewTask={(taskId) => setDetailTaskId(taskId)}
                 onViewTaskInCalendar={(task) => setDetailTaskId(task.id)}
                 onCreateTask={() => setShowCreateModal(true)}
+                onBatchAssign={(task) => {
+                  setBatchAssignTaskId(task.id);
+                  setBatchAssignTaskInfo({ id: task.id, taskName: task.taskName, taskType: task.taskType });
+                  setShowBatchAssignModal(true);
+                }}
                 onWithdraw={handleTaskWithdraw}
                 onCancel={handleTaskCancel}
                 onReassign={handleTaskReassign}
@@ -654,6 +664,18 @@ export function FarmTaskHub() {
           hub.forceRefresh();
         }}
         tasksHook={tasksHook}
+      />
+
+      {/* 2026-09-15：批量任务分配弹窗（#9） */}
+      <BatchAssignModal
+        open={showBatchAssignModal}
+        onClose={() => {
+          setShowBatchAssignModal(false);
+          setBatchAssignTaskId(null);
+          setBatchAssignTaskInfo(null);
+        }}
+        task={batchAssignTaskInfo}
+        workers={workers.map((w) => ({ id: w.id, name: w.name, departmentName: w.position }))}
       />
 
       {/* 撤回任务弹窗 */}

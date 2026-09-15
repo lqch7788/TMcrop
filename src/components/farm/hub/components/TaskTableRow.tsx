@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Bell, CheckCircle, FileText, Play, Send, Undo2, X, XCircle } from 'lucide-react';
+import { Bell, CheckCircle, FileText, Layers, Play, Send, Undo2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
@@ -95,6 +95,8 @@ interface TaskTableRowProps {
   onReassign?: () => void;
   onRemind?: () => void;
   onSelectExecutor?: () => void;
+  // 2026-09-15：批量任务分配（#9）
+  onBatchAssign?: () => void;
   onPublish?: () => void;  // 发布草稿任务
   // 标识是否为"我的任务"视图（true=执行人视图，显示接受/拒绝；false=管理者视图，显示撤回/取消）
   isMyTasksView?: boolean;
@@ -133,6 +135,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
   onRemind,
   onSelectExecutor,
   onPublish,
+  onBatchAssign,
   isMyTasksView = false,
   remindProps,
   canRemind,
@@ -293,6 +296,19 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               className="text-xs h-6"
             >
               <CheckCircle className="w-4 h-4" /> 验收
+            </Button>
+          )}
+
+          {/* 2026-09-15：批量任务分配按钮（#9，所有状态可触发） */}
+          {onBatchAssign && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBatchAssign}
+              className="text-xs h-6"
+              title="批量分配：选工人+日期范围，自动生成排班"
+            >
+              <Layers className="w-3 h-3" /> 批量分配
             </Button>
           )}
 
