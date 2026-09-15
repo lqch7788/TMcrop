@@ -91,6 +91,96 @@ export function initializeDatabase() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_team_members_worker_id ON team_members(worker_id)`);
   db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_unique ON team_members(team_id, worker_id)`);
 
+  // 2026-09-15：班组分配管理完整性 - Phase 1 数据模型扩展
+  // teams 加 4 个字段（capability_tags / daily_capacity_hours / weekly_capacity_hours / coverage_radius_km）
+  try { db.run(`ALTER TABLE teams ADD COLUMN skill_tags TEXT`); } catch (e) {} // 兼容旧字段
+  try { db.run(`ALTER TABLE teams ADD COLUMN capability_tags TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE teams ADD COLUMN daily_capacity_hours INTEGER DEFAULT 8`); } catch (e) {}
+  try { db.run(`ALTER TABLE teams ADD COLUMN weekly_capacity_hours INTEGER DEFAULT 40`); } catch (e) {}
+  try { db.run(`ALTER TABLE teams ADD COLUMN coverage_radius_km REAL DEFAULT 0`); } catch (e) {}
+
+  // team_members 加软删除字段
+  try { db.run(`ALTER TABLE team_members ADD COLUMN left_at TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE team_members ADD COLUMN left_reason TEXT`); } catch (e) {}
+
+  // 新表 1：班组-作业区域关联（#1）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_zone_assignments (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      zone_id TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'allowed',
+      created_at TEXT NOT NULL,
+      UNIQUE(team_id, zone_id, role)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_team_zones_team ON team_zone_assignments(team_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_team_zones_zone ON team_zone_assignments(zone_id)`);
+
+  // 新表 2：班组任务类型能力（#3）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_task_capabilities (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      task_type TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(team_id, task_type)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_team_capabilities_team ON team_task_capabilities(team_id)`);
+
+  // 新表 3：工人-班组兼职（#10 跨班组成员共享）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS worker_team_assignments (
+      id TEXT PRIMARY KEY,
+      worker_id TEXT NOT NULL,
+      team_id TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      is_primary INTEGER NOT NULL DEFAULT 0,
+      percentage INTEGER DEFAULT 100,
+      joined_at TEXT NOT NULL,
+      left_at TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(worker_id, team_id, role)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_wta_worker ON worker_team_assignments(worker_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_wta_team ON worker_team_assignments(team_id)`);
+
+  // 新表 4：班组成员变动历史（#7）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_member_changes (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      worker_id TEXT NOT NULL,
+      change_type TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      reason TEXT,
+      created_at TEXT NOT NULL
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tmc_team ON team_member_changes(team_id, created_at DESC)`);
+
+  // 新表 5：班组可用性日历（#8）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_daily_availability (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      available_hours INTEGER DEFAULT 8,
+      busy_hours INTEGER DEFAULT 0,
+      on_leave_count INTEGER DEFAULT 0,
+      scheduled_worker_count INTEGER DEFAULT 0,
+      total_worker_count INTEGER DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      UNIQUE(team_id, date)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tda_team_date ON team_daily_availability(team_id, date)`);
+
   // 仓库表
   db.run(`
     CREATE TABLE IF NOT EXISTS warehouses (
