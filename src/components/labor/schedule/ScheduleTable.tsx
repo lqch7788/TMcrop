@@ -229,7 +229,7 @@ export function ScheduleTable({
               )}
               {/* 2026-09-14：班次设置移到导出后面 */}
               {onShiftConfigClick && (
-                <Button size="sm" onClick={onShiftConfigClick}>
+                <Button size="sm" onClick={onShiftConfigClick} className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600">
                   <Settings className="w-4 h-4" />
                   班次设置
                 </Button>
