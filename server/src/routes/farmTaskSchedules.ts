@@ -169,4 +169,99 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * 2026-09-15：批量任务分配（#9 批量任务分配）
+ * POST /batch-assign
+ * 输入：template task_id + workers[] + 日期范围
+ * 输出：自动生成 N 个 farm_task_schedule（每个 worker × 每个 date）
+ *
+ * 参数：
+ *   taskId - 任务模板 ID（必填）
+ *   startDate / endDate - 日期范围（必填）
+ *   workers[] - 每个 worker：{ workerId, workerName, teamId, teamName, shiftType?, percentage? }
+ *
+ * 跳过冲突：同 worker 同日期已有排班则跳过，不阻塞主流程
+ */
+router.post('/batch-assign', requireAuth, async (req, res) => {
+  try {
+    const { taskId, startDate, endDate, workers, planStart, planEnd, remarks, createdBy } = req.body || {};
+
+    // 必填校验
+    if (!taskId) return res.status(400).json({ success: false, error: 'taskId 必填' });
+    if (!startDate || !endDate) return res.status(400).json({ success: false, error: 'startDate/endDate 必填' });
+    if (!Array.isArray(workers) || workers.length === 0) {
+      return res.status(400).json({ success: false, error: 'workers 必须是非空数组' });
+    }
+
+    // 日期范围校验
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+      return res.status(400).json({ success: false, error: '日期范围无效' });
+    }
+    const dayCount = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    if (dayCount > 90) {
+      return res.status(400).json({ success: false, error: '单次批量最多 90 天' });
+    }
+
+    // 生成日期序列
+    const dates: string[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const y = cursor.getFullYear();
+      const m = String(cursor.getMonth() + 1).padStart(2, '0');
+      const d = String(cursor.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${d}`);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    // 逐个 worker × 日期生成
+    let created = 0;
+    const skipped: Array<{ workerId: string; date: string; reason: string }> = [];
+    const errors: string[] = [];
+
+    for (const w of workers) {
+      if (!w.workerId) continue;
+      for (const date of dates) {
+        try {
+          // 冲突检测
+          const conflicts = await farmTaskScheduleService.checkConflicts(w.workerId, date);
+          if (conflicts.length > 0) {
+            skipped.push({ workerId: w.workerId, date, reason: '该执行人在同日已有排班' });
+            continue;
+          }
+          await farmTaskScheduleService.createSchedule({
+            taskId,
+            workerId: w.workerId,
+            workerName: w.workerName || '',
+            teamId: w.teamId || null,
+            teamName: w.teamName || null,
+            planDate: date,
+            planStart: planStart || null,
+            planEnd: planEnd || null,
+            shiftType: w.shiftType || null,
+            remarks: remarks || null,
+          });
+          created++;
+        } catch (e) {
+          errors.push(`${w.workerId}@${date}: ${(e as Error).message}`);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        created,
+        skipped: skipped.length,
+        errors: errors.length,
+        details: { skipped, errors: errors.slice(0, 10) }, // 最多返回前 10 个错误
+      },
+    });
+  } catch (error) {
+    console.error('批量任务分配失败:', error);
+    res.status(500).json({ success: false, error: '批量任务分配失败' });
+  }
+});
+
 export default router;
