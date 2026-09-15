@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
 import { normalizeRecord } from './types';
 import { todayLocal } from '../../../lib/dateUtils';
@@ -198,9 +198,37 @@ export function ScheduleCalendar({
                     );
                   })}
                   {schedules.length > 3 && (
-                    <div className="text-xs text-gray-500 px-1">
-                      +{schedules.length - 3} 更多
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div
+                          className="text-xs text-gray-500 px-1 cursor-pointer hover:text-blue-600 hover:underline"
+                          // 点击"更多"时不切换日期选中态
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          +{schedules.length - 3} 更多
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="text-xs font-medium text-gray-500 mb-2 px-1">
+                          {dateStr} 共 {schedules.length} 条排班
+                        </div>
+                        <div className="space-y-1 max-h-60 overflow-y-auto">
+                          {schedules.map(schedule => (
+                            <div
+                              key={schedule.id}
+                              onClick={() => onScheduleClick?.(schedule)}
+                              className={`
+                                text-xs px-2 py-1 rounded cursor-pointer text-white truncate
+                                ${getShiftColor(schedule.shift, shiftConfigs)}
+                                ${schedule.status === '已取消' ? 'opacity-50 line-through' : ''}
+                              `}
+                            >
+                              {schedule.staffName} {schedule.shift}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
               </div>
@@ -364,36 +392,8 @@ export function ScheduleCalendar({
   return (
     <div className="space-y-4">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePrev}
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleToday}
-            className="text-blue-600 hover:bg-blue-50"
-          >
-            今天
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleNext}
-          >
-            <ChevronRight className="w-5 h-5 text-gray-600" />
-          </Button>
-          <div className="ml-4 text-lg font-medium text-gray-800">
-            {new Date(selectedDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })}
-          </div>
-        </div>
-
-        {/* 视图切换 */}
+      <div className="flex items-center">
+        {/* 视图切换（移至最左，位于"今天"按钮前面） */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           <Button
             variant={viewMode === 'month' ? 'default' : 'ghost'}
@@ -419,6 +419,34 @@ export function ScheduleCalendar({
           >
             日
           </Button>
+        </div>
+
+        <div className="flex items-center gap-2 ml-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePrev}
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleToday}
+            className="text-blue-600 hover:bg-blue-50"
+          >
+            今天
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNext}
+          >
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          </Button>
+          <div className="ml-4 text-lg font-medium text-gray-800">
+            {new Date(selectedDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })}
+          </div>
         </div>
       </div>
 

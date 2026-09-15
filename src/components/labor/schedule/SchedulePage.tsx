@@ -8,7 +8,7 @@ import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
-import { ScheduleAddModal, ScheduleBatchEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
+import { ScheduleAddModal, ScheduleEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ScheduleRecordLike, ShiftType } from './types';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
@@ -44,7 +44,6 @@ export function SchedulePage() {
     setViewMode,
     updateShiftConfig,
     addSchedule,
-    updateSchedule,
     deleteSchedule,
     cancelSchedule,
     submitSwapRequest,
@@ -87,19 +86,18 @@ export function SchedulePage() {
   // 2026-09-14：行尾发起调班时预填的 requester（ScheduleRecord）
   const [swapRequester, setSwapRequester] = useState<ScheduleRecord | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
 
-  // 批量操作状态
-  const [batchEditMode, setBatchEditMode] = useState(false);
+  // 批量操作状态（2026-09-15：移除批量编辑相关 state，仅保留删除/导出）
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-
-  // 批量编辑状态
-  const [editedRecordIds, setEditedRecordIds] = useState<string[]>([]);
-  const [editedRecords, setEditedRecords] = useState<Record<string, Partial<ScheduleRecord>>>({});
-  const [selectedRecordId, setSelectedRecordId] = useState('');
+  // 2026-09-15：调班申请独立的导出模式（与排班记录导出互不干扰，复用 ExportFormatModal）
+  const [swapExportMode, setSwapExportMode] = useState(false);
+  const [selectedSwapRows, setSelectedSwapRows] = useState<string[]>([]);
+  // 2026-09-15：被调班过的排班，点击行尾「查看调班」图标 → 弹窗显示 swap_request 详情
+  const [swapDetailRecord, setSwapDetailRecord] = useState<ScheduleRecord | null>(null);
 
   // 导出状态
   const [showExportModal, setShowExportModal] = useState(false);
@@ -109,9 +107,10 @@ export function SchedulePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // 处理排班点击
+  // 处理排班点击（2026-09-15：行尾"编辑"按钮点击 → 打开单条编辑弹窗）
   const handleScheduleClick = (record: ScheduleRecord) => {
     setSelectedSchedule(record);
+    setShowEditModal(true);
   };
 
   // 处理调班申请提交
@@ -168,9 +167,30 @@ export function SchedulePage() {
     }
   };
 
+  // 2026-09-15：调班申请导出模式（与排班记录同套交互）
+  const handleSelectAllSwap = () => {
+    if (selectedSwapRows.length === swapRequests.length) {
+      setSelectedSwapRows([]);
+    } else {
+      setSelectedSwapRows(swapRequests.map(r => r.id));
+    }
+  };
+
+  const handleSelectRowSwap = (id: string) => {
+    if (selectedSwapRows.includes(id)) {
+      setSelectedSwapRows(selectedSwapRows.filter(rowId => rowId !== id));
+    } else {
+      setSelectedSwapRows([...selectedSwapRows, id]);
+    }
+  };
+
+  const handleCancelSwapBatch = () => {
+    setSwapExportMode(false);
+    setSelectedSwapRows([]);
+  };
+
   // 取消批量操作
   const handleCancelBatch = () => {
-    setBatchEditMode(false);
     setBatchDeleteMode(false);
     setExportMode(false);
     setSelectedRows([]);
@@ -191,76 +211,16 @@ export function SchedulePage() {
     handleCancelBatch();
   };
 
-  // 批量编辑相关处理
-  const handleBatchEditClick = () => {
-    if (batchEditMode) {
-      // 已经在批量编辑模式，打开批量编辑弹窗
-      setShowBatchEditModal(true);
-    } else {
-      // 进入批量编辑模式
-      setBatchEditMode(true);
-    }
-  };
+  // 批量编辑相关处理（2026-09-15：已删除，编辑功能下沉到每行）
+  // handleBatchEditClick / handleConfirmBatchEdit / handleConfirmNext 已移除
 
-  const handleConfirmBatchEdit = async () => {
-    // 保存编辑结果
-    if (editedRecordIds.length > 0) {
-      // 批量更新编辑过的记录
-      try {
-        for (const id of editedRecordIds) {
-          const updates = editedRecords[id];
-          if (updates) {
-            await updateSchedule(id, updates);
-          }
-        }
-      } catch (err) {
-        showAlert(`批量更新失败：${(err as Error).message}`);
-        return;
-      }
-    }
-    setShowBatchEditModal(false);
-    setBatchEditMode(false);
-    setSelectedRows([]);
-    setEditedRecordIds([]);
-    setEditedRecords({});
-    setSelectedRecordId('');
-  };
-
-  // 确认（下一个）- 保存当前记录并选择下一条
-  const handleConfirmNext = () => {
-    // 将当前记录标记为已编辑
-    if (selectedRecordId && !editedRecordIds.includes(selectedRecordId)) {
-      setEditedRecordIds([...editedRecordIds, selectedRecordId]);
-    }
-
-    // 找到下一条未编辑的记录
-    const selectedRecords = selectedRows.map(id => scheduleList.find(r => r.id === id)).filter(Boolean) as ScheduleRecord[];
-    const currentIndex = selectedRecords.findIndex(r => r.id.toString() === selectedRecordId);
-    const nextUneditedRecord = selectedRecords.find((r, idx) => {
-      return idx > currentIndex && !editedRecordIds.includes(r.id.toString());
-    });
-
-    if (nextUneditedRecord) {
-      // 选择下一条未编辑的记录
-      setSelectedRecordId(nextUneditedRecord.id.toString());
-    } else {
-      // 如果没有更多未编辑的记录，关闭弹窗
-      setShowBatchEditModal(false);
-      setBatchEditMode(false);
-      setSelectedRows([]);
-      setEditedRecordIds([]);
-      setEditedRecords({});
-      setSelectedRecordId('');
-    }
-  };
-
-  // 确认导出
+  // 确认导出（排班记录）
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) return;
     handleDoExport();
   };
 
-  // 执行导出
+  // 2026-09-15：执行导出（排班记录）
   const handleDoExport = async () => {
     const selectedData = scheduleList.filter(s => selectedRows.includes(s.id));
     const headers = ['日期', '员工', '班次', '工作区域', '开始时间', '结束时间', '状态', '签到时间', '签退时间'];
@@ -280,27 +240,87 @@ export function SchedulePage() {
       };
     });
 
+    await doExport({
+      exportData,
+      headers,
+      fileNamePrefix: '排班记录',
+      onDone: () => {
+        setShowExportModal(false);
+        handleCancelBatch();
+      },
+    });
+  };
+
+  // 2026-09-15：调班申请导出（与排班记录走同一套格式选择/下载流程）
+  const handleConfirmSwapExport = () => {
+    if (selectedSwapRows.length === 0) return;
+    handleDoSwapExport();
+  };
+
+  const handleDoSwapExport = async () => {
+    const selectedData = swapRequests.filter(r => selectedSwapRows.includes(r.id));
+    const headers = ['申请时间', '状态', '申请人', '调班对象', '原日期', '目标日期', '原因'];
+
+    const exportData = selectedData.map(r => ({
+      '申请时间': r.createTime,
+      '状态': r.status,
+      '申请人': r.requesterName,
+      '调班对象': r.targetName,
+      '原日期': r.originalDate,
+      '目标日期': r.targetDate,
+      '原因': r.reason || '',
+    }));
+
+    await doExport({
+      exportData,
+      headers,
+      fileNamePrefix: '调班申请',
+      onDone: () => {
+        setShowExportModal(false);
+        handleCancelSwapBatch();
+      },
+    });
+  };
+
+  /**
+   * 通用导出函数（2026-09-15 提取）：排班记录与调班申请共用格式选择/下载逻辑
+   * @param exportData - 已规范化的导出数据（属性名=表头）
+   * @param headers - 列顺序（与 exportData 属性对应）
+   * @param fileNamePrefix - 文件名前缀（如「排班记录」「调班申请」）
+   * @param onDone - 下载完成后的回调（关闭弹窗、清空状态）
+   */
+  const doExport = async ({
+    exportData,
+    headers,
+    fileNamePrefix,
+    onDone,
+  }: {
+    exportData: Record<string, string | number>[];
+    headers: string[];
+    fileNamePrefix: string;
+    onDone: () => void;
+  }) => {
     let content = '';
     let mimeType = '';
     let extension = '';
 
     if (exportFormat === 'csv') {
       content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+        headers.map(h => `"${row[h] || ''}"`).join(',')
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
     } else if (exportFormat === 'excel') {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-excel;charset=utf-8';
       extension = 'xls';
     } else if (exportFormat === 'word') {
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-word;charset=utf-8';
       extension = 'doc';
     }
 
-    const fileName = `排班记录_${todayLocal()}.${extension}`;
+    const fileName = `${fileNamePrefix}_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
@@ -334,8 +354,7 @@ export function SchedulePage() {
       URL.revokeObjectURL(url);
     }
 
-    setShowExportModal(false);
-    handleCancelBatch();
+    onDone();
   };
 
   return (
@@ -463,16 +482,14 @@ export function SchedulePage() {
                 onPageChange={setCurrentPage}
                 onPageSizeChange={setPageSize}
                 onScheduleClick={handleScheduleClick}
-                showCheckbox={exportMode || batchEditMode || batchDeleteMode}
+                showCheckbox={exportMode || batchDeleteMode}
                 exportMode={exportMode}
-                batchEditMode={batchEditMode}
                 batchDeleteMode={batchDeleteMode}
                 selectedRows={selectedRows}
                 onSelectAll={handleSelectAll}
                 onSelectRow={handleSelectRow}
                 onAddClick={() => setShowAddModal(true)}
                 onExport={() => setExportMode(true)}
-                onBatchEditClick={handleBatchEditClick}
                 onBatchDeleteClick={() => {
                   if (batchDeleteMode) {
                     // 在批量删除模式下，显示确认删除弹窗
@@ -495,7 +512,6 @@ export function SchedulePage() {
                     setExportMode(true);
                   }
                 }}
-                onCancelBatchEdit={handleCancelBatch}
                 onCancelBatchDelete={handleCancelBatch}
                 onCancelBatchExport={handleCancelBatch}
                 // 2026-09-14：行尾操作列回调
@@ -509,15 +525,16 @@ export function SchedulePage() {
                   setSwapRequester(record);
                   setShowSwapModal(true);
                 }}
+                // 2026-09-15：被调班过的排班点击「查看调班详情」图标
+                onShowSwapDetail={(record) => setSwapDetailRecord(record)}
                 onShiftConfigClick={() => setShowShiftEditor(true)}
               />
 
-              {/* 批量操作提示栏 */}
-              {(batchEditMode || batchDeleteMode || exportMode) && (
+              {/* 批量操作提示栏（2026-09-15：删除批量编辑相关文案） */}
+              {(batchDeleteMode || exportMode) && (
                 <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between mt-4">
                   <div className="text-sm text-gray-600">
                     已选择 <strong className="text-emerald-600">{selectedRows.length}</strong> 项
-                    {batchEditMode && '（点击批量编辑进入编辑模式）'}
                     {batchDeleteMode && '（确认删除选中的记录）'}
                   </div>
                   <Button
@@ -537,7 +554,7 @@ export function SchedulePage() {
         {displayMode === 'table' && (
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-800">调班申请</h3>
+              <h3 className="font-bold text-gray-800">调班申请</h3>
               <span className="text-xs text-gray-500">
                 {swapRequests.filter(r => r.status === '待审批').length} 待处理
               </span>
@@ -545,6 +562,23 @@ export function SchedulePage() {
             <SwapRequestList
               requests={swapRequests}
               onHandle={handleSwapRequestWithAlert}
+              // 2026-09-15：与排班记录导出完全一致的受控模式
+              exportMode={swapExportMode}
+              selectedRows={selectedSwapRows}
+              onSelectAll={handleSelectAllSwap}
+              onSelectRow={handleSelectRowSwap}
+              onEnterExportMode={() => {
+                setSwapExportMode(true);
+                setSelectedSwapRows(swapRequests.map(r => r.id));
+              }}
+              onConfirmExport={() => {
+                if (selectedSwapRows.length === 0) {
+                  showAlert('请先选择要导出的数据');
+                  return;
+                }
+                setShowExportModal(true);
+              }}
+              onCancelExport={handleCancelSwapBatch}
             />
           </div>
         )}
@@ -589,21 +623,11 @@ export function SchedulePage() {
         defaultDate={selectedDate}
       />
 
-      {/* 批量编辑弹窗 */}
-      <ScheduleBatchEditModal
-        isOpen={showBatchEditModal}
-        selectedRows={selectedRows}
-        records={scheduleList}
-        editedRecordIds={editedRecordIds}
-        editedRecords={editedRecords}
-        selectedRecordId={selectedRecordId}
-        onSelectedRecordIdChange={setSelectedRecordId}
-        onEditedRecordsChange={setEditedRecords}
-        onEditedRecordIdsChange={setEditedRecordIds}
-        onClose={() => setShowBatchEditModal(false)}
-        onConfirm={handleConfirmBatchEdit}
-        onConfirmNext={handleConfirmNext}
-        shiftConfigs={shiftConfigs}
+      {/* 单条编辑弹窗（2026-09-15：行尾"编辑"按钮点击触发） */}
+      <ScheduleEditModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        schedule={selectedSchedule}
       />
 
       {/* 删除确认弹窗 */}
@@ -617,14 +641,74 @@ export function SchedulePage() {
         }}
       />
 
-      {/* 导出格式选择弹窗 */}
+      {/* 2026-09-15：调班详情弹窗（从被调班过的排班点「查看调班」图标进入） */}
+      <UnifiedModal
+        isOpen={!!swapDetailRecord}
+        onClose={() => setSwapDetailRecord(null)}
+        title="调班详情"
+        size="lg"
+        showFooter={true}
+        footer={(
+          <Button variant="outline" size="sm" onClick={() => setSwapDetailRecord(null)}>
+            <X className="w-4 h-4" /> 关闭
+          </Button>
+        )}
+      >
+        {swapDetailRecord && (() => {
+          // 查找对应的 swap_request
+          const swap = swapRequests.find(r => r.id === swapDetailRecord.swapRecordId);
+          return (
+            <div className="space-y-4 text-sm">
+              {/* 当前排班（已被调班过的最新状态） */}
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <div className="font-medium text-blue-800 mb-2">当前排班（调班生效后）</div>
+                <div className="grid grid-cols-2 gap-2 text-blue-700">
+                  <span>员工：{swapDetailRecord.staffName || swapDetailRecord.staffId}</span>
+                  <span>班次：{swapDetailRecord.shift}</span>
+                  <span>日期：{swapDetailRecord.date}</span>
+                  <span>工作区域：{swapDetailRecord.workZone || '-'}</span>
+                </div>
+              </div>
+              {swap ? (
+                <>
+                  <div className="bg-orange-50 border border-orange-200 rounded p-3">
+                    <div className="font-medium text-orange-800 mb-2">调班审批信息</div>
+                    <div className="grid grid-cols-2 gap-2 text-orange-700">
+                      <span>申请人：{swap.requesterName}</span>
+                      <span>调班对象：{swap.targetName}</span>
+                      <span>原日期：{swap.originalDate}</span>
+                      <span>目标日期：{swap.targetDate || '—'}</span>
+                      <span>状态：{swap.status}</span>
+                      <span>申请时间：{swap.createTime}</span>
+                    </div>
+                    {swap.reason && (
+                      <div className="mt-2 text-orange-700">
+                        <span className="font-medium">调班原因：</span>{swap.reason}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <p>💡 该排班（id: {swapDetailRecord.id}）因调班申请（id: {swap.id}）审批通过而发生变更。</p>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-yellow-700 text-xs">
+                  ⚠ 未找到对应的调班申请记录（id: {swapDetailRecord.swapRecordId}），可能已被清理。
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </UnifiedModal>
+
+      {/* 导出格式选择弹窗（2026-09-15：onConfirm 根据当前导出模式路由到对应处理函数） */}
       <ExportFormatModal
         isOpen={showExportModal}
         exportFormat={exportFormat}
-        selectedCount={selectedRows.length}
+        selectedCount={swapExportMode ? selectedSwapRows.length : selectedRows.length}
         onFormatChange={setExportFormat}
         onClose={() => setShowExportModal(false)}
-        onConfirm={handleConfirmExport}
+        onConfirm={swapExportMode ? handleConfirmSwapExport : handleConfirmExport}
       />
     </div>
   );

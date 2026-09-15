@@ -19,6 +19,8 @@ export interface ScheduleRecord {
   checkOut?: string;      // 签退时间 HH:mm
   teamId?: string;        // 班组 ID（2026-09-13 加，按班组排班后写入）
   teamName?: string;      // 班组名称
+  // 2026-09-15：调班审批通过后写入关联的 swap_request id（用于列表显示「已调班」徽章 + 查看调班详情）
+  swapRecordId?: string;
 }
 
 // 班次配置

@@ -4615,6 +4615,84 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.skip('• batch_timeline_view 创建失败:', (e as Error).message);
   }
 
+  // 2026-09-15：班组成员数据修复（按部门 round-robin 分到该部门下各班组）
+  // 背景：早期种子数据 team_members.team_id 用了 TEAM_001/team002 等与 teams.id(T001) 维度不一致的 ID；
+  // 且 worker_id 用了 WORKER_xxx / uwxxx 等与 employees.id(EMP_xxx) 不一致的 ID，
+  // 导致 team_members 8 条记录全部是孤儿、永远查不到，"按班组排班"被迫降级为"按部门排班"。
+  // 修复策略：清空孤儿数据 + 按 teams.department_name 平分 employees 到同部门下各班组。
+  // 幂等：每次启动执行相同结果（先清空再按当前 teams/employees 重算）。
+  try {
+    const beforeResult = db.exec('SELECT COUNT(*) AS c FROM team_members');
+    const beforeCount = beforeResult.length > 0 && beforeResult[0].values.length > 0
+      ? Number(beforeResult[0].values[0][0] ?? 0)
+      : 0;
+    db.run('DELETE FROM team_members');
+
+    // 取所有班组（按 id 排序保证 round-robin 稳定），分组：按 department_name 分桶
+    const teamsRes = db.exec("SELECT id, team_name, department_name FROM teams WHERE department_name IS NOT NULL AND department_name != '' ORDER BY id");
+    const teamsByDept = new Map<string, { id: string; team_name: string }[]>();
+    if (teamsRes.length > 0 && teamsRes[0].values.length > 0) {
+      const cols = teamsRes[0].columns;
+      const idIdx = cols.indexOf('id');
+      const nameIdx = cols.indexOf('team_name');
+      const deptIdx = cols.indexOf('department_name');
+      for (const row of teamsRes[0].values) {
+        const dept = row[deptIdx] as string;
+        if (!teamsByDept.has(dept)) teamsByDept.set(dept, []);
+        teamsByDept.get(dept)!.push({ id: row[idIdx] as string, team_name: row[nameIdx] as string });
+      }
+    }
+
+    // 取所有员工，按 department_name round-robin 分到同部门下各班组
+    const empRes = db.exec("SELECT id, name, department_name FROM employees WHERE department_name IS NOT NULL AND department_name != '' ORDER BY id");
+    let insertedCount = 0;
+    if (empRes.length > 0 && empRes[0].values.length > 0) {
+      const cols = empRes[0].columns;
+      const idIdx = cols.indexOf('id');
+      const nameIdx = cols.indexOf('name');
+      const deptIdx = cols.indexOf('department_name');
+      // 按部门分组员工索引（用于 round-robin 取模）
+      const empIdxByDept = new Map<string, number>();
+      const nowLocal = nowLocalTimestamp();
+      for (const row of empRes[0].values) {
+        const empId = row[idIdx] as string;
+        const empName = row[nameIdx] as string;
+        const dept = row[deptIdx] as string;
+        const teamsInDept = teamsByDept.get(dept);
+        if (!teamsInDept || teamsInDept.length === 0) continue;
+        const idx = empIdxByDept.get(dept) ?? 0;
+        const targetTeam = teamsInDept[idx % teamsInDept.length];
+        empIdxByDept.set(dept, idx + 1);
+        db.run(
+          `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at, version)
+           VALUES (?, ?, ?, 'member', ?, ?, ?, 1)`,
+          [
+            `TM_SYNC_${Date.now()}_${empId}`,
+            targetTeam.id,
+            empId,
+            nowLocal,
+            nowLocal,
+            nowLocal,
+          ],
+        );
+        insertedCount++;
+      }
+    }
+    seedLog.info(`✓ team_members 数据修复：清空 ${beforeCount} 条孤儿，新增 ${insertedCount} 条 (按部门 round-robin 分配)`);
+  } catch (e: any) {
+    seedLog.skip('• team_members 数据修复失败:', e.message);
+  }
+
+  // 2026-09-15：schedules 表加 swap_record_id 列（关联调班申请 ID，调班审批通过时写入）
+  try {
+    db.run(`ALTER TABLE schedules ADD COLUMN swap_record_id TEXT`);
+    seedLog.info('✓ schedules 表添加 swap_record_id 列');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      seedLog.skip('• schedules.swap_record_id:', e.message);
+    }
+  }
+
   saveDatabase();
 }
 

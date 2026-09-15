@@ -130,7 +130,8 @@ export const useTeamManageStore = create<TeamManageState>()(
         );
         const teams: Team[] = apiTeams.map((t, i) => ({
           ...mapApiTeam(t),
-          memberIds: membersList[i].map((m) => m.worker_id),
+          // 2026-09-15：响应字段是 workerId（camelCaseResponse 中间件转换），不是 worker_id
+          memberIds: membersList[i].map((m) => m.workerId),
         }));
         const assignedSet = new Set(teams.flatMap((t) => t.memberIds));
         // 4. 未分配工人 = 全部在职工人 - 已入组工人

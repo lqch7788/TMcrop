@@ -2,7 +2,15 @@
  * 班组 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';import { getTeams, createTeam, updateTeam, deleteTeam, type Team } from '../services/apiBasicDataService';
+import { create } from 'zustand';
+import { enhancedApiClient } from '../lib/apiClient';
+import { getTeams, createTeam, updateTeam, deleteTeam, type Team as ApiTeam } from '../services/apiBasicDataService';
+
+// 2026-09-15：扩展班组类型，新增 memberIds（班组成员 ID 列表，从 /team-members/teams/:id/members 拉取）
+// 之前 ScheduleAddModal 只能按 departmentName 过滤 employees 凑出"班组成员"（维度不一致 → 按部门排班 bug）
+export interface Team extends ApiTeam {
+  memberIds: string[];
+}
 
 interface TeamStore {
   teams: Team[];
@@ -16,7 +24,7 @@ interface TeamStore {
   // CRUD
   addTeam: (team: Partial<Team>) => Promise<Team>;
   editTeam: (id: string, team: Partial<Team>) => Promise<void>;
-  removeTeam: (id: string) => Promise<void>;
+  removeTeam: (teamId: string) => Promise<void>;
 
   // 刷新
   refreshTeams: () => Promise<void>;
@@ -38,8 +46,24 @@ export const useTeamStore = create<TeamStore>()(
 
         set({ loading: true, error: null });
         try {
+          // 1. 拉班组列表
           const data = await getTeams();
-          set({ teams: data, loading: false, lastFetch: now });
+          // 2. 并行拉每队成员，组装 memberIds（2026-09-15：修复按部门排班 bug）
+          const teamsWithMembers: Team[] = await Promise.all(
+            data.map(async (t): Promise<Team> => {
+              try {
+                // 2026-09-15：响应字段是 workerId（camelCaseResponse 中间件转换），不是 worker_id
+                const members = await enhancedApiClient.get<Array<{ workerId: string }>>(
+                  `/team-members/teams/${t.id}/members`
+                );
+                return { ...t, memberIds: (members || []).map((m) => m.workerId) };
+              } catch {
+                // 拉取失败时返回空成员（不影响班组列表加载）
+                return { ...t, memberIds: [] };
+              }
+            }),
+          );
+          set({ teams: teamsWithMembers, loading: false, lastFetch: now });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : '加载班组失败', loading: false });
         }
@@ -47,7 +71,7 @@ export const useTeamStore = create<TeamStore>()(
 
       addTeam: async (team) => {
         const result = await createTeam(team);
-        set(state => ({ teams: [...state.teams, result] }));
+        set(state => ({ teams: [...state.teams, { ...result, memberIds: [] }] }));
         return result;
       },
 
@@ -58,9 +82,9 @@ export const useTeamStore = create<TeamStore>()(
         }));
       },
 
-      removeTeam: async (id) => {
-        await deleteTeam(id);
-        set(state => ({ teams: state.teams.filter(t => t.id !== id) }));
+      removeTeam: async (teamId) => {
+        await deleteTeam(teamId);
+        set(state => ({ teams: state.teams.filter(t => t.id !== teamId) }));
       },
 
       refreshTeams: async () => {

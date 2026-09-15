@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Download, Edit2, LogIn, Plus, RefreshCw, Search, Settings, Trash2, X } from 'lucide-react';
+import { Clock, Download, Edit2, FileText, LogIn, Plus, RefreshCw, Search, Settings, Trash2, X } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
 import { normalizeRecord } from './types';
 import { Button } from '@/components/ui';
@@ -22,15 +22,12 @@ interface ScheduleTableProps {
   onAddClick?: () => void;
   showCheckbox?: boolean;
   exportMode?: boolean;
-  batchEditMode?: boolean;
   batchDeleteMode?: boolean;
   selectedRows?: string[];
   onSelectAll?: () => void;
   onSelectRow?: (id: string) => void;
-  onBatchEditClick?: () => void;
   onBatchDeleteClick?: () => void;
   onBatchExportClick?: () => void;
-  onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
   // 2026-09-14：导出模式取消回调（之前漏了导致按钮无效）
   onCancelBatchExport?: () => void;
@@ -45,6 +42,8 @@ interface ScheduleTableProps {
   onSwapRowClick?: (record: ScheduleRecord) => void;
   // 2026-09-14：班次设置回调（顶部右侧按钮调用）
   onShiftConfigClick?: () => void;
+  // 2026-09-15：查看调班详情（仅被调班过的排班显示按钮，点击后弹窗显示 swap_request + 调班前后对比）
+  onShowSwapDetail?: (record: ScheduleRecord) => void;
 }
 
 // 获取班次颜色
@@ -65,20 +64,18 @@ export function ScheduleTable({
   onAddClick,
   showCheckbox = false,
   exportMode = false,
-  batchEditMode = false,
   batchDeleteMode = false,
   selectedRows = [],
   onSelectAll,
   onSelectRow,
-  onBatchEditClick,
   onBatchDeleteClick,
   onBatchExportClick,
-  onCancelBatchEdit,
   onCancelBatchDelete,
   onCancelBatchExport,
   onCheckInClick,
   onCancelRowClick,
   onSwapRowClick,
+  onShowSwapDetail,
   onShiftConfigClick,
   canCreate = true,
   canEdit = true,
@@ -164,28 +161,8 @@ export function ScheduleTable({
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">排班记录</h3>
         <div className="flex gap-2">
-          {(batchEditMode || batchDeleteMode || exportMode) ? (
+          {(batchDeleteMode || exportMode) ? (
             <>
-              {batchEditMode && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="blue"
-                    onClick={onBatchEditClick}
-                    disabled={selectedRows.length === 0}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    批量编辑
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={onCancelBatchEdit}
-                  >
-                    <X className="w-4 h-4" /> 取消
-                  </Button>
-                </>
-              )}
               {batchDeleteMode && (
                 <>
                   <Button
@@ -232,12 +209,6 @@ export function ScheduleTable({
                 <Button size="sm" onClick={onAddClick}>
                   <Plus className="w-4 h-4" />
                   新增
-                </Button>
-              )}
-              {canEdit && onBatchEditClick && (
-                <Button size="sm" variant="blue" onClick={onBatchEditClick}>
-                  <Edit2 className="w-4 h-4" />
-                  编辑
                 </Button>
               )}
               {canDelete && onBatchDeleteClick && (
@@ -364,7 +335,7 @@ export function ScheduleTable({
         <Table>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow>
-              {(exportMode || batchEditMode || batchDeleteMode) && (
+              {(exportMode || batchDeleteMode) && (
                 <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
                   <Checkbox
                     checked={allSelected}
@@ -397,9 +368,9 @@ export function ScheduleTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 签到/签退
               </TableHead>
-              {/* 2026-09-14：操作列（签到/取消/调班 行尾图标按钮） */}
-              {!exportMode && !batchEditMode && !batchDeleteMode && (
-                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-32">
+              {/* 2026-09-15：操作列（编辑/签到/取消/调班 行尾图标按钮） */}
+              {!exportMode && !batchDeleteMode && (
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-40">
                   操作
                 </TableHead>
               )}
@@ -418,10 +389,10 @@ export function ScheduleTable({
                 return (
                   <TableRow
                     key={record.id}
-                    onClick={() => (exportMode || batchEditMode || batchDeleteMode) ? onSelectRow?.(record.id) : onScheduleClick?.(record)}
+                    onClick={() => (exportMode || batchDeleteMode) ? onSelectRow?.(record.id) : onScheduleClick?.(record)}
                     className="hover:bg-blue-100 cursor-pointer transition-colors"
                   >
-                    {(exportMode || batchEditMode || batchDeleteMode) && (
+                    {(exportMode || batchDeleteMode) && (
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <Checkbox
                           checked={selectedRows.includes(record.id)}
@@ -456,58 +427,102 @@ export function ScheduleTable({
                       {record.workZone}
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                      {shiftConfig?.startTime} - {shiftConfig?.endTime}
+                      {/* 2026-09-15：时间列同时显示班次名（如「早班 08:00 - 16:00」），避免用户去「班次」列来回对照 */}
+                      {record.shift}
+                      {shiftConfig?.startTime && shiftConfig?.endTime && (
+                        <> {shiftConfig.startTime} - {shiftConfig.endTime}</>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap">
-                      <span className={`
-                        inline-flex items-center px-2 py-1 rounded text-xs font-medium
-                        ${record.status === '已排班' ? 'bg-blue-100 text-blue-700' : ''}
-                        ${record.status === '已执行' ? 'bg-green-100 text-green-700' : ''}
-                        ${record.status === '已取消' ? 'bg-gray-100 text-gray-600' : ''}
-                      `}>
-                        {record.status}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`
+                          inline-flex items-center px-2 py-1 rounded text-xs font-medium
+                          ${record.status === '已排班' ? 'bg-blue-100 text-blue-700' : ''}
+                          ${record.status === '已执行' ? 'bg-green-100 text-green-700' : ''}
+                          ${record.status === '已取消' ? 'bg-gray-100 text-gray-600' : ''}
+                        `}>
+                          {record.status}
+                        </span>
+                        {/* 2026-09-15：被调班过的排班显示「已调班」徽章（swapRecordId 存在时） */}
+                        {record.swapRecordId && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700" title="该排班经历过调班审批通过">
+                            已调班
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.checkIn || '-'} / {record.checkOut || '-'}
                     </TableCell>
-                    {/* 2026-09-14：行尾操作列 */}
-                    {!exportMode && !batchEditMode && !batchDeleteMode && (
+                    {/* 2026-09-15：行尾操作列（编辑/签到/调班/取消） */}
+                    {!exportMode && !batchDeleteMode && (
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          {/* 签到/签退：仅已排班/已执行显示 */}
-                          {(record.status === '已排班' || record.status === '已执行') && onCheckInClick && (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onCheckInClick(record); }}
-                              title={record.status === '已执行' ? '修改签到/签退' : '签到 / 签退'}
-                              className="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors"
-                            >
-                              <LogIn className="w-4 h-4" />
-                            </button>
-                          )}
-                          {/* 调班申请：所有状态可发起 */}
-                          {onSwapRowClick && (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onSwapRowClick(record); }}
-                              title="调班申请"
-                              className="p-1.5 rounded hover:bg-purple-100 text-purple-600 transition-colors"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </button>
-                          )}
-                          {/* 取消排班：仅已排班显示（已执行/已取消不显示） */}
-                          {record.status === '已排班' && onCancelRowClick && (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onCancelRowClick(record); }}
-                              title="取消排班"
-                              className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
+                          {/* 2026-09-15：「已取消」记录的编辑/调班按钮置灰（已取消是终止态，不可再编辑/调班） */}
+                          {(() => {
+                            const isCancelled = record.status === '已取消';
+                            return (
+                              <>
+                                {/* 2026-09-15：查看调班详情（仅被调班过的排班显示） */}
+                                {record.swapRecordId && onShowSwapDetail && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onShowSwapDetail(record); }}
+                                    title="查看调班详情"
+                                    className="p-1.5 rounded text-orange-600 transition-colors hover:bg-orange-100"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* 编辑：已取消时置灰 */}
+                                {canEdit && onScheduleClick && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onScheduleClick(record); }}
+                                    disabled={isCancelled}
+                                    title={isCancelled ? '已取消，不可编辑' : '编辑排班'}
+                                    className="p-1.5 rounded text-blue-600 transition-colors hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* 签到/签退：仅已排班/已执行显示 */}
+                                {(record.status === '已排班' || record.status === '已执行') && onCheckInClick && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onCheckInClick(record); }}
+                                    title={record.status === '已执行' ? '修改签到/签退' : '签到 / 签退'}
+                                    className="p-1.5 rounded hover:bg-blue-100 text-blue-600 transition-colors"
+                                  >
+                                    <LogIn className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* 调班申请：已取消时置灰 */}
+                                {onSwapRowClick && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onSwapRowClick(record); }}
+                                    disabled={isCancelled}
+                                    title={isCancelled ? '已取消，不可调班' : '调班申请'}
+                                    className="p-1.5 rounded text-purple-600 transition-colors hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                  >
+                                    <RefreshCw className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* 取消排班：仅已排班显示（已执行/已取消不显示） */}
+                                {record.status === '已排班' && onCancelRowClick && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onCancelRowClick(record); }}
+                                    title="取消排班"
+                                    className="p-1.5 rounded hover:bg-red-100 text-red-600 transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     )}

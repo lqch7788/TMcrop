@@ -116,6 +116,8 @@ interface ScheduleState {
   // Actions - 调班申请
   submitSwapRequest: (request: Omit<SwapRequest, 'id' | 'status' | 'createTime'>) => Promise<void>;
   handleSwapRequest: (id: string, status: '已同意' | '已拒绝') => Promise<void>;
+  // 2026-09-15：拉取全部历史调班申请（避免刷新后数据丢失）
+  fetchSwapRequests: () => Promise<void>;
 
   // Actions - 视图控制
   setSelectedDate: (date: string) => void;
@@ -258,6 +260,34 @@ export const useScheduleStore = create<ScheduleState>()(
           // 失败显式抛错（Fail Loud），错误信息已写入 store.error
           const message = (error as Error).message;
           set({ error: message, isLoading: false });
+          throw error;
+        }
+      },
+
+      // 2026-09-15：拉取全部历史调班申请（修复刷新/重新挂载后数据丢失 bug）
+      fetchSwapRequests: async () => {
+        try {
+          // 后端响应是 { success, data: [...] }；enhancedApiClient 自动解包 data
+          // 响应字段是 snake_case（requestor_id/requestor_name/...），前端 SwapRequest 用 camelCase，需映射
+          const rows = await enhancedApiClient.get<Array<Record<string, unknown>>>(
+            '/schedules/swap-requests?limit=500',
+          );
+          const swapRequests: SwapRequest[] = (rows || []).map((r) => ({
+            id: (r.id as string) || '',
+            requesterId: ((r.requester_id ?? r.requesterId) as string) || '',
+            requesterName: ((r.requester_name ?? r.requesterName) as string) || '',
+            targetId: ((r.target_id ?? r.targetId) as string) || '',
+            targetName: ((r.target_name ?? r.targetName) as string) || '',
+            originalDate: ((r.original_date ?? r.originalDate) as string) || '',
+            targetDate: ((r.target_date ?? r.targetDate) as string) || '',
+            reason: ((r.reason as string) || '') || '',
+            status: (r.status as SwapRequest['status']) || '待审批',
+            createTime: (r.create_time as string) || '',
+          }));
+          set({ swapRequests });
+        } catch (error) {
+          // Fail Loud：错误显式抛错并写入 store.error，不静默降级
+          set({ error: (error as Error).message });
           throw error;
         }
       },
@@ -448,9 +478,11 @@ export const useScheduleStore = create<ScheduleState>()(
               s => s.staffId === request.requesterId && s.date === request.originalDate
             );
             if (originalSchedule) {
+              // 2026-09-15：写入 swapRecordId 关联该 swap_request，让排班列表能识别「已调班」并查看详情
               await get().updateSchedule(originalSchedule.id, {
                 staffId: request.targetId,
                 staffName: request.targetName,
+                swapRecordId: request.id,
               });
             }
             // 失效 originalDate + targetDate 两个日期的占用缓存
