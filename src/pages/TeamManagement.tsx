@@ -44,9 +44,20 @@ export default function TeamManagement() {
   }, [activeTab, loadShifts]);
 
   const filteredTeams = useMemo(() => {
-    if (!searchTerm) return teams;
+    // 2026-09-15：把 capabilityTags（后端 JSON 字符串）解析为数组，方便 UI 渲染
+    const teamsWithParsedTags = teams.map((t) => {
+      if (Array.isArray(t.capabilityTags)) return t;
+      if (typeof t.capabilityTags === 'string' && t.capabilityTags) {
+        try {
+          const parsed = JSON.parse(t.capabilityTags);
+          if (Array.isArray(parsed)) return { ...t, capabilityTags: parsed };
+        } catch { /* ignore parse error */ }
+      }
+      return t;
+    });
+    if (!searchTerm) return teamsWithParsedTags;
     const term = searchTerm.toLowerCase();
-    return teams.filter(t =>
+    return teamsWithParsedTags.filter(t =>
       t.teamName?.toLowerCase().includes(term) ||
       t.teamCode?.toLowerCase().includes(term) ||
       t.leaderName?.toLowerCase().includes(term)
@@ -71,10 +82,18 @@ export default function TeamManagement() {
       return;
     }
     try {
+      // 2026-09-15：保存时携带 4 个新字段（capabilityTags / dailyCapacityHours / weeklyCapacityHours / coverageRadiusKm）
+      const payload = {
+        ...newTeam,
+        capabilityTags: newTeam.capabilityTags,
+        dailyCapacityHours: newTeam.dailyCapacityHours ?? 8,
+        weeklyCapacityHours: newTeam.weeklyCapacityHours ?? 40,
+        coverageRadiusKm: newTeam.coverageRadiusKm ?? 0,
+      };
       if (editingTeam) {
-        await storeEditTeam(editingTeam.id, newTeam);
+        await storeEditTeam(editingTeam.id, payload);
       } else {
-        await addTeam(newTeam);
+        await addTeam(payload);
       }
       setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' });
     } catch (err) { logger.error('保存班组失败', err); await showAlert('保存班组失败'); }
@@ -400,6 +419,48 @@ export default function TeamManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">成员数量</label>
                   <input type="number" value={newTeam.memberCount || 0} onChange={(e) => setNewTeam({ ...newTeam, memberCount: parseInt(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+              </div>
+              {/* 2026-09-15：班组分配完整性 Phase 4-补救：编辑弹窗加 4 个新字段 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">技能标签 <span className="text-xs text-gray-400">（逗号分隔）</span></label>
+                  <input
+                    type="text"
+                    value={Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags.join(',') : (newTeam.capabilityTags || '')}
+                    onChange={(e) => setNewTeam({ ...newTeam, capabilityTags: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="如：采收,植保,灌溉"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">日产能上限 <span className="text-xs text-gray-400">（小时/天）</span></label>
+                  <input
+                    type="number"
+                    value={newTeam.dailyCapacityHours ?? 8}
+                    onChange={(e) => setNewTeam({ ...newTeam, dailyCapacityHours: parseInt(e.target.value) || 8 })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">周产能上限 <span className="text-xs text-gray-400">（小时/周）</span></label>
+                  <input
+                    type="number"
+                    value={newTeam.weeklyCapacityHours ?? 40}
+                    onChange={(e) => setNewTeam({ ...newTeam, weeklyCapacityHours: parseInt(e.target.value) || 40 })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">作业半径 <span className="text-xs text-gray-400">（公里，0=不限）</span></label>
+                  <input
+                    type="number"
+                    value={newTeam.coverageRadiusKm ?? 0}
+                    onChange={(e) => setNewTeam({ ...newTeam, coverageRadiusKm: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
               </div>
               <div>

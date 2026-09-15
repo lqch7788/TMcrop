@@ -196,6 +196,11 @@ export interface Team {
   description?: string;
   status?: string;
   createdAt?: string;
+  // 2026-09-15：班组分配完整性 Phase 4 新字段
+  capabilityTags?: string[] | string;     // 后端存 JSON 字符串
+  dailyCapacityHours?: number;
+  weeklyCapacityHours?: number;
+  coverageRadiusKm?: number;
 }
 
 /**
