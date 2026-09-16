@@ -123,21 +123,27 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
       {/* Tab 内容 */}
       {activeTab === 'basic' && (
         <div className="space-y-3">
-          <Field label="班长" value={team.leaderName || '未设置'} />
-          <Field label="成员数量" value={`${team.memberCount} 人`} />
-          <Field label="作业区域(主)" value={team.workZone || '-'} />
-          <Field label="技能标签(班组)" value={
-            team.capabilityTags?.length ? (
+          {/* 2026-09-16：3 个字段一行（grid-cols-3），技能标签 chip 满 3 个/行 */}
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="班长" value={team.leaderName || '未设置'} />
+            <Field label="成员数量" value={`${team.memberCount} 人`} />
+            <Field label="作业区域(主)" value={team.workZone || '-'} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">技能标签(班组)</label>
+            {team.capabilityTags?.length ? (
               <div className="flex flex-wrap gap-1">
                 {team.capabilityTags.map((tag) => (
                   <Badge key={tag} variant="secondary">{tag}</Badge>
                 ))}
               </div>
-            ) : '—'
-          } />
-          <Field label="日产能上限" value={`${team.dailyCapacityHours ?? 8} 小时/天`} />
-          <Field label="周产能上限" value={`${team.weeklyCapacityHours ?? 40} 小时/周`} />
-          <Field label="作业半径" value={`${team.coverageRadiusKm ?? 0} 公里（0=不限）`} />
+            ) : <span className="text-gray-400 text-sm">—</span>}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="日产能上限" value={`${team.dailyCapacityHours ?? 8} 小时/天`} />
+            <Field label="周产能上限" value={`${team.weeklyCapacityHours ?? 40} 小时/周`} />
+            <Field label="作业半径" value={`${team.coverageRadiusKm ?? 0} 公里（0=不限）`} />
+          </div>
           {team.description && <Field label="班组描述" value={team.description} />}
         </div>
       )}
