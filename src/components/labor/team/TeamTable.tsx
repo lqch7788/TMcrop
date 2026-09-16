@@ -62,6 +62,11 @@ export function TeamTable({
     leaderName: '',
     description: '',
     workZone: '',
+    // 2026-09-16：4 个新字段（技能标签 + 产能 + 半径）
+    capabilityTags: [] as string[],
+    dailyCapacityHours: 8,
+    weeklyCapacityHours: 40,
+    coverageRadiusKm: 0,
   });
 
   // P0-3 修复：当前用户从认证 Store 读取（V2.1 铁律：组件不直接读写 localStorage）
@@ -92,18 +97,31 @@ export function TeamTable({
   // 打开新建班组弹窗
   const openCreateModal = () => {
     setEditingTeam(null);
-    setFormData({ name: '', leaderName: '', description: '', workZone: '' });
+    setFormData({
+      name: '', leaderName: '', description: '', workZone: '',
+      capabilityTags: [], dailyCapacityHours: 8, weeklyCapacityHours: 40, coverageRadiusKm: 0,
+    });
     setIsFormOpen(true);
   };
 
   // 打开编辑弹窗
   const openEditModal = (team: Team) => {
     setEditingTeam(team);
+    // capabilityTags 可能是 JSON 字符串（后端 GET 返回）或数组
+    let capTags: string[] = [];
+    if (Array.isArray(team.capabilityTags)) capTags = team.capabilityTags;
+    else if (typeof team.capabilityTags === 'string' && team.capabilityTags) {
+      try { const p = JSON.parse(team.capabilityTags); if (Array.isArray(p)) capTags = p; } catch { /* ignore */ }
+    }
     setFormData({
       name: team.name,
       leaderName: team.leaderName,
       description: team.description || '',
       workZone: team.workZone || '',
+      capabilityTags: capTags,
+      dailyCapacityHours: team.dailyCapacityHours ?? 8,
+      weeklyCapacityHours: team.weeklyCapacityHours ?? 40,
+      coverageRadiusKm: team.coverageRadiusKm ?? 0,
     });
     setIsFormOpen(true);
   };
@@ -537,6 +555,69 @@ export function TeamTable({
               value={formData.workZone}
               onChange={(e) => setFormData({ ...formData, workZone: e.target.value })}
               placeholder="请输入作业区域"
+            />
+          </div>
+          {/* 2026-09-16：4 个新字段（技能标签 chip 多选 + 产能 + 半径） */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              技能标签
+              <span className="ml-2 text-xs text-gray-400">（点击 chip 选择班组可承接的任务类型）</span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {['采收', '施肥', '打药', '巡检', '灌溉', '运输', '修剪', '清园'].map((preset) => {
+                const currentTags = Array.isArray(formData.capabilityTags) ? formData.capabilityTags : [];
+                const selected = currentTags.includes(preset);
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      const next = selected
+                        ? currentTags.filter((s: string) => s !== preset)
+                        : [...currentTags, preset];
+                      setFormData({ ...formData, capabilityTags: next });
+                    }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      selected
+                        ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
+                        : 'bg-white border-gray-300 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50'
+                    }`}
+                  >
+                    {selected ? '✓ ' : '+ '}{preset}
+                  </button>
+                );
+              })}
+            </div>
+            {Array.isArray(formData.capabilityTags) && formData.capabilityTags.length > 0 && (
+              <div className="text-xs text-gray-500 mt-2">
+                已选 {formData.capabilityTags.length} 个：{(formData.capabilityTags as string[]).join('、')}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">日产能上限 <span className="text-xs text-gray-400">（小时/天）</span></Label>
+              <Input
+                type="number"
+                value={formData.dailyCapacityHours ?? 8}
+                onChange={(e) => setFormData({ ...formData, dailyCapacityHours: parseInt(e.target.value) || 8 })}
+              />
+            </div>
+            <div>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">周产能上限 <span className="text-xs text-gray-400">（小时/周）</span></Label>
+              <Input
+                type="number"
+                value={formData.weeklyCapacityHours ?? 40}
+                onChange={(e) => setFormData({ ...formData, weeklyCapacityHours: parseInt(e.target.value) || 40 })}
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">作业半径 <span className="text-xs text-gray-400">（公里，0=不限）</span></Label>
+            <Input
+              type="number"
+              value={formData.coverageRadiusKm ?? 0}
+              onChange={(e) => setFormData({ ...formData, coverageRadiusKm: parseFloat(e.target.value) || 0 })}
             />
           </div>
           <div>
