@@ -456,7 +456,8 @@ export default function TeamManagement() {
                     );
                   })}
                   {/* 其他 - 2026-09-16：点击展开自定义输入 */}
-                  {newTeam.capabilityTags?.includes('__custom_input__') ? (
+                  {/* 2026-09-16 修复：判断「__custom_input__ 标记 OR 已有 custom: 前缀项」才显示 input */}
+                  {(Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.some((t: string) => t === '__custom_input__' || t.startsWith('custom:'))) ? (
                     <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 border border-emerald-400 rounded-full">
                       <input
                         autoFocus
