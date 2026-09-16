@@ -99,7 +99,8 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
       isOpen={open}
       onClose={onClose}
       title={`班组详情 - ${team.name}`}
-      size="lg"
+      size="xxxl"
+      width={1200}
       showFooter={false}
     >
       {/* Tab 切换 */}
