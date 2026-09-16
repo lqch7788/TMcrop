@@ -325,6 +325,13 @@ export function TeamTable({
               </>
             ) : (
               <>
+                {/* 2026-09-16：调换顺序 — 新建班组移到批量删除前面 */}
+                {canCreate && (
+                  <Button size="sm" onClick={openCreateModal}>
+                    <Plus className="w-4 h-4" />
+                    新建班组
+                  </Button>
+                )}
                 {canDelete && (
                   <Button
                     size="sm"
@@ -333,12 +340,6 @@ export function TeamTable({
                   >
                     <Trash2 className="w-4 h-4" />
                     批量删除
-                  </Button>
-                )}
-                {canCreate && (
-                  <Button size="sm" onClick={openCreateModal}>
-                    <Plus className="w-4 h-4" />
-                    新建班组
                   </Button>
                 )}
               </>
