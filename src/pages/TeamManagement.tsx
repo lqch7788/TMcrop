@@ -382,7 +382,7 @@ export default function TeamManagement() {
       {/* 班组编辑弹窗 */}
       {showTeamModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingTeam ? '编辑班组' : '新增班组'}</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -421,27 +421,51 @@ export default function TeamManagement() {
                     className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
-              {/* 2026-09-15：班组分配完整性 Phase 4-补救：编辑弹窗加 4 个新字段 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">技能标签 <span className="text-xs text-gray-400">（逗号分隔）</span></label>
-                  <input
-                    type="text"
-                    value={Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags.join(',') : (newTeam.capabilityTags || '')}
-                    onChange={(e) => setNewTeam({ ...newTeam, capabilityTags: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="如：采收,植保,灌溉"
-                  />
+              {/* 2026-09-16：技能标签 chip 多选 UI（替代原文本输入，更直观） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  技能标签
+                  <span className="ml-2 text-xs text-gray-400">（点击下方 chip 选择班组可承接的任务类型）</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['采收', '施肥', '打药', '巡检', '灌溉', '运输', '修剪', '清园'].map((preset) => {
+                    const selected = Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.includes(preset);
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                          const next = selected
+                            ? current.filter((s) => s !== preset)
+                            : [...current, preset];
+                          setNewTeam({ ...newTeam, capabilityTags: next });
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                          selected
+                            ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
+                            : 'bg-white border-gray-300 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {selected ? '✓ ' : '+ '}{preset}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">日产能上限 <span className="text-xs text-gray-400">（小时/天）</span></label>
-                  <input
-                    type="number"
-                    value={newTeam.dailyCapacityHours ?? 8}
-                    onChange={(e) => setNewTeam({ ...newTeam, dailyCapacityHours: parseInt(e.target.value) || 8 })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+                {Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    已选 {newTeam.capabilityTags.length} 个：{newTeam.capabilityTags.join('、')}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">日产能上限 <span className="text-xs text-gray-400">（小时/天）</span></label>
+                <input
+                  type="number"
+                  value={newTeam.dailyCapacityHours ?? 8}
+                  onChange={(e) => setNewTeam({ ...newTeam, dailyCapacityHours: parseInt(e.target.value) || 8 })}
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
