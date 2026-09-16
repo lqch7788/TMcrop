@@ -95,7 +95,6 @@ export function TaskTab({
   onCancel,
   onReassign,
   onOvertime,
-  onBatchAssign,
   onContinue,
   onAccept,
   onRemind,
