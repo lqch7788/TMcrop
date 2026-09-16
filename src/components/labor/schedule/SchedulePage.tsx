@@ -9,7 +9,7 @@ import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
 import { ScheduleAddModal, ScheduleEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
-import type { ScheduleRecord, ScheduleRecordLike, ShiftType } from './types';
+import type { ScheduleRecord, ScheduleRecordLike } from './types';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { useScheduleStore } from '@/stores';
@@ -26,10 +26,8 @@ function getWorkZone(record: ScheduleRecordLike): string {
 
 export function SchedulePage() {
   const [searchParams] = useSearchParams();
-  // URL 参数：teamId 用于过滤排班占用；prefillDate/prefillShift 用于打开新增弹窗时预填
+  // URL 参数 teamId 用于过滤排班占用
   const teamIdFilter = searchParams.get('teamId') ?? undefined;
-  const prefillDate = searchParams.get('prefillDate') ?? undefined;
-  const prefillShift = searchParams.get('prefillShift') ?? '早班';
 
   const {
     scheduleList,
@@ -57,24 +55,6 @@ export function SchedulePage() {
       void useScheduleStore.getState().fetchOccupations(selectedDate, teamIdFilter);
     }
   }, [selectedDate, teamIdFilter]);
-
-  // URL 参数 prefillDate/prefillShift：自动打开新增排班弹窗并预填
-  // 仅在 URL 含 prefillDate 时触发，避免影响正常访问
-  useEffect(() => {
-    if (prefillDate) {
-      setSelectedDate(prefillDate);
-      setNewSchedule({
-        staffId: '',
-        staffName: '',
-        date: prefillDate,
-        shift: prefillShift as ShiftType,
-        workZone: '',
-      });
-      setShowAddModal(true);
-    }
-    // 故意只依赖 prefillDate，避免 prefillShift 反复触发重置表单
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefillDate]);
 
   // UI状态
   const [showShiftEditor, setShowShiftEditor] = useState(false);
