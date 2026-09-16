@@ -44,12 +44,11 @@ export function useTeam(): UseTeamReturn {
     total: storeTeams.length,
   });
 
-  // 初次加载时拉取数据（fetchData 为 store 稳定引用，不会触发重复加载）
+  // 拉取数据（2026-09-17 修复：每次 mount 都触发 fetchData，不再依赖长度判断）
+  // 之前 length === 0 判断在硬刷新页面后不可靠（store state 时序问题），导致 fetchData 不触发
   useEffect(() => {
-    if (storeTeams.length === 0 && storeUnassigned.length === 0) {
-      fetchData();
-    }
-  }, [fetchData, storeTeams.length, storeUnassigned.length]);
+    fetchData();
+  }, [fetchData]);
 
   // 过滤后的班组
   const filteredTeams = useMemo(() => {
