@@ -4693,6 +4693,16 @@ function fixApprovedProductionPlanStatus(): void {
     }
   }
 
+  // 2026-09-15：teams 表加 description 列（修复历史 schema 漏建 — POST/PUT 引用了它但缺列）
+  try {
+    db.run(`ALTER TABLE teams ADD COLUMN description TEXT`);
+    seedLog.info('✓ teams 表添加 description 列（修复历史 bug）');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      seedLog.skip('• teams.description:', e.message);
+    }
+  }
+
   // 2026-09-15：班组分配管理完整性 Phase 1 - 数据模型迁移（10 个缺口修复）
   // 新增 4 张表 + 7 个字段 ALTER，全部幂等
 
