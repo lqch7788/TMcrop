@@ -103,14 +103,16 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
       width={1200}
       showFooter={false}
     >
-      {/* Tab 切换 */}
+      {/* Tab 切换（2026-09-16：粗体 + 选中蓝色背景） */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg mb-4 overflow-x-auto">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap ${
-              activeTab === t.id ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`px-3 py-1.5 text-xs font-bold rounded transition-colors whitespace-nowrap ${
+              activeTab === t.id
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:text-gray-900'
             }`}
           >
             {t.label}
