@@ -485,22 +485,22 @@ export const useTeamManageStore = create<TeamManageState>()(
     /** #8 获取班组某天可用性 */
     fetchAvailability: async (teamId, date) => {
       try {
-        const data = await enhancedApiClient.get<{
-          id: string; teamId: string; date: string;
-          availableHours: number; busyHours: number; onLeaveCount: number;
-          scheduledWorkerCount: number; totalWorkerCount: number; updatedAt: string;
-        } | null>(`/teams/${teamId}/availability?date=${date}`);
+        // 2026-09-16：兜底兼容 camelCase + snake_case（防御字段命名不一致）
+        const data = await enhancedApiClient.get<Record<string, any> | null>(
+          `/teams/${teamId}/availability?date=${date}`,
+        );
         if (!data) return null;
+        const pick = (a: any, b: any) => a ?? b; // 优先 camelCase，缺失回退 snake_case
         return {
           id: data.id,
-          team_id: data.teamId,
+          team_id: pick(data.teamId, data.team_id),
           date: data.date,
-          available_hours: data.availableHours,
-          busy_hours: data.busyHours,
-          on_leave_count: data.onLeaveCount,
-          scheduled_worker_count: data.scheduledWorkerCount,
-          total_worker_count: data.totalWorkerCount,
-          updated_at: data.updatedAt,
+          available_hours: pick(data.availableHours, data.available_hours) ?? 0,
+          busy_hours: pick(data.busyHours, data.busy_hours) ?? 0,
+          on_leave_count: pick(data.onLeaveCount, data.on_leave_count) ?? 0,
+          scheduled_worker_count: pick(data.scheduledWorkerCount, data.scheduled_worker_count) ?? 0,
+          total_worker_count: pick(data.totalWorkerCount, data.total_worker_count) ?? 0,
+          updated_at: pick(data.updatedAt, data.updated_at),
         };
       } catch (error) {
         console.error('[fetchAvailability] 失败:', error);

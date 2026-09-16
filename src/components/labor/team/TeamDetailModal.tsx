@@ -258,12 +258,27 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
             <span className="text-sm text-gray-600">日期：</span>
             <Input type="date" value={availDate} onChange={(e) => setAvailDate(e.target.value)} className="w-40" />
           </div>
+          {/* 2026-09-16：字段含义说明（避免用户看不懂英文字段） */}
+          <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
+            <div className="font-medium mb-1">📊 字段含义</div>
+            <div><strong>可用工时</strong> = 班组当日剩余可承接任务的小时数</div>
+            <div><strong>已排工时</strong> = 班组所有成员当日排班占用的总小时数</div>
+            <div><strong>总成员数</strong> = 班组当前在职成员人数</div>
+            <div><strong>利用率</strong> = 已排工时 / (总成员数 × 8h)</div>
+          </div>
           {avail ? (
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="可用工时" value={`${avail.available_hours}h`} color="green" />
-              <Stat label="已排工时" value={`${avail.busy_hours}h`} color="orange" />
-              <Stat label="总成员数" value={`${avail.total_worker_count} 人`} />
-              <Stat label="利用率" value={avail.total_worker_count > 0 ? `${Math.round(avail.busy_hours / (avail.total_worker_count * 8) * 100)}%` : '—'} />
+              <Stat label="可用工时（剩余可派工时）" value={`${avail.available_hours ?? 0}h`} color="green" />
+              <Stat label="已排工时（占用的工时）" value={`${avail.busy_hours ?? 0}h`} color="orange" />
+              <Stat label="总成员数" value={`${avail.total_worker_count ?? 0} 人`} />
+              <Stat
+                label="利用率"
+                value={
+                  (avail.total_worker_count ?? 0) > 0
+                    ? `${Math.round(((avail.busy_hours ?? 0) / (avail.total_worker_count * 8)) * 100)}%`
+                    : '—'
+                }
+              />
             </div>
           ) : (
             <p className="text-gray-400 text-sm text-center py-4">该日期无排班数据</p>
