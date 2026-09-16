@@ -82,10 +82,14 @@ export default function TeamManagement() {
       return;
     }
     try {
-      // 2026-09-15：保存时携带 4 个新字段（capabilityTags / dailyCapacityHours / weeklyCapacityHours / coverageRadiusKm）
+      // 2026-09-16：清理自定义标签（去 custom: 前缀 + 移除 __custom_input__ 内部标记）
+      const cleanedTags = (Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [])
+        .filter((t: string) => t !== '__custom_input__')
+        .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
+        .filter((t: string) => t.length > 0);
       const payload = {
         ...newTeam,
-        capabilityTags: newTeam.capabilityTags,
+        capabilityTags: cleanedTags,
         dailyCapacityHours: newTeam.dailyCapacityHours ?? 8,
         weeklyCapacityHours: newTeam.weeklyCapacityHours ?? 40,
         coverageRadiusKm: newTeam.coverageRadiusKm ?? 0,
@@ -421,21 +425,21 @@ export default function TeamManagement() {
                     className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
-              {/* 2026-09-16：技能标签 chip 多选 UI（替代原文本输入，更直观） */}
+              {/* 2026-09-16：技能标签 chip 多选 UI + 其他自定义输入 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   技能标签
-                  <span className="ml-2 text-xs text-gray-400">（点击下方 chip 选择班组可承接的任务类型）</span>
+                  <span className="ml-2 text-xs text-gray-400">（点击 chip 选择，预设外可点「其他」输入自定义）</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {['采收', '施肥', '打药', '巡检', '灌溉', '运输', '修剪', '清园'].map((preset) => {
-                    const selected = Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.includes(preset);
+                    const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                    const selected = current.includes(preset);
                     return (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => {
-                          const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
                           const next = selected
                             ? current.filter((s) => s !== preset)
                             : [...current, preset];
@@ -451,10 +455,64 @@ export default function TeamManagement() {
                       </button>
                     );
                   })}
+                  {/* 其他 - 2026-09-16：点击展开自定义输入 */}
+                  {newTeam.capabilityTags?.includes('__custom_input__') ? (
+                    <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 border border-emerald-400 rounded-full">
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="输入自定义标签"
+                        value={newTeam.capabilityTags?.find((t: string) => t.startsWith('custom:'))?.replace('custom:', '') || ''}
+                        onChange={(e) => {
+                          const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                          const filtered = current.filter((t: string) => !t.startsWith('custom:') && t !== '__custom_input__');
+                          setNewTeam({
+                            ...newTeam,
+                            capabilityTags: e.target.value ? [...filtered, `custom:${e.target.value.trim()}`] : [...filtered, '__custom_input__'],
+                          });
+                        }}
+                        onBlur={() => {
+                          const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                          const hasValue = current.some((t: string) => t.startsWith('custom:') && t.replace('custom:', '').trim());
+                          if (!hasValue) {
+                            setNewTeam({ ...newTeam, capabilityTags: current.filter((t: string) => t !== '__custom_input__') });
+                          }
+                        }}
+                        className="w-32 text-xs border-none bg-transparent outline-none"
+                        style={{ minWidth: '120px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                          setNewTeam({ ...newTeam, capabilityTags: current.filter((t: string) => t !== '__custom_input__') });
+                        }}
+                        className="text-emerald-700 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = Array.isArray(newTeam.capabilityTags) ? newTeam.capabilityTags : [];
+                        setNewTeam({ ...newTeam, capabilityTags: [...current, '__custom_input__'] });
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-dashed border-gray-400 text-gray-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50"
+                    >
+                      + 其他
+                    </button>
+                  )}
                 </div>
-                {Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.length > 0 && (
+                {Array.isArray(newTeam.capabilityTags) && newTeam.capabilityTags.filter((t: string) => t !== '__custom_input__').length > 0 && (
                   <div className="text-xs text-gray-500 mt-2">
-                    已选 {newTeam.capabilityTags.length} 个：{newTeam.capabilityTags.join('、')}
+                    已选 {newTeam.capabilityTags.filter((t: string) => t !== '__custom_input__').length} 个：{
+                      newTeam.capabilityTags
+                        .filter((t: string) => t !== '__custom_input__')
+                        .map((t: string) => t.startsWith('custom:') ? `「${t.replace('custom:', '')}」` : t)
+                        .join('、')
+                    }
                   </div>
                 )}
               </div>
