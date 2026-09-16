@@ -253,6 +253,12 @@ export const useTeamManageStore = create<TeamManageState>()(
      */
     createTeam: async (data) => {
       try {
+        // 2026-09-16：清理 capabilityTags（去 __custom_input__ 标记 + custom: 前缀）
+        const rawTags = Array.isArray(data.capabilityTags) ? data.capabilityTags : [];
+        const capabilityTags = rawTags
+          .filter((t: string) => t !== '__custom_input__')
+          .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
+          .filter((t: string) => t.length > 0);
         const apiTeam = await apiCreateTeam({
           teamName: data.name || '',
           teamCode: `TM${Date.now()}`,
@@ -260,6 +266,11 @@ export const useTeamManageStore = create<TeamManageState>()(
           ...(data.leaderId && data.leaderId !== 'new' ? { leaderId: data.leaderId } : {}),
           leaderName: data.leaderName,
           description: data.description,
+          // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
+          capabilityTags,
+          dailyCapacityHours: data.dailyCapacityHours,
+          weeklyCapacityHours: data.weeklyCapacityHours,
+          coverageRadiusKm: data.coverageRadiusKm,
         });
         set((state) => ({ teams: [mapApiTeam(apiTeam), ...state.teams] }));
       } catch (error) {
@@ -269,14 +280,30 @@ export const useTeamManageStore = create<TeamManageState>()(
 
     /**
      * 更新班组（API 成功后才更新本地状态）
+     * 2026-09-16：补全 capability_tags/daily_capacity_hours/weekly_capacity_hours/coverage_radius_km 4 个新字段（之前漏掉导致刷新后数据丢失）
      */
     updateTeam: async (id, data) => {
       try {
+        // 2026-09-16：清理 capabilityTags 中的 __custom_input__ 标记 + custom: 前缀（前端 UI 内部标记）
+        const rawTags = Array.isArray(data.capabilityTags) ? data.capabilityTags : [];
+        const capabilityTags = rawTags
+          .filter((t: string) => t !== '__custom_input__')
+          .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
+          .filter((t: string) => t.length > 0);
         await apiUpdateTeam(id, {
           teamName: data.name,
+          teamCode: data.teamCode,
+          departmentOid: data.departmentOid,
           leaderId: data.leaderId,
           leaderName: data.leaderName,
+          shiftType: data.shiftType,
+          memberCount: data.memberCount,
           description: data.description,
+          // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
+          capabilityTags,
+          dailyCapacityHours: data.dailyCapacityHours,
+          weeklyCapacityHours: data.weeklyCapacityHours,
+          coverageRadiusKm: data.coverageRadiusKm,
         });
         set((state) => ({
           teams: state.teams.map((t) =>
