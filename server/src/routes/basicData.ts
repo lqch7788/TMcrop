@@ -1166,6 +1166,7 @@ router.put('/teams/:id', (req, res) => {
           updated_at = ?
       WHERE id = ?
     `, [teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description, status, capJson, dailyCapacityHours, weeklyCapacityHours, coverageRadiusKm, now, id]);
+    saveDatabase(); // 2026-09-16 修复：PUT 后必须 saveDatabase() 持久化（sql.js 内存数据库），否则刷新页面数据丢失
 
     res.json({ success: true, message: '班组更新成功' });
   } catch (error) {
