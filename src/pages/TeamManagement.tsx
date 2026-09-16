@@ -33,6 +33,10 @@ export default function TeamManagement() {
     loadTeams, addTeam, editTeam: storeEditTeam, removeTeam,
   } = useTeamStore();
 
+  // 2026-09-16：编辑 Modal 同步子资源（区域 + 任务能力）
+  const syncTeamZones = useTeamManageStore((s) => s.syncTeamZones);
+  const syncTeamCapabilities = useTeamManageStore((s) => s.syncTeamCapabilities);
+
   // 班次 Store
   const { shifts, loadShifts, addShift, updateShift: storeUpdateShift, removeShift } = useShiftStore();
 
@@ -94,10 +98,24 @@ export default function TeamManagement() {
         weeklyCapacityHours: newTeam.weeklyCapacityHours ?? 40,
         coverageRadiusKm: newTeam.coverageRadiusKm ?? 0,
       };
+      let teamId: string;
       if (editingTeam) {
-        await storeEditTeam(editingTeam.id, payload);
+        teamId = editingTeam.id;
+        await storeEditTeam(teamId, payload);
       } else {
-        await addTeam(payload);
+        const newTeamResult = await addTeam(payload);
+        teamId = newTeamResult?.id ?? '';
+      }
+      // 2026-09-16：同步子资源（区域 + 任务能力，从详情弹窗迁移过来）
+      if (teamId) {
+        try {
+          await Promise.all([
+            syncTeamZones(teamId, Array.isArray(newTeam.zones) ? newTeam.zones : []),
+            syncTeamCapabilities(teamId, cleanedTags),
+          ]);
+        } catch (err) {
+          console.error('同步子资源失败:', err);
+        }
       }
       setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' });
     } catch (err) { logger.error('保存班组失败', err); await showAlert('保存班组失败'); }
@@ -545,6 +563,43 @@ export default function TeamManagement() {
                     className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
+              </div>
+              {/* 2026-09-16：作业区域 chip 多选（从详情弹窗迁移过来） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  作业区域（多选）
+                  <span className="ml-2 text-xs text-gray-400">（点击 chip 选择班组可作业的园区/区域）</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['zone_001', 'zone_002', 'zone_003', 'zone_004', 'zone_005'].map((preset) => {
+                    const currentZones = Array.isArray(newTeam.zones) ? newTeam.zones : [];
+                    const selected = currentZones.some((z: any) => (typeof z === 'string' ? z === preset : z.zone_id === preset));
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          const next = selected
+                            ? currentZones.filter((z: any) => (typeof z === 'string' ? z !== preset : z.zone_id !== preset))
+                            : [...currentZones, preset];
+                          setNewTeam({ ...newTeam, zones: next });
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                          selected
+                            ? 'bg-blue-100 border-blue-400 text-blue-700'
+                            : 'bg-white border-gray-300 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {selected ? '✓ ' : '+ '}{preset}
+                      </button>
+                    );
+                  })}
+                </div>
+                {Array.isArray(newTeam.zones) && newTeam.zones.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    已选 {newTeam.zones.length} 个区域
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>

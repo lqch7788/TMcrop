@@ -1,17 +1,16 @@
 /**
- * 班组详情弹窗（2026-09-15：扩展为 Tab 化，集成 Phase 2 新能力）
+ * 班组详情弹窗（2026-09-16：纯只读）
+ *
+ * 设计：详情 = 查看，不允许任何编辑操作。区域/能力等子资源在编辑 Modal 中管理。
  *
  * Tab：
  *  - 基本信息：原 Team 字段 + capabilityTags + capacity + coverage
  *  - 成员：原成员列表（基于 memberIds 反查名字）
- *  - 作业区域（#1）：zone_assignments 列表 + 增删
- *  - 任务能力（#3）：task_capabilities 列表 + 增删
  *  - 变更历史（#7）：member-changes 时间线
  *  - 可用性（#8）：指定日期可用工时
  */
 import { useEffect, useState } from 'react';
-import { Plus, X } from 'lucide-react';
-import { Badge, Button, Input, UnifiedModal } from '@/components/ui';
+import { Badge, UnifiedModal } from '@/components/ui';
 import type { Team } from './types';
 import { getWorkerName, useTeamManageStore } from '@/stores/useTeamManageStore';
 
@@ -21,25 +20,15 @@ interface TeamDetailModalProps {
   team: Team | null;
 }
 
-type DetailTab = 'basic' | 'members' | 'zones' | 'capabilities' | 'changes' | 'availability';
+type DetailTab = 'basic' | 'members' | 'changes' | 'availability';
 
 export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('basic');
-  const [zoneInput, setZoneInput] = useState('');
-  const [capInput, setCapInput] = useState('');
   const [availDate, setAvailDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const fetchZones = useTeamManageStore((s) => s.fetchZones);
-  const addZone = useTeamManageStore((s) => s.addZone);
-  const removeZone = useTeamManageStore((s) => s.removeZone);
-  const fetchCapabilities = useTeamManageStore((s) => s.fetchCapabilities);
-  const addCapability = useTeamManageStore((s) => s.addCapability);
-  const removeCapability = useTeamManageStore((s) => s.removeCapability);
   const fetchMemberChanges = useTeamManageStore((s) => s.fetchMemberChanges);
   const fetchAvailability = useTeamManageStore((s) => s.fetchAvailability);
 
-  const [zones, setZones] = useState<Array<{ id: string; zone_id: string; role: string }>>([]);
-  const [caps, setCaps] = useState<Array<{ id: string; task_type: string }>>([]);
   const [changes, setChanges] = useState<Array<{
     id: string; worker_id: string; change_type: string;
     operator_name: string | null; reason: string | null; created_at: string;
@@ -48,26 +37,20 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
     available_hours: number; busy_hours: number; total_worker_count: number;
   } | null>(null);
 
-  // 打开弹窗时刷新数据
+  // 打开弹窗时刷新变更历史
   useEffect(() => {
     if (!open || !team) return;
     let cancelled = false;
     void (async () => {
-      const [z, c, ch] = await Promise.all([
-        fetchZones(team.id),
-        fetchCapabilities(team.id),
-        fetchMemberChanges(team.id, 30),
-      ]);
+      const ch = await fetchMemberChanges(team.id, 30);
       if (cancelled) return;
-      setZones(z.map((x) => ({ id: x.id, zone_id: x.zone_id, role: x.role })));
-      setCaps(c.map((x) => ({ id: x.id, task_type: x.task_type })));
       setChanges(ch.map((x) => ({
         id: x.id, worker_id: x.worker_id, change_type: x.change_type,
         operator_name: x.operator_name, reason: x.reason, created_at: x.created_at,
       })));
     })();
     return () => { cancelled = true; };
-  }, [open, team, fetchZones, fetchCapabilities, fetchMemberChanges]);
+  }, [open, team, fetchMemberChanges]);
 
   // 切到可用性 Tab 时加载
   useEffect(() => {
@@ -88,8 +71,6 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
   const tabs: Array<{ id: DetailTab; label: string }> = [
     { id: 'basic', label: '基本信息' },
     { id: 'members', label: `成员 (${team.memberIds.length})` },
-    { id: 'zones', label: `作业区域 (${zones.length})` },
-    { id: 'capabilities', label: `任务能力 (${caps.length})` },
     { id: 'changes', label: `变更历史 (${changes.length})` },
     { id: 'availability', label: '可用性' },
   ];
@@ -120,10 +101,9 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
         ))}
       </div>
 
-      {/* Tab 内容 */}
+      {/* 基本信息 - 2026-09-16：3 列布局 */}
       {activeTab === 'basic' && (
         <div className="space-y-3">
-          {/* 2026-09-16：3 个字段一行（grid-cols-3），技能标签 chip 满 3 个/行 */}
           <div className="grid grid-cols-3 gap-3">
             <Field label="班长" value={team.leaderName || '未设置'} />
             <Field label="成员数量" value={`${team.memberCount} 人`} />
@@ -145,9 +125,14 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
             <Field label="作业半径" value={`${team.coverageRadiusKm ?? 0} 公里（0=不限）`} />
           </div>
           {team.description && <Field label="班组描述" value={team.description} />}
+          {/* 2026-09-16：明确提示子资源去编辑入口修改 */}
+          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-2 mt-4">
+            💡 区域/任务能力等子资源请通过「编辑班组」弹窗修改（点行操作列「编辑」图标）
+          </div>
         </div>
       )}
 
+      {/* 成员 */}
       {activeTab === 'members' && (
         <div className="space-y-2">
           {team.memberIds && team.memberIds.length > 0 ? (
@@ -163,85 +148,7 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
         </div>
       )}
 
-      {activeTab === 'zones' && (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={zoneInput}
-              onChange={(e) => setZoneInput(e.target.value)}
-              placeholder="输入作业区域 ID（如 zone_001）"
-              className="flex-1"
-            />
-            <Button size="sm" onClick={async () => {
-              if (!zoneInput.trim()) return;
-              await addZone(team.id, zoneInput.trim(), 'allowed');
-              setZoneInput('');
-              setZones(await fetchZones(team.id).then((arr) => arr.map((x) => ({ id: x.id, zone_id: x.zone_id, role: x.role }))));
-            }}>
-              <Plus className="w-4 h-4" /> 添加
-            </Button>
-          </div>
-          {zones.length > 0 ? (
-            <div className="space-y-1">
-              {zones.map((z) => (
-                <div key={z.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <div>
-                    <span className="text-sm text-gray-900">{z.zone_id}</span>
-                    <Badge variant={z.role === 'primary' ? 'default' : 'secondary'} className="ml-2">{z.role}</Badge>
-                  </div>
-                  <Button size="icon" variant="ghost" onClick={async () => {
-                    await removeZone(team.id, z.zone_id, z.role);
-                    setZones(await fetchZones(team.id).then((arr) => arr.map((x) => ({ id: x.id, zone_id: x.zone_id, role: x.role }))));
-                  }}>
-                    <X className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm text-center py-4">暂无作业区域</p>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'capabilities' && (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={capInput}
-              onChange={(e) => setCapInput(e.target.value)}
-              placeholder="输入任务类型（如 采收 / 施肥 / 打药 / 巡检 / 灌溉）"
-              className="flex-1"
-            />
-            <Button size="sm" onClick={async () => {
-              if (!capInput.trim()) return;
-              await addCapability(team.id, capInput.trim());
-              setCapInput('');
-              setCaps(await fetchCapabilities(team.id).then((arr) => arr.map((x) => ({ id: x.id, task_type: x.task_type }))));
-            }}>
-              <Plus className="w-4 h-4" /> 添加
-            </Button>
-          </div>
-          {caps.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {caps.map((c) => (
-                <div key={c.id} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 rounded">
-                  <span className="text-sm text-blue-800">{c.task_type}</span>
-                  <button onClick={async () => {
-                    await removeCapability(team.id, c.task_type);
-                    setCaps(await fetchCapabilities(team.id).then((arr) => arr.map((x) => ({ id: x.id, task_type: x.task_type }))));
-                  }}>
-                    <X className="w-3 h-3 text-red-500" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm text-center py-4">暂无任务能力</p>
-          )}
-        </div>
-      )}
-
+      {/* 变更历史 */}
       {activeTab === 'changes' && (
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {changes.length > 0 ? changes.map((c) => (
@@ -260,13 +167,13 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
         </div>
       )}
 
+      {/* 可用性 */}
       {activeTab === 'availability' && (
         <div className="space-y-3">
           <div className="flex gap-2 items-center">
             <span className="text-sm text-gray-600">日期：</span>
-            <Input type="date" value={availDate} onChange={(e) => setAvailDate(e.target.value)} className="w-40" />
+            <input type="date" value={availDate} onChange={(e) => setAvailDate(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded text-sm" />
           </div>
-          {/* 2026-09-16：字段含义说明（避免用户看不懂英文字段） */}
           <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
             <div className="font-medium mb-1">📊 字段含义</div>
             <div><strong>可用工时</strong> = 班组当日剩余可承接任务的小时数</div>

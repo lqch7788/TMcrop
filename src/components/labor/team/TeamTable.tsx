@@ -47,6 +47,10 @@ export function TeamTable({
     filteredTeams,
   } = useTeam();
 
+  // 2026-09-16：编辑 Modal 同步子资源（区域 + 任务能力）
+  const syncTeamZones = useTeamManageStore((s) => s.syncTeamZones);
+  const syncTeamCapabilities = useTeamManageStore((s) => s.syncTeamCapabilities);
+
   // 批量选择状态
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [batchDeleteMode, setBatchDeleteMode] = useState(false);
@@ -62,11 +66,12 @@ export function TeamTable({
     leaderName: '',
     description: '',
     workZone: '',
-    // 2026-09-16：4 个新字段（技能标签 + 产能 + 半径）
+    // 2026-09-16：5 个新字段
     capabilityTags: [] as string[],
     dailyCapacityHours: 8,
     weeklyCapacityHours: 40,
     coverageRadiusKm: 0,
+    zones: [] as string[], // 2026-09-16：从详情弹窗迁移过来的作业区域多选
   });
 
   // P0-3 修复：当前用户从认证 Store 读取（V2.1 铁律：组件不直接读写 localStorage）
@@ -100,6 +105,7 @@ export function TeamTable({
     setFormData({
       name: '', leaderName: '', description: '', workZone: '',
       capabilityTags: [], dailyCapacityHours: 8, weeklyCapacityHours: 40, coverageRadiusKm: 0,
+      zones: [],
     });
     setIsFormOpen(true);
   };
@@ -122,6 +128,7 @@ export function TeamTable({
       dailyCapacityHours: team.dailyCapacityHours ?? 8,
       weeklyCapacityHours: team.weeklyCapacityHours ?? 40,
       coverageRadiusKm: team.coverageRadiusKm ?? 0,
+      zones: [], // 2026-09-16：作业区域从详情迁移到编辑弹窗（首次加载留空，保存时清空旧关联再重写）
     });
     setIsFormOpen(true);
   };
@@ -132,26 +139,43 @@ export function TeamTable({
   };
 
   // 处理创建/编辑
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 2026-09-16：清理自定义标签（去 custom: 前缀 + 移除 __custom_input__ 内部标记）
     const cleanedTags = (Array.isArray(formData.capabilityTags) ? formData.capabilityTags : [])
       .filter((t: string) => t !== '__custom_input__')
       .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
       .filter((t: string) => t.length > 0);
+
+    let teamId: string;
     if (editingTeam) {
-      updateTeam(editingTeam.id, {
+      teamId = editingTeam.id;
+      await updateTeam(teamId, {
         ...formData,
         capabilityTags: cleanedTags,
         leaderName: formData.leaderName,
       });
     } else {
-      createTeam({
+      const newTeam = await createTeam({
         ...formData,
         capabilityTags: cleanedTags,
         leaderId: 'new',
         leaderName: formData.leaderName,
       });
+      teamId = newTeam?.id ?? '';
     }
+
+    // 2026-09-16：同步子资源（区域 + 任务能力，从详情弹窗迁移过来）
+    if (teamId) {
+      try {
+        await Promise.all([
+          syncTeamZones(teamId, Array.isArray(formData.zones) ? formData.zones : []),
+          syncTeamCapabilities(teamId, cleanedTags),
+        ]);
+      } catch (err) {
+        console.error('同步子资源失败:', err);
+      }
+    }
+
     setIsFormOpen(false);
   };
 
@@ -683,6 +707,43 @@ export function TeamTable({
               value={formData.coverageRadiusKm ?? 0}
               onChange={(e) => setFormData({ ...formData, coverageRadiusKm: parseFloat(e.target.value) || 0 })}
             />
+          </div>
+          {/* 2026-09-16：作业区域 + 任务能力 chip 多选（从详情弹窗迁移过来） */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              作业区域（多选）
+              <span className="ml-2 text-xs text-gray-400">（点击 chip 选择班组可作业的园区/区域）</span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {['zone_001', 'zone_002', 'zone_003', 'zone_004', 'zone_005'].map((preset) => {
+                const currentZones = Array.isArray(formData.zones) ? formData.zones : [];
+                const selected = currentZones.some((z: any) => (typeof z === 'string' ? z === preset : z.zone_id === preset));
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      const next = selected
+                        ? currentZones.filter((z: any) => (typeof z === 'string' ? z !== preset : z.zone_id !== preset))
+                        : [...currentZones, preset];
+                      setFormData({ ...formData, zones: next });
+                    }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      selected
+                        ? 'bg-blue-100 border-blue-400 text-blue-700'
+                        : 'bg-white border-gray-300 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    {selected ? '✓ ' : '+ '}{preset}
+                  </button>
+                );
+              })}
+            </div>
+            {Array.isArray(formData.zones) && formData.zones.length > 0 && (
+              <div className="text-xs text-gray-500 mt-2">
+                已选 {formData.zones.length} 个区域
+              </div>
+            )}
           </div>
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">描述</Label>

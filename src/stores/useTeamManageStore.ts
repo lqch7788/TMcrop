@@ -179,9 +179,13 @@ interface TeamManageState {
   fetchZones: (teamId: string) => Promise<TeamZoneAssignment[]>;
   addZone: (teamId: string, zoneId: string, role?: 'primary' | 'allowed') => Promise<void>;
   removeZone: (teamId: string, zoneId: string, role: string) => Promise<void>;
+  // 2026-09-16：全量同步作业区域（先删旧再加新，简化编辑交互）
+  syncTeamZones: (teamId: string, zoneIds: string[]) => Promise<void>;
   // #3 任务类型能力
   fetchCapabilities: (teamId: string) => Promise<TeamTaskCapability[]>;
   addCapability: (teamId: string, taskType: string) => Promise<void>;
+  // 2026-09-16：全量同步任务能力（与 syncTeamZones 对称）
+  syncTeamCapabilities: (teamId: string, taskTypes: string[]) => Promise<void>;
   removeCapability: (teamId: string, taskType: string) => Promise<void>;
   // #7 变更历史
   fetchMemberChanges: (teamId: string, limit?: number) => Promise<TeamMemberChange[]>;
@@ -413,6 +417,40 @@ export const useTeamManageStore = create<TeamManageState>()(
         await enhancedApiClient.delete(`/teams/${teamId}/zones/${zoneId}?role=${role}`);
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '移除作业区域失败' });
+        throw error;
+      }
+    },
+
+    /** 2026-09-16：全量同步作业区域（删除旧 + 添加新，简化编辑交互） */
+    syncTeamZones: async (teamId, zoneIds) => {
+      try {
+        // 先删旧
+        const existing = await enhancedApiClient.get<Array<{ zoneId: string; role: string }>>(`/teams/${teamId}/zones`);
+        for (const z of existing || []) {
+          await enhancedApiClient.delete(`/teams/${teamId}/zones/${z.zoneId}?role=${z.role}`);
+        }
+        // 再加新
+        for (const zid of zoneIds) {
+          await enhancedApiClient.post(`/teams/${teamId}/zones`, { zoneId: zid, role: 'allowed' });
+        }
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '同步作业区域失败' });
+        throw error;
+      }
+    },
+
+    /** 2026-09-16：全量同步任务能力（先删旧再加新） */
+    syncTeamCapabilities: async (teamId, taskTypes) => {
+      try {
+        const existing = await enhancedApiClient.get<Array<{ taskType: string }>>(`/teams/${teamId}/capabilities`);
+        for (const c of existing || []) {
+          await enhancedApiClient.delete(`/teams/${teamId}/capabilities/${c.taskType}`);
+        }
+        for (const t of taskTypes) {
+          await enhancedApiClient.post(`/teams/${teamId}/capabilities`, { taskType: t });
+        }
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '同步任务能力失败' });
         throw error;
       }
     },
