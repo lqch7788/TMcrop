@@ -11,6 +11,7 @@ import type { Team } from './types';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { useTeamManageStore } from '@/stores/useTeamManageStore';
 import { showConfirm, showAlert } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 import { Input } from '@/components/ui';
