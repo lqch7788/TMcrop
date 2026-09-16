@@ -273,6 +273,8 @@ export const useTeamManageStore = create<TeamManageState>()(
           coverageRadiusKm: data.coverageRadiusKm,
         });
         set((state) => ({ teams: [mapApiTeam(apiTeam), ...state.teams] }));
+        // 2026-09-16：创建后主动重新拉取，确保列表显示新班组
+        await get().fetchData();
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '创建班组失败' });
       }
@@ -312,6 +314,9 @@ export const useTeamManageStore = create<TeamManageState>()(
               : t
           ),
         }));
+        // 2026-09-16：编辑成功后主动重新拉取数据，避免乐观更新与后端字段映射不一致导致 list 显示空
+        // （前端 data.capabilityTags 是数组，但 data.capabilityTags 通过 {...t, ...data} 合并时可能丢字段；re-fetch 保证 store 与 DB 同步）
+        await get().fetchData();
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '更新班组失败' });
       }
