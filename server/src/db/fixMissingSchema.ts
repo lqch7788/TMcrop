@@ -4622,6 +4622,21 @@ function fixApprovedProductionPlanStatus(): void {
   // 修复策略：清空孤儿数据 + 按 teams.department_name 平分 employees 到同部门下各班组。
   // 幂等：每次启动执行相同结果（先清空再按当前 teams/employees 重算）。
   try {
+    // 2026-09-17 修复：原逻辑每次启动无条件清空 team_members 并按部门重建（一次性迁移被留在启动路径），
+    // 导致用户手动分配的班组成员每次服务器重启全部丢失（分配工人 → 刷新/重启 → 成员复原为按部门均分）。
+    // 改为仅当存在孤儿记录（team_id 或 worker_id 在对应主表中不存在）时才执行重建。
+    const orphanResult = db.exec(`
+      SELECT COUNT(*) AS c FROM team_members tm
+      WHERE NOT EXISTS (SELECT 1 FROM teams t WHERE t.id = tm.team_id)
+         OR NOT EXISTS (SELECT 1 FROM employees e WHERE e.id = tm.worker_id)
+    `);
+    const orphanCount = orphanResult.length > 0 && orphanResult[0].values.length > 0
+      ? Number(orphanResult[0].values[0][0] ?? 0)
+      : 0;
+
+    if (orphanCount === 0) {
+      seedLog.skip('• team_members 数据修复: 无孤儿记录，跳过（保留用户分配）:');
+    } else {
     const beforeResult = db.exec('SELECT COUNT(*) AS c FROM team_members');
     const beforeCount = beforeResult.length > 0 && beforeResult[0].values.length > 0
       ? Number(beforeResult[0].values[0][0] ?? 0)
@@ -4679,6 +4694,7 @@ function fixApprovedProductionPlanStatus(): void {
       }
     }
     seedLog.info(`✓ team_members 数据修复：清空 ${beforeCount} 条孤儿，新增 ${insertedCount} 条 (按部门 round-robin 分配)`);
+    }
   } catch (e: any) {
     seedLog.skip('• team_members 数据修复失败:', e.message);
   }

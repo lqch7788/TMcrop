@@ -14,7 +14,7 @@ export interface UseTeamReturn {
   createTeam: (data: Partial<Team>) => void;
   updateTeam: (id: string, data: Partial<Team>) => void;
   deleteTeam: (id: string) => void;
-  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => void;
+  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role?: string) => void;
   removeWorker: (teamId: string, workerId: string) => void;
   getTeamById: (id: string) => Team | undefined;
   filteredTeams: Team[];
@@ -37,7 +37,7 @@ export function useTeam(): UseTeamReturn {
     removeWorker: storeRemove,
   } = useTeamManageStore();
 
-  const [filters, setFilters] = useState<TeamFilters>({ name: '', leaderName: '', workZone: '' });
+  const [filters, setFiltersState] = useState<TeamFilters>({ name: '', leaderName: '', workZone: '' });
   const [pagination, setPagination] = useState<TeamPagination>({
     currentPage: 1,
     pageSize: 10,
@@ -67,11 +67,20 @@ export function useTeam(): UseTeamReturn {
   }, [storeTeams, filters]);
 
   // 分页数据
+  // 2026-09-17 修复：页码越界保护——筛选/删除后若当前页超出总页数，此前会渲染空列表
   const paginatedTeams = useMemo(() => {
-    const start = (pagination.currentPage - 1) * pagination.pageSize;
+    const totalPages = Math.max(1, Math.ceil(filteredTeams.length / pagination.pageSize));
+    const safePage = Math.min(pagination.currentPage, totalPages);
+    const start = (safePage - 1) * pagination.pageSize;
     const end = start + pagination.pageSize;
     return filteredTeams.slice(start, end);
   }, [filteredTeams, pagination]);
+
+  // 2026-09-17 修复：筛选条件变化时重置到第 1 页，否则在第 2 页筛选会显示空列表
+  const setFilters = useCallback((next: TeamFilters) => {
+    setFiltersState(next);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
 
   const setPage = useCallback((page: number) => {
     setPagination((prev) => ({ ...prev, currentPage: page }));
@@ -96,10 +105,10 @@ export function useTeam(): UseTeamReturn {
     storeDelete(id);
   }, [storeDelete]);
 
-  // 分配工人到班组
+  // 分配工人到班组（2026-09-17：补传 role，此前角色选择在下拉链路中被丢弃）
   const assignWorkers = useCallback(
-    (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => {
-      storeAssign(teamId, workerIds, operatorId, operatorName);
+    (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role = 'member') => {
+      storeAssign(teamId, workerIds, operatorId, operatorName, role);
     },
     [storeAssign]
   );

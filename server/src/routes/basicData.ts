@@ -1050,8 +1050,8 @@ router.get('/teams', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT t.id, t.oid, t.team_code, t.team_name, t.department_oid, t.leader_id, t.leader_name, t.shift_type, t.member_count, t.status, t.created_at,
-             t.capability_tags, t.daily_capacity_hours, t.weekly_capacity_hours, t.coverage_radius_km, t.work_zone,
+      SELECT t.id, t.oid, t.team_code, t.team_name, t.department_oid, t.leader_id, t.leader_name, t.shift_type, t.member_count, t.status, t.created_at, t.updated_at,
+             t.capability_tags, t.daily_capacity_hours, t.weekly_capacity_hours, t.coverage_radius_km, t.work_zone, t.description,
              d.name as department_name
       FROM teams t
       LEFT JOIN departments d ON t.department_oid = d.oid
@@ -1097,7 +1097,7 @@ router.post('/teams', (req, res) => {
     // 2026-09-15：加 4 个字段（capability_tags / daily_capacity_hours / weekly_capacity_hours / coverage_radius_km）
     // 2026-09-17：加 workZone（作业区域），workZone 用 departmentName 兜底（兼容老数据）
     const {
-      teamName, teamCode, departmentOid, leaderName, shiftType, memberCount, description,
+      teamName, teamCode, departmentOid, departmentName, leaderName, shiftType, memberCount, description,
       workZone, // 2026-09-17：作业区域（之前漏了，导致刷新后丢失）
       capabilityTags = null,
       dailyCapacityHours = 8,
@@ -1123,6 +1123,7 @@ router.post('/teams', (req, res) => {
       workZone || departmentName || '', // 2026-09-17：workZone 优先，否则用部门名兜底
       now, now,
     ]);
+    saveDatabase(); // 2026-09-17 修复：POST 后必须 saveDatabase()（与 PUT 一致），否则新建班组重启即丢失
 
     res.json({ success: true, message: '班组创建成功', data: { id, oid, teamCode, teamName } });
   } catch (error) {
@@ -1191,6 +1192,7 @@ router.delete('/teams/:id', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`UPDATE teams SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+    saveDatabase(); // 2026-09-17 修复：DELETE 后必须 saveDatabase()，否则重启后已删除班组"复活"
 
     res.json({ success: true, message: '班组删除成功' });
   } catch (error) {

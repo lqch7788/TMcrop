@@ -1,7 +1,7 @@
 /**
  * 班组任务类型能力服务（2026-09-15 Phase 2 - #3 任务类型能力矩阵）
  */
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
 
 function handleServiceError(error: unknown, operation: string): never {
@@ -40,6 +40,7 @@ export async function addTeamCapability(teamId: string, taskType: string): Promi
       `INSERT INTO team_task_capabilities (id, team_id, task_type, created_at) VALUES (?, ?, ?, ?)`,
       [id, teamId, taskType, now],
     );
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后任务能力丢失
     return { id, team_id: teamId, task_type: taskType, created_at: now };
   } catch (error) {
     return handleServiceError(error, '添加班组任务能力');
@@ -53,6 +54,7 @@ export async function removeTeamCapability(teamId: string, taskType: string): Pr
       `DELETE FROM team_task_capabilities WHERE team_id = ? AND task_type = ?`,
       [teamId, taskType],
     );
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后删除的能力"复活"
     return true;
   } catch (error) {
     return handleServiceError(error, '删除班组任务能力');

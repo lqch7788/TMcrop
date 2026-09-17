@@ -1,7 +1,7 @@
 /**
  * 班组分配表格组件
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Edit2, Eye, Plus, RotateCcw, Save, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { useTeamManageStore } from '@/stores/useTeamManageStore';
+import { useZoneStore } from '@/stores/useZoneStore';
 import { showConfirm, showAlert } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -51,6 +52,10 @@ export function TeamTable({
   // 2026-09-16：编辑 Modal 同步子资源（区域 + 任务能力）
   const syncTeamZones = useTeamManageStore((s) => s.syncTeamZones);
   const syncTeamCapabilities = useTeamManageStore((s) => s.syncTeamCapabilities);
+  const fetchTeamZones = useTeamManageStore((s) => s.fetchZones);
+  // 2026-09-17：作业区域选项改用真实数据源（zones 表），此前硬编码 zone_001~005 在 DB 中不存在
+  const zones = useZoneStore((s) => s.zones);
+  const loadZones = useZoneStore((s) => s.loadZones);
 
   // 批量选择状态
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -77,6 +82,20 @@ export function TeamTable({
 
   // P0-3 修复：当前用户从认证 Store 读取（V2.1 铁律：组件不直接读写 localStorage）
   const currentUser = useAuthStore((s) => s.currentUser);
+
+  // 2026-09-17：加载真实作业区域列表（编辑弹窗选项数据源，替代硬编码 zone_001~005）
+  useEffect(() => {
+    loadZones();
+  }, [loadZones]);
+
+  // 2026-09-17 修复：Store 操作失败此前只写进 state.error 无人展示（静默失败），改为弹窗提示
+  const storeError = useTeamManageStore((s) => s.error);
+  useEffect(() => {
+    if (storeError) {
+      showAlert(`操作失败：${storeError}`);
+      useTeamManageStore.setState({ error: null });
+    }
+  }, [storeError]);
 
   // ★ Task 15：跳到排班页 + 预填班组/日期/班次（url-deep-link-modal-pattern）
   const handleBatchSchedule = (team: Team) => {
@@ -111,14 +130,22 @@ export function TeamTable({
     setIsFormOpen(true);
   };
 
-  // 打开编辑弹窗
-  const openEditModal = (team: Team) => {
+  // 打开编辑弹窗（2026-09-17：改为 async，回填该班组已关联的作业区域）
+  const openEditModal = async (team: Team) => {
     setEditingTeam(team);
     // capabilityTags 可能是 JSON 字符串（后端 GET 返回）或数组
     let capTags: string[] = [];
     if (Array.isArray(team.capabilityTags)) capTags = team.capabilityTags;
     else if (typeof team.capabilityTags === 'string' && team.capabilityTags) {
       try { const p = JSON.parse(team.capabilityTags); if (Array.isArray(p)) capTags = p; } catch { /* ignore */ }
+    }
+    // 2026-09-17 修复：加载该班组已关联的作业区域（此前写死 []，导致每次保存都把已有区域清空）
+    let existingZoneIds: string[] = [];
+    try {
+      const assigned = await fetchTeamZones(team.id);
+      existingZoneIds = assigned.map((z) => z.zone_id);
+    } catch (err) {
+      console.error('加载班组作业区域失败:', err);
     }
     setFormData({
       name: team.name,
@@ -129,14 +156,14 @@ export function TeamTable({
       dailyCapacityHours: team.dailyCapacityHours ?? 8,
       weeklyCapacityHours: team.weeklyCapacityHours ?? 40,
       coverageRadiusKm: team.coverageRadiusKm ?? 0,
-      zones: [], // 2026-09-16：作业区域从详情迁移到编辑弹窗（首次加载留空，保存时清空旧关联再重写）
+      zones: existingZoneIds,
     });
     setIsFormOpen(true);
   };
 
-  // 处理分配（操作人取当前登录用户，realName 优先）
-  const handleAssign = (teamId: string, workerIds: string[]) => {
-    assignWorkers(teamId, workerIds, currentUser?.oid || '', currentUser?.realName || currentUser?.username || '');
+  // 处理分配（操作人取当前登录用户，realName 优先；2026-09-17 修复：补传 role，此前角色选择被丢弃）
+  const handleAssign = (teamId: string, workerIds: string[], role: string = 'member') => {
+    assignWorkers(teamId, workerIds, currentUser?.oid || '', currentUser?.realName || currentUser?.username || '', role);
   };
 
   // 处理创建/编辑
@@ -183,7 +210,7 @@ export function TeamTable({
   // 处理删除
   const handleDelete = async (team: Team) => {
     if (await showConfirm(`确定删除班组 "${team.name}" 吗？`)) {
-      deleteTeam(team.id);
+      await deleteTeam(team.id); // 2026-09-17：等待完成（此前不等待，失败也无从感知）
     }
   };
 
@@ -194,7 +221,8 @@ export function TeamTable({
       return;
     }
     if (await showConfirm(`确定删除选中的 ${selectedRows.length} 个班组吗？`)) {
-      selectedRows.forEach(id => deleteTeam(id));
+      // 2026-09-17 修复：等待全部删除完成（此前 forEach 不等待，UI 先清空选择、删除结果无从确认）
+      await Promise.all(selectedRows.map((id) => deleteTeam(id)));
       setSelectedRows([]);
       setBatchDeleteMode(false);
     }
@@ -715,18 +743,18 @@ export function TeamTable({
               作业区域（多选）
               <span className="ml-2 text-xs text-gray-400">（点击 chip 选择班组可作业的园区/区域）</span>
             </Label>
-            <div className="flex flex-wrap gap-2">
-              {['zone_001', 'zone_002', 'zone_003', 'zone_004', 'zone_005'].map((preset) => {
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {zones.filter((z) => z.status !== 'inactive').map((zone) => {
                 const currentZones = Array.isArray(formData.zones) ? formData.zones : [];
-                const selected = currentZones.some((z: any) => (typeof z === 'string' ? z === preset : z.zone_id === preset));
+                const selected = currentZones.includes(zone.id);
                 return (
                   <button
-                    key={preset}
+                    key={zone.id}
                     type="button"
                     onClick={() => {
                       const next = selected
-                        ? currentZones.filter((z: any) => (typeof z === 'string' ? z !== preset : z.zone_id !== preset))
-                        : [...currentZones, preset];
+                        ? currentZones.filter((z) => z !== zone.id)
+                        : [...currentZones, zone.id];
                       setFormData({ ...formData, zones: next });
                     }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
@@ -735,7 +763,7 @@ export function TeamTable({
                         : 'bg-white border-gray-300 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
-                    {selected ? '✓ ' : '+ '}{preset}
+                    {selected ? '✓ ' : '+ '}{zone.zoneName}
                   </button>
                 );
               })}
