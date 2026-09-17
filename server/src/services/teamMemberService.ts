@@ -3,7 +3,7 @@
  * 提供班组成员的增删改查操作
  */
 
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
 
 /**
@@ -43,7 +43,7 @@ export async function getTeamMembers(teamId: string): Promise<TeamMemberWithName
       SELECT tm.*, e.name as worker_name, e.employee_code as worker_code
       FROM team_members tm
       JOIN employees e ON tm.worker_id = e.id
-      WHERE tm.team_id = ?
+      WHERE tm.team_id = ? AND tm.left_at IS NULL
       ORDER BY tm.role DESC, tm.joined_at ASC
     `);
     stmt.bind([teamId]);
@@ -175,6 +175,7 @@ export async function addTeamMembers(
     }
 
     insertStmt.free();
+    saveDatabase(); // 2026-09-17 修复：事务提交后持久化，否则重启后批量分配丢失
     return results;
   } catch (error) {
     return handleServiceError(error, '批量添加成员');
@@ -196,6 +197,7 @@ function updateTeamMemberCount(teamId: string): void {
   const updateStmt = db.prepare('UPDATE teams SET member_count = ?, updated_at = ? WHERE id = ?');
   updateStmt.run([result.count, new Date().toISOString(), teamId]);
   updateStmt.free();
+  saveDatabase(); // 2026-09-17 修复：写操作必须持久化（sql.js 内存库），否则重启后成员变动丢失
 }
 
 /**
@@ -213,20 +215,41 @@ export async function addTeamMemberWithLog(
     const now = new Date().toISOString();
     const { isPrimary = true, percentage = 100, operatorId, operatorName, reason } = ctx;
 
-    // 1. 写主表 team_members
-    db.run(
-      `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, teamId, workerId, role, now, now, now],
+    // 1. 写主表 team_members（2026-09-17 修复：软删除记录仍在表中，唯一约束下需先查后写，否则重新添加报 UNIQUE 错误）
+    const existRes = db.exec(
+      'SELECT id FROM team_members WHERE team_id = ? AND worker_id = ?',
+      [teamId, workerId],
     );
+    const existMemberId = existRes[0]?.values?.[0]?.[0] as string | undefined;
+    if (existMemberId) {
+      db.run(
+        `UPDATE team_members SET left_at = NULL, left_reason = NULL, role = ?, joined_at = ?, updated_at = ? WHERE id = ?`,
+        [role, now, now, existMemberId],
+      );
+    } else {
+      db.run(
+        `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, teamId, workerId, role, now, now, now],
+      );
+    }
 
-    // 2. 写主职/兼职关联 worker_team_assignments
-    const wtaId = generateId('WTA');
-    db.run(
-      `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [wtaId, workerId, teamId, role, isPrimary ? 1 : 0, percentage, now, now],
+    // 2. 写主职/兼职关联 worker_team_assignments（同样 UNIQUE(worker_id, team_id, role)）
+    const wtaExistRes = db.exec(
+      'SELECT id FROM worker_team_assignments WHERE worker_id = ? AND team_id = ? AND role = ?',
+      [workerId, teamId, role],
     );
+    const wtaExistId = wtaExistRes[0]?.values?.[0]?.[0] as string | undefined;
+    if (wtaExistId) {
+      db.run('UPDATE worker_team_assignments SET left_at = NULL WHERE id = ?', [wtaExistId]);
+    } else {
+      const wtaId = generateId('WTA');
+      db.run(
+        `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [wtaId, workerId, teamId, role, isPrimary ? 1 : 0, percentage, now, now],
+      );
+    }
 
     // 3. 写变更日志
     await recordMemberChange(teamId, workerId, 'add', null, { role, isPrimary, percentage }, operatorId, operatorName, reason);
@@ -258,21 +281,49 @@ export async function addTeamMembersWithLog(
     db.run('BEGIN TRANSACTION');
     try {
       for (const workerId of workerIds) {
-        const id = generateId('TM');
-        db.run(
-          `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [id, teamId, workerId, role, now, now, now],
+        // 2026-09-17 修复：team_members 有 (team_id, worker_id) 唯一约束，软删除（left_at）的记录
+        // 仍留在表中，直接 INSERT 会报 UNIQUE constraint failed，导致"移除成员后重新加回"永久失败。
+        // 存在旧记录时改为复活更新（清空 left_at）。
+        const existRes = db.exec(
+          'SELECT id FROM team_members WHERE team_id = ? AND worker_id = ?',
+          [teamId, workerId],
         );
-        // 同步写 worker_team_assignments
-        const wtaId = generateId('WTA');
-        db.run(
-          `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
-           VALUES (?, ?, ?, ?, 1, 100, ?, ?)`,
-          [wtaId, workerId, teamId, role, now, now],
+        const existId = existRes[0]?.values?.[0]?.[0] as string | undefined;
+
+        let memberId: string;
+        if (existId) {
+          db.run(
+            `UPDATE team_members SET left_at = NULL, left_reason = NULL, role = ?, joined_at = ?, updated_at = ? WHERE id = ?`,
+            [role, now, now, existId],
+          );
+          memberId = existId;
+        } else {
+          memberId = generateId('TM');
+          db.run(
+            `INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [memberId, teamId, workerId, role, now, now, now],
+          );
+        }
+
+        // 同步写 worker_team_assignments（该表 UNIQUE(worker_id, team_id, role)，同样需先查后写）
+        const wtaRes = db.exec(
+          'SELECT id FROM worker_team_assignments WHERE worker_id = ? AND team_id = ? AND role = ?',
+          [workerId, teamId, role],
         );
+        const wtaExistId = wtaRes[0]?.values?.[0]?.[0] as string | undefined;
+        if (wtaExistId) {
+          db.run('UPDATE worker_team_assignments SET left_at = NULL WHERE id = ?', [wtaExistId]);
+        } else {
+          db.run(
+            `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
+             VALUES (?, ?, ?, ?, 1, 100, ?, ?)`,
+            [generateId('WTA'), workerId, teamId, role, now, now],
+          );
+        }
+
         await recordMemberChange(teamId, workerId, 'add', null, { role }, operatorId, operatorName);
-        results.push({ id, team_id: teamId, worker_id: workerId, role, joined_at: now, created_at: now, updated_at: now });
+        results.push({ id: memberId, team_id: teamId, worker_id: workerId, role, joined_at: now, created_at: now, updated_at: now });
       }
 
       // 更新 member_count
@@ -288,6 +339,7 @@ export async function addTeamMembersWithLog(
       db.run('ROLLBACK');
       throw error;
     }
+    saveDatabase(); // 2026-09-17 修复：事务提交后持久化，否则重启后批量分配丢失
     return results;
   } catch (error) {
     return handleServiceError(error, '批量添加班组成员（含日志）');
@@ -361,6 +413,7 @@ function updateTeamMemberCountActive(teamId: string): void {
   const result = countStmt.getAsObject() as { count: number };
   countStmt.free();
   db.run('UPDATE teams SET member_count = ?, updated_at = ? WHERE id = ?', [result.count, new Date().toISOString(), teamId]);
+  saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后移除成员的操作丢失
 }
 
 /**

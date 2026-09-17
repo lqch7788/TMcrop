@@ -1,7 +1,7 @@
 /**
  * 工人-班组兼职关联服务（2026-09-15 Phase 2 - #10 跨班组成员共享）
  */
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
 
 function handleServiceError(error: unknown, operation: string): never {
@@ -52,6 +52,7 @@ export async function addWorkerTeam(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, workerId, teamId, role, isPrimary ? 1 : 0, percentage, now, now],
     );
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后兼职关联丢失
     return { id, worker_id: workerId, team_id: teamId, role, is_primary: isPrimary ? 1 : 0, percentage, joined_at: now, left_at: null, created_at: now };
   } catch (error) {
     return handleServiceError(error, '添加工人班组兼职');
@@ -65,6 +66,7 @@ export async function removeWorkerTeam(workerId: string, teamId: string): Promis
       `UPDATE worker_team_assignments SET left_at = ? WHERE worker_id = ? AND team_id = ? AND left_at IS NULL`,
       [new Date().toISOString(), workerId, teamId],
     );
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后解除兼职"复活"
     return true;
   } catch (error) {
     return handleServiceError(error, '解除工人班组兼职');

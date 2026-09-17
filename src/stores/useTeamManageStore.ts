@@ -116,8 +116,9 @@ export interface WorkerTeamAssignment {
 
 /**
  * 后端班组记录 → 前端 Team 映射
- * workZone 使用后端 departmentName（班组所属部门作为作业区域展示）
- * 2026-09-15：加 capability_tags / daily_capacity_hours / weekly_capacity_hours / coverage_radius_km 字段映射
+ * 2026-09-17 修复：GET /basic-data/teams 响应是 camelCase（路由内已转驼峰 + 解析 JSON），
+ * 此前按 snake_case 读取（capability_tags 等）全部取到 undefined，走默认值兜底，
+ * 导致技能标签 / 日产能 / 周产能 / 作业半径 编辑保存后刷新显示为空或默认值（看起来像丢失）。
  */
 function mapApiTeam(api: ApiTeam & {
   capability_tags?: string | null;
@@ -125,10 +126,14 @@ function mapApiTeam(api: ApiTeam & {
   weekly_capacity_hours?: number | null;
   coverage_radius_km?: number | null;
 }): Team {
+  // 兼容 camelCase（当前后端）与 snake_case（旧字段名）
+  const rawTags = api.capabilityTags ?? api.capability_tags;
   let capabilityTags: string[] | undefined;
-  if (api.capability_tags) {
+  if (Array.isArray(rawTags)) {
+    capabilityTags = rawTags;
+  } else if (typeof rawTags === 'string' && rawTags) {
     try {
-      const parsed = JSON.parse(api.capability_tags);
+      const parsed = JSON.parse(rawTags);
       if (Array.isArray(parsed)) capabilityTags = parsed as string[];
     } catch { /* ignore parse error */ }
   }
@@ -140,13 +145,16 @@ function mapApiTeam(api: ApiTeam & {
     memberIds: [],
     memberCount: api.memberCount ?? 0,
     description: api.description,
-    workZone: api.departmentName,
+    // 2026-09-17 修复：workZone 优先读 teams.work_zone 列（用户编辑保存的值），
+    // 老数据该列为 null 时兜底用部门名（历史兼容）。之前直接用 departmentName，
+    // 导致「编辑作业区域 → 保存 → 刷新」后显示旧部门名，看起来像数据丢失。
+    workZone: api.workZone ?? api.departmentName ?? '',
     createdAt: api.createdAt ?? '',
-    updatedAt: api.createdAt ?? '',
+    updatedAt: api.updatedAt ?? api.createdAt ?? '',
     capabilityTags,
-    dailyCapacityHours: api.daily_capacity_hours ?? 8,
-    weeklyCapacityHours: api.weekly_capacity_hours ?? 40,
-    coverageRadiusKm: api.coverage_radius_km ?? 0,
+    dailyCapacityHours: api.dailyCapacityHours ?? api.daily_capacity_hours ?? 8,
+    weeklyCapacityHours: api.weeklyCapacityHours ?? api.weekly_capacity_hours ?? 40,
+    coverageRadiusKm: api.coverageRadiusKm ?? api.coverage_radius_km ?? 0,
   };
 }
 
@@ -171,7 +179,7 @@ interface TeamManageState {
   createTeam: (data: Partial<Team>) => Promise<void>;
   updateTeam: (id: string, data: Partial<Team>) => Promise<void>;
   deleteTeam: (id: string) => Promise<void>;
-  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => Promise<void>;
+  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role?: string) => Promise<void>;
   removeWorker: (teamId: string, workerId: string) => Promise<void>;
 
   // 2026-09-15：班组分配完整性 Phase 3 - 新增 actions
@@ -225,6 +233,10 @@ export const useTeamManageStore = create<TeamManageState>()(
           ...mapApiTeam(t),
           // 2026-09-15：响应字段是 workerId（camelCaseResponse 中间件转换），不是 worker_id
           memberIds: membersList[i].map((m) => m.workerId),
+          // 2026-09-17 修复：成员数以实际 team_members 记录为准。
+          // teams.member_count 是冗余字段，与实际成员表长期不同步（如 T001 字段=8 实际=1），
+          // 此前直接展示该字段，用户看到的"成员数量"是错的。
+          memberCount: membersList[i].length,
         }));
         const assignedSet = new Set(teams.flatMap((t) => t.memberIds));
         // 4. 未分配工人 = 全部在职工人 - 已入组工人
@@ -266,6 +278,8 @@ export const useTeamManageStore = create<TeamManageState>()(
           ...(data.leaderId && data.leaderId !== 'new' ? { leaderId: data.leaderId } : {}),
           leaderName: data.leaderName,
           description: data.description,
+          // 2026-09-17 修复：补传 workZone（作业区域），之前漏传导致新建班组刷新后该列为空
+          workZone: data.workZone,
           // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
           capabilityTags,
           dailyCapacityHours: data.dailyCapacityHours,
@@ -340,12 +354,13 @@ export const useTeamManageStore = create<TeamManageState>()(
      * 批量分配工人到班组
      * 仅 API 成功后更新本地状态（禁止"无论成败都乐观更新"的静默失败）
      */
-    assignWorkers: async (teamId, workerIds, operatorId, operatorName) => {
+    assignWorkers: async (teamId, workerIds, operatorId, operatorName, role = 'member') => {
       try {
         await enhancedApiClient.post(`/team-members/teams/${teamId}/members/batch`, {
           workerIds,
           operatorId,
           operatorName,
+          role, // 2026-09-17 修复：此前未传 role，后端默认 'member'，用户选的班长/安全员等角色全部丢失
         });
         set((state) => {
           const team = state.teams.find((t) => t.id === teamId);
