@@ -34,6 +34,21 @@ export async function listTeamCapabilities(teamId: string): Promise<TeamTaskCapa
 export async function addTeamCapability(teamId: string, taskType: string): Promise<TeamTaskCapability> {
   try {
     const db = getDatabase();
+    // 2026-09-17 修复：幂等处理。表有 UNIQUE(team_id, task_type) 约束，
+    // 前端 syncTeamCapabilities 用"先删后加"，并发/重复保存时会触发 UNIQUE constraint failed。
+    // 已存在时直接返回现有记录。
+    const existRes = db.exec(
+      'SELECT * FROM team_task_capabilities WHERE team_id = ? AND task_type = ?',
+      [teamId, taskType],
+    );
+    if (existRes.length > 0 && existRes[0].values.length > 0) {
+      const cols = existRes[0].columns;
+      const row = existRes[0].values[0];
+      const obj: Record<string, unknown> = {};
+      cols.forEach((col, i) => { obj[col] = row[i]; });
+      return obj as unknown as TeamTaskCapability;
+    }
+
     const id = generateId('TCA');
     const now = new Date().toISOString();
     db.run(

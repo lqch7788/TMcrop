@@ -107,7 +107,7 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
           <div className="grid grid-cols-3 gap-3">
             <Field label="班长" value={team.leaderName || '未设置'} />
             <Field label="成员数量" value={`${team.memberCount} 人`} />
-            <Field label="作业区域(主)" value={team.workZone || '-'} />
+            {/* 2026-09-17：作业区域界面已下线（数据保留在 team_zone_assignments 表） */}
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">技能标签(班组)</label>
@@ -119,10 +119,9 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
               </div>
             ) : <span className="text-gray-400 text-sm">—</span>}
           </div>
+          {/* 2026-09-17：移除周产能/作业半径展示（项目内无任何下游消费的死字段） */}
           <div className="grid grid-cols-3 gap-3">
-            <Field label="日产能上限" value={`${team.dailyCapacityHours ?? 8} 小时/天`} />
-            <Field label="周产能上限" value={`${team.weeklyCapacityHours ?? 40} 小时/周`} />
-            <Field label="作业半径" value={`${team.coverageRadiusKm ?? 0} 公里（0=不限）`} />
+            <Field label="日产能上限" value={`${team.dailyCapacityHours ?? 8} 小时/人/天`} />
           </div>
           {team.description && <Field label="班组描述" value={team.description} />}
           {/* 2026-09-16：明确提示子资源去编辑入口修改 */}

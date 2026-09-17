@@ -10,8 +10,17 @@ export interface Team {
   leaderName: string;      // 负责人姓名
   memberIds: string[];    // 成员ID列表
   memberCount: number;     // 成员数量
+  memberNames?: string[]; // 成员姓名列表（与 memberIds 同源，表格展示用）
   description?: string;   // 班组描述
-  workZone?: string;      // 作业区域
+  workZone?: string;      // 作业区域（历史文本字段，已由 zoneIds/zoneNames 取代）
+  // 2026-09-17：作业区域统一用关联表数据（team_zone_assignments）
+  zoneIds?: string[];     // 关联的区域ID列表
+  zoneNames?: string[];   // 关联的区域名称列表（表格展示用）
+  capabilityTags?: string[];      // 技能标签（历史字段，已由 taskCapabilities 取代）
+  taskCapabilities?: string[];    // 技能标签（来源 team_task_capabilities 表，与派工消费口径一致）
+  dailyCapacityHours?: number;    // 日产能上限（小时/天）
+  weeklyCapacityHours?: number;   // 周产能上限（小时/周）
+  coverageRadiusKm?: number;      // 作业半径（公里，0=不限）
   createdAt: string;
   updatedAt: string;
 }
@@ -38,7 +47,7 @@ export interface TeamAssignment {
 export interface TeamFilters {
   name: string;       // 班组名称
   leaderName: string; // 负责人
-  workZone: string;  // 作业区域
+  // 2026-09-17：移除 workZone 筛选（作业区域界面已下线）
 }
 
 /**

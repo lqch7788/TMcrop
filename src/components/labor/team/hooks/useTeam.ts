@@ -37,7 +37,7 @@ export function useTeam(): UseTeamReturn {
     removeWorker: storeRemove,
   } = useTeamManageStore();
 
-  const [filters, setFiltersState] = useState<TeamFilters>({ name: '', leaderName: '', workZone: '' });
+  const [filters, setFiltersState] = useState<TeamFilters>({ name: '', leaderName: '' });
   const [pagination, setPagination] = useState<TeamPagination>({
     currentPage: 1,
     pageSize: 10,
@@ -57,9 +57,6 @@ export function useTeam(): UseTeamReturn {
         return false;
       }
       if (filters.leaderName && !team.leaderName.toLowerCase().includes(filters.leaderName.toLowerCase())) {
-        return false;
-      }
-      if (filters.workZone && !team.workZone?.toLowerCase().includes(filters.workZone.toLowerCase())) {
         return false;
       }
       return true;
