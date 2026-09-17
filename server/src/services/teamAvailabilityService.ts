@@ -27,27 +27,29 @@ export interface TeamDailyAvailability {
 
 /**
  * 刷新（重算）某班组某天的可用性
- * 数据源：
+ * 数据源（2026-09-17 统一为 team_members，与排班/批量排班口径一致）：
+ *   - total_worker_count = 该组当前在职成员数（team_members where left_at IS NULL）
  *   - busy_hours = 该组所有成员当天的 schedules 班次时长合计
- *   - total_worker_count = 该组当前成员数（team_members where left_at IS NULL）
- *   - available_hours = total_worker_count × 8 - busy_hours
+ *   - available_hours = total_worker_count × 班组日产能上限(daily_capacity_hours，默认 8) - busy_hours
  *   - on_leave_count: 暂留 0（未来接入考勤）
  */
 export async function refreshAvailability(teamId: string, date: string): Promise<TeamDailyAvailability> {
   try {
     const db = getDatabase();
-    // 1. 该组成员数（含主职+兼职）
+    // 1. 该组成员数（2026-09-17 修复：改用 team_members —— 与排班/批量排班口径一致）
+    //    此前用 worker_team_assignments，两表长期不同步（实测 T002 4人 vs 3人、T004/T005 1人 vs 0人），
+    //    导致可用工时的分母与实际可排班人员不符。
     const memberRes = db.exec(
-      `SELECT COUNT(DISTINCT worker_id) AS c FROM worker_team_assignments WHERE team_id = ? AND left_at IS NULL`,
+      `SELECT COUNT(DISTINCT worker_id) AS c FROM team_members WHERE team_id = ? AND left_at IS NULL`,
       [teamId],
     );
     const total_worker_count = (memberRes[0]?.values?.[0]?.[0] as number) || 0;
 
-    // 2. 该组当日所有排班的 busy_hours
+    // 2. 该组当日所有排班的 busy_hours（同样以 team_members 为准）
     const shiftsRes = db.exec(
       `SELECT s.shift, s.staff_id FROM schedules s
-       JOIN worker_team_assignments wta ON wta.worker_id = s.staff_id
-       WHERE wta.team_id = ? AND wta.left_at IS NULL AND s.date = ?`,
+       JOIN team_members tm ON tm.worker_id = s.staff_id
+       WHERE tm.team_id = ? AND tm.left_at IS NULL AND s.date = ?`,
       [teamId, date],
     );
     let busy_hours = 0;
@@ -71,7 +73,11 @@ export async function refreshAvailability(teamId: string, date: string): Promise
         shiftHoursStmt.free();
       }
     }
-    const available_hours = Math.max(0, total_worker_count * 8 - busy_hours);
+    // 3. 2026-09-17 修复：可用工时按班组配置的日产能上限计算。
+    //    此前硬编码每人 8h，导致"日产能上限"字段填了也不生效（无任何消费方）。
+    const capRes = db.exec('SELECT daily_capacity_hours FROM teams WHERE id = ?', [teamId]);
+    const capPerPerson = Number(capRes[0]?.values?.[0]?.[0]) || 8;
+    const available_hours = Math.max(0, total_worker_count * capPerPerson - busy_hours);
     const scheduled_worker_count = uniqueWorkers.size;
 
     // 3. upsert

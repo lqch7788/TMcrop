@@ -29,12 +29,20 @@ export interface Team {
   leaderName: string;
   memberIds: string[];
   memberCount: number;
+  // 2026-09-17：成员姓名列表（与 memberIds 同源，表格"成员"列展示用）
+  memberNames?: string[];
   description?: string;
   workZone?: string;
+  // 2026-09-17：作业区域统一用关联表（team_zone_assignments）。
+  // zoneIds 为关联的区域 id，zoneNames 为对应名称（表格列展示用）。
+  zoneIds?: string[];
+  zoneNames?: string[];
   createdAt: string;
   updatedAt: string;
   // 2026-09-15：班组分配完整性 Phase 2 字段（来自 teams.capability_tags 等）
   capabilityTags?: string[];
+  // 2026-09-17：技能标签统一用 team_task_capabilities 表（与下游派工消费的数据源一致）
+  taskCapabilities?: string[];
   dailyCapacityHours?: number;
   weeklyCapacityHours?: number;
   coverageRadiusKm?: number;
@@ -204,7 +212,10 @@ interface TeamManageState {
 // ========== Store 实现 ==========
 
 export const useTeamManageStore = create<TeamManageState>()(
-  (set) => ({
+  // 2026-09-17 修复：必须解构 get —— createTeam/updateTeam 末尾的 `await get().fetchData()`
+  // 此前引用未定义的 get，抛 ReferenceError 被 catch 吞掉（只写 state.error 无人展示），
+  // 导致"保存后主动 re-fetch 同步列表"从未真正执行，且错误提示上线后暴露为"get is not defined"
+  (set, get) => ({
     teams: [],
     unassignedWorkers: [],
     isLoading: false,
@@ -221,14 +232,25 @@ export const useTeamManageStore = create<TeamManageState>()(
         await useWorkerStore.getState().loadWorkers();
         // 2. 拉取真实班组列表
         const apiTeams = await getTeams();
-        // 3. 并行拉取每队成员，构建已分配工人集合
-        const membersList = await Promise.all(
-          apiTeams.map((t) =>
-            enhancedApiClient
-              .get<ApiTeamMember[]>(`/team-members/teams/${t.id}/members`)
-              .then((members) => members || [])
-          )
-        );
+        // 3. 并行拉取每队成员 + 任务能力
+        //   （2026-09-17：作业区域界面已下线，不再加载 zone 关联——数据保留在 team_zone_assignments 表；
+        //    技能标签统一用 team_task_capabilities 表，不再读 teams.capability_tags 字段）
+        const [membersList, capsList] = await Promise.all([
+          Promise.all(
+            apiTeams.map((t) =>
+              enhancedApiClient
+                .get<ApiTeamMember[]>(`/team-members/teams/${t.id}/members`)
+                .then((members) => members || [])
+            )
+          ),
+          Promise.all(
+            apiTeams.map((t) =>
+              enhancedApiClient
+                .get<Array<{ taskType: string }>>(`/teams/${t.id}/capabilities`)
+                .then((cs) => cs || [])
+            )
+          ),
+        ]);
         const teams: Team[] = apiTeams.map((t, i) => ({
           ...mapApiTeam(t),
           // 2026-09-15：响应字段是 workerId（camelCaseResponse 中间件转换），不是 worker_id
@@ -237,6 +259,10 @@ export const useTeamManageStore = create<TeamManageState>()(
           // teams.member_count 是冗余字段，与实际成员表长期不同步（如 T001 字段=8 实际=1），
           // 此前直接展示该字段，用户看到的"成员数量"是错的。
           memberCount: membersList[i].length,
+          // 2026-09-17：成员姓名列表（表格"成员"列展示用，与 memberIds 同源同序）
+          memberNames: membersList[i].map((m) => m.workerName),
+          // 2026-09-17：技能标签统一用 team_task_capabilities 表
+          taskCapabilities: capsList[i].map((c) => c.taskType),
         }));
         const assignedSet = new Set(teams.flatMap((t) => t.memberIds));
         // 4. 未分配工人 = 全部在职工人 - 已入组工人
@@ -265,12 +291,8 @@ export const useTeamManageStore = create<TeamManageState>()(
      */
     createTeam: async (data) => {
       try {
-        // 2026-09-16：清理 capabilityTags（去 __custom_input__ 标记 + custom: 前缀）
-        const rawTags = Array.isArray(data.capabilityTags) ? data.capabilityTags : [];
-        const capabilityTags = rawTags
-          .filter((t: string) => t !== '__custom_input__')
-          .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
-          .filter((t: string) => t.length > 0);
+        // 2026-09-17：技能标签统一走 team_task_capabilities（由 syncTeamCapabilities 写入），
+        // 不再写 teams.capability_tags 字段；周产能/作业半径无任何下游消费，停止写入。
         const apiTeam = await apiCreateTeam({
           teamName: data.name || '',
           teamCode: `TM${Date.now()}`,
@@ -278,13 +300,8 @@ export const useTeamManageStore = create<TeamManageState>()(
           ...(data.leaderId && data.leaderId !== 'new' ? { leaderId: data.leaderId } : {}),
           leaderName: data.leaderName,
           description: data.description,
-          // 2026-09-17 修复：补传 workZone（作业区域），之前漏传导致新建班组刷新后该列为空
-          workZone: data.workZone,
-          // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
-          capabilityTags,
+          // 2026-09-17：日产能上限是可用性计算的输入（teamAvailabilityService），保留写入
           dailyCapacityHours: data.dailyCapacityHours,
-          weeklyCapacityHours: data.weeklyCapacityHours,
-          coverageRadiusKm: data.coverageRadiusKm,
         });
         set((state) => ({ teams: [mapApiTeam(apiTeam), ...state.teams] }));
         // 2026-09-16：创建后主动重新拉取，确保列表显示新班组
@@ -296,16 +313,11 @@ export const useTeamManageStore = create<TeamManageState>()(
 
     /**
      * 更新班组（API 成功后才更新本地状态）
-     * 2026-09-16：补全 capability_tags/daily_capacity_hours/weekly_capacity_hours/coverage_radius_km 4 个新字段（之前漏掉导致刷新后数据丢失）
+     * 2026-09-17：技能标签改由 syncTeamCapabilities 写 team_task_capabilities；
+     * 周产能/作业半径/作业区域文本无下游消费，停止写入（字段保留历史值）
      */
     updateTeam: async (id, data) => {
       try {
-        // 2026-09-16：清理 capabilityTags 中的 __custom_input__ 标记 + custom: 前缀（前端 UI 内部标记）
-        const rawTags = Array.isArray(data.capabilityTags) ? data.capabilityTags : [];
-        const capabilityTags = rawTags
-          .filter((t: string) => t !== '__custom_input__')
-          .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
-          .filter((t: string) => t.length > 0);
         await apiUpdateTeam(id, {
           teamName: data.name,
           teamCode: data.teamCode,
@@ -315,13 +327,8 @@ export const useTeamManageStore = create<TeamManageState>()(
           shiftType: data.shiftType,
           memberCount: data.memberCount,
           description: data.description,
-          // 2026-09-17 修复：之前漏传 workZone（作业区域），导致刷新后丢失
-          workZone: data.workZone,
-          // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
-          capabilityTags,
+          // 2026-09-17：日产能上限是可用性计算的输入（teamAvailabilityService），保留写入
           dailyCapacityHours: data.dailyCapacityHours,
-          weeklyCapacityHours: data.weeklyCapacityHours,
-          coverageRadiusKm: data.coverageRadiusKm,
         });
         set((state) => ({
           teams: state.teams.map((t) =>

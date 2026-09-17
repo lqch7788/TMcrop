@@ -35,6 +35,22 @@ export async function listTeamZones(teamId: string): Promise<TeamZoneAssignment[
 export async function addTeamZone(teamId: string, zoneId: string, role: string = 'allowed'): Promise<TeamZoneAssignment> {
   try {
     const db = getDatabase();
+    // 2026-09-17 修复：幂等处理。表有 UNIQUE(team_id, zone_id, role) 约束，
+    // 而前端 syncTeamZones 用"先删后加"实现全量同步，并发/重复保存时两次同步交错
+    //（A 删→A 插→B 插）会触发 UNIQUE constraint failed 报 500，用户看到"作业区域同步失败"。
+    // 已存在时直接返回现有记录，不重复插入。
+    const existRes = db.exec(
+      'SELECT * FROM team_zone_assignments WHERE team_id = ? AND zone_id = ? AND role = ?',
+      [teamId, zoneId, role],
+    );
+    if (existRes.length > 0 && existRes[0].values.length > 0) {
+      const cols = existRes[0].columns;
+      const row = existRes[0].values[0];
+      const obj: Record<string, unknown> = {};
+      cols.forEach((col, i) => { obj[col] = row[i]; });
+      return obj as unknown as TeamZoneAssignment;
+    }
+
     const id = generateId('TZA');
     const now = new Date().toISOString();
     db.run(

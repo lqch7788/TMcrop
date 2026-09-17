@@ -63,11 +63,11 @@ function enrichWithScore(
 ): void {
   if (recommendations.length === 0) return;
 
-  // 1. 批量查每个工人所属班组（含主职+兼职）
+  // 1. 批量查每个工人所属班组（2026-09-17：统一用 team_members，与排班/候选池口径一致）
   const workerIds = recommendations.map((r) => r.workerId);
   const placeholders = workerIds.map(() => '?').join(',');
   const workerTeamsRes = db.exec(
-    `SELECT worker_id, team_id FROM worker_team_assignments WHERE worker_id IN (${placeholders}) AND left_at IS NULL`,
+    `SELECT worker_id, team_id FROM team_members WHERE worker_id IN (${placeholders}) AND left_at IS NULL`,
     workerIds,
   );
   const workerTeamMap = new Map<string, string[]>(); // worker_id → team_ids
@@ -211,13 +211,15 @@ router.post('/recommend', (req: Request, res: Response) => {
     let candidateWorkerIds: string[] | null = null;
     let poolSource: PoolSource = 'all';
 
-    // 班组非空时必须先确定候选员工（2026-09-15：兼容 worker_team_assignments 主职+兼职）
+    // 班组非空时必须先确定候选员工
+    // 2026-09-17 修复：统一用 team_members（此前用 worker_team_assignments，
+    // 与排班、dispatchRecommender 的口径不一致，两表长期不同步会取到不同的人）
     if (Array.isArray(teamIds) && teamIds.length > 0) {
       const normalizedTeamIds = teamIds.filter((teamId): teamId is string => typeof teamId === 'string');
       const placeholders = normalizedTeamIds.map(() => '?').join(',');
       const teamResult = normalizedTeamIds.length > 0
         ? db.exec(
-            `SELECT DISTINCT worker_id FROM worker_team_assignments WHERE team_id IN (${placeholders}) AND left_at IS NULL`,
+            `SELECT DISTINCT worker_id FROM team_members WHERE team_id IN (${placeholders}) AND left_at IS NULL`,
             normalizedTeamIds,
           ) as SqlTableResult[]
         : [];
