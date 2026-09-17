@@ -4703,6 +4703,16 @@ function fixApprovedProductionPlanStatus(): void {
     }
   }
 
+  // 2026-09-17：teams 表加 work_zone 列（修复「作业区域列丢失」bug）
+  try {
+    db.run(`ALTER TABLE teams ADD COLUMN work_zone TEXT`);
+    seedLog.info('✓ teams 表添加 work_zone 列');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      seedLog.skip('• teams.work_zone:', e.message);
+    }
+  }
+
   // 2026-09-15：班组分配管理完整性 Phase 1 - 数据模型迁移（10 个缺口修复）
   // 新增 4 张表 + 7 个字段 ALTER，全部幂等
 
