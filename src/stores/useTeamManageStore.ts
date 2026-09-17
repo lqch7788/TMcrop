@@ -301,6 +301,8 @@ export const useTeamManageStore = create<TeamManageState>()(
           shiftType: data.shiftType,
           memberCount: data.memberCount,
           description: data.description,
+          // 2026-09-17 修复：之前漏传 workZone（作业区域），导致刷新后丢失
+          workZone: data.workZone,
           // 2026-09-16：4 个新字段（之前漏掉导致刷新后丢失）
           capabilityTags,
           dailyCapacityHours: data.dailyCapacityHours,
