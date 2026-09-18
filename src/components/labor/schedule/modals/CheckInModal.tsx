@@ -77,9 +77,22 @@ export function CheckInModal({ isOpen, onClose, schedule }: CheckInModalProps) {
       showAlert('签退时间格式应为 HH:mm（如 17:30）');
       return;
     }
-    if (checkIn && checkOut && checkIn >= checkOut) {
-      showAlert('签退时间必须晚于签到时间');
-      return;
+    // 2026-09-18 修复 C-1：跨日班次不能简单用字符串比较判断时间先后。
+    // 例：晚班 22:00 → 次日 06:00，签退 06:00 字符串上 < 签到 22:00，
+    // 但业务上完全合法（跨午夜）。改为读班次配置判断该班次是否跨日。
+    if (checkIn && checkOut) {
+      const cfg = useScheduleStore.getState().shiftConfigs.find((c) => c.name === schedule.shift);
+      // 跨日班次判定：班次结束时间 <= 开始时间（如 22:00-06:00、20:00-04:00）
+      const isOvernight = cfg ? cfg.endTime <= cfg.startTime : false;
+      if (!isOvernight && checkIn >= checkOut) {
+        showAlert('签退时间必须晚于签到时间');
+        return;
+      }
+      // 跨日班次：签退时间必须 < 签到时间（否则用户可能填反了）
+      if (isOvernight && checkIn < checkOut) {
+        showAlert(`该班次为跨日班（${cfg?.startTime}-${cfg?.endTime}），签退时间应早于签到时间`);
+        return;
+      }
     }
 
     setSubmitting(true);

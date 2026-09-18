@@ -84,9 +84,9 @@ export class OperationLogService {
 
     db.run(`
       INSERT INTO operation_logs (
-        id, user_id, user_name, module, action, target_id, target_name,
-        ip_address, details, operate_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, user_id, username, module, action, resource_id, description,
+        ip_address, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       log.user_id || '',
@@ -94,9 +94,8 @@ export class OperationLogService {
       log.module || '',
       log.action || '',
       log.target_id || null,
-      log.target_name || null,
-      log.ip_address || null,
       log.details || null,
+      log.ip_address || null,
       log.operate_time || now,
     ]);
 

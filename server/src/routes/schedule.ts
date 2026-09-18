@@ -7,10 +7,40 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { operationLogService } from '../services/operationLog.service';
 import { getDatabase, saveDatabase } from '../db';
 import { refreshAvailability } from '../services/teamAvailabilityService';
 
 const router = Router();
+
+/**
+ * 2026-09-18 修复 M-7：可用性刷新 debounce 队列。
+ *
+ * 背景：refreshAvailability 内部会 saveDatabase()（全量 22MB 写盘）。
+ * 批量排班 100 条 → 每人都触发一次 setImmediate 刷新 → 100 次全量写盘 ≈ 2.2GB。
+ * 而且多次刷新同一 (teamId, date) 是冗余的（每次都重算同样的数据）。
+ *
+ * 方案：同一 (teamId, date) 的刷新请求在 500ms 窗口内合并为一次执行。
+ * 500ms 是"批量操作合并"与"读端延迟容忍"的折中——批量排班通常在同一秒内完成，
+ * 而读可用性的接口等 500ms 拿到最新值可接受。
+ */
+const REFRESH_DEBOUNCE_MS = 500;
+const pendingRefreshes = new Map<string, NodeJS.Timeout>();
+
+function scheduleAvailabilityRefresh(teamId: string, date: string): void {
+  const key = `${teamId}|${date}`;
+  const existing = pendingRefreshes.get(key);
+  if (existing) clearTimeout(existing);
+  pendingRefreshes.set(
+    key,
+    setTimeout(() => {
+      pendingRefreshes.delete(key);
+      refreshAvailability(teamId, date).catch((e) => {
+        console.warn(`[可用性刷新失败] team=${teamId} date=${date}:`, (e as Error).message);
+      });
+    }, REFRESH_DEBOUNCE_MS),
+  );
+}
 
 /**
  * 2026-09-15：排班事件触发班组可用性刷新（异步，不阻塞响应）
@@ -27,10 +57,8 @@ function refreshAvailabilityForStaffAsync(staffId: string, date: string): void {
       );
       if (!teamRes[0] || teamRes[0].values.length === 0) return;
       for (const row of teamRes[0].values) {
-        const teamId = String(row[0]);
-        refreshAvailability(teamId, date).catch((e) => {
-          console.warn(`[可用性刷新失败] team=${teamId} date=${date}:`, (e as Error).message);
-        });
+        // 2026-09-18 M-7：走 debounce 队列（合并同一 team+date 的重复请求）
+        scheduleAvailabilityRefresh(String(row[0]), date);
       }
     } catch (e) {
       console.warn(`[可用性刷新异常] staff=${staffId} date=${date}:`, (e as Error).message);
@@ -43,9 +71,8 @@ function refreshAvailabilityForStaffAsync(staffId: string, date: string): void {
  */
 function refreshAvailabilityForTeamAsync(teamId: string, date: string): void {
   setImmediate(() => {
-    refreshAvailability(teamId, date).catch((e) => {
-      console.warn(`[可用性刷新失败] team=${teamId} date=${date}:`, (e as Error).message);
-    });
+    // 2026-09-18 M-7：走 debounce 队列
+    scheduleAvailabilityRefresh(teamId, date);
   });
 }
 
@@ -55,7 +82,7 @@ function refreshAvailabilityForTeamAsync(teamId: string, date: string): void {
  */
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { date, staff_id, start_date, end_date, page = '1', limit = '100' } = req.query;
+    const { date, staff_id, start_date, end_date, team_id, shift, status, work_zone, page = '1', limit = '100' } = req.query;
     const db = getDatabase();
 
     let sql = 'SELECT * FROM schedules WHERE 1=1';
@@ -81,11 +108,32 @@ router.get('/', (req: Request, res: Response) => {
       params.push(end_date);
     }
 
+    // 2026-09-18 修复 H-5：补 4 个常用过滤维度（此前只能按 date/staff_id/日期范围过滤，
+    // 前端要按班组/班次/状态筛选只能客户端 join）
+    if (team_id) {
+      sql += ' AND team_id = ?';
+      params.push(team_id);
+    }
+    if (shift) {
+      sql += ' AND shift = ?';
+      params.push(shift);
+    }
+    if (status) {
+      sql += ' AND status = ?';
+      params.push(status);
+    }
+    if (work_zone) {
+      sql += ' AND work_zone = ?';
+      params.push(work_zone);
+    }
+
     sql += ' ORDER BY date DESC, staff_id';
 
-    // 分页
-    const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    // 分页（2026-09-18 修复 H-6：limit 上限 + 参数化绑定）
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 100), 500);
+    const safeOffset = Math.max(0, (Number(page) - 1) * safeLimit);
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(safeLimit, safeOffset);
 
     const schedules = db.exec(sql, params);
     const records = schedules.length > 0 ? schedules[0].values.map((row: any) => {
@@ -371,6 +419,11 @@ router.patch('/dispatch-tasks', (req: Request, res: Response) => {
         ? Array.from(new Set([...ids, taskId]))
         : ids.filter((id) => id !== taskId);
 
+    // 2026-09-18 审计 H-2 结论：本 handler 完全同步（无 await），Node.js 单线程下
+    // 从上面的 SELECT 到这里 UPDATE 之间没有 event loop 让出点，不存在 read-modify-write
+    // 竞态（审计报告的"竞态窗口"是理论推断，未考虑同步 handler 的执行模型）。
+    // ⚠️ 若未来把本 handler 改成 async（如 await 外部服务），必须补 version 乐观锁：
+    //    UPDATE ... WHERE id = ? AND version = ? 并处理影响 0 行时重试。
     db.run('UPDATE schedules SET dispatched_task_ids = ? WHERE id = ?', [
       JSON.stringify(newIds),
       row.id,
@@ -412,11 +465,20 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
       [teamId],
     );
     const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
-    const workerIds: string[] = Array.isArray(inputWorkerIds) && inputWorkerIds.length > 0
-      ? inputWorkerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0)
-      : (teamMembersTable
-        ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
-        : []);
+    const workerIds: string[] = (() => {
+      const raw = Array.isArray(inputWorkerIds) && inputWorkerIds.length > 0
+        ? inputWorkerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0) as string[]
+        : (teamMembersTable
+          ? teamMembersTable.values.map((row: unknown[]) => row[0] as string)
+          : []);
+      // 2026-09-18 修复 M-3：去重——同一 workerId 多次传入会导致 UNIQUE constraint failed 全批失败
+      return Array.from(new Set(raw));
+    })();
+
+    // 2026-09-18 修复 M-4：上限校验——防 DoS（IN 子句生成 N 个 ? 占位符会 OOM）
+    if (workerIds.length > 1000) {
+      return res.status(400).json({ success: false, error: `workerIds 数量超过上限(1000): ${workerIds.length}` });
+    }
 
     if (workerIds.length === 0) {
       return res.json({ success: true, data: { created: 0, skipped: [] } });
@@ -440,30 +502,39 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
     // 2026-09-14：补 staff_name / team_name
     const { staffNameMap, teamName } = enrichScheduleNames(db, workerIds, teamId);
 
-    for (const workerId of workerIds) {
-      if (existingWorkers.has(workerId) && skipOffDuty) {
-        skipped.push({ workerId, reason: '已排班' });
-        continue;
+    // 2026-09-18 修复 C-5：批量加事务，循环里任何 UNIQUE 失败都回滚
+    db.run('BEGIN TRANSACTION');
+    try {
+      for (const workerId of workerIds) {
+        if (existingWorkers.has(workerId) && skipOffDuty) {
+          skipped.push({ workerId, reason: '已排班' });
+          continue;
+        }
+        db.run(
+          `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
+          [`batch-${Date.now()}-${workerId}`, workerId, staffNameMap.get(workerId) || null, date, shift, workZone || null, teamId, teamName],
+        );
+        created++;
       }
-      db.run(
-        `INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, team_id, team_name, status, version, create_time, update_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, '已排班', 1, datetime('now'), datetime('now'))`,
-        [`batch-${Date.now()}-${workerId}`, workerId, staffNameMap.get(workerId) || null, date, shift, workZone || null, teamId, teamName],
-      );
-      created++;
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      throw e;
     }
-
     saveDatabase();
     // 2026-09-15：批量按班组排班后，触发该班组当天可用性刷新
-    if (created > 0) {
-      const date = req.body?.startDate || req.body?.date;
-      if (date) refreshAvailabilityForTeamAsync(teamId, date);
+    // 2026-09-18 修复 M-8：直接用外层解构的 date（此前用 req.body?.startDate || req.body?.date
+    // 重新取值，与 line 398 的解构可能不一致；startDate 本端点根本不接收）
+    if (created > 0 && date) {
+      refreshAvailabilityForTeamAsync(teamId, date);
     }
     return res.json({ success: true, data: { created, skipped } });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('批量按班组排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏（服务端 console.error 保留原始 err 排查，
+    //   客户端只返回通用"操作失败"——避免泄漏 sql.js 内部错误/SQL 片段/表名）
+    console.error('[schedule] 批量按班组排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -593,9 +664,9 @@ router.post('/batch-by-date-range', (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('单人日期段批量排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏
+    console.error('[schedule] 单人日期段批量排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -692,9 +763,9 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('班组日期段批量排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏
+    console.error('[schedule] 班组日期段批量排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -766,9 +837,9 @@ router.post('/batch-by-weekday', (req: Request, res: Response) => {
       data: { created, skipped, total: dates.length },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('单人周重复批量排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏
+    console.error('[schedule] 单人周重复批量排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -874,9 +945,9 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('班组周重复批量排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '批量排班失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏
+    console.error('[schedule] 班组周重复批量排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -998,9 +1069,9 @@ router.post('/preview-batch', (req: Request, res: Response) => {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('预览批量排班失败:', message);
-    return res.status(500).json({ success: false, error: message || '预览失败' });
+    // 2026-09-18 修复 M-5：错误信息脱敏
+    console.error('[schedule] 预览批量排班失败:', err);
+    return res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -1023,8 +1094,11 @@ router.get('/swap-requests', (req: Request, res: Response) => {
 
     sql += ' ORDER BY create_time DESC';
 
-    const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
+    // 分页（2026-09-18 修复 H-6：limit 上限 + 参数化）
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 500);
+    const safeOffset = Math.max(0, (Number(page) - 1) * safeLimit);
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(safeLimit, safeOffset);
 
     const result = db.exec(sql, params);
     const records = result.length > 0 ? result[0].values.map((row: any) => {
@@ -1101,7 +1175,40 @@ router.put('/swap-requests/:id', (req: Request, res: Response) => {
       return;
     }
 
-    db.run('UPDATE swap_requests SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+    // 2026-09-18 修复 C-2：审批通过时在后端同步调整排班记录（此前完全依赖前端补偿，
+    // 前端未刷新/崩溃时会出现 swap_requests=已同意 但排班未换的不一致）。
+    // 幂等设计：更新条件用 requester_id + original_date，前端若已执行过同样的更新，
+    // 此时 WHERE 匹配不到 requester 的记录（已是 target），不会重复换人。
+    db.run('BEGIN TRANSACTION');
+    try {
+      db.run('UPDATE swap_requests SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+
+      if (status === '已同意') {
+        const swapRes = db.exec('SELECT * FROM swap_requests WHERE id = ?', [id]);
+        if (swapRes[0]?.values?.length) {
+          const cols = swapRes[0].columns;
+          const row = swapRes[0].values[0];
+          const get = (name: string) => row[cols.indexOf(name)];
+          const requesterId = String(get('requester_id') ?? '');
+          const targetId = String(get('target_id') ?? '');
+          const targetName = String(get('target_name') ?? '');
+          const originalDate = String(get('original_date') ?? '');
+          if (requesterId && targetId && originalDate) {
+            // 2026-09-18：swap_record_id 列已补（用户授权 ALTER TABLE），恢复溯源写入
+            db.run(
+              `UPDATE schedules SET staff_id = ?, staff_name = ?, swap_record_id = ?,
+                 version = version + 1, update_time = ?
+               WHERE staff_id = ? AND date = ?`,
+              [targetId, targetName, id, now, requesterId, originalDate],
+            );
+          }
+        }
+      }
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      throw e;
+    }
     saveDatabase();
 
     res.json({ success: true, data: { id, status } });
@@ -1151,6 +1258,24 @@ router.post('/', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
+    // 2026-09-18 修复 C-4：必填字段前置校验（之前直接走 INSERT 路径，靠 sql.js bind undefined 抛错兜底 → 500 错误信息含糊）
+    if (!staff_id || !date || !shift) {
+      return res.status(400).json({ success: false, error: 'staff_id/date/shift 为必填' });
+    }
+
+    // 2026-09-18 修复 C-4：员工存在性校验（之前可给不存在的 staff_id 排班，下游派工/可用性全错）
+    const staffCheck = db.exec('SELECT 1 FROM employees WHERE id = ? LIMIT 1', [staff_id]);
+    if (!staffCheck[0]?.values?.length) {
+      return res.status(400).json({ success: false, error: `员工不存在: ${staff_id}` });
+    }
+    // 2026-09-18 修复 C-4：班组存在性校验（仅在传了 team_id 时）
+    if (team_id) {
+      const teamCheck = db.exec('SELECT 1 FROM teams WHERE id = ? AND status = ? LIMIT 1', [team_id, 'active']);
+      if (!teamCheck[0]?.values?.length) {
+        return res.status(400).json({ success: false, error: `班组不存在或已停用: ${team_id}` });
+      }
+    }
+
     // ★ 排班冲突检测（2026-07-31）：同一员工同一日期同一班次不可重复排班
     const existing = db.exec(
       'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ? LIMIT 1',
@@ -1171,6 +1296,17 @@ router.post('/', (req: Request, res: Response) => {
     `, [newId, staff_id, staff_name, date, shift, work_zone || null, status || '已排班', check_in || null, check_out || null, remarks || null, 1, now, now, team_id || null, team_name || null]);
 
     saveDatabase();
+    // 2026-09-18 修复 H-7：写审计日志（操作人从 JWT 注入，与班组模块一致防伪造）
+    const jwtUser = (req as any).user;
+    operationLogService.create({
+      user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
+      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      module: '排班',
+      action: 'create',
+      target_id: newId,
+      target_name: `${staff_name || staff_id} ${date} ${shift}`,
+      details: JSON.stringify({ workZone: work_zone, team_id, status: status || '已排班' }),
+    }).catch((err) => console.error('[schedule] 审计日志写入失败:', err));
     // 2026-09-15：触发班组可用性刷新（异步）
     refreshAvailabilityForStaffAsync(staff_id, date);
 
@@ -1211,42 +1347,65 @@ router.post('/batch', (req: Request, res: Response) => {
       res.status(400).json({ success: false, error: '请提供排班数据数组' });
       return;
     }
+    // 2026-09-18 修复 M-4：批量上限——单次最多 1000 条排班
+    if (schedules.length > 1000) {
+      res.status(400).json({ success: false, error: `schedules 数量超过上限(1000): ${schedules.length}` });
+      return;
+    }
+    // 2026-09-18 修复 M-3：去重——同 (id) 多次出现会 PRIMARY KEY 冲突全批失败
+    // 保留每个 id 的最后一条（用 Map 覆盖）
+    const deduped = new Map<string, any>();
+    for (const s of schedules) {
+      if (s && typeof s === 'object' && typeof s.id === 'string') {
+        deduped.set(s.id, s);
+      } else {
+        deduped.set(`__no_id_${Math.random()}`, s); // 没 id 的原样保留
+      }
+    }
+    const dedupedSchedules = Array.from(deduped.values());
 
     const db = getDatabase();
     const now = new Date().toISOString();
     const insertedIds: string[] = [];
+    // 2026-09-18 修复 C-5：批量加 BEGIN TRANSACTION，部分失败时回滚已写入的行，
+    // 避免"前端以为部分成功但 DB 实际留半成品"的数据不一致。
+    db.run('BEGIN TRANSACTION');
+    try {
+      for (const schedule of dedupedSchedules) {
+        // ★ 排班冲突检测（2026-07-31）：同一员工同一日期同一班次不可重复排班
+        const existing = db.exec(
+          'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ? LIMIT 1',
+          [schedule.staff_id, schedule.date, schedule.shift],
+        );
+        if (existing[0]?.values?.length > 0) {
+          // 跳过冲突记录，继续处理其它
+          continue;
+        }
 
-    for (const schedule of schedules) {
-      // ★ 排班冲突检测（2026-07-31）：同一员工同一日期同一班次不可重复排班
-      const existing = db.exec(
-        'SELECT id FROM schedules WHERE staff_id = ? AND date = ? AND shift = ? LIMIT 1',
-        [schedule.staff_id, schedule.date, schedule.shift],
-      );
-      if (existing[0]?.values?.length > 0) {
-        // 跳过冲突记录，继续处理其它
-        continue;
+        const newId = schedule.id || `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        db.run(`
+          INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, remarks, version, create_time, update_time)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          newId,
+          schedule.staff_id,
+          schedule.staff_name,
+          schedule.date,
+          schedule.shift,
+          schedule.work_zone || null,
+          schedule.status || '已排班',
+          schedule.remarks || null,
+          1,
+          now,
+          now,
+        ]);
+        insertedIds.push(newId);
       }
-
-      const newId = schedule.id || `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      db.run(`
-        INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, remarks, version, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        newId,
-        schedule.staff_id,
-        schedule.staff_name,
-        schedule.date,
-        schedule.shift,
-        schedule.work_zone || null,
-        schedule.status || '已排班',
-        schedule.remarks || null,
-        1,
-        now,
-        now,
-      ]);
-      insertedIds.push(newId);
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      throw e;
     }
-
     saveDatabase();
 
     res.status(201).json({
@@ -1305,7 +1464,7 @@ router.put('/:id', (req: Request, res: Response) => {
     if (updates.check_in !== undefined) { fields.push('check_in = ?'); values.push(updates.check_in); }
     if (updates.check_out !== undefined) { fields.push('check_out = ?'); values.push(updates.check_out); }
     if (updates.remarks !== undefined) { fields.push('remarks = ?'); values.push(updates.remarks); }
-    // 2026-09-15：调班申请 ID 关联写入
+    // 2026-09-15：调班申请 ID 关联写入（2026-09-18 补列后恢复）
     if (updates.swap_record_id !== undefined) { fields.push('swap_record_id = ?'); values.push(updates.swap_record_id); }
 
     // 版本号递增（乐观锁）
@@ -1342,6 +1501,17 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(`UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
+    // 2026-09-18 修复 H-7：写审计日志
+    const jwtUser = (req as any).user;
+    operationLogService.create({
+      user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
+      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      module: '排班',
+      action: 'update',
+      target_id: id,
+      target_name: `排班 ${id}`,
+      details: JSON.stringify({ updatedFields: Object.keys(updates).filter(k => (updates as any)[k] !== undefined) }),
+    }).catch((err) => console.error('[schedule] 审计日志写入失败:', err));
     // 2026-09-15：触发班组可用性刷新（异步，staff_id/date 变化时）
     const newStaffId = (updates.staff_id as string) || req.body?.staff_id;
     const newDate = (updates.date as string) || req.body?.date;
@@ -1388,6 +1558,16 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     db.run('DELETE FROM schedules WHERE id = ?', [id]);
     saveDatabase();
+    // 2026-09-18 修复 H-7：删除审计
+    const jwtUser = (req as any).user;
+    operationLogService.create({
+      user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
+      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      module: '排班',
+      action: 'delete',
+      target_id: id,
+      target_name: `排班 ${id} (${deletedStaffId} ${deletedDate})`,
+    }).catch((err) => console.error('[schedule] 审计日志写入失败:', err));
     // 2026-09-15：触发班组可用性刷新（异步）
     refreshAvailabilityForStaffAsync(deletedStaffId, deletedDate);
 
@@ -1413,128 +1593,14 @@ router.delete('/batch', (req: Request, res: Response) => {
     const db = getDatabase();
     const placeholders = ids.map(() => '?').join(',');
     db.run(`DELETE FROM schedules WHERE id IN (${placeholders})`, ids);
+    // 2026-09-18 修复 M-2：用 getRowsModified 拿真实删除数（之前返回请求 size 会误报）
+    const actualDeleted = (db as any).getRowsModified?.() ?? ids.length;
     saveDatabase();
 
-    res.json({ success: true, data: { deleted: ids, count: ids.length } });
+    res.json({ success: true, data: { deleted: actualDeleted, count: actualDeleted, requested: ids.length } });
   } catch (error) {
     console.error('批量删除排班失败:', error);
     res.status(500).json({ success: false, error: '批量删除排班失败' });
-  }
-});
-
-// ==================== 调班申请 API ====================
-
-/**
- * 获取调班申请列表
- * GET /api/schedules/swap-requests
- * 2026-09-15：路径从 /swap-requests/list 改为 /swap-requests（与 POST/PUT 统一 REST 风格）
- */
-router.get('/swap-requests', (req: Request, res: Response) => {
-  try {
-    const { status, page = '1', limit = '50' } = req.query;
-    const db = getDatabase();
-
-    let sql = 'SELECT * FROM swap_requests WHERE 1=1';
-    const params: any[] = [];
-
-    if (status) {
-      sql += ' AND status = ?';
-      params.push(status);
-    }
-
-    sql += ' ORDER BY create_time DESC';
-
-    const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;
-
-    const result = db.exec(sql, params);
-    const records = result.length > 0 ? result[0].values.map((row: any) => {
-      const columns = result[0].columns;
-      return columns.reduce((obj: any, col: string, idx: number) => {
-        obj[col] = row[idx];
-        return obj;
-      }, {});
-    }) : [];
-
-    res.json({ success: true, data: records });
-  } catch (error) {
-    console.error('获取调班申请列表失败:', error);
-    res.status(500).json({ success: false, error: '获取调班申请列表失败' });
-  }
-});
-
-/**
- * 提交调班申请
- * POST /api/schedules/swap-requests
- */
-router.post('/swap-requests', (req: Request, res: Response) => {
-  try {
-    // 兼容 camelCase 和 snake_case（前端 store spread camelCase；旧逻辑用 snake_case）
-    const body = req.body || {};
-    const id = body.id;
-    const requester_id = body.requester_id ?? body.requesterId;
-    const requester_name = body.requester_name ?? body.requesterName;
-    const target_id = body.target_id ?? body.targetId;
-    const target_name = body.target_name ?? body.targetName;
-    const original_date = body.original_date ?? body.originalDate;
-    const target_date = body.target_date ?? body.targetDate;
-    const reason = body.reason;
-    const newId = id || `SWAP-${Date.now()}`;
-    const now = new Date().toISOString();
-
-    const db = getDatabase();
-    db.run(`
-      INSERT INTO swap_requests (id, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, '待审批', now, now]);
-
-    saveDatabase();
-
-    res.status(201).json({
-      success: true,
-      data: {
-        id: newId,
-        requester_id,
-        requester_name,
-        target_id,
-        target_name,
-        original_date,
-        target_date,
-        reason,
-        status: '待审批',
-        create_time: now,
-      },
-    });
-  } catch (error) {
-    console.error('提交调班申请失败:', error);
-    res.status(500).json({ success: false, error: '提交调班申请失败' });
-  }
-});
-
-/**
- * 处理调班申请
- * PUT /api/schedules/swap-requests/:id
- */
-router.put('/swap-requests/:id', (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const now = new Date().toISOString();
-
-    const db = getDatabase();
-
-    if (!['已同意', '已拒绝'].includes(status)) {
-      res.status(400).json({ success: false, error: '无效的审批状态' });
-      return;
-    }
-
-    db.run('UPDATE swap_requests SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
-    saveDatabase();
-
-    res.json({ success: true, data: { id, status } });
-  } catch (error) {
-    console.error('处理调班申请失败:', error);
-    res.status(500).json({ success: false, error: '处理调班申请失败' });
   }
 });
 

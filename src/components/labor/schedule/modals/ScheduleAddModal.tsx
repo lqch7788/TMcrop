@@ -19,6 +19,7 @@ import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { useScheduleStore, useTeamStore, useDictionaryStore, getDictItems } from '@/stores';
 import type { ShiftType } from '../types';
+import { todayLocalISO, parseLocalISO, formatLocalISO, expandDatesForPreview } from './scheduleDateUtils';
 
 type AddMode = 'single' | 'team';
 type DateRangeMode = 'single' | 'range' | 'weekday';
@@ -56,39 +57,7 @@ const INITIAL_FORM: FormState = {
 
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-function todayLocalISO(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseLocalISO(s: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-  const d = new Date(s + 'T00:00:00');
-  return isNaN(d.getTime()) ? null : d;
-}
-
-// 预览：计算日期段实际生效天数（用于显示）
-function expandDatesForPreview(startDate: string, endDate: string, weekdays?: number[]): string[] {
-  const start = parseLocalISO(startDate);
-  const end = parseLocalISO(endDate);
-  if (!start || !end || start > end) return [];
-  const result: string[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    const day = cursor.getDay();
-    if (!weekdays || weekdays.length === 0 || weekdays.includes(day)) {
-      const y = cursor.getFullYear();
-      const m = String(cursor.getMonth() + 1).padStart(2, '0');
-      const d = String(cursor.getDate()).padStart(2, '0');
-      result.push(`${y}-${m}-${d}`);
-    }
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return result;
-}
+// 2026-09-18：4 个纯日期函数已抽到 ./scheduleDateUtils.ts
 
 export function ScheduleAddModal({
   isOpen,
@@ -142,11 +111,17 @@ export function ScheduleAddModal({
   const handleModeChange = (next: AddMode) => {
     if (next === mode) return;
     setMode(next);
+    // 2026-09-18 修复 C-2：切换模式时同步清空 workZone + 预览结果。
+    // 此前只清 staffId/teamId，导致个人模式选的"张三 A 区"残留到班组模式，
+    // 提交时整个班组被错误地排到 A 区；旧 previewResult 也会跨模式误导用户。
     setForm(prev => ({
       ...prev,
       staffId: '',
       teamId: '',
+      workZone: '', // 由用户在新模式下重新确认（或选员工时自动预填）
     }));
+    setPreviewResult(null);
+    setPreviewing(false);
   };
 
   // 模式切换：日期段 ↔ 周重复 ↔ 单日
@@ -756,11 +731,6 @@ export function ScheduleAddModal({
   );
 }
 
-function formatLocalISO(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+// 2026-09-18：formatLocalISO 已抽到 ./scheduleDateUtils.ts
 
 export default ScheduleAddModal;
