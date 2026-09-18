@@ -3,12 +3,7 @@
  */
 import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
-
-function handleServiceError(error: unknown, operation: string): never {
-  console.error(`${operation}失败:`, error);
-  if (error instanceof Error) throw new Error(`${operation}失败: ${error.message}`);
-  throw new Error(`${operation}失败: 未知错误`);
-}
+import { handleServiceError } from '../utils/serviceError';
 
 export interface TeamZoneAssignment {
   id: string;
@@ -37,27 +32,30 @@ export async function addTeamZone(teamId: string, zoneId: string, role: string =
     const db = getDatabase();
     // 2026-09-17 修复：幂等处理。表有 UNIQUE(team_id, zone_id, role) 约束，
     // 而前端 syncTeamZones 用"先删后加"实现全量同步，并发/重复保存时两次同步交错
-    //（A 删→A 插→B 插）会触发 UNIQUE constraint failed 报 500，用户看到"作业区域同步失败"。
-    // 已存在时直接返回现有记录，不重复插入。
-    const existRes = db.exec(
+    // 2026-09-18 修复 H-1 TOCTOU：原"先 SELECT 后 INSERT"在并发下会触发 UNIQUE 失败。
+    // 改用 `INSERT OR IGNORE`（SQLite 原生 upsert 幂等语义）：已存在则跳过，新记录则写入。
+    // 之后用 SELECT 获取最终状态（可能是新插入的，也可能是已存在的）。
+    const id = generateId('TZA');
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT OR IGNORE INTO team_zone_assignments (id, team_id, zone_id, role, created_at) VALUES (?, ?, ?, ?, ?)`,
+      [id, teamId, zoneId, role, now],
+    );
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化
+    // 查询最终记录（处理并发：可能当前 INSERT 被忽略，已有记录存在）
+    const finalRes = db.exec(
       'SELECT * FROM team_zone_assignments WHERE team_id = ? AND zone_id = ? AND role = ?',
       [teamId, zoneId, role],
     );
-    if (existRes.length > 0 && existRes[0].values.length > 0) {
-      const cols = existRes[0].columns;
-      const row = existRes[0].values[0];
+    if (finalRes.length > 0 && finalRes[0].values.length > 0) {
+      const cols = finalRes[0].columns;
+      const row = finalRes[0].values[0];
       const obj: Record<string, unknown> = {};
       cols.forEach((col, i) => { obj[col] = row[i]; });
       return obj as unknown as TeamZoneAssignment;
     }
-
-    const id = generateId('TZA');
-    const now = new Date().toISOString();
-    db.run(
-      `INSERT INTO team_zone_assignments (id, team_id, zone_id, role, created_at) VALUES (?, ?, ?, ?, ?)`,
-      [id, teamId, zoneId, role, now],
-    );
-    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后区域关联丢失
+    // 极小概率：INSERT OR IGNORE 跳过且 SELECT 也为空（说明 INSERT 自己也未命中），
+    // 返回新生成的 id 让上层至少能感知调用完成
     return { id, team_id: teamId, zone_id: zoneId, role, created_at: now };
   } catch (error) {
     return handleServiceError(error, '关联班组区域');

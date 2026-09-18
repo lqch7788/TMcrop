@@ -70,7 +70,7 @@ router.post('/teams/:teamId/members', requireAuth, async (req, res) => {
 router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
   try {
     const { teamId } = req.params;
-    const { workerIds, role = 'member', operatorId, operatorName } = req.body;
+    const { workerIds, role = 'member', workerRoles, operatorId, operatorName } = req.body;
 
     if (!workerIds || !Array.isArray(workerIds)) {
       return res.status(400).json({ success: false, error: 'workerIds必须为数组' });
@@ -79,8 +79,23 @@ router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: 'workerIds不能为空数组' });
     }
 
+    // 2026-09-18：审计 C-1（审计日志伪造）+ workerRoles（每工人独立角色）接入
+    // 优先用 JWT 注入的用户身份（authenticate 中间件已写入 req.user）
+    const jwtUser = (req as any).user;
+    const finalOperatorId = jwtUser?.userId ?? jwtUser?.oid ?? operatorId ?? '';
+    const finalOperatorName = jwtUser?.realName ?? jwtUser?.username ?? operatorName ?? '';
+
+    // 2026-09-18：审计 C-9 —— 支持每工人独立角色
+    //   - 传 workerRoles（Record<workerId, role>）→ 用每个工人的角色
+    //   - 不传 → 全部用同一 role（向后兼容）
+    const perWorkerRole: Record<string, string> | null =
+      workerRoles && typeof workerRoles === 'object'
+        ? workerRoles
+        : null;
+
     const members = await teamMemberService.addTeamMembersWithLog(
-      teamId, workerIds, role, { operatorId, operatorName },
+      teamId, workerIds, role, { operatorId: finalOperatorId, operatorName: finalOperatorName },
+      perWorkerRole,
     );
     res.json({ success: true, data: members });
   } catch (error) {

@@ -8,7 +8,8 @@ interface TeamAssignModalProps {
   unassignedWorkers: UnassignedWorker[];
   open: boolean;
   onClose: () => void;
-  onAssign: (teamId: string, workerIds: string[], role?: string) => void;
+  // 2026-09-18 修复 C-9：传 per-worker 角色映射（替代单一 role）
+  onAssign: (teamId: string, workerIds: string[], workerRoles: Record<string, string>) => void;
 }
 
 // 2026-09-15：扩展角色枚举（leader/deputy/safety/quality/member）
@@ -45,13 +46,17 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
   };
 
   const handleAssign = () => {
-    if (selectedWorkers.length > 0) {
-      // 2026-09-15：每个工人用各自选的角色；如果都选了同一个角色（如都选 leader），取第一个
-      onAssign(team.id, selectedWorkers, workerRoles[selectedWorkers[0]] || 'member');
-      setSelectedWorkers([]);
-      setWorkerRoles({});
-      onClose();
+    if (selectedWorkers.length === 0) return;
+    // 2026-09-18 修复 C-9：完整传 workerRoles（每个工人独立角色），
+    // 之前只取第一个工人的角色，其余被静默丢弃
+    const finalRoles: Record<string, string> = {};
+    for (const wid of selectedWorkers) {
+      finalRoles[wid] = workerRoles[wid] || 'member';
     }
+    onAssign(team.id, selectedWorkers, finalRoles);
+    setSelectedWorkers([]);
+    setWorkerRoles({});
+    onClose();
   };
 
   const content = (
@@ -88,44 +93,56 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
             const role = workerRoles[worker.id] || 'member';
             const roleLabel = ROLE_OPTIONS.find((r) => r.value === role)?.label || role;
             return (
-              <div
+              // 2026-09-18 修复 M-8：改为 label + 隐藏 checkbox（键盘可达 + screen reader 友好），
+              // 替代之前的 div onClick（不可通过 Tab 聚焦、无 a11y 角色）
+              <label
                 key={worker.id}
-                onClick={() => toggleWorker(worker.id)}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                className={`block p-3 border rounded-lg cursor-pointer transition-colors ${
                   selectedWorkers.includes(worker.id)
                     ? 'border-emerald-500 bg-emerald-50'
                     : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{worker.name}</p>
-                    <p className="text-sm text-gray-500">{worker.phone}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">{worker.workerType}</span>
-                    {selectedWorkers.includes(worker.id) && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                        {roleLabel}
-                      </span>
-                    )}
-                    {selectedWorkers.includes(worker.id) && (
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-emerald-600"
+                    checked={selectedWorkers.includes(worker.id)}
+                    onChange={() => toggleWorker(worker.id)}
+                    aria-label={`选择工人 ${worker.name}`}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{worker.name}</p>
+                        <p className="text-sm text-gray-500">{worker.phone}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{worker.workerType}</span>
+                        {selectedWorkers.includes(worker.id) && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            {roleLabel}
+                          </span>
+                        )}
+                        {selectedWorkers.includes(worker.id) && (
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {worker.skillTags.length > 0 && (
+                      <div className="flex gap-1 mt-2">
+                        {worker.skillTags.map((tag) => (
+                          <span key={tag} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            {tag}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
-                {worker.skillTags.length > 0 && (
-                  <div className="flex gap-1 mt-2">
-                    {worker.skillTags.map((tag) => (
-                      <span key={tag} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </label>
             );
           })}
         </div>

@@ -14,6 +14,14 @@ import { Badge, UnifiedModal } from '@/components/ui';
 import type { Team } from './types';
 import { getWorkerName, useTeamManageStore } from '@/stores/useTeamManageStore';
 
+// 2026-09-18 修复 M-10：详情弹窗的变更历史 + 可用性数据加模块级缓存（30s TTL），
+//   重复打开同班组详情弹窗不再重复请求后端。30s 内数据变更视为可接受延迟（用户也可关闭重开刷新）
+type ChangeRow = { id: string; worker_id: string; change_type: string; operator_name: string | null; reason: string | null; created_at: string };
+type AvailRow = { available_hours: number; busy_hours: number; total_worker_count: number };
+const changesCache = new Map<string, { ts: number; data: ChangeRow[] }>();
+const availCache = new Map<string, { ts: number; data: AvailRow | null }>();
+const CACHE_TTL = 30 * 1000;
+
 interface TeamDetailModalProps {
   open: boolean;
   onClose: () => void;
@@ -29,39 +37,49 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
   const fetchMemberChanges = useTeamManageStore((s) => s.fetchMemberChanges);
   const fetchAvailability = useTeamManageStore((s) => s.fetchAvailability);
 
-  const [changes, setChanges] = useState<Array<{
-    id: string; worker_id: string; change_type: string;
-    operator_name: string | null; reason: string | null; created_at: string;
-  }>>([]);
-  const [avail, setAvail] = useState<{
-    available_hours: number; busy_hours: number; total_worker_count: number;
-  } | null>(null);
+  const [changes, setChanges] = useState<ChangeRow[]>([]);
+  const [avail, setAvail] = useState<AvailRow | null>(null);
 
-  // 打开弹窗时刷新变更历史
+  // 打开弹窗时刷新变更历史（带 30s TTL 缓存）
   useEffect(() => {
     if (!open || !team) return;
     let cancelled = false;
+    const cacheKey = `${team.id}|changes`;
+    const cached = changesCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      setChanges(cached.data);
+      return;
+    }
     void (async () => {
       const ch = await fetchMemberChanges(team.id, 30);
       if (cancelled) return;
-      setChanges(ch.map((x) => ({
+      const rows = ch.map((x) => ({
         id: x.id, worker_id: x.worker_id, change_type: x.change_type,
         operator_name: x.operator_name, reason: x.reason, created_at: x.created_at,
-      })));
+      }));
+      changesCache.set(cacheKey, { ts: Date.now(), data: rows });
+      setChanges(rows);
     })();
     return () => { cancelled = true; };
   }, [open, team, fetchMemberChanges]);
 
-  // 切到可用性 Tab 时加载
+  // 切到可用性 Tab 时加载（带缓存）
   useEffect(() => {
     if (activeTab === 'availability' && team && availDate) {
+      const cacheKey = `${team.id}|${availDate}`;
+      const cached = availCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        setAvail(cached.data);
+        return;
+      }
       void fetchAvailability(team.id, availDate).then((a) => {
-        if (a) setAvail({
+        const row: AvailRow | null = a ? {
           available_hours: a.available_hours,
           busy_hours: a.busy_hours,
           total_worker_count: a.total_worker_count,
-        });
-        else setAvail(null);
+        } : null;
+        availCache.set(cacheKey, { ts: Date.now(), data: row });
+        setAvail(row);
       });
     }
   }, [activeTab, team, availDate, fetchAvailability]);
@@ -111,9 +129,10 @@ export function TeamDetailModal({ open, onClose, team }: TeamDetailModalProps) {
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">技能标签(班组)</label>
-            {team.capabilityTags?.length ? (
+            {/* 2026-09-18 修复：技能标签展示统一用 taskCapabilities（与编辑/派工口径一致） */}
+            {team.taskCapabilities?.length ? (
               <div className="flex flex-wrap gap-1">
-                {team.capabilityTags.map((tag) => (
+                {team.taskCapabilities.map((tag) => (
                   <Badge key={tag} variant="secondary">{tag}</Badge>
                 ))}
               </div>

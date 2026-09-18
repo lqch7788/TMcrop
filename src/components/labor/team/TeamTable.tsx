@@ -7,6 +7,11 @@ import { Calendar, Edit2, Eye, Plus, RotateCcw, Save, Trash2, UserPlus, Users, X
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
+import { SkillTagEditor } from './SkillTagEditor';
+import { StatCard } from './StatCard';
+import { FiltersBar } from './FiltersBar';
+import { ToolbarHeader } from './ToolbarHeader';
+import { TeamFormFields } from './TeamFormFields';
 import type { Team } from './types';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
@@ -108,15 +113,22 @@ export function TeamTable({
     setIsDetailModalOpen(true);
   };
 
+  // 2026-09-18 修复 M-4：表单初始化工厂（创建/编辑复用同一初始化逻辑，
+  //   避免加字段时漏改一处）
+  const initFormData = (team?: Team | null) => ({
+    name: team?.name ?? '',
+    leaderName: team?.leaderName ?? '',
+    description: team?.description ?? '',
+    workZone: team?.workZone ?? '',
+    capabilityTags: Array.isArray(team?.taskCapabilities) ? (team!.taskCapabilities as string[]) : [],
+    dailyCapacityHours: team?.dailyCapacityHours ?? 8,
+  });
+
   // 打开新建班组弹窗
   const openCreateModal = () => {
     setEditingTeam(null);
-    // 2026-09-17：新建场景用户从头选标签，允许同步
-    setSkillCapsLoaded(true);
-    setFormData({
-      name: '', leaderName: '', description: '', workZone: '',
-      capabilityTags: [], dailyCapacityHours: 8,
-    });
+    setSkillCapsLoaded(true); // 新建场景标签按"已加载"处理
+    setFormData(initFormData(null));
     setIsFormOpen(true);
   };
 
@@ -126,64 +138,81 @@ export function TeamTable({
     // 2026-09-17：技能标签回填改用 team_task_capabilities 数据源（与保存/派工口径一致）
     // 防御：区分「加载完成且为空数组」与「数据未就绪（undefined）」——
     // 后者回填成 [] 再保存会把已有标签全删（syncTeamCapabilities 是全量覆盖）
-    const capsLoaded = Array.isArray(team.taskCapabilities);
-    setSkillCapsLoaded(capsLoaded);
-    const capTags: string[] = capsLoaded ? (team.taskCapabilities as string[]) : [];
-    setFormData({
-      name: team.name,
-      leaderName: team.leaderName,
-      description: team.description || '',
-      workZone: team.workZone || '',
-      capabilityTags: capTags,
-      dailyCapacityHours: team.dailyCapacityHours ?? 8,
-    });
+    setSkillCapsLoaded(Array.isArray(team.taskCapabilities));
+    setFormData(initFormData(team));
     setIsFormOpen(true);
   };
 
-  // 处理分配（操作人取当前登录用户，realName 优先；2026-09-17 修复：补传 role，此前角色选择被丢弃）
-  const handleAssign = (teamId: string, workerIds: string[], role: string = 'member') => {
-    assignWorkers(teamId, workerIds, currentUser?.oid || '', currentUser?.realName || currentUser?.username || '', role);
+  // 处理分配（操作人取当前登录用户，realName 优先；2026-09-18 修复 C-9：传 workerRoles 替代单一 role）
+  const handleAssign = (teamId: string, workerIds: string[], workerRoles: Record<string, string>) => {
+    assignWorkers(teamId, workerIds, currentUser?.oid || '', currentUser?.realName || currentUser?.username || '', workerRoles);
   };
+
+  // 2026-09-18 修复 C-15/C-16：防止双击重复提交 + 必填校验
+  const [submitting, setSubmitting] = useState(false);
 
   // 处理创建/编辑
   const handleSubmit = async () => {
+    // 2026-09-18 修复 C-15：必填校验
+    const name = formData.name.trim();
+    const leaderName = formData.leaderName.trim();
+    if (!name || !leaderName) {
+      await showAlert('班组名称和负责人为必填项');
+      return;
+    }
+    // 2026-09-18 修复 C-16：防双击
+    if (submitting) return;
+    setSubmitting(true);
+
     // 2026-09-16：清理自定义标签（去 custom: 前缀 + 移除 __custom_input__ 内部标记）
     const cleanedTags = (Array.isArray(formData.capabilityTags) ? formData.capabilityTags : [])
       .filter((t: string) => t !== '__custom_input__')
       .map((t: string) => t.startsWith('custom:') ? t.replace('custom:', '').trim() : t)
       .filter((t: string) => t.length > 0);
 
-    let teamId: string;
-    if (editingTeam) {
-      teamId = editingTeam.id;
-      await updateTeam(teamId, {
-        ...formData,
-        capabilityTags: cleanedTags,
-        leaderName: formData.leaderName,
-      });
-    } else {
-      const newTeam = await createTeam({
-        ...formData,
-        capabilityTags: cleanedTags,
-        leaderId: 'new',
-        leaderName: formData.leaderName,
-      });
-      teamId = newTeam?.id ?? '';
-    }
-
-    // 2026-09-16：同步子资源（任务能力）
-    // 2026-09-17：作业区域界面已下线，只同步技能标签；失败时显式提示（Fail Loud）
-    // 防御：编辑场景下若技能标签数据未就绪，跳过同步（避免用空数组覆盖掉已有标签）
-    if (teamId && skillCapsLoaded) {
-      try {
-        await syncTeamCapabilities(teamId, cleanedTags);
-      } catch (err) {
-        console.error('同步技能标签失败:', err);
-        await showAlert('班组信息已保存，但技能标签同步失败。请重试或联系管理员。');
+    try {
+      let teamId: string;
+      if (editingTeam) {
+        teamId = editingTeam.id;
+        await updateTeam(teamId, {
+          name,
+          leaderName,
+          description: formData.description,
+          dailyCapacityHours: formData.dailyCapacityHours,
+        });
+      } else {
+        // 2026-09-18 修复 C-10：store.createTeam 现在真正返回 Promise<Team | undefined>
+        // （hook 之前用 useCallback 包一层吞掉 Promise，await 拿到 undefined → teamId 永远空）
+        const newTeam = await createTeam({
+          name,
+          leaderName,
+          description: formData.description,
+          dailyCapacityHours: formData.dailyCapacityHours,
+        });
+        teamId = newTeam?.id ?? '';
       }
-    }
 
-    setIsFormOpen(false);
+      // 2026-09-16：同步子资源（任务能力）
+      // 2026-09-17：作业区域界面已下线，只同步技能标签；失败时显式提示（Fail Loud）
+      // 2026-09-18 修复 C-11：store.write 操作现在会 throw，try/catch 显式提示用户
+      if (teamId && skillCapsLoaded) {
+        try {
+          await syncTeamCapabilities(teamId, cleanedTags);
+        } catch (err) {
+          console.error('同步技能标签失败:', err);
+          await showAlert('班组信息已保存，但技能标签同步失败。请重试或联系管理员。');
+          setSubmitting(false);
+          return;
+        }
+      }
+      setIsFormOpen(false);
+    } catch (err) {
+      // 2026-09-18 修复 C-11：store 失败时弹窗，Modal 保持打开让用户重试
+      console.error('保存班组失败:', err);
+      await showAlert(`保存失败：${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // 处理删除
@@ -207,12 +236,13 @@ export function TeamTable({
     }
   };
 
-  // 全选/取消全选
+  // 全选/取消全选（2026-09-18 修复 M-15：useTeam 返回的 teams 是分页后的，
+  //   与过滤后的全集长度不一致会漏选。用 filteredTeams 才是当前可见的全集）
   const handleSelectAll = () => {
-    if (selectedRows.length === teams.length) {
+    if (selectedRows.length === filteredTeams.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(teams.map(t => t.id));
+      setSelectedRows(filteredTeams.map(t => t.id));
     }
   };
 
@@ -231,9 +261,6 @@ export function TeamTable({
     setSelectedRows([]);
   };
 
-  // 计算分页数据
-  const paginatedData = teams;
-
   return (
     <div className="space-y-4">
       {/* 页面标题 */}
@@ -251,124 +278,35 @@ export function TeamTable({
 
       {/* 统计卡片 - 紧凑型淡彩色 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Users className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">班组数量</p>
-              <p className="text-lg font-bold text-gray-800">{teams.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Users className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">总人数</p>
-              <p className="text-lg font-bold text-gray-800">
-                {teams.reduce((sum, team) => sum + team.memberCount, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <UserPlus className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">未分配</p>
-              <p className="text-lg font-bold text-gray-800">{unassignedWorkers.length}</p>
-            </div>
-          </div>
-        </div>
+        {/* 2026-09-18 修复 M-5：3 张统计卡片抽到 StatCard 组件 */}
+        <StatCard icon={Users} label="班组数量" value={filteredTeams.length} color="emerald" />
+        <StatCard
+          icon={Users}
+          label="总人数"
+          value={teams.reduce((sum, team) => sum + team.memberCount, 0)}
+          color="blue"
+        />
+        <StatCard icon={UserPlus} label="未分配" value={unassignedWorkers.length} color="amber" />
       </div>
 
-      {/* 筛选栏 - 多字段搜索 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 whitespace-nowrap">班组名称:</span>
-            <Input
-              type="text"
-              placeholder="请输入"
-              value={filters.name}
-              onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-              className="w-[140px]"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 whitespace-nowrap">负责人:</span>
-            <Input
-              type="text"
-              placeholder="请输入"
-              value={filters.leaderName}
-              onChange={(e) => setFilters({ ...filters, leaderName: e.target.value })}
-              className="w-[140px]"
-            />
-          </div>
-          {/* 2026-09-17：移除"作业区域"筛选项（对应列已下线） */}
-          <div className="flex gap-2 ml-auto">
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => setFilters({ name: '', leaderName: '' })}
-            >
-              <RotateCcw className="w-4 h-4" />
-              重置
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* 2026-09-18 修复 M-1：筛选栏/工具栏抽到独立组件 */}
+      <FiltersBar
+        filters={filters}
+        onChange={setFilters}
+      />
 
       {/* 班组列表表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* 表格标题栏 */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">班组分配记录表</h3>
-          <div className="flex gap-2">
-            {batchDeleteMode ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleBatchDelete}
-                  disabled={selectedRows.length === 0}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={handleCancelBatch}>
-                  <X className="w-4 h-4" /> 取消
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* 2026-09-16：调换顺序 — 新建班组移到批量删除前面 */}
-                {canCreate && (
-                  <Button size="sm" onClick={openCreateModal}>
-                    <Plus className="w-4 h-4" />
-                    新建班组
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setBatchDeleteMode(true)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    批量删除
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        <ToolbarHeader
+          batchDeleteMode={batchDeleteMode}
+          selectedCount={selectedRows.length}
+          canCreate={canCreate}
+          canDelete={canDelete}
+          onEnterBatchDelete={() => setBatchDeleteMode(true)}
+          onConfirmBatchDelete={handleBatchDelete}
+          onCancelBatchDelete={handleCancelBatch}
+          onCreate={openCreateModal}
+        />
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -376,7 +314,7 @@ export function TeamTable({
                 {batchDeleteMode && (
                   <TableHead className="px-4 py-3 text-sm font-semibold w-12 text-white">
                     <Checkbox
-                      checked={selectedRows.length === teams.length && teams.length > 0}
+                      checked={selectedRows.length === filteredTeams.length && filteredTeams.length > 0}
                       onCheckedChange={handleSelectAll}
                       className="border-white rounded"
                     />
@@ -396,14 +334,14 @@ export function TeamTable({
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white divide-y divide-gray-300">
-              {paginatedData.length === 0 ? (
+              {teams.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={batchDeleteMode ? 8 : 7} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((team) => (
+                teams.map((team) => (
                   <TableRow key={team.id} className="hover:bg-emerald-50 transition-colors">
                     {batchDeleteMode && (
                       <TableCell className="px-4 py-3">
@@ -479,11 +417,13 @@ export function TeamTable({
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {/* 2026-09-18 修复 M-11：图标按钮加 aria-label（title 仅作 tooltip） */}
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => openDetailModal(team)}
                           title="查看详情"
+                          aria-label="查看班组详情"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -492,6 +432,7 @@ export function TeamTable({
                           size="icon"
                           onClick={() => openAssignModal(team)}
                           title="分配工人"
+                          aria-label="分配工人"
                         >
                           <UserPlus className="w-4 h-4" />
                         </Button>
@@ -501,6 +442,7 @@ export function TeamTable({
                             size="icon"
                             onClick={() => openEditModal(team)}
                             title="编辑"
+                            aria-label="编辑班组"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -511,6 +453,7 @@ export function TeamTable({
                             size="icon"
                             onClick={() => handleDelete(team)}
                             title="删除"
+                            aria-label="删除班组"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -521,6 +464,7 @@ export function TeamTable({
                           size="icon"
                           onClick={() => handleBatchSchedule(team)}
                           title="为该班组批量排班"
+                          aria-label="为该班组批量排班"
                         >
                           <Calendar className="w-4 h-4" />
                         </Button>
@@ -575,163 +519,23 @@ export function TeamTable({
         footer={
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setIsFormOpen(false)}><X className="w-4 h-4" /> 取消</Button>
-            <Button onClick={handleSubmit}><Save className="w-4 h-4" /> 保存</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              <Save className="w-4 h-4" /> {submitting ? '保存中...' : '保存'}
+            </Button>
           </div>
         }
       >
-        <div className="space-y-4">
-          <div>
-            <Label className="block text-sm font-medium text-gray-700 mb-1">班组名称</Label>
-            <Input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="请输入班组名称"
-            />
-          </div>
-          <div>
-            <Label className="block text-sm font-medium text-gray-700 mb-1">负责人</Label>
-            <Input
-              type="text"
-              value={formData.leaderName}
-              onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
-              placeholder="请输入负责人姓名"
-            />
-          </div>
-          {/* 2026-09-17：移除"作业区域"文本框 —— 作业区域统一用下方多选控件（关联表），
-              原 teams.work_zone 文本字段与关联表语义重复，是两套并存的历史遗留 */}
-          {/* 2026-09-16：4 个新字段（技能标签 chip 多选 + 产能 + 半径） */}
-          <div>
-            <Label className="block text-sm font-medium text-gray-700 mb-2">
-              技能标签
-              <span className="ml-2 text-xs text-gray-400">（点击 chip 选择，预设外可点「其他」输入自定义）</span>
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {['采收', '施肥', '打药', '巡检', '灌溉', '运输', '修剪', '清园'].map((preset) => {
-                const currentTags = Array.isArray(formData.capabilityTags) ? formData.capabilityTags : [];
-                const selected = currentTags.includes(preset);
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => {
-                      // 2026-09-17 修复：必须用函数式更新。此前 `{...formData}` 展开的是闭包里的旧值，
-                      // 连续快速点击多个 chip 时后面的点击会覆盖前面的选择（用户反馈"勾选后保存丢失"）。
-                      setFormData((prev) => {
-                        const cur = Array.isArray(prev.capabilityTags) ? prev.capabilityTags : [];
-                        const next = cur.includes(preset)
-                          ? cur.filter((s: string) => s !== preset)
-                          : [...cur, preset];
-                        return { ...prev, capabilityTags: next };
-                      });
-                    }}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                      selected
-                        ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
-                        : 'bg-white border-gray-300 text-gray-600 hover:border-emerald-300 hover:bg-emerald-50'
-                    }`}
-                  >
-                    {selected ? '✓ ' : '+ '}{preset}
-                  </button>
-                );
-              })}
-              {/* 其他 - 2026-09-16：点击展开自定义输入 */}
-              {/* 2026-09-16 修复：判断「__custom_input__ 标记 OR 已有 custom: 前缀项」才显示 input（避免输入首字符导致卸载） */}
-              {(Array.isArray(formData.capabilityTags) && formData.capabilityTags.some((t: string) => t === '__custom_input__' || t.startsWith('custom:'))) ? (
-                <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 border border-emerald-400 rounded-full">
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="输入自定义标签"
-                    value={formData.capabilityTags?.find((t: string) => t.startsWith('custom:'))?.replace('custom:', '') || ''}
-                    onChange={(e) => {
-                      // 2026-09-17：函数式更新（同 chip 修复，避免与其他字段编辑互相覆盖）
-                      const val = e.target.value;
-                      setFormData((prev) => {
-                        const cur = Array.isArray(prev.capabilityTags) ? prev.capabilityTags : [];
-                        const filtered = cur.filter((t: string) => !t.startsWith('custom:') && t !== '__custom_input__');
-                        return {
-                          ...prev,
-                          capabilityTags: val ? [...filtered, `custom:${val.trim()}`] : [...filtered, '__custom_input__'],
-                        };
-                      });
-                    }}
-                    onBlur={() => {
-                      // 失焦时如果输入框为空，移除「其他」状态
-                      setFormData((prev) => {
-                        const cur = Array.isArray(prev.capabilityTags) ? prev.capabilityTags : [];
-                        const hasValue = cur.some((t: string) => t.startsWith('custom:') && t.replace('custom:', '').trim());
-                        if (hasValue) return prev;
-                        return { ...prev, capabilityTags: cur.filter((t: string) => t !== '__custom_input__') };
-                      });
-                    }}
-                    className="w-32 text-xs border-none bg-transparent outline-none"
-                    style={{ minWidth: '120px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // 2026-09-17：函数式更新
-                      setFormData((prev) => {
-                        const cur = Array.isArray(prev.capabilityTags) ? prev.capabilityTags : [];
-                        return { ...prev, capabilityTags: cur.filter((t: string) => t !== '__custom_input__') };
-                      });
-                    }}
-                    className="text-emerald-700 hover:text-red-500"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // 2026-09-17：函数式更新
-                    setFormData((prev) => {
-                      const cur = Array.isArray(prev.capabilityTags) ? prev.capabilityTags : [];
-                      return { ...prev, capabilityTags: [...cur, '__custom_input__'] };
-                    });
-                  }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full border border-dashed border-gray-400 text-gray-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50"
-                >
-                  + 其他
-                </button>
-              )}
-            </div>
-            {Array.isArray(formData.capabilityTags) && formData.capabilityTags.filter((t: string) => t !== '__custom_input__').length > 0 && (
-              <div className="text-xs text-gray-500 mt-2">
-                已选 {formData.capabilityTags.filter((t: string) => t !== '__custom_input__').length} 个：{
-                  formData.capabilityTags
-                    .filter((t: string) => t !== '__custom_input__')
-                    .map((t: string) => t.startsWith('custom:') ? `「${t.replace('custom:', '')}」` : t)
-                    .join('、')
-                }
-              </div>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="block text-sm font-medium text-gray-700 mb-1">日产能上限 <span className="text-xs text-gray-400">（小时/天）</span></Label>
-              <Input
-                type="number"
-                value={formData.dailyCapacityHours ?? 8}
-                onChange={(e) => setFormData({ ...formData, dailyCapacityHours: parseInt(e.target.value) || 8 })}
-              />
-            </div>
-          </div>
-          {/* 2026-09-17：移除「周产能上限」和「作业半径」（全项目无下游消费的死字段）；
-              同时移除「作业区域」多选控件 —— 该功能经核实空转（唯一消费方未激活 +
-              与任务空间维度断层），界面下线，数据保留在 team_zone_assignments 表 */}
-          <div>
-            <Label className="block text-sm font-medium text-gray-700 mb-1">描述</Label>
-            <TextArea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              placeholder="请输入描述"
-            />
-          </div>
-        </div>
+        {/* 2026-09-18 修复 M-1：表单内层字段抽到 TeamFormFields 组件 */}
+        <TeamFormFields
+          value={{
+            name: formData.name,
+            leaderName: formData.leaderName,
+            description: formData.description,
+            capabilityTags: formData.capabilityTags || [],
+            dailyCapacityHours: formData.dailyCapacityHours ?? 8,
+          }}
+          onChange={(next) => setFormData((prev) => ({ ...prev, ...next }))}
+        />
       </UnifiedModal>
     </div>
   );

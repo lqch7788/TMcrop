@@ -3,12 +3,7 @@
  */
 import { getDatabase } from '../db';
 import { generateId } from '../utils/id';
-
-function handleServiceError(error: unknown, operation: string): never {
-  console.error(`${operation}失败:`, error);
-  if (error instanceof Error) throw new Error(`${operation}失败: ${error.message}`);
-  throw new Error(`${operation}失败: 未知错误`);
-}
+import { handleServiceError } from '../utils/serviceError';
 
 export interface TeamMemberChange {
   id: string;

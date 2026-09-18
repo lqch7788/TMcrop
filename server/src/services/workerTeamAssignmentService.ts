@@ -3,12 +3,7 @@
  */
 import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
-
-function handleServiceError(error: unknown, operation: string): never {
-  console.error(`${operation}失败:`, error);
-  if (error instanceof Error) throw new Error(`${operation}失败: ${error.message}`);
-  throw new Error(`${operation}失败: 未知错误`);
-}
+import { handleServiceError } from '../utils/serviceError';
 
 export interface WorkerTeamAssignment {
   id: string;
@@ -45,14 +40,28 @@ export async function addWorkerTeam(
 ): Promise<WorkerTeamAssignment> {
   try {
     const db = getDatabase();
+    // 2026-09-18 修复 H-1 TOCTOU：worker_team_assignments 表 UNIQUE(worker_id, team_id, role)，
+    // 并发添加会触发 UNIQUE failed。改用 INSERT OR IGNORE 幂等写入。
     const id = generateId('WTA');
     const now = new Date().toISOString();
     db.run(
-      `INSERT INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
+      `INSERT OR IGNORE INTO worker_team_assignments (id, worker_id, team_id, role, is_primary, percentage, joined_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, workerId, teamId, role, isPrimary ? 1 : 0, percentage, now, now],
     );
-    saveDatabase(); // 2026-09-17 修复：写操作必须持久化，否则重启后兼职关联丢失
+    saveDatabase(); // 2026-09-17 修复：写操作必须持久化
+    // 查询最终记录（处理并发：可能当前 INSERT 被忽略，已有记录存在）
+    const finalRes = db.exec(
+      'SELECT * FROM worker_team_assignments WHERE worker_id = ? AND team_id = ? AND role = ?',
+      [workerId, teamId, role],
+    );
+    if (finalRes.length > 0 && finalRes[0].values.length > 0) {
+      const row = finalRes[0].values[0];
+      const cols = finalRes[0].columns;
+      const obj: Record<string, unknown> = {};
+      cols.forEach((col, i) => { obj[col] = row[i]; });
+      return obj as unknown as WorkerTeamAssignment;
+    }
     return { id, worker_id: workerId, team_id: teamId, role, is_primary: isPrimary ? 1 : 0, percentage, joined_at: now, left_at: null, created_at: now };
   } catch (error) {
     return handleServiceError(error, '添加工人班组兼职');

@@ -1109,8 +1109,10 @@ router.post('/teams', (req, res) => {
       return res.status(400).json({ success: false, error: '班组名称和编码不能为空' });
     }
 
-    const id = `TM${Date.now()}`;
-    const oid = `TM${Date.now()}`;
+    // 2026-09-18 修复 C-12：id/oid 改用 UUID（crypto.randomUUID），
+    // 避免毫秒级并发创建同一 Date.now() 触发主键冲突。
+    const id = `TM_${crypto.randomUUID()}`;
+    const oid = `TM_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
 
     db.run(`

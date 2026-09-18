@@ -12,7 +12,8 @@ router.get('/:teamId/availability', async (req: Request, res: Response) => {
     const row = await getAvailability(req.params.teamId, date);
     res.json({ success: true, data: row });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] availability 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -22,7 +23,8 @@ router.post('/:teamId/availability/refresh', async (req: Request, res: Response)
     const row = await refreshAvailability(req.params.teamId, date);
     res.json({ success: true, data: row });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] availability 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
