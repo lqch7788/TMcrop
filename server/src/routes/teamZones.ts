@@ -11,7 +11,8 @@ router.get('/:teamId/zones', async (req: Request, res: Response) => {
     const zones = await listTeamZones(req.params.teamId);
     res.json({ success: true, data: zones });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] GET /zones 失败:', error); // 2026-09-18 修复 C-7：服务端保留 stack，响应脱敏
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -22,7 +23,8 @@ router.post('/:teamId/zones', async (req: Request, res: Response) => {
     const result = await addTeamZone(req.params.teamId, zoneId, role);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] POST /zones 失败:', error);
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -32,7 +34,8 @@ router.delete('/:teamId/zones/:zoneId', async (req: Request, res: Response) => {
     await removeTeamZone(req.params.teamId, req.params.zoneId, role);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] DELETE /zones 失败:', error);
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 

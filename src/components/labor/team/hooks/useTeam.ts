@@ -11,11 +11,14 @@ export interface UseTeamReturn {
   setFilters: (filters: TeamFilters) => void;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
-  createTeam: (data: Partial<Team>) => void;
-  updateTeam: (id: string, data: Partial<Team>) => void;
-  deleteTeam: (id: string) => void;
-  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role?: string) => void;
-  removeWorker: (teamId: string, workerId: string) => void;
+  // 2026-09-18 修复：类型签名改回真正的 Promise，审计 C-10/C-11
+  // 此前误写为同步返回（=> void），导致 await 拿到 undefined，新建班组的 teamId 永远为空
+  createTeam: (data: Partial<Team>) => Promise<Team | undefined>;
+  updateTeam: (id: string, data: Partial<Team>) => Promise<void>;
+  deleteTeam: (id: string) => Promise<void>;
+  // 2026-09-18 修复：role 改为 Record（每人独立角色），审计 C-9 批量角色被丢弃
+  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string, workerRoles?: Record<string, string>) => Promise<void>;
+  removeWorker: (teamId: string, workerId: string) => Promise<void>;
   getTeamById: (id: string) => Team | undefined;
   filteredTeams: Team[];
 }
@@ -23,19 +26,22 @@ export interface UseTeamReturn {
 /**
  * 班组分配管理Hook
  * 数据源：useTeamManageStore (Zustand store, mock种子数据 + localStorage持久化)
+ *
+ * 2026-09-18 修复 H-10：之前用 useTeamManageStore() 无 selector 全字段订阅，
+ * 任何字段（isLoading/error/lastFetch 等）变化触发整个 738 行的 TeamTable 重渲染。
+ * 改用 selector 订阅，store 中无关字段变化时此 hook 返回值引用稳定，子组件 re-render 抑制。
  */
 export function useTeam(): UseTeamReturn {
-  const {
-    teams: storeTeams,
-    unassignedWorkers: storeUnassigned,
-    isLoading,
-    fetchData,
-    createTeam: storeCreate,
-    updateTeam: storeUpdate,
-    deleteTeam: storeDelete,
-    assignWorkers: storeAssign,
-    removeWorker: storeRemove,
-  } = useTeamManageStore();
+  const storeTeams = useTeamManageStore((s) => s.teams);
+  const storeUnassigned = useTeamManageStore((s) => s.unassignedWorkers);
+  const isLoading = useTeamManageStore((s) => s.isLoading);
+  const fetchData = useTeamManageStore((s) => s.fetchData);
+  // 2026-09-18 修复 C-10：createTeam / updateTeam 现在真正返回 Promise，不能再用 useCallback 包一层吞掉
+  const storeCreate = useTeamManageStore((s) => s.createTeam);
+  const storeUpdate = useTeamManageStore((s) => s.updateTeam);
+  const storeDelete = useTeamManageStore((s) => s.deleteTeam);
+  const storeAssign = useTeamManageStore((s) => s.assignWorkers);
+  const storeRemove = useTeamManageStore((s) => s.removeWorker);
 
   const [filters, setFiltersState] = useState<TeamFilters>({ name: '', leaderName: '' });
   const [pagination, setPagination] = useState<TeamPagination>({
@@ -87,36 +93,13 @@ export function useTeam(): UseTeamReturn {
     setPagination((prev) => ({ ...prev, pageSize: size, currentPage: 1 }));
   }, []);
 
-  // 创建班组
-  const createTeam = useCallback((data: Partial<Team>) => {
-    storeCreate(data);
-  }, [storeCreate]);
-
-  // 更新班组
-  const updateTeam = useCallback((id: string, data: Partial<Team>) => {
-    storeUpdate(id, data);
-  }, [storeUpdate]);
-
-  // 删除班组
-  const deleteTeam = useCallback((id: string) => {
-    storeDelete(id);
-  }, [storeDelete]);
-
-  // 分配工人到班组（2026-09-17：补传 role，此前角色选择在下拉链路中被丢弃）
-  const assignWorkers = useCallback(
-    (teamId: string, workerIds: string[], operatorId: string, operatorName: string, role = 'member') => {
-      storeAssign(teamId, workerIds, operatorId, operatorName, role);
-    },
-    [storeAssign]
-  );
-
-  // 从班组移除工人
-  const removeWorker = useCallback(
-    (teamId: string, workerId: string) => {
-      storeRemove(teamId, workerId);
-    },
-    [storeRemove]
-  );
+  // 2026-09-18 修复：直接返回 store 的 Promise（不要 useCallback 包一层吞掉，
+  // 这是 C-10 根因——await createTeam(...) 拿到 undefined → teamId 空字符串 → 跳过技能同步）
+  const createTeam = storeCreate;
+  const updateTeam = storeUpdate;
+  const deleteTeam = storeDelete;
+  const assignWorkers = storeAssign;
+  const removeWorker = storeRemove;
 
   // 根据ID获取班组
   const getTeamById = useCallback(
@@ -126,11 +109,13 @@ export function useTeam(): UseTeamReturn {
     [storeTeams]
   );
 
-  return {
+  // 2026-09-18 修复 H-14：useMemo 稳定引用，React.memo 子组件的 prop 比较才能生效
+  return useMemo(() => ({
     teams: paginatedTeams,
     unassignedWorkers: storeUnassigned,
     filters,
     isLoading,
+    // 2026-09-18 修复 L-3：pagination 不再每次返回新对象（total 直接从 filteredTeams 派生）
     pagination: { ...pagination, total: filteredTeams.length },
     setFilters,
     setPage,
@@ -142,5 +127,10 @@ export function useTeam(): UseTeamReturn {
     removeWorker,
     getTeamById,
     filteredTeams,
-  };
+  }), [
+    paginatedTeams, storeUnassigned, filters, isLoading, pagination,
+    setFilters, setPage, setPageSize,
+    createTeam, updateTeam, deleteTeam, assignWorkers, removeWorker, getTeamById,
+    filteredTeams,
+  ]);
 }

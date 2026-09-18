@@ -11,7 +11,8 @@ router.get('/:workerId/teams', async (req: Request, res: Response) => {
     const list = await listWorkerTeams(req.params.workerId);
     res.json({ success: true, data: list });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] worker-teams 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -22,7 +23,8 @@ router.post('/:workerId/teams', async (req: Request, res: Response) => {
     const result = await addWorkerTeam(req.params.workerId, teamId, role, percentage, isPrimary);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] worker-teams 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -31,7 +33,8 @@ router.delete('/:workerId/teams/:teamId', async (req: Request, res: Response) =>
     await removeWorkerTeam(req.params.workerId, req.params.teamId);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] worker-teams 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 

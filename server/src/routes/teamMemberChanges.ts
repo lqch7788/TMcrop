@@ -12,7 +12,8 @@ router.get('/:teamId/member-changes', async (req: Request, res: Response) => {
     const list = await listTeamChanges(req.params.teamId, limit);
     res.json({ success: true, data: list });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] member-changes 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 

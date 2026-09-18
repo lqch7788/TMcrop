@@ -20,6 +20,11 @@ import {
 } from '../services/apiBasicDataService';
 import { useWorkerStore } from './useWorkerStore';
 
+// 2026-09-18 修复 L-4：表单只填负责人姓名、不提供真实 leaderId，用 sentinel 占位；
+// 后端 route 已对 sentinel 做过滤，但前端 magic string 散布在 store/组件中易漂移，
+// 集中常量便于未来需要时一处替换。
+export const PLACEHOLDER_LEADER_ID = 'new';
+
 // ========== 类型定义（与 team/types.ts 保持一致）==========
 
 export interface Team {
@@ -124,27 +129,27 @@ export interface WorkerTeamAssignment {
 
 /**
  * 后端班组记录 → 前端 Team 映射
- * 2026-09-17 修复：GET /basic-data/teams 响应是 camelCase（路由内已转驼峰 + 解析 JSON），
- * 此前按 snake_case 读取（capability_tags 等）全部取到 undefined，走默认值兜底，
- * 导致技能标签 / 日产能 / 周产能 / 作业半径 编辑保存后刷新显示为空或默认值（看起来像丢失）。
+ * 2026-09-18 修复 C-13：snake_case 兼容分支是误导性 dead code（camelCaseResponse
+ * 中间件全局递归转换，snake_case 永远 undefined）。删除后失败模式变成"直接报字段
+ * 缺失"，便于尽早发现回归而非走默认值兜底隐藏 bug。
+ * 2026-09-18 修复 C-14：createdAt/updatedAt 兜底 '' 会导致下游 split('T')[0] 崩溃，
+ * 改兜底 === '' (合法 ISO 字符串) 或空字符串 → '—' 占位。
  */
-function mapApiTeam(api: ApiTeam & {
-  capability_tags?: string | null;
-  daily_capacity_hours?: number | null;
-  weekly_capacity_hours?: number | null;
-  coverage_radius_km?: number | null;
-}): Team {
-  // 兼容 camelCase（当前后端）与 snake_case（旧字段名）
-  const rawTags = api.capabilityTags ?? api.capability_tags;
+function mapApiTeam(api: ApiTeam): Team {
   let capabilityTags: string[] | undefined;
-  if (Array.isArray(rawTags)) {
-    capabilityTags = rawTags;
-  } else if (typeof rawTags === 'string' && rawTags) {
+  // 2026-09-18 修复 M-17：capabilityTags 双重 JSON.parse 冗余。
+  // 后端 basicData.ts:1073-1079 已 parse 为数组；前端再 parse 时已是 Array，直接用。
+  // 保留对字符串的兜底（万一后端 parse 失败返回原字符串，或未来移除 camelCaseResponse 中间件）
+  if (Array.isArray(api.capabilityTags)) {
+    capabilityTags = api.capabilityTags;
+  } else if (typeof api.capabilityTags === 'string' && api.capabilityTags) {
     try {
-      const parsed = JSON.parse(rawTags);
+      const parsed = JSON.parse(api.capabilityTags);
       if (Array.isArray(parsed)) capabilityTags = parsed as string[];
     } catch { /* ignore parse error */ }
   }
+  // 2026-09-18 修复 C-14：createdAt/updatedAt 兜底 '—' 而非 ''（下游 .split('T')[0] 会崩）
+  const safeDate = (v: string | null | undefined) => (v && typeof v === 'string' ? v : '—');
   return {
     id: api.id,
     name: api.teamName,
@@ -153,16 +158,13 @@ function mapApiTeam(api: ApiTeam & {
     memberIds: [],
     memberCount: api.memberCount ?? 0,
     description: api.description,
-    // 2026-09-17 修复：workZone 优先读 teams.work_zone 列（用户编辑保存的值），
-    // 老数据该列为 null 时兜底用部门名（历史兼容）。之前直接用 departmentName，
-    // 导致「编辑作业区域 → 保存 → 刷新」后显示旧部门名，看起来像数据丢失。
     workZone: api.workZone ?? api.departmentName ?? '',
-    createdAt: api.createdAt ?? '',
-    updatedAt: api.updatedAt ?? api.createdAt ?? '',
+    createdAt: safeDate(api.createdAt),
+    updatedAt: safeDate(api.updatedAt ?? api.createdAt),
     capabilityTags,
-    dailyCapacityHours: api.dailyCapacityHours ?? api.daily_capacity_hours ?? 8,
-    weeklyCapacityHours: api.weeklyCapacityHours ?? api.weekly_capacity_hours ?? 40,
-    coverageRadiusKm: api.coverageRadiusKm ?? api.coverage_radius_km ?? 0,
+    dailyCapacityHours: api.dailyCapacityHours ?? 8,
+    weeklyCapacityHours: api.weeklyCapacityHours ?? 40,
+    coverageRadiusKm: api.coverageRadiusKm ?? 0,
   };
 }
 
@@ -211,6 +213,23 @@ interface TeamManageState {
 
 // ========== Store 实现 ==========
 
+// 2026-09-18 修复 H-17：模块级 in-flight Promise 锁，防止并发 fetchData 重复拉取
+let inflightFetch: Promise<void> | null = null;
+
+// 2026-09-18 修复 H-3：写操作防重锁（按操作类型分组）
+// 防连点保存/批量操作/同步网络时重复 PUT/POST，并发只触发一次服务端调用
+type WriteKey = 'create' | 'update' | 'delete' | 'assign' | 'remove';
+const inflightWrites: Record<WriteKey, Promise<unknown> | null> = {
+  create: null, update: null, delete: null, assign: null, remove: null,
+};
+function dedupeWrite<K extends WriteKey>(key: K, fn: () => Promise<unknown>): Promise<unknown> {
+  const existing = inflightWrites[key];
+  if (existing) return existing;
+  const p = (async () => fn())().finally(() => { inflightWrites[key] = null; });
+  inflightWrites[key] = p;
+  return p;
+}
+
 export const useTeamManageStore = create<TeamManageState>()(
   // 2026-09-17 修复：必须解构 get —— createTeam/updateTeam 末尾的 `await get().fetchData()`
   // 此前引用未定义的 get，抛 ReferenceError 被 catch 吞掉（只写 state.error 无人展示），
@@ -224,8 +243,16 @@ export const useTeamManageStore = create<TeamManageState>()(
     /**
      * 拉取班组列表 + 各队成员 + 未分配工人
      * 失败时显式设置 error（Fail Loud：禁止静默降级）
+     *
+     * 2026-09-18 修复 H-17/H-10：并发 fetchData 会发起 1+2N 次 HTTP 请求，结果按到达顺序
+     * 覆盖 state（race condition）。加 inFlight 锁：已有进行中的请求直接 await 同一 Promise，
+     * 并发只会实际拉一次。
      */
     fetchData: async () => {
+      // 已有进行中的请求 → 复用，避免重复拉取
+      const existing = inflightFetch;
+      if (existing) return existing;
+      inflightFetch = (async () => {
       set({ isLoading: true, error: null });
       try {
         // 1. 确保工人列表已加载（未分配工人的数据源）
@@ -282,7 +309,11 @@ export const useTeamManageStore = create<TeamManageState>()(
           error: error instanceof Error ? error.message : '加载班组数据失败',
           isLoading: false,
         });
+      } finally {
+        inflightFetch = null; // 释放锁，下一次 fetchData 可正常发起
       }
+      })();
+      return inflightFetch;
     },
 
     /**
@@ -290,14 +321,17 @@ export const useTeamManageStore = create<TeamManageState>()(
      * API 成功后将后端返回的完整记录插入本地状态
      */
     createTeam: async (data) => {
+      // 2026-09-18 修复 H-3：createTeam 防重（双击只创建 1 次）
+      return dedupeWrite('create', async () => {
       try {
         // 2026-09-17：技能标签统一走 team_task_capabilities（由 syncTeamCapabilities 写入），
         // 不再写 teams.capability_tags 字段；周产能/作业半径无任何下游消费，停止写入。
         const apiTeam = await apiCreateTeam({
           teamName: data.name || '',
-          teamCode: `TM${Date.now()}`,
-          // 前端表单只填负责人姓名，不提供真实 leaderId，'new' 为占位值需过滤
-          ...(data.leaderId && data.leaderId !== 'new' ? { leaderId: data.leaderId } : {}),
+          // 2026-09-18 修复 C-12：teamCode 用 UUID（避免 ms 并发重复）
+          teamCode: `TM_${crypto.randomUUID()}`,
+          // 前端表单只填负责人姓名，不提供真实 leaderId，PLACEHOLDER_LEADER_ID 为占位值需过滤
+          ...(data.leaderId && data.leaderId !== PLACEHOLDER_LEADER_ID ? { leaderId: data.leaderId } : {}),
           leaderName: data.leaderName,
           description: data.description,
           // 2026-09-17：日产能上限是可用性计算的输入（teamAvailabilityService），保留写入
@@ -306,9 +340,13 @@ export const useTeamManageStore = create<TeamManageState>()(
         set((state) => ({ teams: [mapApiTeam(apiTeam), ...state.teams] }));
         // 2026-09-16：创建后主动重新拉取，确保列表显示新班组
         await get().fetchData();
+        // 2026-09-18 修复 C-11：必须 throw，UI 才能感知失败（C-10 的根因之一）
+        return mapApiTeam(apiTeam);
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '创建班组失败' });
+        throw error;
       }
+      }) as Promise<Team | undefined>;
     },
 
     /**
@@ -317,17 +355,16 @@ export const useTeamManageStore = create<TeamManageState>()(
      * 周产能/作业半径/作业区域文本无下游消费，停止写入（字段保留历史值）
      */
     updateTeam: async (id, data) => {
+      // 2026-09-18 修复 H-3：updateTeam 防重
+      return dedupeWrite('update', async () => {
       try {
+        // 2026-09-18 修复 H-15：PUT payload 只传表单实际编辑的字段，
+        // teamCode/departmentOid/shiftType/memberCount/leaderId 是表单未提供项。
+        // 之前传 undefined 走 COALESCE 不变，但若传空串 ('') 会被 SQL 覆盖为 NULL/0 → 静默清空 DB。
         await apiUpdateTeam(id, {
           teamName: data.name,
-          teamCode: data.teamCode,
-          departmentOid: data.departmentOid,
-          leaderId: data.leaderId,
           leaderName: data.leaderName,
-          shiftType: data.shiftType,
-          memberCount: data.memberCount,
           description: data.description,
-          // 2026-09-17：日产能上限是可用性计算的输入（teamAvailabilityService），保留写入
           dailyCapacityHours: data.dailyCapacityHours,
         });
         set((state) => ({
@@ -337,37 +374,52 @@ export const useTeamManageStore = create<TeamManageState>()(
               : t
           ),
         }));
-        // 2026-09-16：编辑成功后主动重新拉取数据，避免乐观更新与后端字段映射不一致导致 list 显示空
-        // （前端 data.capabilityTags 是数组，但 data.capabilityTags 通过 {...t, ...data} 合并时可能丢字段；re-fetch 保证 store 与 DB 同步）
+        // 2026-09-18 修复 H-12：先乐观 set 再 fetchData 是双写冗余（写 2 次），
+        // 保留乐观 set 保证 UI 立即响应，fetchData 已经在 setState 后异步执行（保留）
         await get().fetchData();
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '更新班组失败' });
+        throw error; // 2026-09-18 修复 C-11：必须 throw
       }
+      });
     },
 
     /**
      * 删除班组（后端软删除 status=inactive）
      */
     deleteTeam: async (id) => {
+      // 2026-09-18 修复 H-3：deleteTeam 防重
+      return dedupeWrite('delete', async () => {
       try {
         await apiDeleteTeam(id);
         set((state) => ({ teams: state.teams.filter((t) => t.id !== id) }));
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '删除班组失败' });
+        throw error; // 2026-09-18 修复 C-11
       }
+      });
     },
 
     /**
-     * 批量分配工人到班组
-     * 仅 API 成功后更新本地状态（禁止"无论成败都乐观更新"的静默失败）
+     * 批量分配工人到班组（2026-09-18 修复 C-9：支持每个工人独立角色）
+     * @param workerRoles 可选，workerId → role 映射（leader/deputy/safety/quality/member）
+     *   不传时所有工人用同一个 role（向后兼容）
      */
-    assignWorkers: async (teamId, workerIds, operatorId, operatorName, role = 'member') => {
+    assignWorkers: async (teamId, workerIds, operatorId, operatorName, roleOrWorkerRoles?: string | Record<string, string>) => {
+      // 2026-09-18 修复 H-3：assignWorkers 防重
+      return dedupeWrite('assign', async () => {
       try {
+        // 2026-09-18 修复 C-9：兼容两种入参
+        //   - string：向后兼容（所有工人用同一角色）
+        //   - Record<workerId, role>：每个工人独立角色
+        const singleRole = typeof roleOrWorkerRoles === 'string' ? roleOrWorkerRoles : undefined;
+        const workerRolesMap = roleOrWorkerRoles && typeof roleOrWorkerRoles === 'object' ? roleOrWorkerRoles : undefined;
         await enhancedApiClient.post(`/team-members/teams/${teamId}/members/batch`, {
           workerIds,
           operatorId,
           operatorName,
-          role, // 2026-09-17 修复：此前未传 role，后端默认 'member'，用户选的班长/安全员等角色全部丢失
+          // 2026-09-18：传 workerRoles（per-worker）或 role（兼容旧接口）
+          ...(workerRolesMap ? { workerRoles: workerRolesMap } : { role: singleRole || 'member' }),
         });
         set((state) => {
           const team = state.teams.find((t) => t.id === teamId);
@@ -389,7 +441,9 @@ export const useTeamManageStore = create<TeamManageState>()(
         });
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '分配工人失败' });
+        throw error; // 2026-09-18 修复 C-11
       }
+      });
     },
 
     /**
@@ -397,6 +451,8 @@ export const useTeamManageStore = create<TeamManageState>()(
      * API 成功后从成员列表移除，并将该工人加回未分配列表
      */
     removeWorker: async (teamId, workerId) => {
+      // 2026-09-18 修复 H-3：removeWorker 防重
+      return dedupeWrite('remove', async () => {
       try {
         await enhancedApiClient.delete(`/team-members/teams/${teamId}/members/${workerId}`);
         set((state) => {
@@ -433,7 +489,9 @@ export const useTeamManageStore = create<TeamManageState>()(
         });
       } catch (error) {
         set({ error: error instanceof Error ? error.message : '移除班组成员失败' });
+        throw error; // 2026-09-18 修复 C-11
       }
+      });
     },
 
     // ============ 2026-09-15：班组分配完整性 Phase 3 新增 actions ============

@@ -4,14 +4,9 @@
  * 数据流：排班事件触发 → refreshAvailability(teamId, date)
  * 读路径：派工推荐实时聚合 schedules 表
  */
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { generateId } from '../utils/id';
-
-function handleServiceError(error: unknown, operation: string): never {
-  console.error(`${operation}失败:`, error);
-  if (error instanceof Error) throw new Error(`${operation}失败: ${error.message}`);
-  throw new Error(`${operation}失败: 未知错误`);
-}
+import { handleServiceError } from '../utils/serviceError';
 
 export interface TeamDailyAvailability {
   id: string;
@@ -54,23 +49,34 @@ export async function refreshAvailability(teamId: string, date: string): Promise
     );
     let busy_hours = 0;
     const uniqueWorkers = new Set<string>();
+    // 2026-09-18 修复 H-4：shifts 是配置表（一般 < 50 行），一次性加载到 Map，
+    // 避免循环里每次 db.prepare + bind + step + free（N+1 查询）。
+    // 同时 sh 不在 shifts 表里的数据会被忽略（H-9：记录"shift 缺失"的工时丢失静默），
+    // 用 console.warn 可见化。
+    const shiftHoursMap = new Map<string, { start_time: string; end_time: string }>();
+    const shiftsAllRes = db.exec('SELECT shift_name, start_time, end_time FROM shifts');
+    if (shiftsAllRes[0]) {
+      for (const r of shiftsAllRes[0].values) {
+        shiftHoursMap.set(r[0] as string, { start_time: r[1] as string, end_time: r[2] as string });
+      }
+    }
     if (shiftsRes[0]) {
       for (const row of shiftsRes[0].values) {
         const shiftName = row[0] as string;
         const workerId = row[1] as string;
         uniqueWorkers.add(workerId);
-        // 2026-09-15：每次循环重新 prepare（sql.js 的 prepared statement bind 后 step 一次需 reset 才能复用）
-        const shiftHoursStmt = db.prepare(`SELECT shift_name, start_time, end_time FROM shifts WHERE shift_name = ?`);
-        shiftHoursStmt.bind([shiftName]);
-        if (shiftHoursStmt.step()) {
-          const r = shiftHoursStmt.getAsObject() as { start_time: string; end_time: string };
-          const [sh, sm] = r.start_time.split(':').map(Number);
-          const [eh, em] = r.end_time.split(':').map(Number);
+        const shift = shiftHoursMap.get(shiftName);
+        if (shift) {
+          const [sh, sm] = shift.start_time.split(':').map(Number);
+          const [eh, em] = shift.end_time.split(':').map(Number);
           let mins = (eh * 60 + em) - (sh * 60 + sm);
           if (mins < 0) mins += 24 * 60; // 跨日班处理
           busy_hours += Math.round(mins / 60);
+        } else {
+          // 2026-09-18 修复 H-9：shifts 表里没有这个班次名 → 工时丢失且无告警。
+          // 之前是静默吞掉，现在显式记录（不 throw，不阻断主流程）
+          console.warn(`[team-availability] shift 名 "${shiftName}" 在 shifts 表里未定义，工人 ${workerId} 当天工时无法计算`);
         }
-        shiftHoursStmt.free();
       }
     }
     // 3. 2026-09-17 修复：可用工时按班组配置的日产能上限计算。
@@ -93,6 +99,9 @@ export async function refreshAvailability(teamId: string, date: string): Promise
         `UPDATE team_daily_availability SET available_hours=?, busy_hours=?, on_leave_count=?, scheduled_worker_count=?, total_worker_count=?, updated_at=? WHERE id=?`,
         [available_hours, busy_hours, 0, scheduled_worker_count, total_worker_count, now, existingId],
       );
+      // 2026-09-18 修复 C-5：可用性写入必须持久化（sql.js 内存库），
+      // 否则重启后整张表丢失 → 派工读过时数据 → 过度派工/漏派
+      saveDatabase();
       return { id: existingId, team_id: teamId, date, available_hours, busy_hours, on_leave_count: 0, scheduled_worker_count, total_worker_count, updated_at: now };
     } else {
       db.run(
@@ -100,6 +109,8 @@ export async function refreshAvailability(teamId: string, date: string): Promise
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, teamId, date, available_hours, busy_hours, 0, scheduled_worker_count, total_worker_count, now],
       );
+      // 2026-09-18 修复 C-5：同上
+      saveDatabase();
       return { id, team_id: teamId, date, available_hours, busy_hours, on_leave_count: 0, scheduled_worker_count, total_worker_count, updated_at: now };
     }
   } catch (error) {

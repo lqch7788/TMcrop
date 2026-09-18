@@ -11,7 +11,8 @@ router.get('/:teamId/capabilities', async (req: Request, res: Response) => {
     const caps = await listTeamCapabilities(req.params.teamId);
     res.json({ success: true, data: caps });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] capability 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -22,7 +23,8 @@ router.post('/:teamId/capabilities', async (req: Request, res: Response) => {
     const result = await addTeamCapability(req.params.teamId, taskType);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] capability 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 
@@ -31,7 +33,8 @@ router.delete('/:teamId/capabilities/:taskType', async (req: Request, res: Respo
     await removeTeamCapability(req.params.teamId, req.params.taskType);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: (error as Error).message });
+    console.error('[team] capability 路由失败:', error); // 2026-09-18 修复 C-7
+    res.status(500).json({ success: false, error: '操作失败' });
   }
 });
 

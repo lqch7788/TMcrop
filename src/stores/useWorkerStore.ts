@@ -26,9 +26,11 @@ export const useWorkerStore = create<WorkerStore>()(
       lastFetch: null,
 
       loadWorkers: async () => {
+        // 2026-09-18 修复 H-18：把 5 分钟缓存缩短到 30 秒，
+        // 减少"刚改工人状态，班组分配页面 5 分钟内看不到最新"的不一致窗口。
         const now = Date.now();
         const lastFetch = get().lastFetch;
-        if (lastFetch && now - lastFetch < 5 * 60 * 1000 && get().workers.length > 0) {
+        if (lastFetch && now - lastFetch < 30 * 1000 && get().workers.length > 0) {
           return;
         }
 
