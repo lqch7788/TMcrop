@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, CalendarDays, Clock, Download, List, Plus, Settings, Users, X } from 'lucide-react';
+import { AlertCircle, Calendar, CalendarDays, Clock, Download, List, Plus, Settings, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSchedule } from './hooks/useSchedule';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
 import { ShiftEditor } from './ShiftEditor';
-import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
+import { SwapRequestModal } from './SwapRequestModal';
+import { SwapRequestList } from './SwapRequestList';
 import { ScheduleAddModal, ScheduleEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ScheduleRecordLike } from './types';
 import { showAlert } from '@/lib/dialogService';
@@ -46,6 +47,8 @@ export function SchedulePage() {
     cancelSchedule,
     submitSwapRequest,
     handleSwapRequest,
+    // 2026-09-18 修复 C-8：订阅错误状态（此前页面完全不展示后端失败）
+    error: scheduleError,
   } = useSchedule();
 
   // URL 参数 teamId：触发按班组过滤的排班占用拉取
@@ -339,6 +342,17 @@ export function SchedulePage() {
 
   return (
     <div className="space-y-4">
+      {/* 2026-09-18 修复 C-8：排班数据加载失败时展示错误横幅（此前静默失败，用户只看到空表格） */}
+      {scheduleError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-red-800">排班数据加载失败</div>
+            <div className="text-xs text-red-700 mt-0.5">{scheduleError}</div>
+          </div>
+        </div>
+      )}
+
       {/* 页面标题 - 紧凑型标题卡片 */}
       <div className="bg-white rounded-xl p-6 shadow-sm mb-4">
         <div className="flex items-center gap-3">

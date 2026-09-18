@@ -15,6 +15,9 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
   const swapRequests = useScheduleStore((s) => s.swapRequests);
   const selectedDate = useScheduleStore((s) => s.selectedDate);
   const viewMode = useScheduleStore((s) => s.viewMode);
+  // 2026-09-18 修复 C-8：暴露 error 给页面展示（此前页面完全不渲染错误）
+  const error = useScheduleStore((s) => s.error);
+  const isLoading = useScheduleStore((s) => s.isLoading);
 
   // Action 字段（引用稳定）
   const fetchSchedules = useScheduleStore((s) => s.fetchSchedules);
@@ -31,10 +34,18 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
   // 2026-09-15：拉取历史调班申请（修复刷新后数据丢失）
   const fetchSwapRequests = useScheduleStore((s) => s.fetchSwapRequests);
 
-  // 组件挂载时初始化数据（失败时错误已写入 store.error，此处仅阻止未捕获的 Promise rejection）
+  // 组件挂载时初始化数据
+  // 2026-09-18 修复 C-8：此前 `.catch(() => {})` 完全吞掉 Promise rejection，
+  // 而 SchedulePage 从不渲染 store.error → 后端 500/网络断/401 时用户只看到空表格
+  // 却无任何提示（静默失败）。现改为把错误写进 store.error，页面顶部横幅展示。
   useEffect(() => {
-    fetchSchedules().catch(() => {});
-    fetchSwapRequests().catch(() => {});
+    // 两个请求并发（互不依赖），失败时各自写 store.error（store 内部已 set）
+    void fetchSchedules().catch((err) => {
+      console.error('[useSchedule] 排班数据加载失败:', err);
+    });
+    void fetchSwapRequests().catch((err) => {
+      console.error('[useSchedule] 调班申请加载失败:', err);
+    });
   }, [fetchSchedules, fetchSwapRequests]);
 
   // 同步初始日期
@@ -79,6 +90,8 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
     shiftConfigs,
     staffList,
     swapRequests,
+    error,
+    isLoading,
     // 视图
     selectedDate,
     viewMode,

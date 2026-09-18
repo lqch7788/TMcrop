@@ -250,8 +250,23 @@ export const useScheduleStore = create<ScheduleState>()(
         await get().loadStaffFromWorkers();
 
         try {
-          // 从 API 获取（V2.1 铁律：API 是数据唯一来源，失败不降级为 mock）
-          const apiSchedules = await enhancedApiClient.get<ScheduleApiRow[]>('/schedules');
+          // 2026-09-18 修复 C-7：显式传日期范围 + limit，避免后端默认 limit=100 静默截断。
+          // 之前无参调用在 30 人 × 90 天的真实场景下永远只能拿到前 100 条，
+          // 月视图会出现"很多日期看起来没排班"的假象。
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = now.getMonth();
+          // 取前 1 月 ~ 后 2 月（覆盖月视图导航 + 未来的周/日视图）
+          const start = new Date(y, m - 1, 1);
+          const end = new Date(y, m + 3, 0);
+          const fmt = (d: Date) => {
+            const yy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yy}-${mm}-${dd}`;
+          };
+          const url = `/schedules?start_date=${fmt(start)}&end_date=${fmt(end)}&limit=500`;
+          const apiSchedules = await enhancedApiClient.get<ScheduleApiRow[]>(url);
 
           // 规范化API返回的snake_case数据为camelCase
           const normalizedSchedules = (apiSchedules || []).map(row => normalizeScheduleRow(row));

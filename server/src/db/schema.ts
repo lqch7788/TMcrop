@@ -2614,7 +2614,11 @@ export function initializeDatabase() {
       dispatched_task_ids TEXT DEFAULT '[]',
       -- 2026-07-30：排班调度 × 班组分配贯通：班组 ID/名称列
       team_id TEXT,
-      team_name TEXT
+      team_name TEXT,
+      -- 2026-09-18：调班申请 ID（调班审批通过时写入，用于排班→调班的溯源查询）。
+      -- 此前只在 fixMissingSchema 里 ALTER，而该函数被启动白名单禁用从未执行，
+      -- 导致实际 DB 长期缺列。同步到建表语句保证新库直接带此列。
+      swap_record_id TEXT
     )
   `);
 
