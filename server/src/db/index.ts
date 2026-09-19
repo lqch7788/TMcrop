@@ -36,6 +36,22 @@ let isDbInitialized = false;
 let isDbReadOnly = false; // initDatabase 完成后立即置 true
 
 const originalWriteFileSync = fs.writeFileSync;
+const originalRenameSync = fs.renameSync;
+// 2026-09-19：saveDatabase 改用 rename 落盘（见下方原子写说明），
+// rename 同样能覆盖 DB_PATH，所以给它补上同一道拦截，不留新的旁路。
+(fs as any).renameSync = function(oldPath: any, newPath: any) {
+  const normalizedTarget = typeof newPath === 'string' ? path.resolve(newPath) : null;
+  if (normalizedTarget && normalizedTarget === path.resolve(DB_PATH) && isDbReadOnly) {
+    const err = new Error(
+      `❌ [db-safety] 阻止 rename 覆盖 ${DB_PATH}! server 运行中 db 设为只读。\n` +
+      `   如需写盘,请用 POST /api/admin/db-commit (会先 git add + commit)`
+    );
+    console.error(err.message);
+    throw err;
+  }
+  return originalRenameSync.call(fs, oldPath, newPath);
+};
+
 (fs as any).writeFileSync = function(pathOrFd: any, data: any, options?: any) {
   // 拦截对 DB_PATH 的写盘
   const targetPath = typeof pathOrFd === 'string' ? pathOrFd : null;
@@ -212,14 +228,22 @@ export function saveDatabase(): void {
     const buffer = Buffer.from(data);
 
     // 原子写: 先写临时文件,再 rename 替换
-    // rename 在 Windows 上是原子操作(同盘),崩溃时不会损坏 db
+    // rename 在 Windows 上是原子操作(同盘 MoveFileEx),崩溃时不会损坏 db
+    //
+    // 2026-09-19 修复：原实现是 writeFileSync(tmp) + writeFileSync(DB_PATH)。
+    //   writeFileSync 对已存在文件是「先截断再写」，中途崩溃/断电就留下损坏的 db，
+    //   而临时文件紧接着被 unlink，也不构成可恢复副本 —— 注释写的是 rename，代码没做。
+    //   现改为真正的 rename；rename 失败时**保留**临时文件（它是完整的库副本），
+    //   日志里给出路径，便于人工恢复。
     originalWriteFileSync(tmpPath, buffer);
-    originalWriteFileSync(DB_PATH, buffer);
-    // 删除临时文件（即使 rename 失败,也不影响 db 文件）
     try {
-      fs.unlinkSync(tmpPath);
-    } catch (_) {
-      // ignore
+      originalRenameSync.call(fs, tmpPath, DB_PATH);
+    } catch (renameErr) {
+      console.error(
+        `❌ [db-safety] rename 覆盖失败，完整副本已保留在 ${tmpPath}，可手动恢复`,
+        (renameErr as NodeJS.ErrnoException)?.code || renameErr
+      );
+      throw renameErr;
     }
 
     lastSaveError = null;
