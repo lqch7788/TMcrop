@@ -1424,7 +1424,11 @@ router.post('/', (req: Request, res: Response) => {
     const jwtUser = (req as any).user;
     operationLogService.create({
       user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
-      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      // 2026-09-19 修复：JwtPayload 的字段是 name（middleware/auth.ts:47；
+      // 登录时写入 `name: user.real_name || user.username`），
+      // 原先读的 realName / username 都不存在 → 操作人恒为空字符串，
+      // 导致操作日志页「用户」列永远显示「系统」，审计形同虚设。
+      user_name: jwtUser?.name ?? '',
       module: '排班',
       action: 'create',
       target_id: newId,
@@ -1640,7 +1644,11 @@ router.put('/:id', (req: Request, res: Response) => {
     const jwtUser = (req as any).user;
     operationLogService.create({
       user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
-      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      // 2026-09-19 修复：JwtPayload 的字段是 name（middleware/auth.ts:47；
+      // 登录时写入 `name: user.real_name || user.username`），
+      // 原先读的 realName / username 都不存在 → 操作人恒为空字符串，
+      // 导致操作日志页「用户」列永远显示「系统」，审计形同虚设。
+      user_name: jwtUser?.name ?? '',
       module: '排班',
       action: 'update',
       target_id: id,
@@ -1697,7 +1705,11 @@ router.delete('/:id', (req: Request, res: Response) => {
     const jwtUser = (req as any).user;
     operationLogService.create({
       user_id: jwtUser?.userId ?? jwtUser?.oid ?? '',
-      user_name: jwtUser?.realName ?? jwtUser?.username ?? '',
+      // 2026-09-19 修复：JwtPayload 的字段是 name（middleware/auth.ts:47；
+      // 登录时写入 `name: user.real_name || user.username`），
+      // 原先读的 realName / username 都不存在 → 操作人恒为空字符串，
+      // 导致操作日志页「用户」列永远显示「系统」，审计形同虚设。
+      user_name: jwtUser?.name ?? '',
       module: '排班',
       action: 'delete',
       target_id: id,
