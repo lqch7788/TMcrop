@@ -11,7 +11,10 @@ import { todayLocal } from '../lib/dateUtils';
 // ========== 类型定义 ==========
 
 export interface ShiftConfig {
-  name: string;
+  // 2026-09-19 修复 H13：原为 string，而 components/labor/schedule/types.ts 里是 ShiftType
+  // （5 个字面量的联合），两侧互不相容导致 SchedulePage 的 ShiftConfig 传参报 4 条类型错误。
+  // 班次名本就只有这 5 种，收敛为 ShiftType。
+  name: ShiftType;
   startTime: string;
   endTime: string;
   color: string;
@@ -31,6 +34,13 @@ export interface ScheduleRecord {
   checkIn?: string;
   checkOut?: string;
   remarks?: string;
+  // 2026-09-19 修复 H13：与 components/labor/schedule/types.ts 的同名接口对齐。
+  // 此前 store 侧漏声明这三个字段，组件侧却已在用 —— 类型层不报错，
+  // 导致 normalizeScheduleRow 漏映射 swap_record_id 时没有任何提示（H3 的成因）。
+  teamId?: string;
+  teamName?: string;
+  // 调班审批通过后写入的 swap_request id（列表「已调班」徽章 + 查看调班详情入口）
+  swapRecordId?: string;
 }
 
 export interface SwapRequest {
@@ -39,7 +49,13 @@ export interface SwapRequest {
   requesterName: string;
   targetId: string;
   targetName: string;
+  // 2026-09-19 修复 H13：组件侧 types.ts 早已声明 targetType，store 侧漏了 ——
+  // 补齐后两处类型才能互赋，也才能在建任务/审批时区分"换给个人"还是"换给班组"。
+  targetType?: 'staff' | 'team';
   originalDate: string;
+  // 2026-09-19 修复 C1：要换的是哪一班。同一人同一天可有多班（唯一键含 shift），
+  // 缺这个字段审批时无法定位，会把当天全部班次一起换人。
+  originalShift?: string;
   targetDate: string;
   reason: string;
   status: '待审批' | '已同意' | '已拒绝';
@@ -97,6 +113,16 @@ interface ScheduleState {
   // 加载状态
   isLoading: boolean;
   error: string | null;
+
+  // 2026-09-19 修复 H13：这几个字段 store 里早已初始化并在多处读写，
+  // 但接口一直漏声明 —— 运行时正常、类型层全错（14 条报错），
+  // 也让「字段存在但没被声明」这类疏漏无法被发现。
+  // 排班占用（派工联动），按日期字符串为键缓存
+  occupations: Record<string, ScheduleOccupation[]>;
+  occupationsLoading: boolean;
+  occupationsError: string | null;
+  // 各日期的占用缓存时间戳（2 分钟 TTL）
+  lastFetchedAt: Record<string, number>;
 
   // Actions - 数据获取
   fetchSchedules: () => Promise<void>;
@@ -253,19 +279,11 @@ export const useScheduleStore = create<ScheduleState>()(
           // 2026-09-18 修复 C-7：显式传日期范围 + limit，避免后端默认 limit=100 静默截断。
           // 之前无参调用在 30 人 × 90 天的真实场景下永远只能拿到前 100 条，
           // 月视图会出现"很多日期看起来没排班"的假象。
-          const now = new Date();
-          const y = now.getFullYear();
-          const m = now.getMonth();
-          // 取前 1 月 ~ 后 2 月（覆盖月视图导航 + 未来的周/日视图）
-          const start = new Date(y, m - 1, 1);
-          const end = new Date(y, m + 3, 0);
-          const fmt = (d: Date) => {
-            const yy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            return `${yy}-${mm}-${dd}`;
-          };
-          const url = `/schedules?start_date=${fmt(start)}&end_date=${fmt(end)}&limit=500`;
+          // 2026-09-19 修复 H2：窗口改为可变状态（loadedRange）。原来写死"前 1 月~后 2 月"，
+          // 导致建在窗口外的排班（如跨年排班）在重取时被丢弃 —— 用户看到"新增成功，刷新就没了"。
+          const range = loadedRange ?? computeDefaultRange();
+          loadedRange = range;
+          const url = `/schedules?start_date=${range.start}&end_date=${range.end}&limit=500`;
           const apiSchedules = await enhancedApiClient.get<ScheduleApiRow[]>(url);
 
           // 规范化API返回的snake_case数据为camelCase
@@ -293,7 +311,10 @@ export const useScheduleStore = create<ScheduleState>()(
             requesterName: ((r.requester_name ?? r.requesterName) as string) || '',
             targetId: ((r.target_id ?? r.targetId) as string) || '',
             targetName: ((r.target_name ?? r.targetName) as string) || '',
+            // 2026-09-19 修复 C1：原日期 + 原班次一起映射，否则审批无法定位到具体哪一班
             originalDate: ((r.original_date ?? r.originalDate) as string) || '',
+            originalShift: ((r.original_shift ?? r.originalShift) as string) || undefined,
+            targetType: ((r.target_type ?? r.targetType) as 'staff' | 'team') || undefined,
             targetDate: ((r.target_date ?? r.targetDate) as string) || '',
             reason: ((r.reason as string) || '') || '',
             status: (r.status as SwapRequest['status']) || '待审批',
@@ -348,6 +369,12 @@ export const useScheduleStore = create<ScheduleState>()(
             ),
           }));
 
+          // 2026-09-19 修复 H2：新记录日期落在已加载窗口外时，扩展窗口并重取，
+          // 否则下一次 fetchSchedules 会把它丢掉（表现为"保存成功，刷新后看不到"）。
+          if (expandRangeBy(normalizedRecord.date)) {
+            await get().fetchSchedules();
+          }
+
           // 联动失效：派工占用缓存
           setTimeout(() => get().invalidateOccupations(record.date), 0);
 
@@ -375,7 +402,20 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/schedules/${id}`, updates);
+          // 2026-09-19 修复 C-10：后端会在带 check_in/check_out 时把 status 改写为'已执行'，
+          // 上方的乐观合并只应用了 updates（不含 status），拿不到这个服务端改写，
+          // 导致签到后状态列一直停在'已排班'。必须把服务端返回的权威记录合并回本地。
+          const updated = await enhancedApiClient.put<ScheduleApiRow>(`/schedules/${id}`, updates);
+          if (updated && (updated as ScheduleApiRow).id) {
+            const normalized = normalizeScheduleRow(updated as ScheduleApiRow);
+            set(state => ({
+              schedules: state.schedules.map(s => (s.id === id ? { ...s, ...normalized } : s)),
+            }));
+            // 2026-09-19 修复 H2：改期到已加载窗口之外时同样扩展窗口并重取
+            if (expandRangeBy(normalized.date)) {
+              await get().fetchSchedules();
+            }
+          }
           // 联动失效：派工占用缓存
           // 如果排班改期（updates.date 变化），原日期 + 新日期两个日期都需要失效
           const datesToInvalidate = new Set<string>();
@@ -487,30 +527,21 @@ export const useScheduleStore = create<ScheduleState>()(
         try {
           await enhancedApiClient.put(`/schedules/swap-requests/${id}`, { status });
 
-          // 如果同意，执行调班
-          if (status === '已同意' && request) {
-            const originalSchedule = get().schedules.find(
-              s => s.staffId === request.requesterId && s.date === request.originalDate
-            );
-            if (originalSchedule) {
-              // 2026-09-15：写入 swapRecordId 关联该 swap_request，让排班列表能识别「已调班」并查看详情
-              await get().updateSchedule(originalSchedule.id, {
-                staffId: request.targetId,
-                staffName: request.targetName,
-                swapRecordId: request.id,
-              });
-            }
+          // 2026-09-19 修复 C1：换人动作**只由后端执行**。
+          // 原先前端也用 .find() 自己改一遍（只取第一条匹配、不看班次），
+          // 与后端各改一次且可能改到不同的行；而后端才是能按 (staff_id, date, shift)
+          // 精确定位的一侧。这里改为重取权威数据，不再重复写入。
+          if (status === '已同意') {
+            await get().fetchSchedules();
+          }
+
+          if (request) {
             // 失效 originalDate + targetDate 两个日期的占用缓存
             if (request.originalDate) {
               setTimeout(() => get().invalidateOccupations(request.originalDate), 0);
             }
             if (request.targetDate) {
               setTimeout(() => get().invalidateOccupations(request.targetDate), 0);
-            }
-          } else if (request) {
-            // 即使拒绝，也失效调班日的缓存（状态变化会反映在前端）
-            if (request.originalDate) {
-              setTimeout(() => get().invalidateOccupations(request.originalDate), 0);
             }
           }
         } catch (error) {
@@ -644,6 +675,9 @@ export const useScheduleStore = create<ScheduleState>()(
           workZone,
           workerIds,
         });
+        // 2026-09-19 修复 H2：把本日并入加载窗口，否则调用方随后的 fetchSchedules
+        // 会把窗口外新建的记录丢掉
+        expandRangeBy(date);
         // 刷新当日占用缓存（V2.1 铁律：API 是数据唯一来源，立即失效前端缓存）
         get().invalidateOccupations(date);
         return res;
@@ -665,6 +699,10 @@ export const useScheduleStore = create<ScheduleState>()(
           skipExisting,
         });
         // 失效日期段内所有日期的占用缓存
+        // 2026-09-19 修复 H2：把本次排班的日期段并入加载窗口，
+        // 否则调用方随后的 fetchSchedules 会把窗口外新建的记录丢掉
+        expandRangeBy(startDate);
+        expandRangeBy(endDate);
         get().invalidateDateRange(startDate, endDate);
         return res;
       },
@@ -683,6 +721,10 @@ export const useScheduleStore = create<ScheduleState>()(
           skipExisting,
           workerIds,
         });
+        // 2026-09-19 修复 H2：把本次排班的日期段并入加载窗口，
+        // 否则调用方随后的 fetchSchedules 会把窗口外新建的记录丢掉
+        expandRangeBy(startDate);
+        expandRangeBy(endDate);
         get().invalidateDateRange(startDate, endDate);
         return res;
       },
@@ -701,6 +743,10 @@ export const useScheduleStore = create<ScheduleState>()(
           workZone,
           skipExisting,
         });
+        // 2026-09-19 修复 H2：把本次排班的日期段并入加载窗口，
+        // 否则调用方随后的 fetchSchedules 会把窗口外新建的记录丢掉
+        expandRangeBy(startDate);
+        expandRangeBy(endDate);
         get().invalidateDateRange(startDate, endDate);
         return res;
       },
@@ -720,6 +766,10 @@ export const useScheduleStore = create<ScheduleState>()(
           skipExisting,
           workerIds,
         });
+        // 2026-09-19 修复 H2：把本次排班的日期段并入加载窗口，
+        // 否则调用方随后的 fetchSchedules 会把窗口外新建的记录丢掉
+        expandRangeBy(startDate);
+        expandRangeBy(endDate);
         get().invalidateDateRange(startDate, endDate);
         return res;
       },
@@ -792,6 +842,9 @@ interface ScheduleApiRow {
   team_name?: string | null;
   teamId?: string | null;
   teamName?: string | null;
+  // 2026-09-19 修复 H3：补声明 swap_record_id，否则映射遗漏时类型层无法发现
+  swap_record_id?: string | null;
+  swapRecordId?: string | null;
 }
 
 /** 工人列表结构（来自 useWorkerStore，宽松类型避免 any） */
@@ -801,6 +854,48 @@ interface WorkerLike {
   name?: string;
   department?: string;
   workArea?: string;
+}
+
+// ========== 排班加载窗口（2026-09-19 修复 H2）==========
+//
+// 背景：为了避开后端 limit 截断，fetchSchedules 显式传了日期范围。但窗口一旦写死，
+// 落在窗口外的记录在重取时会被丢弃 —— 用户"新增成功 → 刷新后看不到"，是典型假 bug。
+// 修法：窗口可变，且任何写入若落在窗口外就自动扩展窗口并重取，使这类丢失在结构上不可能发生。
+
+/** 把 Date 格式化为 YYYY-MM-DD（本地时区，禁用 toISOString 以免 UTC 偏移） */
+function fmtLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 默认窗口：前 3 个月 ~ 后 12 个月（覆盖跨年排班与季度计划） */
+function computeDefaultRange(): { start: string; end: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  return {
+    start: fmtLocalDate(new Date(y, m - 3, 1)),
+    end: fmtLocalDate(new Date(y, m + 13, 0)),
+  };
+}
+
+/** 已加载的日期窗口；null 表示尚未加载过，用默认窗口 */
+let loadedRange: { start: string; end: string } | null = null;
+
+/** 判断日期是否落在窗口内 */
+function rangeContains(range: { start: string; end: string }, date: string): boolean {
+  return date >= range.start && date <= range.end;
+}
+
+/** 把单个日期并入窗口（取并集），返回是否发生了扩展 */
+function expandRangeBy(date: string): boolean {
+  if (!date) return false;
+  const cur = loadedRange ?? computeDefaultRange();
+  if (rangeContains(cur, date)) return false;
+  loadedRange = {
+    start: date < cur.start ? date : cur.start,
+    end: date > cur.end ? date : cur.end,
+  };
+  return true;
 }
 
 // ========== 辅助函数 ==========
@@ -822,6 +917,9 @@ function normalizeScheduleRow(row: ScheduleApiRow): ScheduleRecord {
     remarks: row.remarks ?? undefined,
     teamId: row.team_id ?? row.teamId ?? undefined,
     teamName: row.team_name ?? row.teamName ?? undefined,
+    // 2026-09-19 修复 H3：此前漏映射，导致调班审批后「已调班」徽章与
+    // 「查看调班详情」按钮在刷新/重取后消失（DB 里 swap_record_id 其实是有值的）
+    swapRecordId: row.swap_record_id ?? row.swapRecordId ?? undefined,
   };
 }
 

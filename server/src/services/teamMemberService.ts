@@ -58,7 +58,12 @@ export async function getTeamMembers(teamId: string): Promise<TeamMemberWithName
 function updateTeamMemberCount(teamId: string): void {
   const db = getDatabase();
 
-  const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ?');
+  // 2026-09-19 修复 H5：原先此处 COUNT(*) 不过滤 left_at，而 updateTeamMemberCountActive
+  // 却过滤 —— 同一个 teams.member_count 字段出现两套口径：加成员算"含已离组"、
+  // 移除成员算"仅在职"，数字取决于最后一次操作是什么。实测 7 个班组有 5 个是错的
+  // （PRD-A 字段=8 而实际在职 1 人、TEC-001 字段=5 而实际 1 人…）。
+  // 统一为"仅在职成员"，与可用性计算的分母口径一致。
+  const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ? AND left_at IS NULL');
   countStmt.bind([teamId]);
   countStmt.step();
   const result = countStmt.getAsObject() as { count: number };
@@ -228,8 +233,9 @@ export async function addTeamMembersWithLog(
         results.push({ id: memberId, team_id: teamId, worker_id: workerId, role: finalRole, joined_at: now, created_at: now, updated_at: now });
       }
 
-      // 更新 member_count
-      const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ?');
+      // 更新 member_count（2026-09-19 修复 H5：与 updateTeamMemberCountActive 统一口径，
+      // 只统计在职成员，否则"含已离组"会把数字抬高）
+      const countStmt = db.prepare('SELECT COUNT(*) as count FROM team_members WHERE team_id = ? AND left_at IS NULL');
       countStmt.bind([teamId]);
       countStmt.step();
       const count = (countStmt.getAsObject() as { count: number }).count;

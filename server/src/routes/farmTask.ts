@@ -1336,6 +1336,10 @@ router.post('/:id/complete', (req: Request, res: Response) => {
 
     res.json({ success: true, data: { id, status: 'completed', actual_hours: actualHoursValue, estimated_vs_actual_ratio: ratioValue } });
   } catch (error) {
+    // 2026-09-19 修复 H14：原先这里只有 res.status(500)，没有 console.error ——
+    // 缺列（no such column: actual_hours）这类故障在前端只看到"验收通过失败"，
+    // 后端日志一片空白，违反 Fail Loud。补上日志。
+    console.error('[farmTask] 验收通过失败:', error);
     res.status(500).json({ success: false, error: '验收通过失败' });
   }
 });

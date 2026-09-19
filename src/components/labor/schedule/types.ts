@@ -41,7 +41,12 @@ export interface SwapRequest {
   requesterName: string;
   targetId: string;
   targetName: string;
-  targetType: 'staff' | 'team'; // 2026-09-14 加：target 是个人还是班组
+  // 2026-09-14 加：target 是个人还是班组。
+  // 2026-09-19 修复 H13：改为可选 —— swap_requests 表并没有 target_type 列，
+  // 从后端取回的记录天然没有该字段，声明为必填与事实不符（也让 store 侧类型无法互赋）。
+  targetType?: 'staff' | 'team';
+  // 2026-09-19 修复 C1：原排班 + 原班次，审批时用于精确定位要换哪一班
+  originalShift?: string;
   originalDate: string;
   targetDate: string;
   reason: string;

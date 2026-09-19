@@ -2631,6 +2631,10 @@ export function initializeDatabase() {
       target_id TEXT NOT NULL,
       target_name TEXT,
       original_date TEXT NOT NULL,
+      -- 2026-09-19 修复 C1：记录"要换的是哪一班"。
+      -- 此前只有 original_date，而 schedules 的唯一键是 (staff_id, date, shift)，
+      -- 同一人同一天可有多班；审批时无法定位，导致 UPDATE 命中当天全部班次。
+      original_shift TEXT,
       target_date TEXT NOT NULL,
       reason TEXT,
       status TEXT DEFAULT '待审批',

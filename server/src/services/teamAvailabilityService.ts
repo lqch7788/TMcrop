@@ -41,10 +41,15 @@ export async function refreshAvailability(teamId: string, date: string): Promise
     const total_worker_count = (memberRes[0]?.values?.[0]?.[0] as number) || 0;
 
     // 2. 该组当日所有排班的 busy_hours（同样以 team_members 为准）
+    // 2026-09-19 修复：加 status 过滤 —— 此前把「已取消」的排班也算进占用工时，
+    // 取消一个班后可用工时不会回升，建任务时还会误报「该班组今日已满排」。
+    // 用 (status IS NULL OR status <> '已取消') 而非直接 <> ：schedules.status 允许为空，
+    // 直接比较会把 NULL 行也排除掉（SQL 三值逻辑），那是另一种口径错误。
     const shiftsRes = db.exec(
       `SELECT s.shift, s.staff_id FROM schedules s
        JOIN team_members tm ON tm.worker_id = s.staff_id
-       WHERE tm.team_id = ? AND tm.left_at IS NULL AND s.date = ?`,
+       WHERE tm.team_id = ? AND tm.left_at IS NULL AND s.date = ?
+         AND (s.status IS NULL OR s.status <> '已取消')`,
       [teamId, date],
     );
     let busy_hours = 0;

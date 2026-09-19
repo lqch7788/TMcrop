@@ -145,6 +145,61 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   // ============ schedules（2026-07-29 排班-派工联动）============
   // dispatch 端 PATCH /api/schedules/dispatch-tasks 写入；occupations 端读取
   addedColumns += safeAddColumn(db, 'schedules', 'dispatched_task_ids', 'TEXT', `'[]'`) ? 1 : 0;
+  // 2026-09-19 修复 C1：调班审批需要按 (staff_id, date, shift) 精确定位排班行。
+  // 老库缺此列时审批只能按 date 匹配，会把当天全部班次一起换人。
+  addedColumns += safeAddColumn(db, 'swap_requests', 'original_shift', 'TEXT') ? 1 : 0;
+
+  // ============ teams（2026-09-19 修复 H9）============
+  // basicData.ts 的 teams GET/POST/PUT 都引用这两列，但 schema.ts 的 CREATE TABLE 不含它们，
+  // 唯一的 ALTER 在被启动白名单禁用的 fixMissingSchema 里 —— 结果**全新库**上
+  // GET /api/basic-data/teams 直接 500（班组列表空 → 排班/调班/派工全取不到班组）。
+  // 现库能跑只是因为历史上手工跑过那个被禁用的脚本。
+  addedColumns += safeAddColumn(db, 'teams', 'description', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'teams', 'work_zone', 'TEXT') ? 1 : 0;
+
+  // ============ farm_tasks（2026-09-19 修复 H14）============
+  // 这 25 列分别由一次性手动脚本 migrateV03.ts / 裸 SQL 文件 2026-08-22-add-actual-hours*.sql
+  // 引入，且 fixMissingSchema 的对应 ALTER 被启动禁用 —— **全新库**缺列后：
+  //   · farmTask.ts:1326「验收通过」写 actual_hours → no such column（且该处 catch 只 res.status(500)，
+  //     没有 console.error，错误彻底静默）
+  //   · ai/anomaly.ts、ai/reportGenerator.ts、ai/workhour.ts 读 actual_hours 同理
+  // 类型与默认值严格照抄原脚本定义，不自行发明。
+  const farmTaskColumnsToAdd: Array<[string, string, string?]> = [
+    ['actual_hours', 'REAL'],
+    ['actual_hours_recorded_at', 'TEXT'],
+    ['actual_hours_recorded_by', 'TEXT'],
+    ['estimated_vs_actual_ratio', 'REAL'],
+    ['synthetic', 'INTEGER', '0'],
+    ['cancelled_at', 'TEXT'],
+    ['cancelled_by', 'TEXT'],
+    ['cancelled_reason', 'TEXT'],
+    ['abandoned_at', 'TEXT'],
+    ['abandoned_by', 'TEXT'],
+    ['abandoned_reason', 'TEXT'],
+    ['rejected_at', 'TEXT'],
+    ['rejected_by', 'TEXT'],
+    ['rejected_reason', 'TEXT'],
+    ['executor_reject_count', 'INTEGER', '0'],
+    ['acceptance_record', 'TEXT'],
+    ['progress_pct', 'INTEGER', '0'],
+    ['current_pause_reason', 'TEXT'],
+    ['paused_at', 'DATETIME'],
+    ['resumed_at', 'DATETIME'],
+    ['actual_start_at', 'DATETIME'],
+    ['actual_end_at', 'DATETIME'],
+    ['total_pause_seconds', 'INTEGER', '0'],
+    ['outsource_cost', 'REAL', '0'],
+    ['tenant_id', 'INTEGER', '1'],
+  ];
+  for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
+    addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;
+  }
+
+  // 2026-09-19：上面的 *_actual_hours 索引（原裸 SQL 文件里创建），同步进启动通道
+  safeCreateIndex(db, 'idx_ft_actual_hours',
+    `CREATE INDEX IF NOT EXISTS idx_ft_actual_hours ON farm_tasks(actual_hours)`);
+  safeCreateIndex(db, 'idx_ft_actual_recorded_at',
+    `CREATE INDEX IF NOT EXISTS idx_ft_actual_recorded_at ON farm_tasks(actual_hours_recorded_at)`);
 
   // ============ 索引（GREEN 级：纯 CREATE INDEX）===========
   // 2026-07-19 P0-16：source_code UNIQUE 索引

@@ -11,7 +11,7 @@ import { SwapRequestModal } from './SwapRequestModal';
 import { SwapRequestList } from './SwapRequestList';
 import { ScheduleAddModal, ScheduleEditModal, CheckInModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ScheduleRecordLike } from './types';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { useScheduleStore } from '@/stores';
 
@@ -115,10 +115,17 @@ export function SchedulePage() {
     }
   };
 
-  // 取消排班（包一层 catch，请求失败时提示用户）
-  const handleCancelSchedule = async (id: string) => {
+  // 取消排班（2026-09-19：先弹窗让用户确认，再执行；失败时提示）
+  // 背景：此前点一下操作列的图标就立即取消，无二次确认，误触即改状态。
+  const handleCancelSchedule = async (record: ScheduleRecord) => {
+    const who = getStaffName(record);
+    const ok = await showConfirm(
+      `确定取消「${who} ${record.date} ${record.shift}」的排班吗？\n` +
+      '取消后该排班状态变为「已取消」，记录仍保留，可通过编辑改回。',
+    );
+    if (!ok) return;
     try {
-      await cancelSchedule(id);
+      await cancelSchedule(record.id);
     } catch (err) {
       showAlert(`取消排班失败：${(err as Error).message}`);
     }
@@ -134,12 +141,14 @@ export function SchedulePage() {
   };
 
   // 批量选择操作
-  const handleSelectAll = () => {
-    if (selectedRows.length === scheduleList.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(scheduleList.map(r => r.id));
-    }
+  // 2026-09-19 修复 C2 / M13：作用域改为"表格当前筛选结果"（由 ScheduleTable 传入 ids），
+  // 不再按整个 scheduleList（那样会选中被筛掉的、用户看不见的记录）。
+  // 切换逻辑改为可加可减：该集合已全选则移除，否则并入（跨页累加不会互相覆盖）。
+  const handleSelectAll = (ids: string[]) => {
+    setSelectedRows(prev => {
+      const allIn = ids.length > 0 && ids.every(id => prev.includes(id));
+      return allIn ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]));
+    });
   };
 
   const handleSelectRow = (id: string) => {
@@ -151,12 +160,12 @@ export function SchedulePage() {
   };
 
   // 2026-09-15：调班申请导出模式（与排班记录同套交互）
-  const handleSelectAllSwap = () => {
-    if (selectedSwapRows.length === swapRequests.length) {
-      setSelectedSwapRows([]);
-    } else {
-      setSelectedSwapRows(swapRequests.map(r => r.id));
-    }
+  // 2026-09-19 修复 C2 / M13：与 handleSelectAll 同样，作用域改为当前 tab 筛选结果
+  const handleSelectAllSwap = (ids: string[]) => {
+    setSelectedSwapRows(prev => {
+      const allIn = ids.length > 0 && ids.every(id => prev.includes(id));
+      return allIn ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]));
+    });
   };
 
   const handleSelectRowSwap = (id: string) => {
@@ -513,7 +522,7 @@ export function SchedulePage() {
                   setSelectedSchedule(record);
                   setShowCheckInModal(true);
                 }}
-                onCancelRowClick={(record) => handleCancelSchedule(record.id)}
+                onCancelRowClick={handleCancelSchedule}
                 onSwapRowClick={(record) => {
                   // 2026-09-14：行尾发起调班，自动预填 requester = 当前员工
                   setSwapRequester(record);
@@ -562,8 +571,11 @@ export function SchedulePage() {
               onSelectAll={handleSelectAllSwap}
               onSelectRow={handleSelectRowSwap}
               onEnterExportMode={() => {
+                // 2026-09-19 修复 M7：进入导出模式不再预选全部（原为 swapRequests.map(...)，
+                // 忽略当前 tab 筛选，导出的范围与用户所见不符）。与排班记录侧保持一致：
+                // 从空选择开始，由用户用表头全选或逐行勾选。
                 setSwapExportMode(true);
-                setSelectedSwapRows(swapRequests.map(r => r.id));
+                setSelectedSwapRows([]);
               }}
               onConfirmExport={() => {
                 if (selectedSwapRows.length === 0) {
