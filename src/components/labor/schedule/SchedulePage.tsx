@@ -41,7 +41,7 @@ export function SchedulePage() {
     monthDateRange,
     setSelectedDate,
     setViewMode,
-    updateShiftConfig,
+    fetchShiftConfigs,
     addSchedule,
     deleteSchedule,
     cancelSchedule,
@@ -598,10 +598,11 @@ export function SchedulePage() {
         size="lg"
         showFooter={false}
       >
-        <ShiftEditor
-          shiftConfigs={shiftConfigs}
-          onUpdateConfig={updateShiftConfig}
-        />
+        {/* 2026-09-19：ShiftEditor 已升级为完整班次管理（新增/改名/改时间/状态/删除，全部落库），
+            变更后重取派生配置，排班表格、日历与新增排班下拉同步更新 */}
+        <ShiftEditor onChanged={() => { void fetchShiftConfigs().catch((err) => {
+          console.error('[SchedulePage] 班次配置刷新失败:', err);
+        }); }} />
       </UnifiedModal>
 
       {showSwapModal && (

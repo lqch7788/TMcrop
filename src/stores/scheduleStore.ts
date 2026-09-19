@@ -20,7 +20,11 @@ export interface ShiftConfig {
   color: string;
 }
 
-export type ShiftType = '早班' | '中班' | '晚班' | '全天' | '弹性';
+// 2026-09-19：由闭合联合放宽为 string。
+// 原因：班次改为在界面上自由新增/改名（真正写入 shifts 表），名称不再是固定的 5 个。
+// 原联合类型本身就是"谎报" —— 库里有 shift='全天' 的排班，而 shifts 表只有早/中/晚，
+// 那种错位正是因为类型和配置表各写各的。放宽后所有既有调用点仍可编译（联合可赋给 string）。
+export type ShiftType = string;
 export type ScheduleStatus = '已排班' | '已执行' | '已取消';
 
 export interface ScheduleRecord {
@@ -97,6 +101,21 @@ const DEFAULT_SHIFT_CONFIGS: ShiftConfig[] = [
   { name: '弹性', startTime: '09:00', endTime: '18:00', color: 'bg-purple-500' },
 ];
 
+// 班次配色（2026-09-19）：shifts 表没有颜色列，颜色属纯前端展示属性。
+// 已知班次沿用原固定配色；用户在界面上新增的班次按调色板顺序取色。
+const SHIFT_COLOR_BY_NAME: Record<string, string> = {
+  '早班': 'bg-amber-500',
+  '中班': 'bg-blue-500',
+  '晚班': 'bg-indigo-600',
+  '全天': 'bg-green-500',
+  '弹性': 'bg-purple-500',
+};
+
+const SHIFT_COLOR_PALETTE = [
+  'bg-amber-500', 'bg-blue-500', 'bg-indigo-600', 'bg-green-500',
+  'bg-purple-500', 'bg-pink-500', 'bg-red-500', 'bg-teal-500',
+];
+
 // ========== Store 类型 ==========
 
 interface ScheduleState {
@@ -137,7 +156,10 @@ interface ScheduleState {
   batchUpdateSchedule: (ids: string[], updates: Partial<ScheduleRecord>) => Promise<void>;
 
   // Actions - 班次配置
-  updateShiftConfig: (name: ShiftType, config: Partial<ShiftConfig>) => void;
+  // 2026-09-19：班次配置改为**只读派生自 shifts 表**。
+  // 增删改统一由「排班调度 → 班次设置」里的 ShiftEditor 走 useShiftStore 完成，
+  // 不再保留只改内存的 updateShiftConfig（那正是"改了不落库"的根源）。
+  fetchShiftConfigs: () => Promise<void>;
 
   // Actions - 调班申请
   submitSwapRequest: (request: Omit<SwapRequest, 'id' | 'status' | 'createTime'>) => Promise<void>;
@@ -475,12 +497,37 @@ export const useScheduleStore = create<ScheduleState>()(
 
       // ========== 班次配置 ==========
 
-      updateShiftConfig: (name, config) => {
-        set(state => ({
-          shiftConfigs: state.shiftConfigs.map(cfg =>
-            cfg.name === name ? { ...cfg, ...config } : cfg
-          ),
-        }));
+      // 2026-09-19：班次配置改为**以 shifts 表为准**。
+      // 此前是硬编码的 DEFAULT_SHIFT_CONFIGS，造成两处错位：
+      //   1) 库里有 5 个班次名时界面仍按 5 个渲染，但其中「全天/弹性」在 shifts 表里并不存在
+      //      → 这些班次的工时在班组可用性统计里被静默丢弃
+      //   2) 用户在界面上新增/改名班次后，配置源不同步
+      // 颜色是纯前端展示属性（表里没有该列），已知班次沿用固定色，新班次按调色板取。
+      fetchShiftConfigs: async () => {
+        try {
+          const rows = await enhancedApiClient.get<Array<Record<string, unknown>>>('/basic-data/shifts');
+          const list = Array.isArray(rows) ? rows : [];
+          // 库里没有班次时保留默认配置，避免排班页完全没班次可选
+          if (list.length === 0) return;
+
+          const configs: ShiftConfig[] = [];
+          list.forEach((r, i) => {
+            const name = String(r.shiftName ?? r.shift_name ?? '').trim();
+            if (!name) return;
+            configs.push({
+              name,
+              startTime: String(r.startTime ?? r.start_time ?? ''),
+              endTime: String(r.endTime ?? r.end_time ?? ''),
+              color: SHIFT_COLOR_BY_NAME[name] ?? SHIFT_COLOR_PALETTE[i % SHIFT_COLOR_PALETTE.length],
+            });
+          });
+          if (configs.length === 0) return;
+          set({ shiftConfigs: configs });
+        } catch (error) {
+          // Fail Loud：读不到就报错，不用默认值静默顶上（否则用户以为改动没生效）
+          set({ error: (error as Error).message });
+          throw error;
+        }
       },
 
       // ========== 调班申请 ==========
