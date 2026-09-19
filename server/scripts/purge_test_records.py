@@ -39,7 +39,17 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'yuanxingtu.db')
 TARGETS = [
     ('positions', 'code', 'ZZTEST%'),
     ('camera_devices', 'camera_code', 'ZZTEST%'),
+    # 落盘/审计验证时建过一条 2026-12-31 的测试排班，触发了可用性刷新而在
+    # team_daily_availability 留下 T001/T002 两行（各字段均为 0）的残留。
+    # 该表只有 upsert 没有删除接口，只能在这里按日期精确清理。
+    ('team_daily_availability', 'date', '2026-12-31'),
 ]
+
+# 明确**不清理**的表：operation_logs（审计日志）
+#   理由：判断"哪条审计记录是测试产生的"只能靠描述文本模糊匹配，而
+#   description LIKE 'POST /api/cameras' 同样会命中操作员真实的建摄像头操作 ——
+#   用这种模式批量删审计记录会误伤真实审计数据。审计行的去留应由用户显式指定。
+AUDIT_TABLE_EXCLUDED = 'operation_logs'
 
 
 def main() -> int:
@@ -47,6 +57,14 @@ def main() -> int:
     parser.add_argument('--yes', action='store_true', help='确认执行（不加则只预演）')
     parser.add_argument('--no-backup', action='store_true', help='跳过自动备份（不推荐）')
     args = parser.parse_args()
+
+    # 结构性保护：本脚本不允许碰审计日志表（判断"哪条审计是测试产生的"只能靠
+    # 描述文本模糊匹配，必然误伤真实操作记录）。有人往 TARGETS 里加了就直接拒绝运行，
+    # 而不是靠注释提醒。
+    if any(t[0] == AUDIT_TABLE_EXCLUDED for t in TARGETS):
+        print(f'[FAIL] 拒绝执行：TARGETS 里包含审计表 {AUDIT_TABLE_EXCLUDED}')
+        print('       审计记录只能由用户显式指定 ID 删除，不走本脚本。')
+        return 1
 
     db_path = os.path.abspath(DB_PATH)
     if not os.path.exists(db_path):

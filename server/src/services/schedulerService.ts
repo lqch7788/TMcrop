@@ -43,6 +43,59 @@ const REMINDER_RUN_SCRIPT = path.join(__dirname, '../routes/reminders');
 let dailyJob: any = null;
 let monthlyJob: any = null;
 let reminderJob: any = null;
+let auditRetentionJob: any = null;
+
+/**
+ * 操作日志保留天数
+ * 2026-09-19：审计中间件上线后，573 个写端点全部产生日志，不做保留策略会无界增长。
+ * 默认 180 天；设为 0 或负数则**关闭自动清理**（审计数据永久保留）。
+ */
+const AUDIT_LOG_RETENTION_DAYS = Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 180);
+
+/**
+ * 操作日志保留清理任务（每天 04:00，错开 02:00 日备份 / 03:00 月备份）
+ * 按 created_at 删除超过保留期的记录，并打印删除条数（Fail Loud：不静默）
+ */
+function scheduleAuditLogRetention(): void {
+  if (!(AUDIT_LOG_RETENTION_DAYS > 0)) {
+    console.log('[scheduler] 操作日志清理已关闭（AUDIT_LOG_RETENTION_DAYS<=0，日志永久保留）');
+    return;
+  }
+
+  auditRetentionJob = cron.schedule(
+    '0 4 * * *',
+    async () => {
+      try {
+        const { getDatabase, saveDatabase } = await import('../db/index');
+        const db = getDatabase();
+        const cutoff = new Date(
+          Date.now() - AUDIT_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+        ).toISOString();
+
+        const before = db.exec('SELECT COUNT(*) FROM operation_logs');
+        const totalBefore = (before[0]?.values?.[0]?.[0] as number) ?? 0;
+
+        db.run('DELETE FROM operation_logs WHERE created_at < ?', [cutoff]);
+
+        const after = db.exec('SELECT COUNT(*) FROM operation_logs');
+        const totalAfter = (after[0]?.values?.[0]?.[0] as number) ?? 0;
+        saveDatabase();
+
+        console.log(
+          `[scheduler] 操作日志清理完成 — 保留 ${AUDIT_LOG_RETENTION_DAYS} 天，删除 ${
+            totalBefore - totalAfter
+          } 条（${totalBefore} → ${totalAfter}）`
+        );
+      } catch (e) {
+        console.error('[scheduler] 操作日志清理失败:', (e as Error).message);
+      }
+    },
+    { timezone: 'Asia/Shanghai' }
+  );
+  console.log(
+    `[scheduler] 操作日志清理已注册（cron: 0 4 * * *，保留 ${AUDIT_LOG_RETENTION_DAYS} 天）`
+  );
+}
 
 /**
  * 启动补偿：服务启动时执行过去 24h 内未触发的扫描
@@ -198,8 +251,9 @@ export function startScheduler(): void {
   scheduleDailyBackup();
   scheduleMonthlyBackup();
   scheduleReminderScan();
+  scheduleAuditLogRetention();
 
-  console.log('[scheduler] 调度服务已启动（3 个任务）');
+  console.log('[scheduler] 调度服务已启动（4 个任务）');
 }
 
 /**
@@ -207,6 +261,10 @@ export function startScheduler(): void {
  */
 export function stopScheduler(): void {
   console.log('[scheduler] 停止调度服务...');
+  if (auditRetentionJob) {
+    auditRetentionJob.stop();
+    auditRetentionJob = null;
+  }
   if (dailyJob) {
     dailyJob.stop();
     dailyJob = null;
