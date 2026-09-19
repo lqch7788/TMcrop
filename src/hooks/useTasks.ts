@@ -44,7 +44,8 @@ function validateTransition(task: Task, targetStatus: string): boolean {
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
 import { updateSeedling } from '../services/apiSeedlingService';
 // 导入操作日志服务（用于将操作记录写入后端数据库）
-import { createOperationLog } from '../services/apiOperationLogService';
+// 2026-09-19：createOperationLog 已移除 —— 审计日志改为服务端统一记录
+// （middleware/auditTrail.ts），不再由浏览器写
 import { SeedlingStatus } from '../types/crop';
 // 导入农事任务 Store（统一数据层）
 import { useFarmTaskStore, Task as StoreTask } from '../stores/farmTaskStore';
@@ -618,27 +619,15 @@ export function useTasks(): UseTasksReturn {
   // 考勤记录hook
   const { attendance, addAttendance, updateAttendance } = usePersistentAttendance();
 
-  // 保存操作记录到 React 状态 + 同步写入后端数据库
+  // 保存操作记录到 React 状态
+  // 2026-09-19：原先这里额外调 createOperationLog() 从浏览器写 operation_logs，已移除。
+  //   ① 客户端写入可被绕过/漏写，审计不可信；
+  //   ② 农事任务的详细操作（动作、前后状态、操作人）已由服务端 farmTask.ts 写入
+  //      task_operation_records（当前 289 条），信息比这里更全；
+  //   ③ 通用审计行现由服务端 middleware/auditTrail.ts 对所有写请求统一记录。
   const saveTaskRecords = useCallback((records: TaskRecord[]) => {
     taskRecordsRef.current = records;
     setTaskRecords(records);
-
-    // 将最新一条记录同步写入后端数据库（异步，不阻塞UI）
-    const latest = records[0];
-    if (latest) {
-      createOperationLog({
-        userId: latest.operatorId,
-        username: latest.operatorName,
-        action: latest.action,
-        module: '农事任务',
-        resourceType: 'task',
-        resourceId: latest.taskId,
-        description: `${latest.operatorName} ${TASK_ACTION_CONFIG[latest.action]?.label || latest.action} 任务【${latest.taskTitle}】`,
-        status: 'success',
-      }).catch((e) => {
-        // logger.warn('[useTasks] 操作日志API写入失败:', e);
-      });
-    }
   }, []);
 
   // 保存催办记录到 React 状态

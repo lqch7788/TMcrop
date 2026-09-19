@@ -101,6 +101,10 @@ export function errorHandler(
     message = 'Internal server error';
   }
 
+  // 2026-09-19：把错误摘要挂到 res.locals，供 middleware/auditTrail.ts 写入审计日志
+  // 的 error_message 字段（失败的操作同样需要留痕）
+  res.locals.auditError = message;
+
   // 返回统一格式的 JSON 响应
   res.status(statusCode).json({
     success: false,

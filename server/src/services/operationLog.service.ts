@@ -3,6 +3,7 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { bumpAuditWriteCount } from '../lib/auditMeta';
 
 export interface OperationLog {
   id: string;
@@ -15,6 +16,13 @@ export interface OperationLog {
   ip_address?: string;
   details?: string;
   operate_time: string;
+  /**
+   * 审计级别（2026-09-19 新增）
+   * 与 middleware/auditTrail.ts 的分档保持一致：success / warning(4xx) / error(5xx)。
+   * 不传时按 success 落库 —— 但失败的操作（如登录失败）必须显式传 warning，
+   * 否则统计接口的「警告/错误」计数永远是 0。
+   */
+  status?: 'success' | 'warning' | 'error';
 }
 
 export class OperationLogService {
@@ -85,8 +93,8 @@ export class OperationLogService {
     db.run(`
       INSERT INTO operation_logs (
         id, user_id, username, module, action, resource_id, description,
-        ip_address, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ip_address, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       log.user_id || '',
@@ -96,10 +104,13 @@ export class OperationLogService {
       log.target_id || null,
       log.details || null,
       log.ip_address || null,
+      log.status || 'success',
       log.operate_time || now,
     ]);
 
     saveDatabase();
+    // 通知 middleware/auditTrail.ts：本请求已显式写过日志，不要重复记录
+    bumpAuditWriteCount();
     return id;
   }
 

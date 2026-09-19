@@ -4,6 +4,7 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { bumpAuditWriteCount } from '../lib/auditMeta';
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from './leaveQuotaService';
 
 export interface BusinessLink {
@@ -52,6 +53,8 @@ export class ApprovalLinkageService {
         description,
         now,
       ]);
+      // 通知 middleware/auditTrail.ts：本请求已写过语义化日志（审批通过/拒绝），不要重复记录
+      bumpAuditWriteCount();
     } catch (e) {
       console.error('记录操作日志失败:', e);
     }
