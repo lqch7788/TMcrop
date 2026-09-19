@@ -9,7 +9,7 @@
  */
 
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -76,6 +76,7 @@ router.post('/', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'active', ?, ?)
     `, [id, code, name, nameEn || '', parentCode || '', level, ruleType || 'material', now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '分类创建成功', data: { id, code, name, nameEn: nameEn || '', parentCode: parentCode || '', level, ruleType: ruleType || 'material' } });
   } catch (error) {
     console.error('创建物料编码分类失败:', error);
@@ -109,6 +110,7 @@ router.put('/:code', (req, res) => {
 
     db.run(`UPDATE material_code_categories SET ${fields.join(', ')} WHERE code = ? AND rule_type = ?`, values);
 
+    saveDatabase();
     res.json({ success: true, message: '分类更新成功' });
   } catch (error) {
     console.error('更新物料编码分类失败:', error);
@@ -167,6 +169,7 @@ router.delete('/:code', (req, res) => {
       db.run(`UPDATE material_code_categories SET status = 'inactive', updated_at = ? WHERE parent_code = ? AND level = 'sub' AND rule_type = ?`, [now, parentKey, ruleType]);
     }
 
+    saveDatabase();
     res.json({ success: true, message: '分类删除成功' });
   } catch (error) {
     console.error('删除物料编码分类失败:', error);

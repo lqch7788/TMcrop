@@ -4,7 +4,7 @@
  * 三级警报级别和通知联系人配置
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -50,6 +50,7 @@ router.put('/levels/:level', (req, res) => {
       `, [req.params.level, level_name, notify_email || 0, notify_sms || 0, notify_phone || 0, now]);
     }
 
+    saveDatabase();
     const result = db.exec('SELECT * FROM alarm_level_configs WHERE level = ?', [req.params.level]);
     const columns = result[0].columns;
     const record: any = {};
@@ -108,6 +109,7 @@ router.post('/contacts', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     console.error('添加联系人失败:', error);
@@ -120,6 +122,7 @@ router.delete('/contacts/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('UPDATE alarm_contacts SET status = ? WHERE oid = ?', ['inactive', req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '联系人已删除' });
   } catch (error) {
     console.error('删除联系人失败:', error);

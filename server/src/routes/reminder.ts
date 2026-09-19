@@ -6,7 +6,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -83,6 +83,7 @@ router.post('/', (req: Request, res: Response) => {
         data.status || 'pending', now, null,
       ],
     );
+    saveDatabase();
     const stmt = db.prepare('SELECT * FROM reminders WHERE id = ?');
     stmt.bind([id]);
     if (stmt.step()) {
@@ -113,6 +114,7 @@ router.put('/:id', (req: Request, res: Response) => {
     if (fields.length === 0) return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     values.push(req.params.id);
     db.run(`UPDATE reminders SET ${fields.join(', ')} WHERE id = ?`, values);
+    saveDatabase();
     const stmt = db.prepare('SELECT * FROM reminders WHERE id = ?');
     stmt.bind([req.params.id]);
     if (stmt.step()) {
@@ -132,6 +134,7 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM reminders WHERE id = ?', [req.params.id]);
+    saveDatabase();
     res.json({ success: true, data: { id: req.params.id } });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });

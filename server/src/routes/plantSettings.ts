@@ -4,7 +4,7 @@
  * 种植图标和品种种植参数配置
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -55,6 +55,7 @@ router.post('/', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     console.error('创建种植设置失败:', error);
@@ -81,6 +82,7 @@ router.put('/:oid', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('更新种植设置失败:', error);
@@ -93,6 +95,7 @@ router.delete('/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM plant_settings WHERE oid = ?', [req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '设置已删除' });
   } catch (error) {
     console.error('删除种植设置失败:', error);

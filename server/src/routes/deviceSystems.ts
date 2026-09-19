@@ -4,7 +4,7 @@
  * 管理系统类型定义和IDC关联
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -68,6 +68,7 @@ router.post('/', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     console.error('创建设备系统失败:', error);
@@ -94,6 +95,7 @@ router.put('/:oid', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('更新设备系统失败:', error);
@@ -106,6 +108,7 @@ router.delete('/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM device_systems WHERE oid = ?', [req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '系统已删除' });
   } catch (error) {
     console.error('删除设备系统失败:', error);

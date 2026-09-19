@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -234,6 +234,7 @@ router.post('/', (req: Request, res: Response) => {
     }
     stmt.free();
 
+    saveDatabase();
     res.json({ success: true, data: newLog });
   } catch (error) {
     console.error('创建工作日志失败:', error);
@@ -288,6 +289,7 @@ router.put('/:id', (req: Request, res: Response) => {
     }
     stmt.free();
 
+    saveDatabase();
     res.json({ success: true, data: updatedLog });
   } catch (error) {
     console.error('更新工作日志失败:', error);
@@ -313,6 +315,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     db.run('DELETE FROM work_logs WHERE id = ?', [id]);
 
+    saveDatabase();
     res.json({ success: true, message: '日志已删除' });
   } catch (error) {
     console.error('删除工作日志失败:', error);

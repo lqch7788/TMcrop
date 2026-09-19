@@ -377,6 +377,12 @@ async function start() {
     app.use(express.json({ limit: '8mb' }));
     app.use(express.urlencoded({ extended: true, limit: '8mb' }));
 
+    // 2026-09-19: 自动落盘兜底 —— sql.js 内存库的唯一落盘路径是显式 saveDatabase()，
+    // 而周期/退出落盘自 2026-06-20 起被禁用。这里对返回 2xx 的写请求做 debounce 落盘，
+    // 覆盖所有漏调 saveDatabase() 的端点（全站扫描约 65 个），避免重启后数据静默回滚。
+    const { autoPersist } = await import('./middleware/autoPersist');
+    app.use(autoPersist);
+
     // API 路由（optionalAuthenticate：演示模式无 token 放行；带 token 验证）
     const { optionalAuthenticate } = await import('./middleware/auth');
     app.use('/api', optionalAuthenticate);

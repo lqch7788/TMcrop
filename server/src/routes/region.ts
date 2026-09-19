@@ -6,7 +6,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 
 const router = Router();
 
@@ -160,6 +160,7 @@ router.post('/init', (req: Request, res: Response) => {
       }
     }
 
+    saveDatabase();
     res.json({
       success: true,
       data: { message: '行政区划种子数据初始化完成', provinces: provinces.length, cities: totalCities, total: nextId - 1 },

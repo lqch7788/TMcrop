@@ -4,7 +4,7 @@
  * IoT设备分配到温室/区域 + 运行参数配置（预留端口）
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -69,6 +69,7 @@ router.post('/', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     console.error('创建设备分配失败:', error);
@@ -108,6 +109,7 @@ router.put('/:oid', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('更新设备分配失败:', error);
@@ -120,6 +122,7 @@ router.delete('/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM device_distributions WHERE oid = ?', [req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '分配记录已删除' });
   } catch (error) {
     console.error('删除设备分配失败:', error);
