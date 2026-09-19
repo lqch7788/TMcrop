@@ -69,6 +69,8 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
     targetName: '',
     targetType: 'staff' as 'staff' | 'team', // 由 requesterType 派生（同步设置）
     originalDate: '',
+    // 2026-09-19 修复 C1：与 originalDate 成对，标明要调换的是哪一班
+    originalShift: '',
     targetDate: '',
     reason: '',
   });
@@ -230,6 +232,7 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
       targetName: '',
       // 重置日期（避免错位）
       originalDate: '',
+      originalShift: '',
       targetDate: '',
     }));
     setRequesterSchedules([]);
@@ -293,6 +296,12 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
       showAlert('请填写完整信息');
       return;
     }
+    // 2026-09-19 修复 C1：必须明确"换哪一班"，否则审批时无法定位，
+    // 后端会因当天多条排班而拒绝执行（宁可不换，也不误改其他班次）
+    if (!formData.originalShift) {
+      showAlert('请选择要调换的原班次（日期 + 班次）');
+      return;
+    }
     // 2026-09-15：个人 target 时，先校验 target 在原日期是否有班（无班则无法调班）
     // 历史 bug：target 原日期无班时下拉框为空、placeholder 提示不够醒目，用户点提交只看到「请选择目标日期」而非根本原因
     if (formData.targetType === 'staff' && availability.staffMap.get(formData.targetId) === false) {
@@ -336,6 +345,7 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
               targetId: '',
               targetName: '',
               originalDate: '',
+              originalShift: '',
               targetDate: '',
             }))}
             className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
@@ -358,6 +368,7 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
               targetId: '',
               targetName: '',
               originalDate: '',
+              originalShift: '',
               targetDate: '',
             }))}
             className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
@@ -398,6 +409,7 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
                 targetId: '',
                 targetName: '',
                 originalDate: '',
+                originalShift: '',
                 targetDate: '',
               }));
               // 班组作为申请人：拉班组全员未来 30 天
@@ -464,12 +476,18 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
           原排班日期（选申请人某天已有的班）
         </Label>
         <Select
-          value={formData.originalDate}
+          value={formData.originalDate && formData.originalShift
+            ? `${formData.originalDate}|${formData.originalShift}`
+            : ''}
           onValueChange={(val) => {
-            setFormData(prev => ({ ...prev, originalDate: val, targetId: '', targetName: '', targetDate: '' }));
+            // 2026-09-19 修复 C1：选项值改为「日期|班次」。
+            // 同一人同一天可有多班（唯一键含 shift），原来只存 date 会让两个选项同值、
+            // 班次信息丢失，后端审批时无法定位具体换哪一班，会把当天全部班次一起换人。
+            const [date, shift] = val.split('|');
+            setFormData(prev => ({ ...prev, originalDate: date, originalShift: shift || '', targetId: '', targetName: '', targetDate: '' }));
             setTargetOriginalDateSchedules([]);
             // 2026-09-14 重构：选原日期后立刻拉当天全部排班，构建 target 空闲度
-            void loadOriginalDateAvailability(val);
+            void loadOriginalDateAvailability(date);
           }}
           disabled={requesterSchedules.length === 0}
         >
@@ -478,7 +496,7 @@ export function SwapRequestModal({ staffList, initialRequester, onSubmit, onClos
           </SelectTrigger>
           <SelectContent>
             {requesterSchedules.map(s => (
-              <SelectItem key={s.id} value={s.date}>
+              <SelectItem key={s.id} value={`${s.date}|${s.shift}`}>
                 {s.date} {s.shift} {s.workZone ? `(${s.workZone})` : ''}
               </SelectItem>
             ))}

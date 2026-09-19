@@ -396,10 +396,12 @@ async function start() {
     if (fs.existsSync(frontendDist)) {
       app.use(express.static(frontendDist));
       // SPA fallback：所有非API请求返回index.html
-      app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-          res.sendFile(path.join(frontendDist, 'index.html'));
-        }
+      // 2026-09-19 修复 H1：/api/* 未匹配任何路由时必须放行给 notFoundHandler，
+      // 否则这里既不响应也不 next()，请求会**永久挂起**（实测 GET /api/teams、
+      // /api/team-members 以及任意拼错的 /api/ 路径都是 8s+ 无响应，前端只能等到超时）。
+      app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next();
+        res.sendFile(path.join(frontendDist, 'index.html'));
       });
     }
 

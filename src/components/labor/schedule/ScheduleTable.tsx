@@ -24,7 +24,8 @@ interface ScheduleTableProps {
   exportMode?: boolean;
   batchDeleteMode?: boolean;
   selectedRows?: string[];
-  onSelectAll?: () => void;
+  // 2026-09-19 修复 C2：把当前筛选结果的行 id 传上去，避免调用方按"整个 store"选择
+  onSelectAll?: (ids: string[]) => void;
   onSelectRow?: (id: string) => void;
   onBatchDeleteClick?: () => void;
   onBatchExportClick?: () => void;
@@ -97,23 +98,12 @@ export function ScheduleTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  // 修复 2026-09-13：原默认本周一~周日，新建非本周日期的排班在表格视图看不到。
-  // 改为本月1日~本月最后一日，容纳任意日期新建的排班。
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
-    const today = new Date();
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return {
-      start: formatDate(monthStart),
-      end: formatDate(monthEnd),
-    };
-  });
+  // 2026-09-19 修复 H2（第二处）：默认**不做**日期过滤。
+  // 历史：2026-09-13 曾把默认从"本周一~周日"放宽到"本月1日~本月末"，
+  // 但只挪了一格 —— 任何非本月的日期（跨月排班、提前排下季度）新建后仍被当场藏起来，
+  // 表现为"保存成功但看不到"。数据量已由 store 的加载窗口限制，
+  // 这里再叠一个默认过滤只会制造同类假 bug。改为空 = 不过滤，由用户按需收窄。
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
@@ -132,8 +122,10 @@ export function ScheduleTable({
       // 状态筛选
       const matchStatus = statusFilter === 'all' || record.status === statusFilter;
 
-      // 日期范围
-      const matchDate = record.date >= dateRange.start && record.date <= dateRange.end;
+      // 日期范围（两端都可留空 = 该端不设限）
+      const matchDate =
+        (!dateRange.start || record.date >= dateRange.start) &&
+        (!dateRange.end || record.date <= dateRange.end);
 
       return matchSearch && matchShift && matchStatus && matchDate;
     });
@@ -146,7 +138,13 @@ export function ScheduleTable({
   }, [filteredData, currentPage, pageSize]);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
-  const allSelected = paginatedData.length > 0 && paginatedData.every(r => selectedRows.includes(r.id));
+  // 2026-09-19 修复 C2 / M13：全选的作用域与勾选态必须一致。
+  // 原实现：勾选态按 paginatedData（当前页）算，动作按 SchedulePage 的整个 scheduleList
+  //        （忽略筛选）算 —— 用户以为选中了本页 10 条，实际选中了全部 21 条，
+  //        批量删除会删掉从未显示的记录；且勾满当前页后点表头会「反向扩大」选择。
+  // 现改为两侧统一按 filteredData（当前筛选结果），并提供 indeterminate 三态。
+  const allSelected = filteredData.length > 0 && filteredData.every(r => selectedRows.includes(r.id));
+  const someSelected = filteredData.some(r => selectedRows.includes(r.id));
 
   // 星期几
   const getWeekday = (dateStr: string) => {
@@ -339,7 +337,11 @@ export function ScheduleTable({
                 <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
                   <Checkbox
                     checked={allSelected}
-                    onCheckedChange={() => onSelectAll?.()}
+                    ref={(el) => {
+                      // 部分选中时显示 indeterminate（此前缺失，用户无从判断"现在选了哪些"）
+                      if (el) (el as HTMLInputElement).indeterminate = !allSelected && someSelected;
+                    }}
+                    onCheckedChange={() => onSelectAll?.(filteredData.map(r => r.id))}
                     className="border-white data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-600"
                   />
                 </TableHead>

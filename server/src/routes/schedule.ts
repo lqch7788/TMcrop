@@ -51,8 +51,13 @@ function refreshAvailabilityForStaffAsync(staffId: string, date: string): void {
   setImmediate(() => {
     try {
       const db = getDatabase();
+      // 2026-09-19 修复 H5：触发器必须与计算口径用同一张表。
+      // teamAvailabilityService 的分母取自 team_members（left_at IS NULL），
+      // 而这里原先查 worker_team_assignments —— 两表长期不同步（实测 EMP_003 在
+      // team_members 是在职成员，在 worker_team_assignments 里一条都没有），
+      // 结果是该员工所属班组的可用性**永远不刷新**，dispatch 按过期工时评分。
       const teamRes = db.exec(
-        `SELECT DISTINCT team_id FROM worker_team_assignments WHERE worker_id = ? AND left_at IS NULL`,
+        `SELECT DISTINCT team_id FROM team_members WHERE worker_id = ? AND left_at IS NULL`,
         [staffId],
       );
       if (!teamRes[0] || teamRes[0].values.length === 0) return;
@@ -74,6 +79,29 @@ function refreshAvailabilityForTeamAsync(teamId: string, date: string): void {
     // 2026-09-18 M-7：走 debounce 队列
     scheduleAvailabilityRefresh(teamId, date);
   });
+}
+
+/**
+ * 2026-09-19 修复 H4：批量排班/批量删除后刷新日期段内的班组可用性。
+ *
+ * 背景：原先只有单条新建/编辑/删除与 batch-by-team 会触发刷新，其余 5 个批量端点
+ * 写完就结束 —— team_daily_availability 停在旧值（该日期若从无可用性行，则整行不存在），
+ * 导致「班组详情」的可用工时、以及建农事任务时的「该班组今日已满排」判断用的是过期数据。
+ *
+ * 说明：refreshAvailability 内部按 (teamId, date) 走 debounce 队列，日期段有
+ * MAX_DATE_RANGE_DAYS 上限，重复调用会被合并，不会造成写盘风暴。
+ */
+function refreshBatchAvailabilityByTeam(teamId: string, startDate: string, endDate: string): void {
+  for (const d of expandDates(startDate, endDate)) {
+    refreshAvailabilityForTeamAsync(teamId, d);
+  }
+}
+
+/** 同上，但只知道员工（需要反查其所属班组） */
+function refreshBatchAvailabilityByStaff(staffId: string, startDate: string, endDate: string): void {
+  for (const d of expandDates(startDate, endDate)) {
+    refreshAvailabilityForStaffAsync(staffId, d);
+  }
 }
 
 /**
@@ -219,8 +247,9 @@ router.get('/occupations', (req: Request, res: Response) => {
     // 0. 如果传 teamId，先查班组 worker 池；空班组直接返回空 workers
     let workerFilterIds: string[] | null = null;
     if (teamId && typeof teamId === 'string') {
+      // 2026-09-19 修复 H6：补 left_at IS NULL（否则占用面板会把已离组成员显示成在岗）
       const teamMembersResult = db.exec(
-        'SELECT worker_id FROM team_members WHERE team_id = ?',
+        'SELECT worker_id FROM team_members WHERE team_id = ? AND left_at IS NULL',
         [teamId],
       );
       const teamMembersTable = Array.isArray(teamMembersResult)
@@ -460,8 +489,11 @@ router.post('/batch-by-team', (req: Request, res: Response) => {
 
   try {
     const db = getDatabase();
+    // 2026-09-19 修复 H6：补 left_at IS NULL。team_members 是软删除表，
+    // 不过滤会把已离组成员当成在岗：批量排班会给离职的人建排班，
+    // 而可用性计算的分母已按 left_at 排除他 → 班表有他的班、可用工时却不扣。
     const teamMembersResult = db.exec(
-      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      'SELECT worker_id FROM team_members WHERE team_id = ? AND left_at IS NULL',
       [teamId],
     );
     const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
@@ -655,6 +687,8 @@ router.post('/batch-by-date-range', (req: Request, res: Response) => {
       created++;
     }
     saveDatabase();
+    // 2026-09-19 修复 H4：批量排班后刷新该员工所属班组在日期段内的可用性
+    refreshBatchAvailabilityByStaff(staffId, startDate, endDate);
     return res.json({
       success: true,
       data: {
@@ -698,8 +732,11 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
 
   try {
     const db = getDatabase();
+    // 2026-09-19 修复 H6：补 left_at IS NULL。team_members 是软删除表，
+    // 不过滤会把已离组成员当成在岗：批量排班会给离职的人建排班，
+    // 而可用性计算的分母已按 left_at 排除他 → 班表有他的班、可用工时却不扣。
     const teamMembersResult = db.exec(
-      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      'SELECT worker_id FROM team_members WHERE team_id = ? AND left_at IS NULL',
       [teamId],
     );
     const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
@@ -754,6 +791,9 @@ router.post('/batch-by-team-and-date-range', (req: Request, res: Response) => {
       }
     }
     saveDatabase();
+    // 2026-09-19 修复 H4：批量按班组排班后刷新该班组在日期段内的可用性，
+    // 否则班组可用工时/建任务时的「今日已满排」判断都停留在旧值
+    refreshBatchAvailabilityByTeam(teamId, startDate, endDate);
     return res.json({
       success: true,
       data: {
@@ -832,6 +872,8 @@ router.post('/batch-by-weekday', (req: Request, res: Response) => {
       created++;
     }
     saveDatabase();
+    // 2026-09-19 修复 H4：批量按周几排班后刷新该员工所属班组在日期段内的可用性
+    refreshBatchAvailabilityByStaff(staffId, startDate, endDate);
     return res.json({
       success: true,
       data: { created, skipped, total: dates.length },
@@ -880,8 +922,11 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
 
   try {
     const db = getDatabase();
+    // 2026-09-19 修复 H6：补 left_at IS NULL。team_members 是软删除表，
+    // 不过滤会把已离组成员当成在岗：批量排班会给离职的人建排班，
+    // 而可用性计算的分母已按 left_at 排除他 → 班表有他的班、可用工时却不扣。
     const teamMembersResult = db.exec(
-      'SELECT worker_id FROM team_members WHERE team_id = ?',
+      'SELECT worker_id FROM team_members WHERE team_id = ? AND left_at IS NULL',
       [teamId],
     );
     const teamMembersTable = Array.isArray(teamMembersResult) ? teamMembersResult[0] : teamMembersResult;
@@ -936,6 +981,9 @@ router.post('/batch-by-team-and-weekday', (req: Request, res: Response) => {
       }
     }
     saveDatabase();
+    // 2026-09-19 修复 H4：批量按班组排班后刷新该班组在日期段内的可用性，
+    // 否则班组可用工时/建任务时的「今日已满排」判断都停留在旧值
+    refreshBatchAvailabilityByTeam(teamId, startDate, endDate);
     return res.json({
       success: true,
       data: {
@@ -987,7 +1035,8 @@ router.post('/preview-batch', (req: Request, res: Response) => {
       if (Array.isArray(body.workerIds) && body.workerIds.length > 0) {
         targetWorkerIds = body.workerIds.filter((x: unknown) => typeof x === 'string' && x.length > 0);
       } else if (body.teamId) {
-        const tm = db.exec('SELECT worker_id FROM team_members WHERE team_id = ?', [body.teamId]);
+        // 2026-09-19 修复 H6：补 left_at IS NULL（预览也不该把已离组成员算进去）
+        const tm = db.exec('SELECT worker_id FROM team_members WHERE team_id = ? AND left_at IS NULL', [body.teamId]);
         const tmTable = Array.isArray(tm) ? tm[0] : tm;
         targetWorkerIds = tmTable ? tmTable.values.map((row: unknown[]) => row[0] as string) : [];
       } else {
@@ -1127,6 +1176,9 @@ router.post('/swap-requests', (req: Request, res: Response) => {
     const target_id = body.target_id ?? body.targetId;
     const target_name = body.target_name ?? body.targetName;
     const original_date = body.original_date ?? body.originalDate;
+    // 2026-09-19 修复 C1：记录"要换哪一班"。同一人同一天可有多班（唯一键含 shift），
+    // 只凭 original_date 审批时无法定位，会把当天全部班次一起换人。
+    const original_shift = body.original_shift ?? body.originalShift;
     const target_date = body.target_date ?? body.targetDate;
     const reason = body.reason;
     const newId = id || `SWAP-${Date.now()}`;
@@ -1134,9 +1186,9 @@ router.post('/swap-requests', (req: Request, res: Response) => {
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO swap_requests (id, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, requester_id, requester_name, target_id, target_name, original_date, target_date, reason, '待审批', now, now]);
+      INSERT INTO swap_requests (id, requester_id, requester_name, target_id, target_name, original_date, original_shift, target_date, reason, status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [newId, requester_id, requester_name, target_id, target_name, original_date, original_shift ?? null, target_date, reason, '待审批', now, now]);
 
     saveDatabase();
 
@@ -1149,6 +1201,7 @@ router.post('/swap-requests', (req: Request, res: Response) => {
         target_id,
         target_name,
         original_date,
+        original_shift: original_shift ?? null,
         target_date,
         reason,
         status: '待审批',
@@ -1175,34 +1228,94 @@ router.put('/swap-requests/:id', (req: Request, res: Response) => {
       return;
     }
 
+    const swapRes = db.exec('SELECT * FROM swap_requests WHERE id = ?', [id]);
+    const swapTable = Array.isArray(swapRes) ? swapRes[0] : swapRes;
+    if (!swapTable?.values?.length) {
+      res.status(404).json({ success: false, error: '调班申请不存在' });
+      return;
+    }
+
+    // 2026-09-19 修复 C1：审批前先**精确定位**"换哪一条排班"。
+    // 背景：schedules 的唯一键是 (staff_id, date, shift)，同一人同一天可有多班
+    //      （实测 EMP_001 在 2026-09-13 有早/中/晚三条）。原实现只按 (staff_id, date)
+    //      匹配，批准一条申请会把当天**全部班次**一起换到 target 名下。
+    // 定位放在事务外，是为了能把业务原因以 400 + 明确文案返回，而不是笼统的 500。
+    let swapTargetId = '';
+    let swapTargetName = '';
+    let targetScheduleId: string | null = null;
+
+    if (status === '已同意') {
+      const cols = swapTable.columns;
+      const row = swapTable.values[0];
+      const get = (name: string) => row[cols.indexOf(name)];
+      const requesterId = String(get('requester_id') ?? '');
+      const targetId = String(get('target_id') ?? '');
+      const targetName = String(get('target_name') ?? '');
+      const originalDate = String(get('original_date') ?? '');
+      const shiftRaw = get('original_shift');
+      const originalShift = shiftRaw == null ? '' : String(shiftRaw);
+
+      if (!requesterId || !targetId || !originalDate) {
+        res.status(400).json({ success: false, error: '调班申请缺少申请人 / 调班对象 / 原日期，无法执行' });
+        return;
+      }
+
+      // C1-①：调班对象必须是真实员工。前端支持"调班对象 = 班组"，若不拦住，
+      // 班组 ID 会被写进 schedules.staff_id，该行此后再也匹配不到任何员工维度。
+      const empRes = db.exec('SELECT id FROM employees WHERE id = ?', [targetId]);
+      const empTable = Array.isArray(empRes) ? empRes[0] : empRes;
+      if (!empTable?.values?.length) {
+        res.status(400).json({
+          success: false,
+          error: `调班对象「${targetName || targetId}」不是有效员工，无法执行调班（暂不支持以班组为调班对象）`,
+        });
+        return;
+      }
+
+      // C1-②：带 shift 就精确匹配；老申请没有 shift 时，只有当天恰好一条排班才敢动
+      const where = ['staff_id = ?', 'date = ?'];
+      const params: any[] = [requesterId, originalDate];
+      if (originalShift) {
+        where.push('shift = ?');
+        params.push(originalShift);
+      }
+
+      const foundRes = db.exec(`SELECT id FROM schedules WHERE ${where.join(' AND ')}`, params);
+      const foundTable = Array.isArray(foundRes) ? foundRes[0] : foundRes;
+      const foundRows = foundTable?.values ?? [];
+
+      // C1-③：Fail Loud —— 匹配不到 / 匹配到多条都必须报错，不能静默"审批成功"
+      if (foundRows.length === 0) {
+        res.status(400).json({ success: false, error: '未找到对应的排班记录，调班未执行' });
+        return;
+      }
+      if (foundRows.length > 1) {
+        res.status(400).json({
+          success: false,
+          error: `该员工 ${originalDate} 当天有 ${foundRows.length} 条排班，申请未记录具体班次，无法确定换哪一班`,
+        });
+        return;
+      }
+
+      targetScheduleId = String(foundRows[0][0]);
+      swapTargetId = targetId;
+      swapTargetName = targetName;
+    }
+
     // 2026-09-18 修复 C-2：审批通过时在后端同步调整排班记录（此前完全依赖前端补偿，
     // 前端未刷新/崩溃时会出现 swap_requests=已同意 但排班未换的不一致）。
-    // 幂等设计：更新条件用 requester_id + original_date，前端若已执行过同样的更新，
-    // 此时 WHERE 匹配不到 requester 的记录（已是 target），不会重复换人。
     db.run('BEGIN TRANSACTION');
     try {
       db.run('UPDATE swap_requests SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
 
-      if (status === '已同意') {
-        const swapRes = db.exec('SELECT * FROM swap_requests WHERE id = ?', [id]);
-        if (swapRes[0]?.values?.length) {
-          const cols = swapRes[0].columns;
-          const row = swapRes[0].values[0];
-          const get = (name: string) => row[cols.indexOf(name)];
-          const requesterId = String(get('requester_id') ?? '');
-          const targetId = String(get('target_id') ?? '');
-          const targetName = String(get('target_name') ?? '');
-          const originalDate = String(get('original_date') ?? '');
-          if (requesterId && targetId && originalDate) {
-            // 2026-09-18：swap_record_id 列已补（用户授权 ALTER TABLE），恢复溯源写入
-            db.run(
-              `UPDATE schedules SET staff_id = ?, staff_name = ?, swap_record_id = ?,
-                 version = version + 1, update_time = ?
-               WHERE staff_id = ? AND date = ?`,
-              [targetId, targetName, id, now, requesterId, originalDate],
-            );
-          }
-        }
+      if (status === '已同意' && targetScheduleId) {
+        // 已按主键锁定单条记录，不会误伤同日其他班次
+        db.run(
+          `UPDATE schedules SET staff_id = ?, staff_name = ?, swap_record_id = ?,
+             version = version + 1, update_time = ?
+           WHERE id = ?`,
+          [swapTargetId, swapTargetName, id, now, targetScheduleId],
+        );
       }
       db.run('COMMIT');
     } catch (e) {
@@ -1210,6 +1323,17 @@ router.put('/swap-requests/:id', (req: Request, res: Response) => {
       throw e;
     }
     saveDatabase();
+
+    // 2026-09-19：换人后刷新相关日期的班组可用性（此前调班审批不触发刷新，
+    // 可用工时会停在旧值，影响建任务时的"该班组今日已满排"判断）
+    if (status === '已同意' && swapTargetId) {
+      const dateCol = swapTable.columns.indexOf('original_date');
+      const swapDate = dateCol >= 0 ? String(swapTable.values[0][dateCol] ?? '') : '';
+      const requesterCol = swapTable.columns.indexOf('requester_id');
+      const requesterForRefresh = requesterCol >= 0 ? String(swapTable.values[0][requesterCol] ?? '') : '';
+      if (requesterForRefresh && swapDate) refreshAvailabilityForStaffAsync(requesterForRefresh, swapDate);
+      if (swapTargetId && swapDate) refreshAvailabilityForStaffAsync(swapTargetId, swapDate);
+    }
 
     res.json({ success: true, data: { id, status } });
   } catch (error) {
@@ -1408,6 +1532,14 @@ router.post('/batch', (req: Request, res: Response) => {
     }
     saveDatabase();
 
+    // 2026-09-19 修复 H4：批量新建后刷新各员工所属班组的可用性
+    // （此前该端点写完就结束，team_daily_availability 停在旧值）
+    for (const s of dedupedSchedules) {
+      const sid = (s as any)?.staff_id;
+      const d = (s as any)?.date;
+      if (sid && d) refreshAvailabilityForStaffAsync(String(sid), String(d));
+    }
+
     res.status(201).json({
       success: true,
       data: { inserted: insertedIds, count: insertedIds.length },
@@ -1467,17 +1599,10 @@ router.put('/:id', (req: Request, res: Response) => {
     // 2026-09-15：调班申请 ID 关联写入（2026-09-18 补列后恢复）
     if (updates.swap_record_id !== undefined) { fields.push('swap_record_id = ?'); values.push(updates.swap_record_id); }
 
-    // 版本号递增（乐观锁）
-    fields.push('version = version + 1');
-    fields.push('update_time = ?');
-    values.push(now);
-    values.push(id);
-
-    if (fields.length === 0) {
-      res.status(400).json({ success: false, error: '没有需要更新的字段' });
-      return;
-    }
-
+    // 2026-09-19 修复 C-9：签到/签退自动置 status='已执行' 必须在本段**之前**完成。
+    // fields 与 values 是平行数组，values 末尾的 id 是 WHERE 参数；若在本段之后再追加
+    // status，values.push('已执行') 会落到 id 之后，导致 SQL 里 WHERE id 取到 '已执行'，
+    // UPDATE 匹配 0 行却静默返回 200（签到保存"成功"但数据不变、状态不切换）。
     // 2026-09-14：签到/签退后自动设 status='已执行'（仅当请求里带了 check_in 或 check_out）
     // 业务语义：员工登记了签到或签退时间，表示该班次已执行
     if ((updates.check_in !== undefined && updates.check_in) ||
@@ -1487,16 +1612,26 @@ router.put('/:id', (req: Request, res: Response) => {
       const curTable = Array.isArray(curRes) ? curRes[0] : curRes;
       const curStatus = curTable && curTable.values.length > 0 ? curTable.values[0][0] as string : null;
       if (curStatus !== '已取消') {
-        // 移除原 updates.status 加入 '已执行'
         const idx = fields.indexOf('status = ?');
         if (idx >= 0) {
-          fields[idx] = 'status = ?';
+          // 请求里已带 status，原地覆盖，保持 fields/values 下标对齐
           values[idx] = '已执行';
         } else {
           fields.push('status = ?');
           values.push('已执行');
         }
       }
+    }
+
+    // 版本号递增（乐观锁）
+    fields.push('version = version + 1');
+    fields.push('update_time = ?');
+    values.push(now);
+    values.push(id);
+
+    if (fields.length === 0) {
+      res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return;
     }
 
     db.run(`UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -1592,10 +1727,22 @@ router.delete('/batch', (req: Request, res: Response) => {
 
     const db = getDatabase();
     const placeholders = ids.map(() => '?').join(',');
+    // 2026-09-19 修复 H4：删除前先取出 (staff_id, date)，删完才能据此刷新班组可用性
+    const rowsToRefresh = db.exec(
+      `SELECT staff_id, date FROM schedules WHERE id IN (${placeholders})`,
+      ids,
+    );
     db.run(`DELETE FROM schedules WHERE id IN (${placeholders})`, ids);
     // 2026-09-18 修复 M-2：用 getRowsModified 拿真实删除数（之前返回请求 size 会误报）
     const actualDeleted = (db as any).getRowsModified?.() ?? ids.length;
     saveDatabase();
+
+    // 2026-09-19 修复 H4：批量删除后刷新相关班组可用性
+    for (const row of (rowsToRefresh[0]?.values ?? [])) {
+      const sid = row[0];
+      const d = row[1];
+      if (sid && d) refreshAvailabilityForStaffAsync(String(sid), String(d));
+    }
 
     res.json({ success: true, data: { deleted: actualDeleted, count: actualDeleted, requested: ids.length } });
   } catch (error) {

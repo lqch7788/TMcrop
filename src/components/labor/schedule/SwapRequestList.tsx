@@ -22,7 +22,8 @@ interface SwapRequestListProps {
   // 2026-09-15：导出模式（受控），与 ScheduleTable 一致
   exportMode?: boolean;
   selectedRows?: string[];
-  onSelectAll?: () => void;
+  // 2026-09-19 修复 C2：与 ScheduleTable 一致，传当前筛选结果的行 id
+  onSelectAll?: (ids: string[]) => void;
   onSelectRow?: (id: string) => void;
   onEnterExportMode?: () => void;
   onConfirmExport?: () => void;
@@ -185,7 +186,7 @@ export function SwapRequestList({
                       ref={(el) => {
                         if (el) (el as HTMLInputElement).indeterminate = !allFilteredSelected && someFilteredSelected;
                       }}
-                      onCheckedChange={() => onSelectAll?.()}
+                      onCheckedChange={() => onSelectAll?.(filteredIds)}
                     />
                   </TableHead>
                 )}
