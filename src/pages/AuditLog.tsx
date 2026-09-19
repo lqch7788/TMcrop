@@ -23,7 +23,9 @@ interface OperationLog {
   status: string;
   level?: string;
   errorMessage?: string;
-  created_at: string;
+  // 2026-09-19 修复：后端 camelCaseResponse 中间件会把 created_at 转成 createdAt。
+  // 原先读 log.created_at 永远是 undefined，导致「时间」列整列显示 "-"。
+  createdAt: string;
 }
 
 interface LogStats {
@@ -35,6 +37,65 @@ interface LogStats {
 }
 
 const EMPTY_STATS: LogStats = { total: 0, today: 0, info: 0, warning: 0, error: 0 };
+
+// 操作日志 description 里出现的英文字段名 → 中文（2026-09-19）
+// 取值来自对全库 337 条日志的实际统计（updatedFields 中出现过的全部字段）
+// + 几个同类字段以便后续写入新字段时也能正确显示。
+const LOG_FIELD_LABELS: Record<string, string> = {
+  status: '状态',
+  check_in: '签到时间',
+  check_out: '签退时间',
+  staff_id: '员工',
+  staff_name: '员工姓名',
+  swap_record_id: '调班申请',
+  date: '日期',
+  shift: '班次',
+  work_zone: '工作区域',
+  workZone: '工作区域',
+  remarks: '备注',
+  team_id: '班组',
+  team_name: '班组名称',
+};
+
+/**
+ * 操作人显示名（2026-09-19）
+ * 历史日志的 username 因后端字段名写错（读 realName/username，实际是 name）而为空，
+ * 这条已在写入侧修掉，但**不改写已有审计记录** —— 审计数据是证据，回填等于篡改。
+ * 这里只做展示层回退：没有姓名时显示 user_id（如 EMP_003），比一律显示「系统」准确。
+ */
+function getOperatorName(log: { username?: string; userId?: string }): string {
+  return log.username || log.userId || '系统';
+}
+
+/**
+ * 把后端存的操作日志 description 渲染成中文。
+ *
+ * 后端写入的 description 有两种形态：
+ *  1) 已中文化的业务文本（业务联动处理器生成，如「…业务日志: 生产计划状态已更新」）→ 原样展示
+ *  2) JSON，如 {"updatedFields":["check_in","status"]}、{"workZone":"A区"} → 需翻译
+ * 此前直接渲染原始值，界面上会冒出 {"updatedFields":["status"]} 这类英文片段。
+ *
+ * 解析失败时原样返回：不吞错、也不编造内容。
+ */
+function formatLogDescription(desc?: string | null): string {
+  if (!desc) return '-';
+  const text = String(desc).trim();
+  if (!text.startsWith('{')) return text;
+  try {
+    const obj = JSON.parse(text) as Record<string, unknown>;
+    const label = (k: string) => LOG_FIELD_LABELS[k] || k;
+
+    if (Array.isArray(obj.updatedFields)) {
+      const fields = (obj.updatedFields as string[]).map(label);
+      return fields.length ? `更新字段：${fields.join('、')}` : '更新';
+    }
+
+    const parts = Object.entries(obj).map(([k, v]) => `${label(k)}：${String(v ?? '')}`);
+    return parts.length ? parts.join('；') : text;
+  } catch {
+    return text;
+  }
+}
 
 // 模块筛选选项（按系统架构分类）
 const MODULE_OPTIONS = [
@@ -239,11 +300,11 @@ export default function AuditLog() {
 
     const headers = ['时间', '用户', '操作', '模块', '描述', '级别'];
     const rows = dataToExport.map((log: any) => [
-      log.created_at,
-      log.username || '系统',
+      log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '',
+      getOperatorName(log),
       getActionLabel(log.action),
       getModuleDisplayName(log.module),
-      log.description || '',
+      formatLogDescription(log.description),
       getLevelLabel(log.level || log.status),
     ]);
 
@@ -417,7 +478,9 @@ export default function AuditLog() {
                 )}
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">用户</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                {/* 2026-09-19 修复：此列渲染的是操作类型徽章（创建/更新/删除），
+                    与最后一列的「操作」按钮重名，用户无法区分 —— 改为「操作类型」 */}
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作类型</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">模块</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">描述</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">级别</th>
@@ -444,22 +507,22 @@ export default function AuditLog() {
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-'}
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '-'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xs font-medium">
-                        {(log.username || 'S')[0].toUpperCase()}
+                        {getOperatorName(log)[0].toUpperCase()}
                       </div>
-                      <span className="text-sm text-gray-900">{log.username || '系统'}</span>
+                      <span className="text-sm text-gray-900">{getOperatorName(log)}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>{getActionLabel(log.action)}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{getModuleDisplayName(log.module)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={log.description}>
-                    {log.description || '-'}
+                  <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={formatLogDescription(log.description)}>
+                    {formatLogDescription(log.description)}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 text-xs rounded-full ${getLevelColor(log.level || log.status)}`}>
@@ -504,10 +567,12 @@ export default function AuditLog() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">日志详情</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <DetailField label="时间" value={selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString('zh-CN') : '-'} />
-                <DetailField label="用户" value={selectedLog.username || '系统'} />
-                <DetailField label="操作" value={selectedLog.action || '-'} />
-                <DetailField label="模块" value={selectedLog.module || '-'} />
+                <DetailField label="时间" value={selectedLog.createdAt ? new Date(selectedLog.createdAt).toLocaleString('zh-CN') : '-'} />
+                <DetailField label="用户" value={getOperatorName(selectedLog)} />
+                {/* 2026-09-19：详情弹窗此前显示的是原始英文 action/module（如 update、
+                    approval），与表格里的中文标签不一致 —— 统一走同套映射 */}
+                <DetailField label="操作类型" value={getActionLabel(selectedLog.action)} />
+                <DetailField label="模块" value={getModuleDisplayName(selectedLog.module)} />
                 <DetailField label="IP地址" value={selectedLog.ipAddress || '-'} />
                 <div>
                   <p className="text-xs text-gray-500">级别</p>
@@ -516,7 +581,7 @@ export default function AuditLog() {
                   </span>
                 </div>
               </div>
-              <DetailField label="描述" value={selectedLog.description || '-'} />
+              <DetailField label="描述" value={formatLogDescription(selectedLog.description)} />
               {selectedLog.oldValue && (
                 <div>
                   <p className="text-xs text-gray-500">原值</p>

@@ -83,7 +83,9 @@ router.post('/teams/:teamId/members/batch', requireAuth, async (req, res) => {
     // 优先用 JWT 注入的用户身份（authenticate 中间件已写入 req.user）
     const jwtUser = (req as any).user;
     const finalOperatorId = jwtUser?.userId ?? jwtUser?.oid ?? operatorId ?? '';
-    const finalOperatorName = jwtUser?.realName ?? jwtUser?.username ?? operatorName ?? '';
+    // 2026-09-19 修复：JwtPayload 的字段是 name（不是 realName/username），
+    // 原写法恒为 undefined，审计日志的操作人永远落到请求体或空字符串
+    const finalOperatorName = jwtUser?.name ?? operatorName ?? '';
 
     // 2026-09-18：审计 C-9 —— 支持每工人独立角色
     //   - 传 workerRoles（Record<workerId, role>）→ 用每个工人的角色
