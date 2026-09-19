@@ -136,6 +136,15 @@ async function start() {
     // Step 1: 启动前 db 完整性检查 + 快照
     console.log('正在加载数据库...');
     await initDatabase();
+
+    // 2026-09-19: 安装变更追踪器 —— 操作日志的 old_value 靠它在 db.run/exec 层
+    // 抓「变更前那一行」。只读不改 SQL，捕获失败静默降级，不影响业务写入。
+    {
+      const { getDatabase } = await import('./db/index');
+      const { installChangeTracker } = await import('./lib/changeTracker');
+      installChangeTracker(getDatabase());
+      console.log('✓ 变更追踪器已安装（操作日志将记录变更前值）');
+    }
     const dbFile = path.join(__dirname, '../data/yuanxingtu.db');
     const dbFileExists = fs.existsSync(dbFile);
     if (dbFileExists) {
@@ -382,6 +391,11 @@ async function start() {
     // 覆盖所有漏调 saveDatabase() 的端点（全站扫描约 65 个），避免重启后数据静默回滚。
     const { autoPersist } = await import('./middleware/autoPersist');
     app.use(autoPersist);
+
+    // 2026-09-19: 操作审计 —— 所有写请求自动落 operation_logs（含失败），
+    // 覆盖改前只有 5 处显式日志的缺口；业务已写的语义化日志会自动去重
+    const { auditTrail } = await import('./middleware/auditTrail');
+    app.use(auditTrail);
 
     // API 路由（optionalAuthenticate：演示模式无 token 放行；带 token 验证）
     const { optionalAuthenticate } = await import('./middleware/auth');
