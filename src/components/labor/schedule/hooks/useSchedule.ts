@@ -28,7 +28,9 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
   const cancelSchedule = useScheduleStore((s) => s.cancelSchedule);
   const deleteSchedule = useScheduleStore((s) => s.deleteSchedule);
   const batchUpdateSchedule = useScheduleStore((s) => s.batchUpdateSchedule);
-  const updateShiftConfig = useScheduleStore((s) => s.updateShiftConfig);
+  // 2026-09-19：班次配置改为从 shifts 表读取（此前是硬编码常量、改了不落库）。
+  // 增删改由 ShiftEditor 直接走 useShiftStore，这里是排班页侧的派生配置刷新。
+  const fetchShiftConfigs = useScheduleStore((s) => s.fetchShiftConfigs);
   const submitSwapRequestAction = useScheduleStore((s) => s.submitSwapRequest);
   const handleSwapRequest = useScheduleStore((s) => s.handleSwapRequest);
   // 2026-09-15：拉取历史调班申请（修复刷新后数据丢失）
@@ -46,7 +48,11 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
     void fetchSwapRequests().catch((err) => {
       console.error('[useSchedule] 调班申请加载失败:', err);
     });
-  }, [fetchSchedules, fetchSwapRequests]);
+    // 2026-09-19：拉取班次起止时间（shifts 表），使其成为班次配置的唯一数据源
+    void fetchShiftConfigs().catch((err) => {
+      console.error('[useSchedule] 班次配置加载失败:', err);
+    });
+  }, [fetchSchedules, fetchSwapRequests, fetchShiftConfigs]);
 
   // 同步初始日期
   useEffect(() => {
@@ -109,7 +115,7 @@ export function useSchedule({ initialDate }: UseScheduleProps = {}) {
     cancelSchedule: cancelScheduleById,
     deleteSchedule: deleteScheduleById,
     batchUpdateSchedule,
-    updateShiftConfig,
+    fetchShiftConfigs,
     submitSwapRequest,
     handleSwapRequest,
     fetchSwapRequests,

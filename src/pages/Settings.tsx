@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  Settings as SettingsIcon, MapPin, ScrollText, Users, Target, ChevronRight,
+  Settings as SettingsIcon, MapPin, ScrollText, Target, ChevronRight,
   ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor,
   Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database,
-  Clock, DollarSign, Package, Bug, AlertTriangle,
+  DollarSign, Package, Bug, AlertTriangle,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -30,7 +30,6 @@ const productionSections = [
 // 组3: 运营管理 — 仓库、班组与权限
 const operationSections = [
   { icon: Warehouse, label: '仓库管理', path: '/settings/warehouse', desc: '仓库信息配置' },
-  { icon: Users, label: '班组管理', path: '/settings/team', desc: '班组和班次管理' },
   { icon: Shield, label: '用户权限管理', path: '/settings/user-permission', desc: '组织架构 · 角色定义 · 权限矩阵 · 用户管理 · 权限覆盖' },
   { icon: GitBranch, label: '审批流程', path: '/settings/approval-workflow', desc: '审批流程配置' },
   { icon: Shield, label: '分级审批', path: '/settings/approval-level-config', desc: '金额阈值和审批级别配置' },

@@ -47,7 +47,6 @@ import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
 import ApprovalLevelConfig from './pages/ApprovalLevelConfig';
 import NotificationSettings from './pages/NotificationSettings';
 import WarehouseManagement from './pages/WarehouseManagement';
-import TeamManagement from './pages/TeamManagement';
 import AuditLog from './pages/AuditLog';
 import DataMigration from './pages/system/DataMigration';
 
@@ -482,7 +481,9 @@ function AppContent() {
             <Route path="approval-level-config" element={<ApprovalLevelConfig />} />
             <Route path="notification" element={<NotificationSettings />} />
             <Route path="warehouse" element={<WarehouseManagement />} />
-            <Route path="team" element={<TeamManagement />} />
+            {/* 2026-09-19：原 /settings/team（班组管理→后改为班次管理）已下线。
+                班组增删改统一走 农事管理 → 班组分配（/team）；
+                班次管理统一走 排班调度 → 班次设置（ShiftEditor，直接读写 shifts 表）。 */}
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="crop-variety" element={<CropVarietyManagement />} />
             {/* 病虫害防治管理 */}

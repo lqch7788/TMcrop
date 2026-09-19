@@ -1,7 +1,8 @@
 // 排班调度中心类型定义
 
 // 班次类型
-export type ShiftType = '早班' | '中班' | '晚班' | '全天' | '弹性';
+// 2026-09-19：由闭合联合放宽为 string（班次名改为用户在界面上自由维护，见 scheduleStore 同名说明）
+export type ShiftType = string;
 
 // 排班状态
 export type ScheduleStatus = '已排班' | '已执行' | '已取消';
