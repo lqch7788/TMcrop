@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, ChevronRight, ClipboardList, Download, Eye, FileText, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronRight, ClipboardList, Download, Eye, FileText, Loader2, RefreshCw, RotateCcw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
@@ -98,15 +98,18 @@ function formatLogDescription(desc?: string | null): string {
 }
 
 // 模块筛选选项（按系统架构分类）
+// 2026-09-19 修复：value 曾用英文代号（farm/crop/schedule…），但库里存的是中文模块名，
+// 除 farm 外全部对不上 → 选了等于查空。现改为与后端 lib/auditMeta.ts 的分类一一对应。
 const MODULE_OPTIONS = [
   { value: 'all', label: '全部模块' },
-  { value: 'farm', label: '农事管理' },
-  { value: 'crop', label: '作物管理' },
-  { value: 'schedule', label: '计划管理' },
-  { value: 'labor', label: '用工管理' },
-  { value: 'material', label: '物资管理' },
-  { value: 'system', label: '系统设置' },
-  { value: 'approval', label: '审批' },
+  { value: '农事管理', label: '农事管理' },
+  { value: '作物管理', label: '作物管理' },
+  { value: '计划管理', label: '计划管理' },
+  { value: '用工管理', label: '用工管理' },
+  { value: '物资管理', label: '物资管理' },
+  { value: '审批', label: '审批' },
+  { value: '系统设置', label: '系统设置' },
+  { value: '智能分析', label: '智能分析' },
 ];
 
 export default function AuditLog() {
@@ -139,7 +142,8 @@ export default function AuditLog() {
       if (searchTerm) params.set('search', searchTerm);
       if (filterUser) params.set('username', filterUser);
       if (filterModule !== 'all') params.set('module', filterModule);
-      if (filterLevel !== 'all') params.set('level', filterLevel);
+      // 2026-09-19 修复：后端按 status 列筛选（表里没有 level 列，原参数名会直接 500）
+      if (filterLevel !== 'all') params.set('status', filterLevel);
       if (filterDate) params.set('start_date', filterDate);
 
       const [logsResult, statsResult] = await Promise.allSettled([
@@ -192,18 +196,25 @@ export default function AuditLog() {
     fetchData();
   }, [fetchData]);
 
-  // 前端二次筛选
-  const filteredLogs = logs.filter((log) => {
-    const matchSearch =
-      !searchTerm ||
-      (log.username && log.username.includes(searchTerm)) ||
-      (log.description && log.description.includes(searchTerm)) ||
-      (log.action && log.action.includes(searchTerm));
-    const matchUser =
-      !filterUser ||
-      (log.username && log.username.includes(filterUser));
-    return matchSearch && matchUser;
-  });
+  /**
+   * 重置全部筛选条件（2026-09-19 新增）
+   * 清空两个搜索框、两个下拉（模块/级别回到 all）与日期，并把页码复位到第 1 页。
+   * 以上都在 fetchData 的依赖数组里，状态变化会自动触发重新拉取，无需再手动调一次。
+   */
+  const handleResetFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterUser('');
+    setFilterModule('all');
+    setFilterLevel('all');
+    setFilterDate('');
+    setCurrentPage(1);
+  }, []);
+
+  // 2026-09-19：删掉了这里的「前端二次筛选」。
+  // 它把服务端的筛选条件又抄了一遍（搜索词匹配 username/description/action，
+  // 用户匹配 username），两处必须保持同步才不会漏行 —— 而后端搜索范围一扩到「模块」，
+  // 这里就会把只靠模块命中的行筛掉。服务端已经是权威过滤，前端不再重复一遍。
+  const filteredLogs = logs;
 
   const getLevelColor = (status: string | undefined) => {
     const level = status || 'info';
@@ -228,10 +239,17 @@ export default function AuditLog() {
   // 模块名称映射（与筛选框一致）
   const getModuleDisplayName = (module: string | undefined) => {
     if (!module) return '-';
-    // 农事相关模块统一显示为"农事管理"
-    const farmModules = ['农事任务', '临时任务', '巡查', '问题'];
-    if (farmModules.includes(module)) return '农事管理';
-    return module;
+    // 2026-09-19：历史记录里的模块名未统一（农事任务/巡查/问题/排班/approval），
+    // 展示时归一到新的分类名，保证列表不出现两套叫法
+    const LEGACY_MODULE_ALIAS: Record<string, string> = {
+      农事任务: '农事管理',
+      临时任务: '农事管理',
+      巡查: '农事管理',
+      问题: '农事管理',
+      排班: '计划管理',
+      approval: '审批',
+    };
+    return LEGACY_MODULE_ALIAS[module] ?? module;
   };
 
   // 操作类型中文映射
@@ -243,6 +261,7 @@ export default function AuditLog() {
       'update': '更新',
       'delete': '删除',
       'login': '登录',
+      'login_failed': '登录失败',
       'logout': '登出',
       'export': '导出',
       'import': '导入',
@@ -383,7 +402,7 @@ export default function AuditLog() {
               type="text"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              placeholder="搜索日志..."
+              placeholder="搜索描述/操作人/模块..."
               className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
             />
           </div>
@@ -422,6 +441,12 @@ export default function AuditLog() {
             onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+          {/* 2026-09-19：一键清空全部筛选条件（两个搜索框 + 两个下拉 + 日期），
+              并把页码复位到第 1 页 —— 状态变化会触发上面的 useEffect 自动重新拉取。
+              配色对齐订单管理页的重置按钮（Button 的 warning 变体 = bg-amber-500） */}
+          <Button variant="warning" size="sm" onClick={handleResetFilters}>
+            <RotateCcw className="w-4 h-4" /> 重置
+          </Button>
           <Button size="sm" onClick={fetchData}>
             <RefreshCw className="w-4 h-4" /> 刷新
           </Button>

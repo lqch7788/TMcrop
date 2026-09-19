@@ -133,9 +133,12 @@ export class SeedSourceController {
   }
 
   /**
-   * 2026-06-26: 种源审计日志写入工具（复用 audit_logs 表）
+   * 2026-06-26: 种源审计日志写入工具
    * business_type = 'seed_source'，action = 'create' | 'update' | 'delete'
    * opinion 字段存"修改前→修改后"快照（update 时每字段1条）
+   *
+   * 2026-09-19：写入目标由 audit_logs 改为 operation_logs —— 前者全站无人读取，
+   * 记了也看不到；现在是操作日志页能查到的同一张表。
    */
   private writeAuditLog(args: {
     seedSourceId: string;
@@ -150,16 +153,22 @@ export class SeedSourceController {
         assertNoMojibake(args.opinion, 'audit_log.opinion');
       }
       const { getDatabase } = require('../db');
+      const { bumpAuditWriteCount } = require('../lib/auditMeta');
       const db = getDatabase();
       // 2026-07-14：审计日志 ID 改用 crypto.randomUUID()（替代 Math.random，违反 [[code-generation-contract-rule]] 铁律）
       const { randomUUID } = require('crypto');
       const id = `AUD-SS-${randomUUID()}`;
       const now = new Date().toISOString();
       db.run(
-        `INSERT INTO audit_logs (id, business_type, business_id, action, operator_id, operator_name, opinion, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, 'seed_source', args.seedSourceId, args.action, '', args.operatorName || 'system', args.opinion || '', now]
+        `INSERT INTO operation_logs (
+           id, user_id, username, action, module, resource_type, resource_id,
+           description, status, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'success', ?)`,
+        [id, '', args.operatorName || 'system', args.action, '作物管理', 'seed_source',
+         args.seedSourceId, args.opinion || '种源操作', now]
       );
+      // 通知 middleware/auditTrail.ts：本请求已写过语义化日志，不要重复记录
+      bumpAuditWriteCount();
     } catch (e) {
       console.warn('[seedSource.audit] write failed:', (e as Error).message);
     }
