@@ -118,6 +118,7 @@ router.post('/marks', (req: Request, res: Response) => {
     );
     const id = db.exec('SELECT last_insert_rowid()')[0]?.values[0]?.[0];
     const items = queryToObjects(db, `SELECT * FROM plant_marks WHERE id = ?`, [id]);
+    saveDatabase();
     res.status(201).json({ success: true, data: items[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -138,6 +139,7 @@ router.put('/marks/:id', (req: Request, res: Response) => {
        sort_order ?? exist[0].sort_order, is_use ?? exist[0].is_use, id]
     );
     const items = queryToObjects(db, `SELECT * FROM plant_marks WHERE id = ?`, [id]);
+    saveDatabase();
     res.json({ success: true, data: items[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -150,6 +152,7 @@ router.delete('/marks/:id', (req: Request, res: Response) => {
     const db = getDatabase();
     const { id } = req.params;
     db.run(`UPDATE plant_marks SET is_use = 0 WHERE id = ?`, [id]);
+    saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });

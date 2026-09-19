@@ -77,6 +77,7 @@ router.post('/departments', (req, res) => {
       VALUES (?, ?, NULL, ?, ?, 'department', ?, 0, 'active', ?, ?, ?, ?)
     `, [`ORG_ID_${Date.now()}`, orgOid, orgOid, name, managerName || '', oid, name, now, now]);
 
+    saveDatabase();
     res.status(201).json({ success: true, message: '部门创建成功', data: { id: oid, oid, name, code, orgOid } });
   } catch (error) {
     console.error('创建部门失败:', error);
@@ -122,6 +123,7 @@ router.put('/departments/:id', (req, res) => {
       `, [name || null, managerName || null, name || null, now, id]);
     }
 
+    saveDatabase();
     res.json({ success: true, message: '部门更新成功' });
   } catch (error) {
     console.error('更新部门失败:', error);
@@ -144,6 +146,7 @@ router.delete('/departments/:id', (req, res) => {
     // 双向同步：同步禁用关联的组织节点
     db.run(`UPDATE organizations SET status = 'inactive', updated_at = ? WHERE department_id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '部门删除成功' });
   } catch (error) {
     console.error('删除部门失败:', error);
@@ -353,6 +356,9 @@ router.post('/init', (req, res) => {
 
     // 导出基础数据
     exportBasicData();
+    // 2026-09-19：exportBasicData() 内部已落盘，这里显式再调一次，
+    // 让"每个写端点都必须有显式 saveDatabase()"这条不变量在静态扫描下无例外
+    saveDatabase();
     res.json({ success: true, message: '基础数据初始化成功' });
   } catch (error) {
     console.error('初始化基础数据失败:', error);
@@ -944,6 +950,7 @@ router.post('/positions', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [id, oid, code, name, departmentOid || '', departmentName || '', level || 1, description || '', sortOrder || 0, now, now]);
 
+    saveDatabase();
     res.status(201).json({ success: true, message: '职位创建成功', data: { id, oid, code, name } });
   } catch (error) {
     console.error('创建职位失败:', error);
@@ -983,6 +990,7 @@ router.put('/positions/:id', (req, res) => {
       WHERE id = ?
     `, [code, name, departmentOid, departmentName, level, description, sortOrder, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '职位更新成功' });
   } catch (error) {
     console.error('更新职位失败:', error);
@@ -1010,6 +1018,7 @@ router.delete('/positions/:id', (req, res) => {
     // 软删除：设置状态为 inactive
     db.run('UPDATE positions SET status = ?, updated_at = ? WHERE id = ?', ['inactive', now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '职位删除成功' });
   } catch (error) {
     console.error('删除职位失败:', error);
@@ -1035,6 +1044,7 @@ router.post('/positions/batch-delete', (req, res) => {
 
     db.run(`UPDATE positions SET status = ?, updated_at = ? WHERE id IN (${placeholders})`, ['inactive', now, ...ids]);
 
+    saveDatabase();
     res.json({ success: true, message: '批量删除职位成功', data: { deletedCount: ids.length } });
   } catch (error) {
     console.error('批量删除职位失败:', error);
@@ -1264,6 +1274,7 @@ router.post('/devices', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', ?, ?, ?)
     `, [id, oid, deviceCode, deviceName, deviceType || '', manufacturer || '', serialNumber || '', greenhouseOid || '', location || '', installDate || '', description || '', now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '设备创建成功', data: { id, oid, deviceCode, deviceName } });
   } catch (error) {
     console.error('创建设备失败:', error);
@@ -1299,6 +1310,7 @@ router.put('/devices/:id', (req, res) => {
       WHERE id = ?
     `, [deviceName, deviceCode, deviceType, manufacturer, serialNumber, greenhouseOid, location, installDate, status, description, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '设备更新成功' });
   } catch (error) {
     console.error('更新设备失败:', error);
@@ -1318,6 +1330,7 @@ router.delete('/devices/:id', (req, res) => {
 
     db.run(`UPDATE devices SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '设备删除成功' });
   } catch (error) {
     console.error('删除设备失败:', error);
@@ -1801,6 +1814,7 @@ router.post('/system-configs', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
     `, [id, configKey, configValue, configType || 'string', category || 'system', description || '', now, now]);
 
+    saveDatabase();
     // 查询完整记录返回
     const created = db.exec(`SELECT * FROM system_configs WHERE id = ?`, [id]);
     if (created.length > 0 && created[0].values.length > 0) {
@@ -1842,6 +1856,7 @@ router.put('/system-configs/:id', (req, res) => {
       WHERE id = ?
     `, [configKey, configValue, configType, category, description, isActive, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '系统配置更新成功' });
   } catch (error) {
     console.error('更新系统配置失败:', error);
@@ -1861,6 +1876,7 @@ router.delete('/system-configs/:id', (req, res) => {
 
     db.run(`UPDATE system_configs SET is_active = 0, updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '系统配置删除成功' });
   } catch (error) {
     console.error('删除系统配置失败:', error);
@@ -1924,6 +1940,7 @@ router.post('/process-definitions', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [oid, processCode, processName, processType || '', unit || '亩', defaultPrice || 0, defaultBonus || 0, description || '', now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '工序定义创建成功', data: { oid, processCode, processName } });
   } catch (error) {
     console.error('创建工序定义失败:', error);
@@ -1957,6 +1974,7 @@ router.put('/process-definitions/:id', (req, res) => {
       WHERE id = ?
     `, [processCode, processName, processType, unit, defaultPrice, defaultBonus, description, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '工序定义更新成功' });
   } catch (error) {
     console.error('更新工序定义失败:', error);
@@ -1976,6 +1994,7 @@ router.delete('/process-definitions/:id', (req, res) => {
 
     db.run(`UPDATE process_definitions SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '工序定义删除成功' });
   } catch (error) {
     console.error('删除工序定义失败:', error);
@@ -2052,6 +2071,7 @@ router.put('/approval-level-configs/:id', (req, res) => {
       WHERE id = ?
     `, [levelName, description, approverCount, requireMultiApprover, rolesJson, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '审批级别配置更新成功' });
   } catch (error) {
     console.error('更新审批级别配置失败:', error);
@@ -2119,6 +2139,7 @@ router.post('/approval-amount-thresholds', (req, res) => {
       VALUES (?, ?, ?, ?, 'active', ?, ?)
     `, [oid, maxAmount, levelCode, sortOrder || 0, now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '金额阈值创建成功', data: { oid, maxAmount, levelCode } });
   } catch (error) {
     console.error('创建金额阈值失败:', error);
@@ -2147,6 +2168,7 @@ router.put('/approval-amount-thresholds/:id', (req, res) => {
       WHERE id = ?
     `, [maxAmount, levelCode, sortOrder, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '金额阈值更新成功' });
   } catch (error) {
     console.error('更新金额阈值失败:', error);
@@ -2164,6 +2186,7 @@ router.delete('/approval-amount-thresholds/:id', (req, res) => {
     const { id } = req.params;
     const now = new Date().toISOString();
     db.run(`UPDATE approval_amount_thresholds SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
+    saveDatabase();
     res.json({ success: true, message: '金额阈值删除成功' });
   } catch (error) {
     console.error('删除金额阈值失败:', error);
@@ -2234,6 +2257,7 @@ router.put('/approval-type-rules/:id', (req, res) => {
       WHERE id = ?
     `, [forceExempt, forceStrict, forcedLevel, batchApprovalSupported, customApproverCount, remark, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '审批类型规则更新成功' });
   } catch (error) {
     console.error('更新审批类型规则失败:', error);
@@ -2301,6 +2325,10 @@ router.post('/shifts', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [oid, shiftCode, shiftName, startTime, endTime, shiftType || '早班', description || '', status || 'active', now, now]);
 
+    // 2026-09-19 修复：此前漏了落盘 —— sql.js 是内存库，不 saveDatabase() 则新增的班次
+    // 只存在于内存，服务器一重启就消失（同文件其它实体的端点 2026-07-28 已修，shifts 被漏掉）
+    saveDatabase();
+
     const created = db.exec(`SELECT id, oid, shift_code, shift_name, start_time, end_time, shift_type, description, status, created_at, updated_at FROM shifts WHERE oid = ?`, [oid]);
     if (created.length > 0 && created[0].values.length > 0) {
       const columns = created[0].columns;
@@ -2344,6 +2372,9 @@ router.put('/shifts/:id', (req, res) => {
       WHERE id = ?
     `, [shiftCode, shiftName, startTime, endTime, shiftType, description, status, now, id]);
 
+    // 2026-09-19 修复：同上，UPDATE 后必须落盘，否则改了班次时间重启就回滚
+    saveDatabase();
+
     res.json({ success: true, message: '班次更新成功' });
   } catch (error) {
     console.error('更新班次失败:', error);
@@ -2362,6 +2393,9 @@ router.delete('/shifts/:id', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`UPDATE shifts SET status = 'deleted', updated_at = ? WHERE id = ?`, [now, id]);
+
+    // 2026-09-19 修复：软删除也要落盘，否则删掉的班次重启后又回来了
+    saveDatabase();
 
     res.json({ success: true, message: '班次删除成功' });
   } catch (error) {
@@ -2416,6 +2450,7 @@ router.post('/cost-categories', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [oid, categoryCode, categoryName, categoryType || 'other', unit || '元', description || '', status || 'active', now, now]);
 
+    saveDatabase();
     const created = db.exec(`SELECT * FROM cost_categories WHERE oid = ?`, [oid]);
     if (created.length > 0 && created[0].values.length > 0) {
       const cols = created[0].columns;
@@ -2444,6 +2479,7 @@ router.put('/cost-categories/:id', (req, res) => {
           description = COALESCE(?, description), status = COALESCE(?, status), updated_at = ?
       WHERE id = ?
     `, [categoryCode, categoryName, categoryType, unit, description, status, now, id]);
+    saveDatabase();
     res.json({ success: true, message: '成本类别更新成功' });
   } catch (error) {
     console.error('更新成本类别失败:', error);
@@ -2456,6 +2492,7 @@ router.delete('/cost-categories/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
     db.run(`UPDATE cost_categories SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    saveDatabase();
     res.json({ success: true, message: '成本类别删除成功' });
   } catch (error) {
     console.error('删除成本类别失败:', error);
@@ -2512,6 +2549,7 @@ router.post('/cost-budgets', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [oid, budgetName, categoryOid, budgetYear, budgetMonth || null, budgetAmount || 0, usedAmount || 0, status || 'active', now, now]);
 
+    saveDatabase();
     const created = db.exec(`
       SELECT b.*, c.category_name, c.category_code FROM cost_budgets b
       LEFT JOIN cost_categories c ON b.category_oid = c.oid WHERE b.oid = ?
@@ -2544,6 +2582,7 @@ router.put('/cost-budgets/:id', (req, res) => {
           status = COALESCE(?, status), updated_at = ?
       WHERE id = ?
     `, [budgetName, categoryOid, budgetYear, budgetMonth, budgetAmount, usedAmount, status, now, id]);
+    saveDatabase();
     res.json({ success: true, message: '预算更新成功' });
   } catch (error) {
     console.error('更新预算失败:', error);
@@ -2556,6 +2595,7 @@ router.delete('/cost-budgets/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
     db.run(`UPDATE cost_budgets SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    saveDatabase();
     res.json({ success: true, message: '预算删除成功' });
   } catch (error) {
     console.error('删除预算失败:', error);
@@ -2598,6 +2638,7 @@ router.post('/material-types', (req, res) => {
       `INSERT INTO material_types (oid, type_code, type_name, category, default_unit, default_price, specifications, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [oid, typeCode, typeName, category || null, defaultUnit || null, defaultPrice || 0, specifications || null, description || null, status || 'active', now, now]
     );
+    saveDatabase();
     const result = db.exec(`SELECT * FROM material_types WHERE oid = ?`, [oid]);
     const columns = result[0].columns;
     const created: any = {};
@@ -2634,6 +2675,7 @@ router.put('/material-types/:id', (req, res) => {
     values.push(new Date().toISOString());
     values.push(parseInt(id));
     db.run(`UPDATE material_types SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    saveDatabase();
     const result = db.exec(`SELECT * FROM material_types WHERE id = ?`, [parseInt(id)]);
     const columns = result[0].columns;
     const updated: any = {};
@@ -2653,6 +2695,7 @@ router.delete('/material-types/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
     db.run(`UPDATE material_types SET status = 'deleted', updated_at = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    saveDatabase();
     res.json({ success: true, message: '物料类型删除成功' });
   } catch (error) {
     console.error('删除物料类型失败:', error);
@@ -2756,6 +2799,7 @@ router.post('/bases/migrate', (req, res) => {
         }
       }
       db.run('COMMIT');
+      saveDatabase();
       res.json({ success: true, message: `迁移完成，共创建 ${createdCount} 条基地记录`, count: createdCount });
     } catch (txErr) {
       db.run('ROLLBACK');

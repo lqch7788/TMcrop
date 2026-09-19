@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 
 const router = Router();
 
@@ -180,6 +180,7 @@ router.post('/', (req: Request, res: Response) => {
       ]
     );
 
+    saveDatabase();
     successResponse(res, { id, oid, name }, '入职记录创建成功');
   } catch (error) {
     console.error('创建入职记录失败:', error);
@@ -248,6 +249,7 @@ router.put('/:id', (req: Request, res: Response) => {
       ]
     );
 
+    saveDatabase();
     successResponse(res, { id }, '入职记录更新成功');
   } catch (error) {
     console.error('更新入职记录失败:', error);
@@ -272,6 +274,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     db.run('DELETE FROM onboarding_records WHERE id = ?', [id]);
 
+    saveDatabase();
     successResponse(res, { id }, '入职记录删除成功');
   } catch (error) {
     console.error('删除入职记录失败:', error);
@@ -333,6 +336,7 @@ router.post('/:id/status', (req: Request, res: Response) => {
       [status, JSON.stringify(progress), operatorId, operatorName, now, now, id]
     );
 
+    saveDatabase();
     successResponse(res, { id, status }, '状态更新成功');
   } catch (error) {
     console.error('更新入职状态失败:', error);
@@ -356,6 +360,7 @@ router.post('/batch-delete', (req: Request, res: Response) => {
     const placeholders = ids.map(() => '?').join(',');
     db.run(`DELETE FROM onboarding_records WHERE id IN (${placeholders})`, ids);
 
+    saveDatabase();
     successResponse(res, { deletedCount: ids.length }, '批量删除成功');
   } catch (error) {
     console.error('批量删除入职记录失败:', error);

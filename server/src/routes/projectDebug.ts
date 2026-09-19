@@ -4,7 +4,7 @@
  * HMI版本查询、数据库测试、系统诊断工具
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -61,6 +61,7 @@ router.post('/db-test', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `, [oid, 'db_connection', 'SQLite', 'SUCCESS', duration]);
 
+    saveDatabase();
     res.json({ success: true, data: { duration, status: '连接正常' } });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });
@@ -104,6 +105,7 @@ router.delete('/logs', (req, res) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM debug_logs');
+    saveDatabase();
     res.json({ success: true, message: '调试日志已清空' });
   } catch (error) {
     res.status(500).json({ success: false, error: '清空日志失败' });

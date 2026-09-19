@@ -6,7 +6,7 @@
  * 表：problem_attachments
  */
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
@@ -113,6 +113,7 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM problem_attachments WHERE id = ?', [req.params.id]);
+    saveDatabase();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });
@@ -124,6 +125,7 @@ router.delete('/by-problem/:problemId', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM problem_attachments WHERE problem_id = ?', [Number(req.params.problemId)]);
+    saveDatabase();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });

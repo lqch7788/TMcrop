@@ -12,7 +12,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { getDatabase } from '../../db';
+import { getDatabase, saveDatabase } from '../../db';
 import { identifyPestImage } from '../../services/ai/imageId';
 
 const router = Router();
@@ -63,6 +63,7 @@ router.post('/upload', (req: Request, res: Response) => {
       `INSERT INTO pest_images (id, file_path, original_filename, size_bytes, uploaded_at, status) VALUES (?, ?, ?, ?, ?, ?)`,
       [imageId, filePath, filename, buffer.length, new Date().toISOString(), 'uploaded'],
     );
+    saveDatabase();
 
     return res.json({
       success: true,

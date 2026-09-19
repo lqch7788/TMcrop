@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -77,6 +77,7 @@ router.post('/channels', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, oid, channelCode, channelName, channelType || 'in-app', isActive ? 1 : 0, configJson, now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知渠道创建成功' });
   } catch (error) {
     console.error('创建通知渠道失败:', error);
@@ -120,6 +121,7 @@ router.put('/channels/:id', (req, res) => {
       `, [channelCode, channelName, channelType, isActive !== undefined ? (isActive ? 1 : 0) : null, now, id]);
     }
 
+    saveDatabase();
     res.json({ success: true, message: '通知渠道更新成功' });
   } catch (error) {
     console.error('更新通知渠道失败:', error);
@@ -138,6 +140,7 @@ router.delete('/channels/:id', (req, res) => {
 
     db.run(`DELETE FROM notification_channels WHERE id = ?`, [id]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知渠道删除成功' });
   } catch (error) {
     console.error('删除通知渠道失败:', error);
@@ -166,6 +169,7 @@ router.patch('/channels/:id/toggle', (req, res) => {
 
     db.run(`UPDATE notification_channels SET is_active = ?, updated_at = ? WHERE id = ?`, [newActive, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知渠道状态切换成功' });
   } catch (error) {
     console.error('切换通知渠道状态失败:', error);
@@ -251,6 +255,7 @@ router.post('/rules', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, oid, ruleCode, ruleName, eventType || '', recipientType || '', recipientIdsJson || '[]', channelIdsJson || '[]', frequency || 'immediate', template || '', isActive ? 1 : 0, now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知规则创建成功' });
   } catch (error) {
     console.error('创建通知规则失败:', error);
@@ -287,6 +292,7 @@ router.put('/rules/:id', (req, res) => {
       WHERE id = ?
     `, [ruleCode, ruleName, eventType, recipientType, recipientIdsJson, channelIdsJson, frequency, template, isActive !== undefined ? (isActive ? 1 : 0) : null, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知规则更新成功' });
   } catch (error) {
     console.error('更新通知规则失败:', error);
@@ -305,6 +311,7 @@ router.delete('/rules/:id', (req, res) => {
 
     db.run(`DELETE FROM notification_rules WHERE id = ?`, [id]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知规则删除成功' });
   } catch (error) {
     console.error('删除通知规则失败:', error);
@@ -333,6 +340,7 @@ router.patch('/rules/:id/toggle', (req, res) => {
 
     db.run(`UPDATE notification_rules SET is_active = ?, updated_at = ? WHERE id = ?`, [newActive, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '通知规则状态切换成功' });
   } catch (error) {
     console.error('切换通知规则状态失败:', error);
@@ -445,6 +453,7 @@ router.put('/preferences/:userOid', (req, res) => {
       ]);
     }
 
+    saveDatabase();
     res.json({ success: true, message: '通知偏好保存成功' });
   } catch (error) {
     console.error('保存通知偏好失败:', error);

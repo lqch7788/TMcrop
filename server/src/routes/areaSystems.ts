@@ -4,7 +4,7 @@
  * 管理分区与设备系统的关联映射
  */
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -74,6 +74,7 @@ router.post('/', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     console.error('创建区域系统映射失败:', error);
@@ -99,6 +100,7 @@ router.put('/:oid', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record });
   } catch (error) {
     console.error('更新区域系统映射失败:', error);
@@ -111,6 +113,7 @@ router.delete('/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('DELETE FROM area_system_mappings WHERE oid = ?', [req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '映射已删除' });
   } catch (error) {
     console.error('删除区域系统映射失败:', error);

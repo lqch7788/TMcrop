@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -261,6 +261,7 @@ router.post('/', (req: Request, res: Response) => {
       created_at
     ]);
 
+    saveDatabase();
     res.json({ success: true, data: { id, created_at } });
   } catch (error) {
     console.error('创建操作日志失败:', error);
@@ -334,6 +335,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     db.run('DELETE FROM operation_logs WHERE id = ?', [id]);
 
+    saveDatabase();
     res.json({ success: true, message: '日志已删除' });
   } catch (error) {
     console.error('删除日志失败:', error);

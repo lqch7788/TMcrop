@@ -210,6 +210,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     if (exist.length === 0) { res.status(404).json({ success: false, error: '标签不存在' }); return; }
     db.run(`DELETE FROM plant_label_resume WHERE label_id = ?`, [id]);
     db.run(`DELETE FROM plant_labels WHERE id = ?`, [id]);
+    saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });

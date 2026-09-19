@@ -183,6 +183,9 @@ export function getDatabase(): Database {
  */
 let isSaving = false;
 let lastSaveError: Error | null = null;
+// 2026-09-19: 成功落盘次数。autoPersist 中间件用它判断"延迟窗口内是否已有显式落盘"，
+// 避免显式 saveDatabase() + 全局兜底对同一次写请求重复写盘
+let saveSuccessCount = 0;
 
 export function saveDatabase(): void {
   if (!db || !isDbInitialized) {
@@ -220,6 +223,7 @@ export function saveDatabase(): void {
     }
 
     lastSaveError = null;
+    saveSuccessCount += 1;
     console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes`);
   } catch (e: any) {
     lastSaveError = e;
@@ -235,6 +239,14 @@ export function saveDatabase(): void {
  */
 export function getLastSaveError(): Error | null {
   return lastSaveError;
+}
+
+/**
+ * 已成功落盘的次数（2026-09-19 新增）
+ * 供 autoPersist 中间件去重：延迟窗口内若已有显式落盘，就跳过兜底落盘
+ */
+export function getSaveSuccessCount(): number {
+  return saveSuccessCount;
 }
 
 /**
