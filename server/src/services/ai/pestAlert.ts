@@ -8,6 +8,8 @@
  */
 
 import { getDatabase } from '../../db';
+// 2026-09-19：可预期的业务错误用 AppError 带状态码，路由层据此回 4xx 而非一律 500
+import { AppError } from '../../middleware/errorHandler';
 
 interface PestAlertInput {
   crop_type: string;               // 必填
@@ -106,7 +108,7 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
 
   // 1. 环境数据：只读真实 IoT 传感器（无数据 → 明确抛错，不做 mock 降级）
   if (!input.greenhouse_id) {
-    throw new Error('病虫害预警必须提供 greenhouse_id（温室）参数');
+    throw new AppError('病虫害预警必须提供 greenhouse_id（温室）参数', 400);
   }
   // 校验温室存在
   const ghStmt = db.prepare('SELECT id, name, crop FROM greenhouses WHERE id = ? LIMIT 1');
@@ -116,7 +118,7 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
   const ghName = ghRow ? String(ghRow.name || input.greenhouse_id) : input.greenhouse_id;
   ghStmt.free();
   if (!hasGh) {
-    throw new Error(`温室 ${input.greenhouse_id} 不存在，请检查 greenhouse_id 参数`);
+    throw new AppError(`温室 ${input.greenhouse_id} 不存在，请检查 greenhouse_id 参数`, 404);
   }
 
   // 2026-08-24 PR3：缺 crop_type 时，从该温室当前种植作物反查（替换前端硬编码 '番茄'）
@@ -139,22 +141,26 @@ export async function predictPestAlert(input: PestAlertInput): Promise<PestAlert
       plantStmt.free();
     }
     if (!cropType) {
-      throw new Error(
+      throw new AppError(
         `温室 ${ghName}（${input.greenhouse_id}）未提供 crop_type，且无法从 greenhouses.crop 或 plantings 当前批次反查到作物名。` +
         '请前端传 crop_type 或在温室/种植表中补充当前作物',
+        400,
       );
     }
   }
 
   const snapshot = queryEnvSnapshot(input.greenhouse_id);
   if (!snapshot) {
-    throw new Error(
+    // 422：请求可理解，但数据源当前无数据
+    throw new AppError(
       `温室 ${ghName}（${input.greenhouse_id}）最近 24h 无环境传感器数据（iot_sensor_readings 为空）。` +
       '请确认：1) 传感器已部署并上报数据 2) 数据写入 iot_sensor_readings 表',
+      422,
     );
   }
   if (snapshot.temp === 0 || snapshot.hum === 0) {
-    throw new Error(`温室 ${ghName} 缺少温度/湿度传感器数据（当前仅有 ${['temp', 'hum', 'light', 'co2', 'soil'].filter(k => (snapshot as any)[k] !== 0).join(',')}），无法执行病虫害规则判断`);
+    // 422：同上，数据不全而非服务端故障
+    throw new AppError(`温室 ${ghName} 缺少温度/湿度传感器数据（当前仅有 ${['temp', 'hum', 'light', 'co2', 'soil'].filter(k => (snapshot as any)[k] !== 0).join(',')}），无法执行病虫害规则判断`, 422);
   }
   const env = {
     temperature: snapshot.temp,

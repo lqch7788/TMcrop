@@ -15,6 +15,8 @@
  */
 
 import { getDatabase } from '../../db';
+// 2026-09-19：可预期的业务错误用 AppError 带状态码，路由层据此回 4xx 而非一律 500
+import { AppError } from '../../middleware/errorHandler';
 
 interface GrowthPredictInput {
   crop_type: string;               // 必填：作物类型
@@ -139,16 +141,19 @@ function estimateCumulativeGdd(plantDate: Date, baseTemp: number, greenhouseId?:
   if (daysSince <= 0) return 0;
 
   if (!greenhouseId) {
-    throw new Error(
+    throw new AppError(
       'AI-04 生长预测需要 greenhouse_id 才能读取 iot_sensor_readings 真实温度数据；' +
       '如该任务未关联温室，请联系前端补充上下文',
+      400,
     );
   }
   const dailyTemps = queryHistoricalDailyTemp(greenhouseId, plantDate, today);
   if (dailyTemps.length === 0) {
-    throw new Error(
+    // 422：请求本身没问题，是数据源没有数据 —— 不是服务端故障
+    throw new AppError(
       `温室 ${greenhouseId} 在 ${plantDate.toISOString().split('T')[0]} ~ ${today.toISOString().split('T')[0]} 期间` +
       '无 iot_sensor_readings 温度数据，无法计算真实 GDD。请确认传感器已部署并上报数据',
+      422,
     );
   }
 
@@ -163,10 +168,10 @@ function estimateCumulativeGdd(plantDate: Date, baseTemp: number, greenhouseId?:
 export async function predictGrowth(input: GrowthPredictInput): Promise<GrowthPredictResult> {
   // 2026-08-24 PR3：Fail Loud 校验，缺 crop_type 直接抛错（前端能看到明确提示）
   if (!input.crop_type) {
-    throw new Error('AI-04 生长预测必须提供 crop_type（作物类型）参数');
+    throw new AppError('AI-04 生长预测必须提供 crop_type（作物类型）参数', 400);
   }
   if (!input.greenhouse_id) {
-    throw new Error('AI-04 生长预测必须提供 greenhouse_id 才能读取 iot_sensor_readings 真实温度数据');
+    throw new AppError('AI-04 生长预测必须提供 greenhouse_id 才能读取 iot_sensor_readings 真实温度数据', 400);
   }
 
   const cropProfile = CROP_STAGES[input.crop_type] || CROP_STAGES['默认'];
@@ -196,7 +201,8 @@ export async function predictGrowth(input: GrowthPredictInput): Promise<GrowthPr
     ? recentTemps.reduce((s, d) => s + d.avgTemp, 0) / recentTemps.length
     : 0;
   if (dailyAvgTempEstimate === 0) {
-    throw new Error(`温室 ${input.greenhouse_id} 最近 7 天无温度数据，无法预测采收日期`);
+    // 422：数据源无数据，非服务端故障
+    throw new AppError(`温室 ${input.greenhouse_id} 最近 7 天无温度数据，无法预测采收日期`, 422);
   }
   const dailyGddAvg = Math.max(1, dailyAvgTempEstimate - baseTemp);
   const remainingGdd = cropProfile.total_gdd - cumulativeGdd;

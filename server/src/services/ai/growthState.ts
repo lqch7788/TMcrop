@@ -16,6 +16,8 @@
  */
 
 import { getDatabase } from '../../db';
+// 2026-09-19：可预期的业务错误用 AppError 带状态码，路由层据此回 4xx 而非一律 500
+import { AppError } from '../../middleware/errorHandler';
 
 interface GrowthStateInput {
   crop_type: string;
@@ -233,8 +235,10 @@ export async function identifyGrowthState(input: GrowthStateInput): Promise<Grow
     if (totalGdd > 0) gdd = Math.round(totalGdd);
   }
   if (gdd === undefined) {
-    throw new Error(
-      `AI-10 生长状态识别缺少 GDD 数据源：请传入 current_gdd 或 greenhouse_id（用于读取 iot_sensor_readings）`
+    // 400：调用方可通过传参解决（current_gdd 或 greenhouse_id），属输入缺失
+    throw new AppError(
+      `AI-10 生长状态识别缺少 GDD 数据源：请传入 current_gdd 或 greenhouse_id（用于读取 iot_sensor_readings）`,
+      400,
     );
   }
 
