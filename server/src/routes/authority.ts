@@ -4,12 +4,49 @@
  * 创建日期：2026-05-02
  */
 
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import bcrypt from 'bcryptjs';
 import { generateToken, authenticate } from '../middleware/auth';
+import { operationLogService } from '../services/operationLog.service';
 
 const router = Router();
+
+/**
+ * 写登录审计日志（2026-09-19 新增）
+ *
+ * 为什么要在路由里显式写：
+ *   middleware/auditTrail.ts 的通用审计能记录"有人调了登录接口"，但登录请求发生时
+ *   req.user 还是空的，通用记录的操作人必然是空字符串 —— 而登录审计最核心的信息
+ *   恰恰就是"谁"。这里显式写库，中间件检测到本次请求已有日志会自动跳过，不会重复。
+ *
+ * 约定：
+ *   - 成功与失败都留痕；失败记录"尝试的用户名"，便于排查暴力破解
+ *   - 绝不记录密码
+ */
+function writeLoginAudit(
+  req: Request,
+  params: {
+    username: string;
+    userId?: string;
+    action: 'login' | 'login_failed';
+    detail: string;
+  }
+): void {
+  operationLogService
+    .create({
+      user_id: params.userId ?? '',
+      user_name: params.username,
+      module: '系统设置',
+      action: params.action,
+      target_id: params.userId ?? params.username,
+      details: params.detail,
+      ip_address: req.ip || req.socket?.remoteAddress || '',
+      // 登录失败记 warning，否则统计接口的「警告」计数永远为 0，页面也筛不出来
+      status: params.action === 'login_failed' ? 'warning' : 'success',
+    })
+    .catch((err) => console.error('[authority] 登录审计写入失败:', err));
+}
 
 // ============================================
 // 登录接口
@@ -44,6 +81,11 @@ router.post('/login', (req, res) => {
       const isPasswordValid = bcrypt.compareSync(password, storedPasswordHash);
 
       if (!isPasswordValid) {
+        writeLoginAudit(req, {
+          username,
+          action: 'login_failed',
+          detail: `登录失败：密码错误（账号：${username}）`,
+        });
         res.status(401).json({ success: false, error: '账号或密码错误' });
         return;
       }
@@ -57,6 +99,13 @@ router.post('/login', (req, res) => {
 
       // 去除密码哈希后返回用户信息
       const { password_hash, ...userWithoutPassword } = user;
+
+      writeLoginAudit(req, {
+        username: (userWithoutPassword.real_name || userWithoutPassword.username) as string,
+        userId: userWithoutPassword.oid as string,
+        action: 'login',
+        detail: `登录成功（账号：${userWithoutPassword.username}）`,
+      });
 
       res.json({
         success: true,
@@ -73,6 +122,11 @@ router.post('/login', (req, res) => {
       });
     } else {
       stmt.free();
+      writeLoginAudit(req, {
+        username,
+        action: 'login_failed',
+        detail: `登录失败：用户不存在或已禁用（账号：${username}）`,
+      });
       res.status(401).json({ success: false, error: '账号或密码错误' });
     }
   } catch (error) {
@@ -512,12 +566,23 @@ router.post('/auth/login', async (req, res) => {
     stmt.free();
 
     if (!user) {
+      writeLoginAudit(req, {
+        username,
+        action: 'login_failed',
+        detail: `登录失败：用户不存在（账号：${username}）`,
+      });
       res.status(401).json({ error: '用户不存在' });
       return;
     }
 
     // 检查用户状态
     if ((user.status as string) !== 'active') {
+      writeLoginAudit(req, {
+        username,
+        userId: user.oid as string,
+        action: 'login_failed',
+        detail: `登录失败：用户已被禁用（账号：${user.username}）`,
+      });
       res.status(401).json({ error: '用户已被禁用' });
       return;
     }
@@ -539,6 +604,12 @@ router.post('/auth/login', async (req, res) => {
       isValid = await bcrypt.compare(password, passwordHash);
     }
     if (!isValid) {
+      writeLoginAudit(req, {
+        username: (user.real_name || user.username) as string,
+        userId: user.oid as string,
+        action: 'login_failed',
+        detail: `登录失败：密码错误（账号：${user.username}）`,
+      });
       res.status(401).json({ error: '密码错误' });
       return;
     }
@@ -562,6 +633,14 @@ router.post('/auth/login', async (req, res) => {
 
     // 返回用户信息（不包含密码）
     const { password_hash, ...userWithoutPassword } = user;
+
+    writeLoginAudit(req, {
+      username: (user.real_name || user.username) as string,
+      userId: user.oid as string,
+      action: 'login',
+      detail: `登录成功（账号：${user.username}）`,
+    });
+
     res.json({
       success: true,
       token,
