@@ -7,6 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { predictGrowth } from '../../services/ai/growthPredictor';
+import { sendAiError } from './_shared';
 
 const router = Router();
 
@@ -27,7 +28,8 @@ router.post('/predict', async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: result });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message || '生长预测失败' });
+    // 2026-09-19：改用统一映射 —— 缺参数/数据不足回 4xx，真故障才 500
+    sendAiError(res, e, '生长预测失败');
   }
 });
 

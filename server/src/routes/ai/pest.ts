@@ -7,6 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { predictPestAlert } from '../../services/ai/pestAlert';
+import { sendAiError } from './_shared';
 
 const router = Router();
 
@@ -22,7 +23,8 @@ router.post('/alert', async (req: Request, res: Response) => {
     const result = await predictPestAlert(input);
     res.json({ success: true, data: result });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message || '预警失败' });
+    // 2026-09-19：改用统一映射 —— 缺参数/数据不足回 4xx，真故障才 500
+    sendAiError(res, e, '预警失败');
   }
 });
 
