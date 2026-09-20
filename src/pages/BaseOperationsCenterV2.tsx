@@ -1549,8 +1549,10 @@ export function GreenhouseWithZonesTab({
       let cancelled = false;
       (async () => {
         try {
+          // P0 修复：去掉 URL 里的 `/api` 前缀（enhancedApiClient baseURL 已是 `/api`），
+          //   原 `/api/basic-data/zones/.../plantings` 会拼成 `/api/api/...` 触发 404
           const res: any = await enhancedApiClient.get(
-            `/api/basic-data/zones/${encodeURIComponent(zoneOid)}/plantings`,
+            `/basic-data/zones/${encodeURIComponent(zoneOid)}/plantings`,
           );
           if (cancelled) return;
           const raw = res?.data || res || { plantings: [], seedlings: [] };
