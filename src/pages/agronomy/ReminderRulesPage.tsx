@@ -73,7 +73,23 @@ export default function ReminderRulesPage() {
   };
 
   useEffect(() => {
-    load();
+    // P0：useEffect 加 cancellation flag
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await listRules();
+        if (cancelled) return;
+        setRules(data);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        messageApi.error('加载失败：' + (err instanceof Error ? err.message : String(err)));
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const handleRun = async (dryRun: boolean) => {

@@ -105,6 +105,14 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       error: null,
 
       fetchRecords: async (filters) => {
+        // P0：3 秒防重入（对齐 useFarmTaskStore.fetchTasks 第 147 行 P2-4 模式）
+        // 修复场景：切回 /farm-hub 时 useFarmHub.loadData + InspectionTab useEffect
+        // 双重触发导致 fetchRecords 死循环，最终浏览器主线程卡死。
+        const now = Date.now();
+        const lastFetch = ((get() as any)._lastFetchAt as number) || 0;
+        if (now - lastFetch < 3000) return;
+        (get() as any)._lastFetchAt = now;
+
         set({ isLoading: true, error: null });
         try {
           const params = new URLSearchParams();

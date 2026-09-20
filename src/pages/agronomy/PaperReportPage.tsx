@@ -43,7 +43,20 @@ export default function PaperReportPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
-    loadTemplates();
+    // P0：useEffect 加 cancellation flag
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getPaperTemplates();
+        if (cancelled) return;
+        setTemplates(data);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const m = err instanceof Error ? err.message : String(err);
+        messageApi.warning(`模板加载失败：${m}`);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const loadTemplates = async () => {

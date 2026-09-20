@@ -69,7 +69,28 @@ export default function SopLibraryPage() {
   };
 
   useEffect(() => {
-    loadSops();
+    // P0：useEffect 加 cancellation flag，防止路由切换时 await 完成 setState 触发 React 死循环
+    // （修复：其他页面切到农事任务中心导致浏览器卡死）
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await listSop({
+          crop_code: cropFilter,
+          task_type: taskTypeFilter,
+        });
+        if (cancelled) return;
+        setSops(data);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const m = err instanceof Error ? err.message : String(err);
+        messageApi.error(`加载失败：${m}`);
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [cropFilter, taskTypeFilter]);
 
   return (

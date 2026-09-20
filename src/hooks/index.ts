@@ -8,9 +8,6 @@ export { useDepartmentOptions, useDepartmentOptionsWithValue } from './useDepart
 // 生产汇总相关
 export { useBatchSummary, useBatchFilterOptions } from './useBatchSummary';
 
-// 每日工单汇总相关
-export { useDailyWorkSummary } from './useDailyWorkSummary';
-
 // 每日问题汇总相关
 export { useDailyProblemSummary } from './useDailyProblemSummary';
 

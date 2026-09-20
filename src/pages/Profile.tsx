@@ -91,7 +91,7 @@ const rolePermissions = {
     quickActions: [
       { label: '农事记录', icon: Leaf, path: '/agriculture-record', desc: '记录农事作业' },
       { label: '环境监测', icon: Activity, path: '/environment-monitor', desc: '查看环境数据' },
-      { label: '任务反馈', icon: CheckSquare, path: '/tasks', desc: '反馈任务进度' },
+      { label: '任务反馈', icon: CheckSquare, path: '/my-tasks', desc: '反馈任务进度' },
       { label: '巡田记录', icon: Search, path: '/inspection', desc: '记录巡田情况' },
     ]
   },
@@ -108,10 +108,10 @@ const rolePermissions = {
       { label: '完成率', value: '96%', icon: TargetIcon, color: 'bg-purple-500' },
     ],
     quickActions: [
-      { label: '我的任务', icon: ClipboardList, path: '/tasks', desc: '查看我的任务' },
+      { label: '我的任务', icon: ClipboardList, path: '/my-tasks', desc: '查看我的任务' },
       { label: '考勤打卡', icon: Clock, path: '/worker-attendance', desc: '上下班打卡' },
       { label: '物料领用', icon: Package, path: '/material-receiving', desc: '申请领用物资' },
-      { label: '任务反馈', icon: CheckSquare, path: '/tasks', desc: '反馈任务状态' },
+      { label: '任务反馈', icon: CheckSquare, path: '/my-tasks', desc: '反馈任务状态' },
     ]
   },
   visitor: {
