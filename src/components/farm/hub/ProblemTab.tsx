@@ -80,7 +80,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // 使用 useProblemDispatch 获取分派功能
-  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, handledProblems, totalCount } = useProblemDispatch();
+  // 2026-09-20：补 waitingAcceptanceProblems —— hook 早已导出但组件从未消费，
+  //   导致"待验收"状态的问题既不在"全部"列表、也没有筛选入口（后端 28 条只渲染 19 条）
+  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, totalCount } = useProblemDispatch();
   // 使用 useComprehensiveDispatch 获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
@@ -106,7 +108,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [activeTab, setActiveTab] = useState<'problems' | 'tasks'>('problems');
 
   // ========== 筛选状态 ==========
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'handled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled'>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | '轻微' | '中等' | '严重'>('all');
   const [sourceModuleFilter, setSourceModuleFilter] = useState<SourceModuleType | 'all'>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month' | 'year' | 'custom'>('all');
@@ -125,13 +127,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
 
-  // ========== 内部统计数据（使用与表格相同的数据源：pending + dispatched + handled）==========
+  // ========== 内部统计数据（使用与表格相同的数据源：pending + dispatched + waitingAcceptance + handled）==========
   const internalStats = useMemo(() => ({
-    total: pendingProblems.length + dispatchedProblems.length + handledProblems.length,
+    total: pendingProblems.length + dispatchedProblems.length + waitingAcceptanceProblems.length + handledProblems.length,
     pending: pendingProblems.length,
     processing: dispatchedProblems.length,
+    waitingAcceptance: waitingAcceptanceProblems.length,
     resolved: handledProblems.length,
-  }), [pendingProblems, dispatchedProblems, handledProblems]);
+  }), [pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems]);
 
   // 使用内部计算的统计（优先）或外部传入的统计
   const displayStats = internalStats;
@@ -182,11 +185,15 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       case 'dispatched':
         list = dispatchedProblems as any;
         break;
+      // 2026-09-20：补"待验收"分支（原实现遗漏，导致该状态问题全列表不可见）
+      case 'waiting_acceptance':
+        list = waitingAcceptanceProblems as any;
+        break;
       case 'handled':
         list = handledProblems as any;
         break;
       default:
-        list = [...pendingProblems, ...dispatchedProblems, ...handledProblems] as any;
+        list = [...pendingProblems, ...dispatchedProblems, ...waitingAcceptanceProblems, ...handledProblems] as any;
     }
 
     if (severityFilter !== 'all') {
@@ -231,8 +238,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       }
     }
 
-    return list;
-  }, [statusFilter, pendingProblems, dispatchedProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
+    // 2026-09-20：按创建时间倒序（最新在最前）——覆盖所有筛选分支。
+    //   原实现 default 分支把 pending/dispatched/handled 三个列表直接拼接，
+    //   按"状态分组"而非时间排序：旧的待处理问题会排在新的已处理问题前面。
+    //   后端 /api/problems 已有 ORDER BY create_time DESC，但拼接打乱了全局时间序。
+    //   用 [...list] 复制后再 sort，避免就地修改 store 数组引用。
+    return [...list].sort((a, b) => {
+      const ta = new Date((a as any).createTime || (a as any).create_time || (a as any).createdAt || 0).getTime();
+      const tb = new Date((b as any).createTime || (b as any).create_time || (b as any).createdAt || 0).getTime();
+      return tb - ta;
+    });
+  }, [statusFilter, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
 
   // ========== 问题类型到任务类型的映射（避免硬编码） ==========
   const PROBLEM_TYPE_MAPPING = [
@@ -1166,6 +1182,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                   <span className="text-gray-500">条</span>
                   <span className="text-red-600">| 待处理 {displayStats.pending}</span>
                   <span className="text-blue-600">| 处理中 {displayStats.processing}</span>
+                  {/* 2026-09-20：补待验收统计（与 internalStats 新增字段对齐） */}
+                  {(displayStats as any).waitingAcceptance > 0 && (
+                    <span className="text-purple-600">| 待验收 {(displayStats as any).waitingAcceptance}</span>
+                  )}
                   <span className="text-green-600">| 已处理 {displayStats.resolved}</span>
                 </div>
               )}
