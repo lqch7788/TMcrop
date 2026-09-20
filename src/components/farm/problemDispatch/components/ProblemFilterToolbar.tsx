@@ -14,7 +14,8 @@ interface ProblemFilterToolbarProps {
   // 筛选状态
   timeFilter: 'all' | 'week' | 'month' | 'year' | 'custom';
   dateRange: { start: string; end: string };
-  statusFilter: 'all' | 'pending' | 'dispatched' | 'handled';
+  // 2026-09-20：补 'waiting_acceptance'（待验收筛选）
+  statusFilter: 'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled';
   severityFilter: 'all' | '轻微' | '中等' | '严重';
   sourceModuleFilter: string;
   // 模式状态
@@ -26,7 +27,7 @@ interface ProblemFilterToolbarProps {
   // 回调
   onTimeFilterChange: (value: 'all' | 'week' | 'month' | 'year' | 'custom') => void;
   onDateRangeChange: (range: { start: string; end: string }) => void;
-  onStatusFilterChange: (value: 'all' | 'pending' | 'dispatched' | 'handled') => void;
+  onStatusFilterChange: (value: 'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled') => void;
   onSeverityFilterChange: (value: 'all' | '轻微' | '中等' | '严重') => void;
   onSourceModuleChange: (value: any) => void;
   // 操作回调
@@ -139,6 +140,8 @@ export function ProblemFilterToolbar({
               <SelectItem value="all">全部</SelectItem>
               <SelectItem value="pending">待分派</SelectItem>
               <SelectItem value="dispatched">已分派</SelectItem>
+              {/* 2026-09-20：补"待验收"选项（原下拉缺该状态，9 条问题无法筛选查看） */}
+              <SelectItem value="waiting_acceptance">待验收</SelectItem>
               <SelectItem value="handled">已处理</SelectItem>
             </SelectContent>
           </Select>
