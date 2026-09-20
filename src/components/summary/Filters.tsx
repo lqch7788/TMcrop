@@ -3,7 +3,7 @@
  * V2.1: 替换原生 input[date]、select、label 为 UI 组件库对应组件
  */
 
-import { Search, Download } from 'lucide-react';
+import { Search, Download, RotateCcw } from 'lucide-react';
 import { DatePicker, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Button } from '@/components/ui';
 import { FilterSelectConfig } from './types';
 
@@ -36,6 +36,9 @@ interface FiltersProps {
   onSearch?: () => void;
   /** 隐藏正常模式下的导出按钮（导出模式下的确认/取消仍显示） */
   hideExportButton?: boolean;
+  // 2026-09-20：筛选重置按钮（导出模式不显示，避免清空筛选导致确认导出时数据突变）
+  onReset?: () => void;
+  resetText?: string;
 }
 
 export function Filters({
@@ -47,6 +50,8 @@ export function Filters({
   onCancelExport,
   onSearch,
   hideExportButton = false,
+  onReset,
+  resetText = '重置',
 }: FiltersProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
@@ -87,6 +92,18 @@ export function Filters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
+          {/* 2026-09-20：重置按钮（导出模式不显示），样式对齐订单管理 OrderFilter.tsx:131-139 */}
+          {!showExportMode && onReset && (
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={onReset}
+              className="whitespace-nowrap"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {resetText}
+            </Button>
+          )}
           {onSearch && (
             <Button
               variant="secondary"

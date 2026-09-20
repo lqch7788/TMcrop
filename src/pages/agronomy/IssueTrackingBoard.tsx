@@ -80,7 +80,25 @@ export default function IssueTrackingBoard() {
   };
 
   useEffect(() => {
-    loadBoard();
+    // P0：useEffect 加 cancellation flag
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const result = await getIssueBoard();
+        if (cancelled) return;
+        setBoard(result.board);
+        setCounts(result.counts);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const m = err instanceof Error ? err.message : String(err);
+        messageApi.error(`加载失败：${m}`);
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const handleRectify = async () => {

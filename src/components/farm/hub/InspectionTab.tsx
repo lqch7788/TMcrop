@@ -3,7 +3,7 @@
  * 集成独立巡查页面的所有功能
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useProblemStore } from '../../../stores/useProblemStore';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useInspectionDataStore, useProductionPlanStore, useDictionaryStore, getDictItems, useFarmTaskStore } from '../../../stores';
@@ -152,29 +152,23 @@ export function InspectionTab({
   const infrastructures = useInfrastructureStore((state) => state.infrastructures);
   const fetchInfrastructures = useInfrastructureStore((state) => state.fetchInfrastructures);
 
+  // P0 防御性修复：actions 用 ref 锁定，useEffect 只依赖 length
+  // 原代码 7 个 store actions 都进依赖项；任何 action 引用在 setState 后不稳定
+  // 都会触发 useEffect 重跑 → 调 fetchXxx → store setState → 重渲染 → 重跑 → 死循环。
+  // 修法：actions 走 ref（每次渲染同步最新引用但不影响 effect 触发），length 仍是 effect 触发条件。
+  const actionsRef = useRef({ loadUsers, loadGreenhouses, fetchPlans, loadDictionaries, fetchDevices, fetchEquipment, fetchInfrastructures });
+  actionsRef.current = { loadUsers, loadGreenhouses, fetchPlans, loadDictionaries, fetchDevices, fetchEquipment, fetchInfrastructures };
   useEffect(() => {
-    if (users.length === 0) {
-      loadUsers();
-    }
-    if (greenhouses.length === 0) {
-      loadGreenhouses();
-    }
-    if (storePlans.length === 0) {
-      fetchPlans();
-    }
-    if (dictionaries.length === 0) {
-      loadDictionaries();
-    }
-    if (devices.length === 0) {
-      fetchDevices();
-    }
-    if (equipment.length === 0) {
-      fetchEquipment();
-    }
-    if (infrastructures.length === 0) {
-      fetchInfrastructures();
-    }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, storePlans.length, fetchPlans, dictionaries.length, loadDictionaries, devices.length, fetchDevices, equipment.length, fetchEquipment, infrastructures.length, fetchInfrastructures]);
+    const a = actionsRef.current;
+    if (users.length === 0) a.loadUsers();
+    if (greenhouses.length === 0) a.loadGreenhouses();
+    if (storePlans.length === 0) a.fetchPlans();
+    if (dictionaries.length === 0) a.loadDictionaries();
+    if (devices.length === 0) a.fetchDevices();
+    if (equipment.length === 0) a.fetchEquipment();
+    if (infrastructures.length === 0) a.fetchInfrastructures();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users.length, greenhouses.length, storePlans.length, dictionaries.length, devices.length, equipment.length, infrastructures.length]);
 
   // 从Store计算生产批次和作物类型
   const cropBatches = useMemo(() => storePlans.map(p => ({
@@ -189,8 +183,10 @@ export function InspectionTab({
     targetYield: (p as any).targetYield,
   })), [storePlans]);
 
+  // 2026-09-19：补 id 字段 —— CreateInspectionModal 用 key={crop.id} 渲染下拉项，
+  //   缺 id 会让所有 SelectItem 的 key 变成 undefined（React 报 "unique key" 警告）
   const cropTypes = useMemo(() =>
-    getDictItems('crop_category').map(d => ({ value: d.dictLabel, label: d.dictLabel, name: d.dictLabel })),
+    getDictItems('crop_category').map(d => ({ id: d.id, value: d.dictLabel, label: d.dictLabel, name: d.dictLabel })),
     [dictionaries]
   );
 
@@ -205,21 +201,15 @@ export function InspectionTab({
     fetchRecords();
   }, [fetchRecords]);
 
-  // 本地巡查记录状态：从 prop 初始化，prop 变化时同步
-  // 使用 useMemo 确保新记录排在前面（按 create_time 降序）
-  const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(() => {
-    return inspections.sort((a, b) =>
+  // 本地巡查记录排序：基于 prop 直接 useMemo 派生
+  // P0：删除原 useState+useEffect 反模式。原写法初始化器 inspections.sort() 会就地修改父组件数组，
+  //   加上 prop 引用每次 render 都变，useEffect 反复 setState 触发不必要的重渲染；
+  //   与 fetchRecords 死循环叠加后浏览器主线程卡死。改用 useMemo 派生，无副作用。
+  const inspectionRecords = useMemo(() => {
+    return [...inspections].sort((a, b) =>
       new Date(b.createTime || b.create_time || 0).getTime() -
       new Date(a.createTime || a.create_time || 0).getTime()
     );
-  });
-  useEffect(() => {
-    // 将新的 inspections 排序后更新到本地状态
-    const sortedInspections = [...inspections].sort((a, b) =>
-      new Date(b.createTime || b.create_time || 0).getTime() -
-      new Date(a.createTime || a.create_time || 0).getTime()
-    );
-    setInspectionRecords(sortedInspections);
   }, [inspections]);
 
   // 问题相关 Hook (V2.0: API 数据层)
@@ -560,7 +550,12 @@ export function InspectionTab({
 
   // 创建巡查记录
   const handleCreateRecord = async () => {
-    if (!validateForm()) return;
+    // P0 修复：先 validate 拿结果（setErrors 在 validate 内部触发），
+    //   立即关闭 modal 避免 validate 触发的重渲染与切 tab 触发的 InspectionTab/antd Modal unmount 竞争，
+    //   形成 React scheduler 死循环（schedulePerformWorkUntilDeadline 循环不收敛）。
+    const ok = validateForm();
+    handleCloseCreateModal();
+    if (!ok) return;
 
     const selectedUser = users.find(u => u.id === newRecord.inspectorId);
     const selectedBatch = cropBatches.find(b => b.id === newRecord.batchId);
@@ -812,7 +807,9 @@ export function InspectionTab({
         }
       }
     });
-    setInspectionRecords(updatedRecords);
+    // P0：删除 setInspectionRecords(updatedRecords)。
+    //   inspectionRecords 已是 useMemo 派生值，updateStoreRecord → store.records 变更
+    //   → useFarmHub 订阅 → setInspections → 新 prop → useMemo 自动重算 inspectionRecords。
     // 持久化到后端（通过 Zustand Store）
     editedRecordIds.forEach(id => {
       if (editedRecords[id]) {
@@ -841,7 +838,7 @@ export function InspectionTab({
         return indicesToDelete.has(filteredIndex);
       })
       .map(r => r.id);
-    setInspectionRecords(remainingRecords);
+    // P0：删除 setInspectionRecords(remainingRecords)。理由同上 handleConfirmBatchEdit。
     // 持久化到后端（通过 Zustand Store）
     deletedIds.forEach(id => {
       deleteStoreRecord(id);

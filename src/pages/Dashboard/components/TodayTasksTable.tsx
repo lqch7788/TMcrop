@@ -76,7 +76,8 @@ export function TodayTasksTable({ tasks }: TodayTasksTableProps) {
     <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-gray-900">今日任务</h3>
-        <Link to="/tasks" className="text-sm text-emerald-600 hover:text-emerald-700">
+        {/* 2026-09-19：任务工单管理页已废弃，改跳农事任务中心 */}
+        <Link to="/farm-hub" className="text-sm text-emerald-600 hover:text-emerald-700">
           查看全部
         </Link>
       </div>

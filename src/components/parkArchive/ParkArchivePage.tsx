@@ -402,7 +402,8 @@ export function ParkArchivePage() {
     return () => {
       window.removeEventListener('showBaseDetail', handleShowBaseDetail as EventListener);
     };
-  }, []);
+    // 依赖 parkData：否则闭包锁死在首次渲染的空数组，地图弹窗的"查看详情"永远找不到基地
+  }, [parkData]);
 
   const flyToBase = (base: BaseData) => {
     if (mapInstanceRef.current) {

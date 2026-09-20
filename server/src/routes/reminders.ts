@@ -180,7 +180,12 @@ router.post('/run', async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    if (!dryRun) {
+    // P0：仅在真正触发 reminder 时落盘。
+    //   修复场景：reminders cron 每 5 分钟触发一次 reminders/run，原代码无条件 saveDatabase()
+    //   → 后端同步写整个 9.8MB DB 文件到磁盘（fs.writeFileSync），阻塞 Node 事件循环 5-8 秒，
+    //   → 期间所有 HTTP 请求（GET /api/farm-tasks 等）都不响应 → 前端 click 超时表现为"卡死"。
+    //   改后：scanned=0 triggered=0 时不再 saveDatabase()，大幅减少写盘阻塞。
+    if (!dryRun && triggeredReminders.length > 0) {
       saveDatabase();
     }
 

@@ -72,6 +72,11 @@ type TempTaskDataCompat = TempTaskData & {
   cancelledBy?: string;
   workDuration?: number;
   inspectionType?: string;
+  // 2026-09-19：后端 GET /api/temp-tasks 实际返回的是这两个 camelCase 字段名
+  //   （DB 列 task_title/task_type 经服务端 camelCase 转换而来），
+  //   类型定义里原先缺失，导致转换时只读 title/task_title 而漏掉真实字段
+  taskTitle?: string;
+  taskType?: string;
 };
 // 导入巡查记录 Store
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
@@ -216,8 +221,11 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
 function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
   // 统一字段（兼容 snake_case 和 camelCase）
   const id = t.taskCode || t.id || '';
-  const title = t.title || t.task_title || '';
-  const type = t.type || t.task_type || '';
+  // 2026-09-19：补 taskTitle 兜底（与 useTempTasks.ts 的转换口径一致）
+  //   原来只读 t.title / t.task_title，而 temp_tasks 表经服务端 camelCase 转换后是 taskTitle，
+  //   导致部分临时任务 title 为空，被下游按 title 过滤的页面（如每日工单汇总）整条丢弃
+  const title = t.title || t.taskTitle || t.task_title || '';
+  const type = t.type || t.taskType || t.task_type || '';
   const assigneeId = t.assigneeId || t.assignee_id || '';
   const assigneeName = t.assigneeName || t.assignee_name || '';
   const requesterId = t.requesterId || t.requester_id || '';
@@ -320,6 +328,13 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
   const feedbackUsers = Array.isArray(t.feedbackUsers) ? t.feedbackUsers : [];
   const assigneeName = feedbackUsers.length > 0 ? feedbackUsers[0] : inspectorName;
   const status = t.status || 'pending';
+  // P0：巡查 status 字段是巡查性质（critical/normal/attention），
+  //   但每日工单汇总需要反映"问题处理进度"。当 issueStatus=resolved 时，
+  //   把 status 改为 completed（已完成），否则保持巡查原状态。
+  const issueStatus = t.issueStatus || (t as any).issue_status;
+  const taskStatusFromIssue: TaskStatus | null =
+    issueStatus === 'resolved' || issueStatus === '已处理' ? 'completed' : null;
+  const finalStatus: TaskStatus = (taskStatusFromIssue || status) as TaskStatus;
   const issueSeverity = t.issueSeverity || t.issue_severity || '轻微';
 
   return {
@@ -328,9 +343,9 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     title: `${greenhouseName} 巡查反馈`,
     type: 'other',
     typeName: '巡查反馈处理',
-    status: status as TaskStatus,
+    status: finalStatus,
     priority: issueSeverity === '严重' ? 'high' : 'normal',
-    progress: PROGRESS_MAP[status] || 0,
+    progress: PROGRESS_MAP[finalStatus] || 0,
     sourceType: 'dispatch',
     dispatchMode: 'inspection',
     assigneeId: feedbackUsers.length > 0 ? `EMP_${assigneeName.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0)}` : '',
@@ -604,6 +619,9 @@ export function useTasks(): UseTasksReturn {
     // logger.warn('[useTasks] 初始化 fetchTasks 调用');
     useFarmTaskStore.getState().fetchTasks();
     useTempTaskStore.getState().fetchTasks();
+    // P0：主动拉巡查记录 —— 否则 InspectionTab 没 mount 时 useInspectionDataStore.records 是空，
+    //   useTasks 合并的 tasks 里就没有 inspection，所有用 useTasks 的页面（如每日工单汇总）看不到巡查记录。
+    useInspectionDataStore.getState().fetchRecords();
   }, []);
 
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);

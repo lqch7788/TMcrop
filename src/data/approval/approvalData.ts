@@ -6,7 +6,7 @@ import { Message } from '../../types';
 
 // 消息数据
 export const messages: Message[] = [
-  { id: 'M001', type: 'task', title: '新任务派发', content: '您有一个新的浇水任务：番茄浇水（玻璃温室A区）', senderId: 'U003', senderName: '王建国', receiverId: 'U006', isRead: false, sendTime: '2024-03-15 10:00:00', link: '/tasks' },
+  { id: 'M001', type: 'task', title: '新任务派发', content: '您有一个新的浇水任务：番茄浇水（玻璃温室A区）', senderId: 'U003', senderName: '王建国', receiverId: 'U006', isRead: false, sendTime: '2024-03-15 10:00:00', link: '/farm-hub' },
   { id: 'M002', type: 'approval', title: '审批通知', content: '您提交的物资申请已通过审批', senderId: 'U002', senderName: '李明辉', receiverId: 'U003', isRead: false, sendTime: '2024-03-15 09:30:00', link: '/approvals' },
   { id: 'M003', type: 'alert', title: '温度预警', content: '玻璃温室C区当前温度32.1℃，超过警戒值30℃', senderId: 'SYSTEM', senderName: '系统', receiverId: 'U002', isRead: false, sendTime: '2024-03-15 10:35:00', link: '/iot' },
   { id: 'M004', type: 'notice', title: '天气提醒', content: '预计明天有强降雨，请各班组做好防雨措施', senderId: 'SYSTEM', senderName: '系统', receiverId: 'U003', isRead: true, sendTime: '2024-03-14 16:00:00' },

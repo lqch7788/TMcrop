@@ -48,7 +48,24 @@ export default function BatchCostAnalysisPage() {
   };
 
   useEffect(() => {
-    load();
+    // P0：useEffect 加 cancellation flag
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [list, sum] = await Promise.all([listBatchCosts({ limit: 100 }), getCropCostSummary()]);
+        if (cancelled) return;
+        setCosts(list);
+        setSummary(sum);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        messageApi.error('加载失败：' + (err instanceof Error ? err.message : String(err)));
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // 统计

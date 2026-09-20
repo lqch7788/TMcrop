@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, MapPin, ScrollText, Target, ChevronRight,
   ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor,
   Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database,
-  DollarSign, Package, Bug, AlertTriangle,
+  DollarSign, Package, Bug, AlertTriangle, LayoutGrid,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -33,6 +33,8 @@ const operationSections = [
   { icon: Shield, label: '用户权限管理', path: '/settings/user-permission', desc: '组织架构 · 角色定义 · 权限矩阵 · 用户管理 · 权限覆盖' },
   { icon: GitBranch, label: '审批流程', path: '/settings/approval-workflow', desc: '审批流程配置' },
   { icon: Shield, label: '分级审批', path: '/settings/approval-level-config', desc: '金额阈值和审批级别配置' },
+  // 2026-09-20：从"农事管理"迁移过来（原 /agronomy/other-management 重定向到 /settings/operations）
+  { icon: LayoutGrid, label: '其他管理', path: '/settings/operations', desc: 'SOP 标准库 / 问题整改 / 提醒规则 / 批次成本 / 合规报告 / 数据备份 / 快速完成 / 纸单录入' },
 ];
 
 export default function Settings() {

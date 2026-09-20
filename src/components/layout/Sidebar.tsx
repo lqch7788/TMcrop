@@ -99,8 +99,7 @@ const farmSubItems = [
   { icon: CalendarDays, label: '排班调度', path: '/schedule' },
   { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
-  // v0.3 其他管理（8 个工具 Tab 聚合入口）
-  { icon: LayoutGrid, label: '其他管理', path: '/agronomy/other-management' },
+  // 2026-09-20："其他管理"已迁到系统设置 → 运营管理（原 /agronomy/other-management 重定向到 /settings/operations）
 ];
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {

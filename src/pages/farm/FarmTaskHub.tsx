@@ -81,8 +81,13 @@ export function FarmTaskHub() {
   const [showRecordPanel, setShowRecordPanel] = useState(false);
 
   // 任务区域字段列表（从温室 Store 动态计算）
-  const taskDispatchFields = useMemo(() => {
+  // P0 防御性修复：原 useMemo 内副作用 + 依赖 loadGreenhouses 引用不稳会触发死循环。
+  // 修法：副作用移到 useEffect（只依赖 length），useMemo 只计算派生数据。
+  useEffect(() => {
     if (greenhouses.length === 0) loadGreenhouses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [greenhouses.length]);
+  const taskDispatchFields = useMemo(() => {
     return greenhouses.map(g => ({
       id: Number(g.id) || 0,
       name: g.name,
@@ -90,7 +95,7 @@ export function FarmTaskHub() {
       crop: g.crop || '',
       area: g.area || 0,
     }));
-  }, [greenhouses, loadGreenhouses]);
+  }, [greenhouses]);
 
   // 批量导入弹窗状态
   const [showImportModal, setShowImportModal] = useState(false);

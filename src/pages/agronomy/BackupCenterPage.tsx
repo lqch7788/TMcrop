@@ -65,7 +65,26 @@ export default function BackupCenterPage() {
   };
 
   useEffect(() => {
-    load();
+    // P0：useEffect 加 cancellation flag（防切菜单时 await 完成后 setState 触发死循环）
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const result = await enhancedApiClient.get<{ data: BackupRecord[] } | BackupRecord[]>(
+          '/backup/records'
+        );
+        if (cancelled) return;
+        const list = Array.isArray(result) ? result : (result as { data: BackupRecord[] }).data ?? [];
+        setBackups(list);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        messageApi.error('加载失败：' + (err instanceof Error ? err.message : String(err)));
+      } finally {
+        if (cancelled) return;
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const triggerBackup = async () => {

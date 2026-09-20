@@ -17,6 +17,10 @@ export const FARM_OPERATION_TYPES = [
   // 2026-08-30：补临时任务常见 type 翻译（DB temp_tasks.task_type 用这些值）
   { value: 'farm_repair', label: '农场维修' },
   { value: 'equipment_repair', label: '设备维修' },
+  // 2026-09-20：补临时任务 cleaning（清洁卫生）和农事任务 seedling（育苗）
+  //   来源：后端 /api/temp-tasks 和 /api/farm-tasks 的 type 值
+  { value: 'cleaning', label: '清洁卫生' },
+  { value: 'seedling', label: '育苗' },
   { value: 'other', label: '其他' },
 ] as const;
 

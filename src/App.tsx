@@ -17,7 +17,6 @@ import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Production from './pages/Production';
-import Tasks from './pages/Tasks';
 import Materials from './pages/Materials';
 import EnvironmentMonitor from './pages/EnvironmentMonitor';
 
@@ -495,6 +494,8 @@ function AppContent() {
             <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
+            {/* 2026-09-20：从"农事管理 → 其他管理"迁到"系统设置 → 运营管理" */}
+            <Route path="operations" element={<OtherManagementPage />} />
           </Route>
         </Routes>
       </SimpleLayout>
@@ -550,8 +551,8 @@ function AppContent() {
           <Route path="/agronomy/compliance-report" element={<ComplianceReportPage />} />
           {/* v0.3 P2-X：备份中心 */}
           <Route path="/agronomy/backup-center" element={<BackupCenterPage />} />
-          {/* v0.3 其他管理聚合页（8 个工具 Tab） */}
-          <Route path="/agronomy/other-management" element={<OtherManagementPage />} />
+          {/* v0.3 其他管理聚合页（8 个工具 Tab） — 2026-09-20 已迁到 /settings/operations */}
+          <Route path="/agronomy/other-management" element={<Navigate to="/settings/operations" replace />} />
           {/* v0.3 P0-3 移动端：田间作业上报 */}
           <Route path="/m/operation-report" element={<OperationReportPage />} />
           {/* 病虫害防治管理 */}
@@ -573,7 +574,8 @@ function AppContent() {
           <Route path="/material-return" element={<MaterialReturn />} />
           <Route path="/warehouse-overview" element={<WarehouseOverviewPage />} />
           <Route path="/warehouse-inbound" element={<WarehouseInboundPage />} />
-          <Route path="/tasks" element={<Tasks />} />
+          {/* 2026-09-19：任务工单管理页已废弃，功能统一到农事任务中心；保留重定向避免旧链接白屏 */}
+          <Route path="/tasks" element={<Navigate to="/farm-hub" replace />} />
           <Route path="/temp-task" element={<TempTask />} />
           <Route path="/personnel/staff" element={<StaffManagementPage />} />
           <Route path="/labor/personnel" element={<PersonnelPage />} />

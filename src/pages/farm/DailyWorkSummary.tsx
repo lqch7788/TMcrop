@@ -8,7 +8,7 @@
  * 每个活跃任务作为一行，展示任务状态、执行人、进度等信息。
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ClipboardList, Layers, Mail, Clock, CheckCircle, Loader, Download } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import {
@@ -22,13 +22,62 @@ import {
 import { useTasks, TASK_STATUS_CONFIG } from '../../hooks/useTasks';
 import { usePersistentWorkLogs } from '../../hooks/usePersistentWorkLogs';
 import type { Task } from '../../hooks/useTasks';
-import { DailyWorkDetailModal } from '../../components/planning/DailyWorkDetailModal';
+// 2026-09-20：详情弹窗统一用 FarmTaskHub 同一组件（保证字段/UI 完全一致）
+import { TaskDetailModal } from '../../components/farm/hub/TaskDetailModal';
 import { getOperationTypeName } from '../../types/farm/common';
+
+// 完整状态映射（覆盖农事任务/临时任务/巡查记录所有 status 值）
+// 巡查记录特有 status（attention/critical/normal）在 TASK_STATUS_CONFIG 中没有，
+// 必须额外加，否则表格显示英文 status 原值。
+const STATUS_LABELS: Record<string, string> = {
+  // 任务标准状态（与 TASK_STATUS_CONFIG 对齐）
+  draft: '草稿',
+  pending: '待接受',
+  accepted: '已接受',
+  in_progress: '处理中',
+  waiting_acceptance: '待验收',
+  completed: '已完成',
+  rejected: '返工中',
+  failed: '任务失败',
+  cancelled: '已取消',
+  abandoned: '已放弃',
+  // 巡查记录特有状态（来自 /api/inspections 的 status 字段）
+  normal: '正常',
+  attention: '需关注',
+  critical: '异常',
+};
+
+// 任务类别映射（dispatchMode → 中文），用于表格新增"任务类别"列
+const CATEGORY_LABELS: Record<string, string> = {
+  farm: '农事任务',
+  tempTask: '临时任务',
+  problem: '问题处理',
+  inspection: '巡查反馈',
+  smart: '智能任务',
+};
+
+// 状态对应的徽章颜色（按中文 label 匹配，新增巡查中文状态）
+const STATUS_BADGE_CLASSES: Record<string, string> = {
+  '已完成': 'bg-green-100 text-green-700',
+  '待验收': 'bg-orange-100 text-orange-700',
+  '已接受': 'bg-blue-100 text-blue-700',
+  '处理中': 'bg-blue-100 text-blue-700',
+  '返工中': 'bg-red-100 text-red-700',
+  '待接受': 'bg-gray-100 text-gray-600',
+  '已取消': 'bg-gray-100 text-gray-500',
+  '任务失败': 'bg-purple-100 text-purple-700',
+  // 巡查记录状态徽章
+  '正常': 'bg-green-100 text-green-700',
+  '需关注': 'bg-amber-100 text-amber-700',
+  '异常': 'bg-red-100 text-red-700',
+};
 
 // 汇总行数据类型（以任务为主体）
 interface DailySummaryRow {
   id: string;
   taskCode: string;
+  // 2026-09-20：新增任务类别列（农事任务/临时任务/问题处理/巡查反馈）
+  taskCategory: string;
   taskTypeName: string;
   greenhouse: string;
   crop: string;
@@ -45,7 +94,8 @@ interface DailySummaryRow {
 }
 
 export default function DailyWorkSummary() {
-  const { tasks } = useTasks();
+  // 2026-09-20：解构 getTaskRecordsByTaskId，传给 TaskDetailModal 作 records fallback
+  const { tasks, getTaskRecordsByTaskId } = useTasks();
   const { workLogs } = usePersistentWorkLogs();
 
   // 任务详情弹窗状态
@@ -55,16 +105,31 @@ export default function DailyWorkSummary() {
   const [dateFilter, setDateFilter] = useState<string>('');
   const [greenhouseFilter, setGreenhouseFilter] = useState<string>('');
   const [taskTypeFilter, setTaskTypeFilter] = useState<string>('');
+  // 2026-09-20：任务类别筛选（农事任务/临时任务/问题处理/巡查反馈）
+  const [taskCategoryFilter, setTaskCategoryFilter] = useState<string>('');
+
+  // 2026-09-20：重置所有筛选条件（dateFilter / greenhouseFilter / taskTypeFilter / taskCategoryFilter）
+  const handleResetFilters = useCallback(() => {
+    setDateFilter('');
+    setGreenhouseFilter('');
+    setTaskTypeFilter('');
+    setTaskCategoryFilter('');
+    setCurrentPage(1);
+  }, []);
 
   // 主数据源：任务列表（任务 → 汇总行）
   const summaries = useMemo((): DailySummaryRow[] => {
     const rows = tasks
-      // 2026-08-30：过滤临时任务（TT 开头）+ 巡查任务，问题任务
-      //   每日工单汇总 = 农事任务中心的工单，只显示农事任务（dispatchMode='farm'）
-      //   临时任务（TT）在"临时任务"模块看，巡查/问题在对应模块看
-      .filter(task => task.id && task.title && task.dispatchMode !== 'tempTask' && !task.id?.startsWith('TT'))
-      // 2026-08-30：只显示 dispatchMode='farm' 的农事任务（problem/inspection/smart 等在各自模块看）
-      .filter(task => !task.dispatchMode || task.dispatchMode === 'farm')
+      // 2026-09-20：按用户确认，每日工单汇总显示所有用户提交的任务类型：
+      //   农事任务（farm/undefined）、临时任务（tempTask）、问题处理（problem）、巡查反馈（inspection）
+      //   仅排除 AI 智能任务中心训练样本（dispatchMode='smart'）
+      // 旧 2026-08-30 决策（只显示 farm）已按用户要求撤回。
+      .filter(task => {
+        if (!task.id || !task.title) return false;
+        const mode = (task.dispatchMode || 'farm') as string;
+        if (mode === 'smart') return false;
+        return true;
+      })
       .map(task => {
         // 从工作日志中查找关联记录，用于补充工时/人数
         const matchedLogs = workLogs.filter(
@@ -76,13 +141,17 @@ export default function DailyWorkSummary() {
           ? Math.max(...matchedLogs.map(w => w.workers || 0))
           : 0;
 
-        // 状态标签
-        const statusConfig = TASK_STATUS_CONFIG[task.status];
-        const status = statusConfig?.label || task.status;
+        // 状态标签：完整 STATUS_LABELS 覆盖所有来源（农事/临时/巡查）
+        const status = STATUS_LABELS[task.status] || task.status || '-';
+
+        // 任务类别：dispatchMode → 中文
+        const mode = (task.dispatchMode || 'farm') as string;
+        const taskCategory = CATEGORY_LABELS[mode] || mode || '农事任务';
 
         return {
           id: task.id,
           taskCode: task.taskCode || task.id || '-',
+          taskCategory,
           // 任务类型：优先用中文 label，typeName 缺失或为英文时用 getOperationTypeName 翻译
           taskTypeName: getOperationTypeName(task.typeName || task.type || ''),
           greenhouse: task.greenhouseName || '-',
@@ -104,12 +173,16 @@ export default function DailyWorkSummary() {
         };
       });
 
-    // 2026-08-30：按任务编号（taskCode）字符串 DESC 排序
-    //   用户诉求："任务编号按照最新时间的排在最前面"
-    //   解读：NS+yyyyMMdd-NNN 格式编码里日期部分决定排序，NS20260829 > NS20260317
-    //   按 updateTime DESC 会被 cancel/accept 等操作打乱顺序（NS20260317-002 因 8-29 cancel 排第 1）
-    //   按 taskCode DESC 才是稳定可预期的"最新任务编号排最前"
-    rows.sort((a, b) => b.taskCode.localeCompare(a.taskCode));
+    // 2026-09-20：按更新时间（updatedAt）DESC 排序
+    //   旧实现按 taskCode DESC 字符串排序有 bug：
+    //   - 跨类别不可靠（'TT...' > 'NS...' 因为 'T' > 'N'，临时任务全部排前，与实际提交时间无关）
+    //   - 同一天内多个任务序号乱序
+    //   新实现用 updatedAt DESC 反映"最新活动"语义，cancel/accept/进度更新都按时间排。
+    rows.sort((a, b) => {
+      const ta = new Date(a.updateTime || '0').getTime();
+      const tb = new Date(b.updateTime || '0').getTime();
+      return tb - ta;
+    });
 
     return rows;
   }, [tasks, workLogs]);
@@ -120,9 +193,11 @@ export default function DailyWorkSummary() {
       if (dateFilter && s.dueDate !== dateFilter) return false;
       if (greenhouseFilter && greenhouseFilter !== '全部' && s.greenhouse !== greenhouseFilter) return false;
       if (taskTypeFilter && taskTypeFilter !== '全部' && s.taskTypeName !== taskTypeFilter) return false;
+      // 2026-09-20：任务类别筛选（用 taskCategory 中文 label 匹配）
+      if (taskCategoryFilter && s.taskCategory !== taskCategoryFilter) return false;
       return true;
     });
-  }, [summaries, dateFilter, greenhouseFilter, taskTypeFilter]);
+  }, [summaries, dateFilter, greenhouseFilter, taskTypeFilter, taskCategoryFilter]);
 
   // 统计卡片（基于任务状态）
   const statCards = useMemo(() => {
@@ -239,11 +314,30 @@ export default function DailyWorkSummary() {
         setCurrentPage(1);
       },
     },
+    // 2026-09-20：任务类别筛选（农事任务/临时任务/问题处理/巡查反馈）
+    {
+      key: 'taskCategory',
+      label: '任务类别',
+      options: [
+        { value: '', label: '全部' },
+        { value: '农事任务', label: '农事任务' },
+        { value: '临时任务', label: '临时任务' },
+        { value: '问题处理', label: '问题处理' },
+        { value: '巡查反馈', label: '巡查反馈' },
+      ],
+      value: taskCategoryFilter,
+      onChange: (value: string) => {
+        setTaskCategoryFilter(value);
+        setCurrentPage(1);
+      },
+    },
   ];
 
   // 表格列配置
   const columns = [
     { key: 'taskCode', label: '任务编号', width: '130px' },
+    // 2026-09-20：新增"任务类别"列（农事任务/临时任务/问题处理/巡查反馈）
+    { key: 'taskCategory', label: '任务类别', width: '90px' },
     { key: 'taskTypeName', label: '任务类型', width: '80px' },
     { key: 'greenhouse', label: '工作区域', width: '80px' },
     { key: 'crop', label: '作物', width: '80px' },
@@ -271,18 +365,8 @@ export default function DailyWorkSummary() {
       label: '状态',
       width: '90px',
       render: (value: string) => {
-        const colorMap: Record<string, string> = {
-          '已完成': 'bg-green-100 text-green-700',
-          '待验收': 'bg-orange-100 text-orange-700',
-          '已接受': 'bg-blue-100 text-blue-700',
-          '处理中': 'bg-blue-100 text-blue-700',
-          '返工中': 'bg-red-100 text-red-700',
-          '待接受': 'bg-gray-100 text-gray-600',
-          '已取消': 'bg-gray-100 text-gray-500',
-          '任务失败': 'bg-purple-100 text-purple-700',
-        };
         return (
-          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${colorMap[value] || 'bg-gray-100 text-gray-700'}`}>
+          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${STATUS_BADGE_CLASSES[value] || 'bg-gray-100 text-gray-700'}`}>
             {value}
           </span>
         );
@@ -313,6 +397,7 @@ description="基于任务数据汇总的每日农事工单执行情况"
         onConfirmExport={exportHook.handleConfirmExport}
         onCancelExport={exportHook.handleCancelExport}
         hideExportButton
+        onReset={handleResetFilters}
       />
 
       {/* 表格标题栏 + 导出按钮 */}
@@ -355,12 +440,13 @@ description="基于任务数据汇总的每日农事工单执行情况"
         onConfirm={exportHook.handleDoExport}
       />
 
-      {/* 任务详情弹窗 */}
+      {/* 任务详情弹窗 — 与 FarmTaskHub 用同一个 TaskDetailModal，保证内容完全一致 */}
       {selectedTaskId && (
-        <DailyWorkDetailModal
+        <TaskDetailModal
           taskId={selectedTaskId}
           onClose={() => setSelectedTaskId(null)}
           tasks={tasks}
+          getTaskRecordsByTaskId={getTaskRecordsByTaskId}
         />
       )}
     </div>
