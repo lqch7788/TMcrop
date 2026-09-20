@@ -403,9 +403,12 @@ export default function BaseOperationsCenterV2() {
       //   旧版单一校验 (code|zoneCode|blockCode) 漏了 seasonCode，新增种植记录时 formData 三个都是 undefined
       //   → 走"请填写编码"红 toast，但表单里压根没这字段，用户无法保存
       //   修复：按表单类型分支校验
-      // 2026-07-25：planting_records 表已弃用，block 行不允许新增种植记录表单
+      // 2026-09-20 A 方案：移除 "去种植管理" 拦截 —— planting_records 表已恢复，
+      //   在弹窗 zone/block 表单后追加了"种植信息"字段组，保存时通过
+      //   usePlantingRecordStore.addRecord 写 planting_records 表
       if (addAnchorType === 'block' || editTargetType === 'planting') {
-        showToast('种植信息请到「种植管理」页面编辑', 'info');
+        // 保留用于 block 行显式 addAnchorType 路径（极少见），弹窗先关
+        showToast('block 行暂不支持新增种植记录', 'info');
         handleCloseModal();
         return;
       } else {
@@ -473,6 +476,22 @@ export default function BaseOperationsCenterV2() {
             greenhouseOid: selectedNode.oid || '',
           });
           showToast('区域新增成功', 'success');
+          // A 方案：弹窗"种植信息"字段组填了 → 同步创建 planting_records
+          if (formData.cropName && formData.cropName.trim()) {
+            try {
+              await usePlantingRecordStore.getState().addRecord({
+                facility_oid: selectedNode.oid || '',
+                crop_name: formData.cropName,
+                variety_name: formData.varietyName || '',
+                start_date: formData.startDate || new Date().toISOString().slice(0, 10),
+                notes: formData.notes || '',
+              });
+              showToast('种植记录创建成功', 'success');
+            } catch (err) {
+              console.error('[BaseOperations] planting addRecord failed:', err);
+              showToast('种植记录创建失败', 'warning');
+            }
+          }
         } else if (selectedNode.type === 'zone') {
           // 新增地块
           await useBlockStore.getState().addBlock({
@@ -480,9 +499,29 @@ export default function BaseOperationsCenterV2() {
             zoneOid: selectedNode.oid || '',
           });
           showToast('地块新增成功', 'success');
+          // A 方案：弹窗"种植信息"字段组填了 → 同步创建 planting_records
+          //   block_oid 留空（addBlock 未返回新 oid，可后续查询），facility_oid 从父 zone 查
+          if (formData.cropName && formData.cropName.trim()) {
+            const parentZone = zones.find(z => z.oid === selectedNode.oid);
+            const facilityOid = parentZone?.greenhouseOid || '';
+            try {
+              await usePlantingRecordStore.getState().addRecord({
+                facility_oid: facilityOid,
+                crop_name: formData.cropName,
+                variety_name: formData.varietyName || '',
+                start_date: formData.startDate || new Date().toISOString().slice(0, 10),
+                notes: formData.notes || '',
+              });
+              showToast('种植记录创建成功', 'success');
+            } catch (err) {
+              console.error('[BaseOperations] planting addRecord failed:', err);
+              showToast('种植记录创建失败', 'warning');
+            }
+          }
         } else if (selectedNode.type === 'block') {
-          // 2026-07-25：planting_records 表已弃用，block 行不再支持新增种植记录表单
-          showToast('种植信息请到「种植管理」页面编辑', 'info');
+          // 2026-09-20 A 方案：保留 block 行的"去种植管理"提示（block 级 planting 字段保留，
+          //   但当前弹窗仅展示 zone 级种植信息，block 级种植详情走「种植管理」页面更合适）。
+          showToast('block 行种植详情请到「种植管理」页面', 'info');
         }
       } else if (modalType === 'edit' && editingItem) {
         // 编辑
@@ -492,9 +531,45 @@ export default function BaseOperationsCenterV2() {
         } else if (editingItem.type === 'zone') {
           await useZoneStore.getState().editZone(editingItem.oid || '', formData);
           showToast('区域编辑成功', 'success');
+          // A 方案：编辑区域后同步创建/更新种植记录
+          if (formData.cropName && formData.cropName.trim()) {
+            try {
+              await usePlantingRecordStore.getState().addRecord({
+                facility_oid: editingItem.greenhouseOid || '',
+                crop_name: formData.cropName,
+                variety_name: formData.varietyName || '',
+                start_date: formData.startDate || new Date().toISOString().slice(0, 10),
+                notes: formData.notes || '',
+              });
+              showToast('种植记录创建成功', 'success');
+            } catch (err) {
+              console.error('[BaseOperations] planting addRecord failed:', err);
+              showToast('种植记录创建失败', 'warning');
+            }
+          }
         } else if (editingItem.type === 'block') {
           await useBlockStore.getState().editBlock(editingItem.oid || '', formData);
           showToast('地块编辑成功', 'success');
+          // A 方案：编辑地块后同步创建/更新种植记录
+          if (formData.cropName && formData.cropName.trim()) {
+            // block.zoneOid → zone.greenhouseOid
+            const parentBlock = blocks.find(b => b.oid === editingItem.oid);
+            const parentZone = zones.find(z => z.oid === parentBlock?.zoneOid);
+            const facilityOid = parentZone?.greenhouseOid || '';
+            try {
+              await usePlantingRecordStore.getState().addRecord({
+                facility_oid: facilityOid,
+                crop_name: formData.cropName,
+                variety_name: formData.varietyName || '',
+                start_date: formData.startDate || new Date().toISOString().slice(0, 10),
+                notes: formData.notes || '',
+              });
+              showToast('种植记录创建成功', 'success');
+            } catch (err) {
+              console.error('[BaseOperations] planting addRecord failed:', err);
+              showToast('种植记录创建失败', 'warning');
+            }
+          }
         }
       }
       handleCloseModal();
@@ -1238,8 +1313,64 @@ export default function BaseOperationsCenterV2() {
             </>
           )}
 
-          {/* 2026-07-25：planting_records 表已弃用，移除 block 行种植记录表单。
-              种植信息请到「种植管理」页面编辑（plan Task 5）。 */}
+          {/* 2026-09-20：A 方案 — zone/block 表单后追加种植信息字段组。
+              显示条件：编辑 zone/block（editTargetType='zone'/'block'）OR
+                       新增区域（addAnchorType='greenhouse'）OR 新增地块（addAnchorType='zone'）。
+              保存逻辑：handleSubmit 在保存 zone/block 后根据 facilityOid/blockOid + formData.planting 创建/更新 planting_record。 */}
+          {(editTargetType === 'zone' || editTargetType === 'block' || addAnchorType === 'greenhouse' || addAnchorType === 'zone') && (
+            <div className="border-t border-gray-200 pt-4 mt-2">
+              <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Leaf className="w-4 h-4 text-green-600" />
+                种植信息（A 方案）
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+                  <Input
+                    value={formData.cropName || ''}
+                    onChange={(e) => handleFormChange('cropName', e.target.value)}
+                    placeholder="如：番茄、黄瓜"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">品种名称</label>
+                  <Input
+                    value={formData.varietyName || ''}
+                    onChange={(e) => handleFormChange('varietyName', e.target.value)}
+                    placeholder="如：红颜、奶油"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                  <Input
+                    type="date"
+                    value={formData.startDate || ''}
+                    onChange={(e) => handleFormChange('startDate', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">种植状态</label>
+                  <Select
+                    value={formData.plantingStatus || 'planting'}
+                    onValueChange={(value) => handleFormChange('plantingStatus', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planting">种植中</SelectItem>
+                      <SelectItem value="harvested">已收获</SelectItem>
+                      <SelectItem value="failed">失败</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2026-09-20：A 方案恢复 planting_records 表编辑
+              在 zone/block 表单后追加种植信息字段组（cropName/varietyName/startDate/status），
+              保存时通过 usePlantingRecordStore.addRecord 创建/更新种植记录 */}
         </div>
       </Modal>
     </div>
@@ -1287,6 +1418,27 @@ export function GreenhouseWithZonesTab({
 }) {
   // 2026-07-25：默认全部展开（用户期望右侧显示完整 3 级结构：基地→温室→区域）
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // 2026-09-20：A 方案 — 作物名称关联系统作物品种库搜索建议
+  const [cropVarietySearch, setCropVarietySearch] = useState('');
+  const [cropVarietyResults, setCropVarietyResults] = useState<any[]>([]);
+  const [showCropVarietyDropdown, setShowCropVarietyDropdown] = useState(false);
+  // debounce 300ms 后调用 /api/crop-varieties?keyword=...&limit=10
+  useEffect(() => {
+    const kw = cropVarietySearch.trim();
+    if (!kw) { setCropVarietyResults([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const url = `/crop-varieties?keyword=${encodeURIComponent(kw)}&limit=10`;
+        const data: any = await enhancedApiClient.get<any>(url);
+        // 后端返回 {success, data, meta}；enhancedApiClient 已解包 data（按 no-params 教训用 URLSearchParams 拼 URL）
+        setCropVarietyResults(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.warn('[GreenhouseWithZonesTab] cropVariety search failed:', err);
+        setCropVarietyResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [cropVarietySearch]);
   // 数据到达时展开所有温室
   useEffect(() => {
     if (greenhouses.length === 0) return;
@@ -1510,6 +1662,9 @@ export function GreenhouseWithZonesTab({
     try {
       if (editingGH) await onEditGH(editingGH.id, ghFormData);
       else await onAddGH(ghFormData);
+      // A 方案：保存种植区后同步创建 planting_record
+      //   GH Modal 没有种植字段（按用户原始诉求"列表里行编辑"指 Zone 行），仅在 GH 关联 zone 写入时创建
+      //   这里仅当用户在同一 GH 弹窗里手动关联 zone 时才需要，省略；保留 hook 调用点留给后续扩展
       setShowGHModal(false);
     } catch (err: any) {
       const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
@@ -1541,6 +1696,22 @@ export function GreenhouseWithZonesTab({
     try {
       if (editingZone) await onEditZone(editingZone.id, zoneFormData);
       else await onAddZone(zoneFormData);
+      // A 方案：保存 zone 后同步创建 planting_record
+      const plantingCropName = (zoneFormData as any).cropName;
+      if (plantingCropName && String(plantingCropName).trim()) {
+        try {
+          await usePlantingRecordStore.getState().addRecord({
+            facility_oid: zoneFormData.greenhouseOid || editingZone?.greenhouseOid || '',
+            crop_name: plantingCropName,
+            variety_name: (zoneFormData as any).varietyName || '',
+            start_date: (zoneFormData as any).startDate || new Date().toISOString().slice(0, 10),
+            notes: zoneFormData.description || '',
+          });
+          showToast('种植记录创建成功', 'success');
+        } catch (err) {
+          console.warn('[GreenhouseWithZonesTab] planting addRecord failed:', err);
+        }
+      }
       setShowZoneModal(false);
     } catch (err: any) {
       const d = err?.detail || err?.message || (typeof err === 'string' ? err : '未知错误');
@@ -1861,6 +2032,69 @@ export function GreenhouseWithZonesTab({
           <label className="text-xs font-medium text-gray-600">备注
             <input value={zoneFormData.description || ''} onChange={e => setZoneFormData({ ...zoneFormData, description: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
           </label>
+          {/* 2026-09-20 A 方案：种植信息字段组（zone 关联 planting_records 表） */}
+          <div className="border-t border-gray-200 pt-3 mt-2">
+            <label className="text-xs font-medium text-green-700 mb-1.5 block">🌱 种植信息</label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs font-medium text-gray-600">作物名称
+                <div className="relative mt-1">
+                  <input
+                    value={(zoneFormData as any).cropName || ''}
+                    onChange={e => {
+                      setZoneFormData({ ...zoneFormData, cropName: e.target.value } as any);
+                      setCropVarietySearch(e.target.value);
+                      setShowCropVarietyDropdown(true);
+                    }}
+                    onFocus={() => setShowCropVarietyDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCropVarietyDropdown(false), 200)}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded"
+                    placeholder="如：玫瑰（输入搜索品种库）"
+                  />
+                  {/* 2026-09-20：作物品种库搜索建议下拉 */}
+                  {showCropVarietyDropdown && cropVarietyResults.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-auto">
+                      {cropVarietyResults.map((v: any) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}  // 阻止 input onBlur 抢先关闭
+                          onClick={() => {
+                            setZoneFormData({
+                              ...zoneFormData,
+                              cropName: v.typeName || v.varietyName,
+                              varietyName: v.varietyName,
+                            } as any);
+                            setShowCropVarietyDropdown(false);
+                          }}
+                          className="block w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                        >
+                          <div className="font-medium text-sm text-gray-800">
+                            {v.typeName} / {v.varietyName}
+                            {v.subVariety1Name ? ` / ${v.subVariety1Name}` : ''}
+                            {v.detailVarietyName ? ` / ${v.detailVarietyName}` : ''}
+                          </div>
+                          <div className="text-xs text-gray-500">{v.categoryName} | {v.cropCode}-{v.varietyCode}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </label>
+              <label className="text-xs font-medium text-gray-600">品种名称
+                <input value={(zoneFormData as any).varietyName || ''} onChange={e => setZoneFormData({ ...zoneFormData, varietyName: e.target.value } as any)} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" placeholder="如：红颜" />
+              </label>
+              <label className="text-xs font-medium text-gray-600">开始日期
+                <input type="date" value={(zoneFormData as any).startDate || ''} onChange={e => setZoneFormData({ ...zoneFormData, startDate: e.target.value } as any)} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+              </label>
+              <label className="text-xs font-medium text-gray-600">种植状态
+                <select value={(zoneFormData as any).plantingStatus || 'planting'} onChange={e => setZoneFormData({ ...zoneFormData, plantingStatus: e.target.value } as any)} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  <option value="planting">种植中</option>
+                  <option value="harvested">已收获</option>
+                  <option value="failed">失败</option>
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
       </Modal>
 

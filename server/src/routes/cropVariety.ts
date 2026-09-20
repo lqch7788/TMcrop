@@ -20,13 +20,11 @@ router.get('/', (req: Request, res: Response) => {
     const params: string[] = [];
 
     if (keyword) {
-      sql += ' AND (variety_name LIKE ? OR sub_variety1_name LIKE ? OR detail_variety_name LIKE ? OR crop_code LIKE ?)';
+      // 2026-09-20：搜索 keyword 加上 categoryName / typeName 匹配（让"玫瑰"等大类/种类名也能搜到）
+      sql += ' AND (variety_name LIKE ? OR sub_variety1_name LIKE ? OR detail_variety_name LIKE ? OR crop_code LIKE ? OR category_name LIKE ? OR type_name LIKE ? OR alias LIKE ?)';
       const kw = `%${keyword}%`;
       // Use separate parameter entries for each LIKE clause to avoid sql.js binding issues
-      params.push(kw);
-      params.push(kw);
-      params.push(kw);
-      params.push(kw);
+      params.push(kw, kw, kw, kw, kw, kw, kw);
     }
 
     sql += ' ORDER BY crop_code';
