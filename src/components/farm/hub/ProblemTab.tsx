@@ -1300,20 +1300,41 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">优先级</TableHead>
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">状态</TableHead>
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">来源问题</TableHead>
+                    {/* 2026-09-20：新增问题处理结果列（关联任务里原本只有任务侧字段，问题侧处理结果无处可见） */}
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">问题处理结果</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100">
                   {linkedTasks.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                      <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
                         暂无分派任务
                       </TableCell>
                     </TableRow>
                   ) : (
                     linkedTasks.map((task: any) => {
-                      const problem = [...pendingProblems, ...dispatchedProblems, ...handledProblems].find(
-                        p => p.id === task.sourceProblemId
+                      // 2026-09-20：补 waitingAcceptanceProblems —— 原查找漏了"待验收"状态，
+                      //   处于待验收的问题在关联任务里会被当成"无来源问题"（显示 -）
+                      const problem = [
+                        ...pendingProblems,
+                        ...dispatchedProblems,
+                        ...waitingAcceptanceProblems,
+                        ...handledProblems,
+                      ].find(p => String(p.id) === String(task.sourceProblemId));
+                      // 问题处理结果：优先取 handle_result；为空则回退到流转记录里最后一次
+                      // submit/approve 的备注（本系统问题的处理结果正是由提交/验收写入）
+                      const flowRecords = ((problem as any)?.flowRecords || []) as any[];
+                      const lastFlow = [...flowRecords].reverse().find(
+                        (f) => f.action === 'approve' || f.action === 'submit'
                       );
+                      const problemResult = (problem as any)?.handleResult || lastFlow?.comment || '';
+                      const problemResultDate =
+                        (problem as any)?.handleResult
+                          ? (problem as any)?.handleDate || ''
+                          : (lastFlow?.actionTime || '').slice(0, 10);
+                      // 2026-09-20：来源问题状态原来是英文（completed 等），改用中文映射；
+                      //   颜色分支同时改用中文比对（原来按中文比对英文值，永远走灰色默认）
+                      const problemStatusCn = problem ? getStatusCN((problem as any).status) : '';
                       return (
                         <TableRow key={task.id} className="hover:bg-emerald-50 transition-colors">
                           <TableCell className="px-4 py-3 text-sm font-mono text-gray-600">
@@ -1362,16 +1383,27 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                             {problem ? (
                               <div className="flex items-center gap-2">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  problem.status === '已处理' ? 'bg-green-100 text-green-700' :
-                                  problem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
-                                  problem.status === '待验收' ? 'bg-purple-100 text-purple-700' :
+                                  problemStatusCn === '已处理' ? 'bg-green-100 text-green-700' :
+                                  problemStatusCn === '处理中' ? 'bg-amber-100 text-amber-700' :
+                                  problemStatusCn === '待验收' ? 'bg-purple-100 text-purple-700' :
                                   'bg-gray-100 text-gray-700'
                                 }`}>
-                                  {problem.status}
+                                  {problemStatusCn}
                                 </span>
                               </div>
                             ) : (
                               <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          {/* 2026-09-20：问题处理结果（handle_result，空则回退流转记录备注） */}
+                          <TableCell className="px-4 py-3 text-sm text-gray-700">
+                            {problemResult ? (
+                              <span className="block max-w-[240px] truncate" title={problemResult}>
+                                {problemResult}
+                                {problemResultDate ? `（${problemResultDate}）` : ''}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
                             )}
                           </TableCell>
                         </TableRow>
