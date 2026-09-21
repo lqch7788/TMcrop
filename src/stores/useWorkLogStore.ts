@@ -89,6 +89,12 @@ interface WorkLogState {
 
 // ==================== 创建 Store ====================
 
+/**
+ * in-flight 去重句柄：同一时刻只允许一个 fetchWorkLogs 在飞。
+ * 并发调用复用同一个 Promise，保证每个调用方 await 返回时 store 已是最新。
+ */
+let inflightFetchWorkLogs: Promise<void> | null = null;
+
 export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
   workLogs: [],
   filters: { date: '', worker: '', greenhouse: '全部' },
@@ -102,6 +108,12 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
   },
 
   fetchWorkLogs: async () => {
+    // 2026-09-21 修复（与 useProblemStore.fetchProblems 同因）：
+    //   原"3 秒时间窗口丢弃"会让调用方 await 后读到旧值 —— useFarmHub.loadData 正是
+    //   `await fetchWorkLogs()` 后立即读 store 快照，被跳过时读到空数组。
+    //   改为 in-flight Promise 共享（并发复用同一请求，await 返回即最新）。
+    if (inflightFetchWorkLogs) return inflightFetchWorkLogs;
+    const run = (async () => {
     const { filters } = get();
     set({ isLoading: true, error: null });
     try {
@@ -137,6 +149,13 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
         isLoading: false,
         workLogs: [],
       });
+    }
+    })();
+    inflightFetchWorkLogs = run;
+    try {
+      await run;
+    } finally {
+      inflightFetchWorkLogs = null;
     }
   },
 
