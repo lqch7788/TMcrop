@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Check, ChevronDown, ChevronRight, GraduationCap, Info, Leaf, LogIn, LogOut, Settings, Sprout, ThermometerSun, User, Video, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, ChevronRight, GraduationCap, Info, Leaf, Lock, LogIn, LogOut, Settings, Sprout, ThermometerSun, User, Video, X } from 'lucide-react';
 import { translations, Language } from '../i18n/translations';
 import { AboutModal } from '../components/home/AboutModal';
 import { Button } from '@/components/ui';
@@ -12,13 +12,18 @@ interface ModuleCardProps {
   color: string;
   gradient: string;
   onClick?: () => void;
+  /** 暂未开放的模块：右上角加锁标且不可进入（2026-09-21 加） */
+  disabled?: boolean;
 }
 
-function ModuleCard({ icon, title, description, color, gradient, onClick }: ModuleCardProps) {
+function ModuleCard({ icon, title, description, color, gradient, onClick, disabled }: ModuleCardProps) {
   return (
     <div
-      onClick={onClick}
-      className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group ${gradient}`}
+      // 未开放模块不绑定点击，杜绝任何进入路径（卡片外观保持原样，仅右上角多一个锁标）
+      onClick={disabled ? undefined : onClick}
+      className={`relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group ${gradient} ${
+        disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+      }`}
     >
       {/* 背景装饰 */}
       <div className="absolute inset-0 opacity-10">
@@ -26,6 +31,12 @@ function ModuleCard({ icon, title, description, color, gradient, onClick }: Modu
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
       </div>
 
+      {/* 未开放模块的右上角锁标 */}
+      {disabled && (
+        <div className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+          <Lock className="w-4 h-4 text-white" />
+        </div>
+      )}
 
       <div className="relative p-6">
         {/* 图标 */}
@@ -88,6 +99,10 @@ export default function HomePage() {
     navigate('/');
   };
 
+  // 2026-09-21: 首页 8 个系统入口中，仅「种植管理系统」已开发完成可进入，
+  // 其余 7 个模块暂未开发，置 disabled（右上角显示锁标，点击不跳转）。
+  // 各模块的页面、路由、onClick 逻辑全部原样保留，未做任何删改。
+  // 后续某个模块开发完成后解封：把该模块的 disabled 改为 false 即可。
   const modules = [
     {
       icon: <ThermometerSun className="w-8 h-8 text-white" />,
@@ -96,6 +111,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-cyan-500 to-blue-600',
       gradient: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600',
       onClick: () => navigate('/environment-monitor'),
+      disabled: true,
     },
     {
       icon: <Settings className="w-8 h-8 text-white" />,
@@ -104,6 +120,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-orange-500 to-red-600',
       gradient: 'bg-gradient-to-br from-orange-500 via-red-500 to-pink-600',
       onClick: () => navigate('/env-control'),
+      disabled: true,
     },
     {
       icon: <Leaf className="w-8 h-8 text-white" />,
@@ -112,6 +129,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-emerald-500 to-green-600',
       gradient: 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600',
       onClick: () => navigate('/dashboard'),
+      disabled: false,
     },
     {
       icon: <Sprout className="w-8 h-8 text-white" />,
@@ -120,6 +138,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-lime-500 to-green-600',
       gradient: 'bg-gradient-to-br from-lime-500 via-green-500 to-emerald-600',
       onClick: () => navigate('/traceability'),
+      disabled: true,
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-white" />,
@@ -128,6 +147,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-blue-500 to-cyan-600',
       gradient: 'bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-600',
       onClick: () => navigate('/bigdata/analysis'),
+      disabled: true,
     },
     {
       icon: <GraduationCap className="w-8 h-8 text-white" />,
@@ -136,6 +156,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-amber-500 to-orange-600',
       gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
       onClick: () => navigate('/ai/expert'),
+      disabled: true,
     },
     {
       icon: <Video className="w-8 h-8 text-white" />,
@@ -144,6 +165,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-purple-500 to-indigo-600',
       gradient: 'bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-600',
       onClick: () => navigate('/manage/cost'),
+      disabled: true,
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-white" />,
@@ -152,6 +174,7 @@ export default function HomePage() {
       color: 'bg-gradient-to-br from-pink-500 to-rose-600',
       gradient: 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600',
       onClick: () => navigate('/market/order'),
+      disabled: true,
     },
   ];
 
@@ -304,7 +327,6 @@ export default function HomePage() {
               gradient={module.gradient}
               onClick={module.onClick}
               disabled={module.disabled}
-              actionText={module.actionText}
             />
           ))}
         </div>
