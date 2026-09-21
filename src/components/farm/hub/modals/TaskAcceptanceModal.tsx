@@ -326,7 +326,7 @@ export function TaskAcceptanceModal({
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                     placeholder="请输入验收备注..."
-                    className={deepInputClass}
+                    className={`${deepInputClass} w-full`}
                     rows={3}
                   />
                 </div>
@@ -342,7 +342,7 @@ export function TaskAcceptanceModal({
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="请输入驳回原因..."
-                    className={deepInputClass}
+                    className={`${deepInputClass} w-full`}
                     rows={3}
                   />
                 </div>
