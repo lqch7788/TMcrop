@@ -12,6 +12,7 @@ import { X } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
+import { dispatchTempTaskForProblem, linkInspectionToProblem } from '../../../services/apiProblemService';
 
 interface ProblemDispatchModalProps {
   problemId: number;
@@ -54,6 +55,8 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
   const [expectedDate, setExpectedDate] = useState<string>('');
   const [requireCheckin, setRequireCheckin] = useState(false);
   const [requirePhoto, setRequirePhoto] = useState(false);
+  // 2026-09-21：勾选后同时派生一条临时任务（应急场景：现场先处理，再走农事任务闭环）
+  const [alsoDispatchTempTask, setAlsoDispatchTempTask] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -93,6 +96,20 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
         requiredFeedback,
         priorityMap[priority] || 'medium'
       );
+
+      // 2026-09-21：禁用 dispatch-temp 额外 fetch（排查真机卡死）
+      //   保留 state/import/checkbox 代码，待卡死根因找到后再启用。
+      //   原代码：
+      //   if (task && alsoDispatchTempTask) {
+      //     await dispatchTempTaskForProblem(String(problemId), { ... });
+      //   }
+
+      // 2026-09-21：可选联动把"问题对应的原始巡查记录"挂到 problem。
+      //   由 dispatchProblem 的 createTask 路径走 inspection.source_id 关联。
+      //   但 source_problem_id 是反向写入，独立处理：
+      //   当前 dispatchProblem 已通过 source_task_id/inspection_id 与 farm_tasks/inspections 建立关系
+      //   但 inspections.source_problem_id 是反向字段，需要单独 link。
+      //   暂不在弹窗里加 checkbox —— 留到用户主动去"巡查记录"页面操作。
 
       if (task) {
         onDispatched();
@@ -249,6 +266,17 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                       className="w-4 h-4 text-emerald-600 rounded"
                     />
                     <span className="text-sm text-gray-700">作业照片</span>
+                  </Label>
+                  {/* 2026-09-21：同时派生临时任务（应急场景） */}
+                  <Label className="flex items-center gap-2 cursor-not-allowed" title="临时关闭：排查真机卡死，后端已就绪，待卡死根因找到后启用">
+                    <Input
+                      type="checkbox"
+                      checked={false}
+                      disabled
+                      onChange={() => {}}
+                      className="w-4 h-4 text-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-400 line-through">同时派临时任务（应急，排查临时关闭）</span>
                   </Label>
                 </div>
               </div>
