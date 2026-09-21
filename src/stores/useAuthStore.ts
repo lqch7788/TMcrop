@@ -79,7 +79,8 @@ interface AuthState {
   // 操作
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  loadPermissions: () => Promise<void>;
+  /** 加载当前用户权限；返回是否加载成功（verifyToken 据此判定会话是否真正有效） */
+  loadPermissions: () => Promise<boolean>;
   verifyToken: () => Promise<boolean>;
 
   // 权限检查
@@ -88,13 +89,39 @@ interface AuthState {
   getAccessibleMenuRoutes: (allRoutes: string[]) => string[];
 }
 
+// ==================== 会话持久化恢复（2026-09-21） ====================
+
+/**
+ * 启动时从 localStorage 恢复登录会话
+ *
+ * 背景：登录成功后 token/currentUser 已写入 localStorage，但此前**启动时不读回**，
+ *   导致 App.tsx 的 `if (isAuthenticated && token)` 恒为 false → 每次整页加载都重新
+ *   POST /authority/auth/login（StrictMode 双跑 = 2 次）→ 每次刷新触发 2 条登录审计
+ *   + 2 次全量 10.6MB 落盘，并污染操作日志。
+ *
+ * 恢复后走 verifyToken()（GET，不写盘）；校验失败由 App.tsx 回退到自动登录。
+ */
+function restorePersistedAuth(): { token: string | null; currentUser: CurrentUser | null } {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return { token: null, currentUser: null };
+    const raw = localStorage.getItem('currentUser');
+    return { token, currentUser: raw ? (JSON.parse(raw) as CurrentUser) : null };
+  } catch {
+    // localStorage 不可用或数据损坏 → 视为未登录，交由 App 触发登录
+    return { token: null, currentUser: null };
+  }
+}
+
+const restoredAuth = restorePersistedAuth();
+
 // ==================== 创建 Store ====================
 
 export const useAuthStore = create<AuthState>()(
   (set, get)=> ({
-      token: null,
-      currentUser: null,
-      isAuthenticated: false,
+      token: restoredAuth.token,
+      currentUser: restoredAuth.currentUser,
+      isAuthenticated: !!restoredAuth.token,
       roles: [],
       isAdmin: false,
       authorities: [],
@@ -132,6 +159,8 @@ export const useAuthStore = create<AuthState>()(
           // 直接写入 localStorage，确保 enhancedApiClient 立即可读取
           localStorage.setItem('token', response.token);
           localStorage.setItem('username', user.username);
+          // 2026-09-21：持久化完整 currentUser，供启动时恢复会话（见 restorePersistedAuth）
+          localStorage.setItem('currentUser', JSON.stringify(user));
 
           set({
             token: response.token,
@@ -173,7 +202,7 @@ export const useAuthStore = create<AuthState>()(
       // ---------- 加载权限 ----------
       loadPermissions: async () => {
         const { token } = get();
-        if (!token) return;
+        if (!token) return false;
 
         set({ isLoading: true, error: null });
         try {
@@ -189,12 +218,16 @@ export const useAuthStore = create<AuthState>()(
               dataOrgOids: response.dataOrgOids || [],
               isLoading: false,
             });
-          } else {
-            set({ isLoading: false });
+            return true;
           }
+          // 无响应体（token 被拒但服务端返回 200 空体）→ 视为失败
+          set({ isLoading: false });
+          return false;
         } catch (error) {
           // logger.warn('[AuthStore] 加载权限失败:', error);
+          // 失败即视为会话无效：调用方（verifyToken）据此触发 logout + 重新登录
           set({ isLoading: false, error: (error as Error).message });
+          return false;
         }
       },
 
@@ -205,13 +238,25 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const response = await enhancedApiClient.get<{ success: boolean }>('/authority/verify');
-          if (response?.success) {
-            set({ isAuthenticated: true });
-            await get().loadPermissions();
-            return true;
+          if (!response?.success) {
+            get().logout();
+            return false;
           }
-          get().logout();
-          return false;
+          set({ isAuthenticated: true });
+
+          // 2026-09-21 修复（空菜单）：权限加载失败同样判定为会话失效。
+          //   背景：/authority/verify 在演示模式下会放行任意 token（返回 200 success），
+          //   而 /authority/my-permissions 会因"用户不存在"失败。若只信任 verify，
+          //   前端会停在「isAuthenticated=true 但 authorities=[]、isAdmin=false」的中间态
+          //   → Sidebar 的 filteredXxxSubItems 长度全为 0 → 整个左侧菜单消失，
+          //   且不会自行恢复（用户必须手动退出重登）。实测无效 token 复现：菜单链接数 0。
+          //   改为以权限加载结果为准：失败即 logout，交由 App.tsx 回退自动登录。
+          const permsLoaded = await get().loadPermissions();
+          if (!permsLoaded) {
+            get().logout();
+            return false;
+          }
+          return true;
         } catch {
           get().logout();
           return false;
