@@ -18,6 +18,7 @@ import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modal
 import { ExportFormatModal } from '../problemDispatch/modals'
 import { todayLocal } from '@/lib/dateUtils';;
 import { showAlert } from '@/lib/dialogService';
+import { dispatchTempTaskForProblem } from '../../../services/apiProblemService';
 import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
@@ -167,6 +168,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [customDueDate, setCustomDueDate] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [requiredFeedback, setRequiredFeedback] = useState<string[]>(['workload_confirm']);
+  // 2026-09-21：分派的同时派生一条临时任务（应急场景：现场先处理，再走农事任务闭环）。
+  //   该能力原先只存在于 hub/ProblemDispatchModal.tsx，但那个组件整体不可达 ——
+  //   FarmTaskHub 的 setDispatchProblemId 从未被赋值过，弹窗恒不渲染，
+  //   连带后端 /problems/:id/dispatch-temp 接口在 UI 层无从触达。
+  //   而本组件已经有一个功能更完整的自建分派弹窗，故把入口移到这里。
+  const [alsoDispatchTempTask, setAlsoDispatchTempTask] = useState(true);
 
   // ========== 新增表单状态 ==========
   const [formData, setFormData] = useState({
@@ -370,55 +377,91 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 处理分派（支持多选执行人） ==========
-  const handleDispatch = () => {
+  // 2026-09-21 修复：
+  //   ① 原先在 forEach 里调 dispatchProblem，既不 await 也无任何错误处理 ——
+  //      失败时弹窗照关、零提示，用户以为已分派成功；
+  //   ② 新增「同时派一条临时任务」，该能力原在 hub/ProblemDispatchModal.tsx 中，
+  //      但那个组件整体不可达（FarmTaskHub 的 setDispatchProblemId 从未被赋值），
+  //      导致后端 POST /problems/:id/dispatch-temp 在 UI 层无从触发，故迁至此处。
+  const handleDispatch = async () => {
     if (!dispatchModal.problem || selectedWorkers.length === 0) return;
+    const problem = dispatchModal.problem;
+    const dispatchTargets = [...selectedWorkers];
+    const dueDate = calculateDueDate();
 
-    selectedWorkers.forEach(worker => {
-      dispatchProblem(
-        dispatchModal.problem!.id,
-        worker.id,
-        worker.name,
-        defaultInspector?.id || 'U001',
-        defaultInspector?.name || '系统管理员',
-        calculateDueDate(),
-        requiredFeedback,
-        selectedPriority
-      );
-    });
-
-    // 重置状态
+    // 先重置 UI，避免重复提交
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
     setSelectedWorkers([]);
     setExpectedCompletion('3days');
     setCustomDueDate('');
     setSelectedPriority('medium');
     setRequiredFeedback(['workload_confirm']);
+
+    // 注意：dispatchProblem 是【同步函数】，返回 Task | null，
+    //   其内部的 createTask / updateProblemInStore 为 fire-and-forget（不返回 Promise），
+    //   因此这里只能兜住同步异常；其内部异步失败在本层无法感知
+    //   （属该 hook 的既有设计限制，已记入审核结论）。
+    let failed = 0;
+    for (const worker of dispatchTargets) {
+      try {
+        const created = dispatchProblem(
+          problem.id,
+          worker.id,
+          worker.name,
+          defaultInspector?.id || 'U001',
+          defaultInspector?.name || '系统管理员',
+          dueDate,
+          requiredFeedback,
+          selectedPriority
+        );
+        if (!created) failed++;
+      } catch (error) {
+        failed++;
+        console.error('[ProblemTab] 分派失败:', worker.name, error);
+      }
+    }
+
+    // 同时派生一条临时任务（应急场景；只取首位执行人，避免派生出多条）
+    if (alsoDispatchTempTask && dispatchTargets.length > 0) {
+      const worker = dispatchTargets[0];
+      try {
+        await dispatchTempTaskForProblem(String(problem.id), {
+          assigneeId: worker.id,
+          assigneeName: worker.name,
+          title: problem.issueText?.slice(0, 30) || '问题应急处理',
+          taskType: 'other',
+          urgency:
+            selectedPriority === 'high' ? 'urgent' : selectedPriority === 'low' ? 'normal' : 'high',
+          dueDate,
+          description: problem.issueText || '',
+          greenhouseName: problem.greenhouseName || undefined,
+        });
+      } catch (error) {
+        console.error('[ProblemTab] 派生临时任务失败:', error);
+        showAlert(`问题已分派，但派生临时任务失败：${(error as Error).message}`);
+      }
+    }
+
     onProblemDispatched?.();
+    if (failed > 0) {
+      showAlert(`分派失败：${failed}/${dispatchTargets.length} 位执行人未分派成功`);
+    }
   };
 
   // ========== 处理批量分派（支持多选执行人） ==========
-  const handleBatchDispatch = () => {
+  // 2026-09-21：同样改为 allSettled 汇总 + 失败提示（原为 forEach 静默）。
+  //   批量模式不派生临时任务 —— 问题数 × 执行人数会成倍放大，误建风险过高。
+  const handleBatchDispatch = async () => {
     if (selectedProblems.length === 0 || selectedWorkers.length === 0) return;
 
+    const targets: Array<{ problemId: string | number }> = [];
     selectedProblems.forEach(problemId => {
       const problem = pendingProblems.find(p => p.id === problemId);
-      if (problem) {
-        selectedWorkers.forEach(worker => {
-          dispatchProblem(
-            problem.id,
-            worker.id,
-            worker.name,
-            'U001',
-            '系统管理员',
-            calculateDueDate(),
-            requiredFeedback,
-            selectedPriority
-          );
-        });
-      }
+      if (problem) targets.push({ problemId: problem.id });
     });
+    const workers = [...selectedWorkers];
+    const dueDate = calculateDueDate();
 
-    // 重置状态
     setSelectedProblems([]);
     setDispatchModal({ isOpen: false, problem: null, batchMode: false });
     setSelectedWorkers([]);
@@ -427,7 +470,36 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     setSelectedPriority('medium');
     setRequiredFeedback(['workload_confirm']);
     setBatchDispatchMode(false);
+
+    // dispatchProblem 为同步函数（见上方 handleDispatch 的说明），此处同样逐条 try/catch
+    let failed = 0;
+    let total = 0;
+    for (const { problemId } of targets) {
+      for (const worker of workers) {
+        total++;
+        try {
+          const created = dispatchProblem(
+            problemId as any,
+            worker.id,
+            worker.name,
+            'U001',
+            '系统管理员',
+            dueDate,
+            requiredFeedback,
+            selectedPriority
+          );
+          if (!created) failed++;
+        } catch (error) {
+          failed++;
+          console.error('[ProblemTab] 批量分派失败:', problemId, worker.name, error);
+        }
+      }
+    }
+
     onProblemDispatched?.();
+    if (failed > 0) {
+      showAlert(`批量分派存在失败：${failed}/${total} 条未分派成功`);
+    }
   };
 
   // ========== 切换全选 ==========
@@ -980,6 +1052,30 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             ))}
           </div>
         </div>
+
+        {/* 同时派临时任务（2026-09-21 新增，从不可达的 ProblemDispatchModal 迁入）
+            仅单条分派提供 —— 批量模式下问题数 × 执行人数会成倍放大，误建风险过高 */}
+        {!dispatchModal.batchMode && (
+          <div className="border-t border-gray-200 pt-4">
+            <Label className="flex items-start gap-3 px-3 py-3 rounded-lg border-2 cursor-pointer transition-all border-gray-200 bg-white hover:border-amber-200">
+              <Input
+                type="checkbox"
+                checked={alsoDispatchTempTask}
+                onChange={(e) => setAlsoDispatchTempTask(e.target.checked)}
+                className="mt-0.5 w-4 h-4"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-slate-700">
+                  同时派一条临时任务
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  应急场景使用：现场先按临时任务处理，工单记录同样挂到当前问题下，
+                  可在问题管理的「关联任务」里看到。
+                </div>
+              </div>
+            </Label>
+          </div>
+        )}
       </div>
     </Modal>
   );

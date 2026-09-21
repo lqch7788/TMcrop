@@ -1,6 +1,22 @@
 /**
  * 农事任务中心 - 问题分派弹窗
  * V2.0: 补齐 Task 创建 + 流转记录写入
+ *
+ * ⚠️ 2026-09-21 审核结论：本组件当前【整体不可达】，属冗余死代码。
+ *
+ *   证据：唯一引用点是 FarmTaskHub.tsx 的 `{dispatchProblemId && <ProblemDispatchModal .../>}`，
+ *   但 `setDispatchProblemId` 在全文件中只有【声明、重置为 null、onClose 回调】三处，
+ *   从未被赋过具体的问题 id —— 因此 dispatchProblemId 恒为 null，本弹窗永远不会渲染。
+ *
+ *   同时它与 ProblemTab 内自建的分派弹窗功能高度重复，且后者更完整
+ *   （支持多选执行人）。本组件唯一独有的能力是「同时派一条临时任务」，
+ *   该能力已迁入 ProblemTab 的分派弹窗（走同一个 POST /problems/:id/dispatch-temp）。
+ *
+ *   遗留问题：本文件里的 linkInspectionToProblem 调用仍无任何 UI 入口
+ *   （后端 POST /problems/:id/link-inspection 已就绪）。
+ *
+ *   处置建议：确认上述能力均已迁出后，本文件可整体删除（删除需人工确认）。
+ *   在删除前保留此标记，避免后续维护者误改一个不会生效的组件。
  */
 
 import React, { useState, useEffect } from 'react';
