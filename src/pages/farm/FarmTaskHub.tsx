@@ -332,7 +332,13 @@ export function FarmTaskHub() {
         ids: batchDispatchTaskIds,
         updates: { assigneeId, assigneeName, status: 'pending' },
       });
-    } catch { /* API 失败乐观更新仍生效 */ }
+    } catch (error) {
+      // 2026-09-21 修复：原 catch 是 `{ /* API 失败乐观更新仍生效 */ }`，
+      //   后端失败时照样强制改本地 state → 界面全显示"已派发"、刷新后集体回滚，用户白忙一场。
+      //   现改为失败即中止（不写本地）+ 明确提示。
+      showAlert(`批量派发失败：${(error as Error).message}`);
+      return;
+    }
     // 直接 setState 更新 store（不触发 N 次独立 API）
     useFarmTaskStore.setState((prev: any) => ({
       tasks: prev.tasks.map((t: any) =>
@@ -359,7 +365,11 @@ export function FarmTaskHub() {
         ids: batchVerifyTaskIds,
         updates: { status: 'completed', completedAt: now, progress: 100 },
       });
-    } catch { /* API 失败乐观更新仍生效 */ }
+    } catch (error) {
+      // 2026-09-21 修复：同 confirmBatchDispatch —— 失败即中止，不再"假成功"
+      showAlert(`批量验收失败：${(error as Error).message}`);
+      return;
+    }
     useFarmTaskStore.setState((prev: any) => ({
       tasks: prev.tasks.map((t: any) =>
         taskIdSet.has(t.id) ? { ...t, status: 'completed', completedAt: now, progress: 100, updatedAt: now, version: (t.version || 1) + 1 } : t
@@ -390,7 +400,11 @@ export function FarmTaskHub() {
         ids: batchReassignTaskIds,
         updates: { assigneeId: newAssigneeId, assigneeName: newAssigneeName, status: 'pending' },
       });
-    } catch { /* API 失败乐观更新仍生效 */ }
+    } catch (error) {
+      // 2026-09-21 修复：同 confirmBatchDispatch —— 失败即中止，不再"假成功"
+      showAlert(`批量重派失败：${(error as Error).message}`);
+      return;
+    }
     useFarmTaskStore.setState((prev: any) => ({
       tasks: prev.tasks.map((t: any) =>
         taskIdSet.has(t.id) ? { ...t, assigneeId: newAssigneeId, assigneeName: newAssigneeName, reworkCount: 0, reworkHistory: [], deadlineExtensions: [], status: 'pending', updatedAt: now, version: (t.version || 1) + 1 } : t

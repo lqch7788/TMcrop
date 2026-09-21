@@ -14,6 +14,8 @@ import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
 import { BatchEditModal } from './modals/BatchEditModal';
 import { todayLocal } from '@/lib/dateUtils';
+import { showAlert } from '@/lib/dialogService';
+import { problemStatusToEN } from '../../../utils/problemStatus';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
 import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructureStore } from '../../../stores';
@@ -228,10 +230,14 @@ export function InspectionTab({
   const tasks = useFarmTaskStore((s) => s.tasks);
 
   // 获取默认巡查人员（避免硬编码）
+  // 2026-09-21 修复：原依赖数组为 []，闭包锁死在首渲染那一刻的 users ——
+  //   而 useUserStore 初始 users 为 []，于是首渲染就落到硬编码兜底 { id: 'U001', name: '待分配' }，
+  //   即使之后用户列表加载完成也不再更新。表现为：新建巡查时"巡查人员"（readOnly）空白、
+  //   保存后 inspector_id 写成不存在的 U001、inspector_name 为空。
   const defaultInspector = useMemo(() => {
     // 优先使用第一个用户，避免硬编码特定ID
     return users[0] || { id: 'U001', name: '待分配' };
-  }, []);
+  }, [users]);
 
   // 弹窗状态
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
@@ -397,14 +403,11 @@ export function InspectionTab({
       // 问题处理状态筛选
       if (filters.problemStatus !== 'all') {
         const problem = mergedProblems.find(p => p.id === record.problemId);
-        const problemStatusMap: Record<string, string> = {
-          '待处理': 'pending',
-          '处理中': 'processing',
-          '待验收': 'pending',
-          '已处理': 'resolved',
-        };
-        const mappedStatus = problemStatusMap[filters.problemStatus];
-        if (mappedStatus && problem?.status !== mappedStatus) {
+        // 2026-09-21 修复：原问题状态映射表三个值与后端枚举不符 ——
+        //   '处理中' → processing（实为 in_progress）、'待验收' → pending（实为 waiting_acceptance）、
+        //   '已处理' → resolved（实为 completed），导致这三个筛选项恒为空结果。
+        //   改用共享工具 problemStatusToEN（中英文都归一化到英文枚举）再比对。
+        if (problem && problemStatusToEN(filters.problemStatus) !== problemStatusToEN(problem.status)) {
           return false;
         }
       }
@@ -412,16 +415,15 @@ export function InspectionTab({
     });
   }, [inspectionRecords, filters, mergedProblems]);
 
-  // 分页后的数据
-  const paginatedRecords = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredRecords.slice(start, start + pageSize);
-  }, [filteredRecords, currentPage, pageSize]);
-
   // 选中的 ID 数组
+  // 2026-09-21 修复：selectedRows 是 filteredRecords 的全局下标，必须用它索引全量数组。
+  //   原写法索引的是 paginatedRecords（仅当前页），第 2 页起全部取到 undefined →
+  //   selectedIds 被 filter(Boolean) 清空 → "确认导出"静默失效。
+  //   （paginatedRecords 因此不再有使用方，已一并移除；分页由 InspectionTable 内部按
+  //     currentPage/pageSize 自行 slice。）
   const selectedIds = useMemo(() => {
-    return selectedRows.map(idx => paginatedRecords[idx]?.id).filter(Boolean);
-  }, [selectedRows, paginatedRecords]);
+    return selectedRows.map(idx => filteredRecords[idx]?.id).filter(Boolean);
+  }, [selectedRows, filteredRecords]);
 
   // 详情记录
   const detailRecord = useMemo(() => {
@@ -692,7 +694,11 @@ export function InspectionTab({
         fetchRecords();
       })
       .catch((error) => {
-        // 巡查记录创建失败
+        // 2026-09-21 修复：原 catch 只有一行注释，创建失败时弹窗已关闭、零提示，
+        //   用户以为已保存，实际记录未落库（若问题已先创建成功，还会留下孤儿问题）。
+        console.error('[InspectionTab] 新增巡查记录失败:', error);
+        showAlert(`新增巡查记录失败：${(error as Error).message}`);
+        fetchRecords();
       });
   };
 
@@ -839,9 +845,14 @@ export function InspectionTab({
       })
       .map(r => r.id);
     // P0：删除 setInspectionRecords(remainingRecords)。理由同上 handleConfirmBatchEdit。
-    // 持久化到后端（通过 Zustand Store）
-    deletedIds.forEach(id => {
-      deleteStoreRecord(id);
+    // 2026-09-21 修复：原 forEach 不 await、也不看 deleteRecord 的返回值，
+    //   失败时记录已从界面消失、零提示、刷新后"删了又回来"。
+    //   现改为 allSettled 汇总并在失败时明确提示（store 内部已回滚失败项）。
+    void Promise.allSettled(deletedIds.map(id => deleteStoreRecord(id))).then((results) => {
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed > 0) {
+        showAlert(`批量删除失败：${failed}/${deletedIds.length} 条未删除`);
+      }
     });
     setShowDeleteWarning(false);
     onToggleBatchDeleteMode();

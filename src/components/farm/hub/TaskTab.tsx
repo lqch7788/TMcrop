@@ -4,7 +4,7 @@
  * 样式与 TaskDispatchPage 统一
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Task } from '../../../hooks/useTasks';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
@@ -162,6 +162,17 @@ export function TaskTab({
       return true;
     });
   }, [tasks, filters]);
+
+  // 2026-09-21 修复：分页越界钳制。
+  //   筛选条件或数据量变化后总页数可能变小，而 currentPage 仍停在旧值 →
+  //   TaskTable 的 slice 切出空数组 → 表格全空白、页码却仍高亮原页，
+  //   用户只能手动点回第 1 页（典型的"筛选后看不到数据"假 bug）。
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredTasks.length, pageSize, currentPage]);
 
   // 处理任务详情查看
   const handleViewDetail = useCallback((task: Task) => {
@@ -526,11 +537,10 @@ export function TaskTab({
             senderName
           );
         }}
-        onSelectRow={(index) => {
-          const task = filteredTasks[index];
-          if (task) {
-            onToggleSelect(task.id);
-          }
+        onSelectRow={(taskId) => {
+          // 2026-09-21 修复：直接使用 task.id，不再用页内下标索引全量数组
+          //   （原写法翻页后会选中错误的任务，进而导致批量删除/导出作用到别的任务）
+          onToggleSelect(taskId);
         }}
         onSelectAll={handleSelectAll}
         onViewDetail={handleViewDetail as any}
@@ -544,6 +554,9 @@ export function TaskTab({
         onSelectExecutor={handleSelectExecutor as any}
         onPublish={handlePublish as any}
         onBatchAssign={onBatchAssign as any}
+        // 2026-09-21 修复：handleRemind 此前定义了却从未传出，
+        //   导致 TaskTableRow 里依赖 onRemind 的「催办」按钮永不渲染。
+        onRemind={handleRemind as any}
         isMyTasksView={false}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
@@ -565,8 +578,12 @@ export function TaskTab({
         onBatchDelete={toggleBatchDeleteMode}
         onBatchDispatch={toggleBatchDispatchMode}
         onConfirmBatchDispatch={handleConfirmBatchDispatch}
+        // 2026-09-21 修复：这两个模式的「取消」此前未传值（TaskTable 侧误绑到删除模式），
+        //   现分别接上各自的切换函数，点取消即退出当前模式回到 normal。
+        onCancelBatchDispatch={toggleBatchDispatchMode}
         onBatchVerify={toggleBatchVerifyMode}
         onConfirmBatchVerify={handleConfirmBatchVerify}
+        onCancelBatchVerify={toggleBatchVerifyMode}
         onBatchReassign={toggleBatchReassignMode}
         onConfirmBatchReassign={handleConfirmBatchReassign}
         onCancelBatchReassign={toggleBatchReassignMode}

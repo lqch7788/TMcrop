@@ -17,6 +17,7 @@ import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/component
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals'
 import { todayLocal } from '@/lib/dateUtils';;
+import { showAlert } from '@/lib/dialogService';
 import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
@@ -28,6 +29,7 @@ import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, 
 import { Pagination } from '@/components/ui';
 import type { SourceModuleType } from '../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
+import { problemStatusToCN } from '../../../utils/problemStatus';
 
 // 必填反馈选项常量（避免在组件内重复定义）
 const FEEDBACK_OPTIONS = [
@@ -40,13 +42,9 @@ const FEEDBACK_OPTIONS = [
 ] as const;
 
 // 状态映射：后端英文 → 前端中文（与 ProblemTable 保持一致）
-const STATUS_CN_MAP: Record<string, string> = {
-  'pending': '待处理',
-  'in_progress': '处理中',
-  'waiting_acceptance': '待验收',
-  'completed': '已处理',
-};
-const getStatusCN = (status: string): string => STATUS_CN_MAP[status] || status;
+// 2026-09-21：状态映射表已上移到 src/utils/problemStatus.ts（唯一真相源）。
+//   此处保留原来的函数名做薄封装，避免改动本文件内已有的多处调用点。
+const getStatusCN = problemStatusToCN;
 
 // 问题创建默认值常量
 const DEFAULT_PROBLEM_VALUES = {
@@ -442,11 +440,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 切换单选 ==========
+  // 2026-09-21 修复：按当前模式分派到正确的选中集合。
+  //   本组件维护两个独立集合：selectedRows（导出 / 批量删除用）与
+  //   selectedProblems（批量分派用）。ProblemTable 的复选框在导出/删除模式下
+  //   checked 读的是 selectedRows，但 onChange 一直调这个函数、只写 selectedProblems，
+  //   于是勾选后 checked 仍为 false（复选框不变勾）、"确认导出"的禁用态也不解除。
+  //   这里按模式写入对应集合即可，ProblemTable 侧无需改动。
   const toggleSelect = (id: number) => {
-    if (selectedProblems.includes(id)) {
-      setSelectedProblems(prev => prev.filter(p => p !== id));
+    if (exportMode || batchDeleteMode) {
+      setSelectedRows(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]));
     } else {
-      setSelectedProblems(prev => [...prev, id]);
+      setSelectedProblems(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]));
     }
   };
 
@@ -545,20 +549,38 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 处理删除确认 ==========
-  const handleDeleteConfirm = () => {
+  // 2026-09-21 修复（两处静默问题）：
+  //   ① 原实现 `store.deleteProblems(ids)` 既不 await 也不看结果，后端失败时用户毫不知情；
+  //   ② 选中集（全状态）与实际可删集（仅「待处理」且未派发）口径不同，
+  //      差额被静默丢弃——用户点了"确定删除 N 条"却什么都没发生，也没有任何解释。
+  const handleDeleteConfirm = async () => {
     const allProblems = [...pendingProblems, ...dispatchedProblems, ...handledProblems];
     const idsToDelete = allProblems
       .filter(p => selectedRows.includes(p.id) && getStatusCN(p.status) === '待处理' && !p.sourceTaskId)
       .map(p => p.id);
 
-    if (idsToDelete.length > 0) {
-      store.deleteProblems(idsToDelete);
-    }
-
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
-    setSelectedRows([]);
-    onProblemDispatched?.();
+
+    if (idsToDelete.length === 0) {
+      // Fail Loud：明确告知为什么删不掉，而不是静默关闭弹窗
+      showAlert(
+        selectedRows.length === 0
+          ? '请先选择要删除的问题'
+          : '所选问题中没有可删除的记录（仅「待处理」且尚未派发任务的问题允许删除）'
+      );
+      setSelectedRows([]);
+      return;
+    }
+
+    try {
+      await store.deleteProblems(idsToDelete);
+      setSelectedRows([]);
+      onProblemDispatched?.();
+    } catch (error) {
+      // store 已回滚本地改动，这里只负责告知用户
+      showAlert(`删除失败：${(error as Error).message}`);
+    }
   };
 
   // ========== 处理导出确认 ==========
@@ -1052,13 +1074,15 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 <div className="bg-white rounded-lg p-3">
                   <div className="text-xs text-orange-600 mb-1">当前状态</div>
                   <div className="text-sm font-semibold">
+                    {/* 2026-09-21 修复：原用中文直接比对英文枚举，三个分支全不命中 → 一律灰色兜底；
+                        且状态文本原样输出，会把 waiting_acceptance 这类英文暴露给用户 */}
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                      problem.status === '已处理' ? 'bg-green-100 text-green-700' :
-                      problem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
-                      problem.status === '待验收' ? 'bg-purple-100 text-purple-700' :
+                      getStatusCN(problem.status) === '已处理' ? 'bg-green-100 text-green-700' :
+                      getStatusCN(problem.status) === '处理中' ? 'bg-amber-100 text-amber-700' :
+                      getStatusCN(problem.status) === '待验收' ? 'bg-purple-100 text-purple-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {problem.status}
+                      {getStatusCN(problem.status)}
                     </span>
                   </div>
                 </div>
@@ -1111,7 +1135,13 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const tempTaskStoreAll = useTempTaskStore((s) => s.tasks);
   const inspectionStoreAll = useInspectionDataStore((s) => s.records);
   // 2026-09-21：当前登录用户（用于「待我验收」快捷按钮的条件判断）
-  const currentUserName = useAuthStore((s: any) => s.currentUser?.username || '');
+  //   必须用 realName 而不是 username —— 任务的 assigneeName 存的是真实姓名（"张三"），
+  //   而 username 是账号名，两者不是同一命名空间。原先比对 username，
+  //   导致「待我验收」按钮的第三个条件恒为 false、按钮永不出现。
+  //   （useAuthStore 同时提供 username 与 realName，见其 login 分支的 CurrentUser 构造）
+  const currentUserName = useAuthStore(
+    (s: any) => s.currentUser?.realName || s.currentUser?.username || ''
+  );
   const linkedTasks = useMemo(() => {
     const farmList = (externalTasks || tasks || []) as any[];
     const farmLinked = farmList
@@ -1310,6 +1340,21 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 <Download className="w-4 h-4" />
                 导出
               </Button>
+              {/* 2026-09-21 新增：批量删除此前完全没有入口 ——
+                  setBatchDeleteMode(true) 在全文件从未被调用（只有置 false），
+                  DeleteWarningModal 与工具栏的「确认删除」分支都是死 UI，
+                  用户实际上无法删除任何问题。此处补齐入口。 */}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setBatchDeleteMode(true);
+                  setSelectedRows([]);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </Button>
             </div>
           </div>
 
@@ -1451,8 +1496,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                       const taskType = taskTypeConfig[task.type || task.kind] || { label: task.kind || '?', bg: 'bg-gray-100', text: 'text-gray-600' };
                       // 「待我验收」快捷按钮可见条件：
                       //   1. 任务状态为 waiting_acceptance
-                      //   2. 当前登录用户名 与 任务 assigneeId 一致（V1.1 用文本字段做匹配，因 V1.1 assigneeId 是 hash 字符串）
-                      //   3. 临时任务 / 巡查的 assigneeId 暂未填，默认关闭（task.type === 'farm' 时判断）
+                      //   2. 任务执行人姓名 === 当前登录用户的真实姓名
+                      //      （V1.1 的 assigneeName 是自由文本姓名，assigneeId 是姓名哈希，
+                      //       故只能用姓名比对；currentUserName 已取 realName，见本文件上方定义）
+                      //   3. 仅农事任务参与判断（临时任务 / 巡查的 assignee 字段未填）
                       const isWaitingAcceptance = task.status === 'waiting_acceptance';
                       const isMyAcceptanceTask =
                         task.type === 'farm' &&

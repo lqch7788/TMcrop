@@ -299,6 +299,22 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             </Button>
           )}
 
+          {/* 继续执行 - accepted/rejected 可转为 in_progress（状态机仅这两条边可达）
+              2026-09-21 新增：此前 onContinue 只有 prop 定义与解构，没有任何渲染入口，
+              即"继续执行"功能整体不可达（TaskTab/FarmTaskHub/useTasks 三层都在，
+              唯独缺这个按钮）。 */}
+          {['accepted', 'rejected'].includes(task.status) && onContinue && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onContinue}
+              className="text-xs h-6"
+              title="继续执行：将任务转为进行中"
+            >
+              <Play className="w-3 h-3" /> 继续执行
+            </Button>
+          )}
+
           {/* 2026-09-15：批量任务分配按钮（#9，所有状态可触发） */}
           {onBatchAssign && (
             <Button
