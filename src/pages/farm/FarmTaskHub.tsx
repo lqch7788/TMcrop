@@ -165,14 +165,17 @@ export function FarmTaskHub() {
   // 任务刷新计数器
   const [taskRefresh, setTaskRefresh] = useState(0);
 
-  // 2026-09-21 简化：4 个 tab 只渲染当前激活的那一个（其他 tab 不渲染，React 自动卸载）。
-  //   历史：
-  //     - 2026-09-20 之前是"条件渲染"：切走即卸载；用户在多次进出后触发 setState 死循环卡死
-  //     - 2026-09-20 改成"全挂载 + hidden"：避免卸载；实测无效，因为 hiddenDivs 累积 + 真机 React 树残留
-  //     - 真机实测（用户截图）：hiddenDivs=3 仍卡死，主线程不响应
-  //   方案：恢复条件渲染（卸载），但把 Radix Select 的卸载成本降到最低 —— 让卸载走正常 commit，
-  //   setState 风暴只在卸载瞬间触发一次，而不是"全挂在 DOM 里偷偷 ref 漂移"。
-  //   副收益：各 tab 内部 state（筛选/选中）切换后重置，符合用户预期。
+  // 2026-09-20 卡死修复：tab 首次访问后保持挂载，仅用 CSS 隐藏非活动 tab。
+  //   根因（CDP 断点实测）：Radix Select 内部用 useState 存 DOM 节点，并把 setState 当 ref 回调
+  //   传给元素（ref={composeRefs(forwardedRef, setTrigger)}，见 @radix-ui/react-select）。
+  //   切换 tab 时 40+ 个 Select 同时卸载 → React commit 阶段 safelyDetachRef 触发大量 setState
+  //   → 同步渲染死循环（主线程 100% 占满、F12 无响应、无任何 React 报错）。
+  //   保持挂载后，tab 切换只切 CSS 可见性，不再卸载 Radix 组件，同时保留各 tab 的筛选状态。
+  const [visitedTabs, setVisitedTabs] = useState<Set<HubTab>>(() => new Set<HubTab>(['task']));
+  useEffect(() => {
+    const current = hub.state.activeTab;
+    setVisitedTabs((prev) => (prev.has(current) ? prev : new Set(prev).add(current)));
+  }, [hub.state.activeTab]);
   // SOP 弹窗状态
   const [showSopModal, setShowSopModal] = useState(false);
   const [selectedSopContent, setSelectedSopContent] = useState<string>('');
@@ -456,9 +459,8 @@ export function FarmTaskHub() {
 
           {/* Tab内容 */}
           <div className="p-4">
-            {/* 2026-09-21 简化：条件渲染当前激活的 tab，其他 tab 自动卸载。
-              已废弃：保持挂载 + hiddenDivs 累积 → 用户实测仍卡死。 */}
-            {hub.state.activeTab === 'task' && (
+            {visitedTabs.has('task') && (
+              <div className={hub.state.activeTab === 'task' ? '' : 'hidden'}>
               <TaskTab
                 key={taskRefresh}
                 tasks={hub.getFilteredTasks()}
@@ -504,8 +506,10 @@ export function FarmTaskHub() {
                 onExport={handleExport}
                 onBatchReassign={handleBatchReassign}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'inspection' && (
+            {visitedTabs.has('inspection') && (
+              <div className={hub.state.activeTab === 'inspection' ? '' : 'hidden'}>
               <InspectionTab
                 inspections={hub.inspections}
                 stats={{
@@ -553,8 +557,10 @@ export function FarmTaskHub() {
                   // 调用 hub 的巡查批量编辑（打开编辑弹窗）
                 }}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'problem' && (
+            {visitedTabs.has('problem') && (
+              <div className={hub.state.activeTab === 'problem' ? '' : 'hidden'}>
               <ProblemTab
                 // 传递hooks获取实时数据
                 onProblemDispatched={handleProblemDispatched}
@@ -565,9 +571,12 @@ export function FarmTaskHub() {
                   resolved: hub.problems.filter(p => p.status === '已处理').length,
                 }}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'tempTask' && (
+            {visitedTabs.has('tempTask') && (
+              <div className={hub.state.activeTab === 'tempTask' ? '' : 'hidden'}>
               <TempTaskTab />
+              </div>
             )}
           </div>
         </div>
