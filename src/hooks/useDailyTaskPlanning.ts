@@ -122,17 +122,20 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   // 每日计划 Store（持久化到服务器）
-  const dailyPlanStore = useDailyPlanStore();
-
+  // 2026-09-20 死循环预防：与 useMonthlyTaskPlanning 同模式修复 —— 原代码
+  //   `useDailyPlanStore()` 无选择器订阅整个 store，而 generateDailyPlan /
+  //   confirmAndDispatch 内部调 savePlan 成功后 store 更新 → 快照变 →
+  //   useCallback 重建 → 若被页面 effect 调用会死循环（月计划版已于同日引爆）。
+  //   改用 getState() 直取 action（不订阅）。
   // 存储上次任务执行日期记录（仍使用 localStorage）
   const [lastTaskDates, setLastTaskDates] = useLocalStorage<Record<string, string>>(
     'yuanxingtu_daily_planning_last_tasks',
     {}
   );
 
-  // 初始化时从服务器获取每日计划
+  // 初始化时从服务器获取每日计划（getState 直取，避免订阅整个 store）
   useEffect(() => {
-    dailyPlanStore.fetchPlans();
+    useDailyPlanStore.getState().fetchPlans();
   }, []);
 
   // ============================================
@@ -354,11 +357,12 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       workerSuggestions,
     };
 
-    // 保存计划到服务器
-    await dailyPlanStore.savePlan(targetDate, plan);
+    // 保存计划到服务器（getState 直取，不订阅 store —— 避免 savePlan 成功后
+    //   store 更新触发本 useCallback 重建，被页面 effect 调用时形成死循环）
+    await useDailyPlanStore.getState().savePlan(targetDate, plan);
 
     return plan;
-  }, [getPendingDispatchTasks, getWorkerLoadAnalysis, getWeatherForecast, dailyPlanStore]);
+  }, [getPendingDispatchTasks, getWorkerLoadAnalysis, getWeatherForecast]);
 
   // ============================================
   // 确认并派发计划
@@ -410,8 +414,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
         }
       }
 
-      // 更新计划状态为已派发（保存到服务器）
-      await dailyPlanStore.savePlan(plan.date, plan);
+      // 更新计划状态为已派发（保存到服务器，getState 直取避免订阅整个 store）
+      await useDailyPlanStore.getState().savePlan(plan.date, plan);
 
       // 如果有任何错误，返回 false
       if (errors.length > 0) {
@@ -424,7 +428,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       // 派发失败
       return { success: false, dispatchedTasks: dispatchedCount };
     }
-  }, [createTask, setLastTaskDates, dailyPlanStore]);
+  }, [createTask, setLastTaskDates]);
 
   // ============================================
   // 获取今日计划
@@ -432,8 +436,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const getTodayPlan = useCallback((): DailyPlan => {
     const today = new Date().toISOString().split('T')[0];
 
-    // 从 Store 获取计划
-    const storedPlan = dailyPlanStore.getPlan(today);
+    // 从 Store 获取计划（getState 直取，避免订阅整个 store）
+    const storedPlan = useDailyPlanStore.getState().getPlan(today);
     if (storedPlan) {
       return storedPlan;
     }
@@ -446,7 +450,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       totalHours: 0,
       requiredWorkers: 0,
     };
-  }, [dailyPlanStore]);
+  }, []);
 
   return {
     generateDailyPlan,
