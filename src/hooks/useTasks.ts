@@ -82,6 +82,8 @@ type TempTaskDataCompat = TempTaskData & {
 import { useInspectionDataStore, InspectionData } from '../stores/useInspectionDataStore';
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
+import { useAuthStore } from '../stores/useAuthStore';
+import { showAlert } from '@/lib/dialogService';
 // 导入存储容量管理
 
 
@@ -1183,6 +1185,17 @@ export function useTasks(): UseTasksReturn {
     if (!task) return;
     if (!validateTransition(task, 'completed')) { console.error(`[状态机] 非法转换: ${task.status} → completed, task=${id}`); return; }
 
+    // 2026-09-21：最小权限校验 —— 执行人不得验收自己执行的任务。
+    //   完整的角色权限体系需要先给 CurrentUser 建模 role 字段
+    //   （当前只有 oid/username/realName/orgOid/email/phone/status），
+    //   故此处先落地一条不依赖角色、语义明确的硬规则，堵住最直接的越权路径。
+    const me = useAuthStore.getState().currentUser;
+    const myName = me?.realName || me?.username || '';
+    if (myName && task.assigneeName && myName === task.assigneeName) {
+      showAlert('不能验收自己执行的任务，请由派发人或管理员验收');
+      return;
+    }
+
     const now = new Date().toISOString();
 
     // 创建操作记录
@@ -1192,8 +1205,10 @@ export function useTasks(): UseTasksReturn {
     // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
       await enhancedApiClient.post(`/farm-tasks/${id}/complete`, {
-        operator_id: task.assignerId || '',
-        operator_name: task.assignerName || '',
+        // 2026-09-21：操作人改为当前登录用户。原先是 task.assignerId / assignerName，
+        //   导致无论谁点验收，审计里记的都是派发人，事后无法追溯真实操作者。
+        operator_id: me?.oid || me?.username || task.assignerId || '',
+        operator_name: myName || task.assignerName || '',
         comments: comments || '',
       });
     }, 'acceptCompletion');
@@ -1243,6 +1258,15 @@ export function useTasks(): UseTasksReturn {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     if (!validateTransition(task, 'rejected') && !validateTransition(task, 'failed')) { console.error(`[状态机] 非法转换: ${task.status} → rejected, task=${id}`); return; }
+
+    // 2026-09-21：与 acceptCompletion 同源的最小权限校验 —— 驳回同样属验收动作，
+    //   执行人不得驳回自己提交的成果
+    const me = useAuthStore.getState().currentUser;
+    const myName = me?.realName || me?.username || '';
+    if (myName && task.assigneeName && myName === task.assigneeName) {
+      showAlert('不能驳回自己执行的任务，请由派发人或管理员处理');
+      return;
+    }
 
     const now = new Date().toISOString();
     const newReworkCount = task.reworkCount + 1;
