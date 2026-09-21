@@ -98,6 +98,12 @@ interface InspectionDataState {
   deleteRecord: (id: string) => Promise<boolean>;
 }
 
+/**
+ * in-flight 去重句柄：同一时刻只允许一个 fetchRecords 在飞。
+ * 并发调用复用同一个 Promise，保证每个调用方 await 返回时 store 已是最新。
+ */
+let inflightFetchRecords: Promise<void> | null = null;
+
 export const useInspectionDataStore = create<InspectionDataState>()(
   (set, get) => ({
       records: [],
@@ -105,32 +111,40 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       error: null,
 
       fetchRecords: async (filters) => {
-        // P0：3 秒防重入（对齐 useFarmTaskStore.fetchTasks 第 147 行 P2-4 模式）
-        // 修复场景：切回 /farm-hub 时 useFarmHub.loadData + InspectionTab useEffect
-        // 双重触发导致 fetchRecords 死循环，最终浏览器主线程卡死。
-        const now = Date.now();
-        const lastFetch = ((get() as any)._lastFetchAt as number) || 0;
-        if (now - lastFetch < 3000) return;
-        (get() as any)._lastFetchAt = now;
-
-        set({ isLoading: true, error: null });
-        try {
-          const params = new URLSearchParams();
-          if (filters) {
-            Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+        // 2026-09-21 修复（与 useProblemStore.fetchProblems 同因，巡查记录 tab 徽章同理）：
+        //   原"3 秒时间窗口丢弃"防重入与调用方契约冲突 —— useFarmHub.loadData 是
+        //   `await fetchRecords()` 后立即读 store 快照，被跳过时读到空数组 → hub.inspections
+        //   被设为 [] → 徽章恒显示 0（而列表走 store 订阅正常）。
+        //   改为 in-flight Promise 共享：并发调用复用同一请求，await 返回时 store 必为最新；
+        //   防死循环能力不变（原修复目标是阻断 loadData + InspectionTab 双重触发的循环，
+        //   改成复用进行中的 Promise 后，循环内不会额外发起网络请求，拦截更彻底）。
+        if (inflightFetchRecords) return inflightFetchRecords;
+        const run = (async () => {
+          set({ isLoading: true, error: null });
+          try {
+            const params = new URLSearchParams();
+            if (filters) {
+              Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+            }
+            const query = params.toString();
+            const url = `/inspections${query ? `?${query}` : ''}`;
+            // logger.info('[InspectionDataStore] fetchRecords 请求:', url);
+            const response = await enhancedApiClient.get<{ success: boolean; data: InspectionData[] }>(url);
+            // logger.info('[InspectionDataStore] fetchRecords 原始响应:', JSON.stringify(response).substring(0, 500));
+            // enhancedApiClient 已提取 .data，response 即为实际数据数组
+            const data = Array.isArray(response) ? response : [];
+            // logger.info('[InspectionDataStore] fetchRecords 加载记录数:', data.length);
+            set({ records: data.map(normalize), isLoading: false });
+          } catch (error) {
+            // logger.error('[InspectionDataStore] API获取失败:', error);
+            set({ error: (error as Error).message, isLoading: false });
           }
-          const query = params.toString();
-          const url = `/inspections${query ? `?${query}` : ''}`;
-          // logger.info('[InspectionDataStore] fetchRecords 请求:', url);
-          const response = await enhancedApiClient.get<{ success: boolean; data: InspectionData[] }>(url);
-          // logger.info('[InspectionDataStore] fetchRecords 原始响应:', JSON.stringify(response).substring(0, 500));
-          // enhancedApiClient 已提取 .data，response 即为实际数据数组
-          const data = Array.isArray(response) ? response : [];
-          // logger.info('[InspectionDataStore] fetchRecords 加载记录数:', data.length);
-          set({ records: data.map(normalize), isLoading: false });
-        } catch (error) {
-          // logger.error('[InspectionDataStore] API获取失败:', error);
-          set({ error: (error as Error).message, isLoading: false });
+        })();
+        inflightFetchRecords = run;
+        try {
+          await run;
+        } finally {
+          inflightFetchRecords = null;
         }
       },
 

@@ -180,6 +180,12 @@ interface ProblemState {
   deleteProblems: (ids: (number | string)[]) => Promise<boolean>;
 }
 
+/**
+ * in-flight 去重句柄：同一时刻只允许一个 fetchProblems 在飞。
+ * 并发调用复用同一个 Promise，保证每个调用方 await 返回时 store 已是最新。
+ */
+let inflightFetchProblems: Promise<void> | null = null;
+
 export const useProblemStore = create<ProblemState>()(
   (set, get) => ({
       problems: [],
@@ -187,21 +193,38 @@ export const useProblemStore = create<ProblemState>()(
       error: null,
 
       fetchProblems: async (filters) => {
-        set({ isLoading: true, error: null });
-        try {
-          const params = new URLSearchParams();
-          if (filters) {
-            Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+        // 2026-09-21 修复（问题管理 tab 徽章恒为 0）：
+        //   原实现用"3 秒时间窗口丢弃"做防重入，与调用方契约冲突 —— useFarmHub.loadData
+        //   是 `await fetchProblems()` 后**立即读 store 快照**，若这一次调用恰好落在窗口内
+        //   被跳过，它读到的仍是旧值（空数组）→ hub.problems 被设为 [] → 徽章恒显示 0，
+        //   而问题列表走 store 实时订阅显示 29 条，两者不一致（已实测复现）。
+        //   改为 in-flight Promise 共享：并发调用复用进行中的同一请求，每个调用方
+        //   await 返回时 store 必为最新；防死循环能力不变（循环内复用进行中的请求，
+        //   不会额外发起网络请求）。
+        if (inflightFetchProblems) return inflightFetchProblems;
+        const run = (async () => {
+          set({ isLoading: true, error: null });
+          try {
+            const params = new URLSearchParams();
+            if (filters) {
+              Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+            }
+            const query = params.toString();
+            const url = `/problems${query ? `?${query}` : ''}`;
+            const response = await enhancedApiClient.get<{ success: boolean; data: ProblemData[] }>(url);
+            // enhancedApiClient 已提取 .data，response 即为实际数据数组
+            const data = Array.isArray(response) ? response : [];
+            set({ problems: data.map(normalize), isLoading: false });
+          } catch (error) {
+            // logger.warn('[ProblemStore] API获取失败:', error);
+            set({ error: (error as Error).message, isLoading: false });
           }
-          const query = params.toString();
-          const url = `/problems${query ? `?${query}` : ''}`;
-          const response = await enhancedApiClient.get<{ success: boolean; data: ProblemData[] }>(url);
-          // enhancedApiClient 已提取 .data，response 即为实际数据数组
-          const data = Array.isArray(response) ? response : [];
-          set({ problems: data.map(normalize), isLoading: false });
-        } catch (error) {
-          // logger.warn('[ProblemStore] API获取失败:', error);
-          set({ error: (error as Error).message, isLoading: false });
+        })();
+        inflightFetchProblems = run;
+        try {
+          await run;
+        } finally {
+          inflightFetchProblems = null;
         }
       },
 
