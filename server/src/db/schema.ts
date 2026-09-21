@@ -884,7 +884,9 @@ export function initializeDatabase() {
       images TEXT,
       status TEXT DEFAULT 'pending',
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-09-21：关联到 problems 表（problem → source_problem_id 反向关联）
+      source_problem_id TEXT
     )
   `);
 

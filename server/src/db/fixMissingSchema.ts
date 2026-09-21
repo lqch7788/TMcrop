@@ -1369,6 +1369,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'source_type', sql: 'ALTER TABLE temp_tasks ADD COLUMN source_type TEXT DEFAULT \'tempTask\'' },
     { name: 'dispatch_mode', sql: 'ALTER TABLE temp_tasks ADD COLUMN dispatch_mode TEXT DEFAULT \'tempTask\'' },
     { name: 'required_feedback', sql: 'ALTER TABLE temp_tasks ADD COLUMN required_feedback TEXT DEFAULT \'[]\'' },
+    // 2026-09-21：问题↔临时任务反向关联（让问题管理 → 关联任务能聚合显示）
+    { name: 'source_problem_id', sql: 'ALTER TABLE temp_tasks ADD COLUMN source_problem_id TEXT' },
   ];
   for (const col of tempTaskColumnsToAdd) {
     try {
@@ -1377,6 +1379,21 @@ export async function fixMissingSchema(): Promise<void> {
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
         seedLog.skip(`• temp_tasks.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 2026-09-21：inspections 表添加 source_problem_id 列（与 temp_tasks/farm_tasks 对齐）
+  const inspectionColumnsToAdd = [
+    { name: 'source_problem_id', sql: 'ALTER TABLE inspections ADD COLUMN source_problem_id TEXT' },
+  ];
+  for (const col of inspectionColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ inspections 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• inspections.${col.name}:`, e.message);
       }
     }
   }

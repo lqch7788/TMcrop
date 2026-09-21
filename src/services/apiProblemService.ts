@@ -277,3 +277,44 @@ export async function addProblemHandleRecord(problemId: number, record: {
   await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record);
   return true;
 }
+
+/**
+ * 2026-09-21：为问题派生一条临时任务（应急场景）
+ * POST /api/problems/:id/dispatch-temp
+ */
+export async function dispatchTempTaskForProblem(
+  problemId: string,
+  payload: {
+    assigneeId: string;
+    assigneeName: string;
+    title?: string;
+    taskType?: string;
+    urgency?: 'urgent' | 'high' | 'normal';
+    dueDate?: string;
+    estimatedHours?: number;
+    description?: string;
+    location?: string;
+    greenhouseName?: string;
+  }
+): Promise<{ id: string; taskCode: string; sourceProblemId: string } | null> {
+  const result = await enhancedApiClient.post<{
+    success: boolean;
+    data: { id: string; taskCode: string; sourceProblemId: string };
+  }>(`/problems/${problemId}/dispatch-temp`, payload);
+  return result?.data ?? null;
+}
+
+/**
+ * 2026-09-21：把一条巡查记录关联到问题
+ * POST /api/problems/:id/link-inspection
+ */
+export async function linkInspectionToProblem(
+  problemId: string,
+  inspectionId: string
+): Promise<{ inspectionId: string; sourceProblemId: string } | null> {
+  const result = await enhancedApiClient.post<{
+    success: boolean;
+    data: { inspectionId: string; sourceProblemId: string };
+  }>(`/problems/${problemId}/link-inspection`, { inspectionId });
+  return result?.data ?? null;
+}
