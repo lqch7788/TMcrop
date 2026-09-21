@@ -14,17 +14,18 @@ import { useSystemConfigStore } from '@/stores/useSystemConfigStore';
 export function useThemeConfig() {
   const configs = useSystemConfigStore((s) => s.configs);
   const loadConfigs = useSystemConfigStore((s) => s.loadConfigs);
-  const loading = useSystemConfigStore((s) => s.loading);
 
   // 跟踪已应用的CSS变量名，用于清理被删除的配置
   const appliedVarsRef = useRef<Set<string>>(new Set());
 
   // 首次渲染时确保主题配置已加载
+  // 2026-09-21 修复: 依赖去掉 loading —— loading 在每次请求前后 true/false 翻转，
+  //   会让本 effect 反复重跑，请求失败时形成"失败 → loading 翻转 → 再请求"的闭环。
   useEffect(() => {
-    if (configs.length === 0 && !loading) {
+    if (configs.length === 0) {
       loadConfigs();
     }
-  }, [configs.length, loading, loadConfigs]);
+  }, [configs.length, loadConfigs]);
 
   // 同步 theme.* 配置到CSS变量
   useEffect(() => {

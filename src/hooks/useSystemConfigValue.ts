@@ -34,15 +34,17 @@ export function useSystemConfigValue(key: string, defaultValue: string): string 
   });
 
   // 首次渲染时如果配置为空则触发加载（V1.1借鉴：useEffect非useMemo）
-  const loading = useSystemConfigStore((s) => s.loading);
   const configsLength = useSystemConfigStore((s) => s.configs.length);
   const loadConfigs = useSystemConfigStore((s) => s.loadConfigs);
 
+  // 2026-09-21 修复: 依赖里去掉 loading。loading 在每次请求前后 true/false 翻转，
+  //   会让本 effect 反复重跑，请求失败时形成"失败 → loading 翻转 → 再请求"的闭环。
+  //   并发调用由 store 内 30 秒节流窗口兜住，无需在这里看 loading。
   useEffect(() => {
-    if (configsLength === 0 && !loading) {
+    if (configsLength === 0) {
       loadConfigs();
     }
-  }, [configsLength, loading, loadConfigs]);
+  }, [configsLength, loadConfigs]);
 
   return configValue ?? defaultValue;
 }
@@ -108,15 +110,15 @@ export function useSystemConfigValuesByPrefix(prefix: string): Record<string, st
     return map;
   });
 
-  const loading = useSystemConfigStore((s) => s.loading);
   const configsLength = useSystemConfigStore((s) => s.configs.length);
   const loadConfigs = useSystemConfigStore((s) => s.loadConfigs);
 
+  // 2026-09-21 修复: 同 useSystemConfigValue，依赖去掉 loading 以避免失败重试闭环
   useEffect(() => {
-    if (configsLength === 0 && !loading) {
+    if (configsLength === 0) {
       loadConfigs();
     }
-  }, [configsLength, loading, loadConfigs]);
+  }, [configsLength, loadConfigs]);
 
   return result;
 }

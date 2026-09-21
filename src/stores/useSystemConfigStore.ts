@@ -116,9 +116,15 @@ export const useSystemConfigStore = create<SystemConfigState>()(
       // ---------- 查询（READ）— cache-first 策略 ----------
       loadConfigs: async () => {
         const now = Date.now();
-        const { lastFetch, configs } = get();
+        const { lastFetch } = get();
         // 30秒内不重复请求（V3.0: 从5分钟降至30秒，参数修改即时生效）
-        if (lastFetch && now - lastFetch < 30 * 1000 && configs.length > 0) return;
+        // 2026-09-21 修复: 去掉 `&& configs.length > 0`。
+        //   请求失败时 configs 仍为空数组，该条件恒为 false → 节流完全失效；
+        //   叠加 useSystemConfigValue/useThemeConfig 中依赖 loading 的 useEffect
+        //   （loading 在每次请求前后 true/false 翻转 → effect 重跑 → 再请求），
+        //   后端不可用时形成请求风暴（实测 6 秒 8385 次 /api/basic-data/system-configs）。
+        //   成功与失败走同一节流窗口，下方 catch 里"避免限流自我放大循环"的意图才成立。
+        if (lastFetch && now - lastFetch < 30 * 1000) return;
 
         set({ loading: true, error: null });
         try {
