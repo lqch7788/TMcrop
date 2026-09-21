@@ -248,7 +248,13 @@ export function saveDatabase(): void {
 
     lastSaveError = null;
     saveSuccessCount += 1;
-    console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes`);
+    // 2026-09-21 降噪：落盘成功日志默认静默。原因：每次整页加载会触发 2 次登录审计，
+    //   各落一次盘（10.6MB 全量），加上每 5 分钟的调度扫描，成功日志会把终端刷满，
+    //   真正的错误反而被淹没。需要观察写盘时设环境变量 DB_LOG_VERBOSE=1 即可恢复。
+    //   失败日志（下方 catch）始终打印，不受开关影响 —— 保持 Fail Loud。
+    if (process.env.DB_LOG_VERBOSE === '1') {
+      console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes`);
+    }
   } catch (e: any) {
     lastSaveError = e;
     console.error(`❌ [db-safety] saveDatabase() 写盘失败: ${e?.message || e}`);

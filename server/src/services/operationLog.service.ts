@@ -108,7 +108,17 @@ export class OperationLogService {
       log.operate_time || now,
     ]);
 
-    saveDatabase();
+    // 2026-09-21 落盘合并（降低写盘频率）：
+    //   成功审计不再显式落盘 —— 审计写入全部发生在 HTTP 写请求内（调用方仅 authority.ts
+    //   与 schedule.ts 两个路由），其 2xx 响应必然触发 middleware/autoPersist.ts 的 1.5s
+    //   debounce 兜底落盘；auditTrail.ts 的文件头注释本来就是按这个前提设计的
+    //   （"不在这里调 saveDatabase，已由 autoPersist 覆盖"）。
+    //   效果：整页加载的 2 次登录审计从 2 次全量写盘（各 10.6MB）降为 1 次。
+    //   失败审计（status != success）例外并保留显式落盘：对应响应是 4xx/5xx，
+    //   autoPersist 不落盘，交给兜底就要等下一次成功写盘才写磁盘，进程中途被杀即丢失。
+    if ((log.status || 'success') !== 'success') {
+      saveDatabase();
+    }
     // 通知 middleware/auditTrail.ts：本请求已显式写过日志，不要重复记录
     bumpAuditWriteCount();
     return id;
