@@ -799,13 +799,20 @@ export const TempTaskTab: React.FC = () => {
       } else {
         // ========== 数据闭环：新建临时任务 ==========
         // 根据派发模式和状态决定最终状态
-        let finalStatus: 'pending' | 'draft' | 'pending_ai' = 'draft';
+        // 2026-09-21 修复：不再写入 'pending_ai'。
+        //   该值是「派发状态」（dispatchStatus，见 usePendingConfirmTasks / useUnifiedTaskCreation）
+        //   的取值，不属于临时任务的「执行状态」status —— TempTaskStatus 与
+        //   TEMP_TASK_STATUS_CONFIG 都不含它，写进去会让 labor/tempTask/TempTaskTable 的
+        //   `statusConfig[task.status].bg` 取到 undefined 抛 TypeError，
+        //   冒泡到 App 的 ErrorBoundary，整页内容被错误页替换（白屏）。
+        //   AI 推荐流程本身尚未实现（TempTask 未建模 dispatchStatus），
+        //   故与手动派发一致落到 'pending'（待接受）。
+        let finalStatus: 'pending' | 'draft' = 'draft';
         if (status === 'pending') {
           if (dispatchMode === 'ai_assisted') {
-            finalStatus = 'pending_ai'; // 待AI推荐
-          } else {
-            finalStatus = 'pending'; // 直接派发
+            console.warn('[TempTaskTab] AI 智能推荐派发流程尚未实现，任务先按「待接受」保存');
           }
+          finalStatus = 'pending';
         }
         // 计算总工时
         const totalEstimatedHours = ((taskData.estimatedDays || 0) * 8 + (taskData.estimatedHours || 0)) * (taskData.workerCount || 1);
@@ -1345,13 +1352,19 @@ export const TempTaskTab: React.FC = () => {
     setShowDeleteWarning(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     // ========== 数据闭环：批量删除临时任务 ==========
-    selectedRows.forEach(id => {
-      deleteTempTask(id);
-    });
+    // 2026-09-21 修复：原 forEach 不 await、也不看结果，失败时行已从列表消失、零提示、
+    //   刷新后"删掉的又回来"。改为 allSettled 汇总，失败则明确提示（store 已回滚失败项）。
+    const ids = [...selectedRows];
     setSelectedRows([]);
     setShowDeleteWarning(false);
+
+    const results = await Promise.allSettled(ids.map(id => deleteTempTask(id)));
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) {
+      showAlert(`批量删除失败：${failed}/${ids.length} 条未删除`);
+    }
   };
 
   // 导出

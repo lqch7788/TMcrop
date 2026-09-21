@@ -268,9 +268,22 @@ export function TempTaskTable({
                   {((task.estimatedDays || 0) * 8 + task.estimatedHours) * (task.workerCount || 1)}h
                 </TableCell>
                 <TableCell className="px-3 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[task.status].bg} ${statusConfig[task.status].color}`}>
-                    {statusConfig[task.status].label}
-                  </span>
+                  {/* 2026-09-21 加兜底：原先直接取 statusConfig[task.status].bg/.color/.label，
+                      一旦遇到未登记的状态（历史脏数据，或新增枚举值漏更新字典，例如曾经的
+                      'pending_ai'）就会抛 TypeError，冒泡到 ErrorBoundary 后整页被错误页替换。
+                      这里退化为灰色徽章 + 原样显示状态值，宁可显示得不好看也不要白屏。 */}
+                  {(() => {
+                    const cfg = statusConfig[task.status] ?? {
+                      label: task.status,
+                      color: 'text-gray-600',
+                      bg: 'bg-gray-100',
+                    };
+                    return (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="px-3 py-3 text-center">
                   <div className="flex items-center justify-center gap-2">
