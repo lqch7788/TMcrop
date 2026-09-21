@@ -656,7 +656,12 @@ function App() {
     const authState = useAuthStore.getState();
     // 如果已登录则验证token
     if (authState.isAuthenticated && authState.token) {
-      authState.verifyToken();
+      // 2026-09-21：token 失效时 verifyToken 内部会 logout()，此处回退到默认自动登录，
+      //   否则用户会停在未登录页（此前每次加载都强制重登录，掩盖了这个缺口）。
+      //   会话有效时走 verifyToken（GET，不写盘），避免每次刷新都重登录 → 重复审计 + 全量落盘。
+      authState.verifyToken().then((valid) => {
+        if (!valid) useAuthStore.getState().login('陆启闯', '123456');
+      });
     } else {
       // 默认使用陆启闯自动登录（密码123456）
       authState.login('陆启闯', '123456');
