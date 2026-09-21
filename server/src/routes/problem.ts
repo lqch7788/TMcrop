@@ -492,4 +492,151 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 2026-09-21：为问题派生一条临时任务（应急处理场景）
+ * POST /api/problems/:id/dispatch-temp
+ * body: { assigneeId, assigneeName, title, type, urgency, dueDate, estimatedHours, ... }
+ * 临时任务的 source_problem_id 字段填入 :id，让"问题→关联任务"能展示临时任务
+ */
+router.post('/:id/dispatch-temp', (req: Request, res: Response) => {
+  try {
+    const { id: problemId } = req.params;
+    const db = getDatabase();
+
+    // 1. 校验问题存在
+    const problemStmt = db.prepare('SELECT id, problem_code, title FROM problems WHERE id = ?');
+    problemStmt.bind([problemId]);
+    let problem: any = null;
+    if (problemStmt.step()) problem = problemStmt.getAsObject();
+    problemStmt.free();
+    if (!problem || Object.keys(problem).length === 0) {
+      return res.status(404).json({ success: false, error: '问题记录不存在' });
+    }
+
+    // 2. 解析 body
+    const {
+      assigneeId = '', assigneeName = '', title = '', taskType = 'other',
+      urgency = 'normal', dueDate = '', estimatedHours = 0,
+      description = '', location = '', greenhouseName = '',
+    } = req.body || {};
+
+    if (!assigneeId || !assigneeName) {
+      return res.status(400).json({ success: false, error: 'assigneeId / assigneeName 必填' });
+    }
+
+    // 3. 生成临时任务编号（TT + 时间戳，简化版——避免引入 tempTask service 依赖）
+    const newId = `TEMP${Date.now()}`;
+    const now = new Date().toISOString();
+    const taskCode = `TT${Date.now().toString().slice(-8)}`;
+
+    db.run(`
+      INSERT INTO temp_tasks (
+        id, task_code, task_title, task_type, task_content,
+        requester_id, requester_name, assignee_id, assignee_name,
+        greenhouse_name, area_name,
+        request_date, request_time, urgency, status,
+        create_time, update_time, due_date,
+        estimated_hours, worker_count,
+        actual_hours, progress, reject_count,
+        title, location,
+        source_type, dispatch_mode, source_problem_id, version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newId, taskCode, title || `【问题处理】${problem.problem_code}`, taskType, description || `从问题 ${problem.problem_code} 派发`,
+      req.user?.userId || '', req.user?.name || '系统',
+      assigneeId, assigneeName,
+      greenhouseName, location || greenhouseName,
+      now.substring(0, 10), now.substring(11, 19), urgency, 'pending',
+      now, now, dueDate || now.substring(0, 10),
+      estimatedHours, 1,
+      0, 0, 0,
+      title, location,
+      'tempTask', 'tempTask', problemId, 1,
+    ]);
+
+    // 4. 问题 status 自动从 pending → in_progress（如果当前是 pending）
+    db.run(`UPDATE problems SET status = ?, update_time = ? WHERE id = ? AND status = ?`,
+      ['in_progress', now, problemId, 'pending']);
+
+    // 5. 写审计日志
+    db.run(`INSERT INTO operation_logs (id, user_id, username, action, module, resource_type, resource_id, description, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+       req.user?.userId || '', req.user?.name || '系统',
+       'dispatch_temp', '问题管理', 'problem', problemId,
+       `派生临时任务 ${taskCode} 派给 ${assigneeName}`, 'success', now]);
+
+    saveDatabase();
+
+    res.json({
+      success: true,
+      data: { id: newId, taskCode, sourceProblemId: problemId },
+      message: "由问题 " + problem.problem_code + " 派发临时任务成功",
+    });
+  } catch (error) {
+    console.error('为问题派生临时任务失败:', error);
+    res.status(500).json({ success: false, error: '派生临时任务失败' });
+  }
+});
+
+/**
+ * 2026-09-21：把一条巡查记录关联到问题（双向）
+ * POST /api/problems/:id/link-inspection
+ * body: { inspectionId }
+ * 写 inspections.source_problem_id = :id
+ */
+router.post('/:id/link-inspection', (req: Request, res: Response) => {
+  try {
+    const { id: problemId } = req.params;
+    const { inspectionId } = req.body || {};
+    if (!inspectionId) {
+      return res.status(400).json({ success: false, error: 'inspectionId 必填' });
+    }
+    const db = getDatabase();
+
+    // 1. 校验问题存在
+    const problemStmt = db.prepare('SELECT id, problem_code FROM problems WHERE id = ?');
+    problemStmt.bind([problemId]);
+    let problem: any = null;
+    if (problemStmt.step()) problem = problemStmt.getAsObject();
+    problemStmt.free();
+    if (!problem || Object.keys(problem).length === 0) {
+      return res.status(404).json({ success: false, error: '问题记录不存在' });
+    }
+
+    // 2. 校验巡查存在
+    const inspectStmt = db.prepare('SELECT id, record_code FROM inspections WHERE id = ?');
+    inspectStmt.bind([inspectionId]);
+    let inspection: any = null;
+    if (inspectStmt.step()) inspection = inspectStmt.getAsObject();
+    inspectStmt.free();
+    if (!inspection || Object.keys(inspection).length === 0) {
+      return res.status(404).json({ success: false, error: '巡查记录不存在' });
+    }
+
+    // 3. 写关联
+    db.run(`UPDATE inspections SET source_problem_id = ?, update_time = ? WHERE id = ?`,
+      [problemId, new Date().toISOString(), inspectionId]);
+
+    // 4. 写审计
+    db.run(`INSERT INTO operation_logs (id, user_id, username, action, module, resource_type, resource_id, description, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+       req.user?.userId || '', req.user?.name || '系统',
+       'link_inspection', '问题管理', 'problem', problemId,
+       `关联巡查记录 ${inspection.record_code}`, 'success', new Date().toISOString()]);
+
+    saveDatabase();
+
+    res.json({
+      success: true,
+      data: { inspectionId, sourceProblemId: problemId },
+      message: `巡查 ${inspection.record_code} 已关联到问题 ${problem.problem_code}`,
+    });
+  } catch (error) {
+    console.error('关联巡查记录到问题失败:', error);
+    res.status(500).json({ success: false, error: '关联巡查记录失败' });
+  }
+});
+
 export default router;
