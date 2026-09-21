@@ -514,6 +514,44 @@ function toDbColumnName(fieldName: string): string {
 }
 
 /**
+ * farm_tasks 允许写入的列白名单（2026-09-21 重建，单条 PUT 与批量 PUT 共用）
+ *
+ * 背景：此前单条 PUT（:540）与批量 PUT（:853）各维护了一份白名单，且都已严重过时——
+ *   单条缺 30 列、批量缺 19 列，导致 completed_at / accepted_at / cancelled_* /
+ *   abandoned_* / rejected_* / executor_reject_count / acceptance_record 等
+ *   状态流转字段在写库时被静默丢弃。表现包括：
+ *     · 验收通过后完成时间不落库 → completed_at 为 NULL → "今日完成"统计恒为 0
+ *     · 撤回原因、放弃原因、驳回原因写入后被丢弃 → 事后无法追溯
+ *     · executor_reject_count 恒为 undefined → "拒绝 2 次必须换人"规则永不触发
+ *
+ * 现按表实际 78 列重建，仅排除两个不应由前端写入的列：
+ *   tenant_id —— 多租户隔离字段
+ *   synthetic —— AI 训练样本标记（由离线脚本写入）
+ *
+ * 白名单的职责是「列名校验，防 SQL 注入」，业务约束应在各自 handler 内单独判断。
+ */
+const FARM_TASK_DB_COLUMNS = new Set<string>([
+  'id', 'task_code', 'task_title', 'title', 'task_type', 'task_content', 'description',
+  'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name', 'create_by', 'create_by_id',
+  'greenhouse_id', 'greenhouse_name', 'area_name', 'crop',
+  'plan_date', 'plan_time', 'due_date', 'priority', 'status', 'progress', 'progress_pct',
+  'batch_id', 'batch_code', 'team_id', 'team_name',
+  'completion_date', 'completion_note', 'completed_at', 'accepted_at',
+  'cancelled_at', 'cancelled_by', 'cancelled_reason',
+  'abandoned_at', 'abandoned_by', 'abandoned_reason',
+  'rejected_at', 'rejected_by', 'rejected_reason',
+  'rework_count', 'rework_history', 'executor_reject_count', 'acceptance_record',
+  'paused_at', 'resumed_at', 'current_pause_reason', 'total_pause_seconds',
+  'actual_start_at', 'actual_end_at', 'actual_hours', 'actual_hours_recorded_at',
+  'actual_hours_recorded_by', 'estimated_hours', 'estimated_days', 'estimated_vs_actual_ratio',
+  'dispatch_mode', 'source_type', 'source_id', 'source_code',
+  'source_problem_id', 'source_inspection_id',
+  'feedback_requirements', 'deadline_extensions', 'type_config', 'type_name', 'sop_content',
+  'materials', 'tools', 'tools_remarks', 'remarks', 'outsource_cost',
+  'version', 'create_time', 'update_time',
+]);
+
+/**
  * 将对象中的值转为可存储的格式（数组/对象 → JSON字符串）
  */
 function toDbValue(value: any): any {
@@ -535,28 +573,16 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    // 过滤有效字段并转换为数据库列名
     // 过滤有效字段并转换为数据库列名（跳过不存在于 DB 的字段，避免 SQL 错误）
-    const validDbColumns = new Set([
-      'id', 'task_code', 'task_title', 'task_type', 'task_content',
-      'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name',
-      'greenhouse_id', 'greenhouse_name', 'area_name',
-      'plan_date', 'plan_time', 'priority', 'status',
-      'completion_date', 'completion_note',
-      'batch_id', 'batch_code', 'create_by',
-      'version', 'create_time', 'update_time',
-      'due_date', 'progress', 'crop', 'estimated_hours', 'estimated_days',
-      'remarks', 'materials', 'tools',
-      'type_name', 'source_type', 'dispatch_mode',
-      'feedback_requirements', 'rework_history', 'deadline_extensions',
-      'type_config', 'sop_content', 'description',
-      'team_id', 'team_name', 'tools_remarks',
-      'source_problem_id', 'source_inspection_id', 'source_id', 'source_code',
-    ]);
+    // 2026-09-21：改用共用白名单 FARM_TASK_DB_COLUMNS，并在丢弃字段时打日志（Fail Loud）
     const validKeys = Object.keys(updates).filter(k => {
       if (k === 'id' || updates[k] === undefined) return false;
       const dbCol = toDbColumnName(k);
-      return validDbColumns.has(dbCol);
+      const allowed = FARM_TASK_DB_COLUMNS.has(dbCol);
+      if (!allowed) {
+        console.warn(`[farm-tasks PUT] 忽略非白名单字段: ${k} → ${dbCol}`);
+      }
+      return allowed;
     });
 
     if (validKeys.length === 0) {
@@ -850,30 +876,15 @@ router.put('/batch', (req: Request, res: Response) => {
     }
 
     // P1-8：过滤有效字段 + 转 DB 列名（与单条 PUT 保持一致）
-    const validDbColumns = new Set([
-      'id', 'task_code', 'task_title', 'task_type', 'task_content',
-      'assignee_id', 'assignee_name', 'assigner_id', 'assigner_name',
-      'greenhouse_id', 'greenhouse_name', 'area_name',
-      'plan_date', 'plan_time', 'priority', 'status',
-      'completion_date', 'completion_note',
-      'batch_id', 'batch_code', 'create_by',
-      'version', 'create_time', 'update_time',
-      'due_date', 'progress', 'crop', 'estimated_hours', 'estimated_days',
-      'remarks', 'materials', 'tools',
-      'type_name', 'source_type', 'dispatch_mode',
-      'feedback_requirements', 'rework_history', 'deadline_extensions',
-      'type_config', 'sop_content', 'description',
-      'team_id', 'team_name', 'tools_remarks',
-      'source_problem_id', 'source_inspection_id', 'source_id', 'source_code',
-      'cancelled_at', 'cancelled_by', 'cancelled_reason',
-      'abandoned_at', 'abandoned_by', 'abandoned_reason',
-      'rejected_at', 'rejected_by', 'rejected_reason',
-      'executor_reject_count', 'acceptance_record',
-    ]);
+    // 2026-09-21：改用共用白名单 FARM_TASK_DB_COLUMNS，并在丢弃字段时打日志（Fail Loud）
     const validKeys = Object.keys(normalizedUpdates).filter(k => {
       if (k === 'id' || normalizedUpdates[k] === undefined) return false;
       const dbCol = toDbColumnName(k);
-      return validDbColumns.has(dbCol);
+      const allowed = FARM_TASK_DB_COLUMNS.has(dbCol);
+      if (!allowed) {
+        console.warn(`[farm-tasks PUT /batch] 忽略非白名单字段: ${k} → ${dbCol}`);
+      }
+      return allowed;
     });
 
     if (validKeys.length === 0) {
@@ -1074,7 +1085,9 @@ router.post('/:id/publish', (req: Request, res: Response) => {
 router.post('/:id/withdraw', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { operator_id, operator_name } = req.body;
+    // 2026-09-21 修复：前端一直会发送 reason，但此前此处未接收、也没落库，
+    //   导致"撤回原因"在任何地方都查不到。现接收并写入流转记录描述。
+    const { operator_id, operator_name, reason } = req.body;
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
@@ -1098,12 +1111,15 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
         [now, id]);
 
       recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-        operator_id || '', operator_name || '', 'withdraw', '撤回任务', fromStatus, 'draft');
+        operator_id || '', operator_name || '', 'withdraw',
+        reason ? `撤回任务：${reason}` : '撤回任务', fromStatus, 'draft');
     });
 
     res.json({ success: true, data: { id, status: 'draft' } });
   } catch (error) {
-    res.status(500).json({ success: false, error: '撤回任务失败' });
+    // Fail Loud：把具体错误带回给前端，便于排查（原先只返回笼统文案）
+    console.error('[farm-tasks withdraw] 失败:', error);
+    res.status(500).json({ success: false, error: `撤回任务失败：${(error as Error).message}` });
   }
 });
 
