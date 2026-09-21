@@ -10,6 +10,9 @@ import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { useComprehensiveDispatch } from '../../../hooks/useComprehensiveDispatch';
 import { useTasks } from '../../../hooks/useTasks';
 import { useUserStore } from '../../../stores';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useTempTaskStore } from '../../../stores/useTempTaskStore';
+import { useInspectionDataStore } from '../../../stores/useInspectionDataStore';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals'
@@ -22,6 +25,7 @@ import { AlertTriangle, Camera, Check, CheckCircle, Clock, Download, Eye, FileTe
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import type { SourceModuleType } from '../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
@@ -120,6 +124,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
+
+  // 2026-09-21：问题列表 + 关联任务分页（与农事任务表格一致：底部 Pagination 组件）
+  const [problemsCurrentPage, setProblemsCurrentPage] = useState(1);
+  const [problemsPageSize, setProblemsPageSize] = useState(10);
+  const [linkedCurrentPage, setLinkedCurrentPage] = useState(1);
+  const [linkedPageSize, setLinkedPageSize] = useState(10);
 
   // ========== 弹窗状态 ==========
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -249,6 +259,15 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       return tb - ta;
     });
   }, [statusFilter, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
+
+  // 2026-09-21：问题列表分页（10 条/页，按 createTime DESC 已排好序）
+  const paginatedProblems = useMemo(() => {
+    const start = (problemsCurrentPage - 1) * problemsPageSize;
+    return filteredProblems.slice(start, start + problemsPageSize);
+  }, [filteredProblems, problemsCurrentPage, problemsPageSize]);
+
+  // 筛选条件变化时把页码重置回第 1 页（否则筛选后数据变少会停在空页）
+  useEffect(() => { setProblemsCurrentPage(1); }, [statusFilter, severityFilter, sourceModuleFilter, timeFilter, dateRange]);
 
   // ========== 问题类型到任务类型的映射（避免硬编码） ==========
   const PROBLEM_TYPE_MAPPING = [
@@ -1086,11 +1105,80 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 主渲染 ==========
-  // 获取关联任务列表（sourceProblemId 不为空的任务）
+  // 2026-09-21：关联任务列表聚合三个表（farm_tasks / temp_tasks / inspections）。
+  //   此前只查 farm_tasks，所以临时任务和巡查记录即使 source_problem_id 有值也看不到。
+  //   现在补两 store + 统一字段映射（前端字段 camelCase，DB 列 snake_case）。
+  const tempTaskStoreAll = useTempTaskStore((s) => s.tasks);
+  const inspectionStoreAll = useInspectionDataStore((s) => s.records);
+  // 2026-09-21：当前登录用户（用于「待我验收」快捷按钮的条件判断）
+  const currentUserName = useAuthStore((s: any) => s.currentUser?.username || '');
   const linkedTasks = useMemo(() => {
-    const allTasks = externalTasks || tasks || [];
-    return allTasks.filter((t: any) => t.sourceProblemId);
-  }, [externalTasks, tasks]);
+    const farmList = (externalTasks || tasks || []) as any[];
+    const farmLinked = farmList
+      .filter((t) => t.sourceProblemId)
+      .map((t) => ({
+        kind: 'task' as const,
+        type: 'farm' as const,
+        id: t.id,
+        taskCode: t.taskCode,
+        title: t.title,
+        assigneeName: t.assigneeName,
+        assigneeId: t.assigneeId || '',
+        greenhouseName: t.greenhouseName,
+        dueDate: t.dueDate,
+        priority: t.priority,
+        status: t.status,
+        sourceProblemId: String(t.sourceProblemId),
+        createdAt: t.createdAt || '',
+      }));
+
+    // 临时任务：DB 列 source_problem_id（snake_case）映射
+    const tempLinked = (tempTaskStoreAll as any[])
+      .filter((t) => t.source_problem_id || t.sourceProblemId)
+      .map((t) => ({
+        kind: 'tempTask' as const,
+        type: 'tempTask' as const,
+        id: t.id,
+        taskCode: t.task_code || t.taskCode || '',
+        title: t.title || '',
+        assigneeName: t.assignee_name || t.assigneeName || '',
+        assigneeId: t.assignee_id || t.assigneeId || '',
+        greenhouseName: t.greenhouse_name || t.greenhouseName || '',
+        dueDate: t.due_date || t.dueDate || '',
+        priority: t.urgency || t.priority || '',
+        status: t.status || '',
+        sourceProblemId: String(t.source_problem_id ?? t.sourceProblemId),
+        createdAt: t.create_time || t.createTime || '',
+      }));
+
+    // 巡查记录：DB 列 source_problem_id（snake_case）映射
+    const inspectLinked = (inspectionStoreAll as any[])
+      .filter((i) => i.source_problem_id || i.sourceProblemId)
+      .map((i) => ({
+        kind: 'inspection' as const,
+        type: 'inspection' as const,
+        id: i.id,
+        taskCode: i.record_code || i.recordCode || '',
+        title: (i.issue_text || i.issueText || i.check_result || i.checkResult || '').slice(0, 60) || '巡查记录',
+        assigneeName: i.inspector_name || i.inspectorName || '',
+        assigneeId: '',
+        greenhouseName: i.greenhouse_name || i.greenhouseName || '',
+        dueDate: i.check_date || i.checkDate || '',
+        priority: i.issue_severity || i.issueSeverity || '',
+        status: i.status || '',
+        sourceProblemId: String(i.source_problem_id ?? i.sourceProblemId),
+        createdAt: i.create_time || i.createTime || '',
+        recordCode: i.record_code || i.recordCode || '',
+      }));
+
+    return [...farmLinked, ...tempLinked, ...inspectLinked];
+  }, [externalTasks, tasks, tempTaskStoreAll, inspectionStoreAll]);
+
+  // 2026-09-21：关联任务分页（10 条/页）
+  const paginatedLinkedTasks = useMemo(() => {
+    const start = (linkedCurrentPage - 1) * linkedPageSize;
+    return linkedTasks.slice(start, start + linkedPageSize);
+  }, [linkedTasks, linkedCurrentPage, linkedPageSize]);
 
   return (
     <div className="space-y-6">
@@ -1227,7 +1315,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
         {/* 问题表格 */}
         <ProblemTable
-          problems={filteredProblems}
+          problems={paginatedProblems}
           selectedRows={selectedRows}
           selectedProblems={selectedProblems}
           batchDeleteMode={batchDeleteMode}
@@ -1239,6 +1327,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           onToggleSelectAll={handleBatchSelectAll}
           onBatchSelectAll={toggleSelectAll}
           onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
+        />
+
+        {/* 2026-09-21：问题列表分页（与农事任务表格一致：底部 Pagination 组件） */}
+        <Pagination
+          currentPage={problemsCurrentPage}
+          totalPages={Math.ceil(filteredProblems.length / problemsPageSize) || 1}
+          pageSize={problemsPageSize}
+          onPageChange={setProblemsCurrentPage}
+          onPageSizeChange={(size) => { setProblemsPageSize(size); setProblemsCurrentPage(1); }}
+          showPageSize={true}
         />
         </div>
 
@@ -1278,9 +1376,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               <List className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>
                 <div className="text-sm font-medium text-blue-800">关联任务说明</div>
-                <div className="text-sm text-blue-600 mt-1">
-                  这些任务是由问题分派创建的。完成任务后，问题状态会自动更新为"已处理"。
-                  请前往 <span className="font-medium">任务中心</span> 或 <span className="font-medium">任务工单管理</span> 页面完成任务。
+                {/* 2026-09-21：更新文案（更准确描述3 类任务的来源 + 验收流程） */}
+                <div className="text-sm text-blue-600 mt-1 space-y-1">
+                  <div>
+                    本面板列出与<strong>本问题</strong>关联的全部任务与巡查记录，包含由"问题分派"接口派出的<strong>农事任务</strong>和<strong>临时任务</strong>，以及手工关联的<strong>巡查记录</strong>。
+                  </div>
+                  <div>
+                    完成任务后（农事/临时任务），需由分派员或验收员在任务详情页<strong>点击"验收通过"</strong>，才会自动将本问题标记为"已处理"。
+                  </div>
+                  <div>
+                    点击表格中的<strong>任务编号</strong>可跳转到对应任务的详情/验收页。
+                  </div>
                 </div>
               </div>
             </div>
@@ -1292,6 +1398,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               <Table>
                 <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <TableRow>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">类型</TableHead>
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务编号</TableHead>
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务标题</TableHead>
                     <TableHead className="px-4 py-3 text-left text-sm font-semibold">温室</TableHead>
@@ -1307,12 +1414,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 <TableBody className="divide-y divide-gray-100">
                   {linkedTasks.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                      <TableCell colSpan={11} className="px-4 py-12 text-center text-gray-400">
                         暂无分派任务
                       </TableCell>
                     </TableRow>
                   ) : (
-                    linkedTasks.map((task: any) => {
+                    paginatedLinkedTasks.map((task: any) => {
                       // 2026-09-20：补 waitingAcceptanceProblems —— 原查找漏了"待验收"状态，
                       //   处于待验收的问题在关联任务里会被当成"无来源问题"（显示 -）
                       const problem = [
@@ -1335,8 +1442,29 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                       // 2026-09-20：来源问题状态原来是英文（completed 等），改用中文映射；
                       //   颜色分支同时改用中文比对（原来按中文比对英文值，永远走灰色默认）
                       const problemStatusCn = problem ? getStatusCN((problem as any).status) : '';
+                      // 2026-09-21：任务类型徽章（农事/临时/巡查）+ 待我验收快捷按钮
+                      const taskTypeConfig: Record<string, { label: string; bg: string; text: string }> = {
+                        farm:       { label: '农事', bg: 'bg-blue-100',   text: 'text-blue-700' },
+                        tempTask:   { label: '临时', bg: 'bg-amber-100',  text: 'text-amber-700' },
+                        inspection: { label: '巡查', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                      };
+                      const taskType = taskTypeConfig[task.type || task.kind] || { label: task.kind || '?', bg: 'bg-gray-100', text: 'text-gray-600' };
+                      // 「待我验收」快捷按钮可见条件：
+                      //   1. 任务状态为 waiting_acceptance
+                      //   2. 当前登录用户名 与 任务 assigneeId 一致（V1.1 用文本字段做匹配，因 V1.1 assigneeId 是 hash 字符串）
+                      //   3. 临时任务 / 巡查的 assigneeId 暂未填，默认关闭（task.type === 'farm' 时判断）
+                      const isWaitingAcceptance = task.status === 'waiting_acceptance';
+                      const isMyAcceptanceTask =
+                        task.type === 'farm' &&
+                        currentUserName &&
+                        task.assigneeName === currentUserName;
                       return (
                         <TableRow key={task.id} className="hover:bg-emerald-50 transition-colors">
+                          <TableCell className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${taskType.bg} ${taskType.text}`}>
+                              {taskType.label}
+                            </span>
+                          </TableCell>
                           <TableCell className="px-4 py-3 text-sm font-mono text-gray-600">
                             {task.taskCode}
                           </TableCell>
@@ -1364,20 +1492,43 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                             </span>
                           </TableCell>
                           <TableCell className="px-4 py-3">
-                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              task.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                              task.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
-                              task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {task.status === 'pending' ? '待执行' :
-                               task.status === 'in_progress' ? '进行中' :
-                               task.status === 'completed' ? '已完成' :
-                               task.status === 'cancelled' ? '已取消' :
-                               task.status === 'not_started' ? '未开始' :
-                               task.status === 'paused' ? '已暂停' : '未知'}
-                            </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                task.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                task.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
+                                task.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {task.status === 'pending' ? '待执行' :
+                                 task.status === 'in_progress' ? '进行中' :
+                                 task.status === 'completed' ? '已完成' :
+                                 task.status === 'cancelled' ? '已取消' :
+                                 task.status === 'not_started' ? '未开始' :
+                                 task.status === 'paused' ? '已暂停' : '未知'}
+                              </span>
+                              {/* 2026-09-21：「待我验收」快捷按钮（仅农事任务 + 任务执行人 = 当前用户时显示） */}
+                              {isWaitingAcceptance && isMyAcceptanceTask && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // 跳转到任务详情弹窗（已在 FarmTaskHub 中通过 setDetailTaskId 控制）
+                                    // 这里用全局事件总线触发：dispatchEvent 模拟一次详情打开
+                                    // 简化方案：直接通过 window.history 跳到任务详情页
+                                    // 农事任务详情页路径：根据 App.tsx 通常是 /tasks/:id 或弹窗
+                                    // 这里采用 URL 跳转 + 后续 tab 状态保持（如有 hash）
+                                    if (task.type === 'farm') {
+                                      // 触发自定义事件，让 FarmTaskHub 打开 TaskDetailModal
+                                      window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors"
+                                  title="点击打开任务详情并直接进入验收"
+                                >
+                                  ✓ 待我验收
+                                </button>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-sm">
                             {problem ? (
@@ -1413,6 +1564,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 </TableBody>
               </Table>
             </div>
+
+            {/* 2026-09-21：关联任务分页（与农事任务表格一致） */}
+            <Pagination
+              currentPage={linkedCurrentPage}
+              totalPages={Math.ceil(linkedTasks.length / linkedPageSize) || 1}
+              pageSize={linkedPageSize}
+              onPageChange={setLinkedCurrentPage}
+              onPageSizeChange={(size) => { setLinkedPageSize(size); setLinkedCurrentPage(1); }}
+              showPageSize={true}
+            />
           </div>
         </div>
       )}

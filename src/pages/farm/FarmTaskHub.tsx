@@ -165,6 +165,16 @@ export function FarmTaskHub() {
   // 任务刷新计数器
   const [taskRefresh, setTaskRefresh] = useState(0);
 
+  // 2026-09-21：响应「待我验收」快捷按钮的自定义事件（从 ProblemTab 关联任务列表触发）
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ taskId: string }>).detail;
+      if (detail?.taskId) setDetailTaskId(detail.taskId);
+    };
+    window.addEventListener('open-task-detail', handler);
+    return () => window.removeEventListener('open-task-detail', handler);
+  }, []);
+
   // 2026-09-20 卡死修复：tab 首次访问后保持挂载，仅用 CSS 隐藏非活动 tab。
   //   根因（CDP 断点实测）：Radix Select 内部用 useState 存 DOM 节点，并把 setState 当 ref 回调
   //   传给元素（ref={composeRefs(forwardedRef, setTrigger)}，见 @radix-ui/react-select）。
