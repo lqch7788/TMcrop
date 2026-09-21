@@ -29,6 +29,28 @@ const PROBLEM_STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 /**
+ * problems 表真实列白名单（2026-09-21 新增）
+ *
+ * 用途：PUT /api/problems/:id 只允许白名单内的列名参与 SQL 拼接。
+ * 此前 updates 的键名是直接拼进 `SET ${k} = ?` 的，请求体里可控的键名可以注入 SQL
+ * （例如构造键名把 WHERE 子句注释掉，造成全表改写）。
+ * farmTask.ts 早有同类 validDbColumns 白名单，此处补齐以保持口径一致。
+ */
+const PROBLEM_DB_COLUMNS = new Set<string>([
+  'id', 'problem_code', 'problem_type', 'title', 'description',
+  'greenhouse_name', 'reporter_id', 'reporter_name', 'assignee_id', 'assignee_name',
+  'priority', 'status', 'create_time', 'update_time', 'greenhouse_id',
+  'crop_name', 'inspector_id', 'inspector_name', 'check_date', 'check_time',
+  'weather', 'temperature', 'humidity', 'crop_status', 'plant_height',
+  'leaf_count', 'issue_text', 'issue_severity', 'handler', 'handle_date',
+  'handle_result', 'source_task_id', 'flow_records', 'rework_count', 'accepted_by',
+  'accepted_time', 'rejected_by', 'rejected_reason', 'rejected_time', 'completion_time',
+  'expected_completion', 'remarks', 'images', 'source_module', 'source_id',
+  'source_detail', 'rectification_progress', 'recheck_required', 'recheck_result', 'recheck_at',
+  'rechecker_id', 'recurrence_count', 'tenant_id',
+]);
+
+/**
  * 标准化问题状态值（将中文转换为英文）
  */
 function normalizeProblemStatus(status?: string): string {
@@ -201,14 +223,16 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     // camelCase → snake_case 字段名映射（保证前端发送的字段能正确写入DB列）
+    // 2026-09-21 修复：移除 7 个 problems 表中并不存在的列映射
+    //   source_type / inspection_id / inspection_code / handler_id / handler_name /
+    //   resolve_time / assigned_at —— 前端按旧约定发送这些字段会得到
+    //   `no such column: xxx` 500（例如发 handlerId）。
     const FIELD_MAP: Record<string, string> = {
       problemCode: 'problem_code', problemType: 'problem_type',
       greenhouseId: 'greenhouse_id', greenhouseName: 'greenhouse_name',
       reporterId: 'reporter_id', reporterName: 'reporter_name',
       assigneeId: 'assignee_id', assigneeName: 'assignee_name',
-      sourceType: 'source_type', sourceId: 'source_id',
-      inspectionId: 'inspection_id', inspectionCode: 'inspection_code',
-      handlerId: 'handler_id', handlerName: 'handler_name',
+      sourceId: 'source_id',
       handleResult: 'handle_result', handleDate: 'handle_date',
       sourceTaskId: 'source_task_id',
       flowRecords: 'flow_records',
@@ -219,7 +243,6 @@ router.put('/:id', (req: Request, res: Response) => {
       expectedCompletion: 'expected_completion',
       sourceModule: 'source_module', sourceDetail: 'source_detail',
       createTime: 'create_time', updateTime: 'update_time',
-      resolveTime: 'resolve_time', assignedAt: 'assigned_at',
       cropName: 'crop_name',
       inspectorId: 'inspector_id', inspectorName: 'inspector_name',
       checkDate: 'check_date', checkTime: 'check_time',
@@ -251,12 +274,20 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    // 2026-09-21：列名白名单过滤 —— 只保留 problems 表真实存在的列，杜绝键名注入
+    const safeKeys = Object.keys(updates).filter(k => k !== 'id' && PROBLEM_DB_COLUMNS.has(k));
+    const droppedKeys = Object.keys(updates).filter(k => k !== 'id' && !PROBLEM_DB_COLUMNS.has(k));
+    if (droppedKeys.length > 0) {
+      // Fail Loud：被丢弃的字段必须可见，避免再次出现「前端发了字段但静默不生效」
+      console.warn(`[problems PUT] 忽略非白名单字段: ${droppedKeys.join(', ')}`);
+    }
+
+    const fields = safeKeys.map(k => `${k} = ?`).join(', ');
     if (fields.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const values = safeKeys.map(k => updates[k]);
     values.push(now, id);
 
     db.run(`UPDATE problems SET ${fields}, update_time = ? WHERE id = ?`, values);
