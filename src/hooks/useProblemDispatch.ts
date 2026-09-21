@@ -159,6 +159,27 @@ export function useProblemDispatch() {
   // 辅助：获取 flowRecords（数组）
   const getFlowRecords = (p: ProblemData): ProblemFlowRecord[] => p.flowRecords || [];
 
+  // 辅助：读取 store 中该问题的**最新**流转记录
+  // 2026-09-20 修复（流转记录覆盖丢失）：原实现在各处用调用时捕获的 `problem` 快照构建
+  //   flowRecords，而同一交互里可能连续调用两个函数（如 MyTasksPage 提交时先
+  //   addProgressRecord 再 submitProblemFeedback），两者读的是同一份旧快照，
+  //   后一次写入会把前一次的记录整体覆盖掉（实测 DB 中 progress 记录凭空消失）。
+  //   改为一律以 store 最新值为基，保证多次写入正确叠加。
+  const getLatestFlowRecords = (problemId: number | string): ProblemFlowRecord[] => {
+    const latest = useProblemStore.getState().problems.find(
+      (p) => String(p.id) === String(problemId)
+    );
+    return (latest?.flowRecords || []) as ProblemFlowRecord[];
+  };
+
+  // 辅助：按 sourceProblemId 反查该问题分派出的真实任务
+  // 2026-09-20 修复（乐观 ID 失配）：problems.source_task_id 存的是分派时前端生成的乐观
+  //   ID（形如 TEMP-1789886071455），后端随后分配正式 ID（如 NS20260920-532）并未回写，
+  //   因此直接 updateTaskStatus(problem.sourceTaskId) 会指向一个不存在的任务并静默失效。
+  //   改为按 farm_tasks.source_problem_id 反查真实任务（该字段是可靠的双向关联）。
+  const findTaskByProblem = (problemId: number | string) =>
+    (tasks as any[]).find((t) => String(t.sourceProblemId) === String(problemId));
+
   // 待分派问题（状态为"待处理"且未关联任务）
   const pendingProblems = useMemo(
     () => storeProblems.filter(p => isStatus(p, STATUS_CN.PENDING) && !p.sourceTaskId),
@@ -259,7 +280,7 @@ export function useProblemDispatch() {
     };
 
     // 通过 API Store 更新问题
-    const currentFlowRecords = getFlowRecords(problem);
+    const currentFlowRecords = getLatestFlowRecords(problemId);
     updateProblemInStore(problemId, {
       status: STATUS_EN.IN_PROGRESS,
       handler: assigneeName,
@@ -350,7 +371,7 @@ export function useProblemDispatch() {
     updateProblemInStore(problemId, {
       acceptedBy: operatorName,
       acceptedTime: new Date().toISOString(),
-      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+      flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
   }, [storeProblems, updateProblemInStore]);
 
@@ -384,7 +405,7 @@ export function useProblemDispatch() {
       rejectedTime: new Date().toISOString(),
       handler: '',
       sourceTaskId: '',
-      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+      flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
   }, [storeProblems, updateProblemInStore]);
 
@@ -420,7 +441,7 @@ export function useProblemDispatch() {
       status: STATUS_EN.WAITING_ACCEPTANCE,
       handleResult: feedback.resultText,
       handleDate: todayLocal(),
-      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+      flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
   }, [storeProblems, updateProblemInStore]);
 
@@ -451,7 +472,7 @@ export function useProblemDispatch() {
     };
 
     updateProblemInStore(problemId, {
-      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+      flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
   }, [storeProblems, updateProblemInStore]);
 
@@ -481,14 +502,15 @@ export function useProblemDispatch() {
     updateProblemInStore(problemId, {
       status: STATUS_EN.COMPLETED,
       completionTime: new Date().toISOString(),
-      flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+      flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
     });
 
-    // 同步更新关联任务
-    if (problem.sourceTaskId) {
-      updateTaskStatus(problem.sourceTaskId, 'completed');
+    // 同步更新关联任务（按 sourceProblemId 反查真实任务，见 findTaskByProblem 注释）
+    const linkedTask = findTaskByProblem(problemId);
+    if (linkedTask) {
+      updateTaskStatus(linkedTask.id, 'completed');
     }
-  }, [storeProblems, updateProblemInStore, updateTaskStatus]);
+  }, [storeProblems, updateProblemInStore, updateTaskStatus, tasks]);
 
   // 验收返工
   const rejectAcceptance = useCallback((
@@ -522,21 +544,23 @@ export function useProblemDispatch() {
         handler: '',
         sourceTaskId: '',
         reworkCount: newReworkCount,
-        flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+        flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
       });
-      if (problem.sourceTaskId) {
-        updateTaskStatus(problem.sourceTaskId, 'rejected');
+      const linkedTaskRejected = findTaskByProblem(problemId);
+      if (linkedTaskRejected) {
+        updateTaskStatus(linkedTaskRejected.id, 'rejected');
       }
     } else {
       updateProblemInStore(problemId, {
         reworkCount: newReworkCount,
-        flowRecords: [...getFlowRecords(problem), flowRecord] as any,
+        flowRecords: [...getLatestFlowRecords(problemId), flowRecord] as any,
       });
-      if (problem.sourceTaskId) {
-        updateTaskStatus(problem.sourceTaskId, 'in_progress');
+      const linkedTaskRework = findTaskByProblem(problemId);
+      if (linkedTaskRework) {
+        updateTaskStatus(linkedTaskRework.id, 'in_progress');
       }
     }
-  }, [storeProblems, updateProblemInStore, updateTaskStatus]);
+  }, [storeProblems, updateProblemInStore, updateTaskStatus, tasks]);
 
   // 获取问题流转记录
   const getProblemFlowRecords = useCallback((problemId: number): ProblemFlowRecord[] => {
