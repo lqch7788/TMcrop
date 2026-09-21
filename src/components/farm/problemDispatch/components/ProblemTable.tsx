@@ -8,17 +8,12 @@ import { CheckCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { SourceCell } from './SourceCell';
 import { Input } from '@/components/ui';
+import { problemStatusToCN } from '@/utils/problemStatus';
 
-// 状态映射：后端英文 → 前端中文
-const STATUS_CN_MAP: Record<string, string> = {
-  'pending': '待处理',
-  'in_progress': '处理中',
-  'waiting_acceptance': '待验收',
-  'completed': '已处理',
-};
-
-/** 将后端英文状态转为中文显示 */
-const getStatusCN = (status: string): string => STATUS_CN_MAP[status] || status;
+// 2026-09-21：状态映射表已上移到 src/utils/problemStatus.ts（唯一真相源）。
+//   原先本文件与 ProblemTab 各维护一份 STATUS_CN_MAP，内容已有细微出入。
+//   保留原函数名做薄封装，避免改动本文件内已有调用点。
+const getStatusCN = problemStatusToCN;
 
 interface ProblemEntry {
   id: number;

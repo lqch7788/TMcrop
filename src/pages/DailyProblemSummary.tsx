@@ -15,6 +15,7 @@ import {
 } from '../components/summary';
 import { useDailyProblemSummary, useProblemDispatch } from '../hooks';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
+import { problemStatusToCN, isProblemStatus } from '../utils/problemStatus';
 
 export default function DailyProblemSummary() {
   // 筛选状态
@@ -318,12 +319,13 @@ export default function DailyProblemSummary() {
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <div className="text-xs text-gray-500 mb-1">状态</div>
                     <div className="text-sm font-medium">
+                      {/* 2026-09-21 修复：原用中文比对英文枚举（恒不命中）+ 原样输出英文值 */}
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        detailModal.data.status === '已处理' ? 'bg-green-100 text-green-700' :
-                        detailModal.data.status === '处理中' ? 'bg-amber-100 text-amber-700' :
+                        problemStatusToCN(detailModal.data.status) === '已处理' ? 'bg-green-100 text-green-700' :
+                        problemStatusToCN(detailModal.data.status) === '处理中' ? 'bg-amber-100 text-amber-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {detailModal.data.status}
+                        {problemStatusToCN(detailModal.data.status)}
                       </span>
                     </div>
                   </div>
@@ -357,7 +359,9 @@ export default function DailyProblemSummary() {
               )}
 
               {/* 分派操作 - 仅待处理状态显示 */}
-              {detailModal.data.status === '待处理' && !detailModal.data.sourceTaskId && (
+              {/* 2026-09-21 修复：原先用中文 '待处理' 比对英文枚举 pending，条件恒为 false，
+                  导致该分派按钮永远不会出现。 */}
+              {isProblemStatus(detailModal.data.status, 'pending') && !detailModal.data.sourceTaskId && (
                 <div className="mb-6">
                   <button
                     onClick={() => {

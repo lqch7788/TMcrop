@@ -5,6 +5,7 @@ import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 import { TextArea } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
+import { problemStatusToCN } from '@/utils/problemStatus';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -176,14 +177,15 @@ export function BatchEditModal({
             </FormField>
 
             {/* 当前状态 - 不可编辑 */}
+            {/* 2026-09-21 修复：原用中文比对英文枚举（恒不命中）+ 原样输出英文值 */}
             <div className="bg-gray-100 rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">当前状态</div>
               <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                currentProblem.status === '已处理' ? 'bg-green-100 text-green-700' :
-                currentProblem.status === '处理中' ? 'bg-amber-100 text-amber-700' :
+                problemStatusToCN(currentProblem.status) === '已处理' ? 'bg-green-100 text-green-700' :
+                problemStatusToCN(currentProblem.status) === '处理中' ? 'bg-amber-100 text-amber-700' :
                 'bg-gray-100 text-gray-700'
               }`}>
-                {currentProblem.status}
+                {problemStatusToCN(currentProblem.status)}
               </span>
             </div>
 

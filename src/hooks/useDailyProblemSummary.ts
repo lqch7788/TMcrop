@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { DailyProblemSummaryRow, DailyProblemStatCard, DailyProblemFilters } from '../types/views';
 import { usePersistentProblems, type ProblemEntry } from './usePersistentProblems';
+import { isProblemStatus } from '../utils/problemStatus';
 import {
   getProblemDailySummary,
   getProblemSummaryOverview,
@@ -75,9 +76,10 @@ export function useDailyProblemSummary(filters?: DailyProblemFilters) {
         date,
         month: date.substring(0, 7),
         total: dateProblems.length,
-        pending: dateProblems.filter(p => p.status === '待处理').length,
-        in_progress: dateProblems.filter(p => p.status === '处理中').length,
-        resolved: dateProblems.filter(p => p.status === '已处理').length,
+        // 2026-09-21 修复：原用中文比对英文枚举，7 处条件恒为 false → 日报统计全部为 0
+        pending: dateProblems.filter(p => isProblemStatus(p.status, 'pending')).length,
+        in_progress: dateProblems.filter(p => isProblemStatus(p.status, 'in_progress')).length,
+        resolved: dateProblems.filter(p => isProblemStatus(p.status, 'completed')).length,
         high_priority: dateProblems.filter(p => p.issueSeverity === '严重').length,
         medium_priority: dateProblems.filter(p => p.issueSeverity === '中等').length,
         low_priority: dateProblems.filter(p => p.issueSeverity === '轻微').length,
@@ -90,9 +92,9 @@ export function useDailyProblemSummary(filters?: DailyProblemFilters) {
     const total = problems.length;
     setOverview({
       total,
-      pending: problems.filter(p => p.status === '待处理').length,
-      in_progress: problems.filter(p => p.status === '处理中').length,
-      resolved: problems.filter(p => p.status === '已处理').length,
+      pending: problems.filter(p => isProblemStatus(p.status, 'pending')).length,
+      in_progress: problems.filter(p => isProblemStatus(p.status, 'in_progress')).length,
+      resolved: problems.filter(p => isProblemStatus(p.status, 'completed')).length,
       high_priority: problems.filter(p => p.issueSeverity === '严重').length,
       month_new: problems.filter(p => {
         const problemDate = new Date(p.checkDate);
@@ -100,7 +102,7 @@ export function useDailyProblemSummary(filters?: DailyProblemFilters) {
         return problemDate.getMonth() === now.getMonth() && problemDate.getFullYear() === now.getFullYear();
       }).length,
       trend: 0,
-      resolution_rate: total > 0 ? Math.round((problems.filter(p => p.status === '已处理').length / total) * 100) : 0,
+      resolution_rate: total > 0 ? Math.round((problems.filter(p => isProblemStatus(p.status, 'completed')).length / total) * 100) : 0,
     });
   }, [problems]);
 

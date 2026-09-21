@@ -5,6 +5,25 @@ import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
 import { useUserStore, useProblemStore } from '../../../../stores';
+import { isProblemAwaitingAcceptance, problemStatusToCN } from '../../../../utils/problemStatus';
+
+/**
+ * 流转记录状态徽章的配色类名
+ * 2026-09-21：先经 problemStatusToCN 归一化再比对 —— 原实现直接用中文比对英文枚举，
+ *   三个分支全部命中不到，所有状态都渲染成灰色兜底。
+ */
+function getFlowStatusClass(status: string): string {
+  switch (problemStatusToCN(status)) {
+    case '已处理':
+      return 'bg-green-100 text-green-700';
+    case '待验收':
+      return 'bg-amber-100 text-amber-700';
+    case '处理中':
+      return 'bg-blue-100 text-blue-700';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
+}
 
 // 动作类型中文映射
 const ACTION_LABELS: Record<string, string> = {
@@ -591,7 +610,9 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
               )}
 
               {/* 验收按钮 - 当问题状态为待验收时显示 */}
-              {problem.status === '待验收' && onAcceptProblem && (
+              {/* 2026-09-21 修复：原先用中文 '待验收' 比对，而 store/DB 中是英文枚举
+                  waiting_acceptance，条件恒为 false → 该按钮永远不会渲染。 */}
+              {isProblemAwaitingAcceptance(problem.status) && onAcceptProblem && (
                 <div className="mt-4 pt-4 border-t border-red-200">
                   <Button
                     variant="default"
@@ -665,13 +686,9 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                               )}
                               <span className="text-gray-400">→</span>
                               {record.toStatus && (
-                                <span className={`px-2 py-0.5 text-xs rounded ${
-                                  record.toStatus === '已处理' ? 'bg-green-100 text-green-700' :
-                                  record.toStatus === '待验收' ? 'bg-amber-100 text-amber-700' :
-                                  record.toStatus === '处理中' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {record.toStatus}
+                                <span className={`px-2 py-0.5 text-xs rounded ${getFlowStatusClass(record.toStatus)}`}>
+                                  {/* 显示也需归一化：原样渲染会把 waiting_acceptance 这类英文枚举暴露给用户 */}
+                                  {problemStatusToCN(record.toStatus)}
                                 </span>
                               )}
                             </div>
