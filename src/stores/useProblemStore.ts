@@ -266,13 +266,28 @@ export const useProblemStore = create<ProblemState>()(
       },
 
       deleteProblems: async (ids) => {
+        // 2026-09-21 修复：原先每个请求都 `.catch(() => {})` 吞错，且无论成败恒 return true。
+        //   后端失败时本地已乐观删除、调用方以为成功、刷新后记录"复活"，全程零提示。
+        //   现改为：allSettled 精确统计 → 失败项回滚本地 → 抛错由调用方提示用户（Fail Loud）。
+        const removed = get().problems.filter((p) => ids.includes(p.id));
         set((state) => ({ problems: state.problems.filter((p) => !ids.includes(p.id)) }));
-        try {
-          await Promise.all(ids.map((id) =>
-            enhancedApiClient.delete(`/problems/${id}`).catch(() => {})
-          ));
-          return true;
-        } catch { return false; }
+
+        const results = await Promise.allSettled(
+          ids.map((id) => enhancedApiClient.delete(`/problems/${id}`))
+        );
+        const failedIds = ids.filter((_, i) => results[i].status === 'rejected');
+
+        if (failedIds.length > 0) {
+          // 只回滚失败的那些，已成功的保持删除结果
+          set((state) => {
+            const existing = new Set(state.problems.map((p) => p.id));
+            const restore = removed.filter((p) => failedIds.includes(p.id) && !existing.has(p.id));
+            return { problems: [...restore, ...state.problems] };
+          });
+          console.error(`[ProblemStore] 批量删除失败 ${failedIds.length}/${ids.length} 条，已回滚失败项:`, failedIds);
+          throw new Error(`批量删除失败：${failedIds.length}/${ids.length} 条未删除`);
+        }
+        return true;
       },
     }
   )
