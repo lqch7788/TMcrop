@@ -61,8 +61,8 @@ export default function BatchCostAnalysisPage() {
         if (cancelled) return;
         messageApi.error('加载失败：' + (err instanceof Error ? err.message : String(err)));
       } finally {
-        if (cancelled) return;
-        setLoading(false);
+        // 组件已卸载时跳过 setState；不能在 finally 里 return，会吞掉 try/catch 的异常
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
