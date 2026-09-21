@@ -11,6 +11,8 @@ import { useWorkLogStore, WorkLog } from '../stores/useWorkLogStore';
 import { InspectionRecord } from '../types';
 import { useInspectionDataStore, useProblemStore } from '../stores';
 import { getTodayTaskRecords, getAllTaskRecords } from '../services/apiFarmTaskService';
+import { showAlert } from '@/lib/dialogService';
+import { isProblemStatus } from '../utils/problemStatus';
 export interface InspectionSearchFilters {
   recordCode: string;
   inspectorName: string;
@@ -357,11 +359,13 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
     const abnormalInspections = inspections.filter(i =>
       i.status === 'critical' || i.status === 'abnormal'
     ).length;
+    // 2026-09-21 修复：原先用中文比对英文枚举，两个统计恒为 0
+    //   （顶部看板的「待处理问题 / 已处理问题」一直显示 0，而库里实际有 30 条问题）
     const pendingProblems = problems.filter(p =>
-      ['待处理', '处理中'].includes(p.status)
+      isProblemStatus(p.status, 'pending') || isProblemStatus(p.status, 'in_progress')
     ).length;
     const processedProblems = problems.filter(p =>
-      p.status === '已处理'
+      isProblemStatus(p.status, 'completed')
     ).length;
 
     return {
@@ -407,7 +411,11 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       const storeWorkLogs = useWorkLogStore.getState().workLogs;
       setOperationRecords(storeWorkLogs || []);
     } catch (error) {
-      // loadData 失败
+      // 2026-09-21 修复：原 catch 体为空（只有一行注释）。后端不可用时，
+      //   问题/巡查/操作记录三个列表全部停在空数组，页面看起来"就是没有数据"，
+      //   用户完全不知道是加载失败。现记录日志并明确提示（项目铁律：网络失败直接提示用户）。
+      console.error('[useFarmHub] 加载问题/巡查/操作记录失败:', error);
+      showAlert(`数据加载失败：${(error as Error).message || '请检查后端服务是否正常'}`);
     } finally {
       setIsLoading(false);
       // loadData 完成

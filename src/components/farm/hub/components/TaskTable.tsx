@@ -68,7 +68,10 @@ interface TaskTableProps {
     senderName: string
   ) => void;
   // 操作回调
-  onSelectRow: (index: number) => void;
+  // 2026-09-21 修复：回调参数由「页内下标」改为「任务 id」。
+  //   原实现传的是 paginatedTasks 的页内 index，而消费方 TaskTab 拿它去索引
+  //   全量的 filteredTasks，翻页后必然错位（勾第 2 页的行 → 实际选中第 1 页同行号的任务）。
+  onSelectRow: (taskId: string) => void;
   onSelectAll: () => void;
   onViewDetail: (task: Task) => void;
   onViewSop?: (task: Task) => void;
@@ -80,6 +83,12 @@ interface TaskTableProps {
   onReassign?: (task: Task) => void;
   onSelectExecutor?: (task: Task) => void;
   onPublish?: (task: Task) => void;  // 发布草稿任务
+  // 2026-09-21 修复：这两个 prop 此前在 TaskTableProps 里缺失，
+  //   TaskTab 传进来的 onBatchAssign 被静默丢弃（tsc 也一直在报），
+  //   onRemind 则从未被 TaskTab 传出 —— 结果 TaskTableRow 里依赖它们的
+  //   「批量分配」和「催办」按钮条件恒为 false，永远不会渲染。
+  onBatchAssign?: (task: Task) => void;   // 批量分配（选工人+日期范围生成排班）
+  onRemind?: (task: Task) => void;        // 催办
   // 是否为"我的任务"视图（true=执行人视图，显示接受/拒绝；false=管理者视图，显示撤回/取消）
   isMyTasksView?: boolean;
   onPageChange: (page: number) => void;
@@ -90,6 +99,11 @@ interface TaskTableProps {
   onConfirmBatchEdit?: () => void;
   onCancelBatchEdit?: () => void;
   onCancelBatchDelete?: () => void;
+  // 2026-09-21 修复：批量派发 / 批量验收两个模式的「取消」此前都绑到了 onCancelBatchDelete，
+  //   点取消会把工具栏切进 batchDelete（红色"确认删除"）而不是退出当前模式 —— 极易误删。
+  //   现为这两个模式补上各自的取消回调（batchReassign 早已有 onCancelBatchReassign）。
+  onCancelBatchDispatch?: () => void;
+  onCancelBatchVerify?: () => void;
   onBatchDelete?: () => void;
   onConfirmBatchDelete?: () => void;
   onBatchDispatch?: () => void;
@@ -130,6 +144,8 @@ export function TaskTable({
   onReassign,
   onSelectExecutor,
   onPublish,
+  onBatchAssign,
+  onRemind,
   isMyTasksView = false,
   onPageChange,
   onPageSizeChange,
@@ -139,6 +155,8 @@ export function TaskTable({
   onConfirmBatchEdit,
   onCancelBatchEdit,
   onCancelBatchDelete,
+  onCancelBatchDispatch,
+  onCancelBatchVerify,
   onBatchDelete,
   onConfirmBatchDelete,
   onBatchDispatch,
@@ -256,7 +274,7 @@ export function TaskTable({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={onCancelBatchDelete}
+                onClick={() => onCancelBatchDispatch?.()}
               >
                 <X className="w-4 h-4" /> 取消
               </Button>
@@ -274,7 +292,7 @@ export function TaskTable({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={onCancelBatchDelete}
+                onClick={() => onCancelBatchVerify?.()}
               >
                 <X className="w-4 h-4" /> 取消
               </Button>
@@ -438,7 +456,7 @@ export function TaskTable({
                   isSelected={selectedIds.includes(task.id)}
                   isSelectable={isSelectable}
                   selectableReason={selectableReason}
-                  onSelect={() => onSelectRow(index)}
+                  onSelect={() => onSelectRow(task.id)}
                   onViewDetail={() => onViewDetail(task)}
                   onViewSop={onViewSop ? () => onViewSop(task) : undefined}
                   onAccept={onAccept ? () => onAccept(task) : undefined}
@@ -449,6 +467,8 @@ export function TaskTable({
                   onReassign={onReassign ? () => onReassign(task) : undefined}
                   onSelectExecutor={onSelectExecutor ? () => onSelectExecutor(task) : undefined}
                   onPublish={onPublish ? () => onPublish(task) : undefined}
+                  onBatchAssign={onBatchAssign ? () => onBatchAssign(task) : undefined}
+                  onRemind={onRemind ? () => onRemind(task) : undefined}
                   isMyTasksView={isMyTasksView}
                   canRemind={canRemind}
                   sendReminder={sendReminder}
