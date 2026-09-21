@@ -656,13 +656,16 @@ export function TempTaskPage() {
       } else {
         // ========== 数据闭环：新建临时任务 ==========
         // 根据派发模式和状态决定最终状态
-        let finalStatus: 'pending' | 'draft' | 'pending_ai' = 'draft';
+        // 2026-09-21 修复：同 TempTaskTab —— 不再写入 'pending_ai'。
+        //   那是 dispatchStatus（派发状态）的取值，不属于 TempTaskStatus（执行状态），
+        //   写入后会让 TempTaskTable 的 statusConfig[status].bg 取到 undefined 抛 TypeError
+        //   → ErrorBoundary 接管 → 整页白屏。AI 推荐流程尚未实现，统一落到 'pending'。
+        let finalStatus: 'pending' | 'draft' = 'draft';
         if (status === 'pending') {
           if (dispatchMode === 'ai_assisted') {
-            finalStatus = 'pending_ai'; // 待AI推荐
-          } else {
-            finalStatus = 'pending'; // 直接派发
+            console.warn('[TempTaskPage] AI 智能推荐派发流程尚未实现，任务先按「待接受」保存');
           }
+          finalStatus = 'pending';
         }
         // 计算总工时
         const totalEstimatedHours = ((taskData.estimatedDays || 0) * 8 + (taskData.estimatedHours || 0)) * (taskData.workerCount || 1);
