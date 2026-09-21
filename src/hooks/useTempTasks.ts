@@ -319,7 +319,8 @@ export interface UseTempTasksReturn {
   rejectCompletion: (id: string, reason: string) => void;
 
   // 删除临时任务
-  deleteTempTask: (id: string) => void;
+  // 2026-09-21：改为返回 Promise，失败时 reject（调用方需 await 并汇总提示）
+  deleteTempTask: (id: string) => Promise<void>;
 
   // 获取临时任务
   getTempTask: (id: string) => TempTask | undefined;
@@ -346,10 +347,12 @@ export function useTempTasks(): UseTempTasksReturn {
   }, []);
 
   // 订阅 Store 变更，自动同步本地状态（解决跨组件状态不一致问题）
+  // 2026-09-21 修复：原条件 `if (storeTasks.length > 0)` 在 store 被清空时不更新本地副本。
+  //   useTempTasks 被多处调用，每个实例各持一份本地 useState 副本；删掉最后一条临时任务时，
+  //   删除方本地立即更新，而观察方（FarmTaskHub 的 tab 徽章）因守卫不成立而保持旧值 →
+  //   出现"徽章显示 1、列表已空"。改为无条件同步，空数组同样要同步。
   useEffect(() => {
-    if (storeTasks.length > 0) {
-      setTempTasks(storeTasks.map(mapStoreTaskToTempTask));
-    }
+    setTempTasks(storeTasks.map(mapStoreTaskToTempTask));
   }, [storeTasks]);
   // 操作记录状态（仅内存状态，后端数据库已有持久化）
   // 注：临时任务操作记录已通过后端 API 保存到 task_operation_records 表
@@ -621,11 +624,21 @@ export function useTempTasks(): UseTempTasksReturn {
   }, [tempTasks, operationRecords, saveOperationRecords, updateTempTask]);
 
   // 删除临时任务
-  const deleteTempTask = useCallback((id: string) => {
+  // 2026-09-21 修复：原实现不 await store.deleteTask，失败时本地副本已删、零提示、
+  //   刷新后"删掉的又回来"。现 await + 失败时把本地副本重新对齐 store（store 内部已回滚）+ 抛错，
+  //   由调用方汇总后提示用户。
+  const deleteTempTask = useCallback(async (id: string) => {
     setTempTasks(prev => prev.filter(task => task.id !== id));
 
     // 同步删除后端数据（通过 Zustand Store）
-    store.deleteTask(id);
+    try {
+      await store.deleteTask(id);
+    } catch (error) {
+      // store 已回滚自身状态，这里把本地副本重新同步，避免界面残留"已删除"的假象
+      const latest = useTempTaskStore.getState().tasks;
+      setTempTasks(latest.map(mapStoreTaskToTempTask));
+      throw error;
+    }
   }, [setTempTasks, store]);
 
   // 获取临时任务

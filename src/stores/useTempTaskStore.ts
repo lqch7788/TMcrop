@@ -258,6 +258,8 @@ export const useTempTaskStore = create<TempTaskState>()(
         // 通过 id 或 taskCode 查找实际任务（兼容 unified task 使用 taskCode 作为 id 的情况）
         const existing = get().tasks.find(t => t.id === id || t.taskCode === id);
         const realId = existing?.id || id;
+        // 2026-09-21 修复：原 catch 只有注释，失败时不回滚也不抛错
+        const prev = existing;
         // 乐观更新
         set((state) => ({
           tasks: state.tasks.map((t) => (t.id === realId || t.taskCode === id ? { ...t, ...updates } : t)),
@@ -265,7 +267,13 @@ export const useTempTaskStore = create<TempTaskState>()(
         try {
           await enhancedApiClient.put(`/temp-tasks/${realId}`, body);
         } catch (error) {
-          // logger.warn('[TempTaskStore] 更新任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
+          if (prev) {
+            set((state) => ({
+              tasks: state.tasks.map((t) => (t.id === realId ? prev : t)),
+            }));
+          }
+          console.error('[TempTaskStore] 更新任务失败，已回滚本地改动:', error);
+          throw error;
         }
       },
 
@@ -278,8 +286,13 @@ export const useTempTaskStore = create<TempTaskState>()(
           await enhancedApiClient.delete(`/temp-tasks/${realId}`);
           return true;
         } catch (error) {
-          // logger.warn('[TempTaskStore] 删除任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
-          return false;
+          // 2026-09-21 修复：原 catch 只 return false，而调用方普遍不看返回值，
+          //   失败时行已消失、零提示、刷新后"删掉的又回来"。现回滚 + 抛错。
+          if (existing) {
+            set((state) => ({ tasks: [existing, ...state.tasks] }));
+          }
+          console.error('[TempTaskStore] 删除任务失败，已回滚本地改动:', error);
+          throw error;
         }
       },
 
@@ -292,17 +305,27 @@ export const useTempTaskStore = create<TempTaskState>()(
         });
         const idSet = new Set(ids);
         const realIdSet = new Set(realIds);
+        // 2026-09-21 修复：保留被删项用于失败回滚
+        const removed = allTasks.filter((t) => realIdSet.has(t.id) || idSet.has(t.taskCode || ''));
         set((state) => ({
           tasks: state.tasks.filter((t) => !realIdSet.has(t.id) && !idSet.has(t.taskCode || '')),
         }));
-        try {
-          await Promise.all(realIds.map((rid) =>
-            enhancedApiClient.delete(`/temp-tasks/${rid}`).catch(() => {})
-          ));
-          return true;
-        } catch {
-          return false;
+
+        const results = await Promise.allSettled(
+          realIds.map((rid) => enhancedApiClient.delete(`/temp-tasks/${rid}`))
+        );
+        const failedIds = realIds.filter((_, i) => results[i].status === 'rejected');
+
+        if (failedIds.length > 0) {
+          set((state) => {
+            const existing = new Set(state.tasks.map((t) => t.id));
+            const restore = removed.filter((t) => failedIds.includes(t.id) && !existing.has(t.id));
+            return { tasks: [...restore, ...state.tasks] };
+          });
+          console.error(`[TempTaskStore] 批量删除失败 ${failedIds.length}/${realIds.length} 条，已回滚失败项:`, failedIds);
+          throw new Error(`批量删除失败：${failedIds.length}/${realIds.length} 条未删除`);
         }
+        return true;
       },
     }
   )

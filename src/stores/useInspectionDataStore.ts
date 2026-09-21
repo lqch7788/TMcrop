@@ -162,24 +162,39 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       },
 
       updateRecord: async (id, updates) => {
+        // 2026-09-21 修复：原 catch 只有一行注释，失败时不回滚也不抛错，
+        //   界面停在乐观更新后的状态、用户以为已保存，刷新即回滚且无任何提示。
+        const prev = get().records.find((r) => r.id === id);
         set((state) => ({
           records: state.records.map((r) => (r.id === id ? { ...r, ...updates } : r)),
         }));
         try {
           await enhancedApiClient.put(`/inspections/${id}`, updates);
         } catch (error) {
-          // logger.warn('[InspectionDataStore] 更新失败:', error);
+          if (prev) {
+            set((state) => ({
+              records: state.records.map((r) => (r.id === id ? prev : r)),
+            }));
+          }
+          console.error('[InspectionDataStore] 更新失败，已回滚本地改动:', error);
+          throw error;
         }
       },
 
       deleteRecord: async (id) => {
+        // 2026-09-21 修复：原 catch 只 return false，而调用方（批量删除的 forEach）不看返回值，
+        //   失败时记录已从界面消失、零提示、刷新后"删了又回来"。现改为回滚 + 抛错。
+        const removed = get().records.find((r) => r.id === id);
         set((state) => ({ records: state.records.filter((r) => r.id !== id) }));
         try {
           await enhancedApiClient.delete(`/inspections/${id}`);
           return true;
         } catch (error) {
-          // logger.warn('[InspectionDataStore] 删除失败:', error);
-          return false;
+          if (removed) {
+            set((state) => ({ records: [removed, ...state.records] }));
+          }
+          console.error('[InspectionDataStore] 删除失败，已回滚本地改动:', error);
+          throw error;
         }
       },
     }
