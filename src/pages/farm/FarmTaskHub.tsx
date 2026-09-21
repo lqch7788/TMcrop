@@ -164,6 +164,18 @@ export function FarmTaskHub() {
   const [detailInspectionId, setDetailInspectionId] = useState<string | null>(null);
   // 任务刷新计数器
   const [taskRefresh, setTaskRefresh] = useState(0);
+
+  // 2026-09-20 卡死修复：tab 首次访问后保持挂载，仅用 CSS 隐藏非活动 tab。
+  //   根因（CDP 断点实测）：Radix Select 内部用 useState 存 DOM 节点，并把 setState 当 ref 回调
+  //   传给元素（ref={composeRefs(forwardedRef, setTrigger)}，见 @radix-ui/react-select）。
+  //   切换 tab 时 40+ 个 Select 同时卸载 → React commit 阶段 safelyDetachRef 触发大量 setState
+  //   → 同步渲染死循环（主线程 100% 占满、F12 无响应、无任何 React 报错）。
+  //   保持挂载后，tab 切换只切 CSS 可见性，不再卸载 Radix 组件，同时保留各 tab 的筛选状态。
+  const [visitedTabs, setVisitedTabs] = useState<Set<HubTab>>(() => new Set<HubTab>(['task']));
+  useEffect(() => {
+    const current = hub.state.activeTab;
+    setVisitedTabs((prev) => (prev.has(current) ? prev : new Set(prev).add(current)));
+  }, [hub.state.activeTab]);
   // SOP 弹窗状态
   const [showSopModal, setShowSopModal] = useState(false);
   const [selectedSopContent, setSelectedSopContent] = useState<string>('');
@@ -447,7 +459,8 @@ export function FarmTaskHub() {
 
           {/* Tab内容 */}
           <div className="p-4">
-            {hub.state.activeTab === 'task' && (
+            {visitedTabs.has('task') && (
+              <div className={hub.state.activeTab === 'task' ? '' : 'hidden'}>
               <TaskTab
                 key={taskRefresh}
                 tasks={hub.getFilteredTasks()}
@@ -493,8 +506,10 @@ export function FarmTaskHub() {
                 onExport={handleExport}
                 onBatchReassign={handleBatchReassign}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'inspection' && (
+            {visitedTabs.has('inspection') && (
+              <div className={hub.state.activeTab === 'inspection' ? '' : 'hidden'}>
               <InspectionTab
                 inspections={hub.inspections}
                 stats={{
@@ -542,8 +557,10 @@ export function FarmTaskHub() {
                   // 调用 hub 的巡查批量编辑（打开编辑弹窗）
                 }}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'problem' && (
+            {visitedTabs.has('problem') && (
+              <div className={hub.state.activeTab === 'problem' ? '' : 'hidden'}>
               <ProblemTab
                 // 传递hooks获取实时数据
                 onProblemDispatched={handleProblemDispatched}
@@ -554,24 +571,19 @@ export function FarmTaskHub() {
                   resolved: hub.problems.filter(p => p.status === '已处理').length,
                 }}
               />
+              </div>
             )}
-            {hub.state.activeTab === 'tempTask' && (
+            {visitedTabs.has('tempTask') && (
+              <div className={hub.state.activeTab === 'tempTask' ? '' : 'hidden'}>
               <TempTaskTab />
+              </div>
             )}
           </div>
         </div>
 
-        {/* v0.3 工具快捷栏：与现有功能 0 冲突，只增不删 */}
-        <div className="flex items-center gap-2 px-2 py-2 mb-3 bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg">
-          <span className="text-xs font-medium text-emerald-700 shrink-0">v0.3 工具：</span>
-          <button onClick={() => window.location.href = '/agronomy/sop-library'} className="text-xs px-3 py-1 bg-white border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-50">📖 SOP 标准库</button>
-          <button onClick={() => window.location.href = '/agronomy/issue-board'} className="text-xs px-3 py-1 bg-white border border-orange-300 text-orange-700 rounded hover:bg-orange-50">⚠️ 问题整改看板</button>
-          <button onClick={() => window.location.href = '/agronomy/reminders'} className="text-xs px-3 py-1 bg-white border border-green-300 text-green-700 rounded hover:bg-green-50">🔔 智能提醒</button>
-          <button onClick={() => window.location.href = '/agronomy/batch-cost'} className="text-xs px-3 py-1 bg-white border border-pink-300 text-pink-700 rounded hover:bg-pink-50">💰 批次成本</button>
-          <button onClick={() => window.location.href = '/agronomy/compliance-report'} className="text-xs px-3 py-1 bg-white border border-purple-300 text-purple-700 rounded hover:bg-purple-50">📋 合规报告</button>
-          <button onClick={() => window.location.href = '/agronomy/backup-center'} className="text-xs px-3 py-1 bg-white border border-cyan-300 text-cyan-700 rounded hover:bg-cyan-50">💾 数据备份</button>
-          <button onClick={() => window.location.href = '/agronomy/other-management'} className="text-xs px-3 py-1 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 ml-auto">查看全部 →</button>
-        </div>
+        {/* 2026-09-21：移除「v0.3 工具」快捷栏 —— 这 6 个工具（SOP 标准库/问题整改/智能提醒/
+            批次成本/合规报告/数据备份）已统一收敛到「系统设置 → 运营管理」(/settings/operations)，
+            此处为重复入口。原 /agronomy/other-management 也已重定向到该页。 */}
 
         {/* 今日操作记录 */}
         <TodayOperationRecords

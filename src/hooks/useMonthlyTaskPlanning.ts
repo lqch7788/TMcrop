@@ -328,17 +328,20 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
   const storeBatches = useProductionPlanStore((state) => state.batches);
 
   // 月度计划 Store（持久化到服务器）
-  const monthlyPlanStore = useMonthlyPlanStore();
-
+  // 2026-09-20 死循环修复：原代码 `useMonthlyPlanStore()` 无选择器订阅整个 store，
+  //   generateMonthlyPlan 的 useCallback 依赖含该快照；而 generateMonthlyPlan 内部
+  //   savePlan 成功后 store 更新 → 快照变 → useCallback 重建 → 页面 effect 重跑 →
+  //   再次 savePlan → 无限循环（2026-09-20 10:28 实测 6 秒内 POST 53 次）。
+  //   改用 getState() 直取 action（不订阅），savePlan 成功不再触发组件重渲染。
   // 使用localStorage存储上次任务执行日期
   const [lastTaskDates, setLastTaskDates] = useLocalStorage<Record<string, string>>(
     'yuanxingtu_monthly_planning_last_tasks',
     {}
   );
 
-  // 初始化时从服务器获取月度计划
+  // 初始化时从服务器获取月度计划（getState 直取，避免订阅整个 store）
   useEffect(() => {
-    monthlyPlanStore.fetchPlans();
+    useMonthlyPlanStore.getState().fetchPlans();
   }, []);
 
   // ============================================
@@ -454,11 +457,12 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
       planningHorizon: 'monthly',
     };
 
-    // 保存到服务器
-    monthlyPlanStore.savePlan(month, plan);
+    // 保存到服务器（getState 直取，不订阅 store —— 否则 savePlan 成功后
+    //   store 更新 → 本 useCallback 依赖变 → 重建 → 页面 effect 重跑 → 死循环）
+    useMonthlyPlanStore.getState().savePlan(month, plan);
 
     return plan;
-  }, [predictTasks, lastTaskDates, storeBatches, monthlyPlanStore]);
+  }, [predictTasks, lastTaskDates, storeBatches]);
 
   // ============================================
   // 按周汇总
