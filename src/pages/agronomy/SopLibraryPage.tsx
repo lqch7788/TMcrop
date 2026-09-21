@@ -86,8 +86,8 @@ export default function SopLibraryPage() {
         const m = err instanceof Error ? err.message : String(err);
         messageApi.error(`加载失败：${m}`);
       } finally {
-        if (cancelled) return;
-        setLoading(false);
+        // 组件已卸载时跳过 setState；不能在 finally 里 return，会吞掉 try/catch 的异常
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
