@@ -128,10 +128,13 @@ export function getTaskPermissions(): typeof TASK_PERMISSIONS_DEFAULTS {
 }
 
 /** 状态转换限制默认值 */
+// 2026-09-21：pending 增加 'draft' 出口 —— 撤回（withdraw）的语义是「收回派发回到草稿」，
+//   后端 POST /farm-tasks/:id/withdraw 正是写 status='draft'，但此前状态机不含这条边，
+//   前端只能退而写 'cancelled'，造成"界面显示已取消、刷新后变回草稿"的两端不一致。
 export const STATUS_TRANSITIONS_DEFAULTS: Record<string, string[]> = {
   draft: ['pending', 'cancelled'],
-  pending: ['accepted', 'cancelled'],
-  accepted: ['in_progress', 'cancelled'],
+  pending: ['accepted', 'cancelled', 'draft'],
+  accepted: ['in_progress', 'cancelled', 'draft'],
   in_progress: ['waiting_acceptance', 'cancelled', 'abandoned'],
   waiting_acceptance: ['completed', 'rejected'],
   rejected: ['in_progress', 'failed'],

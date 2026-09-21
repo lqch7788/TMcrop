@@ -816,16 +816,20 @@ export function useTasks(): UseTasksReturn {
     });
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
-  // 撤回任务（pending → cancelled，撤回原因记录在操作记录中）
+  // 撤回任务（pending → draft，撤回原因记录在操作记录中）
+  // 2026-09-21 修复：原实现把本地状态置为 'cancelled'，而后端 POST /:id/withdraw 写的是
+  //   status='draft'，两端不一致 → 界面显示"已取消"、刷新后变回"草稿"，撤回原因也查不到。
+  //   业务语义上「撤回」= 收回派发回到草稿（可修改后重新发布），与「取消」（彻底作废）不同，
+  //   故对齐后端用 'draft'，且不再写 cancelled_* 系列字段（那是取消语义专用的）。
   const withdrawTask = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    if (!validateTransition(task, 'cancelled')) { console.error(`[状态机] 非法转换: ${task.status} → cancelled, task=${id}`); return; }
+    if (!validateTransition(task, 'draft')) { console.error(`[状态机] 非法转换: ${task.status} → draft, task=${id}`); return; }
 
     const now = new Date().toISOString();
 
     // 创建操作记录
-    const record = createTaskRecord(task, 'withdraw', task.status, { reason });
+    const record = createTaskRecord(task, 'withdraw', 'draft' as any, { reason });
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // P0-3：改用 enhancedApiClient.post
@@ -839,10 +843,8 @@ export function useTasks(): UseTasksReturn {
 
     // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
-      status: 'cancelled',
-      cancelledReason: reason,
-      cancelledAt: now,
-      cancelledBy: task.assignerId,
+      status: 'draft',
+      updatedAt: now,
     } as any);
   }, [tasks, createTaskRecord, saveTaskRecords]);
 
