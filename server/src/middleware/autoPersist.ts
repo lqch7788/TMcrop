@@ -25,6 +25,14 @@ const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 /** debounce 窗口（毫秒），可通过环境变量覆盖 */
 const DEBOUNCE_MS = Number(process.env.AUTO_PERSIST_DEBOUNCE_MS ?? 1500);
 
+/**
+ * 详细落盘日志开关（2026-09-21 降噪）
+ * 默认关闭：每次整页加载的 2 次登录审计 + 每 5 分钟调度扫描都会产生这些行，
+ * 长期刷屏会淹没真正的错误。需要观察落盘行为时设 DB_LOG_VERBOSE=1。
+ * 失败日志（下方 catch）始终打印，不受此开关影响。
+ */
+const VERBOSE_PERSIST_LOG = process.env.DB_LOG_VERBOSE === '1';
+
 let timer: NodeJS.Timeout | null = null;
 /** 本次窗口内合并的写请求数，仅用于日志 */
 let mergedCount = 0;
@@ -44,12 +52,16 @@ function onWindowElapsed(): void {
   mergedCount = 0;
   // 窗口内已有显式 saveDatabase() 落过盘（它导出的是整个内存库），无需重复写盘
   if (getSaveSuccessCount() > windowStartSaveCount) {
-    console.log(`[auto-persist] 跳过兜底落盘（窗口内已有显式落盘覆盖 ${count} 次写请求）`);
+    if (VERBOSE_PERSIST_LOG) {
+      console.log(`[auto-persist] 跳过兜底落盘（窗口内已有显式落盘覆盖 ${count} 次写请求）`);
+    }
     return;
   }
   try {
     saveDatabase();
-    console.log(`[auto-persist] 自动落盘完成（合并 ${count} 次写请求）`);
+    if (VERBOSE_PERSIST_LOG) {
+      console.log(`[auto-persist] 自动落盘完成（合并 ${count} 次写请求）`);
+    }
   } catch (e) {
     // 落盘失败必须显式报出来，不能静默吞掉（Fail Loud）
     console.error(`[auto-persist] ❌ 自动落盘失败，${count} 次写请求未持久化:`, (e as Error).message);
