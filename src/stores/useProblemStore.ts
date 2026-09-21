@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { applyListLimit } from '../config/apiLimits';
 
 // ========== 类型 ==========
 
@@ -209,6 +210,11 @@ export const useProblemStore = create<ProblemState>()(
             if (filters) {
               Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
             }
+            // 2026-09-21：显式传 limit。后端 GET /problems 默认 limit=50，
+            //   而本 store 既不传 limit 也不读 meta.total，却在这个数组上做全量
+            //   统计/筛选/徽章计数/导出 —— 记录超 50 条后第 51 条起会静默消失。
+            //   （详见 src/config/apiLimits.ts）
+            applyListLimit(params);
             const query = params.toString();
             const url = `/problems${query ? `?${query}` : ''}`;
             const response = await enhancedApiClient.get<{ success: boolean; data: ProblemData[] }>(url);

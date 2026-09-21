@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { applyListLimit } from '../config/apiLimits';
 
 // ========== 类型 ==========
 
@@ -126,6 +127,10 @@ export const useInspectionDataStore = create<InspectionDataState>()(
             if (filters) {
               Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
             }
+            // 2026-09-21：显式传 limit。后端 GET /inspections 默认 limit=50，
+            //   而本 store 在这个数组上做全量统计与导出 ——
+            //   记录超 50 条后第 51 条起会静默消失（详见 src/config/apiLimits.ts）
+            applyListLimit(params);
             const query = params.toString();
             const url = `/inspections${query ? `?${query}` : ''}`;
             // logger.info('[InspectionDataStore] fetchRecords 请求:', url);

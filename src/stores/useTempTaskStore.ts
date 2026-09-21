@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { applyListLimit } from '../config/apiLimits';
 
 // ========== 类型定义 ==========
 
@@ -199,6 +200,10 @@ export const useTempTaskStore = create<TempTaskState>()(
           if (filters) {
             Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
           }
+          // 2026-09-21：显式传 limit。后端 GET /temp-tasks 默认 limit=50，
+          //   而本 store 既丢弃 meta.total 又在返回数组上做全量统计/导出 ——
+          //   记录超 50 条后第 51 条起会静默消失（详见 src/config/apiLimits.ts）
+          applyListLimit(params);
           const query = params.toString();
           const url = `/temp-tasks${query ? `?${query}` : ''}`;
           const response = await enhancedApiClient.get<{ success: boolean; data: TempTaskData[]; meta?: { total: number } }>(url);
