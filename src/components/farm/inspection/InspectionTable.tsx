@@ -61,11 +61,17 @@ interface InspectionTableProps {
   records: InspectionRecord[];
   currentPage: number;
   pageSize: number;
+  /**
+   * 选中行下标 —— 语义是「records（即全量 filteredRecords）的全局下标」，不是页内下标。
+   * 2026-09-21 修复：此前本组件用页内 idx 去 includes 这个数组，两个索引空间混用，
+   *   导致第 2 页勾选后复选框不亮（点了像没反应）、且第 1 页的行在第 2 页出现"幻勾"。
+   */
   selectedRows: number[];
   exportMode: boolean;
   batchEditMode: boolean;
   batchDeleteMode: boolean;
-  onSelectRow: (index: number) => void;
+  /** 回调参数为页内下标，由父组件换算成全局下标 */
+  onSelectRow: (pageIndex: number) => void;
   onSelectAll: () => void;
   onViewDetail: (record: InspectionRecord) => void;
   onPageChange: (page: number) => void;
@@ -204,7 +210,9 @@ export function InspectionTable({
                   <td className="px-4 py-3 text-center">
                     <Input
                       type="checkbox"
-                      checked={selectedRows.includes(idx)}
+                      // 2026-09-21 修复：selectedRows 存的是全局下标，这里必须把页内 idx 换算过去，
+                      //   否则第 2 页起复选框恒不亮（用户以为没选上），且第 1 页的选中会在第 2 页"幻勾"。
+                      checked={selectedRows.includes((currentPage - 1) * pageSize + idx)}
                       onChange={() => onSelectRow(idx)}
                       className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
@@ -439,11 +447,15 @@ export function InspectionTable({
                         </Button>
                       );
                     }
-                    if (status && displayStatus && displayStatus !== '已处理') {
-                      return <span className="text-xs text-blue-500 font-medium">{displayStatus}</span>;
+                    // 2026-09-21 修复：原条件用 status（英文枚举）比对中文 '已处理'，恒为 false，
+                    //   绿色「已完成」分支不可达，完成态反被上一条当成进行中渲染成蓝色。
+                    //   现统一基于 displayStatus 判断，并覆盖本表 statusMap 里的三种完成措辞。
+                    const COMPLETED_LABELS = ['已处理', '已完成', '已解决'];
+                    if (displayStatus && COMPLETED_LABELS.includes(displayStatus)) {
+                      return <span className="text-xs text-green-500 font-medium">{displayStatus}</span>;
                     }
-                    if (status === '已处理') {
-                      return <span className="text-xs text-green-500 font-medium">已处理</span>;
+                    if (displayStatus) {
+                      return <span className="text-xs text-blue-500 font-medium">{displayStatus}</span>;
                     }
                     return <span className="text-gray-400 text-xs">-</span>;
                   })()}
