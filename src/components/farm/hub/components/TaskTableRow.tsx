@@ -219,10 +219,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         )}
       </td>
 
-      {/* 批次 */}
-      <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
-        {task.batchCode || '-'}
-      </td>
+      {/* 2026-09-22：删除"关联生产批次"单元格（与表头同步） */}
 
       {/* 执行人 */}
       <td className="px-3 py-3 whitespace-nowrap">
