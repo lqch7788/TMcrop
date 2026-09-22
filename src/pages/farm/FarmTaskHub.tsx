@@ -18,7 +18,6 @@ import { OperationRecordPanel } from '../../components/farm/hub/OperationRecordP
 import { TaskDetailModal } from '../../components/farm/hub/TaskDetailModal';
 import { VerifyTaskModal } from '../../components/farm/hub/VerifyTaskModal';
 import { TaskAcceptanceAdapter } from '../../components/farm/hub/modals/TaskAcceptanceAdapter';
-import { ProblemDispatchModal } from '../../components/farm/hub/ProblemDispatchModal';
 import { InspectionDetailModal } from '../../components/farm/hub/InspectionDetailModal';
 import { SelectExecutorModal } from '../../components/farm/hub/modals/SelectExecutorModal';
 import { CreateTaskModal } from '../../components/farm/hub/modals/CreateTaskModal';
@@ -182,7 +181,6 @@ export function FarmTaskHub() {
   // 弹窗状态
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [verifyTaskId, setVerifyTaskId] = useState<string | null>(null);
-  const [dispatchProblemId, setDispatchProblemId] = useState<number | null>(null);
   const [detailInspectionId, setDetailInspectionId] = useState<string | null>(null);
   // 任务刷新计数器
   const [taskRefresh, setTaskRefresh] = useState(0);
@@ -264,9 +262,8 @@ export function FarmTaskHub() {
     setVerifyTaskId(taskId);
   };
 
-  // 问题分派回调
+  // 问题分派回调（2026-09-22：不再需要重置 dispatchProblemId，该状态已随死组件移除）
   const handleProblemDispatched = () => {
-    setDispatchProblemId(null);
     hub.refresh();
   };
 
@@ -669,14 +666,11 @@ export function FarmTaskHub() {
         />
       )}
 
-      {/* 问题分派弹窗 */}
-      {dispatchProblemId && (
-        <ProblemDispatchModal
-          problemId={dispatchProblemId}
-          onClose={() => setDispatchProblemId(null)}
-          onDispatched={handleProblemDispatched}
-        />
-      )}
+      {/* 2026-09-22：移除「问题分派弹窗」——
+          它引用的 ProblemDispatchModal 从未渲染过（setDispatchProblemId 只在声明、
+          重置与 onClose 中出现，从未被赋具体问题 id），属整体不可达的死组件。
+          其功能与 ProblemTab 内自建的分派弹窗重复，唯一独有的「同时派一条临时任务」
+          已迁入后者。组件文件已一并删除。 */}
 
       {/* 巡查详情弹窗 */}
       {detailInspectionId && (
