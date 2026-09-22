@@ -160,8 +160,12 @@ export const useAuthStore = create<AuthState>()(
             email: response.user?.email as string,
             phone: response.user?.phone as string,
             status: response.user?.status as string,
-            // 2026-09-22：登录接口新增返回 role（来自 roles + user_roles）
-            role: (response.user?.role as string) || 'user',
+            // 2026-09-22：登录接口新增返回 role（来自 roles + user_roles）。
+            //   此处【不要】用 `|| 'user'` 兜底 —— 那会让"后端未下发角色"与
+            //   "真实角色就是 user"两种情形不可区分，进而使 useTasks.resolveTaskRole
+            //   里"角色缺失时临时放行"的保护永远不触发，把本该放行的操作误拒。
+            //   保持原值（缺失即 undefined）。
+            role: response.user?.role as string,
           };
 
           // 直接写入 localStorage，确保 enhancedApiClient 立即可读取
