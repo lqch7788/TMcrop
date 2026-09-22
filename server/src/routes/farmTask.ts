@@ -276,13 +276,10 @@ router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
-    stmt.bind([id]);
-    let item: any = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject();
-    }
-    stmt.free();
+    // 2026-09-22 修复：与 List 路由保持一致，用 queryToObjects 自动 mapToCamelCase，
+    //   否则 transformTaskFields 读驼峰字段名会全部丢空（assigneeId/Name/assigner/.../reworkCount）
+    const items = queryToObjects(db, 'SELECT * FROM farm_tasks WHERE id = ?', [id]);
+    const item = items[0] || null;
 
     if (!item || Object.keys(item).length === 0) {
       return res.status(404).json({ success: false, error: '农事任务不存在' });

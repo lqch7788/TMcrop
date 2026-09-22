@@ -25,7 +25,7 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
   in_progress: { bg: 'bg-blue-100', color: 'text-blue-600', label: '进行中' },
   completed: { bg: 'bg-green-100', color: 'text-green-600', label: '已完成' },
   waiting_acceptance: { bg: 'bg-amber-100', color: 'text-amber-600', label: '待验收' },
-  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '已拒绝' },
+  rejected: { bg: 'bg-red-100', color: 'text-red-600', label: '返工中' },
   failed: { bg: 'bg-purple-100', color: 'text-purple-600', label: '任务失败' },
   cancelled: { bg: 'bg-gray-100', color: 'text-gray-500', label: '已取消' },
   abandoned: { bg: 'bg-red-50', color: 'text-red-400', label: '已放弃' },

@@ -61,6 +61,11 @@ export const BATCH_DISPATCH_STATUSES = ['draft'];
 // 批量重派时可重派的状态（失败/已放弃）
 export const BATCH_REASSIGN_STATUSES = ['failed', 'abandoned'];
 
+// 批量分配（行级 onBatchAssign）可触发的状态：排除终态 + 执行人已完工作但未验收的状态
+// 2026-09-22：completed / cancelled 终态无意义；waiting_acceptance 表示执行人已提交工作，
+//   此时再分配给别人无业务意义（任务工作已完成），禁止触发
+export const BATCH_ASSIGNABLE_STATUSES = ['draft', 'pending', 'accepted', 'in_progress', 'rejected', 'failed', 'abandoned'];
+
 // ========== 工作制配置 ==========
 export const WORK_HOUR_SYSTEMS = [
   { value: '8', label: '8小时工作制', workHours: 8, startHour: 8, endHour: 17 },
@@ -98,10 +103,16 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 /**
  * 根据任务类型值获取类型标签
+ * 支持单值或逗号分隔的复合类型（如 "fertilization,irrigation" → "施肥,灌溉"）
  */
 export const getTypeLabel = (typeValue: string): string => {
-  const found = TASK_TYPES.find(t => t.value === typeValue);
-  return found?.label || typeValue;
+  if (!typeValue) return '';
+  // 2026-09-22：支持逗号分隔（DB 中 type_name 可能存的是 "施肥,灌溉" 或 "fertilization,irrigation"）
+  return typeValue.split(',').map(s => {
+    const v = s.trim();
+    const found = TASK_TYPES.find(t => t.value === v);
+    return found?.label || v;
+  }).join(',');
 };
 
 /**

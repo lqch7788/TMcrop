@@ -349,6 +349,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
     setStepError('');
     setNewTask(initialNewTask);
     setAreaTab('planting'); setAreaSearch(''); setSelectedAreas([]); setShowAreaDropdown(false);
+    // 2026-09-22：必须同步通知父组件关闭，否则父组件 isOpen 残留 true，
+    //   下次点"新建"时 setState(true) 被 React 短路、useEffect 不触发、Modal 不显示
+    onClose();
   };
 
   const handleModalClose = () => {
