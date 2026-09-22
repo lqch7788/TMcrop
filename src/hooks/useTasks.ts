@@ -466,6 +466,14 @@ function canPerformAction(
   userRole: string,
   userId: string
 ): boolean {
+  // 2026-09-22：系统管理员放行一切。
+  //   理由：① admin 本就是最高权限角色，在矩阵里逐条列举容易漏项；
+  //        ② 本系统处于开发测试阶段，登录账号即为系统管理员（陆启闯），
+  //           需要能对任意任务执行验收/驳回/继续/撤回等全部操作，
+  //           以完成端到端流程验证 —— 这与"任务不按执行人过滤、
+  //           统统能在我的任务里处理"的测试期设计是一致的。
+  if (userRole === 'admin') return true;
+
   const permission = TASK_PERMISSIONS[action];
   if (!permission) return false;
 
@@ -490,6 +498,68 @@ function canPerformAction(
   }
 
   return true;
+}
+
+/**
+ * 解析当前用户「相对于某条任务」的角色（2026-09-22 新增）
+ *
+ * TASK_PERMISSIONS 的 roles 字段混用了两类概念：
+ *   · 'admin'               —— 系统角色（来自 CurrentUser.role，登录接口下发）
+ *   · 'assigner'/'assignee' —— 用户在这条任务里的相对身份
+ * canPerformAction 需要的是后者的语境，故先在此归一。
+ *
+ * 判定顺序：系统管理员 → 派发人 → 执行人 → 其它。
+ * 注意 V1.1 的 assigneeId 是「姓名哈希」而非真实账号 ID，
+ * 因此姓名比对（realName）同样必要 —— 只比 ID 会大面积失配。
+ */
+function resolveTaskRole(
+  task: Task,
+  currentUser: { oid?: string; realName?: string; role?: string } | null | undefined
+): string {
+  const sysRole = currentUser?.role;
+
+  // 过渡期兜底（2026-09-22）：
+  //   role 由登录接口下发，若后端尚未重启或用户尚未重新登录，currentUser.role 会是
+  //   undefined。此时若按最低权限处理，会把本该放行的操作全部拒掉
+  //   （开发测试期登录账号是系统管理员，需要能对任意任务执行全部操作）。
+  //   故在角色未知时退回 admin 并打日志 —— 宁可暂时放宽，也不要凭空造出
+  //   一批"点了没反应"。用户重新登录拿到 role 后即走正常判定。
+  if (!sysRole) {
+    console.warn('[权限] currentUser.role 缺失（后端未下发角色），本次按 admin 放行；重新登录后即恢复正常判定');
+    return 'admin';
+  }
+
+  if (sysRole === 'admin') return 'admin';
+
+  const myOid = currentUser?.oid || '';
+  const myName = currentUser?.realName || '';
+
+  if (myOid && task.assignerId === myOid) return 'assigner';
+  if (myName && task.assignerName === myName) return 'assigner';
+  if (myOid && task.assigneeId === myOid) return 'assignee';
+  if (myName && task.assigneeName === myName) return 'assignee';
+
+  return 'other';
+}
+
+/**
+ * 校验当前用户是否有权对该任务执行某操作（2026-09-22 新增）
+ *
+ * 各操作入口统一调用：无权限时提示用户并返回 false，调用方据此提前 return。
+ * 之所以要"提示"而不是静默拦截，是为了避免又制造一处"点了没反应"。
+ */
+function ensureTaskPermission(
+  action: keyof typeof TASK_PERMISSIONS,
+  task: Task
+): boolean {
+  const me = useAuthStore.getState().currentUser;
+  const role = resolveTaskRole(task, me);
+  const allowed = canPerformAction(action, task, role, me?.oid || '');
+  if (!allowed) {
+    console.error(`[权限] 拒绝操作 "${action}"：task=${task.id} 当前角色=${role}`);
+    showAlert(`当前账号无权对该任务执行此操作（${action}），请联系管理员`);
+  }
+  return allowed;
 }
 
 // ============================================
@@ -826,6 +896,8 @@ export function useTasks(): UseTasksReturn {
   const withdrawTask = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
+    // 2026-09-22：接入权限矩阵（withdraw 限 admin）
+    if (!ensureTaskPermission('withdraw', task)) return;
     if (!validateTransition(task, 'draft')) { console.error(`[状态机] 非法转换: ${task.status} → draft, task=${id}`); return; }
 
     const now = new Date().toISOString();
@@ -854,6 +926,8 @@ export function useTasks(): UseTasksReturn {
   const cancelTask = useCallback((id: string, reason: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
+    // 2026-09-22：接入权限矩阵（cancel 限 admin）
+    if (!ensureTaskPermission('cancel', task)) return;
     if (!validateTransition(task, 'cancelled')) { console.error(`[状态机] 非法转换: ${task.status} → cancelled, task=${id}`); return; }
 
     const now = new Date().toISOString();
@@ -979,6 +1053,8 @@ export function useTasks(): UseTasksReturn {
   ) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
+    // 2026-09-22：接入权限矩阵（submitProgress 限 assignee，admin 放行）
+    if (!ensureTaskPermission('submitProgress', task)) return;
 
     const now = new Date();
     const nowIso = now.toISOString();
@@ -1184,6 +1260,8 @@ export function useTasks(): UseTasksReturn {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     if (!validateTransition(task, 'completed')) { console.error(`[状态机] 非法转换: ${task.status} → completed, task=${id}`); return; }
+    // 2026-09-22：接入权限矩阵（verify 限 assigner / admin）
+    if (!ensureTaskPermission('verify', task)) return;
 
     // 2026-09-21：最小权限校验 —— 执行人不得验收自己执行的任务。
     //   完整的角色权限体系需要先给 CurrentUser 建模 role 字段
@@ -1258,6 +1336,8 @@ export function useTasks(): UseTasksReturn {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     if (!validateTransition(task, 'rejected') && !validateTransition(task, 'failed')) { console.error(`[状态机] 非法转换: ${task.status} → rejected, task=${id}`); return; }
+    // 2026-09-22：接入权限矩阵（verify 限 assigner / admin）
+    if (!ensureTaskPermission('verify', task)) return;
 
     // 2026-09-21：与 acceptCompletion 同源的最小权限校验 —— 驳回同样属验收动作，
     //   执行人不得驳回自己提交的成果
@@ -1308,6 +1388,8 @@ export function useTasks(): UseTasksReturn {
   const continueExecution = useCallback((id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
+    // 2026-09-22：接入权限矩阵（continue 限 assignee，admin 放行）
+    if (!ensureTaskPermission('continue', task)) return;
     if (!validateTransition(task, 'in_progress')) { console.error(`[状态机] 非法转换: ${task.status} → in_progress, task=${id}`); return; }
 
     const now = new Date().toISOString();
@@ -1377,6 +1459,8 @@ export function useTasks(): UseTasksReturn {
     // logger.info('[reassignTask] called with:', id, newAssigneeId, newAssigneeName);
     const task = tasks.find(t => t.id === id);
     if (!task) return;
+    // 2026-09-22：接入权限矩阵（reassign 限 admin）
+    if (!ensureTaskPermission('reassign', task)) return;
     if (!validateTransition(task, 'pending')) { console.error(`[状态机] 非法转换: ${task.status} → pending, task=${id}`); return; }
 
     const now = new Date().toISOString();
