@@ -1292,7 +1292,13 @@ function TeamCapabilityPreview({ teamId, taskType }: { teamId: string; taskType:
 
   const matched = taskType && caps.includes(taskType);
   const noCapSet = caps.length === 0;
-  const warning = avail && avail.available_hours <= 0;
+  // 2026-09-22 修复：原 `available_hours <= 0` 直接报"已满排"，会把"班组无成员（total_worker_count=0）"
+  //   误判为满排（0×8 - 0 = 0）。三种情况分别处理：
+  //   - busy > 0 && available <= 0 → 真满排
+  //   - total_worker_count === 0 → 班组无成员（告警）
+  //   - busy === 0 && total_worker_count > 0 → 今日无排班（中性）
+  const noWorkers = avail && avail.total_worker_count === 0;
+  const warning = avail && avail.busy_hours > 0 && avail.available_hours <= 0;
 
   return (
     <div className="text-xs bg-emerald-50 border border-emerald-200 rounded p-2 -mt-2 space-y-1">
@@ -1311,7 +1317,9 @@ function TeamCapabilityPreview({ teamId, taskType }: { teamId: string; taskType:
         <div className="text-gray-600">班组能力：{caps.join('、')}</div>
       )}
       <div>
-        {avail ? (
+        {noWorkers ? (
+          <span className="text-orange-700">⚠ 该班组暂无在岗成员（先在班组详情页添加成员）</span>
+        ) : avail ? (
           warning ? (
             <span className="text-red-700">⚠ 该班组今日已满排（可用 {avail.available_hours}h / 已排 {avail.busy_hours}h）</span>
           ) : (

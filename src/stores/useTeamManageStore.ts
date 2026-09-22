@@ -641,7 +641,10 @@ export const useTeamManageStore = create<TeamManageState>()(
         const data = await enhancedApiClient.get<Record<string, any> | null>(
           `/teams/${teamId}/availability?date=${date}`,
         );
+        // 2026-09-22 修复：enhancedApiClient.get 第 243 行 `data ?? result` 会把 `{success:true, data:null}`
+        //   兜底为整个对象，必须显式判断内层 data === null（DB 中没有今天的 availability 记录）
         if (!data) return null;
+        if ('success' in data && (data as { data?: unknown }).data === null) return null;
         const pick = (a: any, b: any) => a ?? b; // 优先 camelCase，缺失回退 snake_case
         return {
           id: data.id,

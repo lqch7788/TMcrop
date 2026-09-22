@@ -49,7 +49,7 @@ export function TaskTableHeader({
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务类型</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务区域</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">关联生产批次</th>
+      {/* 2026-09-22：删除"关联生产批次"列 —— 新建任务弹窗无该字段录入，后端 batch_code 由 PC-${id} 自动生成，对用户无业务意义 */}
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">班组</th>
       <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
