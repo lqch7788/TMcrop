@@ -22,6 +22,12 @@ export interface CurrentUser {
   email?: string;
   phone?: string;
   status?: string;
+  /**
+   * 角色码（2026-09-22 新增）：admin / manager / user / 访客…
+   * 由登录接口从 roles + user_roles 查出，多角色时取权限最高者。
+   * 供 useTasks 的 canPerformAction 等权限判断使用。
+   */
+  role?: string;
 }
 
 /** 角色摘要 */
@@ -154,6 +160,8 @@ export const useAuthStore = create<AuthState>()(
             email: response.user?.email as string,
             phone: response.user?.phone as string,
             status: response.user?.status as string,
+            // 2026-09-22：登录接口新增返回 role（来自 roles + user_roles）
+            role: (response.user?.role as string) || 'user',
           };
 
           // 直接写入 localStorage，确保 enhancedApiClient 立即可读取

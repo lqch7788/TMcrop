@@ -100,6 +100,33 @@ router.post('/login', (req, res) => {
       // 去除密码哈希后返回用户信息
       const { password_hash, ...userWithoutPassword } = user;
 
+      // 2026-09-22：查出用户角色并随登录响应返回。
+      //   背景：roles / user_roles 表早已存在（user_roles 经 user_oid ↔ roles.oid 关联），
+      //   但登录接口一直不返回角色，导致前端的 canPerformAction 拿不到 userRole，
+      //   整套 TASK_PERMISSIONS 权限矩阵从未被调用过。
+      //   一个用户可能挂多个角色（陆启闯就同时有 admin / manager / user 三个历史分配），
+      //   这里按权限高低取最高者：admin > manager > user > 其他。
+      let userRole = 'user';
+      try {
+        const roleStmt = db.prepare(
+          `SELECT r.role_code FROM user_roles ur
+           JOIN roles r ON r.oid = ur.role_oid
+           WHERE ur.user_oid = ? AND (r.status IS NULL OR r.status = 'active')`
+        );
+        roleStmt.bind([String(userWithoutPassword.oid ?? '')]);
+        const codes: string[] = [];
+        while (roleStmt.step()) {
+          const code = String((roleStmt.getAsObject() as Record<string, unknown>).role_code || '');
+          if (code) codes.push(code);
+        }
+        roleStmt.free();
+        const priority = ['admin', 'manager', 'user'];
+        userRole = priority.find((p) => codes.includes(p)) || codes[0] || 'user';
+      } catch (roleError) {
+        // 角色查询失败不阻断登录，退回最低权限
+        console.error('[authority/login] 角色查询失败，按 user 处理:', roleError);
+      }
+
       writeLoginAudit(req, {
         username: (userWithoutPassword.real_name || userWithoutPassword.username) as string,
         userId: userWithoutPassword.oid as string,
@@ -118,6 +145,8 @@ router.post('/login', (req, res) => {
           phone: userWithoutPassword.phone,
           org_oid: userWithoutPassword.org_oid,
           status: userWithoutPassword.status,
+          // 2026-09-22：角色码（admin / manager / user / 访客…），供前端权限判断使用
+          role: userRole,
         },
       });
     } else {
