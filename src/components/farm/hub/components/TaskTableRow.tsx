@@ -6,7 +6,7 @@ import React from 'react';
 import { Bell, CheckCircle, FileText, Layers, Play, Send, Undo2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
-import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
+import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours, BATCH_ASSIGNABLE_STATUSES } from '../constants_taskDispatch';
 import { OvertimeBadge } from './OvertimeBadge';
 import { showAlert } from '@/lib/dialogService';
 
@@ -175,10 +175,11 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
       {/* 任务类型 */}
       <td className="px-3 py-3 whitespace-nowrap">
         <div className="flex flex-wrap gap-1 items-center">
-          {/* 优先使用 typeName 显示，兼容 types 数组 */}
+          {/* 优先使用 typeName 显示，兼容 types 数组
+              2026-09-22：typeName 也走 getTypeLabel 翻译（兼容 typeName 存英文 enum 的情况） */}
           {task.typeName ? (
             <span className={`inline-flex px-2 py-0.5 rounded text-xs text-white ${getTypeColor(task.type || '')}`}>
-              {task.typeName}
+              {getTypeLabel(task.typeName)}
             </span>
           ) : (
             (task.types || []).slice(0, 2).map((typeValue: string, idx: number) => {
@@ -315,8 +316,9 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             </Button>
           )}
 
-          {/* 2026-09-15：批量任务分配按钮（#9，所有状态可触发） */}
-          {onBatchAssign && (
+          {/* 批量任务分配按钮：仅非终态 + 未分派可触发
+              2026-09-22：已完成/已取消的任务再分配无业务意义；新建任务时已分派执行人也不应再分配 */}
+          {onBatchAssign && BATCH_ASSIGNABLE_STATUSES.includes(task.status) && !task.assigneeId && (
             <Button
               variant="outline"
               size="sm"

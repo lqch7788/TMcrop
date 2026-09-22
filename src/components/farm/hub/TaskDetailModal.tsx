@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { type Task, type TaskRecord } from '../../../hooks/useTasks';
-import { Camera, CheckCircle, Download, FileText, MapPin, Mic, User, X } from 'lucide-react';
+import { Camera, CheckCircle, Download, FileText, MapPin, Mic, User } from 'lucide-react';
 import { Button, Label, Modal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
@@ -502,9 +502,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, ta
           </div>
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <Button variant="secondary" onClick={onClose}>
-            <X className="w-4 h-4" /> 关闭
-          </Button>
+          {/* 2026-09-22：删除底部"关闭"按钮 —— 弹窗右上角 Modal 自带关闭图标，重复 */}
           {/* v0.3 P0-2：快速完成按钮（可选 prop，未传则不显示） */}
           {onQuickComplete && task && task.status !== 'completed' && task.status !== 'cancelled' && (
             <Button

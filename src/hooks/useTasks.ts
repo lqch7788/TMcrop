@@ -1267,11 +1267,13 @@ export function useTasks(): UseTasksReturn {
     //   完整的角色权限体系需要先给 CurrentUser 建模 role 字段
     //   （当前只有 oid/username/realName/orgOid/email/phone/status），
     //   故此处先落地一条不依赖角色、语义明确的硬规则，堵住最直接的越权路径。
+    // 2026-09-22：测试阶段放宽 —— 显示提示但放行（去 return），正式上线前恢复硬阻断。
     const me = useAuthStore.getState().currentUser;
     const myName = me?.realName || me?.username || '';
     if (myName && task.assigneeName && myName === task.assigneeName) {
-      showAlert('不能验收自己执行的任务，请由派发人或管理员验收');
-      return;
+      // 测试阶段：fire-and-forget 弹窗，不阻塞后续验收流程
+      showAlert('不能验收自己执行的任务，请由派发人或管理员验收（测试阶段已放行）');
+      // 不 return，继续执行验收流程
     }
 
     const now = new Date().toISOString();
@@ -1341,11 +1343,13 @@ export function useTasks(): UseTasksReturn {
 
     // 2026-09-21：与 acceptCompletion 同源的最小权限校验 —— 驳回同样属验收动作，
     //   执行人不得驳回自己提交的成果
+    // 2026-09-22：测试阶段放宽 —— 显示提示但放行（去 return），正式上线前恢复硬阻断。
     const me = useAuthStore.getState().currentUser;
     const myName = me?.realName || me?.username || '';
     if (myName && task.assigneeName && myName === task.assigneeName) {
-      showAlert('不能驳回自己执行的任务，请由派发人或管理员处理');
-      return;
+      // 测试阶段：fire-and-forget 弹窗，不阻塞后续驳回流程
+      showAlert('不能驳回自己执行的任务，请由派发人或管理员处理（测试阶段已放行）');
+      // 不 return，继续执行驳回流程
     }
 
     const now = new Date().toISOString();
