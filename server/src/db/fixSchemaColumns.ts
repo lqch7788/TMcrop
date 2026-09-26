@@ -134,6 +134,13 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
   addedColumns += safeAddColumn(db, 'crop_circulation_records', 'revoke_reason', 'TEXT') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'crop_circulation_records', 'parent_source_id', 'TEXT') ? 1 : 0;
 
+  // ============ material_requests（2026-09-26 修复审批回写链 C1）============
+  // approvalLinkage.service.ts 审批通过时写 approval_code / approved_at 两列，
+  // 但 schema.ts 建表与 fixMissingSchema 补列（该文件被启动白名单禁用）均不含它们 →
+  // UPDATE 抛 no such column 被内部 catch 吞掉，物料领料审批通过后状态永不变。
+  addedColumns += safeAddColumn(db, 'material_requests', 'approval_code', 'TEXT') ? 1 : 0;
+  addedColumns += safeAddColumn(db, 'material_requests', 'approved_at', 'TEXT') ? 1 : 0;
+
   // ============ inventory_inbound_records ============
   addedColumns += safeAddColumn(db, 'inventory_inbound_records', 'returned_quantity', 'REAL', '0') ? 1 : 0;
   addedColumns += safeAddColumn(db, 'inventory_inbound_records', 'reversed_at', 'TEXT') ? 1 : 0;

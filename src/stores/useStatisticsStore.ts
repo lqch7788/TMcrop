@@ -123,7 +123,9 @@ const FIELD_MAP: Record<string, string> = {
 function normalizeMaterialStat(db: Record<string, unknown>): MaterialStatItem {
   const result: Record<string, unknown> = {};
   for (const [snake, camel] of Object.entries(FIELD_MAP)) {
-    if (snake in db) result[camel] = db[snake];
+    // 2026-09-26 修复：后端响应已 camelCase，优先读 camelCase，snake_case 兜底
+    if (camel in db) result[camel] = db[camel];
+    else if (snake in db) result[camel] = db[snake];
   }
   return result as unknown as MaterialStatItem;
 }
@@ -131,7 +133,9 @@ function normalizeMaterialStat(db: Record<string, unknown>): MaterialStatItem {
 function normalizeMonthlyStat(db: Record<string, unknown>): MonthlyStatItem {
   const result: Record<string, unknown> = {};
   for (const [snake, camel] of Object.entries(FIELD_MAP)) {
-    if (snake in db) result[camel] = db[snake];
+    // 2026-09-26 修复：后端响应已 camelCase，优先读 camelCase，snake_case 兜底
+    if (camel in db) result[camel] = db[camel];
+    else if (snake in db) result[camel] = db[snake];
   }
   return result as unknown as MonthlyStatItem;
 }
@@ -264,19 +268,25 @@ export const useStatisticsStore = create<StatisticsState>()(
         set({ isLoading: true, error: null });
         try {
           // enhancedApiClient 已自动提取 .data，resp 直接就是数据体
+          // 2026-09-26 修复：后端 camelCaseResponse 中间件已把响应键转为 camelCase，
+          // 此前读 snake_case 键恒为 undefined → 统计页全 0。保留 snake 兜底容错。
           const data = await enhancedApiClient.get<{
-            material_statistics: Record<string, unknown>[];
-            monthly_statistics: Record<string, unknown>[];
-            category_summary: CategorySummaryItem[];
-            category_trend: CategoryTrendItem[];
+            materialStatistics?: Record<string, unknown>[];
+            monthlyStatistics?: Record<string, unknown>[];
+            categorySummary?: CategorySummaryItem[];
+            categoryTrend?: CategoryTrendItem[];
+            material_statistics?: Record<string, unknown>[];
+            monthly_statistics?: Record<string, unknown>[];
+            category_summary?: CategorySummaryItem[];
+            category_trend?: CategoryTrendItem[];
           }>('/material-statistics');
 
           if (data) {
             set({
-              materialStatistics: (data.material_statistics || []).map(normalizeMaterialStat),
-              monthlyStatistics: (data.monthly_statistics || []).map(normalizeMonthlyStat),
-              categorySummary: data.category_summary || [],
-              categoryTrend: data.category_trend || [],
+              materialStatistics: (data.materialStatistics ?? data.material_statistics ?? []).map(normalizeMaterialStat),
+              monthlyStatistics: (data.monthlyStatistics ?? data.monthly_statistics ?? []).map(normalizeMonthlyStat),
+              categorySummary: data.categorySummary ?? data.category_summary ?? [],
+              categoryTrend: data.categoryTrend ?? data.category_trend ?? [],
               isLoading: false,
             });
           } else {

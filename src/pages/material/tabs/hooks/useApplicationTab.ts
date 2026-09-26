@@ -136,7 +136,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [showEditWarning, setShowEditWarning] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
-  const [batchEditedRecords, setBatchEditedRecords] = useState<Record<number, MaterialReceivingRecord>>({});
+  const [batchEditedRecords, setBatchEditedRecords] = useState<Record<string | number, MaterialReceivingRecord>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
 
   // ============================================
@@ -507,6 +507,93 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   // ============================================
+  // 批量编辑（2026-09-26 P0 修复：此前这些 handler 从未接线，
+  //   弹窗里改什么都不落库，"保存全部"只调 loadItems 刷新 = 空操作）
+  // ============================================
+
+  /** 切换当前编辑的领料单 */
+  const handleBatchRecordChange = (index: number) => {
+    setCurrentBatchEditIndex(Math.max(0, Math.min(index, selectedRows.length - 1)));
+  };
+
+  /** 修改当前领料单的普通字段（函数式 setState 防覆盖） */
+  const handleBatchFieldChange = (recordId: string | number, field: string, value: unknown) => {
+    setBatchEditedRecords((prev) => {
+      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
+      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), [field]: value } };
+    });
+  };
+
+  /** 修改当前领料单的物料明细行（函数式 setState 防覆盖） */
+  const handleBatchMaterialChange = (recordId: string | number, materialIndex: number, field: string, value: unknown) => {
+    setBatchEditedRecords((prev) => {
+      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
+      const mats = [...((base as MaterialReceivingRecord).materials || [])];
+      mats[materialIndex] = { ...mats[materialIndex], [field]: value };
+      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), materials: mats } };
+    });
+  };
+
+  /** 删除当前领料单的物料明细行 */
+  const handleBatchMaterialDelete = (recordId: string | number, materialIndex: number) => {
+    setBatchEditedRecords((prev) => {
+      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
+      const mats = [...((base as MaterialReceivingRecord).materials || [])];
+      mats.splice(materialIndex, 1);
+      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), materials: mats } };
+    });
+  };
+
+  /** "确认（下一个）"：跳到下一条待编辑领料单 */
+  const handleBatchNextRecord = () => {
+    setCurrentBatchEditIndex((i) => Math.min(i + 1, selectedRows.length - 1));
+  };
+
+  /** 中文状态标签 → DB 英文枚举（批量编辑弹窗选项与 DB 存储值统一） */
+  const BATCH_STATUS_ENUM: Record<string, { status: string; approvalStatus?: string }> = {
+    待审批: { status: 'draft', approvalStatus: 'pending' },
+    已审批: { status: 'approved', approvalStatus: 'approved' },
+    已拒绝: { status: 'rejected', approvalStatus: 'rejected' },
+    已取消: { status: 'cancelled' },
+  };
+
+  /** 保存全部：逐条 PUT 持久化（失败计数，fail loud 提示） */
+  const handleBatchSaveAll = async (records: Record<string | number, MaterialReceivingRecord>) => {
+    const entries = Object.entries(records);
+    if (entries.length === 0) {
+      await showAlert('没有可保存的编辑内容');
+      return;
+    }
+    let failCount = 0;
+    for (const [id, rec] of entries) {
+      const statusEnum = BATCH_STATUS_ENUM[rec.status] || {};
+      const ok = await storeUpdateItem(id as string, {
+        date: rec.date,
+        applicant: rec.applicant,
+        warehouseLocation: rec.warehouseLocation,
+        reviewer: rec.reviewer,
+        productionBatchCode: rec.productionBatchCode,
+        status: statusEnum.status,
+        approvalStatus: statusEnum.approvalStatus,
+        materials: (rec.materials || []).map((m) => ({ ...m, actualQuantity: 0 })),
+      } as any);
+      if (!ok) failCount += 1;
+    }
+    // 写后刷新（DB 唯一真相）
+    await loadItems();
+    setShowBatchEditModal(false);
+    setBatchEditMode(null);
+    setSelectedRows([]);
+    setBatchEditedRecords({});
+    setCurrentBatchEditIndex(0);
+    if (failCount === 0) {
+      await showAlert(`批量编辑完成，共保存 ${entries.length} 条`);
+    } else {
+      await showAlert(`批量编辑完成：${entries.length - failCount} 条成功，${failCount} 条失败（已审批的单据不允许修改）`);
+    }
+  };
+
+  // ============================================
   // 保存编辑（重新提交）
   // ============================================
   const handleSaveEdit = async () => {
@@ -858,6 +945,13 @@ export function useApplicationTab(): UseApplicationTabReturn {
     handleDeleteClick,
     confirmDelete,
     handleBatchDelete,
+    // 批量编辑（2026-09-26 P0 修复：接线）
+    handleBatchRecordChange,
+    handleBatchFieldChange,
+    handleBatchMaterialChange,
+    handleBatchMaterialDelete,
+    handleBatchNextRecord,
+    handleBatchSaveAll,
     handleSaveEdit,
     handleVoidApply,
     submitVoidApply,

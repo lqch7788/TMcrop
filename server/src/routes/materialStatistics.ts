@@ -63,6 +63,9 @@ router.get('/', (_req: Request, res: Response) => {
           rowValues.forEach((val, i) => { item[columns[i]] = val; });
           try { item.materials = JSON.parse(item.materials as string || '[]'); }
           catch { item.materials = []; }
+          // 2026-09-26 防护：历史脏数据（双重 JSON 编码）解析结果是字符串而非数组，
+          // 曾导致下方 mats.reduce 抛 TypeError → 统计接口 500。此处强制数组。
+          if (!Array.isArray(item.materials)) item.materials = [];
           return item;
         })
       : [];

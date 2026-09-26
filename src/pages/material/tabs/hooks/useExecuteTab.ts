@@ -7,7 +7,8 @@ import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStor
 import { showAlert } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
-import { fefoAllocate, batchDeduct, batchRestore } from '@/services/apiWarehouseMaterialService';
+// 2026-09-26：batchDeduct/batchRestore 不再由前端调用（扣/恢复库存已下沉后端事务），fefoAllocate 仅用于物料池分配预览
+import { fefoAllocate } from '@/services/apiWarehouseMaterialService';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -406,45 +407,25 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const confirmExecuteDelete = useCallback(async () => {
     if (executeDeletingId === null) return;
 
-    // 2026-08-10 P2修复：删除出库单前先恢复库存
-    const record = executeStore.items.find(i => i.id === executeDeletingId);
-    if (record?.materials?.length) {
-      const restores: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
-      for (const m of record.materials) {
-        if (m.batchNo && m.actualQuantity > 0) {
-          // 解析 batchNo 字符串 "BATCH001(5个),BATCH002(3袋)" → 逐条恢复
-          const matches = m.batchNo.matchAll(/([^(,\s]+)\((\d+(?:\.\d+)?)/g);
-          for (const match of matches) {
-            restores.push({ materialCode: m.materialCode, batchNo: match[1], quantity: Number(match[2]) });
-          }
-          // 如果解析不到批次细分，用整条恢复
-          if (restores.filter(r => r.materialCode === m.materialCode).length === 0) {
-            restores.push({ materialCode: m.materialCode, batchNo: '', quantity: m.actualQuantity });
-          }
-        }
-      }
-      if (restores.length > 0) {
-        try {
-          await batchRestore(restores);
-        } catch (e) {
-          console.warn('库存恢复失败（不影响删除）:', e);
-        }
-      }
-    }
-
+    // 2026-09-26 P0 重构：删除前的库存恢复已下沉到后端 DELETE 事务
+    // （此前前端先 batchRestore 再删，删除失败会"多恢复"库存；且 batchRestore 失败仅 console.warn）
     const ok = await executeStore.deleteItem(executeDeletingId);
     if (ok) {
       // 删除后重新加载（触发 dispatch_status 重新计算）
       await executeStore.fetchItems();
       await materialRequestStore.loadItems();
+    } else {
+      await showAlert(executeStore.error || '删除失败，请重试');
     }
     setExecuteShowDeleteConfirm(false);
     setExecuteDeletingId(null);
   }, [executeDeletingId, executeStore, materialRequestStore]);
 
-  const handleExecuteSaveEdit = useCallback(() => {
+  const handleExecuteSaveEdit = useCallback(async () => {
     if (!executeSelectedRecord) return;
-    executeStore.updateItem(executeSelectedRecord.id, {
+    // 2026-09-26 P0 修复：await 保存结果（此前 fire-and-forget 无条件提示"保存成功"），
+    // 物料数量变化时后端在事务内做库存差额调整
+    const ok = await executeStore.updateItem(executeSelectedRecord.id, {
       date: executeEditForm.date,
       applicant: executeEditForm.applicant,
       warehouseLocation: executeEditForm.warehouseLocation,
@@ -453,6 +434,10 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       executeStatus: executeEditForm.executeStatus,
       materials: executeEditForm.materials,
     } as any);
+    if (!ok) {
+      await showAlert(executeStore.error || '保存失败，请重试');
+      return;
+    }
     setExecuteShowEditModal(false);
     showAlert('保存成功');
   }, [executeSelectedRecord, executeEditForm, executeStore]);
@@ -463,27 +448,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       return;
     }
 
-    // V14.0: FEFO 自动分配批次（按过期日期先进先出）
-    // 2026-08-10 P0修复：无批次记录的物料用空 batchNo 兜底，batch-deduct仍会扣减materials主表
-    const fefoAllocations: Array<{ materialCode: string; batchNo: string; quantity: number }> = [];
-    try {
-      for (const m of executeMaterialPool) {
-        if (m.actualQuantity > 0 && m.materialCode) {
-          const result = await fefoAllocate(m.materialCode, m.actualQuantity);
-          if (result.allocations.length > 0) {
-            m.batchNo = result.allocations.map(a => `${a.batchNo}(${a.quantity}${a.unit})`).join(',');
-            for (const alloc of result.allocations) {
-              fefoAllocations.push({ materialCode: m.materialCode, batchNo: alloc.batchNo, quantity: alloc.quantity });
-            }
-          } else {
-            // 无批次记录兜底：用空batchNo直接扣主表库存（batch-deduct在batchNo为空时跳过batch_inventory）
-            fefoAllocations.push({ materialCode: m.materialCode, batchNo: '', quantity: m.actualQuantity });
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('FEFO 分配失败，继续出库:', e);
-    }
+    // 2026-09-26 P0 重构：FEFO 分配与库存扣减已下沉到后端 POST 事务
+    // （此前前端分离调用 fefoAllocate + batchDeduct，扣减失败仅 console.warn，
+    //   浏览器崩溃在"已建出库单、未扣库存"的中间态；batchNo 显示串由后端扣减时回写）
 
     const sourceAppCodes = [...new Set(executeMaterialPool.map(m => m.applicationCode))];
     const firstMaterial = executeMaterialPool[0];
@@ -506,17 +473,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     // 保存到 Zustand Store（写操作走 Store action，V2.1 铁律：API 直连无缓存）
     const result = await executeStore.createItem(newRecord);
     if (!result) {
-      showAlert('出库失败，请重试');
+      // 2026-09-26 P0 修复：显示后端真实错误（如"物料 XX 批次库存不足"），不再笼统"请重试"
+      await showAlert(executeStore.error || '出库失败，请重试');
       return;
-    }
-
-    // V14.0: 扣减批次库存
-    if (fefoAllocations.length > 0) {
-      try {
-        await batchDeduct(fefoAllocations);
-      } catch (e) {
-        console.warn('批次库存扣减失败（不影响出库记录）:', e);
-      }
     }
 
     setExecuteShowAddModal(false);

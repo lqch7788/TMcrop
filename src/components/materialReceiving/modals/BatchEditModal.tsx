@@ -26,7 +26,7 @@ interface MaterialItem {
 }
 
 interface RecordType {
-  id: number;
+  id: string | number;
   code: string;
   date: string;
   applicant: string;
@@ -39,18 +39,20 @@ interface RecordType {
 
 interface BatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
-  batchEditedRecords: Record<number, RecordType>;
+  selectedRows: (string | number)[];
+  batchEditedRecords: Record<string | number, RecordType>;
   currentBatchEditIndex: number;
   recordsList: RecordType[];
   onClose: () => void;
   onRecordChange: (index: number) => void;
-  onFieldChange: (recordId: number, field: string, value: any) => void;
-  onMaterialChange: (recordId: number, materialIndex: number, field: string, value: any) => void;
-  onMaterialDelete: (recordId: number, materialIndex: number) => void;
+  onFieldChange: (recordId: string | number, field: string, value: any) => void;
+  onMaterialChange: (recordId: string | number, materialIndex: number, field: string, value: any) => void;
+  onMaterialDelete: (recordId: string | number, materialIndex: number) => void;
   onNextRecord: () => void;
-  onVoidApply: () => void;
-  onSaveAll: () => void;
+  // 2026-09-26：批量编辑弹窗内未渲染作废按钮，该 prop 改为可选（历史遗留接口）
+  onVoidApply?: () => void;
+  // 2026-09-26 P0 修复：保存时把编辑后的记录集合传给父组件持久化（此前只叫 loadItems 刷新，编辑内容从不落库）
+  onSaveAll: (records: Record<string | number, RecordType>) => void;
 }
 
 export const BatchEditModal: React.FC<BatchEditModalProps> = ({
@@ -217,7 +219,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
         <Button variant="outline" onClick={onNextRecord} className="whitespace-nowrap">
           <Check className="w-4 h-4" /> 确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
         </Button>
-        <Button onClick={onSaveAll} className="whitespace-nowrap">
+        <Button onClick={() => onSaveAll(batchEditedRecords)} className="whitespace-nowrap">
           <Save className="w-4 h-4" /> 保存全部 ({editedCount} 个)
         </Button>
       </div>

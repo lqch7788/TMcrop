@@ -279,7 +279,8 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       if (body.materials !== undefined) {
         body.materials = JSON.stringify(body.materials);
       }
-      body.production_batch_code = null;
+      // 2026-09-26 P0 修复：删除强制 production_batch_code = null —— 该行会把
+      // 批量编辑/编辑弹窗想修改的生产批次号强制抹成 NULL，是"批量编辑保存不生效"的共犯之一
       body.update_time = new Date().toISOString();
 
       // 乐观更新：去 statusClass（前端专用）再用 ...updates 合并
