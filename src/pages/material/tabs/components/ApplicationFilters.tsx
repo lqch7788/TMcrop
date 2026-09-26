@@ -19,6 +19,13 @@ interface ApplicationFiltersProps {
   setSearchWarehouse: (value: string) => void;
   statusFilter: string;
   setStatusFilter: (value: string) => void;
+  // 2026-09-26 批次三：日期范围 + 优先级筛选
+  searchDateFrom: string;
+  setSearchDateFrom: (value: string) => void;
+  searchDateTo: string;
+  setSearchDateTo: (value: string) => void;
+  priorityFilter: string;
+  setPriorityFilter: (value: string) => void;
   // 操作
   onReset: () => void;
   onPageChange: (page: number) => void;
@@ -38,6 +45,12 @@ export function ApplicationFilters({
   setSearchWarehouse,
   statusFilter,
   setStatusFilter,
+  searchDateFrom,
+  setSearchDateFrom,
+  searchDateTo,
+  setSearchDateTo,
+  priorityFilter,
+  setPriorityFilter,
   onReset,
   onPageChange,
 }: ApplicationFiltersProps) {
@@ -107,6 +120,44 @@ export function ApplicationFilters({
               <SelectItem value="仓库C区">仓库C区</SelectItem>
               <SelectItem value="仓库D区">仓库D区</SelectItem>
               <SelectItem value="仓库E区">仓库E区</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 2026-09-26 批次三：申请日期范围筛选 */}
+        <div className="flex-1">
+          <Label className="block text-sm font-medium text-gray-900 mb-1">日期从</Label>
+          <Input
+            type="date"
+            value={searchDateFrom}
+            onChange={(e) => { setSearchDateFrom(e.target.value); onPageChange(1); }}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="block text-sm font-medium text-gray-900 mb-1">日期到</Label>
+          <Input
+            type="date"
+            value={searchDateTo}
+            onChange={(e) => { setSearchDateTo(e.target.value); onPageChange(1); }}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* 2026-09-26 批次四：优先级筛选 */}
+        <div className="flex-1">
+          <Label className="block text-sm font-medium text-gray-900 mb-1">优先级</Label>
+          <Select
+            value={priorityFilter}
+            onValueChange={(val) => { setPriorityFilter(val); onPageChange(1); }}
+          >
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="high">加急</SelectItem>
+              <SelectItem value="medium">普通</SelectItem>
             </SelectContent>
           </Select>
         </div>

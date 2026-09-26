@@ -72,6 +72,10 @@ export interface EditFormState {
   plantAreas: SelectedArea[];
   reviewer: string;
   status: string;
+  /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 */
+  productionBatchCode: string;
+  expectedDate: string;
+  priority: string;
   materials: MaterialItem[];
 }
 
@@ -85,7 +89,11 @@ export interface AddFormState {
   /** 2026-08-10：选区域(多选) */
   plantAreas: SelectedArea[];
   reviewer: string;
-  batchRemark: string;
+  /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 + 附件 */
+  productionBatchCode: string;
+  expectedDate: string;
+  priority: string;
+  attachments: Array<{ name: string; dataUrl: string }>;
   materials: MaterialItem[];
 }
 
@@ -123,6 +131,16 @@ export interface UseApplicationTabReturn {
   setSearchWarehouse: (value: string) => void;
   statusFilter: string;
   setStatusFilter: (value: string) => void;
+  // 2026-09-26 批次三/四：日期范围 + 优先级筛选
+  searchDateFrom: string;
+  setSearchDateFrom: (value: string) => void;
+  searchDateTo: string;
+  setSearchDateTo: (value: string) => void;
+  priorityFilter: string;
+  setPriorityFilter: (value: string) => void;
+
+  // 提交锁（2026-09-26 防双击重复提交）
+  isSubmitting: boolean;
 
   // 分页状态
   currentPage: number;
@@ -139,6 +157,10 @@ export interface UseApplicationTabReturn {
   setShowExportTypeModal: (value: boolean) => void;
   exportFileType: string;
   setExportFileType: (value: string) => void;
+
+  // 详情附加数据（2026-09-26 批次二：审批进度 + 操作历史）
+  detailApproval: Record<string, unknown> | null;
+  detailLogs: Record<string, unknown>[];
 
   // 弹窗状态（2026-09-26：批量编辑相关状态已随死代码删除）
   showDetailModal: boolean;
@@ -199,6 +221,10 @@ export interface UseApplicationTabReturn {
   confirmExport: () => Promise<void>;
   handleCancelExport: () => void;
   handleView: (item: MaterialReceivingRecord) => void;
+  // 2026-09-26 批次二/四：复制、撤回、物料批次/历史价提示
+  handleDuplicate: (item: MaterialReceivingRecord) => void;
+  handleWithdraw: (item: MaterialReceivingRecord) => Promise<void>;
+  getMaterialStockInfo: (materialCode: string) => Promise<string>;
   handleEdit: (item: MaterialReceivingRecord) => void;
   handleEditAddMaterial: () => void;
   handleEditRemoveMaterial: (index: number) => void;

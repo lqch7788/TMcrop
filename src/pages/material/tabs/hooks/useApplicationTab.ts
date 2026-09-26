@@ -9,11 +9,13 @@ import { Approval, ApprovalType, ApprovalStatus } from '@/types/approval';
 import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
 import { useMaterialRequestDataStore, useUserStore } from '@/stores';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 // 默认新增表单初始状态
+// 2026-09-26 改进批次四：恢复 productionBatchCode（成本归集维度）+ expectedDate + priority + attachments
 const getDefaultAddForm = () => ({
   code: '',
   date: todayLocal(),
@@ -23,8 +25,10 @@ const getDefaultAddForm = () => ({
   // 2026-08-10：plantArea → plantAreas 数组
   plantAreas: [] as SelectedArea[],
   reviewer: '',
-  // 2026-08-10：移除 productionBatchCode 字段
-  batchRemark: '',
+  productionBatchCode: '',
+  expectedDate: '',
+  priority: 'medium' as string,
+  attachments: [] as Array<{ name: string; dataUrl: string }>,
   materials: [] as MaterialItem[]
 });
 
@@ -45,6 +49,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     addItem: storeAddItem,
     updateItem: storeUpdateItem,
     deleteItem: storeDeleteItem,
+    withdrawItem: storeWithdrawItem,
   } = useMaterialRequestDataStore();
 
   // 初始化加载数据
@@ -76,6 +81,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const [searchBatchCode, setSearchBatchCode] = useState('');
   const [searchWarehouse, setSearchWarehouse] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  // 2026-09-26 批次三/四：日期范围 + 优先级筛选
+  const [searchDateFrom, setSearchDateFrom] = useState('');
+  const [searchDateTo, setSearchDateTo] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -84,6 +93,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
+  // 2026-09-26 改进批次一：提交锁（防双击重复提交产生重复单据）
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExportTypeModal, setShowExportTypeModal] = useState(false);
   const [exportFileType, setExportFileType] = useState('xlsx');
 
@@ -93,17 +104,23 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  // 2026-09-26 复制预填标志：true 时弹窗打开不清空表单（复制申请单场景）
+  const [copyPrefill, setCopyPrefill] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MaterialReceivingRecord | null>(null);
+  // 2026-09-26 改进批次二：详情弹窗的审批进度 + 操作历史数据（打开详情时并行拉取）
+  const [detailApproval, setDetailApproval] = useState<Record<string, unknown> | null>(null);
+  const [detailLogs, setDetailLogs] = useState<Record<string, unknown>[]>([]);
 
   // 2026-08-10 修复：弹窗打开时自动 reset addForm + 按后端 MR 格式生成 code
   //   注意：必须放在 showAddModal 声明之后，否则依赖数组里 [showAddModal] 会触发 TDZ
+  // 2026-09-26 修复复制 bug：复制预填模式下跳过重置（此前打开弹窗即清空，复制只剩单号、物料明细全丢）
   useEffect(() => {
-    if (showAddModal) {
+    if (showAddModal && !copyPrefill) {
       setAddForm(getDefaultAddForm());
       setTimeout(() => handleGenerateAddCode(), 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAddModal]);
+  }, [showAddModal, copyPrefill]);
 
   // ============================================
   // 删除确认状态
@@ -146,6 +163,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
     plantAreas: SelectedArea[];
     reviewer: string;
     status: string;
+    /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 */
+    productionBatchCode: string;
+    expectedDate: string;
+    priority: string;
     materials: MaterialItem[];
   }>({
     date: '',
@@ -155,6 +176,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     plantAreas: [],
     reviewer: '',
     status: '',
+    productionBatchCode: '',
+    expectedDate: '',
+    priority: 'medium',
     materials: [] as MaterialItem[]
   });
 
@@ -170,22 +194,28 @@ export function useApplicationTab(): UseApplicationTabReturn {
     return materialData.filter(item => {
       if (searchCode && !item.code.toLowerCase().includes(searchCode.toLowerCase())) return false;
       if (searchApplicant && !item.applicant.toLowerCase().includes(searchApplicant.toLowerCase())) return false;
-      // 2026-08-10：移除 productionBatchCode 搜索——字段已删除
-      // 改为按 plantAreas 区域/作物搜索
+      // 2026-09-26 批次四：恢复生产计划批次号搜索（保留区域/作物搜索兜底）
       if (searchBatchCode) {
-        const areas = item.plantAreas || [];
-        const match = areas.some((a: any) =>
-          (a.code || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
-          (a.cropName || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
-          (a.area || '').toLowerCase().includes(searchBatchCode.toLowerCase())
-        );
-        if (!match) return false;
+        const batchMatch = (item.productionBatchCode || '').toLowerCase().includes(searchBatchCode.toLowerCase());
+        if (!batchMatch) {
+          const areas = item.plantAreas || [];
+          const areaMatch = areas.some((a: any) =>
+            (a.code || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
+            (a.cropName || '').toLowerCase().includes(searchBatchCode.toLowerCase()) ||
+            (a.area || '').toLowerCase().includes(searchBatchCode.toLowerCase())
+          );
+          if (!areaMatch) return false;
+        }
       }
       if (searchWarehouse && !item.warehouseLocation.toLowerCase().includes(searchWarehouse.toLowerCase())) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      // 2026-09-26 批次三/四：日期范围 + 优先级过滤
+      if (searchDateFrom && item.date < searchDateFrom) return false;
+      if (searchDateTo && item.date > searchDateTo) return false;
+      if (priorityFilter !== 'all' && (item.priority || 'medium') !== priorityFilter) return false;
       return true;
     });
-  }, [materialData, searchCode, searchApplicant, searchBatchCode, searchWarehouse, statusFilter]);
+  }, [materialData, searchCode, searchApplicant, searchBatchCode, searchWarehouse, statusFilter, searchDateFrom, searchDateTo, priorityFilter]);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
@@ -198,6 +228,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setSearchBatchCode('');
     setSearchWarehouse('');
     setStatusFilter('all');
+    setSearchDateFrom('');
+    setSearchDateTo('');
+    setPriorityFilter('all');
     setCurrentPage(1);
   };
 
@@ -387,9 +420,96 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   // 查看详情
   // ============================================
-  const handleView = (item: MaterialReceivingRecord) => {
+  const handleView = async (item: MaterialReceivingRecord) => {
     setSelectedRecord(item);
     setShowDetailModal(true);
+    // 2026-09-26 改进批次二：打开详情时并行拉取审批进度与操作历史（失败不阻塞主信息）
+    setDetailApproval(null);
+    setDetailLogs([]);
+    try {
+      const [approvalResp, logsResp] = await Promise.all([
+        enhancedApiClient.get<Record<string, unknown> | null>(`/material-requests/${item.id}/approval`),
+        enhancedApiClient.get<Record<string, unknown>[]>(`/material-requests/${item.id}/logs`),
+      ]);
+      setDetailApproval((approvalResp as Record<string, unknown>) || null);
+      setDetailLogs(Array.isArray(logsResp) ? logsResp : []);
+    } catch (e) {
+      logger.warn('获取详情附加信息失败', e);
+    }
+  };
+
+  // ============================================
+  // 复制申请单（2026-09-26 改进批次二：同作物周期投入品快速复制重提）
+  // ============================================
+  const handleDuplicate = (item: MaterialReceivingRecord) => {
+    // 用户中文名 → oid 反查（表单 applicant/reviewer 存的是用户 oid）
+    const reverseUserMap: Record<string, string> = {};
+    Object.entries(userMap).forEach(([oid, name]) => { reverseUserMap[name] = oid; });
+    // 生成新单号（当日 MAX+1，与 handleGenerateAddCode 同规则）
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const prefix = `MR${dateStr}-`;
+    let serial = 0;
+    for (const c of materialData.map((r) => r.code)) {
+      if (typeof c === 'string' && c.startsWith(prefix) && c.length === 15) {
+        const n = parseInt(c.slice(-4), 10) || 0;
+        if (n > serial) serial = n;
+      }
+    }
+    // 2026-09-26 修复复制 bug：先置 copyPrefill 标志（弹窗 effect 不清空），
+    // 再预填含**完整物料明细**的表单（编码/名称/规格/单位/数量/单价/货位/备注全复制）
+    setCopyPrefill(true);
+    setAddForm({
+      ...getDefaultAddForm(),
+      code: `${prefix}${String(serial + 1).padStart(4, '0')}`,
+      date: todayLocal(),
+      applicant: reverseUserMap[item.applicant] || item.applicantId || item.applicant,
+      department: item.department,
+      warehouseLocation: item.warehouseLocation,
+      plantAreas: Array.isArray(item.plantAreas) ? [...item.plantAreas] : [],
+      reviewer: reverseUserMap[item.reviewer] || item.reviewer,
+      productionBatchCode: item.productionBatchCode || '',
+      expectedDate: item.expectedDate || '',
+      priority: item.priority || 'medium',
+      materials: item.materials.map((m) => ({ ...m, actualQuantity: 0, stockInsufficient: false })),
+    });
+    setShowAddModal(true);
+  };
+
+  // ============================================
+  // 撤回审批（2026-09-26 改进批次二：pending 单据撤回回草稿）
+  // ============================================
+  const handleWithdraw = async (item: MaterialReceivingRecord) => {
+    const ok = await showConfirm(`确认撤回领料单 ${item.code} 的审批申请吗？撤回后回到草稿状态。`);
+    if (!ok) return;
+    const success = await storeWithdrawItem(item.id);
+    if (success) {
+      await showAlert('已撤回，单据回到草稿状态，可编辑后重新提交');
+    } else {
+      const { error } = useMaterialRequestDataStore.getState();
+      await showAlert(error || '撤回失败，请重试');
+    }
+  };
+
+  // ============================================
+  // 物料批次明细 + 历史领用价提示（2026-09-26 改进批次四）
+  // ============================================
+  const getMaterialStockInfo = async (materialCode: string): Promise<string> => {
+    const lines: string[] = [];
+    try {
+      const priceResp = await enhancedApiClient.get<{ prices?: number[] }>(`/material-requests/material-price-history?materialCode=${encodeURIComponent(materialCode)}`);
+      const prices = (priceResp as any)?.prices || [];
+      if (prices.length > 0) lines.push(`最近领用价：${prices.map((p) => `¥${p}`).join('、')}`);
+    } catch { /* 历史价失败不阻断 */ }
+    try {
+      const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
+      const result = await fefoAllocate(materialCode, 999999);
+      const allocs = (result as any)?.allocations || [];
+      if (allocs.length > 0) {
+        lines.push('批次明细：' + allocs.slice(0, 5).map((a: any) => `${a.batchNo}(剩${a.quantity}${a.unit}，效期${a.expiryDate || '无'})`).join('；') + (allocs.length > 5 ? ' 等' : ''));
+      }
+    } catch { /* 批次失败不阻断 */ }
+    return lines.join('\n');
   };
 
   // ============================================
@@ -422,6 +542,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
       plantAreas: Array.isArray(item.plantAreas) ? [...item.plantAreas] : [],
       reviewer: item.reviewer,
       status: item.status,
+      // 2026-09-26 改进批次四：回填新字段
+      productionBatchCode: item.productionBatchCode || '',
+      expectedDate: item.expectedDate || '',
+      priority: item.priority || 'medium',
       materials: [...item.materials],
     });
     setShowEditModal(true);
@@ -472,10 +596,15 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   const handleDeleteClick = (id: number) => {
     setDeletingId(id);
+    // 2026-09-26 批次五：记录待删单据供确认弹窗显示单号
+    setSelectedRecord(materialData.find((r) => r.id === id) || null);
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
     // 调用 API 删除记录（2026-09-26：失败提示后端原因，如"已审批不允许删除/已有出库记录"）
     if (deletingId !== null) {
       const ok = await storeDeleteItem(deletingId);
@@ -490,6 +619,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     }
     setShowDeleteConfirm(false);
     setDeletingId(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ============================================
@@ -518,7 +650,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 保存编辑（重新提交）
   // ============================================
   const handleSaveEdit = async () => {
+    if (isSubmitting) return;
     if (!selectedRecord) return;
+    setIsSubmitting(true);
+    try {
 
     const updates = {
       date: editForm.date,
@@ -527,6 +662,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
       warehouseLocation: editForm.warehouseLocation,
       plantAreas: editForm.plantAreas,
       reviewer: editForm.reviewer,
+      // 2026-09-26 改进批次四：生产批次号/预计日期/优先级
+      productionBatchCode: editForm.productionBatchCode || '',
+      expectedDate: editForm.expectedDate || '',
+      priority: editForm.priority || 'medium',
       // 2026-09-26 修复 M2：status 用 DB 合法枚举 draft（此前写 'pending' 非枚举值）
       status: 'draft',
       approvalStatus: 'pending',   // DB 列 approval_status
@@ -542,6 +681,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
 
     setShowEditModal(false);
     await showAlert('编辑已保存，领料单已重新提交，等待审批');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ============================================
@@ -557,11 +699,14 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 提交作废申请
   // ============================================
   const submitVoidApply = async () => {
+    if (isSubmitting) return;
     if (!voidReason.trim()) {
       await showAlert('请填写作废原因');
       return;
     }
     if (!selectedRecord) return;
+    setIsSubmitting(true);
+    try {
 
     // 2026-09-26 修复 C2+C3：作废同时写 status 与 approval_status='voided'
     // （此前只写 status='cancelled'，approval_status 仍 pending，normalize 派生回"待审批"→作废被吞）；
@@ -580,6 +725,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setShowVoidModal(false);
     setShowEditModal(false);
     setVoidReason('');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ============================================
@@ -660,6 +808,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 保存新增
   // ============================================
   const handleSaveAdd = async () => {
+    // 2026-09-26 改进批次一：防双击重复提交（后端防重是换新单号，双击会产生两张内容相同的单据）
+    if (isSubmitting) return;
     if (!addForm.applicant) {
       await showAlert('请选择申请人');
       return;
@@ -668,6 +818,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
       await showAlert('请添加至少一个物料');
       return;
     }
+    setIsSubmitting(true);
+    try {
 
     // 从用户映射中获取申请人中文名称
     const applicantName = userMap[addForm.applicant] || addForm.applicant;
@@ -683,13 +835,29 @@ export function useApplicationTab(): UseApplicationTabReturn {
       // 2026-08-10：plantArea → plantAreas 数组
       plantAreas: addForm.plantAreas,
       reviewer: reviewerName,
-      // 2026-08-10：移除 productionBatchCode
-      materials: addForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
+      // 2026-09-26 改进批次四：生产批次号/预计日期/优先级/附件
+      productionBatchCode: addForm.productionBatchCode || '',
+      expectedDate: addForm.expectedDate || '',
+      priority: addForm.priority || 'medium',
+      attachments: addForm.attachments || [],
+      // 2026-09-26 改进批次一：总金额汇总落库 + 库存不足行前端预标记（后端会以实时库存复核覆盖）
+      totalAmount: addForm.materials.reduce((s, m) => s + (m.requestedQuantity || 0) * (m.unitPrice || 0), 0),
+      materials: addForm.materials.map(m => ({
+        ...m,
+        actualQuantity: 0,
+        stockInsufficient: m.requestedQuantity > (m.stockQuantity || 0),
+      })),
     });
 
     if (!newRecord) {
       await showAlert('保存领料单失败，请重试');
       return;
+    }
+
+    // 2026-09-26 改进批次一：后端库存软校验警示（超库存允许提交但标记）
+    const stockWarnings = (newRecord as any).stockWarnings || [];
+    if (stockWarnings.length > 0) {
+      await showAlert(`领料单已保存，但以下物料库存不足：\n${stockWarnings.join('\n')}`);
     }
 
     // 2026-08-10 修复：保存成功后从后端 reload 列表，避免 addItem 内部 normalize 字段错位导致主字段全空
@@ -760,6 +928,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
 
     setShowAddModal(false);
     setAddForm(getDefaultAddForm());
+    setCopyPrefill(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ============================================
@@ -768,6 +940,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const handleCancelAdd = () => {
     setShowAddModal(false);
     setAddForm(getDefaultAddForm());
+    setCopyPrefill(false);
   };
 
   // ============================================
@@ -785,6 +958,15 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setSearchWarehouse,
     statusFilter,
     setStatusFilter,
+    searchDateFrom,
+    setSearchDateFrom,
+    searchDateTo,
+    setSearchDateTo,
+    priorityFilter,
+    setPriorityFilter,
+
+    // 提交锁（防双击）
+    isSubmitting,
 
     // 分页状态
     currentPage,
@@ -801,6 +983,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setShowExportTypeModal,
     exportFileType,
     setExportFileType,
+
+    // 详情附加数据（2026-09-26 批次二：审批进度 + 操作历史）
+    detailApproval,
+    detailLogs,
 
     // 弹窗状态
     showDetailModal,
@@ -861,6 +1047,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
     confirmExport,
     handleCancelExport,
     handleView,
+    // 2026-09-26 批次二/四：复制、撤回、物料批次/历史价提示
+    handleDuplicate,
+    handleWithdraw,
+    getMaterialStockInfo,
     handleEdit,
     handleEditAddMaterial,
     handleEditRemoveMaterial,

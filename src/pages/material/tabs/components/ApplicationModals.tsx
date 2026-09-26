@@ -13,6 +13,7 @@ import { UserSelect } from '@/components/common/settings/UserSelect';
 import { AreaMultiSelectPicker } from '@/components/common/AreaMultiSelectPicker';
 import { useWarehouseMaterialStore } from '@/stores';
 import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '@/types/materialReceiving';
+import { showAlert } from '@/lib/dialogService';
 
 // 辅助函数：从 plantAreas 数组取/设单条自定义用途（'custom' 类型仅保留 0 或 1 条）
 function getCustomPurpose(plantAreas: SelectedArea[]): string {
@@ -48,6 +49,10 @@ interface EditModalProps {
     plantAreas: SelectedArea[];
     reviewer: string;
     status: string;
+    /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 */
+    productionBatchCode: string;
+    expectedDate: string;
+    priority: string;
     materials: MaterialItem[];
   };
   onFormChange: React.Dispatch<React.SetStateAction<{
@@ -58,6 +63,9 @@ interface EditModalProps {
     plantAreas: SelectedArea[];
     reviewer: string;
     status: string;
+    productionBatchCode: string;
+    expectedDate: string;
+    priority: string;
     materials: MaterialItem[];
   }>>;
   onClose: () => void;
@@ -66,6 +74,10 @@ interface EditModalProps {
   onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
   onSave: () => void;
   onVoidApply: () => void;
+  /** 2026-09-26 批次二：提交锁（防双击） */
+  saving?: boolean;
+  /** 2026-09-26 批次四：物料批次明细 + 历史领用价提示 */
+  onShowMaterialInfo?: (code: string) => Promise<string>;
 }
 
 export function EditModal({
@@ -79,6 +91,8 @@ export function EditModal({
   onMaterialChange,
   onSave,
   onVoidApply,
+  saving = false,
+  onShowMaterialInfo,
 }: EditModalProps) {
   // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
   //   让用户"先输编码再补名称"成为可能，避免之前"输完编码保存后名称空"的 bug
@@ -182,7 +196,41 @@ export function EditModal({
           placeholder="选择审核人"
         />
       </div>
-      {/* 2026-08-10：移除"生产计划批次号"字段——改为"针对实际的种植和育苗来统计对应的使用物料"的多选区域 */}
+      {/* 2026-09-26 改进批次四：恢复生产计划批次号（成本归集维度）+ 预计日期 + 优先级 */}
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
+        <Input
+          type="text"
+          value={editForm.productionBatchCode || ''}
+          onChange={(e) => onFormChange({ ...editForm, productionBatchCode: e.target.value })}
+          placeholder="如 ZZB2026-001"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">预计领用日期</Label>
+        <Input
+          type="date"
+          value={editForm.expectedDate || ''}
+          onChange={(e) => onFormChange({ ...editForm, expectedDate: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">优先级</Label>
+        <Select
+          value={editForm.priority || 'medium'}
+          onValueChange={(val) => onFormChange({ ...editForm, priority: val })}
+        >
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectValue placeholder="普通" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="medium">普通</SelectItem>
+            <SelectItem value="high">加急</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 
@@ -240,6 +288,8 @@ export function EditModal({
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
                         onMaterialChange(idx, 'warehousePosition', m.location || '');
+                        // 2026-09-26 批次四：选中物料后展示批次明细 + 最近领用价
+                        onShowMaterialInfo?.(m.code).then((t) => { if (t) showAlert(t); }).catch(() => {});
                       }}
                       placeholder="输入物料名称搜索（必填）"
                       className="w-full"
@@ -348,8 +398,8 @@ export function EditModal({
           <XCircle className="w-4 h-4" /> 作废申请
         </Button>
       )}
-      <Button onClick={onSave}>
-        <Save className="w-4 h-4" /> 保存提交
+      <Button onClick={onSave} disabled={saving}>
+        <Save className="w-4 h-4" /> {saving ? '提交中...' : '保存提交'}
       </Button>
     </div>
   );
@@ -390,7 +440,11 @@ interface AddModalProps {
     /** 2026-08-10：选区域(多选) */
     plantAreas: SelectedArea[];
     reviewer: string;
-    batchRemark: string;
+    /** 2026-09-26 改进批次四：恢复生产批次号 + 预计日期 + 优先级 + 附件 */
+    productionBatchCode: string;
+    expectedDate: string;
+    priority: string;
+    attachments: Array<{ name: string; dataUrl: string }>;
     materials: MaterialItem[];
   };
   onFormChange: React.Dispatch<React.SetStateAction<{
@@ -401,7 +455,10 @@ interface AddModalProps {
     warehouseLocation: string;
     plantAreas: SelectedArea[];
     reviewer: string;
-    batchRemark: string;
+    productionBatchCode: string;
+    expectedDate: string;
+    priority: string;
+    attachments: Array<{ name: string; dataUrl: string }>;
     materials: MaterialItem[];
   }>>;
   onClose: () => void;
@@ -410,6 +467,10 @@ interface AddModalProps {
   onMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
   onGenerateCode: () => void;
   onSave: () => void;
+  /** 2026-09-26 批次二：提交锁（防双击） */
+  saving?: boolean;
+  /** 2026-09-26 批次四：物料批次明细 + 历史领用价提示 */
+  onShowMaterialInfo?: (code: string) => Promise<string>;
 }
 
 export function AddModal({
@@ -422,6 +483,8 @@ export function AddModal({
   onMaterialChange,
   onGenerateCode,
   onSave,
+  saving = false,
+  onShowMaterialInfo,
 }: AddModalProps) {
   // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
   useEffect(() => {
@@ -534,7 +597,78 @@ export function AddModal({
           placeholder="选择审核人"
         />
       </div>
-      {/* 2026-08-10：移除"生产计划批次号"字段——改为"针对实际的种植和育苗来统计对应的使用物料"的多选区域 */}
+      {/* 2026-09-26 改进批次四：恢复生产计划批次号（成本归集维度）+ 预计日期 + 优先级 + 附件 */}
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
+        <Input
+          type="text"
+          value={addForm.productionBatchCode || ''}
+          onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
+          placeholder="如 ZZB2026-001（选填）"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">预计领用日期</Label>
+        <Input
+          type="date"
+          value={addForm.expectedDate || ''}
+          onChange={(e) => onFormChange({ ...addForm, expectedDate: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">优先级</Label>
+        <Select
+          value={addForm.priority || 'medium'}
+          onValueChange={(val) => onFormChange({ ...addForm, priority: val })}
+        >
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectValue placeholder="普通" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="medium">普通</SelectItem>
+            <SelectItem value="high">加急</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">附件</Label>
+        <Input
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={(e) => {
+            // 2026-09-26 批次五：附件转 base64 存表单（attachments JSON 落库）
+            const files = Array.from(e.target.files || []);
+            Promise.all(files.map((f) => new Promise<{ name: string; dataUrl: string }>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve({ name: f.name, dataUrl: String(reader.result || '') });
+              reader.onerror = () => resolve({ name: f.name, dataUrl: '' });
+              reader.readAsDataURL(f);
+            }))).then((newAtts) => {
+              onFormChange({ ...addForm, attachments: [...(addForm.attachments || []), ...newAtts] });
+            });
+          }}
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm"
+        />
+        {(addForm.attachments || []).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(addForm.attachments || []).map((a, i) => (
+              <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
+                {a.name}
+                <button
+                  type="button"
+                  className="text-red-500 hover:text-red-700"
+                  onClick={() => onFormChange({ ...addForm, attachments: (addForm.attachments || []).filter((_, j) => j !== i) })}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -592,6 +726,8 @@ export function AddModal({
                         onMaterialChange(idx, 'stockQuantity', m.quantity);
                         onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
                         onMaterialChange(idx, 'warehousePosition', m.location || '');
+                        // 2026-09-26 批次四：选中物料后展示批次明细 + 最近领用价
+                        onShowMaterialInfo?.(m.code).then((t) => { if (t) showAlert(t); }).catch(() => {});
                       }}
                       placeholder="输入物料名称搜索（必填）"
                       className="w-full"
@@ -693,8 +829,8 @@ export function AddModal({
       <Button variant="secondary" onClick={onClose}>
         <X className="w-4 h-4" /> 取消
       </Button>
-      <Button onClick={onSave}>
-        <Send className="w-4 h-4" /> 提交申请
+      <Button onClick={onSave} disabled={saving}>
+        <Send className="w-4 h-4" /> {saving ? '提交中...' : '提交申请'}
       </Button>
     </div>
   );

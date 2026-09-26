@@ -125,6 +125,42 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 /**
+ * 物料历史领用价 — GET /api/material-requests/material-price-history?materialCode=xxx
+ * 注意：必须注册在 GET /:id 之前，否则 "material-price-history" 会被当作 :id 捕获
+ */
+router.get('/material-price-history', (req: Request, res: Response) => {
+  try {
+    const code = String(req.query.materialCode || '');
+    if (!code) {
+      return res.status(400).json({ success: false, error: '缺少物料编码' });
+    }
+    const db = getDatabase();
+    const results = db.exec(
+      'SELECT materials, apply_date FROM material_requests WHERE materials LIKE ? ORDER BY apply_date DESC, create_time DESC LIMIT 20',
+      [`%"materialCode":"${code}"%`]
+    );
+    const prices: number[] = [];
+    if (results.length > 0) {
+      for (const row of results[0].values) {
+        let mats: any[] = [];
+        try { mats = JSON.parse(String(row[0] || '[]')); } catch { mats = []; }
+        if (!Array.isArray(mats)) continue;
+        for (const m of mats) {
+          if ((m.materialCode || m.code) === code) {
+            const p = Number(m.unitPrice);
+            if (p > 0 && !prices.includes(p)) prices.push(p);
+          }
+        }
+      }
+    }
+    res.json({ success: true, data: { prices: prices.slice(0, 3) } });
+  } catch (error) {
+    console.error('获取历史领用价失败:', error);
+    res.status(500).json({ success: false, error: '获取历史领用价失败' });
+  }
+});
+
+/**
  * 获取单个物料申请详情
  * GET /api/material-requests/:id
  */
@@ -197,11 +233,49 @@ router.post('/', (req: Request, res: Response) => {
     const localDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const localNow = `${localDateStr} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     let requestCode = request_code || generateMaterialRequestCode();
+
+    // 2026-09-26 改进批次一：解析 materials（前端传字符串或数组；此前直接 JSON.stringify(字符串)
+    // 会产生双重编码，靠启动迁移反复兜底——此处根治）
+    let materialsArr: any[] = [];
+    if (Array.isArray(materials)) {
+      materialsArr = materials;
+    } else if (typeof materials === 'string') {
+      try {
+        const parsed = JSON.parse(materials);
+        materialsArr = Array.isArray(parsed) ? parsed : [];
+      } catch { materialsArr = []; }
+    }
+
+    const db = getDatabase();
+
+    // 2026-09-26 改进批次一：
+    // 1) 库存软校验——超库存允许提交，但行标记 stockInsufficient + 响应返回警示清单
+    // 2) total_amount 兜底重算（前端此前恒传 0，金额列全失真）
+    const stockWarnings: string[] = [];
+    let computedTotal = Number(total_amount) || 0;
+    for (const m of materialsArr) {
+      const mCode = m.materialCode || m.code || '';
+      const mQty = Number(m.requestedQuantity) || 0;
+      const mPrice = Number(m.unitPrice) || 0;
+      computedTotal += mQty * mPrice;
+      if (!mCode || mQty <= 0) continue;
+      // 可用库存 = 批次剩余总量（有批次时）或 materials 主表量（无批次物料）
+      const batchRows = db.exec('SELECT SUM(remaining_quantity) AS s FROM batch_inventory WHERE material_code = ?', [mCode]);
+      const batchSum = batchRows.length > 0 && batchRows[0].values.length > 0 ? Number(batchRows[0].values[0][0]) || 0 : 0;
+      const mainRows = db.exec('SELECT quantity FROM materials WHERE code = ?', [mCode]);
+      const mainQty = mainRows.length > 0 && mainRows[0].values.length > 0 ? Number(mainRows[0].values[0][0]) || 0 : 0;
+      const available = batchSum > 0 ? batchSum : mainQty;
+      if (mQty > available) {
+        m.stockInsufficient = true;
+        stockWarnings.push(`${m.materialName || mCode}：申请 ${mQty}${m.unit || ''}，可用库存 ${available}${m.unit || ''}`);
+      } else {
+        m.stockInsufficient = false;
+      }
+    }
     // 2026-08-10 修复：id 默认等于 request_code（前端只传 request_code，避免 id 与 code 存不同值）
     let newId = id || requestCode;
     // 2026-08-10 修复：自动验重 —— 极端并发下前端拿到的列表可能落后于后端实际状态，
     //   再次确认 code 不重复；若重复则循环递增生成新 code（PRIMARY KEY 冲突会直接 500）
-    const db = getDatabase();
     const checkExists = (id: string) => {
       // sql.js 的 stmt.bind() 不会自动 reset，循环里复用同一 stmt 会失效 —— 每次重新 prepare
       const stmt = db.prepare('SELECT 1 FROM material_requests WHERE id = ? LIMIT 1');
@@ -265,21 +339,24 @@ router.post('/', (req: Request, res: Response) => {
         warehouse_name || null,
         plant_area || null,
         production_batch_code || null,
-        total_amount || 0,
+        computedTotal,
         priority || 'medium',
         status || 'draft',
         approval_status || 'pending',
         remarks || null,
         reviewer || null,
         JSON.stringify(attachments || []),
-        JSON.stringify(materials || []),
+        JSON.stringify(materialsArr),
         create_by || null,
         localNow,
         localNow,
       ]);
 
       saveDatabase();
-      res.status(201).json({ success: true, data: { id: newId, request_code: requestCode } });
+      res.status(201).json({
+        success: true,
+        data: { id: newId, request_code: requestCode, total_amount: computedTotal, stock_warnings: stockWarnings },
+      });
     } catch (dbError) {
       console.error('【DEBUG】数据库INSERT失败:', dbError);
       res.status(500).json({ success: false, error: '创建物料申请失败: ' + (dbError instanceof Error ? dbError.message : String(dbError)) });
@@ -287,6 +364,111 @@ router.post('/', (req: Request, res: Response) => {
   } catch (error) {
     console.error('【DEBUG】创建物料申请失败:', error);
     res.status(500).json({ success: false, error: '创建物料申请失败' });
+  }
+});
+
+/**
+ * 撤回审批 — POST /api/material-requests/:id/withdraw
+ * 2026-09-26 改进批次二：pending 申请单可撤回（审批单改 cancelled + 申请单回 draft/pending）
+ */
+router.post('/:id/withdraw', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    // 查该申请单的待审批审批单（business_link JSON 内嵌 requestId，两种键名兼容）
+    const rows = db.exec(
+      `SELECT id FROM approvals WHERE status = 'pending' AND (business_link LIKE ? OR business_link LIKE ?) ORDER BY created_at DESC LIMIT 1`,
+      [`%"requestId":"${id}"%`, `%"request_id":"${id}"%`]
+    );
+    if (rows.length === 0 || rows[0].values.length === 0) {
+      return res.status(400).json({ success: false, error: '未找到待审批的审批单，无法撤回' });
+    }
+    const approvalId = String(rows[0].values[0][0]);
+    const d = new Date();
+    const padN = (n: number) => String(n).padStart(2, '0');
+    const now = `${d.getFullYear()}-${padN(d.getMonth() + 1)}-${padN(d.getDate())} ${padN(d.getHours())}:${padN(d.getMinutes())}:${padN(d.getSeconds())}`;
+
+    db.run("UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE id = ?", [now, approvalId]);
+    db.run("UPDATE material_requests SET status = 'draft', approval_status = 'pending', update_time = ? WHERE id = ?", [now, id]);
+    saveDatabase();
+    res.json({ success: true, data: { id, approvalId } });
+  } catch (error) {
+    console.error('撤回领料申请失败:', error);
+    res.status(500).json({ success: false, error: '撤回领料申请失败' });
+  }
+});
+
+/**
+ * 申请单操作历史 — GET /api/material-requests/:id/logs
+ * 数据源：operation_logs（审计中间件自动记录全部写操作）
+ */
+router.get('/:id/logs', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    // 2026-09-26：auditTrail 的 resource_id 取路径最后一段——创建类请求（POST /material-requests）
+    // 无路径 id → resource_id=null；/withdraw 子路径 → resource_id='withdraw'。
+    // 因此按三路匹配：resource_id / 描述中含该单号路径 / 请求体含 request_code（创建时的 new_value）
+    const results = db.exec(
+      `SELECT id, user_id, username, action, module, resource_type, resource_id, description, created_at
+       FROM operation_logs
+       WHERE resource_id = ?
+          OR description LIKE ?
+          OR new_value LIKE ?
+       ORDER BY created_at DESC LIMIT 50`,
+      [id, `%/material-requests/${id}%`, `%"request_code":"${id}"%`]
+    );
+    const logs: Record<string, unknown>[] = [];
+    if (results.length > 0) {
+      const cols = results[0].columns;
+      for (const row of results[0].values) {
+        const item: Record<string, unknown> = {};
+        row.forEach((v: unknown, i: number) => { item[cols[i]] = v; });
+        logs.push(item);
+      }
+    }
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    console.error('获取申请单操作历史失败:', error);
+    res.status(500).json({ success: false, error: '获取申请单操作历史失败' });
+  }
+});
+
+/**
+ * 申请单审批进度 — GET /api/material-requests/:id/approval
+ * 返回对应审批单（approvers 审批链 + records 审批记录）
+ */
+router.get('/:id/approval', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const rows = db.exec(
+      `SELECT id, status, approvers, records, created_at, updated_at FROM approvals
+       WHERE business_link LIKE ? OR business_link LIKE ? ORDER BY created_at DESC LIMIT 1`,
+      [`%"requestId":"${id}"%`, `%"request_id":"${id}"%`]
+    );
+    if (rows.length === 0 || rows[0].values.length === 0) {
+      return res.json({ success: true, data: null });
+    }
+    const cols = rows[0].columns;
+    const raw: Record<string, unknown> = {};
+    rows[0].values[0].forEach((v: unknown, i: number) => { raw[cols[i]] = v; });
+    const parseJson = (v: unknown): unknown => {
+      if (Array.isArray(v)) return v;
+      if (typeof v !== 'string' || !v) return [];
+      let parsed: unknown = v;
+      for (let i = 0; i < 3; i++) {
+        if (typeof parsed !== 'string') break;
+        try { parsed = JSON.parse(parsed); } catch { return []; }
+      }
+      return parsed;
+    };
+    raw.approvers = parseJson(raw.approvers);
+    raw.records = parseJson(raw.records);
+    res.json({ success: true, data: raw });
+  } catch (error) {
+    console.error('获取申请单审批进度失败:', error);
+    res.status(500).json({ success: false, error: '获取申请单审批进度失败' });
   }
 });
 
