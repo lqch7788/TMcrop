@@ -1,10 +1,8 @@
 // StatisticsTab 组件 - 领料统计页面主组件
 // 负责组合所有子组件，呈现完整的统计页面功能
+// 2026-09-26: 删除 AI 助手（AIPanel）—— 功能已在智能任务中心存在，不应放在这里
 import { Calendar, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui';
-
-// ★ 2026-08-25 PR-D4：接入 AIPanel（AI-07 资源优化 + AI-12 问答）
-import { AIPanel } from '../../../components/farm/ai/AIPanel';
 
 // 导入hook
 import { useStatisticsTab } from './hooks/useStatisticsTab';
@@ -80,13 +78,6 @@ export default function StatisticsTab() {
         </div>
 
         <div className="px-6 pt-6 pb-0">
-          {/* ★ 2026-08-25 PR-D4：AI 助手（覆盖 AI-07 资源优化 + AI-12 问答） */}
-          <div className="mb-6">
-            <AIPanel
-              context="物料统计"
-              lookbackDays={30}
-            />
-          </div>
           {/* 仪表盘 - 仅月度汇总Tab显示 */}
           {hook.statActiveTab === 'monthly' && (
             <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 mb-6 shadow-lg shadow-cyan-500/10">
