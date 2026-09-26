@@ -183,6 +183,8 @@ interface MaterialRequestDataState {
   updateItem: (id: string | number, updates: Partial<MaterialReceivingRecord>) => Promise<boolean>;
   deleteItem: (id: string | number) => Promise<boolean>;
   deleteItems: (ids: (string | number)[]) => Promise<boolean>;
+  // 2026-09-26 改进批次二：撤回审批（pending → draft）
+  withdrawItem: (id: string | number) => Promise<boolean>;
   refresh: () => Promise<void>;
 }
 
@@ -219,8 +221,8 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         // 2026-08-10：清理 denormalize 多余字段，再写 plantArea
         delete body.plantAreas;
         delete body.plantAreaRaw;
-        // 2026-08-10 修复：保留 production_batch_code=null 占位（后端 SQL 24 个 ?，删值会触发 bind 错误）
-        body.production_batch_code = null;
+        // 2026-09-26 改进批次四：恢复生产计划批次号关联（不再强制置 null）
+        body.production_batch_code = body.production_batch_code ?? item.productionBatchCode ?? null;
         // 2026-08-10 修复：id 默认 = request_code（不传 id，后端 newId = requestCode；之前前端传 MR${Date.now()} 作 id，导致 id 列与 code 列存了不同值）
         body.request_code = body.request_code || item.code || `MR${Date.now()}`;
         delete body.id;
@@ -242,7 +244,8 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         body.status = body.status || 'draft';
         body.approval_status = body.approval_status || 'pending';
         body.remarks = body.remarks || null;
-        body.attachments = body.attachments || null;
+        // 2026-09-26 改进批次五：附件传数组（后端统一 JSON.stringify，避免字符串双重编码）
+        body.attachments = Array.isArray(body.attachments) ? body.attachments : (Array.isArray(item.attachments) ? item.attachments : []);
         body.create_by = body.create_by || null;
         body.create_time = new Date().toISOString();
         body.update_time = new Date().toISOString();
@@ -265,6 +268,11 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
           status: 'draft',
           materials: item.materials || [],
         } as Record<string, unknown>);
+
+        // 2026-09-26 改进批次一：透传后端库存软校验警示与重算金额（提交后提示用户）
+        const resp = (result as any) || {};
+        (newItem as any).stockWarnings = resp.stockWarnings ?? resp.stock_warnings ?? [];
+        (newItem as any).totalAmount = resp.totalAmount ?? resp.total_amount ?? body.total_amount ?? 0;
 
         set((s) => ({ items: [newItem, ...s.items] }));
         return newItem;
@@ -349,6 +357,19 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
 
     refresh: async () => {
       await get().loadItems();
+    },
+
+    // 2026-09-26 改进批次二：撤回审批（后端撤销审批单 + 申请单回 draft/pending）
+    withdrawItem: async (id) => {
+      try {
+        await enhancedApiClient.post(`/material-requests/${id}/withdraw`, {});
+        await get().loadItems();
+        return true;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : '撤回失败';
+        set({ error: msg });
+        return false;
+      }
     },
   })
 );

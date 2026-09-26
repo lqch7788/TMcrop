@@ -1,11 +1,13 @@
 // ApplicationTable 组件
 // 领料申请单的主表格和展开行
 // 2026-09-26：批量编辑死代码已删除（编辑走行操作列），清理未用 props/import
-import { Fragment } from 'react';
-import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
+import { Fragment, useState } from 'react';
+import { ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
+import { printVoucher } from '../../../../components/materialReceiving/modals/DetailModal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { EmptyState } from '@/components/ui';
 import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
 
 interface ApplicationTableProps {
@@ -35,6 +37,9 @@ interface ApplicationTableProps {
   onView: (item: MaterialReceivingRecord) => void;
   onEdit: (item: MaterialReceivingRecord) => void;
   onDeleteClick: (id: number) => void;
+  // 2026-09-26 批次二：撤回（仅待审批）与复制
+  onWithdraw: (item: MaterialReceivingRecord) => void;
+  onDuplicate: (item: MaterialReceivingRecord) => void;
   // 新增
   onAddModalOpen: () => void;
   // 批量操作
@@ -65,10 +70,18 @@ export function ApplicationTable({
   onView,
   onEdit,
   onDeleteClick,
+  onWithdraw,
+  onDuplicate,
   onAddModalOpen,
   onShowBatchDeleteConfirm,
   onBatchCancel,
 }: ApplicationTableProps) {
+  // 2026-09-26 批次五：申请日期表头点击排序（升/降切换）
+  const [sortAsc, setSortAsc] = useState(false);
+  const sortedData = [...filteredData].sort((a, b) =>
+    sortAsc ? String(a.date).localeCompare(String(b.date)) : String(b.date).localeCompare(String(a.date))
+  );
+
   // 计算总页数
   const computedTotalPages = Math.ceil(filteredData.length / pageSize);
 
@@ -118,7 +131,12 @@ export function ApplicationTable({
         )}
       </div>
 
-      {/* 表格内容 */}
+      {/* 表格内容（2026-09-26 改进批次五：空数据展示 EmptyState） */}
+      {filteredData.length === 0 ? (
+        <div className="p-12">
+          <EmptyState type="search" title="暂无领料申请单" description="调整筛选条件，或点击右上角「新增」创建第一张领料申请单" />
+        </div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full">
           {/* 表头 */}
@@ -134,13 +152,17 @@ export function ApplicationTable({
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-8"></th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">领料单号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
+              {/* 2026-09-26 批次五：日期表头点击排序 */}
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer select-none" onClick={() => setSortAsc(!sortAsc)} title="点击切换升/降序">
+                申请日期 {sortAsc ? '↑' : '↓'}
+              </th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap hidden md:table-cell">部门</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区域/用途</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
-              {/* 2026-08-10：移除"生产计划批次号"列——改为选区域(多选)展示 plantAreas */}
+              {/* 2026-09-26 批次四：恢复"生产计划批次号"列（成本归集维度） */}
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap hidden md:table-cell">生产批次号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               {/* 2026-08-10：操作列（参照物料库存页面，下沉编辑/删除按钮） */}
@@ -149,7 +171,7 @@ export function ApplicationTable({
           </thead>
           {/* 表体 */}
           <tbody className="divide-y divide-gray-300">
-            {filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
+            {sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
               // 2026-09-26 修复：key 上移到 Fragment（此前 key 在内层 tr，Fragment 无 key 引发 React 警告）
               <Fragment key={item.id}>
                 {/* 主数据行 */}
@@ -178,7 +200,7 @@ export function ApplicationTable({
                   <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => onView(item)}>{item.code}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.date}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicant}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.department}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap hidden md:table-cell">{item.department}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.materials.length > 0 ? `${item.materials.length}种` : '-'}</td>
                   {/* 2026-08-10：选区域(多选)展示——以 chip 形式显示 plantAreas */}
                   <td className="px-4 py-3 text-xs text-gray-600">
@@ -203,7 +225,10 @@ export function ApplicationTable({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.reviewer}</td>
-                  {/* 2026-08-10：移除"生产计划批次号"列 */}
+                  {/* 2026-09-26 批次四：恢复"生产计划批次号"列 */}
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap hidden md:table-cell">
+                    {(item as any).productionBatchCode || '-'}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium w-fit ${
@@ -217,12 +242,22 @@ export function ApplicationTable({
                       }`}>
                         {item.status}
                       </span>
+                      {/* 2026-09-26 批次四：加急优先级徽章 */}
+                      {(item as any).priority === 'high' && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit bg-red-100 text-red-700">加急</span>
+                      )}
                       {/* 出库状态标签（后端聚合 dispatch_status 列） */}
                       {(item as any).dispatchStatus && (
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${
                           (item as any).dispatchStatus === 'complete' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
                         }`}>
                           {(item as any).dispatchStatus === 'complete' ? '已出库' : '部分出库'}
+                        </span>
+                      )}
+                      {/* 2026-09-26 改进批次一：库存不足软警示徽章（后端提交时逐行复核标记） */}
+                      {item.materials.some((m: any) => m.stockInsufficient) && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit bg-orange-100 text-orange-700" title="部分物料申请数量超过当前可用库存">
+                          ⚠ 库存不足
                         </span>
                       )}
                       {item.statusClass === 'rejected' && item.rejectReason && (
@@ -232,14 +267,26 @@ export function ApplicationTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap hidden md:table-cell">
                     {item.materials.length > 0 ? item.materials[0].remark : '-'}
                   </td>
-                  {/* 行内操作列：编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
+                  {/* 行内操作列：编辑/撤回/复制/删除（2026-09-26 批次二扩充） */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" title="编辑" onClick={() => onEdit(item)}>
                         <Edit2 className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      {item.statusClass === 'pending' && (
+                        <Button variant="ghost" size="icon" title="撤回审批" onClick={() => onWithdraw(item)}>
+                          <Undo2 className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" title="复制申请单" onClick={() => onDuplicate(item)}>
+                        <Copy className="w-4 h-4 text-emerald-600" />
+                      </Button>
+                      {/* 2026-09-26 用户要求：操作列与详情弹窗两处均可打印 */}
+                      <Button variant="ghost" size="icon" title="打印领料单" onClick={() => printVoucher(item)}>
+                        <Printer className="w-4 h-4 text-gray-600" />
                       </Button>
                       <Button variant="ghost" size="icon" title="删除" onClick={() => onDeleteClick(item.id)}>
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -250,7 +297,7 @@ export function ApplicationTable({
                 {/* 展开行 - 物料明细 */}
                 {expandedRows.has(item.id) && (
                   <tr key={`${item.id}-expanded`} className="bg-white">
-                    <td colSpan={(exportMode || batchEditMode) ? 12 : 11} className="px-4 py-3">
+                    <td colSpan={(exportMode || batchEditMode) ? 13 : 12} className="px-4 py-3">
                       <div className="text-sm">
                         <div className="font-medium text-blue-800 mb-2">物料明细</div>
                         {item.materials.length > 0 ? (
@@ -304,6 +351,7 @@ export function ApplicationTable({
           </tbody>
         </table>
       </div>
+      )}
 
       {/* 导出模式底部 */}
       {exportMode && selectedRows.length > 0 && (

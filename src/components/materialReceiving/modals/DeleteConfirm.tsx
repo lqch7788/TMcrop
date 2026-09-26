@@ -7,9 +7,11 @@ interface DeleteConfirmProps {
   onConfirm: () => void;
   onCancel?: () => void;
   onClose?: () => void;
+  /** 2026-09-26 批次五：确认弹窗显示单据号，防误删 */
+  recordCode?: string;
 }
 
-export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCancel, onClose }) => {
+export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCancel, onClose, recordCode }) => {
   const handleCancel = onCancel || onClose || (() => {});
   return (
     <UnifiedModal
@@ -34,7 +36,9 @@ export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCance
           <strong>警告：</strong> 删除此领料记录可能会导致相关数据丢失，无法恢复。请确认是否继续删除操作。
         </p>
       </div>
-      <p className="text-sm text-gray-600">确定要删除这条领料记录吗？</p>
+      <p className="text-sm text-gray-600">
+        确定要删除领料单 <strong className="font-mono text-blue-700">{recordCode || '（未指定单号）'}</strong> 吗？
+      </p>
     </UnifiedModal>
   );
 };

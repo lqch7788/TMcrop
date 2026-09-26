@@ -40,6 +40,12 @@ export default function ApplicationTab() {
         setSearchWarehouse={hook.setSearchWarehouse}
         statusFilter={hook.statusFilter}
         setStatusFilter={hook.setStatusFilter}
+        searchDateFrom={hook.searchDateFrom}
+        setSearchDateFrom={hook.setSearchDateFrom}
+        searchDateTo={hook.searchDateTo}
+        setSearchDateTo={hook.setSearchDateTo}
+        priorityFilter={hook.priorityFilter}
+        setPriorityFilter={hook.setPriorityFilter}
         onReset={hook.handleReset}
         onPageChange={hook.setCurrentPage}
       />
@@ -65,16 +71,21 @@ export default function ApplicationTab() {
         onView={hook.handleView}
         onEdit={hook.handleEdit}
         onDeleteClick={hook.handleDeleteClick}
+        // 2026-09-26 批次二：行内撤回（仅待审批）与复制
+        onWithdraw={hook.handleWithdraw}
+        onDuplicate={hook.handleDuplicate}
         onAddModalOpen={() => hook.setShowAddModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
         onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}
       />
 
-      {/* 查看详情弹窗 */}
+      {/* 查看详情弹窗（2026-09-26 批次二：附审批进度 + 操作历史） */}
       {hook.showDetailModal && hook.selectedRecord && (
         <DetailModal
           isOpen={hook.showDetailModal}
           record={hook.selectedRecord}
+          approval={hook.detailApproval as any}
+          logs={hook.detailLogs as any}
           onClose={() => hook.setShowDetailModal(false)}
         />
       )}
@@ -91,6 +102,8 @@ export default function ApplicationTab() {
         onMaterialChange={hook.handleEditMaterialChange}
         onSave={hook.handleSaveEdit}
         onVoidApply={hook.handleVoidApply}
+        saving={hook.isSubmitting}
+        onShowMaterialInfo={hook.getMaterialStockInfo}
       />
 
       {/* 新增弹窗 */}
@@ -104,6 +117,8 @@ export default function ApplicationTab() {
         onMaterialChange={hook.handleMaterialChange}
         onGenerateCode={hook.handleGenerateAddCode}
         onSave={hook.handleSaveAdd}
+        saving={hook.isSubmitting}
+        onShowMaterialInfo={hook.getMaterialStockInfo}
       />
 
       {/* 删除确认弹窗 */}
@@ -112,6 +127,7 @@ export default function ApplicationTab() {
           isOpen={hook.showDeleteConfirm}
           onClose={() => hook.setShowDeleteConfirm(false)}
           onConfirm={hook.confirmDelete}
+          recordCode={hook.selectedRecord?.code}
         />
       )}
 
