@@ -101,7 +101,8 @@ export interface VoidState {
 /** 批量编辑状态 */
 export interface BatchEditState {
   batchEditMode: 'edit' | 'delete' | null;
-  batchEditedRecords: Record<number, MaterialReceivingRecord>;
+  // 2026-09-26：id 兼容 string（DB 主键为 MR 格式字符串），批量编辑保存据此逐条 PUT
+  batchEditedRecords: Record<string | number, MaterialReceivingRecord>;
   currentBatchEditIndex: number;
 }
 
@@ -184,8 +185,8 @@ export interface UseApplicationTabReturn {
   // 批量编辑状态
   batchEditMode: 'edit' | 'delete' | null;
   setBatchEditMode: (value: 'edit' | 'delete' | null) => void;
-  batchEditedRecords: Record<number, MaterialReceivingRecord>;
-  setBatchEditedRecords: (value: Record<number, MaterialReceivingRecord>) => void;
+  batchEditedRecords: Record<string | number, MaterialReceivingRecord>;
+  setBatchEditedRecords: (value: Record<string | number, MaterialReceivingRecord>) => void;
   currentBatchEditIndex: number;
   setCurrentBatchEditIndex: (value: number) => void;
 
@@ -221,6 +222,13 @@ export interface UseApplicationTabReturn {
   handleDeleteClick: (id: number) => void;
   confirmDelete: () => void;
   handleBatchDelete: () => void;
+  // 批量编辑（2026-09-26 P0 修复：接线）
+  handleBatchRecordChange: (index: number) => void;
+  handleBatchFieldChange: (recordId: string | number, field: string, value: unknown) => void;
+  handleBatchMaterialChange: (recordId: string | number, materialIndex: number, field: string, value: unknown) => void;
+  handleBatchMaterialDelete: (recordId: string | number, materialIndex: number) => void;
+  handleBatchNextRecord: () => void;
+  handleBatchSaveAll: (records: Record<string | number, MaterialReceivingRecord>) => Promise<void>;
   handleSaveEdit: () => void;
   handleVoidApply: () => void;
   submitVoidApply: () => void;

@@ -66,14 +66,17 @@ export class ApprovalLinkageService {
       db.run(`
         UPDATE material_requests SET
           status = ?,
+          approval_status = ?,
           approval_code = ?,
           approved_at = ?,
           update_time = ?
         WHERE id = ?
-      `, [status, approvalCode, now, now, id]);
+      `, [status, status, approvalCode, now, now, id]);
       return true;
     } catch (e) {
-      console.error('更新物料申请失败:', e);
+      // 2026-09-26 修复 C1：approval_code/approved_at 列已由 fixSchemaColumns(GREEN) 补齐，
+      // 此处失败必须留完整错误信息（不再只靠调用方的 console.warn）
+      console.error('[审批联动] 更新物料申请失败（请检查 material_requests 列 approval_code/approved_at 是否存在）:', e);
       return false;
     }
   }
@@ -742,13 +745,15 @@ export class ApprovalLinkageService {
           db.run(`
             UPDATE material_requests SET
               status = ?,
+              approval_status = ?,
               approval_code = ?,
               approved_at = ?,
               update_time = ?
             WHERE id = ?
-          `, [status, approvalCode, now, now, requestId]);
+          `, [status, status, approvalCode, now, now, requestId]);
           return { success: true, message: '退料单状态已更新' };
         } catch (e) {
+          console.error('[审批联动] 更新退料单状态失败:', e);
           return { success: false, message: '数据库更新失败' };
         }
 

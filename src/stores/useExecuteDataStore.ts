@@ -81,7 +81,8 @@ interface ExecuteDataState {
 
   fetchItems: () => Promise<void>;
   createItem: (data: Partial<MaterialExecuteRecord>) => Promise<MaterialExecuteRecord | null>;
-  updateItem: (id: number | string, updates: Partial<MaterialExecuteRecord>) => Promise<void>;
+  // 2026-09-26 P0 修复：updateItem 返回成功与否（此前 void + 吞错，编辑失败也提示"保存成功"）
+  updateItem: (id: number | string, updates: Partial<MaterialExecuteRecord>) => Promise<boolean>;
   deleteItem: (id: number | string) => Promise<boolean>;
   deleteItems: (ids: (number | string)[]) => Promise<boolean>;
 
@@ -129,6 +130,9 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           return newItem;
         } catch (error) {
           // 2026-06-04 V2.1 铁律：API 失败抛错（不允许乐观更新，否则 UI 与 DB 不一致）
+          // 2026-09-26 P0 修复：错误信息存入 error，调用方据此提示（此前静默 null，用户只看到"出库失败，请重试"）
+          const msg = error instanceof Error ? error.message : '创建出库单失败';
+          set({ error: msg });
           return null;
         }
       },
@@ -145,8 +149,14 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
 
         try {
           await enhancedApiClient.put(`/material-executes/${id}`, body);
+          return true;
         } catch (error) {
-          // 2026-06-04 V2.1 铁律：API 失败抛错（不允许离线队列兜底）
+          // 2026-09-26 P0 修复：fail loud —— 失败时撤销乐观更新并返回 false，
+          // 调用方提示"保存失败"（此前吞错且 UI 已显示新值，与 DB 不一致）
+          const msg = error instanceof Error ? error.message : '更新出库单失败';
+          set({ error: msg });
+          await get().fetchItems(); // 以 DB 为准重拉，撤销乐观更新
+          return false;
         }
       },
 
@@ -160,7 +170,11 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           await enhancedApiClient.delete(`/material-executes/${id}`);
           return true;
         } catch (error) {
-          // 2026-06-04 V2.1 铁律：API 失败抛错（不允许离线队列兜底）
+          // 2026-09-26 P0 修复：删除失败时撤销乐观更新（重拉 DB 真相），
+          // 此前 UI 已移除该行但 DB 未删，刷新后"复活"
+          const msg = error instanceof Error ? error.message : '删除出库单失败';
+          set({ error: msg });
+          await get().fetchItems();
           return false;
         }
       },

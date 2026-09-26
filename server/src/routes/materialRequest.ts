@@ -47,8 +47,13 @@ function generateMaterialRequestCode(): string {
  */
 router.get('/', (req: Request, res: Response) => {
   try {
-    const { request_type, status, approval_status, department_name, applicant_name, warehouse_name, priority, page = 1, limit = 50 } = req.query;
+    const { request_type, status, approval_status, department_name, applicant_name, warehouse_name, priority } = req.query;
     const db = getDatabase();
+
+    // 2026-09-26 P0 修复：默认 limit=50 会静默截断列表（前端不做服务端分页拉取），
+    // 超过 50 条申请单永远不可见。改为默认全量（上限 10000）+ page/limit 非法值防护（NaN 会使 OFFSET 失效）
+    const pageNum = Math.max(1, Number(req.query.page) || 1);
+    const limitNum = Math.min(Math.max(1, Number(req.query.limit) || 10000), 10000);
 
     let sql = 'SELECT * FROM material_requests WHERE 1=1';
     const params: (string | number)[] = [];
@@ -93,20 +98,26 @@ router.get('/', (req: Request, res: Response) => {
 
     const total = execCount(db, countSql, params);
 
-    const offset = (Number(page) - 1) * Number(limit);
+    const offset = (pageNum - 1) * limitNum;
     sql += ` LIMIT ? OFFSET ?`;
-    params.push(Number(limit), offset);
+    params.push(limitNum, offset);
 
     const items = queryToObjects(db, sql, params);
 
-    // 解析 attachments 和 materials JSON 字段
-    const result = items.map((item: Record<string, unknown>) => ({
-      ...item,
-      attachments: item.attachments ? JSON.parse(item.attachments as string) : [],
-      materials: item.materials ? JSON.parse(item.materials as string) : [],
-    }));
+    // 解析 attachments 和 materials JSON 字段（兼容双重编码历史数据：解析结果非数组则置空）
+    const result = items.map((item: Record<string, unknown>) => {
+      let attachments: unknown = [];
+      let materials: unknown = [];
+      try { attachments = item.attachments ? JSON.parse(item.attachments as string) : []; } catch { attachments = []; }
+      try { materials = item.materials ? JSON.parse(item.materials as string) : []; } catch { materials = []; }
+      return {
+        ...item,
+        attachments: Array.isArray(attachments) ? attachments : [],
+        materials: Array.isArray(materials) ? materials : [],
+      };
+    });
 
-    res.json({ success: true, data: result, meta: { total, page: Number(page), limit: Number(limit) } });
+    res.json({ success: true, data: result, meta: { total, page: pageNum, limit: limitNum } });
   } catch (error) {
     console.error('获取物料申请列表失败:', error);
     res.status(500).json({ success: false, error: '获取物料申请列表失败' });
@@ -178,7 +189,12 @@ router.post('/', (req: Request, res: Response) => {
       create_by,
     } = req.body;
 
-    const now = new Date().toISOString();
+    // 2026-09-26 P0 修复：业务日期/时间禁止 toISOString()（UTC）——北京时间 0-8 点创建的
+    // 单据 apply_date 会落在前一天，导致统计按月错档（dateUtil 铁律）
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const localDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const localNow = `${localDateStr} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     let requestCode = request_code || generateMaterialRequestCode();
     // 2026-08-10 修复：id 默认等于 request_code（前端只传 request_code，避免 id 与 code 存不同值）
     let newId = id || requestCode;
@@ -242,7 +258,7 @@ router.post('/', (req: Request, res: Response) => {
         department_name || null,
         applicant_id || null,
         applicant_name || null,
-        apply_date || now.substring(0, 10),
+        apply_date || localDateStr,
         expected_date || null,
         warehouse_id || null,
         warehouse_name || null,
@@ -256,8 +272,8 @@ router.post('/', (req: Request, res: Response) => {
         JSON.stringify(attachments || []),
         JSON.stringify(materials || []),
         create_by || null,
-        now,
-        now,
+        localNow,
+        localNow,
       ]);
 
       saveDatabase();
@@ -280,7 +296,10 @@ router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const now = new Date().toISOString();
+    // 2026-09-26 P0 修复：业务时间用本地时区（禁止 toISOString UTC）
+    const d = new Date();
+    const padN = (n: number) => String(n).padStart(2, '0');
+    const now = `${d.getFullYear()}-${padN(d.getMonth() + 1)}-${padN(d.getDate())} ${padN(d.getHours())}:${padN(d.getMinutes())}:${padN(d.getSeconds())}`;
     const db = getDatabase();
 
     // 检查物料申请是否存在
@@ -301,19 +320,28 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '已审批通过的物料申请不允许修改' });
     }
 
-    // 过滤掉 id 和自动生成的字段
-    const excludeFields = ['id', 'request_code', 'create_time'];
-    const fields = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
-      .map(k => `${k} = ?`)
-      .join(', ');
-
-    if (fields.length === 0) {
+    // 2026-09-26 P0 修复（SQL 注入）：列名白名单校验。
+    // 此前 Object.keys(updates) 直接拼进 UPDATE SET 子句，仅排除 id/request_code/create_time，
+    // 任意列名（甚至 "status=1, remarks" 之类结构破坏 payload）都能改写 SQL。白名单 = 建表全部可写列。
+    const ALLOWED_UPDATE_COLUMNS = new Set([
+      'request_title', 'request_type', 'department_id', 'department_name',
+      'applicant_id', 'applicant_name', 'apply_date', 'expected_date',
+      'warehouse_id', 'warehouse_name', 'plant_area', 'production_batch_code',
+      'total_amount', 'priority', 'status', 'approval_status',
+      'remarks', 'attachments', 'materials', 'reviewer', 'create_by',
+    ]);
+    const updateKeys = Object.keys(updates).filter(k => ALLOWED_UPDATE_COLUMNS.has(k));
+    const illegalKeys = Object.keys(updates).filter(k => !ALLOWED_UPDATE_COLUMNS.has(k));
+    if (illegalKeys.length > 0) {
+      return res.status(400).json({ success: false, error: `包含非法更新字段: ${illegalKeys.join(', ')}` });
+    }
+    if (updateKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
+    const fields = updateKeys.map(k => `${k} = ?`).join(', ');
+
+    const values = updateKeys
       .map(k => {
         // 处理 JSON 数组/对象字段序列化
         if (k === 'attachments' || k === 'materials' || k === 'plant_area') {

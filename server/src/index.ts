@@ -320,6 +320,27 @@ async function start() {
       console.warn('[backfillPlantingHarvestToInventory] 启动回填失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-09-26：生产领料数据修复（GREEN 级独立模块，幂等）
+    // 三项：双重 JSON 编码规范化（修统计 500）/ execute_status 乱码修复 / 历史出库单追溯补扣（用户授权）
+    // 顺序要求：放在 fixSchemaColumns 之后（表/列齐全），启动后状态对比之前（让对比覆盖本次变更）
+    try {
+      const { repairMaterialReceivingData } = await import('./db/materialReceivingDataRepair');
+      const result = repairMaterialReceivingData();
+      const jsonFixed = result.jsonNormalized.filter((x) => x.count > 0);
+      if (jsonFixed.length > 0 || result.mojibakeFixed.length > 0 || result.deducted.length > 0 || result.skippedLines.length > 0 || result.alreadyDeducted.length > 0) {
+        console.log('[materialReceivingDataRepair] 数据修复摘要:');
+        if (jsonFixed.length > 0) console.log(`  双重编码规范化: ${jsonFixed.map((x) => `${x.table}.${x.column}=${x.count}`).join(', ')}`);
+        if (result.mojibakeFixed.length > 0) console.log(`  乱码状态修复: ${result.mojibakeFixed.map((x) => `${x.executeCode}(${x.from}→${x.to})`).join(', ')}`);
+        if (result.deducted.length > 0) console.log(`  追溯补扣: ${result.deducted.map((x) => `${x.materialCode} 扣${x.quantity}(批次${x.batchQty}/主表${x.mainQty})`).join(', ')}`);
+        if (result.alreadyDeducted.length > 0) console.log(`  已扣跳过: ${result.alreadyDeducted.map((x) => `${x.materialCode}(出库${x.executedSum})`).join(', ')}`);
+        if (result.skippedLines.length > 0) console.log(`  跳过告警: ${result.skippedLines.map((x) => `${x.executeCode}/${x.materialCode}: ${x.reason}`).join('; ')}`);
+      } else {
+        console.log('[materialReceivingDataRepair] 无待修复数据（全部已处理）');
+      }
+    } catch (e: any) {
+      console.warn('[materialReceivingDataRepair] 启动修复失败（不影响主流程）:', e?.message || e);
+    }
+
     // Step 3: 启动后 db 状态对比
     if (dbFileExists) {
       const compare = postStartupCompare(preCheck.snapshot);
