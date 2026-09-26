@@ -1,7 +1,7 @@
 // ExecuteTabTable 组件
 // 领料出库页面的表格组件
 import React from 'react';
-import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -39,10 +39,8 @@ interface ExecuteTabTableProps {
   onCancelExport: () => void;
   onExportConfirm: () => void;
 
-  // 批量编辑相关回调
-  onBatchEditClick: () => void;
+  // 批量删除相关回调（2026-09-26：批量编辑已移除，编辑下放到行操作列 onEdit）
   onBatchDeleteClick: () => void;
-  onBatchEditConfirm: () => void;
   onBatchDeleteConfirm: () => void;
   onBatchCancel: () => void;
 
@@ -75,9 +73,7 @@ export function ExecuteTabTable({
   onExportClick,
   onCancelExport,
   onExportConfirm,
-  onBatchEditClick,
   onBatchDeleteClick,
-  onBatchEditConfirm,
   onBatchDeleteConfirm,
   onBatchCancel,
   onAdd,
@@ -100,16 +96,6 @@ export function ExecuteTabTable({
               <X className="w-4 h-4" /> 取消
             </Button>
           </div>
-        ) : batchEditMode === 'edit' ? (
-          /* 批量编辑模式 */
-          <div className="flex gap-2">
-            <Button variant="blue" size="sm" onClick={onBatchEditConfirm}>
-              <Edit2 className="w-4 h-4" /> 确认编辑
-            </Button>
-            <Button variant="secondary" size="sm" onClick={onBatchCancel}>
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </div>
         ) : batchEditMode === 'delete' ? (
           /* 批量删除模式 */
           <div className="flex gap-2">
@@ -121,15 +107,11 @@ export function ExecuteTabTable({
             </Button>
           </div>
         ) : (
-          /* 默认模式 */
+          /* 默认模式（2026-09-26：移除工具栏"编辑"批量编辑按钮，编辑入口在每行操作列） */
           <div className="flex gap-2">
             <Button size="sm" onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
-            </Button>
-            <Button variant="blue" size="sm" onClick={onBatchEditClick}>
-              <Edit className="w-4 h-4" />
-              <Edit2 className="w-4 h-4" /> 编辑
             </Button>
             <Button variant="destructive" size="sm" onClick={onBatchDeleteClick}>
               <Trash2 className="w-4 h-4" />
@@ -218,6 +200,16 @@ export function ExecuteTabTable({
                         title="查看"
                       >
                         <Eye className="w-4 h-4" />
+                      </Button>
+                      {/* 2026-09-26：行级编辑入口（原工具栏批量编辑已移除）；已完成出库的单据禁止编辑 */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(item)}
+                        title={item.executeStatusClass === 'completed' ? '已完成出库，不可编辑' : '编辑'}
+                        disabled={item.executeStatusClass === 'completed'}
+                      >
+                        <Pencil className={`w-4 h-4 ${item.executeStatusClass === 'completed' ? 'text-gray-300' : 'text-blue-600'}`} />
                       </Button>
                       <Button
                         variant="ghost"

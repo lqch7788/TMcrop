@@ -1,12 +1,12 @@
 // ApplicationTable 组件
 // 领料申请单的主表格和展开行
-import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit, Edit2, Plus, Trash2, X } from 'lucide-react';
+// 2026-09-26：批量编辑死代码已删除（编辑走行操作列），清理未用 props/import
+import { Fragment } from 'react';
+import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
-import { showAlert } from '@/lib/dialogService';
-import type { UseApplicationTabReturn } from '../hooks/useApplicationTab';
 
 interface ApplicationTableProps {
   // 数据
@@ -14,23 +14,20 @@ interface ApplicationTableProps {
   // 分页
   currentPage: number;
   pageSize: number;
-  totalPages: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   // 导出
   exportMode: boolean;
-  selectedRows: number[];
+  selectedRows: (string | number)[];
   onExportModeChange: (value: boolean) => void;
   onExportClick: () => void;
   onCancelExport: () => void;
-  // 批量编辑
+  // 批量删除
   batchEditMode: 'edit' | 'delete' | null;
   onBatchEditModeChange: (value: 'edit' | 'delete' | null) => void;
-  onShowEditWarning: () => void;
   // 选中行
-  selectedRows: number[];
   onSelectAll: () => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string | number) => void;
   // 展开行
   expandedRows: Set<number>;
   onToggleExpand: (id: number) => void;
@@ -41,7 +38,6 @@ interface ApplicationTableProps {
   // 新增
   onAddModalOpen: () => void;
   // 批量操作
-  onShowBatchEditModal: () => void;
   onShowBatchDeleteConfirm: () => void;
   onBatchCancel: () => void;
 }
@@ -53,7 +49,6 @@ export function ApplicationTable({
   filteredData,
   currentPage,
   pageSize,
-  totalPages,
   onPageChange,
   onPageSizeChange,
   exportMode,
@@ -63,7 +58,6 @@ export function ApplicationTable({
   onCancelExport,
   batchEditMode,
   onBatchEditModeChange,
-  onShowEditWarning,
   onSelectAll,
   onSelectRow,
   expandedRows,
@@ -72,7 +66,6 @@ export function ApplicationTable({
   onEdit,
   onDeleteClick,
   onAddModalOpen,
-  onShowBatchEditModal,
   onShowBatchDeleteConfirm,
   onBatchCancel,
 }: ApplicationTableProps) {
@@ -157,9 +150,10 @@ export function ApplicationTable({
           {/* 表体 */}
           <tbody className="divide-y divide-gray-300">
             {filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
-              <>
+              // 2026-09-26 修复：key 上移到 Fragment（此前 key 在内层 tr，Fragment 无 key 引发 React 警告）
+              <Fragment key={item.id}>
                 {/* 主数据行 */}
-                <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+                <tr className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode) && (
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Checkbox
@@ -305,7 +299,7 @@ export function ApplicationTable({
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

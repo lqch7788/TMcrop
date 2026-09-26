@@ -35,6 +35,14 @@ async function refreshRelatedBusinessStores(): Promise<void> {
   } catch {
     // 静默失败 — 不阻塞审批主流程
   }
+  // 2026-09-26 决策3：审批通过/拒绝后自动刷新领料申请列表
+  // （此前申请 tab 常驻挂载、loadItems 仅挂载时执行，审批后列表状态永不更新）
+  try {
+    const { useMaterialRequestDataStore } = await import('./useMaterialRequestDataStore');
+    await useMaterialRequestDataStore.getState().loadItems();
+  } catch {
+    // 静默失败 — 不阻塞审批主流程
+  }
 }
 
 /** 后端(snake_case) → 前端(camelCase) 字段名映射 */

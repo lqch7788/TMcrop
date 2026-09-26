@@ -7,12 +7,11 @@ import { ApplicationFilters } from './components/ApplicationFilters';
 import { ApplicationTable } from './components/ApplicationTable';
 import { EditModal, AddModal } from './components/ApplicationModals';
 
-// 弹窗组件
+// 弹窗组件（2026-09-26：批量编辑死代码已按用户决策删除）
 import { ExportTypeModal } from '../../../components/materialReceiving/modals/ExportTypeModal';
 import { DetailModal } from '../../../components/materialReceiving/modals/DetailModal';
 import { DeleteConfirm } from '../../../components/materialReceiving/modals/DeleteConfirm';
 import { VoidModal } from '../../../components/materialReceiving/modals/VoidModal';
-import { BatchEditModal } from '../../../components/materialReceiving/modals/BatchEditModal';
 import { EditWarningModal } from '../../../components/materialReceiving/modals/EditWarningModal';
 
 import { BatchDeleteConfirmModal } from '../../../components/materialReceiving/modals/BatchDeleteConfirmModal';
@@ -50,7 +49,6 @@ export default function ApplicationTab() {
         filteredData={hook.filteredData}
         currentPage={hook.currentPage}
         pageSize={hook.pageSize}
-        totalPages={hook.totalPages}
         onPageChange={hook.setCurrentPage}
         onPageSizeChange={hook.setPageSize}
         exportMode={hook.exportMode}
@@ -60,7 +58,6 @@ export default function ApplicationTab() {
         onCancelExport={hook.handleCancelExport}
         batchEditMode={hook.batchEditMode}
         onBatchEditModeChange={hook.setBatchEditMode}
-        onShowEditWarning={() => hook.setShowEditWarning(true)}
         onSelectAll={hook.handleSelectAll}
         onSelectRow={hook.handleSelectRow}
         expandedRows={hook.expandedRows}
@@ -69,7 +66,6 @@ export default function ApplicationTab() {
         onEdit={hook.handleEdit}
         onDeleteClick={hook.handleDeleteClick}
         onAddModalOpen={() => hook.setShowAddModal(true)}
-        onShowBatchEditModal={() => hook.setShowBatchEditModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
         onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}
       />
@@ -127,6 +123,7 @@ export default function ApplicationTab() {
           onChange={hook.setVoidReason}
           onClose={() => hook.setShowVoidModal(false)}
           onConfirm={hook.submitVoidApply}
+          recordCode={hook.selectedRecord?.code}
         />
       )}
 
@@ -137,24 +134,6 @@ export default function ApplicationTab() {
           title="无法编辑"
           message={hook.editAlertMessage}
           onClose={() => hook.setShowEditAlert(false)}
-        />
-      )}
-
-      {/* 批量编辑弹窗（2026-09-26 P0 修复：接线全部编辑 handler，保存时把编辑记录传给 hook 逐条持久化） */}
-      {hook.showBatchEditModal && (
-        <BatchEditModal
-          isOpen={hook.showBatchEditModal}
-          selectedRows={hook.selectedRows}
-          batchEditedRecords={hook.batchEditedRecords}
-          currentBatchEditIndex={hook.currentBatchEditIndex}
-          recordsList={hook.materialData}
-          onClose={() => hook.setShowBatchEditModal(false)}
-          onRecordChange={hook.handleBatchRecordChange}
-          onFieldChange={hook.handleBatchFieldChange}
-          onMaterialChange={hook.handleBatchMaterialChange}
-          onMaterialDelete={hook.handleBatchMaterialDelete}
-          onNextRecord={hook.handleBatchNextRecord}
-          onSaveAll={hook.handleBatchSaveAll}
         />
       )}
 

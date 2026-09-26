@@ -296,6 +296,15 @@ export function EditModal({
                   <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50">
                     {subtotal.toFixed(2)}
                   </td>
+                  {/* 2026-09-26 修复列错位：补上"仓库货位"单元格（此前 12 表头 11 列，货位列被备注顶替、备注列显示删除按钮） */}
+                  <td className="px-2 py-2">
+                    <Input
+                      type="text"
+                      value={material.warehousePosition || ''}
+                      onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </td>
                   <td className="px-2 py-2">
                     <Input
                       type="text"
@@ -332,7 +341,9 @@ export function EditModal({
       <Button variant="secondary" onClick={onClose}>
         <X className="w-4 h-4" /> 取消
       </Button>
-      {(record.status === '待审批' || record.status === '已审批') && (
+      {/* 2026-09-26 修复：作废按钮改用 statusClass 判断（可编辑状态才显示作废），
+          此前硬编码中文状态且对"已审批"也显示作废（与后端禁止修改已审批矛盾） */}
+      {(record.statusClass === 'pending' || record.statusClass === 'rejected') && (
         <Button variant="warning" onClick={onVoidApply}>
           <XCircle className="w-4 h-4" /> 作废申请
         </Button>

@@ -10,10 +10,8 @@ import {
   ExecuteTabFilters,
   ExecuteTabTable,
   ExecuteDetailModal,
-  ExecuteWarningModal,
   ExecuteDeleteConfirmModal,
   ExportTypeModal,
-  ExecuteBatchEditModal,
   ExecuteAddModal,
 } from './components/ExecuteTab';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
@@ -77,15 +75,11 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     executeExpandedRows,
     toggleExecuteExpandRow,
 
-    // 批量编辑模式状态
+    // 批量删除模式状态（2026-09-26：批量编辑已移除）
     executeBatchEditMode,
     setExecuteBatchEditMode,
-    executeShowBatchEditModal,
-    setExecuteShowBatchEditModal,
     executeShowBatchDeleteConfirm,
     setExecuteShowBatchDeleteConfirm,
-    executeShowEditWarning,
-    setExecuteShowEditWarning,
 
     // 物料池状态
     executeSelectedApplicationCode,
@@ -180,9 +174,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onExportClick={handleExecuteExportClick}
         onCancelExport={handleExecuteCancelExport}
         onExportConfirm={confirmExecuteExport}
-        onBatchEditClick={() => { setExecuteBatchEditMode('edit'); setExecuteShowEditWarning(true); }}
         onBatchDeleteClick={() => { setExecuteBatchEditMode('delete'); }}
-        onBatchEditConfirm={() => { setExecuteShowBatchEditModal(true); }}
         onBatchDeleteConfirm={() => { setExecuteShowBatchDeleteConfirm(true); }}
         onBatchCancel={() => { setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
         onAdd={handleExecuteAdd}
@@ -506,15 +498,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onClose={() => setExecuteShowExportTypeModal(false)}
       />
 
-      {/* 编辑警告弹窗 */}
-      <ExecuteWarningModal
-        show={executeShowEditWarning}
-        type="edit"
-        onCancel={() => { setExecuteShowEditWarning(false); setExecuteBatchEditMode(null); setExecuteSelectedRows([]); }}
-        onConfirm={() => { setExecuteShowEditWarning(false); }}
-      />
-
-      {/* 批量删除确认弹窗 */}
+      {/* 批量删除确认弹窗（2026-09-26：批量编辑弹窗与警告弹窗已移除，编辑入口在每行操作列） */}
       <ExecuteDeleteConfirmModal
         show={executeShowBatchDeleteConfirm}
         count={executeSelectedRows.length}
@@ -525,24 +509,6 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
           setExecuteSelectedRows([]);
           setExecuteBatchEditMode(null);
           showAlert(`已删除 ${executeSelectedRows.length} 项领料出库记录`);
-        }}
-      />
-
-      {/* 批量编辑出库弹窗 */}
-      <ExecuteBatchEditModal
-        show={executeShowBatchEditModal}
-        selectedRows={executeSelectedRows}
-        recordsList={executeStore.items.filter(r => executeSelectedRows.includes(r.id))}
-        onClose={() => { setExecuteShowBatchEditModal(false); }}
-        onSaveAll={async (editedRecords) => {
-          // 持久化所有编辑到数据库
-          for (const [id, updates] of Object.entries(editedRecords)) {
-            await executeStore.updateItem(id, updates as any);
-          }
-          setExecuteShowBatchEditModal(false);
-          setExecuteBatchEditMode(null);
-          setExecuteSelectedRows([]);
-          showAlert(`批量编辑成功，已保存 ${Object.keys(editedRecords).length} 条记录`);
         }}
       />
     </>

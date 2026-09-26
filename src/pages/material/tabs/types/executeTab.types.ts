@@ -33,6 +33,8 @@ export interface ExecuteEditFormState {
   reviewer: string;
   operator: string;
   executeStatus: string;
+  // 2026-09-26：补齐缺失字段（编辑弹窗一直读此字段但类型与初始化都没它，受控输入 undefined 警告）
+  productionBatchCode: string;
   materials: ExecuteMaterialItem[];
 }
 
@@ -106,15 +108,11 @@ export interface UseExecuteTabReturn {
   executeExpandedRows: Set<number>;
   toggleExecuteExpandRow: (id: number) => void;
 
-  // 批量编辑模式状态
+  // 批量删除模式状态（2026-09-26：批量编辑已移除，编辑下放到行操作列）
   executeBatchEditMode: 'edit' | 'delete' | null;
   setExecuteBatchEditMode: (mode: 'edit' | 'delete' | null) => void;
-  executeShowBatchEditModal: boolean;
-  setExecuteShowBatchEditModal: (show: boolean) => void;
   executeShowBatchDeleteConfirm: boolean;
   setExecuteShowBatchDeleteConfirm: (show: boolean) => void;
-  executeShowEditWarning: boolean;
-  setExecuteShowEditWarning: (show: boolean) => void;
   executeShowDeleteWarning: boolean;
   setExecuteShowDeleteWarning: (show: boolean) => void;
   executeBatchEditedRecords: Record<number, any>;
