@@ -83,7 +83,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 导出模式状态
   // ============================================
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
   const [showExportTypeModal, setShowExportTypeModal] = useState(false);
   const [exportFileType, setExportFileType] = useState('xlsx');
 
@@ -129,15 +129,10 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const [editAlertMessage, setEditAlertMessage] = useState('');
 
   // ============================================
-  // 批量编辑模式状态
+  // 批量删除模式状态（2026-09-26：批量编辑死代码已按用户决策删除，编辑走行操作列）
   // ============================================
   const [batchEditMode, setBatchEditMode] = useState<'edit' | 'delete' | null>(null);
-  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
-  const [showEditWarning, setShowEditWarning] = useState(false);
-  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
-  const [batchEditedRecords, setBatchEditedRecords] = useState<Record<string | number, MaterialReceivingRecord>>({});
-  const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
 
   // ============================================
   // 编辑表单状态
@@ -233,7 +228,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   // 选择单行
   // ============================================
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string | number) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -257,13 +252,17 @@ export function useApplicationTab(): UseApplicationTabReturn {
       (row as any)._areaDisplay = areas.map((a: any) =>
         a.type === 'custom' ? `📝${a.cropName}` : `${a.type === 'planting' ? '🌱' : '🌿'}${a.cropName}·${a.area}`
       ).join('; ');
+      // 2026-09-26 修复 M1：小计列此前被 warehousePosition 重复键覆盖，改为预算 subtotal
+      ((row as any).materials || []).forEach((m: any) => {
+        m.subtotal = (((m.requestedQuantity || 0) * (m.unitPrice || 0)).toFixed(2));
+      });
     });
 
     const headers = ['领料单号', '日期', '申领人', '部门', '审核人', '区域/用途', '状态'];
     const fields = ['code', 'date', 'applicant', 'department', 'reviewer', '_areaDisplay', 'status'];
 
     const materialHeaders = ['物料编码', '物料名称', '批次号', '规格', '单位', '申领数量', '当前库存', '单价(元)', '小计(元)', '仓库货位', '备注'];
-    const materialFields = ['materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'warehousePosition', 'warehousePosition', 'remark'];
+    const materialFields = ['materialCode', 'materialName', 'batchNo', 'spec', 'unit', 'requestedQuantity', 'stockQuantity', 'unitPrice', 'subtotal', 'warehousePosition', 'remark'];
 
     let content: string | Uint8Array = '';
     let mimeType = '';
@@ -397,21 +396,19 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 编辑
   // ============================================
   const handleEdit = (item: MaterialReceivingRecord) => {
-    // 2026-08-10 修复（第二次）：
-    //   Store normalize() 把后端英文 enum 转为中文（item.status='待审批'/'已审批'等），
-    //   原代码比对中文'待审批'应该能匹配，但弹窗 title 是"批量编辑警告"误导且与"非待审批"文案不一致。
-    //   改用 statusClass（英文 enum: pending/approved/rejected/voided/cancelled）作为状态判断标准，
-    //   显示文案用 statusTextMap 把 statusClass 翻译为中文。
-    if (item.statusClass !== 'pending') {
+    // 2026-09-26 修复 M3：待审批/已拒绝可编辑（已拒绝需重新提交），
+    // 已审批/已作废/已取消不可编辑（用户要求已审批禁编辑；作废/取消为终态）
+    const editableStatuses = ['pending', 'rejected'];
+    if (!editableStatuses.includes(item.statusClass || '')) {
       const statusTextMap: Record<string, string> = {
         approved: '已审批',
         pending: '待审批',
-        rejected: '已驳回',
+        rejected: '已拒绝',
         voided: '已作废',
         cancelled: '已取消',
       };
       const displayText = statusTextMap[item.statusClass || ''] || item.status || item.statusClass || '未知';
-      setEditAlertMessage(`该领料单当前状态为「${displayText}」，非待审批状态无法编辑。如需处理，可选择「作废申请」。`);
+      setEditAlertMessage(`该领料单当前状态为「${displayText}」，不可编辑。${item.statusClass === 'approved' ? '' : '如需处理，可选择「作废申请」。'}`);
       setShowEditAlert(true);
       return;
     }
@@ -479,9 +476,16 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   const confirmDelete = async () => {
-    // 调用 API 删除记录
+    // 调用 API 删除记录（2026-09-26：失败提示后端原因，如"已审批不允许删除/已有出库记录"）
     if (deletingId !== null) {
-      await storeDeleteItem(deletingId);
+      const ok = await storeDeleteItem(deletingId);
+      if (!ok) {
+        const { error } = useMaterialRequestDataStore.getState();
+        await showAlert(error || '删除失败，请稍后重试');
+        setShowDeleteConfirm(false);
+        setDeletingId(null);
+        return;
+      }
       await loadItems();
     }
     setShowDeleteConfirm(false);
@@ -493,103 +497,20 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   const handleBatchDelete = async () => {
     if (selectedRows.length === 0) return;
-    // 逐条调用 API 删除
+    // 逐条调用 API 删除，失败计数 fail loud（已审批/已出库的会被后端 400 拦截）
+    let failCount = 0;
     for (const id of selectedRows) {
-      await storeDeleteItem(id);
+      const ok = await storeDeleteItem(id);
+      if (!ok) failCount += 1;
     }
     // 重新加载数据
     await loadItems();
     // 关闭弹窗、退出批量模式、清空选中
     setShowBatchDeleteConfirm(false);
-    setShowDeleteWarning(false);
     setBatchEditMode(null);
     setSelectedRows([]);
-  };
-
-  // ============================================
-  // 批量编辑（2026-09-26 P0 修复：此前这些 handler 从未接线，
-  //   弹窗里改什么都不落库，"保存全部"只调 loadItems 刷新 = 空操作）
-  // ============================================
-
-  /** 切换当前编辑的领料单 */
-  const handleBatchRecordChange = (index: number) => {
-    setCurrentBatchEditIndex(Math.max(0, Math.min(index, selectedRows.length - 1)));
-  };
-
-  /** 修改当前领料单的普通字段（函数式 setState 防覆盖） */
-  const handleBatchFieldChange = (recordId: string | number, field: string, value: unknown) => {
-    setBatchEditedRecords((prev) => {
-      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
-      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), [field]: value } };
-    });
-  };
-
-  /** 修改当前领料单的物料明细行（函数式 setState 防覆盖） */
-  const handleBatchMaterialChange = (recordId: string | number, materialIndex: number, field: string, value: unknown) => {
-    setBatchEditedRecords((prev) => {
-      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
-      const mats = [...((base as MaterialReceivingRecord).materials || [])];
-      mats[materialIndex] = { ...mats[materialIndex], [field]: value };
-      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), materials: mats } };
-    });
-  };
-
-  /** 删除当前领料单的物料明细行 */
-  const handleBatchMaterialDelete = (recordId: string | number, materialIndex: number) => {
-    setBatchEditedRecords((prev) => {
-      const base = prev[recordId] ?? materialData.find((r) => r.id === recordId) ?? {};
-      const mats = [...((base as MaterialReceivingRecord).materials || [])];
-      mats.splice(materialIndex, 1);
-      return { ...prev, [recordId]: { ...(base as MaterialReceivingRecord), materials: mats } };
-    });
-  };
-
-  /** "确认（下一个）"：跳到下一条待编辑领料单 */
-  const handleBatchNextRecord = () => {
-    setCurrentBatchEditIndex((i) => Math.min(i + 1, selectedRows.length - 1));
-  };
-
-  /** 中文状态标签 → DB 英文枚举（批量编辑弹窗选项与 DB 存储值统一） */
-  const BATCH_STATUS_ENUM: Record<string, { status: string; approvalStatus?: string }> = {
-    待审批: { status: 'draft', approvalStatus: 'pending' },
-    已审批: { status: 'approved', approvalStatus: 'approved' },
-    已拒绝: { status: 'rejected', approvalStatus: 'rejected' },
-    已取消: { status: 'cancelled' },
-  };
-
-  /** 保存全部：逐条 PUT 持久化（失败计数，fail loud 提示） */
-  const handleBatchSaveAll = async (records: Record<string | number, MaterialReceivingRecord>) => {
-    const entries = Object.entries(records);
-    if (entries.length === 0) {
-      await showAlert('没有可保存的编辑内容');
-      return;
-    }
-    let failCount = 0;
-    for (const [id, rec] of entries) {
-      const statusEnum = BATCH_STATUS_ENUM[rec.status] || {};
-      const ok = await storeUpdateItem(id as string, {
-        date: rec.date,
-        applicant: rec.applicant,
-        warehouseLocation: rec.warehouseLocation,
-        reviewer: rec.reviewer,
-        productionBatchCode: rec.productionBatchCode,
-        status: statusEnum.status,
-        approvalStatus: statusEnum.approvalStatus,
-        materials: (rec.materials || []).map((m) => ({ ...m, actualQuantity: 0 })),
-      } as any);
-      if (!ok) failCount += 1;
-    }
-    // 写后刷新（DB 唯一真相）
-    await loadItems();
-    setShowBatchEditModal(false);
-    setBatchEditMode(null);
-    setSelectedRows([]);
-    setBatchEditedRecords({});
-    setCurrentBatchEditIndex(0);
-    if (failCount === 0) {
-      await showAlert(`批量编辑完成，共保存 ${entries.length} 条`);
-    } else {
-      await showAlert(`批量编辑完成：${entries.length - failCount} 条成功，${failCount} 条失败（已审批的单据不允许修改）`);
+    if (failCount > 0) {
+      await showAlert(`批量删除完成：${selectedRows.length - failCount} 条成功，${failCount} 条失败（已审批或已有出库记录的单据不允许删除）`);
     }
   };
 
@@ -606,7 +527,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
       warehouseLocation: editForm.warehouseLocation,
       plantAreas: editForm.plantAreas,
       reviewer: editForm.reviewer,
-      status: 'pending',
+      // 2026-09-26 修复 M2：status 用 DB 合法枚举 draft（此前写 'pending' 非枚举值）
+      status: 'draft',
       approvalStatus: 'pending',   // DB 列 approval_status
       materials: editForm.materials.map(m => ({ ...m, actualQuantity: 0 })),
     };
@@ -641,12 +563,23 @@ export function useApplicationTab(): UseApplicationTabReturn {
     }
     if (!selectedRecord) return;
 
-    // 2026-08-10 修复：DB 用英文 enum（cancelled），原代码写'已作废'会让状态比较失配
-    await storeUpdateItem(selectedRecord.id, { status: 'cancelled', statusClass: 'voided' } as any);
+    // 2026-09-26 修复 C2+C3：作废同时写 status 与 approval_status='voided'
+    // （此前只写 status='cancelled'，approval_status 仍 pending，normalize 派生回"待审批"→作废被吞）；
+    // 作废原因落入 remarks 留痕
+    const ok = await storeUpdateItem(selectedRecord.id, {
+      status: 'voided',
+      approvalStatus: 'voided',
+      remarks: `作废: ${voidReason}`,
+    } as any);
+    if (!ok) {
+      await showAlert('作废失败，请稍后重试');
+      return;
+    }
     await loadItems();
 
     setShowVoidModal(false);
     setShowEditModal(false);
+    setVoidReason('');
   };
 
   // ============================================
@@ -882,14 +815,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setShowVoidModal,
     showEditAlert,
     setShowEditAlert,
-    showBatchEditModal,
-    setShowBatchEditModal,
     showBatchDeleteConfirm,
     setShowBatchDeleteConfirm,
-    showEditWarning,
-    setShowEditWarning,
-    showDeleteWarning,
-    setShowDeleteWarning,
 
     // 选中记录
     selectedRecord,
@@ -905,13 +832,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     voidReason,
     setVoidReason,
 
-    // 批量编辑状态
+    // 批量删除模式状态（2026-09-26：批量编辑已按用户决策删除）
     batchEditMode,
     setBatchEditMode,
-    batchEditedRecords,
-    setBatchEditedRecords,
-    currentBatchEditIndex,
-    setCurrentBatchEditIndex,
 
     // 编辑提醒
     editAlertMessage,
@@ -945,13 +868,6 @@ export function useApplicationTab(): UseApplicationTabReturn {
     handleDeleteClick,
     confirmDelete,
     handleBatchDelete,
-    // 批量编辑（2026-09-26 P0 修复：接线）
-    handleBatchRecordChange,
-    handleBatchFieldChange,
-    handleBatchMaterialChange,
-    handleBatchMaterialDelete,
-    handleBatchNextRecord,
-    handleBatchSaveAll,
     handleSaveEdit,
     handleVoidApply,
     submitVoidApply,

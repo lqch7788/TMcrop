@@ -368,6 +368,11 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '出库单不存在' });
     }
 
+    // 2026-09-26 用户要求：已完成出库的单据不允许编辑（后端兜底，防前端绕过）
+    if (oldRow.execute_status_class === 'completed') {
+      return res.status(400).json({ success: false, error: '已完成出库的单据不允许编辑' });
+    }
+
     // 2026-09-26 P0 修复（SQL 注入）：列名白名单
     const updateKeys = Object.keys(updates).filter((k) => ALLOWED_UPDATE_COLUMNS.has(k));
     const illegalKeys = Object.keys(updates).filter((k) => !ALLOWED_UPDATE_COLUMNS.has(k));

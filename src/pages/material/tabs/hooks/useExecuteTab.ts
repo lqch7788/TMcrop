@@ -47,11 +47,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   // 展开行状态
   const [executeExpandedRows, setExecuteExpandedRows] = useState<Set<number>>(new Set());
 
-  // 批量编辑模式状态
+  // 批量删除模式状态（2026-09-26：批量编辑已移除，编辑下放到行操作列）
   const [executeBatchEditMode, setExecuteBatchEditMode] = useState<'edit' | 'delete' | null>(null);
-  const [executeShowBatchEditModal, setExecuteShowBatchEditModal] = useState(false);
   const [executeShowBatchDeleteConfirm, setExecuteShowBatchDeleteConfirm] = useState(false);
-  const [executeShowEditWarning, setExecuteShowEditWarning] = useState(false);
   const [executeShowDeleteWarning, setExecuteShowDeleteWarning] = useState(false);
   const [executeBatchEditedRecords, setExecuteBatchEditedRecords] = useState<Record<number, MaterialExecuteRecord>>({});
   const [executeCurrentBatchEditIndex, setExecuteCurrentBatchEditIndex] = useState(0);
@@ -72,6 +70,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     reviewer: '',
     operator: '',
     executeStatus: '',
+    productionBatchCode: '',
     materials: [] as ExecuteMaterialItem[]
   });
 
@@ -383,8 +382,13 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     }
   }, [executeMaterialPool]);
 
-  // 领料出库页面编辑
+  // 领料出库页面编辑（2026-09-26：编辑入口下放到行操作列，点行内"编辑"按钮触发）
   const handleExecuteEdit = useCallback((item: MaterialExecuteRecord) => {
+    // 2026-09-26 用户要求：已完成出库的单据不允许编辑（前端拦截，后端 PUT 另有兜底）
+    if (item.executeStatusClass === 'completed') {
+      showAlert('已完成出库的单据不允许编辑');
+      return;
+    }
     setExecuteSelectedRecord(item);
     setExecuteEditForm({
       date: item.date,
@@ -393,6 +397,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       reviewer: item.reviewer,
       operator: item.operator || '',
       executeStatus: item.executeStatus,
+      productionBatchCode: item.productionBatchCode || '',
       materials: item.materials
     });
     setExecuteShowEditModal(true);
@@ -607,15 +612,11 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     executeExpandedRows,
     toggleExecuteExpandRow,
 
-    // 批量编辑模式状态
+    // 批量删除模式状态（2026-09-26：批量编辑已移除）
     executeBatchEditMode,
     setExecuteBatchEditMode,
-    executeShowBatchEditModal,
-    setExecuteShowBatchEditModal,
     executeShowBatchDeleteConfirm,
     setExecuteShowBatchDeleteConfirm,
-    executeShowEditWarning,
-    setExecuteShowEditWarning,
     executeShowDeleteWarning,
     setExecuteShowDeleteWarning,
     executeBatchEditedRecords,

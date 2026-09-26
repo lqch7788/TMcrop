@@ -35,12 +35,12 @@ export interface PaginationState {
 /** 导出模式状态 */
 export interface ExportState {
   exportMode: boolean;
-  selectedRows: number[];
+  selectedRows: (string | number)[];
   showExportTypeModal: boolean;
   exportFileType: string;
 }
 
-/** 弹窗状态 */
+/** 弹窗状态（2026-09-26：批量编辑相关状态已随死代码删除） */
 export interface ModalState {
   showDetailModal: boolean;
   showEditModal: boolean;
@@ -48,10 +48,7 @@ export interface ModalState {
   showDeleteConfirm: boolean;
   showVoidModal: boolean;
   showEditAlert: boolean;
-  showBatchEditModal: boolean;
   showBatchDeleteConfirm: boolean;
-  showEditWarning: boolean;
-  showDeleteWarning: boolean;
 }
 
 /** 选中记录状态 */
@@ -98,12 +95,9 @@ export interface VoidState {
   voidReason: string;
 }
 
-/** 批量编辑状态 */
+/** 批量删除模式状态（2026-09-26：批量编辑已删除） */
 export interface BatchEditState {
   batchEditMode: 'edit' | 'delete' | null;
-  // 2026-09-26：id 兼容 string（DB 主键为 MR 格式字符串），批量编辑保存据此逐条 PUT
-  batchEditedRecords: Record<string | number, MaterialReceivingRecord>;
-  currentBatchEditIndex: number;
 }
 
 /** 编辑提醒弹窗状态 */
@@ -139,14 +133,14 @@ export interface UseApplicationTabReturn {
   // 导出状态
   exportMode: boolean;
   setExportMode: (value: boolean) => void;
-  selectedRows: number[];
-  setSelectedRows: (value: number[]) => void;
+  selectedRows: (string | number)[];
+  setSelectedRows: (value: (string | number)[]) => void;
   showExportTypeModal: boolean;
   setShowExportTypeModal: (value: boolean) => void;
   exportFileType: string;
   setExportFileType: (value: string) => void;
 
-  // 弹窗状态
+  // 弹窗状态（2026-09-26：批量编辑相关状态已随死代码删除）
   showDetailModal: boolean;
   setShowDetailModal: (value: boolean) => void;
   showEditModal: boolean;
@@ -159,14 +153,8 @@ export interface UseApplicationTabReturn {
   setShowVoidModal: (value: boolean) => void;
   showEditAlert: boolean;
   setShowEditAlert: (value: boolean) => void;
-  showBatchEditModal: boolean;
-  setShowBatchEditModal: (value: boolean) => void;
   showBatchDeleteConfirm: boolean;
   setShowBatchDeleteConfirm: (value: boolean) => void;
-  showEditWarning: boolean;
-  setShowEditWarning: (value: boolean) => void;
-  showDeleteWarning: boolean;
-  setShowDeleteWarning: (value: boolean) => void;
 
   // 选中记录
   selectedRecord: MaterialReceivingRecord | null;
@@ -182,13 +170,9 @@ export interface UseApplicationTabReturn {
   voidReason: string;
   setVoidReason: (value: string) => void;
 
-  // 批量编辑状态
+  // 批量删除模式状态（2026-09-26：批量编辑已删除）
   batchEditMode: 'edit' | 'delete' | null;
   setBatchEditMode: (value: 'edit' | 'delete' | null) => void;
-  batchEditedRecords: Record<string | number, MaterialReceivingRecord>;
-  setBatchEditedRecords: (value: Record<string | number, MaterialReceivingRecord>) => void;
-  currentBatchEditIndex: number;
-  setCurrentBatchEditIndex: (value: number) => void;
 
   // 编辑提醒
   editAlertMessage: string;
@@ -210,7 +194,7 @@ export interface UseApplicationTabReturn {
   // 处理函数
   handleReset: () => void;
   handleSelectAll: () => void;
-  handleSelectRow: (id: number) => void;
+  handleSelectRow: (id: string | number) => void;
   handleExportClick: () => void;
   confirmExport: () => Promise<void>;
   handleCancelExport: () => void;
@@ -222,13 +206,6 @@ export interface UseApplicationTabReturn {
   handleDeleteClick: (id: number) => void;
   confirmDelete: () => void;
   handleBatchDelete: () => void;
-  // 批量编辑（2026-09-26 P0 修复：接线）
-  handleBatchRecordChange: (index: number) => void;
-  handleBatchFieldChange: (recordId: string | number, field: string, value: unknown) => void;
-  handleBatchMaterialChange: (recordId: string | number, materialIndex: number, field: string, value: unknown) => void;
-  handleBatchMaterialDelete: (recordId: string | number, materialIndex: number) => void;
-  handleBatchNextRecord: () => void;
-  handleBatchSaveAll: (records: Record<string | number, MaterialReceivingRecord>) => Promise<void>;
   handleSaveEdit: () => void;
   handleVoidApply: () => void;
   submitVoidApply: () => void;

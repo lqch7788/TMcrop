@@ -116,6 +116,9 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   result.plantAreas = parsePlantArea(result.plantAreaRaw ?? db.plant_area);
 
   // 状态字段派生
+  // 2026-09-26 修复 C2：作废/取消分支必须先于 pending 判断——
+  //   历史数据作废只写了 status 没清 approval_status(pending)，原顺序下
+  //   cancelled/voided 分支永不可达，作废后前端仍显示"待审批"
   const approvalStatus = String(result.approvalStatus ?? db.approval_status ?? '');
   const rawStatus = String(result.rawStatus ?? db.status ?? '');
   if (approvalStatus === 'approved') {
@@ -124,15 +127,18 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   } else if (approvalStatus === 'rejected') {
     result.status = '已拒绝';
     result.statusClass = 'rejected';
-  } else if (approvalStatus === 'pending') {
-    result.status = '待审批';
-    result.statusClass = 'pending';
+  } else if (approvalStatus === 'partially_approved') {
+    result.status = '部分审批';
+    result.statusClass = 'partially_approved';
   } else if (rawStatus === 'voided' || rawStatus === '已作废') {
     result.status = '已作废';
     result.statusClass = 'voided';
   } else if (rawStatus === 'cancelled' || rawStatus === '已取消') {
     result.status = '已取消';
     result.statusClass = 'cancelled';
+  } else if (approvalStatus === 'pending') {
+    result.status = '待审批';
+    result.statusClass = 'pending';
   } else {
     result.status = result.status || '待审批';
     result.statusClass = result.statusClass || 'pending';
@@ -295,7 +301,10 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         await enhancedApiClient.put(`/material-requests/${id}`, body);
         return true;
       } catch (error) {
-        // logger.error('[MaterialRequestStore] 更新物料申请失败:', error);
+        // 2026-09-26 修复：fail loud —— 错误信息透出 + 撤销乐观更新（以 DB 为准重拉）
+        const msg = error instanceof Error ? error.message : '更新物料申请失败';
+        set({ error: msg });
+        await get().loadItems();
         return false;
       }
     },
@@ -310,7 +319,10 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         await enhancedApiClient.delete(`/material-requests/${id}`);
         return true;
       } catch (error) {
-        // logger.error('[MaterialRequestStore] 删除物料申请失败:', error);
+        // 2026-09-26 修复：fail loud —— 错误信息透出 + 撤销乐观更新
+        const msg = error instanceof Error ? error.message : '删除物料申请失败';
+        set({ error: msg });
+        await get().loadItems();
         return false;
       }
     },

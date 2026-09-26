@@ -187,6 +187,7 @@ router.post('/', (req: Request, res: Response) => {
       attachments,
       materials,
       create_by,
+      reviewer,
     } = req.body;
 
     // 2026-09-26 P0 修复：业务日期/时间禁止 toISOString()（UTC）——北京时间 0-8 点创建的
@@ -246,9 +247,9 @@ router.post('/', (req: Request, res: Response) => {
           warehouse_id, warehouse_name,
           plant_area, production_batch_code,
           total_amount, priority, status, approval_status,
-          remarks, attachments, materials, create_by,
+          remarks, reviewer, attachments, materials, create_by,
           create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId,
         requestCode,
@@ -269,6 +270,7 @@ router.post('/', (req: Request, res: Response) => {
         status || 'draft',
         approval_status || 'pending',
         remarks || null,
+        reviewer || null,
         JSON.stringify(attachments || []),
         JSON.stringify(materials || []),
         create_by || null,
@@ -323,18 +325,22 @@ router.put('/:id', (req: Request, res: Response) => {
     // 2026-09-26 P0 修复（SQL 注入）：列名白名单校验。
     // 此前 Object.keys(updates) 直接拼进 UPDATE SET 子句，仅排除 id/request_code/create_time，
     // 任意列名（甚至 "status=1, remarks" 之类结构破坏 payload）都能改写 SQL。白名单 = 建表全部可写列。
+    // 2026-09-26 回归修复：前端 store 无条件发送 update_time，此前白名单未含该列导致
+    //   所有前端编辑/作废全部 400「包含非法更新字段: update_time」——update_time 允许传入但
+    //   由本路由统一覆盖（本地时区 now），不参与动态 SET
     const ALLOWED_UPDATE_COLUMNS = new Set([
       'request_title', 'request_type', 'department_id', 'department_name',
       'applicant_id', 'applicant_name', 'apply_date', 'expected_date',
       'warehouse_id', 'warehouse_name', 'plant_area', 'production_batch_code',
       'total_amount', 'priority', 'status', 'approval_status',
       'remarks', 'attachments', 'materials', 'reviewer', 'create_by',
+      'update_time',
     ]);
-    const updateKeys = Object.keys(updates).filter(k => ALLOWED_UPDATE_COLUMNS.has(k));
     const illegalKeys = Object.keys(updates).filter(k => !ALLOWED_UPDATE_COLUMNS.has(k));
     if (illegalKeys.length > 0) {
       return res.status(400).json({ success: false, error: `包含非法更新字段: ${illegalKeys.join(', ')}` });
     }
+    const updateKeys = Object.keys(updates).filter(k => ALLOWED_UPDATE_COLUMNS.has(k) && k !== 'update_time');
     if (updateKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
@@ -384,7 +390,17 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '物料申请不存在' });
     }
 
-    // 直接删除，不做状态限制
+    // 2026-09-26 用户要求：已审批的申请单不允许删除；已有出库记录的也不允许删除
+    // （此前无任何限制，已出库申请单删除后 material_executes 的文本引用成孤儿）
+    if (request.status === 'approved' || request.approval_status === 'approved') {
+      return res.status(400).json({ success: false, error: '已审批通过的物料申请不允许删除' });
+    }
+    const dispatchCheck = db.exec('SELECT dispatch_status FROM material_requests WHERE id = ?', [id]);
+    const dispatchStatus = dispatchCheck.length > 0 && dispatchCheck[0].values.length > 0 ? dispatchCheck[0].values[0][0] : null;
+    if (dispatchStatus === 'complete' || dispatchStatus === 'partial') {
+      return res.status(400).json({ success: false, error: '该申请单已有出库记录，不允许删除' });
+    }
+
     db.run('DELETE FROM material_requests WHERE id = ?', [id]);
     saveDatabase();
     res.json({ success: true, data: { id } });
