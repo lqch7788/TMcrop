@@ -52,6 +52,12 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
       title="领料单详情"
       size="xxl"
       showFooter={false}
+      // 2026-09-26 用户要求：打印按钮放弹窗标题栏右上角（headerAction 插槽）
+      headerAction={
+        <Button variant="secondary" size="sm" onClick={() => printVoucher(record)}>
+          <Printer className="w-4 h-4" /> 打印领料单
+        </Button>
+      }
     >
       <div className="grid grid-cols-3 gap-4">
         <div>
@@ -225,12 +231,6 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
         </div>
       )}
 
-      {/* 2026-09-26 批次三：打印领料单 */}
-      <div className="mt-6 flex justify-end">
-        <Button variant="secondary" size="sm" onClick={() => printVoucher(record)}>
-          <Printer className="w-4 h-4" /> 打印领料单
-        </Button>
-      </div>
     </UnifiedModal>
   );
 };
