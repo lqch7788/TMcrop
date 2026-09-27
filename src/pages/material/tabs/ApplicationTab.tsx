@@ -46,6 +46,14 @@ export default function ApplicationTab() {
         setSearchDateTo={hook.setSearchDateTo}
         priorityFilter={hook.priorityFilter}
         setPriorityFilter={hook.setPriorityFilter}
+        searchMaterial={hook.searchMaterial}
+        setSearchMaterial={hook.setSearchMaterial}
+        myApplicationsOnly={hook.myApplicationsOnly}
+        setMyApplicationsOnly={hook.setMyApplicationsOnly}
+        pendingMyApproval={hook.pendingMyApproval}
+        setPendingMyApproval={hook.setPendingMyApproval}
+        overdueOnly={hook.overdueOnly}
+        setOverdueOnly={hook.setOverdueOnly}
         onReset={hook.handleReset}
         onPageChange={hook.setCurrentPage}
       />
@@ -74,6 +82,10 @@ export default function ApplicationTab() {
         // 2026-09-26 批次二：行内撤回（仅待审批）与复制
         onWithdraw={hook.handleWithdraw}
         onDuplicate={hook.handleDuplicate}
+        onResubmit={hook.handleResubmit}
+        onBatchSubmit={hook.batchSubmit}
+        onBatchWithdraw={hook.batchWithdraw}
+        summary={hook.summary}
         onAddModalOpen={() => hook.setShowAddModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
         onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}
@@ -86,6 +98,7 @@ export default function ApplicationTab() {
           record={hook.selectedRecord}
           approval={hook.detailApproval as any}
           logs={hook.detailLogs as any}
+          executions={hook.detailExecutions as any}
           onClose={() => hook.setShowDetailModal(false)}
         />
       )}
@@ -119,6 +132,14 @@ export default function ApplicationTab() {
         onSave={hook.handleSaveAdd}
         saving={hook.isSubmitting}
         onShowMaterialInfo={hook.getMaterialStockInfo}
+        hasDraft={hook.hasDraft}
+        onRestoreDraft={() => { if (hook.restoreDraft()) { hook.setHasDraft(false); hook.discardDraft(); } }}
+        onDiscardDraft={hook.discardDraft}
+        templates={hook.templates}
+        onApplyTemplate={hook.applyTemplate}
+        onSaveTemplate={hook.saveAsTemplate}
+        onDeleteTemplate={hook.deleteTemplate}
+        productionPlans={hook.productionPlans}
       />
 
       {/* 删除确认弹窗 */}

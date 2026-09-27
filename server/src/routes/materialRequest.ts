@@ -389,7 +389,8 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
     const now = `${d.getFullYear()}-${padN(d.getMonth() + 1)}-${padN(d.getDate())} ${padN(d.getHours())}:${padN(d.getMinutes())}:${padN(d.getSeconds())}`;
 
     db.run("UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE id = ?", [now, approvalId]);
-    db.run("UPDATE material_requests SET status = 'draft', approval_status = 'pending', update_time = ? WHERE id = ?", [now, id]);
+    // 2026-09-27：approval_status 置 'draft'（而非 pending）——前端据此区分"已撤回待重提的草稿"与"新建待审批"
+    db.run("UPDATE material_requests SET status = 'draft', approval_status = 'draft', update_time = ? WHERE id = ?", [now, id]);
     saveDatabase();
     res.json({ success: true, data: { id, approvalId } });
   } catch (error) {
@@ -469,6 +470,83 @@ router.get('/:id/approval', (req: Request, res: Response) => {
   } catch (error) {
     console.error('获取申请单审批进度失败:', error);
     res.status(500).json({ success: false, error: '获取申请单审批进度失败' });
+  }
+});
+
+/**
+ * 申请单出库执行情况 — GET /api/material-requests/:id/executions
+ * 2026-09-27 P0-1：详情弹窗展示"领了多少/还剩多少"，此前完全不可见
+ * 返回：出库记录列表 + 逐物料汇总（申请量/已领量/剩余量）
+ */
+router.get('/:id/executions', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    // 申请单物料明细（作为汇总基准）
+    const reqRows = db.exec('SELECT materials FROM material_requests WHERE id = ?', [id]);
+    const reqMaterials: any[] = reqRows.length > 0 && reqRows[0].values.length > 0
+      ? (() => { try { const p = JSON.parse(String(reqRows[0].values[0][0] || '[]')); return Array.isArray(p) ? p : []; } catch { return []; } })()
+      : [];
+
+    // 关联出库单（source_application_codes 是 JSON 文本数组，含本单号）
+    const execRows = db.exec(
+      `SELECT id, code, date, applicant, operator, execute_status, execute_status_class, materials
+       FROM material_executes WHERE source_application_codes LIKE ? ORDER BY date ASC, create_time ASC`,
+      [`%"${id}"%`]
+    );
+
+    const executions: Record<string, unknown>[] = [];
+    const dispatchedMap: Record<string, number> = {};
+    if (execRows.length > 0) {
+      const cols = execRows[0].columns;
+      for (const row of execRows[0].values) {
+        const item: Record<string, unknown> = {};
+        row.forEach((v: unknown, i: number) => { item[cols[i]] = v; });
+        let mats: any[] = [];
+        try { const p = JSON.parse(String(item.materials || '[]')); mats = Array.isArray(p) ? p : []; } catch { mats = []; }
+        // 只统计关联本单号的行（一单可能被多来源单共享）
+        item.materials = mats;
+        executions.push(item);
+        for (const m of mats) {
+          const code = m.materialCode || m.code || '';
+          const qty = Number(m.actualQuantity ?? m.actualQty ?? m.quantity ?? 0) || 0;
+          if (code && qty > 0) dispatchedMap[code] = (dispatchedMap[code] || 0) + qty;
+        }
+      }
+    }
+
+    // 汇总：申请量 vs 已领量 vs 剩余量
+    const summary = reqMaterials.map((rm) => {
+      const code = rm.materialCode || rm.code || '';
+      const requested = Number(rm.requestedQuantity) || 0;
+      const dispatched = dispatchedMap[code] || 0;
+      return {
+        materialCode: code,
+        materialName: rm.materialName || rm.name || '',
+        unit: rm.unit || '',
+        requestedQuantity: requested,
+        dispatchedQuantity: dispatched,
+        remainingQuantity: Math.max(0, requested - dispatched),
+      };
+    });
+
+    const totalRequested = summary.reduce((s, x) => s + x.requestedQuantity, 0);
+    const totalDispatched = summary.reduce((s, x) => s + x.dispatchedQuantity, 0);
+    const isFulfilled = totalRequested > 0 && totalDispatched >= totalRequested;
+
+    res.json({
+      success: true,
+      data: {
+        executions,
+        summary,
+        totals: { requested: totalRequested, dispatched: totalDispatched, remaining: Math.max(0, totalRequested - totalDispatched) },
+        isFulfilled,
+      },
+    });
+  } catch (error) {
+    console.error('获取申请单出库执行情况失败:', error);
+    res.status(500).json({ success: false, error: '获取申请单出库执行情况失败' });
   }
 });
 

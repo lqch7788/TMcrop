@@ -158,9 +158,36 @@ export interface UseApplicationTabReturn {
   exportFileType: string;
   setExportFileType: (value: string) => void;
 
-  // 详情附加数据（2026-09-26 批次二：审批进度 + 操作历史）
+  // 详情附加数据（2026-09-26 批次二：审批进度 + 操作历史；2026-09-27 P0-1：出库执行情况）
   detailApproval: Record<string, unknown> | null;
   detailLogs: Record<string, unknown>[];
+  detailExecutions: Record<string, unknown> | null;
+
+  // 2026-09-27 P2-8/9：物料搜索 + 我的申请/待我审批筛选
+  searchMaterial: string;
+  setSearchMaterial: (value: string) => void;
+  myApplicationsOnly: boolean;
+  setMyApplicationsOnly: (value: boolean) => void;
+  pendingMyApproval: boolean;
+  setPendingMyApproval: (value: boolean) => void;
+  // 2026-09-27 P1-6：超期未还筛选（工具借用超期）
+  overdueOnly: boolean;
+  setOverdueOnly: (value: boolean) => void;
+  // 2026-09-27 P2-12：统计摘要
+  summary: { monthCount: number; monthAmount: number; insufficientCount: number; pendingCount: number };
+  // 2026-09-27 P1-4：生产计划列表（批次号下拉数据源）
+  productionPlans: Array<{ batchCode: string; cropName: string; areaName: string }>;
+  // 2026-09-27 P0-2：草稿
+  hasDraft: boolean;
+  setHasDraft: (value: boolean) => void;
+  checkDraft: () => boolean;
+  restoreDraft: () => boolean;
+  discardDraft: () => void;
+  // 2026-09-27 P2-10：模板
+  templates: Array<{ name: string; materials: MaterialItem[]; department: string; warehouseLocation: string; plantAreas: SelectedArea[] }>;
+  saveAsTemplate: (name: string) => Promise<void>;
+  applyTemplate: (index: number) => void;
+  deleteTemplate: (index: number) => void;
 
   // 弹窗状态（2026-09-26：批量编辑相关状态已随死代码删除）
   showDetailModal: boolean;
@@ -232,6 +259,10 @@ export interface UseApplicationTabReturn {
   handleDeleteClick: (id: number) => void;
   confirmDelete: () => void;
   handleBatchDelete: () => void;
+  // 2026-09-27 P2-11：批量提交/撤回 + 单条重新提交
+  batchSubmit: () => Promise<void>;
+  batchWithdraw: () => Promise<void>;
+  handleResubmit: (item: MaterialReceivingRecord) => Promise<void>;
   handleSaveEdit: () => void;
   handleVoidApply: () => void;
   submitVoidApply: () => void;

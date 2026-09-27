@@ -136,6 +136,10 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   } else if (rawStatus === 'cancelled' || rawStatus === '已取消') {
     result.status = '已取消';
     result.statusClass = 'cancelled';
+  } else if (approvalStatus === 'draft') {
+    // 2026-09-27：撤回后的草稿态（可编辑/重新提交），与"新建待审批"区分
+    result.status = '草稿';
+    result.statusClass = 'draft';
   } else if (approvalStatus === 'pending') {
     result.status = '待审批';
     result.statusClass = 'pending';

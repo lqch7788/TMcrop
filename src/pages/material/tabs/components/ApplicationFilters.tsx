@@ -26,6 +26,16 @@ interface ApplicationFiltersProps {
   setSearchDateTo: (value: string) => void;
   priorityFilter: string;
   setPriorityFilter: (value: string) => void;
+  // 2026-09-27 P2-8/9：物料搜索 + 快捷筛选
+  searchMaterial: string;
+  setSearchMaterial: (value: string) => void;
+  myApplicationsOnly: boolean;
+  setMyApplicationsOnly: (value: boolean) => void;
+  pendingMyApproval: boolean;
+  setPendingMyApproval: (value: boolean) => void;
+  // 2026-09-27 P1-6：超期未还
+  overdueOnly: boolean;
+  setOverdueOnly: (value: boolean) => void;
   // 操作
   onReset: () => void;
   onPageChange: (page: number) => void;
@@ -51,6 +61,14 @@ export function ApplicationFilters({
   setSearchDateTo,
   priorityFilter,
   setPriorityFilter,
+  searchMaterial,
+  setSearchMaterial,
+  myApplicationsOnly,
+  setMyApplicationsOnly,
+  pendingMyApproval,
+  setPendingMyApproval,
+  overdueOnly,
+  setOverdueOnly,
   onReset,
   onPageChange,
 }: ApplicationFiltersProps) {
@@ -174,6 +192,7 @@ export function ApplicationFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="草稿">草稿</SelectItem>
               <SelectItem value="待审批">待审批</SelectItem>
               <SelectItem value="已审批">已审批</SelectItem>
               <SelectItem value="已拒绝">已拒绝</SelectItem>
@@ -183,9 +202,51 @@ export function ApplicationFilters({
           </Select>
         </div>
 
+        {/* 2026-09-27 P2-8：物料维度搜索（农药追溯用） */}
+        <div className="flex-1">
+          <Label className="block text-sm font-medium text-gray-900 mb-1">物料（追溯）</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="搜物料名称/编码..."
+              value={searchMaterial}
+              onChange={(e) => { setSearchMaterial(e.target.value); onPageChange(1); }}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
         {/* 重置按钮 */}
         <Button variant="warning" size="sm" onClick={onReset}>
           <RotateCcw className="w-4 h-4" /> 重置
+        </Button>
+      </div>
+
+      {/* 2026-09-27 P2-9：快捷筛选（我的申请 / 待我审批） */}
+      <div className="flex items-center gap-2 mt-3">
+        <Button
+          size="sm"
+          variant={myApplicationsOnly ? 'default' : 'secondary'}
+          onClick={() => { setMyApplicationsOnly(!myApplicationsOnly); onPageChange(1); }}
+        >
+          我的申请
+        </Button>
+        <Button
+          size="sm"
+          variant={pendingMyApproval ? 'default' : 'secondary'}
+          onClick={() => { setPendingMyApproval(!pendingMyApproval); onPageChange(1); }}
+        >
+          待我审批
+        </Button>
+        {/* 2026-09-27 P1-6：超期未还 */}
+        <Button
+          size="sm"
+          variant={overdueOnly ? 'destructive' : 'secondary'}
+          onClick={() => { setOverdueOnly(!overdueOnly); onPageChange(1); }}
+          title="筛选含借用超期未归还物料的单据"
+        >
+          超期未还
         </Button>
       </div>
     </div>
