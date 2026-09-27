@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { nowLocalTimestamp } from '../lib/timeUtils';
-import { writeStockTransaction } from './materialExecute';
+import { writeStockTransaction, parseBatchAllocations } from './materialExecute';
 
 const router = Router();
 
@@ -38,46 +38,71 @@ function applyReturnStock(
     const qty = Number(m.returnQuantity ?? m.quantity ?? 0) || 0;
     if (!code || qty <= 0) continue;
 
-    const mainRows = db.exec('SELECT quantity FROM materials WHERE code = ?', [code]);
+    // 2026-09-27 修复：主表按 code 锁定单行（防同 code 多行被连坐）；
+    // 此前 WHERE code 更新全部匹配行（与出库端同款结构性炸弹）
+    const mainRows = db.exec('SELECT id, quantity FROM materials WHERE code = ? ORDER BY id ASC LIMIT 1', [code]);
     if (mainRows.length === 0 || mainRows[0].values.length === 0) {
       throw new Error(`物料 ${code} 不存在，无法${direction === 'in' ? '退料入库' : '撤销退料'}`);
     }
-    const mainQty = Number(mainRows[0].values[0][0]) || 0;
+    const mainId = mainRows[0].values[0][0];
+    const mainQty = Number(mainRows[0].values[0][1]) || 0;
     if (direction === 'undo' && mainQty < qty) {
       throw new Error(`物料 ${code} 当前库存 ${mainQty} 不足以回收退料量 ${qty}（库存已被后续使用），无法撤销`);
     }
 
-    // 主表：退料 +qty / 撤销 -qty
+    // 主表：退料 +qty / 撤销 -qty（按主键更新）
     db.run(
-      'UPDATE materials SET quantity = quantity + ?, lastUpdateTime = ? WHERE code = ?',
-      [direction === 'in' ? qty : -qty, now, code]
+      'UPDATE materials SET quantity = quantity + ?, lastUpdateTime = ? WHERE id = ?',
+      [direction === 'in' ? qty : -qty, now, mainId]
     );
 
-    // 批次账：有批次号 → 恢复该批次；无 → 默认批次（不存在则新建承接）
-    const batchNo = String(m.batchNo || '').trim() || '默认批次';
-    const bRows = db.exec('SELECT remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?', [code, batchNo]);
-    const hasBatch = bRows.length > 0 && bRows[0].values.length > 0;
-    if (hasBatch) {
-      const batchRemaining = Number(bRows[0].values[0][0]) || 0;
-      if (direction === 'undo' && batchRemaining < qty) {
-        throw new Error(`物料 ${code} 批次 ${batchNo} 余量 ${batchRemaining} 不足以回收退料量 ${qty}`);
+    // 批次账：2026-09-27 修复——退料行 batchNo 可能是出库时 FEFO 写回的显示串
+    // （如 "B20260415(5袋),EQ20260125(2卷)"）。此前把整串当单个批次号查询，
+    // 查不到就新建脏批次行（批次号=显示串），原真实批次反而没恢复。
+    // 现按显示串解析出子批次，逐批恢复；无子批次细分时走单批次（原逻辑）。
+    const allocs = parseBatchAllocations(m);
+    // 子批次恢复量按本次退料量截断（显示串合计是出库时各批扣减量，可能大于本次退料量）
+    const batchTargets: Array<{ batchNo: string; qty: number }> = [];
+    if (allocs.length > 0 && allocs[0].batchNo) {
+      let remaining = qty;
+      for (const a of allocs) {
+        if (remaining <= 0) break;
+        const take = Math.min(a.qty, remaining);
+        batchTargets.push({ batchNo: a.batchNo, qty: take });
+        remaining -= take;
       }
-      db.run(
-        'UPDATE batch_inventory SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE material_code = ? AND batch_no = ?',
-        [direction === 'in' ? qty : -qty, now, code, batchNo]
-      );
-    } else if (direction === 'in') {
-      db.run(
-        `INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, create_time, update_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [`bi-return-${code}-${Date.now()}`, code, String(m.materialName || ''), batchNo, '', '', String(m.unit || ''), qty, qty, now, now]
-      );
-    } else {
-      // undo 且批次不存在：主表已回收，批次无账可回，显式告警
-      console.warn(`[生产退料] 撤销退料时批次未命中：物料 ${code} 批次 ${batchNo}（退料单 ${returnCode}）`);
+    }
+    if (batchTargets.length === 0) {
+      batchTargets.push({ batchNo: String(m.batchNo || '').trim() || '默认批次', qty });
     }
 
-    // 流水
+    for (const target of batchTargets) {
+      const batchNo = target.batchNo;
+      const targetQty = target.qty;
+      const bRows = db.exec('SELECT remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?', [code, batchNo]);
+      const hasBatch = bRows.length > 0 && bRows[0].values.length > 0;
+      if (hasBatch) {
+        const batchRemaining = Number(bRows[0].values[0][0]) || 0;
+        if (direction === 'undo' && batchRemaining < targetQty) {
+          throw new Error(`物料 ${code} 批次 ${batchNo} 余量 ${batchRemaining} 不足以回收退料量 ${targetQty}`);
+        }
+        db.run(
+          'UPDATE batch_inventory SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE material_code = ? AND batch_no = ?',
+          [direction === 'in' ? targetQty : -targetQty, now, code, batchNo]
+        );
+      } else if (direction === 'in') {
+        db.run(
+          `INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, create_time, update_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [`bi-return-${code}-${Date.now()}-${seq}`, code, String(m.materialName || ''), batchNo, '', '', String(m.unit || ''), targetQty, targetQty, now, now]
+        );
+      } else {
+        // undo 且批次不存在：主表已回收，批次无账可回，显式告警
+        console.warn(`[生产退料] 撤销退料时批次未命中：物料 ${code} 批次 ${batchNo}（退料单 ${returnCode}）`);
+      }
+    }
+
+    // 流水（按行总退料量记一笔，余额链以主表为准）
     writeStockTransaction(db, ++seq, direction === 'in' ? 'material_return_in' : 'material_return_undo',
       returnId, returnCode, code, qty, {
         operatorName,

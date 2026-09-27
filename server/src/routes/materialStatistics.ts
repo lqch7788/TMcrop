@@ -161,6 +161,41 @@ router.get('/', (_req: Request, res: Response) => {
       }
     }
 
+    // 2026-09-27 审计修复：退料聚合——差异率此前只看"出库实发"不扣退料，
+    // 实际净消耗 = 出库实发 - 有效退料（拒绝/作废/取消的退料不占用库存，不扣）
+    const returnedByMaterial = new Map<string, number>();
+    const returnedByMonth = new Map<string, number>(); // `${year}-${month}-${dept}` → 退料量
+    try {
+      const rtRows = db.exec('SELECT date, department, status, materials FROM material_returns');
+      if (rtRows.length > 0) {
+        const cols = rtRows[0].columns;
+        const dIdx = cols.indexOf('date');
+        const deptIdx = cols.indexOf('department');
+        const stIdx = cols.indexOf('status');
+        const matIdx = cols.indexOf('materials');
+        for (const row of rtRows[0].values) {
+          const st = String(row[stIdx] || '');
+          // 非有效态退料（拒绝/作废/取消）从未恢复库存，不计入
+          if (st === 'rejected' || st === 'cancelled' || st === 'voided'
+            || st === '已拒绝' || st === '已作废' || st === '已取消') continue;
+          let mats: any[] = [];
+          try { const p = JSON.parse(String(row[matIdx] || '[]')); mats = Array.isArray(p) ? p : []; } catch { /* 忽略脏数据 */ }
+          const dateStr = String(row[dIdx] || '');
+          const dept = String(row[deptIdx] || '');
+          const ymKey = `${dateStr.substring(0, 7)}-${dept}`;
+          for (const m of mats) {
+            const code = String(m.materialCode || m.code || '');
+            const qty = Number(m.returnQuantity ?? m.quantity ?? 0) || 0;
+            if (!code || qty <= 0) continue;
+            returnedByMaterial.set(code, (returnedByMaterial.get(code) || 0) + qty);
+            returnedByMonth.set(ymKey, (returnedByMonth.get(ymKey) || 0) + qty);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[material-statistics] 退料聚合失败（降级为无退料口径）:', e);
+    }
+
     // ------ 1. 物料级别统计 ------
     const materialMap = new Map<string, any>();
     for (const rec of approvedRecords) {
@@ -202,9 +237,13 @@ router.get('/', (_req: Request, res: Response) => {
     }
     // 2026-09-27 审计修复：实发量/实发金额 = 出库单聚合结果（此前恒等于申请量；
     // 实发金额按"申请金额/申请量"单价 × 实发量估算，用于差异分析）
+    // 2026-09-27 追加：退料量 + 净消耗（净消耗 = 实发 - 退料，差异率权威口径）
     for (const entry of materialMap.values()) {
       const dispatched = dispatchedByMaterial.get(entry.material_code) || 0;
+      const returned = returnedByMaterial.get(entry.material_code) || 0;
       entry.actual_quantity = dispatched;
+      entry.returned_quantity = returned;
+      entry.net_quantity = dispatched - returned;
       const unitPrice = entry.total_quantity > 0 ? entry.total_amount / entry.total_quantity : 0;
       entry.actual_amount = Math.round(dispatched * unitPrice * 100) / 100;
     }
@@ -224,6 +263,8 @@ router.get('/', (_req: Request, res: Response) => {
       // 2026-09-27 审计修复：该单实发量 = 出库单按行归属到本单的实发量（此前恒等于申请量）
       const reqCode = String((rec as any).request_code || '');
       const perMatDispatched = dispatchedByRequest.get(reqCode) || new Map<string, number>();
+      // 2026-09-27 追加：本月该部门退料量——差异率改用净消耗口径
+      const returnedQty = returnedByMonth.get(key) || 0;
       if (!monthlyMap.has(key)) {
         const mats = (rec.materials as any[]) || [];
         const totalQty = mats.reduce((s: number, m: any) => s + Number(m.requestedQuantity || m.quantity || 0), 0);
@@ -236,7 +277,8 @@ router.get('/', (_req: Request, res: Response) => {
           material_types: new Set(mats.map((m: any) => m.materialCode || m.code)),
           total_quantity: totalQty,
           actual_quantity: actualQty,
-          difference_rate: totalQty > 0 ? ((actualQty - totalQty) / totalQty * 100) : 0,
+          returned_quantity: returnedQty,
+          difference_rate: totalQty > 0 ? ((actualQty - returnedQty - totalQty) / totalQty * 100) : 0,
           total_amount: totalAmt,
         });
       } else {
@@ -248,7 +290,9 @@ router.get('/', (_req: Request, res: Response) => {
         entry.total_quantity += mats.reduce((s: number, m: any) => s + Number(m.requestedQuantity || m.quantity || 0), 0);
         entry.actual_quantity += mats.reduce((s: number, m: any) => s + (perMatDispatched.get(m.materialCode || m.code || '') || 0), 0);
         entry.total_amount += mats.reduce((s: number, m: any) => s + Number(m.unitPrice || 0) * Number(m.requestedQuantity || m.quantity || 0), 0);
-        entry.difference_rate = entry.total_quantity > 0 ? ((entry.actual_quantity - entry.total_quantity) / entry.total_quantity * 100) : 0;
+        entry.returned_quantity = returnedByMonth.get(key) || 0;
+        entry.difference_rate = entry.total_quantity > 0
+          ? ((entry.actual_quantity - entry.returned_quantity - entry.total_quantity) / entry.total_quantity * 100) : 0;
       }
     }
     const monthlyStatistics = Array.from(monthlyMap.values()).map((e: any) => {

@@ -74,6 +74,10 @@ export interface MaterialStatItem {
   requisitionCount: number;
   totalQuantity: number;
   actualQuantity: number;
+  /** 2026-09-27 审计修复：退料量（净消耗 = 实发 - 退料，后端返回） */
+  returnedQuantity?: number;
+  /** 净消耗量（实发 - 退料） */
+  netQuantity?: number;
   totalAmount: number;
   /** 2026-09-27 审计修复（A2）：实发金额（出库聚合 × 均价估算，后端返回） */
   actualAmount?: number;

@@ -38,7 +38,10 @@ export function upsertBatchInventory(materials: Array<{
 
   for (const m of materials) {
     const code = (m.code || '').trim();
-    const batchNo = (m.batchNo || '').trim() || `DEFAULT-${code}-${Date.now()}`;
+    // 2026-09-27 修复（P1-7 配套）：空批次号统一为「默认批次」——
+    // 此前每次入库生成 DEFAULT-${code}-${Date.now()} 不同批次号，同码会产生多条默认批次行，
+    // 且与出库扣减/对账脚本/入库回收使用的「默认批次」口径不一致（回收查不到行）
+    const batchNo = (m.batchNo || '').trim() || '默认批次';
     const name = m.name || '';
     const prodDate = m.productionDate || null;
     const expiryDate = m.expiryDate || null;

@@ -22,7 +22,9 @@ interface MaterialReturnState {
 }
 
 export const useMaterialReturnStore = create<MaterialReturnState>()(
-  (set) => ({
+  // 2026-09-27 修复（P2-8）：补上 get 参数——此前 create((set) => ...) 未声明 get，
+  // fetchItems 内的 get() 调用即 ReferenceError（当前无调用方，一旦调用必崩）
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -33,8 +35,8 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         const data = await returnService.getMaterialReturns();
         set({ items: data, isLoading: false });
       } catch (error) {
-        // logger.error('[useMaterialReturnStore] 获取退料失败:', error);
-        set({ error: (error as Error).message, isLoading: false });
+        const msg = error instanceof Error ? error.message : '获取退料失败';
+        set({ error: msg, isLoading: false });
       }
     },
 
@@ -47,7 +49,9 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         if (result) set((s) => ({ items: [result, ...s.items] }));
         return result;
       } catch (error) {
-        // logger.error('[useMaterialReturnStore] 添加退料失败:', error);
+        // 2026-09-27 修复（P2-8）：silent swallow → fail loud（此前吞错返回 null，调用方无感知）
+        const msg = error instanceof Error ? error.message : '新增退料失败';
+        set({ error: msg });
         return null;
       }
     },
@@ -58,7 +62,8 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
         return result;
       } catch (error) {
-        // logger.error('[useMaterialReturnStore] 更新退料失败:', error);
+        const msg = error instanceof Error ? error.message : '更新退料失败';
+        set({ error: msg });
         return false;
       }
     },
@@ -69,7 +74,8 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        // logger.error('[useMaterialReturnStore] 删除退料失败:', error);
+        const msg = error instanceof Error ? error.message : '删除退料失败';
+        set({ error: msg });
         return false;
       }
     },
@@ -80,7 +86,8 @@ export const useMaterialReturnStore = create<MaterialReturnState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return result;
       } catch (error) {
-        // logger.error('[useMaterialReturnStore] 批量删除退料失败:', error);
+        const msg = error instanceof Error ? error.message : '批量删除退料失败';
+        set({ error: msg });
         return false;
       }
     },

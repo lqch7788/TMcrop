@@ -20,6 +20,9 @@ import ActionToolbar from '../../components/warehouse/ActionToolbar';
 import { useWarehouseMaterialStore } from '../../stores';
 import { todayLocal } from '@/lib/dateUtils';
 import { categoryConfig } from '../../types/warehouseInbound.types';
+// 2026-09-27 修复（P2-10）：导出改用真正的 .xlsx（此前 HTML 伪装 .xls，Excel 打开弹格式警告）
+import { exportXlsx } from '@/services/exporters';
+import { showAlert } from '@/lib/dialogService';
 
 export default function WarehouseOverviewPage() {
   // Zustand Store 数据
@@ -109,38 +112,34 @@ export default function WarehouseOverviewPage() {
     await loadItems();
   };
 
-  // 导出处理
+  // 导出处理（2026-09-27 修复：HTML 伪装 .xls → 真 .xlsx；未选中行时导出当前筛选的全部数据）
   const handleDoExport = async () => {
-    const selectedData = filteredMaterials.filter(m => selectedRows.includes(m.id));
+    const rowsToExport = selectedRows.length > 0
+      ? filteredMaterials.filter(m => selectedRows.includes(m.id))
+      : filteredMaterials;
+    if (rowsToExport.length === 0) {
+      showAlert('没有可导出的数据');
+      return;
+    }
     const headers = ['物料编码', '物料名称', '分类', '规格', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '数据状态'];
-    const rows = selectedData.map(m => [
-      m.code, m.name, m.category, m.specification, m.unit,
-      m.quantity, m.minStock, m.maxStock, m.price, m.supplier, m.location, m.dataStatus
-    ]);
-    let content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-    rows.forEach(row => { content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`; });
-    content += '</table></body></html>';
-    const mimeType = 'application/vnd.ms-excel;charset=utf-8';
-    const fileName = `物料汇总表_${todayLocal()}.xls`;
+    const rows = rowsToExport.map(m => ({
+      '物料编码': m.code,
+      '物料名称': m.name,
+      '分类': m.category,
+      '规格': m.specification,
+      '单位': m.unit,
+      '库存数量': m.quantity,
+      '最低库存': m.minStock,
+      '最高库存': m.maxStock,
+      '单价': m.price,
+      '供应商': m.supplier,
+      '存放位置': m.location,
+      '数据状态': m.dataStatus,
+    }));
     try {
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ accept: { [mimeType]: ['.xls'] } }] });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-      } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
-        URL.revokeObjectURL(url);
-      }
+      await exportXlsx({ filename: `物料汇总表_${todayLocal()}.xlsx`, headers, rows });
+    } catch (e) {
+      showAlert(`导出失败：${e instanceof Error ? e.message : '未知错误'}`);
     }
     setShowExportModal(false); setExportMode(false); setSelectedRows([]);
   };
@@ -354,7 +353,7 @@ export default function WarehouseOverviewPage() {
 
       <MaterialExportModal
         isOpen={showExportModal}
-        selectedCount={selectedRows.length}
+        selectedCount={selectedRows.length > 0 ? selectedRows.length : filteredMaterials.length}
         exportFormat={exportFormat}
         onClose={() => setShowExportModal(false)}
         onFormatChange={setExportFormat}
