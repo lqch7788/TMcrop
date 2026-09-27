@@ -341,6 +341,16 @@ async function start() {
       console.warn('[materialReceivingDataRepair] 启动修复失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-09-27：删除单据归档表（GREEN 级幂等建表）——删除后仍可追溯的永久审计载体
+    // （operation_logs 默认 180 天清理，不能承载长期追溯）
+    try {
+      const { ensureDeletedDocumentsArchiveSchema } = await import('./db/deletedDocumentsArchive');
+      ensureDeletedDocumentsArchiveSchema();
+      console.log('[deletedDocumentsArchive] 归档表已就绪');
+    } catch (e: any) {
+      console.warn('[deletedDocumentsArchive] 建表失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-09-27：领料链路存量对账修复（GREEN 级独立模块，幂等）
     // 三项：物料两本账对账（19/74 不一致）/ 出库单孤儿引用清理 / 幽灵审批单清理（用户授权"全部修复"）
     // 顺序要求：放在 materialReceivingDataRepair 之后（追溯补扣已改完两账，再对账收尾）

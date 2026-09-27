@@ -187,7 +187,8 @@ interface MaterialRequestDataState {
   fetchItems: (params?: Record<string, string>) => Promise<void>;
   addItem: (item: Partial<MaterialReceivingRecord>) => Promise<MaterialReceivingRecord | null>;
   updateItem: (id: string | number, updates: Partial<MaterialReceivingRecord>) => Promise<boolean>;
-  deleteItem: (id: string | number) => Promise<boolean>;
+  // 2026-09-27 审计方案：删除原因随请求传入（写入归档表）
+  deleteItem: (id: string | number, reason?: string) => Promise<boolean>;
   deleteItems: (ids: (string | number)[]) => Promise<boolean>;
   // 2026-09-26 改进批次二：撤回审批（pending → draft）
   withdrawItem: (id: string | number) => Promise<boolean>;
@@ -317,26 +318,31 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       } catch (error) {
         // 2026-09-26 修复：fail loud —— 错误信息透出 + 撤销乐观更新（以 DB 为准重拉）
         const msg = error instanceof Error ? error.message : '更新物料申请失败';
-        set({ error: msg });
         await get().loadItems();
+        // 2026-09-27 修复：loadItems 会清空 error，重拉后写回真实原因
+        set({ error: msg });
         return false;
       }
     },
 
     // 删除单个
-    deleteItem: async (id) => {
+    deleteItem: async (id, reason) => {
       set((s) => ({
         items: s.items.filter((i) => i.id !== id && i.code !== id),
       }));
 
       try {
-        await enhancedApiClient.delete(`/material-requests/${id}`);
+        // 2026-09-27 审计方案：删除原因写入归档表（选填）
+        const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+        await enhancedApiClient.delete(`/material-requests/${id}${qs}`);
         return true;
       } catch (error) {
         // 2026-09-26 修复：fail loud —— 错误信息透出 + 撤销乐观更新
         const msg = error instanceof Error ? error.message : '删除物料申请失败';
-        set({ error: msg });
         await get().loadItems();
+        // 2026-09-27 修复：loadItems 成功会把 error 清空（用户只看到"删除失败，请稍后重试"兜底文案），
+        // 必须在重拉之后再次写回错误信息，让"已审批不允许删除"等真实原因透出
+        set({ error: msg });
         return false;
       }
     },

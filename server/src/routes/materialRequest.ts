@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { archiveDeletedDocument } from '../db/deletedDocumentsArchive';
 
 const router = Router();
 
@@ -728,8 +729,8 @@ router.delete('/:id', (req: Request, res: Response) => {
     const padN = (n: number) => String(n).padStart(2, '0');
     const nowLocal = `${dNow.getFullYear()}-${padN(dNow.getMonth() + 1)}-${padN(dNow.getDate())} ${padN(dNow.getHours())}:${padN(dNow.getMinutes())}:${padN(dNow.getSeconds())}`;
 
-    // 检查物料申请是否存在
-    const stmt = db.prepare('SELECT status, approval_status, request_code FROM material_requests WHERE id = ?');
+    // 检查物料申请是否存在（2026-09-27 审计方案：改 SELECT * 取整行，供删除归档快照用）
+    const stmt = db.prepare('SELECT * FROM material_requests WHERE id = ?');
     stmt.bind([id]);
     let request: Record<string, unknown> | null = null;
     if (stmt.step()) {
@@ -788,9 +789,34 @@ router.delete('/:id', (req: Request, res: Response) => {
     const cancelledCount = cancelPendingApprovalsForRequest(db, id);
     if (cancelledCount > 0) console.log(`【领料申请】删除联动：已取消 ${cancelledCount} 张关联待审批单`);
 
-    db.run('DELETE FROM material_requests WHERE id = ?', [id]);
+    // 2026-09-27 审计方案（追溯保护）：物理删除前整行快照写入归档表永久留存——
+    // operation_logs 默认 180 天清理且快照不稳定，删除后需要"虽然不在列表显示但查得到"
+    const reqUser = (req as unknown as { user?: { name?: string; username?: string } }).user || {};
+    const deletedBy = String(reqUser.name || reqUser.username || '');
+    const reason = String((req.query.reason as string) || '');
+    let snapshot: Record<string, unknown> = { ...request };
+    try { if (typeof snapshot.materials === 'string') snapshot.materials = JSON.parse(snapshot.materials); } catch { /* 保留原值 */ }
+
+    db.run('BEGIN');
+    try {
+      archiveDeletedDocument({
+        docType: 'material_request',
+        docId: String(request.id || id),
+        docCode: String(request.request_code || id),
+        snapshot,
+        deletedBy,
+        reason,
+      });
+      db.run('DELETE FROM material_requests WHERE id = ?', [id]);
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      console.error('[领料申请] 删除失败已回滚:', e);
+      return res.status(500).json({ success: false, error: e instanceof Error ? e.message : '删除物料申请失败' });
+    }
+
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, data: { id, archived: true } });
   } catch (error) {
     console.error('删除物料申请失败:', error);
     res.status(500).json({ success: false, error: '删除物料申请失败' });

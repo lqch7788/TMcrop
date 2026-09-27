@@ -1,7 +1,7 @@
 // ExecuteTabTable 组件
 // 领料出库页面的表格组件
 import React from 'react';
-import { CheckCircle2, ChevronDown, ChevronRight as ChevronRightIcon, Download, Eye, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
+import { Archive, Ban, CheckCircle2, ChevronDown, ChevronRight as ChevronRightIcon, Download, Eye, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
 import { printExecuteVoucher } from './ExecuteTabModals/DetailModal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -33,6 +33,10 @@ interface ExecuteTabTableProps {
   onView: (item: any) => void;
   onEdit: (item: any) => void;
   onDelete: (id: string | number) => void;
+  // 2026-09-27 审计方案：作废（已发料单据唯一撤销方式，替代删除）
+  onVoid: (item: any) => void;
+  // 2026-09-27 审计方案：已删除单据归档追溯入口
+  onShowDeletedDocs: () => void;
   // 2026-09-27 两步出库：确认发料
   onConfirmIssue: (item: any) => void;
   // 2026-09-27 能力对齐：快捷筛选 + 统计卡片
@@ -80,6 +84,8 @@ export function ExecuteTabTable({
   onView,
   onEdit,
   onDelete,
+  onVoid,
+  onShowDeletedDocs,
   onConfirmIssue,
   summary,
   pendingOnly = false,
@@ -176,6 +182,11 @@ export function ExecuteTabTable({
             <Button size="sm" onClick={() => onExportClick()}>
               <Download className="w-4 h-4" />
               导出
+            </Button>
+            {/* 2026-09-27 审计方案：已删除单据归档追溯入口 */}
+            <Button variant="secondary" size="sm" onClick={onShowDeletedDocs}>
+              <Archive className="w-4 h-4" />
+              已删除单据
             </Button>
           </div>
         )}
@@ -327,14 +338,27 @@ export function ExecuteTabTable({
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(item.id)}
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
+                      {/* 2026-09-27 审计方案：已出库单据禁止删除（追溯链保护）→ 改【作废】；
+                          待出库单可删除（删除时整行快照归档，仍可按单号追溯） */}
+                      {(item.executeStatusClass === 'completed' || item.executeStatusClass === 'partial') ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onVoid(item)}
+                          title="作废（恢复库存，单据保留可追溯）"
+                        >
+                          <Ban className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(item.id)}
+                          title="删除（快照归档，仍可按单号追溯）"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

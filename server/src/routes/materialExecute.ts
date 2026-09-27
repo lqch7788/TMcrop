@@ -16,6 +16,7 @@ import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { fefoAllocate } from '../db/batchInventory';
 import { nowLocalTimestamp } from '../lib/timeUtils';
+import { archiveDeletedDocument } from '../db/deletedDocumentsArchive';
 
 const router = Router();
 
@@ -24,6 +25,8 @@ const ALLOWED_UPDATE_COLUMNS = new Set([
   'code', 'date', 'applicant', 'warehouse_location', 'reviewer', 'operator',
   'production_batch_code', 'source_application_codes', 'execute_status',
   'execute_status_class', 'materials', 'create_by',
+  // 2026-09-27 审计方案：作废原因写入 remarks（作废=改 cancelled + 备注原因）
+  'remarks',
 ]);
 
 /**
@@ -697,42 +700,61 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-/** 删除 — DELETE /api/material-executes/:id（事务内：恢复库存 + 删除 + 重算派单状态） */
+/**
+ * 删除 — DELETE /api/material-executes/:id
+ * 2026-09-27 审计方案（追溯保护，三层）：
+ *  ① 已发料单据（completed/partial）**禁止物理删除** → 引导使用【作废】（cancelled，单据本体保留）
+ *  ② 允许删除的仅剩待出库单（pending_out，未扣库存、无业务影响）
+ *  ③ 删除前整行快照写入 deleted_documents_archive（永久留存，可按单号追溯；日志 180 天会被清理）
+ */
 router.delete('/:id', (req: Request, res: Response) => {
   const db = getDatabase();
   try {
     const { id } = req.params;
     const now = nowLocalTimestamp();
 
-    // 删除前读取整行（来源单号 + 物料明细，用于恢复库存与重算 dispatch_status）
-    const preStmt = db.prepare('SELECT code, source_application_codes, materials, execute_status_class, applicant, operator FROM material_executes WHERE id = ?');
+    // 读取整行（快照 + 重算 dispatch_status 用）
+    const preStmt = db.prepare('SELECT * FROM material_executes WHERE id = ?');
     preStmt.bind([id]);
-    let oldCode = '';
-    let oldClass = '';
-    let oldApplicant = '';
-    let oldOperator = '';
-    let sourceCodes: string[] = [];
-    let oldMaterials: any[] = [];
-    if (preStmt.step()) {
-      const row = preStmt.getAsObject();
-      oldCode = String(row.code || '');
-      oldClass = String(row.execute_status_class || '');
-      oldApplicant = String(row.applicant || '');
-      oldOperator = String(row.operator || '');
-      sourceCodes = parseMaterials(row.source_application_codes);
-      oldMaterials = parseMaterials(row.materials);
-    }
+    let oldRow: Record<string, unknown> | null = null;
+    if (preStmt.step()) oldRow = preStmt.getAsObject();
     preStmt.free();
+    if (!oldRow || Object.keys(oldRow).length === 0) {
+      return res.status(404).json({ success: false, error: '出库单不存在' });
+    }
+
+    const oldCode = String(oldRow.code || '');
+    const oldClass = String(oldRow.execute_status_class || '');
+    const sourceCodes = parseMaterials(oldRow.source_application_codes);
+
+    // ① 已发料 → 拒绝删除（追溯链保护）
+    if (isDeductedClass(oldClass)) {
+      return res.status(400).json({
+        success: false,
+        error: '已出库单据不允许删除（会丢失领料追溯记录）。请使用【作废】：库存自动恢复、单据保留可查询',
+      });
+    }
+
+    // ②③ 待出库单：归档快照 + 删除（同一事务）
+    const reqUser = (req as unknown as { user?: { name?: string; username?: string } }).user || {};
+    const deletedBy = String(reqUser.name || reqUser.username || '');
+    const reason = String((req.query.reason as string) || '');
+    const snapshot: Record<string, unknown> = {
+      ...oldRow,
+      source_application_codes: sourceCodes,
+      materials: parseMaterials(oldRow.materials),
+    };
 
     db.run('BEGIN');
     try {
-      // 2026-09-27 两步出库：只有"已扣过库存"的单据（completed/partial）删除时才恢复；
-      // 待出库单从未扣减，恢复会凭空增加库存
-      if (isDeductedClass(oldClass)) {
-        restoreExecuteStock(db, oldMaterials, id, oldCode, {
-          applicant: oldApplicant, operator: oldOperator, reason: '出库单删除恢复',
-        });
-      }
+      archiveDeletedDocument({
+        docType: 'material_execute',
+        docId: String(oldRow.id || id),
+        docCode: oldCode,
+        snapshot,
+        deletedBy,
+        reason,
+      });
       db.run('DELETE FROM material_executes WHERE id = ?', [id]);
       if (sourceCodes.length > 0) {
         recalcDispatchStatus(db, sourceCodes, now);
@@ -745,7 +767,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, data: { id, archived: true } });
   } catch (error) {
     console.error('删除出库单失败:', error);
     res.status(500).json({ success: false, error: '删除出库单失败' });

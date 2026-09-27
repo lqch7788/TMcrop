@@ -79,10 +79,12 @@ async function main() {
   const afterEdit = await materialQty(testMat.code);
   check('T1 差额调整：库存再 -3', afterEdit === qtyBaseline - 8, { after: afterEdit });
 
-  // 清理该出库单（恢复 8）
-  await del('/material-executes/' + exId);
+  // 2026-09-27 新规则：已发料单禁删（DELETE 400）→ 先验证拦截，再用【作废】恢复库存
+  const delBlocked = await del('/material-executes/' + exId);
+  check('T1 已发料单删除被拦（400）', delBlocked.status === 400, delBlocked.json);
+  await put('/material-executes/' + exId, { execute_status_class: 'cancelled', execute_status: '已取消', remarks: 'E2E清理' });
   const afterClean = await materialQty(testMat.code);
-  check('T1 清理后库存回到基线', afterClean === qtyBaseline, { after: afterClean });
+  check('T1 作废后库存回到基线', afterClean === qtyBaseline, { after: afterClean });
   await del('/material-requests/' + reqId);
 
   // ==================== T2 0 数量行过滤 ====================

@@ -48,11 +48,15 @@ const stockOf = async (code) => {
   const r3 = await post(`/material-executes/${execId}/confirm`, {});
   check('已发料单据再次确认被拒', r3.success === false, r3.error || '');
 
-  console.log('\n=== ④ 删除已发料单：恢复库存 ===');
-  const r4 = await del(`/material-executes/${execId}`);
-  check('删除成功', r4.success, r4.error || '');
+  console.log('\n=== ④ 作废已发料单：恢复库存 + 单据保留（2026-09-27 审计方案：已发料禁删） ===');
+  const r4blocked = await del(`/material-executes/${execId}`);
+  check('已发料单删除被拦（400 引导作废）', r4blocked.success === false, r4blocked.error || '');
+  const r4 = await put(`/material-executes/${execId}`, { execute_status_class: 'cancelled', execute_status: '已取消', remarks: '作废：E2E' });
+  check('作废成功', r4.success, r4.error || '');
   const afterDel = await stockOf(TEST_CODE);
   check('库存恢复', afterDel === baseStock, `${afterDel} vs ${baseStock}`);
+  const kept = await get(`/material-executes/${execId}`);
+  check('作废后单据仍可查（追溯保留）', kept.success === true && !!kept.data, kept.error || '');
 
   console.log('\n=== ⑤ 待出库单删除：不凭空增库存 ===');
   const r5a = await post('/material-executes', {
@@ -91,9 +95,10 @@ const stockOf = async (code) => {
   check('库存扣减 6', afterUpgrade === beforeEdit - 6, `${afterUpgrade} vs ${beforeEdit - 6}`);
 
   console.log('\n=== 清理 ===');
-  await del(`/material-executes/${r7a.data.id}`);
+  // r7a 单已被 ⑧ 升级为已发料（completed）→ 新规则禁删，改用【作废】恢复库存
+  await put(`/material-executes/${r7a.data.id}`, { execute_status_class: 'cancelled', execute_status: '已取消', remarks: '作废：E2E清理' });
   const finalStock = await stockOf(TEST_CODE);
-  check('清理后库存回到基线', finalStock === baseStock, `${finalStock} vs ${baseStock}`);
+  check('清理（作废）后库存回到基线', finalStock === baseStock, `${finalStock} vs ${baseStock}`);
 
   console.log(`\n========== 结果: ${pass} 通过 / ${fail} 失败 ==========`);
   process.exit(fail > 0 ? 1 : 0);

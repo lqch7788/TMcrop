@@ -1,6 +1,8 @@
 // ApplicationTab 组件 - 领料申请单页面主组件
 // 负责组合所有子组件，呈现完整的领料申请单功能
+import { useState } from 'react';
 import { useApplicationTab } from './hooks/useApplicationTab';
+import { DeletedDocumentsModal } from './components/DeletedDocumentsModal';
 
 // 导入子组件
 import { ApplicationFilters } from './components/ApplicationFilters';
@@ -22,6 +24,8 @@ import { BatchDeleteConfirmModal } from '../../../components/materialReceiving/m
 export default function ApplicationTab() {
   // 使用自定义hook管理所有状态和逻辑（数据从 Zustand Store 获取）
   const hook = useApplicationTab();
+  // 2026-09-27 审计方案：已删除单据归档追溯弹窗
+  const [showDeletedDocs, setShowDeletedDocs] = useState(false);
 
   // ============================================
   // JSX - 领料申请单Tab内容
@@ -90,6 +94,7 @@ export default function ApplicationTab() {
         onToggleOverdue={() => hook.setOverdueOnly(!hook.overdueOnly)}
         onAddModalOpen={() => hook.setShowAddModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
+        onShowDeletedDocs={() => setShowDeletedDocs(true)}
         onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}
       />
 
@@ -193,6 +198,13 @@ export default function ApplicationTab() {
         onChange={hook.setExportFileType}
         onConfirm={hook.confirmExport}
         onClose={() => hook.setShowExportTypeModal(false)}
+      />
+
+      {/* 2026-09-27 审计方案：已删除单据归档查询（追溯入口） */}
+      <DeletedDocumentsModal
+        isOpen={showDeletedDocs}
+        onClose={() => setShowDeletedDocs(false)}
+        defaultType="material_request"
       />
     </>
   );
