@@ -182,10 +182,12 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
       // 后端 PUT 状态感知：旧账已扣 → 先恢复库存；单据本体保留（cancelled），可在"已取消"筛选追溯
       voidItem: async (id, reason) => {
         try {
+          // 2026-09-27 修复：reason 类型防御（同 deleteItem）
+          const safeReason = typeof reason === 'string' ? reason.trim() : '';
           await enhancedApiClient.put(`/material-executes/${id}`, {
             execute_status_class: 'cancelled',
             execute_status: '已取消',
-            remarks: reason ? `作废：${reason}` : '作废',
+            remarks: safeReason ? `作废：${safeReason}` : '作废',
           });
           await get().fetchItems();
           return true;
@@ -204,7 +206,10 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
 
         try {
           // 2026-09-27 审计方案：删除原因写入归档表（选填）
-          const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+          // 2026-09-27 修复：reason 必须是字符串——若调用方误传事件对象等，
+          // encodeURIComponent 会 toString 成 "[object Object]" 污染归档数据
+          const safeReason = typeof reason === 'string' ? reason.trim() : '';
+          const qs = safeReason ? `?reason=${encodeURIComponent(safeReason)}` : '';
           await enhancedApiClient.delete(`/material-executes/${id}${qs}`);
           return true;
         } catch (error) {

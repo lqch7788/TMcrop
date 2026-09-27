@@ -738,7 +738,10 @@ router.delete('/:id', (req: Request, res: Response) => {
     // ②③ 待出库单：归档快照 + 删除（同一事务）
     const reqUser = (req as unknown as { user?: { name?: string; username?: string } }).user || {};
     const deletedBy = String(reqUser.name || reqUser.username || '');
-    const reason = String((req.query.reason as string) || '');
+    // 2026-09-27 修复：reason 必须是"有意义的字符串"——过滤事件对象被 toString 的
+    // "[object Object]" 等脏值（前端已防御，此处兜底防直调 API 绕过）
+    const rawReason = String((req.query.reason as string) || '');
+    const reason = rawReason === '[object Object]' ? '' : rawReason;
     const snapshot: Record<string, unknown> = {
       ...oldRow,
       source_application_codes: sourceCodes,
