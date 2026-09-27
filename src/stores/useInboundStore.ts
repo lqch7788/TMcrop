@@ -22,7 +22,8 @@ interface InboundState {
 }
 
 export const useInboundStore = create<InboundState>()(
-  (set) => ({
+  // 2026-09-27 修复：此前签名为 (set)，但 fetchItems 用了 get() → 调用即 ReferenceError
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -54,11 +55,24 @@ export const useInboundStore = create<InboundState>()(
 
     updateItem: async (id, updates) => {
       try {
-        const result = await warehouseService.updateInboundRecord(id, updates);
+        // 2026-09-27：只提交后端白名单字段——此前传 {...record} 携带 id/voidedDate 会被
+        // 400 拒绝（"包含非法更新字段"），导致编辑保存与作废全部失败。
+        // 后端已做兼容剔除，这里前端也保持干净（undefined 字段会被 JSON.stringify 丢弃，不会误覆盖）
+        const payload = {
+          code: updates.code,
+          inboundDate: updates.inboundDate,
+          supplier: updates.supplier,
+          operator: updates.operator,
+          status: updates.status,
+          materials: updates.materials,
+        };
+        const result = await warehouseService.updateInboundRecord(id, payload);
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...result } : i) }));
         return result;
       } catch (error) {
-        // logger.error('[useInboundStore] 更新入库记录失败:', error);
+        // 2026-09-27 fail-loud：错误写入 store.error，调用方据此提示用户（此前静默吞掉，
+        // 后端 400 拒绝时前端无任何反馈 → 用户以为"删不掉/没反应"）
+        set({ error: error instanceof Error ? error.message : '更新入库记录失败' });
         return null;
       }
     },
@@ -69,7 +83,8 @@ export const useInboundStore = create<InboundState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        // logger.error('[useInboundStore] 删除入库记录失败:', error);
+        // 2026-09-27 fail-loud：同 updateItem
+        set({ error: error instanceof Error ? error.message : '删除入库记录失败' });
         return false;
       }
     },

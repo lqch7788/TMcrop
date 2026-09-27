@@ -12,7 +12,22 @@ export function getAllMaterials(): any[] {
   // 修复：按 id DESC 排序，让新建物料显示在最前面
   // 旧 ORDER BY code 会让"ULTRATESTxxx"这种新编码排到 MAT_xxx 后面，用户分页看不到
   // 库存总览页面用户最关心"刚加了啥"，按 id DESC 符合该场景
-  const results = db.exec('SELECT * FROM materials ORDER BY id DESC');
+  // 2026-09-27 多批次方案 A：联表批次账（batch_inventory 是批次权威表）——
+  // 返回有效批次数 batchCount 与"最早有效批次效期"earliestExpiry（FEFO 临期预警视角），
+  // 主表仍是按 code 唯一的总量行（不拆行，避免出库按 code 扣减被多行连坐）
+  const results = db.exec(`
+    SELECT m.*,
+      IFNULL(b.batch_count, 0) AS batchCount,
+      IFNULL(b.earliest_expiry, '') AS earliestExpiry
+    FROM materials m
+    LEFT JOIN (
+      SELECT material_code, COUNT(*) AS batch_count, MIN(expiry_date) AS earliest_expiry
+      FROM batch_inventory
+      WHERE remaining_quantity > 0 AND expiry_date IS NOT NULL AND expiry_date <> ''
+      GROUP BY material_code
+    ) b ON b.material_code = m.code
+    ORDER BY m.id DESC
+  `);
   if (results.length === 0) return [];
 
   const { columns, values } = results[0];
@@ -63,12 +78,13 @@ export function createMaterial(material: {
   expiryDate: string;
   lastUpdateTime: string;
   dataStatus: string;
+  remarks?: string;
 }): number {
   const db = getDatabase();
   db.run(`
     INSERT INTO materials
-    (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus, remarks)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     material.code,
     material.name,
@@ -86,7 +102,8 @@ export function createMaterial(material: {
     material.productionDate,
     material.expiryDate,
     material.lastUpdateTime,
-    material.dataStatus
+    material.dataStatus,
+    material.remarks || ''
   ]);
   // 先取 last_insert_rowid，再 saveDatabase（sql.js 在 saveDatabase 后会重置该值为 0）
   const result = db.exec('SELECT last_insert_rowid() as id');
@@ -209,11 +226,19 @@ export function updateInboundRecord(id: number, updates: Record<string, any>): b
  * 批次用完标记"已用完"而非删除，保留追溯。
  * @param opts.persist 事务内调用时传 false，由调用方在 COMMIT 后统一落盘（sql.js 事务内禁止 saveDatabase）
  */
-export function syncInboundToMaterials(materials: any[], opts?: { persist?: boolean }): void {
+export function syncInboundToMaterials(
+  materials: any[],
+  opts?: { persist?: boolean; fallbackSupplier?: string }
+): void {
   const db = getDatabase();
+  // 单头供应商兜底：前端入库明细不含 supplier，新建物料时继承单头供应商，避免主数据供应商为空
+  const fallbackSupplier = String(opts?.fallbackSupplier || '').trim();
 
   for (const m of materials) {
     if (!m.code) continue; // 无物料编码则跳过
+
+    const supplier = String(m.supplier || fallbackSupplier || '').trim();
+    const remarks = String(m.remarks || '').trim();
 
     // 按 code 匹配总量行（同码多行历史数据取 id 最小行）
     const existing = db.exec(
@@ -224,16 +249,30 @@ export function syncInboundToMaterials(materials: any[], opts?: { persist?: bool
       // 已有该物料：累加数量 + 恢复启用状态（防止之前因用完被标记）
       const oldQty = existing[0].values[0][1] as number;
       const newQty = oldQty + (Number(m.quantity) || 0);
-      db.run(
-        'UPDATE materials SET quantity = ?, lastUpdateTime = ?, dataStatus = ? WHERE id = ?',
-        [newQty, new Date().toISOString(), '启用', existing[0].values[0][0]]
-      );
+
+      // 2026-09-27 字段链路修复：入库属性（供应商/单价/位置/批次/日期/备注）非空时覆盖，
+      // 不抹掉未提供的信息；库存阈值仅 >0 覆盖（0 视为未提供，避免把已配置的预警线清零）。
+      // name/category/specification/unit/barcode 属物料身份信息，入库不覆盖（走物料编辑维护）。
+      const sets: string[] = ['quantity = ?', 'lastUpdateTime = ?', "dataStatus = '启用'"];
+      const params: (string | number)[] = [newQty, new Date().toISOString()];
+      if (supplier) { sets.push('supplier = ?'); params.push(supplier); }
+      if (m.price) { sets.push('price = ?'); params.push(String(m.price)); }
+      if (m.location) { sets.push('location = ?'); params.push(String(m.location)); }
+      if (m.batchNo) { sets.push('batchNo = ?'); params.push(String(m.batchNo)); }
+      if (m.productionDate) { sets.push('productionDate = ?'); params.push(String(m.productionDate)); }
+      if (m.expiryDate) { sets.push('expiryDate = ?'); params.push(String(m.expiryDate)); }
+      if (remarks) { sets.push('remarks = ?'); params.push(remarks); }
+      if (Number(m.minStock) > 0) { sets.push('minStock = ?'); params.push(Number(m.minStock)); }
+      if (Number(m.maxStock) > 0) { sets.push('maxStock = ?'); params.push(Number(m.maxStock)); }
+
+      params.push(existing[0].values[0][0] as number);
+      db.run(`UPDATE materials SET ${sets.join(', ')} WHERE id = ?`, params);
     } else {
-      // 新物料：新增总量行（batchNo 留空——批次明细由 batch_inventory 承载）
+      // 新物料：新增总量行（batchNo 取入库明细值——批次明细的权威仍在 batch_inventory）
       db.run(`
         INSERT INTO materials
-        (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus, remarks)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         m.code,
         m.name || '',
@@ -241,17 +280,18 @@ export function syncInboundToMaterials(materials: any[], opts?: { persist?: bool
         m.specification || '',
         m.unit || '袋',
         Number(m.quantity) || 0,
-        m.minStock || 0,
-        m.maxStock || 0,
+        Number(m.minStock) || 0,
+        Number(m.maxStock) || 0,
         m.price || '',
-        m.supplier || '',
+        supplier,
         m.location || '',
         m.barcode || '',
-        '',
+        m.batchNo || '',
         m.productionDate || '',
         m.expiryDate || '',
         new Date().toISOString(),
-        '启用'
+        '启用',
+        remarks
       ]);
     }
   }

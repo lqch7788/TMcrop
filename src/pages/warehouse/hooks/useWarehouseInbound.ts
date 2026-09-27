@@ -94,6 +94,8 @@ export function useWarehouseInbound() {
   const [showInboundAddModal, setShowInboundAddModal] = useState(false);
   const [showInboundDeleteModal, setShowInboundDeleteModal] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+  // 2026-09-27：冲销弹窗（红字单，处理"货已被领用无法作废"的场景）
+  const [showReversalModal, setShowReversalModal] = useState(false);
 
   // 数据状态（现在从 API 获取）
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -233,9 +235,16 @@ export function useWarehouseInbound() {
   // 确认删除
   const onConfirmInboundDelete = useCallback(async () => {
     if (selectedInboundRecords.length > 0) {
-      // 调用 Store 删除每条记录
+      // 调用 Store 删除每条记录（2026-09-27 fail-loud：逐条检查结果，
+      // 后端拒绝"已完成"单时把原因告知用户，此前静默失败导致"点了没反应"）
+      const failedCodes: string[] = [];
       for (const record of selectedInboundRecords) {
-        await storeDeleteItem(record.id);
+        const ok = await storeDeleteItem(record.id);
+        if (!ok) failedCodes.push(record.code || `#${record.id}`);
+      }
+      if (failedCodes.length > 0) {
+        const reason = useInboundStore.getState().error || '未知原因';
+        await showAlert(`以下入库单删除失败：${failedCodes.join('、')}\n原因：${reason}`);
       }
       // 刷新数据
       loadItems();
@@ -244,9 +253,25 @@ export function useWarehouseInbound() {
     setSelectedInboundRecords([]);
   }, [selectedInboundRecords, storeDeleteItem, loadItems]);
 
-  // 保存编辑
+  /** 打开冲销弹窗（已完成单：原单保留，红字冲销，冲销量=实际可冲回量） */
+  const onRequestReversal = useCallback((record: InboundRecord) => {
+    setSelectedInboundRecord(record);
+    setShowReversalModal(true);
+  }, []);
+
+  /** 冲销成功：刷新列表 */
+  const onReversalSuccess = useCallback(() => {
+    loadItems();
+  }, [loadItems]);
+
+  // 保存编辑（含"已完成单作废"：后端回收库存后状态转 voided）
   const onSaveInboundEdit = useCallback(async (record: InboundRecord) => {
-    await storeUpdateItem(record.id, record);
+    const result = await storeUpdateItem(record.id, record);
+    if (!result) {
+      const reason = useInboundStore.getState().error || '未知原因';
+      await showAlert(`保存失败：${reason}`);
+      return;
+    }
     await loadItems();
     setShowInboundEditModal(false);
     setSelectedInboundRecord(null);
@@ -372,6 +397,11 @@ export function useWarehouseInbound() {
     setShowInboundDeleteModal,
     showBatchEditModal,
     setShowBatchEditModal,
+    // 2026-09-27 冲销
+    showReversalModal,
+    setShowReversalModal,
+    onRequestReversal,
+    onReversalSuccess,
 
     // 数据相关
     inboundRecords,

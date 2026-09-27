@@ -3,7 +3,7 @@
  * 从原始 WarehouseInboundPage 拆分后重构，整合各子组件
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Download, ChevronDown, ChevronRight, X } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
@@ -18,6 +18,7 @@ import {
   InboundExportModal,
   InboundAddModal,
   InboundEditModal,
+  InboundReversalModal,
   InboundBatchEditModal,
 } from './components/WarehouseInboundModals';
 
@@ -59,6 +60,11 @@ export default function WarehouseInboundPage() {
     setShowInboundDetailModal,
     showInboundEditModal,
     setShowInboundEditModal,
+    // 2026-09-27 冲销
+    showReversalModal,
+    setShowReversalModal,
+    onRequestReversal,
+    onReversalSuccess,
     showInboundAddModal,
     setShowInboundAddModal,
     showInboundDeleteModal,
@@ -90,6 +96,8 @@ export default function WarehouseInboundPage() {
     selectedRecords,
     isAllSelected,
     filteredRecords,
+    // 全量记录（单号查重必须用全量，筛选态下用 filteredRecords 会漏判重码）
+    inboundRecords,
 
     // 展开状态
     expandedRows,
@@ -114,6 +122,16 @@ export default function WarehouseInboundPage() {
     onConfirmDelete,
     onToggleExpand,
   } = useWarehouseInbound();
+
+  // 2026-09-27：已被冲销的原单 id 集合（隐藏编辑弹窗里的"冲销"入口，防重复冲销）
+  const reversedIds = useMemo(
+    () => new Set(
+      (inboundRecords || [])
+        .filter((r) => r.recordType === 'reversal' && r.reversalOf != null)
+        .map((r) => r.reversalOf as number)
+    ),
+    [inboundRecords]
+  );
 
   // 判断是否有任何模式激活
   const hasActiveMode = editMode || deleteMode || exportMode;
@@ -266,6 +284,8 @@ export default function WarehouseInboundPage() {
           // 2026-08-10：行内操作列回调
           onEditRecord={onEditRecord}
           onDeleteRecord={onDeleteRecord}
+          // 2026-09-27：行内冲销入口（已完成单）
+          onRequestReversal={onRequestReversal}
           page={inboundPage}
           pageSize={inboundPageSize}
           totalPages={totalPages}
@@ -287,6 +307,16 @@ export default function WarehouseInboundPage() {
         isOpen={showInboundEditModal}
         onClose={() => setShowInboundEditModal(false)}
         onSave={onSaveInboundEdit}
+        onRequestReversal={onRequestReversal}
+        isReversed={selectedInboundRecord ? reversedIds.has(selectedInboundRecord.id) : false}
+      />
+
+      {/* 2026-09-27 冲销弹窗（红字单：原单保留，回收仍在库存中的数量） */}
+      <InboundReversalModal
+        isOpen={showReversalModal}
+        record={selectedInboundRecord}
+        onClose={() => setShowReversalModal(false)}
+        onSuccess={onReversalSuccess}
       />
 
       <InboundAddModal
@@ -294,7 +324,7 @@ export default function WarehouseInboundPage() {
         onClose={() => setShowInboundAddModal(false)}
         onSave={onSaveNewInbound}
         onGenerateCode={onGenerateOrderCode}
-        existingCodes={filteredRecords.map(r => r.code)}
+        existingCodes={inboundRecords.map(r => r.code)}
       />
 
       <InboundDeleteConfirmModal

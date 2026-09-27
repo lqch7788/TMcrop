@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Send, Trash2, X } from 'lucide-react';
-import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
+import { InboundRecord, InboundMaterial } from '../../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -76,7 +76,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
     inboundDate: today,
     supplier: '',
     operator: currentUserName,
-    status: 'completed' as 'completed' | 'pending',
+    // 2026-09-27：默认待审核（统一走"物料审批 → 物料入库"），直接入库仅限紧急场景
+    status: 'pending' as 'completed' | 'pending',
   });
 
   // 物料列表状态
@@ -281,11 +282,13 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       const todayPrefix = `RK${todayStr.replace(/-/g, '')}-`;
       const seq = parseInt(newCode.replace(todayPrefix, ''), 10);
       const nextSeq = seq + 1;
-      if (nextSeq > 999) {
-        setCodeError('今日编号已达上限999');
+      // 2026-09-27 修复：查重分支此前用 3 位序号（padStart(3)），与基础生成器 4 位不一致，
+      // 同一天可能生成位数不同的单号；统一为 4 位、上限 9999
+      if (nextSeq > 9999) {
+        setCodeError('今日编号已达上限9999');
         return;
       }
-      newCode = `${todayPrefix}${String(nextSeq).padStart(3, '0')}`;
+      newCode = `${todayPrefix}${String(nextSeq).padStart(4, '0')}`;
       attempts++;
     }
 
@@ -305,14 +308,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
       code: '',
       name: '',
       category: '',
-      bigCategory: '',
-      midCategory: '',
-      subCategory: '',
       specification: '',
       barcode: '',
       unit: '袋',
       quantity: 0,
+      // 2026-09-27：库存阈值（minStock/maxStock）属物料主数据，不在入库明细填写——
+      // 由物料库存页的编辑/批量编辑维护（新物料入库后阈值为 0，库存页有"未设置"提示引导）
       price: '',
+      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',
@@ -336,20 +339,25 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
   // 提交表单
   const handleSubmit = () => {
+    // 2026-09-27：明细继承单头供应商——入库新建物料时落主数据供应商（后端另有单头兜底）
+    const materialsWithSupplier = materials.map(m => ({
+      ...m,
+      supplier: m.supplier || formData.supplier,
+    }));
     onSave({
       code: formData.code || onGenerateCode(),
       inboundDate: formData.inboundDate,
       supplier: formData.supplier,
       operator: formData.operator,
       status: formData.status,
-      materials,
+      materials: materialsWithSupplier,
     });
     setFormData({
       code: '',
       inboundDate: today,
       supplier: '',
       operator: currentUserName,
-      status: 'completed',
+      status: 'pending', // 与初始默认一致（统一走审批）
     });
     setMaterials([]);
     onClose();
@@ -456,7 +464,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
               />
             </div>
 
-            {/* 状态 */}
+            {/* 状态：2026-09-27 改为默认待审核（统一走审批），"直接入库"仅限紧急场景 */}
             <div>
               <Label className="text-xs text-emerald-700">状态</Label>
               <Select
@@ -467,10 +475,15 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="completed">已完成</SelectItem>
-                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="pending">待审核（审批通过后入库）</SelectItem>
+                  <SelectItem value="completed">直接入库（跳过审批，紧急场景）</SelectItem>
                 </SelectContent>
               </Select>
+              {formData.status === 'completed' && (
+                <p className="mt-1 text-[11px] text-amber-600">
+                  ⚠ 直接入库将跳过审批、立即计入库存，仅限车辆等卸/急用等紧急场景
+                </p>
+              )}
             </div>
           </div>
         </div>

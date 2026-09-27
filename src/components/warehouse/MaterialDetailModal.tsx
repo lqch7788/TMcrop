@@ -4,6 +4,7 @@ import { Material } from './MaterialFilters';
 import { UnifiedModal, TabsList, TabsTrigger, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button, Checkbox, Pagination } from '@/components/ui';
 import { enhancedApiClient } from '@/lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
+import { daysUntilExpiry, EXPIRY_WARN_DAYS } from '@/lib/dateUtils';
 
 interface OutboundRecord {
   executeCode: string;
@@ -21,6 +22,18 @@ interface OutboundRecord {
   areaInfo: string;
   batchNo: string;
   applicationCode: string;
+}
+
+/** 批次账行（GET /materials/batches/:code 返回，camelCase 中间件转换后） */
+interface BatchRow {
+  id: number;
+  batchNo: string;
+  productionDate: string;
+  expiryDate: string;
+  unit: string;
+  totalQuantity: number;
+  remainingQuantity: number;
+  inboundRecordId: number | null;
 }
 
 interface MaterialDetailModalProps {
@@ -63,6 +76,12 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
   // 2026-09-27 审计修复：库存流水 tab（inventory_transaction，按 instance_id=物料编码查）
   const [transactions, setTransactions] = useState<Array<Record<string, unknown>>>([]);
   const [loadingTx, setLoadingTx] = useState(false);
+
+  // 2026-09-27 批次明细（方案 A）：batch_inventory 是批次权威表
+  const [batches, setBatches] = useState<BatchRow[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  /** 已用完批次（remaining=0）默认折叠，避免历史批次淹没在列表里 */
+  const [showUsedUpBatches, setShowUsedUpBatches] = useState(false);
 
   // 导出模式
   const [exportMode, setExportMode] = useState(false);
@@ -111,13 +130,36 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
     }
   }, [material?.code]);
 
+  /** 加载批次明细（batch_inventory，后端按效期升序返回） */
+  const loadBatches = useCallback(async () => {
+    if (!material?.code) return;
+    setLoadingBatches(true);
+    try {
+      const res = await enhancedApiClient.get<{ success: boolean; data: BatchRow[] }>(
+        `/materials/batches/${encodeURIComponent(material.code)}`
+      );
+      // enhancedApiClient 已自动解包 .data，res 可能是数组或 { data: [...] }
+      const rows = (res as any)?.data || (Array.isArray(res) ? res : []);
+      setBatches(Array.isArray(rows) ? rows : []);
+      setError(null);
+    } catch (e) {
+      console.error('加载批次明细失败:', e);
+      setBatches([]);
+      setError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setLoadingBatches(false);
+    }
+  }, [material?.code]);
+
   useEffect(() => {
     if (activeTab === 'history') {
       loadHistory();
     } else if (activeTab === 'transactions') {
       loadTransactions();
+    } else if (activeTab === 'batches') {
+      loadBatches();
     }
-  }, [activeTab, loadHistory, loadTransactions]);
+  }, [activeTab, loadHistory, loadTransactions, loadBatches]);
 
   // 弹窗关闭时重置 tab 和导出模式
   useEffect(() => {
@@ -125,6 +167,8 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
       setActiveTab('basic');
       setHistory([]);
       setTransactions([]);
+      setBatches([]);
+      setShowUsedUpBatches(false);
       setExportMode(false);
       setSelectedIndices(new Set());
     }
@@ -236,6 +280,10 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
         <TabsTrigger value="transactions">
           库存流水 {transactions.length > 0 ? `(${transactions.length})` : ''}
         </TabsTrigger>
+        {/* 2026-09-27 多批次方案 A：批次明细 tab（batch_inventory 权威表，含生产日期/有效期/剩余量） */}
+        <TabsTrigger value="batches">
+          批次明细 {batches.length > 0 ? `(${batches.filter(b => Number(b.remainingQuantity) > 0).length})` : ''}
+        </TabsTrigger>
       </TabsList>
 
       {activeTab === 'basic' && (
@@ -279,13 +327,22 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
                 <span className="text-xs text-gray-500 block">当前库存</span>
                 <span className="text-sm font-medium text-gray-900">{material.quantity} {material.unit}</span>
               </div>
+              {/* 2026-09-27：阈值属主数据（入口在编辑弹窗）——未设置时显式提示 */}
               <div>
                 <span className="text-xs text-gray-500 block">最低库存</span>
-                <span className="text-sm font-medium text-gray-900">{material.minStock} {material.unit}</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {material.minStock > 0
+                    ? `${material.minStock} ${material.unit}`
+                    : <span className="text-amber-500 text-xs">未设置（编辑中设置后启用库存预警）</span>}
+                </span>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">最高库存</span>
-                <span className="text-sm font-medium text-gray-900">{material.maxStock} {material.unit}</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {material.maxStock > 0
+                    ? `${material.maxStock} ${material.unit}`
+                    : <span className="text-amber-500 text-xs">未设置</span>}
+                </span>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">单价</span>
@@ -314,6 +371,11 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
               <div>
                 <span className="text-xs text-gray-500 block">最后更新时间</span>
                 <span className="text-sm font-medium text-gray-900">{material.lastUpdateTime}</span>
+              </div>
+              {/* 2026-09-27 新增：备注（入库明细备注落主数据后可在此查看） */}
+              <div>
+                <span className="text-xs text-gray-500 block">备注</span>
+                <span className="text-sm font-medium text-gray-900">{material.remarks || '-'}</span>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">数据状态</span>
@@ -529,6 +591,79 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
                 })}
               </TableBody>
             </Table>
+          )}
+        </div>
+      )}
+      {/* 2026-09-27 批次明细（方案 A）：batch_inventory 权威表，后端按效期升序（无期限的排后）；
+          主表不拆行避免出库按 code 扣减连坐，批次信息在此集中呈现；已用完批次默认折叠 */}
+      {activeTab === 'batches' && (
+        <div className="space-y-4">
+          {loadingBatches ? (
+            <div className="text-center py-10 text-gray-500">加载中...</div>
+          ) : batches.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">
+              暂无批次记录（该物料未经入库单入库，或批次账未建立）
+            </div>
+          ) : (
+            (() => {
+              const active = batches.filter((b) => Number(b.remainingQuantity) > 0);
+              const usedUp = batches.filter((b) => Number(b.remainingQuantity) <= 0);
+              const shown = showUsedUpBatches ? batches : active;
+              return (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">批次号</TableHead>
+                        <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">生产日期</TableHead>
+                        <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">有效期至</TableHead>
+                        <TableHead className="px-3 py-2 text-right text-xs font-semibold text-gray-600">剩余 / 入库量</TableHead>
+                        <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">入库单 ID</TableHead>
+                        <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">状态</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {shown.map((b) => {
+                        const remaining = Number(b.remainingQuantity) || 0;
+                        const total = Number(b.totalQuantity) || 0;
+                        const days = daysUntilExpiry(b.expiryDate);
+                        const isWarn = days !== null && days >= 0 && days < EXPIRY_WARN_DAYS;
+                        const isExpired = days !== null && days < 0;
+                        const isUsedUp = remaining <= 0;
+                        return (
+                          <TableRow key={b.id} className={isUsedUp ? 'opacity-50' : 'hover:bg-gray-50'}>
+                            <TableCell className="px-3 py-2 text-xs font-mono text-gray-800">{b.batchNo || '默认批次'}</TableCell>
+                            <TableCell className="px-3 py-2 text-xs text-gray-600">{b.productionDate || '-'}</TableCell>
+                            <TableCell className={`px-3 py-2 text-xs ${isExpired || isWarn ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                              {b.expiryDate || '-'}
+                              {isExpired ? ' ⚠已过期' : isWarn ? ` ⚠${days}天` : ''}
+                            </TableCell>
+                            <TableCell className="px-3 py-2 text-xs text-right text-gray-700">
+                              {remaining} / {total} {b.unit || ''}
+                            </TableCell>
+                            <TableCell className="px-3 py-2 text-xs text-gray-500">{b.inboundRecordId ? `#${b.inboundRecordId}` : '-'}</TableCell>
+                            <TableCell className="px-3 py-2">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${isUsedUp ? 'bg-gray-100 text-gray-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                                {isUsedUp ? '已用完' : '有效'}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  {usedUp.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowUsedUpBatches((v) => !v)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      {showUsedUpBatches ? '收起已用完批次' : `展开已用完批次（${usedUp.length}）`}
+                    </button>
+                  )}
+                </>
+              );
+            })()
           )}
         </div>
       )}

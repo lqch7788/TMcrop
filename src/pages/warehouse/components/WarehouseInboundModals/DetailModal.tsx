@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Package, X } from 'lucide-react';
-import { InboundRecord } from '../../../types/warehouseInbound.types';
+import { InboundRecord } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -24,6 +24,10 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
   if (!isOpen || !record) return null;
 
   const totalQuantity = record.materials.reduce((sum, m) => sum + Number(m.quantity), 0);
+  // 2026-09-27 冲销单展示：单号 = {原单号}-CX，原单号可去后缀推导；原入库量合计用于对比展示
+  const isReversal = record.recordType === 'reversal';
+  const originalCode = isReversal && record.code.endsWith('-CX') ? record.code.slice(0, -3) : '';
+  const totalOriginal = record.materials.reduce((sum, m) => sum + Number(m.originalQuantity ?? m.quantity), 0);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -83,9 +87,23 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
         <div className="mt-3 pt-3 border-t border-emerald-200">
           <span className="text-xs text-emerald-600">物料统计：</span>
           <span className="text-sm font-medium text-gray-900 ml-2">
-            共 {record.materials.length} 种物料，合计 {totalQuantity} 件
+            共 {record.materials.length} 种物料，
+            {isReversal
+              ? <>实际冲回 <b>{totalQuantity}</b> 件（原入库 {totalOriginal} 件，差额为已被领用部分）</>
+              : <>合计 {totalQuantity} 件</>}
           </span>
         </div>
+        {/* 2026-09-27 冲销单：显示关联的原单与冲销原因（原单号由单号去 -CX 后缀推导） */}
+        {isReversal && (
+          <div className="mt-2 pt-2 border-t border-red-200 flex flex-wrap items-center gap-x-6 gap-y-1">
+            <span className="text-xs text-red-600 font-medium">
+              冲销自：<span className="font-mono">{originalCode || `#${record.reversalOf ?? ''}`}</span>
+            </span>
+            {record.reversalReason && (
+              <span className="text-xs text-gray-700">冲销原因：{record.reversalReason}</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 物料明细 */}
@@ -122,7 +140,19 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
                   <TableCell className="text-xs text-gray-600 whitespace-nowrap">{m.specification || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-600 whitespace-nowrap">{m.barcode || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-600 whitespace-nowrap">{m.unit}</TableCell>
-                  <TableCell className="text-xs text-gray-900 whitespace-nowrap">{m.quantity}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {/* 冲销单：显示实际冲回量（负数视觉）与原始入库量对比；普通单直接显示数量 */}
+                    {isReversal ? (
+                      <span className={m.quantity > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                        {m.quantity > 0 ? `-${m.quantity}` : '0'}
+                        {m.originalQuantity !== undefined && (
+                          <span className="text-gray-400 font-normal">（原 {m.originalQuantity}）</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-900">{m.quantity}</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-gray-900 whitespace-nowrap">{m.price}元</TableCell>
                   <TableCell className="text-xs text-gray-600 whitespace-nowrap">{m.location || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-600 whitespace-nowrap">{m.batchNo || '-'}</TableCell>

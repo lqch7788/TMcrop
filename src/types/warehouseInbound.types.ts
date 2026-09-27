@@ -5,15 +5,18 @@
 
 /**
  * 入库物料明细
+ *
+ * 2026-09-27 字段链路对齐：
+ * - 移除 bigCategory/midCategory/subCategory（无 UI 入口、后端不落库的死字段）
+ * - 新增 supplier/minStock/maxStock：前端提交时 supplier 自动继承单头（后端另有单头兜底），
+ *   minStock/maxStock 仅在"入库新建物料"时写入主数据（已有物料不覆盖，见 syncInboundToMaterials）
+ * - 三个新字段设为可选：历史入库单 JSON（种子数据）形态不一，读取时必须容忍缺失
  */
 export interface InboundMaterial {
   id: number;
   code: string;
   name: string;
   category: string;
-  bigCategory: string;
-  midCategory: string;
-  subCategory: string;
   specification: string;
   barcode: string;
   unit: string;
@@ -24,6 +27,16 @@ export interface InboundMaterial {
   productionDate: string;
   expiryDate: string;
   remarks: string;
+  /** 供应商：提交时自动继承单头供应商 */
+  supplier?: string;
+  /** 最低库存（新建物料时落主数据；未填=不覆盖/0） */
+  minStock?: number;
+  /** 最高库存（同上） */
+  maxStock?: number;
+  /** 冲销单专用：原入库量（展示快照） */
+  originalQuantity?: number;
+  /** 冲销单专用：冲销时该批次剩余量（展示快照） */
+  batchRemain?: number;
 }
 
 /**
@@ -42,7 +55,14 @@ export interface InboundRecord {
   operator: string;
   status: InboundStatus;
   materials: InboundMaterial[];
-  voidedDate?: string;
+  // 2026-09-27：移除 voidedDate —— DB 列保留但无任何写入/读取（作废功能未实现），
+  // 类型层不再暴露以免误导；DB 列未删除（删列有风险，需单独迁移）
+  /** 单据类型：inbound=普通入库单；reversal=冲销单（红字，关联原单） */
+  recordType?: 'inbound' | 'reversal';
+  /** 冲销单关联的原单 id */
+  reversalOf?: number;
+  /** 冲销原因（操作留痕） */
+  reversalReason?: string;
 }
 
 /**

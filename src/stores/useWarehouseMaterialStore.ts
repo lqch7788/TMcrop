@@ -22,7 +22,8 @@ interface WarehouseMaterialState {
 }
 
 export const useWarehouseMaterialStore = create<WarehouseMaterialState>()(
-  (set) => ({
+  // 2026-09-27 修复：此前签名为 (set)，但 fetchItems 用了 get() → 调用即 ReferenceError
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,

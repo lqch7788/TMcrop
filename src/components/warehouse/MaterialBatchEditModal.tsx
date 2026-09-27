@@ -224,6 +224,17 @@ export function MaterialBatchEditModal({
             />
           </div>
         </div>
+
+        {/* 2026-09-27 新增：备注 */}
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
+          <Input
+            type="text"
+            value={(currentEditedData.remarks as string) || ''}
+            onChange={(e) => onFieldChange(currentMaterialId, 'remarks', e.target.value)}
+            className={deepInputClass.replace('py-3', 'py-1.5')}
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 mt-6">

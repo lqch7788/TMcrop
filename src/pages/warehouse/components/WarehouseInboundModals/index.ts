@@ -8,3 +8,4 @@ export { InboundExportModal } from './ExportModal';
 export { InboundAddModal } from './CreateModal';
 export { InboundEditModal } from './EditModal';
 export { InboundBatchEditModal } from './BatchEditModal';
+export { InboundReversalModal } from './ReversalModal';

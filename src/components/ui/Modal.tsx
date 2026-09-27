@@ -14,7 +14,8 @@ import {
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  // 2026-09-27：放宽为 ReactNode——多个业务弹窗传 JSX 标题（如带统计徽章），运行时本就正常
+  title: React.ReactNode;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl' | 'full';
   onSubmit?: () => void;

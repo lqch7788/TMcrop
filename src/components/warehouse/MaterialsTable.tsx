@@ -1,5 +1,6 @@
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Material } from './MaterialFilters';
+import { daysUntilExpiry, EXPIRY_WARN_DAYS } from '@/lib/dateUtils';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -77,7 +78,7 @@ export function MaterialsTable({
       )}
 
       <div style={{ overflowX: 'auto' }}>
-        <Table className="w-full" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
+        <Table className="w-full" style={{ minWidth: '1600px', tableLayout: 'fixed' }}>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow>
               {(exportMode || batchEditMode || deleteMode) && (
@@ -104,6 +105,7 @@ export function MaterialsTable({
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">生产日期</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">备注</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</TableHead>
               {/* 2026-08-10：每行操作列，下沉编辑按钮（原仅依赖工具栏批量编辑入口） */}
@@ -142,15 +144,65 @@ export function MaterialsTable({
                     {item.quantity}
                   </span>
                 </TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最低 ${item.minStock}`}>{item.minStock}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最高 ${item.maxStock}`}>{item.maxStock}</TableCell>
+                {/* 2026-09-27：阈值属物料主数据（不在入库明细填）——未设置时显式提示，避免"0=不预警"被隐没 */}
+                <TableCell
+                  className="px-4 py-3 text-sm truncate"
+                  title={item.minStock > 0 ? `最低 ${item.minStock}` : '未设置最低库存阈值：设置后才会触发"库存不足"预警'}
+                >
+                  {item.minStock > 0
+                    ? <span className="text-gray-600">{item.minStock}</span>
+                    : <span className="text-amber-500 text-xs">未设置</span>}
+                </TableCell>
+                <TableCell
+                  className="px-4 py-3 text-sm truncate"
+                  title={item.maxStock > 0 ? `最高 ${item.maxStock}` : '未设置最高库存阈值'}
+                >
+                  {item.maxStock > 0
+                    ? <span className="text-gray-600">{item.maxStock}</span>
+                    : <span className="text-amber-500 text-xs">未设置</span>}
+                </TableCell>
                 {/* 2026-09-27 修复：price 为 null 时 .replace 崩溃（一行坏数据炸整页）——防御式兜底 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.price || ''}>{(item.price || '').replace('元', '')}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.supplier}>{item.supplier}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.location}>{item.location}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.batchNo}>{item.batchNo}</TableCell>
+                {/* 2026-09-27 多批次方案 A：批次号 + "共 N 批"徽章（批次数来自 batch_inventory 聚合，
+                    主表仍是按 code 唯一总量行不拆行；批次明细在详情弹窗"批次明细"tab 查看） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate" title={item.batchNo}>{item.batchNo}</span>
+                    {(item.batchCount ?? 0) > 1 && (
+                      <span
+                        className="shrink-0 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xs whitespace-nowrap"
+                        title={`该物料共 ${item.batchCount} 个有效批次，点击编码查看批次明细`}
+                      >
+                        共 {item.batchCount} 批
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.productionDate}>{item.productionDate}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.expiryDate}>{item.expiryDate}</TableCell>
+                {/* 有效期至：优先显示"最早有效批次效期"（FEFO 视角），无批次效期时回退主表值；30 天内临期红字（与领料模块 EXPIRY_WARN_DAYS 一致） */}
+                {(() => {
+                  const shown = item.earliestExpiry || item.expiryDate;
+                  const days = daysUntilExpiry(shown);
+                  const isWarn = days !== null && days >= 0 && days < EXPIRY_WARN_DAYS;
+                  const isExpired = days !== null && days < 0;
+                  return (
+                    <TableCell
+                      className={`px-4 py-3 text-sm truncate ${isWarn || isExpired ? 'text-red-600 font-medium' : 'text-gray-600'}`}
+                      title={
+                        item.earliestExpiry && item.earliestExpiry !== item.expiryDate
+                          ? `最早有效批次效期 ${item.earliestExpiry}${isExpired ? '（已过期）' : isWarn ? `（${days} 天后到期）` : ''}｜最近入库批次 ${item.expiryDate || '-'}`
+                          : shown
+                      }
+                    >
+                      {shown}
+                      {isExpired ? ' ⚠已过期' : isWarn ? ` ⚠${days}天` : ''}
+                    </TableCell>
+                  );
+                })()}
+                {/* 2026-09-27 新增：备注列（入库明细备注落主数据后可在此查看） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.remarks}>{item.remarks}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.lastUpdateTime}>
                   {item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}
                 </TableCell>

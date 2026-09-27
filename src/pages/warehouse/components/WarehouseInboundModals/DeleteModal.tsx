@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
-import { InboundRecord } from '../../../types/warehouseInbound.types';
+import { InboundRecord } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 

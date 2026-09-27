@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
+import { applyMaterialInboundApproval } from '../services/materialInboundStock.service';
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
 
 const router = Router();
@@ -628,22 +629,15 @@ export function updateBusinessTable(
       break;
 
     case 'material_inbound':
-      // 物料入库使用 inventory 表
+      // 2026-09-27 修复：此前 UPDATE legacy `inventory` 表（11 行种子数据、无读取方，
+      // 目标行永不匹配却恒返回 success —— 幽灵路径），审批结果从未落到真实入库单。
+      // 改为真实链路：通过 → 入库单 completed + 库存入账；驳回/取消 → 入库单作废。
       try {
-        db.run(`
-          UPDATE inventory SET
-            status = ?,
-            approval_code = ?,
-            inbound_at = ?,
-            update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
-        return { success: true, message: '物料入库状态已更新' };
+        return applyMaterialInboundApproval(db, String(requestId), status);
       } catch (e) {
         console.error('更新物料入库失败:', e);
         return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
-      break;
 
     case 'material_transfer':
       // 库存调拨使用 inventory 表

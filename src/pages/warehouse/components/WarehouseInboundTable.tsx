@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ChevronDown, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit2, RotateCcw, Trash2 } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -35,6 +35,8 @@ interface WarehouseInboundTableProps {
   // 2026-08-10：行内操作列回调（参照物料库存页面模式）
   onEditRecord?: (record: InboundRecord) => void;
   onDeleteRecord?: (record: InboundRecord) => void;
+  /** 2026-09-27：冲销（红字单）——列表行内入口，仅对已完成单显示 */
+  onRequestReversal?: (record: InboundRecord) => void;
   // 权限控制
   canEdit?: boolean;
   canDelete?: boolean;
@@ -63,6 +65,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   onViewRecord,
   onEditRecord,
   onDeleteRecord,
+  onRequestReversal,
   canEdit = true,
   canDelete = true,
   page,
@@ -74,6 +77,16 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
 }) => {
   // 判断是否有任何模式激活
   const hasActiveMode = editMode || deleteMode || exportMode;
+
+  // 2026-09-27：已被冲销的原单 id 集合（从列表数据推导，用于隐藏"冲销"入口，防重复冲销）
+  const reversedIds = React.useMemo(
+    () => new Set(
+      records
+        .filter((r) => r.recordType === 'reversal' && r.reversalOf != null)
+        .map((r) => r.reversalOf as number)
+    ),
+    [records]
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -146,6 +159,12 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                     className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
                     onClick={() => onViewRecord(record)}
                   >
+                    {/* 2026-09-27：冲销单标识（红字单，关联原单） */}
+                    {record.recordType === 'reversal' && (
+                      <span className="mr-1.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-xs no-underline" title={`冲销单：冲销 #${record.reversalOf ?? ''}${record.reversalReason ? `｜原因：${record.reversalReason}` : ''}`}>
+                        冲销
+                      </span>
+                    )}
                     {record.code}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</TableCell>
@@ -157,7 +176,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                       {getStatusText(record.status)}
                     </span>
                   </TableCell>
-                  {/* 行内操作列：编辑 + 删除按钮（2026-08-10 下沉自工具栏） */}
+                  {/* 行内操作列：编辑 + 冲销 + 删除按钮（2026-08-10 下沉自工具栏；冲销 2026-09-27 新增） */}
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       {canEdit && onEditRecord && (
@@ -168,6 +187,17 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                           onClick={() => onEditRecord(record)}
                         >
                           <Edit2 className="w-4 h-4 text-blue-600" />
+                        </Button>
+                      )}
+                      {/* 冲销：仅已完成、非冲销单本身、且未被他单冲销过（防重复冲销） */}
+                      {onRequestReversal && record.status === 'completed' && record.recordType !== 'reversal' && !reversedIds.has(record.id) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="冲销（原单保留，回收仍在库存中的数量）"
+                          onClick={() => onRequestReversal(record)}
+                        >
+                          <RotateCcw className="w-4 h-4 text-amber-600" />
                         </Button>
                       )}
                       {canDelete && onDeleteRecord && (
