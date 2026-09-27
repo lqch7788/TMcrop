@@ -79,10 +79,13 @@ function parseMaterials(raw: unknown): any[] {
   return Array.isArray(cur) ? cur : [];
 }
 
-/** 解析物料行里的 batchNo 字符串（如 "B20260415(5袋),EQ20260125(2卷)"）→ 批次分配列表 */
-function parseBatchAllocations(line: any): Array<{ code: string; batchNo: string; qty: number }> {
+/** 解析物料行里的 batchNo 字符串（如 "B20260415(5袋),EQ20260125(2卷)"）→ 批次分配列表
+ * 2026-09-27 审计修复：export 供退料路由复用（退料行复制自出库明细，batchNo 是 FEFO 显示串） */
+export function parseBatchAllocations(line: any): Array<{ code: string; batchNo: string; qty: number }> {
   const code = line.materialCode || line.code || '';
-  const qty = Number(line.actualQuantity ?? line.actualQty ?? line.quantity ?? 0) || 0;
+  // 2026-09-27 修复：数量字段兼容出库行（actualQuantity）与退料行（returnQuantity）——
+  // 此前退料行无 actualQuantity 字段恒返回空数组，退料批次解析形同虚设
+  const qty = Number(line.actualQuantity ?? line.actualQty ?? line.returnQuantity ?? line.quantity ?? 0) || 0;
   if (!code || qty <= 0) return [];
   const batchStr = typeof line.batchNo === 'string' ? line.batchNo : '';
   const out: Array<{ code: string; batchNo: string; qty: number }> = [];
@@ -123,6 +126,9 @@ export function writeStockTransaction(
     material_restore: 'RST',
     material_return_in: 'RTN',
     material_return_undo: 'RTU',
+    // 2026-09-27 审计修复：物料入库流水（此前入库完全不写流水，追溯链断裂）
+    material_inbound: 'INB',
+    material_reverse_inbound: 'RIB',
   };
   const typeTag = typeTagMap[transactionType] || 'TXN';
   const id = `EXEC-${typeTag}-${now.replace(/[-: ]/g, '')}-${seq}-${Math.random().toString(36).substring(2, 8)}`;
@@ -184,8 +190,11 @@ function deductExecuteStock(
 
     // 主表账：存在则必须足量（2026-09-27 审计修复：此前仅在无批次时校验且 UPDATE 用
     // MAX(0,...) 静默截断——主表与批次账可各自漂移且无告警）
-    const mainRows = db.exec('SELECT quantity FROM materials WHERE code = ?', [code]);
-    const mainQty = mainRows.length > 0 && mainRows[0].values.length > 0 ? Number(mainRows[0].values[0][0]) || 0 : null;
+    // 2026-09-27 修复：主表行按 code 唯一（总量行），SELECT/UPDATE 用主键锁定单行——
+    // 此前 WHERE code 会把同编码的所有批次行全部扣减（结构性炸弹，见 P1-7）
+    const mainRows = db.exec('SELECT id, quantity FROM materials WHERE code = ? ORDER BY id ASC LIMIT 1', [code]);
+    const mainQty = mainRows.length > 0 && mainRows[0].values.length > 0 ? Number(mainRows[0].values[0][1]) || 0 : null;
+    const mainId = mainRows.length > 0 && mainRows[0].values.length > 0 ? mainRows[0].values[0][0] : null;
     if (mainQty !== null && mainQty < qty) {
       throw new Error(`物料 ${code} 库存不足：需要 ${qty}，主表现有 ${mainQty}`);
     }
@@ -222,11 +231,11 @@ function deductExecuteStock(
         throw new Error(`物料 ${code} 批次 ${alloc.batchNo} 扣减失败（批次余量不足或已变更）`);
       }
     }
-    // 扣主表
-    if (mainQty !== null) {
+    // 扣主表（按主键锁定单行，防同 code 多行被连坐扣减）
+    if (mainQty !== null && mainId !== null) {
       db.run(
-        'UPDATE materials SET quantity = quantity - ?, lastUpdateTime = ? WHERE code = ?',
-        [qty, nowLocalTimestamp(), code]
+        'UPDATE materials SET quantity = quantity - ?, lastUpdateTime = ? WHERE id = ?',
+        [qty, nowLocalTimestamp(), mainId]
       );
     }
 
@@ -285,13 +294,13 @@ function restoreExecuteStock(
     const lineQty = allocs.reduce((s, a) => s + a.qty, 0);
     if (lineQty > 0) mainTotals[allocs[0].code] = (mainTotals[allocs[0].code] || 0) + lineQty;
   }
-  // 统一恢复主表（主表行存在才恢复）
+  // 统一恢复主表（主表行存在才恢复；按主键锁定单行，防同 code 多行被连坐恢复）
   for (const [code, qty] of Object.entries(mainTotals)) {
-    const rows = db.exec('SELECT id FROM materials WHERE code = ?', [code]);
+    const rows = db.exec('SELECT id FROM materials WHERE code = ? ORDER BY id ASC LIMIT 1', [code]);
     if (rows.length === 0 || rows[0].values.length === 0) continue;
     db.run(
-      'UPDATE materials SET quantity = quantity + ?, lastUpdateTime = ? WHERE code = ?',
-      [qty, nowLocalTimestamp(), code]
+      'UPDATE materials SET quantity = quantity + ?, lastUpdateTime = ? WHERE id = ?',
+      [qty, nowLocalTimestamp(), rows[0].values[0][0]]
     );
   }
 }

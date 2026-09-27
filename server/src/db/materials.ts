@@ -153,6 +153,8 @@ export function getInboundRecordById(id: number): any | null {
 
 /**
  * 创建入库记录
+ * @param opts.persist 事务内调用时传 false（sql.js 事务内禁止 saveDatabase），
+ *                    由调用方在 COMMIT 后统一落盘
  */
 export function createInboundRecord(record: {
   code: string;
@@ -161,7 +163,7 @@ export function createInboundRecord(record: {
   operator: string;
   status: string;
   materials: any[];
-}): number {
+}, opts?: { persist?: boolean }): number {
   const db = getDatabase();
   db.run(`
     INSERT INTO inbound_records
@@ -175,7 +177,7 @@ export function createInboundRecord(record: {
     record.status,
     JSON.stringify(record.materials)
   ]);
-  saveDatabase();
+  if (opts?.persist !== false) saveDatabase();
   const result = db.exec('SELECT last_insert_rowid() as id');
   return result[0]?.values[0]?.[0] as number || 0;
 }
@@ -200,31 +202,34 @@ export function updateInboundRecord(id: number, updates: Record<string, any>): b
 }
 
 /**
- * 入库完成 → 自动同步物料库存（按 code + batchNo 匹配累加或新增）
- * 同编码不同批次独立存储，批次用完标记"已用完"而非删除，保留追溯
+ * 入库完成 → 自动同步物料库存（按 code 匹配累加或新增）
+ * 2026-09-27 修复（P1-7）：主表行语义唯一化为"按 code 唯一的总量行"——
+ * 此前按 code+batchNo 匹配，同码新批次会 INSERT 新行；而出库端主表 UPDATE 按 code 扣减，
+ * 一旦同码多行会把所有批次行连坐扣减（结构性炸弹）。批次明细的权威在 batch_inventory。
+ * 批次用完标记"已用完"而非删除，保留追溯。
+ * @param opts.persist 事务内调用时传 false，由调用方在 COMMIT 后统一落盘（sql.js 事务内禁止 saveDatabase）
  */
-export function syncInboundToMaterials(materials: any[]): void {
+export function syncInboundToMaterials(materials: any[], opts?: { persist?: boolean }): void {
   const db = getDatabase();
 
   for (const m of materials) {
     if (!m.code) continue; // 无物料编码则跳过
-    const batchNo = m.batchNo || ''; // 批次号为空则视为同一批次
 
-    // 按 code + batchNo 精确匹配批次
+    // 按 code 匹配总量行（同码多行历史数据取 id 最小行）
     const existing = db.exec(
-      'SELECT id, quantity FROM materials WHERE code = ? AND batchNo = ?',
-      [m.code, batchNo]
+      'SELECT id, quantity FROM materials WHERE code = ? ORDER BY id ASC LIMIT 1',
+      [m.code]
     );
     if (existing.length > 0 && existing[0].values.length > 0) {
-      // 已有同批次：累加数量 + 恢复启用状态（防止之前因用完被标记）
+      // 已有该物料：累加数量 + 恢复启用状态（防止之前因用完被标记）
       const oldQty = existing[0].values[0][1] as number;
       const newQty = oldQty + (Number(m.quantity) || 0);
       db.run(
-        'UPDATE materials SET quantity = ?, lastUpdateTime = ?, dataStatus = ? WHERE code = ? AND batchNo = ?',
-        [newQty, new Date().toISOString(), '启用', m.code, batchNo]
+        'UPDATE materials SET quantity = ?, lastUpdateTime = ?, dataStatus = ? WHERE id = ?',
+        [newQty, new Date().toISOString(), '启用', existing[0].values[0][0]]
       );
     } else {
-      // 新批次：新增物料记录
+      // 新物料：新增总量行（batchNo 留空——批次明细由 batch_inventory 承载）
       db.run(`
         INSERT INTO materials
         (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus)
@@ -242,7 +247,7 @@ export function syncInboundToMaterials(materials: any[]): void {
         m.supplier || '',
         m.location || '',
         m.barcode || '',
-        batchNo,
+        '',
         m.productionDate || '',
         m.expiryDate || '',
         new Date().toISOString(),
@@ -250,7 +255,7 @@ export function syncInboundToMaterials(materials: any[]): void {
       ]);
     }
   }
-  saveDatabase();
+  if (opts?.persist !== false) saveDatabase();
 }
 
 /**

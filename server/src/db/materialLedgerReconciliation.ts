@@ -148,6 +148,43 @@ export function reconcileMaterialLedger(): LedgerReconciliationResult {
 
   // ==================== 1. 物料两本账对账 ====================
   const matsRows = db.exec('SELECT code, quantity FROM materials');
+  // 2026-09-27 修复（P0-2）：反向对账——此前只从主表出发遍历，
+  // "批次账有量但主表无行"的幽灵库存（物料主数据被删但批次账残留，实测 EQ0103001/PH0105001）
+  // 永远不被修复；物料库存页看不到、FEFO 却仍可分配。此处补建主表总量行。
+  {
+    const mainCodes = new Set<string>();
+    if (matsRows.length > 0) {
+      matsRows[0].values.forEach((v: unknown[]) => mainCodes.add(String(v[0] || '')));
+    }
+    const batchCodes = db.exec(
+      'SELECT material_code, SUM(remaining_quantity), MAX(material_name) FROM batch_inventory GROUP BY material_code'
+    );
+    if (batchCodes.length > 0) {
+      for (const row of batchCodes[0].values) {
+        const code = String(row[0] || '');
+        const total = Number(row[1]) || 0;
+        const name = String(row[2] || '');
+        if (!code || total <= 0 || mainCodes.has(code)) continue;
+        // 主表 batchNo 取该码剩余量最大的批次号（仅供展示，账务权威在批次账）
+        const top = db.exec(
+          'SELECT batch_no FROM batch_inventory WHERE material_code = ? AND remaining_quantity > 0 ORDER BY remaining_quantity DESC LIMIT 1',
+          [code]
+        );
+        const batchNo = top.length > 0 && top[0].values.length > 0 ? String(top[0].values[0][0]) : DEFAULT_BATCH;
+        // 2026-09-27 修复：补建行必须补全字段默认值——此前 category/price 等为 NULL，
+        // 物料库存页 MaterialsTable 的 price.replace('元','') 直接崩溃（白屏）
+        db.run(
+          `INSERT INTO materials (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus)
+           VALUES (?, ?, '', '', '袋', ?, 0, 0, '', '', '', '', ?, '', '', ?, '启用')`,
+          [code, name, total, batchNo, now]
+        );
+        result.ledgerAdjusted.push({
+          code, mainQty: total, batchQtyBefore: total, diff: 0,
+          action: `反向补建主表行（批次账有量 ${total} 但主表缺行）`,
+        });
+      }
+    }
+  }
   if (matsRows.length > 0) {
     for (const row of matsRows[0].values) {
       const materialCode = String(row[0] || '');

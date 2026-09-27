@@ -40,6 +40,9 @@ const TX_TYPE_LABELS: Record<string, { label: string; cls: string; isOut: boolea
   material_restore: { label: '出库恢复', cls: 'bg-amber-100 text-amber-700', isOut: false },
   material_return_in: { label: '退料入库', cls: 'bg-emerald-100 text-emerald-700', isOut: false },
   material_return_undo: { label: '撤销退料', cls: 'bg-gray-100 text-gray-600', isOut: true },
+  // 2026-09-27 审计修复：物料入库流水标签（此前入库不写流水，新增后补标签）
+  material_inbound: { label: '物料入库', cls: 'bg-teal-100 text-teal-700', isOut: false },
+  material_reverse_inbound: { label: '入库撤销', cls: 'bg-amber-100 text-amber-700', isOut: true },
   inbound: { label: '入库', cls: 'bg-emerald-100 text-emerald-700', isOut: false },
   outbound: { label: '出库', cls: 'bg-blue-100 text-blue-700', isOut: true },
   freeze: { label: '冻结', cls: 'bg-slate-100 text-slate-600', isOut: true },

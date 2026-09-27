@@ -144,7 +144,8 @@ export function MaterialsTable({
                 </TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最低 ${item.minStock}`}>{item.minStock}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最高 ${item.maxStock}`}>{item.maxStock}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.price}>{item.price.replace('元', '')}</TableCell>
+                {/* 2026-09-27 修复：price 为 null 时 .replace 崩溃（一行坏数据炸整页）——防御式兜底 */}
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.price || ''}>{(item.price || '').replace('元', '')}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.supplier}>{item.supplier}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.location}>{item.location}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.batchNo}>{item.batchNo}</TableCell>

@@ -33,6 +33,10 @@ export interface MaterialStatItem {
   requisitionCount: number;
   totalQuantity: number;
   actualQuantity: number;
+  /** 2026-09-27 审计修复：退料量（出库实发后经生产退料回流的部分；老数据无此字段，可选） */
+  returnedQuantity?: number;
+  /** 净消耗 = 实发量 - 退料量 */
+  netQuantity?: number;
   totalAmount: number;
   mainWarehouse: string;
 }
@@ -45,6 +49,8 @@ export interface MonthlyStatItem {
   materialTypes: number;
   totalQuantity: number;
   actualQuantity: number;
+  /** 2026-09-27 审计修复：退料量（差异率按净消耗口径，后端已算好下发） */
+  returnedQuantity: number;
   differenceRate: number;
   totalAmount: number;
 }
@@ -100,6 +106,8 @@ const FIELD_MAP: Record<string, string> = {
   requisition_count: 'requisitionCount',
   total_quantity: 'totalQuantity',
   actual_quantity: 'actualQuantity',
+  returned_quantity: 'returnedQuantity',
+  net_quantity: 'netQuantity',
   actual_amount: 'actualAmount',
   total_amount: 'totalAmount',
   main_warehouse: 'mainWarehouse',
@@ -307,8 +315,10 @@ export interface MonthSummaryWithActual {
   monthName: string;
   totalQuantity: number;   // 申请量
   actualQuantity: number;  // 实发量（已扣库存出库单聚合）
+  /** 2026-09-27 审计修复：退料量（差异率按净消耗 = 实发 - 退料 计算） */
+  returnedQuantity: number;
   totalAmount: number;     // 真实申请金额（monthly_statistics.total_amount 聚合，元）
-  differenceRate: number;  // 差异率 %（实发-申请）/申请
+  differenceRate: number;  // 差异率 %（净消耗-申请）/申请
   departments: string[];   // 该月涉及的部门
   percentage: number;      // 占年度申请量比
 }
@@ -338,6 +348,7 @@ export function getMonthSummariesWithActual(
     if (existing) {
       existing.totalQuantity += m.totalQuantity || 0;
       existing.actualQuantity += m.actualQuantity || 0;
+      existing.returnedQuantity += m.returnedQuantity || 0;
       existing.totalAmount += m.totalAmount || 0;
       if (m.department && !existing.departments.includes(m.department)) existing.departments.push(m.department);
     } else {
@@ -346,6 +357,7 @@ export function getMonthSummariesWithActual(
         monthName: `${parseInt(m.month)}月`,
         totalQuantity: m.totalQuantity || 0,
         actualQuantity: m.actualQuantity || 0,
+        returnedQuantity: m.returnedQuantity || 0,
         totalAmount: m.totalAmount || 0,
         differenceRate: m.differenceRate || 0,
         departments: m.department ? [m.department] : [],
@@ -365,6 +377,7 @@ export function getMonthSummariesWithActual(
         monthName: `${parseInt(t.month.split('-')[1])}月`,
         totalQuantity: t.total || 0,
         actualQuantity: 0,
+        returnedQuantity: 0,
         totalAmount: 0,
         differenceRate: 0,
         departments: [],
@@ -373,11 +386,12 @@ export function getMonthSummariesWithActual(
     }
   }
   const rows = Array.from(map.values()).sort((a, b) => a.month.localeCompare(b.month));
-  // 重算差异率（跨部门聚合后）与占比
+  // 重算差异率（跨部门聚合后，2026-09-27 改净消耗口径）与占比
   const yearTotal = rows.reduce((s, r) => s + r.totalQuantity, 0);
   for (const r of rows) {
+    const netQuantity = r.actualQuantity - r.returnedQuantity;
     r.differenceRate = r.totalQuantity > 0
-      ? Math.round(((r.actualQuantity - r.totalQuantity) / r.totalQuantity) * 1000) / 10
+      ? Math.round(((netQuantity - r.totalQuantity) / r.totalQuantity) * 1000) / 10
       : 0;
     r.percentage = yearTotal > 0 ? Math.round((r.totalQuantity / yearTotal) * 1000) / 10 : 0;
   }

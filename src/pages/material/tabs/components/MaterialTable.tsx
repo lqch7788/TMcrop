@@ -96,6 +96,8 @@ export function MaterialTable({
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">出现次数</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总数量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">实际数量</th>
+              {/* 2026-09-27 审计修复：退料量列（净消耗口径可视化） */}
+              <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">退料量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总金额(元)</th>
               {/* 2026-09-27 审计修复（B5）：实发金额列（后端已聚合，此前未展示） */}
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">实发金额(元)</th>
@@ -128,6 +130,10 @@ export function MaterialTable({
                   <td className="px-3 py-3 text-sm text-right font-medium text-blue-600 whitespace-nowrap">{item.requisitionCount}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.totalQuantity.toLocaleString()}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.actualQuantity.toLocaleString()}</td>
+                  {/* 2026-09-27：退料量（0 时淡化显示） */}
+                  <td className={`px-3 py-3 text-sm text-right font-medium whitespace-nowrap ${(item.returnedQuantity ?? 0) > 0 ? 'text-amber-700' : 'text-gray-300'}`}>
+                    {(item.returnedQuantity ?? 0).toLocaleString()}
+                  </td>
                   <td className="px-3 py-3 text-sm text-right font-bold text-emerald-600 whitespace-nowrap">¥{item.totalAmount.toLocaleString()}</td>
                   {/* 2026-09-27（B5）：实发金额 */}
                   <td className="px-3 py-3 text-sm text-right font-medium text-blue-700 whitespace-nowrap">
