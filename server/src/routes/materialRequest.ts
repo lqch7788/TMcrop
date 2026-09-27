@@ -10,6 +10,32 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 const router = Router();
 
 /**
+ * 取消某申请单关联的全部待审批审批单（2026-09-27 审计修复）
+ * 作废/删除申请单时调用。用 JS 侧解析 business_link 精确比对 requestId，
+ * 兼容单层与双重编码的历史数据（SQL LIKE 对转义引号匹配不可靠）。
+ */
+function cancelPendingApprovalsForRequest(db: any, requestId: string): number {
+  const rows = db.exec(`SELECT id, business_link FROM approvals WHERE status = 'pending'`);
+  if (rows.length === 0) return 0;
+  const iso = new Date().toISOString();
+  let cancelled = 0;
+  for (const row of rows[0].values) {
+    const apId = String(row[0] || '');
+    const raw = String(row[1] || '');
+    let link: unknown = null;
+    try {
+      link = JSON.parse(raw);
+      if (typeof link === 'string') link = JSON.parse(link); // 双重编码兜底
+    } catch { continue; }
+    if (link && typeof link === 'object' && String((link as { requestId?: string }).requestId || '') === requestId) {
+      db.run('UPDATE approvals SET status = ?, updated_at = ? WHERE id = ?', ['cancelled', iso, apId]);
+      cancelled += 1;
+    }
+  }
+  return cancelled;
+}
+
+/**
  * 生成物料申请编码
  * 格式: MR + YYYYMMDD + - + 3位流水号 (如 MR20260607-001), 共 14 字符
  * 流水号按当日自增（查询当日 MAX+1，禁止随机数）
@@ -246,6 +272,19 @@ router.post('/', (req: Request, res: Response) => {
       } catch { materialsArr = []; }
     }
 
+    // 2026-09-27 审计修复：剔除 0 数量物料行（实测存在"申请 0 台"的脏行，
+    // 出库/统计/差异率均无意义）；全部为零则拒绝提交（fail loud）
+    const droppedZeroLines: string[] = [];
+    materialsArr = materialsArr.filter((m: any) => {
+      const qty = Number(m.requestedQuantity ?? m.quantity ?? 0) || 0;
+      if (qty > 0) return true;
+      droppedZeroLines.push(String(m.materialName || m.materialCode || '未命名'));
+      return false;
+    });
+    if (materialsArr.length === 0) {
+      return res.status(400).json({ success: false, error: '请至少添加一种物料且申请数量大于 0' });
+    }
+
     const db = getDatabase();
 
     // 2026-09-26 改进批次一：
@@ -375,24 +414,21 @@ router.post('/:id/withdraw', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    // 查该申请单的待审批审批单（business_link JSON 内嵌 requestId，两种键名兼容）
-    const rows = db.exec(
-      `SELECT id FROM approvals WHERE status = 'pending' AND (business_link LIKE ? OR business_link LIKE ?) ORDER BY created_at DESC LIMIT 1`,
-      [`%"requestId":"${id}"%`, `%"request_id":"${id}"%`]
-    );
-    if (rows.length === 0 || rows[0].values.length === 0) {
-      return res.status(400).json({ success: false, error: '未找到待审批的审批单，无法撤回' });
-    }
-    const approvalId = String(rows[0].values[0][0]);
     const d = new Date();
     const padN = (n: number) => String(n).padStart(2, '0');
     const now = `${d.getFullYear()}-${padN(d.getMonth() + 1)}-${padN(d.getDate())} ${padN(d.getHours())}:${padN(d.getMinutes())}:${padN(d.getSeconds())}`;
 
-    db.run("UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE id = ?", [now, approvalId]);
+    // 2026-09-27 审计修复：撤回时取消该申请单的"全部"待审批单——
+    // 此前 LIMIT 1 只撤一张，历史遗留多张 pending 时会漏撤（实测有 9 张残留审批单的场景）。
+    // 复用 cancelPendingApprovalsForRequest（JS 解析 business_link，兼容双重编码与两种键名）
+    const cancelledCount = cancelPendingApprovalsForRequest(db, id);
+    if (cancelledCount === 0) {
+      return res.status(400).json({ success: false, error: '未找到待审批的审批单，无法撤回' });
+    }
     // 2026-09-27：approval_status 置 'draft'（而非 pending）——前端据此区分"已撤回待重提的草稿"与"新建待审批"
     db.run("UPDATE material_requests SET status = 'draft', approval_status = 'draft', update_time = ? WHERE id = ?", [now, id]);
     saveDatabase();
-    res.json({ success: true, data: { id, approvalId } });
+    res.json({ success: true, data: { id, cancelledCount } });
   } catch (error) {
     console.error('撤回领料申请失败:', error);
     res.status(500).json({ success: false, error: '撤回领料申请失败' });
@@ -498,6 +534,9 @@ router.get('/:id/executions', (req: Request, res: Response) => {
 
     const executions: Record<string, unknown>[] = [];
     const dispatchedMap: Record<string, number> = {};
+    // 2026-09-27 审计修复：待发料量（pending_out）单列，取消单（cancelled）全部忽略——
+    // 此前不区分状态全量累加，导致"已领 N"把待出库/已取消的计划量也算进去（虚高）
+    const pendingMap: Record<string, number> = {};
     if (execRows.length > 0) {
       const cols = execRows[0].columns;
       for (const row of execRows[0].values) {
@@ -508,26 +547,34 @@ router.get('/:id/executions', (req: Request, res: Response) => {
         // 只统计关联本单号的行（一单可能被多来源单共享）
         item.materials = mats;
         executions.push(item);
+        const cls = String(item.execute_status_class || '');
+        if (cls === 'cancelled') continue; // 已取消单不计入任何口径
+        const isDeducted = cls === 'completed' || cls === 'partial';
         for (const m of mats) {
           const code = m.materialCode || m.code || '';
           const qty = Number(m.actualQuantity ?? m.actualQty ?? m.quantity ?? 0) || 0;
-          if (code && qty > 0) dispatchedMap[code] = (dispatchedMap[code] || 0) + qty;
+          if (!code || qty <= 0) continue;
+          if (isDeducted) dispatchedMap[code] = (dispatchedMap[code] || 0) + qty;
+          else pendingMap[code] = (pendingMap[code] || 0) + qty; // 待出库：尚未扣库存
         }
       }
     }
 
-    // 汇总：申请量 vs 已领量 vs 剩余量
+    // 汇总：申请量 vs 已领量(已扣库存) vs 待发料量 vs 剩余量
     const summary = reqMaterials.map((rm) => {
       const code = rm.materialCode || rm.code || '';
       const requested = Number(rm.requestedQuantity) || 0;
       const dispatched = dispatchedMap[code] || 0;
+      const pending = pendingMap[code] || 0;
       return {
         materialCode: code,
         materialName: rm.materialName || rm.name || '',
         unit: rm.unit || '',
         requestedQuantity: requested,
         dispatchedQuantity: dispatched,
-        remainingQuantity: Math.max(0, requested - dispatched),
+        pendingQuantity: pending,
+        // 剩余 = 申请 - 已领 - 待发料（待发料单已占用额度，不重复建单）
+        remainingQuantity: Math.max(0, requested - dispatched - pending),
       };
     });
 
@@ -577,8 +624,14 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '物料申请不存在' });
     }
 
-    // 不允许更新已审批通过的申请
-    if (request.status === 'approved' || request.approval_status === 'approved') {
+    // 2026-09-27 审计修复：结案例外——dispatch_status='closed'（结案）或 null（取消结案）
+    // 是唯一允许对"已审批单"的修改（其余字段对已审批单仍一律拒绝）
+    const isCloseCase =
+      Object.keys(updates).every(k => k === 'dispatch_status' || k === 'update_time') &&
+      (updates.dispatch_status === 'closed' || updates.dispatch_status === null);
+
+    // 不允许更新已审批通过的申请（结案除外）
+    if ((request.status === 'approved' || request.approval_status === 'approved') && !isCloseCase) {
       return res.status(400).json({ success: false, error: '已审批通过的物料申请不允许修改' });
     }
 
@@ -594,6 +647,7 @@ router.put('/:id', (req: Request, res: Response) => {
       'warehouse_id', 'warehouse_name', 'plant_area', 'production_batch_code',
       'total_amount', 'priority', 'status', 'approval_status',
       'remarks', 'attachments', 'materials', 'reviewer', 'create_by',
+      'dispatch_status',
       'update_time',
     ]);
     const illegalKeys = Object.keys(updates).filter(k => !ALLOWED_UPDATE_COLUMNS.has(k));
@@ -603,6 +657,29 @@ router.put('/:id', (req: Request, res: Response) => {
     const updateKeys = Object.keys(updates).filter(k => ALLOWED_UPDATE_COLUMNS.has(k) && k !== 'update_time');
     if (updateKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+    }
+
+    // 2026-09-27 审计修复：编辑保存同样剔除 0 数量物料行（与 POST 一致，防脏行）
+    if (Array.isArray((updates as any).materials)) {
+      const before = (updates as any).materials.length;
+      (updates as any).materials = (updates as any).materials.filter(
+        (m: any) => (Number(m.requestedQuantity ?? m.quantity ?? 0) || 0) > 0
+      );
+      if (before > 0 && (updates as any).materials.length === 0) {
+        return res.status(400).json({ success: false, error: '物料明细不能为空（申请数量必须大于 0）' });
+      }
+    }
+
+    // 2026-09-27 审计修复：dispatch_status 仅支持"结案"语义（closed / null 取消结案），
+    // 且仅已审批单可操作——防止把该列当自由字段改写（complete/partial 由出库联动回写）
+    if (updates.dispatch_status !== undefined) {
+      const ds = updates.dispatch_status;
+      if (ds !== 'closed' && ds !== null) {
+        return res.status(400).json({ success: false, error: 'dispatch_status 仅支持标记为 closed（结案）或 null（取消结案）' });
+      }
+      if (request.status !== 'approved' && request.approval_status !== 'approved') {
+        return res.status(400).json({ success: false, error: '仅已审批通过的申请单可以结案' });
+      }
     }
 
     const fields = updateKeys.map(k => `${k} = ?`).join(', ');
@@ -620,6 +697,16 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE material_requests SET ${fields}, update_time = ? WHERE id = ?`, values);
+
+    // 2026-09-27 审计修复：作废/取消时同步取消关联的待审批审批单——
+    // 此前作废只改申请单，审批中心仍挂着 pending 单可点"通过"，
+    // 通过后联动会把已作废单覆盖回 approved（作废丢失）
+    const newStatusLower = String(updates.status || '').toLowerCase();
+    if (newStatusLower === 'voided' || newStatusLower === 'cancelled') {
+      const cancelledCount = cancelPendingApprovalsForRequest(db, id);
+      if (cancelledCount > 0) console.log(`【领料申请】作废联动：已取消 ${cancelledCount} 张关联待审批单`);
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
@@ -636,9 +723,13 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
+    // 本地时区时间戳（与其他写端点一致，禁止 UTC）
+    const dNow = new Date();
+    const padN = (n: number) => String(n).padStart(2, '0');
+    const nowLocal = `${dNow.getFullYear()}-${padN(dNow.getMonth() + 1)}-${padN(dNow.getDate())} ${padN(dNow.getHours())}:${padN(dNow.getMinutes())}:${padN(dNow.getSeconds())}`;
 
     // 检查物料申请是否存在
-    const stmt = db.prepare('SELECT status, approval_status FROM material_requests WHERE id = ?');
+    const stmt = db.prepare('SELECT status, approval_status, request_code FROM material_requests WHERE id = ?');
     stmt.bind([id]);
     let request: Record<string, unknown> | null = null;
     if (stmt.step()) {
@@ -650,16 +741,52 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '物料申请不存在' });
     }
 
-    // 2026-09-26 用户要求：已审批的申请单不允许删除；已有出库记录的也不允许删除
-    // （此前无任何限制，已出库申请单删除后 material_executes 的文本引用成孤儿）
+    // 2026-09-26 用户要求：已审批的申请单不允许删除
     if (request.status === 'approved' || request.approval_status === 'approved') {
       return res.status(400).json({ success: false, error: '已审批通过的物料申请不允许删除' });
     }
-    const dispatchCheck = db.exec('SELECT dispatch_status FROM material_requests WHERE id = ?', [id]);
-    const dispatchStatus = dispatchCheck.length > 0 && dispatchCheck[0].values.length > 0 ? dispatchCheck[0].values[0][0] : null;
-    if (dispatchStatus === 'complete' || dispatchStatus === 'partial') {
-      return res.status(400).json({ success: false, error: '该申请单已有出库记录，不允许删除' });
+
+    // 2026-09-27 审计修复：删除保护改为"直接查出库单引用"——
+    // 原实现只看 dispatch_status，而"待出库(pending_out)"单不回写该字段，
+    // 导致有待出库引用的申请单可被删除、出库单引用成孤儿（实测存在 1 例）；
+    // 有效引用（非已取消）一律拦住；已取消单的残留引用在删除时一并清理
+    const refCode = String(request.request_code || id);
+    const refExecRows = db.exec(
+      `SELECT code, source_application_codes, execute_status_class FROM material_executes
+       WHERE source_application_codes LIKE ? OR source_application_codes LIKE ?`,
+      [`%"${refCode}"%`, `%"${id}"%`]
+    );
+    const activeRefs: string[] = [];
+    const cancelledRefs: { code: string; list: string[] }[] = [];
+    if (refExecRows.length > 0) {
+      const cols = refExecRows[0].columns;
+      for (const row of refExecRows[0].values) {
+        const rec: Record<string, unknown> = {};
+        row.forEach((v: unknown, i: number) => { rec[cols[i]] = v; });
+        let srcList: string[] = [];
+        try { const p = JSON.parse(String(rec.source_application_codes || '[]')); srcList = Array.isArray(p) ? p : []; } catch { srcList = []; }
+        if (!srcList.includes(refCode) && !srcList.includes(id)) continue;
+        if (String(rec.execute_status_class || '') === 'cancelled') {
+          cancelledRefs.push({ code: String(rec.code), list: srcList });
+        } else {
+          activeRefs.push(String(rec.code));
+        }
+      }
     }
+    if (activeRefs.length > 0) {
+      return res.status(400).json({ success: false, error: `该申请单已被出库单 ${activeRefs[0]} 引用，不允许删除` });
+    }
+
+    // 清理已取消出库单的残留引用（避免删除后留下悬空引用）
+    for (const ref of cancelledRefs) {
+      const filtered = ref.list.filter((c) => c !== refCode && c !== id);
+      db.run('UPDATE material_executes SET source_application_codes = ?, update_time = ? WHERE code = ?',
+        [JSON.stringify(filtered), nowLocal, ref.code]);
+    }
+
+    // 2026-09-27 审计修复：删除申请单时同步取消关联的待审批审批单（防幽灵审批单）
+    const cancelledCount = cancelPendingApprovalsForRequest(db, id);
+    if (cancelledCount > 0) console.log(`【领料申请】删除联动：已取消 ${cancelledCount} 张关联待审批单`);
 
     db.run('DELETE FROM material_requests WHERE id = ?', [id]);
     saveDatabase();

@@ -59,8 +59,11 @@ export function MaterialsTable({
 
   const isAllSelected = materials.length > 0 && selectedRows.length === materials.length;
 
+  // 2026-09-27 修复分页条数失效：此前容器固定 maxHeight: calc(100vh - 400px) + 内层纵向滚动，
+  // 数据虽按 pageSize 渲染（20/50 行）但超出固定高度的行被内部滚动隐藏，用户看到"始终 10 条"。
+  // 改为自然撑开（与物料入库页行为一致），由页面整体滚动
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ maxHeight: 'calc(100vh - 400px)', display: 'flex', flexDirection: 'column' }}>
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* 操作栏 - 编辑/删除/导出模式下显示 */}
       {(exportMode || batchEditMode || deleteMode) && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
@@ -73,7 +76,7 @@ export function MaterialsTable({
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+      <div style={{ overflowX: 'auto' }}>
         <Table className="w-full" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow>

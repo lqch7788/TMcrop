@@ -90,6 +90,8 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
               <SelectItem value="seed">种源</SelectItem>
               <SelectItem value="seedling">种苗</SelectItem>
               <SelectItem value="product">成品</SelectItem>
+              {/* 2026-09-27 用户要求：并入 material 类型（生产领料出库） */}
+              <SelectItem value="material">物料</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -192,8 +194,12 @@ export function OutboundRecordsTable({
   };
 
   const colSpan = (exportMode || deleteMode) ? 16 : 15;
-  const allSelected = data.length > 0 && selectedRows.length === data.length;
-  const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
+  // 2026-09-27 用户要求：并入 material 类型后，删除模式下 material 行不可选
+  // （物料账必须走领料出库模块操作；后端删除白名单同样不含 material 类型——双保险）
+  const isDeleteLockedRow = (row: OutboundRow) => deleteMode && !exportMode && row.stockType === 'material';
+  const selectableData = data.filter(r => !isDeleteLockedRow(r));
+  const allSelected = selectableData.length > 0 && selectableData.every(r => selectedRows.includes(r.id));
+  const someSelected = selectedRows.length > 0 && !allSelected;
 
   // 用 row.id（流水唯一 ID）而非 row.instanceId（库存实例 ID）作为选中 key
   // — 同一库存实例可有多条出库流水，必须按行 ID 区分
@@ -257,10 +263,11 @@ export function OutboundRecordsTable({
               data.map((row) => (
                 <tr key={row.id} className="hover:bg-emerald-50 transition-colors">
                   {(exportMode || deleteMode) && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" title={isDeleteLockedRow(row) ? '物料流水请在领料出库模块操作，此处不可删除' : undefined}>
                       <Checkbox
                         checked={selectedRows.includes(row.id)}
                         onCheckedChange={() => toggleRow(row.id)}
+                        disabled={isDeleteLockedRow(row)}
                         className="rounded"
                       />
                     </td>
@@ -283,7 +290,8 @@ export function OutboundRecordsTable({
                       {stockLabel(row.stockType)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{row.cropName || '-'}</td>
+                  {/* 2026-09-27：material 类型并入后，该列对领料流水显示物料名称（作物行为原作物名） */}
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{row.cropName || row.materialName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {QUALITY_GRADE_MAP[row.grade]?.label || row.grade || '-'}

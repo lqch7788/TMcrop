@@ -50,6 +50,8 @@ export interface OutboundRow {
   greenhouseName?: string;
   plantingMode?: string;
   grade?: string;
+  /** 2026-09-27：material 类型并入后补充（后端 LEFT JOIN materials，仅领料流水有值） */
+  materialName?: string;
   // 备注/其他
   remarks?: string;
   // 2026-07-21 清理：移除 DB 不存在的字段（receiver/unitPrice/totalAmount/updatedAt/status/type）

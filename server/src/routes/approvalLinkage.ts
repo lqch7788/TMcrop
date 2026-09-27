@@ -72,23 +72,59 @@ function logOperation(
 // ============================================
 
 /**
+ * 从审批单回读"实际审批人 + 审批时间/意见"（2026-09-27 审计修复新增）
+ * 用于回写业务表的 reviewer/approved_at/rejectReason——此前这些字段留的是
+ * "申请时选的审核人"，与实际操作审批的人无关。
+ */
+function readApprovalActor(db: any, approvalCode: string): { name: string | null; time: string | null; comment: string | null } {
+  try {
+    const rows = db.exec('SELECT records FROM approvals WHERE code = ? ORDER BY updated_at DESC LIMIT 1', [approvalCode]);
+    if (rows.length === 0 || rows[0].values.length === 0) return { name: null, time: null, comment: null };
+    let recs: any[] = [];
+    try { const p = JSON.parse(String(rows[0].values[0][0] || '[]')); recs = Array.isArray(p) ? p : []; } catch { recs = []; }
+    if (recs.length === 0) return { name: null, time: null, comment: null };
+    const last = recs[recs.length - 1];
+    return {
+      name: last.approverName || null,
+      time: last.actionTime || null,
+      comment: last.comment || null,
+    };
+  } catch {
+    return { name: null, time: null, comment: null };
+  }
+}
+
+/**
  * 更新物料申请状态
- * 2026-08-10 修复：原代码更新 `approval_code` / `approved_at` 列，但 material_requests 表没有这两列（schema L988 只有 status + approval_status）。
- *   修复：只更新 status（英文 enum: approved/rejected/cancelled/pending）+ approval_status 同步。
- *   领料申请单列表 normalize() 根据 status 派生 '待审批'/'已审批'/'已作废'/'已取消' 中文字段。
+ * 2026-08-10 修复：原代码更新 `approval_code` / `approved_at` 列，但 material_requests 表没有这两列。
+ * 2026-09-27 审计修复：列已由 fixSchemaColumns 补齐，现补写审批元数据（approval_code/approved_at/reviewer），
+ *   并加防覆盖保护——已作废/已取消的申请单不再被迟到审批覆盖回 approved（作废丢失防护第二层）。
  */
 function updateMaterialRequest(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
   try {
+    // 2026-09-27 审计修复：作废/取消保护——审批单虽已被作废逻辑取消，但审批中心页面上
+    // 可能持有陈旧数据继续点"通过"；此处二次拦截，避免已作废单被覆盖回 approved
+    const curRows = db.exec('SELECT status FROM material_requests WHERE id = ?', [id]);
+    const curStatus = curRows.length > 0 && curRows[0].values.length > 0 ? String(curRows[0].values[0][0] || '') : '';
+    if (curStatus === 'voided' || curStatus === 'cancelled') {
+      console.warn(`【审批联动】申请单 ${id} 已作废/取消（${curStatus}），跳过状态覆盖`);
+      return true;
+    }
+
     const now = new Date().toISOString();
-    // 同步 status（业务主状态）+ approval_status（审批子状态），便于列表 / 详情按 status 派生中文
+    const actor = status === 'approved' ? readApprovalActor(db, approvalCode) : { name: null, time: null, comment: null };
+    // 同步 status（业务主状态）+ approval_status（审批子状态）+ 审批元数据
     db.run(`
       UPDATE material_requests SET
         status = ?,
         approval_status = ?,
+        approval_code = ?,
+        approved_at = COALESCE(?, approved_at),
+        reviewer = COALESCE(?, reviewer),
         update_time = ?
       WHERE id = ?
-    `, [status, status, now, id]);
-    console.log(`【审批联动】material_request ${id} 状态已更新为 ${status}`);
+    `, [status, status, approvalCode, actor.time, actor.name, now, id]);
+    console.log(`【审批联动】material_request ${id} 状态已更新为 ${status}${actor.name ? `（审批人 ${actor.name}）` : ''}`);
     return true;
   } catch (e) {
     console.error('更新物料申请失败:', e);
@@ -1021,14 +1057,22 @@ export function updateBusinessTable(
     // 退料单
     case 'return':
       try {
+        // 2026-09-27 审计修复：原实现 UPDATE material_requests（错表）——退料单 status 永不流转。
+        // 改为更新 material_returns（按 id 匹配，兜底按 code），并回写审批人/审批时间/驳回原因。
+        const actor = readApprovalActor(db, approvalCode);
+        const stText = status === 'approved' || status === 'partially_approved' ? '已批准'
+          : status === 'rejected' ? '已拒绝'
+          : status === 'cancelled' ? '已取消' : '待审批';
         db.run(`
-          UPDATE material_requests SET
+          UPDATE material_returns SET
             status = ?,
-            approval_code = ?,
-            approved_at = ?,
+            statusClass = ?,
+            reviewer = COALESCE(?, reviewer),
+            reviewDate = COALESCE(?, reviewDate),
+            rejectReason = CASE WHEN ? = 'rejected' THEN COALESCE(?, rejectReason) ELSE rejectReason END,
             update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
+          WHERE id = ? OR code = ?
+        `, [stText, status, actor.name, actor.time, status, actor.comment, now, requestId, requestId]);
         return { success: true, message: '退料单状态已更新' };
       } catch (e) {
         console.error('更新退料单失败:', e);

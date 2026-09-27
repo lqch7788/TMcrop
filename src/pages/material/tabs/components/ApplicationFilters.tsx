@@ -26,16 +26,9 @@ interface ApplicationFiltersProps {
   setSearchDateTo: (value: string) => void;
   priorityFilter: string;
   setPriorityFilter: (value: string) => void;
-  // 2026-09-27 P2-8/9：物料搜索 + 快捷筛选
+  // 2026-09-27 P2-8：物料搜索
   searchMaterial: string;
   setSearchMaterial: (value: string) => void;
-  myApplicationsOnly: boolean;
-  setMyApplicationsOnly: (value: boolean) => void;
-  pendingMyApproval: boolean;
-  setPendingMyApproval: (value: boolean) => void;
-  // 2026-09-27 P1-6：超期未还
-  overdueOnly: boolean;
-  setOverdueOnly: (value: boolean) => void;
   // 操作
   onReset: () => void;
   onPageChange: (page: number) => void;
@@ -63,12 +56,6 @@ export function ApplicationFilters({
   setPriorityFilter,
   searchMaterial,
   setSearchMaterial,
-  myApplicationsOnly,
-  setMyApplicationsOnly,
-  pendingMyApproval,
-  setPendingMyApproval,
-  overdueOnly,
-  setOverdueOnly,
   onReset,
   onPageChange,
 }: ApplicationFiltersProps) {
@@ -220,33 +207,6 @@ export function ApplicationFilters({
         {/* 重置按钮 */}
         <Button variant="warning" size="sm" onClick={onReset}>
           <RotateCcw className="w-4 h-4" /> 重置
-        </Button>
-      </div>
-
-      {/* 2026-09-27 P2-9：快捷筛选（我的申请 / 待我审批） */}
-      <div className="flex items-center gap-2 mt-3">
-        <Button
-          size="sm"
-          variant={myApplicationsOnly ? 'default' : 'secondary'}
-          onClick={() => { setMyApplicationsOnly(!myApplicationsOnly); onPageChange(1); }}
-        >
-          我的申请
-        </Button>
-        <Button
-          size="sm"
-          variant={pendingMyApproval ? 'default' : 'secondary'}
-          onClick={() => { setPendingMyApproval(!pendingMyApproval); onPageChange(1); }}
-        >
-          待我审批
-        </Button>
-        {/* 2026-09-27 P1-6：超期未还 */}
-        <Button
-          size="sm"
-          variant={overdueOnly ? 'destructive' : 'secondary'}
-          onClick={() => { setOverdueOnly(!overdueOnly); onPageChange(1); }}
-          title="筛选含借用超期未归还物料的单据"
-        >
-          超期未还
         </Button>
       </div>
     </div>

@@ -124,11 +124,16 @@ export default function OutboundRecordsPage() {
   };
 
   // 全选/取消全选（用 row.id 而非 instanceId —— 同一库存可有多条流水）
+  // 2026-09-27 用户要求：并入 material 类型后，删除模式全选排除 material 行
+  // （物料账必须走领料出库模块；导出模式不受限）
   const handleExportSelectAll = () => {
-    if (selectedRows.length === rows.length) {
+    const selectable = (deleteMode && !exportMode)
+      ? rows.filter(r => r.stockType !== 'material')
+      : rows;
+    if (selectable.length > 0 && selectedRows.length === selectable.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(rows.map(r => r.id));
+      setSelectedRows(selectable.map(r => r.id));
     }
   };
 

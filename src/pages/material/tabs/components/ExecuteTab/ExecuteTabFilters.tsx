@@ -21,6 +21,8 @@ interface ExecuteTabFiltersProps {
 
   // 重置函数
   onReset: () => void;
+  // 2026-09-27：筛选变化时重置页码（此前停在第 N 页筛选后只剩空白）
+  onPageChange: (page: number) => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function ExecuteTabFilters({
   executeStatusFilter,
   setExecuteStatusFilter,
   onReset,
+  onPageChange,
 }: ExecuteTabFiltersProps) {
   return (
     <div className="bg-gray-50 rounded-lg p-4">
@@ -52,7 +55,7 @@ export function ExecuteTabFilters({
               type="text"
               placeholder="搜索出库单号..."
               value={executeSearchCode}
-              onChange={(e) => { setExecuteSearchCode(e.target.value); }}
+              onChange={(e) => { setExecuteSearchCode(e.target.value); onPageChange(1); }}
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
@@ -67,7 +70,7 @@ export function ExecuteTabFilters({
               type="text"
               placeholder="搜索申领人..."
               value={executeSearchApplicant}
-              onChange={(e) => { setExecuteSearchApplicant(e.target.value); }}
+              onChange={(e) => { setExecuteSearchApplicant(e.target.value); onPageChange(1); }}
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
@@ -82,7 +85,7 @@ export function ExecuteTabFilters({
               type="text"
               placeholder="搜索生产计划批次号..."
               value={executeSearchBatchCode}
-              onChange={(e) => { setExecuteSearchBatchCode(e.target.value); }}
+              onChange={(e) => { setExecuteSearchBatchCode(e.target.value); onPageChange(1); }}
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
@@ -93,7 +96,7 @@ export function ExecuteTabFilters({
           <Label className="block text-sm font-medium text-gray-900 mb-1">库存地点</Label>
           <Select
             value={executeSearchWarehouse || 'all'}
-            onValueChange={(val) => { setExecuteSearchWarehouse(val === 'all' ? '' : val); }}
+            onValueChange={(val) => { setExecuteSearchWarehouse(val === 'all' ? '' : val); onPageChange(1); }}
           >
             <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
               <SelectValue placeholder="全部" />
@@ -114,7 +117,7 @@ export function ExecuteTabFilters({
           <Label className="block text-sm font-medium text-gray-900 mb-1">执行状态</Label>
           <Select
             value={executeStatusFilter}
-            onValueChange={(val) => { setExecuteStatusFilter(val); }}
+            onValueChange={(val) => { setExecuteStatusFilter(val); onPageChange(1); }}
           >
             <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
               <SelectValue placeholder="全部状态" />

@@ -69,6 +69,8 @@ const WRITE_FIELD_MAP: Record<string, string> = {
   materials: 'materials',
   reviewer: 'reviewer',
   createBy: 'create_by',
+  // 2026-09-27 审计修复：结案（部分出库后剩余不再领用）需要把 dispatchStatus 写回 dispatch_status 列
+  dispatchStatus: 'dispatch_status',
   updateTime: 'update_time',
 };
 

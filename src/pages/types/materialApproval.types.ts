@@ -44,6 +44,8 @@ export interface RejectModalState {
   show: boolean;
   item: Approval | null;
   reason: string;
+  /** 2026-09-27 审计修复：弹窗双模式（approve 通过意见选填 / reject 拒绝原因必填） */
+  mode: 'reject' | 'approve';
 }
 
 // Hook返回类型

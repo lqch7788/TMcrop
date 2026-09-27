@@ -17,7 +17,6 @@ import type {
   QuickFilterPeriod,
   DateRange,
   SortConfig,
-  StatSummaryData,
   MonthStats,
   ExportTarget,
   ExportFileType,
@@ -378,39 +377,6 @@ export function useStatisticsTab() {
     } else {
       setStatSelectedRows(materialStatFilteredData.map((_, idx) => idx));
     }
-  };
-
-  // ============================================
-  // 统计卡片数据
-  // ============================================
-  const getStatSummaryData = (): StatSummaryData => {
-    const allData = statActiveTab === 'monthly' ? monthlyStatisticsData : materialStatisticsData;
-
-    const totalRequisitions = allData.reduce((sum: number, item: any) => sum + (item.requisitionCount || 0), 0);
-    const totalQuantity = allData.reduce((sum: number, item: any) => sum + (item.totalQuantity || 0), 0);
-    const totalAmount = allData.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0);
-    const avgDifferenceRate = allData.length > 0
-      ? allData.reduce((sum: number, item: any) => sum + (item.differenceRate || 0), 0) / allData.length
-      : 0;
-
-    // 计算同比变化：本年度总数量 vs 上一年度总数量（按当前年份筛选）
-    const yearTotal = monthlyStatisticsData
-      .filter((m: any) => m.year === statYearFilter)
-      .reduce((s: number, m: any) => s + (m.totalQuantity || 0), 0);
-    const lastYearTotal = monthlyStatisticsData
-      .filter((m: any) => m.year === String(Number(statYearFilter) - 1))
-      .reduce((s: number, m: any) => s + (m.totalQuantity || 0), 0);
-    const yearOnYearChange = lastYearTotal > 0
-      ? ((yearTotal - lastYearTotal) / lastYearTotal) * 100
-      : 0;
-
-    return {
-      requisitionCount: totalRequisitions,
-      totalQuantity,
-      totalAmount,
-      avgDifferenceRate,
-      yearOnYearChange,
-    };
   };
 
   // ============================================
@@ -900,6 +866,5 @@ export function useStatisticsTab() {
     handleMaterialStatCancelExport,
     handleMaterialStatSelectAll,
     confirmMaterialStatExport,
-    getStatSummaryData,
   };
 }

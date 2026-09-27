@@ -85,6 +85,8 @@ interface ExecuteDataState {
   updateItem: (id: number | string, updates: Partial<MaterialExecuteRecord>) => Promise<boolean>;
   deleteItem: (id: number | string) => Promise<boolean>;
   deleteItems: (ids: (number | string)[]) => Promise<boolean>;
+  // 2026-09-27 两步出库：确认发料（事务内扣库存 + 置状态）
+  confirmItem: (id: number | string) => Promise<boolean>;
 
   generateCode: () => string;
 }
@@ -160,6 +162,19 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         }
       },
 
+      // ---------- 确认发料（2026-09-27 两步出库）----------
+      confirmItem: async (id) => {
+        try {
+          await enhancedApiClient.post(`/material-executes/${id}/confirm`, {});
+          await get().fetchItems();
+          return true;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : '确认发料失败';
+          set({ error: msg });
+          return false;
+        }
+      },
+
       // ---------- 删除单个（乐观更新）----------
       deleteItem: async (id) => {
         set((state) => ({
@@ -179,24 +194,29 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         }
       },
 
-      // ---------- 批量删除（乐观更新）----------
+      // ---------- 批量删除（乐观更新 + fail loud）----------
       deleteItems: async (ids) => {
         set((state) => ({
           items: state.items.filter((item) => !ids.includes(item.id)),
         }));
 
-        try {
-          await Promise.all(
-            ids.map((id) =>
-              enhancedApiClient
-                .delete(`/material-executes/${id}`)
-                .catch(() => {})
-            )
-          );
-          return true;
-        } catch {
+        // 2026-09-27 审计修复：此前 Promise.all + .catch(()=>{}) 吞错且恒返回 true，
+        // 单条删除失败（如后端 400/500）调用方完全无感知、界面与 DB 脱节。
+        // 现逐条删除并统计失败，失败时以 DB 为准重拉对齐。
+        let failCount = 0;
+        for (const id of ids) {
+          try {
+            await enhancedApiClient.delete(`/material-executes/${id}`);
+          } catch {
+            failCount += 1;
+          }
+        }
+        if (failCount > 0) {
+          set({ error: `批量删除完成：${ids.length - failCount} 条成功，${failCount} 条失败` });
+          await get().fetchItems();
           return false;
         }
+        return true;
       },
 
       // ---------- 生成编号 ----------

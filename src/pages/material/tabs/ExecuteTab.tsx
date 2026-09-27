@@ -15,6 +15,7 @@ import {
   ExecuteAddModal,
 } from './components/ExecuteTab';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
+import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
 import type { MaterialReceivingRecord } from '@/types/materialReceiving';
 import { showAlert } from '@/lib/dialogService';
 
@@ -104,6 +105,20 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     executeFilteredData,
     executeTotalPages,
 
+    // 2026-09-27 能力对齐：统计摘要 + 快捷筛选 + 详情来源申请单 + 草稿
+    executeDetailSources,
+    executeHasDraft,
+    setExecuteHasDraft,
+    restoreExecDraft,
+    discardExecDraft,
+    executeSummary,
+    executePendingOnly,
+    setExecutePendingOnly,
+    executeTodayOnly,
+    setExecuteTodayOnly,
+    executeMineOnly,
+    setExecuteMineOnly,
+
     // 处理函数
     handleExecuteReset,
     handleExecuteSelectAll,
@@ -120,6 +135,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     handleExecuteDeleteClick,
     confirmExecuteDelete,
     handleExecuteSaveEdit,
+    handleConfirmIssue,
     handleExecuteSaveAdd,
     handleExecuteCancelAdd,
     handleExecuteCancelEdit,
@@ -134,6 +150,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
 
   // 获取 store 实例（用于批量编辑等场景读取数据）
   const executeStore = useExecuteDataStore();
+  // 2026-09-27：批量删除后同步刷新申请单（dispatch_status 会重算）
+  const materialRequestStore = useMaterialRequestDataStore();
 
   return (
     <>
@@ -150,6 +168,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         executeStatusFilter={executeStatusFilter}
         setExecuteStatusFilter={setExecuteStatusFilter}
         onReset={handleExecuteReset}
+        onPageChange={setExecuteCurrentPage}
       />
 
       {/* 数据表格 */}
@@ -169,6 +188,14 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onView={handleExecuteView}
         onEdit={handleExecuteEdit}
         onDelete={handleExecuteDeleteClick}
+        onConfirmIssue={handleConfirmIssue}
+        summary={executeSummary}
+        pendingOnly={executePendingOnly}
+        todayOnly={executeTodayOnly}
+        mineOnly={executeMineOnly}
+        onTogglePending={() => { setExecutePendingOnly(!executePendingOnly); setExecuteCurrentPage(1); }}
+        onToggleToday={() => { setExecuteTodayOnly(!executeTodayOnly); setExecuteCurrentPage(1); }}
+        onToggleMine={() => { setExecuteMineOnly(!executeMineOnly); setExecuteCurrentPage(1); }}
         onPageChange={setExecuteCurrentPage}
         onPageSizeChange={setExecutePageSize}
         onExportClick={handleExecuteExportClick}
@@ -184,6 +211,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
       <ExecuteDetailModal
         isOpen={executeShowDetailModal}
         record={executeSelectedRecord}
+        sourceExecutions={executeDetailSources}
         onClose={() => setExecuteShowDetailModal(false)}
       />
 
@@ -200,22 +228,30 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onSelectApplicationCode={setExecuteSelectedApplicationCode}
         selectedMaterialIndices={executeSelectedMaterialIndices}
         onToggleMaterialIndex={(idx) => {
-          const newSet = new Set(executeSelectedMaterialIndices);
-          if (newSet.has(idx)) {
-            newSet.delete(idx);
-          } else {
-            newSet.add(idx);
-          }
-          setExecuteSelectedMaterialIndices(newSet);
+          // 2026-09-27 修复 P0：函数式 setState——此前用闭包旧 Set，
+          // AddModal 的"全选"在 forEach 中循环调用本回调，每次基于同一旧值，最终只选中最后一行
+          setExecuteSelectedMaterialIndices((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(idx)) {
+              newSet.delete(idx);
+            } else {
+              newSet.add(idx);
+            }
+            return newSet;
+          });
         }}
         materialActualQuantities={executeMaterialActualQuantities}
         onMaterialActualQuantityChange={(idx, qty) => {
-          setExecuteMaterialActualQuantities({ ...executeMaterialActualQuantities, [idx]: qty });
+          // 2026-09-27 修复 P0：同上，展开旧对象在连续调用时会互相覆盖
+          setExecuteMaterialActualQuantities((prev) => ({ ...prev, [idx]: qty }));
         }}
         onAddMaterial={handleExecuteAddAddMaterial}
         onRemoveMaterial={handleExecuteAddRemoveMaterial}
         onMaterialChange={handleExecuteAddMaterialChange}
         fefoMap={executeFefoMap}
+        hasDraft={executeHasDraft}
+        onRestoreDraft={() => { restoreExecDraft(); setExecuteHasDraft(false); discardExecDraft(); }}
+        onDiscardDraft={discardExecDraft}
         onClose={handleExecuteCancelAdd}
         onSave={handleExecuteSaveAdd}
       />
@@ -503,12 +539,25 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         show={executeShowBatchDeleteConfirm}
         count={executeSelectedRows.length}
         onCancel={() => setExecuteShowBatchDeleteConfirm(false)}
-        onConfirm={() => {
-          executeStore.deleteItems(executeSelectedRows);
+        onConfirm={async () => {
+          // 2026-09-27 修复 P1：await 删除结果 + 失败计数 + 重拉数据
+          // （此前 fire-and-forget，接口失败也会提示"已删除 N 项"）
+          const ids = [...executeSelectedRows];
           setExecuteShowBatchDeleteConfirm(false);
+          let failCount = 0;
+          for (const id of ids) {
+            const ok = await executeStore.deleteItem(id);
+            if (!ok) failCount += 1;
+          }
+          await executeStore.fetchItems();
+          await materialRequestStore.loadItems();
           setExecuteSelectedRows([]);
           setExecuteBatchEditMode(null);
-          showAlert(`已删除 ${executeSelectedRows.length} 项领料出库记录`);
+          if (failCount > 0) {
+            await showAlert(`批量删除完成：${ids.length - failCount} 条成功，${failCount} 条失败${executeStore.error ? '（' + executeStore.error + '）' : ''}`);
+          } else {
+            await showAlert(`已删除 ${ids.length} 项领料出库记录`);
+          }
         }}
       />
     </>

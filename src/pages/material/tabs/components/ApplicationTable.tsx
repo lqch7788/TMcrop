@@ -2,7 +2,7 @@
 // 领料申请单的主表格和展开行
 // 2026-09-26：批量编辑死代码已删除（编辑走行操作列），清理未用 props/import
 import { Fragment, useState } from 'react';
-import { ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, Send, Trash2, Undo2, X } from 'lucide-react';
+import { Archive, ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, RotateCcw, Send, Trash2, Undo2, X } from 'lucide-react';
 import { printVoucher } from '../../../../components/materialReceiving/modals/DetailModal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -42,11 +42,21 @@ interface ApplicationTableProps {
   onDuplicate: (item: MaterialReceivingRecord) => void;
   // 2026-09-27 P2-11：重新提交（草稿态）
   onResubmit: (item: MaterialReceivingRecord) => void;
+  // 2026-09-27 审计修复：结案（部分出库后剩余不再领用）+ 取消结案
+  onCloseCase: (item: MaterialReceivingRecord) => void;
+  onReopenCase: (item: MaterialReceivingRecord) => void;
   // 2026-09-27 P2-11：批量提交/撤回
   onBatchSubmit: () => void;
   onBatchWithdraw: () => void;
   // 2026-09-27 P2-12：统计摘要
   summary: { monthCount: number; monthAmount: number; insufficientCount: number; pendingCount: number };
+  // 2026-09-27 用户要求：快捷筛选按钮移入标题行（原在筛选器区）
+  myApplicationsOnly: boolean;
+  pendingMyApproval: boolean;
+  overdueOnly: boolean;
+  onToggleMyApplications: () => void;
+  onTogglePendingApproval: () => void;
+  onToggleOverdue: () => void;
   // 新增
   onAddModalOpen: () => void;
   // 批量操作
@@ -80,9 +90,17 @@ export function ApplicationTable({
   onWithdraw,
   onDuplicate,
   onResubmit,
+  onCloseCase,
+  onReopenCase,
   onBatchSubmit,
   onBatchWithdraw,
   summary,
+  myApplicationsOnly,
+  pendingMyApproval,
+  overdueOnly,
+  onToggleMyApplications,
+  onTogglePendingApproval,
+  onToggleOverdue,
   onAddModalOpen,
   onShowBatchDeleteConfirm,
   onBatchCancel,
@@ -121,7 +139,34 @@ export function ApplicationTable({
 
       {/* 表格头部操作区 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">领料申请单列表</h3>
+        {/* 2026-09-27 用户要求：标题 + 快捷筛选按钮同一行 */}
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900 whitespace-nowrap">领料申请单列表</h3>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={myApplicationsOnly ? 'default' : 'secondary'}
+              onClick={() => { onToggleMyApplications(); onPageChange(1); }}
+            >
+              我的申请
+            </Button>
+            <Button
+              size="sm"
+              variant={pendingMyApproval ? 'default' : 'secondary'}
+              onClick={() => { onTogglePendingApproval(); onPageChange(1); }}
+            >
+              待我审批
+            </Button>
+            <Button
+              size="sm"
+              variant={overdueOnly ? 'destructive' : 'secondary'}
+              onClick={() => { onToggleOverdue(); onPageChange(1); }}
+              title="筛选含借用超期未归还物料的单据"
+            >
+              超期未还
+            </Button>
+          </div>
+        </div>
         {exportMode ? (
           /* 导出模式 */
           <div className="flex gap-2">
@@ -321,9 +366,12 @@ export function ApplicationTable({
                       {/* 出库状态标签（后端聚合 dispatch_status 列） */}
                       {(item as any).dispatchStatus && (
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit ${
-                          (item as any).dispatchStatus === 'complete' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                          (item as any).dispatchStatus === 'complete' ? 'bg-emerald-100 text-emerald-700'
+                          : (item as any).dispatchStatus === 'closed' ? 'bg-gray-100 text-gray-600'
+                          : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {(item as any).dispatchStatus === 'complete' ? '已出库' : '部分出库'}
+                          {(item as any).dispatchStatus === 'complete' ? '已出库'
+                            : (item as any).dispatchStatus === 'closed' ? '已结案' : '部分出库'}
                         </span>
                       )}
                       {/* 2026-09-26 改进批次一：库存不足软警示徽章（后端提交时逐行复核标记） */}
@@ -374,6 +422,20 @@ export function ApplicationTable({
                       <Button variant="ghost" size="icon" title="复制申请单" onClick={() => onDuplicate(item)}>
                         <Copy className="w-4 h-4 text-emerald-600" />
                       </Button>
+                      {/* 2026-09-27 审计修复：结案按钮——已审批且未领齐、未结案时可结案（剩余不再领用） */}
+                      {item.statusClass === 'approved'
+                        && (item as any).dispatchStatus !== 'closed'
+                        && (item as any).dispatchStatus !== 'complete' && (
+                        <Button variant="ghost" size="icon" title="结案（剩余物料不再领用）" onClick={() => onCloseCase(item)}>
+                          <Archive className="w-4 h-4 text-slate-600" />
+                        </Button>
+                      )}
+                      {/* 2026-09-27 审计修复：取消结案（恢复剩余物料可继续出库） */}
+                      {item.statusClass === 'approved' && (item as any).dispatchStatus === 'closed' && (
+                        <Button variant="ghost" size="icon" title="取消结案" onClick={() => onReopenCase(item)}>
+                          <RotateCcw className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      )}
                       {/* 2026-09-26 用户要求：操作列与详情弹窗两处均可打印 */}
                       <Button variant="ghost" size="icon" title="打印领料单" onClick={() => printVoucher(item)}>
                         <Printer className="w-4 h-4 text-gray-600" />

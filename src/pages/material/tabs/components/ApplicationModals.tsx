@@ -358,6 +358,8 @@ export function EditModal({
                   <td className="px-2 py-2">
                     <Input
                       type="number"
+                      /* 2026-09-27 审计修复：申请数量最小值 1（后端 POST/PUT 已兜底剔除 0 行） */
+                      min="1"
                       value={material.requestedQuantity}
                       onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
                       className={`w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
@@ -920,6 +922,8 @@ export function AddModal({
                   <td className="px-2 py-2">
                     <Input
                       type="number"
+                      /* 2026-09-27 审计修复：申请数量最小值 1（后端 POST/PUT 已兜底剔除 0 行） */
+                      min="1"
                       value={material.requestedQuantity}
                       onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
                       className={`w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}

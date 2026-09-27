@@ -29,11 +29,37 @@ interface MaterialDetailModalProps {
   onClose: () => void;
 }
 
+/**
+ * 库存流水类型翻译（2026-09-27 审计修复：补全领料链路类型——此前 material_* 系列
+ * 不在任何前端枚举，渲染为"未知(type)"）
+ * isOut=true 表示库存减少方向（显示负数与红色）
+ */
+const TX_TYPE_LABELS: Record<string, { label: string; cls: string; isOut: boolean }> = {
+  material_outbound: { label: '领料出库', cls: 'bg-blue-100 text-blue-700', isOut: true },
+  material_outbound_retroactive: { label: '追溯补扣', cls: 'bg-orange-100 text-orange-700', isOut: true },
+  material_restore: { label: '出库恢复', cls: 'bg-amber-100 text-amber-700', isOut: false },
+  material_return_in: { label: '退料入库', cls: 'bg-emerald-100 text-emerald-700', isOut: false },
+  material_return_undo: { label: '撤销退料', cls: 'bg-gray-100 text-gray-600', isOut: true },
+  inbound: { label: '入库', cls: 'bg-emerald-100 text-emerald-700', isOut: false },
+  outbound: { label: '出库', cls: 'bg-blue-100 text-blue-700', isOut: true },
+  freeze: { label: '冻结', cls: 'bg-slate-100 text-slate-600', isOut: true },
+  unfreeze: { label: '解冻', cls: 'bg-slate-100 text-slate-600', isOut: false },
+  transfer_in: { label: '调拨入', cls: 'bg-indigo-100 text-indigo-700', isOut: false },
+  transfer_out: { label: '调拨出', cls: 'bg-indigo-100 text-indigo-700', isOut: true },
+  transfer: { label: '调拨', cls: 'bg-indigo-100 text-indigo-700', isOut: true },
+  adjust: { label: '库存调整', cls: 'bg-purple-100 text-purple-700', isOut: false },
+  reverse_inbound: { label: '入库冲销', cls: 'bg-amber-100 text-amber-700', isOut: true },
+  reverse_circulation: { label: '流通冲销', cls: 'bg-amber-100 text-amber-700', isOut: true },
+};
+
 export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>('basic');
   const [history, setHistory] = useState<OutboundRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 2026-09-27 审计修复：库存流水 tab（inventory_transaction，按 instance_id=物料编码查）
+  const [transactions, setTransactions] = useState<Array<Record<string, unknown>>>([]);
+  const [loadingTx, setLoadingTx] = useState(false);
 
   // 导出模式
   const [exportMode, setExportMode] = useState(false);
@@ -63,17 +89,39 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
     }
   }, [material?.code]);
 
+  /** 加载库存流水（领料出库/恢复/退料入库/追溯补扣等全部库存变动，含操作人与余额） */
+  const loadTransactions = useCallback(async () => {
+    if (!material?.code) return;
+    setLoadingTx(true);
+    try {
+      const res = await enhancedApiClient.get<Record<string, unknown>[]>(
+        `/inventory/transaction/${encodeURIComponent(material.code)}`
+      );
+      setTransactions(Array.isArray(res) ? res : []);
+      setError(null);
+    } catch (e) {
+      console.error('加载库存流水失败:', e);
+      setTransactions([]);
+      setError(e instanceof Error ? e.message : '加载失败');
+    } finally {
+      setLoadingTx(false);
+    }
+  }, [material?.code]);
+
   useEffect(() => {
     if (activeTab === 'history') {
       loadHistory();
+    } else if (activeTab === 'transactions') {
+      loadTransactions();
     }
-  }, [activeTab, loadHistory]);
+  }, [activeTab, loadHistory, loadTransactions]);
 
   // 弹窗关闭时重置 tab 和导出模式
   useEffect(() => {
     if (!isOpen) {
       setActiveTab('basic');
       setHistory([]);
+      setTransactions([]);
       setExportMode(false);
       setSelectedIndices(new Set());
     }
@@ -180,6 +228,10 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
         <TabsTrigger value="basic">基本信息</TabsTrigger>
         <TabsTrigger value="history">
           出库记录 {history.length > 0 ? `(${history.length})` : ''}
+        </TabsTrigger>
+        {/* 2026-09-27 审计修复：库存流水 tab（谁在何时领走多少、变动前后余量、关联单据） */}
+        <TabsTrigger value="transactions">
+          库存流水 {transactions.length > 0 ? `(${transactions.length})` : ''}
         </TabsTrigger>
       </TabsList>
 
@@ -419,6 +471,61 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
                 showPageSize
               />
             </div>
+          )}
+        </div>
+      )}
+
+      {/* 2026-09-27 审计修复：库存流水 tab（追溯"谁在何时领走多少 + 变动前后余量"） */}
+      {activeTab === 'transactions' && (
+        <div className="space-y-4">
+          {loadingTx ? (
+            <div className="text-center py-10 text-gray-500">加载中...</div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">暂无库存流水记录</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">时间</TableHead>
+                  <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">类型</TableHead>
+                  <TableHead className="px-3 py-2 text-right text-xs font-semibold text-gray-600">数量</TableHead>
+                  <TableHead className="px-3 py-2 text-right text-xs font-semibold text-gray-600">变动前</TableHead>
+                  <TableHead className="px-3 py-2 text-right text-xs font-semibold text-gray-600">变动后</TableHead>
+                  <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">操作人</TableHead>
+                  <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">关联单号</TableHead>
+                  <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600">备注</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx, idx) => {
+                  const type = String(tx.transactionType || '');
+                  const meta = TX_TYPE_LABELS[type] || { label: type || '未知', cls: 'bg-gray-100 text-gray-600', isOut: false };
+                  const qty = Number(tx.quantity) || 0;
+                  const before = Number(tx.balanceBefore) || 0;
+                  const after = Number(tx.balanceAfter) || 0;
+                  return (
+                    <TableRow key={idx} className="hover:bg-gray-50">
+                      <TableCell className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                        {String(tx.operateDate || tx.createTime || '').slice(0, 19)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${meta.cls}`}>{meta.label}</span>
+                      </TableCell>
+                      <TableCell className={`px-3 py-2 text-xs text-right font-medium ${meta.isOut ? 'text-red-600' : 'text-emerald-700'}`}>
+                        {meta.isOut ? '-' : '+'}{qty}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-right text-gray-500">{before || '-'}</TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-right text-gray-500">{after || '-'}</TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-gray-700">{String(tx.operatorName || '-')}</TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-blue-700 font-mono">{String(tx.businessCode || '-')}</TableCell>
+                      <TableCell className="px-3 py-2 text-xs text-gray-500 max-w-[220px] truncate" title={String(tx.remarks || '')}>
+                        {String(tx.remarks || '-')}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
