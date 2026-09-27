@@ -59,6 +59,10 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeShowAddModal, setExecuteShowAddModal] = useState(false);
   const [executeSelectedRecord, setExecuteSelectedRecord] = useState<MaterialExecuteRecord | null>(null);
   const [executeDeletingId, setExecuteDeletingId] = useState<number | null>(null);
+  // 2026-09-27 审计方案：作废确认弹窗状态（已发料单据唯一撤销方式）
+  const [executeShowVoidConfirm, setExecuteShowVoidConfirm] = useState(false);
+  const [executeVoidTarget, setExecuteVoidTarget] = useState<MaterialExecuteRecord | null>(null);
+  const [executeVoidReason, setExecuteVoidReason] = useState('');
 
   // 展开行状态
   const [executeExpandedRows, setExecuteExpandedRows] = useState<Set<number>>(new Set());
@@ -551,12 +555,13 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteShowDeleteConfirm(true);
   }, []);
 
-  const confirmExecuteDelete = useCallback(async () => {
+  // 2026-09-27 审计方案：reason 由删除确认弹窗 onConfirm(reason) 直接传入
+  const confirmExecuteDelete = useCallback(async (reason: string) => {
     if (executeDeletingId === null) return;
 
     // 2026-09-26 P0 重构：删除前的库存恢复已下沉到后端 DELETE 事务
     // （此前前端先 batchRestore 再删，删除失败会"多恢复"库存；且 batchRestore 失败仅 console.warn）
-    const ok = await executeStore.deleteItem(executeDeletingId);
+    const ok = await executeStore.deleteItem(executeDeletingId, reason);
     if (ok) {
       // 删除后重新加载（触发 dispatch_status 重新计算）
       await executeStore.fetchItems();
@@ -621,6 +626,35 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     await showAlert('已确认发料，库存已扣减');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executeStore]);
+
+  /**
+   * 作废出库单（2026-09-27 审计方案：已发料单据禁止删除，改作废）
+   * 作废后：库存按原明细恢复，单据本体保留（"已取消"筛选可查），追溯链不断裂。
+   * 2026-09-27 修正：确认与原因输入内嵌弹窗（替代 showConfirm+window.prompt，
+   * prompt 在 Electron/无头环境被拦截返回 null 会静默放弃操作）
+   */
+  const handleExecuteVoid = useCallback((item: MaterialExecuteRecord) => {
+    setExecuteVoidTarget(item);
+    setExecuteVoidReason('');
+    setExecuteShowVoidConfirm(true);
+  }, []);
+
+  /** 确认作废（弹窗回传原因） */
+  const confirmExecuteVoid = useCallback(async (reason: string) => {
+    const item = executeVoidTarget;
+    if (!item) return;
+    const success = await executeStore.voidItem(item.id, reason);
+    if (!success) {
+      await showAlert(executeStore.error || '作废失败，请重试');
+      return;
+    }
+    await executeStore.fetchItems();
+    await materialRequestStore.loadItems();
+    setExecuteShowVoidConfirm(false);
+    setExecuteVoidTarget(null);
+    await showAlert(`出库单 ${item.code} 已作废，库存已恢复`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [executeVoidTarget, executeStore, materialRequestStore]);
 
   const handleExecuteSaveAdd = useCallback(async () => {
     if (executeMaterialPool.length === 0) {
@@ -862,6 +896,15 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     handleExecuteDeleteClick,
     confirmExecuteDelete,
     handleExecuteSaveEdit,
+    // 2026-09-27 审计方案：作废（已发料单据唯一撤销方式）
+    handleExecuteVoid,
+    // 2026-09-27 审计方案：作废确认弹窗状态与确认动作
+    executeShowVoidConfirm,
+    setExecuteShowVoidConfirm,
+    executeVoidTarget,
+    executeVoidReason,
+    setExecuteVoidReason,
+    confirmExecuteVoid,
     // 2026-09-27 两步出库：确认发料
     handleConfirmIssue,
     handleExecuteSaveAdd,

@@ -39,8 +39,8 @@ initSqlJs().then((SQL) => {
 
   countAndDelete(
     'E2E 申请单',
-    "SELECT COUNT(*) FROM material_requests WHERE request_code LIKE 'E2EB%'",
-    "DELETE FROM material_requests WHERE request_code LIKE 'E2EB%'"
+    "SELECT COUNT(*) FROM material_requests WHERE request_code LIKE 'E2EB%' OR request_code LIKE 'E2EARC%' OR request_code LIKE 'MR-E2E%'",
+    "DELETE FROM material_requests WHERE request_code LIKE 'E2EB%' OR request_code LIKE 'E2EARC%' OR request_code LIKE 'MR-E2E%'"
   );
   countAndDelete(
     'E2E 退料单',
@@ -65,6 +65,17 @@ initSqlJs().then((SQL) => {
     'E2E 库存流水',
     `SELECT COUNT(*) FROM inventory_transaction WHERE ${e2eTxWhere}`,
     `DELETE FROM inventory_transaction WHERE ${e2eTxWhere}`
+  );
+  // 2026-09-27：E2E 前缀的出库单（含归档测试遗留的作废单）与归档记录
+  countAndDelete(
+    'E2E 出库单(E2EARC 等)',
+    "SELECT COUNT(*) FROM material_executes WHERE code LIKE 'E2EARC%' OR code LIKE 'CK-E2E%' OR code LIKE '%E2E'",
+    "DELETE FROM material_executes WHERE code LIKE 'E2EARC%' OR code LIKE 'CK-E2E%' OR code LIKE '%E2E'"
+  );
+  countAndDelete(
+    'E2E 归档记录',
+    "SELECT COUNT(*) FROM deleted_documents_archive WHERE doc_code LIKE 'E2E%' OR doc_code LIKE '%E2EARC%' OR doc_code LIKE 'CK-E2E%'",
+    "DELETE FROM deleted_documents_archive WHERE doc_code LIKE 'E2E%' OR doc_code LIKE '%E2EARC%' OR doc_code LIKE 'CK-E2E%'"
   );
 
   console.log('=== E2E 残留清理 ===');

@@ -257,12 +257,16 @@ export interface UseApplicationTabReturn {
   handleEditRemoveMaterial: (index: number) => void;
   handleEditMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
   handleDeleteClick: (id: number) => void;
-  confirmDelete: () => void;
+  // 2026-09-27 审计方案：删除原因由确认弹窗传入
+  confirmDelete: (reason: string) => Promise<void>;
   handleBatchDelete: () => void;
   // 2026-09-27 P2-11：批量提交/撤回 + 单条重新提交
   batchSubmit: () => Promise<void>;
   batchWithdraw: () => Promise<void>;
   handleResubmit: (item: MaterialReceivingRecord) => Promise<void>;
+  /** 2026-09-27：结案 / 取消结案（部分出库后剩余不再领用） */
+  handleCloseCase: (item: MaterialReceivingRecord) => Promise<void>;
+  handleReopenCase: (item: MaterialReceivingRecord) => Promise<void>;
   handleSaveEdit: () => void;
   handleVoidApply: () => void;
   submitVoidApply: () => void;

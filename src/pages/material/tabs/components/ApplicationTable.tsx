@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { EmptyState } from '@/components/ui';
-import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
+import type { MaterialReceivingRecord } from '@/types/materialReceiving'; // 2026-09-27 修正预存错误路径（原 ../../../types 不存在）
 
 interface ApplicationTableProps {
   // 数据
@@ -45,6 +45,8 @@ interface ApplicationTableProps {
   // 2026-09-27 审计修复：结案（部分出库后剩余不再领用）+ 取消结案
   onCloseCase: (item: MaterialReceivingRecord) => void;
   onReopenCase: (item: MaterialReceivingRecord) => void;
+  // 2026-09-27 审计方案：已删除单据归档追溯入口
+  onShowDeletedDocs: () => void;
   // 2026-09-27 P2-11：批量提交/撤回
   onBatchSubmit: () => void;
   onBatchWithdraw: () => void;
@@ -92,6 +94,7 @@ export function ApplicationTable({
   onResubmit,
   onCloseCase,
   onReopenCase,
+  onShowDeletedDocs,
   onBatchSubmit,
   onBatchWithdraw,
   summary,
@@ -208,6 +211,11 @@ export function ApplicationTable({
             <Button size="sm" onClick={() => onExportModeChange(true)}>
               <Download className="w-4 h-4" />
               导出
+            </Button>
+            {/* 2026-09-27 审计方案：已删除单据归档追溯入口 */}
+            <Button variant="secondary" size="sm" onClick={onShowDeletedDocs}>
+              <Archive className="w-4 h-4" />
+              已删除单据
             </Button>
           </div>
         )}

@@ -31,6 +31,7 @@ import approvalWorkflowRouter from './approvalWorkflow';
 import approvalRouter from './approval';
 import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
+import deletedDocumentsRouter from './deletedDocuments';
 import workLogRouter from './workLog';
 import reminderRouter from './reminder';
 import farmOperationRecordsRouter from './farmOperationRecords';
@@ -294,6 +295,9 @@ router.use('/approval-linkage', requireAuth, approvalLinkageRouter);
 
 // 操作日志路由 - 需要认证
 router.use('/operation-logs', requireAuth, operationLogRouter);
+
+// 已删除单据归档查询 - 需要认证（2026-09-27 追溯方案）
+router.use('/deleted-documents', requireAuth, deletedDocumentsRouter);
 
 // 工作日志路由 - 需要认证
 router.use('/work-logs', requireAuth, workLogRouter);

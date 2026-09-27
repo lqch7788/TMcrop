@@ -988,13 +988,16 @@ export function useApplicationTab(): UseApplicationTabReturn {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = async () => {
+  // 2026-09-27 审计方案：reason 由 DeleteConfirm 弹窗 onConfirm(reason) 直接传入
+  const confirmDelete = async (reason: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
     // 调用 API 删除记录（2026-09-26：失败提示后端原因，如"已审批不允许删除/已有出库记录"）
     if (deletingId !== null) {
-      const ok = await storeDeleteItem(deletingId);
+      // 2026-09-27 审计方案：删除原因由确认弹窗内嵌输入传入（DeleteConfirm onConfirm(reason)），
+      // 写入归档表——删除后仍可按单号追溯快照
+      const ok = await storeDeleteItem(deletingId, reason);
       if (!ok) {
         const { error } = useMaterialRequestDataStore.getState();
         await showAlert(error || '删除失败，请稍后重试');

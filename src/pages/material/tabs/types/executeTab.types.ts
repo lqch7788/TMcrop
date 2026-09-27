@@ -162,6 +162,20 @@ export interface UseExecuteTabReturn {
   handleExecuteSaveEdit: () => void;
   // 2026-09-27 两步出库：确认发料
   handleConfirmIssue: (item: MaterialExecuteRecord) => Promise<void>;
+  /** 2026-09-27 审计方案：作废（已发料单据唯一撤销方式）——打开确认弹窗 */
+  handleExecuteVoid: (item: MaterialExecuteRecord) => void;
+  executeShowVoidConfirm: boolean;
+  setExecuteShowVoidConfirm: (v: boolean) => void;
+  executeVoidTarget: MaterialExecuteRecord | null;
+  executeVoidReason: string;
+  setExecuteVoidReason: (v: string) => void;
+  confirmExecuteVoid: (reason: string) => Promise<void>;
+  /** 2026-09-27 能力对齐（预存类型缺口补齐）：详情来源执行情况 / 出库草稿 */
+  executeDetailSources: Record<string, unknown>[] | null;
+  executeHasDraft: boolean;
+  setExecuteHasDraft: (v: boolean) => void;
+  restoreExecDraft: () => boolean;
+  discardExecDraft: () => void;
   // 2026-09-27 能力对齐：统计摘要 + 快捷筛选
   executeSummary: { todayCount: number; pendingCount: number; monthAmount: number; overIssueCount: number };
   executePendingOnly: boolean;

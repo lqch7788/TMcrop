@@ -83,10 +83,13 @@ interface ExecuteDataState {
   createItem: (data: Partial<MaterialExecuteRecord>) => Promise<MaterialExecuteRecord | null>;
   // 2026-09-26 P0 修复：updateItem 返回成功与否（此前 void + 吞错，编辑失败也提示"保存成功"）
   updateItem: (id: number | string, updates: Partial<MaterialExecuteRecord>) => Promise<boolean>;
-  deleteItem: (id: number | string) => Promise<boolean>;
+  // 2026-09-27 审计方案：删除原因随请求传入（写入归档表）
+  deleteItem: (id: number | string, reason?: string) => Promise<boolean>;
   deleteItems: (ids: (number | string)[]) => Promise<boolean>;
   // 2026-09-27 两步出库：确认发料（事务内扣库存 + 置状态）
   confirmItem: (id: number | string) => Promise<boolean>;
+  // 2026-09-27 审计方案：作废（已发料单据禁止删除，改作废——库存恢复、单据保留可追溯）
+  voidItem: (id: number | string, reason: string) => Promise<boolean>;
 
   generateCode: () => string;
 }
@@ -156,8 +159,8 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           // 2026-09-26 P0 修复：fail loud —— 失败时撤销乐观更新并返回 false，
           // 调用方提示"保存失败"（此前吞错且 UI 已显示新值，与 DB 不一致）
           const msg = error instanceof Error ? error.message : '更新出库单失败';
-          set({ error: msg });
           await get().fetchItems(); // 以 DB 为准重拉，撤销乐观更新
+          set({ error: msg }); // 2026-09-27：重拉会清空 error，写回真实原因
           return false;
         }
       },
@@ -175,21 +178,43 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         }
       },
 
+      // ---------- 作废（2026-09-27 审计方案：已发料单据的唯一撤销方式）----------
+      // 后端 PUT 状态感知：旧账已扣 → 先恢复库存；单据本体保留（cancelled），可在"已取消"筛选追溯
+      voidItem: async (id, reason) => {
+        try {
+          await enhancedApiClient.put(`/material-executes/${id}`, {
+            execute_status_class: 'cancelled',
+            execute_status: '已取消',
+            remarks: reason ? `作废：${reason}` : '作废',
+          });
+          await get().fetchItems();
+          return true;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : '作废出库单失败';
+          set({ error: msg });
+          return false;
+        }
+      },
+
       // ---------- 删除单个（乐观更新）----------
-      deleteItem: async (id) => {
+      deleteItem: async (id, reason) => {
         set((state) => ({
           items: state.items.filter((item) => item.id !== id),
         }));
 
         try {
-          await enhancedApiClient.delete(`/material-executes/${id}`);
+          // 2026-09-27 审计方案：删除原因写入归档表（选填）
+          const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+          await enhancedApiClient.delete(`/material-executes/${id}${qs}`);
           return true;
         } catch (error) {
           // 2026-09-26 P0 修复：删除失败时撤销乐观更新（重拉 DB 真相），
           // 此前 UI 已移除该行但 DB 未删，刷新后"复活"
           const msg = error instanceof Error ? error.message : '删除出库单失败';
-          set({ error: msg });
           await get().fetchItems();
+          // 2026-09-27 修复：fetchItems 成功会清空 error，重拉后写回真实原因
+          // （"已出库单据不允许删除"等后端 400 原因必须透出，不能只显示兜底文案）
+          set({ error: msg });
           return false;
         }
       },

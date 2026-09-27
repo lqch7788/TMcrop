@@ -5,7 +5,10 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { useState } from 'react';
 import { useExecuteTab } from './hooks/useExecuteTab';
+import { DeletedDocumentsModal } from './components/DeletedDocumentsModal';
+import { ExecuteVoidConfirmModal } from './components/ExecuteTab/ExecuteTabModals/VoidConfirmModal';
 import {
   ExecuteTabFilters,
   ExecuteTabTable,
@@ -136,6 +139,13 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     confirmExecuteDelete,
     handleExecuteSaveEdit,
     handleConfirmIssue,
+    handleExecuteVoid,
+    executeShowVoidConfirm,
+    setExecuteShowVoidConfirm,
+    executeVoidTarget,
+    executeVoidReason,
+    setExecuteVoidReason,
+    confirmExecuteVoid,
     handleExecuteSaveAdd,
     handleExecuteCancelAdd,
     handleExecuteCancelEdit,
@@ -147,6 +157,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     handleExecuteAddRemoveMaterial,
     handleExecuteAddMaterialChange,
   } = useExecuteTab(materialData);
+  // 2026-09-27 审计方案：已删除单据归档追溯弹窗
+  const [showDeletedDocs, setShowDeletedDocs] = useState(false);
 
   // 获取 store 实例（用于批量编辑等场景读取数据）
   const executeStore = useExecuteDataStore();
@@ -189,6 +201,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onEdit={handleExecuteEdit}
         onDelete={handleExecuteDeleteClick}
         onConfirmIssue={handleConfirmIssue}
+        onVoid={handleExecuteVoid}
+        onShowDeletedDocs={() => setShowDeletedDocs(true)}
         summary={executeSummary}
         pendingOnly={executePendingOnly}
         todayOnly={executeTodayOnly}
@@ -559,6 +573,21 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
             await showAlert(`已删除 ${ids.length} 项领料出库记录`);
           }
         }}
+      />
+
+      {/* 2026-09-27 审计方案：作废确认弹窗（已发料单据唯一撤销方式，原因选填） */}
+      <ExecuteVoidConfirmModal
+        show={executeShowVoidConfirm}
+        recordCode={executeVoidTarget?.code || ''}
+        onCancel={() => setExecuteShowVoidConfirm(false)}
+        onConfirm={confirmExecuteVoid}
+      />
+
+      {/* 2026-09-27 审计方案：已删除单据归档查询（追溯入口） */}
+      <DeletedDocumentsModal
+        isOpen={showDeletedDocs}
+        onClose={() => setShowDeletedDocs(false)}
+        defaultType="material_execute"
       />
     </>
   );
