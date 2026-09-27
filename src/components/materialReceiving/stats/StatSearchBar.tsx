@@ -12,7 +12,6 @@ export interface StatSearchBarProps {
   categoryFilter: string[];
   warehouseFilter: string[];
   supplierFilter: string[];
-  batchCodeFilter: string[];
   productionPlanFilter: string[];
   usageAreaFilter: string[];
   requisitionerFilter: string[];
@@ -23,7 +22,6 @@ export interface StatSearchBarProps {
   categoryOptions: string[];
   warehouseOptions: string[];
   supplierOptions: string[];
-  batchCodeOptions: string[];
   productionPlanOptions: string[];
   usageAreaOptions: string[];
   requisitionerOptions: string[];
@@ -35,7 +33,6 @@ export interface StatSearchBarProps {
   onCategoryChange: (value: string[]) => void;
   onWarehouseChange: (value: string[]) => void;
   onSupplierChange: (value: string[]) => void;
-  onBatchCodeChange: (value: string[]) => void;
   onProductionPlanChange: (value: string[]) => void;
   onUsageAreaChange: (value: string[]) => void;
   onRequisitionerChange: (value: string[]) => void;
@@ -50,6 +47,10 @@ const quickFilterOptions = [
   { value: 'currentQuarter', label: '本季' },
   { value: 'currentYear', label: '本年' },
 ];
+
+/** 2026-09-27 用户要求：字段标签统一加粗黑色（原 text-gray-500 灰色）；
+ *  whitespace-nowrap 防止 flex 容器挤压时中文标签折行（如"时/间"竖排） */
+const LABEL_CLS = 'text-xs font-semibold text-gray-900 whitespace-nowrap shrink-0';
 
 // 支持搜索的下拉输入组件
 interface SearchSelectProps {
@@ -118,7 +119,6 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
   categoryFilter,
   warehouseFilter,
   supplierFilter,
-  batchCodeFilter,
   productionPlanFilter,
   usageAreaFilter,
   requisitionerFilter,
@@ -127,7 +127,6 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
   categoryOptions,
   warehouseOptions,
   supplierOptions,
-  batchCodeOptions,
   productionPlanOptions,
   usageAreaOptions,
   requisitionerOptions,
@@ -137,7 +136,6 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
   onCategoryChange,
   onWarehouseChange,
   onSupplierChange,
-  onBatchCodeChange,
   onProductionPlanChange,
   onUsageAreaChange,
   onRequisitionerChange,
@@ -149,7 +147,7 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4">
-      {/* 第一行：基础筛选条件 */}
+      {/* 第一行：基础筛选条件（保留原样式） */}
       <div className="flex items-center gap-3 flex-wrap">
         {/* 物料编码/名称搜索 */}
         <div className="flex items-center gap-1.5">
@@ -165,7 +163,7 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
 
         {/* 部门筛选 */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-500">部门</span>
+          <span className={LABEL_CLS}>部门</span>
           <SearchSelect
             value={departmentFilter[0] || ''}
             options={departmentOptions}
@@ -176,7 +174,7 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
 
         {/* 时间范围 */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-500">时间</span>
+          <span className={LABEL_CLS}>时间</span>
           <Input
             type="date"
             value={dateRange.start}
@@ -211,12 +209,12 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
           ))}
         </div>
 
-        {/* 重置按钮 */}
+        {/* 重置按钮（2026-09-27 用户要求：背景色与领料出库页重置按钮一致——warning 变体） */}
         <Button
-          variant="outline"
+          variant="warning"
           size="sm"
           onClick={onReset}
-          className="h-8 px-3 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-1"
+          className="flex items-center gap-1"
         >
           <RefreshCw className="w-3 h-3" />
           重置
@@ -243,13 +241,14 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
         </Button>
       </div>
 
-      {/* 高级筛选展开区域 */}
+      {/* 高级筛选展开区域（2026-09-27 用户要求：展开内容保持一行显示，不再折成两行；
+          flex-nowrap 强制单行 + overflow-x-auto 超宽横向滚动兜底 + shrink-0 防压缩） */}
       {showAdvanced && (
         <div className="mt-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-nowrap overflow-x-auto pb-0.5">
             {/* 分类筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">分类</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={LABEL_CLS}>分类</span>
               <SearchSelect
                 value={categoryFilter[0] || ''}
                 options={categoryOptions}
@@ -259,8 +258,8 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
             </div>
 
             {/* 仓库筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">仓库</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={LABEL_CLS}>仓库</span>
               <SearchSelect
                 value={warehouseFilter[0] || ''}
                 options={warehouseOptions}
@@ -270,8 +269,8 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
             </div>
 
             {/* 供应商筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">供应商</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={LABEL_CLS}>供应商</span>
               <SearchSelect
                 value={supplierFilter[0] || ''}
                 options={supplierOptions}
@@ -280,20 +279,9 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
               />
             </div>
 
-            {/* 批次号筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">批次</span>
-              <SearchSelect
-                value={batchCodeFilter[0] || ''}
-                options={batchCodeOptions}
-                onChange={onBatchCodeChange}
-                label="批次号"
-              />
-            </div>
-
             {/* 生产计划批次筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">计划批次</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={LABEL_CLS}>计划批次</span>
               <SearchSelect
                 value={productionPlanFilter[0] || ''}
                 options={productionPlanOptions}
@@ -302,26 +290,26 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
               />
             </div>
 
-            {/* 用途/区域筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">用途</span>
-              <SearchSelect
-                value={usageAreaFilter[0] || ''}
-                options={usageAreaOptions}
-                onChange={onUsageAreaChange}
-                label="用途区域"
-              />
-            </div>
-
-            {/* 领料人筛选 */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500">领料人</span>
-              <SearchSelect
-                value={requisitionerFilter[0] || ''}
-                options={requisitionerOptions}
-                onChange={onRequisitionerChange}
-                label="领料人"
-              />
+            {/* 用途/区域 + 领料人（用户要求：领料人紧随用途、始终同一行） */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <span className={LABEL_CLS}>用途</span>
+                <SearchSelect
+                  value={usageAreaFilter[0] || ''}
+                  options={usageAreaOptions}
+                  onChange={onUsageAreaChange}
+                  label="用途区域"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={LABEL_CLS}>领料人</span>
+                <SearchSelect
+                  value={requisitionerFilter[0] || ''}
+                  options={requisitionerOptions}
+                  onChange={onRequisitionerChange}
+                  label="领料人"
+                />
+              </div>
             </div>
           </div>
         </div>

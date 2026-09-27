@@ -136,6 +136,9 @@ export function MonthlyTable({
               >
                 领料金额 {sortConfig.key === 'totalAmount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
+              {/* 2026-09-27 审计修复（A2）：实发量与差异率列（真实数据，此前月度视图完全缺失） */}
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实发量</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">差异率</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">排名</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">占比</th>
               <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">环比</th>
@@ -160,6 +163,9 @@ export function MonthlyTable({
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.categoryName}</td>
                     <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{row.quantity.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600 whitespace-nowrap">¥{row.amount.toLocaleString()}</td>
+                    {/* 2026-09-27（A2）：单月分类行实发/差异率占位（分类级实发暂未聚合） */}
+                    <td className="px-4 py-3 text-sm text-right text-gray-300 whitespace-nowrap">-</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-300 whitespace-nowrap">-</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">-</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">{getCategoryStats(row.quantity, singleMonthTotal.totalQty)}</td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 whitespace-nowrap">-</td>
@@ -173,6 +179,13 @@ export function MonthlyTable({
                   <td className="px-4 py-3 text-sm text-emerald-600">-</td>
                   <td className="px-4 py-3 text-sm text-right text-emerald-700">{singleMonthTotal.totalQty.toLocaleString()}</td>
                   <td className="px-4 py-3 text-sm text-right text-emerald-700">¥{singleMonthTotal.totalAmt.toLocaleString()}</td>
+                  {/* 2026-09-27（A2）：当月真实实发量/差异率（monthlyStatistics 聚合） */}
+                  <td className="px-4 py-3 text-sm text-right text-emerald-700">
+                    {(() => { const m = monthSummaries.find(x => x.month === `${yearFilter}-${monthFilter}`); return m ? (m.actualQuantity ?? 0).toLocaleString() : '-'; })()}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-right text-emerald-700">
+                    {(() => { const m = monthSummaries.find(x => x.month === `${yearFilter}-${monthFilter}`); return m && m.differenceRate !== undefined ? `${m.differenceRate > 0 ? '+' : ''}${m.differenceRate}%` : '-'; })()}
+                  </td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">100%</td>
                   <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
@@ -216,6 +229,15 @@ export function MonthlyTable({
                       <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600">
                         ¥{monthRow.totalAmount.toLocaleString()}
                       </td>
+                      {/* 2026-09-27（A2）：月度真实实发量/差异率 */}
+                      <td className="px-4 py-3 text-sm text-right text-blue-700">
+                        {(monthRow.actualQuantity ?? 0).toLocaleString()}
+                      </td>
+                      <td className={`px-4 py-3 text-sm text-right font-medium whitespace-nowrap ${
+                        (monthRow.differenceRate ?? 0) < 0 ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        {monthRow.differenceRate !== undefined ? `${monthRow.differenceRate > 0 ? '+' : ''}${monthRow.differenceRate}%` : '-'}
+                      </td>
                       <td className="px-4 py-3 text-center text-sm text-gray-500">
                         {getMonthStats(monthRow.month).rank}
                       </td>
@@ -257,6 +279,9 @@ export function MonthlyTable({
                             <td className="px-4 py-3 text-sm text-right text-gray-600">
                               ¥{detail.amount.toLocaleString()}
                             </td>
+                            {/* 2026-09-27（A2）：展开分类行补实发/差异率占位列（分类级实发暂未聚合） */}
+                            <td className="px-4 py-3 text-sm text-right text-gray-300">-</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-300">-</td>
                             <td className="px-4 py-3 text-center text-gray-400">-</td>
                             <td className="px-4 py-3 text-center text-sm text-gray-500">
                               {getCategoryStats(detail.quantity, monthRow.totalQuantity)}
@@ -270,13 +295,24 @@ export function MonthlyTable({
                   </tbody>
                 ))}
 
-                {/* 年度合计 */}
+                {/* 年度合计（2026-09-27 A2：补实发量/差异率两列，与表头对齐） */}
                 <tr className="bg-emerald-100 font-bold text-emerald-800">
                   {exportMode && <td className="px-4 py-3"></td>}
                   <td className="px-4 py-3 whitespace-nowrap">年度合计</td>
                   <td className="px-4 py-3">-</td>
                   <td className="px-4 py-3 text-right">{getYearTotalQuantity(yearFilter, categoryTrend).toLocaleString()}</td>
                   <td className="px-4 py-3 text-right">¥{getYearTotalAmount(yearFilter, categoryTrend, categorySummary).toLocaleString()}</td>
+                  {/* 2026-09-27（A2）：年度实发量/差异率（月度行聚合） */}
+                  <td className="px-4 py-3 text-right">
+                    {(() => { const sum = monthSummaries.reduce((s, m) => s + (m.actualQuantity ?? 0), 0); return sum.toLocaleString(); })()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {(() => {
+                      const totalQty = getYearTotalQuantity(yearFilter, categoryTrend);
+                      const sumAct = monthSummaries.reduce((s, m) => s + (m.actualQuantity ?? 0), 0);
+                      return totalQty > 0 ? `${sumAct - totalQty >= 0 ? '+' : ''}${Math.round(((sumAct - totalQty) / totalQty) * 1000) / 10}%` : '-';
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-center">-</td>
                   <td className="px-4 py-3 text-center">100%</td>
                   <td className="px-4 py-3 text-center">-</td>

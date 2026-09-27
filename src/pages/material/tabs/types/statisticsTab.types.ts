@@ -39,6 +39,10 @@ export interface MonthSummary {
   monthName: string;
   totalQuantity: number;
   totalAmount: number;
+  /** 2026-09-27 审计修复（A2）：实发量/差异率/部门（真实数据源 monthlyStatistics） */
+  actualQuantity?: number;
+  differenceRate?: number;
+  departments?: string[];
 }
 
 /** 月度详情数据 */
@@ -71,6 +75,8 @@ export interface MaterialStatItem {
   totalQuantity: number;
   actualQuantity: number;
   totalAmount: number;
+  /** 2026-09-27 审计修复（A2）：实发金额（出库聚合 × 均价估算，后端返回） */
+  actualAmount?: number;
   mainWarehouse: string;
 }
 
@@ -84,7 +90,6 @@ export interface UseStatisticsTabReturn {
   statWarehouseFilter: string[];
   statMaterialSearch: string;
   statSupplierFilter: string[];
-  statBatchCodeFilter: string[];
   statProductionPlanFilter: string[];
   statUsageAreaFilter: string[];
   statRequisitionerFilter: string[];
@@ -120,7 +125,6 @@ export interface UseStatisticsTabReturn {
   setStatWarehouseFilter: (filter: string[]) => void;
   setStatMaterialSearch: (search: string) => void;
   setStatSupplierFilter: (filter: string[]) => void;
-  setStatBatchCodeFilter: (filter: string[]) => void;
   setStatProductionPlanFilter: (filter: string[]) => void;
   setStatUsageAreaFilter: (filter: string[]) => void;
   setStatRequisitionerFilter: (filter: string[]) => void;

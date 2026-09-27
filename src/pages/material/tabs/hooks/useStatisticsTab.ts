@@ -4,13 +4,16 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   useStatisticsStore,
-  getMonthSummaries,
+  getMonthSummariesWithActual,
   getYearTotalQuantity,
   getYearTotalAmount,
   getSingleMonthTableData,
   getMonthDetails,
+  getTrendTotalByMonth,
+  getCategorySummaryByYear,
   type MaterialStatItem,
 } from '@/stores';
+import { todayLocal } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
 import type {
   StatActiveTab,
@@ -22,7 +25,7 @@ import type {
   ExportFileType,
   MonthSummary,
 } from '../types/statisticsTab.types';
-import type { MonthDetailRow } from '@/stores/useStatisticsStore';
+import type { MonthDetailRow, MonthlyStatItem } from '@/stores/useStatisticsStore';
 import { showAlert } from '@/lib/dialogService';
 
 // 默认日期范围常量
@@ -40,6 +43,13 @@ export function useStatisticsTab() {
 
   useEffect(() => { fetchStatistics(); }, [fetchStatistics]);
 
+  // 2026-09-27 审计修复（B3）：挂载时执行一次"本月"快捷筛选——
+  // 此前 statQuickFilterPeriod 标签显示"本月"，但 dateRange 初始是 2026 全年（状态撒谎）
+  useEffect(() => {
+    handleStatQuickFilter('currentMonth');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ============================================
   // 从统计数据中聚合筛选选项（替代硬编码 mock 列表）
   // ============================================
@@ -47,7 +57,6 @@ export function useStatisticsTab() {
     const departments = new Set<string>();
     const categories = new Set<string>();
     const suppliers = new Set<string>();
-    const batchCodes = new Set<string>();
     const productionPlans = new Set<string>();
     const usageAreas = new Set<string>();
     const requisitioners = new Set<string>();
@@ -55,7 +64,6 @@ export function useStatisticsTab() {
       if (item.requisitionDepartment) departments.add(item.requisitionDepartment);
       if (item.category) categories.add(item.category);
       if (item.supplier) suppliers.add(item.supplier);
-      if (item.batchCode) batchCodes.add(item.batchCode);
       if (item.productionPlanBatchCode) productionPlans.add(item.productionPlanBatchCode);
       if (item.usageArea) usageAreas.add(item.usageArea);
       if (item.requisitioner) requisitioners.add(item.requisitioner);
@@ -64,12 +72,20 @@ export function useStatisticsTab() {
       departments: Array.from(departments).sort(),
       categories: Array.from(categories).sort(),
       suppliers: Array.from(suppliers).sort(),
-      batchCodes: Array.from(batchCodes).sort(),
       productionPlans: Array.from(productionPlans).sort(),
       usageAreas: Array.from(usageAreas).sort(),
       requisitioners: Array.from(requisitioners).sort(),
     };
   }, [materialStatisticsData]);
+
+  // 2026-09-27 审计修复（B6）：月度汇总部门筛选选项（从 monthlyStatistics 聚合）
+  const monthlyDeptOptions = useMemo(() => {
+    const set = new Set<string>();
+    monthlyStatisticsData.forEach((m: MonthlyStatItem) => {
+      if (m.department) set.add(m.department);
+    });
+    return Array.from(set).sort();
+  }, [monthlyStatisticsData]);
 
   // ============================================
   // 主Tab状态
@@ -89,7 +105,6 @@ export function useStatisticsTab() {
   // ============================================
   const [statMaterialSearch, setStatMaterialSearch] = useState<string>('');
   const [statSupplierFilter, setStatSupplierFilter] = useState<string[]>([]);
-  const [statBatchCodeFilter, setStatBatchCodeFilter] = useState<string[]>([]);
   const [statProductionPlanFilter, setStatProductionPlanFilter] = useState<string[]>([]);
   const [statUsageAreaFilter, setStatUsageAreaFilter] = useState<string[]>([]);
   const [statRequisitionerFilter, setStatRequisitionerFilter] = useState<string[]>([]);
@@ -116,8 +131,6 @@ export function useStatisticsTab() {
       }
       // 供应商筛选
       if (statSupplierFilter.length > 0 && !statSupplierFilter.includes(item.supplier)) return false;
-      // 批次号筛选
-      if (statBatchCodeFilter.length > 0 && !statBatchCodeFilter.includes(item.batchCode)) return false;
       // 生产计划批次筛选
       if (statProductionPlanFilter.length > 0 && !statProductionPlanFilter.includes(item.productionPlanBatchCode)) return false;
       // 用途/区域筛选
@@ -134,7 +147,6 @@ export function useStatisticsTab() {
     statWarehouseFilter,
     statMaterialSearch,
     statSupplierFilter,
-    statBatchCodeFilter,
     statProductionPlanFilter,
     statUsageAreaFilter,
     statRequisitionerFilter,
@@ -155,6 +167,14 @@ export function useStatisticsTab() {
   // ============================================
   const [statYearFilter, setStatYearFilter] = useState<string>(String(new Date().getFullYear()));
   const [statMonthFilter, setStatMonthFilter] = useState<string>('all');
+  // 2026-09-27 审计修复（B6）：月度汇总按部门筛选
+  const [statMonthlyDeptFilter, setStatMonthlyDeptFilter] = useState<string>('all');
+
+  // 2026-09-27 审计修复（A1）：当前年份的分类汇总（环形图/卡片随年份联动）
+  const statYearCategorySummary = useMemo(
+    () => getCategorySummaryByYear(statYearFilter, categoryTrend, categorySummary),
+    [statYearFilter, categoryTrend, categorySummary]
+  );
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'month', direction: 'asc' });
 
@@ -201,18 +221,20 @@ export function useStatisticsTab() {
       case 'currentWeek': {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
-        start = weekStart.toISOString().split('T')[0];
-        end = now.toISOString().split('T')[0];
+        // 2026-09-27 审计修复（A4）：业务日期用本地时区（todayLocal），
+        // 此前 toISOString() 是 UTC——北京时间 0-8 点会取到昨天
+        start = todayLocal(weekStart);
+        end = todayLocal(now);
         break;
       }
       case 'currentMonth':
         start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        end = now.toISOString().split('T')[0];
+        end = todayLocal(now);
         break;
       case 'currentQuarter': {
         const quarter = Math.floor(now.getMonth() / 3);
         start = `${now.getFullYear()}-${String(quarter * 3 + 1).padStart(2, '0')}-01`;
-        end = now.toISOString().split('T')[0];
+        end = todayLocal(now);
         break;
       }
       case 'currentYear':
@@ -240,14 +262,34 @@ export function useStatisticsTab() {
     setStatMonthFilter('all');
     setStatMaterialSearch('');
     setStatSupplierFilter([]);
-    setStatBatchCodeFilter([]);
     setStatProductionPlanFilter([]);
     setStatUsageAreaFilter([]);
     setStatRequisitionerFilter([]);
     setStatQuickFilterPeriod('currentMonth');
+    setStatMonthlyDeptFilter('all');
     setExpandedMonths(new Set());
     setSortConfig({ key: 'month', direction: 'asc' });
   };
+
+  // ============================================
+  // 2026-09-27 审计修复（B2）：数据刷新——手动刷新 + 主 tab 切到统计时自动刷新
+  // 此前 fetchStatistics 仅挂载执行一次，申请/出库操作后统计数据永远不更新
+  // ============================================
+  const [statRefreshing, setStatRefreshing] = useState(false);
+  const refreshStatistics = async () => {
+    setStatRefreshing(true);
+    try {
+      await fetchStatistics();
+    } finally {
+      setStatRefreshing(false);
+    }
+  };
+  useEffect(() => {
+    const handler = () => { void refreshStatistics(); };
+    window.addEventListener('material-statistics-refresh', handler);
+    return () => window.removeEventListener('material-statistics-refresh', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchStatistics]);
 
   // ============================================
   // 月度汇总表格辅助函数
@@ -275,7 +317,13 @@ export function useStatisticsTab() {
   };
 
   const getSortedMonthSummaries = () => {
-    const data = getMonthSummaries(statYearFilter, categoryTrend, categorySummary);
+    // 2026-09-27 审计修复（A2+B6）：月度汇总改用 monthlyStatistics 真实数据
+    // （实发量/差异率/真实金额），支持按部门筛选
+    // 2026-09-27 修复（B6）：部门筛选下沉到聚合函数（按部门过滤后再按月聚合）
+    const data = getMonthSummariesWithActual(
+      statYearFilter, monthlyStatisticsData, categoryTrend,
+      statMonthlyDeptFilter === 'all' ? undefined : statMonthlyDeptFilter
+    );
     const key = sortConfig.key;
     const sorted = [...data].sort((a, b) => {
       if (a[key as keyof typeof a] < b[key as keyof typeof b]) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -309,10 +357,12 @@ export function useStatisticsTab() {
     }
 
     let yoy = '-';
+    // 2026-09-27 审计修复（A3）：此前在"本年度过滤后的列表"里查上年度月份恒查不到（同比恒 '-'），
+    // 改为从全量 categoryTrend 取去年同月总量
     const lastYearMonth = `${parseInt(year) - 1}-${m}`;
-    const lastYearData = allMonthSummaries.find(am => am.month === lastYearMonth);
-    if (lastYearData && lastYearData.totalQuantity > 0) {
-      const change = ((currentData?.totalQuantity || 0) - lastYearData.totalQuantity) / lastYearData.totalQuantity * 100;
+    const lastYearQty = getTrendTotalByMonth(lastYearMonth, categoryTrend);
+    if (lastYearQty > 0) {
+      const change = ((currentData?.totalQuantity || 0) - lastYearQty) / lastYearQty * 100;
       yoy = change >= 0 ? `↑${change.toFixed(1)}%` : `↓${Math.abs(change).toFixed(1)}%`;
     }
 
@@ -400,7 +450,8 @@ export function useStatisticsTab() {
     const allMonthSummaries = getSortedMonthSummaries();
     const yearTotalQty = getYearTotalQuantity(statYearFilter, categoryTrend);
     const yearTotalAmt = getYearTotalAmount(statYearFilter, categoryTrend, categorySummary);
-    const selectedData = statMonthFilter === 'all'
+    // 2026-09-27：selectedData 可能是月份汇总行或单月分类明细行，导出按公共字段读取
+    const selectedData: any[] = statMonthFilter === 'all'
       ? statSelectedRows.map(idx => allMonthSummaries[idx]).filter(Boolean)
       : getSingleMonthTableData(statYearFilter, statMonthFilter, categoryTrend, categorySummary).filter((_, idx) => statSelectedRows.includes(idx));
 
@@ -472,7 +523,7 @@ export function useStatisticsTab() {
       csvContent += `导出时间,${formatDate()}\n`;
       csvContent += `\n`;
       csvContent += headers.map(h => escapeCSV(h)).join(',') + '\n';
-      selectedData.forEach((row: MonthSummary) => {
+      selectedData.forEach((row) => {
         csvContent += `${escapeCSV(row.monthName)},合计,${escapeCSV(row.totalQuantity.toString())},${escapeCSV(row.totalAmount.toString())},${escapeCSV(getMonthRank(row.month, 'qty').toString())},${escapeCSV(getMonthPercent(row.totalQuantity))},${escapeCSV(getMonthQoQ(row.month))},${escapeCSV(getMonthYoY(row.month))}\n`;
         getMonthDetails(row.month, categoryTrend, categorySummary).forEach((detail: any) => {
           csvContent += `,,${escapeCSV(detail.categoryName)},${escapeCSV(detail.quantity.toString())},${escapeCSV(detail.amount.toString())},,${escapeCSV(getCategoryPercent(detail.quantity, row.totalQuantity))},,\n`;
@@ -489,7 +540,7 @@ export function useStatisticsTab() {
       tableContent += `<div style="margin-bottom:10px;">年度：${statYearFilter}年 | 筛选条件：${statMonthFilter === 'all' ? '全部月份' : statMonthFilter + '月'} | 导出时间：${formatDate()}</div>`;
       tableContent += `<table border="1" style="border-collapse:collapse;width:100%;">`;
       tableContent += `<tr style="background-color:#e5e7eb;font-weight:bold;">${headers.map(h => `<th style="padding:8px;border:1px solid #ccc;">${h}</th>`).join('')}</tr>`;
-      selectedData.forEach((row: MonthSummary) => {
+      selectedData.forEach((row) => {
         tableContent += `<tr style="background-color:#fef3c7;font-weight:bold;">`;
         tableContent += `<td style="padding:8px;border:1px solid #ccc;">${row.monthName}</td>`;
         tableContent += `<td style="padding:8px;border:1px solid #ccc;">合计</td>`;
@@ -532,7 +583,7 @@ export function useStatisticsTab() {
       tableContent += `<div style="margin-bottom:10px;">年度：${statYearFilter}年 | 筛选条件：${statMonthFilter === 'all' ? '全部月份' : statMonthFilter + '月'} | 导出时间：${formatDate()}</div>`;
       tableContent += `<table border="1" style="border-collapse:collapse;width:100%;">`;
       tableContent += `<tr style="background-color:#e5e7eb;font-weight:bold;">${headers.map(h => `<th style="padding:8px;border:1px solid #000;">${h}</th>`).join('')}</tr>`;
-      selectedData.forEach((row: MonthSummary) => {
+      selectedData.forEach((row) => {
         tableContent += `<tr style="background-color:#fef3c7;font-weight:bold;">`;
         tableContent += `<td style="padding:8px;border:1px solid #000;">${row.monthName}</td>`;
         tableContent += `<td style="padding:8px;border:1px solid #000;">合计</td>`;
@@ -786,13 +837,19 @@ export function useStatisticsTab() {
     statWarehouseFilter,
     statMaterialSearch,
     statSupplierFilter,
-    statBatchCodeFilter,
     statProductionPlanFilter,
     statUsageAreaFilter,
     statRequisitionerFilter,
     statQuickFilterPeriod,
     statYearFilter,
     statMonthFilter,
+    // 2026-09-27 审计修复：部门筛选 / 年份分类汇总 / 刷新
+    statMonthlyDeptFilter,
+    setStatMonthlyDeptFilter,
+    monthlyDeptOptions,
+    statYearCategorySummary,
+    statRefreshing,
+    refreshStatistics,
     expandedMonths,
     sortConfig,
     statCurrentPage,
@@ -825,7 +882,6 @@ export function useStatisticsTab() {
     setStatWarehouseFilter,
     setStatMaterialSearch,
     setStatSupplierFilter,
-    setStatBatchCodeFilter,
     setStatProductionPlanFilter,
     setStatUsageAreaFilter,
     setStatRequisitionerFilter,

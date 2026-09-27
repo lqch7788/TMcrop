@@ -49,6 +49,42 @@ function getCategoryKey(name: string): string {
   return map[name] || '其他';
 }
 
+/**
+ * 用途/区域列可读化（2026-09-27 用户反馈：显示原始 JSON 乱码）
+ * material_requests.plant_area 有两种历史格式：
+ *  - 新格式：JSON 数组 [{type,id,code,cropName,area},...]
+ *  - 旧格式：纯字符串（如 "红颜·日光温室区"）
+ * 统一解析为可读文本："红颜·日光温室区; 杜鹃花·连栋温室01区; 测试区域"
+ */
+function formatPlantArea(raw: unknown): string {
+  if (!raw) return '';
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((entry: Record<string, unknown>) => {
+            const cropName = String(entry.cropName || '');
+            const area = String(entry.area || '');
+            const code = String(entry.code || '');
+            if (cropName && area) return `${cropName}·${area}`;
+            if (area) return area;
+            if (cropName) return cropName;
+            return code;
+          })
+          .filter(Boolean)
+          .join('; ');
+      }
+    } catch {
+      // 解析失败回退原值
+    }
+  }
+  return trimmed;
+}
+
 /** 获取所有统计数据的聚合接口 */
 router.get('/', (_req: Request, res: Response) => {
   try {
@@ -147,7 +183,8 @@ router.get('/', (_req: Request, res: Response) => {
             expiry_date: m.expiryDate || '',
             production_plan_batch_code: (rec as any).production_batch_code || '',
             requisition_department: (rec as any).department_name || '',
-            usage_area: (rec as any).plant_area || '',
+            // 2026-09-27 修复：plant_area JSON 解析为可读文本（此前原样透传显示乱码）
+            usage_area: formatPlantArea((rec as any).plant_area),
             requisitioner: (rec as any).applicant_name || '',
             requisition_time: String((rec as any).apply_date || ''),
             requisition_count: 0,

@@ -11,19 +11,24 @@ interface MonthlyDashboardProps {
   selectedMonth: string;
   /** 设置选中月份 */
   onMonthChange: (month: string) => void;
+  /** 2026-09-27 审计修复（A1）：当前年份的分类汇总（随年份联动，全时段数据仅作均价来源） */
+  yearCategories: import('@/stores').CategorySummaryItem[];
+  /** 2026-09-27 审计修复（A1）：年度总金额（该年估算，随年份联动） */
+  yearAmount: number;
 }
 
-export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: MonthlyDashboardProps) {
+export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange, yearCategories, yearAmount }: MonthlyDashboardProps) {
   const categorySummaryData = useStatisticsStore((s) => s.categorySummary);
   const categoryTrendData = useStatisticsStore((s) => s.categoryTrend);
   const materialStatistics = useStatisticsStore((s) => s.materialStatistics);
+  // 2026-09-27 审计修复（A1）：图表与卡片统一用"当前年份"的分类数据（无数据年份回退全时段，避免空白）
+  const displayCategories = yearCategories.length > 0 ? yearCategories : categorySummaryData;
 
   // 仅统计当前选中年份的数据
   const trendInYear = categoryTrendData.filter(d => d.month.startsWith(yearFilter));
 
-  // 动态计算年度总数量和总金额
+  // 动态计算年度总数量（金额由父组件按年估算传入，2026-09-27 A1 修复）
   const yearTotal = trendInYear.reduce((sum, d) => sum + (d.total || 0), 0);
-  const yearAmount = categorySummaryData.reduce((sum, c) => sum + c.amount, 0);
   // 根据选中的月份计算当月总计（仅在选中月份属于当前年份时计算）
   const monthTotal = selectedMonth !== 'all' && selectedMonth.startsWith(yearFilter)
     ? trendInYear.find(d => d.month === selectedMonth)?.total || 0
@@ -46,7 +51,7 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={categorySummaryData}
+                data={displayCategories}
                 cx="50%"
                 cy="50%"
                 innerRadius={50}
@@ -54,7 +59,7 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
                 paddingAngle={2}
                 dataKey="value"
               >
-                {categorySummaryData.map((entry, index) => (
+                {displayCategories.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.solid} />
                 ))}
               </Pie>
@@ -84,7 +89,7 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
         </div>
         {/* 分类列表 */}
         <div className="mt-4 space-y-2">
-          {categorySummaryData.map((item) => (
+          {displayCategories.map((item) => (
             <div key={item.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full" style={{ background: `linear-gradient(135deg, ${item.gradient[0]}, ${item.gradient[1]})` }}></span>
@@ -153,7 +158,7 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
                   tickFormatter={(v) => v.replace(/^\d{4}-/, '')+'月'}
                   tick={{ fontSize: 11, fill: '#64748B' }}
                 />
-                <YAxis tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, Math.ceil(Math.max(...trendInYear.map(d => d.total)) * 1.2 / 100) * 100]} />
+                <YAxis tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, (() => { const maxV = trendInYear.length > 0 ? Math.max(...trendInYear.map(d => d.total)) : 100; return Math.max(100, Math.ceil(maxV * 1.2 / 100) * 100); })()]} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -299,17 +304,19 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
  * 分类汇总卡片区域组件
  * 显示各物料分类的汇总信息
  */
-export function CategorySummaryCards() {
+export function CategorySummaryCards({ yearCategories }: { yearCategories?: import('@/stores').CategorySummaryItem[] }) {
+  // 2026-09-27 审计修复（A1）：年份分类汇总由父组件（StatisticsTab/hook）按 statYearFilter 计算传入
   const categorySummaryData = useStatisticsStore((s) => s.categorySummary);
 
-  // 动态计算合计
-  const yearTotal = categorySummaryData.reduce((sum, c) => sum + c.value, 0);
-  const yearAmount = categorySummaryData.reduce((sum, c) => sum + c.amount, 0);
+  // 动态计算合计（当前年份优先，无数据年份回退全时段）
+  const display = (yearCategories && yearCategories.length > 0) ? yearCategories : categorySummaryData;
+  const yearTotal = display.reduce((sum, c) => sum + c.value, 0);
+  const yearAmount = display.reduce((sum, c) => sum + c.amount, 0);
 
   return (
     /* 底部：分类汇总卡片 */
     <div className="grid grid-cols-8 gap-3">
-      {categorySummaryData.map((item) => (
+      {display.map((item) => (
         <div key={item.name} className="bg-white/60 rounded-xl p-3 border border-gray-100 hover:shadow-md transition-all">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-3 h-3 rounded-full" style={{ background: `linear-gradient(135deg, ${item.gradient[0]}, ${item.gradient[1]})` }}></span>

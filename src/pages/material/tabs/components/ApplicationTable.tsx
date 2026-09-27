@@ -213,7 +213,7 @@ export function ApplicationTable({
               导出
             </Button>
             {/* 2026-09-27 审计方案：已删除单据归档追溯入口 */}
-            <Button variant="secondary" size="sm" onClick={onShowDeletedDocs}>
+            <Button variant="blue" size="sm" onClick={onShowDeletedDocs}>
               <Archive className="w-4 h-4" />
               已删除单据
             </Button>

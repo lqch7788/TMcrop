@@ -15,8 +15,6 @@ interface MaterialFiltersProps {
   warehouseFilter: string[];
   /** 供应商筛选 */
   supplierFilter: string[];
-  /** 批次号筛选 */
-  batchCodeFilter: string[];
   /** 生产计划批次筛选 */
   productionPlanFilter: string[];
   /** 用途/区域筛选 */
@@ -30,7 +28,6 @@ interface MaterialFiltersProps {
     departments: string[];
     categories: string[];
     suppliers: string[];
-    batchCodes: string[];
     productionPlans: string[];
     usageAreas: string[];
     requisitioners: string[];
@@ -47,8 +44,6 @@ interface MaterialFiltersProps {
   onWarehouseChange: (filter: string[]) => void;
   /** 设置供应商筛选 */
   onSupplierChange: (filter: string[]) => void;
-  /** 设置批次号筛选 */
-  onBatchCodeChange: (filter: string[]) => void;
   /** 设置生产计划批次筛选 */
   onProductionPlanChange: (filter: string[]) => void;
   /** 设置用途/区域筛选 */
@@ -68,7 +63,6 @@ export function MaterialFilters({
   categoryFilter,
   warehouseFilter,
   supplierFilter,
-  batchCodeFilter,
   productionPlanFilter,
   usageAreaFilter,
   requisitionerFilter,
@@ -80,7 +74,6 @@ export function MaterialFilters({
   onCategoryChange,
   onWarehouseChange,
   onSupplierChange,
-  onBatchCodeChange,
   onProductionPlanChange,
   onUsageAreaChange,
   onRequisitionerChange,
@@ -95,7 +88,6 @@ export function MaterialFilters({
       categoryFilter={categoryFilter}
       warehouseFilter={warehouseFilter}
       supplierFilter={supplierFilter}
-      batchCodeFilter={batchCodeFilter}
       productionPlanFilter={productionPlanFilter}
       usageAreaFilter={usageAreaFilter}
       requisitionerFilter={requisitionerFilter}
@@ -104,7 +96,6 @@ export function MaterialFilters({
       categoryOptions={filterOptions.categories}
       warehouseOptions={[]}
       supplierOptions={filterOptions.suppliers}
-      batchCodeOptions={filterOptions.batchCodes}
       productionPlanOptions={filterOptions.productionPlans}
       usageAreaOptions={filterOptions.usageAreas}
       requisitionerOptions={filterOptions.requisitioners}
@@ -114,7 +105,6 @@ export function MaterialFilters({
       onCategoryChange={onCategoryChange}
       onWarehouseChange={onWarehouseChange}
       onSupplierChange={onSupplierChange}
-      onBatchCodeChange={onBatchCodeChange}
       onProductionPlanChange={onProductionPlanChange}
       onUsageAreaChange={onUsageAreaChange}
       onRequisitionerChange={onRequisitionerChange}

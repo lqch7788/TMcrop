@@ -41,7 +41,14 @@ export default function MaterialReceiving() {
             <Button
               key={tab.key}
               variant="ghost"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                // 2026-09-27 审计修复（B2）：切到统计 tab 时发刷新事件——
+                // 申请/出库操作后统计数据不再停留在挂载时的旧值
+                if (tab.key === 'statistics') {
+                  window.dispatchEvent(new CustomEvent('material-statistics-refresh'));
+                }
+              }}
               className={`pb-2 text-base font-semibold relative ${
                 activeTab === tab.key
                   ? 'text-emerald-600'

@@ -100,6 +100,7 @@ const FIELD_MAP: Record<string, string> = {
   requisition_count: 'requisitionCount',
   total_quantity: 'totalQuantity',
   actual_quantity: 'actualQuantity',
+  actual_amount: 'actualAmount',
   total_amount: 'totalAmount',
   main_warehouse: 'mainWarehouse',
   // 月度统计字段
@@ -193,7 +194,7 @@ export function getMonthDetails(month: string, trend: CategoryTrendItem[], categ
   if (!monthData) return [];
   const totalQty = monthData.total;
   return categories.map(cat => {
-    const qty = (monthData as Record<string, number>)[cat.key] || 0;
+    const qty = (monthData as unknown as Record<string, number>)[cat.key] || 0;
     // 用分类全年的 (qty, amount) 比例，分摊得到该月该分类的金额（amount 单位：万元）
     const catAmount = cat.value > 0 ? (qty / cat.value) * cat.amount : 0;
     return {
@@ -235,8 +236,9 @@ export function getYearTotalAmount(year: string, trend: CategoryTrendItem[], cat
   for (const cat of categories) {
     const avgPrice = cat.value > 0 ? cat.amount / cat.value : 0;
     if (avgPrice <= 0) continue;
+    // 2026-09-27 修复：trend 行的键是中文短名（key），非带前缀的 name（如 'OP-作业支持类'）
     const qty = yearRows.reduce(
-      (s, row) => s + (Number((row as unknown as Record<string, number>)[cat.name]) || 0), 0
+      (s, row) => s + (Number((row as unknown as Record<string, number>)[cat.key]) || 0), 0
     );
     amount += qty * avgPrice;
   }
@@ -253,7 +255,7 @@ export function getMonthCategoryData(month: string, trend: CategoryTrendItem[], 
   const monthData = trend.find(d => d.month === month);
   if (!monthData) return [];
   return categories.map(cat => {
-    const value = (monthData as Record<string, number>)[cat.key] || 0;
+    const value = (monthData as unknown as Record<string, number>)[cat.key] || 0;
     const amount = cat.value > 0 ? Math.round((value / cat.value) * cat.amount * 100) / 100 : 0;
     return { ...cat, value, amount, month: month.replace(/^\d{4}-/, '') + '月' };
   });
@@ -266,6 +268,129 @@ export function getMonthSummary(month: string, trend: CategoryTrendItem[], categ
     totalQuantity: data.reduce((s, d) => s + d.value, 0),
     totalAmount: data.reduce((s, d) => s + d.amount, 0),
   };
+}
+
+/**
+ * 2026-09-27 审计修复（A2）：按年份聚合分类汇总——
+ * 此前 categorySummary 是全时段无年份维度，环形图/分类卡片/年度合计金额在切换年份时全部不变。
+ * 该年各分类数量（从 trend 取）× 分类均价（全时段金额/数量）→ 该年分类汇总；无数据年份返回空数组。
+ */
+export function getCategorySummaryByYear(
+  year: string,
+  trend: CategoryTrendItem[],
+  categories: CategorySummaryItem[]
+): CategorySummaryItem[] {
+  const yearRows = trend.filter((d) => d.month.startsWith(year));
+  if (yearRows.length === 0) return [];
+  const result: CategorySummaryItem[] = [];
+  let yearTotalQty = 0;
+  for (const cat of categories) {
+    const qty = yearRows.reduce(
+      (s, row) => s + (Number((row as unknown as Record<string, number>)[cat.key]) || 0), 0
+    );
+    if (qty <= 0) continue;
+    const avgPrice = cat.value > 0 ? cat.amount / cat.value : 0;
+    const amount = Math.round(qty * avgPrice * 100) / 100;
+    yearTotalQty += qty;
+    result.push({ ...cat, value: qty, amount });
+  }
+  // 重算该年占比
+  for (const c of result) {
+    c.percentage = yearTotalQty > 0 ? Math.round((c.value / yearTotalQty) * 1000) / 10 : 0;
+  }
+  return result;
+}
+
+/** 月度汇总行（含实发量与真实金额，2026-09-27 A2 数据链补完） */
+export interface MonthSummaryWithActual {
+  month: string;
+  monthName: string;
+  totalQuantity: number;   // 申请量
+  actualQuantity: number;  // 实发量（已扣库存出库单聚合）
+  totalAmount: number;     // 真实申请金额（monthly_statistics.total_amount 聚合，元）
+  differenceRate: number;  // 差异率 %（实发-申请）/申请
+  departments: string[];   // 该月涉及的部门
+  percentage: number;      // 占年度申请量比
+}
+
+/**
+ * 2026-09-27 审计修复（A2）：月度汇总真实数据聚合——
+ * 此前 getMonthSummaries 用 categoryTrend（申请量口径）且金额按比例分摊（估算值）；
+ * monthlyStatistics（后端已聚合实发量/差异率/真实金额）完全未被前端使用。
+ * 本函数按"年-月"跨部门聚合 monthlyStatistics；trend 兜底补全年月份（无申请单的月份）。
+ */
+export function getMonthSummariesWithActual(
+  year: string,
+  monthlyStats: MonthlyStatItem[],
+  trend: CategoryTrendItem[],
+  /** 2026-09-27（B6）：按部门过滤后聚合（'all'/空 = 全部部门） */
+  dept?: string
+): MonthSummaryWithActual[] {
+  const map = new Map<string, MonthSummaryWithActual>();
+  const deptActive = !!dept && dept !== 'all';
+  for (const m of monthlyStats) {
+    if (m.year !== year) continue;
+    // 2026-09-27 修复：部门筛选在聚合前过滤——此前聚合后按 departments.includes 过滤，
+    // 只过滤"月份是否含该部门"而非"该部门的数据"，显示的是全部门合并值（语义错误）
+    if (deptActive && m.department !== dept) continue;
+    const key = `${m.year}-${m.month}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.totalQuantity += m.totalQuantity || 0;
+      existing.actualQuantity += m.actualQuantity || 0;
+      existing.totalAmount += m.totalAmount || 0;
+      if (m.department && !existing.departments.includes(m.department)) existing.departments.push(m.department);
+    } else {
+      map.set(key, {
+        month: key,
+        monthName: `${parseInt(m.month)}月`,
+        totalQuantity: m.totalQuantity || 0,
+        actualQuantity: m.actualQuantity || 0,
+        totalAmount: m.totalAmount || 0,
+        differenceRate: m.differenceRate || 0,
+        departments: m.department ? [m.department] : [],
+        percentage: 0,
+      });
+    }
+  }
+  // 合并 trend 中存在的月份（含无申请单但 trend 有值的月份——实际二者同源，trend 兜底）
+  // 2026-09-27 修复：部门筛选视图跳过 trend 兜底——trend 是全部门申请量维度，
+  // 会把"无该部门数据"的月份用全部门值补齐（8月173/9月10 就是误补的结果）
+  for (const t of trend) {
+    if (!t.month.startsWith(year)) continue;
+    if (deptActive) break;
+    if (!map.has(t.month)) {
+      map.set(t.month, {
+        month: t.month,
+        monthName: `${parseInt(t.month.split('-')[1])}月`,
+        totalQuantity: t.total || 0,
+        actualQuantity: 0,
+        totalAmount: 0,
+        differenceRate: 0,
+        departments: [],
+        percentage: 0,
+      });
+    }
+  }
+  const rows = Array.from(map.values()).sort((a, b) => a.month.localeCompare(b.month));
+  // 重算差异率（跨部门聚合后）与占比
+  const yearTotal = rows.reduce((s, r) => s + r.totalQuantity, 0);
+  for (const r of rows) {
+    r.differenceRate = r.totalQuantity > 0
+      ? Math.round(((r.actualQuantity - r.totalQuantity) / r.totalQuantity) * 1000) / 10
+      : 0;
+    r.percentage = yearTotal > 0 ? Math.round((r.totalQuantity / yearTotal) * 1000) / 10 : 0;
+  }
+  return rows;
+}
+
+/**
+ * 2026-09-27 审计修复（A3）：跨年度取趋势值——
+ * 同比修复用：此前 getMonthStats 在"本年度过滤后的列表"里查上一年度月份，永远查不到（同比恒为'-'）。
+ */
+export function getTrendTotalByMonth(month: string, trend: CategoryTrendItem[]): number {
+  const d = trend.find((x) => x.month === month);
+  return d ? d.total : 0;
 }
 
 // ==================== 第六步：创建 Store ====================
