@@ -3,7 +3,8 @@ import { Modal } from './Modal';
 interface UnifiedModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  // 2026-09-27：放宽为 ReactNode，与 Modal 对齐（业务弹窗传 JSX 标题场景）
+  title: React.ReactNode;
   children: React.ReactNode;
   headerAction?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl';

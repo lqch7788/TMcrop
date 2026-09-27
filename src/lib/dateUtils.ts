@@ -27,3 +27,20 @@ export function currentTimeLocal(date?: Date | string): string {
   const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
 }
+
+/** 临期预警阈值（天）：批次效期距今小于该值即视为临期（与领料模块 EXPIRY_WARN_DAYS 口径一致） */
+export const EXPIRY_WARN_DAYS = 30;
+
+/**
+ * 距离到期天数（按自然日、本地时区）
+ * 2026-09-27：物料库存/批次明细临期预警共用；无法解析的日期返回 null
+ * @returns 正数=还有 N 天到期；0=今天到期；负数=已过期 N 天；null=无日期/格式非法
+ */
+export function daysUntilExpiry(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - today.getTime()) / 86400000);
+}

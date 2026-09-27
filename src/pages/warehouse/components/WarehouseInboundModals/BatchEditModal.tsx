@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, ChevronRight, Plus, Save, Trash2, X, XCircle } from 'lucide-react';
-import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
+import { InboundRecord, InboundMaterial } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -81,14 +81,13 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
       code: '',
       name: '',
       category: '',
-      bigCategory: '',
-      midCategory: '',
-      subCategory: '',
       specification: '',
       barcode: '',
       unit: '袋',
       quantity: 0,
+      // 2026-09-27：库存阈值不在入库明细维护（属物料主数据，在物料库存页编辑/批量编辑）
       price: '',
+      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',

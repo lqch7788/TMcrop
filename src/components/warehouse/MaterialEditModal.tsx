@@ -6,6 +6,9 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
+import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -21,9 +24,10 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
   // 本地编辑表单状态
   const [form, setForm] = useState<Material | null>(null);
 
+  // 每次打开时从 material 重新拷贝（组件常挂载，避免保留上次未保存的修改）
   useEffect(() => {
-    if (material) setForm({ ...material });
-  }, [material]);
+    if (isOpen && material) setForm({ ...material });
+  }, [isOpen, material]);
 
   if (!isOpen || !material || !form) return null;
 
@@ -150,10 +154,11 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 供应商 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">供应商</Label>
-          <Input
-            type="text"
+          {/* 2026-09-27：接入供应商管理数据，支持搜索自动定位已有供应商名称 */}
+          <SupplierSearchInput
             value={form.supplier}
-            onChange={(e) => handleChange('supplier', e.target.value)}
+            onChange={(name) => handleChange('supplier', name)}
+            placeholder="搜索或输入供应商名称"
             className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
@@ -165,6 +170,57 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.location}
             onChange={(e) => handleChange('location', e.target.value)}
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+          />
+        </div>
+
+        {/* 2026-09-27 字段补齐：条码 / 批次 / 生产日期 / 有效期 / 备注（此前编辑弹窗只能改 8 个字段） */}
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">条码</Label>
+          <Input
+            type="text"
+            value={form.barcode}
+            onChange={(e) => handleChange('barcode', e.target.value)}
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+          />
+        </div>
+
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">批次号</Label>
+          <Input
+            type="text"
+            value={form.batchNo}
+            onChange={(e) => handleChange('batchNo', e.target.value)}
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+          />
+        </div>
+
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
+          <DatePicker
+            className="w-full"
+            selected={form.productionDate ? new Date(form.productionDate) : undefined}
+            onChange={(date) => handleChange('productionDate', todayLocal(date))}
+            placeholder="选择生产日期"
+          />
+        </div>
+
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">有效期至</Label>
+          <DatePicker
+            className="w-full"
+            selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
+            onChange={(date) => handleChange('expiryDate', todayLocal(date))}
+            placeholder="选择有效期"
+          />
+        </div>
+
+        <div>
+          <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
+          <Input
+            type="text"
+            value={form.remarks || ''}
+            onChange={(e) => handleChange('remarks', e.target.value)}
             className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>

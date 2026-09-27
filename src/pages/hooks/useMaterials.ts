@@ -467,7 +467,8 @@ export function useMaterials() {
       inboundDate: newInbound.inboundDate || todayLocal(),
       supplier: newInbound.supplier,
       operator: newInbound.operator,
-      status: 'completed',
+      // 2026-09-27：与主入库页统一——默认待审核走审批流（此处路径无状态选择控件）
+      status: 'pending',
       materials: [
         {
           id: 0,

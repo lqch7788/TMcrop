@@ -13,6 +13,8 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { useWarehouseMaterialStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { CodeGenState, categoryConfig, bigCategoriesList } from '@/types/warehouseInbound.types';
@@ -24,10 +26,34 @@ import {
   getSubCategories,
 } from '@/pages/warehouse/utils/warehouseInbound.utils';
 import { WarehouseInboundCodeGen } from '@/pages/warehouse/components/WarehouseInboundCodeGen';
+import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
 import type { Material } from '@/services/apiWarehouseMaterialService';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
+// 表单初始值（弹窗每次打开时重置用，name 由 prefillName 单独处理）
+const INITIAL_FORM = {
+  code: '',
+  name: '',
+  category: '',
+  bigCategory: '',
+  midCategory: '',
+  subCategory: '',
+  specification: '',
+  unit: '',
+  minStock: 0,
+  maxStock: 0,
+  price: '',
+  supplier: '',
+  location: '',
+  barcode: '',
+  batchNo: '',
+  productionDate: '',
+  expiryDate: '',
+  remarks: '',
+  dataStatus: '启用',
+};
 
 interface MaterialCreateModalProps {
   open: boolean;
@@ -51,23 +77,7 @@ export function MaterialCreateModal({
   const warehouseItems = useWarehouseMaterialStore((s) => s.items);
 
   // 表单状态
-  const [form, setForm] = useState({
-    code: '',
-    name: prefillName || '',
-    category: '',
-    bigCategory: '',
-    midCategory: '',
-    subCategory: '',
-    specification: '',
-    unit: '',
-    minStock: 0,
-    maxStock: 0,
-    price: '',
-    supplier: '',
-    location: '',
-    barcode: '',
-    dataStatus: '启用',
-  });
+  const [form, setForm] = useState({ ...INITIAL_FORM, name: prefillName || '' });
 
   // 编码生成器状态
   const [codeGen, setCodeGen] = useState<CodeGenState>({
@@ -82,12 +92,17 @@ export function MaterialCreateModal({
   const [copySuccess, setCopySuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 打开时同步 prefillName（URL deep link 场景）
+  // 打开弹窗时重置表单与编码生成器（组件常挂载，不重置会保留上次输入），并应用 deep link 预填名称
   useEffect(() => {
-    if (open && prefillName) {
-      setForm((prev) => ({ ...prev, name: prefillName }));
-    }
-  }, [open, prefillName]);
+    if (!open) return;
+    setForm({ ...INITIAL_FORM, name: prefillName || '' });
+    setCodeGen({ bigCategory: '', midCategory: '', subCategory: '', generatedCode: '' });
+    setCodeGenError('');
+    setCodeGenSuccess('');
+    setCopySuccess(false);
+    setCodeGenExpanded(defaultExpandCodeGen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // 编码生成后同步到 form.code（用户也可以手动覆盖）
   useEffect(() => {
@@ -197,6 +212,11 @@ export function MaterialCreateModal({
         supplier: form.supplier.trim(),
         location: form.location.trim(),
         barcode: form.barcode.trim(),
+        // 2026-09-27 字段补齐：库存页表格已展示批次号/生产日期/有效期至，新建时此前无法录入
+        batchNo: form.batchNo.trim(),
+        productionDate: form.productionDate,
+        expiryDate: form.expiryDate,
+        remarks: form.remarks.trim(),
         lastUpdateTime: new Date().toISOString(),
         dataStatus: form.dataStatus,
       };
@@ -436,11 +456,11 @@ export function MaterialCreateModal({
           </div>
           <div>
             <Label className="block text-sm font-medium text-gray-900 mb-1">供应商</Label>
-            <Input
-              type="text"
+            {/* 2026-09-27：接入供应商管理数据，支持搜索自动定位已有供应商名称 */}
+            <SupplierSearchInput
               value={form.supplier}
-              onChange={(e) => setForm((prev) => ({ ...prev, supplier: e.target.value }))}
-              placeholder="如：中化化肥有限公司"
+              onChange={(name) => setForm((prev) => ({ ...prev, supplier: name }))}
+              placeholder="搜索或输入供应商名称"
               className={deepInputClass}
             />
           </div>
@@ -469,20 +489,64 @@ export function MaterialCreateModal({
           </div>
         </div>
 
-        <div>
-          <Label className="block text-sm font-medium text-gray-900 mb-1">数据状态</Label>
-          <Select
-            value={form.dataStatus}
-            onValueChange={(val) => setForm((prev) => ({ ...prev, dataStatus: val }))}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="启用">启用</SelectItem>
-              <SelectItem value="停用">停用</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* 2026-09-27 字段补齐：批次号 / 生产日期 / 有效期至（库存页表格已展示这三列，此前新建时无法录入） */}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">批次号</Label>
+            <Input
+              type="text"
+              value={form.batchNo}
+              onChange={(e) => setForm((prev) => ({ ...prev, batchNo: e.target.value }))}
+              placeholder="如：B20260901"
+              className={deepInputClass}
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">生产日期</Label>
+            <DatePicker
+              className="w-full"
+              selected={form.productionDate ? new Date(form.productionDate) : undefined}
+              onChange={(date) => setForm((prev) => ({ ...prev, productionDate: todayLocal(date) }))}
+              placeholder="选择生产日期"
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">有效期至</Label>
+            <DatePicker
+              className="w-full"
+              selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
+              onChange={(date) => setForm((prev) => ({ ...prev, expiryDate: todayLocal(date) }))}
+              placeholder="选择有效期"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">备注</Label>
+            <Input
+              type="text"
+              value={form.remarks}
+              onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))}
+              placeholder="选填"
+              className={deepInputClass}
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">数据状态</Label>
+            <Select
+              value={form.dataStatus}
+              onValueChange={(val) => setForm((prev) => ({ ...prev, dataStatus: val }))}
+            >
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="启用">启用</SelectItem>
+                <SelectItem value="停用">停用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </UnifiedModal>

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Download, X } from 'lucide-react';
 
-import { InboundRecord } from '../../../types/warehouseInbound.types';
+import { InboundRecord } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import * as XLSX from 'xlsx';

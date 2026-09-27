@@ -33,7 +33,7 @@ export default function WarehouseOverviewPage() {
 
   // 筛选状态
   const [filters, setFilters] = useState<MaterialFiltersState>({
-    code: '', name: '', category: '全部', supplier: '', location: '',
+    code: '', name: '', supplier: '', location: '',
     searchBigCategory: '', searchMidCategory: '', searchSubCategory: '', showLowStock: false,
   });
 
@@ -121,12 +121,14 @@ export default function WarehouseOverviewPage() {
       showAlert('没有可导出的数据');
       return;
     }
-    const headers = ['物料编码', '物料名称', '分类', '规格', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '数据状态'];
+    const headers = ['物料编码', '物料名称', '分类', '规格', '条形码', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '批次号', '生产日期', '有效期至', '备注', '数据状态'];
     const rows = rowsToExport.map(m => ({
       '物料编码': m.code,
       '物料名称': m.name,
       '分类': m.category,
       '规格': m.specification,
+      // 2026-09-27 补齐：此前导出缺 条形码/批次号/生产日期/有效期至/备注 5 列（表格已展示）
+      '条形码': m.barcode,
       '单位': m.unit,
       '库存数量': m.quantity,
       '最低库存': m.minStock,
@@ -134,6 +136,10 @@ export default function WarehouseOverviewPage() {
       '单价': m.price,
       '供应商': m.supplier,
       '存放位置': m.location,
+      '批次号': m.batchNo,
+      '生产日期': m.productionDate,
+      '有效期至': m.expiryDate,
+      '备注': m.remarks || '',
       '数据状态': m.dataStatus,
     }));
     try {

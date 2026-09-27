@@ -2718,7 +2718,8 @@ export function initializeDatabase() {
       productionDate TEXT,
       expiryDate TEXT,
       lastUpdateTime TEXT,
-      dataStatus TEXT DEFAULT '启用'
+      dataStatus TEXT DEFAULT '启用',
+      remarks TEXT
     )
   `);
 
@@ -2739,7 +2740,10 @@ export function initializeDatabase() {
       operator TEXT,
       status TEXT DEFAULT 'pending',
       materials TEXT,
-      voidedDate TEXT
+      voidedDate TEXT,
+      recordType TEXT DEFAULT 'inbound',
+      reversalOf INTEGER,
+      reversalReason TEXT
     )
   `);
 
@@ -4031,6 +4035,47 @@ export function initializeDatabase() {
       }
     }
   } catch { /* batch backfill non-critical */ }
+
+  // ============================================================
+  // 2026-09-27：inbound_records 补冲销 3 列（原单不可改写，红字单抵消）
+  // 幂等：PRAGMA 查列后再 ALTER；历史数据回填见 server/scripts/db-migrations/addInboundReversalColumns.ts
+  // ============================================================
+  {
+    const colStmt = db.prepare('PRAGMA table_info(inbound_records)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    const inboundCols: Array<[string, string]> = [
+      ['recordType', "TEXT DEFAULT 'inbound'"],
+      ['reversalOf', 'INTEGER'],
+      ['reversalReason', 'TEXT'],
+    ];
+    for (const [col, type] of inboundCols) {
+      if (!existing.has(col)) {
+        try { db.run(`ALTER TABLE inbound_records ADD COLUMN ${col} ${type}`); } catch {}
+      }
+    }
+  }
+
+  // ============================================================
+  // 2026-09-27：materials 表补 remarks 列（入库明细备注落主数据）
+  // 幂等：PRAGMA 查列后再 ALTER；历史数据回填见 server/scripts/db-migrations/addMaterialsRemarksColumn.ts
+  // ============================================================
+  {
+    const colStmt = db.prepare('PRAGMA table_info(materials)');
+    const existing = new Set<string>();
+    while (colStmt.step()) {
+      const r = colStmt.getAsObject() as { name: string };
+      existing.add(r.name);
+    }
+    colStmt.free();
+    if (!existing.has('remarks')) {
+      try { db.run('ALTER TABLE materials ADD COLUMN remarks TEXT'); } catch {}
+    }
+  }
 
   // ============================================================
   // 2026-07-18：种源自动合并功能 schema 改动

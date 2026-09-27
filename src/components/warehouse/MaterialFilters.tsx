@@ -25,12 +25,17 @@ export interface Material {
   expiryDate: string;
   lastUpdateTime: string;
   dataStatus: string;
+  /** 备注（2026-09-27 新增列：入库明细的备注可落到主数据） */
+  remarks?: string;
+  /** 有效批次数（来自 batch_inventory 聚合，多批次物料表格显示"共 N 批"） */
+  batchCount?: number;
+  /** 最早有效批次效期（FEFO 视角，临期预警；空表示无带效期的有效批次） */
+  earliestExpiry?: string;
 }
 
 export interface MaterialFiltersState {
   code: string;
   name: string;
-  category: string;
   supplier: string;
   location: string;
   searchBigCategory: string;
@@ -39,18 +44,18 @@ export interface MaterialFiltersState {
   showLowStock: boolean;
 }
 
-/** 物料分类配置树形结构 */
-interface SubCategoryConfig { code: string; name: string; prefix?: string }
-interface MidCategoryConfig { name: string; subCategories: Record<string, SubCategoryConfig> }
-interface BigCategoryConfig { name: string; categories: Record<string, MidCategoryConfig> }
-type CategoryConfig = Record<string, BigCategoryConfig>;
+// 2026-09-27 类型统一：分类配置结构复用 types/warehouseInbound.types 的 CategoryConfig，
+// 删除本地重复定义（此前两套同名不同类型，props 声明与页面传入互不兼容）
+import type { CategoryConfig } from '@/types/warehouseInbound.types';
 
 interface MaterialFiltersProps {
   filters: MaterialFiltersState;
   onFiltersChange: (filters: MaterialFiltersState) => void;
   lowStockCount: number;
   onLowStockClick: () => void;
-  categoryConfig: CategoryConfig;
+  // 2026-09-27 类型修复：实际传入的是"大类码 → 配置"的字典（组件内按 categoryConfig[bigCode] 取用），
+  // 此前声明为单个 CategoryConfig，与实际用法不符
+  categoryConfig: Record<string, CategoryConfig>;
 }
 
 const bigCategories = [
@@ -100,12 +105,15 @@ export function MaterialFilters({
   };
 
   const handleChange = (field: keyof MaterialFiltersState, value: string | boolean) => {
+    // 2026-09-27 类型修复：按字段收窄 string/boolean，此前直接把 string|boolean 赋给 string 字段
     if (field === 'searchBigCategory') {
-      onFiltersChange({ ...filters, searchBigCategory: value, searchMidCategory: '', searchSubCategory: '' });
+      onFiltersChange({ ...filters, searchBigCategory: String(value), searchMidCategory: '', searchSubCategory: '' });
     } else if (field === 'searchMidCategory') {
-      onFiltersChange({ ...filters, searchMidCategory: value, searchSubCategory: '' });
+      onFiltersChange({ ...filters, searchMidCategory: String(value), searchSubCategory: '' });
+    } else if (field === 'showLowStock') {
+      onFiltersChange({ ...filters, showLowStock: Boolean(value) });
     } else {
-      onFiltersChange({ ...filters, [field]: value });
+      onFiltersChange({ ...filters, [field]: String(value) });
     }
   };
 
@@ -201,7 +209,6 @@ export function MaterialFilters({
             onClick={() => onFiltersChange({
               code: '',
               name: '',
-              category: '全部',
               supplier: '',
               location: '',
               searchBigCategory: '',

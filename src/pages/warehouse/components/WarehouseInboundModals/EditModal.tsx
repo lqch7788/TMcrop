@@ -4,23 +4,29 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Plus, Save, Trash2, X, XCircle } from 'lucide-react';
-import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
+import { AlertTriangle, Plus, RotateCcw, Save, Trash2, X, XCircle } from 'lucide-react';
+import { InboundRecord, InboundMaterial } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useSupplierStore } from '@/stores/useSupplierStore';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface InboundEditModalProps {
   record: InboundRecord | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (record: InboundRecord) => void;
+  /** 2026-09-27：请求冲销（红字单）——由页面打开冲销弹窗 */
+  onRequestReversal?: (record: InboundRecord) => void;
+  /** 2026-09-27：该单是否已被冲销（已冲销则隐藏"冲销"入口，防重复冲销） */
+  isReversed?: boolean;
 }
 
 export const InboundEditModal: React.FC<InboundEditModalProps> = ({
@@ -28,6 +34,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onRequestReversal,
+  isReversed = false,
 }) => {
   // 供应商列表
   const suppliers = useSupplierStore((s) => s.items);
@@ -67,14 +75,13 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
       code: '',
       name: '',
       category: '',
-      bigCategory: '',
-      midCategory: '',
-      subCategory: '',
       specification: '',
       barcode: '',
       unit: '袋',
       quantity: 0,
+      // 2026-09-27：库存阈值不在入库明细维护（属物料主数据，在物料库存页编辑/批量编辑）
       price: '',
+      supplier: '',
       location: '',
       batchNo: '',
       productionDate: '',
@@ -84,9 +91,28 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
     setEditedMaterials([...editedMaterials, newMaterial]);
   };
 
+  /**
+   * 作废已完成入库单（2026-09-27）：
+   * 后端在同一事务内回收库存（数量/批次账/流水），单据保留为"已作废"供追溯；作废后可删除单据。
+   * 此前该按钮是 showAlert 占位（功能未实现），导致"已完成单既删不掉、也无法作废"的死胡同。
+   */
+  const handleVoid = async () => {
+    const ok = await showConfirm(
+      '作废将立即回收该单的全部入库库存（数量、批次账、流水），单据保留为"已作废"可追溯。\n作废后可删除该单据。确定作废？'
+    );
+    if (!ok) return;
+    // 走 PUT（onSave → hook.onSaveInboundEdit）：后端检测 completed→voided 触发库存回收
+    onSave({ ...record, status: 'voided' });
+  };
+
   // 保存
   const handleSave = () => {
-    onSave({ ...record, supplier: editedSupplier, materials: editedMaterials });
+    // 2026-09-27：明细继承单头供应商（与新增弹窗同口径，后端另有单头兜底）
+    const materialsWithSupplier = editedMaterials.map(m => ({
+      ...m,
+      supplier: m.supplier || editedSupplier,
+    }));
+    onSave({ ...record, supplier: editedSupplier, materials: materialsWithSupplier });
     onClose();
   };
 
@@ -106,10 +132,32 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          {record.status === 'completed' && (
-            <Button variant="warning" onClick={() => showAlert('申请作废功能待实现')}>
-              <XCircle className="w-4 h-4" /> 申请作废
-            </Button>
+          {/* 2026-09-27：冲销单为不可变更凭证（红字单），不提供任何修改/作废/再冲销操作 */}
+          {record.recordType === 'reversal' ? (
+            <span className="text-sm text-gray-500 mr-auto self-center">
+              冲销单为不可变更凭证，仅供查看；如需纠正请对新的入库单操作
+            </span>
+          ) : record.status === 'completed' && (
+            <>
+              {/* 2026-09-27：冲销（红字单）——适用于货已被领用、无法全额作废的场景；
+                  作废仅适用于货未动用的场景（全额回收），冲销按"仍在库存中的量"回收；
+                  已冲销的单隐藏该入口（防重复冲销） */}
+              {!isReversed && (
+                <Button
+                  variant="outline"
+                  onClick={() => onRequestReversal?.(record)}
+                  title="冲销：原单保留，生成红字单并回收仍在库存中的数量（已领用部分不回收）"
+                >
+                  <RotateCcw className="w-4 h-4" /> 冲销
+                </Button>
+              )}
+              {isReversed && (
+                <span className="text-xs text-gray-500 self-center mr-2">该单已被冲销</span>
+              )}
+              <Button variant="warning" onClick={handleVoid} title="作废：适用于货未动用的场景（全额回收入库量）">
+                <XCircle className="w-4 h-4" /> 作废（回收库存）
+              </Button>
+            </>
           )}
           {record.status === 'pending' && (
             <Button variant="blue" onClick={handleSave}>
@@ -187,7 +235,7 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               )}
             </div>
             <div className="overflow-auto rounded-lg border border-gray-200 bg-white max-h-80">
-              <Table className="text-xs" style={{ minWidth: '1200px' }}>
+              <Table className="text-xs" style={{ minWidth: '1500px' }}>
                 <TableHeader>
                   <TableRow className="bg-blue-50 sticky top-0 z-10">
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">操作</TableHead>
@@ -195,12 +243,15 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">物料名称</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">分类</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">规格</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">条形码</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">单位</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">数量</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">单价</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">存放位置</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">批号</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">生产日期</TableHead>
                     <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">有效期至</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">备注</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -287,6 +338,18 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
+                            value={m.barcode}
+                            onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
+                            className="h-6 px-1 text-xs"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-600">{m.barcode || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
+                        {record.status === 'pending' ? (
+                          <Input
+                            type="text"
                             value={m.unit}
                             onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
                             className="h-6 px-1 text-xs"
@@ -323,6 +386,18 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
+                            value={m.location}
+                            onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
+                            className="h-6 px-1 text-xs"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-600">{m.location || '-'}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
+                        {record.status === 'pending' ? (
+                          <Input
+                            type="text"
                             value={m.batchNo}
                             onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
                             className="h-6 px-1 text-xs"
@@ -333,11 +408,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </TableCell>
                       <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <Input
-                            type="text"
-                            value={m.productionDate}
-                            onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
-                            className="h-6 px-1 text-xs"
+                          // 2026-09-27：与新增弹窗统一为日期选择器（此前为纯文本输入，格式易错）
+                          <DatePicker
+                            selected={m.productionDate ? new Date(m.productionDate) : undefined}
+                            onChange={(date) => handleMaterialChange(m.id, 'productionDate', todayLocal(date))}
+                            placeholder="生产日期"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.productionDate || '-'}</span>
@@ -345,14 +420,26 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </TableCell>
                       <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <Input
-                            type="text"
-                            value={m.expiryDate}
-                            onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
-                            className="h-6 px-1 text-xs"
+                          <DatePicker
+                            selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
+                            onChange={(date) => handleMaterialChange(m.id, 'expiryDate', todayLocal(date))}
+                            placeholder="有效期至"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.expiryDate || '-'}</span>
+                        )}
+                      </TableCell>
+                      {/* 2026-09-27：库存阈值（minStock/maxStock）属物料主数据，不在入库明细维护（改由物料库存页编辑） */}
+                      <TableCell className="px-1 py-1.5">
+                        {record.status === 'pending' ? (
+                          <Input
+                            type="text"
+                            value={m.remarks}
+                            onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
+                            className="h-6 px-1 text-xs"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-600">{m.remarks || '-'}</span>
                         )}
                       </TableCell>
                     </TableRow>

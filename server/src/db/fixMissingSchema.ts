@@ -31,6 +31,9 @@ export async function fixMissingSchema(): Promise<void> {
 
   seedLog.info('开始修复数据库结构...\n');
 
+  // 注 2026-09-27: materials.remarks 列已迁移至 server/scripts/db-migrations/addMaterialsRemarksColumn.ts
+  //   原因: 启动白名单禁用了 fixMissingSchema（YELLOW 级），所有 schema 变更需走 scripts 路径
+
   // 1. 修复 positions 表 - 添加 description 和 sort_order 列
   try {
     db.run(`ALTER TABLE positions ADD COLUMN description TEXT`);
