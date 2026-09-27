@@ -1,7 +1,7 @@
 // StatisticsTab 组件 - 领料统计页面主组件
 // 负责组合所有子组件，呈现完整的统计页面功能
 // 2026-09-26: 删除 AI 助手（AIPanel）—— 功能已在智能任务中心存在，不应放在这里
-import { Calendar, BarChart2 } from 'lucide-react';
+import { Calendar, BarChart2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 // 导入hook
@@ -13,6 +13,7 @@ import { MonthlyFilters } from './components/MonthlyFilters';
 import { MonthlyTable } from './components/MonthlyTable';
 import { MaterialFilters } from './components/MaterialFilters';
 import { MaterialTable } from './components/MaterialTable';
+import { MaterialTopRanking } from './components/MaterialTopRanking';
 import { Pagination } from '@/components/ui';
 
 // 弹窗组件
@@ -42,38 +43,49 @@ export default function StatisticsTab() {
   // ============================================
   return (
     <>
-      {/* Tab切换 - 子Tab（统计页面内部） */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 pt-4 pb-0 mb-4">
-        <div className="flex gap-6 border-b border-gray-200">
+      {/* Tab切换 - 子Tab（2026-09-27 用户要求：两个子 tab 紧凑分段控件，不再分散） */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 pt-4 pb-3 mb-4">
+        <div className="flex items-center justify-between">
+          {/* 紧凑分段控件：月度汇总 / 分类汇总 */}
+          <div className="inline-flex gap-1 bg-gray-100 rounded-lg p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { hook.setStatActiveTab('monthly'); hook.setStatCurrentPage(1); }}
+              className={`text-sm font-semibold ${
+                hook.statActiveTab === 'monthly'
+                  ? 'bg-white shadow-sm text-emerald-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              月度汇总
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { hook.setStatActiveTab('material'); hook.setStatCurrentPage(1); }}
+              className={`text-sm font-semibold ${
+                hook.statActiveTab === 'material'
+                  ? 'bg-white shadow-sm text-emerald-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              分类汇总
+            </Button>
+          </div>
+          {/* 2026-09-27 审计修复（B2）：数据刷新按钮——申请/出库操作后手动刷新统计 */}
           <Button
             variant="ghost"
-            onClick={() => { hook.setStatActiveTab('monthly'); hook.setStatCurrentPage(1); }}
-            className={`relative pb-3 text-sm font-semibold ${
-              hook.statActiveTab === 'monthly'
-                ? 'text-emerald-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            size="sm"
+            onClick={() => hook.refreshStatistics()}
+            disabled={hook.statRefreshing}
+            className="text-gray-500 hover:text-gray-700"
+            title="刷新统计数据"
           >
-            <Calendar className="w-4 h-4" />
-            月度汇总
-            {hook.statActiveTab === 'monthly' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => { hook.setStatActiveTab('material'); hook.setStatCurrentPage(1); }}
-            className={`relative pb-3 text-sm font-semibold ${
-              hook.statActiveTab === 'material'
-                ? 'text-emerald-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <BarChart2 className="w-4 h-4" />
-            分类汇总
-            {hook.statActiveTab === 'material' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
-            )}
+            <RefreshCw className={`w-4 h-4 ${hook.statRefreshing ? 'animate-spin' : ''}`} />
+            {hook.statRefreshing ? '刷新中...' : '刷新'}
           </Button>
         </div>
 
@@ -86,9 +98,11 @@ export default function StatisticsTab() {
                 yearFilter={hook.statYearFilter}
                 selectedMonth={hook.selectedMonth}
                 onMonthChange={hook.setSelectedMonth}
+                yearCategories={hook.statYearCategorySummary}
+                yearAmount={hook.statYearCategorySummary.reduce((sum: number, c: any) => sum + c.amount, 0)}
               />
-              {/* 分类汇总卡片 */}
-              <CategorySummaryCards />
+              {/* 分类汇总卡片（按年联动，2026-09-27 A1） */}
+              <CategorySummaryCards yearCategories={hook.statYearCategorySummary} />
             </div>
           )}
 
@@ -97,8 +111,11 @@ export default function StatisticsTab() {
             <MonthlyFilters
               yearFilter={hook.statYearFilter}
               monthFilter={hook.statMonthFilter}
+              deptFilter={hook.statMonthlyDeptFilter}
+              deptOptions={hook.monthlyDeptOptions}
               onYearChange={hook.setStatYearFilter}
               onMonthChange={hook.setStatMonthFilter}
+              onDeptChange={hook.setStatMonthlyDeptFilter}
               onReset={hook.handleStatReset}
               onPageChange={hook.setStatCurrentPage}
               onExpandedMonthsChange={hook.resetExpandedMonths}
@@ -114,7 +131,6 @@ export default function StatisticsTab() {
               categoryFilter={hook.statCategoryFilter}
               warehouseFilter={hook.statWarehouseFilter}
               supplierFilter={hook.statSupplierFilter}
-              batchCodeFilter={hook.statBatchCodeFilter}
               productionPlanFilter={hook.statProductionPlanFilter}
               usageAreaFilter={hook.statUsageAreaFilter}
               requisitionerFilter={hook.statRequisitionerFilter}
@@ -126,7 +142,6 @@ export default function StatisticsTab() {
               onCategoryChange={hook.setStatCategoryFilter}
               onWarehouseChange={hook.setStatWarehouseFilter}
               onSupplierChange={hook.setStatSupplierFilter}
-              onBatchCodeChange={hook.setStatBatchCodeFilter}
               onProductionPlanChange={hook.setStatProductionPlanFilter}
               onUsageAreaChange={hook.setStatUsageAreaFilter}
               onRequisitionerChange={hook.setStatRequisitionerFilter}
@@ -156,6 +171,11 @@ export default function StatisticsTab() {
               onCancelExport={hook.handleStatCancelExport}
               onExportModeChange={hook.setStatExportMode}
             />
+          )}
+
+          {/* 2026-09-27 审计缺功能补完（B7）：物料领用 TOP10 排行 */}
+          {hook.statActiveTab === 'material' && (
+            <MaterialTopRanking data={hook.materialStatFilteredData} />
           )}
 
           {/* 物料汇总表格 */}

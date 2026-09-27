@@ -127,8 +127,8 @@ export { useMaterialCodeRuleStore } from './useMaterialCodeRuleStore';
 export type { BigCategory, MidCategory, SubCategory } from './useMaterialCodeRuleStore';
 
 export { useExecuteDataStore } from './useExecuteDataStore';
-export { useStatisticsStore, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getSingleMonthTableData, getMonthCategoryData, getMonthSummary } from './useStatisticsStore';
-export type { MaterialStatItem, MonthlyStatItem, CategorySummaryItem, CategoryTrendItem, MonthSummaryRow, MonthDetailRow } from './useStatisticsStore';
+export { useStatisticsStore, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getSingleMonthTableData, getMonthCategoryData, getMonthSummary, getCategorySummaryByYear, getMonthSummariesWithActual, getTrendTotalByMonth } from './useStatisticsStore';
+export type { MaterialStatItem, MonthlyStatItem, CategorySummaryItem, CategoryTrendItem, MonthSummaryRow, MonthDetailRow, MonthSummaryWithActual } from './useStatisticsStore';
 
 export { useNotificationStore, type Notification, type NotificationVariant } from './useNotificationStore';
 

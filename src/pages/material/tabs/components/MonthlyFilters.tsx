@@ -1,5 +1,5 @@
 // MonthlyFilters 组件 - 月度筛选表单
-// 月度汇总Tab专用的年份和月份筛选
+// 月度汇总Tab专用的年份、月份与部门筛选
 import { Button } from '@/components/ui';
 import { RotateCcw } from 'lucide-react';
 
@@ -11,10 +11,16 @@ interface MonthlyFiltersProps {
   yearFilter: string;
   /** 当前选择的月份 */
   monthFilter: string;
+  /** 2026-09-27 审计修复（B6）：部门筛选 */
+  deptFilter: string;
+  /** 部门选项（从 monthlyStatistics 聚合） */
+  deptOptions: string[];
   /** 设置年份 */
   onYearChange: (year: string) => void;
   /** 设置月份 */
   onMonthChange: (month: string) => void;
+  /** 设置部门 */
+  onDeptChange: (dept: string) => void;
   /** 重置筛选 */
   onReset: () => void;
   /** 设置当前页码 */
@@ -26,12 +32,20 @@ interface MonthlyFiltersProps {
 export function MonthlyFilters({
   yearFilter,
   monthFilter,
+  deptFilter,
+  deptOptions,
   onYearChange,
   onMonthChange,
+  onDeptChange,
   onReset,
   onPageChange,
   onExpandedMonthsChange,
 }: MonthlyFiltersProps) {
+  // 2026-09-27 修复：年份选项动态生成（当前年往前 4 年）——此前硬编码 2023-2025，
+  // 而默认年份是当年（2026），下拉无当前年选项导致 Select 显示空白
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+
   return (
     <div className="bg-gray-50 rounded-lg p-4">
       <div className="flex items-end gap-4">
@@ -48,9 +62,9 @@ export function MonthlyFilters({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025">2025年</SelectItem>
-              <SelectItem value="2024">2024年</SelectItem>
-              <SelectItem value="2023">2023年</SelectItem>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={y}>{y}年</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -60,7 +74,7 @@ export function MonthlyFilters({
             value={monthFilter}
             onValueChange={(v) => {
               onMonthChange(v);
-              onExpandedMonthsChange(new Set());
+              onExpandedMonthsChange();
               onPageChange(1);
             }}
           >
@@ -84,12 +98,34 @@ export function MonthlyFilters({
             </SelectContent>
           </Select>
         </div>
+        {/* 2026-09-27 审计修复（B6）：月度汇总按部门筛选 */}
+        <div className="flex-1">
+          <Label className="block text-sm font-medium text-gray-900 mb-1">部门</Label>
+          <Select
+            value={deptFilter}
+            onValueChange={(v) => {
+              onDeptChange(v);
+              onPageChange(1);
+            }}
+          >
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部部门</SelectItem>
+              {deptOptions.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           variant="warning"
           onClick={() => {
             onYearChange(String(new Date().getFullYear()));
             onMonthChange('all');
-            onExpandedMonthsChange(new Set());
+            onDeptChange('all');
+            onExpandedMonthsChange();
             onPageChange(1);
           }}
         >

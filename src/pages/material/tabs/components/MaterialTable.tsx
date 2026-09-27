@@ -92,10 +92,13 @@ export function MaterialTable({
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">领料部门</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">用途/区域</th>
               <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">领料人</th>
-              <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">领料次数</th>
+              {/* 2026-09-27 修复：requisitionCount 语义是"物料行出现次数"，改名避免误读为单据数 */}
+              <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">出现次数</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总数量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">实际数量</th>
               <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">总金额(元)</th>
+              {/* 2026-09-27 审计修复（B5）：实发金额列（后端已聚合，此前未展示） */}
+              <th className="px-3 py-3 text-right text-sm font-semibold whitespace-nowrap">实发金额(元)</th>
               {!exportMode && (
                 <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               )}
@@ -126,6 +129,10 @@ export function MaterialTable({
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.totalQuantity.toLocaleString()}</td>
                   <td className="px-3 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">{item.actualQuantity.toLocaleString()}</td>
                   <td className="px-3 py-3 text-sm text-right font-bold text-emerald-600 whitespace-nowrap">¥{item.totalAmount.toLocaleString()}</td>
+                  {/* 2026-09-27（B5）：实发金额 */}
+                  <td className="px-3 py-3 text-sm text-right font-medium text-blue-700 whitespace-nowrap">
+                    ¥{(item.actualAmount ?? 0).toLocaleString()}
+                  </td>
                   {!exportMode && (
                     <td className="px-3 py-3 text-center whitespace-nowrap">
                       <Button
