@@ -341,6 +341,31 @@ async function start() {
       console.warn('[materialReceivingDataRepair] 启动修复失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-09-27：领料链路存量对账修复（GREEN 级独立模块，幂等）
+    // 三项：物料两本账对账（19/74 不一致）/ 出库单孤儿引用清理 / 幽灵审批单清理（用户授权"全部修复"）
+    // 顺序要求：放在 materialReceivingDataRepair 之后（追溯补扣已改完两账，再对账收尾）
+    try {
+      const { reconcileMaterialLedger } = await import('./db/materialLedgerReconciliation');
+      const result = reconcileMaterialLedger();
+      if (result.duplicateCodesResolved.length > 0 || result.ledgerAdjusted.length > 0 || result.orphanRefsCleaned.length > 0 || result.ghostApprovalsCancelled.length > 0) {
+        console.log('[materialLedgerReconciliation] 对账修复摘要:');
+        if (result.duplicateCodesResolved.length > 0) {
+          console.log(`  重复编码处理 ${result.duplicateCodesResolved.length} 组:`);
+          result.duplicateCodesResolved.forEach((x) => console.log(`    ${x.oldCode}（保留 id=${x.keptId}）: ${x.renamed.map((r) => `id=${r.id}「${r.name}」→ ${r.newCode}`).join('; ')}`));
+        }
+        if (result.ledgerAdjusted.length > 0) {
+          console.log(`  两本账调整 ${result.ledgerAdjusted.length} 项:`);
+          result.ledgerAdjusted.forEach((x) => console.log(`    ${x.code}: 主表${x.mainQty}/批次${x.batchQtyBefore} 差${x.diff} → ${x.action}`));
+        }
+        if (result.orphanRefsCleaned.length > 0) console.log(`  孤儿引用清理: ${result.orphanRefsCleaned.map((x) => `${x.executeCode} 移除[${x.removedCodes.join(',')}]`).join('; ')}`);
+        if (result.ghostApprovalsCancelled.length > 0) console.log(`  幽灵审批单取消: ${result.ghostApprovalsCancelled.map((x) => `${x.approvalId}(${x.requestCode})`).join('; ')}`);
+      } else {
+        console.log('[materialLedgerReconciliation] 账目一致，无需修复');
+      }
+    } catch (e: any) {
+      console.warn('[materialLedgerReconciliation] 启动对账失败（不影响主流程）:', e?.message || e);
+    }
+
     // Step 3: 启动后 db 状态对比
     if (dbFileExists) {
       const compare = postStartupCompare(preCheck.snapshot);

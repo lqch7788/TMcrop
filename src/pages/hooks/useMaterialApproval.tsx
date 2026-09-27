@@ -59,11 +59,12 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
     item: null
   });
 
-  // 拒绝原因弹窗状态
+  // 审批意见弹窗状态（2026-09-27：拒绝原因 / 通过意见 双模式共用）
   const [rejectModal, setRejectModal] = useState<RejectModalState>({
     show: false,
     item: null,
-    reason: ''
+    reason: '',
+    mode: 'reject'
   });
 
   // Tab配置
@@ -142,39 +143,41 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
     setDetailModal({ show: false, item: null });
   }, []);
 
-  // 拒绝弹窗操作
+  // 拒绝弹窗操作（2026-09-27 审计修复：同一弹窗复用为"通过意见/拒绝原因"双模式）
   const handleRejectClick = useCallback((item: Approval) => {
-    setRejectModal({ show: true, item, reason: '' });
+    setRejectModal({ show: true, item, reason: '', mode: 'reject' });
   }, []);
 
   const handleConfirmReject = useCallback(() => {
-    if (!rejectModal.reason.trim()) {
+    // 拒绝原因必填；通过意见选填（2026-09-27：此前通过不传意见，审批意见恒为空）
+    if (rejectModal.mode === 'reject' && !rejectModal.reason.trim()) {
       showAlert('请输入拒绝原因');
       return;
     }
     if (rejectModal.item) {
-      reject(rejectModal.item.id, rejectModal.reason);
+      if (rejectModal.mode === 'approve') {
+        approve(rejectModal.item.id, rejectModal.reason.trim() || undefined);
+      } else {
+        reject(rejectModal.item.id, rejectModal.reason);
+      }
     }
-    setRejectModal({ show: false, item: null, reason: '' });
+    setRejectModal({ show: false, item: null, reason: '', mode: 'reject' });
     handleCloseDetail();
-  }, [rejectModal, reject, handleCloseDetail]);
+  }, [rejectModal, approve, reject, handleCloseDetail]);
 
   const handleCancelReject = useCallback(() => {
-    setRejectModal({ show: false, item: null, reason: '' });
+    setRejectModal({ show: false, item: null, reason: '', mode: 'reject' });
   }, []);
 
-  // 设置拒绝原因
+  // 设置拒绝原因 / 通过意见
   const setRejectReason = useCallback((reason: string) => {
     setRejectModal(prev => ({ ...prev, reason }));
   }, []);
 
-  // 通过审批
-  const handleApprove = useCallback(async (item: Approval) => {
-    if (await showConfirm(`确定要通过「${item.title}」吗？`)) {
-      approve(item.id);
-      handleCloseDetail();
-    }
-  }, [approve, handleCloseDetail]);
+  // 通过审批（2026-09-27：改为弹出意见输入弹窗，意见可选填）
+  const handleApprove = useCallback((item: Approval) => {
+    setRejectModal({ show: true, item, reason: '', mode: 'approve' });
+  }, []);
 
   // 物料分类辅助函数
   const getCategoryByCode = useCallback((code: string): string => {

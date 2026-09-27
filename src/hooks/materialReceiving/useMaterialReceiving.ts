@@ -559,7 +559,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
     // 同步创建审批记录（核心联动功能）
     if (approvalContext && newRecord) {
       const approval: Approval = {
-        id: `MAT-AP-${Date.now()}`,
+        id: `MAT-AP-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         code: newCode,
         type: ApprovalType.MATERIAL_REQUEST,
         typeName: '领料单',

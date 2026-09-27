@@ -53,7 +53,9 @@ function getCategoryKey(name: string): string {
 router.get('/', (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const results = db.exec('SELECT * FROM material_requests ORDER BY apply_date ASC');
+    // 2026-09-27 审计修复：排序改为"最近优先"——物料行的部门/领用人/时间元数据取首个即
+    // 最近一单（此前 ASC 取最早一单，按部门/领用人筛选会误判到最早的旧单上）
+    const results = db.exec('SELECT * FROM material_requests ORDER BY apply_date DESC');
     const resultSet = results.length > 0 ? results[0] : null;
     const columns: string[] = resultSet ? resultSet.columns : [];
     // values 是二维数组 [[行1_val1, 行1_val2, ...], [行2_val1, ...]]
@@ -70,9 +72,62 @@ router.get('/', (_req: Request, res: Response) => {
         })
       : [];
 
+    // 2026-09-27 审计修复：只统计"已审批"申请单——此前 draft/pending/rejected/voided
+    // 全部计入统计（与列表接口的状态过滤不一致，统计口径虚高）
+    const approvedRecords = records.filter((r) => {
+      const st = String((r as any).status || '');
+      const aps = String((r as any).approval_status || '');
+      return st === 'approved' || aps === 'approved';
+    });
+
+    // 2026-09-27 审计修复：实发量从出库单聚合——此前申请单行无 actualQuantity 字段，
+    // actual_quantity 恒等于申请量、差异率恒为 0（统计页展示的是申请量而非实发量）。
+    // 按"行级 applicationCode"归属到申请单；只统计已扣库存的出库单（completed/partial）。
+    const dispatchedByRequest = new Map<string, Map<string, number>>();
+    try {
+      const exRows = db.exec('SELECT source_application_codes, execute_status_class, materials FROM material_executes');
+      if (exRows.length > 0) {
+        const cols = exRows[0].columns;
+        const srcIdx = cols.indexOf('source_application_codes');
+        const clsIdx = cols.indexOf('execute_status_class');
+        const matIdx = cols.indexOf('materials');
+        for (const row of exRows[0].values) {
+          const cls = String(row[clsIdx] || '');
+          if (cls !== 'completed' && cls !== 'partial') continue;
+          let srcList: string[] = [];
+          try { const p = JSON.parse(String(row[srcIdx] || '[]')); srcList = Array.isArray(p) ? p.map(String) : []; } catch { /* 忽略脏数据 */ }
+          let mats: any[] = [];
+          try { const p = JSON.parse(String(row[matIdx] || '[]')); mats = Array.isArray(p) ? p : []; } catch { /* 忽略脏数据 */ }
+          for (const m of mats) {
+            const code = m.materialCode || m.code || '';
+            const qty = Number(m.actualQuantity ?? m.actualQty ?? m.quantity ?? 0) || 0;
+            if (!code || qty <= 0) continue;
+            // 行级来源优先；缺省时回退到单据级来源（历史数据兼容）
+            const lineSrc = String(m.applicationCode || '');
+            const targets = lineSrc ? [lineSrc] : srcList;
+            for (const rc of targets) {
+              const perMat = dispatchedByRequest.get(rc) || new Map<string, number>();
+              perMat.set(code, (perMat.get(code) || 0) + qty);
+              dispatchedByRequest.set(rc, perMat);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[material-statistics] 出库聚合失败（降级为仅申请量口径）:', e);
+    }
+
+    /** 全局物料实发量（跨申请单累加，物料统计行用） */
+    const dispatchedByMaterial = new Map<string, number>();
+    for (const perMat of dispatchedByRequest.values()) {
+      for (const [code, qty] of perMat) {
+        dispatchedByMaterial.set(code, (dispatchedByMaterial.get(code) || 0) + qty);
+      }
+    }
+
     // ------ 1. 物料级别统计 ------
     const materialMap = new Map<string, any>();
-    for (const rec of records) {
+    for (const rec of approvedRecords) {
       const mats = (rec.materials as any[]) || [];
       for (const m of mats) {
         const code = m.materialCode || m.code || '';
@@ -105,15 +160,22 @@ router.get('/', (_req: Request, res: Response) => {
         const entry = materialMap.get(key);
         entry.requisition_count += 1;
         entry.total_quantity += Number(m.requestedQuantity || m.quantity || 0);
-        entry.actual_quantity += Number(m.actualQuantity || m.requestedQuantity || m.quantity || 0);
         entry.total_amount += Number(m.unitPrice || 0) * Number(m.requestedQuantity || m.quantity || 0);
       }
+    }
+    // 2026-09-27 审计修复：实发量/实发金额 = 出库单聚合结果（此前恒等于申请量；
+    // 实发金额按"申请金额/申请量"单价 × 实发量估算，用于差异分析）
+    for (const entry of materialMap.values()) {
+      const dispatched = dispatchedByMaterial.get(entry.material_code) || 0;
+      entry.actual_quantity = dispatched;
+      const unitPrice = entry.total_quantity > 0 ? entry.total_amount / entry.total_quantity : 0;
+      entry.actual_amount = Math.round(dispatched * unitPrice * 100) / 100;
     }
     const materialStatistics = Array.from(materialMap.values());
 
     // ------ 2. 月度统计（按部门）------
     const monthlyMap = new Map<string, any>();
-    for (const rec of records) {
+    for (const rec of approvedRecords) {
       const applyDate = String((rec as any).apply_date || '');
       if (!applyDate) continue;
       const parts = applyDate.split('-');
@@ -122,10 +184,13 @@ router.get('/', (_req: Request, res: Response) => {
       if (!year || !month) continue;
       const dept = (rec as any).department_name || '';
       const key = `${year}-${month}-${dept}`;
+      // 2026-09-27 审计修复：该单实发量 = 出库单按行归属到本单的实发量（此前恒等于申请量）
+      const reqCode = String((rec as any).request_code || '');
+      const perMatDispatched = dispatchedByRequest.get(reqCode) || new Map<string, number>();
       if (!monthlyMap.has(key)) {
         const mats = (rec.materials as any[]) || [];
         const totalQty = mats.reduce((s: number, m: any) => s + Number(m.requestedQuantity || m.quantity || 0), 0);
-        const actualQty = mats.reduce((s: number, m: any) => s + Number(m.actualQuantity || m.requestedQuantity || m.quantity || 0), 0);
+        const actualQty = mats.reduce((s: number, m: any) => s + (perMatDispatched.get(m.materialCode || m.code || '') || 0), 0);
         const totalAmt = mats.reduce((s: number, m: any) => s + Number(m.unitPrice || 0) * Number(m.requestedQuantity || m.quantity || 0), 0);
         monthlyMap.set(key, {
           year, month,
@@ -144,7 +209,7 @@ router.get('/', (_req: Request, res: Response) => {
         entry.requisition_count += 1;
         entry.material_types = new Set([...entry.material_types, ...matTypes]);
         entry.total_quantity += mats.reduce((s: number, m: any) => s + Number(m.requestedQuantity || m.quantity || 0), 0);
-        entry.actual_quantity += mats.reduce((s: number, m: any) => s + Number(m.actualQuantity || m.requestedQuantity || m.quantity || 0), 0);
+        entry.actual_quantity += mats.reduce((s: number, m: any) => s + (perMatDispatched.get(m.materialCode || m.code || '') || 0), 0);
         entry.total_amount += mats.reduce((s: number, m: any) => s + Number(m.unitPrice || 0) * Number(m.requestedQuantity || m.quantity || 0), 0);
         entry.difference_rate = entry.total_quantity > 0 ? ((entry.actual_quantity - entry.total_quantity) / entry.total_quantity * 100) : 0;
       }
@@ -157,7 +222,7 @@ router.get('/', (_req: Request, res: Response) => {
 
     // ------ 3. 分类汇总（饼图数据 + 真实金额）------
     const categoryMap = new Map<string, { qty: number; amount: number }>();
-    for (const rec of records) {
+    for (const rec of approvedRecords) {
       const mats = (rec.materials as any[]) || [];
       for (const m of mats) {
         const code = m.materialCode || m.code || '';
@@ -180,7 +245,7 @@ router.get('/', (_req: Request, res: Response) => {
 
     // ------ 4. 分类趋势（月度堆叠柱状图）------
     const trendMap = new Map<string, Record<string, any>>();
-    for (const rec of records) {
+    for (const rec of approvedRecords) {
       const applyDate = String((rec as any).apply_date || '');
       if (!applyDate) continue;
       const ym = applyDate.substring(0, 7); // YYYY-MM

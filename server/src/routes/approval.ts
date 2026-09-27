@@ -1495,6 +1495,34 @@ router.post('/batch-action', (req, res) => {
           id,
         ]);
 
+        // 2026-09-27 审计修复：批量审批此前不回写业务表——终态时调 updateBusinessTable，
+        // 与单条 PATCH /:id/action 的联动行为对齐（此前只有前端逐条调用才生效）
+        if (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'cancelled' || newStatus === 'partially_approved') {
+          try {
+            // 兼容单层/双重转义的 business_link 解析（与单条端点的 parseJsonObject 同逻辑，
+            // 此处内联实现——parseJsonObject 是单条 handler 内的局部函数，不跨 handler 可见）
+            let rawLink: unknown = approval.business_link;
+            for (let i = 0; i < 3 && typeof rawLink === 'string'; i++) {
+              try { rawLink = JSON.parse(rawLink as string); } catch { break; }
+            }
+            const businessLink = (rawLink && typeof rawLink === 'object')
+              ? rawLink as { type?: string; requestId?: string; requestCode?: string }
+              : null;
+            if (businessLink?.type && businessLink?.requestId) {
+              const linkageAction = newStatus === 'approved' ? 'approved' as const
+                : newStatus === 'rejected' ? 'rejected' as const
+                : newStatus === 'cancelled' ? 'cancelled' as const
+                : 'partially_approved' as const;
+              const linkResult = updateBusinessTable(db, businessLink.type, businessLink.requestId, linkageAction, String(approval.code || ''), businessLink);
+              if (!linkResult.success) {
+                console.warn(`【批量审批联动】${businessLink.type} 更新失败: ${linkResult.message}`);
+              }
+            }
+          } catch (linkErr) {
+            console.error('【批量审批联动】更新业务表失败:', linkErr);
+          }
+        }
+
         results.push({ id, success: true });
       } catch (err) {
         results.push({ id, success: false, error: '处理异常' });

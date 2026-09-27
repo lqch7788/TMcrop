@@ -12,6 +12,20 @@
 import { getDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 
+/**
+ * 出库记录页纳入的流水类型（2026-09-27 用户要求：并入 material 类型）
+ * 语义 = 库存"减少"方向：种源/种苗/成品出库 + 领料出库 + 追溯补扣 + 撤销退料回收。
+ * 不纳入 material_restore（出库恢复）与 material_return_in（退料入库）——那是增加方向。
+ * SQL 字面量为固定白名单常量（无用户输入拼接，无注入面）。
+ */
+const OUTBOUND_TRANSACTION_TYPES = [
+  'outbound',
+  'material_outbound',
+  'material_outbound_retroactive',
+  'material_return_undo',
+] as const;
+const OUTBOUND_TYPES_SQL = OUTBOUND_TRANSACTION_TYPES.map((t) => `'${t}'`).join(', ');
+
 export interface TransactionQuery {
   from: string;                   // YYYY-MM-DD 必填
   to: string;                     // YYYY-MM-DD 必填
@@ -50,6 +64,8 @@ export interface OutboundRow {
   plantingMode?: string;
   grade?: string;
   greenhouseName?: string;
+  // JOIN materials 字段（2026-09-27 material 类型并入后补充，仅领料流水有值）
+  materialName?: string;
 }
 
 export interface OutboundSummary {
@@ -75,8 +91,9 @@ export class InventoryTransactionRepository {
 
     // WHERE 子句条件（针对 transactions 表自身字段）
     // 2026-08-13：from/to 改为可选——空时返回全部记录
+    // 2026-09-27：并入 material 类型（领料出库/追溯补扣/撤销退料），见顶部常量
     const where: string[] = [
-      `t.transaction_type = 'outbound'`,
+      `t.transaction_type IN (${OUTBOUND_TYPES_SQL})`,
     ];
     const whereParams: any[] = [];
     if (from)         { where.push(`t.operate_date >= ?`);  whereParams.push(from); }
@@ -102,16 +119,19 @@ export class InventoryTransactionRepository {
         t.remarks, t.create_time AS createTime,
         s.crop_name AS cropName, s.variety_name AS varietyName, s.crop_code AS cropCode, s.unit,
         s.warehouse_name AS warehouseName, s.planting_mode AS plantingMode, s.grade,
-        s.greenhouse_name AS greenhouseName
+        s.greenhouse_name AS greenhouseName,
+        m.name AS materialName
       FROM inventory_transaction t
       LEFT JOIN inventory_stock s
         ON s.instance_id = t.instance_id
         ${onSql}
+      LEFT JOIN materials m
+        ON t.stock_type = 'material' AND m.code = t.instance_id
       WHERE ${where.join(' AND ')}
       -- 2026-06-08 出库记录列表：按业务类型分组（种源→种苗→成品），同类型实例ID聚在一起
-      -- stock_type 业务顺序映射：seed=种源(INS) → seedling=种苗(ISE) → product=成品(IPR)
+      -- stock_type 业务顺序映射：seed=种源(INS) → seedling=种苗(ISE) → product=成品(IPR) → material=物料
       ORDER BY t.operate_date DESC,
-        CASE t.stock_type WHEN 'seed' THEN 1 WHEN 'seedling' THEN 2 WHEN 'product' THEN 3 ELSE 4 END,
+        CASE t.stock_type WHEN 'seed' THEN 1 WHEN 'seedling' THEN 2 WHEN 'product' THEN 3 WHEN 'material' THEN 4 ELSE 5 END,
         t.create_time DESC
       LIMIT ? OFFSET ?
     `;
@@ -147,7 +167,7 @@ export class InventoryTransactionRepository {
     } = query;
 
     const where: string[] = [
-      `t.transaction_type = 'outbound'`,
+      `t.transaction_type IN (${OUTBOUND_TYPES_SQL})`,
     ];
     const whereParams: any[] = [];
     if (from)         { where.push(`t.operate_date >= ?`);  whereParams.push(from); }
@@ -177,7 +197,7 @@ export class InventoryTransactionRepository {
 
     // 今日出库次数（独立 SQL：不受当前筛选影响，全局当天）
     const todayResult = queryToObjects<{ cnt: number }>(db,
-      `SELECT COUNT(*) AS cnt FROM inventory_transaction WHERE transaction_type = 'outbound' AND operate_date = date('now','localtime')  -- 2026-07-21 修复：UTC→本地日期（中国 0-8 点统计错位）`,
+      `SELECT COUNT(*) AS cnt FROM inventory_transaction WHERE transaction_type IN (${OUTBOUND_TYPES_SQL}) AND operate_date = date('now','localtime')  -- 2026-07-21 修复：UTC→本地日期（中国 0-8 点统计错位）`,
       []
     );
     const todayCount = todayResult[0]?.cnt || 0;

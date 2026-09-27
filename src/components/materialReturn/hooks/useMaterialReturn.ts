@@ -411,22 +411,9 @@ export function useMaterialReturn() {
       materials: addForm.materials,
     };
     await storeAddItem(newRecord as any);
-    // V14.0: 退料恢复批次库存
-    if (addForm.materials && addForm.materials.length > 0) {
-      try {
-        const { batchRestore } = await import('@/services/apiWarehouseMaterialService');
-        const returns = addForm.materials
-          .filter((m: any) => m.materialCode && m.actualQuantity > 0)
-          .map((m: any) => ({
-            materialCode: m.materialCode,
-            batchNo: m.batchNo || '',
-            quantity: m.actualQuantity
-          }));
-        if (returns.length > 0) await batchRestore(returns);
-      } catch (e) {
-        console.warn('批次库存恢复失败（不影响退料记录）:', e);
-      }
-    }
+    // 2026-09-27 审计修复：删除前端 batchRestore 调用（字段名错配恒不触发，且
+    // /materials/batch-restore 不写流水）。库存恢复已由后端 POST /material-returns
+    // 在事务内统一完成（materials 主表 + batch_inventory 批次 + inventory_transaction 流水）。
     await loadItems();
     setShowAddModal(false);
     setAddForm(initialAddForm);

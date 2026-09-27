@@ -55,6 +55,8 @@ export function MaterialSelectModal({
       spec: em.spec,
       unit: em.unit,
       quantity: em.actualQuantity,
+      // 2026-09-27 审计修复：退料行带上原出库批次号，后端按此还原批次账
+      batchNo: (em as any).batchNo || '',
       unitPrice: em.unitPrice || 0,
       warehousePosition: em.warehousePosition || '',
       returnQuantity: 0,
@@ -103,6 +105,8 @@ export function MaterialSelectModal({
       unit: m.unit,
       quantity: m.quantity || 0,
       returnQuantity: m.quantity || 0,
+      // 2026-09-27 审计修复：透传批次号（后端退料入库按批次还原批次账）
+      batchNo: (m as any).batchNo || '',
       unitPrice: m.unitPrice || 0,
       warehousePosition: m.warehousePosition,
       reason: '',

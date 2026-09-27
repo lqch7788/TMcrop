@@ -657,6 +657,35 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   // ============================================
+  // 2026-09-27 审计修复：结案（部分出库后剩余物料不再领用）
+  // 此前无结案机制，部分出库的申请单永远挂在"部分出库"状态且持续出现在出库下拉
+  // ============================================
+  const handleCloseCase = async (item: MaterialReceivingRecord) => {
+    const ok = await showConfirm(
+      `确认对领料单 ${item.code} 结案吗？\n结案后剩余未领物料将不再出现在"领料出库"的可选申请单中（已出库记录保留）。`
+    );
+    if (!ok) return;
+    const success = await storeUpdateItem(item.id, { dispatchStatus: 'closed' } as any);
+    if (success) {
+      await showAlert(`领料单 ${item.code} 已结案`);
+    } else {
+      await showAlert('结案失败，请稍后重试');
+    }
+  };
+
+  /** 取消结案（2026-09-27 审计修复：结案可撤销，恢复为出库联动自动管理的派单状态） */
+  const handleReopenCase = async (item: MaterialReceivingRecord) => {
+    const ok = await showConfirm(`确认取消领料单 ${item.code} 的结案吗？取消后剩余物料可继续出库。`);
+    if (!ok) return;
+    const success = await storeUpdateItem(item.id, { dispatchStatus: null } as any);
+    if (success) {
+      await showAlert(`领料单 ${item.code} 已取消结案`);
+    } else {
+      await showAlert('操作失败，请稍后重试');
+    }
+  };
+
+  // ============================================
   // 复制申请单（2026-09-26 改进批次二：同作物周期投入品快速复制重提）
   // ============================================
   const handleDuplicate = (item: MaterialReceivingRecord) => {
@@ -1246,7 +1275,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
       try {
         const areaSummary = (addForm.plantAreas || []).map((a: any) => a.type === 'custom' ? a.cropName : `${a.cropName}·${a.area}`).join('; ');
         const approval: Approval = {
-          id: `MAT-AP-${Date.now()}`,
+          id: `MAT-AP-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           code: newRecord.code,
           type: ApprovalType.MATERIAL_REQUEST,
           typeName: '领料单',
@@ -1453,6 +1482,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
     confirmExport,
     handleCancelExport,
     handleView,
+    // 2026-09-27 审计修复：结案（部分出库后剩余不再领用）+ 取消结案
+    handleCloseCase,
+    handleReopenCase,
     // 2026-09-26 批次二/四：复制、撤回、物料批次/历史价提示
     handleDuplicate,
     handleWithdraw,

@@ -277,11 +277,12 @@ export default function MaterialApproval() {
         getCategoryByCode={getCategoryByCode}
       />
 
-      {/* 拒绝原因弹窗 */}
+      {/* 审批意见弹窗（拒绝原因必填 / 通过意见选填，2026-09-27 双模式） */}
       <RejectModal
         show={rejectModal.show}
         item={rejectModal.item}
         reason={rejectModal.reason}
+        mode={rejectModal.mode}
         onReasonChange={setRejectReason}
         onConfirm={handleConfirmReject}
         onCancel={handleCancelReject}

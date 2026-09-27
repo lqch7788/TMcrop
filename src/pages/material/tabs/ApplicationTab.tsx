@@ -48,12 +48,6 @@ export default function ApplicationTab() {
         setPriorityFilter={hook.setPriorityFilter}
         searchMaterial={hook.searchMaterial}
         setSearchMaterial={hook.setSearchMaterial}
-        myApplicationsOnly={hook.myApplicationsOnly}
-        setMyApplicationsOnly={hook.setMyApplicationsOnly}
-        pendingMyApproval={hook.pendingMyApproval}
-        setPendingMyApproval={hook.setPendingMyApproval}
-        overdueOnly={hook.overdueOnly}
-        setOverdueOnly={hook.setOverdueOnly}
         onReset={hook.handleReset}
         onPageChange={hook.setCurrentPage}
       />
@@ -83,9 +77,17 @@ export default function ApplicationTab() {
         onWithdraw={hook.handleWithdraw}
         onDuplicate={hook.handleDuplicate}
         onResubmit={hook.handleResubmit}
+        onCloseCase={hook.handleCloseCase}
+        onReopenCase={hook.handleReopenCase}
         onBatchSubmit={hook.batchSubmit}
         onBatchWithdraw={hook.batchWithdraw}
         summary={hook.summary}
+        myApplicationsOnly={hook.myApplicationsOnly}
+        pendingMyApproval={hook.pendingMyApproval}
+        overdueOnly={hook.overdueOnly}
+        onToggleMyApplications={() => hook.setMyApplicationsOnly(!hook.myApplicationsOnly)}
+        onTogglePendingApproval={() => hook.setPendingMyApproval(!hook.pendingMyApproval)}
+        onToggleOverdue={() => hook.setOverdueOnly(!hook.overdueOnly)}
         onAddModalOpen={() => hook.setShowAddModal(true)}
         onShowBatchDeleteConfirm={() => hook.setShowBatchDeleteConfirm(true)}
         onBatchCancel={() => { hook.setBatchEditMode(null); hook.setSelectedRows([]); }}

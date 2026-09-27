@@ -8,6 +8,7 @@ export interface MaterialItem {
   unit: string;                   // 单位
   quantity?: number;              // 领料数量（原单据数量，选填）
   returnQuantity: number;         // 本次退料数量
+  batchNo?: string;               // 2026-09-27：原出库批次号（后端退料入库按批次还原批次账）
   unitPrice: number;              // 单价(元)
   warehousePosition: string;       // 仓库货位
   reason: string;                 // 退料原因

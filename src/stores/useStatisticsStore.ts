@@ -223,9 +223,24 @@ export function getYearTotalQuantity(year: string, trend: CategoryTrendItem[]): 
   return trend.filter(d => d.month.startsWith(year)).reduce((s, d) => s + d.total, 0);
 }
 
-/** 年度总金额（万元）- 使用后端 category_summary 的实际金额 */
-export function getYearTotalAmount(_year: string, _trend: CategoryTrendItem[], categories: CategorySummaryItem[]): number {
-  return categories.reduce((s, c) => s + c.amount, 0);
+/**
+ * 年度总金额（万元）
+ * 2026-09-27 审计修复：此前忽略 year 参数恒返回全时段金额（切换年份金额不变）。
+ * 改为"该年各分类数量 × 分类均价（全时段金额/数量）"估算；该年无数据返回 0。
+ */
+export function getYearTotalAmount(year: string, trend: CategoryTrendItem[], categories: CategorySummaryItem[]): number {
+  const yearRows = trend.filter(d => d.month.startsWith(year));
+  if (yearRows.length === 0) return 0;
+  let amount = 0;
+  for (const cat of categories) {
+    const avgPrice = cat.value > 0 ? cat.amount / cat.value : 0;
+    if (avgPrice <= 0) continue;
+    const qty = yearRows.reduce(
+      (s, row) => s + (Number((row as unknown as Record<string, number>)[cat.name]) || 0), 0
+    );
+    amount += qty * avgPrice;
+  }
+  return amount;
 }
 
 /** 单月明细 */

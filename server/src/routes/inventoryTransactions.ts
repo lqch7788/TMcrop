@@ -69,6 +69,8 @@ function transformRow(row: any): Record<string, unknown> {
     greenhouseName: row.greenhouseName,
     plantingMode: row.plantingMode,
     grade: row.grade,
+    // 2026-09-27：material 类型并入后补充（LEFT JOIN materials，仅领料流水有值）
+    materialName: row.materialName,
     // 备注/其他
     remarks: row.remarks,
     receiver: row.receiver,

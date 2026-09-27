@@ -19,15 +19,6 @@ export interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-/** 统计汇总数据 */
-export interface StatSummaryData {
-  requisitionCount: number;
-  totalQuantity: number;
-  totalAmount: number;
-  avgDifferenceRate: number;
-  yearOnYearChange: number;
-}
-
 /** 月度统计辅助数据 */
 export interface MonthStats {
   rank: number | string;
@@ -170,5 +161,4 @@ export interface UseStatisticsTabReturn {
   handleMaterialStatCancelExport: () => void;
   handleMaterialStatSelectAll: () => void;
   confirmMaterialStatExport: () => Promise<void>;
-  getStatSummaryData: () => StatSummaryData;
 }

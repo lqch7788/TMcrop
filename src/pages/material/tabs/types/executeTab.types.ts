@@ -160,6 +160,16 @@ export interface UseExecuteTabReturn {
   handleExecuteDeleteClick: (id: string | number) => void;
   confirmExecuteDelete: () => void;
   handleExecuteSaveEdit: () => void;
+  // 2026-09-27 两步出库：确认发料
+  handleConfirmIssue: (item: MaterialExecuteRecord) => Promise<void>;
+  // 2026-09-27 能力对齐：统计摘要 + 快捷筛选
+  executeSummary: { todayCount: number; pendingCount: number; monthAmount: number; overIssueCount: number };
+  executePendingOnly: boolean;
+  setExecutePendingOnly: (value: boolean) => void;
+  executeTodayOnly: boolean;
+  setExecuteTodayOnly: (value: boolean) => void;
+  executeMineOnly: boolean;
+  setExecuteMineOnly: (value: boolean) => void;
   handleExecuteSaveAdd: () => void;
   handleExecuteCancelAdd: () => void;
   handleExecuteCancelEdit: () => void;

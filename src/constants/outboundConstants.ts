@@ -4,21 +4,26 @@
  * DB 字段 inventory_transaction.business_type 仍为 VARCHAR，存此枚举的字符串值。
  */
 export enum OutboundBusinessType {
-  CUSTOMER_SALE    = 'customer_sale',
-  TRANSFER_OUT     = 'transfer_out',
-  DAMAGE_LOSS      = 'damage_loss',
-  GIFT_SAMPLE      = 'gift_sample',
-  INVENTORY_ADJUST = 'inventory_adjust',
-  OTHER            = 'other',
+  CUSTOMER_SALE        = 'customer_sale',
+  TRANSFER_OUT         = 'transfer_out',
+  DAMAGE_LOSS          = 'damage_loss',
+  GIFT_SAMPLE          = 'gift_sample',
+  INVENTORY_ADJUST     = 'inventory_adjust',
+  // 2026-09-27 用户要求：并入 material 类型（领料出库 / 撤销退料回收）
+  MATERIAL_REQUISITION = 'material_execute',
+  MATERIAL_RETURN_UNDO = 'material_return',
+  OTHER                = 'other',
 }
 
 export const OUTBOUND_BUSINESS_TYPE_META: Record<OutboundBusinessType, { label: string; color: string }> = {
-  [OutboundBusinessType.CUSTOMER_SALE]:     { label: '销售交货', color: 'bg-emerald-100 text-emerald-700' },
-  [OutboundBusinessType.TRANSFER_OUT]:      { label: '调拨出库', color: 'bg-blue-100 text-blue-700' },
-  [OutboundBusinessType.DAMAGE_LOSS]:       { label: '损耗报损', color: 'bg-red-100 text-red-700' },
-  [OutboundBusinessType.GIFT_SAMPLE]:       { label: '赠送/试吃', color: 'bg-purple-100 text-purple-700' },
-  [OutboundBusinessType.INVENTORY_ADJUST]:  { label: '盘点调整', color: 'bg-cyan-100 text-cyan-700' },
-  [OutboundBusinessType.OTHER]:             { label: '其他',     color: 'bg-gray-100 text-gray-700' },
+  [OutboundBusinessType.CUSTOMER_SALE]:        { label: '销售交货', color: 'bg-emerald-100 text-emerald-700' },
+  [OutboundBusinessType.TRANSFER_OUT]:         { label: '调拨出库', color: 'bg-blue-100 text-blue-700' },
+  [OutboundBusinessType.DAMAGE_LOSS]:          { label: '损耗报损', color: 'bg-red-100 text-red-700' },
+  [OutboundBusinessType.GIFT_SAMPLE]:          { label: '赠送/试吃', color: 'bg-purple-100 text-purple-700' },
+  [OutboundBusinessType.INVENTORY_ADJUST]:     { label: '盘点调整', color: 'bg-cyan-100 text-cyan-700' },
+  [OutboundBusinessType.MATERIAL_REQUISITION]: { label: '生产领料', color: 'bg-amber-100 text-amber-700' },
+  [OutboundBusinessType.MATERIAL_RETURN_UNDO]: { label: '撤销退料', color: 'bg-orange-100 text-orange-700' },
+  [OutboundBusinessType.OTHER]:                { label: '其他',     color: 'bg-gray-100 text-gray-700' },
 };
 
 const LEGACY_BUSINESS_TYPE_SET = new Set([
@@ -43,4 +48,6 @@ export const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; ic
   seed:     { label: '种源', color: 'bg-amber-500 text-white',    icon: '🌱' },
   seedling: { label: '种苗', color: 'bg-green-500 text-white',    icon: '🌿' },
   product:  { label: '成品', color: 'bg-blue-500 text-white',     icon: '📦' },
+  // 2026-09-27 用户要求：并入 material 类型（生产领料出库流水）
+  material: { label: '物料', color: 'bg-emerald-500 text-white',  icon: '🧰' },
 };

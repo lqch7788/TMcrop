@@ -163,7 +163,10 @@ export function MonthlyDashboard({ yearFilter, selectedMonth, onMonthChange }: M
                   }}
                   formatter={(value: number, name: string, props: any) => {
                     const cat = categorySummaryData.find(c => c.key === name);
-                    const amount = Math.round(value * 30);
+                    // 2026-09-27 审计修复：此前用 `value * 30` 硬编码单价估算金额，
+                    // 改为分类实际均价（分类汇总金额 / 分类数量）
+                    const unitPrice = cat && cat.value > 0 ? cat.amount / cat.value : 0;
+                    const amount = Math.round(value * unitPrice);
                     return [`${value} 件 / ¥${(amount/10000).toFixed(2)} 万`, cat?.name || name];
                   }}
                 />

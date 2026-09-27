@@ -26,6 +26,24 @@ const ALLOWED_UPDATE_COLUMNS = new Set([
   'execute_status_class', 'materials', 'create_by',
 ]);
 
+/**
+ * 2026-09-27 两步出库（用户决策：先建单待发料，仓库确认后扣库存）
+ * 判断该状态类是否"已扣过库存"：
+ *  - completed / partial → 已扣（编辑/删除需恢复）
+ *  - pending_out（待出库）/ cancelled（已取消）→ 从未扣减（编辑/删除不得恢复，否则凭空增库存）
+ */
+function isDeductedClass(cls: unknown): boolean {
+  return cls === 'completed' || cls === 'partial';
+}
+
+/** 按状态类派生中文状态文案 */
+function statusTextByClass(cls: string): string {
+  if (cls === 'completed') return '已出库';
+  if (cls === 'partial') return '部分出库';
+  if (cls === 'cancelled') return '已取消';
+  return '待出库';
+}
+
 /** 本地日期 YYYY-MM-DD（禁止 toISOString 的 UTC 日期，避免 0-8 点错档） */
 function localDateStr(): string {
   const d = new Date();
@@ -71,20 +89,39 @@ function parseBatchAllocations(line: any): Array<{ code: string; batchNo: string
   return out;
 }
 
-/** 写库存流水（审计：出库扣减/编辑调整/删除恢复） */
-function writeStockTransaction(
+/**
+ * 写库存流水（审计：出库扣减/编辑调整/删除恢复/退料入库）
+ * 2026-09-27 审计修复：原实现 operator/balance/remarks 全部硬编码
+ * （operator_id='system'、operator_name='领料出库'、balance 恒 0、文案固定），
+ * 导致"谁领走的、变动前后余量"完全不可追溯。现全部由调用方传入。
+ */
+export function writeStockTransaction(
   db: any,
   seq: number,
   transactionType: string,
   executeId: string | number,
   executeCode: string,
   materialCode: string,
-  qty: number
+  qty: number,
+  opts?: {
+    operatorId?: string;
+    operatorName?: string;
+    balanceBefore?: number;
+    balanceAfter?: number;
+    remark?: string;
+    businessType?: string;
+  }
 ): void {
   const now = nowLocalTimestamp();
   // 2026-09-26 修复：restore 与 deduct 各自从 seq=1 起号，同秒内会撞 UNIQUE(transaction_id)。
   // 加事务类型前缀 + 随机后缀保证全局唯一。
-  const typeTag = transactionType === 'material_outbound' ? 'OUT' : 'RST';
+  const typeTagMap: Record<string, string> = {
+    material_outbound: 'OUT',
+    material_restore: 'RST',
+    material_return_in: 'RTN',
+    material_return_undo: 'RTU',
+  };
+  const typeTag = typeTagMap[transactionType] || 'TXN';
   const id = `EXEC-${typeTag}-${now.replace(/[-: ]/g, '')}-${seq}-${Math.random().toString(36).substring(2, 8)}`;
   db.run(
     `INSERT INTO inventory_transaction
@@ -94,25 +131,75 @@ function writeStockTransaction(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, id, materialCode, 'material', transactionType, qty,
-      0, 0, String(executeId), 'material_execute', executeCode,
-      'system', '领料出库', now, '领料出库库存流水', now,
+      Number(opts?.balanceBefore) || 0, Number(opts?.balanceAfter) || 0,
+      String(executeId), opts?.businessType || 'material_execute', executeCode,
+      opts?.operatorId || 'system', opts?.operatorName || '仓库',
+      now, opts?.remark || '领料出库库存流水', now,
     ]
   );
 }
 
 /**
  * 扣减出库物料库存（事务内调用）：
- * - 有批次库存 → FEFO 扣批次 + 同步扣 materials 主表（与 /materials/batch-deduct 语义一致）
- * - 无批次行 → 仅扣主表（保留历史兜底行为）
- * - 库存不足 → 抛错（调用方 ROLLBACK + 400），不再静默部分扣
- * 返回 { allocations, stockSeq } 并把每行的 batchNo 显示串写回
+ * - 行内带 applicationCode 时，以申请单实际申请量为权威回填 requestedQuantity（防改大绕过超发校验）
+ * - 无批次行 → 用主表量自动建"默认批次"再走 FEFO（防两本账漂移）
+ * - 批次/主表任一不足 → 抛错（fail loud，调用方 ROLLBACK）
+ * - 流水补齐操作人/变动前后余额/备注
+ * 返回 { stockSeq } 并把每行的 batchNo 显示串写回
  */
-function deductExecuteStock(db: any, materials: any[], executeId: string | number, executeCode: string): { stockSeq: number } {
+function deductExecuteStock(
+  db: any,
+  materials: any[],
+  executeId: string | number,
+  executeCode: string,
+  operatorInfo?: { applicant?: string; operator?: string }
+): { stockSeq: number } {
   let stockSeq = 0;
   for (const m of materials) {
     const code = m.materialCode || m.code || '';
     const qty = Number(m.actualQuantity ?? m.actualQty ?? m.quantity ?? 0) || 0;
     if (!code || qty <= 0) continue;
+
+    // 2026-09-27 审计修复（P0-7）：requestedQuantity 在编辑弹窗可被任意改大，
+    // 超发校验形同虚设。行内带 applicationCode 时以申请单实际申请量为权威覆盖。
+    const appCode = String(m.applicationCode || '');
+    if (appCode) {
+      const appRows = db.exec('SELECT materials FROM material_requests WHERE request_code = ?', [appCode]);
+      if (appRows.length > 0 && appRows[0].values.length > 0) {
+        const appMats = parseMaterials(appRows[0].values[0][0]);
+        const match = appMats.find((x: any) => (x.materialCode || x.code) === code);
+        const authoritative = Number(match?.requestedQuantity) || 0;
+        if (authoritative > 0) m.requestedQuantity = authoritative;
+      }
+    }
+
+    // 2026-09-27 超发校验：实发量不得超过申请量，防错账
+    const requestedQty = Number(m.requestedQuantity) || 0;
+    if (requestedQty > 0 && qty > requestedQty) {
+      throw new Error(`物料 ${code} 实发 ${qty} 超过申请量 ${requestedQty}，不允许超发`);
+    }
+
+    // 主表账：存在则必须足量（2026-09-27 审计修复：此前仅在无批次时校验且 UPDATE 用
+    // MAX(0,...) 静默截断——主表与批次账可各自漂移且无告警）
+    const mainRows = db.exec('SELECT quantity FROM materials WHERE code = ?', [code]);
+    const mainQty = mainRows.length > 0 && mainRows[0].values.length > 0 ? Number(mainRows[0].values[0][0]) || 0 : null;
+    if (mainQty !== null && mainQty < qty) {
+      throw new Error(`物料 ${code} 库存不足：需要 ${qty}，主表现有 ${mainQty}`);
+    }
+
+    // 2026-09-27 审计修复（P0-1 两本账）：物料没有任何批次行时，
+    // 先用主表量建"默认批次"再走 FEFO，避免"只扣主表不扣批次"造成两账长期漂移
+    if (mainQty !== null && mainQty > 0) {
+      const cntRows = db.exec('SELECT COUNT(*) FROM batch_inventory WHERE material_code = ?', [code]);
+      const hasBatches = cntRows.length > 0 && Number(cntRows[0].values[0][0]) > 0;
+      if (!hasBatches) {
+        db.run(
+          `INSERT INTO batch_inventory (id, material_code, material_name, batch_no, production_date, expiry_date, unit, total_quantity, remaining_quantity, create_time, update_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [`bi-default-${code}-${Date.now()}`, code, m.materialName || '', '默认批次', '', '', m.unit || '', mainQty, mainQty, nowLocalTimestamp(), nowLocalTimestamp()]
+        );
+      }
+    }
 
     const { allocations, fulfilled } = fefoAllocate(code, qty);
     const batchTotal = allocations.reduce((s, a) => s + a.quantity, 0);
@@ -122,24 +209,20 @@ function deductExecuteStock(db: any, materials: any[], executeId: string | numbe
       throw new Error(`物料 ${code} 批次库存不足：需要 ${qty}，批次可分配仅 ${batchTotal}`);
     }
 
-    // 主表账：主表存在则需足量
-    const mainRows = db.exec('SELECT quantity FROM materials WHERE code = ?', [code]);
-    const mainQty = mainRows.length > 0 && mainRows[0].values.length > 0 ? Number(mainRows[0].values[0][0]) || 0 : null;
-    if (mainQty !== null && mainQty < qty && allocations.length === 0) {
-      throw new Error(`物料 ${code} 库存不足：需要 ${qty}，主表现有 ${mainQty}`);
-    }
-
-    // 扣批次
+    // 扣批次（校验实际生效行数：0 行 = 账目异常，暴露而非静默）
     for (const alloc of allocations) {
       db.run(
         `UPDATE batch_inventory SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE material_code = ? AND batch_no = ? AND remaining_quantity >= ?`,
         [alloc.quantity, nowLocalTimestamp(), code, alloc.batchNo, alloc.quantity]
       );
+      if (db.getRowsModified() === 0) {
+        throw new Error(`物料 ${code} 批次 ${alloc.batchNo} 扣减失败（批次余量不足或已变更）`);
+      }
     }
     // 扣主表
     if (mainQty !== null) {
       db.run(
-        'UPDATE materials SET quantity = MAX(0, quantity - ?), lastUpdateTime = ? WHERE code = ?',
+        'UPDATE materials SET quantity = quantity - ?, lastUpdateTime = ? WHERE code = ?',
         [qty, nowLocalTimestamp(), code]
       );
     }
@@ -148,15 +231,35 @@ function deductExecuteStock(db: any, materials: any[], executeId: string | numbe
     m.batchNo = allocations.length > 0
       ? allocations.map((a) => `${a.batchNo}(${a.quantity}${a.unit})`).join(',')
       : '';
-    writeStockTransaction(db, ++stockSeq, 'material_outbound', executeId, executeCode, code, qty);
+
+    // 流水：补操作人/余额/备注（2026-09-27 审计修复：此前全部硬编码不可追溯）
+    const operatorName = String(operatorInfo?.operator || '').trim() || String(operatorInfo?.applicant || '').trim() || '仓库';
+    writeStockTransaction(db, ++stockSeq, 'material_outbound', executeId, executeCode, code, qty, {
+      operatorName,
+      balanceBefore: mainQty ?? 0,
+      balanceAfter: mainQty !== null ? mainQty - qty : 0,
+      remark: `领料出库 ${executeCode}｜领用人 ${operatorInfo?.applicant || '-'}`,
+    });
   }
   return { stockSeq };
 }
 
-/** 恢复出库物料库存（事务内调用）：按 batchNo 字符串还原批次 + 主表 */
-function restoreExecuteStock(db: any, materials: any[], executeId: string | number, executeCode: string): void {
+/**
+ * 恢复出库物料库存（事务内调用）：按 batchNo 字符串还原批次 + 主表
+ * 2026-09-27 审计修复：流水补操作人与恢复原因；批次行不存在时告警（不再静默写流水）。
+ * 说明：恢复流水 balance 保持 0——其语义是冲销对应出库流水，余额链权威在 outbound 侧。
+ */
+function restoreExecuteStock(
+  db: any,
+  materials: any[],
+  executeId: string | number,
+  executeCode: string,
+  operatorInfo?: { applicant?: string; operator?: string; reason?: string }
+): void {
   let seq = 0;
   const mainTotals: Record<string, number> = {};
+  const operatorName = String(operatorInfo?.operator || '').trim() || String(operatorInfo?.applicant || '').trim() || '仓库';
+  const reason = operatorInfo?.reason || '出库单编辑或删除恢复';
   for (const line of materials) {
     const allocs = parseBatchAllocations(line);
     for (const a of allocs) {
@@ -166,8 +269,14 @@ function restoreExecuteStock(db: any, materials: any[], executeId: string | numb
           `UPDATE batch_inventory SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE material_code = ? AND batch_no = ?`,
           [a.qty, nowLocalTimestamp(), a.code, a.batchNo]
         );
+        if (db.getRowsModified() === 0) {
+          console.warn(`[领料出库] 恢复批次未命中：物料 ${a.code} 批次 ${a.batchNo} 不存在（出库单 ${executeCode}）`);
+        }
       }
-      writeStockTransaction(db, ++seq, 'material_restore', executeId, executeCode, a.code, a.qty);
+      writeStockTransaction(db, ++seq, 'material_restore', executeId, executeCode, a.code, a.qty, {
+        operatorName,
+        remark: `${reason} ${executeCode}`,
+      });
     }
     // 主表按行总量恢复（与扣减时"批次+主表同时扣"的语义镜像；无批次细分行 = 只恢复主表）
     const lineQty = allocs.reduce((s, a) => s + a.qty, 0);
@@ -193,16 +302,25 @@ function recalcDispatchStatus(db: any, sourceCodes: string[], now: string): void
     if (reqMaterials.length === 0) continue;
 
     // 聚合此来源申请单所有出库记录中的实发数量
+    // 2026-09-27 两步出库：只统计"已扣库存"的单据（completed/partial）——
+    // 待出库单（pending_out）尚未发料，计入会让申请单误显示"部分出库"
     const dispatchedMap: Record<string, number> = {};
-    const allExecs = db.exec('SELECT materials, source_application_codes FROM material_executes');
+    const allExecs = db.exec('SELECT materials, source_application_codes, execute_status_class FROM material_executes');
     if (allExecs.length > 0) {
       const execCols = allExecs[0].columns;
       const matIdx = execCols.indexOf('materials');
       const srcIdx = execCols.indexOf('source_application_codes');
+      const clsIdx = execCols.indexOf('execute_status_class');
       for (const row of allExecs[0].values) {
+        if (!isDeductedClass(row[clsIdx])) continue;
         const srcList = parseMaterials(row[srcIdx]);
         if (!srcList.includes(srcCode)) continue;
         for (const m of parseMaterials(row[matIdx])) {
+          // 2026-09-27 审计修复：按行归属——只累加 applicationCode 指向本申请单的行。
+          // 此前多来源混单时把整单物料同时计入所有来源单，同一批物料被重复累加，
+          // 可能把不该完成的申请单误判成 complete（行级来源缺失时回退整单口径，兼容旧数据）
+          const lineSrc = String(m.applicationCode || '');
+          if (lineSrc && lineSrc !== srcCode) continue;
           const key = m.materialCode || '';
           dispatchedMap[key] = (dispatchedMap[key] || 0) + (Number(m.actualQuantity) || 0);
         }
@@ -279,6 +397,47 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 出库单操作历史 — GET /api/material-executes/:id/logs
+ * 2026-09-27 审计修复：出库单此前无操作历史入口（申请单有），
+ * 谁建的、谁确认发料、谁改过完全不可见。复用 operation_logs 四路匹配：
+ * resource_id（数字 id）/ 路径含 id / 路径含 code（DELETE 场景）/ 请求体含 code（POST 场景）
+ */
+router.get('/:id/logs', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    // 先解析出库单编码（日志里 DELETE 用 code 作为路径）
+    let code = '';
+    const row = db.exec('SELECT code FROM material_executes WHERE id = ?', [id]);
+    if (row.length > 0 && row[0].values.length > 0) code = String(row[0].values[0][0] || '');
+
+    const results = db.exec(
+      `SELECT id, username, action, module, resource_type, description, created_at
+       FROM operation_logs
+       WHERE resource_id = ?
+          OR description LIKE ?
+          OR description LIKE ?
+          OR (description LIKE ? AND new_value LIKE ?)
+       ORDER BY created_at DESC LIMIT 50`,
+      [id, `%/material-executes/${id}%`, code ? `%/material-executes/${code}%` : `%__NOMATCH__%`, '%/material-executes%', code ? `%"code":"${code}"%` : '%__NOMATCH__%']
+    );
+    const logs: Record<string, unknown>[] = [];
+    if (results.length > 0) {
+      const cols = results[0].columns;
+      for (const r of results[0].values) {
+        const item: Record<string, unknown> = {};
+        r.forEach((v: unknown, i: number) => { item[cols[i]] = v; });
+        logs.push(item);
+      }
+    }
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    console.error('获取出库单操作历史失败:', error);
+    res.status(500).json({ success: false, error: '获取出库单操作历史失败' });
+  }
+});
+
 /** 创建 — POST /api/material-executes（事务内：插入 + 扣库存 + 流水 + 回写派单状态） */
 router.post('/', (req: Request, res: Response) => {
   const db = getDatabase();
@@ -306,18 +465,23 @@ router.post('/', (req: Request, res: Response) => {
       ? req.body.source_application_codes
       : parseMaterials(req.body.source_application_codes);
     const source_application_codes = JSON.stringify(sourceCodes);
-    const execute_status = req.body.execute_status || '已出库';
-    const execute_status_class = req.body.execute_status_class || 'completed';
+    // 2026-09-27 两步出库（用户决策）：默认建"待出库"单（不扣库存），
+    // 仓库确认发料时调 POST /:id/confirm 才扣库存；如需一步直达可显式传 completed/partial
+    const execute_status_class = req.body.execute_status_class || 'pending_out';
+    const execute_status = req.body.execute_status || statusTextByClass(execute_status_class);
     const materials: any[] = Array.isArray(req.body.materials)
       ? req.body.materials
       : parseMaterials(req.body.materials);
     const create_by = req.body.create_by || '';
+    const willDeduct = isDeductedClass(execute_status_class);
 
-    // 事务开始：扣库存（先）→ INSERT（带 batchNo 显示串）→ 回写派单状态，全有或全无
+    // 事务开始：扣库存（仅已完成/部分出库时）→ INSERT → 回写派单状态，全有或全无
     db.run('BEGIN');
     try {
-      // 扣库存（失败抛错 → ROLLBACK）；同时把每行 batchNo 显示串写入 materials
-      deductExecuteStock(db, materials, id, code);
+      if (willDeduct) {
+        // 扣库存（失败抛错 → ROLLBACK）；同时把每行 batchNo 显示串写入 materials
+        deductExecuteStock(db, materials, id, code, { applicant, operator });
+      }
 
       db.run(`
         INSERT INTO material_executes (
@@ -349,6 +513,73 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 确认发料 — POST /api/material-executes/:id/confirm
+ * 2026-09-27 两步出库（用户决策）：待出库单 → 仓库确认 → 事务内扣库存 + 置状态 + 回写派单状态
+ */
+router.post('/:id/confirm', (req: Request, res: Response) => {
+  const db = getDatabase();
+  try {
+    const { id } = req.params;
+    const now = nowLocalTimestamp();
+
+    const stmt = db.prepare('SELECT * FROM material_executes WHERE id = ?');
+    stmt.bind([id]);
+    let row: Record<string, unknown> | null = null;
+    if (stmt.step()) row = stmt.getAsObject();
+    stmt.free();
+
+    if (!row || Object.keys(row).length === 0) {
+      return res.status(404).json({ success: false, error: '出库单不存在' });
+    }
+    if (row.execute_status_class !== 'pending_out') {
+      return res.status(400).json({ success: false, error: `当前状态（${row.execute_status || row.execute_status_class}）不是待出库，无法确认发料` });
+    }
+
+    const materials = parseMaterials(row.materials);
+    if (materials.length === 0) {
+      return res.status(400).json({ success: false, error: '出库单无物料明细，无法确认发料' });
+    }
+
+    // 状态判定：全部足额 → 已出库；否则部分出库
+    const isPartial = materials.some((m: any) => {
+      const req = Number(m.requestedQuantity) || 0;
+      const act = Number(m.actualQuantity ?? m.actualQty ?? m.quantity ?? 0) || 0;
+      return req > 0 && act < req;
+    });
+    const newClass = isPartial ? 'partial' : 'completed';
+    const newStatus = statusTextByClass(newClass);
+    const sourceCodes = parseMaterials(row.source_application_codes);
+
+    db.run('BEGIN');
+    try {
+      // 扣库存（失败抛错 → ROLLBACK）；同时回写 batchNo 显示串
+      deductExecuteStock(db, materials, id, String(row.code || ''), {
+        applicant: String(row.applicant || ''),
+        operator: String(req.body.operator || row.operator || ''),
+      });
+
+      db.run(
+        'UPDATE material_executes SET execute_status = ?, execute_status_class = ?, materials = ?, operator = ?, update_time = ? WHERE id = ?',
+        [newStatus, newClass, JSON.stringify(materials), req.body.operator || row.operator || '', now, id]
+      );
+
+      recalcDispatchStatus(db, sourceCodes, now);
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      console.error('[领料出库] 确认发料失败已回滚:', e);
+      return res.status(400).json({ success: false, error: e instanceof Error ? e.message : '确认发料失败' });
+    }
+
+    saveDatabase();
+    res.json({ success: true, data: { id, executeStatus: newStatus, executeStatusClass: newClass } });
+  } catch (error) {
+    console.error('确认发料失败:', error);
+    res.status(500).json({ success: false, error: '确认发料失败' });
+  }
+});
+
 /** 更新 — PUT /api/material-executes/:id（事务内：差额调整库存） */
 router.put('/:id', (req: Request, res: Response) => {
   const db = getDatabase();
@@ -368,9 +599,12 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '出库单不存在' });
     }
 
-    // 2026-09-26 用户要求：已完成出库的单据不允许编辑（后端兜底，防前端绕过）
-    if (oldRow.execute_status_class === 'completed') {
-      return res.status(400).json({ success: false, error: '已完成出库的单据不允许编辑' });
+    // 2026-09-27 审计修复：放开"已完成出库不允许编辑"限制——原限制导致发错数量只能整单删除重建。
+    // 编辑已完成单时下方事务会"先按旧明细恢复库存、再按新明细扣减"（净差额调整，全程事务内），
+    // 库存不足时整体回滚（400），安全性与新建单一致。
+    const oldRowWasCompleted = oldRow.execute_status_class === 'completed';
+    if (oldRowWasCompleted) {
+      console.log(`[领料出库] 编辑已完成出库单 ${oldRow.code}：将按新旧明细差额调整库存`);
     }
 
     // 2026-09-26 P0 修复（SQL 注入）：列名白名单
@@ -393,17 +627,42 @@ router.put('/:id', (req: Request, res: Response) => {
       }
     }
 
-    // 物料变化 → 先恢复旧出库库存，再按新明细扣减（事务内，全有或全无）
+    // 2026-09-27 两步出库：库存调整改为"状态感知"——
+    // 旧状态已扣库存才恢复；新状态会扣库存才扣减；待出库↔已出库的状态切换也正确调整库存
+    const oldDeducted = isDeductedClass(oldRow.execute_status_class);
+    const newClass = (clean.execute_status_class as string | undefined) ?? String(oldRow.execute_status_class || 'pending_out');
+    const newDeducted = isDeductedClass(newClass);
     const materialsChanged = clean.materials !== undefined;
+    const statusChanged = clean.execute_status_class !== undefined && clean.execute_status_class !== oldRow.execute_status_class;
+
+    // 流水操作人信息（新旧行取并）
+    const infoApplicant = String((clean.applicant as string) ?? oldRow.applicant ?? '');
+    const infoOperator = String((clean.operator as string) ?? oldRow.operator ?? '');
+
     db.run('BEGIN');
     try {
-      if (materialsChanged) {
-        const oldMaterials = parseMaterials(oldRow.materials);
-        restoreExecuteStock(db, oldMaterials, id, String(oldRow.code || ''));
-        const newMaterials = parseMaterials(clean.materials);
-        deductExecuteStock(db, newMaterials, id, String(oldRow.code || ''));
-        // 新明细回写 batchNo 显示串
-        clean.materials = JSON.stringify(newMaterials);
+      if (materialsChanged || statusChanged) {
+        // 1) 旧账已扣 → 先恢复
+        if (oldDeducted) {
+          restoreExecuteStock(db, parseMaterials(oldRow.materials), id, String(oldRow.code || ''), {
+            applicant: infoApplicant, operator: infoOperator, reason: '出库单编辑恢复',
+          });
+        }
+        // 2) 新账要扣 → 再扣减（含状态升级为已出库/部分出库的场景）
+        if (newDeducted) {
+          const newMaterials = materialsChanged ? parseMaterials(clean.materials) : parseMaterials(oldRow.materials);
+          deductExecuteStock(db, newMaterials, id, String(oldRow.code || ''), { applicant: infoApplicant, operator: infoOperator });
+          // 新明细回写 batchNo 显示串（仅当本次改了明细）
+          if (materialsChanged) clean.materials = JSON.stringify(newMaterials);
+        }
+      }
+      // 状态文案与状态类保持一致（前端可能只传其一）
+      // 2026-09-27 审计修复：补写 clean 时必须同步 updateKeys——
+      // 否则 fields（按 updateKeys 生成）与 values（按 clean 键生成）数量不一致，
+      // 只传 execute_status_class 时 db.run 参数越界报 "column index out of range"（实测）
+      if (clean.execute_status_class !== undefined && clean.execute_status === undefined) {
+        clean.execute_status = statusTextByClass(String(clean.execute_status_class));
+        updateKeys.push('execute_status');
       }
 
       const fields = updateKeys.map((k) => `${k} = ?`).join(', ');
@@ -411,9 +670,16 @@ router.put('/:id', (req: Request, res: Response) => {
       values.push(now, id);
       db.run(`UPDATE material_executes SET ${fields}, update_time = ? WHERE id = ?`, values);
 
-      // 来源单变化 → 重算 dispatch_status
-      if (clean.source_application_codes !== undefined) {
-        recalcDispatchStatus(db, parseMaterials(clean.source_application_codes), now);
+      // 来源单变化 / 物料变化 / 状态变化 → 重算 dispatch_status
+      // （2026-09-27：状态从待出库→已出库也改变了"已发量"，必须重算）
+      if (clean.source_application_codes !== undefined || materialsChanged || statusChanged) {
+        // 2026-09-27 审计修复：新旧来源单取并集重算——此前只算新集合，
+        // 被移除的旧申请单 dispatch_status 永久残留（误显示"部分出库"且因删除保护永久不可删）
+        const oldCodes = parseMaterials(oldRow.source_application_codes);
+        const newCodes = clean.source_application_codes !== undefined
+          ? parseMaterials(clean.source_application_codes)
+          : oldCodes;
+        recalcDispatchStatus(db, Array.from(new Set([...oldCodes, ...newCodes])), now);
       }
 
       db.run('COMMIT');
@@ -439,14 +705,20 @@ router.delete('/:id', (req: Request, res: Response) => {
     const now = nowLocalTimestamp();
 
     // 删除前读取整行（来源单号 + 物料明细，用于恢复库存与重算 dispatch_status）
-    const preStmt = db.prepare('SELECT code, source_application_codes, materials FROM material_executes WHERE id = ?');
+    const preStmt = db.prepare('SELECT code, source_application_codes, materials, execute_status_class, applicant, operator FROM material_executes WHERE id = ?');
     preStmt.bind([id]);
     let oldCode = '';
+    let oldClass = '';
+    let oldApplicant = '';
+    let oldOperator = '';
     let sourceCodes: string[] = [];
     let oldMaterials: any[] = [];
     if (preStmt.step()) {
       const row = preStmt.getAsObject();
       oldCode = String(row.code || '');
+      oldClass = String(row.execute_status_class || '');
+      oldApplicant = String(row.applicant || '');
+      oldOperator = String(row.operator || '');
       sourceCodes = parseMaterials(row.source_application_codes);
       oldMaterials = parseMaterials(row.materials);
     }
@@ -454,8 +726,13 @@ router.delete('/:id', (req: Request, res: Response) => {
 
     db.run('BEGIN');
     try {
-      // 恢复库存（删除出库单 = 撤销出库）
-      restoreExecuteStock(db, oldMaterials, id, oldCode);
+      // 2026-09-27 两步出库：只有"已扣过库存"的单据（completed/partial）删除时才恢复；
+      // 待出库单从未扣减，恢复会凭空增加库存
+      if (isDeductedClass(oldClass)) {
+        restoreExecuteStock(db, oldMaterials, id, oldCode, {
+          applicant: oldApplicant, operator: oldOperator, reason: '出库单删除恢复',
+        });
+      }
       db.run('DELETE FROM material_executes WHERE id = ?', [id]);
       if (sourceCodes.length > 0) {
         recalcDispatchStatus(db, sourceCodes, now);

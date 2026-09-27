@@ -196,6 +196,11 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
               </span>
               <span className="text-gray-700">
                 已领 <strong>{(executions as any).totals?.dispatched ?? 0}</strong> / 申请 <strong>{(executions as any).totals?.requested ?? 0}</strong>，剩余 <strong className={(executions as any).totals?.remaining > 0 ? 'text-amber-700' : ''}>{(executions as any).totals?.remaining ?? 0}</strong>
+                {/* 2026-09-27 审计修复：待发料单量单列（已建单未确认发料，不占用"已领"口径） */}
+                {(() => {
+                  const pend = ((executions as any).summary as any[]).reduce((s: number, x: any) => s + (Number(x.pendingQuantity) || 0), 0);
+                  return pend > 0 ? <span className="ml-2 text-blue-700">（待发料 <strong>{pend}</strong>）</span> : null;
+                })()}
               </span>
             </div>
             {/* 逐物料汇总 */}
@@ -205,6 +210,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
                   <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">物料</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">申请量</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">已领量</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">待发料</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">剩余</th>
                 </tr>
               </thead>
@@ -214,6 +220,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
                     <td className="px-3 py-2 text-gray-800">{s.materialName} <span className="text-xs text-gray-400 font-mono">{s.materialCode}</span></td>
                     <td className="px-3 py-2 text-right">{s.requestedQuantity}{s.unit}</td>
                     <td className="px-3 py-2 text-right text-emerald-700">{s.dispatchedQuantity}{s.unit}</td>
+                    <td className={`px-3 py-2 text-right ${(Number(s.pendingQuantity) || 0) > 0 ? 'text-blue-700 font-medium' : 'text-gray-400'}`}>{(Number(s.pendingQuantity) || 0) > 0 ? `${s.pendingQuantity}${s.unit}` : '-'}</td>
                     <td className={`px-3 py-2 text-right ${s.remainingQuantity > 0 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>{s.remainingQuantity}{s.unit}</td>
                   </tr>
                 ))}

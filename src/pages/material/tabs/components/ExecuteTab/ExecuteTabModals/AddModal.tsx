@@ -52,6 +52,10 @@ interface ExecuteAddModalProps {
   onMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: string | number) => void;
   // V14.0: FEFO 批次分配预览
   fefoMap?: Record<string, Array<{ batchNo: string; expiryDate: string; quantity: number; unit: string }>>;
+  // 2026-09-27 能力对齐：草稿
+  hasDraft?: boolean;
+  onRestoreDraft?: () => void;
+  onDiscardDraft?: () => void;
   // 操作
   onClose: () => void;
   onSave: () => void;
@@ -65,6 +69,9 @@ export function ExecuteAddModal({
   onAddToMaterialPool,
   onRemoveFromMaterialPool,
   onUpdateMaterialPoolQuantity,
+  hasDraft = false,
+  onRestoreDraft,
+  onDiscardDraft,
   selectedApplicationCode,
   onSelectApplicationCode,
   selectedMaterialIndices,
@@ -86,17 +93,59 @@ export function ExecuteAddModal({
   // 搜索申请单
   const [appSearch, setAppSearch] = useState('');
 
-  // 过滤后的领料申请单列表 — 只显示已审批且未完全出库的
+  // 2026-09-27 修复：聚合所有出库单（含"待出库"单）对每个申请单的物料覆盖量。
+  // 原过滤依赖后端回写的 dispatch_status === 'complete'，但两步出库下"待出库"单
+  // 不计入 dispatch_status，申请单建单后仍出现在下拉里，用户无法判断哪些已选过。
+  // 2026-09-27 审计修复：已取消(cancelled)单据不计入覆盖——否则"建单后又取消"
+  // 会把申请单永久挤出下拉（remainingByApp 归 0 且无法再建单，实测死锁场景）。
+  const coverageByApp = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {}; // 申请单号 → 物料编码 → 已覆盖量
+    for (const exec of executeItems) {
+      if ((exec as any).executeStatusClass === 'cancelled') continue; // 已取消单不占用额度
+      const srcList = ((exec as any).sourceApplicationCodes || []) as string[];
+      if (srcList.length === 0) continue;
+      for (const src of srcList) {
+        const perMaterial = (map[src] = map[src] || {});
+        for (const m of (exec.materials || [])) {
+          const code = m.materialCode || '';
+          if (!code) continue;
+          perMaterial[code] = (perMaterial[code] || 0) + (Number(m.actualQuantity) || 0);
+        }
+      }
+    }
+    return map;
+  }, [executeItems]);
+
+  // 每个申请单的未领物料统计（remaining = 还有剩余的物料种数，用于过滤 + 下拉项标注）
+  const remainingByApp = useMemo(() => {
+    const map: Record<string, { remaining: number; total: number }> = {};
+    for (const app of applicationItems) {
+      const covered = coverageByApp[app.code] || {};
+      let remaining = 0;
+      for (const m of (app.materials || [])) {
+        const requested = Number(m.requestedQuantity) || 0;
+        if ((covered[m.materialCode] || 0) < requested) remaining += 1;
+      }
+      map[app.code] = { remaining, total: (app.materials || []).length };
+    }
+    return map;
+  }, [applicationItems, coverageByApp]);
+
+  // 过滤后的领料申请单列表 — 只显示已审批且仍有未领物料的
   const availableApplications = useMemo(() => {
     return applicationItems.filter(app => {
       // 2026-08-10 P0修复：只允许从已审批通过的申请单出库（防审批绕过）
       if (app.statusClass !== 'approved') return false;
-      // 已完全出库的不再显示（防止重复出库）
-      if ((app as any).dispatchStatus === 'complete') return false;
+      // 2026-09-27 审计修复：已结案（不再领用）的申请单不再显示
+      if ((app as any).dispatchStatus === 'closed') return false;
+      // 2026-09-27 修复：所有物料均已被出库单覆盖（含"待出库"单）的不再显示，
+      // 防止同一申请单重复建单；部分覆盖的保留（剩余物料仍可继续领）
+      const info = remainingByApp[app.code];
+      if (info && info.total > 0 && info.remaining === 0) return false;
       if (appSearch && !app.code.toLowerCase().includes(appSearch.toLowerCase())) return false;
       return true;
     });
-  }, [appSearch, applicationItems]);
+  }, [appSearch, applicationItems, remainingByApp]);
 
   // 当前选中的领料申请单
   const selectedApplication = useMemo(() => {
@@ -104,10 +153,12 @@ export function ExecuteAddModal({
   }, [selectedApplicationCode, applicationItems]);
 
   // 计算已发数量：聚合所有出库记录中引用此申请单的物料实发量
+  // 2026-09-27 审计修复：与 coverageByApp 同口径排除已取消单（防"已发"列虚高）
   const dispatchedMap = useMemo(() => {
     const map: Record<string, number> = {}; // materialCode → 已发总量
     if (!selectedApplicationCode) return map;
     for (const exec of executeItems) {
+      if ((exec as any).executeStatusClass === 'cancelled') continue;
       const srcList = (exec as any).sourceApplicationCodes || [];
       if (!srcList.includes(selectedApplicationCode)) continue;
       for (const m of (exec.materials || [])) {
@@ -234,11 +285,18 @@ export function ExecuteAddModal({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">请选择领料申请单</SelectItem>
-            {availableApplications.map(app => (
-              <SelectItem key={app.code} value={app.code}>
-                {app.code} ({app.applicant} / {app.materials.length}种物料)
-              </SelectItem>
-            ))}
+            {availableApplications.map(app => {
+              // 2026-09-27：部分已领的申请单标注剩余种数，用户可判断是否领过
+              const info = remainingByApp[app.code];
+              const isPartial = !!info && info.total > 0 && info.remaining < info.total;
+              return (
+                <SelectItem key={app.code} value={app.code}>
+                  {app.code} ({app.applicant} / {isPartial
+                    ? `剩 ${info!.remaining}/${info!.total} 种未领`
+                    : `${app.materials.length}种物料`})
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -347,6 +405,33 @@ export function ExecuteAddModal({
   // ============================================
   const renderMaterialPool = () => (
     <div className="mt-6">
+      {/* 2026-09-27 能力对齐：草稿恢复提示 */}
+      {hasDraft && (
+        <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+          <span className="text-sm text-amber-800">⚠ 检测到上次未提交的出库草稿，是否恢复？</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="blue" onClick={onRestoreDraft}>恢复草稿</Button>
+            <Button size="sm" variant="secondary" onClick={onDiscardDraft}>丢弃</Button>
+          </div>
+        </div>
+      )}
+      {/* 2026-09-27 两步出库：默认建"待出库"单（仓库确认后才扣库存）；勾选则一步直达 */}
+      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={(addForm as any).directIssue === true}
+            onChange={(e) => onFormChange({ ...addForm, directIssue: e.target.checked } as any)}
+            className="w-4 h-4 accent-emerald-600"
+          />
+          <span className="text-sm text-blue-800 font-medium">直接出库（立即扣减库存）</span>
+        </label>
+        <span className="text-xs text-blue-600">
+          {(addForm as any).directIssue === true
+            ? '提交后立即扣库存，状态为「已出库/部分出库」'
+            : '默认：单据先建为「待出库」，仓库确认发料后才扣库存'}
+        </span>
+      </div>
       <div className="flex items-center justify-between mb-2">
         <Label className="text-sm font-medium text-gray-700">
           出库物料池
