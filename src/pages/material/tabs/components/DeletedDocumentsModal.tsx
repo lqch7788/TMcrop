@@ -36,6 +36,14 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   material_execute: '领料出库单',
 };
 
+/** 2026-09-27：删除原因显示兜底——过滤历史脏值（事件对象被 toString 的产物） */
+function cleanReason(reason: string | null | undefined): string {
+  if (!reason || typeof reason !== 'string') return '未填写';
+  const t = reason.trim();
+  if (!t || t === '[object Object]') return '未填写';
+  return t;
+}
+
 /** 从快照中提取物料明细（两种单据字段同名 materials/materialCode） */
 function snapshotMaterials(snapshot: Record<string, unknown>): any[] {
   const mats = snapshot.materials;
@@ -203,7 +211,9 @@ function FragmentRow({
         </td>
         <td className="px-3 py-2 text-gray-700">{row.deletedBy || '-'}</td>
         <td className="px-3 py-2 text-gray-500">{row.deletedAt.slice(0, 19).replace('T', ' ')}</td>
-        <td className="px-3 py-2 text-gray-600 max-w-[220px] truncate" title={row.reason || ''}>{row.reason || '-'}</td>
+        {/* 2026-09-27 修复：reason 渲染兜底——历史脏数据可能存了 "[object Object]"
+            （改造过渡期事件对象被 toString 所致），统一显示为"未填写" */}
+        <td className="px-3 py-2 text-gray-600 max-w-[220px] truncate" title={cleanReason(row.reason)}>{cleanReason(row.reason)}</td>
       </tr>
       {isExpanded && (
         <tr>
