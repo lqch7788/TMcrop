@@ -2,7 +2,7 @@
 // 领料申请单的主表格和展开行
 // 2026-09-26：批量编辑死代码已删除（编辑走行操作列），清理未用 props/import
 import { Fragment, useState } from 'react';
-import { ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, Trash2, Undo2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, Send, Trash2, Undo2, X } from 'lucide-react';
 import { printVoucher } from '../../../../components/materialReceiving/modals/DetailModal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -40,6 +40,13 @@ interface ApplicationTableProps {
   // 2026-09-26 批次二：撤回（仅待审批）与复制
   onWithdraw: (item: MaterialReceivingRecord) => void;
   onDuplicate: (item: MaterialReceivingRecord) => void;
+  // 2026-09-27 P2-11：重新提交（草稿态）
+  onResubmit: (item: MaterialReceivingRecord) => void;
+  // 2026-09-27 P2-11：批量提交/撤回
+  onBatchSubmit: () => void;
+  onBatchWithdraw: () => void;
+  // 2026-09-27 P2-12：统计摘要
+  summary: { monthCount: number; monthAmount: number; insufficientCount: number; pendingCount: number };
   // 新增
   onAddModalOpen: () => void;
   // 批量操作
@@ -72,6 +79,10 @@ export function ApplicationTable({
   onDeleteClick,
   onWithdraw,
   onDuplicate,
+  onResubmit,
+  onBatchSubmit,
+  onBatchWithdraw,
+  summary,
   onAddModalOpen,
   onShowBatchDeleteConfirm,
   onBatchCancel,
@@ -88,6 +99,26 @@ export function ApplicationTable({
   return (
     /* 数据表格 */
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* 2026-09-27 P2-12：统计摘要卡片 */}
+      <div className="grid grid-cols-4 gap-3 p-4 pb-0">
+        <div className="bg-blue-50 rounded-lg px-4 py-2">
+          <p className="text-xs text-blue-600">本月申请</p>
+          <p className="text-lg font-semibold text-blue-800">{summary.monthCount} 单</p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg px-4 py-2">
+          <p className="text-xs text-emerald-600">本月金额</p>
+          <p className="text-lg font-semibold text-emerald-800">¥{summary.monthAmount.toLocaleString()}</p>
+        </div>
+        <div className={`rounded-lg px-4 py-2 ${summary.pendingCount > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+          <p className={`text-xs ${summary.pendingCount > 0 ? 'text-amber-600' : 'text-gray-500'}`}>待审批</p>
+          <p className={`text-lg font-semibold ${summary.pendingCount > 0 ? 'text-amber-800' : 'text-gray-600'}`}>{summary.pendingCount} 单</p>
+        </div>
+        <div className={`rounded-lg px-4 py-2 ${summary.insufficientCount > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
+          <p className={`text-xs ${summary.insufficientCount > 0 ? 'text-orange-600' : 'text-gray-500'}`}>库存不足</p>
+          <p className={`text-lg font-semibold ${summary.insufficientCount > 0 ? 'text-orange-800' : 'text-gray-600'}`}>{summary.insufficientCount} 单</p>
+        </div>
+      </div>
+
       {/* 表格头部操作区 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">领料申请单列表</h3>
@@ -103,10 +134,16 @@ export function ApplicationTable({
             </Button>
           </div>
         ) : batchEditMode === 'delete' ? (
-          /* 批量删除模式 */
+          /* 批量删除模式（2026-09-27：扩展为 删除/提交/撤回 三动作） */
           <div className="flex gap-2">
             <Button variant="destructive" size="sm" onClick={onShowBatchDeleteConfirm}>
               <Trash2 className="w-4 h-4" /> 确认删除
+            </Button>
+            <Button variant="blue" size="sm" onClick={onBatchSubmit}>
+              <Send className="w-4 h-4" /> 批量提交
+            </Button>
+            <Button variant="warning" size="sm" onClick={onBatchWithdraw}>
+              <Undo2 className="w-4 h-4" /> 批量撤回
             </Button>
             <Button variant="secondary" size="sm" onClick={onBatchCancel}>
               <X className="w-4 h-4" /> 取消
@@ -137,7 +174,41 @@ export function ApplicationTable({
           <EmptyState type="search" title="暂无领料申请单" description="调整筛选条件，或点击右上角「新增」创建第一张领料申请单" />
         </div>
       ) : (
-      <div className="overflow-x-auto">
+      <>
+      {/* 2026-09-27 P3：移动端卡片视图（<md 显示，仓库现场手机操作） */}
+      <div className="md:hidden divide-y divide-gray-100">
+        {sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
+          <div key={item.id} className="p-4 active:bg-gray-50" onClick={() => onView(item)}>
+            <div className="flex items-start justify-between mb-2">
+              <span className="font-mono text-sm text-blue-600 underline">{item.code}</span>
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                item.statusClass === 'approved' ? 'bg-green-100 text-green-700' :
+                item.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :
+                item.statusClass === 'draft' ? 'bg-slate-100 text-slate-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>{item.status}</span>
+            </div>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>{item.date} · {item.department} · {item.applicant}</p>
+              <p className="text-xs text-gray-500">
+                {item.materials.length} 种物料 · ¥{item.materials.reduce((s: number, m: any) => s + (m.requestedQuantity || 0) * (m.unitPrice || 0), 0).toFixed(2)}
+                {(item as any).dispatchStatus === 'complete' && ' · 已出库'}
+                {(item as any).dispatchStatus === 'partial' && ' · 部分出库'}
+              </p>
+            </div>
+            {/* 移动端操作按钮 */}
+            <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+              <Button size="sm" variant="secondary" onClick={() => onEdit(item)}>编辑</Button>
+              {item.statusClass === 'pending' && <Button size="sm" variant="secondary" onClick={() => onWithdraw(item)}>撤回</Button>}
+              {item.statusClass === 'draft' && <Button size="sm" variant="blue" onClick={() => onResubmit(item)}>提交</Button>}
+              <Button size="sm" variant="secondary" onClick={() => onDuplicate(item)}>复制</Button>
+              <Button size="sm" variant="secondary" onClick={() => printVoucher(item)}>打印</Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto hidden md:block">
         <table className="w-full">
           {/* 表头 */}
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -237,6 +308,7 @@ export function ApplicationTable({
                         item.statusClass === 'rejected' ? 'bg-red-100 text-red-700' :
                         item.statusClass === 'cancelled' ? 'bg-gray-100 text-blue-700' :
                         item.statusClass === 'voided' ? 'bg-gray-200 text-gray-600' :
+                        item.statusClass === 'draft' ? 'bg-slate-100 text-slate-700' :
                         item.statusClass === 'partial' ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-blue-700'
                       }`}>
@@ -260,6 +332,18 @@ export function ApplicationTable({
                           ⚠ 库存不足
                         </span>
                       )}
+                      {/* 2026-09-27 P1-6：借用超期未还徽章 */}
+                      {(() => {
+                        const today = new Date().toISOString().slice(0, 10);
+                        const overdue = (item.materials || []).filter((m: any) => m.returnable && m.returnDate && String(m.returnDate) < today);
+                        if (overdue.length === 0) return null;
+                        const maxDays = Math.max(...overdue.map((m: any) => Math.floor((new Date(today).getTime() - new Date(m.returnDate).getTime()) / 86400000)));
+                        return (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium w-fit bg-red-100 text-red-700" title={`有 ${overdue.length} 项借用物料超过预计归还日期`}>
+                            借用超期 {maxDays} 天
+                          </span>
+                        );
+                      })()}
                       {item.statusClass === 'rejected' && item.rejectReason && (
                         <span className="text-xs text-red-600 max-w-[150px] truncate" title={item.rejectReason}>
                           原因：{item.rejectReason}
@@ -279,6 +363,12 @@ export function ApplicationTable({
                       {item.statusClass === 'pending' && (
                         <Button variant="ghost" size="icon" title="撤回审批" onClick={() => onWithdraw(item)}>
                           <Undo2 className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      )}
+                      {/* 2026-09-27 P2-11：草稿态（撤回后）重新提交 */}
+                      {item.statusClass === 'draft' && (
+                        <Button variant="ghost" size="icon" title="重新提交" onClick={() => onResubmit(item)}>
+                          <Send className="w-4 h-4 text-emerald-600" />
                         </Button>
                       )}
                       <Button variant="ghost" size="icon" title="复制申请单" onClick={() => onDuplicate(item)}>
@@ -351,6 +441,7 @@ export function ApplicationTable({
           </tbody>
         </table>
       </div>
+      </>
       )}
 
       {/* 导出模式底部 */}

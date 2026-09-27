@@ -11,6 +11,21 @@ export interface MaterialItem {
   warehousePosition: string;
   batchNo?: string; // 批次号（批次级库存追溯）
   remark?: string;
+  // 2026-09-27 P1 新增字段
+  /** 库存不足标记（提交时后端按实时库存复核写入） */
+  stockInsufficient?: boolean;
+  /** 预计归还日期（工具类物料借用场景） */
+  returnDate?: string;
+  /** 是否需归还（工具/设备类物料借用标记，2026-09-27 P1-6 补齐） */
+  returnable?: boolean;
+  /** 单位面积用量（P1-7 辅助计算：用量/亩） */
+  dosagePerMu?: number;
+  /** 领用面积（P1-7 辅助计算：亩数） */
+  areaMu?: number;
+  /** 临期提示（P1-5 前端展示用，不落库）：批次最快效期距今天数 */
+  nearestExpiryDays?: number;
+  /** 物料最低效期（P1-5 前端展示用，不落库） */
+  nearestExpiryDate?: string;
 }
 
 // 2026-08-10：选区域(多选)类型——与施肥管理「施肥区域(多选,支持不同作物不同区域)」对齐

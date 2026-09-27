@@ -1,7 +1,7 @@
 // ApplicationModals 组件
 // 领料申请单的编辑弹窗和新增弹窗
 // 使用统一的 Modal 组件，支持拖动、调整大小、最大化功能
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Save, Send, Trash2, Wand2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -138,16 +138,11 @@ export function EditModal({
           className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
+      {/* 2026-09-27 用户决策：部门前置（成本归属，必填）；申请人后置且选填（支持部门统一领料） */}
       <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">申请人</Label>
-        <UserSelect
-          value={editForm.applicant}
-          onChange={(value) => onFormChange({ ...editForm, applicant: value })}
-          placeholder="选择申请人"
-        />
-      </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
+          部门 <span className="text-red-500">*</span>
+        </Label>
         <Select
           value={editForm.department || 'none'}
           onValueChange={(val) => onFormChange({ ...editForm, department: val === 'none' ? '' : val })}
@@ -164,6 +159,16 @@ export function EditModal({
             <SelectItem value="采后处理部">采后处理部</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
+          申请人 <span className="text-xs text-gray-400 font-normal">（选填，留空则记为部门领料）</span>
+        </Label>
+        <UserSelect
+          value={editForm.applicant}
+          onChange={(value) => onFormChange({ ...editForm, applicant: value })}
+          placeholder="选择申请人"
+        />
       </div>
       <div className="col-span-2">
         {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
@@ -253,12 +258,14 @@ export function EditModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">批次号</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">用量/亩×面积</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">需归还/日期</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
           </thead>
@@ -320,6 +327,35 @@ export function EditModal({
                     />
                   </td>
                   <td className="px-2 py-2">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number" min="0" step="0.1"
+                        value={material.dosagePerMu ?? ''}
+                        placeholder="用量"
+                        onChange={(e) => {
+                          const dosage = Number(e.target.value) || 0;
+                          onMaterialChange(idx, 'dosagePerMu', dosage);
+                          if (dosage > 0 && (material.areaMu || 0) > 0) onMaterialChange(idx, 'requestedQuantity', Math.round(dosage * (material.areaMu || 0) * 100) / 100);
+                        }}
+                        className="w-14 px-1 py-1 border border-gray-400 rounded text-xs"
+                        title="单位面积用量（可选，与面积相乘自动填入申领数量）"
+                      />
+                      <span className="text-xs text-gray-400">x</span>
+                      <Input
+                        type="number" min="0" step="0.1"
+                        value={material.areaMu ?? ''}
+                        placeholder="面积"
+                        onChange={(e) => {
+                          const area = Number(e.target.value) || 0;
+                          onMaterialChange(idx, 'areaMu', area);
+                          if (area > 0 && (material.dosagePerMu || 0) > 0) onMaterialChange(idx, 'requestedQuantity', Math.round((material.dosagePerMu || 0) * area * 100) / 100);
+                        }}
+                        className="w-14 px-1 py-1 border border-gray-400 rounded text-xs"
+                        title="领用面积（亩）"
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-2">
                     <Input
                       type="number"
                       value={material.requestedQuantity}
@@ -362,6 +398,25 @@ export function EditModal({
                       onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
                       className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
+                  </td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={!!material.returnable}
+                        onChange={(e) => onMaterialChange(idx, 'returnable', e.target.checked)}
+                        title="标记为需归还（工具/设备类借用）"
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <Input
+                        type="date"
+                        value={material.returnDate || ''}
+                        onChange={(e) => onMaterialChange(idx, 'returnDate', e.target.value)}
+                        disabled={!material.returnable}
+                        className="w-32 px-1 py-1 border border-gray-400 rounded text-xs disabled:bg-gray-100 disabled:text-gray-400"
+                        title="预计归还日期（勾选'需归还'后填写）"
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-2">
                     <Button
@@ -471,6 +526,17 @@ interface AddModalProps {
   saving?: boolean;
   /** 2026-09-26 批次四：物料批次明细 + 历史领用价提示 */
   onShowMaterialInfo?: (code: string) => Promise<string>;
+  /** 2026-09-27 P0-2：草稿 */
+  hasDraft?: boolean;
+  onRestoreDraft?: () => void;
+  onDiscardDraft?: () => void;
+  /** 2026-09-27 P2-10：模板 */
+  templates?: Array<{ name: string; materials: MaterialItem[] }>;
+  onApplyTemplate?: (index: number) => void;
+  onSaveTemplate?: (name: string) => void;
+  onDeleteTemplate?: (index: number) => void;
+  /** 2026-09-27 P1-4：生产计划列表（批次号下拉） */
+  productionPlans?: Array<{ batchCode: string; cropName: string; areaName: string }>;
 }
 
 export function AddModal({
@@ -485,7 +551,17 @@ export function AddModal({
   onSave,
   saving = false,
   onShowMaterialInfo,
+  hasDraft = false,
+  onRestoreDraft,
+  onDiscardDraft,
+  templates = [],
+  onApplyTemplate,
+  onSaveTemplate,
+  onDeleteTemplate,
+  productionPlans = [],
 }: AddModalProps) {
+  // 2026-09-27 P2-10：模板名输入态
+  const [templateName, setTemplateName] = useState('');
   // 2026-08-10：当 materialCode 填了但 materialName 空时，从物料库自动反查填充
   useEffect(() => {
     if (!addForm.materials?.length) return;
@@ -514,7 +590,34 @@ export function AddModal({
 
   // 新增表单内容
   const renderFormContent = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div>
+      {/* 2026-09-27 P0-2：草稿恢复提示 */}
+      {hasDraft && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+          <span className="text-sm text-amber-800">⚠ 检测到上次未提交的草稿内容，是否恢复？</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="blue" onClick={onRestoreDraft}>恢复草稿</Button>
+            <Button size="sm" variant="secondary" onClick={onDiscardDraft}>丢弃</Button>
+          </div>
+        </div>
+      )}
+      {/* 2026-09-27 P2-10：模板 */}
+      {templates.length > 0 && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <Label className="block text-xs font-medium text-blue-700 mb-2">快速模板（点击带入常用物料组合）</Label>
+          <div className="flex flex-wrap gap-2">
+            {templates.map((t, i) => (
+              <span key={i} className="inline-flex items-center gap-1 bg-white border border-blue-200 rounded px-2 py-1 text-sm">
+                <button type="button" className="text-blue-700 hover:underline" onClick={() => onApplyTemplate?.(i)}>
+                  {t.name}（{t.materials.length}项）
+                </button>
+                <button type="button" className="text-red-400 hover:text-red-600 text-xs" title="删除模板" onClick={() => onDeleteTemplate?.(i)}>×</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4">
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">领料单号</Label>
         <div className="flex gap-2">
@@ -540,15 +643,9 @@ export function AddModal({
         />
       </div>
       <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">申请人</Label>
-        <UserSelect
-          value={addForm.applicant}
-          onChange={(value) => onFormChange({ ...addForm, applicant: value })}
-          placeholder="选择申请人"
-        />
-      </div>
-      <div>
-        <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
+          部门 <span className="text-red-500">*</span>
+        </Label>
         <Select
           value={addForm.department || 'none'}
           onValueChange={(val) => onFormChange({ ...addForm, department: val === 'none' ? '' : val })}
@@ -565,6 +662,16 @@ export function AddModal({
             <SelectItem value="采后处理部">采后处理部</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
+          申请人 <span className="text-xs text-gray-400 font-normal">（选填，留空则记为部门领料）</span>
+        </Label>
+        <UserSelect
+          value={addForm.applicant}
+          onChange={(value) => onFormChange({ ...addForm, applicant: value })}
+          placeholder="选择申请人"
+        />
       </div>
       <div className="col-span-2">
         {/* 2026-08-10：种植区域/用途 → 选区域(多选) */}
@@ -600,13 +707,20 @@ export function AddModal({
       {/* 2026-09-26 改进批次四：恢复生产计划批次号（成本归集维度）+ 预计日期 + 优先级 + 附件 */}
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
+        {/* 2026-09-27 P1-4：改为下拉关联生产计划（可手输兜底），避免手输错号导致成本归集失配 */}
         <Input
           type="text"
+          list="production-plan-batches"
           value={addForm.productionBatchCode || ''}
           onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
-          placeholder="如 ZZB2026-001（选填）"
+          placeholder="选择或输入批次号（选填）"
           className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
+        <datalist id="production-plan-batches">
+          {productionPlans.map((p) => (
+            <option key={p.batchCode} value={p.batchCode}>{p.cropName} · {p.areaName}</option>
+          ))}
+        </datalist>
       </div>
       <div>
         <Label className="block text-sm font-medium text-gray-700 mb-1">预计领用日期</Label>
@@ -669,6 +783,21 @@ export function AddModal({
           </div>
         )}
       </div>
+      </div>
+
+      {/* 2026-09-27 P2-10：保存为模板 */}
+      <div className="mt-4 flex items-center gap-2">
+        <Input
+          type="text"
+          value={templateName}
+          onChange={(e) => setTemplateName(e.target.value)}
+          placeholder="输入模板名称（如：草莓基肥组合）"
+          className="w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        />
+        <Button size="sm" variant="secondary" onClick={() => { onSaveTemplate?.(templateName); setTemplateName(''); }}>
+          存为模板
+        </Button>
+      </div>
     </div>
   );
 
@@ -691,12 +820,14 @@ export function AddModal({
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">批次号</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">用量/亩×面积</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">申领数量</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
+              <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600">需归还/日期</th>
               <th className="px-2 py-2 text-left text-sm font-semibold text-gray-600 w-12">操作</th>
             </tr>
           </thead>
@@ -758,6 +889,35 @@ export function AddModal({
                     />
                   </td>
                   <td className="px-2 py-2">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number" min="0" step="0.1"
+                        value={material.dosagePerMu ?? ''}
+                        placeholder="用量"
+                        onChange={(e) => {
+                          const dosage = Number(e.target.value) || 0;
+                          onMaterialChange(idx, 'dosagePerMu', dosage);
+                          if (dosage > 0 && (material.areaMu || 0) > 0) onMaterialChange(idx, 'requestedQuantity', Math.round(dosage * (material.areaMu || 0) * 100) / 100);
+                        }}
+                        className="w-14 px-1 py-1 border border-gray-400 rounded text-xs"
+                        title="单位面积用量（可选，与面积相乘自动填入申领数量）"
+                      />
+                      <span className="text-xs text-gray-400">x</span>
+                      <Input
+                        type="number" min="0" step="0.1"
+                        value={material.areaMu ?? ''}
+                        placeholder="面积"
+                        onChange={(e) => {
+                          const area = Number(e.target.value) || 0;
+                          onMaterialChange(idx, 'areaMu', area);
+                          if (area > 0 && (material.dosagePerMu || 0) > 0) onMaterialChange(idx, 'requestedQuantity', Math.round((material.dosagePerMu || 0) * area * 100) / 100);
+                        }}
+                        className="w-14 px-1 py-1 border border-gray-400 rounded text-xs"
+                        title="领用面积（亩）"
+                      />
+                    </div>
+                  </td>
+                  <td className="px-2 py-2">
                     <Input
                       type="number"
                       value={material.requestedQuantity}
@@ -800,6 +960,25 @@ export function AddModal({
                       onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
                       className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
+                  </td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={!!material.returnable}
+                        onChange={(e) => onMaterialChange(idx, 'returnable', e.target.checked)}
+                        title="标记为需归还（工具/设备类借用）"
+                        className="w-4 h-4 accent-blue-600"
+                      />
+                      <Input
+                        type="date"
+                        value={material.returnDate || ''}
+                        onChange={(e) => onMaterialChange(idx, 'returnDate', e.target.value)}
+                        disabled={!material.returnable}
+                        className="w-32 px-1 py-1 border border-gray-400 rounded text-xs disabled:bg-gray-100 disabled:text-gray-400"
+                        title="预计归还日期（勾选'需归还'后填写）"
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-2">
                     <Button

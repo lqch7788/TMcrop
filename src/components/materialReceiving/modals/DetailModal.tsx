@@ -13,6 +13,8 @@ interface DetailModalProps {
   /** 2026-09-26 批次二：审批进度（approvers/records）与操作历史 */
   approval?: Record<string, unknown> | null;
   logs?: Record<string, unknown>[];
+  /** 2026-09-27 P0-1：出库执行情况（records/summary/totals） */
+  executions?: Record<string, unknown> | null;
 }
 
 /** 打印领料单（2026-09-26 批次三：新窗口打印视图；2026-09-26 用户要求操作列与详情弹窗两处可用，故导出复用） */
@@ -44,7 +46,7 @@ export function printVoucher(record: MaterialReceivingRecord) {
   w.document.close();
 }
 
-export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClose, approval, logs }) => {
+export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClose, approval, logs, executions }) => {
   return (
     <UnifiedModal
       isOpen={isOpen}
@@ -179,6 +181,61 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
               })}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* 2026-09-27 P0-1：出库执行情况（领了多少/还剩多少） */}
+      {executions && Array.isArray((executions as any).summary) && (executions as any).summary.length > 0 && (
+        <div className="mt-6">
+          <Label className="text-sm text-gray-500 block mb-2">出库执行情况</Label>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            {/* 汇总条 */}
+            <div className={`px-4 py-2 text-sm flex items-center justify-between ${(executions as any).isFulfilled ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+              <span className={(executions as any).isFulfilled ? 'text-emerald-800' : 'text-amber-800'}>
+                {(executions as any).isFulfilled ? '✓ 已全部出库' : '⚠ 部分出库，尚有剩余未领'}
+              </span>
+              <span className="text-gray-700">
+                已领 <strong>{(executions as any).totals?.dispatched ?? 0}</strong> / 申请 <strong>{(executions as any).totals?.requested ?? 0}</strong>，剩余 <strong className={(executions as any).totals?.remaining > 0 ? 'text-amber-700' : ''}>{(executions as any).totals?.remaining ?? 0}</strong>
+              </span>
+            </div>
+            {/* 逐物料汇总 */}
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">物料</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">申请量</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">已领量</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">剩余</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {((executions as any).summary as any[]).map((s, i) => (
+                  <tr key={i}>
+                    <td className="px-3 py-2 text-gray-800">{s.materialName} <span className="text-xs text-gray-400 font-mono">{s.materialCode}</span></td>
+                    <td className="px-3 py-2 text-right">{s.requestedQuantity}{s.unit}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{s.dispatchedQuantity}{s.unit}</td>
+                    <td className={`px-3 py-2 text-right ${s.remainingQuantity > 0 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>{s.remainingQuantity}{s.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* 出库单明细 */}
+            {Array.isArray((executions as any).executions) && (executions as any).executions.length > 0 && (
+              <div className="border-t border-gray-200 px-4 py-2 bg-gray-50">
+                <p className="text-xs text-gray-500 mb-1">关联出库单（{(executions as any).executions.length} 张）</p>
+                <ul className="space-y-1">
+                  {((executions as any).executions as any[]).map((e, i) => (
+                    <li key={i} className="text-sm flex items-center gap-3">
+                      <span className="w-28 text-gray-500">{e.date}</span>
+                      <span className="font-mono text-blue-700">{e.code}</span>
+                      <span className="text-gray-600">{e.executeStatus}</span>
+                      <span className="text-gray-500">操作人：{e.operator || '-'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
