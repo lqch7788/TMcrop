@@ -1,7 +1,8 @@
 // 供应商编辑弹窗组件
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Supplier, EditFormData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
+import { Supplier, EditFormData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS, SUPPLIER_SETTLEMENT_OPTIONS, SUPPLIER_INTERNAL_OPTIONS, SUPPLIER_RATING_LABEL, SUPPLIER_RATING_HINT } from './types';
 import { getSupplierTypeName } from './data';
+import { QUALIFICATION_ROWS, QUALIFICATION_LABELS, requiredKindForType } from './qualification';
 import { UnifiedModal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -112,10 +113,20 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
     bankName: '',
     bankCardNumber: '',
     organization: '',
-    createDate: '',
     remarks: '',
     lastEditBy: '',
-    lastEditTime: ''
+    lastEditTime: '',
+    // 2026-09-28 批次B/C：资质证照 + 经营决策（空串表示未登记）
+    pesticideLicenseNo: '',
+    pesticideLicenseExpiry: '',
+    seedFilingNo: '',
+    seedFilingExpiry: '',
+    fertilizerRegNo: '',
+    fertilizerRegExpiry: '',
+    isInternal: 'external',
+    settlementType: '',
+    creditDays: '',
+    rating: '',
   });
 
   useEffect(() => {
@@ -136,10 +147,22 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
         bankName: supplier.bankName || '',
         bankCardNumber: supplier.bankCardNumber || '',
         organization: supplier.organization,
-        createDate: supplier.createDate,
+        // 2026-09-28：建档日期不再出现在表单里（提交时由新增流程记当天），
+        // 编辑不触碰该字段——走 {...supplier, ...form} 合并时沿用库中现值
         remarks: supplier.remarks || '',
         lastEditBy: '',
-        lastEditTime: todayLocal()
+        lastEditTime: todayLocal(),
+        // 2026-09-28 批次B/C：资质证照 + 经营决策（DB 里 null → 空串，表单可控）
+        pesticideLicenseNo: supplier.pesticideLicenseNo || '',
+        pesticideLicenseExpiry: supplier.pesticideLicenseExpiry || '',
+        seedFilingNo: supplier.seedFilingNo || '',
+        seedFilingExpiry: supplier.seedFilingExpiry || '',
+        fertilizerRegNo: supplier.fertilizerRegNo || '',
+        fertilizerRegExpiry: supplier.fertilizerRegExpiry || '',
+        isInternal: supplier.isInternal || 'external',
+        settlementType: supplier.settlementType || '',
+        creditDays: supplier.creditDays ? String(supplier.creditDays) : '',
+        rating: supplier.rating ? String(supplier.rating) : '',
       });
       // 2026-09-28 审计修复：地区级联节点此前从不同步 → 编辑已有供应商时省市显示为空，
       // 且跨供应商残留（编辑 A 后取消再编辑 B，界面仍显示 A 的省市）。
@@ -179,9 +202,15 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
 
     onSave({
       ...supplier,
-      ...form
+      ...form,
+      // 2026-09-28 批次C：数值列显式转换（表单里是文本，直接落库会被 SQLite 存成字符串）
+      creditDays: Number(form.creditDays) || 0,
+      rating: Number(form.rating) || 0,
     });
   };
+
+  // 当前供应类型强制要求的证照（用于表单高亮；不强制时返回 null）
+  const requiredKind = requiredKindForType(form.supplierType);
 
   if (!isOpen || !supplier) return null;
 
@@ -269,8 +298,9 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">请选择组织</SelectItem>
-                  <SelectItem value="宁波帮帮忙公司">宁波帮帮忙公司</SelectItem>
-                  <SelectItem value="成都帮帮您公司">成都帮帮您公司</SelectItem>
+                  {SUPPLIER_ORGANIZATION_OPTIONS.map(org => (
+                    <SelectItem key={org} value={org}>{org}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -286,9 +316,9 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="合作中">合作中</SelectItem>
-                  <SelectItem value="暂停">暂停</SelectItem>
-                  <SelectItem value="终止">终止</SelectItem>
+                  {SUPPLIER_STATUS_OPTIONS.map(st => (
+                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -396,15 +426,111 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
               />
             </div>
 
-            {/* 创建时间 */}
-            <div>
-              <Label className="block text-sm font-medium text-gray-700 mb-1">创建时间</Label>
-              <Input
-                type="date"
-                value={form.createDate}
-                onChange={(e) => handleChange('createDate', e.target.value)}
-                className={deepInputClass}
-              />
+            {/* 2026-09-28 批次B 合规风控：资质证照（三类全展示，当前类型要求的标红星） */}
+            <div className="col-span-2 border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="block text-sm font-medium text-gray-700">资质证照</Label>
+                <span className={`text-xs ${requiredKind ? 'text-orange-600' : 'text-gray-400'}`}>
+                  {requiredKind
+                    ? `当前「${getSupplierTypeName(form.supplierType)}」须持${QUALIFICATION_LABELS[requiredKind]}`
+                    : '当前供应类型不强制持证'}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {QUALIFICATION_ROWS.map((row) => {
+                  const isRequired = row.kind === requiredKind;
+                  return (
+                    <div key={row.kind} className="flex items-center gap-3">
+                      <Label className="w-32 shrink-0 text-sm text-gray-700">
+                        {row.label}
+                        {isRequired && <span className="text-red-500 ml-0.5" title="当前供应类型强制要求">*</span>}
+                      </Label>
+                      <Input
+                        type="text"
+                        value={String(form[row.noField] ?? '')}
+                        onChange={(e) => handleChange(row.noField as keyof EditFormData, e.target.value)}
+                        placeholder="证号"
+                        className={`flex-1 ${deepInputClass}`}
+                      />
+                      <Input
+                        type="date"
+                        value={String(form[row.expiryField] ?? '')}
+                        onChange={(e) => handleChange(row.expiryField as keyof EditFormData, e.target.value)}
+                        title="有效期至"
+                        className={`w-44 shrink-0 ${deepInputClass}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2026-09-28 批次C 经营决策：内部自产 / 结算方式 / 账期 / 评级 */}
+            <div className="col-span-2 border-t border-gray-200 pt-4">
+              <Label className="block text-sm font-medium text-gray-700 mb-3">经营决策</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">内部自产标记</Label>
+                  <Select
+                    value={form.isInternal}
+                    onValueChange={(val) => handleChange('isInternal', val)}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="外部采购" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPLIER_INTERNAL_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">结算方式</Label>
+                  <Select
+                    value={form.settlementType}
+                    onValueChange={(val) => handleChange('settlementType', val)}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择结算方式" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* 空 value 项不可省：ui/Select 把 '' 映射为 sentinel（非空），
+                          无匹配项时 Radix 不渲染 placeholder，触发器会是空白 */}
+                      <SelectItem value="">未设置</SelectItem>
+                      {SUPPLIER_SETTLEMENT_OPTIONS.map(opt => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">账期天数</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.creditDays}
+                    onChange={(e) => handleChange('creditDays', e.target.value)}
+                    placeholder="0"
+                    className={deepInputClass}
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">{SUPPLIER_RATING_LABEL}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={form.rating}
+                    onChange={(e) => handleChange('rating', e.target.value)}
+                    placeholder={SUPPLIER_RATING_HINT}
+                    className={deepInputClass}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* 备注 */}

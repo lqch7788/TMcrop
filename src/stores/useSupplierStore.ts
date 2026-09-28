@@ -71,6 +71,18 @@ function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
     create_date: item.createDate,
     remarks: item.remarks,
     create_by: item.createBy,
+    // 2026-09-28 批次B：三类强制资质证照
+    pesticide_license_no: item.pesticideLicenseNo,
+    pesticide_license_expiry: item.pesticideLicenseExpiry,
+    seed_filing_no: item.seedFilingNo,
+    seed_filing_expiry: item.seedFilingExpiry,
+    fertilizer_reg_no: item.fertilizerRegNo,
+    fertilizer_reg_expiry: item.fertilizerRegExpiry,
+    // 2026-09-28 批次C：经营决策字段（数值列显式转 Number，空值落 0）
+    is_internal: item.isInternal,
+    settlement_type: item.settlementType,
+    credit_days: item.creditDays === undefined ? undefined : (Number(item.creditDays) || 0),
+    rating: item.rating === undefined ? undefined : (Number(item.rating) || 0),
   };
   // 丢弃 undefined（JSON.stringify 本就会丢，但这里显式过滤避免上层误用）
   return Object.fromEntries(Object.entries(map).filter(([, v]) => v !== undefined));
@@ -105,6 +117,18 @@ function fromBackendFields(record: Record<string, unknown>): Supplier {
     organization: r.organization || '',
     createDate: r.createDate || r.create_date || '',
     remarks: r.remarks || '',
+    // 2026-09-28 批次B：资质证照（camelCase 优先，兼容 snake_case 未过中间件的场景）
+    pesticideLicenseNo: r.pesticideLicenseNo || r.pesticide_license_no || '',
+    pesticideLicenseExpiry: r.pesticideLicenseExpiry || r.pesticide_license_expiry || '',
+    seedFilingNo: r.seedFilingNo || r.seed_filing_no || '',
+    seedFilingExpiry: r.seedFilingExpiry || r.seed_filing_expiry || '',
+    fertilizerRegNo: r.fertilizerRegNo || r.fertilizer_reg_no || '',
+    fertilizerRegExpiry: r.fertilizerRegExpiry || r.fertilizer_reg_expiry || '',
+    // 2026-09-28 批次C：经营决策
+    isInternal: r.isInternal || r.is_internal || 'external',
+    settlementType: r.settlementType || r.settlement_type || '',
+    creditDays: Number(r.creditDays ?? r.credit_days ?? 0) || 0,
+    rating: Number(r.rating ?? 0) || 0,
   };
 }
 

@@ -1,9 +1,10 @@
 // 供应商新增弹窗组件 - 参照物料入库 InboundAddModal 样式
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Send, X } from 'lucide-react';
-import { Supplier, NewSupplierData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
+import { Supplier, NewSupplierData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS, SUPPLIER_SETTLEMENT_OPTIONS, SUPPLIER_INTERNAL_OPTIONS, SUPPLIER_RATING_LABEL, SUPPLIER_RATING_HINT } from './types';
 import { getSupplierTypeName } from './data';
-import { Button } from '@/components/ui';
+import { QUALIFICATION_ROWS, QUALIFICATION_LABELS, requiredKindForType } from './qualification';
+import SupplierCodeGenerator from './SupplierCodeGenerator';
+import { UnifiedModal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Cascader } from '@/components/ui';
@@ -27,14 +28,13 @@ interface SupplierAddModalProps {
   onClose: () => void;
   /** 2026-09-28：允许返回 false 表示保存失败（弹窗据此保留草稿） */
   onAdd: (supplier: Supplier) => void | Promise<unknown>;
-  generatedCode?: string;
 }
 
-export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode }: SupplierAddModalProps) {
+// 2026-09-28：编码生成器已移入本弹窗（原为页面生成→复制→粘贴，改为一键回填），
+// 原 generatedCode 外部注入通道随之移除
+export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAddModalProps) {
   // 深度输入框样式（与其他 AddModal 一致）
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
-  const today = todayLocal();
 
   // 从全局设置数据获取供应商属性字典
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
@@ -117,81 +117,29 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
     status: '合作中',
     bankName: '',
     bankCardNumber: '',
-    createDate: today,
-    remarks: ''
+    remarks: '',
+    // 2026-09-28 批次B/C：资质证照 + 经营决策
+    pesticideLicenseNo: '',
+    pesticideLicenseExpiry: '',
+    seedFilingNo: '',
+    seedFilingExpiry: '',
+    fertilizerRegNo: '',
+    fertilizerRegExpiry: '',
+    isInternal: 'external',
+    settlementType: '',
+    creditDays: '',
+    rating: '',
   });
 
-  // 弹窗最大化状态
-  // 2026-09-28：提交中标记（防重复提交）
-  const [submitting, setSubmitting] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
-
-  // 同步外部生成的编码
-  useEffect(() => {
-    if (generatedCode) {
-      setForm(prev => ({ ...prev, code: generatedCode }));
-    }
-  }, [generatedCode]);
-
-  // 拖动处理
-  const handleDragStart = (e: React.MouseEvent) => {
-    if (isMaximized) return;
-    if ((e.target as HTMLElement).closest('button')) return;
-    e.preventDefault();
-    setIsDragging(true);
-    const dialog = document.getElementById('supplier-add-dialog');
-    if (dialog) {
-      const rect = dialog.getBoundingClientRect();
-      setDragStart({ x: e.clientX, y: e.clientY, left: rect.left, top: rect.top });
-    }
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      const dialog = document.getElementById('supplier-add-dialog');
-      if (dialog) {
-        dialog.style.position = 'fixed';
-        dialog.style.left = `${dragStart.left + deltaX}px`;
-        dialog.style.top = `${dragStart.top + deltaY}px`;
-        dialog.style.margin = '0';
-      }
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragStart]);
-
-  // 最大化/还原
-  const toggleMaximize = () => {
-    const dialog = document.getElementById('supplier-add-dialog');
-    if (!isMaximized && dialog) {
-      dialog.style.width = '100vw';
-      dialog.style.height = '100vh';
-      dialog.style.maxWidth = 'none';
-      dialog.style.maxHeight = 'none';
-      dialog.style.borderRadius = '0';
-    } else if (dialog) {
-      dialog.style.width = '';
-      dialog.style.height = '';
-      dialog.style.maxWidth = '';
-      dialog.style.maxHeight = '';
-      dialog.style.borderRadius = '';
-    }
-    setIsMaximized(!isMaximized);
-  };
+  // 2026-09-28：拖动/最大化/提交中禁用改由 UnifiedModal（ui/Modal）统一提供，
+  // 本组件不再自管 isMaximized/isDragging/submitting 状态（此前为自绘弹窗遗留）
 
   const handleChange = (field: keyof NewSupplierData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
+
+  // 当前供应类型强制要求的证照（用于表单高亮；不强制时返回 null）
+  const requiredKind = requiredKindForType(form.supplierType);
 
   /** 表单重置（提交成功 / 关闭时共用） */
   const resetForm = () => {
@@ -200,7 +148,10 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
       organization: '', code: '', name: '', supplierType: '', supplierAttribute: '',
       contact: '', mobilePhone: '', workPhone: '', fax: '', country: '中国',
       province: '', city: '', address: '', status: '合作中',
-      bankName: '', bankCardNumber: '', createDate: today, remarks: ''
+      bankName: '', bankCardNumber: '', remarks: '',
+      pesticideLicenseNo: '', pesticideLicenseExpiry: '', seedFilingNo: '', seedFilingExpiry: '',
+      fertilizerRegNo: '', fertilizerRegExpiry: '',
+      isInternal: 'external', settlementType: '', creditDays: '', rating: ''
     });
   };
 
@@ -235,22 +186,22 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
       return;
     }
 
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const newSupplier: Supplier = {
-        id: form.code, // 2026-09-28：id 用编码（string），与后端 TEXT 主键一致（原 Date.now() 是数字，类型不符）
-        ...form,
-        code: form.code.trim(),
-        name: form.name.trim(),
-      };
-      // 2026-09-28 审计修复：等待保存结果——失败时保留草稿（此前先清表单，用户 18 个字段白填）
-      const ok = await (onAdd as unknown as (s: Supplier) => Promise<unknown> | unknown)(newSupplier);
-      if (ok === false) return;
-      resetForm();
-    } finally {
-      setSubmitting(false);
-    }
+    const newSupplier: Supplier = {
+      id: form.code, // 2026-09-28：id 用编码（string），与后端 TEXT 主键一致（原 Date.now() 是数字，类型不符）
+      ...form,
+      code: form.code.trim(),
+      name: form.name.trim(),
+      // 2026-09-28 批次C：数值列显式转换（表单里是文本，直接落库会被 SQLite 存成字符串）
+      creditDays: Number(form.creditDays) || 0,
+      rating: Number(form.rating) || 0,
+      // 2026-09-28：建档日期不再由用户填写，提交当天即建档日（列表「创建时间」列／详情弹窗照常展示）
+      createDate: todayLocal(),
+    };
+    // 2026-09-28 审计修复：等待保存结果——失败时保留草稿（此前先清表单，用户 18 个字段白填）
+    // 防重复提交由 UnifiedModal 的 isSubmitting 承担（提交期间按钮禁用）
+    const ok = await (onAdd as unknown as (s: Supplier) => Promise<unknown> | unknown)(newSupplier);
+    if (ok === false) return;
+    resetForm();
   };
 
   // 2026-09-28 审计修复：关闭时重置草稿——组件常驻挂载，此前取消后再打开会带出上一单内容
@@ -260,52 +211,31 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div
-        id="supplier-add-dialog"
-        className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[90vh] flex flex-col relative"
-      >
-        {/* 标题栏 */}
-        <div
-          className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0 cursor-move"
-          onMouseDown={handleDragStart}
-        >
-          <h3 className="text-lg font-semibold text-white select-none">新增供应商</h3>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleMaximize}
-              className="text-white hover:bg-emerald-700"
-              title={isMaximized ? '还原' : '最大化'}
-            >
-              {isMaximized ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H6a2 2 0 00-2 2v2m0 4v2a2 2 0 002 2h2m8 0h2a2 2 0 002-2v-2m0-4V6a2 2 0 00-2-2h-2" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-              )}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="新增供应商"
+      size="xxxl"
+      // 显式给宽度：Modal 定位用 sizeDefaults.xxxl(1350px)，而 CSS 上限是 max-w-6xl(1152px)，
+      // 两者不一致 → 在 ≤1380 宽的屏幕上按 1350 居中会把左边缘算到屏幕外（标题被裁）。
+      // 这里对齐到 1152（= 原自绘弹窗的 max-w-6xl），与 CSS 上限一致。
+      width={1152}
+      showFooter={true}
+      onSubmit={handleSubmit}
+      submitText="提交"
+      cancelText="取消"
+    >
         {/* 基本信息区域 */}
         <div className="p-4 bg-emerald-50 border-b border-gray-200">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* 供应商编号 */}
+            {/* 供应商编号（占一列，不再横跨两列） */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号</Label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号 *</Label>
               <Input
                 type="text"
                 value={form.code}
                 onChange={(e) => handleChange('code', e.target.value)}
-                placeholder="手动输入或使用编码生成器"
+                placeholder="手动输入或点击生成"
                 className={deepInputClass.replace('text-sm', 'text-sm font-mono')}
               />
             </div>
@@ -321,7 +251,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               />
             </div>
 
-            {/* 供应类型 */}
+            {/* 供应类型（大类）—— 排在「编码中类」之前：先选大类才能选中类 */}
             <div>
               <Label className="block text-xs font-medium text-emerald-700 mb-1">供应类型 *</Label>
               <Select
@@ -340,6 +270,18 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               </Select>
             </div>
 
+            {/* 编码中类 + 生成按钮（与编号/名称/供应类型同一行）：选中类 → 生成 → 直接回填编号字段 */}
+            <div>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">编码中类</Label>
+              <SupplierCodeGenerator
+                bigCategory={form.supplierType}
+                onGenerated={(code) => setForm(prev => ({ ...prev, code }))}
+              />
+            </div>
+          </div>
+
+          {/* 第二行：属性/组织/联系人/移动电话/状态 五个字段同行（独立 5 列，避免第 5 个被挤到下一行） */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
             {/* 供应商属性 */}
             <div>
               <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商属性 *</Label>
@@ -473,19 +415,8 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               />
             </div>
 
-            {/* 创建时间 */}
-            <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">创建时间</Label>
-              <Input
-                type="date"
-                value={form.createDate}
-                onChange={(e) => handleChange('createDate', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
-              />
-            </div>
-
-            {/* 详细地址 */}
-            <div className="col-span-3">
+            {/* 详细地址（与省/市/区同一行：省市区占 1 列，地址占 2 列） */}
+            <div className="col-span-2">
               <Label className="block text-xs font-medium text-gray-700 mb-1">详细地址</Label>
               <Input
                 type="text"
@@ -517,6 +448,113 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
               />
             </div>
 
+            {/* 2026-09-28 批次B 合规风控：资质证照（三类全展示，当前类型要求的标红星） */}
+            <div className="col-span-3 border-t border-gray-200 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="block text-xs font-medium text-gray-700">资质证照</Label>
+                <span className={`text-xs ${requiredKind ? 'text-orange-600' : 'text-gray-400'}`}>
+                  {requiredKind
+                    ? `当前「${getSupplierTypeName(form.supplierType)}」须持${QUALIFICATION_LABELS[requiredKind]}`
+                    : '当前供应类型不强制持证'}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {QUALIFICATION_ROWS.map((row) => {
+                  const isRequired = row.kind === requiredKind;
+                  return (
+                    <div key={row.kind} className="flex items-center gap-3">
+                      <Label className="w-28 shrink-0 text-xs text-gray-700">
+                        {row.label}
+                        {isRequired && <span className="text-red-500 ml-0.5" title="当前供应类型强制要求">*</span>}
+                      </Label>
+                      <Input
+                        type="text"
+                        value={String(form[row.noField] ?? '')}
+                        onChange={(e) => handleChange(row.noField as keyof NewSupplierData, e.target.value)}
+                        placeholder="证号"
+                        className={`flex-1 ${deepInputClass}`}
+                      />
+                      <Input
+                        type="date"
+                        value={String(form[row.expiryField] ?? '')}
+                        onChange={(e) => handleChange(row.expiryField as keyof NewSupplierData, e.target.value)}
+                        title="有效期至"
+                        className={`w-40 shrink-0 ${deepInputClass}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2026-09-28 批次C 经营决策：内部自产 / 结算方式 / 账期 / 评级（四个字段同一行） */}
+            <div className="col-span-3 border-t border-gray-200 pt-3">
+              <Label className="block text-xs font-medium text-gray-700 mb-2">经营决策</Label>
+              <div className="grid grid-cols-4 gap-3">
+                <div>
+                  <Label className="block text-xs font-medium text-gray-700 mb-1">内部自产标记</Label>
+                  <Select
+                    value={form.isInternal}
+                    onValueChange={(val) => handleChange('isInternal', val)}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="外部采购" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPLIER_INTERNAL_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="block text-xs font-medium text-gray-700 mb-1">结算方式</Label>
+                  <Select
+                    value={form.settlementType}
+                    onValueChange={(val) => handleChange('settlementType', val)}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择结算方式" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* 空 value 项不可省：ui/Select 把 '' 映射为 sentinel（非空），
+                          无匹配项时 Radix 不渲染 placeholder，触发器会是空白 */}
+                      <SelectItem value="">未设置</SelectItem>
+                      {SUPPLIER_SETTLEMENT_OPTIONS.map(opt => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="block text-xs font-medium text-gray-700 mb-1">账期天数</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.creditDays}
+                    onChange={(e) => handleChange('creditDays', e.target.value)}
+                    placeholder="0"
+                    className={deepInputClass}
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-xs font-medium text-gray-700 mb-1">{SUPPLIER_RATING_LABEL}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={form.rating}
+                    onChange={(e) => handleChange('rating', e.target.value)}
+                    placeholder={SUPPLIER_RATING_HINT}
+                    className={deepInputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* 备注 */}
             <div className="col-span-3">
               <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
@@ -530,16 +568,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
           </div>
         </div>
 
-        {/* 底部按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-          <Button variant="secondary" onClick={onClose}>
-            <X className="w-4 h-4" /> 取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            <Send className="w-4 h-4" /> 提交
-          </Button>
-        </div>
-      </div>
-    </div>
+        {/* 底部按钮由 UnifiedModal 统一渲染（showFooter + onSubmit） */}
+    </UnifiedModal>
   );
 }

@@ -2,6 +2,7 @@
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Supplier } from './types';
 import { getSupplierTypeName } from './data';
+import { evaluateSupplierQualification, QUALIFICATION_STATUS_TEXT, QUALIFICATION_STATUS_CLASS } from './qualification';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -46,10 +47,26 @@ export default function SupplierTable({
 
   const isAllSelected = suppliers.length > 0 && selectedRows.length === suppliers.length;
 
+  /** 2026-09-28 批次B：资质合规徽章（未登记/已过期/即将到期/有效/不适用） */
+  const renderQualificationBadge = (supplier: Supplier) => {
+    const ev = evaluateSupplierQualification(supplier);
+    const title = ev.status === 'not_required'
+      ? '该供应类型不强制持证'
+      : `${ev.label}${ev.no ? ` ${ev.no}` : ''}${ev.expiry ? ` · 有效期至 ${ev.expiry}` : ''}`;
+    return (
+      <span
+        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${QUALIFICATION_STATUS_CLASS[ev.status]}`}
+        title={title}
+      >
+        {QUALIFICATION_STATUS_TEXT[ev.status]}
+      </span>
+    );
+  };
+
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full" style={{ minWidth: '1400px', tableLayout: 'fixed' }}>
+        <table className="w-full" style={{ minWidth: '1480px', tableLayout: 'fixed' }}>
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {(exportMode || batchEditMode || deleteMode) && (
@@ -70,6 +87,7 @@ export default function SupplierTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">移动电话</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">所属组织</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">资质</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">所在地区</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">创建时间</th>
               {!exportMode && !batchEditMode && !deleteMode && (
@@ -82,7 +100,7 @@ export default function SupplierTable({
                 叠加页码越界时用户会以为数据丢了 */}
             {displayedSuppliers.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-4 py-10 text-center text-gray-500">
+                <td colSpan={13} className="px-4 py-10 text-center text-gray-500">
                   {suppliers.length === 0 ? '没有符合条件的供应商（可尝试重置筛选条件）' : '当前页没有数据（可尝试回到上一页）'}
                 </td>
               </tr>
@@ -117,6 +135,7 @@ export default function SupplierTable({
                     {supplier.status}
                   </span>
                 </td>
+                <td className="px-4 py-3 whitespace-nowrap">{renderQualificationBadge(supplier)}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.province} {supplier.city}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{supplier.createDate}</td>
                 {!exportMode && !batchEditMode && !deleteMode && (

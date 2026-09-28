@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import PageHeader from './PageHeader';
 import SupplierFilters, { filterSuppliers } from './SupplierFilters';
 import SupplierTable from './SupplierTable';
@@ -9,7 +9,6 @@ import SupplierEditModal from './SupplierEditModal';
 import SupplierAddModal from './SupplierAddModal';
 import SupplierBatchEditModal from './SupplierBatchEditModal';
 import SupplierExportModal from './SupplierExportModal';
-import SupplierCodeGenerator from './SupplierCodeGenerator';
 import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningDialog, BatchDeleteConfirmDialog } from './DeleteDialogs';
 import { Supplier, SupplierFiltersState } from './types';
@@ -17,7 +16,6 @@ import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
 import { useSupplierStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
-import { enhancedApiClient } from '@/lib/apiClient';
 
 /** 2026-09-28 审计修复：导出转义工具（此前 CSV 无 BOM/未转义、HTML 直接拼原值） */
 const escapeHtml = (v: string): string =>
@@ -51,7 +49,12 @@ export default function SupplierManagementPage() {
     type: '全部',
     status: '全部',
     supplierAttribute: '全部',
-    organization: '全部'
+    organization: '全部',
+    province: '',
+    city: '',
+    // 2026-09-28 批次B/C：资质状态 + 内部自产
+    qualification: '全部',
+    isInternal: '全部',
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -79,12 +82,7 @@ export default function SupplierManagementPage() {
   const [batchEditedSuppliers, setBatchEditedSuppliers] = useState<Record<string, Partial<Supplier>>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
 
-  // 编码生成器状态（内联展开，参照物料入库）
-  const [codeGenExpanded, setCodeGenExpanded] = useState(false);
-  const [codeGen, setCodeGen] = useState({ bigCategory: '', midCategory: '', generatedCode: '' });
-  const [codeGenError, setCodeGenError] = useState('');
-  const [codeGenSuccess, setCodeGenSuccess] = useState('');
-  const [copySuccess, setCopySuccess] = useState(false);
+  // 2026-09-28：编码生成器状态与逻辑已移入「新增供应商」弹窗
 
   // 筛选后的供应商
   const filteredSuppliers = useMemo(() => filterSuppliers(suppliers, filters), [suppliers, filters]);
@@ -103,7 +101,13 @@ export default function SupplierManagementPage() {
   };
 
   const handleResetFilters = () => {
-    setFilters({ code: '', name: '', contact: '', type: '全部', status: '全部', supplierAttribute: '全部', organization: '全部' });
+    setFilters({
+      code: '', name: '', contact: '', type: '全部', status: '全部',
+      supplierAttribute: '全部', organization: '全部',
+      // 2026-09-28：补 province/city——此前重置不清省市，筛过省份后点「重置」列表仍被过滤；
+      // 同时重置批次B/C 新增的 qualification/isInternal
+      province: '', city: '', qualification: '全部', isInternal: '全部',
+    });
     setCurrentPage(1);
   };
 
@@ -378,61 +382,8 @@ export default function SupplierManagementPage() {
     setSelectedRows([]);
   };
 
-  // 编码生成
-  // 2026-09-28 审计修复：编码生成改为调用后端 /api/suppliers/generate-code
-  // 原实现用 Math.floor(Math.random()*99)+1 出流水号（违反《业务编码生成契约规则》：
-  // 禁随机、须按前缀自增、跨端一致），序列空间仅 001-099 且从不查重。
-  const handleGenerateCode = useCallback(async () => {
-    setCodeGenError('');
-    setCodeGenSuccess('');
-    if (!codeGen.bigCategory || !codeGen.midCategory) {
-      setCodeGenError('请选择供应商大类和供应商中类');
-      return;
-    }
-    try {
-      const res = await enhancedApiClient.get<{ code?: string } | { data?: { code?: string } }>(
-        `/suppliers/generate-code?big=${encodeURIComponent(codeGen.bigCategory)}&mid=${encodeURIComponent(codeGen.midCategory)}`
-      );
-      const code = (res as { code?: string })?.code || (res as { data?: { code?: string } })?.data?.code || '';
-      if (!code) {
-        setCodeGenError('编码生成失败：后端未返回编码');
-        return;
-      }
-      setCodeGen(prev => ({ ...prev, generatedCode: code }));
-      setCodeGenSuccess(`编码生成成功：${code}`);
-    } catch (error) {
-      setCodeGenError(`编码生成失败：${error instanceof Error ? error.message : '未知错误'}`);
-    }
-  }, [codeGen.bigCategory, codeGen.midCategory]);
-
-  const handleCopyCode = useCallback(() => {
-    if (codeGen.generatedCode) {
-      navigator.clipboard.writeText(codeGen.generatedCode);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
-  }, [codeGen.generatedCode]);
-
-  const handleResetCodeGen = useCallback(() => {
-    setCodeGen({ bigCategory: '', midCategory: '', generatedCode: '' });
-    setCodeGenError('');
-    setCodeGenSuccess('');
-  }, []);
-
-  const handleCodeGenChange = useCallback((field: 'bigCategory' | 'midCategory', value: string) => {
-    setCodeGen(prev => {
-      const newState = { ...prev, [field]: value };
-      if (field === 'bigCategory') {
-        newState.midCategory = '';
-        newState.generatedCode = '';
-      } else if (field === 'midCategory') {
-        newState.generatedCode = '';
-      }
-      return newState;
-    });
-    setCodeGenError('');
-    setCodeGenSuccess('');
-  }, []);
+  // 2026-09-28：编码生成逻辑已移入「新增供应商」弹窗（SupplierCodeGenerator 组件自管状态），
+  // 页面不再需要 codeGen/copy 相关的 state 与 handler
 
   const isAllSelected = filteredSuppliers.length > 0 && selectedRows.length === filteredSuppliers.length;
   const hasActiveMode = batchEditMode || deleteMode || exportMode;
@@ -441,46 +392,6 @@ export default function SupplierManagementPage() {
     <div className="space-y-6">
       {/* 页头 */}
       <PageHeader />
-
-      {/* 编码规则按钮 + 编码生成器（参照物料入库样式） */}
-      <div className="flex items-center gap-4">
-        <div className="h-6 w-px bg-gray-500"></div>
-        <Button
-          size="sm"
-          onClick={() => navigate('/supplier-code-rule')}
-        >
-          编码规则 &gt;&gt;
-        </Button>
-        <span className="text-base font-bold text-blue-600">供应商编码生成</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCodeGenExpanded(!codeGenExpanded)}
-          title={codeGenExpanded ? '收起' : '展开'}
-        >
-          {codeGenExpanded ? (
-            <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
-          )}
-        </Button>
-      </div>
-
-      {/* 编码规则生成器 */}
-      {codeGenExpanded && (
-        <SupplierCodeGenerator
-          expanded={codeGenExpanded}
-          onToggleExpand={() => setCodeGenExpanded(!codeGenExpanded)}
-          codeGen={codeGen}
-          onCodeGenChange={handleCodeGenChange}
-          onGenerate={handleGenerateCode}
-          onCopy={handleCopyCode}
-          onReset={handleResetCodeGen}
-          error={codeGenError}
-          success={codeGenSuccess}
-          copySuccess={copySuccess}
-        />
-      )}
 
       {/* 筛选 */}
       <SupplierFilters
@@ -522,6 +433,14 @@ export default function SupplierManagementPage() {
                 <Button size="sm" onClick={() => setExportMode(true)}>
                   <Download className="w-4 h-4" />
                   导出
+                </Button>
+                {/* 2026-09-28：编码规则入口从独立一行移到这里（紧跟「导出」后面），不再单独占一行 */}
+                <Button
+                  size="sm"
+                  variant="blue"
+                  onClick={() => navigate('/supplier-code-rule')}
+                >
+                  编码规则 &gt;&gt;
                 </Button>
               </>
             ) : (
@@ -582,7 +501,6 @@ export default function SupplierManagementPage() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={handleSaveAdd}
-        generatedCode={codeGen.generatedCode}
       />
 
       <SupplierBatchEditModal

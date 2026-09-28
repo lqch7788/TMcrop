@@ -772,7 +772,20 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      -- 2026-09-28 批次B 合规风控：三类强制资质证照（证号 + 有效期至）
+      -- 适用品类：PP 农药与植保产品类→农药经营许可证；SP 种子与种苗类→种子经营备案；FE 肥料与土壤改良类→肥料登记证
+      pesticide_license_no TEXT,
+      pesticide_license_expiry TEXT,
+      seed_filing_no TEXT,
+      seed_filing_expiry TEXT,
+      fertilizer_reg_no TEXT,
+      fertilizer_reg_expiry TEXT,
+      -- 2026-09-28 批次C 经营决策：内部自产标记 / 结算方式 / 账期天数 / 评级
+      is_internal TEXT DEFAULT 'external',
+      settlement_type TEXT,
+      credit_days INTEGER DEFAULT 0,
+      rating INTEGER DEFAULT 0
     )
   `);
 
@@ -1318,6 +1331,19 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE suppliers ADD COLUMN supplier_attribute TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN create_date TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN area TEXT DEFAULT ''`); } catch (e) {}
+
+  // 2026-09-28 批次B 合规风控：三类强制资质证照（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，此处必须同步）
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN pesticide_license_no TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN pesticide_license_expiry TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN seed_filing_no TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN seed_filing_expiry TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN fertilizer_reg_no TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN fertilizer_reg_expiry TEXT`); } catch (e) {}
+  // 2026-09-28 批次C 经营决策（is_internal 的取值来自字典 supplier_is_internal：internal/external）
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN is_internal TEXT DEFAULT 'external'`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN settlement_type TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN credit_days INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE suppliers ADD COLUMN rating INTEGER DEFAULT 0`); } catch (e) {}
 
   // 2026-09-28 批次A-2：供应商 id 落库（主数据治理基础设施）
   // 此前 inbound_records/materials 只存供应商"名称"文本 → 改名即失真、无法按供应商统计/查资质。

@@ -68,6 +68,8 @@ export interface PurchaseItem {
 
   // 供应商与库位（一个采购申请单可能有多家供应商）
   supplier: string;             // 供应商
+  /** 2026-09-28 批次A-2：供应商主数据 id（按名称从 useSupplierStore 解析；自由文本场景为空） */
+  supplierId?: string;
   location?: string;            // 期望存放位置
 
   // 批次信息

@@ -8,6 +8,7 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { safeJsonParse } from '../utils/safeJson';
+import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
 
 // ============================================================
 // 类型定义
@@ -79,6 +80,10 @@ export interface CreatePurchasePlanInput {
   totalAmount?: number;
   executionStatus?: string; // 采购执行状态（4 档白名单校验在 updateExecutionStatus）
   otherBatchReason?: string; // 关联批次=其他时的说明
+  // 2026-09-28 批次B：单头供应商（前端取"首个已登记主数据的明细行"回填）
+  // 此前 create 的 INSERT 把这两列写死为空串 → 单头供应商从未落库（update 路径走 FIELD_MAP 是通的）
+  supplierId?: string;
+  supplierName?: string;
 }
 
 /** 更新采购计划入参（部分字段） */
@@ -479,6 +484,14 @@ export class PurchasePlanService {
       }
 
       const db = getDatabase();
+
+      // 2026-09-28 批次B 合规风控：供应商资质守卫
+      // 默认仅前端告警（本函数返回 null）；设 SUPPLIER_QUALIFICATION_ENFORCE=1 后无证/过期即硬阻断
+      const qualIssue = assertSupplierQualificationAllowed(db, input.supplierId);
+      if (qualIssue) {
+        return { success: false, error: qualIssue };
+      }
+
       // 本地时间生成 ISO 字符串（避免 UTC 跨天导致日期错位）
       const now = new Date();
       const nowIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
@@ -535,8 +548,8 @@ export class PurchasePlanService {
           input.applicant,
           input.applyDate || todayLocal,
           input.requiredDate || null,
-          '',
-          '',
+          String(input.supplierId || ''),
+          String(input.supplierName || ''),
           totalAmount,
           input.priority || 'normal',
           input.status || 'draft',
@@ -585,6 +598,16 @@ export class PurchasePlanService {
         return { success: false, error: '采购计划不存在' };
       }
       const currentRecord = current[0];
+
+      // 2026-09-28 批次B 合规风控：供应商资质守卫（input 未改供应商时按库中现有值校验）
+      const qualSupplierId = input.supplierId !== undefined
+        ? input.supplierId
+        : (currentRecord as Record<string, unknown>).supplierId;
+      const qualIssue = assertSupplierQualificationAllowed(db, qualSupplierId);
+      if (qualIssue) {
+        return { success: false, error: qualIssue };
+      }
+
 
       // 2. executionStatus 独立处理（不受 canEdit 约束）
       // 业务上 executionStatus 是采购执行流（4 档白名单），与 status（审批流）解耦，
