@@ -84,3 +84,6 @@ export type { LabelType } from './LabelTypeSelector'
 // 2026-07-05: 操作列图标按钮统一组件 — 用于种源/育苗/种植三表的操作列样式统一
 export { ActionIconButton } from './ActionIconButton'
 export type { ActionIconVariant } from '@/constants/actionIconTokens'
+
+// 2026-09-28: 深度输入框 / 深度文本域 / 深度选择框 — 统一"深边框+内阴影"表单控件样式，替代各模块重复定义的 deepInputClass 常量
+export { DeepInput, DeepTextArea, DeepSelectTrigger } from './DeepInput'

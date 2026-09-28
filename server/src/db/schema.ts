@@ -1149,6 +1149,14 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-09-28 审核修复：退料列表查询（按状态过滤 + create_time 排序）此前全表扫描
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_material_returns_status ON material_returns(status)'); } catch { /* 索引已存在 */ }
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_material_returns_create_time ON material_returns(create_time DESC)'); } catch { /* 索引已存在 */ }
+  try { db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_material_returns_code ON material_returns(code)'); } catch { /* 索引已存在或有重复数据 */ }
+  // 2026-09-28 审核修复：materials.code 加唯一索引——退料/出入库均按 code 定位库存行，
+  // 重复 code 会导致库存更新只命中一行（账实分裂）。已有重复数据时建索引失败，由业务层显式报错。
+  try { db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_materials_code_unique ON materials(code)'); } catch { /* 索引已存在或有重复数据 */ }
+
   // ==================== 领料出库表 ====================
   db.run(`
     CREATE TABLE IF NOT EXISTS material_executes (

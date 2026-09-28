@@ -845,15 +845,16 @@ router.patch('/:id/action', (req, res) => {
             // 2026-08-10 修复：updateBusinessTable 只 UPDATE 内存 db，需显式 saveDatabase 落盘，否则列表刷新读到脏数据
             saveDatabase();
             console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
-          } else if (businessLink.type === 'material_inbound') {
-            // 2026-09-28 审计修复：入库单联动失败=硬失败。回滚审批终态并返回 409，
-            // 让审批人看到真实原因（此前静默成功 → 审批"已通过"但库存永远没加，且终态不可重试）
+          } else if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
+            // 2026-09-28 审计修复：入库单 / 退料单联动失败=硬失败（两者都影响库存账实）。
+            // 回滚审批终态并返回 409，让审批人看到真实原因
+            // （此前静默成功 → 审批"已通过"但库存永远没动，且终态不可重试）
             db.run(
               `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
               [prevApprovalState.status, prevApprovalState.current_step, prevApprovalState.approvers, prevApprovalState.records, prevApprovalState.updated_at, id]
             );
             saveDatabase();
-            return res.status(409).json({ success: false, error: `入库单联动失败，审批已回滚：${result.message}` });
+            return res.status(409).json({ success: false, error: `业务联动失败，审批已回滚：${result.message}` });
           } else {
             console.warn(`【审批联动】${businessLink.type} 更新失败: ${result.message}`);
           }
@@ -1509,6 +1510,12 @@ router.post('/batch-action', (req, res) => {
               const linkResult = updateBusinessTable(db, businessLink.type, businessLink.requestId, linkageAction, String(approval.code || ''), businessLink);
               if (!linkResult.success) {
                 console.warn(`【批量审批联动】${businessLink.type} 更新失败: ${linkResult.message}`);
+                // 2026-09-28：库存类联动（入库/退料）失败时标记该条为失败，
+                // 避免"审批显示成功但库存没动"被静默吞掉（审批人可据此重试）
+                if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
+                  results.push({ id, success: false, error: `库存联动失败：${linkResult.message || '未知原因'}` });
+                  continue;
+                }
               }
             }
           } catch (linkErr) {

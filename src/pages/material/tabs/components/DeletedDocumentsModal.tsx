@@ -27,13 +27,23 @@ interface ArchivedDoc {
 interface DeletedDocumentsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** 预筛选类型：material_request | material_execute | 空=全部 */
+  /** 预筛选类型：material_request | material_execute | material_return | 空=全部 */
   defaultType?: string;
 }
 
+// 2026-09-28 新增 material_return（生产退料单）支持：后端删除退料单时已写入归档快照，
+// 但本弹窗此前只认领料申请单/领料出库单，导致退料单归档数据"写了却看不到"。
 const DOC_TYPE_LABEL: Record<string, string> = {
   material_request: '领料申请单',
   material_execute: '领料出库单',
+  material_return: '生产退料单',
+};
+
+/** 类型徽章配色（按单据类型区分；未识别类型沿用原琥珀色兜底） */
+const DOC_TYPE_BADGE: Record<string, string> = {
+  material_request: 'bg-blue-100 text-blue-700',
+  material_execute: 'bg-amber-100 text-amber-700',
+  material_return: 'bg-violet-100 text-violet-700',
 };
 
 /** 2026-09-27：删除原因显示兜底——过滤历史脏值（事件对象被 toString 的产物） */
@@ -44,7 +54,7 @@ function cleanReason(reason: string | null | undefined): string {
   return t;
 }
 
-/** 从快照中提取物料明细（两种单据字段同名 materials/materialCode） */
+/** 从快照中提取物料明细（三类单据字段同名 materials/materialCode） */
 function snapshotMaterials(snapshot: Record<string, unknown>): any[] {
   const mats = snapshot.materials;
   if (Array.isArray(mats)) return mats;
@@ -130,6 +140,7 @@ export function DeletedDocumentsModal({ isOpen, onClose, defaultType }: DeletedD
                 <SelectItem value="all">全部</SelectItem>
                 <SelectItem value="material_request">领料申请单</SelectItem>
                 <SelectItem value="material_execute">领料出库单</SelectItem>
+                <SelectItem value="material_return">生产退料单</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -197,6 +208,9 @@ function FragmentRow({
   const s = row.snapshot;
   const applicant = String(s.applicant || s.applicant_name || '-');
   const date = String(s.date || s.apply_date || '-');
+  // 2026-09-28 新增 material_return 支持：退料单明细字段与领料单不同——
+  // 只有退料量（returnQuantity）/原领料数量（quantity），没有申请量/实发量
+  const isReturnDoc = row.docType === 'material_return';
   return (
     <>
       <tr className="hover:bg-gray-50 cursor-pointer" onClick={onToggle}>
@@ -205,7 +219,7 @@ function FragmentRow({
         </td>
         <td className="px-3 py-2 font-mono text-blue-700">{row.docCode}</td>
         <td className="px-3 py-2">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${row.docType === 'material_request' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${DOC_TYPE_BADGE[row.docType] || 'bg-amber-100 text-amber-700'}`}>
             {DOC_TYPE_LABEL[row.docType] || row.docType}
           </span>
         </td>
@@ -229,8 +243,15 @@ function FragmentRow({
                   <tr>
                     <th className="px-2 py-1.5 text-left font-semibold text-gray-600">物料编码</th>
                     <th className="px-2 py-1.5 text-left font-semibold text-gray-600">物料名称</th>
-                    <th className="px-2 py-1.5 text-right font-semibold text-gray-600">申请量</th>
-                    <th className="px-2 py-1.5 text-right font-semibold text-gray-600">实发量</th>
+                    {/* 2026-09-28：退料单明细只有退料量，无申请量/实发量，按类型切换数量列 */}
+                    {isReturnDoc ? (
+                      <th className="px-2 py-1.5 text-right font-semibold text-gray-600">退料量</th>
+                    ) : (
+                      <>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-600">申请量</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-600">实发量</th>
+                      </>
+                    )}
                     <th className="px-2 py-1.5 text-left font-semibold text-gray-600">单位</th>
                   </tr>
                 </thead>
@@ -239,8 +260,14 @@ function FragmentRow({
                     <tr key={i}>
                       <td className="px-2 py-1.5 font-mono text-gray-700">{m.materialCode || m.code || '-'}</td>
                       <td className="px-2 py-1.5 text-gray-800">{m.materialName || m.name || '-'}</td>
-                      <td className="px-2 py-1.5 text-right">{m.requestedQuantity ?? '-'}</td>
-                      <td className="px-2 py-1.5 text-right">{m.actualQuantity ?? '-'}</td>
+                      {isReturnDoc ? (
+                        <td className="px-2 py-1.5 text-right">{m.returnQuantity ?? m.quantity ?? '-'}</td>
+                      ) : (
+                        <>
+                          <td className="px-2 py-1.5 text-right">{m.requestedQuantity ?? '-'}</td>
+                          <td className="px-2 py-1.5 text-right">{m.actualQuantity ?? '-'}</td>
+                        </>
+                      )}
                       <td className="px-2 py-1.5 text-gray-500">{m.unit || '-'}</td>
                     </tr>
                   ))}

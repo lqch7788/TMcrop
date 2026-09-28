@@ -1,4 +1,5 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
+import { UnifiedModal, Button } from '@/components/ui';
 
 interface WarningModalProps {
   open: boolean;
@@ -7,23 +8,32 @@ interface WarningModalProps {
   onConfirm: () => void;
 }
 
+/**
+ * 生产退料 - 批量编辑/批量删除风险提示弹窗
+ * 编辑场景确认按钮为蓝色，删除场景为红色；确认后由父级切换批量模式
+ */
 export function WarningModal({ open, type, onClose, onConfirm }: WarningModalProps) {
   if (!open) return null;
 
   const isEdit = type === 'edit';
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-96 shadow-xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-amber-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {isEdit ? '批量编辑警告' : '批量删除警告'}
-          </h3>
+    <UnifiedModal
+      isOpen={open}
+      onClose={onClose}
+      title={isEdit ? '批量编辑警告' : '批量删除警告'}
+      size="md"
+      showFooter={false}
+      showMaximize={false}
+      enableDrag={false}
+      enableResize={false}
+    >
+      {/* 风险图标 + 风险清单 */}
+      <div className="flex items-start gap-3 mb-6">
+        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="w-6 h-6 text-amber-600" />
         </div>
-        <div className="text-sm text-gray-600 space-y-2 mb-6">
+        <div className="text-sm text-gray-600 space-y-2 flex-1">
           <p>{isEdit ? '编辑后可能存在以下问题：' : '删除后可能存在以下问题：'}</p>
           <ul className="list-disc list-inside space-y-1">
             {isEdit ? (
@@ -41,23 +51,22 @@ export function WarningModal({ open, type, onClose, onConfirm }: WarningModalPro
             )}
           </ul>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`flex-1 px-4 py-2 text-white rounded-lg text-sm font-medium hover:${
-              isEdit ? 'bg-blue-700' : 'bg-red-700'
-            } ${isEdit ? 'bg-blue-600' : 'bg-red-600'}`}
-          >
-            已知晓
-          </button>
-        </div>
       </div>
-    </div>
+
+      {/* 底部操作：取消 / 已知晓 */}
+      <div className="flex gap-3">
+        <Button size="default" variant="outline" className="flex-1" onClick={onClose}>
+          <X className="w-4 h-4" /> 取消
+        </Button>
+        <Button
+          size="default"
+          variant={isEdit ? 'blue' : 'destructive'}
+          className="flex-1"
+          onClick={onConfirm}
+        >
+          已知晓
+        </Button>
+      </div>
+    </UnifiedModal>
   );
 }

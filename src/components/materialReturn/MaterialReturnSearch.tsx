@@ -1,6 +1,8 @@
-import { Search } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { SearchForm, STATUS_OPTIONS } from './types';
 import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
+import { Button, DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface MaterialReturnSearchProps {
   searchForm: SearchForm;
@@ -106,13 +108,31 @@ export function MaterialReturnSearch({
           </select>
         </div>
 
-        {/* 重置按钮 */}
-        <button
-          onClick={onReset}
-          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-        >
+        {/* 2026-09-28 新增：退料日期范围筛选（从 / 到），与领料 ApplicationFilters 的日期范围口径一致 */}
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">退料日期从</label>
+          <DatePicker
+            selected={searchForm.dateFrom ? new Date(searchForm.dateFrom) : undefined}
+            onChange={(date) => onUpdateField('dateFrom', todayLocal(date))}
+            placeholder="开始日期"
+            className="border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-sm font-medium text-gray-700 mb-1">退料日期到</label>
+          <DatePicker
+            selected={searchForm.dateTo ? new Date(searchForm.dateTo) : undefined}
+            onChange={(date) => onUpdateField('dateTo', todayLocal(date))}
+            placeholder="结束日期"
+            className="border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* 重置按钮（2026-09-28 改用 UI 库 Button，此前为原生 button） */}
+        <Button variant="ghost" size="sm" onClick={onReset}>
+          <RotateCcw className="w-4 h-4" />
           重置
-        </button>
+        </Button>
       </div>
     </div>
   );
