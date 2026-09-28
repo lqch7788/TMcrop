@@ -56,6 +56,12 @@ export interface ApprovalSubmitResult {
   autoApprove: boolean;
   level: string;
   message: string;
+  /**
+   * 2026-09-28 新增：免审批自动通过是否失败。
+   * 失败时单据会卡在「待审批」且无审批人（无人可审），调用方必须据此提示用户，
+   * 否则用户只看到单据不动、原因不可见（如：退料物料不在库存主表 → 联动回滚）。
+   */
+  autoApproveFailed?: boolean;
 }
 
 // ============================================================
@@ -108,8 +114,9 @@ class ApprovalSubmitService {
       }
 
       // 5. 如果是自动通过，调用 PATCH 端点触发审批联动（updateBusinessTable）
+      let autoApproveFailed = false;
+      let autoApproveError = '';
       if (levelResult.autoApprove) {
-        console.log('【审批提交】自动通过审批，触发PATCH联动，businessLink:', businessData.businessLink);
         try {
           const approverId = businessData.applicantId || 'system';
           const approverName = businessData.applicantName || '系统';
@@ -117,8 +124,10 @@ class ApprovalSubmitService {
             `/approvals/${fullApproval.id}/action`,
             { action: 'approve', comment: '免审批自动通过', approverId, approverName }
           );
-          console.log('【审批提交】自动通过审批，业务联动更新成功');
         } catch (linkError) {
+          // 2026-09-28：不再静默——记录原因并透出给调用方提示用户
+          autoApproveFailed = true;
+          autoApproveError = linkError instanceof Error ? linkError.message : '未知错误';
           logger.error('【审批提交】自动通过审批，业务联动更新失败', linkError);
         }
       }
@@ -129,9 +138,12 @@ class ApprovalSubmitService {
         approvalCode: fullApproval.code,
         autoApprove: levelResult.autoApprove,
         level: levelResult.level,
-        message: levelResult.autoApprove
-          ? '金额在免审批阈值内，已自动通过'
-          : `已提交审批，等待 ${levelResult.approverCount} 位审批人处理`,
+        autoApproveFailed,
+        message: autoApproveFailed
+          ? `免审批自动通过失败：${autoApproveError}（单据已创建但仍为待审批，需人工处理）`
+          : levelResult.autoApprove
+            ? '金额在免审批阈值内，已自动通过'
+            : `已提交审批，等待 ${levelResult.approverCount} 位审批人处理`,
       };
     } catch (error) {
       logger.error('【审批提交】提交审批失败', error);
@@ -429,7 +441,22 @@ export async function submitMaterialRequestApproval(params: {
 export async function submitReturnMaterialApproval(params: {
   returnId: string;
   returnCode: string;
-  materials: Array<{ name: string; quantity: number }>;
+  /**
+   * 退料明细（2026-09-28 扩展）：
+   * name/quantity 为审批所需最小字段，其余为审批页展开行的明细展示字段
+   * （此前只传 name/quantity，导致审批页「退料物料明细」展开后无内容可显示）
+   */
+  materials: Array<{
+    name: string;
+    quantity: number;
+    materialCode?: string;
+    spec?: string;
+    unit?: string;
+    unitPrice?: number;
+    sourceApplicationCode?: string;
+    warehousePosition?: string;
+    reason?: string;
+  }>;
   amount: number;
   applicantId: string;
   applicantName: string;

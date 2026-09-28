@@ -2,6 +2,16 @@
 // 领料出库页面的表格组件
 import React from 'react';
 import { Archive, Ban, CheckCircle2, ChevronDown, ChevronRight as ChevronRightIcon, Download, Eye, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
+
+/**
+ * 2026-09-28：Fragment 替代组件
+ * 背景：vite-plugin-source-identifier 会向 JSX 写法的 <React.Fragment> 注入 data-matrix-id，
+ * 触发 React "Invalid prop supplied to Fragment" 警告（控制台刷屏）。
+ * 本组件用 createElement 调用（非 JSX），插件不会注入额外属性，行为与 Fragment 一致。
+ */
+function RowPair({ children }: { children: React.ReactNode }) {
+  return React.createElement(React.Fragment, null, children);
+}
 import { printExecuteVoucher } from './ExecuteTabModals/DetailModal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -253,7 +263,7 @@ export function ExecuteTabTable({
           </thead>
           <tbody className="divide-y divide-gray-300">
             {paginatedData.map((item) => (
-              <React.Fragment key={item.id}>
+              <RowPair key={item.id}>
                 <tr className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode) && (
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -440,7 +450,7 @@ export function ExecuteTabTable({
                     </td>
                   </tr>
                 )}
-              </React.Fragment>
+              </RowPair>
             ))}
           </tbody>
         </table>

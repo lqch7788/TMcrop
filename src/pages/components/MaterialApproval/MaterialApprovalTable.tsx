@@ -1,6 +1,6 @@
 // MaterialApprovalTable 组件
 // 物料审批页面的表格组件
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight as ChevronRightIcon,
@@ -11,6 +11,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Pagination } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
+// 2026-09-28：审批操作失败时给用户可见反馈（此前忽略 approve 返回值 → 点了没反应）
+import { showAlert } from '@/lib/dialogService';
+import { useApprovalStore } from '@/stores/useApprovalStore';
+// 2026-09-28：退料单数据（明细字段权威来源，用于补全历史审批单的简化明细）
+import { useMaterialReturnStore } from '@/stores/useMaterialReturnStore';
 
 interface MaterialApprovalTableProps {
   // 数据
@@ -33,7 +38,9 @@ interface MaterialApprovalTableProps {
   toggleExpandRow: (id: string) => void;
   handleViewDetail: (item: Approval) => void;
   handleRejectClick: (item: Approval) => void;
-  approve: (id: string) => void;
+  /** 2026-09-28：改为 Promise<boolean> —— 与 store 实际实现一致，
+   *  调用方需据此判断成功/失败并给出用户反馈（此前声明为 void 导致无法感知失败） */
+  approve: (id: string) => Promise<boolean>;
   /** 2026-09-28：走"审批意见弹窗"的通过入口（与其他 tab 一致，且失败会有提示） */
   onApproveClick?: (item: Approval) => void;
 
@@ -79,6 +86,28 @@ export function MaterialApprovalTable({
   onBatchReject,
   onExport,
 }: MaterialApprovalTableProps) {
+  // 2026-09-28 修复：历史退料审批单的 businessLink.materials 只存了 {name, quantity}，
+  // 导致「退料物料明细」展开后除名称/数量外全为空白。
+  // 退料单本身物料字段完整，故加载退料单数据作为明细的权威来源（按 requestId 索引）。
+  const returnItems = useMaterialReturnStore((s) => s.items);
+  const loadReturns = useMaterialReturnStore((s) => s.loadItems);
+  useEffect(() => {
+    if (activeTab === 'return' && returnItems.length === 0) {
+      loadReturns().catch(() => { /* 加载失败时明细回退到审批单自身数据 */ });
+    }
+  }, [activeTab, returnItems.length, loadReturns]);
+
+  /** requestId → 退料单完整物料明细（字段齐全，供展开行使用） */
+  const returnMaterialsMap = useMemo(() => {
+    const map = new Map<string, unknown[]>();
+    returnItems.forEach(r => {
+      if (Array.isArray(r.materials) && r.materials.length > 0) {
+        map.set(String(r.id), r.materials as unknown[]);
+      }
+    });
+    return map;
+  }, [returnItems]);
+
   // 领料审批表格
   const renderMaterialTable = () => (
     <div className="overflow-x-auto">
@@ -113,12 +142,20 @@ export function MaterialApprovalTable({
                     )}
                   </button>
                 </TableCell>
-                <TableCell className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</TableCell>
+                {/* 2026-09-28 修复：列头是「领料单号」，此前渲染 item.code（审批单号 SP…）——
+                    与退料表同款问题，改为优先显示业务单号 businessLink.requestCode */}
+                <TableCell
+                  className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
+                  title={`审批单号：${item.code}`}
+                >
+                  {item.businessLink?.requestCode || item.code}
+                </TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.applyDate}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantName}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantDepartment || '-'}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.warehouseLocation || '-'}</TableCell>
-                <TableCell className="text-gray-600 whitespace-nowrap">{item.materials?.length > 0 ? `${item.materials.length}种` : '-'}</TableCell>
+                {/* 2026-09-28：补 ?? 0 消除严格模式下的 "possibly undefined" 类型错误 */}
+                <TableCell className="text-gray-600 whitespace-nowrap">{(item.materials?.length ?? 0) > 0 ? `${item.materials?.length}种` : '-'}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.plantArea || '-'}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.approvers?.[0]?.userName || '-'}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.batchCode || '-'}</TableCell>
@@ -137,7 +174,20 @@ export function MaterialApprovalTable({
                   <div className="flex items-center gap-1">
                     {item.status === ApprovalStatus.PENDING && canApprove && (
                       <>
-                        <button onClick={() => approve(item.id)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                        <button
+                          onClick={async () => {
+                            const ok = await approve(item.id);
+                            if (ok) {
+                              showAlert('审批已通过');
+                            } else {
+                              // 失败时必须让用户看到原因（如：业务联动失败导致审批回滚）
+                              const err = useApprovalStore.getState().error || '未知错误';
+                              showAlert(`审批未生效：${err}`);
+                            }
+                          }}
+                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          title="通过"
+                        >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleRejectClick(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
@@ -244,7 +294,15 @@ export function MaterialApprovalTable({
                     )}
                   </button>
                 </TableCell>
-                <TableCell className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</TableCell>
+                {/* 2026-09-28 修复：列头是「退料单号」，此前渲染 item.code（审批单号 SP…），
+                    导致按退料单号（TL…）查找时找不到。改为优先显示业务单号 businessLink.requestCode，
+                    审批单号降为 title 提示。 */}
+                <TableCell
+                  className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
+                  title={`审批单号：${item.code}`}
+                >
+                  {item.businessLink?.requestCode || item.code}
+                </TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.applyDate}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{getReturnType(item)}</TableCell>
                 <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantName}</TableCell>
@@ -266,7 +324,20 @@ export function MaterialApprovalTable({
                   <div className="flex items-center gap-1">
                     {item.status === ApprovalStatus.PENDING && canApprove && (
                       <>
-                        <button onClick={() => approve(item.id)} className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                        <button
+                          onClick={async () => {
+                            const ok = await approve(item.id);
+                            if (ok) {
+                              showAlert('审批已通过');
+                            } else {
+                              // 失败时必须让用户看到原因（如：业务联动失败导致审批回滚）
+                              const err = useApprovalStore.getState().error || '未知错误';
+                              showAlert(`审批未生效：${err}`);
+                            }
+                          }}
+                          className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                          title="通过"
+                        >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleRejectClick(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
@@ -286,7 +357,12 @@ export function MaterialApprovalTable({
                   <TableCell colSpan={12}>
                     <div className="text-sm">
                       <div className="font-medium text-blue-800 mb-2">退料物料明细</div>
-                      {item.materials && item.materials.length > 0 ? (
+                      {/* 2026-09-28 修复：审批单的顶级 materials 恒为空（创建时未写入），
+                          物料实际存在 businessLink.materials —— 此前读 item.materials 导致展开后始终显示"暂无明细"。
+                          明细来源优先级：退料单完整明细（returnMaterialsMap）> businessLink.materials > item.materials */}
+                      {(((returnMaterialsMap.get(String(item.businessLink?.requestId)) as unknown[] | undefined)?.length ?? 0) > 0
+                        || (item.businessLink?.materials?.length ?? 0) > 0
+                        || (item.materials?.length ?? 0) > 0) ? (
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-[#F2F6FA]">
@@ -304,18 +380,26 @@ export function MaterialApprovalTable({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {item.materials.map((m: any, idx: number) => {
-                              const subtotal = (m.returnQuantity || 0) * (m.unitPrice || 0);
+                            {/* 明细优先取退料单原始数据（字段完整），回退审批单简化明细 */}
+                            {(((returnMaterialsMap.get(String(item.businessLink?.requestId)) as any[] | undefined)
+                              || (item.businessLink?.materials?.length ? item.businessLink.materials : item.materials)
+                              || []) as any[]).map((m: any, idx: number) => {
+                              // 字段适配（数量优先级修正 2026-09-28）：退料单明细同时含 quantity（原领料量）
+                              // 与 returnQuantity（本次退料量），必须优先取 returnQuantity，否则会把「领料量」
+                              // 当成「退料量」显示（曾出现退 3 显示成 10 的错误）；审批单简化明细只有 quantity。
+                              const qty = m.returnQuantity ?? m.quantity ?? m.requestedQuantity ?? 0;
+                              const price = m.unitPrice ?? 0;
+                              const subtotal = qty * price;
                               return (
                                 <TableRow key={idx} className="hover:bg-[#F2F6FA]/50">
                                   <TableCell className="text-blue-800 font-mono">{m.sourceApplicationCode || '-'}</TableCell>
-                                  <TableCell className="text-blue-800 font-mono">{m.materialCode}</TableCell>
+                                  <TableCell className="text-blue-800 font-mono">{m.materialCode || '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.category || '-'}</TableCell>
-                                  <TableCell className="text-blue-800">{m.materialName}</TableCell>
+                                  <TableCell className="text-blue-800">{m.materialName || m.name || '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.spec || '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.unit || '-'}</TableCell>
-                                  <TableCell className="text-blue-800">{m.returnQuantity || m.requestedQuantity || 0}</TableCell>
-                                  <TableCell className="text-blue-800">{m.unitPrice != null ? m.unitPrice.toFixed(2) : '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{qty}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unitPrice != null ? price.toFixed(2) : '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.unitPrice != null ? subtotal.toFixed(2) : '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.warehousePosition || '-'}</TableCell>
                                   <TableCell className="text-blue-800">{m.reason || '-'}</TableCell>
@@ -389,7 +473,19 @@ export function MaterialApprovalTable({
               <div className="flex items-center gap-1">
                 {item.status === ApprovalStatus.PENDING && canApprove && (
                   <>
-                    <button onClick={() => approve(item.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                    <button
+                      onClick={async () => {
+                        const ok = await approve(item.id);
+                        if (ok) {
+                          showAlert('审批已通过');
+                        } else {
+                          const err = useApprovalStore.getState().error || '未知错误';
+                          showAlert(`审批未生效：${err}`);
+                        }
+                      }}
+                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                      title="通过"
+                    >
                       <CheckCircle className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleRejectClick(item)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
