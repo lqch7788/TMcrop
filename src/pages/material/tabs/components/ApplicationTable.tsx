@@ -1,7 +1,19 @@
 // ApplicationTable 组件
 // 领料申请单的主表格和展开行
 // 2026-09-26：批量编辑死代码已删除（编辑走行操作列），清理未用 props/import
-import { Fragment, useState } from 'react';
+import { useState, createElement, Fragment } from 'react';
+import type { ReactNode } from 'react';
+
+/**
+ * 2026-09-28：Fragment 替代组件
+ * 背景：vite-plugin-source-identifier 会向 JSX 写法的 <React.Fragment> 注入 data-matrix-id，
+ * 触发 React "Invalid prop supplied to Fragment" 警告（控制台刷屏）。
+ * 本组件用 createElement 调用（非 JSX），插件不会注入额外属性；
+ * 且自定义组件本身可安全接收任意 props，故不再产生警告。行为与 Fragment 完全一致。
+ */
+function RowPair({ children }: { children: ReactNode }) {
+  return createElement(Fragment, null, children);
+}
 import { Archive, ChevronDown, ChevronRight as ChevronRightIcon, Copy, Download, Edit2, Plus, Printer, RotateCcw, Send, Trash2, Undo2, X } from 'lucide-react';
 import { printVoucher } from '../../../../components/materialReceiving/modals/DetailModal';
 import { Button } from '@/components/ui';
@@ -296,8 +308,8 @@ export function ApplicationTable({
           {/* 表体 */}
           <tbody className="divide-y divide-gray-300">
             {sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
-              // 2026-09-26 修复：key 上移到 Fragment（此前 key 在内层 tr，Fragment 无 key 引发 React 警告）
-              <Fragment key={item.id}>
+              // 2026-09-28：改用 RowPair（createElement 实现）替代 Fragment，规避 data-matrix-id 注入警告
+              <RowPair key={item.id}>
                 {/* 主数据行 */}
                 <tr className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode) && (
@@ -506,7 +518,7 @@ export function ApplicationTable({
                     </td>
                   </tr>
                 )}
-              </Fragment>
+              </RowPair>
             ))}
           </tbody>
         </table>
