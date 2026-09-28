@@ -19,8 +19,8 @@
 | `MaterialExportModal.tsx` | 导出格式选择弹窗 |
 | ~~`DeleteWarningDialog.tsx`~~ | **已删除（2026-09-28）** — 工具栏"删除"改为直接进入复选框模式，该警告弹窗已无引用被移除 |
 | `BatchDeleteConfirmDialog.tsx` | 批量删除确认弹窗（工具栏"删除"→ 勾选 → 确认删除 的最终二次确认） |
-| `InboundModals.tsx` | 入库相关所有弹窗 |
-| `MaterialInboundTab.tsx` | 入库记录标签页 |
+| ~~`InboundModals.tsx`~~ | **已删除（2026-09-28）** — 旧弹窗集，与 MaterialInboundTab 互相引用形成无入口死岛 |
+| ~~`MaterialInboundTab.tsx`~~ | **已删除（2026-09-28）** — 旧入库标签页，同上；现役实现在 `src/pages/warehouse/` |
 
 ## Subdirectories
 无子目录
@@ -29,7 +29,7 @@
 
 ### 状态管理
 - 实际主页面是 `src/pages/warehouse/WarehouseOverviewPage.tsx`，使用 Zustand Store 走 enhancedApiClient（V2.1 架构）
-- 本目录下的 `MaterialFilters.tsx` / `MaterialsTable.tsx` / `MaterialInboundTab.tsx` 等子组件由父级 WarehouseOverviewPage 调用，自身无业务数据
+- 本目录下的 `MaterialFilters.tsx` / `MaterialsTable.tsx` 等子组件由父级 WarehouseOverviewPage 调用，自身无业务数据
 - 子组件通过 props 接收状态和回调
 
 ### Modal 组件命名规范
@@ -94,7 +94,7 @@ interface InboundRecord {
 
 ### Internal
 - `MaterialFilters.tsx` - 筛选器
-- `MaterialInboundTab.tsx` - 入库记录类型
+
 
 ### External
 - `lucide-react` - 图标库

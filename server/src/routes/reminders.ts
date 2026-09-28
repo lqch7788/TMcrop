@@ -127,12 +127,17 @@ router.post('/run', async (req: Request, res: Response): Promise<void> => {
           stats.scanned++;
 
           // 检查冷却
+          // 2026-09-28 修复：原 SQL 用不存在的列 created_at → /api/reminders/run 每次 500，
+          // 调度器每 5 分钟静默失败（日志只打"提醒扫描返回异常"），提醒引擎整体失效。
+          // 列名改为真实的 create_time；时间口径与表内一致（存的是 ISO-UTC 字符串，
+          // 由 routes/reminder.ts 用 new Date().toISOString() 写入），阈值也在 JS 侧算成 ISO 串比较
+          const cooldownThreshold = new Date(Date.now() - cooldownMin * 60 * 1000).toISOString();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const recentCheck = db.exec(
             `SELECT id FROM reminders
              WHERE target_id = ? AND target_type = 'task'
-               AND created_at > datetime('now', '-' || ? || ' minutes')`,
-            [taskId, String(cooldownMin)] as any[]
+               AND create_time > ?`,
+            [taskId, cooldownThreshold] as any[]
           );
           if (recentCheck.length > 0 && recentCheck[0].values.length > 0) {
             stats.skipped_cooldown++;
@@ -153,23 +158,30 @@ router.post('/run', async (req: Request, res: Response): Promise<void> => {
           });
 
           if (!dryRun) {
-            // 注意：reminders 表 schema 不固定，尝试最小字段集
+            // 2026-09-28 修复：原 INSERT 用的 title/content/rule_code/receiver_id/created_at
+            // 五列在 reminders 表中都不存在（真实列见 schema.ts:3670）→ 每次触发都被 catch 吞成
+            // "insert reminder failed"，提醒永远写不进库。现按真实列写入，并补齐 NOT NULL 的 task_id。
             try {
               db.exec(
                 `INSERT INTO reminders
-                 (id, title, content, rule_code, target_id, target_type, receiver_id, priority, status, payload, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unread', ?, datetime('now', 'localtime'))`,
+                 (id, task_id, task_code, task_title, operator_id, operator_name,
+                  reminder_type, urgency, message, status, create_time, rule_id, target_id, target_type, priority, payload)
+                 VALUES (?, ?, ?, ?, ?, ?, 'task_overdue', ?, ?, 'unread', ?, ?, ?, 'task', ?, ?)`,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 [
                   reminderId,
-                  `任务超期：${taskTitle}`,
-                  `任务 ${taskCode} 已超过计划日期 ${planDate}，请尽快处理。`,
-                  rule.rule_code,
                   taskId,
-                  'task',
+                  taskCode,
+                  `任务超期：${taskTitle}`,
                   assigneeId,
-                  rule.priority,
-                  JSON.stringify({ taskCode, planDate }),
+                  '', // 执行人姓名不在本查询范围内（接收方以 operator_id 为准）
+                  ['high', 'low'].includes(String(rule.priority)) ? String(rule.priority) : 'normal',
+                  `任务 ${taskCode} 已超过计划日期 ${planDate}，请尽快处理。`,
+                  new Date().toISOString(), // 与表内既有数据同口径（ISO-UTC）
+                  String(rule.id ?? ''),
+                  taskId,
+                  String(rule.priority ?? 'normal'),
+                  JSON.stringify({ taskCode, planDate, ruleCode: rule.rule_code }),
                 ] as any[]
               );
             } catch (e) {
@@ -214,7 +226,8 @@ router.get('/my', async (req: Request, res: Response): Promise<void> => {
       return;
     }
     const db = getDatabase();
-    const whereClauses: string[] = ['receiver_id = ?'];
+    // 2026-09-28 修复：receiver_id / created_at 均为不存在的列（真实列 operator_id / create_time）
+    const whereClauses: string[] = ['operator_id = ?'];
     const params: unknown[] = [user_id];
     if (status) {
       whereClauses.push('status = ?');
@@ -222,7 +235,7 @@ router.get('/my', async (req: Request, res: Response): Promise<void> => {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = db.exec(
-      `SELECT * FROM reminders WHERE ${whereClauses.join(' AND ')} ORDER BY created_at DESC LIMIT 100`,
+      `SELECT * FROM reminders WHERE ${whereClauses.join(' AND ')} ORDER BY create_time DESC LIMIT 100`,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       params as any[] as any
     );
