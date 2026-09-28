@@ -83,6 +83,8 @@ export const useInboundStore = create<InboundState>()(
           code: updates.code,
           inboundDate: updates.inboundDate,
           supplier: updates.supplier,
+          // 2026-09-28 批次A-2：供应商主数据 id（后端白名单已含 supplierId）
+          supplierId: updates.supplierId,
           operator: updates.operator,
           status: updates.status,
           materials: updates.materials,

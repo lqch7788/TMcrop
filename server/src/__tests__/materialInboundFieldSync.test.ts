@@ -49,7 +49,8 @@ const CREATE_MATERIALS = `
     expiryDate TEXT,
     lastUpdateTime TEXT,
     dataStatus TEXT DEFAULT '启用',
-    remarks TEXT
+    remarks TEXT,
+    supplierId TEXT DEFAULT ''
   )
 `;
 
