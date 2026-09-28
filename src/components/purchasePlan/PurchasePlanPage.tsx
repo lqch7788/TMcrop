@@ -311,6 +311,12 @@ export function PurchasePlanPage() {
     try {
       const totalAmount = createItems.reduce((sum, item) => sum + (item.estimatedTotalPrice || 0), 0);
 
+      // 2026-09-28 批次A-2：单头供应商取"首个已登记主数据的明细"（采购计划单头 supplier_id/supplier_name
+      // 此前恒为空，明细里也只存自由文本名称）——改名后不致失真，且可按供应商统计
+      const firstWithSupplierId = createItems.find((it) => (it as { supplierId?: string }).supplierId);
+      const headerSupplierId = firstWithSupplierId ? String((firstWithSupplierId as { supplierId?: string }).supplierId) : '';
+      const headerSupplierName = firstWithSupplierId ? firstWithSupplierId.supplier : '';
+
       // 表单已是英文编码，直接提交无需映射
       const planData = {
         purchaseApplicationCode: createForm.purchaseApplicationCode,
@@ -328,6 +334,9 @@ export function PurchasePlanPage() {
         approvalPerson: createForm.approvalPerson,
         items: createItems,
         totalAmount,
+        // 2026-09-28 批次A-2：单头供应商主数据（取自明细中首个已登记的供应商）
+        supplierId: headerSupplierId,
+        supplierName: headerSupplierName,
         attachments: [],
       };
 

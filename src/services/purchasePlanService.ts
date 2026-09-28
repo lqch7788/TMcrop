@@ -18,6 +18,8 @@ export interface PurchasePlanItem {
   estimatedPrice: number;
   estimatedTotalPrice: number;
   supplier: string;
+  /** 2026-09-28 批次A-2：供应商主数据 id（选中主数据时写入；自由文本为空） */
+  supplierId?: string;
   location: string;
   batchNo: string;
   productionDate: string;

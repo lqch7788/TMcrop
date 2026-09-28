@@ -31,9 +31,10 @@ export default function SupplierExportModal({ isOpen, exportFormat, selectedCoun
           <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条供应商数据</p>
           <div className="space-y-3">
             {[
-              { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
+              // 2026-09-28 审计修复：标签与实际产物一致（此前写 .xlsx 实为 HTML 伪装的 .xls，Excel 会提示格式不符）
+              { value: 'excel', label: 'Excel (.xls)', desc: '适用于数据分析和处理' },
               { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
-              { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
+              { value: 'word', label: 'Word (.doc)', desc: '适用于文档编辑和分享' },
             ].map((format) => (
               <Label
                 key={format.value}
