@@ -202,8 +202,10 @@ interface ApprovalStore {
   deleteApproval: (id: string) => Promise<boolean>;
 
   // ========== 审批操作（通过 API + 联动） ==========
-  approve: (id: string, comment?: string) => Promise<void>;
-  reject: (id: string, comment: string) => Promise<void>;
+  // 2026-09-28 审计修复：返回 boolean 供调用方 fail-loud 提示——
+  // 此前 catch 只写 logger，后端拒绝（如 409 入库单联动失败）时页面毫无反馈
+  approve: (id: string, comment?: string) => Promise<boolean>;
+  reject: (id: string, comment: string) => Promise<boolean>;
   // 2026-06-04 V2.1 铁律：部分审批走 Store action（之前 ApprovalContext 直接 await patch 违规）
   partiallyApprove: (id: string, items: Record<string, number>, comment?: string) => Promise<void>;
   cancel: (id: string, reason?: string) => Promise<void>;
@@ -363,8 +365,13 @@ export const useApprovalStore = create<ApprovalStore>()(
           // 2026-06-12: 审批通过后,联动刷新生产计划列表 — 后端 approval.ts:832 已把
           // production_plans.batch_status 改为 'published',前端 store 需重拉才能感知
           await refreshRelatedBusinessStores();
+          set({ error: null });
+          return true;
         } catch (error) {
+          // 2026-09-28 审计修复：fail loud——写 error + 返回 false，调用方据此提示用户
           logger.error('[DEBUG] approve 失败', error);
+          set({ error: error instanceof Error ? error.message : '审批通过失败' });
+          return false;
         }
       },
 
@@ -385,8 +392,13 @@ export const useApprovalStore = create<ApprovalStore>()(
           await get().fetchApprovals();
           // 2026-06-12: 拒绝后同步刷新生产计划
           await refreshRelatedBusinessStores();
+          set({ error: null });
+          return true;
         } catch (error) {
+          // 2026-09-28 审计修复：fail loud（同 approve）
           logger.error('[ApprovalStore] 拒绝操作失败', error);
+          set({ error: error instanceof Error ? error.message : '拒绝操作失败' });
+          return false;
         }
       },
 

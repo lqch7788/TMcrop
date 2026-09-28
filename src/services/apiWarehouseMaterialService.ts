@@ -152,13 +152,19 @@ export async function getReversalPreview(inboundId: number): Promise<ReversalPre
   return ((res as any)?.data ?? res) as ReversalPreview;
 }
 
-/** 创建冲销单（直接生效；原单保留，冲销量=实际可冲回量） */
-export async function createInboundReversal(inboundId: number, reason: string): Promise<{ message: string }> {
-  const res = await enhancedApiClient.post<{ success: boolean; message: string }>(
+/**
+ * 创建冲销单（直接生效；原单保留，冲销量=实际可冲回量）
+ *
+ * 2026-09-28 审计修复：enhancedApiClient 已把 `{success,message,data}` 解包成 data，
+ * 此前返回值被当作 `{message}` 使用（类型撒谎）→ 弹窗永远只显示通用"冲销完成"，
+ * 用户分不清"冲回 200 件"还是"货已领完、冲回 0 件"。现返回冲销单记录，
+ * 由调用方据实际冲回量展示结果。
+ */
+export async function createInboundReversal(inboundId: number, reason: string): Promise<InboundRecord> {
+  return await enhancedApiClient.post<InboundRecord>(
     `/materials/inbound/${inboundId}/reversal`,
     { reason }
   );
-  return res as unknown as { message: string };
 }
 
 // ========== V14.0: FEFO 批次库存 ==========

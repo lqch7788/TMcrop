@@ -17,8 +17,8 @@
 | `MaterialEditModal.tsx` | 物料编辑/删除确认弹窗 |
 | `MaterialBatchEditModal.tsx` | 批量编辑物料弹窗 |
 | `MaterialExportModal.tsx` | 导出格式选择弹窗 |
-| `DeleteWarningDialog.tsx` | 批量删除警告弹窗 |
-| `BatchDeleteConfirmDialog.tsx` | 批量删除确认弹窗 |
+| ~~`DeleteWarningDialog.tsx`~~ | **已删除（2026-09-28）** — 工具栏"删除"改为直接进入复选框模式，该警告弹窗已无引用被移除 |
+| `BatchDeleteConfirmDialog.tsx` | 批量删除确认弹窗（工具栏"删除"→ 勾选 → 确认删除 的最终二次确认） |
 | `InboundModals.tsx` | 入库相关所有弹窗 |
 | `MaterialInboundTab.tsx` | 入库记录标签页 |
 

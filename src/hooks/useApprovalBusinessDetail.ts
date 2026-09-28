@@ -30,6 +30,24 @@ export interface BusinessDetailData {
 /** 业务Store加载器函数类型 */
 type StoreLoader = (requestId: string) => Promise<unknown>;
 
+/**
+ * 加载业务数据（带 id 类型兜底重试）
+ *
+ * 2026-09-28 审计修复：business_link.requestId 恒为字符串（后端 String(inboundId) 写入），
+ * 而业务 Store 里的 id 可能是数字（如 inbound_records.id=38）——loader 内的
+ * `i.id === requestId` 严格比较恒 false，导致审批详情永远显示"暂无物料明细"。
+ * 这里在字符串未命中时按数值再试一次，一处修复覆盖全部 30+ 个 loader。
+ */
+async function loadWithIdFallback(loader: StoreLoader, requestId: string): Promise<unknown> {
+  const first = await loader(requestId);
+  if (first) return first;
+  const asNumber = Number(requestId);
+  if (Number.isFinite(asNumber) && String(asNumber) === requestId) {
+    return (await loader(asNumber as unknown as string)) ?? null;
+  }
+  return null;
+}
+
 /** businessLink.type → { 类型名称, 加载函数 } */
 const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader }> = {
   // ========== 物料相关 ==========
@@ -415,7 +433,7 @@ export function useApprovalBusinessDetail(approval: Approval | null): BusinessDe
     setError(null);
 
     try {
-      const data = await storeConfig.loader(requestId);
+      const data = await loadWithIdFallback(storeConfig.loader, requestId);
       setBusinessData(data || null);
     } catch (err) {
       // logger.error(`[useApprovalBusinessDetail] 加载业务数据失败 (${businessType}):`, err);
@@ -461,7 +479,7 @@ export async function fetchBusinessDetail(approval: Approval): Promise<BusinessD
   }
 
   try {
-    const data = await storeConfig.loader(requestId);
+    const data = await loadWithIdFallback(storeConfig.loader, requestId);
     return { data: data || null, typeName: storeConfig.typeName, isLoading: false, error: null };
   } catch (err) {
     return { data: null, typeName: storeConfig.typeName, isLoading: false, error: (err as Error).message };

@@ -130,12 +130,14 @@ export const filterInboundRecords = (
   filters: InboundSearchFilters
 ): InboundRecord[] => {
   return records.filter(record => {
+    // 2026-09-28 审计修复：字段可空防御——DB 里 supplier/code 允许 NULL，
+    // 一旦出现 NULL，`.toLowerCase()` 会在 render 期抛 TypeError 被 ErrorBoundary 兜成整页错误
     // 入库单号搜索
-    if (filters.code && !record.code.toLowerCase().includes(filters.code.toLowerCase())) {
+    if (filters.code && !String(record.code || '').toLowerCase().includes(filters.code.toLowerCase())) {
       return false;
     }
     // 供应商搜索
-    if (filters.supplier && !record.supplier.toLowerCase().includes(filters.supplier.toLowerCase())) {
+    if (filters.supplier && !String(record.supplier || '').toLowerCase().includes(filters.supplier.toLowerCase())) {
       return false;
     }
     // 状态搜索
@@ -144,7 +146,7 @@ export const filterInboundRecords = (
     }
     // 物料名称或编码搜索（匹配任意物料明细）
     if (filters.materialName || filters.materialCode) {
-      const hasMatch = record.materials.some(m => {
+      const hasMatch = (record.materials || []).some(m => {
         const nameMatch = !filters.materialName || (m.name && m.name.toLowerCase().includes(filters.materialName.toLowerCase()));
         const codeMatch = !filters.materialCode || (m.code && m.code.toLowerCase().includes(filters.materialCode.toLowerCase()));
         return nameMatch && codeMatch;
@@ -201,41 +203,38 @@ export const getStatusClassName = (status: string): string => {
 
 /**
  * 判断是否全选
+ *
+ * 2026-09-28 审计修复：统一为"当前页是否都已勾选"的集合判定。
+ * 此前 deleteMode 分支只认 pending 记录——库里 pending=0 时 `[].every()` 恒 true，
+ * 点"全选"永远走过滤分支且过滤集为空 → 按钮完全失效（浏览器实测：已选择恒为 0 项）；
+ * 非 deleteMode 分支用长度相等判定，跨页时误判并把前一页选择静默清空。
  */
 export const isAllSelected = (
   displayedRecords: InboundRecord[],
-  selectedRows: number[],
-  deleteMode: boolean
+  selectedRows: number[]
 ): boolean => {
-  if (deleteMode) {
-    return displayedRecords.filter(r => r.status === 'pending').every(r => selectedRows.includes(r.id));
-  }
-  return displayedRecords.length > 0 && selectedRows.length === displayedRecords.length;
+  return displayedRecords.length > 0 && displayedRecords.every(r => selectedRows.includes(r.id));
 };
 
 /**
- * 处理全选/取消全选
+ * 处理全选/取消全选（当前页维度；不丢弃其它页已勾选的记录）
  */
 export const handleSelectAll = (
   displayedRecords: InboundRecord[],
   selectedRows: number[],
-  deleteMode: boolean,
+  _deleteMode: boolean,
   setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>
 ) => {
-  if (deleteMode) {
-    const pendingIds = displayedRecords.filter(r => r.status === 'pending').map(r => r.id);
-    const allPendingSelected = pendingIds.every(id => selectedRows.includes(id));
-    if (allPendingSelected) {
-      setSelectedRows(selectedRows.filter(id => !pendingIds.includes(id)));
-    } else {
-      setSelectedRows([...selectedRows.filter(id => !pendingIds.includes(id)), ...pendingIds]);
-    }
+  const allSelected = isAllSelected(displayedRecords, selectedRows);
+  if (allSelected) {
+    // 取消当前页的勾选，保留其它页的选择
+    const pageIds = new Set(displayedRecords.map(r => r.id));
+    setSelectedRows(selectedRows.filter(id => !pageIds.has(id)));
   } else {
-    if (selectedRows.length === displayedRecords.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(displayedRecords.map(r => r.id));
-    }
+    // 并入当前页（保留其它页已勾选的记录）
+    const merged = new Set(selectedRows);
+    displayedRecords.forEach(r => merged.add(r.id));
+    setSelectedRows([...merged]);
   }
 };
 

@@ -99,6 +99,9 @@ export interface UseMaterialApprovalReturn {
 
   // 操作
   handleApprove: (item: Approval) => void;
+  /** 2026-09-28：直接调用审批接口（返回 boolean，false=失败，调用方负责提示） */
+  approve: (id: string, comment?: string) => Promise<boolean>;
+  reject: (id: string, comment: string) => Promise<boolean>;
 
   // 辅助函数
   getCategoryByCode: (code: string) => string;

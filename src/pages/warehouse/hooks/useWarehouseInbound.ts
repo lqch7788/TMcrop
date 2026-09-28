@@ -26,7 +26,6 @@ import {
   handleSelectRow as utilSelectRow,
   handleCancelSelection,
 } from '../utils/warehouseInbound.utils';
-import { logger } from '@/lib/logger';
 import { useInboundStore } from '../../../stores';
 import { useWarehouseMaterialStore } from '../../../stores';
 import { showAlert } from '@/lib/dialogService';
@@ -43,6 +42,9 @@ export function useWarehouseInbound() {
   const {
     items: inboundRecords,
     isLoading,
+    // 2026-09-28 审计修复：把 store.error 暴露给页面——
+    // 此前加载失败（断网/500）只写进 store 无人消费，页面显示旧快照或空表却毫无提示
+    error: inboundError,
     loadItems,
     addItem: storeAddItem,
     updateItem: storeUpdateItem,
@@ -50,10 +52,15 @@ export function useWarehouseInbound() {
     deleteItems: storeDeleteItems,
   } = useInboundStore();
 
+  // 加载物料主数据（编码生成器依赖它算 max+1；2026-09-28 审计修复：此前本页从不加载，
+  // 直开本页时列表为空 → 生成器从 001 起算，产出与库中已有物料重码的编码）
+  const loadWarehouseMaterials = useWarehouseMaterialStore((s) => s.loadItems);
+
   // 初始化加载数据（始终从 API 拉取最新数据，避免 persist 缓存过期）
   useEffect(() => {
     loadItems();
-  }, []);
+    loadWarehouseMaterials();
+  }, [loadItems, loadWarehouseMaterials]);
 
   // 刷新数据
   const refreshData = useCallback(() => {
@@ -135,6 +142,18 @@ export function useWarehouseInbound() {
     return filteredRecords.slice(startIdx, endIdx);
   }, [filteredRecords, startIdx, endIdx]);
 
+  // 2026-09-28 审计修复：筛选条件变化后必须回到第 1 页——
+  // 此前在第 3 页输入筛选，命中记录在旧页码上 slice 越界 → 表格空白且无任何提示
+  // （实测：第 3 页搜"喷雾器"，API 确认命中 2 单却显示空表 + "共 1 页"）
+  useEffect(() => {
+    setInboundPage(1);
+  }, [inboundSearchCode, inboundSearchSupplier, inboundSearchStatus, inboundSearchMaterialName, inboundSearchMaterialCode]);
+
+  // 页码越界兜底（删除记录/筛选后总页数减少时）
+  useEffect(() => {
+    if (totalPages > 0 && inboundPage > totalPages) setInboundPage(totalPages);
+  }, [inboundPage, totalPages]);
+
   // 选中的记录列表
   const selectedRecords = useMemo(() => {
     return inboundRecords.filter(r => selectedRows.includes(r.id));
@@ -143,7 +162,10 @@ export function useWarehouseInbound() {
   // 是否全选
   const isAllSelected = useMemo(() => {
     // 2026-08-10 修复：删除模式不再限定 pending，取消过滤以保证"全选"逻辑与行复选框一致。
-    return displayedRecords.length > 0 && selectedRows.length === displayedRecords.length;
+    // 2026-09-28 审计修复：改为"当前页是否都已勾选"的集合判定——
+    // 此前用长度相等判定，跨页全选（第1页10条+第2页10条 → selectedRows=20≠10）会误判为未全选，
+    // 再点一次还会把前一页的选择静默清空。
+    return displayedRecords.length > 0 && displayedRecords.every(r => selectedRows.includes(r.id));
   }, [displayedRecords, selectedRows]);
 
   // 切换展开行
@@ -173,6 +195,14 @@ export function useWarehouseInbound() {
   const handleGenerateCode = useCallback(() => {
     // 从仓库物料主数据 Store 取已用编码列表
     const existingCodes = (warehouseMaterials ?? []).map((m) => m.code).filter((c): c is string => typeof c === 'string' && c.length > 0);
+    // 2026-09-28 审计修复：主数据未加载时按空列表生成会产出已存在的编码
+    // （实测：直开本页生成 SP0103001，而库中 SP0103001 早已存在 → 重码）。
+    // 宁可报错也不给出错误编码。
+    if (existingCodes.length === 0) {
+      setCodeGenError('物料主数据未加载完成，暂不能生成编码（避免重码），请稍后重试');
+      setCodeGenSuccess('');
+      return;
+    }
     handleCodeGen(codeGen, setCodeGen, setCodeGenError, setCodeGenSuccess, existingCodes);
   }, [codeGen, warehouseMaterials]);
 
@@ -278,11 +308,19 @@ export function useWarehouseInbound() {
   }, [storeUpdateItem, loadItems]);
 
   // 批量保存记录
+  // 2026-09-28 审计修复：逐条收集失败单号——此前返回值被丢弃，部分失败也照关弹窗，
+  // 用户以为全部保存成功（对齐 onConfirmInboundDelete 的 fail-loud 写法）
   const onBatchSaveRecord = useCallback(async (records: InboundRecord[]) => {
+    const failed: string[] = [];
     for (const record of records) {
-      await storeUpdateItem(record.id, record);
+      const updated = await storeUpdateItem(record.id, record);
+      if (!updated) failed.push(record.code || `#${record.id}`);
     }
     await loadItems();
+    if (failed.length > 0) {
+      const reason = useInboundStore.getState().error || '未知原因';
+      await showAlert(`以下入库单保存失败：${failed.join('、')}\n原因：${reason}`);
+    }
     setShowInboundEditModal(false);
   }, [storeUpdateItem, loadItems]);
 
@@ -297,16 +335,18 @@ export function useWarehouseInbound() {
   }, [inboundRecords]);
 
   // 保存新记录
+  // 2026-09-28 审计修复：必须检查创建结果——此前 try/catch 形同虚设（store 内部吞错不抛），
+  // 无论成败都关弹窗 + CreateModal 清空表单 → 用户以为已提交，实际什么都没保存。
   const onSaveNewInbound = useCallback(async (record: Omit<InboundRecord, 'id'>) => {
-    try {
-      // 调用 Store 创建记录
-      await storeAddItem(record as any);
-      // 刷新数据
-      loadItems();
-    } catch (error) {
-      logger.error('创建入库记录失败', error);
+    const created = await storeAddItem(record as any);
+    if (!created) {
+      const reason = useInboundStore.getState().error || '未知原因';
+      await showAlert(`保存失败：${reason}`);
+      return false; // 保留弹窗与已填内容，用户修正后可直接重试
     }
+    await loadItems();
     setShowInboundAddModal(false);
+    return true;
   }, [storeAddItem, loadItems]);
 
   // 确认编辑
@@ -352,6 +392,7 @@ export function useWarehouseInbound() {
 
     // 数据加载状态
     isLoading,
+    inboundError,
     refreshData,
 
     // 编码生成相关

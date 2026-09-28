@@ -62,7 +62,10 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
   const handleMaterialChange = (materialId: number, field: keyof InboundMaterial, value: string | number) => {
     setEditedMaterials((prev) => ({
       ...prev,
-      [currentRecord.id]: prev[currentRecord.id].map(m =>
+      // 2026-09-28 审计修复：首次编辑时 prev[currentRecord.id] 为 undefined（初始 {}），
+      // 直接 .map 会抛 TypeError 被全局 ErrorBoundary 兜成整页"出错了"。
+      // 与上方展示口径一致地兜底到原明细。
+      [currentRecord.id]: (prev[currentRecord.id] ?? currentRecord.materials).map(m =>
         m.id === materialId ? { ...m, [field]: value } : m
       ),
     }));
@@ -318,7 +321,8 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                           onSelect={(wm) => {
                             setEditedMaterials((prev) => ({
                               ...prev,
-                              [currentRecord.id]: prev[currentRecord.id].map(x =>
+                              // 同 handleMaterialChange：首次编辑时 prev[id] 为 undefined，需兜底
+                              [currentRecord.id]: (prev[currentRecord.id] ?? currentRecord.materials).map(x =>
                                 x.id === m.id ? {
                                   ...x,
                                   name: wm.name,
@@ -492,11 +496,10 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
             <Button variant="secondary" onClick={() => setShowVoidModal(false)}>
               <X className="w-4 h-4" /> 取消
             </Button>
-            <Button variant="warning" onClick={() => {
-              showAlert('作废申请已提交');
-              setShowVoidModal(false);
-            }}>
-              <XCircle className="w-4 h-4" /> 确认作废
+            {/* 2026-09-28 审计修复：原实现只弹"作废申请已提交"却无任何 API 调用（假成功）。
+                本入口当前不可达（页面已移除批量编辑入口），故不做功能实现，改为如实禁用。 */}
+            <Button variant="warning" disabled title="该功能尚未接入后端接口（批量编辑入口当前未开放）">
+              <XCircle className="w-4 h-4" /> 确认作废（暂未开放）
             </Button>
           </div>
         }

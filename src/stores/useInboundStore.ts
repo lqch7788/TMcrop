@@ -21,6 +21,23 @@ interface InboundState {
   deleteItems: (ids: number[]) => Promise<boolean>;
 }
 
+/**
+ * 2026-09-28 审计修复：历史入库单的明细 JSON 没有 id（实测 14 单 / 64 行），
+ * 而编辑弹窗按 `m.id === materialId` 匹配行——`undefined === undefined` 成立会让
+ * "改一行 = 改全部行、删一行 = 删全部行"（React key 也随之重复）。
+ * 读取时统一补稳定负数 id（不与真实 id 冲突）。
+ */
+function normalizeInboundRecord<T extends { materials?: any[] }>(record: T): T {
+  if (!record || !Array.isArray((record as any).materials)) return record;
+  return {
+    ...record,
+    materials: (record as any).materials.map((m: any, i: number) => ({
+      ...m,
+      id: typeof m?.id === 'number' ? m.id : -(i + 1),
+    })),
+  } as T;
+}
+
 export const useInboundStore = create<InboundState>()(
   // 2026-09-27 修复：此前签名为 (set)，但 fetchItems 用了 get() → 调用即 ReferenceError
   (set, get) => ({
@@ -32,7 +49,9 @@ export const useInboundStore = create<InboundState>()(
       set({ isLoading: true, error: null });
       try {
         const data = await warehouseService.getInboundRecords();
-        set({ items: data, isLoading: false });
+        // 明细 id 归一化（防止"改一行=改全部行"）+ 非数组兜底
+        const list = Array.isArray(data) ? data : [];
+        set({ items: list.map((r) => normalizeInboundRecord(r)), isLoading: false });
       } catch (error) {
         // logger.error('[useInboundStore] 获取入库记录失败:', error);
         set({ error: (error as Error).message, isLoading: false });
@@ -45,10 +64,12 @@ export const useInboundStore = create<InboundState>()(
     addItem: async (item) => {
       try {
         const result = await warehouseService.createInboundRecord(item);
-        if (result) set((s) => ({ items: [result, ...s.items] }));
+        if (result) set((s) => ({ items: [normalizeInboundRecord(result), ...s.items] }));
         return result;
       } catch (error) {
-        // logger.error('[useInboundStore] 添加入库记录失败:', error);
+        // 2026-09-28 审计修复：fail-loud——此前只 `return null` 连错误都丢掉，
+        // 调用方无从提示，用户看到"弹窗关闭+表单清空"却什么都没保存（以为系统丢数据）
+        set({ error: error instanceof Error ? error.message : '创建入库记录失败' });
         return null;
       }
     },
@@ -67,7 +88,7 @@ export const useInboundStore = create<InboundState>()(
           materials: updates.materials,
         };
         const result = await warehouseService.updateInboundRecord(id, payload);
-        if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...result } : i) }));
+        if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? normalizeInboundRecord({ ...i, ...result }) : i) }));
         return result;
       } catch (error) {
         // 2026-09-27 fail-loud：错误写入 store.error，调用方据此提示用户（此前静默吞掉，

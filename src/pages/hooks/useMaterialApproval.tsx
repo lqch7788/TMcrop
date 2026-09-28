@@ -6,6 +6,7 @@ import {
   Truck, Sprout, FileText, CheckCircle, XCircle, Clock, Eye
 } from 'lucide-react';
 import { useApproval } from '@/hooks/useApproval';
+import { useApprovalStore } from '@/stores/useApprovalStore';
 import { ApprovalStatus, ApprovalType, Approval } from '@/types/approval';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import type {
@@ -148,18 +149,24 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
     setRejectModal({ show: true, item, reason: '', mode: 'reject' });
   }, []);
 
-  const handleConfirmReject = useCallback(() => {
+  const handleConfirmReject = useCallback(async () => {
     // 拒绝原因必填；通过意见选填（2026-09-27：此前通过不传意见，审批意见恒为空）
     if (rejectModal.mode === 'reject' && !rejectModal.reason.trim()) {
       showAlert('请输入拒绝原因');
       return;
     }
-    if (rejectModal.item) {
-      if (rejectModal.mode === 'approve') {
-        approve(rejectModal.item.id, rejectModal.reason.trim() || undefined);
-      } else {
-        reject(rejectModal.item.id, rejectModal.reason);
-      }
+    if (!rejectModal.item) return;
+    // 2026-09-28 审计修复：审批操作必须等待结果并提示失败——
+    // 此前不 await 也不看结果（store 内部吞错），后端拒绝（如 409 入库单联动失败）
+    // 时界面照常关闭，用户以为审批成功。
+    const isApprove = rejectModal.mode === 'approve';
+    const ok = isApprove
+      ? await approve(rejectModal.item.id, rejectModal.reason.trim() || undefined)
+      : await reject(rejectModal.item.id, rejectModal.reason);
+    if (!ok) {
+      const reason = useApprovalStore.getState().error || '未知原因';
+      await showAlert(`${isApprove ? '审批通过' : '审批拒绝'}失败：${reason}`);
+      return;
     }
     setRejectModal({ show: false, item: null, reason: '', mode: 'reject' });
     handleCloseDetail();

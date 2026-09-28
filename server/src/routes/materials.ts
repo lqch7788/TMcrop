@@ -8,7 +8,7 @@ import * as materialsDb from '../db/materials';
 // （2026-09-27 重构：入库的 主表/批次账/流水 逻辑已抽到 services/materialInboundStock.service.ts）
 // 2026-09-27 审计修复：入库写库存流水（复用出库侧的 writeStockTransaction）+
 // 入库撤销回收库存（reverseInboundStock，与出库恢复同模式）
-import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials } from '../services/materialInboundStock.service';
+import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials, collectReverseBatchRows } from '../services/materialInboundStock.service';
 
 const router = Router();
 
@@ -102,6 +102,22 @@ router.post('/inbound', (req: Request, res: Response) => {
     const matList = Array.isArray(record.materials) ? record.materials : [];
     const inboundCode = String(record.code || '');
     const status = record.status || 'completed';
+
+    // 2026-09-28 审计修复：明细零校验 → 空编码/0 数量的明细在入账时被静默跳过，
+    // 前端却提示"保存成功"，用户看不到货没入账。改为提交即拒绝并给出行号。
+    const invalidLines = matList
+      .map((m: any, i: number) => ({ line: i + 1, code: String(m?.code || m?.materialCode || '').trim(), qty: Number(m?.quantity) || 0 }))
+      .filter((x: any) => !x.code || x.qty <= 0);
+    if (matList.length === 0) {
+      return res.status(400).json({ success: false, error: '请至少添加一条物料明细' });
+    }
+    if (invalidLines.length > 0) {
+      const detail = invalidLines.map((x: any) => `第 ${x.line} 行${!x.code ? '缺物料编码' : '数量必须大于 0'}`).join('；');
+      return res.status(400).json({ success: false, error: `物料明细不合法：${detail}` });
+    }
+    if (!inboundCode) {
+      return res.status(400).json({ success: false, error: '入库单号不能为空' });
+    }
     // 入库即完成 → 自动同步物料库存 + 批次库存（FEFO）
     const willSync = status === 'completed' && matList.length > 0;
 
@@ -216,6 +232,28 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: `包含非法更新字段: ${illegalKeys.join(', ')}` });
     }
 
+    // 2026-09-28 审计修复①：status 值域校验——此前任意字符串都受理，
+    // 传 'Completed'/'done' 会把已完成单反冲（退出 completed）却永不重新入账（账实虚减）。
+    const VALID_INBOUND_STATUS = new Set(['pending', 'completed', 'voided']);
+    if (updates.status !== undefined && !VALID_INBOUND_STATUS.has(String(updates.status))) {
+      return res.status(400).json({ success: false, error: `非法状态: ${updates.status}（仅支持 pending/completed/voided）` });
+    }
+    // 2026-09-28 审计修复②：明细行必须合法——空编码/0 数量会在入账时被静默跳过，
+    // 单据显示"已完成"但库存没加，用户无从察觉。
+    if (updates.materials !== undefined) {
+      const incoming = Array.isArray(updates.materials) ? updates.materials : [];
+      if (incoming.length === 0) {
+        return res.status(400).json({ success: false, error: '物料明细不能为空' });
+      }
+      const badLines = incoming
+        .map((m: any, i: number) => ({ line: i + 1, code: String(m?.code || m?.materialCode || '').trim(), qty: Number(m?.quantity) || 0 }))
+        .filter((x: any) => !x.code || x.qty <= 0);
+      if (badLines.length > 0) {
+        const detail = badLines.map((x: any) => `第 ${x.line} 行${!x.code ? '缺物料编码' : '数量必须大于 0'}`).join('；');
+        return res.status(400).json({ success: false, error: `物料明细不合法：${detail}` });
+      }
+    }
+
     const oldRecord = materialsDb.getInboundRecordById(id);
     if (!oldRecord) {
       return res.status(404).json({ error: '入库记录不存在' });
@@ -227,11 +265,23 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     }
     const oldStatus = String(oldRecord.status || 'pending');
     const newStatus = String(updates.status ?? oldStatus);
-    const materialsChanged = updates.materials !== undefined;
     const oldMaterials = parseInboundMaterials(oldRecord.materials);
-    const newMaterials = materialsChanged
+    const incomingMaterials = updates.materials !== undefined
       ? (Array.isArray(updates.materials) ? updates.materials : parseInboundMaterials(updates.materials))
-      : oldMaterials;
+      : null;
+    // 2026-09-28 审计修复：明细改为**深比较**（编码+数量+批次+单位）。
+    // 此前只判"字段是否出现"，而前端 store 恒回传全量 materials
+    // （useInboundStore.updateItem 的 payload 固定带 materials）→ 对已完成单做任何保存
+    // 都会被判定为"明细变了"，触发全额反冲 + 重新入账（多写 2 条流水；若库存已被领用则整单 400）。
+    const normalizeLines = (list: any[]): string[] => (Array.isArray(list) ? list : []).map((m: any) => JSON.stringify({
+      code: String(m?.code || m?.materialCode || '').trim(),
+      qty: Number(m?.quantity) || 0,
+      batchNo: String(m?.batchNo || '').trim(),
+      unit: String(m?.unit || '').trim(),
+    }));
+    const materialsChanged = incomingMaterials !== null
+      && JSON.stringify(normalizeLines(incomingMaterials)) !== JSON.stringify(normalizeLines(oldMaterials));
+    const newMaterials = incomingMaterials ?? oldMaterials;
     const operatorName = String(updates.operator ?? oldRecord.operator ?? '').trim() || '仓库';
 
     // 2026-09-27：作废时间由服务端补写（白名单校验已通过，此处为服务端内部字段，用于审计追溯）
@@ -530,6 +580,29 @@ router.delete('/inbound/:id', (req: Request, res: Response) => {
         error: '已完成的入库单不允许删除（会破坏库存追溯）。请先作废/退回：库存自动回收、单据保留可查',
       });
     }
+    // 2026-09-28 审计修复：删单前必须确认没有**在途审批**——否则审批列表留下悬空 business_link，
+    // 审批人点"通过"时联动查不到单据，却仍提示"审批操作成功"（单据与账实双向脱节）。
+    const db = getDatabase();
+    const apprRows = db.exec("SELECT code, business_link FROM approvals WHERE type = 'material_inbound' AND status = 'pending'");
+    let pendingApprovalCode = '';
+    if (apprRows.length > 0) {
+      for (const row of apprRows[0].values) {
+        let parsed: any = row[1];
+        for (let i = 0; i < 3 && typeof parsed === 'string'; i++) {
+          try { parsed = JSON.parse(parsed as string); } catch { break; }
+        }
+        if (parsed && String(parsed.requestId) === String(id)) {
+          pendingApprovalCode = String(row[0] || '');
+          break;
+        }
+      }
+    }
+    if (pendingApprovalCode) {
+      return res.status(400).json({
+        success: false,
+        error: `该入库单存在待审批单 ${pendingApprovalCode}，请先在「物料审批 → 物料入库」驳回/撤销后再删除`,
+      });
+    }
     materialsDb.deleteInboundRecord(id);
     res.json({ success: true });
   } catch (error) {
@@ -558,19 +631,10 @@ function computeReversibleItems(db: any, inboundRecordId: number, matList: any[]
     const batchNo = String(m.batchNo || '').trim() || '默认批次';
     let batchRemain = 0;
     if (code) {
-      const byRecord = db.exec(
-        'SELECT IFNULL(SUM(remaining_quantity), 0) FROM batch_inventory WHERE material_code = ? AND inbound_record_id = ?',
-        [code, inboundRecordId]
-      );
-      batchRemain = byRecord.length > 0 && byRecord[0].values.length > 0 ? Number(byRecord[0].values[0][0]) || 0 : 0;
-      if (batchRemain === 0) {
-        // 兜底：按批次名匹配（老数据未写 inbound_record_id 的场景）
-        const byName = db.exec(
-          'SELECT remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?',
-          [code, batchNo]
-        );
-        batchRemain = byName.length > 0 && byName[0].values.length > 0 ? Number(byName[0].values[0][0]) || 0 : 0;
-      }
+      // 2026-09-28 审计修复：改用与执行（reverseInboundStock）**同一个**候选行集合，
+      // 保证"预览显示的可冲量 = 点确认后真正能冲回的量"（此前两套口径不一致，预览 100 → 确认 400）
+      const rows = collectReverseBatchRows(db, code, batchNo, inboundRecordId);
+      batchRemain = rows.reduce((s, r) => s + r.remaining, 0);
     }
     const reversible = Math.max(0, Math.min(qty, batchRemain));
     return { code, name: m.name || '', unit: m.unit || '', batchNo, quantity: qty, batchRemain, reversible };
@@ -771,6 +835,30 @@ router.put('/:id', (req: Request, res: Response) => {
 router.delete('/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
+    // 2026-09-28 审计修复：删主数据前先守住库存与批次账——
+    // 此前直接 DELETE FROM materials，批次账行残留 → 查不到主数据的"隐形库存"
+    // （实测库中存在 TEST-INBOUND-UI-003/TEST_NOOP_001 各 100 件），
+    // 且出库端点主表无行时会跳过库存校验（materialExecute.ts:196-200）。
+    const material = materialsDb.getMaterialById(id);
+    if (!material) {
+      return res.status(404).json({ error: '物料不存在' });
+    }
+    const mainQty = Number((material as any).quantity) || 0;
+    if (mainQty > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `物料 ${material.code} 当前库存 ${mainQty}，不允许删除（会留下无主批次账）。请先冲销/领用清零后再删除`,
+      });
+    }
+    const db = getDatabase();
+    const batchRows = db.exec('SELECT IFNULL(SUM(remaining_quantity), 0) FROM batch_inventory WHERE material_code = ?', [material.code]);
+    const batchRemain = batchRows.length > 0 && batchRows[0].values.length > 0 ? Number(batchRows[0].values[0][0]) || 0 : 0;
+    if (batchRemain > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `物料 ${material.code} 批次账仍有 ${batchRemain} 件余量（无主库存），请先清理批次账后再删除`,
+      });
+    }
     materialsDb.deleteMaterial(id);
     res.json({ success: true });
   } catch (error) {
