@@ -2,7 +2,6 @@ import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { UnifiedModal } from '@/components/ui';
 
 interface SupplierExportModalProps {
   isOpen: boolean;

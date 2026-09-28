@@ -12,6 +12,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { useSupplierStore } from '@/stores';
+import { Supplier } from '@/components/supplier/types';
+import {
+  evaluateSupplierQualification,
+  getQualificationIssue,
+  QUALIFICATION_STATUS_TEXT,
+  QUALIFICATION_STATUS_CLASS,
+} from '@/components/supplier/qualification';
+import { showConfirm, showToast } from '@/lib/dialogService';
 
 interface SupplierSearchInputProps {
   /** 当前值（供应商名称字符串） */
@@ -55,9 +63,24 @@ export function SupplierSearchInput({
     [value, supplierItems, searchSuppliers]
   );
 
-  /** 选中候选供应商：自动定位并回填名称（与供应商管理页同一数据） */
-  const handleSelect = (name: string) => {
-    onChange(name);
+  /**
+   * 选中候选供应商：自动定位并回填名称（与供应商管理页同一数据）
+   *
+   * 2026-09-28 批次B 合规风控：证照异常时先提示再决定
+   * - 未登记 / 已过期：确认框（取消则不写入，保持原值），提示合规风险
+   * - 即将到期：轻提示（不打断操作）
+   * 后端 `SUPPLIER_QUALIFICATION_ENFORCE=1` 时另会硬阻断，前端这里只做告知。
+   */
+  const handleSelect = async (supplier: Supplier) => {
+    const status = evaluateSupplierQualification(supplier).status;
+    if (status === 'missing' || status === 'expired') {
+      const issue = getQualificationIssue(supplier) || '供应资质异常';
+      const ok = await showConfirm(`该供应商${issue}。\n继续选择该供应商可能带来合规风险，是否仍要继续？`);
+      if (!ok) return;
+    } else if (status === 'expiring') {
+      showToast(`该供应商${getQualificationIssue(supplier) || '证照即将到期'}`, 'warning');
+    }
+    onChange(supplier.name);
     setOpen(false);
   };
 
@@ -99,22 +122,37 @@ export function SupplierSearchInput({
           </div>
         ) : (
           <>
-            {filtered.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => handleSelect(s.name)}
-                className={`w-full px-3 py-2 text-left hover:bg-emerald-50 border-b border-gray-100 last:border-b-0 ${
-                  value === s.name ? 'bg-emerald-50' : ''
-                }`}
-              >
-                <p className="text-sm text-gray-800">{s.name}</p>
-                <p className="text-xs text-gray-500">
-                  {s.code}
-                  {s.contact ? ` · ${s.contact}` : ''}
-                </p>
-              </button>
-            ))}
+            {filtered.map((s) => {
+              // 2026-09-28 批次B：候选行直接标出资质问题，让用户在选择前就能看到
+              const qual = evaluateSupplierQualification(s);
+              const showQualBadge = qual.status === 'missing' || qual.status === 'expired' || qual.status === 'expiring';
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => void handleSelect(s)}
+                  className={`w-full px-3 py-2 text-left hover:bg-emerald-50 border-b border-gray-100 last:border-b-0 ${
+                    value === s.name ? 'bg-emerald-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-800">{s.name}</p>
+                    {showQualBadge && (
+                      <span
+                        className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium ${QUALIFICATION_STATUS_CLASS[qual.status]}`}
+                        title={`${qual.label}${qual.expiry ? ` · 有效期至 ${qual.expiry}` : ''}`}
+                      >
+                        {QUALIFICATION_STATUS_TEXT[qual.status]}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {s.code}
+                    {s.contact ? ` · ${s.contact}` : ''}
+                  </p>
+                </button>
+              );
+            })}
             {filtered.length === MAX_RESULTS && (
               <div className="px-3 py-1.5 text-xs text-gray-400 border-t border-gray-100">
                 仅显示前 {MAX_RESULTS} 条，请继续输入关键字缩小范围

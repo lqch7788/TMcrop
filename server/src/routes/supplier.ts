@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -29,6 +30,12 @@ const SUPPLIER_WRITABLE_COLUMNS = new Set([
   'mobile_phone', 'work_phone', 'fax', 'address', 'supplier_type',
   'supplier_attribute', 'status', 'country', 'province', 'city',
   'bank_name', 'bank_card_number', 'organization', 'create_date', 'remarks',
+  // 2026-09-28 批次B 合规风控：三类强制资质证照（证号 + 有效期至）
+  'pesticide_license_no', 'pesticide_license_expiry',
+  'seed_filing_no', 'seed_filing_expiry',
+  'fertilizer_reg_no', 'fertilizer_reg_expiry',
+  // 2026-09-28 批次C 经营决策
+  'is_internal', 'settlement_type', 'credit_days', 'rating',
 ]);
 
 /** 从请求体挑出白名单列（trim 字符串、丢弃未知键） */
@@ -175,6 +182,83 @@ router.get('/generate-code', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 供应商经营统计数据源（2026-09-28 批次C）
+ *
+ * 全部按 `supplier_id` 外键聚合（批次A-2 起各业务表落库主数据 id）。
+ * ⚠️ 批次A-2 之前的历史行只存供应商名称文本、supplier_id 为空，不在此统计内——
+ * 界面需注明口径，避免用户以为"数据丢了"。
+ */
+const STATS_SOURCES: Array<{ key: string; label: string; table: string; amountCol: string; dateCol: string }> = [
+  { key: 'purchasePlan', label: '采购计划', table: 'purchase_plans', amountCol: 'total_amount', dateCol: 'create_time' },
+  { key: 'materialCost', label: '物料成本', table: 'material_costs', amountCol: 'total_amount', dateCol: 'cost_date' },
+  { key: 'inventoryInbound', label: '库存入库单', table: 'inventory_inbound_records', amountCol: 'total_amount', dateCol: 'record_date' },
+  { key: 'seedSource', label: '种源采购', table: 'seed_sources', amountCol: 'total_amount', dateCol: 'purchase_date' },
+];
+
+/**
+ * 供应商经营统计 — GET /api/suppliers/:id/stats
+ *
+ * 2026-09-28 批次C：按供应商维度汇总各业务表的单据数与金额，供详情弹窗展示。
+ * 表缺失（历史环境）时该项记 0，不整体失败（Fail Loud 体现在返回体里每项都显式给出）。
+ */
+router.get('/:id/stats', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const existing = selectSupplierById(db, id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: '供应商不存在' });
+    }
+
+    const result: Record<string, { label: string; count: number; amount: number; lastDate: string }> = {};
+    let totalAmount = 0;
+    let lastTransactionDate = '';
+
+    for (const src of STATS_SOURCES) {
+      let entry = { label: src.label, count: 0, amount: 0, lastDate: '' };
+      try {
+        const rows = queryToObjects(
+          db,
+          `SELECT COUNT(*) AS cnt, COALESCE(SUM(${src.amountCol}), 0) AS amt, MAX(${src.dateCol}) AS last_date
+           FROM ${src.table} WHERE supplier_id = ?`,
+          [id]
+        );
+        const r = (rows[0] || {}) as Record<string, unknown>;
+        entry = {
+          label: src.label,
+          count: Number(r.cnt ?? 0) || 0,
+          amount: Number(r.amt ?? 0) || 0,
+          lastDate: String(r.lastDate ?? '').slice(0, 10),
+        };
+      } catch { /* 表不存在：保留 0 值 */ }
+      result[src.key] = entry;
+      totalAmount += entry.amount;
+      if (entry.lastDate > lastTransactionDate) lastTransactionDate = entry.lastDate;
+    }
+
+    // 物料入库单（inbound_records 无金额列，只统计单数；该表用 camelCase 的 supplierId）
+    let materialInboundCount = 0;
+    try {
+      const rows = queryToObjects(db, 'SELECT COUNT(*) AS cnt FROM inbound_records WHERE supplierId = ?', [id]);
+      materialInboundCount = Number((rows[0] as Record<string, unknown>)?.cnt ?? 0) || 0;
+    } catch { /* 表不存在 */ }
+
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        materialInbound: { label: '物料入库单', count: materialInboundCount, amount: 0, lastDate: '' },
+        totalAmount,
+        lastTransactionDate,
+      },
+    });
+  } catch (error) {
+    console.error('获取供应商统计失败:', error);
+    res.status(500).json({ success: false, error: '获取供应商统计失败' });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -208,6 +292,12 @@ router.post('/', (req: Request, res: Response) => {
     const name = String(fields.supplier_name || '').trim();
     if (!code) return res.status(400).json({ success: false, error: '供应商编码不能为空' });
     if (!name) return res.status(400).json({ success: false, error: '供应商名称不能为空' });
+
+    // 2026-09-28：建档日期未提供时取服务端当天。前端表单已不再让用户填该字段
+    // （提交时自动带当天），这里是数据完整性兜底——避免建档日期为 NULL 的供应商。
+    if (fields.create_date === undefined) {
+      fields.create_date = formatLocalDateISO();
+    }
 
     // 2026-09-28 审计修复：唯一性校验（此前无唯一索引也无应用层查重 → 可产生重码/重名）
     const dupCode = db.exec('SELECT id FROM suppliers WHERE supplier_code = ? LIMIT 1', [code]);

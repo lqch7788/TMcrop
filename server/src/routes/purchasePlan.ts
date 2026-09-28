@@ -93,8 +93,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   const result = await purchasePlanService.create(req.body as CreatePurchasePlanInput);
   if (!result.success) {
-    // 业务校验失败 → 400；其他错误 → 500
-    const status = result.error?.includes('不允许') || result.error?.includes('不能为空') || result.error?.includes('已存在') || result.error?.includes('无效') ? 400 : 500;
+    // 业务校验失败 → 400；供应商资质合规拦截 → 409（可读的业务拒绝，不是服务端故障）；
+    // 其他错误 → 500。2026-09-28 批次B：此前合规拦截落入 500，前端只能显示"服务器错误"
+    const status = result.error?.includes('按合规要求') ? 409
+      : (result.error?.includes('不允许') || result.error?.includes('不能为空') || result.error?.includes('已存在') || result.error?.includes('无效') ? 400 : 500);
     return res.status(status).json({ success: false, error: result.error });
   }
   res.status(201).json({ success: true, data: result.data });
@@ -109,6 +111,8 @@ router.put('/:id', async (req: Request, res: Response) => {
   if (!result.success) {
     let status = 500;
     if (result.error === '采购计划不存在') status = 404;
+    // 2026-09-28 批次B：供应商资质合规拦截 → 409（见 create 处说明）
+    else if (result.error?.includes('按合规要求')) status = 409;
     else if (result.error?.includes('不允许') || result.error?.includes('没有需要')) status = 400;
     return res.status(status).json({ success: false, error: result.error });
   }

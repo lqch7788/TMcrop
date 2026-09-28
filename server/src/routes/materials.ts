@@ -9,6 +9,8 @@ import * as materialsDb from '../db/materials';
 // 2026-09-27 审计修复：入库写库存流水（复用出库侧的 writeStockTransaction）+
 // 入库撤销回收库存（reverseInboundStock，与出库恢复同模式）
 import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials, parseInboundMaterialsStrict, collectReverseBatchRows } from '../services/materialInboundStock.service';
+// 2026-09-28 批次B 合规风控：外购入库的供应商资质守卫（默认仅告警，见 lib/supplierQualification.ts）
+import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
 
 const router = Router();
 
@@ -127,6 +129,13 @@ router.post('/inbound', (req: Request, res: Response) => {
         error: `入库单号 ${inboundCode} 已存在（防止重复入库），请重新生成单号`,
       });
     }
+    // 2026-09-28 批次B 合规风控：供应商资质守卫（默认仅前端告警；
+    // SUPPLIER_QUALIFICATION_ENFORCE=1 时无证/过期供应商的入库单直接拒绝）
+    const qualIssue = assertSupplierQualificationAllowed(db, record.supplierId);
+    if (qualIssue) {
+      return res.status(409).json({ success: false, error: qualIssue });
+    }
+
     // 入库即完成 → 自动同步物料库存 + 批次库存（FEFO）
     const willSync = status === 'completed' && matList.length > 0;
 
@@ -288,6 +297,14 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     }
     const oldStatus = String(oldRecord.status || 'pending');
     const newStatus = String(updates.status ?? oldStatus);
+    // 2026-09-28 批次B 合规风控：供应商资质守卫（未改供应商时按库中现有值校验）
+    const qualIssue = assertSupplierQualificationAllowed(
+      db,
+      updates.supplierId !== undefined ? updates.supplierId : (oldRecord as any).supplierId
+    );
+    if (qualIssue) {
+      return res.status(409).json({ success: false, error: qualIssue });
+    }
     // 2026-09-28 审计修复：旧明细用严格解析——损坏时返回 400，
     // 而不是按空数组静默跳过库存回收（单据被置 voided 但库存没退回）
     let oldMaterials: any[];
