@@ -30,12 +30,12 @@ interface SupplierAddModalProps {
   onAdd: (supplier: Supplier) => void | Promise<unknown>;
 }
 
+// 表单控件统一样式（对齐生产领料弹窗 ApplicationModals 标准）
+const inputClass = "w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
+
 // 2026-09-28：编码生成器已移入本弹窗（原为页面生成→复制→粘贴，改为一键回填），
 // 原 generatedCode 外部注入通道随之移除
 export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAddModalProps) {
-  // 深度输入框样式（与其他 AddModal 一致）
-  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
   // 从全局设置数据获取供应商属性字典
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
@@ -225,40 +225,40 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
       submitText="提交"
       cancelText="取消"
     >
+        <div className="space-y-4">
         {/* 基本信息区域 */}
-        <div className="p-4 bg-emerald-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* 供应商编号（占一列，不再横跨两列） */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商编号 *</Label>
               <Input
                 type="text"
                 value={form.code}
                 onChange={(e) => handleChange('code', e.target.value)}
                 placeholder="手动输入或点击生成"
-                className={deepInputClass.replace('text-sm', 'text-sm font-mono')}
+                className={`${inputClass} font-mono`}
               />
             </div>
 
             {/* 供应商名称 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商名称 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商名称 *</Label>
               <Input
                 type="text"
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 供应类型（大类）—— 排在「编码中类」之前：先选大类才能选中类 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应类型 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应类型 *</Label>
               <Select
                 value={form.supplierType}
                 onValueChange={(val) => handleChange('supplierType', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -272,7 +272,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
 
             {/* 编码中类 + 生成按钮（与编号/名称/供应类型同一行）：选中类 → 生成 → 直接回填编号字段 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">编码中类</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">编码中类</Label>
               <SupplierCodeGenerator
                 bigCategory={form.supplierType}
                 onGenerated={(code) => setForm(prev => ({ ...prev, code }))}
@@ -281,15 +281,15 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
           </div>
 
           {/* 第二行：属性/组织/联系人/移动电话/状态 五个字段同行（独立 5 列，避免第 5 个被挤到下一行） */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* 供应商属性 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商属性 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商属性 *</Label>
               <Select
                 value={form.supplierAttribute}
                 onValueChange={(val) => handleChange('supplierAttribute', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择属性" />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,12 +303,12 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
 
             {/* 所属组织 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">所属组织 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">所属组织 *</Label>
               <Select
                 value={form.organization}
                 onValueChange={(val) => handleChange('organization', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择组织" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,34 +323,34 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
 
             {/* 联系人 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">联系人 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">联系人 *</Label>
               <Input
                 type="text"
                 value={form.contact}
                 onChange={(e) => handleChange('contact', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 移动电话 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">移动电话 *</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">移动电话 *</Label>
               <Input
                 type="text"
                 value={form.mobilePhone}
                 onChange={(e) => handleChange('mobilePhone', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 状态 */}
             <div>
-              <Label className="block text-xs font-medium text-emerald-700 mb-1">状态</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
               <Select
                 value={form.status}
                 onValueChange={(val) => handleChange('status', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
@@ -362,47 +362,45 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
               </Select>
             </div>
           </div>
-        </div>
 
         {/* 详细信息区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {/* 工作电话 */}
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">工作电话</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">工作电话</Label>
               <Input
                 type="text"
                 value={form.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 传真 */}
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">传真</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">传真</Label>
               <Input
                 type="text"
                 value={form.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 国家 */}
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">国家</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">国家</Label>
               <Input
                 type="text"
                 value={form.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 区域选择（四级级联：省份→城市→区县） */}
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">省/市/区</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">省/市/区</Label>
               <Cascader
                 options={provincesOptions}
                 lazy
@@ -415,55 +413,55 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
               />
             </div>
 
-            {/* 详细地址（与省/市/区同一行：省市区占 1 列，地址占 2 列） */}
+            {/* 详细地址（跨两列） */}
             <div className="col-span-2">
-              <Label className="block text-xs font-medium text-gray-700 mb-1">详细地址</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">详细地址</Label>
               <Input
                 type="text"
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 开户行 */}
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">开户行</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">开户行</Label>
               <Input
                 type="text"
                 value={form.bankName}
                 onChange={(e) => handleChange('bankName', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 银行卡号 */}
             <div className="col-span-2">
-              <Label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">银行卡号</Label>
               <Input
                 type="text"
                 value={form.bankCardNumber}
                 onChange={(e) => handleChange('bankCardNumber', e.target.value)}
-                className={deepInputClass.replace('text-sm', 'text-sm')}
+                className={inputClass}
               />
             </div>
 
             {/* 2026-09-28 批次B 合规风控：资质证照（三类全展示，当前类型要求的标红星） */}
-            <div className="col-span-3 border-t border-gray-200 pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="block text-xs font-medium text-gray-700">资质证照</Label>
+            <div className="col-span-2 border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="block text-sm font-medium text-gray-700">资质证照</Label>
                 <span className={`text-xs ${requiredKind ? 'text-orange-600' : 'text-gray-400'}`}>
                   {requiredKind
                     ? `当前「${getSupplierTypeName(form.supplierType)}」须持${QUALIFICATION_LABELS[requiredKind]}`
                     : '当前供应类型不强制持证'}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {QUALIFICATION_ROWS.map((row) => {
                   const isRequired = row.kind === requiredKind;
                   return (
                     <div key={row.kind} className="flex items-center gap-3">
-                      <Label className="w-28 shrink-0 text-xs text-gray-700">
+                      <Label className="w-28 shrink-0 text-sm text-gray-700">
                         {row.label}
                         {isRequired && <span className="text-red-500 ml-0.5" title="当前供应类型强制要求">*</span>}
                       </Label>
@@ -472,14 +470,14 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
                         value={String(form[row.noField] ?? '')}
                         onChange={(e) => handleChange(row.noField as keyof NewSupplierData, e.target.value)}
                         placeholder="证号"
-                        className={`flex-1 ${deepInputClass}`}
+                        className={`flex-1 ${inputClass}`}
                       />
                       <Input
                         type="date"
                         value={String(form[row.expiryField] ?? '')}
                         onChange={(e) => handleChange(row.expiryField as keyof NewSupplierData, e.target.value)}
                         title="有效期至"
-                        className={`w-40 shrink-0 ${deepInputClass}`}
+                        className={`w-40 shrink-0 ${inputClass}`}
                       />
                     </div>
                   );
@@ -488,16 +486,16 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
             </div>
 
             {/* 2026-09-28 批次C 经营决策：内部自产 / 结算方式 / 账期 / 评级（四个字段同一行） */}
-            <div className="col-span-3 border-t border-gray-200 pt-3">
-              <Label className="block text-xs font-medium text-gray-700 mb-2">经营决策</Label>
-              <div className="grid grid-cols-4 gap-3">
+            <div className="col-span-2 border-t border-gray-200 pt-4">
+              <Label className="block text-sm font-medium text-gray-700 mb-3">经营决策</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <Label className="block text-xs font-medium text-gray-700 mb-1">内部自产标记</Label>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">内部自产标记</Label>
                   <Select
                     value={form.isInternal}
                     onValueChange={(val) => handleChange('isInternal', val)}
                   >
-                    <SelectTrigger className={deepInputClass}>
+                    <SelectTrigger className={inputClass}>
                       <SelectValue placeholder="外部采购" />
                     </SelectTrigger>
                     <SelectContent>
@@ -509,12 +507,12 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
                 </div>
 
                 <div>
-                  <Label className="block text-xs font-medium text-gray-700 mb-1">结算方式</Label>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">结算方式</Label>
                   <Select
                     value={form.settlementType}
                     onValueChange={(val) => handleChange('settlementType', val)}
                   >
-                    <SelectTrigger className={deepInputClass}>
+                    <SelectTrigger className={inputClass}>
                       <SelectValue placeholder="请选择结算方式" />
                     </SelectTrigger>
                     <SelectContent>
@@ -529,19 +527,19 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
                 </div>
 
                 <div>
-                  <Label className="block text-xs font-medium text-gray-700 mb-1">账期天数</Label>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">账期天数</Label>
                   <Input
                     type="number"
                     min={0}
                     value={form.creditDays}
                     onChange={(e) => handleChange('creditDays', e.target.value)}
                     placeholder="0"
-                    className={deepInputClass}
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <Label className="block text-xs font-medium text-gray-700 mb-1">{SUPPLIER_RATING_LABEL}</Label>
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">{SUPPLIER_RATING_LABEL}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -549,20 +547,20 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd }: SupplierAdd
                     value={form.rating}
                     onChange={(e) => handleChange('rating', e.target.value)}
                     placeholder={SUPPLIER_RATING_HINT}
-                    className={deepInputClass}
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
             {/* 备注 */}
-            <div className="col-span-3">
-              <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
+            <div className="col-span-2">
+              <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
               <TextArea
                 value={form.remarks}
                 onChange={(e) => handleChange('remarks', e.target.value)}
-                rows={2}
-                className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                rows={3}
+                className={inputClass}
               />
             </div>
           </div>

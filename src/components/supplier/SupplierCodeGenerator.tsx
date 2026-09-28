@@ -70,7 +70,7 @@ export default function SupplierCodeGenerator({ bigCategory, onGenerated }: Supp
           onValueChange={(val) => { setMidCategory(val); setError(''); }}
           disabled={!bigCategory}
         >
-          <SelectTrigger className="flex-1 min-w-0 px-3 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 shadow-inner disabled:bg-gray-100">
+          <SelectTrigger className="flex-1 min-w-0 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

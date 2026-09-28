@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { RotateCcw, X, AlertTriangle } from 'lucide-react';
 import { InboundRecord } from '../../../../types/warehouseInbound.types';
-import { UnifiedModal, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { UnifiedModal, Button, Input, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { getReversalPreview, createInboundReversal, ReversalPreview } from '@/services/apiWarehouseMaterialService';
 import { showAlert } from '@/lib/dialogService';
 
@@ -96,9 +96,9 @@ export function InboundReversalModal({ isOpen, record, onClose, onSuccess }: Inb
 
         {/* 原单信息 */}
         <div className="grid grid-cols-3 gap-3 text-sm">
-          <div><span className="text-xs text-gray-500 block">原单号</span><span className="font-medium">{record.code}</span></div>
-          <div><span className="text-xs text-gray-500 block">入库日期</span><span>{record.inboundDate}</span></div>
-          <div><span className="text-xs text-gray-500 block">供应商</span><span>{record.supplier || '-'}</span></div>
+          <div><Label className="block text-sm font-medium text-gray-700 mb-1">原单号</Label><span className="font-medium">{record.code}</span></div>
+          <div><Label className="block text-sm font-medium text-gray-700 mb-1">入库日期</Label><span>{record.inboundDate}</span></div>
+          <div><Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label><span>{record.supplier || '-'}</span></div>
         </div>
 
         {/* 明细与可冲量 */}
@@ -156,12 +156,14 @@ export function InboundReversalModal({ isOpen, record, onClose, onSuccess }: Inb
 
         {/* 冲销原因 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">冲销原因（留痕，可选）</label>
+          {/* 2026-09-28：原生 label 改为 UI Label，输入框补齐统一类名 */}
+          <Label className="block text-sm font-medium text-gray-700 mb-1">冲销原因（留痕，可选）</Label>
           <Input
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="如：重复录入 / 数量录错 / 供应商退货"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>

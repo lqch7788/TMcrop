@@ -50,7 +50,6 @@ export interface ReturnRecord {
 export interface SearchForm {
   code: string;
   material: string;
-  warehouse: string;
   applicant: string;
   status: string;
   department: string;

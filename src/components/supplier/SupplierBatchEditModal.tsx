@@ -3,7 +3,7 @@
  * 参照物料入库 BatchEditModal 设计
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Check, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Maximize2, Minimize2, Save, X } from 'lucide-react';
 import { Supplier, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
@@ -13,8 +13,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Label } from '../../components/ui/label';
 import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 表单控件统一样式（对齐生产领料弹窗 ApplicationModals 标准）
+const inputClass = "w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
 
 interface SupplierBatchEditModalProps {
   isOpen: boolean;
@@ -136,32 +136,32 @@ export default function SupplierBatchEditModal({
         id="supplier-batch-edit-dialog"
         className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[90vh] flex flex-col"
       >
-        {/* 翠绿标题栏 */}
+        {/* 翠绿标题栏（与 ui/Modal 标题栏一致） */}
         <div
-          className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600 flex-shrink-0 cursor-move"
+          className="px-6 py-3 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 cursor-move"
           onMouseDown={handleDragStart}
         >
           <h3 className="text-lg font-semibold text-white select-none">批量编辑供应商</h3>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMaximize}
-              className="text-white hover:bg-emerald-700"
-              title={isMaximized ? '还原' : '最大化'}
+              className="text-white hover:bg-emerald-500"
+              title={isMaximized ? '还原窗口' : '最大化窗口'}
+              aria-label={isMaximized ? '还原窗口' : '最大化窗口'}
             >
-              {isMaximized ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H6a2 2 0 00-2 2v2m0 4v2a2 2 0 002 2h2m8 0h2a2 2 0 002-2v-2m0-4V6a2 2 0 00-2-2h-2" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-              )}
+              {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5 text-white" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-white hover:bg-emerald-500"
+              aria-label="关闭弹窗"
+              title="关闭"
+            >
+              <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function SupplierBatchEditModal({
               if (idx >= 0) onSupplierSelect(idx);
             }}
           >
-            <SelectTrigger className={deepInputClass}>
+            <SelectTrigger className={inputClass}>
               <SelectValue placeholder="请选择供应商" />
             </SelectTrigger>
             <SelectContent>
@@ -220,21 +220,21 @@ export default function SupplierBatchEditModal({
 
         {/* 只读标识信息 */}
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <Label className="block text-xs text-gray-500 mb-1">供应商编号</Label>
+              <Label className="block text-xs font-medium text-gray-500 mb-1">供应商编号</Label>
               <div className="text-sm font-medium text-gray-900">{currentSupplier?.code || '-'}</div>
             </div>
             <div>
-              <Label className="block text-xs text-gray-500 mb-1">供应商名称</Label>
+              <Label className="block text-xs font-medium text-gray-500 mb-1">供应商名称</Label>
               <div className="text-sm font-medium text-gray-900">{currentSupplier?.name || '-'}</div>
             </div>
             <div>
-              <Label className="block text-xs text-gray-500 mb-1">创建时间</Label>
+              <Label className="block text-xs font-medium text-gray-500 mb-1">创建时间</Label>
               <div className="text-sm text-gray-600">{currentSupplier?.createDate || '-'}</div>
             </div>
             <div>
-              <Label className="block text-xs text-gray-500 mb-1">原始状态</Label>
+              <Label className="block text-xs font-medium text-gray-500 mb-1">原始状态</Label>
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                 (currentSupplier?.status) === '合作中' ? 'bg-green-100 text-green-700' :
                 (currentSupplier?.status) === '暂停' ? 'bg-yellow-100 text-yellow-700' :
@@ -249,15 +249,15 @@ export default function SupplierBatchEditModal({
         {/* 可编辑字段 — 滚动区域 */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* 基本信息 */}
-          <h4 className="text-sm font-semibold text-emerald-700 mb-3 pb-1 border-b border-emerald-200">基本信息</h4>
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">基本信息</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">供应类型</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应类型</Label>
               <Select
                 value={getValue('supplierType')}
                 onValueChange={(val) => handleFieldChange('supplierType', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,12 +269,12 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">供应商属性</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商属性</Label>
               <Select
                 value={getValue('supplierAttribute')}
                 onValueChange={(val) => handleFieldChange('supplierAttribute', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -286,12 +286,12 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">所属组织</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">所属组织</Label>
               <Select
                 value={getValue('organization')}
                 onValueChange={(val) => handleFieldChange('organization', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -304,12 +304,12 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">状态</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
               <Select
                 value={getValue('status')}
                 onValueChange={(val) => handleFieldChange('status', val)}
               >
-                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -324,147 +324,148 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 联系信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">联系信息</h4>
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">联系信息</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">联系人</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">联系人</Label>
               <Input
                 type="text"
                 value={getValue('contact')}
                 onChange={(e) => handleFieldChange('contact', e.target.value)}
                 placeholder={currentSupplier?.contact || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">移动电话</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">移动电话</Label>
               <Input
                 type="text"
                 value={getValue('mobilePhone')}
                 onChange={(e) => handleFieldChange('mobilePhone', e.target.value)}
                 placeholder={currentSupplier?.mobilePhone || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">工作电话</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">工作电话</Label>
               <Input
                 type="text"
                 value={getValue('workPhone')}
                 onChange={(e) => handleFieldChange('workPhone', e.target.value)}
                 placeholder={currentSupplier?.workPhone || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">传真</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">传真</Label>
               <Input
                 type="text"
                 value={getValue('fax')}
                 onChange={(e) => handleFieldChange('fax', e.target.value)}
                 placeholder={currentSupplier?.fax || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
           </div>
 
           {/* 地区信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">地区信息</h4>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">地区信息</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">国家</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">国家</Label>
               <Input
                 type="text"
                 value={getValue('country')}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
                 placeholder={currentSupplier?.country || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">省份</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">省份</Label>
               <Input
                 type="text"
                 value={getValue('province')}
                 onChange={(e) => handleFieldChange('province', e.target.value)}
                 placeholder={currentSupplier?.province || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">城市</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">城市</Label>
               <Input
                 type="text"
                 value={getValue('city')}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
                 placeholder={currentSupplier?.city || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
           </div>
           <div className="mb-4">
-            <Label className="block text-xs font-medium text-gray-700 mb-1">详细地址</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">详细地址</Label>
             <Input
               type="text"
               value={getValue('address')}
               onChange={(e) => handleFieldChange('address', e.target.value)}
               placeholder={currentSupplier?.address || '未填写'}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className={inputClass}
             />
           </div>
 
           {/* 财务信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">财务信息</h4>
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">财务信息</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">开户行</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">开户行</Label>
               <Input
                 type="text"
                 value={getValue('bankName')}
                 onChange={(e) => handleFieldChange('bankName', e.target.value)}
                 placeholder={currentSupplier?.bankName || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5')}
+                className={inputClass}
               />
             </div>
             <div>
-              <Label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">银行卡号</Label>
               <Input
                 type="text"
                 value={getValue('bankCardNumber')}
                 onChange={(e) => handleFieldChange('bankCardNumber', e.target.value)}
                 placeholder={currentSupplier?.bankCardNumber || '未填写'}
-                className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm font-mono')}
+                className={`${inputClass} font-mono`}
               />
             </div>
           </div>
 
           {/* 备注 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">备注</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-200">备注</h4>
           <div>
             <TextArea
               value={getValue('remarks')}
               onChange={(e) => handleFieldChange('remarks', e.target.value)}
               placeholder={currentSupplier?.remarks || '未填写'}
               rows={2}
-              className={deepInputClass.replace('py-3', 'py-1').replace('text-sm', 'text-sm')}
+              className={inputClass}
             />
           </div>
         </div>
 
         {/* 底部操作按钮 */}
-        <div className="p-4 border-t border-gray-400 flex justify-between gap-3 flex-shrink-0">
-          <Button variant="secondary" onClick={onClose}>
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between gap-3 flex-shrink-0">
+          <Button variant="secondary" size="sm" onClick={onClose}>
             <X className="w-4 h-4" /> 取消
           </Button>
           <div className="flex items-center gap-3">
             <Button
               variant="secondary"
+              size="sm"
               onClick={onNext}
               disabled={!currentSupplierId}
             >
               <Check className="w-4 h-4" /> 确认 {currentBatchEditIndex + 1 < selectedSuppliers.length ? '(下一个)' : '(已最后一个)'}
             </Button>
-            <Button onClick={onSaveAll}>
+            <Button size="sm" onClick={onSaveAll}>
               <Save className="w-4 h-4" /> 保存全部 ({editedCount} 个)
             </Button>
           </div>

@@ -9,6 +9,7 @@ import { InboundRecord, InboundMaterial } from '../../../../types/warehouseInbou
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
@@ -188,15 +189,15 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <span className="text-xs text-gray-500 block">入库单号</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">入库单号</Label>
                 <span className="text-sm font-medium text-gray-900">{record.code}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">入库日期</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">入库日期</Label>
                 <span className="text-sm font-medium text-gray-900">{record.inboundDate}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">供应商</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
                 {record.status === 'pending' ? (
                   <SearchableSelect
                     value={editedSupplier}
@@ -210,11 +211,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                 )}
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">操作员</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">操作员</Label>
                 <span className="text-sm font-medium text-gray-900">{record.operator}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">状态</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
                 <span className={`text-sm font-medium ${statusLabels[record.status]?.textClassName || 'text-gray-600'}`}>
                   {statusLabels[record.status]?.text}
                 </span>

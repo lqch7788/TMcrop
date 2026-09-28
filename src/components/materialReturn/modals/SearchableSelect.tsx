@@ -128,9 +128,11 @@ export function SearchableSelect({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* 选择器触发区域 */}
+      {/* 2026-09-28 UI 统一：触发区样式对齐生产领料弹窗的输入框标准
+          （border-gray-400 / rounded-lg / px-3 py-2 / focus:ring-2 ring-emerald-500） */}
       <div
-        className={`flex items-center border rounded ${
-          open ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-200'
+        className={`flex items-center border border-gray-400 rounded-lg bg-white ${
+          open ? 'ring-2 ring-emerald-500 border-emerald-500' : ''
         }`}
       >
         <input
@@ -143,7 +145,7 @@ export function SearchableSelect({
           }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className="flex-1 px-2 py-1 text-sm bg-white rounded-l focus:outline-none"
+          className="flex-1 px-3 py-2 text-sm bg-white rounded-l-lg focus:outline-none"
         />
         {value && (
           <button

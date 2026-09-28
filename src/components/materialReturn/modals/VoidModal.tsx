@@ -1,4 +1,4 @@
-import { UnifiedModal, TextArea } from '@/components/ui';
+import { UnifiedModal, TextArea, Label } from '@/components/ui';
 import { ReturnRecord } from '../types';
 
 interface VoidModalProps {
@@ -70,9 +70,9 @@ export function VoidModal({
 
       {/* 作废原因（必填） */}
       <div className="mb-1">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           作废原因 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <TextArea
           value={voidReason}
           onChange={(e) => onReasonChange(e.target.value)}

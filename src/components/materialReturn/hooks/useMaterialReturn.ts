@@ -3,6 +3,8 @@ import { MaterialItem, ReturnRecord, RecordId, ReturnStatusClass, SearchForm, Ed
 import { useMaterialReturnStore } from '../../../stores';
 import { useNotificationStore } from '../../../stores/useNotificationStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { useUserStore } from '../../../stores/useUserStore';
+import { useDepartmentStore } from '../../../stores/useDepartmentStore';
 import type { MaterialReturnRecord } from '../../../services/apiMaterialReturnService';
 import { getReturnApproval, cancelReturnApproval } from '../../../services/apiMaterialReturnService';
 import { submitReturnMaterialApproval } from '../../../services/approvalSubmitService';
@@ -12,7 +14,6 @@ import { todayLocal } from '@/lib/dateUtils';
 const initialSearchForm: SearchForm = {
   code: '',
   material: '',
-  warehouse: '',
   applicant: '',
   status: 'all',
   department: 'all',
@@ -178,6 +179,9 @@ export function useMaterialReturn() {
   // 当前登录用户（快筛匹配 + 审批单申请人）
   const authUser = useAuthStore((s) => s.currentUser);
   const currentUserName = authUser?.realName || authUser?.username || '';
+  // 用户/部门主数据（用于新增弹窗自动预填退料部门）
+  const users = useUserStore((s) => s.users);
+  const departments = useDepartmentStore((s) => s.departments);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -219,6 +223,9 @@ export function useMaterialReturn() {
   // 表单状态
   const [editForm, setEditForm] = useState<EditFormData>(initialEditForm);
   const [addForm, setAddForm] = useState<AddFormData>(initialAddForm);
+  // 2026-09-28 新增：提交中标记（防双击重复提交，对齐领料页 useApplicationTab 的 isSubmitting 标准）
+  // 此前无锁，用户连续点保存会产生多条重复请求（浏览器日志曾见同一错误重复 5 次）
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 物料选择弹窗状态
   const [showMaterialSelectModal, setShowMaterialSelectModal] = useState(false);
@@ -252,7 +259,6 @@ export function useMaterialReturn() {
     return storeItems.map(toReturnRecord).filter(item => {
       if (searchForm.code && !String(item.code || '').toLowerCase().includes(searchForm.code.toLowerCase())) return false;
       if (searchForm.material && !item.materials.some(m => String(m.materialName || '').toLowerCase().includes(searchForm.material.toLowerCase()))) return false;
-      if (searchForm.warehouse && !String(item.warehouseLocation || '').toLowerCase().includes(searchForm.warehouse.toLowerCase())) return false;
       if (searchForm.applicant && !String(item.applicant || '').toLowerCase().includes(searchForm.applicant.toLowerCase())) return false;
       if (searchForm.status !== 'all' && item.status !== searchForm.status) return false;
       if (searchForm.department !== 'all' && item.department !== searchForm.department) return false;
@@ -487,6 +493,27 @@ export function useMaterialReturn() {
     setAddForm(prev => ({ ...prev, code: newCode }));
   }, [storeItems]);
 
+  /**
+   * 打开新增弹窗（2026-09-28 新增）—— 自动预填三项，减少必填漏填
+   *  ① 退料单号：避免用户忘点「生成」导致保存被拒
+   *  ② 申请人：默认当前登录用户（可改，支持代他人退料）
+   *  ③ 退料部门：由当前用户的 departmentOid 反查部门名（查不到则留空由用户选）
+   */
+  const openAddModal = useCallback(() => {
+    const code = generateReturnCode(storeItems.map(r => r.code));
+    const applicant = currentUserName;
+    let department = '';
+    if (applicant) {
+      const me = users.find(u => (u.name || u.real_name || '') === applicant);
+      const deptOid = me?.departmentOid || me?.orgOid || '';
+      if (deptOid) {
+        department = departments.find(d => d.oid === deptOid || d.id === deptOid)?.name || '';
+      }
+    }
+    setAddForm({ ...initialAddForm, code, applicant, department });
+    setShowAddModal(true);
+  }, [storeItems, currentUserName, users, departments]);
+
   // ========== 编辑物料操作 ==========
 
   const handleEditMaterialChange = useCallback((index: number, field: keyof MaterialItem, value: string | number) => {
@@ -521,6 +548,8 @@ export function useMaterialReturn() {
   }, []);
 
   const handleSaveAdd = useCallback(async () => {
+    // 防双击：提交中直接忽略后续点击（避免重复创建/重复报错刷屏）
+    if (isSubmitting) return;
     // 2026-09-28 修复：所有校验失败均给出明确提示（此前静默 return，用户点保存毫无反应）
     if (!addForm.code) {
       notify('请先生成退料单号', 'warning');
@@ -548,16 +577,25 @@ export function useMaterialReturn() {
       materials: addForm.materials,
     };
     try {
+      setIsSubmitting(true);
       // 库存恢复由后端在事务内统一完成（materials 主表 + batch_inventory 批次 + inventory_transaction 流水）
       const created = await storeAddItem(newRecord);
       // 2026-09-28 审批流接入：创建后立即提交审批（审批通过才恢复库存）
       try {
-        await submitReturnMaterialApproval({
+        const approvalResult = await submitReturnMaterialApproval({
           returnId: String(created.id),
           returnCode: created.code,
+          // 2026-09-28：补全明细字段，供审批页展开行展示完整物料信息
           materials: addForm.materials.map(m => ({
             name: m.materialName || m.materialCode,
             quantity: Number(m.returnQuantity) || 0,
+            materialCode: m.materialCode,
+            spec: m.spec,
+            unit: m.unit,
+            unitPrice: Number(m.unitPrice) || 0,
+            sourceApplicationCode: m.sourceApplicationCode,
+            warehousePosition: m.warehousePosition,
+            reason: m.reason,
           })),
           amount: addForm.materials.reduce(
             (s, m) => s + (Number(m.returnQuantity) || 0) * (Number(m.unitPrice) || 0), 0
@@ -566,7 +604,13 @@ export function useMaterialReturn() {
           applicantName: addForm.applicant || currentUserName,
           department: addForm.department,
         });
-        notify('退料单已提交审批', 'success', '审批通过后库存自动恢复');
+        if (approvalResult.autoApproveFailed) {
+          // 2026-09-28：免审批自动通过失败时单据会卡在待审批（无审批人可审），
+          // 必须把服务端返回的真实原因透出（如：物料不在库存主表导致联动回滚）
+          notify('审批自动通过失败', 'error', approvalResult.message);
+        } else {
+          notify('退料单已提交审批', 'success', '审批通过后库存自动恢复');
+        }
         // 同步后端最终状态（审批若配置为自动通过，状态与库存已在服务端完成）
         await loadItems().catch(() => { /* 同步失败不影响提交结果，下次刷新自愈 */ });
       } catch (approvalErr) {
@@ -579,8 +623,11 @@ export function useMaterialReturn() {
     } catch (e) {
       // 失败时保留弹窗与表单内容，便于用户修正后重试
       notify('创建退料单失败', 'error', e instanceof Error ? e.message : undefined);
+    } finally {
+      // 无论成败都释放提交锁，避免失败后无法重试
+      setIsSubmitting(false);
     }
-  }, [addForm, storeAddItem, currentUserName, loadItems]);
+  }, [addForm, storeAddItem, currentUserName, loadItems, isSubmitting]);
 
   const handleCancelAdd = useCallback(() => {
     setShowAddModal(false);
@@ -615,9 +662,17 @@ export function useMaterialReturn() {
       await submitReturnMaterialApproval({
         returnId: String(item.id),
         returnCode: item.code,
+        // 2026-09-28：补全明细字段，供审批页展开行展示完整物料信息
         materials: materials.map(m => ({
           name: m.materialName || m.materialCode,
           quantity: Number(m.returnQuantity) || 0,
+          materialCode: m.materialCode,
+          spec: m.spec,
+          unit: m.unit,
+          unitPrice: Number(m.unitPrice) || 0,
+          sourceApplicationCode: m.sourceApplicationCode,
+          warehousePosition: m.warehousePosition,
+          reason: m.reason,
         })),
         amount: materials.reduce(
           (s, m) => s + (Number(m.returnQuantity) || 0) * (Number(m.unitPrice) || 0), 0
@@ -875,6 +930,7 @@ export function useMaterialReturn() {
     filteredReturns,
     allRecords,
     isLoading,
+    isSubmitting,
     showDetailModal,
     showEditModal,
     showDeleteConfirm,
@@ -961,6 +1017,7 @@ export function useMaterialReturn() {
     handleMaterialChange,
     handleSaveAdd,
     handleCancelAdd,
+    openAddModal,
     setShowAddModal,
     handleOpenMaterialSelect,
     handleConfirmMaterialSelect,

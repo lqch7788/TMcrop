@@ -29,9 +29,6 @@ import { WarehouseInboundCodeGen } from '@/pages/warehouse/components/WarehouseI
 import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
 import type { Material } from '@/services/apiWarehouseMaterialService';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
 // 表单初始值（弹窗每次打开时重置用，name 由 prefillName 单独处理）
 const INITIAL_FORM = {
   code: '',
@@ -277,7 +274,7 @@ export function MaterialCreateModal({
         {/* 基本信息 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               物料编码 <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -285,7 +282,7 @@ export function MaterialCreateModal({
               value={form.code}
               onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
               placeholder="使用上方编码生成器自动生成，或手动输入"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {hasIOChar(form.code) && (
               <div className="mt-1 text-xs text-amber-600 flex items-start gap-1">
@@ -295,7 +292,7 @@ export function MaterialCreateModal({
             )}
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               物料名称 <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -303,15 +300,15 @@ export function MaterialCreateModal({
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="如：尿素 50kg/袋"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
         {/* 分类（如果编码生成器已选，自动同步） */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               大类 <span className="text-red-500">*</span>
             </Label>
             <Select
@@ -323,7 +320,7 @@ export function MaterialCreateModal({
                 setCodeGenSuccess('');
               }}
             >
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="请选择大类" />
               </SelectTrigger>
               <SelectContent>
@@ -335,7 +332,7 @@ export function MaterialCreateModal({
             </Select>
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               中类 <span className="text-red-500">*</span>
             </Label>
             <Select
@@ -348,7 +345,7 @@ export function MaterialCreateModal({
                 setCodeGenSuccess('');
               }}
             >
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="请选择中类" />
               </SelectTrigger>
               <SelectContent>
@@ -360,7 +357,7 @@ export function MaterialCreateModal({
             </Select>
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               小类 <span className="text-red-500">*</span>
             </Label>
             <Select
@@ -373,7 +370,7 @@ export function MaterialCreateModal({
                 setCodeGenSuccess('');
               }}
             >
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="请选择小类" />
               </SelectTrigger>
               <SelectContent>
@@ -389,7 +386,7 @@ export function MaterialCreateModal({
         {/* 规格 + 单位 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               规格型号 <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -397,11 +394,11 @@ export function MaterialCreateModal({
               value={form.specification}
               onChange={(e) => setForm((prev) => ({ ...prev, specification: e.target.value }))}
               placeholder="如：50kg/袋"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               单位 <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -409,7 +406,7 @@ export function MaterialCreateModal({
               value={form.unit}
               onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))}
               placeholder="如：袋 / 瓶 / 箱 / 公斤"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -417,7 +414,7 @@ export function MaterialCreateModal({
         {/* 库存阈值 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">最低库存</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">最低库存</Label>
             <Input
               type="number"
               min="0"
@@ -425,11 +422,11 @@ export function MaterialCreateModal({
               value={minStockInput}
               onChange={handleMinStockChange}
               placeholder="0"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">最高库存</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">最高库存</Label>
             <Input
               type="number"
               min="0"
@@ -437,7 +434,7 @@ export function MaterialCreateModal({
               value={maxStockInput}
               onChange={handleMaxStockChange}
               placeholder="0"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -445,64 +442,64 @@ export function MaterialCreateModal({
         {/* 价格 / 供应商 / 货位 / 条码 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">单价(元)</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">单价(元)</Label>
             <Input
               type="text"
               value={form.price}
               onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
               placeholder="如：85.00"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">供应商</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
             {/* 2026-09-27：接入供应商管理数据，支持搜索自动定位已有供应商名称 */}
             <SupplierSearchInput
               value={form.supplier}
               onChange={(name) => setForm((prev) => ({ ...prev, supplier: name }))}
               placeholder="搜索或输入供应商名称"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">存放位置</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">存放位置</Label>
             <Input
               type="text"
               value={form.location}
               onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
               placeholder="如：A区-01-01"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">条码</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">条码</Label>
             <Input
               type="text"
               value={form.barcode}
               onChange={(e) => setForm((prev) => ({ ...prev, barcode: e.target.value }))}
               placeholder="选填"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
         {/* 2026-09-27 字段补齐：批次号 / 生产日期 / 有效期至（库存页表格已展示这三列，此前新建时无法录入） */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">批次号</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">批次号</Label>
             <Input
               type="text"
               value={form.batchNo}
               onChange={(e) => setForm((prev) => ({ ...prev, batchNo: e.target.value }))}
               placeholder="如：B20260901"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">生产日期</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">生产日期</Label>
             <DatePicker
               className="w-full"
               selected={form.productionDate ? new Date(form.productionDate) : undefined}
@@ -511,7 +508,7 @@ export function MaterialCreateModal({
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">有效期至</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">有效期至</Label>
             <DatePicker
               className="w-full"
               selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
@@ -523,22 +520,22 @@ export function MaterialCreateModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">备注</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
             <Input
               type="text"
               value={form.remarks}
               onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))}
               placeholder="选填"
-              className={deepInputClass}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-gray-900 mb-1">数据状态</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">数据状态</Label>
             <Select
               value={form.dataStatus}
               onValueChange={(val) => setForm((prev) => ({ ...prev, dataStatus: val }))}
             >
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

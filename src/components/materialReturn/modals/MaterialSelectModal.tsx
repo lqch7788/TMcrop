@@ -5,7 +5,7 @@ import { UnifiedModal } from '@/components/ui';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 
 // 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 2026-09-28 UI 统一：原 deepInputClass 常量已移除（输入框改用生产领料弹窗的标准类名）
 
 interface MaterialSelectModalProps {
   open: boolean;
@@ -136,7 +136,7 @@ export function MaterialSelectModal({
             placeholder="搜索物料编码或名称..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${deepInputClass}`}
+            className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { ReturnRecord, STATUS_STYLE_MAP } from '../types';
-import { UnifiedModal, Button } from '@/components/ui';
+import { UnifiedModal, Button, Label } from '@/components/ui';
 import { Printer } from 'lucide-react';
 
 /** HTML 转义（打印视图内防止物料名/备注含标记字符破坏文档结构） */
@@ -135,7 +135,7 @@ export function DetailModal({ record, open, onClose }: DetailModalProps) {
       {/* 物料明细 - 重点展示 */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">物料明细</label>
+          <Label className="text-sm font-medium text-gray-700">物料明细</Label>
           <span className="text-xs text-gray-500">共 {record.materials.length} 条</span>
         </div>
         <div className="border border-gray-200 rounded-lg overflow-hidden">

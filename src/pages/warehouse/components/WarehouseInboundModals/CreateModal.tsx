@@ -414,9 +414,9 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
         id="inbound-add-dialog"
         className="bg-white rounded-xl w-full max-w-6xl shadow-xl max-h-[90vh] flex flex-col relative"
       >
-        {/* 标题栏 */}
+        {/* 标题栏（2026-09-28：内边距/无边框对齐 Modal 头部标准，保留自定义拖动与最大化能力） */}
         <div
-          className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 cursor-move rounded-t-xl"
+          className="px-6 py-3 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 cursor-move rounded-t-xl"
           onMouseDown={handleDragStart}
         >
           <h3 className="text-lg font-semibold text-white select-none">新增入库记录</h3>
@@ -439,19 +439,19 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                 </svg>
               )}
             </Button>
-            {/* 关闭按钮 */}
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            {/* 关闭按钮（样式对齐 Modal 头部关闭按钮） */}
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-emerald-500">
               <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
-        {/* 基本信息区域 */}
-        <div className="p-4 bg-emerald-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* 基本信息区域（内边距对齐 Modal 内容区标准） */}
+        <div className="px-4 sm:px-6 py-4 bg-emerald-50 border-b border-gray-200">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* 入库单号 */}
             <div>
-              <Label className="text-xs text-emerald-700">入库单号</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">入库单号</Label>
               <div className="flex gap-1">
                 <Input
                   type="text"
@@ -461,7 +461,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                     setCodeError('');
                   }}
                   placeholder="点击生成"
-                  className="flex-1 h-8 text-sm font-mono"
+                  className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <Button variant="blue" size="sm" onClick={handleGenerateCode} title="生成入库单号">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,7 +474,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 入库日期 */}
             <div>
-              <Label className="text-xs text-emerald-700">入库日期</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">入库日期</Label>
               <DatePicker
                 selected={formData.inboundDate ? new Date(formData.inboundDate) : undefined}
                 onChange={() => {}}
@@ -485,7 +485,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 供应商（搜索+下拉，可重选） */}
             <div>
-              <Label className="text-xs text-emerald-700">供应商</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
               <SearchableSelect
                 value={formData.supplier}
                 onChange={(val) => setFormData({ ...formData, supplier: val })}
@@ -497,23 +497,23 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 操作员 */}
             <div>
-              <Label className="text-xs text-emerald-700">操作员</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">操作员</Label>
               <Input
                 type="text"
                 value={formData.operator}
                 readOnly
-                className="h-8 text-sm bg-gray-100"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 cursor-not-allowed"
               />
             </div>
 
             {/* 状态：2026-09-27 改为默认待审核（统一走审批），"直接入库"仅限紧急场景 */}
             <div>
-              <Label className="text-xs text-emerald-700">状态</Label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
               <Select
                 value={formData.status}
                 onValueChange={(val) => setFormData({ ...formData, status: val as 'completed' | 'pending' })}
               >
-                <SelectTrigger className="h-8">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -530,18 +530,18 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
           </div>
         </div>
 
-        {/* 物料明细区域 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* 物料明细区域（内边距对齐 Modal 内容区标准） */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-4">
               <h4 className="text-sm font-semibold text-gray-800">物料明细（{materials.length}种物料）</h4>
               <span className="text-xs text-gray-400">|</span>
               <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                <span className="w-3 h-3 rounded border border-blue-300 bg-blue-50 inline-block"></span>
+                <span className="w-3 h-3 rounded border border-gray-400 bg-blue-50 inline-block"></span>
                 自动关联
               </span>
               <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                <span className="w-3 h-3 rounded border border-yellow-300 bg-yellow-50 inline-block"></span>
+                <span className="w-3 h-3 rounded border border-gray-400 bg-yellow-50 inline-block"></span>
                 手动录入
               </span>
             </div>
@@ -637,7 +637,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                         <NumberInput
                           value={m.quantity}
                           onChange={(val) => handleMaterialChange(m.id, 'quantity', Number(val))}
-                          className="w-16 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-400 bg-yellow-50"
                           placeholder="数量"
                           decimals={0}
                         />
@@ -663,7 +663,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
-                          className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-400 bg-yellow-50"
                           placeholder="批号"
                         />
                       </TableCell>
@@ -686,7 +686,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
-                          className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-400 bg-yellow-50"
                           placeholder="备注"
                         />
                       </TableCell>
@@ -698,8 +698,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
           )}
         </div>
 
-        {/* 底部按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+        {/* 底部按钮（样式对齐 Modal 底部栏标准） */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
             <X className="w-4 h-4" /> 取消
           </Button>

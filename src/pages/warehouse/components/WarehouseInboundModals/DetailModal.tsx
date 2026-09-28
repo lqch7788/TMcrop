@@ -8,6 +8,7 @@ import { Package, X } from 'lucide-react';
 import { InboundRecord } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { INBOUND_STATUS_LABELS } from '../../utils/warehouseInbound.utils';
 
@@ -51,23 +52,23 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
       <div className="bg-emerald-50 rounded-lg p-4 mb-6 border border-emerald-200">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
-            <span className="text-xs text-emerald-600 block font-medium">入库单号</span>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">入库单号</Label>
             <span className="text-lg font-mono font-bold text-emerald-700">{record.code}</span>
           </div>
           <div>
-            <span className="text-xs text-emerald-600 block font-medium">入库日期</span>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">入库日期</Label>
             <span className="text-sm font-medium text-gray-900">{record.inboundDate}</span>
           </div>
           <div>
-            <span className="text-xs text-emerald-600 block font-medium">供应商</span>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
             <span className="text-sm font-medium text-gray-900">{record.supplier}</span>
           </div>
           <div>
-            <span className="text-xs text-emerald-600 block font-medium">操作员</span>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">操作员</Label>
             <span className="text-sm font-medium text-gray-900">{record.operator}</span>
           </div>
           <div>
-            <span className="text-xs text-emerald-600 block font-medium">状态</span>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
             <span className={`text-sm font-medium ${getStatusClassName(record.status)}`}>
               {getStatusText(record.status)}
             </span>
