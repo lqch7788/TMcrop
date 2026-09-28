@@ -112,12 +112,24 @@ export const useInboundStore = create<InboundState>()(
 
     deleteItems: async (ids) => {
       try {
-        const results = await Promise.all(ids.map((id) => warehouseService.deleteInboundRecord(id)));
-        const allSuccess = results.every(Boolean);
-        if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
-        return allSuccess;
+        // 2026-09-28 审计修复：用 allSettled 逐条收集结果——
+        // 此前 Promise.all 只要一条抛错整批返回 false，失败原因/失败 id 全部丢失，
+        // 且已成功的记录仍留在本地列表（与后端不一致）。
+        const results = await Promise.allSettled(ids.map((id) => warehouseService.deleteInboundRecord(id)));
+        const failedIds = ids.filter((_, i) => results[i].status === 'rejected');
+        const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
+        if (deletedIds.length > 0) {
+          set((s) => ({ items: s.items.filter((i) => !deletedIds.includes(i.id)) }));
+        }
+        if (failedIds.length > 0) {
+          const firstRejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+          const reason = firstRejected?.reason instanceof Error ? firstRejected.reason.message : '未知原因';
+          set({ error: `以下入库单删除失败：${failedIds.join('、')}；原因：${reason}` });
+          return false;
+        }
+        return true;
       } catch (error) {
-        // logger.error('[useInboundStore] 批量删除入库记录失败:', error);
+        set({ error: error instanceof Error ? error.message : '批量删除入库记录失败' });
         return false;
       }
     },

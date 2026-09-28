@@ -4,12 +4,12 @@
  */
 
 import React from 'react';
-import { RotateCcw, RotateCw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
-import { InboundSearchFilters } from '../../../types/warehouseInbound.types';
+import { INBOUND_STATUS_OPTIONS } from '../utils/warehouseInbound.utils';
 
 interface WarehouseInboundFiltersProps {
   // 搜索条件
@@ -79,9 +79,10 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="pending">待审核</SelectItem>
-                <SelectItem value="completed">已完成</SelectItem>
-                <SelectItem value="voided">已作废</SelectItem>
+                {/* 2026-09-28：状态选项统一取自 utils（此前硬编码在组件里，与其它 3 处映射易漂移） */}
+                {INBOUND_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -118,7 +119,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
             variant="warning"
             onClick={onReset}
           >
-            <RotateCw className="w-4 h-4" />
+            {/* 2026-09-28：去掉重复渲染的 RotateCw 图标（此前两个旋转图标叠在一起） */}
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>

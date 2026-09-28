@@ -172,33 +172,36 @@ export const calculatePagination = (
 };
 
 /**
+ * 入库单状态单一来源（2026-09-28 审计修复：此前列表/编辑弹窗/详情弹窗/筛选器各写一份中文映射，
+ * 改文案要动 4 处，且未识别状态会被静默降级成"待审核"，误导用户）
+ */
+export const INBOUND_STATUS_LABELS: Record<string, { text: string; className: string; textClassName: string }> = {
+  pending: { text: '待审核', className: 'bg-amber-100 text-amber-700', textClassName: 'text-amber-600' },
+  completed: { text: '已完成', className: 'bg-green-100 text-green-700', textClassName: 'text-green-600' },
+  voided: { text: '已作废', className: 'bg-gray-100 text-gray-500', textClassName: 'text-gray-500' },
+};
+
+/** 筛选器状态下拉选项（值 + 文案，取自同一映射） */
+export const INBOUND_STATUS_OPTIONS = [
+  { value: 'pending', label: INBOUND_STATUS_LABELS.pending.text },
+  { value: 'completed', label: INBOUND_STATUS_LABELS.completed.text },
+  { value: 'voided', label: INBOUND_STATUS_LABELS.voided.text },
+];
+
+/**
  * 获取状态显示文本
+ * 未识别状态**原样显示**（不再伪装成"待审核"），便于发现后端新增状态
  */
 export const getStatusText = (status: string): string => {
-  switch (status) {
-    case 'completed':
-      return '已完成';
-    case 'voided':
-      return '已作废';
-    case 'pending':
-    default:
-      return '待审核';
-  }
+  return INBOUND_STATUS_LABELS[status]?.text || status || '未知状态';
 };
 
 /**
  * 获取状态样式类
+ * 未识别状态用中性灰（与已知状态区分）
  */
 export const getStatusClassName = (status: string): string => {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-700';
-    case 'voided':
-      return 'bg-gray-100 text-gray-500';
-    case 'pending':
-    default:
-      return 'bg-amber-100 text-amber-700';
-  }
+  return INBOUND_STATUS_LABELS[status]?.className || 'bg-gray-100 text-gray-600';
 };
 
 /**
@@ -257,12 +260,11 @@ export const handleSelectRow = (
  * 取消选择模式
  */
 export const handleCancelSelection = (
-  setEditMode: React.Dispatch<React.SetStateAction<boolean>>,
   setDeleteMode: React.Dispatch<React.SetStateAction<boolean>>,
   setExportMode: React.Dispatch<React.SetStateAction<boolean>>,
   setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>
 ) => {
-  setEditMode(false);
+  // 2026-09-28：去掉 setEditMode 参数（编辑模式入口已不存在，死分支清理）
   setDeleteMode(false);
   setExportMode(false);
   setSelectedRows([]);

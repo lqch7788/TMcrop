@@ -20,7 +20,6 @@ interface WarehouseInboundTableProps {
   // 选择状态
   selectedRows: number[];
   isAllSelected: boolean;
-  editMode: boolean;
   deleteMode: boolean;
   exportMode: boolean;
 
@@ -51,7 +50,6 @@ interface WarehouseInboundTableProps {
   page: number;
   pageSize: number;
   totalPages: number;
-  totalCount: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -61,7 +59,6 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   displayedRecords,
   selectedRows,
   isAllSelected,
-  editMode,
   deleteMode,
   exportMode,
   expandedRows,
@@ -78,12 +75,12 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   page,
   pageSize,
   totalPages,
-  totalCount,
   onPageChange,
   onPageSizeChange,
 }) => {
   // 判断是否有任何模式激活
-  const hasActiveMode = editMode || deleteMode || exportMode;
+  // 2026-09-28：editMode 死分支已移除（入口不存在）
+  const hasActiveMode = deleteMode || exportMode;
 
   // 2026-09-27：已被冲销的原单 → 冲销单号 映射（2026-09-28 起由页面用全量记录传入，
   // 避免筛选把冲销单排除后"已冲销"徽章消失、冲销按钮复现）
@@ -249,10 +246,18 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                               <TableHead className="px-3 py-2 text-left font-medium">物料名称</TableHead>
                               <TableHead className="px-3 py-2 text-left font-medium">分类</TableHead>
                               <TableHead className="px-3 py-2 text-left font-medium">规格</TableHead>
+                              {/* 2026-09-28 审计修复：补齐与新增/编辑/详情一致的 4 列——
+                                  此前展开行看不到 条形码/存放位置/生产日期/备注，
+                                  用户必须逐单打开详情才能看到库位与备注 */}
+                              <TableHead className="px-3 py-2 text-left font-medium">条形码</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">单位</TableHead>
                               <TableHead className="px-3 py-2 text-right font-medium">数量</TableHead>
                               <TableHead className="px-3 py-2 text-right font-medium">单价</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">存放位置</TableHead>
                               <TableHead className="px-3 py-2 text-left font-medium">批次号</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">生产日期</TableHead>
                               <TableHead className="px-3 py-2 text-left font-medium">有效期至</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">备注</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody className="divide-y divide-gray-300">
@@ -262,10 +267,15 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                                 <TableCell className="px-3 py-2 text-gray-800 font-medium">{material.name}</TableCell>
                                 <TableCell className="px-3 py-2 text-gray-600">{material.category}</TableCell>
                                 <TableCell className="px-3 py-2 text-gray-600">{material.specification}</TableCell>
-                                <TableCell className="px-3 py-2 text-right text-gray-800">{material.quantity} {material.unit}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.barcode || '-'}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.unit || '-'}</TableCell>
+                                <TableCell className="px-3 py-2 text-right text-gray-800">{material.quantity}</TableCell>
                                 <TableCell className="px-3 py-2 text-right text-gray-800">{material.price}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.location || '-'}</TableCell>
                                 <TableCell className="px-3 py-2 text-gray-600">{material.batchNo || '-'}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.productionDate || '-'}</TableCell>
                                 <TableCell className="px-3 py-2 text-gray-600">{material.expiryDate || '-'}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.remarks || '-'}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>

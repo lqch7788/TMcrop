@@ -2747,6 +2747,16 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-09-28 审计修复：入库单号唯一索引（幂等兜底）
+  // 此前无任何索引：单号由前端生成 + 客户端超时重试 + 服务端不校验 → 超时场景下
+  // 同一批货可能产生 2-3 张同号单并重复入账。应用层已补 409 拦截，这里是数据库级兜底。
+  // 历史库若已有重码，建索引会失败——只告警不阻断启动（重码需人工处理）。
+  try {
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_inbound_records_code ON inbound_records(code)');
+  } catch (e) {
+    console.error('⚠ [schema] inbound_records 单号唯一索引创建失败（历史库可能存在重码，请人工核对）:', e instanceof Error ? e.message : e);
+  }
+
   // ========== V9.0: 离职记录表 ==========
   // 离职记录表 - 用于存储员工离职申请记录
   db.run(`

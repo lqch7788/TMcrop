@@ -22,6 +22,32 @@ export function parseInboundMaterials(raw: unknown): any[] {
   return Array.isArray(cur) ? cur : [];
 }
 
+/**
+ * 严格解析入库明细（**写路径专用**，2026-09-28 审计修复）
+ *
+ * parseInboundMaterials 解析失败会退化成 []，在写路径上会造成"假成功"：
+ * 作废/审批驳回时 oldMaterials=[] → reverseInboundStock 空转 → 单据照样置为 voided，
+ * 库存分文未回收，用户却以为已回收。此处对"解析不出数组"的脏数据直接抛错，
+ * 由调用方转成 400/409，宁可拒绝操作也不静默跳过。
+ * （读路径继续用宽松版，避免一条脏数据让列表整体 500。）
+ */
+export function parseInboundMaterialsStrict(raw: unknown): any[] {
+  // 空值/空串是合法状态（历史单据可能没写明细），先判定再解析——否则 JSON.parse('') 会被误判为损坏
+  if (raw === null || raw === undefined) return [];
+  if (typeof raw === 'string' && raw.trim() === '') return [];
+  let cur: unknown = raw;
+  for (let i = 0; i < 3 && typeof cur === 'string'; i++) {
+    try { cur = JSON.parse(cur as string); } catch {
+      throw new Error('入库明细数据损坏（materials 字段无法解析为 JSON），已阻止本次操作，请先修复该单据');
+    }
+  }
+  if (cur === null || cur === undefined || cur === '') return [];
+  if (!Array.isArray(cur)) {
+    throw new Error('入库明细数据损坏（materials 不是数组），已阻止本次操作，请先修复该单据');
+  }
+  return cur;
+}
+
 export interface InboundStockParams {
   inboundId: string | number;
   inboundCode: string;
@@ -171,7 +197,8 @@ export function applyMaterialInboundApproval(
     return { success: false, message: `入库单 ${requestId} 不存在` };
   }
   const [id, code, supplier, operator, oldStatus, materialsJson] = rows[0].values[0] as any[];
-  const matList = parseInboundMaterials(materialsJson);
+  // 严格解析：明细损坏时抛错（本函数自有事务会回滚），绝不"空列表静默作废"
+  const matList = parseInboundMaterialsStrict(materialsJson);
   const operatorName = String(operator || '').trim() || '仓库';
 
   // 2026-09-28 审计修复：本函数自管事务（调用方 approvalLinkage 无事务，半完成状态会被落盘）。
