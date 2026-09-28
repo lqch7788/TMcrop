@@ -40,6 +40,9 @@ export function MaterialReturnPage() {
       {/* 页面头部 */}
       <MaterialReturnHeader />
 
+      {/* 统计摘要卡片（2026-09-28：按需求移至搜索栏上方；基于全量数据，不随筛选变化） */}
+      <MaterialReturnSummaryCards records={hook.allRecords} />
+
       {/* 搜索区域 */}
       <MaterialReturnSearch
         searchForm={hook.searchForm}
@@ -49,8 +52,6 @@ export function MaterialReturnPage() {
 
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* 统计摘要卡片（2026-09-28 新增，对齐领料页；基于全量数据，不随筛选变化） */}
-        <MaterialReturnSummaryCards records={hook.allRecords} />
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-gray-900">生产退料单列表</h3>
@@ -86,9 +87,9 @@ export function MaterialReturnPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              {/* 新增按钮 - 不在删除模式下显示 */}
+              {/* 新增按钮 - 不在删除模式下显示（2026-09-28：改用 openAddModal 自动预填单号/申请人/部门） */}
               {!hook.deleteMode && (
-                <Button size="sm" onClick={() => hook.setShowAddModal(true)}>
+                <Button size="sm" onClick={hook.openAddModal}>
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
@@ -131,9 +132,9 @@ export function MaterialReturnPage() {
                   导出
                 </Button>
               )}
-              {/* 已删除单据归档追溯（2026-09-28 新增：删除时已写快照，此前无查看入口） */}
+              {/* 已删除单据归档追溯（2026-09-28 新增；variant 与生产领料页 ApplicationTable 统一为 blue） */}
               {!hook.exportMode && !hook.deleteMode && (
-                <Button size="sm" variant="secondary" onClick={() => setShowDeletedDocs(true)}>
+                <Button size="sm" variant="blue" onClick={() => setShowDeletedDocs(true)}>
                   <Archive className="w-4 h-4" />
                   已删除单据
                 </Button>

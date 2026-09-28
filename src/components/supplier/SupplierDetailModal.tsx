@@ -66,7 +66,7 @@ export default function SupplierDetailModal({ isOpen, supplier, onClose }: Suppl
       title="供应商详情"
       size="lg"
     >
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-4">
         {/* 基本信息 */}
         <div className="col-span-2">
           <h4 className="text-sm font-medium text-gray-500 mb-3">基本信息</h4>

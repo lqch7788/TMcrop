@@ -1,6 +1,9 @@
 import { ReturnRecord, RecordId, MaterialItem } from '../types';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
-import { UnifiedModal, NumberInput, DeepSelectTrigger } from '@/components/ui';
+import { UnifiedModal, NumberInput, DeepSelectTrigger, Label } from '@/components/ui';
+
+// 2026-09-28 UI 统一：输入框样式对齐生产领料弹窗（同 AddModal/EditModal 的 STD_INPUT_CLS）
+const STD_INPUT_CLS = 'w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 interface BatchEditModalProps {
@@ -110,104 +113,105 @@ export function BatchEditModal({
         </DeepSelectTrigger>
       </div>
 
-      {/* 基本信息 - 紧凑排布，每行3个 */}
-      <div className="bg-gray-100 rounded-lg p-3 mb-3">
-        <div className="grid grid-cols-3 gap-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">退料单号：</span>
-            <span className="font-mono font-medium text-gray-900">{currentEditedData.code || '-'}</span>
+      {/* 基本信息（2026-09-28 UI 统一：布局/文字/输入框对齐生产领料弹窗） */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">退料单号</Label>
+          <div className={`${STD_INPUT_CLS} bg-gray-100 text-gray-600 font-mono`}>
+            {currentEditedData.code || '-'}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">日期：</span>
-            <input
-              type="date"
-              value={currentEditedData.date || ''}
-              onChange={(e) => handleFieldChange('date', e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">日期</Label>
+          <input
+            type="date"
+            value={currentEditedData.date || ''}
+            onChange={(e) => handleFieldChange('date', e.target.value)}
+            className={STD_INPUT_CLS}
+          />
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">退料类型</Label>
+          <select
+            value={currentEditedData.type || ''}
+            onChange={(e) => handleFieldChange('type', e.target.value)}
+            className={STD_INPUT_CLS}
+          >
+            <option value="">请选择</option>
+            <option value="生产退料">生产退料</option>
+            <option value="品质退料">品质退料</option>
+            <option value="试制退料">试制退料</option>
+          </select>
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">申请人</Label>
+          <input
+            type="text"
+            value={currentEditedData.applicant || ''}
+            onChange={(e) => handleFieldChange('applicant', e.target.value)}
+            className={STD_INPUT_CLS}
+          />
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
+          <select
+            value={currentEditedData.department || ''}
+            onChange={(e) => handleFieldChange('department', e.target.value)}
+            className={STD_INPUT_CLS}
+          >
+            <option value="">请选择</option>
+            {departmentOptions.map((dept) => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">仓库位置</Label>
+          <input
+            type="text"
+            value={currentEditedData.warehouseLocation || ''}
+            onChange={(e) => handleFieldChange('warehouseLocation', e.target.value)}
+            placeholder="请输入"
+            className={STD_INPUT_CLS}
+          />
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">操作人</Label>
+          <input
+            type="text"
+            value={currentEditedData.operator || ''}
+            onChange={(e) => handleFieldChange('operator', e.target.value)}
+            placeholder="请输入"
+            className={STD_INPUT_CLS}
+          />
+        </div>
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
+          <input
+            type="text"
+            value={currentEditedData.reviewer || ''}
+            onChange={(e) => handleFieldChange('reviewer', e.target.value)}
+            placeholder="请输入"
+            className={STD_INPUT_CLS}
+          />
+        </div>
+        <div className="col-span-2">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
+            状态 <span className="text-xs text-gray-400 font-normal">（审批状态由系统自动生成）</span>
+          </Label>
+          <div className={`${STD_INPUT_CLS} bg-gray-100 text-gray-600`}>
+            {currentEditedData.status || '-'}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">退料类型：</span>
-            <select
-              value={currentEditedData.type || ''}
-              onChange={(e) => handleFieldChange('type', e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            >
-              <option value="">请选择</option>
-              <option value="生产退料">生产退料</option>
-              <option value="品质退料">品质退料</option>
-              <option value="试制退料">试制退料</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">申请人：</span>
-            <input
-              type="text"
-              value={currentEditedData.applicant || ''}
-              onChange={(e) => handleFieldChange('applicant', e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">部门：</span>
-            <select
-              value={currentEditedData.department || ''}
-              onChange={(e) => handleFieldChange('department', e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            >
-              <option value="">请选择</option>
-              {departmentOptions.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">仓库位置：</span>
-            <input
-              type="text"
-              value={currentEditedData.warehouseLocation || ''}
-              onChange={(e) => handleFieldChange('warehouseLocation', e.target.value)}
-              placeholder="请输入"
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">操作人：</span>
-            <input
-              type="text"
-              value={currentEditedData.operator || ''}
-              onChange={(e) => handleFieldChange('operator', e.target.value)}
-              placeholder="请输入"
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">审核人：</span>
-            <input
-              type="text"
-              value={currentEditedData.reviewer || ''}
-              onChange={(e) => handleFieldChange('reviewer', e.target.value)}
-              placeholder="请输入"
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">状态：</span>
-            <span className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-sm text-gray-600">
-              {currentEditedData.status || '-'}
-            </span>
-            <span className="text-xs text-gray-400">（审批状态由系统自动生成）</span>
-          </div>
-          <div className="flex items-center gap-2 col-span-3">
-            <span className="text-gray-500 w-20 shrink-0">备注：</span>
-            <input
-              type="text"
-              value={currentEditedData.remark || ''}
-              onChange={(e) => handleFieldChange('remark', e.target.value)}
-              placeholder="请输入"
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
+        </div>
+        <div className="col-span-2">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
+          <input
+            type="text"
+            value={currentEditedData.remark || ''}
+            onChange={(e) => handleFieldChange('remark', e.target.value)}
+            placeholder="请输入"
+            className={STD_INPUT_CLS}
+          />
         </div>
       </div>
 
@@ -254,7 +258,7 @@ export function BatchEditModal({
                         <select
                           value={mat.sourceApplicationCode || ''}
                           onChange={(e) => handleMaterialChange(idx, 'sourceApplicationCode', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                           <option value="">请选择</option>
                           {sourceApplicationOptions.map(code => (
@@ -267,7 +271,7 @@ export function BatchEditModal({
                           type="text"
                           value={mat.materialCode || ''}
                           onChange={(e) => handleMaterialChange(idx, 'materialCode', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -276,7 +280,7 @@ export function BatchEditModal({
                           value={mat.category || ''}
                           onChange={(e) => handleMaterialChange(idx, 'category', e.target.value)}
                           placeholder="中类-小类"
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -284,7 +288,7 @@ export function BatchEditModal({
                           type="text"
                           value={mat.materialName || ''}
                           onChange={(e) => handleMaterialChange(idx, 'materialName', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -292,7 +296,7 @@ export function BatchEditModal({
                           type="text"
                           value={mat.spec || ''}
                           onChange={(e) => handleMaterialChange(idx, 'spec', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -300,7 +304,7 @@ export function BatchEditModal({
                           type="text"
                           value={mat.unit || ''}
                           onChange={(e) => handleMaterialChange(idx, 'unit', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -327,14 +331,14 @@ export function BatchEditModal({
                           value={mat.warehousePosition || ''}
                           onChange={(e) => handleMaterialChange(idx, 'warehousePosition', e.target.value)}
                           placeholder="仓库-区-位"
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       <td className="px-3 py-2">
                         <select
                           value={mat.reason || ''}
                           onChange={(e) => handleMaterialChange(idx, 'reason', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                           <option value="">请选择</option>
                           <option value="质量问题">质量问题</option>

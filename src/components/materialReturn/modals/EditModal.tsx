@@ -2,7 +2,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import { ReturnRecord, EditFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { RETURN_TYPES } from '../config';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
-import { UnifiedModal, Button, NumberInput, ActionIconButton, DeepInput, DeepSelectTrigger } from '@/components/ui';
+import { UnifiedModal, Button, NumberInput, ActionIconButton, Input, Label } from '@/components/ui';
+
+// 2026-09-28 UI 统一：输入框样式对齐生产领料弹窗（同 AddModal 的 STD_INPUT_CLS）
+const STD_INPUT_CLS = 'w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 
@@ -55,97 +58,104 @@ export function EditModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 退料单号 - 只读 */}
         <div className="bg-gray-100 rounded-lg p-3">
-          <label className="block text-xs font-medium text-gray-500 mb-1">退料单号</label>
+          <Label className="block text-xs font-medium text-gray-500 mb-1">退料单号</Label>
           <div className="text-sm font-medium text-gray-900">{record.code}</div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">退料日期</label>
-          <DeepInput
+          <Label className="block text-sm font-medium text-gray-700 mb-1">退料日期</Label>
+          <Input
             type="date"
             value={form.date}
             onChange={(e) => onFormChange('date', e.target.value)}
+            className={STD_INPUT_CLS}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">退料类型</label>
-          <DeepSelectTrigger
+          <Label className="block text-sm font-medium text-gray-700 mb-1">退料类型</Label>
+          <select
             value={form.type}
             onChange={(e) => onFormChange('type', e.target.value)}
+            className={STD_INPUT_CLS}
           >
             {RETURN_TYPES.map((type) => (
               <option key={type} value={type}>{type}</option>
             ))}
-          </DeepSelectTrigger>
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">申请人</label>
-          <DeepInput
+          <Label className="block text-sm font-medium text-gray-700 mb-1">申请人</Label>
+          <Input
             type="text"
             value={form.applicant}
             onChange={(e) => onFormChange('applicant', e.target.value)}
+            className={STD_INPUT_CLS}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">退料部门</label>
-          <DeepSelectTrigger
+          <Label className="block text-sm font-medium text-gray-700 mb-1">退料部门</Label>
+          <select
             value={form.department}
             onChange={(e) => onFormChange('department', e.target.value)}
+            className={STD_INPUT_CLS}
           >
             {departmentOptions.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
-          </DeepSelectTrigger>
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">仓库位置</label>
-          <DeepInput
+          <Label className="block text-sm font-medium text-gray-700 mb-1">仓库位置</Label>
+          <Input
             type="text"
             value={form.warehouseLocation}
             onChange={(e) => onFormChange('warehouseLocation', e.target.value)}
+            className={STD_INPUT_CLS}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
-          <DeepInput
+          <Label className="block text-sm font-medium text-gray-700 mb-1">操作人</Label>
+          <Input
             type="text"
             value={form.operator}
             onChange={(e) => onFormChange('operator', e.target.value)}
+            className={STD_INPUT_CLS}
           />
         </div>
         {/* 审核人 - 只读展示：由审批流写入，禁止在此处手工修改 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">审核人</label>
-          <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
+          <div className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600">
             {form.reviewer || '-'}
           </div>
         </div>
         {/* 审批状态 - 只读展示：审批状态由审批流驱动，不允许在此处手工修改（防止绕过审批流） */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">审批状态</label>
-          <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">审批状态</Label>
+          <div className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600">
             {form.status || '-'}
           </div>
         </div>
         {/* 审核日期 - 只读展示：由审批流写入 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">审核日期</label>
-          <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">审核日期</Label>
+          <div className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600">
             {form.reviewDate || '-'}
           </div>
         </div>
         {/* 驳回原因 - 只读展示：由审批流写入 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">驳回原因</label>
-          <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">驳回原因</Label>
+          <div className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600">
             {form.rejectReason || '-'}
           </div>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <DeepInput
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
+          <Input
             type="text"
             value={form.remark}
             onChange={(e) => onFormChange('remark', e.target.value)}
+            className={STD_INPUT_CLS}
           />
         </div>
       </div>
@@ -183,7 +193,7 @@ export function EditModal({
                     <select
                       value={material.sourceApplicationCode}
                       onChange={(e) => onMaterialChange(idx, 'sourceApplicationCode', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="">请选择</option>
                       {sourceApplicationOptions.map(code => (
@@ -196,7 +206,7 @@ export function EditModal({
                       type="text"
                       value={material.materialCode}
                       onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -205,7 +215,7 @@ export function EditModal({
                       value={material.category}
                       onChange={(e) => onMaterialChange(idx, 'category', e.target.value)}
                       placeholder="中类-小类"
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -230,7 +240,7 @@ export function EditModal({
                       type="text"
                       value={material.spec}
                       onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -238,7 +248,7 @@ export function EditModal({
                       type="text"
                       value={material.unit}
                       onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -265,14 +275,14 @@ export function EditModal({
                       value={material.warehousePosition}
                       onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
                       placeholder="仓库-区-位"
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-2 py-2">
                     <select
                       value={material.reason}
                       onChange={(e) => onMaterialChange(idx, 'reason', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2 py-1 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="">请选择</option>
                       {RETURN_REASONS.map(reason => (

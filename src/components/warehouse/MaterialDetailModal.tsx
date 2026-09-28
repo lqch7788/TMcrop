@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Package, Barcode, History, Download, X, CheckSquare, Square } from 'lucide-react';
 import { Material } from './MaterialFilters';
-import { UnifiedModal, TabsList, TabsTrigger, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button, Checkbox, Pagination } from '@/components/ui';
+import { UnifiedModal, TabsList, TabsTrigger, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Label, Button, Checkbox, Pagination } from '@/components/ui';
 import { enhancedApiClient } from '@/lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
 import { daysUntilExpiry, EXPIRY_WARN_DAYS } from '@/lib/dateUtils';
@@ -296,7 +296,7 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
             <div className="bg-emerald-50 rounded-lg p-4 mb-4 border border-emerald-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-emerald-600 block font-medium">条形码</span>
+                  <Label className="block text-xs font-medium text-emerald-600 mb-1">条形码</Label>
                   <span className="text-2xl font-mono font-bold text-emerald-700">{material.barcode}</span>
                 </div>
                 <Barcode className="w-12 h-12 text-emerald-600" />
@@ -304,32 +304,32 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
             </div>
             <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <span className="text-xs text-gray-500 block">物料编码</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">物料编码</Label>
                 <span className="text-sm font-medium text-gray-900">{material.code}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">物料名称</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">物料名称</Label>
                 <span className="text-sm font-medium text-gray-900">{material.name}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">物料分类</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">物料分类</Label>
                 <span className="text-sm font-medium text-gray-900">{material.category}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">规格型号</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">规格型号</Label>
                 <span className="text-sm font-medium text-gray-900">{material.specification}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">单位</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">单位</Label>
                 <span className="text-sm font-medium text-gray-900">{material.unit}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">当前库存</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">当前库存</Label>
                 <span className="text-sm font-medium text-gray-900">{material.quantity} {material.unit}</span>
               </div>
               {/* 2026-09-27：阈值属主数据（入口在编辑弹窗）——未设置时显式提示 */}
               <div>
-                <span className="text-xs text-gray-500 block">最低库存</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">最低库存</Label>
                 <span className="text-sm font-medium text-gray-900">
                   {material.minStock > 0
                     ? `${material.minStock} ${material.unit}`
@@ -337,7 +337,7 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
                 </span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">最高库存</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">最高库存</Label>
                 <span className="text-sm font-medium text-gray-900">
                   {material.maxStock > 0
                     ? `${material.maxStock} ${material.unit}`
@@ -345,40 +345,40 @@ export function MaterialDetailModal({ material, isOpen, onClose }: MaterialDetai
                 </span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">单价</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">单价</Label>
                 <span className="text-sm font-medium text-gray-900">{material.price}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">供应商</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">供应商</Label>
                 <span className="text-sm font-medium text-gray-900">{material.supplier}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">存放位置</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">存放位置</Label>
                 <span className="text-sm font-medium text-gray-900">{material.location}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">批次号</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">批次号</Label>
                 <span className="text-sm font-medium text-gray-900">{material.batchNo}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">生产日期</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">生产日期</Label>
                 <span className="text-sm font-medium text-gray-900">{material.productionDate}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">有效期至</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">有效期至</Label>
                 <span className="text-sm font-medium text-gray-900">{material.expiryDate}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">最后更新时间</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">最后更新时间</Label>
                 <span className="text-sm font-medium text-gray-900">{material.lastUpdateTime}</span>
               </div>
               {/* 2026-09-27 新增：备注（入库明细备注落主数据后可在此查看） */}
               <div>
-                <span className="text-xs text-gray-500 block">备注</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">备注</Label>
                 <span className="text-sm font-medium text-gray-900">{material.remarks || '-'}</span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">数据状态</span>
+                <Label className="block text-xs font-medium text-gray-500 mb-1">数据状态</Label>
                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                   material.dataStatus === '启用' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>

@@ -10,9 +10,6 @@ import { DatePicker } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
 interface MaterialEditModalProps {
   material: Material | null;
   isOpen: boolean;
@@ -54,7 +51,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
       <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs text-blue-600 block font-medium">条形码</span>
+            <Label className="block text-xs font-medium text-blue-600 mb-1">条形码</Label>
             <span className="text-2xl font-mono font-bold text-blue-700">{material.barcode}</span>
           </div>
           <Barcode className="w-12 h-12 text-blue-600" />
@@ -63,31 +60,31 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
 
       {/* 只读信息 */}
       <div className="bg-gray-50 rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-xs text-gray-500 block">物料编码</span>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">物料编码</Label>
             <span className="text-sm font-medium text-gray-900">{material.code}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 block">物料名称</span>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">物料名称</Label>
             <span className="text-sm font-medium text-gray-900">{material.name}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 block">物料分类</span>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">物料分类</Label>
             <span className="text-sm font-medium text-gray-900">{material.category}</span>
           </div>
           <div>
-            <span className="text-xs text-gray-500 block">最后更新</span>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">最后更新</Label>
             <span className="text-sm font-medium text-gray-900">{material.lastUpdateTime || '-'}</span>
           </div>
         </div>
       </div>
 
       {/* 可编辑字段 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {/* 当前库存 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">当前库存</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">当前库存</Label>
           <NumberInput
             value={form.quantity}
             onChange={(val) => handleChange('quantity', parseFloat(val) || 0)}
@@ -98,29 +95,29 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
 
         {/* 单位 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">单位</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">单位</Label>
           <Input
             type="text"
             value={form.unit}
             onChange={(e) => handleChange('unit', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 规格型号 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">规格型号</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">规格型号</Label>
           <Input
             type="text"
             value={form.specification}
             onChange={(e) => handleChange('specification', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 最低库存 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">最低库存限值</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">最低库存限值</Label>
           <NumberInput
             value={form.minStock}
             onChange={(val) => handleChange('minStock', parseFloat(val) || 0)}
@@ -131,7 +128,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
 
         {/* 最高库存 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">最高库存限值</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">最高库存限值</Label>
           <NumberInput
             value={form.maxStock}
             onChange={(val) => handleChange('maxStock', parseFloat(val) || 0)}
@@ -142,61 +139,61 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
 
         {/* 单价 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">单价</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">单价</Label>
           <Input
             type="text"
             value={form.price}
             onChange={(e) => handleChange('price', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 供应商 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">供应商</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
           {/* 2026-09-27：接入供应商管理数据，支持搜索自动定位已有供应商名称 */}
           <SupplierSearchInput
             value={form.supplier}
             onChange={(name) => handleChange('supplier', name)}
             placeholder="搜索或输入供应商名称"
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 存放位置 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">存放位置</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">存放位置</Label>
           <Input
             type="text"
             value={form.location}
             onChange={(e) => handleChange('location', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 2026-09-27 字段补齐：条码 / 批次 / 生产日期 / 有效期 / 备注（此前编辑弹窗只能改 8 个字段） */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">条码</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">条码</Label>
           <Input
             type="text"
             value={form.barcode}
             onChange={(e) => handleChange('barcode', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">批次号</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">批次号</Label>
           <Input
             type="text"
             value={form.batchNo}
             onChange={(e) => handleChange('batchNo', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">生产日期</Label>
           <DatePicker
             className="w-full"
             selected={form.productionDate ? new Date(form.productionDate) : undefined}
@@ -206,7 +203,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         </div>
 
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">有效期至</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">有效期至</Label>
           <DatePicker
             className="w-full"
             selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
@@ -216,12 +213,12 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         </div>
 
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <Input
             type="text"
             value={form.remarks || ''}
             onChange={(e) => handleChange('remarks', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 

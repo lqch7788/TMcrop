@@ -10,9 +10,6 @@ import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
 interface MaterialBatchEditModalProps {
   isOpen: boolean;
   selectedRows: number[];
@@ -64,7 +61,7 @@ export function MaterialBatchEditModal({
             const idx = selectedRows.indexOf(Number(val));
             onMaterialSelect(idx >= 0 ? idx : 0);
           }}>
-          <SelectTrigger className={deepInputClass}>
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <SelectValue placeholder="请选择物料" />
           </SelectTrigger>
           <SelectContent>
@@ -80,22 +77,22 @@ export function MaterialBatchEditModal({
       {/* key={currentMaterialId} 强制切换物料时整个表单区 remount
           避免 NumberInput 内部 state 或其他闭包残留导致字段显示上一条物料的值 */}
       <div className="space-y-3" key={currentMaterialId}>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500 mb-1">物料编号</div>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">物料编号</Label>
             <div className="text-sm font-medium text-gray-900">{currentEditedData.code}</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500 mb-1">分类</div>
+            <Label className="block text-xs font-medium text-gray-500 mb-1">分类</Label>
             <div className="text-sm font-medium text-gray-900 truncate">{currentEditedData.category}</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500 mb-1">数据状态</div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">数据状态</Label>
             <Select
               value={currentEditedData.dataStatus || '启用'}
               onValueChange={(val) => onFieldChange(currentMaterialId, 'dataStatus', val)}
             >
-              <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="启用" />
               </SelectTrigger>
               <SelectContent>
@@ -106,9 +103,9 @@ export function MaterialBatchEditModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">库存数量</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">库存数量</Label>
             <NumberInput
               value={currentEditedData.quantity ?? ''}
               onChange={(val) => onFieldChange(currentMaterialId, 'quantity', parseFloat(val) || 0)}
@@ -117,7 +114,7 @@ export function MaterialBatchEditModal({
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">最低库存</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">最低库存</Label>
             <NumberInput
               value={currentEditedData.minStock ?? ''}
               onChange={(val) => onFieldChange(currentMaterialId, 'minStock', parseFloat(val) || 0)}
@@ -126,7 +123,7 @@ export function MaterialBatchEditModal({
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">最高库存</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">最高库存</Label>
             <NumberInput
               value={currentEditedData.maxStock ?? ''}
               onChange={(val) => onFieldChange(currentMaterialId, 'maxStock', parseFloat(val) || 0)}
@@ -136,79 +133,79 @@ export function MaterialBatchEditModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">单价（元）</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">单价（元）</Label>
             <Input
               type="text"
               value={(currentEditedData.price || '').toString().replace('元', '')}
               onChange={(e) => onFieldChange(currentMaterialId, 'price', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">单位</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">单位</Label>
             <Input
               type="text"
               value={currentEditedData.unit || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'unit', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">存放位置</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">存放位置</Label>
             <Input
               type="text"
               value={currentEditedData.location || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'location', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">供应商</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
           <Input
             type="text"
             value={currentEditedData.supplier || ''}
             onChange={(e) => onFieldChange(currentMaterialId, 'supplier', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">规格型号</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">规格型号</Label>
             <Input
               type="text"
               value={currentEditedData.specification || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'specification', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">条形码</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">条形码</Label>
             <Input
               type="text"
               value={currentEditedData.barcode || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'barcode', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">批次号</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">批次号</Label>
             <Input
               type="text"
               value={currentEditedData.batchNo || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'batchNo', e.target.value)}
-              className={deepInputClass.replace('py-3', 'py-1.5')}
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">生产日期</Label>
             <DatePicker
               selected={currentEditedData.productionDate ? new Date(currentEditedData.productionDate as string) : undefined}
               onChange={(date) => onFieldChange(currentMaterialId, 'productionDate', todayLocal(date))}
@@ -216,7 +213,7 @@ export function MaterialBatchEditModal({
             />
           </div>
           <div>
-            <Label className="block text-xs font-medium text-gray-700 mb-1">有效期至</Label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">有效期至</Label>
             <DatePicker
               selected={currentEditedData.expiryDate ? new Date(currentEditedData.expiryDate as string) : undefined}
               onChange={(date) => onFieldChange(currentMaterialId, 'expiryDate', todayLocal(date))}
@@ -227,12 +224,12 @@ export function MaterialBatchEditModal({
 
         {/* 2026-09-27 新增：备注 */}
         <div>
-          <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <Input
             type="text"
             value={(currentEditedData.remarks as string) || ''}
             onChange={(e) => onFieldChange(currentMaterialId, 'remarks', e.target.value)}
-            className={deepInputClass.replace('py-3', 'py-1.5')}
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>

@@ -50,21 +50,6 @@ export function MaterialReturnSearch({
           </div>
         </div>
 
-        {/* 仓库位置 */}
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">仓库位置</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索仓库位置..."
-              value={searchForm.warehouse}
-              onChange={(e) => onUpdateField('warehouse', e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
         {/* 申请人 */}
         <div className="flex-1 min-w-[200px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">申请人</label>
@@ -128,8 +113,8 @@ export function MaterialReturnSearch({
           />
         </div>
 
-        {/* 重置按钮（2026-09-28 改用 UI 库 Button，此前为原生 button） */}
-        <Button variant="ghost" size="sm" onClick={onReset}>
+        {/* 重置按钮（2026-09-28 改用 UI 库 Button；variant 与生产领料页 ApplicationFilters 统一为 warning） */}
+        <Button variant="warning" size="sm" onClick={onReset}>
           <RotateCcw className="w-4 h-4" />
           重置
         </Button>

@@ -22,8 +22,8 @@ import {
 } from '../../lib/validators';
 import { showAlert } from '@/lib/dialogService';
 
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+// 表单控件统一样式（对齐生产领料弹窗 ApplicationModals 标准）
+const inputClass = "w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -244,7 +244,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -255,7 +255,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.supplierType}
                 onValueChange={(val) => handleChange('supplierType', val)}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,7 +274,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.supplierAttribute}
                 onValueChange={(val) => handleChange('supplierAttribute', val)}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择属性" />
                 </SelectTrigger>
                 <SelectContent>
@@ -293,7 +293,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.organization}
                 onValueChange={(val) => handleChange('organization', val)}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="请选择组织" />
                 </SelectTrigger>
                 <SelectContent>
@@ -312,7 +312,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.status}
                 onValueChange={(val) => handleChange('status', val)}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className={inputClass}>
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
@@ -330,7 +330,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.contact}
                 onChange={(e) => handleChange('contact', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -341,7 +341,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.mobilePhone}
                 onChange={(e) => handleChange('mobilePhone', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -352,7 +352,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -363,7 +363,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -374,7 +374,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -400,7 +400,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -411,7 +411,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.bankName}
                 onChange={(e) => handleChange('bankName', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -422,7 +422,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.bankCardNumber}
                 onChange={(e) => handleChange('bankCardNumber', e.target.value)}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
 
@@ -450,14 +450,14 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                         value={String(form[row.noField] ?? '')}
                         onChange={(e) => handleChange(row.noField as keyof EditFormData, e.target.value)}
                         placeholder="证号"
-                        className={`flex-1 ${deepInputClass}`}
+                        className={`flex-1 ${inputClass}`}
                       />
                       <Input
                         type="date"
                         value={String(form[row.expiryField] ?? '')}
                         onChange={(e) => handleChange(row.expiryField as keyof EditFormData, e.target.value)}
                         title="有效期至"
-                        className={`w-44 shrink-0 ${deepInputClass}`}
+                        className={`w-44 shrink-0 ${inputClass}`}
                       />
                     </div>
                   );
@@ -475,7 +475,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                     value={form.isInternal}
                     onValueChange={(val) => handleChange('isInternal', val)}
                   >
-                    <SelectTrigger className={deepInputClass}>
+                    <SelectTrigger className={inputClass}>
                       <SelectValue placeholder="外部采购" />
                     </SelectTrigger>
                     <SelectContent>
@@ -492,7 +492,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                     value={form.settlementType}
                     onValueChange={(val) => handleChange('settlementType', val)}
                   >
-                    <SelectTrigger className={deepInputClass}>
+                    <SelectTrigger className={inputClass}>
                       <SelectValue placeholder="请选择结算方式" />
                     </SelectTrigger>
                     <SelectContent>
@@ -514,7 +514,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                     value={form.creditDays}
                     onChange={(e) => handleChange('creditDays', e.target.value)}
                     placeholder="0"
-                    className={deepInputClass}
+                    className={inputClass}
                   />
                 </div>
 
@@ -527,7 +527,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                     value={form.rating}
                     onChange={(e) => handleChange('rating', e.target.value)}
                     placeholder={SUPPLIER_RATING_HINT}
-                    className={deepInputClass}
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -540,7 +540,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.remarks}
                 onChange={(e) => handleChange('remarks', e.target.value)}
                 rows={3}
-                className={deepInputClass}
+                className={inputClass}
               />
             </div>
         </div>
