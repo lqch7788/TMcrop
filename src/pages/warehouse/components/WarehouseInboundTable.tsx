@@ -37,6 +37,12 @@ interface WarehouseInboundTableProps {
   onDeleteRecord?: (record: InboundRecord) => void;
   /** 2026-09-27：冲销（红字单）——列表行内入口，仅对已完成单显示 */
   onRequestReversal?: (record: InboundRecord) => void;
+  /**
+   * 2026-09-28：已被冲销的原单 → 冲销单号 映射（由页面用**全量**记录计算后传入）。
+   * 此前表格自己用 filteredRecords 计算，一旦筛掉冲销单，"已冲销"徽章消失、
+   * 行内"冲销"按钮重新出现（守卫被筛选绕过）。
+   */
+  reversalByOriginal?: Map<number, string>;
   // 权限控制
   canEdit?: boolean;
   canDelete?: boolean;
@@ -66,6 +72,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   onEditRecord,
   onDeleteRecord,
   onRequestReversal,
+  reversalByOriginal = new Map(),
   canEdit = true,
   canDelete = true,
   page,
@@ -78,15 +85,8 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
   // 判断是否有任何模式激活
   const hasActiveMode = editMode || deleteMode || exportMode;
 
-  // 2026-09-27：已被冲销的原单 id 集合（从列表数据推导，用于隐藏"冲销"入口，防重复冲销）
-  const reversedIds = React.useMemo(
-    () => new Set(
-      records
-        .filter((r) => r.recordType === 'reversal' && r.reversalOf != null)
-        .map((r) => r.reversalOf as number)
-    ),
-    [records]
-  );
+  // 2026-09-27：已被冲销的原单 → 冲销单号 映射（2026-09-28 起由页面用全量记录传入，
+  // 避免筛选把冲销单排除后"已冲销"徽章消失、冲销按钮复现）
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -121,6 +121,15 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-300">
+            {/* 2026-09-28 审计修复：空结果必须有提示——此前筛选后无命中时表格全空白，
+                用户以为"数据没了"（配合页码越界问题更明显） */}
+            {displayedRecords.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={hasActiveMode ? 9 : 8} className="px-4 py-10 text-center text-gray-500">
+                  没有符合条件的入库记录（可尝试重置筛选条件）
+                </TableCell>
+              </TableRow>
+            )}
             {displayedRecords.map((record) => (
               <React.Fragment key={record.id}>
                 {/* 主数据行 */}
@@ -128,10 +137,11 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                   {/* 选择框 */}
                   {hasActiveMode && (
                     <TableCell className="px-4 py-3 whitespace-nowrap">
-                      {/* 2026-08-10 修复：删除模式取消仅允许 pending 的限制。
-                          原逻辑 `deleteMode && status !== 'pending' ? '—' : <Checkbox/>`
-                          导致非 pending 行永远显示 "—" 占位符，用户看不到复选框、无法删除入库单。
-                          后端 DELETE 不限制状态，确认弹窗仍做二次确认，安全可控。 */}
+                      {/* 2026-08-10 修复：删除模式取消仅允许 pending 的限制（原逻辑让非 pending 行
+                          永远显示 "—"，用户看不到复选框）。
+                          2026-09-28 更正：后端自 2026-09-27 起**已完成单禁止删除**（materials.ts:527），
+                          勾选已完成行会在确认时被逐条拒绝；前端保留复选框是为了让用户拿到明确原因提示，
+                          正确路径是行内"作废/冲销"。 */}
                       <Checkbox
                         checked={selectedRows.includes(record.id)}
                         onCheckedChange={() => onSelectRow(record.id)}
@@ -165,6 +175,16 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                         冲销
                       </span>
                     )}
+                    {/* 2026-09-28：被冲销的原单标识（灰蓝底，与红色"冲销"徽章明显区分）
+                        原单 status 仍是"已完成"（冲销不动原单），只在状态列看不出已失效，故在单号前显式标记 */}
+                    {record.recordType !== 'reversal' && reversalByOriginal.has(record.id) && (
+                      <span
+                        className="mr-1.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-xs no-underline"
+                        title={`该入库单已被冲销（冲销单：${reversalByOriginal.get(record.id) || '-'}），原单保留供追溯`}
+                      >
+                        已冲销
+                      </span>
+                    )}
                     {record.code}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</TableCell>
@@ -190,7 +210,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                         </Button>
                       )}
                       {/* 冲销：仅已完成、非冲销单本身、且未被他单冲销过（防重复冲销） */}
-                      {onRequestReversal && record.status === 'completed' && record.recordType !== 'reversal' && !reversedIds.has(record.id) && (
+                      {onRequestReversal && record.status === 'completed' && record.recordType !== 'reversal' && !reversalByOriginal.has(record.id) && (
                         <Button
                           variant="ghost"
                           size="icon"

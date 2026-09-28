@@ -44,8 +44,13 @@ export function InboundReversalModal({ isOpen, record, onClose, onSuccess }: Inb
     if (!record) return;
     setSubmitting(true);
     try {
-      const res = await createInboundReversal(record.id, reason.trim());
-      await showAlert(res?.message || '冲销完成');
+      // 2026-09-28 审计修复：用返回的冲销单实际冲回量展示结果，
+      // 不再是一句无信息的"冲销完成"（用户无法判断库存有没有回冲）
+      const created = await createInboundReversal(record.id, reason.trim());
+      const reversedQty = (created?.materials || []).reduce((s, m) => s + (Number(m.quantity) || 0), 0);
+      await showAlert(reversedQty > 0
+        ? `冲销完成：已生成冲销单 ${created?.code || ''}，实际冲回 ${reversedQty} 件`
+        : `冲销标记完成：原单货已全部领用，无可回收库存（冲销单 ${created?.code || ''}，冲回 0 件）`);
       onSuccess?.();
       onClose();
     } catch (e) {

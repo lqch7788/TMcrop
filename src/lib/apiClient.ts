@@ -58,8 +58,13 @@ class EnhancedApiClient {
     }
 
     // 1. 尝试调用API（带重试）
-    let lastError: Error | null = null;
-    const maxRetries = options.retryCount ?? 3;
+    // 2026-09-28：类型带上可选 status（HTTP 错误标记），避免下面 lastError.status 取不到（原为隐式 any 报错）
+    let lastError: (Error & { status?: number }) | null = null;
+    // 2026-09-28 审计修复：只有幂等的 GET 才重试——
+    // 超时抛的是普通 Error（无 status），此前写请求也会被重试 3 次；
+    // 对无幂等的写端点（如 POST /materials/inbound，单号由前端生成且无唯一约束）
+    // 一次超时/网络抖动就可能创建 2-3 张同号单据并重复入账。
+    const maxRetries = options.retryCount ?? (method === 'GET' ? 3 : 1);
 
     for (let i = 0; i < maxRetries; i++) {
       try {

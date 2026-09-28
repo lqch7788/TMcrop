@@ -800,6 +800,17 @@ router.patch('/:id/action', (req, res) => {
         return res.status(400).json({ success: false, error: '未知的操作类型' });
     }
 
+    // 2026-09-28 审计修复：留存审批终态写入前的原值——
+    // 物料入库联动失败时要把审批回滚到 pending，避免"审批显示已通过、库存却没入账"的假成功
+    // （此前联动失败只 console.warn，接口仍返回 200「审批操作成功」）。
+    const prevApprovalState: Record<string, any> = {
+      status: approval.status,
+      current_step: approval.current_step,
+      approvers: approval.approvers,
+      records: approval.records,
+      updated_at: approval.updated_at,
+    };
+
     db.run(`
       UPDATE approvals SET
         status = ?,
@@ -834,11 +845,32 @@ router.patch('/:id/action', (req, res) => {
             // 2026-08-10 修复：updateBusinessTable 只 UPDATE 内存 db，需显式 saveDatabase 落盘，否则列表刷新读到脏数据
             saveDatabase();
             console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
+          } else if (businessLink.type === 'material_inbound') {
+            // 2026-09-28 审计修复：入库单联动失败=硬失败。回滚审批终态并返回 409，
+            // 让审批人看到真实原因（此前静默成功 → 审批"已通过"但库存永远没加，且终态不可重试）
+            db.run(
+              `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
+              [prevApprovalState.status, prevApprovalState.current_step, prevApprovalState.approvers, prevApprovalState.records, prevApprovalState.updated_at, id]
+            );
+            saveDatabase();
+            return res.status(409).json({ success: false, error: `入库单联动失败，审批已回滚：${result.message}` });
           } else {
             console.warn(`【审批联动】${businessLink.type} 更新失败: ${result.message}`);
           }
         } catch (e) {
           console.error('【审批联动】更新业务表失败:', e);
+          if (businessLink.type === 'material_inbound') {
+            // 同上：异常也必须是硬失败，不能让审批看似成功
+            db.run(
+              `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
+              [prevApprovalState.status, prevApprovalState.current_step, prevApprovalState.approvers, prevApprovalState.records, prevApprovalState.updated_at, id]
+            );
+            saveDatabase();
+            return res.status(409).json({
+              success: false,
+              error: `入库单联动异常，审批已回滚：${e instanceof Error ? e.message : String(e)}`,
+            });
+          }
         }
       }
     }

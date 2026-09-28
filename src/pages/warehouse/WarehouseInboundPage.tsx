@@ -27,6 +27,9 @@ export default function WarehouseInboundPage() {
 
   // 使用 Hook 管理所有状态和业务逻辑
   const {
+    // 数据加载状态（2026-09-28：加载失败时页面顶部显示错误横幅）
+    inboundError,
+    refreshData,
     // 编码生成相关
     codeGenExpanded,
     setCodeGenExpanded,
@@ -123,15 +126,16 @@ export default function WarehouseInboundPage() {
     onToggleExpand,
   } = useWarehouseInbound();
 
-  // 2026-09-27：已被冲销的原单 id 集合（隐藏编辑弹窗里的"冲销"入口，防重复冲销）
-  const reversedIds = useMemo(
-    () => new Set(
-      (inboundRecords || [])
-        .filter((r) => r.recordType === 'reversal' && r.reversalOf != null)
-        .map((r) => r.reversalOf as number)
-    ),
-    [inboundRecords]
-  );
+  // 2026-09-27：已被冲销的原单 → 冲销单号（用于：编辑弹窗隐藏"冲销"入口、表格"已冲销"徽章与行内按钮守卫）
+  // 2026-09-28：统一由页面用**全量记录**计算后传给表格——此前表格自己用筛选后的数据算，
+  // 筛掉冲销单时徽章会消失、冲销按钮会复现
+  const reversalByOriginal = useMemo(() => {
+    const map = new Map<number, string>();
+    (inboundRecords || []).forEach((r) => {
+      if (r.recordType === 'reversal' && r.reversalOf != null) map.set(r.reversalOf as number, r.code);
+    });
+    return map;
+  }, [inboundRecords]);
 
   // 判断是否有任何模式激活
   const hasActiveMode = editMode || deleteMode || exportMode;
@@ -140,6 +144,18 @@ export default function WarehouseInboundPage() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <PageHeader title="物料入库" subtitle="物料入库记录管理" />
+
+      {/* 2026-09-28 审计修复：加载失败必须可见——此前失败静默，用户看到旧快照/空表以为"数据没了" */}
+      {inboundError && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <span className="text-sm text-red-700">
+            {inboundError}（当前显示的可能不是最新数据，可重试刷新）
+          </span>
+          <Button size="sm" variant="secondary" onClick={refreshData}>
+            重试
+          </Button>
+        </div>
+      )}
 
       {/* Tab切换按钮 + 编码规则 */}
       <div className="flex items-center gap-4">
@@ -286,6 +302,8 @@ export default function WarehouseInboundPage() {
           onDeleteRecord={onDeleteRecord}
           // 2026-09-27：行内冲销入口（已完成单）
           onRequestReversal={onRequestReversal}
+          // 2026-09-28：全量口径的"原单→冲销单"映射（徽章与守卫不被筛选影响）
+          reversalByOriginal={reversalByOriginal}
           page={inboundPage}
           pageSize={inboundPageSize}
           totalPages={totalPages}
@@ -308,7 +326,7 @@ export default function WarehouseInboundPage() {
         onClose={() => setShowInboundEditModal(false)}
         onSave={onSaveInboundEdit}
         onRequestReversal={onRequestReversal}
-        isReversed={selectedInboundRecord ? reversedIds.has(selectedInboundRecord.id) : false}
+        isReversed={selectedInboundRecord ? reversalByOriginal.has(selectedInboundRecord.id) : false}
       />
 
       {/* 2026-09-27 冲销弹窗（红字单：原单保留，回收仍在库存中的数量） */}

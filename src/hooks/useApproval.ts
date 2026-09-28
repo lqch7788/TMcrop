@@ -29,8 +29,9 @@ export interface UseApprovalReturn {
   addApproval: (approval: Partial<Approval>) => Promise<Approval | null>;
   updateApproval: (id: string, updates: Partial<Approval>) => Promise<void>;
   deleteApproval: (id: string) => Promise<boolean>;
-  approve: (id: string, comment?: string) => Promise<void>;
-  reject: (id: string, comment: string) => Promise<void>;
+  // 2026-09-28 审计修复：返回 boolean（false=失败），调用方据此提示用户（此前 Promise<void> 无从判断结果）
+  approve: (id: string, comment?: string) => Promise<boolean>;
+  reject: (id: string, comment: string) => Promise<boolean>;
   cancel: (id: string, reason?: string) => Promise<void>;
   batchApprove: (ids: string[], comment?: string) => Promise<void>;
   batchReject: (ids: string[], comment: string) => Promise<void>;

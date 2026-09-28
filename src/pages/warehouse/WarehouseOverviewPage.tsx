@@ -11,7 +11,6 @@ import { MaterialDetailModal } from '../../components/warehouse/MaterialDetailMo
 import { MaterialEditModal, MaterialDeleteConfirmModal } from '../../components/warehouse/MaterialEditModal';
 import { MaterialBatchEditModal } from '../../components/warehouse/MaterialBatchEditModal';
 import { BatchEditWarningModal } from '../../components/warehouse/BatchEditWarningModal';
-import { DeleteWarningDialog } from '../../components/warehouse/DeleteWarningDialog';
 import { BatchDeleteConfirmDialog } from '../../components/warehouse/BatchDeleteConfirmDialog';
 import { MaterialExportModal } from '../../components/warehouse/MaterialExportModal';
 import { MaterialCreateModal } from '../../components/warehouse/MaterialCreateModal';
@@ -71,7 +70,6 @@ export default function WarehouseOverviewPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showBatchEditWarning, setShowBatchEditWarning] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
@@ -169,7 +167,13 @@ export default function WarehouseOverviewPage() {
   // ActionToolbar callbacks
   const handleLowStockToggle = () => handleFiltersChange({ ...filters, showLowStock: !filters.showLowStock });
   const handleBatchEditClick = () => setShowBatchEditWarning(true);
-  const handleDeleteWarning = () => setShowDeleteWarning(true);
+  // 2026-09-28 修复：工具栏"删除"点击后直接进入复选框（勾选）模式，与物料入库/流转记录页一致。
+  // 此前先弹"批量删除警告"弹窗，用户看不到复选框、误以为点一下就把数据删了；
+  // 最终删除仍由 BatchDeleteConfirmDialog 二次确认把关。
+  const handleEnterDeleteMode = () => {
+    setSelectedRows([]);
+    setDeleteMode(true);
+  };
   const handleExport = () => { setExportMode(true); setSelectedRows([]); };
   const handleConfirmBatchEdit = () => {
     if (selectedRows.length === 1) {
@@ -209,7 +213,14 @@ export default function WarehouseOverviewPage() {
     setBatchEditedMaterials({});
     setCurrentBatchEditIndex(0);
   };
-  const handleConfirmBatchDeleteAction = () => { setShowBatchDeleteConfirm(true); };
+  // 点"确认删除"：未勾选任何行时给出提示，避免弹出"删除 0 个"的空确认框
+  const handleConfirmBatchDeleteAction = () => {
+    if (selectedRows.length === 0) {
+      showAlert('请先勾选要删除的物料');
+      return;
+    }
+    setShowBatchDeleteConfirm(true);
+  };
   const handleCancelDeleteAction = () => { setDeleteMode(false); setSelectedRows([]); };
   const handleConfirmExportClick = () => setShowExportModal(true);
   const handleCancelExportAction = () => { setExportMode(false); setSelectedRows([]); };
@@ -254,7 +265,7 @@ export default function WarehouseOverviewPage() {
         filters={filters}
         onLowStockToggle={handleLowStockToggle}
         onBatchEdit={handleBatchEditClick}
-        onDelete={handleDeleteWarning}
+        onDelete={handleEnterDeleteMode}
         onExport={handleExport}
         onConfirmBatchEdit={handleConfirmBatchEdit}
         onCancelBatchEdit={handleCancelBatchEdit}
@@ -302,15 +313,6 @@ export default function WarehouseOverviewPage() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleConfirmDeleteAction}
-      />
-
-      <DeleteWarningDialog
-        isOpen={showDeleteWarning}
-        onClose={() => setShowDeleteWarning(false)}
-        onConfirm={() => {
-          setShowDeleteWarning(false);
-          setDeleteMode(true);
-        }}
       />
 
       <BatchDeleteConfirmDialog

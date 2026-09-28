@@ -13,17 +13,19 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import { useUserStore } from '@/stores/useUserStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import type { Material } from '@/services/apiWarehouseMaterialService';
 import { todayLocal } from '@/lib/dateUtils';
+import { showAlert } from '@/lib/dialogService';
 
 interface InboundAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (record: Omit<InboundRecord, 'id'>) => void;
+  /** 返回 false 表示保存失败（父组件已提示）→ 保留弹窗与已填内容 */
+  onSave: (record: Omit<InboundRecord, 'id'>) => void | Promise<unknown>;
   onGenerateCode: () => string;
   existingCodes: string[];
 }
@@ -35,11 +37,16 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   onGenerateCode,
   existingCodes,
 }) => {
-  // 获取当前用户信息（从 Zustand Store，API 直连）
-  const storeUsers = useUserStore((state) => state.users);
-  const loadUsers = useUserStore((state) => state.loadUsers);
-  useEffect(() => { loadUsers(); }, [loadUsers, isOpen]);
-  const currentUserName = storeUsers[0]?.name || '当前用户';
+  // 2026-09-28 审计修复：操作员此前取"用户列表第一个人"（users[0]），与实际登录人无关——
+  // 实测入库单/库存流水的操作员全部记成「访客01」而登录人是陆启闯（审计链失真）。
+  // 现在只认登录用户；登录态是异步恢复的，故用 effect 持续同步（输入框 readOnly，无需脏标记）。
+  const authUser = useAuthStore((state) => state.currentUser);
+  const currentUserName = authUser?.realName || authUser?.username || '';
+  useEffect(() => {
+    const name = authUser?.realName || authUser?.username;
+    if (!name) return;
+    setFormData((prev) => (prev.operator === name ? prev : { ...prev, operator: name }));
+  }, [authUser]);
   // 获取当天日期字符串
   const today = todayLocal();
 
@@ -88,6 +95,8 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
   // 弹窗大小和位置状态
   const [isMaximized, setIsMaximized] = useState(false);
+  // 2026-09-28：提交中标记（防重复提交）
+  const [submitting, setSubmitting] = useState(false);
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
   const [dialogPos, setDialogPos] = useState({ left: 0, top: 0 });
   const minSize = { width: 640, height: 400 };
@@ -338,29 +347,58 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   };
 
   // 提交表单
-  const handleSubmit = () => {
-    // 2026-09-27：明细继承单头供应商——入库新建物料时落主数据供应商（后端另有单头兜底）
-    const materialsWithSupplier = materials.map(m => ({
-      ...m,
-      supplier: m.supplier || formData.supplier,
-    }));
-    onSave({
-      code: formData.code || onGenerateCode(),
-      inboundDate: formData.inboundDate,
-      supplier: formData.supplier,
-      operator: formData.operator,
-      status: formData.status,
-      materials: materialsWithSupplier,
-    });
-    setFormData({
-      code: '',
-      inboundDate: today,
-      supplier: '',
-      operator: currentUserName,
-      status: 'pending', // 与初始默认一致（统一走审批）
-    });
-    setMaterials([]);
-    onClose();
+  // 2026-09-28 审计修复（P1）：
+  // ① 提交前校验——此前"一条明细都不加""明细缺编码""数量为 0""手填重复单号"都能落库，
+  //    空编码/0 数量明细会在后端入账时被静默跳过（单据显示已完成但库存没加）；
+  // ② 防重复提交——此前按钮直连 onClick，快速双击会发两次 POST（后端单号无唯一约束）；
+  // ③ 成功才清表单/关弹窗——此前无论成败都清空关闭，用户以为已提交。
+  const handleSubmit = async () => {
+    if (submitting) return;
+    if (materials.length === 0) {
+      await showAlert('请至少添加一条物料明细');
+      return;
+    }
+    const badLines = materials
+      .map((m, i) => ({ line: i + 1, code: String(m.code || '').trim(), qty: Number(m.quantity) || 0 }))
+      .filter(x => !x.code || x.qty <= 0);
+    if (badLines.length > 0) {
+      await showAlert(`物料明细不合法：${badLines.map(x => `第 ${x.line} 行${!x.code ? '缺物料编码' : '数量必须大于 0'}`).join('；')}`);
+      return;
+    }
+    const finalCode = formData.code || onGenerateCode();
+    if (existingCodes.includes(finalCode)) {
+      await showAlert(`入库单号 ${finalCode} 已存在，请重新生成或修改单号`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // 2026-09-27：明细继承单头供应商——入库新建物料时落主数据供应商（后端另有单头兜底）
+      const materialsWithSupplier = materials.map(m => ({
+        ...m,
+        supplier: m.supplier || formData.supplier,
+      }));
+      const result = await onSave({
+        code: finalCode,
+        inboundDate: formData.inboundDate,
+        supplier: formData.supplier,
+        operator: formData.operator,
+        status: formData.status,
+        materials: materialsWithSupplier,
+      });
+      if (result === false) return; // 保存失败：父组件已提示，保留弹窗与已填内容供修正
+      setFormData({
+        code: '',
+        inboundDate: today,
+        supplier: '',
+        operator: currentUserName,
+        status: 'pending', // 与初始默认一致（统一走审批）
+      });
+      setMaterials([]);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // 如果弹窗未打开，不渲染任何内容
@@ -661,7 +699,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
           <Button variant="secondary" onClick={onClose}>
             <X className="w-4 h-4" /> 取消
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={submitting}>
             <Send className="w-4 h-4" /> 提交
           </Button>
         </div>

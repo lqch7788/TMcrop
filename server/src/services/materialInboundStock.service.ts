@@ -60,17 +60,22 @@ export function applyInboundStock(db: any, params: InboundStockParams): void {
   upsertBatchInventory(materials, Number(inboundId));
 
   let seq = 0;
+  // 2026-09-28 审计修复：余额按 code 递推——同一张入库单里同一物料有多条明细时，
+  // 此前每行都用同一个"入账前余量"算 after，第 2 条起的流水余额链偏小（数量正确、展示误导）
+  const runningBalance = new Map<string, number>();
   for (const m of materials) {
     const code = String(m.code || m.materialCode || '').trim();
     const qty = Number(m.quantity) || 0;
     if (!code || qty <= 0) continue;
+    const startQty = runningBalance.has(code) ? (runningBalance.get(code) as number) : (beforeMap.get(code) ?? 0);
     writeStockTransaction(db, ++seq, 'material_inbound', inboundId, inboundCode, code, qty, {
       operatorName,
-      balanceBefore: beforeMap.get(code) ?? 0,
-      balanceAfter: (beforeMap.get(code) ?? 0) + qty,
+      balanceBefore: startQty,
+      balanceAfter: startQty + qty,
       remark: `物料入库 ${inboundCode}｜入库人 ${operatorName}`,
       businessType: 'material_inbound',
     });
+    runningBalance.set(code, startQty + qty);
   }
 }
 
@@ -101,14 +106,26 @@ export function createMaterialInboundApproval(db: any, params: {
     requestCode: inboundCode,
   });
 
+  // 2026-09-28 审计修复：把入库明细写进 approvals.materials——
+  // 审批详情弹窗（MaterialApprovalModals/DetailModal）读的是审批表自身的 materials 列，
+  // 此前该列为空 → 点开详情永远显示"暂无物料明细"，审批人只能看到标题里的一句摘要。
+  // 字段名对齐 DetailModal 的列（materialCode/materialName/spec/unit/requestedQuantity）。
+  const approvalMaterials = JSON.stringify(materials.map((m) => ({
+    materialCode: String(m.code || m.materialCode || ''),
+    materialName: String(m.name || m.materialName || ''),
+    spec: String(m.specification || m.spec || ''),
+    unit: String(m.unit || ''),
+    requestedQuantity: Number(m.quantity) || 0,
+  })));
+
   db.run(`
     INSERT INTO approvals (
       id, code, type, type_name, category, title, description,
       applicant_id, applicant_name, applicant_department,
       apply_date, apply_time, current_step, total_steps,
       status, priority, due_date, business_link, attachments,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      created_at, updated_at, materials
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     approvalCode,
@@ -131,6 +148,7 @@ export function createMaterialInboundApproval(db: any, params: {
     null,
     now,
     now,
+    approvalMaterials,
   ]);
   return approvalCode;
 }
@@ -156,31 +174,42 @@ export function applyMaterialInboundApproval(
   const matList = parseInboundMaterials(materialsJson);
   const operatorName = String(operator || '').trim() || '仓库';
 
-  if (status === 'approved') {
-    if (oldStatus === 'completed') {
-      // 幂等：重复审批不应重复入账
-      return { success: true, message: '入库单已是完成状态（跳过重复入账）' };
+  // 2026-09-28 审计修复：本函数自管事务（调用方 approvalLinkage 无事务，半完成状态会被落盘）。
+  // 契约：调用方不得再包一层事务。
+  db.run('BEGIN');
+  try {
+    if (status === 'approved') {
+      if (oldStatus === 'completed') {
+        // 幂等：重复审批不应重复入账
+        db.run('COMMIT');
+        return { success: true, message: '入库单已是完成状态（跳过重复入账）' };
+      }
+      db.run("UPDATE inbound_records SET status = 'completed' WHERE id = ?", [id]);
+      if (matList.length > 0) {
+        applyInboundStock(db, {
+          inboundId: id,
+          inboundCode: String(code || ''),
+          materials: matList,
+          operatorName,
+          fallbackSupplier: String(supplier || ''),
+        });
+      }
+      db.run('COMMIT');
+      return { success: true, message: '物料入库审批通过：入库单已完成并计入库存' };
     }
-    db.run("UPDATE inbound_records SET status = 'completed' WHERE id = ?", [id]);
-    if (matList.length > 0) {
-      applyInboundStock(db, {
-        inboundId: id,
-        inboundCode: String(code || ''),
-        materials: matList,
-        operatorName,
-        fallbackSupplier: String(supplier || ''),
-      });
-    }
-    return { success: true, message: '物料入库审批通过：入库单已完成并计入库存' };
-  }
 
-  // 驳回 / 取消 / 部分通过 → 作废
-  if (oldStatus === 'completed') {
-    // 防御：已完成单若被审批驳回（理论不入审批流），先回收库存再作废
-    reverseInboundStock(db, matList, id, String(code || ''), operatorName);
+    // 驳回 / 取消 / 部分通过 → 作废
+    if (oldStatus === 'completed') {
+      // 防御：已完成单若被审批驳回（理论不入审批流），先回收库存再作废
+      reverseInboundStock(db, matList, id, String(code || ''), operatorName);
+    }
+    db.run("UPDATE inbound_records SET status = 'voided' WHERE id = ?", [id]);
+    db.run('COMMIT');
+    return { success: true, message: '物料入库审批未通过：入库单已作废' };
+  } catch (e) {
+    try { db.run('ROLLBACK'); } catch { /* 回滚失败不掩盖原异常 */ }
+    throw e;
   }
-  db.run("UPDATE inbound_records SET status = 'voided' WHERE id = ?", [id]);
-  return { success: true, message: '物料入库审批未通过：入库单已作废' };
 }
 
 /**
@@ -189,6 +218,49 @@ export function applyMaterialInboundApproval(
  * - 批次账按 (code, batchNo) 回收；批次余量不足 → 抛错回滚（fail loud）
  * - 写 material_reverse_inbound 流水（操作人/余额/备注可追溯）
  */
+/**
+ * 收集某条入库明细"可回收的批次行"（冲销预览与冲销/作废执行**共用同一口径**）
+ *
+ * 2026-09-28 审计修复：此前预览按 (code, inbound_record_id) 求和、执行按 (code, batch_no) 取单行，
+ * 两套口径不一致 → 预览显示"可冲 N 件"但点确认必 400（历史 DEFAULT-${code}-${id} 命名行与现行
+ * "默认批次"行并存时最明显）。现统一为「同名批次行 + 本单归属批次行」，预览与执行结果必然一致。
+ */
+export function collectReverseBatchRows(
+  db: any,
+  code: string,
+  batchNo: string,
+  inboundRecordId: string | number,
+): Array<{ id: any; remaining: number }> {
+  const rows: Array<{ id: any; remaining: number }> = [];
+  const seen = new Set<any>();
+
+  // 1) 同名批次行（现行口径）
+  const byName = db.exec(
+    'SELECT id, remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?',
+    [code, batchNo]
+  );
+  if (byName.length > 0) {
+    for (const r of byName[0].values) {
+      seen.add(r[0]);
+      rows.push({ id: r[0], remaining: Number(r[1]) || 0 });
+    }
+  }
+
+  // 2) 本单归属的其它批次行（历史命名 DEFAULT-${code}-${recordId} 等）
+  const byRecord = db.exec(
+    'SELECT id, remaining_quantity FROM batch_inventory WHERE material_code = ? AND inbound_record_id = ?',
+    [code, Number(inboundRecordId)]
+  );
+  if (byRecord.length > 0) {
+    for (const r of byRecord[0].values) {
+      if (seen.has(r[0])) continue;
+      rows.push({ id: r[0], remaining: Number(r[1]) || 0 });
+    }
+  }
+
+  return rows;
+}
+
 export function reverseInboundStock(
   db: any,
   materials: any[],
@@ -208,31 +280,38 @@ export function reverseInboundStock(
     const batchNo = String(m.batchNo || '').trim() || '默认批次';
 
     // 主表回收（按 code 锁定单行）
+    // 2026-09-28 审计修复：主表未命中此前静默跳过（只扣批次/照写流水 → 账实脱节），改为 fail loud
     const mainRows = db.exec('SELECT id, quantity FROM materials WHERE code = ? ORDER BY id ASC LIMIT 1', [code]);
-    if (mainRows.length > 0 && mainRows[0].values.length > 0) {
-      const mainId = mainRows[0].values[0][0];
-      const mainQty = Number(mainRows[0].values[0][1]) || 0;
-      if (mainQty < qty) {
-        throw new Error(`物料 ${code} 当前库存 ${mainQty} 不足以回收入库量 ${qty}（库存已被后续使用），无法撤销入库`);
-      }
-      db.run('UPDATE materials SET quantity = quantity - ?, lastUpdateTime = ? WHERE id = ?', [qty, now, mainId]);
+    if (!mainRows.length || !mainRows[0].values.length) {
+      throw new Error(`物料 ${code} 主数据不存在，无法回收 ${qty}（入库单 ${inboundCode}）；请先恢复物料主数据再撤销`);
     }
+    const mainId = mainRows[0].values[0][0];
+    const mainQty = Number(mainRows[0].values[0][1]) || 0;
+    if (mainQty < qty) {
+      throw new Error(`物料 ${code} 当前库存 ${mainQty} 不足以回收入库量 ${qty}（库存已被后续使用），无法撤销入库`);
+    }
+    db.run('UPDATE materials SET quantity = quantity - ?, lastUpdateTime = ? WHERE id = ?', [qty, now, mainId]);
 
-    // 批次账回收（按 code + batchNo 匹配；未命中显式告警而非静默）
+    // 批次账回收：候选行 = 同名批次行 + 本单归属批次行（与冲销预览同口径）
     // total_quantity 与 remaining 同步扣回（与 upsertBatchInventory 累加对称）
-    const batchRows = db.exec('SELECT id, remaining_quantity FROM batch_inventory WHERE material_code = ? AND batch_no = ?', [code, batchNo]);
-    if (batchRows.length > 0 && batchRows[0].values.length > 0) {
-      const batchId = batchRows[0].values[0][0];
-      const batchRemain = Number(batchRows[0].values[0][1]) || 0;
-      if (batchRemain < qty) {
-        throw new Error(`物料 ${code} 批次 ${batchNo} 余量 ${batchRemain} 不足以回收入库量 ${qty}`);
-      }
+    const candidates = collectReverseBatchRows(db, code, batchNo, inboundId);
+    const available = candidates.reduce((s, r) => s + r.remaining, 0);
+    if (available < qty) {
+      // 2026-09-28 审计修复：批次未命中此前仅 warn 却照扣主表/照写流水 → 改为抛错回滚
+      throw new Error(
+        `物料 ${code} 批次 ${batchNo} 可回收余量 ${available} 不足以回收入库量 ${qty}（入库单 ${inboundCode}）`
+      );
+    }
+    let left = qty;
+    for (const row of candidates) {
+      if (left <= 0) break;
+      const take = Math.min(left, row.remaining);
+      if (take <= 0) continue;
       db.run(
         'UPDATE batch_inventory SET remaining_quantity = remaining_quantity - ?, total_quantity = total_quantity - ?, update_time = ? WHERE id = ?',
-        [qty, qty, now, batchId]
+        [take, take, now, row.id]
       );
-    } else {
-      console.warn(`[物料入库] 回收批次未命中：物料 ${code} 批次 ${batchNo}（入库单 ${inboundCode}）`);
+      left -= take;
     }
 
     writeStockTransaction(db, ++seq, 'material_reverse_inbound', inboundId, inboundCode, code, qty, {

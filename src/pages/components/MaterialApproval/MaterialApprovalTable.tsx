@@ -34,6 +34,8 @@ interface MaterialApprovalTableProps {
   handleViewDetail: (item: Approval) => void;
   handleRejectClick: (item: Approval) => void;
   approve: (id: string) => void;
+  /** 2026-09-28：走"审批意见弹窗"的通过入口（与其他 tab 一致，且失败会有提示） */
+  onApproveClick?: (item: Approval) => void;
 
   // 辅助函数
   getStatusBadge: (status: ApprovalStatus) => JSX.Element;
@@ -67,6 +69,7 @@ export function MaterialApprovalTable({
   handleViewDetail,
   handleRejectClick,
   approve,
+  onApproveClick,
   getStatusBadge,
   getReturnStatusBadge,
   getReturnType,
@@ -447,7 +450,9 @@ export function MaterialApprovalTable({
                 <div className="flex items-center gap-1">
                   {item.status === ApprovalStatus.PENDING && canApprove && (
                     <>
-                      <button onClick={() => approve(item.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                      {/* 2026-09-28 审计修复：此前直接 approve(item.id)——不 await、不看结果，
+                          store 内部吞错 → 失败无提示。改为走审批意见弹窗流程（有结果提示） */}
+                      <button onClick={() => (onApproveClick ? onApproveClick(item) : approve(item.id))} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
                         <CheckCircle className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleRejectClick(item)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">

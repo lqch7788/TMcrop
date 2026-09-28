@@ -255,6 +255,7 @@ export default function MaterialApproval() {
         handleViewDetail={handleViewDetail}
         handleRejectClick={handleRejectClick}
         approve={approve}
+        onApproveClick={handleApprove}
         getStatusBadge={getStatusBadge}
         getReturnStatusBadge={getReturnStatusBadge}
         getReturnType={getReturnType}
