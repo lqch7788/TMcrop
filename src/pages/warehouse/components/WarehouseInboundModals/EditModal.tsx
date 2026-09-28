@@ -113,7 +113,9 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
       ...m,
       supplier: m.supplier || editedSupplier,
     }));
-    onSave({ ...record, supplier: editedSupplier, materials: materialsWithSupplier });
+    // 2026-09-28 批次A-2：供应商名称可能被改写 → 重新解析主数据 id 一并提交
+    const matched = useSupplierStore.getState().items.find((s) => s.name === editedSupplier.trim());
+    onSave({ ...record, supplier: editedSupplier, supplierId: matched ? String(matched.id) : '', materials: materialsWithSupplier });
     onClose();
   };
 

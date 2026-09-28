@@ -52,6 +52,8 @@ export interface InboundRecord {
   code: string;
   inboundDate: string;
   supplier: string;
+  /** 2026-09-28 批次A-2：供应商主数据 id（按名称从主数据解析；自由文本/历史单据为空） */
+  supplierId?: string;
   operator: string;
   status: InboundStatus;
   materials: InboundMaterial[];

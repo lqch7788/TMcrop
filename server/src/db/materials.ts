@@ -177,6 +177,8 @@ export function createInboundRecord(record: {
   code: string;
   inboundDate: string;
   supplier: string;
+  /** 2026-09-28 批次A-2：供应商主数据 id（可空——历史/自由文本场景） */
+  supplierId?: string;
   operator: string;
   status: string;
   materials: any[];
@@ -184,12 +186,13 @@ export function createInboundRecord(record: {
   const db = getDatabase();
   db.run(`
     INSERT INTO inbound_records
-    (code, inboundDate, supplier, operator, status, materials)
-    VALUES (?, ?, ?, ?, ?, ?)
+    (code, inboundDate, supplier, supplierId, operator, status, materials)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `, [
     record.code,
     record.inboundDate,
     record.supplier,
+    record.supplierId || '',
     record.operator,
     record.status,
     JSON.stringify(record.materials)
@@ -228,16 +231,20 @@ export function updateInboundRecord(id: number, updates: Record<string, any>): b
  */
 export function syncInboundToMaterials(
   materials: any[],
-  opts?: { persist?: boolean; fallbackSupplier?: string }
+  opts?: { persist?: boolean; fallbackSupplier?: string; fallbackSupplierId?: string }
 ): void {
   const db = getDatabase();
   // 单头供应商兜底：前端入库明细不含 supplier，新建物料时继承单头供应商，避免主数据供应商为空
   const fallbackSupplier = String(opts?.fallbackSupplier || '').trim();
+  // 2026-09-28 批次A-2：供应商主数据 id 兜底（与名称同源，用于改名后不失真 / 按供应商统计）
+  const fallbackSupplierId = String(opts?.fallbackSupplierId || '').trim();
 
   for (const m of materials) {
     if (!m.code) continue; // 无物料编码则跳过
 
     const supplier = String(m.supplier || fallbackSupplier || '').trim();
+    // 2026-09-28 批次A-2：id 与名称同规则（明细优先、单头兜底），非空才覆盖
+    const supplierId = String(m.supplierId || fallbackSupplierId || '').trim();
     const remarks = String(m.remarks || '').trim();
 
     // 按 code 匹配总量行（同码多行历史数据取 id 最小行）
@@ -256,6 +263,8 @@ export function syncInboundToMaterials(
       const sets: string[] = ['quantity = ?', 'lastUpdateTime = ?', "dataStatus = '启用'"];
       const params: (string | number)[] = [newQty, new Date().toISOString()];
       if (supplier) { sets.push('supplier = ?'); params.push(supplier); }
+      // 2026-09-28 批次A-2：仅当本次带 id 时才覆盖（避免把已登记的 id 抹掉）
+      if (supplierId) { sets.push('supplierId = ?'); params.push(supplierId); }
       if (m.price) { sets.push('price = ?'); params.push(String(m.price)); }
       if (m.location) { sets.push('location = ?'); params.push(String(m.location)); }
       if (m.batchNo) { sets.push('batchNo = ?'); params.push(String(m.batchNo)); }
@@ -271,8 +280,8 @@ export function syncInboundToMaterials(
       // 新物料：新增总量行（batchNo 取入库明细值——批次明细的权威仍在 batch_inventory）
       db.run(`
         INSERT INTO materials
-        (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus, remarks)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, supplierId, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus, remarks)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         m.code,
         m.name || '',
@@ -284,6 +293,7 @@ export function syncInboundToMaterials(
         Number(m.maxStock) || 0,
         m.price || '',
         supplier,
+        supplierId,
         m.location || '',
         m.barcode || '',
         m.batchNo || '',

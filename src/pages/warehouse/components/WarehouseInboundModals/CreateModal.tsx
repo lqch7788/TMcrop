@@ -378,10 +378,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
         ...m,
         supplier: m.supplier || formData.supplier,
       }));
+      // 2026-09-28 批次A-2：按名称从供应商主数据解析 id 一并落库
+      // （名称仍是展示快照；id 用于供应商改名后不失真 / 按供应商统计）
+      const matched = useSupplierStore.getState().items.find((s) => s.name === formData.supplier.trim());
       const result = await onSave({
         code: finalCode,
         inboundDate: formData.inboundDate,
         supplier: formData.supplier,
+        supplierId: matched ? String(matched.id) : '',
         operator: formData.operator,
         status: formData.status,
         materials: materialsWithSupplier,

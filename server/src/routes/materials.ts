@@ -140,6 +140,8 @@ router.post('/inbound', (req: Request, res: Response) => {
         code: inboundCode,
         inboundDate: record.inboundDate,
         supplier: record.supplier,
+        // 2026-09-28 批次A-2：供应商主数据 id（前端按名称从主数据解析后传入；自由文本场景为空）
+        supplierId: String(record.supplierId || '').trim(),
         operator: record.operator,
         status,
         materials: matList,
@@ -153,6 +155,7 @@ router.post('/inbound', (req: Request, res: Response) => {
           materials: matList,
           operatorName: String(record.operator || '').trim() || '仓库',
           fallbackSupplier: record.supplier,
+          fallbackSupplierId: String(record.supplierId || '').trim(),
         });
       }
 
@@ -235,7 +238,7 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     delete updates.voidedDate;
 
     // 2026-09-27 安全修复：列名白名单（此前 updateInboundRecord 动态拼接任意列名）
-    const ALLOWED_COLUMNS = new Set(['code', 'inboundDate', 'supplier', 'operator', 'status', 'materials']);
+    const ALLOWED_COLUMNS = new Set(['code', 'inboundDate', 'supplier', 'supplierId', 'operator', 'status', 'materials']);
     const illegalKeys = Object.keys(updates).filter(k => !ALLOWED_COLUMNS.has(k));
     if (illegalKeys.length > 0) {
       return res.status(400).json({ success: false, error: `包含非法更新字段: ${illegalKeys.join(', ')}` });
@@ -337,6 +340,8 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
         applyInboundStock(db, {
           inboundId: id,
           inboundCode: String(updates.code || oldRecord.code || ''),
+          // 2026-09-28 批次A-2：改明细重入账时沿用单据上的供应商 id
+          fallbackSupplierId: String((updates as any).supplierId || (oldRecord as any).supplierId || ''),
           materials: newMaterials,
           operatorName,
           fallbackSupplier: String(updates.supplier ?? oldRecord.supplier ?? ''),
@@ -813,6 +818,7 @@ router.post('/inbound/:id/reversal', (req: Request, res: Response) => {
         code: reversalCode,
         inboundDate: new Date().toISOString().slice(0, 10),
         supplier: (record as any).supplier,
+        supplierId: String((record as any).supplierId || ''), // 2026-09-28 批次A-2：冲销单继承原单供应商 id
         operator: operatorName,
         status: 'completed',
         materials: reversalMaterials,

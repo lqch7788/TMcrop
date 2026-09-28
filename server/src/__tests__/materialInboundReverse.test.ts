@@ -29,6 +29,7 @@ vi.mock('../db/index', () => ({
 }));
 
 import { collectReverseBatchRows, reverseInboundStock, applyMaterialInboundApproval, parseInboundMaterialsStrict } from '../services/materialInboundStock.service';
+import { syncInboundToMaterials } from '../db/materials';
 
 const CREATE_MATERIALS = `
   CREATE TABLE materials (
@@ -50,7 +51,8 @@ const CREATE_MATERIALS = `
     expiryDate TEXT,
     lastUpdateTime TEXT,
     dataStatus TEXT DEFAULT '启用',
-    remarks TEXT
+    remarks TEXT,
+    supplierId TEXT DEFAULT ''
   )
 `;
 
@@ -98,6 +100,7 @@ const CREATE_INBOUND = `
     code TEXT NOT NULL,
     inboundDate TEXT,
     supplier TEXT,
+    supplierId TEXT DEFAULT '',
     operator TEXT,
     status TEXT DEFAULT 'pending',
     materials TEXT,
@@ -109,6 +112,14 @@ const CREATE_INBOUND = `
 `;
 
 let db: Database;
+
+function selectRow(sql: string): Record<string, unknown> {
+  const r = db.exec(sql);
+  if (r.length === 0 || r[0].values.length === 0) return {};
+  const row: Record<string, unknown> = {};
+  r[0].columns.forEach((c, i) => { row[c] = r[0].values[0][i]; });
+  return row;
+}
 
 function scalar(sql: string): unknown {
   const r = db.exec(sql);
@@ -241,5 +252,36 @@ describe('applyMaterialInboundApproval 审批入账', () => {
     expect(scalar(`SELECT status FROM inbound_records WHERE id = 8`)).toBe('pending');
     expect(scalar(`SELECT quantity FROM materials WHERE code = 'M1'`)).toBe(0);
     expect(scalar(`SELECT COUNT(*) FROM batch_inventory`)).toBe(0);
+  });
+});
+
+describe('批次A-2：供应商主数据 id 落库', () => {
+  it('新建物料时写入 supplierId（明细为空则取单头兜底）', () => {
+    syncInboundToMaterials(
+      [{ code: 'M-A2-1', name: '物料A', quantity: 5, unit: '件', supplier: '金色稻种有限公司', supplierId: 'SUP001' }],
+      { fallbackSupplier: '兜底供应商', fallbackSupplierId: 'SUP999' }
+    );
+    const row = selectRow("SELECT supplier, supplierId FROM materials WHERE code = 'M-A2-1'");
+    expect(row.supplier).toBe('金色稻种有限公司');
+    expect(row.supplierId).toBe('SUP001');
+  });
+
+  it('明细未带供应商时，单头兜底同时落 id', () => {
+    syncInboundToMaterials(
+      [{ code: 'M-A2-2', name: '物料B', quantity: 3, unit: '件' }],
+      { fallbackSupplier: '兜底供应商', fallbackSupplierId: 'SUP888' }
+    );
+    const row = selectRow("SELECT supplier, supplierId FROM materials WHERE code = 'M-A2-2'");
+    expect(row.supplier).toBe('兜底供应商');
+    expect(row.supplierId).toBe('SUP888');
+  });
+
+  it('已有物料：本次不带 id 时不清空既有 supplierId', () => {
+    syncInboundToMaterials([{ code: 'M-A2-3', name: '物料C', quantity: 1, unit: '件', supplier: '老供应商', supplierId: 'SUP111' }], {});
+    // 第二次入库：只带名称、不带 id
+    syncInboundToMaterials([{ code: 'M-A2-3', name: '物料C', quantity: 1, unit: '件', supplier: '老供应商2' }], {});
+    const row = selectRow("SELECT supplier, supplierId FROM materials WHERE code = 'M-A2-3'");
+    expect(row.supplier).toBe('老供应商2');
+    expect(row.supplierId).toBe('SUP111'); // 名称更新了，id 保留（不被空值抹掉）
   });
 });

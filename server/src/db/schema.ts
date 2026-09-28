@@ -1319,6 +1319,12 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE suppliers ADD COLUMN create_date TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN area TEXT DEFAULT ''`); } catch (e) {}
 
+  // 2026-09-28 批次A-2：供应商 id 落库（主数据治理基础设施）
+  // 此前 inbound_records/materials 只存供应商"名称"文本 → 改名即失真、无法按供应商统计/查资质。
+  // 列名沿用这两张表的 camelCase 约定；名称列保留作展示快照与历史兼容。
+  try { db.run(`ALTER TABLE inbound_records ADD COLUMN supplierId TEXT DEFAULT ''`); } catch (e) {}
+  try { db.run(`ALTER TABLE materials ADD COLUMN supplierId TEXT DEFAULT ''`); } catch (e) {}
+
   // 2026-09-28 审计修复：供应商编码/名称唯一索引（此前无任何唯一约束，
   // 前端 Math.random 出号 + 后端零查重 → 可产生重码；id=code 的设计下重码还会主键冲突）
   // 历史库若已有重码/重名会建索引失败——只告警不阻断启动（需人工核对）

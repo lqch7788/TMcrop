@@ -55,6 +55,8 @@ export interface InboundStockParams {
   operatorName: string;
   /** 单头供应商兜底（明细无 supplier 时用于新建物料主数据） */
   fallbackSupplier?: string;
+  /** 2026-09-28 批次A-2：单头供应商主数据 id 兜底（与名称同规则落库） */
+  fallbackSupplierId?: string;
 }
 
 /**
@@ -82,7 +84,7 @@ export function applyInboundStock(db: any, params: InboundStockParams): void {
     beforeMap.set(code, r.length > 0 && r[0].values.length > 0 ? Number(r[0].values[0][0]) || 0 : 0);
   }
 
-  materialsDb.syncInboundToMaterials(materials, { persist: false, fallbackSupplier });
+  materialsDb.syncInboundToMaterials(materials, { persist: false, fallbackSupplier, fallbackSupplierId: params.fallbackSupplierId });
   upsertBatchInventory(materials, Number(inboundId));
 
   let seq = 0;
@@ -192,14 +194,16 @@ export function applyMaterialInboundApproval(
   requestId: string,
   status: string,
 ): { success: boolean; message: string } {
-  const rows = db.exec('SELECT id, code, supplier, operator, status, materials FROM inbound_records WHERE id = ?', [Number(requestId)]);
+  const rows = db.exec("SELECT id, code, supplier, operator, status, materials, IFNULL(supplierId, '') FROM inbound_records WHERE id = ?", [Number(requestId)]);
   if (!rows.length || !rows[0].values.length) {
     return { success: false, message: `入库单 ${requestId} 不存在` };
   }
   const [id, code, supplier, operator, oldStatus, materialsJson] = rows[0].values[0] as any[];
+  // 2026-09-28 批次A-2：审批入账同样带上供应商 id（从入库单读回）
   // 严格解析：明细损坏时抛错（本函数自有事务会回滚），绝不"空列表静默作废"
   const matList = parseInboundMaterialsStrict(materialsJson);
   const operatorName = String(operator || '').trim() || '仓库';
+  const supplierIdFromRecord = String((rows[0].values[0] as any[])[6] || '');
 
   // 2026-09-28 审计修复：本函数自管事务（调用方 approvalLinkage 无事务，半完成状态会被落盘）。
   // 契约：调用方不得再包一层事务。
@@ -219,6 +223,7 @@ export function applyMaterialInboundApproval(
           materials: matList,
           operatorName,
           fallbackSupplier: String(supplier || ''),
+          fallbackSupplierId: supplierIdFromRecord,
         });
       }
       db.run('COMMIT');
