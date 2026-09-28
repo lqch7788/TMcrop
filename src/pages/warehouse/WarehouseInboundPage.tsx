@@ -19,7 +19,6 @@ import {
   InboundAddModal,
   InboundEditModal,
   InboundReversalModal,
-  InboundBatchEditModal,
 } from './components/WarehouseInboundModals';
 
 export default function WarehouseInboundPage() {
@@ -49,10 +48,9 @@ export default function WarehouseInboundPage() {
     setInboundPageSize,
     totalPages,
 
-    // 选择相关
+    // 选择相关（2026-09-28：editMode 死分支已移除——页面无入口，
+    // 其批量编辑弹窗路径从未被验证过，曾含"首改明细必崩"的潜伏缺陷）
     selectedRows,
-    editMode,
-    setEditMode,
     deleteMode,
     setDeleteMode,
     exportMode,
@@ -72,8 +70,6 @@ export default function WarehouseInboundPage() {
     setShowInboundAddModal,
     showInboundDeleteModal,
     setShowInboundDeleteModal,
-    showBatchEditModal,
-    setShowBatchEditModal,
     showExportModal,
     setShowExportModal,
 
@@ -117,11 +113,9 @@ export default function WarehouseInboundPage() {
     onBatchDeleteRecords,
     onConfirmInboundDelete,
     onSaveInboundEdit,
-    onBatchSaveRecord,
     onAddRecord,
     onGenerateOrderCode,
     onSaveNewInbound,
-    onConfirmEdit,
     onConfirmDelete,
     onToggleExpand,
   } = useWarehouseInbound();
@@ -138,7 +132,7 @@ export default function WarehouseInboundPage() {
   }, [inboundRecords]);
 
   // 判断是否有任何模式激活
-  const hasActiveMode = editMode || deleteMode || exportMode;
+  const hasActiveMode = deleteMode || exportMode;
 
   return (
     <div className="space-y-6">
@@ -289,7 +283,6 @@ export default function WarehouseInboundPage() {
           displayedRecords={displayedRecords}
           selectedRows={selectedRows}
           isAllSelected={isAllSelected}
-          editMode={editMode}
           deleteMode={deleteMode}
           exportMode={exportMode}
           expandedRows={expandedRows}
@@ -307,7 +300,6 @@ export default function WarehouseInboundPage() {
           page={inboundPage}
           pageSize={inboundPageSize}
           totalPages={totalPages}
-          totalCount={filteredRecords.length}
           onPageChange={setInboundPage}
           onPageSizeChange={setInboundPageSize}
         />
@@ -352,12 +344,8 @@ export default function WarehouseInboundPage() {
         onConfirm={onConfirmInboundDelete}
       />
 
-      <InboundBatchEditModal
-        records={selectedRecords}
-        isOpen={showBatchEditModal}
-        onClose={() => setShowBatchEditModal(false)}
-        onSave={onBatchSaveRecord}
-      />
+      {/* 2026-09-28：移除 InboundBatchEditModal 挂载——入口自 2026-08-10 起已不存在，
+          showBatchEditModal 恒为 false（死代码），且其批量保存路径从未被验证 */}
 
       <InboundExportModal
         records={selectedRecords}

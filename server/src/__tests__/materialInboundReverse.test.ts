@@ -28,7 +28,7 @@ vi.mock('../db/index', () => ({
   },
 }));
 
-import { collectReverseBatchRows, reverseInboundStock, applyMaterialInboundApproval } from '../services/materialInboundStock.service';
+import { collectReverseBatchRows, reverseInboundStock, applyMaterialInboundApproval, parseInboundMaterialsStrict } from '../services/materialInboundStock.service';
 
 const CREATE_MATERIALS = `
   CREATE TABLE materials (
@@ -189,6 +189,20 @@ describe('reverseInboundStock 回收执行', () => {
     expect(() =>
       reverseInboundStock(db, [{ code: 'GHOST', batchNo: '', quantity: 5 }], 44, 'RK-TEST-3', '测试员')
     ).toThrow(/主数据不存在/);
+  });
+});
+
+describe('parseInboundMaterialsStrict 严格解析（写路径）', () => {
+  it('正常 JSON / 双重编码 / 空值 均可解析', () => {
+    expect(parseInboundMaterialsStrict('[{"code":"M1","quantity":1}]')).toHaveLength(1);
+    expect(parseInboundMaterialsStrict('"[{\\"code\\":\\"M1\\",\\"quantity\\":1}]"')).toHaveLength(1);
+    expect(parseInboundMaterialsStrict('')).toEqual([]);
+    expect(parseInboundMaterialsStrict(null)).toEqual([]);
+  });
+
+  it('损坏数据抛错（不再退化成空数组导致"静默不回收库存"）', () => {
+    expect(() => parseInboundMaterialsStrict('{坏JSON')).toThrow(/明细数据损坏/);
+    expect(() => parseInboundMaterialsStrict('{"code":"M1"}')).toThrow(/不是数组/);
   });
 });
 

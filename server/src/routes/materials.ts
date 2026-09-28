@@ -8,7 +8,7 @@ import * as materialsDb from '../db/materials';
 // （2026-09-27 重构：入库的 主表/批次账/流水 逻辑已抽到 services/materialInboundStock.service.ts）
 // 2026-09-27 审计修复：入库写库存流水（复用出库侧的 writeStockTransaction）+
 // 入库撤销回收库存（reverseInboundStock，与出库恢复同模式）
-import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials, collectReverseBatchRows } from '../services/materialInboundStock.service';
+import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials, parseInboundMaterialsStrict, collectReverseBatchRows } from '../services/materialInboundStock.service';
 
 const router = Router();
 
@@ -117,6 +117,15 @@ router.post('/inbound', (req: Request, res: Response) => {
     }
     if (!inboundCode) {
       return res.status(400).json({ success: false, error: '入库单号不能为空' });
+    }
+    // 2026-09-28 审计修复：单号查重（幂等兜底）——此前无任何校验，
+    // 客户端超时重试/双击提交会产生 2-3 张同号单并重复入账（同号单库存 ×N）
+    const dupRows = getDatabase().exec('SELECT id FROM inbound_records WHERE code = ? LIMIT 1', [inboundCode]);
+    if (dupRows.length > 0 && dupRows[0].values.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `入库单号 ${inboundCode} 已存在（防止重复入库），请重新生成单号`,
+      });
     }
     // 入库即完成 → 自动同步物料库存 + 批次库存（FEFO）
     const willSync = status === 'completed' && matList.length > 0;
@@ -238,6 +247,17 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     if (updates.status !== undefined && !VALID_INBOUND_STATUS.has(String(updates.status))) {
       return res.status(400).json({ success: false, error: `非法状态: ${updates.status}（仅支持 pending/completed/voided）` });
     }
+    // 2026-09-28 审计修复：改单号时同样查重（防止改成已存在的单号造成歧义/重码）
+    if (updates.code !== undefined) {
+      const newCodeStr = String(updates.code || '').trim();
+      if (!newCodeStr) {
+        return res.status(400).json({ success: false, error: '入库单号不能为空' });
+      }
+      const dupRows = getDatabase().exec('SELECT id FROM inbound_records WHERE code = ? AND id <> ? LIMIT 1', [newCodeStr, id]);
+      if (dupRows.length > 0 && dupRows[0].values.length > 0) {
+        return res.status(409).json({ success: false, error: `入库单号 ${newCodeStr} 已被其它入库单使用` });
+      }
+    }
     // 2026-09-28 审计修复②：明细行必须合法——空编码/0 数量会在入账时被静默跳过，
     // 单据显示"已完成"但库存没加，用户无从察觉。
     if (updates.materials !== undefined) {
@@ -265,7 +285,14 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     }
     const oldStatus = String(oldRecord.status || 'pending');
     const newStatus = String(updates.status ?? oldStatus);
-    const oldMaterials = parseInboundMaterials(oldRecord.materials);
+    // 2026-09-28 审计修复：旧明细用严格解析——损坏时返回 400，
+    // 而不是按空数组静默跳过库存回收（单据被置 voided 但库存没退回）
+    let oldMaterials: any[];
+    try {
+      oldMaterials = parseInboundMaterialsStrict(oldRecord.materials);
+    } catch (e) {
+      return res.status(400).json({ success: false, error: e instanceof Error ? e.message : '入库明细数据损坏' });
+    }
     const incomingMaterials = updates.materials !== undefined
       ? (Array.isArray(updates.materials) ? updates.materials : parseInboundMaterials(updates.materials))
       : null;
@@ -381,11 +408,36 @@ router.post('/batch-allocate', (req: Request, res: Response) => {
 });
 
 /**
+ * 维护端点守卫（2026-09-28 审计修复）
+ *
+ * 背景：`cleanup-batches` 一行 SQL 就把全表 `remaining_quantity` 重置为 `total_quantity`
+ * （直接摧毁 FEFO 账），`seed-batches`/`batch-deduct`/`batch-restore` 同类；
+ * 这四个端点此前只有 requireAuth 保护，而 DEMO_MODE 下连 token 都不校验
+ * → 任意访问者一次 POST 即可毁库。
+ *
+ * 现改为双重条件：非生产环境 **且** 服务端显式设置 ALLOW_MAINTENANCE_ENDPOINTS=1。
+ * 需要时：`ALLOW_MAINTENANCE_ENDPOINTS=1 npm run dev` 定向使用。
+ */
+function assertMaintenanceAllowed(res: Response): boolean {
+  const enabled = process.env.ALLOW_MAINTENANCE_ENDPOINTS === '1';
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd || !enabled) {
+    res.status(403).json({
+      success: false,
+      error: '维护端点已禁用（需非生产环境且显式设置 ALLOW_MAINTENANCE_ENDPOINTS=1）',
+    });
+    return false;
+  }
+  return true;
+}
+
+/**
  * 扣减批次库存 — POST /api/materials/batch-deduct
  * 同时更新 materials 主表 quantity（物料库存列表显示此字段）
  */
 router.post('/batch-deduct', (req: Request, res: Response) => {
   try {
+    if (!assertMaintenanceAllowed(res)) return;
     const { allocations } = req.body;
     if (!Array.isArray(allocations) || allocations.length === 0) {
       return res.status(400).json({ success: false, error: '请提供有效的扣减分配方案' });
@@ -431,6 +483,7 @@ router.post('/batch-deduct', (req: Request, res: Response) => {
  */
 router.post('/batch-restore', (req: Request, res: Response) => {
   try {
+    if (!assertMaintenanceAllowed(res)) return;
     const { returns } = req.body;
     if (!Array.isArray(returns) || returns.length === 0) {
       return res.status(400).json({ success: false, error: '请提供有效的退料数据' });
@@ -475,6 +528,7 @@ router.post('/batch-restore', (req: Request, res: Response) => {
  */
 router.post('/seed-batches', (_req: Request, res: Response) => {
   try {
+    if (!assertMaintenanceAllowed(res)) return;
     const db = getDatabase();
     const inboundRows = db.exec("SELECT id, materials FROM inbound_records WHERE status = 'completed'");
     let count = 0;
@@ -520,6 +574,7 @@ router.post('/seed-batches', (_req: Request, res: Response) => {
  */
 router.post('/cleanup-batches', (_req: Request, res: Response) => {
   try {
+    if (!assertMaintenanceAllowed(res)) return;
     const db = getDatabase();
     // 删除重复（保留 rowid 最小）
     const dups = db.exec("SELECT material_code, batch_no, COUNT(*) as cnt, MIN(rowid) as keep_rid FROM batch_inventory GROUP BY material_code, batch_no HAVING cnt > 1");
@@ -603,8 +658,17 @@ router.delete('/inbound/:id', (req: Request, res: Response) => {
         error: `该入库单存在待审批单 ${pendingApprovalCode}，请先在「物料审批 → 物料入库」驳回/撤销后再删除`,
       });
     }
+    // 2026-09-28 审计修复：删除单据时一并清理它的库存流水——
+    // 保留会留下 business_id 指向已删除单据的孤儿流水（物料详情"库存流水"里来源单据打不开）。
+    // 安全前提：本端点只允许删非完成态单（pending 从未入账 / voided 已反向回收），
+    // 其入库流水与反向流水成对存在，删除后账目净额不变；删除动作本身由 auditTrail 中间件留痕。
+    const txRows = db.exec('SELECT COUNT(*) FROM inventory_transaction WHERE business_id = ?', [String(id)]);
+    const deletedTransactions = txRows.length > 0 && txRows[0].values.length > 0 ? Number(txRows[0].values[0][0]) || 0 : 0;
+    if (deletedTransactions > 0) {
+      db.run('DELETE FROM inventory_transaction WHERE business_id = ?', [String(id)]);
+    }
     materialsDb.deleteInboundRecord(id);
-    res.json({ success: true });
+    res.json({ success: true, deletedTransactions });
   } catch (error) {
     console.error('删除入库记录失败:', error);
     res.status(500).json({ error: '删除入库记录失败' });
@@ -715,6 +779,15 @@ router.post('/inbound/:id/reversal', (req: Request, res: Response) => {
 
     const originalCode = String(record.code || '');
     const reversalCode = `${originalCode}-CX`;
+    // 2026-09-28 审计修复：原单无单号（历史脏数据）会产出无意义的 '-CX'；
+    // 且单号现已有唯一索引，冲突时给出可读提示而非数据库报错
+    if (!originalCode) {
+      return res.status(400).json({ success: false, error: '原单缺少入库单号，无法生成冲销单（请先补全单号）' });
+    }
+    const dupReversal = db.exec('SELECT id FROM inbound_records WHERE code = ? LIMIT 1', [reversalCode]);
+    if (dupReversal.length > 0 && dupReversal[0].values.length > 0) {
+      return res.status(409).json({ success: false, error: `冲销单号 ${reversalCode} 已存在，请先核对历史冲销单` });
+    }
     const operatorName = String(req.body?.operator || (record as any).operator || '').trim() || '仓库';
     // 2026-09-27：冲销单保留原单**全部**明细（含已全部消耗的 0 冲回项）——
     // 此前只存"可冲量>0"的项，完全消耗的单变成空壳（列表显示"0 种物料"，看不出冲了什么）。

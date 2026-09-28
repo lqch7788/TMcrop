@@ -9,6 +9,7 @@ import { InboundRecord } from '../../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { INBOUND_STATUS_LABELS } from '../../utils/warehouseInbound.utils';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;
@@ -29,21 +30,9 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
   const originalCode = isReversal && record.code.endsWith('-CX') ? record.code.slice(0, -3) : '';
   const totalOriginal = record.materials.reduce((sum, m) => sum + Number(m.originalQuantity ?? m.quantity), 0);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return '已完成';
-      case 'voided': return '已作废';
-      default: return '待审核';
-    }
-  };
-
-  const getStatusClassName = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-600';
-      case 'voided': return 'text-gray-500';
-      default: return 'text-amber-600';
-    }
-  };
+  // 状态文案/样式统一取自 utils（2026-09-28：此前本文件另写一份，4 处硬编码易漂移）
+  const getStatusText = (status: string) => INBOUND_STATUS_LABELS[status]?.text || status || '未知状态';
+  const getStatusClassName = (status: string) => INBOUND_STATUS_LABELS[status]?.textClassName || 'text-gray-600';
 
   return (
     <UnifiedModal

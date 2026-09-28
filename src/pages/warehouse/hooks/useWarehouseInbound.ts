@@ -9,7 +9,6 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   InboundRecord,
-  InboundMaterial,
   InboundSearchFilters,
   CodeGenState,
   categoryConfig,
@@ -49,7 +48,6 @@ export function useWarehouseInbound() {
     addItem: storeAddItem,
     updateItem: storeUpdateItem,
     deleteItem: storeDeleteItem,
-    deleteItems: storeDeleteItems,
   } = useInboundStore();
 
   // 加载物料主数据（编码生成器依赖它算 max+1；2026-09-28 审计修复：此前本页从不加载，
@@ -89,8 +87,7 @@ export function useWarehouseInbound() {
   // 选择相关状态
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
-  // 模式状态
-  const [editMode, setEditMode] = useState(false);
+  // 模式状态（2026-09-28：editMode 死分支已移除）
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
 
@@ -100,7 +97,6 @@ export function useWarehouseInbound() {
   const [showInboundEditModal, setShowInboundEditModal] = useState(false);
   const [showInboundAddModal, setShowInboundAddModal] = useState(false);
   const [showInboundDeleteModal, setShowInboundDeleteModal] = useState(false);
-  const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   // 2026-09-27：冲销弹窗（红字单，处理"货已被领用无法作废"的场景）
   const [showReversalModal, setShowReversalModal] = useState(false);
 
@@ -230,7 +226,7 @@ export function useWarehouseInbound() {
 
   // 取消选择模式
   const onCancelSelection = useCallback(() => {
-    handleCancelSelection(setEditMode, setDeleteMode, setExportMode, setSelectedRows);
+    handleCancelSelection(setDeleteMode, setExportMode, setSelectedRows);
   }, []);
 
   // 确认导出
@@ -307,22 +303,6 @@ export function useWarehouseInbound() {
     setSelectedInboundRecord(null);
   }, [storeUpdateItem, loadItems]);
 
-  // 批量保存记录
-  // 2026-09-28 审计修复：逐条收集失败单号——此前返回值被丢弃，部分失败也照关弹窗，
-  // 用户以为全部保存成功（对齐 onConfirmInboundDelete 的 fail-loud 写法）
-  const onBatchSaveRecord = useCallback(async (records: InboundRecord[]) => {
-    const failed: string[] = [];
-    for (const record of records) {
-      const updated = await storeUpdateItem(record.id, record);
-      if (!updated) failed.push(record.code || `#${record.id}`);
-    }
-    await loadItems();
-    if (failed.length > 0) {
-      const reason = useInboundStore.getState().error || '未知原因';
-      await showAlert(`以下入库单保存失败：${failed.join('、')}\n原因：${reason}`);
-    }
-    setShowInboundEditModal(false);
-  }, [storeUpdateItem, loadItems]);
 
   // 添加记录
   const onAddRecord = useCallback(() => {
@@ -349,14 +329,6 @@ export function useWarehouseInbound() {
     return true;
   }, [storeAddItem, loadItems]);
 
-  // 确认编辑
-  const onConfirmEdit = useCallback(() => {
-    if (selectedRows.length === 0) {
-      showAlert('请先选择要编辑的记录');
-      return;
-    }
-    setShowBatchEditModal(true);
-  }, [selectedRows]);
 
   // 确认删除（批量）
   const onConfirmDelete = useCallback(() => {
@@ -418,8 +390,6 @@ export function useWarehouseInbound() {
     // 选择相关
     selectedRows,
     setSelectedRows,
-    editMode,
-    setEditMode,
     deleteMode,
     setDeleteMode,
     exportMode,
@@ -436,8 +406,6 @@ export function useWarehouseInbound() {
     setShowInboundAddModal,
     showInboundDeleteModal,
     setShowInboundDeleteModal,
-    showBatchEditModal,
-    setShowBatchEditModal,
     // 2026-09-27 冲销
     showReversalModal,
     setShowReversalModal,
@@ -488,11 +456,9 @@ export function useWarehouseInbound() {
     onBatchDeleteRecords,
     onConfirmInboundDelete,
     onSaveInboundEdit,
-    onBatchSaveRecord,
     onAddRecord,
     onGenerateOrderCode,
     onSaveNewInbound,
-    onConfirmEdit,
     onConfirmDelete,
 
     // 配置常量

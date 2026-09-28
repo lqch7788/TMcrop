@@ -17,6 +17,7 @@ import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { INBOUND_STATUS_LABELS } from '../../utils/warehouseInbound.utils';
 
 interface InboundEditModalProps {
   record: InboundRecord | null;
@@ -116,12 +117,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
     onClose();
   };
 
-  // 状态标签
-  const statusLabels: Record<string, { text: string; className: string }> = {
-    pending: { text: '待审核', className: 'text-amber-600' },
-    completed: { text: '已完成', className: 'text-green-600' },
-    voided: { text: '已作废', className: 'text-gray-500' },
-  };
+  // 状态标签统一取自 utils（2026-09-28：此前本文件另写一份中文映射，4 处硬编码易漂移）
+  const statusLabels = INBOUND_STATUS_LABELS;
 
   return (
     <UnifiedModal
@@ -216,7 +213,7 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">状态</span>
-                <span className={`text-sm font-medium ${statusLabels[record.status]?.className}`}>
+                <span className={`text-sm font-medium ${statusLabels[record.status]?.textClassName || 'text-gray-600'}`}>
                   {statusLabels[record.status]?.text}
                 </span>
               </div>
