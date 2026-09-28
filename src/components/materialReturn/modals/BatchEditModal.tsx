@@ -1,18 +1,17 @@
-import { ReturnRecord } from '../types';
+import { ReturnRecord, RecordId, MaterialItem } from '../types';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
-import { UnifiedModal } from '@/components/ui';
+import { UnifiedModal, NumberInput, DeepSelectTrigger } from '@/components/ui';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 interface BatchEditModalProps {
   open: boolean;
-  selectedRows: number[];
-  batchEditedRecords: Record<number, ReturnRecord>;
+  /** 选中的退料单 id 列表（后端 material_returns.id 为 TEXT，故用 RecordId） */
+  selectedRows: RecordId[];
+  /** 批量编辑缓存：key 为字符串形式的 id */
+  batchEditedRecords: Record<string, ReturnRecord>;
   currentBatchEditIndex: number;
   onClose: () => void;
-  onRecordChange: (records: Record<number, ReturnRecord>) => void;
+  onRecordChange: (records: Record<string, ReturnRecord>) => void;
   onIndexChange: (index: number) => void;
   onSaveAll: () => void;
   onVoidApply: (record: ReturnRecord) => void;
@@ -38,26 +37,32 @@ export function BatchEditModal({
     new Set(returnItems.flatMap(r => r.materials?.map(m => m.sourceApplicationCode) || []))
   ).filter(Boolean);
 
-  const selectedRecordsList = returnItems.filter(r => selectedRows.includes(r.id as number));
+  const selectedRecordsList = returnItems.filter(r => selectedRows.includes(r.id));
   const currentRecordId = selectedRows[currentBatchEditIndex];
+  // 批量编辑缓存以字符串 id 为 key（对象键只能是 string）
+  const currentRecordKey = currentRecordId !== undefined ? String(currentRecordId) : '';
   const currentRecord = selectedRecordsList.find(r => r.id === currentRecordId);
-  const currentEditedData = batchEditedRecords[currentRecordId] || currentRecord || {};
+  // 当前正在编辑的数据：优先取批量编辑缓存，否则回落到原始记录
+  const currentEditedData: Partial<ReturnRecord> = batchEditedRecords[currentRecordKey] || currentRecord || {};
   const editedCount = Object.keys(batchEditedRecords).length;
   const isVoidable = currentRecord?.status === '待审批' || currentRecord?.status === '已驳回';
 
-  const handleFieldChange = (field: string, value: any) => {
+  // 更新当前退料单的基本字段（泛型约束：字段名与值类型必须匹配）
+  const handleFieldChange = <K extends keyof ReturnRecord>(field: K, value: ReturnRecord[K]) => {
     onRecordChange({
       ...batchEditedRecords,
-      [currentRecordId]: { ...currentEditedData, [field]: value }
+      // 合并结果由完整记录派生，收敛为 ReturnRecord 以匹配批量编辑集合的类型
+      [currentRecordKey]: { ...currentEditedData, [field]: value } as ReturnRecord,
     });
   };
 
-  const handleMaterialChange = (index: number, field: string, value: any) => {
-    const newMaterials = [...((currentEditedData.materials as any[]) || [])];
-    newMaterials[index] = { ...newMaterials[index], [field]: value };
+  // 更新当前退料单中指定行的物料字段
+  const handleMaterialChange = (index: number, field: keyof MaterialItem, value: string | number) => {
+    const newMaterials: MaterialItem[] = [...(currentEditedData.materials || [])];
+    newMaterials[index] = { ...newMaterials[index], [field]: value } as MaterialItem;
     onRecordChange({
       ...batchEditedRecords,
-      [currentRecordId]: { ...currentEditedData, materials: newMaterials }
+      [currentRecordKey]: { ...currentEditedData, materials: newMaterials } as ReturnRecord,
     });
   };
 
@@ -88,20 +93,21 @@ export function BatchEditModal({
 
       {/* 退料单选择下拉 */}
       <div className="mb-3">
-        <select
+        <DeepSelectTrigger
           value={currentRecordId || ''}
           onChange={(e) => {
-            const idx = selectedRows.indexOf(Number(e.target.value));
+            // 下拉 value 为字符串，需按字符串比较定位索引（后端 id 为字符串主键）
+            const idx = selectedRows.findIndex(id => String(id) === e.target.value);
             onIndexChange(idx >= 0 ? idx : 0);
           }}
-          className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${deepInputClass}`}
+          className="w-full"
         >
           {selectedRecordsList.map((record, idx) => (
-            <option key={record.id} value={record.id}>
-              {record.code} ({record.applicant}) {batchEditedRecords[record.id] ? '✅️ 已编辑' : ''}
+            <option key={String(record.id)} value={String(record.id)}>
+              {record.code} ({record.applicant}) {batchEditedRecords[String(record.id)] ? '✅️ 已编辑' : ''}
             </option>
           ))}
-        </select>
+        </DeepSelectTrigger>
       </div>
 
       {/* 基本信息 - 紧凑排布，每行3个 */}
@@ -109,13 +115,13 @@ export function BatchEditModal({
         <div className="grid grid-cols-3 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">退料单号：</span>
-            <span className="font-mono font-medium text-gray-900">{(currentEditedData as any).code || '-'}</span>
+            <span className="font-mono font-medium text-gray-900">{currentEditedData.code || '-'}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">日期：</span>
             <input
               type="date"
-              value={(currentEditedData as any).date || ''}
+              value={currentEditedData.date || ''}
               onChange={(e) => handleFieldChange('date', e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
@@ -123,7 +129,7 @@ export function BatchEditModal({
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">退料类型：</span>
             <select
-              value={(currentEditedData as any).type || ''}
+              value={currentEditedData.type || ''}
               onChange={(e) => handleFieldChange('type', e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
@@ -137,7 +143,7 @@ export function BatchEditModal({
             <span className="text-gray-500 w-20 shrink-0">申请人：</span>
             <input
               type="text"
-              value={(currentEditedData as any).applicant || ''}
+              value={currentEditedData.applicant || ''}
               onChange={(e) => handleFieldChange('applicant', e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
@@ -145,7 +151,7 @@ export function BatchEditModal({
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">部门：</span>
             <select
-              value={(currentEditedData as any).department || ''}
+              value={currentEditedData.department || ''}
               onChange={(e) => handleFieldChange('department', e.target.value)}
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
@@ -159,7 +165,7 @@ export function BatchEditModal({
             <span className="text-gray-500 w-20 shrink-0">仓库位置：</span>
             <input
               type="text"
-              value={(currentEditedData as any).warehouseLocation || ''}
+              value={currentEditedData.warehouseLocation || ''}
               onChange={(e) => handleFieldChange('warehouseLocation', e.target.value)}
               placeholder="请输入"
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -169,7 +175,7 @@ export function BatchEditModal({
             <span className="text-gray-500 w-20 shrink-0">操作人：</span>
             <input
               type="text"
-              value={(currentEditedData as any).operator || ''}
+              value={currentEditedData.operator || ''}
               onChange={(e) => handleFieldChange('operator', e.target.value)}
               placeholder="请输入"
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -179,7 +185,7 @@ export function BatchEditModal({
             <span className="text-gray-500 w-20 shrink-0">审核人：</span>
             <input
               type="text"
-              value={(currentEditedData as any).reviewer || ''}
+              value={currentEditedData.reviewer || ''}
               onChange={(e) => handleFieldChange('reviewer', e.target.value)}
               placeholder="请输入"
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -188,7 +194,7 @@ export function BatchEditModal({
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">状态：</span>
             <span className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-sm text-gray-600">
-              {(currentEditedData as any).status || '-'}
+              {currentEditedData.status || '-'}
             </span>
             <span className="text-xs text-gray-400">（审批状态由系统自动生成）</span>
           </div>
@@ -196,7 +202,7 @@ export function BatchEditModal({
             <span className="text-gray-500 w-20 shrink-0">备注：</span>
             <input
               type="text"
-              value={(currentEditedData as any).remark || ''}
+              value={currentEditedData.remark || ''}
               onChange={(e) => handleFieldChange('remark', e.target.value)}
               placeholder="请输入"
               className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -209,9 +215,9 @@ export function BatchEditModal({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700">物料明细</label>
-          <span className="text-xs text-gray-500">共 {((currentEditedData as any).materials?.length || 0)} 条</span>
+          <span className="text-xs text-gray-500">共 {currentEditedData.materials?.length || 0} 条</span>
         </div>
-        {((currentEditedData as any).materials?.length || 0) > 0 ? (
+        {(currentEditedData.materials?.length || 0) > 0 ? (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="overflow-auto max-h-[320px]">
               <table className="w-full min-w-[1400px]">
@@ -242,7 +248,7 @@ export function BatchEditModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {((currentEditedData as any).materials || []).map((mat: any, idx: number) => (
+                  {(currentEditedData.materials || []).map((mat: MaterialItem, idx: number) => (
                     <tr key={idx} className="hover:bg-emerald-50/50">
                       <td className="px-3 py-2">
                         <select
@@ -298,21 +304,21 @@ export function BatchEditModal({
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        {/* 退料数量：数字输入框组件（失焦时保留 2 位小数） */}
+                        <NumberInput
                           value={mat.returnQuantity || 0}
-                          onChange={(e) => handleMaterialChange(idx, 'returnQuantity', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          onChange={(v) => handleMaterialChange(idx, 'returnQuantity', parseFloat(v) || 0)}
+                          placeholder="0"
+                          className="text-right"
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <input
-                          type="number"
+                        {/* 单价：数字输入框组件 */}
+                        <NumberInput
                           value={mat.unitPrice || 0}
-                          onChange={(e) => handleMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          onChange={(v) => handleMaterialChange(idx, 'unitPrice', parseFloat(v) || 0)}
+                          placeholder="0"
+                          className="text-right"
                         />
                       </td>
                       <td className="px-3 py-2">

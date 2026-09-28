@@ -15,7 +15,7 @@
 import { getDatabase } from './index';
 
 export interface ArchivedDocument {
-  docType: 'material_request' | 'material_execute';
+  docType: 'material_request' | 'material_execute' | 'material_return';
   docId: string;
   docCode: string;
   /** 删除前整行数据（含物料明细） */

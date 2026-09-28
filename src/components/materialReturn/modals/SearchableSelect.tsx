@@ -32,17 +32,11 @@ export function SearchableSelect({
   const [remoteOptions, setRemoteOptions] = useState<Option[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isSelectingRef = useRef(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // 点击外部关闭
+  // 点击外部关闭（选项行的 mousedown 已 preventDefault，选中选项时不会误触发关闭）
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      // 如果正在选择中，跳过
-      if (isSelectingRef.current) {
-        isSelectingRef.current = false;
-        return;
-      }
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
         setSearch('');
@@ -72,8 +66,8 @@ export function SearchableSelect({
     try {
       const results = await onSearch(keyword);
       setRemoteOptions(results);
-    } catch (error) {
-      // logger.error('搜索失败:', error);
+    } catch {
+      // 远程搜索失败时清空结果（UI 显示"无匹配结果"）
       setRemoteOptions([]);
     } finally {
       setLoading(false);
@@ -125,7 +119,6 @@ export function SearchableSelect({
   const displayText = selectedOption?.label || '';
 
   const handleSelect = (opt: Option) => {
-    isSelectingRef.current = true;
     onChange(opt.value, opt.cropCode);
     setOpen(false);
     setSearch('');
@@ -185,6 +178,8 @@ export function SearchableSelect({
                 className={`px-3 py-2 cursor-pointer hover:bg-emerald-100 ${
                   opt.value === value ? 'bg-emerald-50 font-medium' : ''
                 }`}
+                // 阻止 mousedown 默认行为，避免选中选项时触发外部点击关闭逻辑
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(opt)}
               >
                 <div className="text-sm font-mono text-gray-900">{opt.label}</div>

@@ -4,12 +4,10 @@ import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useUserStore } from '../../../stores/useUserStore';
 import { useWarehouseStore } from '../../../stores/useWarehouseStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import { SearchableSelect } from './SearchableSelect';
-import { UnifiedModal } from '@/components/ui';
+import { UnifiedModal, Button, NumberInput, ActionIconButton, DeepInput, DeepSelectTrigger } from '@/components/ui';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 interface AddModalProps {
   open: boolean;
@@ -43,8 +41,10 @@ export function AddModal({
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
   useEffect(() => { loadUsers(); loadWarehouses(); }, [loadUsers, loadWarehouses]);
 
-  // 当前操作人：Store 已有用户则取首位，否则回退到 useAuthStore 中的 username（认证信息例外）
-  const currentUserName = users[0]?.name || '当前用户';
+  // 当前操作人（2026-09-28 修复）：优先取**登录用户**（认证信息），
+  // 此前取 users[0]（用户列表首位）会显示成与操作无关的人（如"访客01"）。
+  const authUser = useAuthStore((s) => s.currentUser);
+  const currentUserName = authUser?.realName || authUser?.username || users[0]?.name || '当前用户';
 
   // 申请人 / 审核人 / 操作人：从 useUserStore 派生的真实用户列表（去重）
   const userNames = useMemo(() => Array.from(new Set(users.map((u) => u.name).filter(Boolean))), [users]);
@@ -81,25 +81,27 @@ export function AddModal({
             placeholder="点击生成获取单号"
             className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm font-mono bg-gray-50 max-w-xs"
           />
-          <button
+          <Button
+            size="sm"
             onClick={onGenerateCode}
-            className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 shrink-0"
             title="生成退料单号"
+            className="shrink-0"
           >
             <RefreshCw className="w-4 h-4" />
             生成
-          </button>
+          </Button>
         </div>
         {/* 其他字段 - 每行3个 */}
         <div className="grid grid-cols-3 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">退料日期：</span>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => onFormChange('date', e.target.value)}
-              className={`flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
-            />
+            <div className="flex-1">
+              <DeepInput
+                type="date"
+                value={form.date}
+                onChange={(e) => onFormChange('date', e.target.value)}
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">申请人：</span>
@@ -152,13 +154,14 @@ export function AddModal({
           </div>
           <div className="flex items-center gap-2 col-span-3">
             <span className="text-gray-500 w-20 shrink-0">备注：</span>
-            <input
-              type="text"
-              value={form.remark}
-              onChange={(e) => onFormChange('remark', e.target.value)}
-              placeholder="请输入"
-              className={`flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
-            />
+            <div className="flex-1">
+              <DeepInput
+                type="text"
+                value={form.remark}
+                onChange={(e) => onFormChange('remark', e.target.value)}
+                placeholder="请输入"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -227,37 +230,35 @@ export function AddModal({
                       <td className="px-3 py-2 text-sm text-center text-gray-700">{material.unit || '-'}</td>
                       <td className="px-3 py-2 text-sm text-right text-gray-700">{(material.quantity || 0).toFixed(2)}</td>
                       <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        {/* 退料数量：数字输入框组件（失焦时保留 2 位小数） */}
+                        <NumberInput
                           value={material.returnQuantity}
-                          onChange={(e) => onMaterialChange(idx, 'returnQuantity', parseFloat(e.target.value) || 0)}
-                          className={`w-full px-2 py-1 border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
+                          onChange={(v) => onMaterialChange(idx, 'returnQuantity', parseFloat(v) || 0)}
                           placeholder="0"
+                          className="text-right"
                         />
                       </td>
                       <td className="px-3 py-2 text-sm text-right text-gray-700">{material.unitPrice ? `¥${material.unitPrice.toFixed(2)}` : '-'}</td>
                       <td className="px-3 py-2 text-sm text-gray-700 truncate">{material.warehousePosition || '-'}</td>
                       <td className="px-3 py-2">
-                        <select
+                        <DeepSelectTrigger
                           value={material.reason}
                           onChange={(e) => onMaterialChange(idx, 'reason', e.target.value)}
-                          className={`w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
+                          className="w-full"
                         >
                           <option value="">请选择</option>
                           {RETURN_REASONS.map(reason => (
                             <option key={reason} value={reason}>{reason}</option>
                           ))}
-                        </select>
+                        </DeepSelectTrigger>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <button
+                        <ActionIconButton
+                          variant="delete"
+                          icon={<Trash2 className="w-4 h-4" />}
                           onClick={() => onRemoveMaterial(idx)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          title="删除物料"
+                        />
                       </td>
                     </tr>
                   ))}

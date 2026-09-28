@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
 import { applyMaterialInboundApproval } from '../services/materialInboundStock.service';
+// 2026-09-28 审批流接入：退料单审批通过时恢复库存 / 审批取消或驳回时回滚（与入库单同等对待）
+import { applyReturnStockOnApproval, revertReturnStockOnApproval } from './materialReturn';
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
 
 const router = Router();
@@ -1054,9 +1056,28 @@ export function updateBusinessTable(
         // 2026-09-27 审计修复：原实现 UPDATE material_requests（错表）——退料单 status 永不流转。
         // 改为更新 material_returns（按 id 匹配，兜底按 code），并回写审批人/审批时间/驳回原因。
         const actor = readApprovalActor(db, approvalCode);
-        const stText = status === 'approved' || status === 'partially_approved' ? '已批准'
-          : status === 'rejected' ? '已拒绝'
-          : status === 'cancelled' ? '已取消' : '待审批';
+        // 2026-09-28 审批流接入：**审批通过才恢复退料库存**（pending 不占库存）。
+        // 失败即返回 success:false —— 调用方按"库存联动硬失败"回滚审批终态，
+        // 避免出现"审批已通过但库存永远没加回仓库"的账实不符。
+        const approved = status === 'approved' || status === 'partially_approved';
+        const revoked = status === 'cancelled' || status === 'rejected';
+        if (approved) {
+          const r = applyReturnStockOnApproval(db, requestId, actor.name || '审批');
+          if (!r.changed && r.message) {
+            return { success: false, message: `退料库存恢复未执行：${r.message}` };
+          }
+        } else if (revoked) {
+          // 2026-09-28 修复：审批先通过（库存已入库）后被取消/驳回 → 必须回滚库存，
+          // 否则出现"审批撤销了但物料还留在仓库"的账实不符
+          const r = revertReturnStockOnApproval(db, requestId, actor.name || '审批');
+          if (!r.changed && r.message) {
+            return { success: false, message: `退料库存回滚未执行：${r.message}` };
+          }
+        }
+        // 状态文案与前端枚举保持一致（此前写 '已批准/已拒绝/已取消'，与前端筛选器不匹配）
+        const stText = approved ? '已审批'
+          : status === 'rejected' ? '已驳回'
+          : status === 'cancelled' ? '已作废' : '待审批';
         db.run(`
           UPDATE material_returns SET
             status = ?,
@@ -1069,8 +1090,9 @@ export function updateBusinessTable(
         `, [stText, status, actor.name, actor.time, status, actor.comment, now, requestId, requestId]);
         return { success: true, message: '退料单状态已更新' };
       } catch (e) {
+        // 库存恢复异常（物料不存在 / 批次无法回补等）→ 显式失败让调用方回滚审批
         console.error('更新退料单失败:', e);
-        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
+        return { success: false, message: '退料单联动失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 

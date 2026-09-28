@@ -15,9 +15,21 @@ export interface MaterialItem {
   remark: string;                // 备注
 }
 
+/**
+ * 记录 ID 类型（2026-09-28 审核修复）
+ * 后端 material_returns.id 是 `TEXT PRIMARY KEY`，实际值为 `TL{timestamp}-{random}` 字符串。
+ * 此前前端声明为 number，导致 `selectedRows.includes(item.id)` 恒为 false
+ * （表格勾选/展开全部失效）。统一为 RecordId 兼容字符串与历史数字 id。
+ */
+export type RecordId = string | number;
+
+// 退料状态联合类型（与后端 statusClass 英文枚举一一对应）
+// 2026-09-28 新增 'draft'：撤回审批后的可编辑态
+export type ReturnStatusClass = 'draft' | 'approved' | 'pending' | 'rejected' | 'completed' | 'voided' | '';
+
 // 退料记录类型
 export interface ReturnRecord {
-  id: number;
+  id: RecordId;
   code: string;
   date: string;
   type: string;
@@ -25,7 +37,7 @@ export interface ReturnRecord {
   department: string;
   warehouseLocation: string;
   status: string;
-  statusClass: 'approved' | 'pending' | 'rejected' | 'completed' | 'voided' | '';
+  statusClass: ReturnStatusClass;
   remark: string;
   operator: string;        // 操作人
   reviewer: string;        // 审核人
@@ -42,6 +54,8 @@ export interface SearchForm {
   applicant: string;
   status: string;
   department: string;
+  dateFrom: string;   // 2026-09-28：退料日期范围起（本地时区 YYYY-MM-DD，空串=不限）
+  dateTo: string;     // 2026-09-28：退料日期范围止（本地时区 YYYY-MM-DD，空串=不限）
 }
 
 // 编辑表单类型
@@ -79,6 +93,7 @@ export interface AddFormData {
 // 状态过滤器选项
 export const STATUS_OPTIONS = [
   { value: 'all', label: '全部状态' },
+  { value: '草稿', label: '草稿' },
   { value: '待审批', label: '待审批' },
   { value: '已审批', label: '已审批' },
   { value: '已驳回', label: '已驳回' },
@@ -108,40 +123,6 @@ export const STATUS_STYLE_MAP: Record<string, { bg: string; text: string }> = {
   '': { bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
-// File System Access API 类型声明
-interface FileSystemWritableFileStream extends WritableStream {
-  write(data: BufferSource | Blob | string | WriteParams): Promise<void>;
-  seek(position: number): Promise<void>;
-  truncate(size: number): Promise<void>;
-}
-
-interface WriteParams {
-  type: 'write' | 'seek' | 'truncate';
-  data?: BufferSource | Blob | string;
-  position?: number;
-  size?: number;
-}
-
-interface FileSystemFileHandle {
-  kind: 'file';
-  name: string;
-  getFile(): Promise<File>;
-  createWritable(options?: { keepExistingData?: boolean }): Promise<FileSystemWritableFileStream>;
-}
-
-interface FilePickerAcceptType {
-  description?: string;
-  accept: Record<string, string[]>;
-}
-
-interface SaveFilePickerOptions {
-  suggestedName?: string;
-  types?: FilePickerAcceptType[];
-  excludeAcceptAllOption?: boolean;
-}
-
-declare global {
-  interface Window {
-    showSaveFilePicker(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
-  }
-}
+// 2026-09-28 审核修复：删除手写的 File System Access API 全局声明。
+// TypeScript 5.6 的 DOM lib 已内置 `showSaveFilePicker`，此处重复声明会产生
+// TS2300 Duplicate identifier 错误；且导出场景已改用内联类型断言，不依赖此声明。
