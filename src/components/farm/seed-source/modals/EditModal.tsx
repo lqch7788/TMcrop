@@ -141,7 +141,8 @@ export function EditModal({
     const targetType = SOURCE_TYPE_TO_SUPPLIER_TYPE[record.sourceType];
     if (!targetType) return suppliers;
     const validIds = new Set(
-      allSuppliersFromStore.filter(s => s.supplierType === targetType).map(s => String(s.id))
+      // 2026-09-28：候选只含「合作中」供应商
+      allSuppliersFromStore.filter(s => (s.status === '合作中' || s.status === 'active') && (!targetType || s.supplierType === targetType)).map(s => String(s.id))
     );
     return suppliers.filter(s => validIds.has(s.value));
   }, [record.sourceType, suppliers, allSuppliersFromStore]);

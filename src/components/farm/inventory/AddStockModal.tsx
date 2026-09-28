@@ -747,7 +747,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
 
   const renderCtx = {
     warehouses: warehouses as any,
-    suppliers: supplierItems.map((s: any) => ({ id: String(s.id), name: s.name })),
+    // 2026-09-28 审计修复：只列「合作中」的供应商（停用/终止不应能用于新建入库）
+    suppliers: supplierItems.filter((s: any) => s.status === '合作中' || s.status === 'active').map((s: any) => ({ id: String(s.id), name: s.name })),
     bases: bases as any,
     formData,
     onCropChange: handleCropChange,

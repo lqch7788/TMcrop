@@ -154,13 +154,11 @@ interface SupplierCodeRuleState {
   categories: BigCategory[];
   isLoading: boolean;
   error: string | null;
-  migratedToApi: boolean;
 
   // 数据加载
   fetchCategories: () => Promise<void>;
 
   // 将本地修改同步到后端（迁移用）
-  syncLocalToApi: () => Promise<void>;
 
   // CRUD 方法（乐观更新 + API 持久化）
   setCategories: (categories: BigCategory[]) => void;
@@ -178,52 +176,35 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
       categories: defaultCategories,
       isLoading: false,
       error: null,
-      migratedToApi: false,
 
       // ---------- 获取分类（从后端 API）----------
       fetchCategories: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await enhancedApiClient.get<{
-            success: boolean;
-            data: FlatCategoryRow[];
-          }>('/api/material-code-categories?rule_type=supplier');
-
-          let data = response?.data || [];
-          if (!Array.isArray(data) && (response as any)?.data) {
-            data = Array.isArray((response as any).data) ? (response as any).data : [];
-          }
+          // 2026-09-28 审计修复：enhancedApiClient 对 {success,data} 响应会自动解包成 data（数组），
+          // 原写法 `response?.data || []` 恒为 undefined → 分类树永远为空 → 界面回落到硬编码兜底，
+          // 规则页的维护结果永远读不到（这是"编码规则页编辑无效"的第二个独立缺陷）
+          const response = await enhancedApiClient.get<FlatCategoryRow[] | { data: FlatCategoryRow[] }>(
+            '/material-code-categories?rule_type=supplier'
+          );
+          const data: FlatCategoryRow[] = Array.isArray(response)
+            ? response
+            : Array.isArray((response as any)?.data)
+              ? (response as any).data
+              : [];
 
           if (Array.isArray(data) && data.length > 0) {
             const tree = rowsToTree(data);
-
-            // 迁移检查：如果 localStorage 有修改但尚未同步到 API
-            const { migratedToApi, categories: localCats } = get();
-            if (!migratedToApi && localCats.length > 0) {
-              // 比较本地数据与默认数据的差异（忽略顺序）
-              const localStr = JSON.stringify(localCats.map(c => ({ code: c.code, name: c.name, midCount: c.midCategories.length })));
-              const defaultStr = JSON.stringify(defaultCategories.map(c => ({ code: c.code, name: c.name, midCount: c.midCategories.length })));
-              if (localStr !== defaultStr) {
-                // 本地有修改，异步同步到 API
-                // logger.info('[SupplierCodeRuleStore] 检测到本地修改，正在同步到后端...');
-                get().syncLocalToApi().then(() => {
-                  // logger.info('[SupplierCodeRuleStore] 本地修改已同步到后端');
-                });
-              } else {
-                set({ migratedToApi: true });
-              }
-            }
-
-            set({ categories: tree, isLoading: false, migratedToApi: true });
+            // 2026-09-28 审计修复（重要）：删除"本地 → API 增量同步"逻辑。
+            // 该逻辑是 localStorage 时代的遗留（V2.1 铁律已禁止本地持久化），判定条件为
+            // "本地内存分类 ≠ 硬编码默认值"——而本地内存一旦被 API 数据覆盖就永远满足，
+            // 于是**每次进入页面都会把 71 条分类整份 POST 一遍**；
+            // 原本被 404 掩盖（见 fetchCategories 的 URL 修复），URL 修好后立刻变成
+            // 无上限重复写：material_code_categories 的 supplier 行从 22/120 涨到 1327/7235。
+            // 服务端才是唯一数据源，前端只读不写。
+            set({ categories: tree, isLoading: false });
           } else {
-            // API 返回空（可能是首次启动，种子数据尚未加载）
-            // 尝试将本地数据同步到 API
-            const { categories: localCats } = get();
-            if (localCats.length > 0) {
-              get().syncLocalToApi().then(() => {
-                get().fetchCategories();
-              });
-            }
+            // API 返回空：保留硬编码兜底供首次种子环境使用，但**不再回写服务端**
             set({ isLoading: false });
           }
         } catch (error) {
@@ -231,51 +212,6 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           // zustand persist 自动从 localStorage 恢复
           set({ error: (error as Error).message, isLoading: false });
         }
-      },
-
-      // ---------- 将本地修改同步到后端 API ----------
-      syncLocalToApi: async () => {
-        const { categories: localCats } = get();
-        for (const big of localCats) {
-          try {
-            await enhancedApiClient.post('/api/material-code-categories', {
-              code: big.code,
-              name: big.name,
-              nameEn: big.nameEn || '',
-              parentCode: '',
-              level: 'big',
-              ruleType: 'supplier',
-            });
-          } catch (e) {
-            // 可能已存在，尝试更新
-            try {
-              await enhancedApiClient.put(`/api/material-code-categories/${big.code}`, {
-                name: big.name,
-                nameEn: big.nameEn || '',
-              });
-            } catch (e2) { /* 静默跳过 */ }
-          }
-
-          for (const mid of big.midCategories) {
-            try {
-              await enhancedApiClient.post('/api/material-code-categories', {
-                code: mid.code,
-                name: mid.name,
-                nameEn: '',
-                parentCode: big.code,
-                level: 'mid',
-                ruleType: 'supplier',
-              });
-            } catch (e) {
-              try {
-                await enhancedApiClient.put(`/api/material-code-categories/${mid.code}`, {
-                  name: mid.name,
-                });
-              } catch (e2) { /* 静默跳过 */ }
-            }
-          }
-        }
-        set({ migratedToApi: true });
       },
 
       // ---------- 整体设置（批量替换）----------
@@ -291,11 +227,14 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           ),
         });
         try {
-          await enhancedApiClient.put(`/api/material-code-categories/${bigCode}`, {
+          // 2026-09-28 审计修复：显式带 rule_type（后端缺省会落到 'material' 误改物料规则）+ parent_code 精确定位
+          await enhancedApiClient.put(`/material-code-categories/${bigCode}?rule_type=supplier&parent_code=`, {
             name: newName,
           });
         } catch (error) {
-          // logger.warn('[SupplierCodeRuleStore] 更新大类名称失败:', error);
+          // 2026-09-28 审计修复：不再空吞——写失败必须能从控制台/state 看到（此前界面显示成功、刷新回滚）
+          console.error('[SupplierCodeRuleStore] 更新大类名称失败:', error);
+          set({ error: error instanceof Error ? error.message : '更新大类名称失败' });
         }
       },
 
@@ -315,11 +254,13 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           ),
         }));
         try {
-          await enhancedApiClient.put(`/api/material-code-categories/${midCode}`, {
+          // 2026-09-28：中类 code 跨大类重复，必须带 parent_code（后端命中多行会 409 拒绝）
+          await enhancedApiClient.put(`/material-code-categories/${midCode}?rule_type=supplier&parent_code=${encodeURIComponent(bigCode)}`, {
             name: newName,
           });
         } catch (error) {
-          // logger.warn('[SupplierCodeRuleStore] 更新中类名称失败:', error);
+          console.error('[SupplierCodeRuleStore] 更新中类名称失败:', error);
+          set({ error: error instanceof Error ? error.message : '更新中类名称失败' });
         }
       },
 
@@ -333,7 +274,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           ],
         }));
         try {
-          await enhancedApiClient.post('/api/material-code-categories', {
+          await enhancedApiClient.post('/material-code-categories', {
             code,
             name,
             nameEn: '',
@@ -360,7 +301,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           ),
         }));
         try {
-          await enhancedApiClient.post('/api/material-code-categories', {
+          await enhancedApiClient.post('/material-code-categories', {
             code,
             name,
             nameEn: '',
@@ -380,9 +321,12 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           categories: state.categories.filter((big) => big.code !== bigCode),
         }));
         try {
-          await enhancedApiClient.delete(`/api/material-code-categories/${bigCode}`);
+          // 2026-09-28 审计修复：必须带 rule_type（后端缺省 'material' 会跨域误删物料编码规则，
+          // 物料与供应商大类 SP/EQ/OP/PH/OT 撞码）+ parent_code='' 精确定位大类
+          await enhancedApiClient.delete(`/material-code-categories/${bigCode}?rule_type=supplier&parent_code=`);
         } catch (error) {
-          // logger.warn('[SupplierCodeRuleStore] 删除大类失败:', error);
+          console.error('[SupplierCodeRuleStore] 删除大类失败:', error);
+          set({ error: error instanceof Error ? error.message : '删除大类失败' });
         }
       },
 
@@ -400,9 +344,11 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
           ),
         }));
         try {
-          await enhancedApiClient.delete(`/api/material-code-categories/${midCode}`);
+          // 2026-09-28：中类 code 跨大类重复，必须带 parent_code（否则一次停用 11 个大类下的同名中类）
+          await enhancedApiClient.delete(`/material-code-categories/${midCode}?rule_type=supplier&parent_code=${encodeURIComponent(bigCode)}`);
         } catch (error) {
-          // logger.warn('[SupplierCodeRuleStore] 删除中类失败:', error);
+          console.error('[SupplierCodeRuleStore] 删除中类失败:', error);
+          set({ error: error instanceof Error ? error.message : '删除中类失败' });
         }
       },
 

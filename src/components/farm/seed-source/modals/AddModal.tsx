@@ -158,8 +158,10 @@ export function AddModal({
   // 种源类型→供应商类型级联过滤
   const filteredSearchResults = useMemo(() => {
     const targetSupplierType = ADD_SOURCE_TYPE_TO_SUPPLIER_TYPE[formData.sourceType];
-    if (!targetSupplierType) return supplierSearchResults; // null = 展示全部
-    return supplierSearchResults.filter(s => s.supplierType === targetSupplierType);
+    // 2026-09-28 审计修复：候选只含「合作中」供应商（停用/终止不可用于新建入库）
+    const activeOnly = supplierSearchResults.filter(s => s.status === '合作中' || s.status === 'active');
+    if (!targetSupplierType) return activeOnly; // null = 展示全部
+    return activeOnly.filter(s => s.supplierType === targetSupplierType);
   }, [supplierSearchResults, formData.sourceType]);
 
   // 2026-07-07 V3.4：seedSavingInit useEffect 已删除（外购入库 + 留种回流转入全部从种植/育苗模块走）

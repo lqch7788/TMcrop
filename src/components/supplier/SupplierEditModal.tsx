@@ -141,8 +141,22 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
         lastEditBy: '',
         lastEditTime: todayLocal()
       });
+      // 2026-09-28 审计修复：地区级联节点此前从不同步 → 编辑已有供应商时省市显示为空，
+      // 且跨供应商残留（编辑 A 后取消再编辑 B，界面仍显示 A 的省市）。
+      // 这里按当前供应商的 province/city 重建节点；数据缺失则清空，避免串档。
+      // CascaderValueNode 需要 { id, name }（见 ui/Cascader.tsx:18）——用区域名做键，仅为回显
+      setRegionPathNodes(
+        supplier.province
+          ? [
+              { id: 0, name: supplier.province },
+              ...(supplier.city ? [{ id: 1, name: supplier.city }] : []),
+            ]
+          : []
+      );
     }
-  }, [supplier]);
+    // 2026-09-28 审计修复：依赖加 isOpen——弹窗常驻挂载，同一供应商"改→取消→再编辑"时
+    // supplier 引用不变、effect 不重跑，表单里留的是上次被放弃的草稿，直接保存就会写库
+  }, [supplier, isOpen]);
 
   const handleChange = (field: keyof EditFormData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));

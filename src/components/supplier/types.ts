@@ -12,7 +12,9 @@ export interface SupplierBigCategory {
 }
 
 export interface Supplier {
-  id: number;
+  // 2026-09-28 审计修复：DB 主键是 TEXT（SUP001 / SU_SP03014），原声明 number 是类型谎言——
+  // 批量编辑据此做 Number(id) 得到 NaN，UPDATE 命中 0 行仍返回成功
+  id: string;
   code: string;
   name: string;
   supplierType: string;
