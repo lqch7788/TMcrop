@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Check, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
-import { Supplier } from './types';
+import { Supplier, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -296,8 +296,10 @@ export default function SupplierBatchEditModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">不修改</SelectItem>
-                  <SelectItem value="宁波帮帮忙公司">宁波帮帮忙公司</SelectItem>
-                  <SelectItem value="成都帮帮您公司">成都帮帮您公司</SelectItem>
+                  {/* 2026-09-28：选项取自 types.ts 常量，消除 4 处硬编码 */}
+                  {SUPPLIER_ORGANIZATION_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -312,9 +314,10 @@ export default function SupplierBatchEditModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">不修改</SelectItem>
-                  <SelectItem value="合作中">合作中</SelectItem>
-                  <SelectItem value="暂停">暂停</SelectItem>
-                  <SelectItem value="终止">终止</SelectItem>
+                  {/* 2026-09-28：三态选项取自 types.ts 常量（与合作中/暂停/终止 → active/paused/terminated 映射一致） */}
+                  {SUPPLIER_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

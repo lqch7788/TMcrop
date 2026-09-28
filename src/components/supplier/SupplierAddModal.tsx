@@ -1,7 +1,7 @@
 // 供应商新增弹窗组件 - 参照物料入库 InboundAddModal 样式
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Send, X } from 'lucide-react';
-import { Supplier, NewSupplierData } from './types';
+import { Supplier, NewSupplierData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -371,8 +371,10 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">请选择组织</SelectItem>
-                  <SelectItem value="宁波帮帮忙公司">宁波帮帮忙公司</SelectItem>
-                  <SelectItem value="成都帮帮您公司">成都帮帮您公司</SelectItem>
+                  {/* 2026-09-28：选项取自 types.ts 常量，消除 4 处硬编码 */}
+                  {SUPPLIER_ORGANIZATION_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -410,9 +412,10 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="合作中">合作中</SelectItem>
-                  <SelectItem value="暂停">暂停</SelectItem>
-                  <SelectItem value="终止">终止</SelectItem>
+                  {/* 2026-09-28：三态选项取自 types.ts 常量（与合作中/暂停/终止 → active/paused/terminated 映射一致） */}
+                  {SUPPLIER_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

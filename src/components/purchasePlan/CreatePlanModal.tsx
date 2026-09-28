@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
+import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
+import { useSupplierStore } from '@/stores/useSupplierStore';
 import { useDictionaryStore, useProductionPlanStore } from '../../stores';
 import { logger } from '../../lib/logger';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
@@ -625,11 +627,16 @@ export function CreatePlanModal({
                         </span>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <Input
+                        {/* 2026-09-28 批次A-2：供应商改为主数据下拉（与物料入库同款组件）——
+                            选中即回填名称并记录主数据 id；此前为自由文本，导致主数据形同虚设（31 个供应商名仅 4 个匹配） */}
+                        <SupplierSearchInput
                           value={item.supplier}
-                          onChange={(e) => handleUpdateItem(item.id, 'supplier', e.target.value)}
-                          placeholder="供应商"
-                          className={deepInputClass}
+                          onChange={(name) => {
+                            handleUpdateItem(item.id, 'supplier', name);
+                            const matched = useSupplierStore.getState().items.find((s) => s.name === name.trim());
+                            handleUpdateItem(item.id, 'supplierId', matched ? String(matched.id) : '');
+                          }}
+                          placeholder="搜索供应商"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">

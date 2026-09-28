@@ -1,6 +1,6 @@
 // 供应商编辑弹窗组件
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Supplier, EditFormData } from './types';
+import { Supplier, EditFormData, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
 import { getSupplierTypeName } from './data';
 import { UnifiedModal } from '@/components/ui';
 import { Input } from '@/components/ui';

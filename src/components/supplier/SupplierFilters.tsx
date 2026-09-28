@@ -1,13 +1,13 @@
-// 供应商筛选组件 - 含四级区域级联筛选（方案6.1）
+// 供应商筛选组件 - 含省/市两级区域级联筛选（2026-09-28：原四级中的区县分支已移除，数据源无区县层级）
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
-import { SupplierFiltersState } from './types';
+import { SupplierFiltersState, SUPPLIER_STATUS_OPTIONS, SUPPLIER_ORGANIZATION_OPTIONS } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { useDictionaryStore, useRegionStore } from '../../stores';
+import { useDictionaryStore, useRegionStore, useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierFiltersProps {
   filters: SupplierFiltersState;
@@ -29,20 +29,28 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
     }
   }, [dictionaries.length, loadDictionaries]);
 
+  // 2026-09-28：类型选项与编码规则同源（store 已在页面/规则页加载）
+  const categories = useSupplierCodeRuleStore((s) => s.categories);
+
   const attributeOptions = useMemo(() => {
     const attrs = dictionaries.filter(d => d.categoryCode === 'supplier_attribute' && d.status === 'active');
     return ['全部', ...attrs.map(a => a.dictLabel)];
   }, [dictionaries]);
 
-  const typeOptions = ['全部', 'SP', 'FE', 'PP', 'EQ', 'FA', 'IR', 'OP', 'PH', 'TS', 'UT', 'OT'];
-  const statusOptions = ['全部', '合作中', '暂停', '终止'];
-  const organizationOptions = ['全部', '宁波帮帮忙公司', '成都帮帮您公司'];
+  // 2026-09-28 审计修复：三组选项不再硬编码在组件内——
+  // 类型取自编码规则 store（与后端 material_code_categories 同源，规则页新增分类即时可用），
+  // 状态/组织取自 types.ts 的统一常量（此前 4 处各写一遍）
+  const typeOptions = useMemo(
+    () => ['全部', ...categories.map((c) => c.code)],
+    [categories]
+  );
+  const statusOptions = useMemo(() => ['全部', ...SUPPLIER_STATUS_OPTIONS], []);
+  const organizationOptions = useMemo(() => ['全部', ...SUPPLIER_ORGANIZATION_OPTIONS], []);
 
   // 四级区域级联筛选（方案6.1）
   const { provinces, fetchProvinces, getChildren } = useRegionStore();
   const [provinceOptions, setProvinceOptions] = useState<Array<{value: string; label: string}>>([]);
   const [cityOptions, setCityOptions] = useState<Array<{value: string; label: string}>>([]);
-  const [districtOptions, setDistrictOptions] = useState<Array<{value: string; label: string}>>([]);
 
   useEffect(() => { fetchProvinces(); }, [fetchProvinces]);
   useEffect(() => {
@@ -58,38 +66,16 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
     }
   }, [provinces, getChildren]);
 
-  const loadDistricts = useCallback(async (cityName: string) => {
-    if (!cityName) { setDistrictOptions([]); return; }
-    // 从所有市选项中找对应ID
-    const allCities = cityOptions.filter(c => c.value !== '');
-    const cityId = allCities.find(c => c.value === cityName)?.value;
-    // 由于我们存的是name不是id，需要从provinces的子节点中找
-    for (const p of provinces) {
-      const children = await getChildren(p.id);
-      const city = children.find(c => c.name === cityName);
-      if (city) {
-        const districts = await getChildren(city.id);
-        setDistrictOptions([{ value: '', label: '全部' }, ...districts.map(d => ({ value: d.name, label: d.name }))]);
-        return;
-      }
-    }
-    setDistrictOptions([]);
-  }, [provinces, cityOptions, getChildren]);
-
   const handleProvinceChange = (value: string) => {
     onFilterChange('province', value);
     onFilterChange('city', '');
-    onFilterChange('district', '');
     setCityOptions([]);
-    setDistrictOptions([]);
     loadCities(value);
   };
 
   const handleCityChange = (value: string) => {
+    // 2026-09-28：区县分支已移除（数据源无区县层级）
     onFilterChange('city', value);
-    onFilterChange('district', '');
-    setDistrictOptions([]);
-    loadDistricts(value);
   };
 
   return (
@@ -264,24 +250,6 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           </div>
 
           {/* 区域级联：区 */}
-          <div>
-            <Label className="block text-sm font-medium text-gray-700 mb-1">区县</Label>
-            <Select
-              value={(filters.district ?? '') || ''}
-              onValueChange={(val) => onFilterChange('district', val)}
-              disabled={!(filters.city ?? '')}
-            >
-              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
-                <SelectValue placeholder="全部" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部</SelectItem>
-                {districtOptions.filter(d => d.value !== '').map(d => (
-                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* 供应商编号 */}
           <div>
@@ -312,7 +280,6 @@ export function filterSuppliers<T extends {
   organization: string;
   province?: string;
   city?: string;
-  district?: string;
 }>(suppliers: T[], filters: SupplierFiltersState): T[] {
   return suppliers.filter(supplier => {
     if (filters.code && !supplier.code.toLowerCase().includes(filters.code.toLowerCase())) return false;
@@ -325,7 +292,7 @@ export function filterSuppliers<T extends {
     // 区域级联
     if (filters.province && supplier.province !== filters.province) return false;
     if (filters.city && supplier.city !== filters.city) return false;
-    if (filters.district && (supplier as any).district !== filters.district) return false;
+    // 2026-09-28：区县谓词已移除（suppliers 无该列）
     return true;
   });
 }

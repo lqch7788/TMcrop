@@ -19,6 +19,13 @@ import { useSupplierStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '@/lib/apiClient';
 
+/** 2026-09-28 审计修复：导出转义工具（此前 CSV 无 BOM/未转义、HTML 直接拼原值） */
+const escapeHtml = (v: string): string =>
+  v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** 中和 Excel 公式注入（以 = + - @ 开头的值会被当公式执行） */
+const neutralizeFormula = (v: string): string => (/^[=+\-@]/.test(v) ? `'${v}` : v);
+
 export default function SupplierManagementPage() {
   const navigate = useNavigate();
 
@@ -81,6 +88,13 @@ export default function SupplierManagementPage() {
 
   // 筛选后的供应商
   const filteredSuppliers = useMemo(() => filterSuppliers(suppliers, filters), [suppliers, filters]);
+
+  // 2026-09-28 审计修复：页码越界回收——删除/筛选导致总页数变少时，
+  // 此前 currentPage 停在旧值 → slice 越界 → 表格整块空白且无提示
+  useEffect(() => {
+    const totalPages = Math.ceil(filteredSuppliers.length / pageSize) || 1;
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [filteredSuppliers.length, pageSize, currentPage]);
 
   // 筛选变化处理
   const handleFilterChange = (key: keyof SupplierFiltersState, value: string) => {
@@ -277,8 +291,8 @@ export default function SupplierManagementPage() {
     setShowBatchDeleteConfirm(false);
   };
 
-  // 导出操作
-  const handleDoExport = () => {
+  // 导出操作（2026-09-28：改 async 以支持未知格式时 await showAlert）
+  const handleDoExport = async () => {
     const selectedData = selectedRows.length > 0
       ? suppliers.filter(s => selectedRows.includes(s.id))
       : filteredSuppliers;
@@ -312,15 +326,18 @@ export default function SupplierManagementPage() {
     let extension = '';
 
     if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + rowsForExport.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
+      // 2026-09-28 审计修复：① 加 UTF-8 BOM（项目另 3 处导出都有，此前 Excel 打开中文乱码）
+      // ② 值内双引号转义为两个双引号，避免含引号的名称/地址冲乱列结构
+      content = '\ufeff' + headers.map(h => `"${h}"`).join(',') + '\n' + rowsForExport.map(row =>
+        headers.map(h => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(',')
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
     } else if (exportFormat === 'excel') {
       const bankCardIndex = headers.indexOf('银行卡号');
       content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rowsForExport.map(row => `<tr>${headers.map((h, i) => {
-        const value = row[h] || '';
+        // 2026-09-28 审计修复：HTML 实体转义（含 <&>" 会破坏文件结构）+ 中和 Excel 公式前缀
+        const value = escapeHtml(neutralizeFormula(String(row[h] ?? '')));
         if (i === bankCardIndex && value) {
           return `<td style="mso-number-format:\\@">${value}</td>`;
         }
@@ -331,7 +348,8 @@ export default function SupplierManagementPage() {
     } else if (exportFormat === 'word') {
       const bankCardIndex = headers.indexOf('银行卡号');
       content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${rowsForExport.map(row => `<tr>${headers.map((h, i) => {
-        const value = row[h] || '';
+        // 2026-09-28 审计修复：HTML 实体转义（含 <&>" 会破坏文件结构）+ 中和 Excel 公式前缀
+        const value = escapeHtml(neutralizeFormula(String(row[h] ?? '')));
         if (i === bankCardIndex && value) {
           return `<td style="mso-number-format:\\@">${value}</td>`;
         }
@@ -339,6 +357,10 @@ export default function SupplierManagementPage() {
       }).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/msword;charset=utf-8';
       extension = 'doc';
+    } else {
+      // 2026-09-28 审计修复：未知格式此前静默产出 0 字节无扩展名文件
+      await showAlert(`不支持的导出格式：${exportFormat}`);
+      return;
     }
 
     const blob = new Blob([content], { type: mimeType });

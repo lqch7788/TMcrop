@@ -47,6 +47,16 @@ export interface Supplier {
   [key: string]: any;
 }
 
+/**
+ * 2026-09-28 审计修复：状态/组织选项集中到此处（此前在筛选器与 3 个弹窗里各写一遍）
+ * 注意：状态值与 useSupplierStore 的 STATUS_TO_BACKEND 映射一一对应；
+ * DB 字典 dictionaries(supplier_status) 亦定义同三态（active/paused/terminated）。
+ */
+export const SUPPLIER_STATUS_OPTIONS = ['合作中', '暂停', '终止'] as const;
+
+/** 所属组织选项（当前两套主体；接入 organizations 表后可从字典派生） */
+export const SUPPLIER_ORGANIZATION_OPTIONS = ['宁波帮帮忙公司', '成都帮帮您公司'] as const;
+
 export interface SupplierFiltersState {
   code: string;
   name: string;
@@ -55,10 +65,10 @@ export interface SupplierFiltersState {
   status: string;
   supplierAttribute: string;
   organization: string;
-  /** 区域级联筛选（方案6.1） */
+  /** 区域级联筛选（方案6.1）——2026-09-28：仅省/市两级（region_data 无区县层级，
+   *  且 suppliers 表无 district 列，原"四级级联"的区县分支恒筛空，已移除） */
   province?: string;
   city?: string;
-  district?: string;
 }
 
 export interface EditFormData {

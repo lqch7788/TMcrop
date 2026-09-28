@@ -78,6 +78,15 @@ export default function SupplierTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
+            {/* 2026-09-28 审计修复：空结果此前渲染整块空白（无"暂无数据"），
+                叠加页码越界时用户会以为数据丢了 */}
+            {displayedSuppliers.length === 0 && (
+              <tr>
+                <td colSpan={12} className="px-4 py-10 text-center text-gray-500">
+                  {suppliers.length === 0 ? '没有符合条件的供应商（可尝试重置筛选条件）' : '当前页没有数据（可尝试回到上一页）'}
+                </td>
+              </tr>
+            )}
             {displayedSuppliers.map((supplier) => (
               <tr key={supplier.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode || deleteMode) && (
