@@ -17,6 +17,7 @@ import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
 import { useSupplierStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
+import { enhancedApiClient } from '@/lib/apiClient';
 
 export default function SupplierManagementPage() {
   const navigate = useNavigate();
@@ -47,7 +48,8 @@ export default function SupplierManagementPage() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  // 2026-09-28：id 是字符串主键（TEXT），selectedRows 同步为 string[]
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
@@ -66,7 +68,8 @@ export default function SupplierManagementPage() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   // 批量编辑状态（逐条编辑+累积保存模式，参照物料入库）
-  const [batchEditedSuppliers, setBatchEditedSuppliers] = useState<Record<number, Partial<Supplier>>>({});
+  // 2026-09-28：id 为字符串主键，批量编辑的索引键同步为 string
+  const [batchEditedSuppliers, setBatchEditedSuppliers] = useState<Record<string, Partial<Supplier>>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
 
   // 编码生成器状态（内联展开，参照物料入库）
@@ -131,7 +134,8 @@ export default function SupplierManagementPage() {
     setCurrentBatchEditIndex(index);
   };
 
-  const handleBatchFieldChange = (supplierId: number, field: string, value: string) => {
+  // 2026-09-28：id 为字符串主键
+  const handleBatchFieldChange = (supplierId: string, field: string, value: string) => {
     setBatchEditedSuppliers(prev => ({
       ...prev,
       [supplierId]: { ...(prev[supplierId] || {}), [field]: value },
@@ -152,11 +156,11 @@ export default function SupplierManagementPage() {
     }
     let successCount = 0;
     for (const [idStr, updates] of entries) {
-      const id = Number(idStr);
-      const result = await storeUpdateItem(id, updates);
+      // 2026-09-28 审计修复：id 是字符串主键（SUP001 / SU_SP03014），Number() 会得到 NaN → PUT 打空
+      const result = await storeUpdateItem(idStr, updates);
       if (result) successCount++;
     }
-    await loadItems();
+    await loadItems(true);
     setBatchEditedSuppliers({});
     setCurrentBatchEditIndex(0);
     setSelectedRows([]);
@@ -199,7 +203,7 @@ export default function SupplierManagementPage() {
     }
   };
 
-  const handleSelectRow = (id: number) => {
+  const handleSelectRow = (id: string) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
     } else {
@@ -223,33 +227,37 @@ export default function SupplierManagementPage() {
   };
 
   // 保存操作
+  // 2026-09-28 审计修复：失败时透出后端真实原因（此前一律"请重试/检查网络"，掩盖了
+  // 编码重复 409、必填 400、被引用 409 等业务原因）；成功后强制刷新（force 绕过 5 分钟 stale 窗口）
   const handleSaveEdit = async (updatedSupplier: Supplier) => {
     const result = await storeUpdateItem(updatedSupplier.id, updatedSupplier);
     if (result) {
-      await loadItems();
+      await loadItems(true);
       setShowEditModal(false);
     } else {
-      await showAlert('编辑失败，请重试');
+      await showAlert(`编辑失败：${useSupplierStore.getState().error || '未知原因'}`);
     }
   };
 
   const handleSaveAdd = async (newSupplier: Supplier) => {
     const result = await storeAddItem(newSupplier);
     if (result) {
-      await loadItems();
+      await loadItems(true);
       setShowAddModal(false);
-    } else {
-      await showAlert('添加失败，请检查网络连接或联系管理员');
+      return true;
     }
+    await showAlert(`添加失败：${useSupplierStore.getState().error || '未知原因'}`);
+    return false;
   };
 
   const handleConfirmDelete = async () => {
     if (selectedSupplier) {
       const result = await storeDeleteItem(selectedSupplier.id);
       if (result) {
-        await loadItems();
+        await loadItems(true);
       } else {
-        await showAlert('删除失败，请重试');
+        // 被业务引用时后端返回 409 + 引用明细，这里原样展示
+        await showAlert(`删除失败：${useSupplierStore.getState().error || '未知原因'}`);
       }
       setSelectedSupplier(null);
     }
@@ -297,19 +305,21 @@ export default function SupplierManagementPage() {
       '备注': row.remarks || ''
     }));
 
+    // 2026-09-28：headers 是 string[]，行对象按表头中文键索引 —— 显式声明索引签名，避免 TS7053
+    const rowsForExport: Array<Record<string, string>> = exportData as unknown as Array<Record<string, string>>;
     let content = '';
     let mimeType = '';
     let extension = '';
 
     if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
+      content = headers.join(',') + '\n' + rowsForExport.map(row =>
         headers.map(h => `"${row[h] || ''}"`).join(',')
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
     } else if (exportFormat === 'excel') {
       const bankCardIndex = headers.indexOf('银行卡号');
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map((h, i) => {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${rowsForExport.map(row => `<tr>${headers.map((h, i) => {
         const value = row[h] || '';
         if (i === bankCardIndex && value) {
           return `<td style="mso-number-format:\\@">${value}</td>`;
@@ -320,7 +330,7 @@ export default function SupplierManagementPage() {
       extension = 'xls';
     } else if (exportFormat === 'word') {
       const bankCardIndex = headers.indexOf('银行卡号');
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map((h, i) => {
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${rowsForExport.map(row => `<tr>${headers.map((h, i) => {
         const value = row[h] || '';
         if (i === bankCardIndex && value) {
           return `<td style="mso-number-format:\\@">${value}</td>`;
@@ -347,17 +357,30 @@ export default function SupplierManagementPage() {
   };
 
   // 编码生成
-  const handleGenerateCode = useCallback(() => {
+  // 2026-09-28 审计修复：编码生成改为调用后端 /api/suppliers/generate-code
+  // 原实现用 Math.floor(Math.random()*99)+1 出流水号（违反《业务编码生成契约规则》：
+  // 禁随机、须按前缀自增、跨端一致），序列空间仅 001-099 且从不查重。
+  const handleGenerateCode = useCallback(async () => {
     setCodeGenError('');
     setCodeGenSuccess('');
     if (!codeGen.bigCategory || !codeGen.midCategory) {
       setCodeGenError('请选择供应商大类和供应商中类');
       return;
     }
-    const serialNum = String(Math.floor(Math.random() * 99) + 1).padStart(3, '0');
-    const code = `SU_${codeGen.bigCategory}${codeGen.midCategory}${serialNum}`;
-    setCodeGen(prev => ({ ...prev, generatedCode: code }));
-    setCodeGenSuccess('编码生成成功！');
+    try {
+      const res = await enhancedApiClient.get<{ code?: string } | { data?: { code?: string } }>(
+        `/suppliers/generate-code?big=${encodeURIComponent(codeGen.bigCategory)}&mid=${encodeURIComponent(codeGen.midCategory)}`
+      );
+      const code = (res as { code?: string })?.code || (res as { data?: { code?: string } })?.data?.code || '';
+      if (!code) {
+        setCodeGenError('编码生成失败：后端未返回编码');
+        return;
+      }
+      setCodeGen(prev => ({ ...prev, generatedCode: code }));
+      setCodeGenSuccess(`编码生成成功：${code}`);
+    } catch (error) {
+      setCodeGenError(`编码生成失败：${error instanceof Error ? error.message : '未知错误'}`);
+    }
   }, [codeGen.bigCategory, codeGen.midCategory]);
 
   const handleCopyCode = useCallback(() => {

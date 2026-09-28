@@ -302,7 +302,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
 // 筛选函数（含区域级联筛选 方案6.1）
 export function filterSuppliers<T extends {
-  id: number;
+  id: string;
   code: string;
   name: string;
   contact: string;

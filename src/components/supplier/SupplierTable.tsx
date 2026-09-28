@@ -10,14 +10,14 @@ interface SupplierTableProps {
   suppliers: Supplier[];
   currentPage: number;
   pageSize: number;
-  selectedRows: number[];
+  selectedRows: string[];
   exportMode: boolean;
   batchEditMode: boolean;
   deleteMode: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSelectAll: () => void;
-  onSelectRow: (id: number) => void;
+  onSelectRow: (id: string) => void;
   onView: (supplier: Supplier) => void;
   onEdit: (supplier: Supplier) => void;
   onDelete: (supplier: Supplier) => void;

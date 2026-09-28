@@ -1319,6 +1319,16 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE suppliers ADD COLUMN create_date TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE suppliers ADD COLUMN area TEXT DEFAULT ''`); } catch (e) {}
 
+  // 2026-09-28 审计修复：供应商编码/名称唯一索引（此前无任何唯一约束，
+  // 前端 Math.random 出号 + 后端零查重 → 可产生重码；id=code 的设计下重码还会主键冲突）
+  // 历史库若已有重码/重名会建索引失败——只告警不阻断启动（需人工核对）
+  try {
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_code_unique ON suppliers(supplier_code)');
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_name_unique ON suppliers(supplier_name)');
+  } catch (e) {
+    console.error('⚠ [schema] 供应商编码/名称唯一索引创建失败（历史库可能存在重码/重名，请人工核对）:', e instanceof Error ? e.message : e);
+  }
+
   // 为农事任务表添加创建者ID关联（如果还没有的话）
   try {
     db.run(`ALTER TABLE farm_tasks ADD COLUMN create_by_id TEXT`);

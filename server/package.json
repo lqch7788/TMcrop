@@ -10,6 +10,8 @@
     "seed": "tsx src/db/seedData.ts",
     "migrate:seed-inventory-stock": "tsx scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts",
     "migrate:seed-inventory-stock:dry-run": "tsx scripts/db-migrations/migrateSeedSourcesToInventoryStock.ts --dry-run",
+    "migrate:dedupe-code-categories": "tsx scripts/db-migrations/dedupeMaterialCodeCategories.ts",
+    "migrate:dedupe-code-categories:dry-run": "tsx scripts/db-migrations/dedupeMaterialCodeCategories.ts --dry-run",
     "migrate:inventory-id-format": "tsx scripts/db-migrations/migrateInventoryIdFormat.ts",
     "migrate:inventory-id-format:dry-run": "tsx scripts/db-migrations/migrateInventoryIdFormat.ts --dry-run",
     "migrate:tx-id-format": "tsx scripts/db-migrations/migrateTransactionIdFormat.ts",

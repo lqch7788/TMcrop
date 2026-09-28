@@ -25,7 +25,8 @@ import { showAlert } from '@/lib/dialogService';
 interface SupplierAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (supplier: Supplier) => void;
+  /** 2026-09-28：允许返回 false 表示保存失败（弹窗据此保留草稿） */
+  onAdd: (supplier: Supplier) => void | Promise<unknown>;
   generatedCode?: string;
 }
 
@@ -121,6 +122,8 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
   });
 
   // 弹窗最大化状态
+  // 2026-09-28：提交中标记（防重复提交）
+  const [submitting, setSubmitting] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
@@ -190,7 +193,35 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  /** 表单重置（提交成功 / 关闭时共用） */
+  const resetForm = () => {
+    setRegionPathNodes([]);
+    setForm({
+      organization: '', code: '', name: '', supplierType: '', supplierAttribute: '',
+      contact: '', mobilePhone: '', workPhone: '', fax: '', country: '中国',
+      province: '', city: '', address: '', status: '合作中',
+      bankName: '', bankCardNumber: '', createDate: today, remarks: ''
+    });
+  };
+
+  const handleSubmit = async () => {
+    // 2026-09-28 审计修复：必填校验——UI 上带 * 的 6 个字段此前**完全不校验**
+    // （validators 对空串一律放行），空编码+空名称可直接提交并落库
+    const requiredFields: Array<{ key: keyof typeof form; label: string }> = [
+      { key: 'organization', label: '所属组织' },
+      { key: 'code', label: '供应商编号' },
+      { key: 'name', label: '供应商名称' },
+      { key: 'supplierType', label: '供应类型' },
+      { key: 'supplierAttribute', label: '供应商属性' },
+      { key: 'contact', label: '联系人' },
+      { key: 'mobilePhone', label: '移动电话' },
+    ];
+    const missing = requiredFields.filter((f) => !String(form[f.key] || '').trim()).map((f) => f.label);
+    if (missing.length > 0) {
+      await showAlert(`请填写必填项：${missing.join('、')}`);
+      return;
+    }
+
     // 格式验证（对标 iAGS purchaserManagement 第613-670行）
     const errors = runValidations([
       { field: 'mobilePhone', valid: validateMobilePhone(form.mobilePhone), message: '请输入移动电话号码' },
@@ -200,24 +231,31 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
       { field: 'code', valid: validateCode(form.code), message: '标识码只能包含字母、数字、下划线和连字符' },
     ]);
     if (errors.length > 0) {
-      showAlert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
+      await showAlert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
       return;
     }
 
-    const newSupplier: Supplier = {
-      id: Date.now(),
-      ...form
-    };
-    onAdd(newSupplier);
-    // 重置表单
-    setRegionPathNodes([]);
-    setForm({
-      organization: '', code: '', name: '', supplierType: '', supplierAttribute: '',
-      contact: '', mobilePhone: '', workPhone: '', fax: '', country: '中国',
-      province: '', city: '', address: '', status: '合作中',
-      bankName: '', bankCardNumber: '', createDate: today, remarks: ''
-    });
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const newSupplier: Supplier = {
+        id: form.code, // 2026-09-28：id 用编码（string），与后端 TEXT 主键一致（原 Date.now() 是数字，类型不符）
+        ...form,
+        code: form.code.trim(),
+        name: form.name.trim(),
+      };
+      // 2026-09-28 审计修复：等待保存结果——失败时保留草稿（此前先清表单，用户 18 个字段白填）
+      const ok = await (onAdd as unknown as (s: Supplier) => Promise<unknown> | unknown)(newSupplier);
+      if (ok === false) return;
+      resetForm();
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // 2026-09-28 审计修复：关闭时重置草稿——组件常驻挂载，此前取消后再打开会带出上一单内容
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!isOpen) resetForm(); }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -494,7 +532,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
           <Button variant="secondary" onClick={onClose}>
             <X className="w-4 h-4" /> 取消
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={submitting}>
             <Send className="w-4 h-4" /> 提交
           </Button>
         </div>

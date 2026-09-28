@@ -19,11 +19,11 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 interface SupplierBatchEditModalProps {
   isOpen: boolean;
   selectedSuppliers: Supplier[];
-  batchEditedSuppliers: Record<number, Partial<Supplier>>;
+  batchEditedSuppliers: Record<string, Partial<Supplier>>;
   currentBatchEditIndex: number;
   onClose: () => void;
   onSupplierSelect: (index: number) => void;
-  onFieldChange: (supplierId: number, field: string, value: string) => void;
+  onFieldChange: (supplierId: string, field: string, value: string) => void;
   onNext: () => void;
   onSaveAll: () => void;
 }
@@ -61,7 +61,7 @@ export default function SupplierBatchEditModal({
   // 当前编辑的供应商
   const currentSupplierId = selectedSuppliers[currentBatchEditIndex]?.id;
   const currentSupplier = selectedSuppliers[currentBatchEditIndex];
-  const currentEdits = batchEditedSuppliers[currentSupplierId] || {};
+  const currentEdits = (currentSupplierId != null ? batchEditedSuppliers[String(currentSupplierId)] : undefined) || {};
   const editedCount = Object.keys(batchEditedSuppliers).length;
 
   // 拖拽处理
@@ -179,7 +179,8 @@ export default function SupplierBatchEditModal({
           <Select
             value={currentSupplierId != null ? String(currentSupplierId) : ''}
             onValueChange={(val) => {
-              const idx = selectedSuppliers.findIndex(s => s.id === Number(val));
+              // 2026-09-28：id 为字符串主键，Number('SUP001')=NaN 会让切换永远无效
+              const idx = selectedSuppliers.findIndex(s => String(s.id) === String(val));
               if (idx >= 0) onSupplierSelect(idx);
             }}
           >
@@ -189,7 +190,7 @@ export default function SupplierBatchEditModal({
             <SelectContent>
               {selectedSuppliers.map((s) => (
                 <SelectItem key={s.id} value={String(s.id)}>
-                  {s.code} — {s.name} {batchEditedSuppliers[s.id] ? ' ✅' : ''}
+                  {s.code} — {s.name} {batchEditedSuppliers[String(s.id)] ? ' ✅' : ''}
                 </SelectItem>
               ))}
             </SelectContent>

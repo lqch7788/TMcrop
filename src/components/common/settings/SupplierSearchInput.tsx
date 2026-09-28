@@ -47,8 +47,10 @@ export function SupplierSearchInput({
   }, [loadSuppliers]);
 
   // 按关键字过滤（search 内部读 store 快照，必须把 supplierItems 列为依赖，数据到位后才会重算）
+  // 2026-09-28 审计修复：只提供「合作中」的供应商——此前下拉吃全量，
+  // 「暂停/终止」的供应商仍能被选来建立新的入库/物料业务
   const filtered = useMemo(
-    () => searchSuppliers(value).slice(0, MAX_RESULTS),
+    () => searchSuppliers(value).filter((s) => s.status === '合作中' || s.status === 'active').slice(0, MAX_RESULTS),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [value, supplierItems, searchSuppliers]
   );

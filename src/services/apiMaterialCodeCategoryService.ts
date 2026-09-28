@@ -52,13 +52,13 @@ export async function createCategory(payload: CreateCategoryPayload): Promise<Ma
   if (data && data.id) {
     return data;
   }
-  throw new Error(data?.error || '创建分类失败');
+  throw new Error((data as { error?: string } | null)?.error || '创建分类失败');
 }
 
 // 更新分类名称
 // PUT 无 .data 字段，直接返回 { success, message }
 export async function updateCategory(code: string, payload: UpdateCategoryPayload): Promise<void> {
-  const result = await enhancedApiClient.put<{ success: boolean; error?: string }>(`/material-code-categories/${code}`, payload);
+  const result = await enhancedApiClient.put<{ success: boolean; error?: string }>(`/material-code-categories/${code}?rule_type=material`, payload);
   if (!result || !result.success) {
     throw new Error(result?.error || '更新分类失败');
   }
@@ -67,7 +67,7 @@ export async function updateCategory(code: string, payload: UpdateCategoryPayloa
 // 删除分类（软删除，级联删除子分类）
 // DELETE 无 .data 字段，直接返回 { success, message }
 export async function deleteCategory(code: string): Promise<void> {
-  const result = await enhancedApiClient.delete<{ success: boolean; error?: string }>(`/material-code-categories/${code}`);
+  const result = await enhancedApiClient.delete<{ success: boolean; error?: string }>(`/material-code-categories/${code}?rule_type=material`);
   if (!result || !result.success) {
     throw new Error(result?.error || '删除分类失败');
   }
