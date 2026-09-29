@@ -27,6 +27,7 @@ import {
   Legend,
 } from 'recharts';
 import { PageHeader, KpiCard, KpiCardGrid, SummaryDateFilter } from '../../components/summary';
+import { getCostTypeLabel } from '../../components/summary/constants';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useSummaryDataStore, type CostDetailItem, type CostSummary } from '../../stores/useSummaryDataStore';
 
@@ -309,7 +310,8 @@ function CostDetailTable({ items, summary }: { items: CostDetailItem[]; summary:
                       {catItems.map((item, idx) => (
                         <TableRow key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                           <TableCell className="px-6 py-2.5 text-sm text-gray-700">
-                            {item.costType || item.costName || '-'}
+                            {/* costType 后端返回英文代码（seed/electricity…），翻译为中文；labor 已是中文 */}
+                            {item.costType ? getCostTypeLabel(item.costType) : (item.costName || '-')}
                           </TableCell>
                           <TableCell className="px-6 py-2.5 text-sm text-gray-500">{item.month || '-'}</TableCell>
                           <TableCell className="px-6 py-2.5 text-sm text-gray-900 text-right font-medium">

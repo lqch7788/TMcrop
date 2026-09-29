@@ -21,6 +21,8 @@ import {
 } from '../services/summaryService';
 // 导入成本统计 API（包含物料和能源成本）
 import { getCostStats } from '../services/costService';
+// 成本类型英文代码 → 中文标签（与成本分析页共用同一份字典）
+import { getCostTypeLabel } from '../components/summary/constants';
 
 interface YieldStatRow {
   month: string;
@@ -294,23 +296,8 @@ export function useProductionReports() {
     ];
   }, [costStatsData, costStatsSummary, laborStats, attendance]);
 
-  // 成本类型标签映射（英文 -> 中文）
-  function getCostTypeLabel(type?: string): string {
-    if (!type) return '其他';
-    const labelMap: Record<string, string> = {
-      'fertilizer': '肥料',
-      'pesticide': '农药',
-      'seed': '种子种苗',
-      'film': '基质农膜',
-      'electricity': '电费',
-      'water': '水费',
-      'gas': '燃气费',
-      'utility': '水电费',
-      'maintenance': '维修费',
-      'other': '其他',
-    };
-    return labelMap[type] || type;
-  }
+  // 成本类型标签映射见 src/components/summary/constants.ts 的 getCostTypeLabel
+  // （2026-09-29 提取共享：成本分析页也需要同一份字典，避免两处漂移）
 
   // 月度工时数据
   const monthlyLabor = useMemo((): MonthlyLaborRow[] => {
