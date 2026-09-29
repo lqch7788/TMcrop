@@ -289,23 +289,6 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
   // ============================================
-  // 2026-09-27 P2-12：统计摘要（列表顶部卡片）
-  // ============================================
-  const summary = useMemo(() => {
-    const thisMonth = todayLocal().slice(0, 7);
-    let monthCount = 0, monthAmount = 0, insufficientCount = 0, pendingCount = 0;
-    for (const item of materialData) {
-      if (String(item.date || '').startsWith(thisMonth)) {
-        monthCount += 1;
-        monthAmount += item.materials.reduce((s: number, m: any) => s + (m.requestedQuantity || 0) * (m.unitPrice || 0), 0);
-      }
-      if ((item.materials || []).some((m: any) => m.stockInsufficient)) insufficientCount += 1;
-      if (item.statusClass === 'pending') pendingCount += 1;
-    }
-    return { monthCount, monthAmount: Math.round(monthAmount * 100) / 100, insufficientCount, pendingCount };
-  }, [materialData]);
-
-  // ============================================
   // 2026-09-27 P1-4：加载生产计划列表（批次号下拉数据源）
   // ============================================
   useEffect(() => {
@@ -1410,8 +1393,6 @@ export function useApplicationTab(): UseApplicationTabReturn {
     // 2026-09-27 P1-6：超期未还筛选
     overdueOnly,
     setOverdueOnly,
-    // 2026-09-27 P2-12：统计摘要
-    summary,
     // 2026-09-27 P1-4：生产计划列表（批次号下拉）
     productionPlans,
     // 2026-09-27 P0-2：草稿

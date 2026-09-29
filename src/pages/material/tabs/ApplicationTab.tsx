@@ -85,7 +85,6 @@ export default function ApplicationTab() {
         onReopenCase={hook.handleReopenCase}
         onBatchSubmit={hook.batchSubmit}
         onBatchWithdraw={hook.batchWithdraw}
-        summary={hook.summary}
         myApplicationsOnly={hook.myApplicationsOnly}
         pendingMyApproval={hook.pendingMyApproval}
         overdueOnly={hook.overdueOnly}

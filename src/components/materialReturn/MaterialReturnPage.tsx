@@ -6,7 +6,6 @@ import { Button } from '@/components/ui';
 import { DeleteConfirmModal as UiDeleteConfirmModal } from '@/components/ui';
 import { MaterialReturnHeader } from './MaterialReturnHeader';
 import { MaterialReturnSearch } from './MaterialReturnSearch';
-import { MaterialReturnSummaryCards } from './MaterialReturnSummaryCards';
 import { MaterialReturnTable } from './MaterialReturnTable';
 import { Pagination } from '@/components/ui';
 import { DetailModal } from './modals/DetailModal';
@@ -40,8 +39,7 @@ export function MaterialReturnPage() {
       {/* 页面头部 */}
       <MaterialReturnHeader />
 
-      {/* 统计摘要卡片（2026-09-28：按需求移至搜索栏上方；基于全量数据，不随筛选变化） */}
-      <MaterialReturnSummaryCards records={hook.allRecords} />
+      {/* 2026-09-29 用户要求：移除统计摘要卡片 */}
 
       {/* 搜索区域 */}
       <MaterialReturnSearch

@@ -103,8 +103,10 @@ export function MaterialsTable({
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">存放位置</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</TableHead>
-              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">生产日期</TableHead>
-              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</TableHead>
+              {/* 2026-09-29 修复日期被截断：原 w-24(96px) 扣 px-4 后内容区仅 64px，放不下 "2026-03-26"(约 71px) */}
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-28">生产日期</TableHead>
+              {/* 有效期至：还需容纳临期/过期后缀（如 "⚠已过期" / "⚠3天"），故比生产日期更宽 */}
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-44">有效期至</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">备注</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</TableHead>

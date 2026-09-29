@@ -251,9 +251,6 @@ export function useMaterialReturn() {
 
   // ========== 数据处理 ==========
 
-  // 全量记录（2026-09-28：统计摘要卡片用，不随筛选变化）
-  const allRecords = useMemo((): ReturnRecord[] => storeItems.map(toReturnRecord), [storeItems]);
-
   // 过滤后的数据（统一规范化为 UI 记录类型）
   const filteredReturns = useMemo((): ReturnRecord[] => {
     return storeItems.map(toReturnRecord).filter(item => {
@@ -928,7 +925,6 @@ export function useMaterialReturn() {
     pageSize,
     totalPages,
     filteredReturns,
-    allRecords,
     isLoading,
     isSubmitting,
     showDetailModal,

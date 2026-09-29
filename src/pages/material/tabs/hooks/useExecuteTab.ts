@@ -129,30 +129,6 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     });
   }, [executeStore.items, executeSearchCode, executeSearchApplicant, executeSearchBatchCode, executeSearchWarehouse, executeStatusFilter, executePendingOnly, executeTodayOnly, executeMineOnly, execCurrentUser]);
 
-  // ============================================
-  // 2026-09-27 能力对齐：统计摘要（今日出库/待出库/本月实发金额/超发单）
-  // ============================================
-  const executeSummary = useMemo(() => {
-    const today = todayLocal();
-    const thisMonth = today.slice(0, 7);
-    let todayCount = 0, pendingCount = 0, monthAmount = 0, overIssueCount = 0;
-    for (const item of executeStore.items) {
-      if (item.date === today) todayCount += 1;
-      if (item.executeStatusClass === 'pending_out') pendingCount += 1;
-      // 2026-09-27 审计修复：只统计已扣库存的单据（completed/partial）——
-      // 此前把"待出库"计划量也算进"本月实发金额"，与卡片标签（实发）矛盾
-      const cls = String((item as any).executeStatusClass || '');
-      if ((cls === 'completed' || cls === 'partial') && String(item.date || '').startsWith(thisMonth)) {
-        monthAmount += (item.materials || []).reduce((s: number, m: any) => s + (Number(m.actualQuantity) || 0) * (Number(m.unitPrice) || 0), 0);
-      }
-      // 超发：实发 > 申请（历史数据可能存在，新提交已被后端拦截）
-      if ((item.materials || []).some((m: any) => (Number(m.actualQuantity) || 0) > (Number(m.requestedQuantity) || 0) && (Number(m.requestedQuantity) || 0) > 0)) {
-        overIssueCount += 1;
-      }
-    }
-    return { todayCount, pendingCount, monthAmount: Math.round(monthAmount * 100) / 100, overIssueCount };
-  }, [executeStore.items]);
-
   const executeTotalPages = Math.ceil(executeFilteredData.length / executePageSize);
 
   // 重置搜索
@@ -866,13 +842,12 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     executeFilteredData,
     executeTotalPages,
 
-    // 2026-09-27 能力对齐：统计摘要 + 快捷筛选 + 详情来源申请单 + 草稿
+    // 2026-09-27 能力对齐：快捷筛选 + 详情来源申请单 + 草稿
     executeDetailSources,
     executeHasDraft,
     checkExecDraft,
     restoreExecDraft,
     discardExecDraft,
-    executeSummary,
     executePendingOnly,
     setExecutePendingOnly,
     executeTodayOnly,
