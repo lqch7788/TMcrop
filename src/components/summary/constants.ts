@@ -122,3 +122,38 @@ export function getFlatParams(): ComparisonParamNode[] {
   flatten(COMPARISON_PARAMS);
   return result;
 }
+
+// ========== 成本类型字典 ==========
+
+/**
+ * 成本类型：后端英文代码 → 中文标签
+ *
+ * 背景：`/api/summary/cost-stats` 返回的明细里，material / energy 的 `costType`
+ * 是英文代码（seed、electricity…），而 labor 的 `costType` 已经是中文"人工成本"
+ * （传入后原样返回）。字典原内联在 src/hooks/useProductionReports.ts 中，
+ * 因成本分析页也需要同样的翻译，2026-09-29 提取到此处共享，避免两处字典漂移。
+ */
+export const COST_TYPE_LABELS: Record<string, string> = {
+  // 物料类
+  seed: '种子种苗',
+  fertilizer: '肥料',
+  pesticide: '农药',
+  film: '基质农膜',
+  // 能源类
+  electricity: '电费',
+  water: '水费',
+  gas: '燃气费',
+  utility: '水电费',
+  maintenance: '维修费',
+  other: '其他',
+};
+
+/**
+ * 取成本类型的中文标签
+ * @param type 后端返回的 costType（英文代码；labor 传中文时原样返回）
+ * @returns 中文标签；未登记的取值原样返回，便于发现新增类型
+ */
+export function getCostTypeLabel(type?: string): string {
+  if (!type) return '其他';
+  return COST_TYPE_LABELS[type] || type;
+}
