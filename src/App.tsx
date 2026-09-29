@@ -51,7 +51,6 @@ import DataMigration from './pages/system/DataMigration';
 
 import DeviceMonitor from './pages/DeviceMonitor';
 import AlertInfo from './pages/AlertInfo';
-import Indicators from './pages/Indicators';
 import Announcement from './pages/Announcement';
 
 // 物联网监控系统 - 从 V1.3 复制的子页面（IoT 布局专用）
@@ -608,7 +607,8 @@ function AppContent() {
           <Route path="/task-dispatch" element={<Navigate to="/farm-hub" replace />} />
           <Route path="/device-monitor" element={<DeviceMonitor />} />
           <Route path="/alert-info" element={<AlertInfo />} />
-          <Route path="/indicators" element={<Indicators />} />
+          {/* 2026-09-29：「指标数据」页已合并进「指标看板」，保留重定向兼容旧书签 */}
+          <Route path="/indicators" element={<Navigate to="/summary/indicators" replace />} />
           <Route path="/announcement" element={<Announcement />} />
 
 

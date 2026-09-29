@@ -291,6 +291,70 @@ export interface ModuleHealth {
   };
 }
 
+/**
+ * 指标看板 - 单条指标（对应 GET /api/summary/indicator-board）
+ *
+ * 分两类：
+ * - 自动指标（autoIndicators）：实际值由后端从业务表实时聚合
+ * - 手工指标（manualIndicators）：实际值来自 indicators 指标库的人工维护值
+ */
+export interface IndicatorBoardItem {
+  /** 自动指标的键名 / 手工指标的 code */
+  key?: string;
+  code?: string;
+  /** 指标库主键 —— 仅手工指标有，供编辑/删除操作使用 */
+  id?: string;
+  /** 采集频率（仅手工指标有） */
+  frequency?: string;
+  name: string;
+  category: string;
+  unit: string;
+  /** 实际值 */
+  actual: number;
+  /** 目标值（自动指标优先取指标库同名定义） */
+  target: number;
+  /** 预警线 */
+  warning: number;
+  /** 权重（用于综合得分） */
+  weight: number;
+  /** 达成率（%），越低越好的指标已取反比并封顶 120% */
+  achievement: number;
+  /** 信号灯状态 */
+  status: 'good' | 'warning' | 'bad';
+  /** higher=越高越好；lower=越低越好（成本率/损耗率/发生率等） */
+  direction: 'higher' | 'lower';
+  /** 口径说明（如"已采收 41,285 / 计划 62,789 kg"） */
+  detail?: string;
+  /** 关联的指标库 code */
+  linkCode?: string | null;
+  /** 目标值是否沿用了指标库定义 */
+  fromLibrary?: boolean;
+  /** 指标库的数据来源说明 */
+  source?: string;
+  trend?: string;
+  /**
+   * 数据来源可信度（2026-09-29 新增）
+   * - live：实际值由真实业务数据实时聚合
+   * - demo：底层含系统演示/模拟数据（如成本表里的 SIMM/SIME 记录），页面需标注
+   */
+  dataSource?: 'live' | 'demo';
+}
+
+/** 指标看板完整数据 */
+export interface IndicatorBoard {
+  period: { start: string; end: string };
+  /** 自动指标：实际值实时计算 */
+  autoIndicators: IndicatorBoardItem[];
+  /** 手工指标：指标库中未被自动覆盖的条目 */
+  manualIndicators: IndicatorBoardItem[];
+  /** 加权综合得分（仅自动指标，0-100） */
+  score: number;
+  /** 按分类的达成率（用于雷达图） */
+  byCategory: { category: string; achievement: number; count: number }[];
+  /** 成本结构（自动指标的原料） */
+  costBreakdown: { labor: number; material: number; energy: number; total: number };
+}
+
 // ========== 字段映射表 ==========
 
 /**
@@ -429,6 +493,8 @@ interface SummaryDataState {
   indicatorsRaw: IndicatorsRaw | null;
   /** 六大模块体检快照（实时存量，不受时间筛选影响） */
   moduleHealth: ModuleHealth | null;
+  /** 指标看板数据（自动指标实时计算 + 指标库手工指标） */
+  indicatorBoard: IndicatorBoard | null;
   isLoading: boolean;
   error: string | null;
   lastFetchTimestamps: Record<string, number>;
@@ -436,6 +502,7 @@ interface SummaryDataState {
 
   fetchOverview: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
   fetchModuleHealth: () => Promise<void>;
+  fetchIndicatorBoard: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
   fetchYieldStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchLaborStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
@@ -471,6 +538,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       indicators: [],
       indicatorsRaw: null,
       moduleHealth: null,
+      indicatorBoard: null,
       isLoading: false,
       error: null,
       lastFetchTimestamps: {},
@@ -524,6 +592,35 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           });
         } catch (error) {
           console.warn('[SummaryDataStore] 获取模块体检失败:', error);
+          set({ error: (error as Error).message, isLoading: false });
+        }
+      },
+
+      /**
+       * 获取指标看板数据
+       * GET /api/summary/indicator-board?start_date={}&end_date={}
+       *
+       * 后端已把「能自动算的指标实时聚合」与「指标库手工维护指标」分好组，
+       * 前端只负责展示，不再自行编造目标值。
+       */
+      fetchIndicatorBoard: async (params) => {
+        set({ isLoading: true, error: null });
+        try {
+          const queryParams = new URLSearchParams();
+          if (params?.startDate) queryParams.set('start_date', params.startDate);
+          if (params?.endDate) queryParams.set('end_date', params.endDate);
+          const query = queryParams.toString();
+
+          const data = await enhancedApiClient.get<IndicatorBoard>(
+            `/summary/indicator-board${query ? `?${query}` : ''}`
+          );
+          set({
+            indicatorBoard: (data as IndicatorBoard) || null,
+            isLoading: false,
+            lastFetchTimestamps: { ...get().lastFetchTimestamps, indicatorBoard: Date.now() },
+          });
+        } catch (error) {
+          console.warn('[SummaryDataStore] 获取指标看板失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -758,6 +855,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
         try {
           await Promise.all([
             get().fetchModuleHealth(),
+            get().fetchIndicatorBoard(),
             get().fetchOverview(),
             get().fetchYieldStats(),
             get().fetchCostStats(),
@@ -792,6 +890,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           indicators: [],
           indicatorsRaw: null,
           moduleHealth: null,
+          indicatorBoard: null,
           error: null,
           lastFetchTimestamps: {},
         });

@@ -872,6 +872,266 @@ router.get('/module-health', (_req: Request, res: Response) => {
 });
 
 /**
+ * 指标看板数据（面向领导/管理者的指标体系总览）
+ * GET /api/summary/indicator-board?start_date=&end_date=
+ *
+ * 2026-09-29 新增。原 /summary/indicators 只返回 4 个维度（产量/任务/问题/人工），
+ * 且 period 参数被忽略（硬编码近 30 天窗口），指标看板页面在业务数据不落在该窗口时
+ * 几乎全 0；页面还自行编造目标值（把 avgYieldPerHarvest × 1.2 当作产量目标）。
+ *
+ * 现改为：能自动计算的指标一律实时从业务表聚合；目标值/预警线**沿用 indicators
+ * 指标库中的现有定义**（按 linkCode 关联），库中未登记的用本文件默认值；
+ * 指标库里其余靠人工维护的指标原样带出，由页面分「自动 / 手工」两区展示。
+ */
+router.get('/indicator-board', (req: Request, res: Response) => {
+  try {
+    const { start_date, end_date } = req.query;
+    if (start_date && !isValidDate(start_date as string)) {
+      return res.status(400).json({ success: false, error: '开始日期格式无效，请使用 YYYY-MM-DD 格式' });
+    }
+    if (end_date && !isValidDate(end_date as string)) {
+      return res.status(400).json({ success: false, error: '结束日期格式无效，请使用 YYYY-MM-DD 格式' });
+    }
+
+    const db = getDatabase();
+    const now = new Date();
+    // 默认本年度；结束日期用本地时间拼接，避免 toISOString 的 UTC 偏移（早 8 小时会取到昨天）
+    const start = (start_date as string) || `${now.getFullYear()}-01-01`;
+    const end = (end_date as string)
+      || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    /** 取单行聚合结果（queryToObjects 转驼峰，别名统一用无下划线的单词以免被转换破坏） */
+    const row = (sql: string, params: (string | number)[] = []): Record<string, unknown> => {
+      const r = queryToObjects<Record<string, unknown>>(db, sql, params);
+      return r[0] || {};
+    };
+    const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+    /** a / b 的百分比，保留 1 位小数 */
+    const pct = (a: number, b: number): number => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
+    const r1 = (v: number): number => Math.round(v * 10) / 10;
+
+    // ── 原始聚合 ──
+    const planQty = num(row(
+      'SELECT COALESCE(SUM(planned_quantity), 0) AS v FROM production_plans WHERE planting_date >= ? AND planting_date <= ?',
+      [start, end]
+    ).v);
+    const harvestQty = num(row(
+      "SELECT COALESCE(SUM(harvest_quantity), 0) AS v FROM harvest_records WHERE status IN ('completed', 'harvested') AND harvest_date >= ? AND harvest_date <= ?",
+      [start, end]
+    ).v);
+    const taskRow = row(
+      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM farm_tasks WHERE plan_date >= ? AND plan_date <= ?",
+      [start, end]
+    );
+    const problemRow = row(
+      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM problems WHERE create_time >= ? AND create_time <= ?",
+      [`${start} 00:00:00`, `${end} 23:59:59`]
+    );
+    const survivalRate = num(row(
+      'SELECT ROUND(AVG(survival_rate), 1) AS v FROM seedlings WHERE survival_rate > 0 AND deleted_at IS NULL AND seedling_date >= ? AND seedling_date <= ?',
+      [start, end]
+    ).v);
+    const laborCost = num(row(
+      "SELECT COALESCE(SUM(total_amount), 0) AS v FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
+      [start, end]
+    ).v);
+    const materialCost = num(row(
+      'SELECT COALESCE(SUM(total_amount), 0) AS v FROM material_costs WHERE cost_date >= ? AND cost_date <= ?',
+      [start, end]
+    ).v);
+    const energyCost = num(row(
+      'SELECT COALESCE(SUM(total_amount), 0) AS v FROM energy_costs WHERE cost_date >= ? AND cost_date <= ?',
+      [start, end]
+    ).v);
+    const materialRow = row(
+      'SELECT COUNT(*) AS total, SUM(CASE WHEN minStock > 0 AND quantity < minStock THEN 1 ELSE 0 END) AS low FROM materials'
+    );
+    const approvalRow = row(
+      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pend FROM approvals WHERE apply_date >= ? AND apply_date <= ?",
+      [start, end]
+    );
+    const planRow = row(
+      "SELECT COUNT(*) AS total, SUM(CASE WHEN status IN ('completed', 'published') THEN 1 ELSE 0 END) AS done FROM production_plans"
+    );
+    const totalCost = laborCost + materialCost + energyCost;
+
+    // ── 数据来源可信度判定（2026-09-29）──
+    // 系统里有历史遗留的演示数据：material_costs 的 `SIMM` 前缀、energy_costs 的 `SIME` 前缀
+    // 都是 Simulation 模拟数据，labor_records 则只有 3 条创建时间完全相同的种子记录（LB001-003）。
+    // 靠这些表算出的指标必须标注出来，否则会误导决策（例如"人工成本率 0.3%"其实是没录数据）。
+    // 判定是**数据驱动**的：把演示数据清理干净后，标注会自动消失。
+    const simRatio = (table: string, prefix: string): number => {
+      const r = row(
+        `SELECT SUM(CASE WHEN id LIKE ? THEN total_amount ELSE 0 END) AS sim, SUM(total_amount) AS total
+         FROM ${table} WHERE cost_date >= ? AND cost_date <= ?`,
+        [`${prefix}%`, start, end]
+      );
+      const total = num(r.total);
+      return total > 0 ? num(r.sim) / total : 0;
+    };
+    const materialIsDemo = simRatio('material_costs', 'SIMM') > 0.5;
+    const energyIsDemo = simRatio('energy_costs', 'SIME') > 0.5;
+    const laborIsDemo = num(row(
+      "SELECT COUNT(*) AS total FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
+      [start, end]
+    ).total) < 5;
+    /** 成本率类指标的分母是三类成本之和，任一为演示数据都会污染该指标 */
+    const costSource: 'live' | 'demo' = (materialIsDemo || energyIsDemo || laborIsDemo) ? 'demo' : 'live';
+
+    /** 指标库定义（按 code 索引），用于沿用其 target / warning / weight */
+    const defs = new Map<string, Record<string, unknown>>();
+    for (const d of queryToObjects<Record<string, unknown>>(db, 'SELECT code, name, target, warning, weight FROM indicators', [])) {
+      defs.set(String(d.code), d);
+    }
+
+    /**
+     * 构建一条自动指标
+     * @param linkCode 关联的指标库 code（目标值/预警线/权重从这里取），无关联系传 null
+     * @param direction higher=越高越好（达成率、完成率）；lower=越低越好（成本率类）
+     * @param dataSource live=真实业务数据；demo=底层含模拟/演示数据，页面需标注
+     */
+    const build = (
+      key: string, name: string, category: string, actual: number, detail: string,
+      linkCode: string | null, defaultTarget: number, defaultWarning: number,
+      direction: 'higher' | 'lower', dataSource: 'live' | 'demo' = 'live'
+    ) => {
+      const def = linkCode ? defs.get(linkCode) : undefined;
+      const target = num(def?.target) || defaultTarget;
+      const warning = num(def?.warning) || defaultWarning;
+      const weight = num(def?.weight) || 10; // 库中未登记的给默认权重，保证综合得分覆盖全部自动指标
+      // 达成率：越高越好的直接比；越低越好的取反比并**封顶 120%**
+      //（否则"人工成本率 0.3% vs 目标 25%"会算出 8000%+ 这种荒谬数字）；
+      // 目标为 0 的指标（如安全事故数）单独处理：为 0 即满分，否则 0 分
+      const achievement = target === 0
+        ? (actual === 0 ? 100 : 0)
+        : direction === 'higher'
+          ? pct(actual, target)
+          : Math.min(pct(target, actual), 120);
+      let status: 'good' | 'warning' | 'bad';
+      if (direction === 'higher') {
+        status = actual >= target ? 'good' : actual >= warning ? 'warning' : 'bad';
+      } else {
+        status = actual <= target ? 'good' : actual <= warning ? 'warning' : 'bad';
+      }
+      return {
+        key, name, category, unit: '%', actual: r1(actual), target, warning, weight,
+        achievement, status, direction, detail, linkCode, fromLibrary: !!def, dataSource,
+      };
+    };
+
+    const autoIndicators = [
+      build('yieldAchievement', '产量达成率', '生产',
+        planQty > 0 ? (harvestQty / planQty) * 100 : 0,
+        `已采收 ${harvestQty.toLocaleString()} / 计划 ${planQty.toLocaleString()} kg`,
+        'PROD_001', 95, 90, 'higher'),
+      build('taskCompletion', '任务完成率', '效率',
+        pct(num(taskRow.done), num(taskRow.total)),
+        `${num(taskRow.done)} / ${num(taskRow.total)} 个任务已完成`,
+        null, 90, 75, 'higher'),
+      build('problemResolution', '问题解决率', '质量',
+        pct(num(problemRow.done), num(problemRow.total)),
+        `${num(problemRow.done)} / ${num(problemRow.total)} 个问题已解决`,
+        null, 80, 60, 'higher'),
+      build('seedlingSurvival', '种苗成活率', '质量', survivalRate,
+        '育苗记录的平均成活率',
+        'KPI003', 98, 95, 'higher'),
+      build('materialCostRate', '物料成本率', '成本',
+        totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
+        `物料 ¥${Math.round(materialCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
+        'COST_001', 35, 38, 'lower', costSource),
+      build('laborCostRate', '人工成本率', '成本',
+        totalCost > 0 ? (laborCost / totalCost) * 100 : 0,
+        `人工 ¥${Math.round(laborCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
+        'COST_002', 25, 28, 'lower', costSource),
+      build('inventorySufficiency', '库存充足率', '效率',
+        num(materialRow.total) > 0
+          ? ((num(materialRow.total) - num(materialRow.low)) / num(materialRow.total)) * 100
+          : 0,
+        `${num(materialRow.total) - num(materialRow.low)} / ${num(materialRow.total)} 种物料高于安全库存`,
+        null, 95, 90, 'higher'),
+      build('approvalCompletion', '审批处理率', '效率',
+        pct(num(approvalRow.total) - num(approvalRow.pend), num(approvalRow.total)),
+        `已办结 ${num(approvalRow.total) - num(approvalRow.pend)} / ${num(approvalRow.total)} 张单据`,
+        null, 90, 80, 'higher'),
+      build('planCompletion', '计划完成率', '生产',
+        pct(num(planRow.done), num(planRow.total)),
+        `${num(planRow.done)} / ${num(planRow.total)} 个生产计划已发布或完成`,
+        null, 90, 80, 'higher'),
+    ];
+
+    // ── 指标库中未被自动覆盖的条目（实际值靠人工维护，原样带出）──
+    const linkedCodes = new Set(autoIndicators.map((i) => i.linkCode).filter(Boolean) as string[]);
+    const manualIndicators = queryToObjects<Record<string, unknown>>(
+      db,
+      // id / frequency 供前端编辑弹窗与删除操作使用（合并「指标数据」页后需要就地维护）
+      'SELECT id, code, name, category, unit, target, actual, warning, weight, source, trend, frequency FROM indicators ORDER BY category, code',
+      []
+    )
+      .filter((d) => !linkedCodes.has(String(d.code)))
+      .map((d) => {
+        const target = num(d.target);
+        const actual = num(d.actual);
+        const warning = num(d.warning);
+        // 指标库没有 direction 字段，但可由 warning 与 target 的大小关系自洽推出：
+        // warning > target = 超标线在目标之上 = 越低越好（成本率/损耗率/发生率/消耗强度/研发周期）；
+        // warning < target = 越高越好（达成率/完好率/合格率/利用率）。已对全部 23 条验证成立。
+        const direction: 'higher' | 'lower' = warning > target ? 'lower' : 'higher';
+        const achievement = target === 0
+          ? (actual === 0 ? 100 : 0)
+          : direction === 'higher'
+            ? pct(actual, target)
+            : Math.min(pct(target, actual), 120);
+        const status: 'good' | 'warning' | 'bad' = direction === 'higher'
+          ? (actual >= target ? 'good' : actual >= warning ? 'warning' : 'bad')
+          : (actual <= target ? 'good' : actual <= warning ? 'warning' : 'bad');
+        return {
+          id: d.id, code: d.code, name: d.name, category: d.category, unit: d.unit,
+          target, actual, warning, weight: num(d.weight), source: d.source, trend: d.trend,
+          frequency: d.frequency,
+          achievement, status, direction,
+          // 手工指标的实际值全部来自 indicators 表（15 条为批量写入的演示值，4 条为空），一律标注
+          dataSource: 'demo' as const,
+        };
+      });
+
+    // ── 汇总：加权综合得分 + 按分类达成率 ──
+    const totalWeight = autoIndicators.reduce((s, i) => s + i.weight, 0);
+    const score = totalWeight > 0
+      ? Math.round(
+          autoIndicators.reduce((s, i) => s + Math.min(i.achievement, 100) * i.weight, 0) / totalWeight
+        )
+      : 0;
+
+    const categories = [...new Set(autoIndicators.map((i) => i.category))];
+    const byCategory = categories.map((c) => {
+      const items = autoIndicators.filter((i) => i.category === c);
+      return {
+        category: c,
+        achievement: Math.round(items.reduce((s, i) => s + Math.min(i.achievement, 100), 0) / items.length),
+        count: items.length,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        period: { start, end },
+        autoIndicators,
+        manualIndicators,
+        score,
+        byCategory,
+        costBreakdown: {
+          labor: r1(laborCost), material: r1(materialCost), energy: r1(energyCost), total: r1(totalCost),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('获取指标看板数据失败:', error);
+    res.status(500).json({ success: false, error: '获取指标看板数据失败' });
+  }
+});
+
+/**
  * 获取生产指标统计（供管理指标页面使用）
  * GET /api/summary/indicators
  */

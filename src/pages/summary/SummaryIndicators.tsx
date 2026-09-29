@@ -1,518 +1,732 @@
 /**
- * 指标看板页面 - 种植关键指标仪表盘
- * 数据源：useSummaryDataStore → indicators (ProductionIndicator[])
- * 路由：/summary/indicators
+ * 指标看板 —— 指标体系总览 + 指标库管理
+ *
+ * 2026-09-29 合并「指标数据」页（原 /indicators）后的统一页面，四个 TAB：
+ *   ① 总览     综合得分 / 分类雷达 / 自动指标卡 / 重点关注
+ *   ② 指标列表 自动指标(9) + 手工指标(19) 合一的清单，支持筛选、分页、编辑、删除、导出
+ *   ③ 分类管理 分类汇总 + 分布饼图 + 定义配置（复用原指标数据页组件）
+ *   ④ 考核评价 基地考核排名（复用原指标数据页组件）
+ *
+ * 数据源：
+ *   - useSummaryDataStore.indicatorBoard → /api/summary/indicator-board
+ *     自动指标实际值实时聚合；手工指标来自 indicators 表；带 direction / status / dataSource
+ *   - useIndicatorDataStore → /api/indicators、/api/indicator-evaluations
+ *     提供分类汇总、考核评价，以及指标的增删改
+ *
+ * 合并要点：
+ *   - 达成率一律走 board 的方向判断（旧页面用 actual/target 硬算，对"越低越好"的成本类指标会算反）
+ *   - 自动指标的实际值是实时算的，**不可编辑**；只能改其目标值（存在指标库里）
+ *   - 手工指标可完整增删改
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, DollarSign, Gauge, Loader2, RefreshCw, Star, Target, TrendingUp } from 'lucide-react';
 import {
-  ResponsiveContainer, PieChart, Pie, Cell,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip
+  Gauge, Loader2, AlertCircle, Target, TrendingUp, TrendingDown, CheckCircle2,
+  Plus, Download, Search, Eye, Edit, Trash2,
+} from 'lucide-react';
+import {
+  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip,
 } from 'recharts';
-import { PageHeader, GaugeChart } from '../../components/summary';
-import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
-import { useSummaryDataStore } from '../../stores';
+import { PageHeader, SummaryDateFilter } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button, Input, Pagination } from '@/components/ui';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { useSummaryDataStore, type IndicatorBoardItem } from '../../stores/useSummaryDataStore';
+import { useIndicatorDataStore } from '../../stores/useIndicatorDataStore';
+import { currentYearRange, rangeByMode, todayLocal } from '../../lib/dateUtils';
+import type { Indicator } from '../types/indicators.types';
+import CategoryPanel from '../components/Indicators/IndicatorsPanels';
+import EvaluatePanel from '../components/Indicators/IndicatorsEvaluatePanel';
+import CreateModal from '../components/Indicators/IndicatorsModals/CreateModal';
+import DetailModal from '../components/Indicators/IndicatorsModals/DetailModal';
+import DeleteModal from '../components/Indicators/IndicatorsModals/DeleteModal';
 
-// ========== 颜色常量 ==========
-const COLORS = {
-  emerald: '#10b981',
-  emeraldLight: '#d1fae5',
-  amber: '#f59e0b',
-  amberLight: '#fef3c7',
-  red: '#ef4444',
-  redLight: '#fee2e2',
-  slate: '#64748b',
-  blue: '#3b82f6',
+// ========== 状态样式字典 ==========
+
+const STATUS_STYLE: Record<IndicatorBoardItem['status'], {
+  dot: string; text: string; bg: string; label: string;
+}> = {
+  good: { dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50', label: '达标' },
+  warning: { dot: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50', label: '注意' },
+  bad: { dot: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50', label: '未达标' },
 };
 
-// ========== 周期选项 ==========
-type PeriodMode = 'month' | 'quarter' | 'year';
-const PERIOD_OPTIONS: { value: PeriodMode; label: string }[] = [
-  { value: 'month', label: '本月' },
-  { value: 'quarter', label: '本季度' },
-  { value: 'year', label: '本年度' },
-];
-
-// ========== 信号灯组件 ==========
-function TrafficLight({
-  status,
-  label,
-}: {
-  status: 'good' | 'warning' | 'bad';
-  label: string;
-}) {
-  const lightConfig = {
-    good: { color: COLORS.emerald, bg: COLORS.emeraldLight, text: '正常', textColor: 'text-emerald-700' },
-    warning: { color: COLORS.amber, bg: COLORS.amberLight, text: '注意', textColor: 'text-amber-700' },
-    bad: { color: COLORS.red, bg: COLORS.redLight, text: '超标', textColor: 'text-red-700' },
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex gap-3">
-        {(['good', 'warning', 'bad'] as const).map((s) => {
-          const cfg = lightConfig[s];
-          const isActive = s === status;
-          return (
-            <div
-              key={s}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: isActive ? 32 : 20,
-                height: isActive ? 32 : 20,
-                backgroundColor: isActive ? cfg.color : '#e5e7eb',
-                boxShadow: isActive ? `0 0 12px ${cfg.color}80` : 'none',
-              }}
-            />
-          );
-        })}
-      </div>
-      <span className={`text-xs font-medium ${lightConfig[status].textColor}`}>
-        {lightConfig[status].text}
-      </span>
-      <span className="text-sm text-gray-500">{label}</span>
-    </div>
-  );
+/** 达成率 → 颜色 */
+function achievementColor(v: number): string {
+  if (v >= 100) return 'text-emerald-600';
+  if (v >= 80) return 'text-amber-600';
+  return 'text-red-600';
 }
 
-// ========== 加载状态 ==========
+/** 看板指标项 → 指标库记录（供编辑/详情弹窗复用原有组件） */
+function toIndicator(item: IndicatorBoardItem): Indicator {
+  return {
+    id: item.id || item.code || item.key || '',
+    code: item.code || item.key || '',
+    name: item.name,
+    category: item.category,
+    unit: item.unit || '',
+    target: item.target,
+    actual: item.actual,
+    trend: (item.trend as Indicator['trend']) || 'stable',
+    frequency: item.frequency || '月度',
+    source: item.source || '自动采集',
+    warning: item.warning,
+    weight: item.weight,
+  };
+}
+
+// ========== 加载态 ==========
+
 function LoadingView() {
   return (
-    <div className="flex items-center justify-center h-96 bg-[#F2F6FA]">
+    <div className="flex items-center justify-center h-96">
       <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-10 h-10 text-slate-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
         <span className="text-gray-500">加载指标数据中...</span>
       </div>
     </div>
   );
 }
 
-// ========== 空状态 ==========
-function EmptyView({ onRetry }: { onRetry: () => void }) {
+// ========== 自动指标卡片 ==========
+
+function IndicatorCard({ item }: { item: IndicatorBoardItem }) {
+  const style = STATUS_STYLE[item.status];
   return (
-    <div className="space-y-6 bg-[#F2F6FA] p-6">
-      <PageHeader
-        icon={<Gauge className="w-6 h-6 text-white" />}
-        title="指标看板"
-        description="种植关键指标仪表盘、阈值告警与实时监控"
-      />
-      <div className="bg-white rounded-xl p-12 text-center">
-        <Gauge className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 text-lg mb-4">暂无指标数据</p>
-        <Button onClick={onRetry} size="sm" className="bg-slate-600 hover:bg-slate-700"><RefreshCw className="w-4 h-4" /> 重新加载</Button>
+    <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow overflow-hidden min-w-0">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-gray-800 truncate" title={item.name}>{item.name}</h3>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className="text-xs text-gray-400">{item.category}</span>
+            {item.fromLibrary ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500" title={`目标值取自指标库 ${item.linkCode}`}>
+                指标库
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400" title="指标库中未登记，使用内置默认目标值">
+                默认目标
+              </span>
+            )}
+            {item.dataSource === 'demo' ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-600" title="底层数据含系统演示/模拟数据，请勿直接用于对外汇报">
+                演示数据
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600" title="实际值由真实业务数据实时聚合">
+                实时
+              </span>
+            )}
+          </div>
+        </div>
+        <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+          {style.label}
+        </span>
+      </div>
+
+      <div className="flex items-baseline gap-2 mb-3">
+        <span className={`text-2xl font-bold flex-shrink-0 ${style.text}`}>
+          {item.actual}
+          <span className="text-sm font-medium ml-0.5">{item.unit}</span>
+        </span>
+        <span className="text-xs text-gray-400 flex-shrink-0">目标 {item.target}{item.unit}</span>
+        <span
+          className="ml-auto flex items-center gap-0.5 text-xs text-slate-400 flex-shrink-0"
+          title={item.direction === 'lower' ? '越低越好' : '越高越好'}
+        >
+          {item.direction === 'lower' ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+          {item.direction === 'lower' ? '越低越好' : '越高越好'}
+        </span>
+      </div>
+
+      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${style.dot}`}
+          style={{ width: `${Math.min(Math.max(item.achievement, 0), 100)}%` }}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`text-xs font-medium flex-shrink-0 ${achievementColor(item.achievement)}`}>
+          达成率 {item.achievement}%
+        </span>
+        <span className="text-xs text-gray-400 truncate min-w-0" title={item.detail}>{item.detail}</span>
       </div>
     </div>
   );
 }
 
-// ========== 页面主组件 ==========
+// ========== 主页面组件 ==========
+
+type TabKey = 'overview' | 'list' | 'category' | 'evaluate';
+
 export default function SummaryIndicators() {
-  // Store 数据
-  const { indicators, isLoading, error, fetchIndicators } = useSummaryDataStore();
+  // ── 看板数据（自动指标实时计算 + 指标库手工指标）──
+  const board = useSummaryDataStore((s) => s.indicatorBoard);
+  const isLoading = useSummaryDataStore((s) => s.isLoading);
+  const error = useSummaryDataStore((s) => s.error);
+  const fetchIndicatorBoard = useSummaryDataStore((s) => s.fetchIndicatorBoard);
 
-  // 周期切换
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('year');
+  // ── 指标库数据与 CRUD（分类汇总、考核评价、增删改）──
+  const indicators = useIndicatorDataStore((s) => s.indicators);
+  const evaluationData = useIndicatorDataStore((s) => s.evaluationData);
+  const categorySummary = useIndicatorDataStore((s) => s.categorySummary);
+  const fetchIndicators = useIndicatorDataStore((s) => s.fetchIndicators);
+  const fetchEvaluations = useIndicatorDataStore((s) => s.fetchEvaluations);
+  const createIndicator = useIndicatorDataStore((s) => s.createIndicator);
+  const updateIndicator = useIndicatorDataStore((s) => s.updateIndicator);
+  const deleteIndicator = useIndicatorDataStore((s) => s.deleteIndicator);
 
-  // 挂载时获取数据，周期切换时重新获取
+  // ── 页面状态 ──
+  const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
+  const [range, setRange] = useState(currentYearRange);
+
+  // 列表筛选
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('全部');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'auto' | 'manual'>('all');
+
+  // 分页
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // 弹窗状态
+  const [formOpen, setFormOpen] = useState(false);
+  const [formItem, setFormItem] = useState<Indicator | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<Indicator | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<Indicator | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // 时间范围变化 → 刷新看板（指标库与考核评价是全量数据，只取一次）
   useEffect(() => {
-    fetchIndicators({ period: periodMode });
-  }, [periodMode]);
+    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate });
+  }, [range]);
 
-  // 当前指标数据（取数组第一个元素）
-  const indicator = indicators[0] || null;
+  useEffect(() => {
+    fetchIndicators();
+    fetchEvaluations();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== 派生数据 ==========
 
-  /** 综合评分百分比（0-100） */
-  const overallScore = indicator?.overallScore ?? 0;
+  const autoItems = board?.autoIndicators ?? [];
+  const manualItems = board?.manualIndicators ?? [];
 
-  /** 产量达成率（假设目标值为一个合理的基准，这里用 100 作为满分，取 avgYieldPerHarvest 的相对值） */
-  const yieldRate = useMemo(() => {
-    if (!indicator) return 0;
-    // 产量达成率：以 avgYieldPerHarvest 为基准，假设目标为该值 * 1.2 为满分
-    const target = indicator.yield.avgYieldPerHarvest > 0 ? indicator.yield.avgYieldPerHarvest * 1.2 : 100;
-    return Math.round((indicator.yield.avgYieldPerHarvest / target) * 100);
-  }, [indicator]);
+  /** 统一的指标清单：自动指标在前（实时、重要），手工指标在后 */
+  const allItems = useMemo<IndicatorBoardItem[]>(
+    () => [...autoItems, ...manualItems],
+    [autoItems, manualItems]
+  );
 
-  /** 任务完成率 */
-  const taskCompletionRate = indicator?.task.completionRate ?? 0;
+  /** 分类选项（从数据里取，避免依赖字典加载时机） */
+  const categoryOptions = useMemo(
+    () => ['全部', ...new Set(allItems.map((i) => i.category).filter(Boolean))],
+    [allItems]
+  );
 
-  /** 问题解决率 */
-  const problemResolutionRate = indicator?.problem.resolutionRate ?? 0;
+  /** 筛选后的列表 */
+  const filteredItems = useMemo(() => {
+    const kw = searchKeyword.trim().toLowerCase();
+    return allItems.filter((i) => {
+      if (categoryFilter !== '全部' && i.category !== categoryFilter) return false;
+      if (sourceFilter === 'auto' && i.dataSource === 'demo' && i.id) return false;
+      if (sourceFilter === 'manual' && !i.id) return false;
+      if (kw && !i.name.toLowerCase().includes(kw) && !(i.code || i.key || '').toLowerCase().includes(kw)) return false;
+      return true;
+    });
+  }, [allItems, categoryFilter, sourceFilter, searchKeyword]);
 
-  /** 人工效率（假设目标为100） */
-  const laborEfficiency = indicator?.labor.efficiency ?? 0;
+  const totalPages = Math.max(Math.ceil(filteredItems.length / pageSize), 1);
+  const paginatedItems = useMemo(
+    () => filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredItems, currentPage]
+  );
 
-  /** 成本控制率（基于人工成本，假设预算为目标成本的1.1倍作为正常阈值） */
-  const costControlRate = useMemo(() => {
-    if (!indicator) return 100;
-    const budget = indicator.labor.totalCost > 0 ? indicator.labor.totalCost * 1.1 : 100;
-    return Math.round((1 - (indicator.labor.totalCost / budget)) * 100 + 100);
-  }, [indicator]);
+  // 筛选变化时回到第一页
+  useEffect(() => { setCurrentPage(1); }, [searchKeyword, categoryFilter, sourceFilter]);
 
-  /** 成本信号灯状态 */
-  const costTrafficStatus: 'good' | 'warning' | 'bad' = useMemo(() => {
-    if (costControlRate >= 90) return 'good';
-    if (costControlRate >= 70) return 'warning';
-    return 'bad';
-  }, [costControlRate]);
+  /** 达标统计 */
+  const goodCount = useMemo(() => autoItems.filter((i) => i.status === 'good').length, [autoItems]);
+  const badCount = useMemo(() => autoItems.filter((i) => i.status === 'bad').length, [autoItems]);
 
-  /** 环形进度图数据（任务完成率） */
-  const progressRingData = useMemo(() => {
-    const rate = taskCompletionRate;
-    return [
-      { name: '已完成', value: rate, color: COLORS.emerald },
-      { name: '未完成', value: 100 - rate, color: '#e5e7eb' },
-    ];
-  }, [taskCompletionRate]);
+  /** 重点关注（未达标项，达成率升序） */
+  const unachieved = useMemo(
+    () => [...autoItems, ...manualItems]
+      .filter((i) => i.status !== 'good')
+      .sort((a, b) => a.achievement - b.achievement)
+      .slice(0, 8),
+    [autoItems, manualItems]
+  );
 
   /** 雷达图数据 */
-  const radarData = useMemo(() => {
-    if (!indicator) return [];
-    return [
-      {
-        subject: '产量',
-        指标得分: yieldRate,
-        fullMark: 100,
-      },
-      {
-        subject: '任务',
-        指标得分: taskCompletionRate,
-        fullMark: 100,
-      },
-      {
-        subject: '问题',
-        指标得分: problemResolutionRate,
-        fullMark: 100,
-      },
-      {
-        subject: '人工',
-        指标得分: laborEfficiency,
-        fullMark: 100,
-      },
-    ];
-  }, [indicator, yieldRate, taskCompletionRate, problemResolutionRate, laborEfficiency]);
+  const radarData = useMemo(
+    () => (board?.byCategory ?? []).map((c) => ({ subject: c.category, 达成率: c.achievement })),
+    [board]
+  );
 
-  /** 指标明细表数据 */
-  const detailTableData = useMemo(() => {
-    if (!indicator) return [];
-    return [
-      {
-        name: '产量指标',
-        target: `${indicator.yield.harvestCount}次采收`,
-        actual: `${(indicator.yield.totalYield ?? 0).toLocaleString()} kg`,
-        rate: `${yieldRate}%`,
-        score: yieldRate,
-      },
-      {
-        name: '任务指标',
-        target: `${indicator.task.total}项`,
-        actual: `完成${indicator.task.completed}项`,
-        rate: `${taskCompletionRate}%`,
-        score: taskCompletionRate,
-      },
-      {
-        name: '问题指标',
-        target: `${indicator.problem.total}项`,
-        actual: `解决${indicator.problem.resolved}项`,
-        rate: `${problemResolutionRate}%`,
-        score: problemResolutionRate,
-      },
-      {
-        name: '人工指标',
-        target: `${indicator.labor.workerCount}名工人`,
-        actual: `${indicator.labor.totalHours.toLocaleString()}工时`,
-        rate: `${laborEfficiency}%`,
-        score: laborEfficiency,
-      },
-    ];
-  }, [indicator, yieldRate, taskCompletionRate, problemResolutionRate, laborEfficiency]);
+  const score = board?.score ?? 0;
 
-  /** 评分颜色 */
-  function scoreColor(score: number): string {
-    if (score >= 80) return 'text-emerald-600';
-    if (score >= 60) return 'text-amber-600';
-    return 'text-red-600';
+  // ========== 事件处理 ==========
+
+  const handleModeChange = (mode: 'month' | 'quarter' | 'year' | 'custom') => {
+    setFilterMode(mode);
+    if (mode !== 'custom') setRange(rangeByMode(mode));
+  };
+
+  /** 新增：自动指标由代码定义，只能手工新增指标库条目 */
+  const handleAdd = () => {
+    setFormItem(null);
+    setFormOpen(true);
+  };
+
+  const handleEdit = (item: IndicatorBoardItem) => {
+    if (!item.id) return; // 自动指标无 id，不可编辑
+    setFormItem(toIndicator(item));
+    setFormOpen(true);
+  };
+
+  const handleView = (item: IndicatorBoardItem) => {
+    setDetailItem(toIndicator(item));
+    setDetailOpen(true);
+  };
+
+  const handleDelete = (item: IndicatorBoardItem) => {
+    if (!item.id) return;
+    setDeleteItem(toIndicator(item));
+    setDeleteOpen(true);
+  };
+
+  /** 保存（新增/编辑）—— 成功后刷新看板，让新目标值/实际值立即生效 */
+  const handleSave = async (data: Partial<Indicator>) => {
+    setSaving(true);
+    try {
+      if (formItem?.id) {
+        await updateIndicator(formItem.id, data);
+      } else {
+        await createIndicator(data);
+      }
+      await Promise.all([fetchIndicatorBoard(), fetchIndicators()]);
+      setFormOpen(false);
+      setFormItem(null);
+    } catch (e) {
+      // 失败时保持弹窗打开，便于用户修正后重试
+      console.error('[指标看板] 保存失败:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteItem?.id) return;
+    setSaving(true);
+    try {
+      await deleteIndicator(deleteItem.id);
+      await Promise.all([fetchIndicatorBoard(), fetchIndicators()]);
+      setDeleteOpen(false);
+      setDeleteItem(null);
+    } catch (e) {
+      console.error('[指标看板] 删除失败:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** 导出当前筛选后的指标清单（Excel HTML，与项目其他导出保持一致） */
+  const handleExport = () => {
+    const headers = ['指标名称', '编码', '分类', '目标值', '实际值', '达成率', '状态', '方向', '数据来源'];
+    const rows = filteredItems.map((i) => [
+      i.name,
+      i.code || i.key || '-',
+      i.category,
+      `${i.target}${i.unit}`,
+      `${i.actual}${i.unit}`,
+      `${i.achievement}%`,
+      STATUS_STYLE[i.status].label,
+      i.direction === 'lower' ? '越低越好' : '越高越好',
+      i.dataSource === 'demo' ? '演示数据' : '实时',
+    ]);
+    const html = `<table border="1"><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>${
+      rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')
+    }</table>`;
+    // 前缀 BOM 让 Excel 正确识别 UTF-8 中文
+    const blob = new Blob([`\ufeff${html}`], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `指标看板_${todayLocal()}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ========== 加载态 ==========
+
+  if (isLoading && !board) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={<Gauge className="w-6 h-6 text-white" />}
+          title="指标看板"
+          description="关键指标达成情况总览与指标库管理"
+        />
+        <LoadingView />
+      </div>
+    );
   }
 
-  /** 评分背景色 */
-  function scoreBgColor(score: number): string {
-    if (score >= 80) return 'bg-emerald-100';
-    if (score >= 60) return 'bg-amber-100';
-    return 'bg-red-100';
-  }
-
-  /** 仪表盘颜色 */
-  function gaugeColor(score: number): 'emerald' | 'amber' | 'red' {
-    if (score >= 80) return 'emerald';
-    if (score >= 60) return 'amber';
-    return 'red';
-  }
-
-  // ========== 加载/空状态 ==========
-  if (isLoading && !indicator) {
-    return <LoadingView />;
-  }
-
-  if (!isLoading && !indicator) {
-    return <EmptyView onRetry={() => fetchIndicators()} />;
-  }
+  // ========== 渲染 ==========
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
+      {/* 页头 + 操作按钮 */}
       <PageHeader
         icon={<Gauge className="w-6 h-6 text-white" />}
         title="指标看板"
-        description="种植关键指标仪表盘、阈值告警与实时监控"
+        description="关键指标达成情况总览与指标库管理"
       />
 
-      {/* 周期切换 */}
-      <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
-          {PERIOD_OPTIONS.map((opt) => (
-            <Button
-              key={opt.value}
-              onClick={() => setPeriodMode(opt.value)}
-              size="sm"
-              variant={periodMode === opt.value ? "secondary" : "ghost"}
-              className={periodMode === opt.value ? "bg-slate-600 text-white hover:bg-slate-700 shadow-sm" : "text-gray-600"}
-            >
-              {opt.label}
-            </Button>
-          ))}
-        </div>
-        {indicator?.period && (
-          <div className="text-sm text-gray-500">
-            统计周期：
-            <span className="font-medium text-gray-700 ml-1">
-              {indicator.period.start} ~ {indicator.period.end}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* 综合评分大卡片 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-          <span className="text-sm text-gray-500 uppercase tracking-wide">综合评分</span>
-        </div>
-        <div className={`text-6xl font-bold ${scoreColor(overallScore)}`}>
-          {Math.round(overallScore)}
-        </div>
-        <div className="text-sm text-gray-400 mt-1">/ 100 分</div>
-        {/* 环形进度条 */}
-        <div className="relative w-40 h-40 mx-auto mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={[
-                  { name: '得分', value: overallScore, color: gaugeColor(overallScore) === 'emerald' ? COLORS.emerald : gaugeColor(overallScore) === 'amber' ? COLORS.amber : COLORS.red },
-                  { name: '剩余', value: Math.max(100 - overallScore, 0), color: '#e5e7eb' },
-                ]}
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={65}
-                startAngle={90}
-                endAngle={-270}
-                dataKey="value"
-                stroke="none"
-              >
-                <Cell fill={overallScore >= 80 ? COLORS.emerald : overallScore >= 60 ? COLORS.amber : COLORS.red} />
-                <Cell fill="#e5e7eb" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          {/* 中心文字 */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-lg font-bold ${scoreColor(overallScore)}`}>
-              {overallScore >= 80 ? '优秀' : overallScore >= 60 ? '良好' : '待改善'}
-            </span>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SummaryDateFilter
+          mode={filterMode}
+          onModeChange={handleModeChange}
+          startDate={range.startDate}
+          endDate={range.endDate}
+          onDateChange={(s, e) => setRange({ startDate: s, endDate: e })}
+        />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={handleExport}>
+            <Download className="w-4 h-4" /> 导出
+          </Button>
+          <Button size="sm" variant="default" onClick={handleAdd}>
+            <Plus className="w-4 h-4" /> 新增指标
+          </Button>
         </div>
       </div>
 
-      {/* 仪表盘行：产量达成 + 任务完成 + 成本控制 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 产量达成率 - SVG 仪表盘 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-            产量达成率
-          </h3>
-          <GaugeChart
-            percentage={yieldRate}
-            label="产量指标达成"
-            colorScheme={gaugeColor(yieldRate)}
-          />
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="text-sm">数据加载失败：{error}</span>
         </div>
+      )}
 
-        {/* 任务完成率 - 环形进度图 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-blue-500" />
-            任务完成率
-          </h3>
-          <div className="relative w-40 h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={progressRingData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={65}
-                  startAngle={90}
-                  endAngle={-270}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {progressRingData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+      {!board ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <Gauge className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">暂无指标数据</p>
+        </div>
+      ) : (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="bg-white rounded-xl p-1 shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 gap-1 p-1 bg-gray-100/80 rounded-xl">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Target className="w-4 h-4" />总览
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />指标列表
+            </TabsTrigger>
+            <TabsTrigger value="category" className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />分类管理
+            </TabsTrigger>
+            <TabsTrigger value="evaluate" className="flex items-center gap-2">
+              <Gauge className="w-4 h-4" />考核评价
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ① 总览 */}
+          <TabsContent value="overview" className="mt-4 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col items-center justify-center">
+                <span className="text-sm text-gray-500 mb-3">综合指标得分</span>
+                <div className={`text-6xl font-bold ${achievementColor(score)}`}>{score}</div>
+                <span className="text-sm text-gray-400 mt-1">/ 100 分</span>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-4">
+                  <div
+                    className={`h-full rounded-full ${score >= 100 ? 'bg-emerald-500' : score >= 80 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${Math.min(score, 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center gap-4 mt-5 text-sm">
+                  <span className="flex items-center gap-1.5 text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" />达标 {goodCount}
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <span className="flex items-center gap-1.5 text-red-600">
+                    <AlertCircle className="w-4 h-4" />未达标 {badCount}
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-500">共 {autoItems.length} 项</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-3 text-center">综合得分按指标权重加权，仅统计自动计算指标</p>
+              </div>
+
+              <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-6">
+                <h3 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-slate-500" />分类达成率
+                </h3>
+                <p className="text-xs text-gray-400 mb-2">按指标分类聚合的加权达成情况</p>
+                {radarData.length >= 3 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
+                        <PolarGrid stroke="#e5e7eb" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: '#374151' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px' }}
+                          formatter={(value: number) => [`${value}%`, '达成率']}
+                        />
+                        <Radar name="达成率" dataKey="达成率" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-64 flex flex-col items-center justify-center gap-3">
+                    {radarData.map((c) => (
+                      <div key={c.subject} className="flex items-center gap-3 w-48">
+                        <span className="text-sm text-gray-600 w-16">{c.subject}</span>
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(c.达成率, 100)}%` }} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 w-12 text-right">{c.达成率}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-gray-700">自动计算指标</h2>
+                <span className="text-xs text-gray-400">
+                  实际值由业务数据实时聚合；标「演示数据」的指标底层为系统模拟数据，请勿直接用于对外汇报
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {autoItems.map((item) => (
+                  <IndicatorCard key={item.key || item.name} item={item} />
+                ))}
+              </div>
+            </div>
+
+            {unachieved.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h3 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500" />重点关注
+                </h3>
+                <p className="text-xs text-gray-400 mb-4">未达标指标，按达成率由低到高排序</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                  {unachieved.map((item) => (
+                    <div key={item.key || item.code} className="flex items-center gap-3">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_STYLE[item.status].dot}`} />
+                      <span className="text-sm text-gray-700 flex-1 truncate">{item.name}</span>
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        {item.actual}{item.unit} / 目标 {item.target}{item.unit}
+                      </span>
+                      <span className={`text-sm font-medium flex-shrink-0 w-14 text-right ${achievementColor(item.achievement)}`}>
+                        {item.achievement}%
+                      </span>
+                    </div>
                   ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            {/* 中心数字 */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-2xl font-bold ${scoreColor(taskCompletionRate)}`}>
-                {Math.round(taskCompletionRate)}%
-              </span>
-              <span className="text-xs text-gray-400 mt-1">完成率</span>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ② 指标列表 */}
+          <TabsContent value="list" className="mt-4 space-y-4">
+            {/* 筛选栏 */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="搜索指标名称或编码"
+                  className="pl-9 border-gray-300"
+                />
+              </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white"
+              >
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+                {([
+                  { key: 'all', label: '全部来源' },
+                  { key: 'auto', label: '自动计算' },
+                  { key: 'manual', label: '手工维护' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setSourceFilter(opt.key)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      sourceFilter === opt.key ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-sm text-gray-400 ml-auto">共 {filteredItems.length} 项</span>
             </div>
-          </div>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500">
-              已完成 <span className="font-medium text-gray-700">{indicator?.task.completed ?? 0}</span>
-              {' / '}
-              总计 <span className="font-medium text-gray-700">{indicator?.task.total ?? 0}</span> 项
-            </p>
-          </div>
-        </div>
 
-        {/* 成本控制率 - 红绿灯 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-amber-500" />
-            成本控制率
-          </h3>
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <TrafficLight status={costTrafficStatus} label="成本控制" />
-          </div>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500">
-              人工成本：<span className="font-medium text-gray-700">
-                {(indicator?.labor.totalCost ?? 0).toLocaleString()} 元
-              </span>
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              工人：{indicator?.labor.workerCount ?? 0}名 | 工时：{indicator?.labor.totalHours ?? 0}h
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 雷达图 + 明细表 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 综合指标雷达图 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Target className="w-4 h-4 text-slate-500" />
-            综合指标雷达图
-          </h3>
-          {radarData.length > 0 ? (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-                  <PolarGrid stroke="#e5e7eb" />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fontSize: 13, fill: '#374151' }}
-                  />
-                  <PolarRadiusAxis
-                    angle={30}
-                    domain={[0, 100]}
-                    tick={{ fontSize: 10, fill: '#9ca3af' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${Math.round(value)}%`, '指标得分']}
-                  />
-                  <Radar
-                    name="指标得分"
-                    dataKey="指标得分"
-                    stroke={COLORS.emerald}
-                    fill={COLORS.emerald}
-                    fillOpacity={0.2}
-                    strokeWidth={2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-400">暂无雷达图数据</div>
-          )}
-        </div>
-
-        {/* 指标明细表 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Star className="w-4 h-4 text-slate-500" />
-            指标明细表
-          </h3>
-          {detailTableData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table className="w-full text-sm">
+            {/* 指标表格 */}
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <Table className="w-full">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                     <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">指标名称</TableHead>
-                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">目标值</TableHead>
-                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">实际值</TableHead>
-                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">达成率</TableHead>
-                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">评分</TableHead>
+                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">分类</TableHead>
+                    <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">目标值</TableHead>
+                    <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">实际值</TableHead>
+                    <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">达成率</TableHead>
+                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">数据来源</TableHead>
+                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detailTableData.map((row, index) => (
-                    <TableRow key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <TableCell className="py-3 px-2 font-medium text-gray-800">{row.name}</TableCell>
-                      <TableCell className="py-3 px-2 text-gray-600">{row.target}</TableCell>
-                      <TableCell className="py-3 px-2 text-gray-600">{row.actual}</TableCell>
-                      <TableCell className="py-3 px-2 text-center">
-                        <span className={`font-medium ${scoreColor(Number(row.rate.replace('%', '')))}`}>
-                          {row.rate}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-2 text-center">
-                        <span className={`inline-flex items-center justify-center w-10 h-8 rounded-md text-xs font-bold ${scoreBgColor(row.score)} ${scoreColor(row.score)}`}>
-                          {row.score}
-                        </span>
+                  {paginatedItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="px-4 py-10 text-center text-gray-400">
+                        没有符合条件的指标
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    paginatedItems.map((item) => {
+                      const style = STATUS_STYLE[item.status];
+                      const isManual = !!item.id;
+                      return (
+                        <TableRow key={item.id || item.key} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="px-4 py-2.5 text-sm text-gray-800 font-medium">
+                            <div className="flex items-center gap-2">
+                              {item.name}
+                              <span className="text-[10px] text-gray-400" title={item.direction === 'lower' ? '越低越好' : '越高越好'}>
+                                {item.direction === 'lower' ? '↓' : '↑'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-2.5 text-sm text-gray-500">{item.category}</TableCell>
+                          <TableCell className="px-4 py-2.5 text-sm text-gray-500 text-right">{item.target}{item.unit}</TableCell>
+                          <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right font-medium">{item.actual}{item.unit}</TableCell>
+                          <TableCell className={`px-4 py-2.5 text-sm text-right font-medium ${achievementColor(item.achievement)}`}>
+                            {item.achievement}%
+                          </TableCell>
+                          <TableCell className="px-4 py-2.5 text-center">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+                              {style.label}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-2.5 text-xs">
+                            {item.dataSource === 'demo' ? (
+                              <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600">演示数据</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">实时</span>
+                            )}
+                            <span className="text-gray-400 ml-1.5">{isManual ? '手工维护' : '自动计算'}</span>
+                          </TableCell>
+                          <TableCell className="px-4 py-2.5">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleView(item)}
+                                className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+                                title="查看详情"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {isManual ? (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(item)}
+                                    className="p-1.5 rounded hover:bg-gray-100 text-blue-600"
+                                    title="编辑"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(item)}
+                                    className="p-1.5 rounded hover:bg-gray-100 text-red-600"
+                                    title="删除"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <span
+                                  className="px-2 text-xs text-gray-300"
+                                  title="自动指标的实际值由业务数据实时计算，不可编辑；如需调整目标值请先在指标库登记同名指标"
+                                >
+                                  —
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-400">暂无明细数据</div>
-          )}
-        </div>
-      </div>
 
-      {/* 错误提示 */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-          数据加载异常：{error}
-        </div>
+            {/* 分页 */}
+            {totalPages > 1 && (
+              <div className="flex justify-end">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400">
+              自动计算指标（{autoItems.length} 项）的实际值来自业务数据实时聚合，不可手工修改；
+              手工维护指标（{manualItems.length} 项）的实际值需在指标库中录入。
+            </p>
+          </TabsContent>
+
+          {/* ③ 分类管理 */}
+          <TabsContent value="category" className="mt-4">
+            <CategoryPanel categorySummary={categorySummary} indicators={indicators} />
+          </TabsContent>
+
+          {/* ④ 考核评价 */}
+          <TabsContent value="evaluate" className="mt-4">
+            <EvaluatePanel evaluationData={evaluationData} />
+          </TabsContent>
+        </Tabs>
       )}
+
+      {/* 弹窗：新增/编辑 */}
+      <CreateModal
+        isOpen={formOpen}
+        indicator={formItem}
+        onClose={() => { setFormOpen(false); setFormItem(null); }}
+        onSave={saving ? () => undefined : handleSave}
+      />
+
+      {/* 弹窗：详情 */}
+      <DetailModal
+        isOpen={detailOpen}
+        indicator={detailItem}
+        modalType="view"
+        onClose={() => { setDetailOpen(false); setDetailItem(null); }}
+      />
+
+      {/* 弹窗：删除确认 */}
+      <DeleteModal
+        isOpen={deleteOpen}
+        item={deleteItem}
+        onClose={() => { setDeleteOpen(false); setDeleteItem(null); }}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }
