@@ -51,6 +51,9 @@ const processRouteMap: Record<string, string> = {
   '/labor/analytics': 'PROC_LABOR_ANALYTICS',
 
   // 生产汇总表子菜单
+  // 2026-09-29：/summary/business-analysis 是 yield+cost+labor 三合一的合并页，
+  // 沿用它前身 /summary/yield 的权限码
+  '/summary/business-analysis': 'PROC_SUM_YIELD',
   '/summary/yield': 'PROC_SUM_YIELD',
   '/summary/cost': 'PROC_SUM_COST',
   '/summary/labor': 'PROC_SUM_LABOR',

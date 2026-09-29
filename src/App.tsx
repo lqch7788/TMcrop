@@ -564,7 +564,7 @@ function AppContent() {
           {/* 生产汇总表旧路由 → 重定向到 V1.0 新页面 */}
           <Route path="/daily-problem-summary" element={<Navigate to="/summary/problems" replace />} />
           <Route path="/plan-summary" element={<Navigate to="/summary/batch" replace />} />
-          <Route path="/reports" element={<Navigate to="/bigdata/analysis" replace />} />
+          <Route path="/reports" element={<Navigate to="/summary/overview" replace />} />
           <Route path="/worker-attendance" element={<WorkerAttendance />} />
           <Route path="/work-log" element={<WorkLog />} />
           <Route path="/monthly-report" element={<MonthlyReport />} />
