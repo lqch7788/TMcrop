@@ -32,6 +32,10 @@ export { TodoStrip } from './TodoStrip';
 export type { TodoStripProps, TodoItem } from './TodoStrip';
 export { ModuleHealthGrid } from './ModuleHealthGrid';
 export type { ModuleHealthGridProps, ModuleCard, ModuleMetric } from './ModuleHealthGrid';
+export { OperationsPerspective } from './OperationsPerspective';
+export type { OperationsPerspectiveProps } from './OperationsPerspective';
+export { DrilldownModal } from './DrilldownModal';
+export type { DrilldownModalProps } from './DrilldownModal';
 
 // Hooks
 export { useExport } from './useExport';

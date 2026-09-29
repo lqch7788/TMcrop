@@ -22,20 +22,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Gauge, Loader2, AlertCircle, Target, TrendingUp, TrendingDown, CheckCircle2,
-  Plus, Download, Search, Eye, Edit, Trash2,
+  Plus, Download, Search, Eye, Edit, Trash2, Layers,
 } from 'lucide-react';
 import {
-  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip,
+  // recharts 的图表 Tooltip 与 UI 库的同名，此处起别名避免冲突
+  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  Tooltip as RechartsTooltip,
 } from 'recharts';
-import { PageHeader, SummaryDateFilter } from '../../components/summary';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button, Input, Pagination } from '@/components/ui';
+import { PageHeader, SummaryDateFilter, OperationsPerspective } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button, Input, Pagination, Tooltip } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { useSummaryDataStore, type IndicatorBoardItem } from '../../stores/useSummaryDataStore';
 import { useIndicatorDataStore } from '../../stores/useIndicatorDataStore';
 import { currentYearRange, rangeByMode, todayLocal } from '../../lib/dateUtils';
-import type { Indicator } from '../types/indicators.types';
+import type { Indicator, CategorySummary } from '../types/indicators.types';
 import CategoryPanel from '../components/Indicators/IndicatorsPanels';
-import EvaluatePanel from '../components/Indicators/IndicatorsEvaluatePanel';
 import CreateModal from '../components/Indicators/IndicatorsModals/CreateModal';
 import DetailModal from '../components/Indicators/IndicatorsModals/DetailModal';
 import DeleteModal from '../components/Indicators/IndicatorsModals/DeleteModal';
@@ -73,6 +74,19 @@ function toIndicator(item: IndicatorBoardItem): Indicator {
     warning: item.warning,
     weight: item.weight,
   };
+}
+
+/**
+ * 指标分类归一化
+ *
+ * 指标库里存在两套命名：前 8 条写「生产 / 质量 / 成本 / 效率 / 安全」，
+ * 后 15 条写「生产指标 / 质量指标 / 成本指标 / …」（带「指标」后缀）。
+ * 不归一化的话，分类汇总里会裂出「生产」与「生产指标」这类语义重复的条目（共 13 个）。
+ * 展示时统一去掉后缀，让两批合并成同一分类。不改数据库，随时可逆。
+ */
+function normalizeCategory(cat: string): string {
+  if (!cat) return '未分类';
+  return cat.replace(/指标$/, '') || cat;
 }
 
 // ========== 加载态 ==========
@@ -145,19 +159,37 @@ function IndicatorCard({ item }: { item: IndicatorBoardItem }) {
           style={{ width: `${Math.min(Math.max(item.achievement, 0), 100)}%` }}
         />
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className={`text-xs font-medium flex-shrink-0 ${achievementColor(item.achievement)}`}>
+      <div className="flex items-center gap-2 text-xs mb-1">
+        <span className={`font-medium flex-shrink-0 ${achievementColor(item.achievement)}`}>
           达成率 {item.achievement}%
         </span>
-        <span className="text-xs text-gray-400 truncate min-w-0" title={item.detail}>{item.detail}</span>
+        {/* 环比：上升对"越高越好"是好事、对"越低越好"是坏事，故颜色随 direction 翻转 */}
+        {item.changeRate !== null && item.changeRate !== undefined ? (
+          <span
+            className={`flex items-center gap-0.5 flex-shrink-0 ${
+              (item.direction === 'lower' ? item.changeRate < 0 : item.changeRate > 0)
+                ? 'text-emerald-600'
+                : 'text-red-500'
+            }`}
+            title="较上一等长区间的变化率"
+          >
+            {item.changeRate > 0 ? <TrendingUp className="w-3 h-3" /> : item.changeRate < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+            {Math.abs(item.changeRate)}%
+          </span>
+        ) : (
+          <span className="text-gray-300 flex-shrink-0" title="上一等长区间内没有该指标的数据，无法计算环比">
+            上期无数据
+          </span>
+        )}
       </div>
+      <div className="text-xs text-gray-400 truncate" title={item.detail}>{item.detail}</div>
     </div>
   );
 }
 
 // ========== 主页面组件 ==========
 
-type TabKey = 'overview' | 'list' | 'category' | 'evaluate';
+type TabKey = 'overview' | 'list' | 'category' | 'operations';
 
 export default function SummaryIndicators() {
   // ── 看板数据（自动指标实时计算 + 指标库手工指标）──
@@ -168,10 +200,7 @@ export default function SummaryIndicators() {
 
   // ── 指标库数据与 CRUD（分类汇总、考核评价、增删改）──
   const indicators = useIndicatorDataStore((s) => s.indicators);
-  const evaluationData = useIndicatorDataStore((s) => s.evaluationData);
-  const categorySummary = useIndicatorDataStore((s) => s.categorySummary);
   const fetchIndicators = useIndicatorDataStore((s) => s.fetchIndicators);
-  const fetchEvaluations = useIndicatorDataStore((s) => s.fetchEvaluations);
   const createIndicator = useIndicatorDataStore((s) => s.createIndicator);
   const updateIndicator = useIndicatorDataStore((s) => s.updateIndicator);
   const deleteIndicator = useIndicatorDataStore((s) => s.deleteIndicator);
@@ -206,7 +235,6 @@ export default function SummaryIndicators() {
 
   useEffect(() => {
     fetchIndicators();
-    fetchEvaluations();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ========== 派生数据 ==========
@@ -260,6 +288,35 @@ export default function SummaryIndicators() {
     [autoItems, manualItems]
   );
 
+  /**
+   * 分类汇总（供「分类管理」TAB 使用）
+   *
+   * 2026-09-29 统一口径：原先直接用 useIndicatorDataStore.categorySummary，
+   * 那是基于指标库 23 条记录的 actual/target 现算的（前 8 条 actual 全为 0），
+   * 导致同一个页面里「总览」说生产类达成 82%、「分类管理」却说 0%。
+   * 现改用与总览同源的 28 条指标（自动 + 手工），并把分类命名归一化。
+   */
+  const boardCategorySummary = useMemo<CategorySummary[]>(() => {
+    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
+    const map = new Map<string, { count: number; sum: number }>();
+    allItems.forEach((i) => {
+      const cat = normalizeCategory(i.category);
+      const cur = map.get(cat) || { count: 0, sum: 0 };
+      cur.count += 1;
+      // 封顶 100：超额完成的指标（如达成率 120%）不应把该分类的平均值拉高到失真
+      cur.sum += Math.min(Math.max(i.achievement, 0), 100);
+      map.set(cat, cur);
+    });
+    return [...map.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([name, v], idx) => ({
+        name,
+        count: v.count,
+        avgAchievement: Math.round((v.sum / v.count) * 10) / 10,
+        color: COLORS[idx % COLORS.length],
+      }));
+  }, [allItems]);
+
   /** 雷达图数据 */
   const radarData = useMemo(
     () => (board?.byCategory ?? []).map((c) => ({ subject: c.category, 达成率: c.achievement })),
@@ -284,6 +341,12 @@ export default function SummaryIndicators() {
   const handleEdit = (item: IndicatorBoardItem) => {
     if (!item.id) return; // 自动指标无 id，不可编辑
     setFormItem(toIndicator(item));
+    setFormOpen(true);
+  };
+
+  /** 从「指标定义配置」表打开编辑（数据直接来自 indicators 表，一定可编辑） */
+  const handleEditFromLibrary = (indicator: Indicator) => {
+    setFormItem(indicator);
     setFormOpen(true);
   };
 
@@ -428,8 +491,8 @@ export default function SummaryIndicators() {
             <TabsTrigger value="category" className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />分类管理
             </TabsTrigger>
-            <TabsTrigger value="evaluate" className="flex items-center gap-2">
-              <Gauge className="w-4 h-4" />考核评价
+            <TabsTrigger value="operations" className="flex items-center gap-2">
+              <Layers className="w-4 h-4" />运营透视
             </TabsTrigger>
           </TabsList>
 
@@ -472,7 +535,7 @@ export default function SummaryIndicators() {
                         <PolarGrid stroke="#e5e7eb" />
                         <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: '#374151' }} />
                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                        <Tooltip
+                        <RechartsTooltip
                           contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '12px' }}
                           formatter={(value: number) => [`${value}%`, '达成率']}
                         />
@@ -614,7 +677,37 @@ export default function SummaryIndicators() {
                           </TableCell>
                           <TableCell className="px-4 py-2.5 text-sm text-gray-500">{item.category}</TableCell>
                           <TableCell className="px-4 py-2.5 text-sm text-gray-500 text-right">{item.target}{item.unit}</TableCell>
-                          <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right font-medium">{item.actual}{item.unit}</TableCell>
+                          <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right font-medium">
+                            {/* 悬停展示该实际值是怎么算出来的：口径 / 数据来源 / 当前数据 / 统计区间 */}
+                            <Tooltip
+                              multiline
+                              maxWidth={340}
+                              position="bottom"
+                              content={
+                                <div className="space-y-1 text-left">
+                                  <div className="font-medium text-white">{item.name}</div>
+                                  <div className="text-xs text-gray-300">
+                                    计算口径：{item.formula || '—'}
+                                  </div>
+                                  <div className="text-xs text-gray-300">
+                                    数据来源：{item.sourceLabel || '—'}
+                                  </div>
+                                  {item.detail && (
+                                    <div className="text-xs text-gray-300 pt-1 mt-1 border-t border-gray-700">
+                                      当前数据：{item.detail}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-gray-400 pt-1">
+                                    统计区间：{board?.period?.start} ~ {board?.period?.end}
+                                  </div>
+                                </div>
+                              }
+                            >
+                              <span className="cursor-help border-b border-dashed border-gray-300">
+                                {item.actual}{item.unit}
+                              </span>
+                            </Tooltip>
+                          </TableCell>
                           <TableCell className={`px-4 py-2.5 text-sm text-right font-medium ${achievementColor(item.achievement)}`}>
                             {item.achievement}%
                           </TableCell>
@@ -693,13 +786,21 @@ export default function SummaryIndicators() {
           </TabsContent>
 
           {/* ③ 分类管理 */}
-          <TabsContent value="category" className="mt-4">
-            <CategoryPanel categorySummary={categorySummary} indicators={indicators} />
+          <TabsContent value="category" className="mt-4 space-y-4">
+            <p className="text-xs text-gray-400">
+              分类汇总统计全部 {allItems.length} 项指标（含手工维护项）；
+              「总览」的综合得分与分类雷达仅统计 {autoItems.length} 项自动计算指标，两者范围不同属预期。
+            </p>
+            <CategoryPanel
+              categorySummary={boardCategorySummary}
+              indicators={indicators}
+              onEdit={handleEditFromLibrary}
+            />
           </TabsContent>
 
-          {/* ④ 考核评价 */}
-          <TabsContent value="evaluate" className="mt-4">
-            <EvaluatePanel evaluationData={evaluationData} />
+          {/* ④ 运营透视：物料去向 / 审批瓶颈 / 人员负荷 */}
+          <TabsContent value="operations" className="mt-4">
+            <OperationsPerspective structure={board.structure ?? null} />
           </TabsContent>
         </Tabs>
       )}

@@ -910,50 +910,95 @@ router.get('/indicator-board', (req: Request, res: Response) => {
     const pct = (a: number, b: number): number => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
     const r1 = (v: number): number => Math.round(v * 10) / 10;
 
-    // ── 原始聚合 ──
-    const planQty = num(row(
-      'SELECT COALESCE(SUM(planned_quantity), 0) AS v FROM production_plans WHERE planting_date >= ? AND planting_date <= ?',
-      [start, end]
-    ).v);
-    const harvestQty = num(row(
-      "SELECT COALESCE(SUM(harvest_quantity), 0) AS v FROM harvest_records WHERE status IN ('completed', 'harvested') AND harvest_date >= ? AND harvest_date <= ?",
-      [start, end]
-    ).v);
-    const taskRow = row(
-      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM farm_tasks WHERE plan_date >= ? AND plan_date <= ?",
-      [start, end]
-    );
-    const problemRow = row(
-      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM problems WHERE create_time >= ? AND create_time <= ?",
-      [`${start} 00:00:00`, `${end} 23:59:59`]
-    );
-    const survivalRate = num(row(
-      'SELECT ROUND(AVG(survival_rate), 1) AS v FROM seedlings WHERE survival_rate > 0 AND deleted_at IS NULL AND seedling_date >= ? AND seedling_date <= ?',
-      [start, end]
-    ).v);
-    const laborCost = num(row(
-      "SELECT COALESCE(SUM(total_amount), 0) AS v FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
-      [start, end]
-    ).v);
-    const materialCost = num(row(
-      'SELECT COALESCE(SUM(total_amount), 0) AS v FROM material_costs WHERE cost_date >= ? AND cost_date <= ?',
-      [start, end]
-    ).v);
-    const energyCost = num(row(
-      'SELECT COALESCE(SUM(total_amount), 0) AS v FROM energy_costs WHERE cost_date >= ? AND cost_date <= ?',
-      [start, end]
-    ).v);
+    // ── 区间聚合（抽成函数，当期与上期各算一次以支持环比）──
+    /**
+     * 计算指定时间区间内的时敏聚合值
+     * @param from 区间起（YYYY-MM-DD）
+     * @param to   区间止（YYYY-MM-DD）
+     */
+    const computeAggregates = (from: string, to: string) => {
+      const planQty = num(row(
+        'SELECT COALESCE(SUM(planned_quantity), 0) AS v FROM production_plans WHERE planting_date >= ? AND planting_date <= ?',
+        [from, to]
+      ).v);
+      const harvestQty = num(row(
+        "SELECT COALESCE(SUM(harvest_quantity), 0) AS v FROM harvest_records WHERE status IN ('completed', 'harvested') AND harvest_date >= ? AND harvest_date <= ?",
+        [from, to]
+      ).v);
+      const taskRow = row(
+        "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM farm_tasks WHERE plan_date >= ? AND plan_date <= ?",
+        [from, to]
+      );
+      const problemRow = row(
+        "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done FROM problems WHERE create_time >= ? AND create_time <= ?",
+        [`${from} 00:00:00`, `${to} 23:59:59`]
+      );
+      const survivalRate = num(row(
+        'SELECT ROUND(AVG(survival_rate), 1) AS v FROM seedlings WHERE survival_rate > 0 AND deleted_at IS NULL AND seedling_date >= ? AND seedling_date <= ?',
+        [from, to]
+      ).v);
+      const laborCost = num(row(
+        "SELECT COALESCE(SUM(total_amount), 0) AS v FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
+        [from, to]
+      ).v);
+      const materialCost = num(row(
+        'SELECT COALESCE(SUM(total_amount), 0) AS v FROM material_costs WHERE cost_date >= ? AND cost_date <= ?',
+        [from, to]
+      ).v);
+      const energyCost = num(row(
+        'SELECT COALESCE(SUM(total_amount), 0) AS v FROM energy_costs WHERE cost_date >= ? AND cost_date <= ?',
+        [from, to]
+      ).v);
+      const approvalRow = row(
+        "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pend FROM approvals WHERE apply_date >= ? AND apply_date <= ?",
+        [from, to]
+      );
+      // 审批平均耗时（天）：只统计已出结果（通过/驳回）的单据
+      const approvalAvgDays = num(row(
+        `SELECT ROUND(AVG(julianday(updated_at) - julianday(apply_date)), 1) AS v
+         FROM approvals WHERE status IN ('approved', 'rejected') AND apply_date >= ? AND apply_date <= ?`,
+        [from, to]
+      ).v);
+
+      return {
+        planQty, harvestQty,
+        taskDone: num(taskRow.done), taskTotal: num(taskRow.total),
+        problemDone: num(problemRow.done), problemTotal: num(problemRow.total),
+        survivalRate, laborCost, materialCost, energyCost,
+        approvalTotal: num(approvalRow.total), approvalPend: num(approvalRow.pend),
+        approvalAvgDays,
+      };
+    };
+
+    /** 与 [from, to] 等长的前一个紧邻区间（本地时间计算，避免 UTC 偏移） */
+    const prevRange = (from: string, to: string): { start: string; end: string } => {
+      const fmt = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const s = new Date(`${from}T00:00:00`);
+      const e = new Date(`${to}T00:00:00`);
+      const days = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+      const prevEnd = new Date(s.getTime() - 86400000);
+      const prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
+      return { start: fmt(prevStart), end: fmt(prevEnd) };
+    };
+
+    const cur = computeAggregates(start, end);
+    const prevWindow = prevRange(start, end);
+    const prev = computeAggregates(prevWindow.start, prevWindow.end);
+
+    // ── 存量聚合（与时间区间无关，因此不参与环比）──
     const materialRow = row(
       'SELECT COUNT(*) AS total, SUM(CASE WHEN minStock > 0 AND quantity < minStock THEN 1 ELSE 0 END) AS low FROM materials'
-    );
-    const approvalRow = row(
-      "SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pend FROM approvals WHERE apply_date >= ? AND apply_date <= ?",
-      [start, end]
     );
     const planRow = row(
       "SELECT COUNT(*) AS total, SUM(CASE WHEN status IN ('completed', 'published') THEN 1 ELSE 0 END) AS done FROM production_plans"
     );
-    const totalCost = laborCost + materialCost + energyCost;
+    // 物料效期预警：90 天内到期的批次数（前瞻性风险，而非当前状态）
+    const expiringCount = num(row(
+      "SELECT COUNT(*) AS v FROM batch_inventory WHERE expiry_date <> '' AND expiry_date < date('now', '+90 days')"
+    ).v);
+
+    const totalCost = cur.laborCost + cur.materialCost + cur.energyCost;
 
     // ── 数据来源可信度判定（2026-09-29）──
     // 系统里有历史遗留的演示数据：material_costs 的 `SIMM` 前缀、energy_costs 的 `SIME` 前缀
@@ -971,10 +1016,12 @@ router.get('/indicator-board', (req: Request, res: Response) => {
     };
     const materialIsDemo = simRatio('material_costs', 'SIMM') > 0.5;
     const energyIsDemo = simRatio('energy_costs', 'SIME') > 0.5;
-    const laborIsDemo = num(row(
-      "SELECT COUNT(*) AS total FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
-      [start, end]
-    ).total) < 5;
+    const laborIsDemo = cur.laborCost > 0
+      ? num(row(
+          "SELECT COUNT(*) AS total FROM labor_records WHERE status = 'completed' AND work_date >= ? AND work_date <= ?",
+          [start, end]
+        ).total) < 5
+      : true;
     /** 成本率类指标的分母是三类成本之和，任一为演示数据都会污染该指标 */
     const costSource: 'live' | 'demo' = (materialIsDemo || energyIsDemo || laborIsDemo) ? 'demo' : 'live';
 
@@ -984,17 +1031,48 @@ router.get('/indicator-board', (req: Request, res: Response) => {
       defs.set(String(d.code), d);
     }
 
+    /** 环比：本期相对上期的变化率（%）。上期为 0 或缺失时返回 null —— 不编造数字 */
+    const changeRate = (curVal: number, prevVal: number | null): number | null => {
+      if (prevVal === null || prevVal === 0) return null;
+      return Math.round(((curVal - prevVal) / Math.abs(prevVal)) * 1000) / 10;
+    };
+
     /**
      * 构建一条自动指标
-     * @param linkCode 关联的指标库 code（目标值/预警线/权重从这里取），无关联系传 null
-     * @param direction higher=越高越好（达成率、完成率）；lower=越低越好（成本率类）
-     * @param dataSource live=真实业务数据；demo=底层含模拟/演示数据，页面需标注
+     *
+     * 2026-09-29 改为对象参数：字段已达十余个，位置参数难以阅读与维护。
      */
-    const build = (
-      key: string, name: string, category: string, actual: number, detail: string,
-      linkCode: string | null, defaultTarget: number, defaultWarning: number,
-      direction: 'higher' | 'lower', dataSource: 'live' | 'demo' = 'live'
-    ) => {
+    const build = (cfg: {
+      key: string;
+      name: string;
+      category: string;
+      actual: number;
+      /** 口径明细，如"已采收 41,285 / 计划 62,789 kg" */
+      detail: string;
+      /** 计算口径说明 */
+      formula: string;
+      /** 数据来源（中文） */
+      sourceLabel: string;
+      /** 计量单位，默认 % */
+      unit?: string;
+      /** 上一等长区间的同指标值，用于环比；存量类指标不传 */
+      previous?: number | null;
+      /** 关联的指标库 code（目标值/预警线/权重取自这里） */
+      linkCode?: string | null;
+      /** 指标库未登记时的默认目标值与预警线 */
+      defaultTarget: number;
+      defaultWarning: number;
+      /** higher=越高越好；lower=越低越好（成本率/耗时/临期数等） */
+      direction: 'higher' | 'lower';
+      /** live=真实业务数据；demo=底层含模拟数据 */
+      dataSource?: 'live' | 'demo';
+    }) => {
+      const {
+        key, name, category, actual, detail, formula, sourceLabel,
+        unit = '%', previous = null, linkCode = null,
+        defaultTarget, defaultWarning, direction, dataSource = 'live',
+      } = cfg;
+
       const def = linkCode ? defs.get(linkCode) : undefined;
       const target = num(def?.target) || defaultTarget;
       const warning = num(def?.warning) || defaultWarning;
@@ -1014,49 +1092,122 @@ router.get('/indicator-board', (req: Request, res: Response) => {
         status = actual <= target ? 'good' : actual <= warning ? 'warning' : 'bad';
       }
       return {
-        key, name, category, unit: '%', actual: r1(actual), target, warning, weight,
-        achievement, status, direction, detail, linkCode, fromLibrary: !!def, dataSource,
+        key, name, category, unit, actual: r1(actual), target, warning, weight,
+        achievement, status, direction, linkCode, fromLibrary: !!def, dataSource,
+        detail, formula, sourceLabel,
+        previousValue: previous === null ? null : r1(previous),
+        changeRate: changeRate(actual, previous),
       };
     };
 
     const autoIndicators = [
-      build('yieldAchievement', '产量达成率', '生产',
-        planQty > 0 ? (harvestQty / planQty) * 100 : 0,
-        `已采收 ${harvestQty.toLocaleString()} / 计划 ${planQty.toLocaleString()} kg`,
-        'PROD_001', 95, 90, 'higher'),
-      build('taskCompletion', '任务完成率', '效率',
-        pct(num(taskRow.done), num(taskRow.total)),
-        `${num(taskRow.done)} / ${num(taskRow.total)} 个任务已完成`,
-        null, 90, 75, 'higher'),
-      build('problemResolution', '问题解决率', '质量',
-        pct(num(problemRow.done), num(problemRow.total)),
-        `${num(problemRow.done)} / ${num(problemRow.total)} 个问题已解决`,
-        null, 80, 60, 'higher'),
-      build('seedlingSurvival', '种苗成活率', '质量', survivalRate,
-        '育苗记录的平均成活率',
-        'KPI003', 98, 95, 'higher'),
-      build('materialCostRate', '物料成本率', '成本',
-        totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
-        `物料 ¥${Math.round(materialCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
-        'COST_001', 35, 38, 'lower', costSource),
-      build('laborCostRate', '人工成本率', '成本',
-        totalCost > 0 ? (laborCost / totalCost) * 100 : 0,
-        `人工 ¥${Math.round(laborCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
-        'COST_002', 25, 28, 'lower', costSource),
-      build('inventorySufficiency', '库存充足率', '效率',
-        num(materialRow.total) > 0
+      build({
+        key: 'yieldAchievement', name: '产量达成率', category: '生产',
+        actual: cur.planQty > 0 ? (cur.harvestQty / cur.planQty) * 100 : 0,
+        detail: `已采收 ${cur.harvestQty.toLocaleString()} / 计划 ${cur.planQty.toLocaleString()} kg`,
+        formula: '统计期内已采收量 ÷ 生产计划量 × 100%',
+        sourceLabel: '采收记录、生产计划',
+        previous: prev.planQty > 0 ? (prev.harvestQty / prev.planQty) * 100 : null,
+        linkCode: 'PROD_001', defaultTarget: 95, defaultWarning: 90, direction: 'higher',
+      }),
+      build({
+        key: 'taskCompletion', name: '任务完成率', category: '效率',
+        actual: pct(cur.taskDone, cur.taskTotal),
+        detail: `${cur.taskDone} / ${cur.taskTotal} 个任务已完成`,
+        formula: '已完成任务数 ÷ 任务总数 × 100%',
+        sourceLabel: '农事任务',
+        previous: pct(prev.taskDone, prev.taskTotal),
+        defaultTarget: 90, defaultWarning: 75, direction: 'higher',
+      }),
+      build({
+        key: 'problemResolution', name: '问题解决率', category: '质量',
+        actual: pct(cur.problemDone, cur.problemTotal),
+        detail: `${cur.problemDone} / ${cur.problemTotal} 个问题已解决`,
+        formula: '已解决问题数 ÷ 问题总数 × 100%',
+        sourceLabel: '问题记录',
+        previous: pct(prev.problemDone, prev.problemTotal),
+        defaultTarget: 80, defaultWarning: 60, direction: 'higher',
+      }),
+      build({
+        key: 'seedlingSurvival', name: '种苗成活率', category: '质量',
+        actual: cur.survivalRate,
+        detail: '统计期内各育苗批次成活率的平均值',
+        formula: '各育苗批次的成活率取算术平均',
+        sourceLabel: '育苗记录',
+        previous: prev.survivalRate || null,
+        linkCode: 'KPI003', defaultTarget: 98, defaultWarning: 95, direction: 'higher',
+      }),
+      build({
+        key: 'materialCostRate', name: '物料成本率', category: '成本',
+        actual: totalCost > 0 ? (cur.materialCost / totalCost) * 100 : 0,
+        detail: `物料 ¥${Math.round(cur.materialCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
+        formula: '物料成本 ÷ 总成本 × 100%（总成本 = 人工 + 物料 + 能源）',
+        sourceLabel: '物料成本',
+        previous: (prev.laborCost + prev.materialCost + prev.energyCost) > 0
+          ? (prev.materialCost / (prev.laborCost + prev.materialCost + prev.energyCost)) * 100
+          : null,
+        linkCode: 'COST_001', defaultTarget: 35, defaultWarning: 38, direction: 'lower',
+        dataSource: costSource,
+      }),
+      build({
+        key: 'laborCostRate', name: '人工成本率', category: '成本',
+        actual: totalCost > 0 ? (cur.laborCost / totalCost) * 100 : 0,
+        detail: `人工 ¥${Math.round(cur.laborCost).toLocaleString()} / 总成本 ¥${Math.round(totalCost).toLocaleString()}`,
+        formula: '人工成本 ÷ 总成本 × 100%（总成本 = 人工 + 物料 + 能源）',
+        sourceLabel: '人工记录',
+        previous: (prev.laborCost + prev.materialCost + prev.energyCost) > 0
+          ? (prev.laborCost / (prev.laborCost + prev.materialCost + prev.energyCost)) * 100
+          : null,
+        linkCode: 'COST_002', defaultTarget: 25, defaultWarning: 28, direction: 'lower',
+        dataSource: costSource,
+      }),
+      build({
+        key: 'inventorySufficiency', name: '库存充足率', category: '效率',
+        actual: num(materialRow.total) > 0
           ? ((num(materialRow.total) - num(materialRow.low)) / num(materialRow.total)) * 100
           : 0,
-        `${num(materialRow.total) - num(materialRow.low)} / ${num(materialRow.total)} 种物料高于安全库存`,
-        null, 95, 90, 'higher'),
-      build('approvalCompletion', '审批处理率', '效率',
-        pct(num(approvalRow.total) - num(approvalRow.pend), num(approvalRow.total)),
-        `已办结 ${num(approvalRow.total) - num(approvalRow.pend)} / ${num(approvalRow.total)} 张单据`,
-        null, 90, 80, 'higher'),
-      build('planCompletion', '计划完成率', '生产',
-        pct(num(planRow.done), num(planRow.total)),
-        `${num(planRow.done)} / ${num(planRow.total)} 个生产计划已发布或完成`,
-        null, 90, 80, 'higher'),
+        detail: `${num(materialRow.total) - num(materialRow.low)} / ${num(materialRow.total)} 种物料高于安全库存`,
+        formula: '(物料总数 − 低于安全库存数) ÷ 物料总数 × 100%',
+        sourceLabel: '物料主数据',
+        defaultTarget: 95, defaultWarning: 90, direction: 'higher',
+      }),
+      build({
+        key: 'approvalCompletion', name: '审批处理率', category: '效率',
+        actual: pct(cur.approvalTotal - cur.approvalPend, cur.approvalTotal),
+        detail: `已办结 ${cur.approvalTotal - cur.approvalPend} / ${cur.approvalTotal} 张单据`,
+        formula: '已办结单数 ÷ 审批总单数 × 100%（已办结 = 非待审批）',
+        sourceLabel: '审批单据',
+        previous: pct(prev.approvalTotal - prev.approvalPend, prev.approvalTotal),
+        defaultTarget: 90, defaultWarning: 80, direction: 'higher',
+      }),
+      build({
+        key: 'planCompletion', name: '计划完成率', category: '生产',
+        actual: pct(num(planRow.done), num(planRow.total)),
+        detail: `${num(planRow.done)} / ${num(planRow.total)} 个生产计划已发布或完成`,
+        formula: '已发布或已完成计划数 ÷ 计划总数 × 100%',
+        sourceLabel: '生产计划',
+        defaultTarget: 90, defaultWarning: 80, direction: 'higher',
+      }),
+      // ── 2026-09-29 新增：面向管理者的效率与风险视角 ──
+      build({
+        key: 'approvalLeadTime', name: '审批平均耗时', category: '效率',
+        actual: cur.approvalAvgDays,
+        unit: '天',
+        detail: `统计期内已出结果的审批单据平均处理 ${cur.approvalAvgDays} 天`,
+        formula: '已完成审批的(结果时间 − 提交时间)之和 ÷ 已审结单数',
+        sourceLabel: '审批单据',
+        previous: prev.approvalAvgDays || null,
+        defaultTarget: 2, defaultWarning: 3, direction: 'lower',
+      }),
+      build({
+        key: 'materialExpiring', name: '物料临期预警', category: '风险',
+        actual: expiringCount,
+        unit: '项',
+        detail: `有 ${expiringCount} 个物料批次将在 90 天内到期（含已过期）`,
+        formula: '统计效期在 90 天内的物料批次数',
+        sourceLabel: '批次库存',
+        defaultTarget: 0, defaultWarning: 3, direction: 'lower',
+      }),
     ];
 
     // ── 指标库中未被自动覆盖的条目（实际值靠人工维护，原样带出）──
@@ -1089,10 +1240,81 @@ router.get('/indicator-board', (req: Request, res: Response) => {
           target, actual, warning, weight: num(d.weight), source: d.source, trend: d.trend,
           frequency: d.frequency,
           achievement, status, direction,
+          // 口径说明：手工指标的值不是算出来的，而是人在指标库中录入的
+          formula: '实际值来自指标库的人工维护值，非系统自动计算',
+          sourceLabel: (d.source as string) || '人工录入',
           // 手工指标的实际值全部来自 indicators 表（15 条为批量写入的演示值，4 条为空），一律标注
           dataSource: 'demo' as const,
         };
       });
+
+    // ── 结构透视数据（供「运营透视」TAB 使用）──
+    /** 出库业务类型 → 中文（已比对库中实际出现的全部取值） */
+    const FLOW_TYPE_LABELS: Record<string, string> = {
+      transfer: '内部调拨', transfer_out: '调出', internal_planting: '种植领用',
+      damage_loss: '损耗', gift_sample: '赠样', customer_sale: '销售',
+      seedling: '育苗领用', material_execute: '生产领料', material_return: '生产退料',
+      return_inbound: '退料入库', restore: '冲销恢复', crop_sale: '作物销售', other: '其他',
+    };
+    /** 审批业务类型 → 中文（识别审批瓶颈用） */
+    const APPROVAL_TYPE_LABELS: Record<string, string> = {
+      production_plan: '生产计划', tech_solution: '技术方案', purchase_request: '采购申请',
+      material_request: '领料申请', return_material: '退料申请', material_inbound: '物料入库',
+      material_transfer: '库存调拨', batch_void: '批次作废', batch_change: '批次变更',
+      planting_plan: '种植计划', seedling_plan: '育苗计划', order_create: '订单创建',
+      order_change: '订单变更', task_dispatch: '任务派发', task_change: '任务变更',
+      inspection_issue: '巡查问题', issue_resolve: '问题处理', leave: '请假',
+      overtime: '加班', resignation: '离职', recruitment: '招聘', onboarding: '入职',
+      attendance_repair: '考勤补录', salary_adjustment: '薪资调整',
+      contract_renewal: '合同续签', salary_budget: '薪资预算', transfer: '调动',
+      indicator_approval: '指标审批', indicator_adjust: '指标调整',
+      budget_create: '预算创建', budget_adjust: '预算调整', production_batch: '生产批次',
+    };
+
+    /** 物料去向：按业务类型聚合出库流水 */
+    const materialFlow = queryToObjects<Record<string, unknown>>(
+      db,
+      `SELECT business_type AS t, COUNT(*) AS c, ROUND(COALESCE(SUM(quantity), 0), 1) AS q
+       FROM inventory_transaction
+       WHERE transaction_type = 'outbound' AND operate_date >= ? AND operate_date <= ?
+       GROUP BY business_type ORDER BY c DESC`,
+      [start, end]
+    ).map((r) => ({
+      type: String(r.t || ''),
+      label: FLOW_TYPE_LABELS[String(r.t)] || String(r.t || '未分类'),
+      count: num(r.c),
+      quantity: num(r.q),
+    }));
+
+    /** 审批类型分布：条数最多的就是流程瓶颈 */
+    const approvalByType = queryToObjects<Record<string, unknown>>(
+      db,
+      `SELECT type AS t, COUNT(*) AS c,
+              SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS p
+       FROM approvals WHERE apply_date >= ? AND apply_date <= ?
+       GROUP BY type ORDER BY c DESC LIMIT 10`,
+      [start, end]
+    ).map((r) => ({
+      type: String(r.t || ''),
+      label: APPROVAL_TYPE_LABELS[String(r.t)] || String(r.t || '未知类型'),
+      count: num(r.c),
+      pending: num(r.p),
+    }));
+
+    /** 人员负荷：任务数按负责人（识别负荷不均） */
+    const workload = queryToObjects<Record<string, unknown>>(
+      db,
+      `SELECT assignee_name AS n, COUNT(*) AS c,
+              SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS d
+       FROM farm_tasks
+       WHERE plan_date >= ? AND plan_date <= ? AND assignee_name <> ''
+       GROUP BY assignee_name ORDER BY c DESC LIMIT 10`,
+      [start, end]
+    ).map((r) => ({
+      name: String(r.n || ''),
+      total: num(r.c),
+      completed: num(r.d),
+    }));
 
     // ── 汇总：加权综合得分 + 按分类达成率 ──
     const totalWeight = autoIndicators.reduce((s, i) => s + i.weight, 0);
@@ -1116,18 +1338,172 @@ router.get('/indicator-board', (req: Request, res: Response) => {
       success: true,
       data: {
         period: { start, end },
+        /** 环比所用的上一等长区间（前端可用于提示"较 X 月 X 日~X 月 X 日"） */
+        previousPeriod: prevWindow,
         autoIndicators,
         manualIndicators,
         score,
         byCategory,
         costBreakdown: {
-          labor: r1(laborCost), material: r1(materialCost), energy: r1(energyCost), total: r1(totalCost),
+          labor: r1(cur.laborCost), material: r1(cur.materialCost),
+          energy: r1(cur.energyCost), total: r1(totalCost),
         },
+        /** 结构透视（「运营透视」TAB 用） */
+        structure: { materialFlow, approvalByType, workload },
       },
     });
   } catch (error) {
     console.error('获取指标看板数据失败:', error);
     res.status(500).json({ success: false, error: '获取指标看板数据失败' });
+  }
+});
+
+/**
+ * 指标下钻明细（点击待办项 / 指标卡后查看具体是哪些记录）
+ * GET /api/summary/indicator-drilldown?type={problems|overdueTasks|pendingApprovals|lowStock|expiring|pendingAcceptance}
+ *
+ * 2026-09-29 新增：此前看板只能看到总数（"未解决问题 18"），
+ * 管理者无法知道是哪 18 个、更无法直接去处理，形成"看得见、动不了"的断点。
+ * 本端点把每个数字背后的记录清单拉出来，字段统一为 {id,title,meta,status,path} 供前端通用渲染。
+ */
+router.get('/indicator-drilldown', (req: Request, res: Response) => {
+  try {
+    const { type } = req.query;
+    if (!type) {
+      return res.status(400).json({ success: false, error: '缺少 type 参数' });
+    }
+    const db = getDatabase();
+    const key = String(type);
+
+    /** 字典 */
+    const PRIORITY: Record<string, string> = { high: '高', medium: '中', low: '低', urgent: '紧急' };
+    const PROBLEM_STATUS: Record<string, string> = {
+      pending: '待处理', in_progress: '处理中', waiting_acceptance: '待验收', completed: '已完成',
+    };
+    const TASK_STATUS: Record<string, string> = {
+      pending: '待执行', in_progress: '进行中', waiting_acceptance: '待验收',
+      completed: '已完成', cancelled: '已取消', abandoned: '已放弃',
+    };
+    const APPROVAL_STATUS: Record<string, string> = {
+      pending: '待审批', approved: '已通过', rejected: '已驳回', draft: '草稿',
+      partially_approved: '部分通过', cancelled: '已撤销',
+    };
+
+    type Row = { id: string; title: string; meta: string; status: string; path: string };
+    let title = '';
+    let rows: Row[] = [];
+
+    switch (key) {
+      case 'problems': {
+        title = '未解决问题';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, title, priority, status, create_time, greenhouse_name FROM problems
+           WHERE status IN ('pending', 'in_progress', 'waiting_acceptance')
+           ORDER BY CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, create_time DESC
+           LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: String(r.title || '(无标题)'),
+          meta: `${PRIORITY[String(r.priority)] || '普通'}优先级 · ${String(r.greenhouseName || '未指定区域')} · ${String(r.createTime || '').slice(0, 10)}`,
+          status: PROBLEM_STATUS[String(r.status)] || String(r.status || ''),
+          path: '/summary/problems',
+        }));
+        break;
+      }
+      case 'overdueTasks': {
+        title = '逾期任务';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, task_title, assignee_name, plan_date, greenhouse_name FROM farm_tasks
+           WHERE plan_date <> '' AND plan_date < date('now', 'localtime')
+             AND status NOT IN ('completed', 'cancelled', 'abandoned')
+           ORDER BY plan_date ASC LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: String(r.taskTitle || '(无标题)'),
+          meta: `负责人 ${String(r.assigneeName || '未指派')} · ${String(r.greenhouseName || '')} · 计划 ${String(r.planDate || '')}`,
+          status: '已逾期',
+          path: '/farm-hub',
+        }));
+        break;
+      }
+      case 'pendingAcceptance': {
+        title = '待验收任务';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, task_title, assignee_name, completion_date, greenhouse_name FROM farm_tasks
+           WHERE status = 'waiting_acceptance' ORDER BY completion_date ASC LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: String(r.taskTitle || '(无标题)'),
+          meta: `执行人 ${String(r.assigneeName || '未指派')} · ${String(r.greenhouseName || '')} · 完成于 ${String(r.completionDate || '').slice(0, 10)}`,
+          status: '待验收',
+          path: '/farm-hub',
+        }));
+        break;
+      }
+      case 'pendingApprovals': {
+        title = '待审批单据';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, code, title, type, applicant_name, apply_date FROM approvals
+           WHERE status = 'pending' ORDER BY apply_date ASC LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: String(r.title || r.code || '(无标题)'),
+          meta: `申请人 ${String(r.applicantName || '')} · 提交 ${String(r.applyDate || '')}`,
+          status: '待审批',
+          path: '/pending-approval',
+        }));
+        break;
+      }
+      case 'lowStock': {
+        title = '低于安全库存的物料';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, code, name, quantity, minStock, unit FROM materials
+           WHERE minStock > 0 AND quantity < minStock ORDER BY (quantity - minStock) ASC LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: `${String(r.name || '')}（${String(r.code || '')}）`,
+          meta: `当前 ${num(r.quantity)} ${String(r.unit || '')} / 安全库存 ${num(r.minStock)} ${String(r.unit || '')}`,
+          status: '需补货',
+          path: '/warehouse-overview',
+        }));
+        break;
+      }
+      case 'expiring': {
+        title = '90 天内到期的物料批次';
+        rows = queryToObjects<Record<string, unknown>>(
+          db,
+          `SELECT id, material_name, material_code, batch_no, expiry_date, remaining_quantity, unit
+           FROM batch_inventory
+           WHERE expiry_date <> '' AND expiry_date < date('now', '+90 days')
+           ORDER BY expiry_date ASC LIMIT 100`,
+          []
+        ).map((r) => ({
+          id: String(r.id),
+          title: `${String(r.materialName || '')} 批次 ${String(r.batchNo || '-')}`,
+          meta: `剩余 ${num(r.remainingQuantity)} ${String(r.unit || '')} · 效期 ${String(r.expiryDate || '')}`,
+          status: '临期',
+          path: '/warehouse-overview',
+        }));
+        break;
+      }
+      default:
+        return res.status(400).json({ success: false, error: `不支持的 type: ${key}` });
+    }
+
+    res.json({ success: true, data: { type: key, title, total: rows.length, rows } });
+  } catch (error) {
+    console.error('获取下钻明细失败:', error);
+    res.status(500).json({ success: false, error: '获取下钻明细失败' });
   }
 });
 
