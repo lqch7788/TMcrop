@@ -49,8 +49,7 @@ interface ExecuteTabTableProps {
   onShowDeletedDocs: () => void;
   // 2026-09-27 两步出库：确认发料
   onConfirmIssue: (item: any) => void;
-  // 2026-09-27 能力对齐：快捷筛选 + 统计卡片
-  summary?: { todayCount: number; pendingCount: number; monthAmount: number; overIssueCount: number };
+  // 2026-09-27 能力对齐：快捷筛选
   pendingOnly?: boolean;
   todayOnly?: boolean;
   mineOnly?: boolean;
@@ -97,7 +96,6 @@ export function ExecuteTabTable({
   onVoid,
   onShowDeletedDocs,
   onConfirmIssue,
-  summary,
   pendingOnly = false,
   todayOnly = false,
   mineOnly = false,
@@ -119,27 +117,7 @@ export function ExecuteTabTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 2026-09-27 能力对齐：统计摘要卡片 */}
-      {summary && (
-        <div className="grid grid-cols-4 gap-3 p-4 pb-0">
-          <div className="bg-blue-50 rounded-lg px-4 py-2">
-            <p className="text-xs text-blue-600">今日出库单</p>
-            <p className="text-lg font-semibold text-blue-800">{summary.todayCount} 单</p>
-          </div>
-          <div className={`rounded-lg px-4 py-2 ${summary.pendingCount > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
-            <p className={`text-xs ${summary.pendingCount > 0 ? 'text-amber-600' : 'text-gray-500'}`}>待出库</p>
-            <p className={`text-lg font-semibold ${summary.pendingCount > 0 ? 'text-amber-800' : 'text-gray-600'}`}>{summary.pendingCount} 单</p>
-          </div>
-          <div className="bg-emerald-50 rounded-lg px-4 py-2">
-            <p className="text-xs text-emerald-600">本月实发金额</p>
-            <p className="text-lg font-semibold text-emerald-800">¥{summary.monthAmount.toLocaleString()}</p>
-          </div>
-          <div className={`rounded-lg px-4 py-2 ${summary.overIssueCount > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-            <p className={`text-xs ${summary.overIssueCount > 0 ? 'text-red-600' : 'text-gray-500'}`}>超发单</p>
-            <p className={`text-lg font-semibold ${summary.overIssueCount > 0 ? 'text-red-800' : 'text-gray-600'}`}>{summary.overIssueCount} 单</p>
-          </div>
-        </div>
-      )}
+      {/* 2026-09-29 用户要求：移除统计摘要卡片（今日出库单/待出库/本月实发金额/超发单） */}
 
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">

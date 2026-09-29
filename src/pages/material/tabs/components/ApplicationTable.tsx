@@ -62,8 +62,6 @@ interface ApplicationTableProps {
   // 2026-09-27 P2-11：批量提交/撤回
   onBatchSubmit: () => void;
   onBatchWithdraw: () => void;
-  // 2026-09-27 P2-12：统计摘要
-  summary: { monthCount: number; monthAmount: number; insufficientCount: number; pendingCount: number };
   // 2026-09-27 用户要求：快捷筛选按钮移入标题行（原在筛选器区）
   myApplicationsOnly: boolean;
   pendingMyApproval: boolean;
@@ -109,7 +107,6 @@ export function ApplicationTable({
   onShowDeletedDocs,
   onBatchSubmit,
   onBatchWithdraw,
-  summary,
   myApplicationsOnly,
   pendingMyApproval,
   overdueOnly,
@@ -132,25 +129,7 @@ export function ApplicationTable({
   return (
     /* 数据表格 */
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 2026-09-27 P2-12：统计摘要卡片 */}
-      <div className="grid grid-cols-4 gap-3 p-4 pb-0">
-        <div className="bg-blue-50 rounded-lg px-4 py-2">
-          <p className="text-xs text-blue-600">本月申请</p>
-          <p className="text-lg font-semibold text-blue-800">{summary.monthCount} 单</p>
-        </div>
-        <div className="bg-emerald-50 rounded-lg px-4 py-2">
-          <p className="text-xs text-emerald-600">本月金额</p>
-          <p className="text-lg font-semibold text-emerald-800">¥{summary.monthAmount.toLocaleString()}</p>
-        </div>
-        <div className={`rounded-lg px-4 py-2 ${summary.pendingCount > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
-          <p className={`text-xs ${summary.pendingCount > 0 ? 'text-amber-600' : 'text-gray-500'}`}>待审批</p>
-          <p className={`text-lg font-semibold ${summary.pendingCount > 0 ? 'text-amber-800' : 'text-gray-600'}`}>{summary.pendingCount} 单</p>
-        </div>
-        <div className={`rounded-lg px-4 py-2 ${summary.insufficientCount > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
-          <p className={`text-xs ${summary.insufficientCount > 0 ? 'text-orange-600' : 'text-gray-500'}`}>库存不足</p>
-          <p className={`text-lg font-semibold ${summary.insufficientCount > 0 ? 'text-orange-800' : 'text-gray-600'}`}>{summary.insufficientCount} 单</p>
-        </div>
-      </div>
+      {/* 2026-09-29 用户要求：移除统计摘要卡片（本月申请/本月金额/待审批/库存不足） */}
 
       {/* 表格头部操作区 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">

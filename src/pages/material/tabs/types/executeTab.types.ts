@@ -176,8 +176,7 @@ export interface UseExecuteTabReturn {
   setExecuteHasDraft: (v: boolean) => void;
   restoreExecDraft: () => boolean;
   discardExecDraft: () => void;
-  // 2026-09-27 能力对齐：统计摘要 + 快捷筛选
-  executeSummary: { todayCount: number; pendingCount: number; monthAmount: number; overIssueCount: number };
+  // 2026-09-27 能力对齐：快捷筛选
   executePendingOnly: boolean;
   setExecutePendingOnly: (value: boolean) => void;
   executeTodayOnly: boolean;

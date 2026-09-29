@@ -108,13 +108,12 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
     executeFilteredData,
     executeTotalPages,
 
-    // 2026-09-27 能力对齐：统计摘要 + 快捷筛选 + 详情来源申请单 + 草稿
+    // 2026-09-27 能力对齐：快捷筛选 + 详情来源申请单 + 草稿
     executeDetailSources,
     executeHasDraft,
     setExecuteHasDraft,
     restoreExecDraft,
     discardExecDraft,
-    executeSummary,
     executePendingOnly,
     setExecutePendingOnly,
     executeTodayOnly,
@@ -203,7 +202,6 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
         onConfirmIssue={handleConfirmIssue}
         onVoid={handleExecuteVoid}
         onShowDeletedDocs={() => setShowDeletedDocs(true)}
-        summary={executeSummary}
         pendingOnly={executePendingOnly}
         todayOnly={executeTodayOnly}
         mineOnly={executeMineOnly}

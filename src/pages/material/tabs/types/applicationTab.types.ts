@@ -173,8 +173,6 @@ export interface UseApplicationTabReturn {
   // 2026-09-27 P1-6：超期未还筛选（工具借用超期）
   overdueOnly: boolean;
   setOverdueOnly: (value: boolean) => void;
-  // 2026-09-27 P2-12：统计摘要
-  summary: { monthCount: number; monthAmount: number; insufficientCount: number; pendingCount: number };
   // 2026-09-27 P1-4：生产计划列表（批次号下拉数据源）
   productionPlans: Array<{ batchCode: string; cropName: string; areaName: string }>;
   // 2026-09-27 P0-2：草稿
