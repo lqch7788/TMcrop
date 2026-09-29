@@ -27,6 +27,12 @@ export type { AlertCardProps } from './AlertCard';
 export { SummaryDateFilter } from './SummaryDateFilter';
 export type { SummaryDateFilterProps } from './SummaryDateFilter';
 
+// 看板专用组件（2026-09-29）
+export { TodoStrip } from './TodoStrip';
+export type { TodoStripProps, TodoItem } from './TodoStrip';
+export { ModuleHealthGrid } from './ModuleHealthGrid';
+export type { ModuleHealthGridProps, ModuleCard, ModuleMetric } from './ModuleHealthGrid';
+
 // Hooks
 export { useExport } from './useExport';
 
