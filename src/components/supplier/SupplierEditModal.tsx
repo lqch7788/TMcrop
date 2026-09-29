@@ -29,7 +29,11 @@ interface SupplierEditModalProps {
   isOpen: boolean;
   supplier: Supplier | null;
   onClose: () => void;
-  onSave: (supplier: Supplier) => void;
+  /**
+   * 保存回调。返回 Promise 时会被 await —— UnifiedModal 依赖"onSubmit 返回 pending Promise"
+   * 在提交期间禁用按钮，不返回 Promise 会导致防重复提交失效（2026-09-29 审计修复）
+   */
+  onSave: (supplier: Supplier) => Promise<unknown> | unknown;
 }
 
 export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }: SupplierEditModalProps) {
@@ -185,7 +189,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!supplier) return;
 
     // 格式验证（对标 iAGS purchaserManagement 第613-670行）
@@ -200,7 +204,10 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
       return;
     }
 
-    onSave({
+    // 2026-09-29 审计修复：await 保存结果 —— 此前同步返回 undefined，
+    // UnifiedModal 的 `await onSubmit(); setIsSubmitting(false)` 立即复位，
+    // 按钮禁用窗口≈0，双击"保存"会发两次 PUT（多一次全库落盘）。
+    await onSave({
       ...supplier,
       ...form,
       // 2026-09-28 批次C：数值列显式转换（表单里是文本，直接落库会被 SQLite 存成字符串）
@@ -259,7 +266,9 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                   <SelectValue placeholder="请选择类型" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">请选择类型</SelectItem>
+                  {/* 2026-09-29 审计修复：移除"请选择类型"空选项。
+                      选中它会把 supplierType 置为空串并落库，导致该供应商的资质判定
+                      由「未登记」变为「不适用」（合规检查形同虚设）。未选状态由 placeholder 表达即可。 */}
                   {categories.map(cat => (
                     <SelectItem key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</SelectItem>
                   ))}

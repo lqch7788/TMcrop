@@ -276,4 +276,42 @@ describe('assertSupplierQualificationAllowed — 硬阻断开关', () => {
     process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
     expect(assertSupplierQualificationAllowed({ prepare: () => { throw new Error('no such table'); } }, 'S1')).toBeNull();
   });
+
+  // 2026-09-29 审计新增：id 为空但给了名称时按名称反查 ——
+  // 堵住"只传名称不传 id 即可绕过硬阻断"的口子（/materials 新增入库此前正是这条路径）
+  describe('supplierId 为空时按名称回退', () => {
+    it('开关开启 + 无 id + 无证供应商名称 → 被拒', () => {
+      process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
+      const reason = assertSupplierQualificationAllowed(db, '', '无证农药商');
+      expect(reason).toContain('无证农药商');
+      expect(reason).toContain('农药经营许可证');
+    });
+
+    it('开关开启 + 无 id + 已过期供应商名称 → 被拒', () => {
+      process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
+      const reason = assertSupplierQualificationAllowed(db, undefined, '过期农药商');
+      expect(reason).toContain('过期');
+    });
+
+    it('开关开启 + 无 id + 合规供应商名称 → 放行', () => {
+      process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
+      expect(assertSupplierQualificationAllowed(db, '', '合规农药商')).toBeNull();
+    });
+
+    it('开关开启 + 无 id + 名称不在主数据 → 放行（不误伤自由文本）', () => {
+      process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
+      expect(assertSupplierQualificationAllowed(db, '', '金土地农资公司（不在主数据）')).toBeNull();
+    });
+
+    it('开关开启 + id 与名称同时给出且名称无证 → 即便 id 查不到也按名称拦截', () => {
+      process.env.SUPPLIER_QUALIFICATION_ENFORCE = '1';
+      // id 不存在会让 id 分支放行，但 id 非空时不应回退到名称（保持原语义：由调用方处理"供应商不存在"）
+      expect(assertSupplierQualificationAllowed(db, 'NOT_EXIST', '无证农药商')).toBeNull();
+    });
+
+    it('开关关闭时按名称回退同样放行', () => {
+      delete process.env.SUPPLIER_QUALIFICATION_ENFORCE;
+      expect(assertSupplierQualificationAllowed(db, '', '无证农药商')).toBeNull();
+    });
+  });
 });

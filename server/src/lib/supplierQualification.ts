@@ -155,25 +155,40 @@ export function isQualificationEnforced(): boolean {
  * 采购类写端点的硬阻断守卫
  *
  * @param db 数据库句柄
- * @param supplierId 请求体里的供应商 id（为空则不校验——未选供应商不属于本守卫范围）
+ * @param supplierId   请求体里的供应商 id
+ * @param supplierName 供应商名称（可选）。2026-09-29 审计新增：
+ *   id 为空但给了名称时按名称反查主数据 —— 此前 `if (!id) return null` 让
+ *   "只传名称不传 id"的调用方（如 /materials 页新增入库）可**完全绕过硬阻断**，
+ *   开关打开也只能挡住传 id 的那几条链路，形成合规假象。
  * @returns null = 放行；string = 应拒绝的原因
  *
- * 开关关闭时直接放行（默认仅前端告警）；供应商 id 查不到记录时放行，
+ * 开关关闭时直接放行（默认仅前端告警）；id/名称都查不到记录时放行，
  * 由调用方原有的"供应商不存在"逻辑处理，避免本守卫吞掉别的错误语义。
  */
-export function assertSupplierQualificationAllowed(db: any, supplierId: unknown): string | null {
+export function assertSupplierQualificationAllowed(db: any, supplierId: unknown, supplierName?: unknown): string | null {
   if (!isQualificationEnforced()) return null;
-  const id = String(supplierId ?? '').trim();
-  if (!id) return null;
+  let id = String(supplierId ?? '').trim();
+  const name = String(supplierName ?? '').trim();
   try {
+    if (!id && name) {
+      // id 缺失时按名称反查（supplier_name 有唯一索引，最多一条）
+      const byName = db.prepare('SELECT * FROM suppliers WHERE supplier_name = ?');
+      byName.bind([name]);
+      const row = byName.step() ? byName.getAsObject() : null;
+      byName.free();
+      if (!row || Object.keys(row).length === 0) return null;
+      if (!isBlockingIssue(row as Record<string, unknown>)) return null;
+      return `供应商「${name}」${getQualificationIssue(row as Record<string, unknown>)}，按合规要求不能建立采购业务（如已补录证照请刷新后重试）`;
+    }
+    if (!id) return null; // 既无 id 也无名称 → 未涉及供应商，不属本守卫范围
     const stmt = db.prepare('SELECT * FROM suppliers WHERE id = ?');
     stmt.bind([id]);
     const row = stmt.step() ? stmt.getAsObject() : null;
     stmt.free();
     if (!row || Object.keys(row).length === 0) return null;
     if (!isBlockingIssue(row as Record<string, unknown>)) return null;
-    const name = String((row as Record<string, unknown>).supplier_name ?? id);
-    return `供应商「${name}」${getQualificationIssue(row as Record<string, unknown>)}，按合规要求不能建立采购业务（如已补录证照请刷新后重试）`;
+    const displayName = String((row as Record<string, unknown>).supplier_name ?? id);
+    return `供应商「${displayName}」${getQualificationIssue(row as Record<string, unknown>)}，按合规要求不能建立采购业务（如已补录证照请刷新后重试）`;
   } catch {
     // 表/列缺失（历史环境）时不阻断业务
     return null;

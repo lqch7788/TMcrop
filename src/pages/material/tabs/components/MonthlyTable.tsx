@@ -2,6 +2,7 @@
 // 按物料分类统计的月度汇总表格（折叠模式）
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { RowPair } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import {
   useStatisticsStore,
@@ -198,7 +199,7 @@ export function MonthlyTable({
             {monthFilter === 'all' && (
               <>
                 {monthSummaries.map((monthRow, monthIdx) => (
-                  <tbody key={monthRow.month}>
+                  <RowPair key={monthRow.month}>
                     {/* 月份汇总行（可点击展开） */}
                     <tr
                       className="cursor-pointer hover:bg-emerald-50/50 bg-gray-50"
@@ -292,7 +293,7 @@ export function MonthlyTable({
                         ))}
                       </>
                     )}
-                  </tbody>
+                  </RowPair>
                 ))}
 
                 {/* 年度合计（2026-09-27 A2：补实发量/差异率两列，与表头对齐） */}

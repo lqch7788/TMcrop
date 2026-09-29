@@ -487,7 +487,8 @@ export class PurchasePlanService {
 
       // 2026-09-28 批次B 合规风控：供应商资质守卫
       // 默认仅前端告警（本函数返回 null）；设 SUPPLIER_QUALIFICATION_ENFORCE=1 后无证/过期即硬阻断
-      const qualIssue = assertSupplierQualificationAllowed(db, input.supplierId);
+      // 2026-09-29：补传名称 —— id 未匹配主数据时按名称反查，避免只传名称绕过
+      const qualIssue = assertSupplierQualificationAllowed(db, input.supplierId, input.supplierName);
       if (qualIssue) {
         return { success: false, error: qualIssue };
       }
@@ -603,7 +604,11 @@ export class PurchasePlanService {
       const qualSupplierId = input.supplierId !== undefined
         ? input.supplierId
         : (currentRecord as Record<string, unknown>).supplierId;
-      const qualIssue = assertSupplierQualificationAllowed(db, qualSupplierId);
+      // 2026-09-29：未改供应商时名称也回落到库中现有值
+      const qualSupplierName = input.supplierName !== undefined
+        ? input.supplierName
+        : (currentRecord as Record<string, unknown>).supplierName;
+      const qualIssue = assertSupplierQualificationAllowed(db, qualSupplierId, qualSupplierName);
       if (qualIssue) {
         return { success: false, error: qualIssue };
       }

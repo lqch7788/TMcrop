@@ -376,6 +376,48 @@ async function start() {
       console.warn('[materialLedgerReconciliation] 启动对账失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-09-29：供应商 ID 回填（GREEN 级独立模块，幂等，用户授权"自动补建缺失档案"）
+    // 背景：materials.supplier / inbound_records.supplier 为纯名称引用，supplierId 实测 0 行填充
+    // → 供应商改名/删除后历史引用脱钩。本模块补建缺失档案 + 回填 ID。
+    // 顺序要求：放在物料账对账之后（两账已一致），启动后状态对比之前。
+    try {
+      const { backfillSupplierIds } = await import('./db/supplierIdBackfill');
+      const r = backfillSupplierIds();
+      if (r.created.length > 0 || r.linked.materials > 0 || r.linked.inboundRecords > 0) {
+        console.log('[supplierIdBackfill] 供应商 ID 回填摘要:');
+        if (r.created.length > 0) console.log(`  自动建档 ${r.created.length} 家（类型统一为 OT，待人工核实）: ${r.created.join('、')}`);
+        if (r.linked.materials > 0) console.log(`  回填 materials.supplierId: ${r.linked.materials} 行`);
+        if (r.linked.inboundRecords > 0) console.log(`  回填 inbound_records.supplierId: ${r.linked.inboundRecords} 行`);
+      } else {
+        console.log('[supplierIdBackfill] 无需回填（已全部关联）');
+      }
+      if (r.skipped.length > 0) {
+        console.warn(`  ⚠️ 跳过 ${r.skipped.length} 个不宜自动建档的名称（需人工处置）: ${r.skipped.map((x) => `${x.name}[${x.reason}]`).join('、')}`);
+      }
+      if (r.remaining > 0) {
+        console.warn(`  ⚠️ 仍有 ${r.remaining} 行引用未关联到主数据（见上方跳过清单）`);
+      }
+    } catch (e: any) {
+      console.warn('[supplierIdBackfill] 启动回填失败（不影响主流程）:', e?.message || e);
+    }
+
+    // 2026-09-29：申请单 dispatch_status 存量回填（GREEN 级独立模块，幂等）
+    // 背景：recalcDispatchStatus 2026-09-27 才加入，此前的出库单不回写来源申请单状态，
+    // 11 张有出库记录的申请单中 7 张为 NULL → 列表看不出"已出库/部分出库"。
+    // 顺序要求：放在供应商回填之后（两者互不影响），启动后状态对比之前。
+    try {
+      const { backfillDispatchStatus } = await import('./db/dispatchStatusBackfill');
+      const r = backfillDispatchStatus();
+      if (r.filled.length > 0) {
+        console.log(`[dispatchStatusBackfill] 回填 ${r.filled.length} 张申请单的出库状态:`);
+        for (const x of r.filled) console.log(`  ${x.code}: ${x.from} → ${x.to}`);
+      } else if (r.recalculated > 0) {
+        console.log(`[dispatchStatusBackfill] ${r.recalculated} 张申请单状态已一致，无需回填`);
+      }
+    } catch (e: any) {
+      console.warn('[dispatchStatusBackfill] 启动回填失败（不影响主流程）:', e?.message || e);
+    }
+
     // Step 3: 启动后 db 状态对比
     if (dbFileExists) {
       const compare = postStartupCompare(preCheck.snapshot);

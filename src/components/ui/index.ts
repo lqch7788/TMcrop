@@ -87,3 +87,6 @@ export type { ActionIconVariant } from '@/constants/actionIconTokens'
 
 // 2026-09-28: 深度输入框 / 深度文本域 / 深度选择框 — 统一"深边框+内阴影"表单控件样式，替代各模块重复定义的 deepInputClass 常量
 export { DeepInput, DeepTextArea, DeepSelectTrigger } from './DeepInput'
+
+// 2026-09-29: 表格成对行容器 — 规避 vite-plugin-source-identifier 向 JSX <React.Fragment> 注入 data-matrix-id 的告警
+export { RowPair } from './RowPair'

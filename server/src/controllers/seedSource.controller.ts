@@ -14,6 +14,7 @@ import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, U
 import { AppError } from '../middleware/errorHandler';
 // 2026-07-21：字符串乱码防御工具（防止再次写入 U+FFFD 替代字符）
 import { sanitizeObject, assertNoMojibake } from '../utils/stringSanitizer';
+import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
 
 /**
  * 2026-07-14：snake/camel 双字段读取 helper（替代 `data as any` 强转 30+ 处）
@@ -228,6 +229,14 @@ export class SeedSourceController {
           const totalAmount = pickField(data, 'total_amount', 'totalAmount') || (unitPrice * quantity);
           const supplierId = pickField(data, 'supplier_id', 'supplierId') || '';
           const supplierName = pickField(data, 'supplier_name', 'supplierName') || '';
+          // 2026-09-29 审计接线：种源外购入库是真实采购行为（卖种子须持备案），
+          // 此前未接供应商资质守卫 → SUPPLIER_QUALIFICATION_ENFORCE=1 时该链路仍可放行。
+          // 守卫默认关闭（仅告警），接线后不改变当前行为；开关打开才生效。
+          const qualIssue = assertSupplierQualificationAllowed(db, supplierId, supplierName);
+          if (qualIssue) {
+            // qualIssue 已含「供应商「X」…」前缀，直接作为业务错误抛出（409 Conflict）
+            throw new AppError(qualIssue, 409);
+          }
           const operator = pickField(data, 'create_by', 'createBy') || 'system';
           const purchaseDate = pickField(data, 'purchase_date', 'purchaseDate') || '';
           db.run(`

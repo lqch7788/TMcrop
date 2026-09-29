@@ -749,6 +749,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
           totalSteps: 1,
           approvers: [{ userId: item.reviewer, userName: item.reviewer, role: '审批人', order: 1, status: 'pending' }],
           records: [],
+          // 2026-09-29 审计修复：补传 amount（同新增路径，此前缺该字段导致金额分级失效）
+          amount: item.totalAmount ?? 0,
           status: ApprovalStatus.PENDING,
           priority: 'normal',
           reminderCount: 0,
@@ -1283,6 +1285,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
             status: 'pending'
           }],
           records: [],
+          // 2026-09-29 审计修复：补传 amount（此前缺该字段 → 金额分级审批对该业务线完全失效）。
+          // 免审批阈值 / 分级规则都基于金额，缺失时后端无从判定，只能全部进人工队列。
+          amount: newRecord.totalAmount ?? 0,
           status: ApprovalStatus.PENDING,
           priority: 'normal',
           reminderCount: 0,

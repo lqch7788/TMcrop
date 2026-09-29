@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, Eye, ClipboardList, Download
 } from 'lucide-react';
 import { Approval, ApprovalStatus } from '@/types/approval';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, RowPair } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
@@ -131,7 +131,7 @@ export function MaterialApprovalTable({
         </TableHeader>
         <TableBody>
           {paginatedData.map((item) => (
-            <React.Fragment key={item.id}>
+            <RowPair key={item.id}>
               <TableRow className="hover:bg-blue-50">
                 <TableCell className="whitespace-nowrap">
                   <button onClick={() => toggleExpandRow(item.id)} className="p-1 hover:bg-gray-100 rounded">
@@ -255,7 +255,7 @@ export function MaterialApprovalTable({
                   </TableCell>
                 </TableRow>
               )}
-            </React.Fragment>
+            </RowPair>
           ))}
         </TableBody>
       </Table>
@@ -283,7 +283,7 @@ export function MaterialApprovalTable({
         </TableHeader>
         <TableBody>
           {paginatedData.map((item) => (
-            <React.Fragment key={item.id}>
+            <RowPair key={item.id}>
               <TableRow className="hover:bg-blue-50">
                 <TableCell className="whitespace-nowrap">
                   <button onClick={() => toggleExpandRow(item.id)} className="p-1 hover:bg-gray-100 rounded">
@@ -420,7 +420,7 @@ export function MaterialApprovalTable({
                   </TableCell>
                 </TableRow>
               )}
-            </React.Fragment>
+            </RowPair>
           ))}
         </TableBody>
       </Table>

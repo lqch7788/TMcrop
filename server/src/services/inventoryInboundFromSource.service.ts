@@ -18,6 +18,7 @@ import { inventoryTransactionRepository } from '../repositories/inventoryTransac
 import { generateInstanceId, generateStockId, generateInboundRecordId } from './inventory.service';
 import { writeFlowLog } from './flowLogService';
 import { mapInventorySourceToCategory } from '../lib/sourceCategoryMapper';
+import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
 
 /**
  * 2026-07-16：库存 cropName 归一化（防"宁玉（宁玉）"类数据错位）
@@ -220,6 +221,18 @@ export async function executeInboundFromSource(
     throw new Error('isSupplementary=true 时 supplementaryReason 必填');
   }
   // 注：种源入库单位校验已在 route 层（3.6 节）提前完成
+
+  // 2026-09-29 审计接线：**种源外购**入库是真实采购行为（卖种子须持经营备案），
+  // 此前未接供应商资质守卫 → SUPPLIER_QUALIFICATION_ENFORCE=1 时该链路仍放行。
+  // 判定口径与下方成本联动一致（stockType=seed && inboundSourceType=external_purchase），
+  // 自产/内部入库不涉及供应商，不受影响。守卫默认关闭（仅告警），接线不改变当前行为。
+  if (input.stockType === 'seed' && (input as any).inboundSourceType === 'external_purchase') {
+    const qualIssue = assertSupplierQualificationAllowed(db, input.supplierId, input.supplierName);
+    if (qualIssue) {
+      // 沿用本文件的错误约定（调用方按 e.message 透出）；守卫默认关闭，不影响现状
+      throw new Error(qualIssue);
+    }
+  }
 
   // 反查源 crop_instance_id（用于 source_instance_id 关联，库存追溯依赖）
   const sourceInstanceId = findSourceInstanceId(db, input.sourceModule, input.sourceRecordId);

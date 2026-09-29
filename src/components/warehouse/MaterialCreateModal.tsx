@@ -43,6 +43,7 @@ const INITIAL_FORM = {
   maxStock: 0,
   price: '',
   supplier: '',
+  supplierId: '', // 2026-09-29：供应商主数据 ID（名称仅作展示快照）
   location: '',
   barcode: '',
   batchNo: '',
@@ -207,6 +208,9 @@ export function MaterialCreateModal({
         maxStock: form.maxStock,
         price: form.price.trim() || '0',
         supplier: form.supplier.trim(),
+        // 2026-09-29：同时落供应商 ID —— 名称是展示快照，ID 才是关联键
+        // （此前只落名称，供应商改名/删除后物料即脱钩，见审计 P0-4）
+        supplierId: form.supplierId || undefined,
         location: form.location.trim(),
         barcode: form.barcode.trim(),
         // 2026-09-27 字段补齐：库存页表格已展示批次号/生产日期/有效期至，新建时此前无法录入
@@ -457,6 +461,7 @@ export function MaterialCreateModal({
             <SupplierSearchInput
               value={form.supplier}
               onChange={(name) => setForm((prev) => ({ ...prev, supplier: name }))}
+              onSupplierResolved={(s) => setForm((prev) => ({ ...prev, supplierId: s ? String(s.id) : '' }))}
               placeholder="搜索或输入供应商名称"
               className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />

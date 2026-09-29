@@ -174,10 +174,14 @@ router.get('/', (_req: Request, res: Response) => {
         const stIdx = cols.indexOf('status');
         const matIdx = cols.indexOf('materials');
         for (const row of rtRows[0].values) {
-          const st = String(row[stIdx] || '');
-          // 非有效态退料（拒绝/作废/取消）从未恢复库存，不计入
-          if (st === 'rejected' || st === 'cancelled' || st === 'voided'
-            || st === '已拒绝' || st === '已作废' || st === '已取消') continue;
+          const st = String(row[stIdx] || '').trim();
+          // 只有"库存已恢复"的退料才计入净消耗（与 materialReturn.isReturnStockActive 同口径）。
+          // 2026-09-29 审计修复：原为黑名单且漏了 '已驳回'（MTR005/TL20240305001 实测
+          // status='已驳回' 且 returnQuantity=15 → 被误当作有效退料从消耗中扣减，
+          // 而该单库存从未恢复）→ 统计与账实不符。现改为**白名单**：认不出即不计入（fail-closed）。
+          const isActive = st === '已审批' || st === '已批准' || st === '已完成'
+            || st === 'approved' || st === 'completed';
+          if (!isActive) continue;
           let mats: any[] = [];
           try { const p = JSON.parse(String(row[matIdx] || '[]')); mats = Array.isArray(p) ? p : []; } catch { /* 忽略脏数据 */ }
           const dateStr = String(row[dIdx] || '');

@@ -18,6 +18,12 @@ export interface Material {
   maxStock: number;
   price: string;
   supplier: string;
+  /**
+   * 供应商主数据 ID（2026-09-29 新增）
+   * 注意：本接口与 services/apiWarehouseMaterialService.ts 的同名 Material 是两份定义
+   * （历史遗留的类型分裂），新增字段需两边同步，否则会出现"服务层能存、组件层报错"。
+   */
+  supplierId?: string;
   location: string;
   barcode: string;
   batchNo: string;
