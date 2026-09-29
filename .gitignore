@@ -104,6 +104,15 @@ server/data/_backup/
 server/data/yuanxingtu_backup_*.db
 server/data/yuanxingtu.db.before-*.db
 
+# 运行时数据库（不提交）—— 2026-09-29 起移出版本控制
+# 原因：sql.js 每次落盘都会重写整个文件，而 operation_logs 审计表在每次交互时增长
+#       （实测一次失败的登录也会写入 1 行）→ 只要「DB 入库 + 高频写入」同时存在，
+#       git status 必然长期为 modified。这不是可优化的噪音，是运行时可变二进制文件
+#       放进版本控制的固有矛盾。
+# 替代方案：提交【基线库】server/data/yuanxingtu-seed.db，运行时库由启动引导自动复制生成；
+#          需要共享当前业务数据时用 server/scripts/export-db-baseline.cjs 导出基线后再提交。
+server/data/yuanxingtu.db
+
 # 后端脚本（不提交）
 server/src/scripts/
 
