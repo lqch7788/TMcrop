@@ -52,8 +52,11 @@ const STATUS_TEXT_TO_CLASS: Record<string, string> = {
  */
 const ACTIVE_STATUS_CLASSES = new Set(['approved', 'completed']);
 
-/** 非有效态中文 status（历史数据 statusClass 缺失时的兜底判断） */
-const INACTIVE_STATUS_TEXTS = new Set(['已拒绝', '已驳回', '已作废', '已取消']);
+/**
+ * 有效态中文 status 白名单（历史数据 statusClass 缺失时的兜底判断，2026-09-29 由黑名单改为白名单）
+ * 只认明确表示"退料已入库、库存已恢复"的文案，认不出的一律按未恢复处理（fail-closed）。
+ */
+const ACTIVE_STATUS_TEXTS = new Set(['已审批', '已批准', '已完成']);
 
 /**
  * 状态规范化：保证 status（中文）与 statusClass（英文）语义一致。
@@ -101,14 +104,18 @@ function normalizeStatusUpdate(
  * 退料单是否处于"库存已恢复"的有效态。
  * 2026-09-28 修复：此前只比对中文黑名单且漏掉 '已驳回'，导致被驳回的退料单
  * 仍被判定为有效态并错误恢复库存（账实不符）。
+ * 2026-09-29 修复（fail-open → fail-closed）：statusClass 缺失时的兜底原为
+ * `!INACTIVE_STATUS_TEXTS.has(s)`（黑名单），而黑名单不含 '待审批' → 待审批的历史行
+ * 会被判为"库存已恢复"→ `applyReturnStockOnApproval` 走幂等跳过分支，
+ * 出现"审批通过但库存从未恢复"的账实不符。现改为**中文白名单**，认不出即视为非有效态。
  */
 function isReturnStockActive(statusClass: unknown, status: unknown): boolean {
   const cls = String(statusClass || '').trim().toLowerCase();
   if (ACTIVE_STATUS_CLASSES.has(cls)) return true;
   if (cls) return false; // 已知但不在白名单（rejected/cancelled/voided 等）→ 非有效态
-  // statusClass 缺失（历史数据）→ 回退中文 status 判断
+  // statusClass 缺失（历史数据）→ 只认明确表示"已恢复库存"的中文文案
   const s = String(status || '').trim();
-  return !INACTIVE_STATUS_TEXTS.has(s);
+  return ACTIVE_STATUS_TEXTS.has(s);
 }
 
 /** 安全解析 materials JSON（损坏数据不炸整个接口） */
@@ -174,10 +181,21 @@ function validateReturnClosedLoop(db: any, materials: any[], excludeReturnId?: s
     ) as any[];
     if (rows.length === 0) throw new Error(`来源领料单 ${srcCode} 不存在，无法退料`);
     // 只有实际出库过的单据才能退料（草稿/待出库/已取消无出库事实）
-    const execClass = String(rows[0].executeStatusClass || '').trim().toLowerCase();
-    if (execClass && execClass !== 'completed' && execClass !== 'partial') {
+    // 2026-09-29 修复（fail-open → fail-closed）：原判据 `if (execClass && ...)` 在
+    // execute_status_class 为空时**整体跳过校验** —— 已取消/待出库的脏数据单据也能被退料。
+    // 现改为：statusClass 为空时从中文 execute_status 兜底推导；仍推导不出则一律拒绝。
+    const rawClass = String(rows[0].executeStatusClass || '').trim().toLowerCase();
+    const rawStatusText = String(rows[0].executeStatus || '').trim();
+    const execClass = rawClass || (
+      rawStatusText === '已出库' ? 'completed'
+        : rawStatusText === '部分出库' ? 'partial'
+          : rawStatusText === '待出库' ? 'pending_out'
+            : rawStatusText === '已取消' ? 'cancelled'
+              : ''
+    );
+    if (execClass !== 'completed' && execClass !== 'partial') {
       throw new Error(
-        `来源领料单 ${srcCode} 当前状态为「${rows[0].executeStatus || execClass}」，没有实际出库记录，无法退料`
+        `来源领料单 ${srcCode} 当前状态为「${rawStatusText || rawClass || '未知'}」，没有实际出库记录，无法退料`
       );
     }
     executeCache.set(srcCode, parseMaterialsJson(rows[0].materials));
@@ -536,6 +554,19 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
+    // 2026-09-29 审计修复（P1-3）：已恢复库存的退料单禁止编辑明细。
+    // 此前只有前端 handleEdit 拦 `status !== '待审批'`，后端无任何守卫 ——
+    // 直调 PUT 即可修改已审批退料单的数量并立即生效（事务内 undo 旧 + in 新），
+    // 而审批记录仍显示"已审批" → **审批可被完全绕过**（先小额走免审批通过，再改成大额）。
+    // 现与 materialRequest 的 approved 守卫对齐：仅允许非有效态（草稿/待审批/已驳回）编辑明细；
+    // 作废由 VoidModal → 状态流转完成，不走本端点的明细编辑。
+    if (isReturnStockActive(oldStatusClass, oldStatus) && updates.materials !== undefined) {
+      return res.status(400).json({
+        success: false,
+        error: `该退料单当前状态为「${oldStatus}」，库存已恢复，不允许修改明细。如需调整请先作废后再重新提交`,
+      });
+    }
+
     // 2026-09-28 修复：状态字段规范化，保证 status/statusClass 一致
     // （仅依据本次提交的字段推导，未提交的一侧才回落旧值）
     if (updates.status !== undefined || updates.statusClass !== undefined) {
@@ -610,6 +641,32 @@ function deleteReturnInternal(db: any, id: string | number, deletedBy: string, r
   const oldStatus = String(oldRow.status || '');
   const oldStatusClass = String(oldRow.statusClass || '');
   const oldMaterials = parseMaterialsJson(oldRow.materials);
+
+  // 2026-09-29 审计修复（P1-10）：删除前必须清理关联审批单。
+  // 此前删除退料单只归档+回收库存，approvals 表留下指向不存在单据的孤儿 business_link
+  // （审批中心仍显示该单、点进去打不开）；若为**待审批**单，审批人点"通过"时
+  // 联动查不到业务单据，会走到硬失败回滚，白跑一轮。与 DELETE /materials/inbound/:id 同策略：
+  // pending → 拒绝删除；终态 → 标记 cancelled 留痕（不物理删，保留审计链）。
+  let linkedApprovals: Array<{ id: string; status: string }> = [];
+  try {
+    linkedApprovals = queryToObjects(
+      db,
+      `SELECT id, status FROM approvals
+       WHERE (json_extract(business_link, '$.requestId') = ? OR json_extract(business_link, '$.requestCode') = ?)
+         AND status NOT IN ('cancelled')`,
+      [String(id), oldCode]
+    ) as Array<{ id: string; status: string }>;
+  } catch {
+    // business_link 非 JSON 或表缺失（历史环境）→ 不做守卫，避免阻塞删除
+    linkedApprovals = [];
+  }
+  const pendingApproval = linkedApprovals.find((a) => String(a.status) === 'pending');
+  if (pendingApproval) {
+    throw new Error(`该退料单存在待审批单 ${pendingApproval.id}，请先在「物料审批」驳回/撤销后再删除`);
+  }
+  for (const ap of linkedApprovals) {
+    db.run("UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE id = ?", [new Date().toISOString(), ap.id]);
+  }
 
   // 2026-09-28 修复：删除前归档整行快照（永久可追溯，不随 operation_logs 180 天清理丢失）
   archiveDeletedDocument({

@@ -15,6 +15,7 @@ import { DatePicker } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
+import { buildSupplierOptions } from '@/components/supplier/data';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import type { Material } from '@/services/apiWarehouseMaterialService';
@@ -489,7 +490,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
               <SearchableSelect
                 value={formData.supplier}
                 onChange={(val) => setFormData({ ...formData, supplier: val })}
-                options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                options={buildSupplierOptions(suppliers, formData.supplier)}
                 placeholder="搜索或选择供应商"
                 allowClear
               />

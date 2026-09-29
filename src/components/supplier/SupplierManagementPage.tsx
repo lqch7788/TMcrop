@@ -13,6 +13,7 @@ import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningDialog, BatchDeleteConfirmDialog } from './DeleteDialogs';
 import { Supplier, SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
+import { evaluateSupplierQualification, QUALIFICATION_STATUS_TEXT } from './qualification';
 import { Button } from '../../components/ui/button';
 import { useSupplierStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
@@ -288,7 +289,9 @@ export default function SupplierManagementPage() {
       await loadItems();
       setSelectedRows([]);
     } else {
-      await showAlert('批量删除部分失败，请检查网络连接');
+      // 2026-09-29 审计修复：透出 store 记录的真实原因（此前硬编码"请检查网络连接"，
+      // 而实际失败多为"被业务引用禁止删除"这类 409，用户排查方向被误导 —— 违反 Fail Loud）
+      await showAlert(`批量删除部分失败：${useSupplierStore.getState().error || '未知原因'}`);
       await loadItems();
       setSelectedRows([]);
     }
@@ -301,13 +304,22 @@ export default function SupplierManagementPage() {
       ? suppliers.filter(s => selectedRows.includes(s.id))
       : filteredSuppliers;
 
-    const headers = ['供应商编号', '所属组织', '供应商名称', '供应物资类型', '供应商属性', '联系人', '移动电话', '工作电话', '传真号码', '国家', '省份', '城市', '详细地址', '状态', '开户行', '银行卡号', '创建时间', '备注'];
+    const headers = ['供应商编号', '所属组织', '供应商名称', '供应物资类型', '供应商属性', '资质状态', '内部自产', '结算方式', '账期(天)', '评级', '联系人', '移动电话', '工作电话', '传真号码', '国家', '省份', '城市', '详细地址', '状态', '开户行', '银行卡号', '创建时间', '备注'];
     const exportData = selectedData.map(row => ({
       '供应商编号': row.code,
       '所属组织': row.organization,
       '供应商名称': row.name,
       '供应物资类型': getSupplierTypeName(row.supplierType),
       '供应商属性': row.supplierAttribute,
+      // 2026-09-29 审计补充：批次B/C 的合规与经营字段此前导不出，合规台账无法离线核对
+      '资质状态': (() => {
+        const ev = evaluateSupplierQualification(row);
+        return ev.status === 'not_required' ? '不适用' : (QUALIFICATION_STATUS_TEXT[ev.status] || ev.status);
+      })(),
+      '内部自产': row.isInternal === 'internal' ? '是' : row.isInternal === 'external' ? '否' : (row.isInternal || ''),
+      '结算方式': row.settlementType || '',
+      '账期(天)': row.creditDays === undefined || row.creditDays === null ? '' : String(row.creditDays),
+      '评级': row.rating === undefined || row.rating === null ? '' : String(row.rating),
       '联系人': row.contact,
       '移动电话': row.mobilePhone,
       '工作电话': row.workPhone || '',
@@ -332,8 +344,10 @@ export default function SupplierManagementPage() {
     if (exportFormat === 'csv') {
       // 2026-09-28 审计修复：① 加 UTF-8 BOM（项目另 3 处导出都有，此前 Excel 打开中文乱码）
       // ② 值内双引号转义为两个双引号，避免含引号的名称/地址冲乱列结构
+      // 2026-09-29 \u5ba1\u8ba1\u4fee\u590d\uff1aCSV \u5206\u652f\u6b64\u524d\u53ea\u8f6c\u4e49\u5f15\u53f7\u3001\u6f0f\u4e86\u516c\u5f0f\u4e2d\u548c \u2014\u2014
+      // \u5907\u6ce8/\u5730\u5740\u4ee5 =+-@ \u5f00\u5934\u65f6\uff0cExcel \u6253\u5f00 CSV \u4ecd\u4f1a\u5f53\u516c\u5f0f\u6267\u884c\uff08excel/word \u5206\u652f\u5df2\u4e2d\u548c\uff0c\u53e3\u5f84\u4e0d\u4e00\uff09
       content = '\ufeff' + headers.map(h => `"${h}"`).join(',') + '\n' + rowsForExport.map(row =>
-        headers.map(h => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(',')
+        headers.map(h => `"${neutralizeFormula(String(row[h] ?? '')).replace(/"/g, '""')}"`).join(',')
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';

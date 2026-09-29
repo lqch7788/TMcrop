@@ -155,6 +155,8 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
           <SupplierSearchInput
             value={form.supplier}
             onChange={(name) => handleChange('supplier', name)}
+            // 2026-09-29：同步供应商主数据 ID（此前只改名称不改 ID → 改完供应商后关联仍指向旧档案）
+            onSupplierResolved={(s) => handleChange('supplierId', s ? String(s.id) : '')}
             placeholder="搜索或输入供应商名称"
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />

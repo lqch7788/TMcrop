@@ -26,6 +26,13 @@ interface SupplierSearchInputProps {
   value: string;
   /** 值变化回调（输入自由文本 / 点击候选均触发） */
   onChange: (name: string) => void;
+  /**
+   * 供应商主数据解析回调（2026-09-29 新增）
+   * - 点击候选 → 回传该 Supplier（调用方可取 id 落 supplierId）
+   * - 输入自由文本 → 回传 null（已脱离主数据，须清空 supplierId）
+   * 不传时行为与旧版一致（仅名称字符串）。
+   */
+  onSupplierResolved?: (supplier: Supplier | null) => void;
   placeholder?: string;
   /** 输入框样式（与相邻字段保持一致） */
   className?: string;
@@ -38,6 +45,7 @@ const MAX_RESULTS = 50;
 export function SupplierSearchInput({
   value,
   onChange,
+  onSupplierResolved,
   placeholder = '搜索供应商名称...',
   className,
   disabled = false,
@@ -81,6 +89,7 @@ export function SupplierSearchInput({
       showToast(`该供应商${getQualificationIssue(supplier) || '证照即将到期'}`, 'warning');
     }
     onChange(supplier.name);
+    onSupplierResolved?.(supplier);
     setOpen(false);
   };
 
@@ -92,6 +101,8 @@ export function SupplierSearchInput({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
+            // 自由输入即脱离主数据：必须清空 supplierId，否则会留下"名称已改、ID 还是旧供应商"的错关联
+            onSupplierResolved?.(null);
             setOpen(true);
           }}
           // preventDefault 阻止 Radix Trigger 的 toggle 关闭（点击输入框本身不应收起下拉）

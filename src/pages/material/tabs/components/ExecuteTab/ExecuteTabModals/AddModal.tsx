@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Send, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { RowPair } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -465,7 +466,7 @@ export function ExecuteAddModal({
               const diff = material.requestedQuantity - material.actualQuantity;
               const allocs = fefoMap[material.materialCode];
               return (
-                <React.Fragment key={idx}>
+                <RowPair key={idx}>
                   <tr className={diff > 0 ? 'bg-amber-50' : 'bg-emerald-50'}>
                     <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.applicationCode}</td>
                     <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.materialCode}</td>
@@ -515,7 +516,7 @@ export function ExecuteAddModal({
                       </td>
                     </tr>
                   )}
-                </React.Fragment>
+                </RowPair>
               );
             })}
           </tbody>

@@ -24,14 +24,6 @@ interface SupplierState {
 
   /** 前端内存搜索（避免重复请求） */
   search: (keyword: string) => Supplier[];
-  /** 合作中的供应商下拉选项（status = 合作中 / active） */
-  getActiveOptions: () => Array<{ value: string; label: string; code: string }>;
-  /**
-   * 2026-09-28 审计修复：可供新建业务选择的供应商
-   * 默认只返回「合作中」——「暂停/终止」的供应商不应能被选中建立新的入库/采购业务
-   * （此前各下游直接吃全量，唯一的状态过滤函数无任何调用方）
-   */
-  getSelectableOptions: (opts?: { includePaused?: boolean }) => Array<{ value: string; label: string; code: string; status: string }>;
 }
 
 /**
@@ -49,6 +41,19 @@ const STATUS_TO_BACKEND: Record<string, string> = {
   '暂停': 'paused',
   '终止': 'terminated',
 };
+
+/**
+ * 该供应商状态是否可用于**新建业务**（入库/采购等下拉选项）
+ *
+ * 2026-09-29 审计：原判定只存在于 Store 内部零调用的 getActiveOptions/getSelectableOptions 里，
+ * 而真正需要过滤的入库弹窗下拉没过滤（「暂停/终止」的供应商仍能被选中建单）。
+ * 抽成纯函数供各下拉统一复用。兼容 'active'：Store 取数时归一为 '合作中'，
+ * 但历史行或乐观更新的行可能仍是英文枚举。
+ */
+export function isSupplierSelectable(status: unknown): boolean {
+  const s = String(status ?? '').trim();
+  return s === '合作中' || s === 'active';
+}
 
 function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
   const map: Record<string, unknown> = {
@@ -176,21 +181,6 @@ export const useSupplierStore = create<SupplierState>()(
         s.contact.toLowerCase().includes(lower) ||
         s.mobilePhone.includes(keyword)
       );
-    },
-
-    /** 合作中的供应商（用于下拉） */
-    getActiveOptions: () => {
-      return get().items
-        .filter(s => s.status === '合作中' || s.status === 'active')
-        .map(s => ({ value: String(s.id), label: s.name, code: s.code }));
-    },
-
-    /** 可供新建业务选择的供应商（默认仅「合作中」） */
-    getSelectableOptions: (opts) => {
-      return get().items
-        .filter(s => s.status === '合作中' || s.status === 'active'
-          || (opts?.includePaused === true && s.status === '暂停'))
-        .map(s => ({ value: String(s.id), label: s.name, code: s.code, status: s.status }));
     },
 
     addItem: async (item) => {

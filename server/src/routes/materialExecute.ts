@@ -143,7 +143,9 @@ export function writeStockTransaction(
       Number(opts?.balanceBefore) || 0, Number(opts?.balanceAfter) || 0,
       String(executeId), opts?.businessType || 'material_execute', executeCode,
       opts?.operatorId || 'system', opts?.operatorName || '仓库',
-      now, opts?.remark || '领料出库库存流水', now,
+      // 2026-09-29：默认备注改为中性文案。此前硬编码"领料出库库存流水"，
+      // 入库/冲销路径若未显式传 remark 会写成语义错误（显示"领料出库"）的记录。
+      now, opts?.remark || `库存变动（${transactionType}）`, now,
     ]
   );
 }
@@ -306,7 +308,7 @@ function restoreExecuteStock(
 }
 
 /** 回写来源申请单的 dispatch_status（事务内调用，聚合已发数量判断 部分/全部 出库） */
-function recalcDispatchStatus(db: any, sourceCodes: string[], now: string): void {
+export function recalcDispatchStatus(db: any, sourceCodes: string[], now: string): void {
   for (const srcCode of sourceCodes) {
     const reqRows = db.exec('SELECT materials FROM material_requests WHERE request_code = ?', [srcCode]);
     if (reqRows.length === 0 || reqRows[0].values.length === 0) continue;
@@ -355,7 +357,13 @@ function recalcDispatchStatus(db: any, sourceCodes: string[], now: string): void
         [allFulfilled ? 'complete' : 'partial', now, srcCode]
       );
     } else {
-      db.run('UPDATE material_requests SET dispatch_status = NULL, update_time = ? WHERE request_code = ?', [now, srcCode]);
+      // 2026-09-29 审计修复：撤单/改单后重算时不得清除人工"结案"标记。
+      // 'closed' 是申请单的人工终态（materialRequest.ts 的结案 API），
+      // 原实现无条件写 NULL → 已结案的申请单在出库单被改动后静默"复活"为未出库。
+      db.run(
+        "UPDATE material_requests SET dispatch_status = NULL, update_time = ? WHERE request_code = ? AND IFNULL(dispatch_status, '') <> 'closed'",
+        [now, srcCode]
+      );
     }
   }
 }

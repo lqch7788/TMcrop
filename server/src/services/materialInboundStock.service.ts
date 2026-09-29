@@ -346,8 +346,12 @@ export function reverseInboundStock(
       left -= take;
     }
 
+    // 2026-09-29 审计修复：补传余额。此前不传 balanceBefore/After，writeStockTransaction
+    // 缺省写 0/0，导致冲销流水"数量 11、余额 0→0"自相矛盾（库存详情"操作历史"显示假余额）。
     writeStockTransaction(db, ++seq, 'material_reverse_inbound', inboundId, inboundCode, code, qty, {
       operatorName,
+      balanceBefore: mainQty,
+      balanceAfter: mainQty - qty,
       remark: `入库单撤销回收 ${inboundCode}`,
       businessType: 'material_inbound',
     });

@@ -17,6 +17,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { useSupplierStore } from '@/stores/useSupplierStore';
+import { buildSupplierOptions } from '@/components/supplier/data';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { INBOUND_STATUS_LABELS } from '../../utils/warehouseInbound.utils';
 
@@ -202,7 +203,7 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                   <SearchableSelect
                     value={editedSupplier}
                     onChange={setEditedSupplier}
-                    options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                    options={buildSupplierOptions(suppliers, editedSupplier)}
                     placeholder="搜索或选择供应商"
                     allowClear
                   />

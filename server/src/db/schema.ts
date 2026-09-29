@@ -1356,6 +1356,10 @@ export function initializeDatabase() {
   // 2026-09-28 批次A-2：供应商 id 落库（主数据治理基础设施）
   // 此前 inbound_records/materials 只存供应商"名称"文本 → 改名即失真、无法按供应商统计/查资质。
   // 列名沿用这两张表的 camelCase 约定；名称列保留作展示快照与历史兼容。
+  // ⚠️ 注意：这两条 ALTER 位于两张表的 CREATE TABLE **之前**（inbound_records 在 2785 行、
+  //    materials 在 2753 行建表），**全新库执行时表尚不存在 → 抛错被 catch 静默吞掉**。
+  //    2026-09-29 审计修复已在建表语句里补上 supplierId 列，此处保留仅为兼容
+  //    "有表但缺列"的历史库。新增列请一律写进建表语句，不要依赖这里的 ALTER。
   try { db.run(`ALTER TABLE inbound_records ADD COLUMN supplierId TEXT DEFAULT ''`); } catch (e) {}
   try { db.run(`ALTER TABLE materials ADD COLUMN supplierId TEXT DEFAULT ''`); } catch (e) {}
 
@@ -2769,7 +2773,12 @@ export function initializeDatabase() {
       expiryDate TEXT,
       lastUpdateTime TEXT,
       dataStatus TEXT DEFAULT '启用',
-      remarks TEXT
+      remarks TEXT,
+      -- 2026-09-29 审计修复：必须写进建表语句。此前只靠 1360 行的 ALTER 补列，
+      -- 而该 ALTER 位于本建表语句**之前**（表尚不存在 → 抛错被 catch 吞掉），
+      -- 导致**全新库缺 supplierId**，而 db/materials.ts 的 INSERT 无条件写该列
+      -- → 新建物料 / 入库建新物料必然 500。生产库因历史迁移累积有该列，掩盖了此问题。
+      supplierId TEXT DEFAULT ''
     )
   `);
 
@@ -2778,6 +2787,16 @@ export function initializeDatabase() {
     db.run('CREATE INDEX IF NOT EXISTS idx_materials_code_batch ON materials(code, batchNo)');
   } catch (e) {
     // 索引可能已存在
+  }
+
+  // 2026-09-29 审计修复：物料编码唯一索引必须在建表**之后**创建。
+  // 1158 行那份位于建表之前（全新库时表不存在 → 抛错被 catch 吞掉）→
+  // 全新库物料编码无唯一约束，可写入重复 code（物料台账分裂）。
+  // 存量库已有该索引，此处为幂等补建；有重复数据时静默跳过（与 1158 行同容错策略）。
+  try {
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_materials_code_unique ON materials(code)');
+  } catch {
+    // 已存在 或 存量存在重复 code（需人工清理后再建）
   }
 
   // 入库记录表
@@ -2793,7 +2812,10 @@ export function initializeDatabase() {
       voidedDate TEXT,
       recordType TEXT DEFAULT 'inbound',
       reversalOf INTEGER,
-      reversalReason TEXT
+      reversalReason TEXT,
+      -- 2026-09-29 审计修复：同 materials，必须写进建表语句（1359 行的 ALTER 在本语句之前，
+      -- 全新库时静默失败 → 缺 supplierId → db/materials.ts 的 INSERT 无条件写该列即报错）
+      supplierId TEXT DEFAULT ''
     )
   `);
 
@@ -3651,7 +3673,21 @@ export function initializeDatabase() {
       status TEXT DEFAULT 'frozen',
       remarks TEXT,
       create_by TEXT,
-      create_time TEXT
+      create_time TEXT,
+      -- 2026-09-29 审计修复：以下 10 列此前只靠 fixMissingSchema 的 ALTER 补（该函数在启动白名单里
+      -- **被禁用**），导致**全新库缺列**：createIndexes 建 idx_inv_freeze_instance 时
+      -- 报 no such column: instance_id（静默 catch），且 /api/inventory/freezes/:instanceId、
+      -- 冻结列表等查询全部失败。列清单与 fixMissingSchema 的 freezeColumnsToAdd 保持一致。
+      instance_id TEXT,
+      freeze_type TEXT DEFAULT 'manual',
+      customer_name TEXT,
+      delivery_date TEXT,
+      purpose TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      freeze_date TEXT,
+      unfreeze_date TEXT,
+      updated_at TEXT
     )
   `);
 

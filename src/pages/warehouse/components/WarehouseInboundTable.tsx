@@ -9,7 +9,8 @@ import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, RowPair } from '@/components/ui';
+
 import { getStatusText, getStatusClassName } from '../utils/warehouseInbound.utils';
 
 interface WarehouseInboundTableProps {
@@ -128,7 +129,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
               </TableRow>
             )}
             {displayedRecords.map((record) => (
-              <React.Fragment key={record.id}>
+              <RowPair key={record.id}>
                 {/* 主数据行 */}
                 <TableRow className="hover:bg-blue-100 transition-colors">
                   {/* 选择框 */}
@@ -284,7 +285,7 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                     </TableCell>
                   </TableRow>
                 )}
-              </React.Fragment>
+              </RowPair>
             ))}
           </TableBody>
         </Table>

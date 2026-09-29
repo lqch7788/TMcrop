@@ -11,6 +11,7 @@ import * as materialsDb from '../db/materials';
 import { applyInboundStock, reverseInboundStock, createMaterialInboundApproval, parseInboundMaterials, parseInboundMaterialsStrict, collectReverseBatchRows } from '../services/materialInboundStock.service';
 // 2026-09-28 批次B 合规风控：外购入库的供应商资质守卫（默认仅告警，见 lib/supplierQualification.ts）
 import { assertSupplierQualificationAllowed } from '../lib/supplierQualification';
+import { formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -131,7 +132,8 @@ router.post('/inbound', (req: Request, res: Response) => {
     }
     // 2026-09-28 批次B 合规风控：供应商资质守卫（默认仅前端告警；
     // SUPPLIER_QUALIFICATION_ENFORCE=1 时无证/过期供应商的入库单直接拒绝）
-    const qualIssue = assertSupplierQualificationAllowed(db, record.supplierId);
+    // 同时传名称：前端只传名称（未匹配到主数据 id）时也走校验，堵住绕过硬阻断的口子
+    const qualIssue = assertSupplierQualificationAllowed(db, record.supplierId, record.supplier);
     if (qualIssue) {
       return res.status(409).json({ success: false, error: qualIssue });
     }
@@ -298,9 +300,11 @@ router.put('/inbound/:id', (req: Request, res: Response) => {
     const oldStatus = String(oldRecord.status || 'pending');
     const newStatus = String(updates.status ?? oldStatus);
     // 2026-09-28 批次B 合规风控：供应商资质守卫（未改供应商时按库中现有值校验）
+    // 2026-09-29：补传名称 —— id 未匹配到主数据时按名称反查，避免只传名称即绕过
     const qualIssue = assertSupplierQualificationAllowed(
       db,
-      updates.supplierId !== undefined ? updates.supplierId : (oldRecord as any).supplierId
+      updates.supplierId !== undefined ? updates.supplierId : (oldRecord as any).supplierId,
+      updates.supplier !== undefined ? (updates as any).supplier : (oldRecord as any).supplier
     );
     if (qualIssue) {
       return res.status(409).json({ success: false, error: qualIssue });
@@ -833,7 +837,9 @@ router.post('/inbound/:id/reversal', (req: Request, res: Response) => {
       // 1) 冲销单本体（recordType='reversal'，关联原单；明细存实际可冲量）
       reversalId = materialsDb.createInboundRecord({
         code: reversalCode,
-        inboundDate: new Date().toISOString().slice(0, 10),
+        // 2026-09-29 审计修复：业务日期必须用本地时区。toISOString() 是 UTC，
+        // 东八区凌晨 0:00-8:00 冲销会写成前一天（项目已立此铁律，见 dateUtil 注释）。
+        inboundDate: formatLocalDateISO(),
         supplier: (record as any).supplier,
         supplierId: String((record as any).supplierId || ''), // 2026-09-28 批次A-2：冲销单继承原单供应商 id
         operator: operatorName,
@@ -901,7 +907,7 @@ router.get('/:id', (req: Request, res: Response) => {
  */
 const MATERIAL_UPDATE_COLUMNS = new Set([
   'code', 'name', 'category', 'specification', 'unit', 'quantity', 'minStock', 'maxStock',
-  'price', 'supplier', 'location', 'barcode', 'batchNo', 'productionDate', 'expiryDate',
+  'price', 'supplier', 'supplierId', 'location', 'barcode', 'batchNo', 'productionDate', 'expiryDate',
   'lastUpdateTime', 'dataStatus', 'remarks',
 ]);
 

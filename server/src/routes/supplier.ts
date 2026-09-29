@@ -49,38 +49,55 @@ function pickWritableColumns(body: Record<string, unknown>): Record<string, unkn
 }
 
 /**
- * 供应商被引用统计（2026-09-28 审计修复：删除前守卫）
+ * 供应商被引用统计（2026-09-28 建，2026-09-29 审计补全引用面）
  *
- * 引用方式两类：① `supplier_id`（结构化，4 张表）② 供应商名称文本（materials / inbound_records）
- * 此前 DELETE 无任何检查，删除后 id 型引用立即悬空、名称型引用与新主数据永久不一致。
+ * 引用方式两类：① `supplier_id` 结构化外键 ② 供应商名称文本快照
+ * 此前 id 名单只有 5 张表、名称名单只有 2 张，漏掉的表删除后引用会静默悬空。
+ * 本次按 DB 实测列补全（括号内为生产库非空行数，2026-09-29）：
+ *   - harvest_records.supplier_id(14)        采收记录的供货商
+ *   - seed_sources.original_supplier_id(6)   种源"原供应商"（换供应商场景）
+ *   - energy_costs.supplier_name(38)         能源成本**只有名称、无 id**，必须按名称匹配
+ *   - crop_orders.supplier_name / production_plans.supplier_name（当前 0 行，补齐防未来悬空）
+ * 同一张表若已按 id 命中则不再重复按名称计数（id 为准，避免同表报两条）。
  */
 function countSupplierReferences(db: any, id: string, name: string): Array<{ table: string; label: string; count: number }> {
-  const tables: Array<{ table: string; column: string; label: string }> = [
+  const idRefs: Array<{ table: string; column: string; label: string }> = [
     { table: 'seed_sources', column: 'supplier_id', label: '种源记录' },
     { table: 'inventory_stock', column: 'supplier_id', label: '作物库存' },
     { table: 'inventory_inbound_records', column: 'supplier_id', label: '库存入库单' },
     { table: 'purchase_plans', column: 'supplier_id', label: '采购计划' },
     { table: 'material_costs', column: 'supplier_id', label: '物料成本' },
+    { table: 'harvest_records', column: 'supplier_id', label: '采收记录' },
+    { table: 'seed_sources', column: 'original_supplier_id', label: '种源原供应商' },
   ];
+  const nameRefs: Array<{ table: string; column: string; label: string }> = [
+    { table: 'materials', column: 'supplier', label: '物料主数据' },
+    { table: 'inbound_records', column: 'supplier', label: '物料入库单' },
+    { table: 'energy_costs', column: 'supplier_name', label: '能源成本' },
+    { table: 'harvest_records', column: 'supplier_name', label: '采收记录' },
+    { table: 'crop_orders', column: 'supplier_name', label: '作物订单' },
+    { table: 'production_plans', column: 'supplier_name', label: '生产计划' },
+    { table: 'seed_sources', column: 'original_supplier_name', label: '种源原供应商' },
+  ];
+
   const out: Array<{ table: string; label: string; count: number }> = [];
-  for (const t of tables) {
+  const countBy = (table: string, column: string, value: string): number => {
     try {
-      const r = db.exec(`SELECT COUNT(*) FROM ${t.table} WHERE ${t.column} = ?`, [id]);
-      const n = r.length > 0 && r[0].values.length > 0 ? Number(r[0].values[0][0]) || 0 : 0;
-      if (n > 0) out.push({ table: t.table, label: t.label, count: n });
-    } catch { /* 表不存在则跳过（历史环境） */ }
+      const r = db.exec(`SELECT COUNT(*) FROM ${table} WHERE ${column} = ?`, [value]);
+      return r.length > 0 && r[0].values.length > 0 ? Number(r[0].values[0][0]) || 0 : 0;
+    } catch { return 0; } // 表/列缺失（历史环境）视为无引用
+  };
+
+  for (const t of idRefs) {
+    const n = countBy(t.table, t.column, id);
+    if (n > 0) out.push({ table: t.table, label: t.label, count: n });
   }
   if (name) {
-    const byName: Array<{ table: string; label: string }> = [
-      { table: 'materials', label: '物料主数据' },
-      { table: 'inbound_records', label: '物料入库单' },
-    ];
-    for (const t of byName) {
-      try {
-        const r = db.exec(`SELECT COUNT(*) FROM ${t.table} WHERE supplier = ?`, [name]);
-        const n = r.length > 0 && r[0].values.length > 0 ? Number(r[0].values[0][0]) || 0 : 0;
-        if (n > 0) out.push({ table: t.table, label: t.label, count: n });
-      } catch { /* 跳过 */ }
+    for (const t of nameRefs) {
+      // 同表已按 id 命中 → 跳过，避免同一批数据重复计数
+      if (out.some(o => o.table === t.table)) continue;
+      const n = countBy(t.table, t.column, name);
+      if (n > 0) out.push({ table: t.table, label: t.label, count: n });
     }
   }
   return out;
@@ -326,10 +343,22 @@ router.post('/', (req: Request, res: Response) => {
       now, now,
     ];
 
-    db.run(
-      `INSERT INTO suppliers (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
-      values as never[]
-    );
+    try {
+      db.run(
+        `INSERT INTO suppliers (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+        values as never[]
+      );
+    } catch (insertErr) {
+      // 2026-09-29 审计修复：上面的查重是 check-then-insert（非原子），并发建档时
+      // 唯一索引会抛错 —— 此前被外层 catch 吞成 500「创建供应商失败」，
+      // 用户以为是系统故障而非"编码/名称已被占用"。现翻译为 409 + 明确原因。
+      const msg = insertErr instanceof Error ? insertErr.message : String(insertErr);
+      if (/UNIQUE constraint failed/i.test(msg)) {
+        const which = /supplier_code/i.test(msg) ? `供应商编码 ${code}` : `供应商名称「${name}」`;
+        return res.status(409).json({ success: false, error: `${which}已存在（并发建档冲突），请刷新后重试` });
+      }
+      throw insertErr;
+    }
 
     saveDatabase();
     // 项目铁律：写端点必须返回完整记录（此前只返回 { id }，前端只能靠乐观拼行）
@@ -364,6 +393,17 @@ router.put('/:id', (req: Request, res: Response) => {
     if ('supplier_name' in fields && !String(fields.supplier_name || '').trim()) {
       return res.status(400).json({ success: false, error: '供应商名称不能为空' });
     }
+    // 2026-09-29 审计修复：阻止把「供应类型」改成空串。
+    // 该字段是资质合规判定的唯一入口（REQUIRED_QUALIFICATION_BY_TYPE 按 PP/SP/FE 查表），
+    // 置空后 evaluateSupplierQualification 落表为空 → 状态由「未登记/已过期」变为「不适用」，
+    // 资质徽章与筛选同时失效（前端编辑弹窗的"请选择类型"空选项两次点击即可触发）。
+    // 全库存量供应商均有类型（实测 0 行为空），故拒空不会误伤。
+    if ('supplier_type' in fields && !String(fields.supplier_type || '').trim()) {
+      return res.status(400).json({
+        success: false,
+        error: '供应类型不能为空（该字段决定农药/种子/肥料的资质校验，清空会使合规检查失效）',
+      });
+    }
 
     // 2026-09-28：编码/名称唯一性（排除自身）
     if (fields.supplier_code !== undefined) {
@@ -379,20 +419,71 @@ router.put('/:id', (req: Request, res: Response) => {
       }
     }
 
-    const now = new Date().toISOString();
-    db.run(
-      `UPDATE suppliers SET ${keys.map((k) => `${k} = ?`).join(', ')}, update_time = ? WHERE id = ?`,
-      [...Object.values(fields), now, id] as never[]
-    );
+    // 2026-09-29 审计修复：供应商改名必须级联更新按名称引用的下游单据。
+    // 背景：materials.supplier 与 inbound_records.supplier 是**纯名称字符串**、无 supplierId 兜底
+    // （全库仅这两张表如此）。改名不级联 → 历史单据与主数据脱钩；
+    // 更严重的是删除守卫 countSupplierReferences 按名称匹配，改名后立刻查不到引用 →
+    // 供应商被删而历史单据永久悬空。
+    const oldName = String((existing as { supplier_name?: string }).supplier_name || '');
+    const newName = fields.supplier_name !== undefined ? String(fields.supplier_name || '') : oldName;
+    const renamed = oldName && newName && oldName !== newName;
 
-    // 2026-09-28：校验影响行数（sql.js 对 0 行命中不报错，此前恒返回成功 → "假成功"）
-    const modified = typeof db.getRowsModified === 'function' ? db.getRowsModified() : 1;
-    if (modified === 0) {
-      return res.status(404).json({ success: false, error: '供应商不存在或未发生变更' });
+    const now = new Date().toISOString();
+    db.run('BEGIN');
+    let cascade: Record<string, number> = {};
+    try {
+      db.run(
+        `UPDATE suppliers SET ${keys.map((k) => `${k} = ?`).join(', ')}, update_time = ? WHERE id = ?`,
+        [...Object.values(fields), now, id] as never[]
+      );
+
+      // 2026-09-28：校验影响行数（sql.js 对 0 行命中不报错，此前恒返回成功 → "假成功"）
+      const modified = typeof db.getRowsModified === 'function' ? db.getRowsModified() : 1;
+      if (modified === 0) {
+        db.run('ROLLBACK');
+        return res.status(404).json({ success: false, error: '供应商不存在或未发生变更' });
+      }
+
+      if (renamed) {
+        // sql.js 的 db.run 不返回影响行数，须紧邻调用 getRowsModified()（读的是最近一条语句）
+        const rowsModified = (): number => (typeof db.getRowsModified === 'function' ? db.getRowsModified() : -1);
+        db.run('UPDATE materials SET supplier = ?, lastUpdateTime = ? WHERE supplier = ?', [newName, now, oldName]);
+        cascade.materials = rowsModified();
+        db.run('UPDATE inbound_records SET supplier = ? WHERE supplier = ?', [newName, oldName]);
+        cascade.inbound_records = rowsModified();
+        // 有 supplier_id 关联的其它表（种源/采购/库存等）保留旧名称快照不影响关联，
+        // 但数量必须报出来，不静默跳过（Fail Loud）
+        const snapshotTables = ['seed_sources', 'harvest_records', 'purchase_plans', 'material_costs',
+          'energy_costs', 'inventory_stock', 'inventory_inbound_records'];
+        for (const t of snapshotTables) {
+          try {
+            const r = db.exec(`SELECT COUNT(*) FROM ${t} WHERE supplier_name = ? OR supplier = ?`, [oldName, oldName]);
+            const n = r.length > 0 && r[0].values.length > 0 ? Number(r[0].values[0][0]) || 0 : 0;
+            if (n > 0) cascade[t] = n;
+          } catch { /* 表/列缺失则跳过（历史环境） */ }
+        }
+      }
+      db.run('COMMIT');
+    } catch (e) {
+      try { db.run('ROLLBACK'); } catch { /* 回滚失败不掩盖原异常 */ }
+      console.error('更新供应商失败（已回滚）:', e);
+      return res.status(500).json({ success: false, error: '更新供应商失败：' + (e instanceof Error ? e.message : String(e)) });
     }
 
     saveDatabase();
-    res.json({ success: true, data: selectSupplierById(db, id) });
+    const staleSnapshot = renamed
+      ? Object.entries(cascade).filter(([t]) => t !== 'materials' && t !== 'inbound_records' && cascade[t] > 0)
+      : [];
+    res.json({
+      success: true,
+      data: selectSupplierById(db, id),
+      ...(renamed ? {
+        renamed: { from: oldName, to: newName, cascade, staleSnapshot: staleSnapshot.map(([table, count]) => ({ table, count })) },
+        message: staleSnapshot.length > 0
+          ? `供应商已改名，物料/入库单名称已同步；另有 ${staleSnapshot.length} 张关联表仍保留旧名称快照（不影响关联，因它们按 supplier_id 关联）`
+          : '供应商已改名，物料与入库单中的名称已同步',
+      } : {}),
+    });
   } catch (error) {
     console.error('更新供应商失败:', error);
     res.status(500).json({ success: false, error: '更新供应商失败' });

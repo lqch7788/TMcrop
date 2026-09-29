@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { generateApprovalCode } from '../lib/approvalCode';
 import { getDatabase, saveDatabase } from '../db/index';
 import { updateBusinessTable } from './approvalLinkage';
+import { evaluateExemptEligibility, resolveBusinessAmount } from '../lib/approvalAutoApprove';
 
 const router = Router();
 
@@ -424,11 +425,64 @@ router.post('/', (req, res) => {
       return res.status(400).json({ success: false, error: 'ID、类型、标题不能为空' });
     }
 
+    // 2026-09-29 审计修复（P1-1）：金额缺失时按 businessLink 从业务单据回填（服务端权威口径）。
+    // 领料申请此前完全不传 amount → 金额分级与免审批阈值判定对该业务线彻底失效。
+    // 前端已补传，这里再兜一层，避免客户端漏传或伪造金额绕过金额分级。
+    let amountFinal: unknown = amount;
+    if (amountFinal === null || amountFinal === undefined || String(amountFinal).trim() === '') {
+      const resolved = resolveBusinessAmount(db, businessLink as { type?: string; requestId?: string } | null);
+      if (resolved !== null) {
+        amountFinal = resolved;
+        console.log(`[审批] 单 ${id} 金额回填：${resolved}（来源 ${String((businessLink as { type?: string })?.type)}）`);
+      }
+    }
+
     const now = new Date().toISOString();
     // C2 阶段 2: code 优先沿用调用方传入（兼容 SP-RE 等自定义前缀），否则按 type 派生
     // 默认 AP 前缀保留旧行为；type 包含 RE 时使用 SP-RE 前缀（招聘业务约定）
     const effectivePrefix = (type && type.toUpperCase().includes('RECRUIT')) ? 'SP-RE' : 'AP';
-    const approvalCode = code || generateApprovalCode(effectivePrefix);
+
+    /**
+     * 该单号是否已被占用（审批单号必须唯一且与业务单号可区分）
+     *
+     * 2026-09-29 审计修复（P2-9）：部分前端调用方把**业务单号**直接当审批单号提交
+     * （material_request 的 `code: newRecord.code`），导致 ① approvals.code 与业务单号
+     * 命名空间混用、② 同一业务单重提时产生同码审批单（DB 实测 LL20260513013 有 13 条、
+     * MR20260927-0002 有 2 条）。现由服务端自愈：撞号即重新生成，不再信任调用方传值。
+     */
+    const isCodeTaken = (c: string): boolean => {
+      const probe = (table: string, col: string): boolean => {
+        try {
+          const r = db.exec(`SELECT 1 FROM ${table} WHERE ${col} = ? LIMIT 1`, [c]);
+          return r.length > 0 && r[0].values.length > 0;
+        } catch { return false; } // 表缺失（历史环境）→ 视为未占用
+      };
+      if (probe('approvals', 'code')) return true;
+      // 与业务单号撞号同样视为占用：审批单号与业务单号必须能区分
+      return probe('material_requests', 'request_code')
+        || probe('material_returns', 'code')
+        || probe('inbound_records', 'code')
+        || probe('material_executes', 'code');
+    };
+
+    /** 生成一个当前未被占用的审批单号（gen 基于当日 MAX+1，理论上仍可能撞上并发写入） */
+    const freshCode = (): string => {
+      for (let i = 0; i < 5; i++) {
+        const c = generateApprovalCode(effectivePrefix);
+        if (!isCodeTaken(c)) return c;
+      }
+      // 连续 5 次都撞（仅在极端并发下可能）→ 附时间戳后缀兜底，绝不落重复单号
+      return `${generateApprovalCode(effectivePrefix)}-${Date.now().toString().slice(-4)}`;
+    };
+
+    let approvalCode = String(code || '').trim();
+    if (!approvalCode) {
+      approvalCode = freshCode();
+    } else if (isCodeTaken(approvalCode)) {
+      const regenerated = freshCode();
+      console.warn(`[审批] 单号 ${approvalCode} 已被占用（与既有审批单或业务单号冲突），自动改为 ${regenerated}`);
+      approvalCode = regenerated;
+    }
 
     db.run(
       `INSERT INTO approvals (
@@ -466,7 +520,7 @@ router.post('/', (req, res) => {
         relatedBatchCode || '',
         JSON.stringify(relatedTaskIds || []),
         0, // notification_sent
-        amount || '',
+        amountFinal === 0 ? 0 : (amountFinal || ''), // 0 是有效金额（低于任意阈值），不可被 `||` 吞成空串
         JSON.stringify(materials || []),
         workflowId || '',
         workflowName || '',
@@ -699,23 +753,76 @@ router.patch('/:id/action', (req, res) => {
     let newStatus = approval.status as string;
     let newCurrentStep = approval.current_step as number;
 
-    // 查找当前步骤的审批人（如果没有预设审批人，则跳过验证）
+    // ==================== 审批权限校验（2026-09-29 审计修复：恢复被注释的校验） ====================
+    // 历史背景：此前两段校验被注释为"开发测试阶段"跳过，导致任意登录用户可审批任意单据、
+    // 且 approve 分支一次即终审，approval_level_configs 配置的多级审批完全失效。
+    // 恢复策略（两条兜底，避免存量单据被永久卡死）：
+    //   ① approvers 为空 → 无预设审批人（当前系统默认提交形态），没有校验对象，放行
+    //   ② approvers 的 userId 全部无法在 users 表命中 → 历史脏配置（如 'user_姓名' 旧格式），
+    //      放行并告警；设 APPROVAL_STRICT_APPROVER=1 可关闭该兜底、强制严格校验
+    const strictApprover = process.env.APPROVAL_STRICT_APPROVER === '1';
     const currentApproverIndex = approvers.length > 0
       ? approvers.findIndex((a: Approver) => a.order === newCurrentStep && a.status === 'pending')
       : -1;
 
-    // 如果有预设审批人但找不到 — 已禁用（开发测试阶段允许任意步骤通过）
-    // if (approvers.length > 0 && currentApproverIndex === -1) {
-    //   return res.status(400).json({ success: false, error: '未找到当前待审批人' });
-    // }
+    /** approvers 是否为有效配置：至少一个 userId 能在 users 表命中（历史 'user_姓名' 旧格式不算） */
+    const isApproverConfigValid = (): boolean => {
+      const ids = approvers.map((a) => String(a?.userId || '').trim()).filter(Boolean);
+      if (ids.length === 0) return false;
+      try {
+        const stmt = db.prepare(`SELECT COUNT(*) AS c FROM users WHERE oid IN (${ids.map(() => '?').join(',')})`);
+        stmt.bind(ids);
+        const ok = stmt.step() && Number((stmt.getAsObject() as { c?: number }).c || 0) > 0;
+        stmt.free();
+        return ok;
+      } catch {
+        return false; // users 表缺失（历史环境）→ 视为无效配置，走宽松兜底
+      }
+    };
+    const approverConfigValid = isApproverConfigValid();
 
-    const currentApprover = approvers.length > 0 ? approvers[currentApproverIndex] : null;
+    if (approverConfigValid || strictApprover) {
+      if (currentApproverIndex === -1) {
+        return res.status(400).json({
+          success: false,
+          error: `未找到第 ${newCurrentStep} 步的待审批人，无法执行「${action}」`,
+        });
+      }
+      const expected = approvers[currentApproverIndex];
+      const expectedIds = [String(expected.userId || '').trim(), String(expected.role || '').trim()];
+      // 登录账号 oid 优先匹配 userId，其次匹配角色名/姓名（兼容按角色配置的历史单据）
+      if (!expectedIds.includes(finalApproverId) && !expectedIds.includes(finalApproverName)) {
+        return res.status(403).json({
+          success: false,
+          error: `您不是第 ${newCurrentStep} 步的待审批人（应为 ${expected.userName || expected.userId || '未知'}）`,
+        });
+      }
+    } else if (approvers.length > 0) {
+      console.warn(`[审批] 单 ${id} 的 approvers 无法匹配系统账号（历史数据），本次按宽松模式放行`);
+    }
 
-    // 验证审批人匹配 — 已禁用（开发测试阶段，陆启闯拥有最大权限可审批所有单据）
-    // 系统稳定后恢复：
-    //   if (currentApprover && currentApprover.userId !== finalApproverId && currentApprover.role !== finalApproverId) {
-    //     return res.status(403).json({ success: false, error: '您不是当前待审批人' });
-    //   }
+    const currentApprover = currentApproverIndex >= 0 ? approvers[currentApproverIndex] : null;
+
+    // ==================== 自审自批防护（2026-09-29 审计修复 P1-2） ====================
+    // 背景：免审批自动通过此前由前端以**申请人本人身份**调本端点完成，因此不能简单地
+    // "禁止自审" —— 那会把免审批流程一起禁掉，退料等业务直接卡死。
+    // 现改为**服务端复核免审批资格**：以申请人身份操作时，只有该单据确实符合免审批规则
+    // （类型免审 / 金额低于阈值）才放行；否则拒绝，要求由他人审批。
+    // 这样既保留免审批直通，又堵住"任意单据自己批自己"的口子。
+    const applicantId = String(approval.applicant_id || '').trim();
+    const applicantName = String(approval.applicant_name || '').trim();
+    const isSelfApproval = (!!applicantId && applicantId === finalApproverId)
+      || (!!applicantName && applicantName === finalApproverName);
+    if (isSelfApproval) {
+      const verdict = evaluateExemptEligibility(db, approval);
+      if (!verdict.eligible) {
+        return res.status(403).json({
+          success: false,
+          error: `不能审批自己提交的单据：${verdict.reason}`,
+        });
+      }
+      console.log(`[审批] 单 ${id} 以申请人身份通过（免审批资格成立）：${verdict.reason}`);
+    }
 
     // 添加审批记录
     const record: ApprovalRecord = {
@@ -748,19 +855,22 @@ router.patch('/:id/action', (req, res) => {
 
     // 处理审批结果
     switch (action) {
-      case 'approve':
-        // 开发测试阶段：一次审批直接通过，跳过多步骤判断
-        newStatus = 'approved';
-        newCurrentStep = approval.total_steps as number; // 标记为最后一步
-        // 标记所有未完成的审批人为已通过
-        approvers.forEach((a: Approver) => {
-          if (a.status === 'pending') {
-            a.status = 'approved';
-            a.comment = a.comment || '审批通过（开发模式）';
-            a.actionTime = now;
-          }
-        });
+      case 'approve': {
+        // 2026-09-29 审计修复：恢复多级审批推进。
+        // 此前为"一次性审批直接通过，跳过多步骤判断"，配置 2~3 级的单据点一次即终审，
+        // 且把剩余审批人伪写为"审批通过（开发模式）"——审批轨迹失真、级别配置形同虚设。
+        // 现语义：有预设审批人且未到最后一级 → 推进 current_step，单据保持 pending；
+        //         无预设审批人（approvers 为空，当前默认形态）→ 直接终审，保持原行为。
+        const totalSteps = Number(approval.total_steps) || 1;
+        if (currentApprover && newCurrentStep < totalSteps) {
+          newCurrentStep += 1;
+          newStatus = 'pending'; // 后续步骤继续审批，暂不触发业务联动
+        } else {
+          newStatus = 'approved';
+          newCurrentStep = totalSteps;
+        }
         break;
+      }
 
       case 'reject':
         newStatus = 'rejected';
@@ -860,7 +970,10 @@ router.patch('/:id/action', (req, res) => {
           }
         } catch (e) {
           console.error('【审批联动】更新业务表失败:', e);
-          if (businessLink.type === 'material_inbound') {
+          // 2026-09-29 审计修复：退回路径此前只覆盖 material_inbound，漏了 'return'。
+          // 两者都直接影响库存账实（入库加库存、退料恢复库存），异常时若不回滚，
+          // 审批显示"已通过"但库存永远没动，且终态不可重试 → 账实不符。
+          if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
             // 同上：异常也必须是硬失败，不能让审批看似成功
             db.run(
               `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
@@ -869,7 +982,7 @@ router.patch('/:id/action', (req, res) => {
             saveDatabase();
             return res.status(409).json({
               success: false,
-              error: `入库单联动异常，审批已回滚：${e instanceof Error ? e.message : String(e)}`,
+              error: `业务联动异常，审批已回滚：${e instanceof Error ? e.message : String(e)}`,
             });
           }
         }
@@ -1424,23 +1537,48 @@ router.post('/batch-action', (req, res) => {
         let newStatus = approval.status as string;
         let newCurrentStep = approval.current_step as number;
 
-        // 查找当前步骤的审批人
-        const currentApproverIndex = approvers.findIndex(
-          (a: Approver) => a.order === newCurrentStep && a.status === 'pending'
-        );
+        // 查找当前步骤的审批人（approvers 为空表示无预设审批人，与单条 PATCH 同语义）
+        const currentApproverIndex = approvers.length > 0
+          ? approvers.findIndex((a: Approver) => a.order === newCurrentStep && a.status === 'pending')
+          : -1;
 
-        if (currentApproverIndex === -1) {
-          results.push({ id, success: false, error: '未找到待审批人' });
-          continue;
+        // 2026-09-29 审计修复：此前 approvers 为空时直接判失败，导致
+        // material_inbound 8/8、return_material 3/5、material_request 7/36 的存量单据
+        // 批量审批永远不可用（单条 PATCH 却能通过 —— 同功能两套语义）。
+        // 现与单条端点对齐：仅当 approvers 配置有效（userId 能命中 users 表）
+        // 或显式开启 APPROVAL_STRICT_APPROVER=1 时才强制校验。
+        const batchStrict = process.env.APPROVAL_STRICT_APPROVER === '1';
+        let batchConfigValid = false;
+        if (approvers.length > 0) {
+          const idsInApprovers = approvers.map((a) => String(a?.userId || '').trim()).filter(Boolean);
+          if (idsInApprovers.length > 0) {
+            try {
+              const cStmt = db.prepare(`SELECT COUNT(*) AS c FROM users WHERE oid IN (${idsInApprovers.map(() => '?').join(',')})`);
+              cStmt.bind(idsInApprovers);
+              batchConfigValid = cStmt.step() && Number((cStmt.getAsObject() as { c?: number }).c || 0) > 0;
+              cStmt.free();
+            } catch {
+              batchConfigValid = false;
+            }
+          }
         }
 
-        const currentApprover = approvers[currentApproverIndex];
-
-        // 验证审批人匹配
-        if (currentApprover.userId !== approverId && currentApprover.role !== approverId) {
-          results.push({ id, success: false, error: '您不是当前待审批人' });
-          continue;
+        if (batchConfigValid || batchStrict) {
+          if (currentApproverIndex === -1) {
+            results.push({ id, success: false, error: `未找到第 ${newCurrentStep} 步的待审批人` });
+            continue;
+          }
+          const expected = approvers[currentApproverIndex];
+          const expectedIds = [String(expected.userId || '').trim(), String(expected.role || '').trim()];
+          if (!expectedIds.includes(String(approverId)) && !expectedIds.includes(String(approverName))) {
+            results.push({ id, success: false, error: `您不是第 ${newCurrentStep} 步的待审批人（应为 ${expected.userName || expected.userId || '未知'}）` });
+            continue;
+          }
+        } else if (approvers.length > 0) {
+          console.warn(`[批量审批] 单 ${id} 的 approvers 无法匹配系统账号（历史数据），本次按宽松模式放行`);
         }
+
+        const currentApprover = currentApproverIndex >= 0 ? approvers[currentApproverIndex] : null;
 
         // 添加审批记录
         records.push({
@@ -1453,24 +1591,38 @@ router.post('/batch-action', (req, res) => {
           actionTime: now,
         });
 
-        // 更新当前审批人状态
-        approvers[currentApproverIndex] = {
-          ...currentApprover,
-          status: action === 'approve' ? 'approved' : 'rejected',
-          comment: comment || '',
-          actionTime: now,
-        };
+        // 更新当前审批人状态（approvers 为空时跳过，与单条 PATCH 同语义）
+        if (currentApprover) {
+          approvers[currentApproverIndex] = {
+            ...currentApprover,
+            status: action === 'approve' ? 'approved' : 'rejected',
+            comment: comment || '',
+            actionTime: now,
+          };
+        }
 
         // 处理审批结果
         if (action === 'approve') {
-          if (newCurrentStep >= (approval.total_steps as number)) {
-            newStatus = 'approved';
+          if (currentApprover && newCurrentStep < (approval.total_steps as number)) {
+            newCurrentStep += 1; // 多级审批：推进到下一步，单据保持 pending
           } else {
-            newCurrentStep += 1;
+            newStatus = 'approved';
+            newCurrentStep = Number(approval.total_steps) || 1;
           }
         } else if (action === 'reject') {
           newStatus = 'rejected';
         }
+
+        // 2026-09-29 审计修复：留存终态写入前的原值——
+        // 库存类联动（入库/退料）失败时必须把审批回滚到 pending，
+        // 否则"审批显示已通过、库存却没动"且终态不可重试（与单条 PATCH 对齐）
+        const prevBatchState: Record<string, any> = {
+          status: approval.status,
+          current_step: approval.current_step,
+          approvers: approval.approvers,
+          records: approval.records,
+          updated_at: approval.updated_at,
+        };
 
         db.run(`
           UPDATE approvals SET
@@ -1512,14 +1664,38 @@ router.post('/batch-action', (req, res) => {
                 console.warn(`【批量审批联动】${businessLink.type} 更新失败: ${linkResult.message}`);
                 // 2026-09-28：库存类联动（入库/退料）失败时标记该条为失败，
                 // 避免"审批显示成功但库存没动"被静默吞掉（审批人可据此重试）
+                // 2026-09-29 审计修复：标记失败之外还必须**回滚审批终态**——
+                // 此前只 continue，approvals 行仍是 approved，单据永久卡在"审批通过但库存没动"。
+                // 现与单条 PATCH 对齐：回滚 + 报错，审批人可原样重试。
                 if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
-                  results.push({ id, success: false, error: `库存联动失败：${linkResult.message || '未知原因'}` });
+                  db.run(
+                    `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
+                    [prevBatchState.status, prevBatchState.current_step, prevBatchState.approvers, prevBatchState.records, prevBatchState.updated_at, id]
+                  );
+                  results.push({ id, success: false, error: `库存联动失败，审批已回滚可重试：${linkResult.message || '未知原因'}` });
                   continue;
                 }
               }
             }
           } catch (linkErr) {
             console.error('【批量审批联动】更新业务表失败:', linkErr);
+            // 2026-09-29 审计修复：异常路径此前只打日志，审批已置终态却无任何标记；
+            // 库存类联动异常同样必须回滚 + 标记失败
+            const rawLinkType = (() => {
+              try {
+                let p: unknown = approval.business_link;
+                for (let i = 0; i < 3 && typeof p === 'string'; i++) { p = JSON.parse(p as string); }
+                return (p && typeof p === 'object') ? String((p as { type?: string }).type || '') : '';
+              } catch { return ''; }
+            })();
+            if (rawLinkType === 'material_inbound' || rawLinkType === 'return') {
+              db.run(
+                `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
+                [prevBatchState.status, prevBatchState.current_step, prevBatchState.approvers, prevBatchState.records, prevBatchState.updated_at, id]
+              );
+              results.push({ id, success: false, error: `库存联动异常，审批已回滚可重试：${linkErr instanceof Error ? linkErr.message : String(linkErr)}` });
+              continue;
+            }
           }
         }
 

@@ -61,6 +61,12 @@ export interface MaterialReceivingRecord {
   rejectReason?: string;
   /** 出库状态：null(未出库) | 'partial'(部分出库) | 'complete'(已出库) */
   dispatchStatus?: string;
+  /**
+   * 申请单总金额（2026-09-29 补）
+   * 后端 `material_requests.total_amount` 一直存在、前端 addItem 也在落库，
+   * 但类型里缺该字段 —— 提交审批时取不到金额，导致金额分级/免审批阈值对该业务线失效（审计 P1-1）。
+   */
+  totalAmount?: number;
   materials: MaterialItem[];
 }
 

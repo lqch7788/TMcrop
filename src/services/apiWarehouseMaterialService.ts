@@ -24,6 +24,11 @@ export interface Material {
   maxStock: number;
   price: string;
   supplier: string;
+  /**
+   * 供应商主数据 ID（2026-09-29 新增）
+   * `supplier` 是展示快照，本字段才是关联键 —— 供应商改名后据此仍能定位主数据。
+   */
+  supplierId?: string;
   location: string;
   barcode: string;
   batchNo: string;
