@@ -729,45 +729,145 @@ router.get('/overview', (req: Request, res: Response) => {
     `;
     const monthEnergyCost = queryToObjects(db, monthEnergyCostSql, [monthStartStr, monthEndStr]);
 
+    // 2026-09-29 修复（P0）：queryToObjects 会把 SQL 别名转成驼峰（harvest_count → harvestCount），
+    // 原代码按蛇形读取 → 全部 undefined → 恒为 0。此前只有 batch 统计正确，
+    // 正是因为其别名是 `count`（无下划线，驼峰转换不改变它）。
+    // 同时响应中间件 camelCaseResponse 会把输出键名再转一次驼峰，
+    // 故此处直接构造驼峰键，避免"蛇形→驼峰"二次转换带来的歧义。
     const data = {
       yield: {
-        month_harvest_count: monthHarvest[0]?.harvest_count || 0,
-        month_total_yield: monthHarvest[0]?.total_yield || 0,
-        month_total_amount: monthHarvest[0]?.total_amount || 0
+        monthHarvestCount: monthHarvest[0]?.harvestCount || 0,
+        monthTotalYield: monthHarvest[0]?.totalYield || 0,
+        monthTotalAmount: monthHarvest[0]?.totalAmount || 0
       },
       task: {
-        total_tasks: monthTask[0]?.total_tasks || 0,
-        completed_tasks: monthTask[0]?.completed_tasks || 0,
-        in_progress_tasks: monthTask[0]?.in_progress_tasks || 0,
-        pending_tasks: monthTask[0]?.pending_tasks || 0,
-        completion_rate: monthTask[0]?.total_tasks > 0
-          ? Math.round((monthTask[0]?.completed_tasks / monthTask[0]?.total_tasks) * 100)
+        totalTasks: monthTask[0]?.totalTasks || 0,
+        completedTasks: monthTask[0]?.completedTasks || 0,
+        inProgressTasks: monthTask[0]?.inProgressTasks || 0,
+        pendingTasks: monthTask[0]?.pendingTasks || 0,
+        completionRate: monthTask[0]?.totalTasks > 0
+          ? Math.round((monthTask[0]?.completedTasks / monthTask[0]?.totalTasks) * 100)
           : 0
       },
       labor: {
-        total_hours: monthLabor[0]?.total_hours || 0,
-        total_labor_cost: monthLabor[0]?.total_labor_cost || 0
+        totalHours: monthLabor[0]?.totalHours || 0,
+        totalLaborCost: monthLabor[0]?.totalLaborCost || 0
       },
       problem: {
-        total_problems: monthProblem[0]?.total_problems || 0,
-        resolved_problems: monthProblem[0]?.resolved_problems || 0,
-        resolution_rate: monthProblem[0]?.total_problems > 0
-          ? Math.round((monthProblem[0]?.resolved_problems / monthProblem[0]?.total_problems) * 100)
+        totalProblems: monthProblem[0]?.totalProblems || 0,
+        resolvedProblems: monthProblem[0]?.resolvedProblems || 0,
+        resolutionRate: monthProblem[0]?.totalProblems > 0
+          ? Math.round((monthProblem[0]?.resolvedProblems / monthProblem[0]?.totalProblems) * 100)
           : 0
       },
       batch: {
-        active_count: activeBatch[0]?.count || 0,
-        total_batches: totalBatches[0]?.count || 0
+        activeCount: activeBatch[0]?.count || 0,
+        totalBatches: totalBatches[0]?.count || 0
       },
-      total_cost: (monthLabor[0]?.total_labor_cost || 0)
-        + (monthMaterialCost[0]?.material_cost || 0)
-        + (monthEnergyCost[0]?.energy_cost || 0)
+      totalCost: (monthLabor[0]?.totalLaborCost || 0)
+        + (monthMaterialCost[0]?.materialCost || 0)
+        + (monthEnergyCost[0]?.energyCost || 0)
     };
 
     res.json({ success: true, data });
   } catch (error) {
     console.error('获取生产报表概览失败:', error);
     res.status(500).json({ success: false, error: '获取生产报表概览失败' });
+  }
+});
+
+/**
+ * 获取六大模块体检概览（供生产汇总看板的「模块体检」区使用）
+ * GET /api/summary/module-health
+ *
+ * 2026-09-29 新增：汇总看板要让管理者一眼看到 计划/作物/农事/物资/审批/人工
+ * 六个模块的运行状态。此前这些数字散落在 6 个以上独立端点，且种源/育苗/种植/
+ * 采购计划/物料/供应商/入库单等模块根本没有聚合端点，前端只能拉全量列表自己数。
+ * 此处集中一次聚合返回，避免看板并发十几个请求各自拼装。
+ *
+ * 注意：本端点是**实时存量快照**（有多少物料、多少在种批次），不是时间段统计，
+ * 因此不接受 start_date/end_date 参数。
+ */
+router.get('/module-health', (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    /**
+     * 执行单行聚合 SQL 并取指定列的数值。
+     * queryToObjects 会把列名转驼峰，故统一用 `AS total` 这类无下划线的别名。
+     */
+    const pick = (sql: string, key: string, fallback = 0): number => {
+      const rows = queryToObjects<Record<string, unknown>>(db, sql, []);
+      const v = rows[0]?.[key];
+      return typeof v === 'number' ? v : fallback;
+    };
+
+    const data = {
+      // 计划管理
+      plan: {
+        orders: pick('SELECT COUNT(*) AS total FROM crop_orders', 'total'),
+        ordersInProgress: pick("SELECT COUNT(*) AS total FROM crop_orders WHERE status = 'in_progress'", 'total'),
+        productionPlans: pick('SELECT COUNT(*) AS total FROM production_plans', 'total'),
+        techSolutions: pick('SELECT COUNT(*) AS total FROM tech_solutions', 'total'),
+        purchasePlans: pick('SELECT COUNT(*) AS total FROM purchase_plans', 'total'),
+        purchasePlansPending: pick("SELECT COUNT(*) AS total FROM purchase_plans WHERE status = 'pending'", 'total'),
+      },
+      // 作物管理（种源/育苗/种植均排除软删记录）
+      crop: {
+        seedSources: pick("SELECT COUNT(*) AS total FROM seed_sources WHERE deleted_at IS NULL AND status = 'active'", 'total'),
+        seedlings: pick('SELECT COUNT(*) AS total FROM seedlings WHERE deleted_at IS NULL', 'total'),
+        seedlingsInProgress: pick("SELECT COUNT(*) AS total FROM seedlings WHERE deleted_at IS NULL AND status = 'in_progress'", 'total'),
+        plantings: pick('SELECT COUNT(*) AS total FROM plantings WHERE deleted_at IS NULL', 'total'),
+        plantingsHarvesting: pick("SELECT COUNT(*) AS total FROM plantings WHERE deleted_at IS NULL AND status = 'harvesting'", 'total'),
+        inventoryInstances: pick('SELECT COUNT(*) AS total FROM inventory_stock', 'total'),
+        inventoryQuantity: pick('SELECT COALESCE(SUM(current_quantity), 0) AS total FROM inventory_stock', 'total'),
+      },
+      // 农事管理
+      farm: {
+        tasksTotal: pick('SELECT COUNT(*) AS total FROM farm_tasks', 'total'),
+        tasksCompleted: pick("SELECT COUNT(*) AS total FROM farm_tasks WHERE status = 'completed'", 'total'),
+        tasksWaitingAcceptance: pick("SELECT COUNT(*) AS total FROM farm_tasks WHERE status = 'waiting_acceptance'", 'total'),
+        // 逾期口径：有计划日期、已过期、且未终结；用 localtime 避免 UTC 早 8 小时误判为前一天
+        tasksOverdue: pick(
+          `SELECT COUNT(*) AS total FROM farm_tasks
+           WHERE plan_date <> '' AND plan_date < date('now', 'localtime')
+             AND status NOT IN ('completed', 'cancelled', 'abandoned')`,
+          'total'
+        ),
+        problemsTotal: pick('SELECT COUNT(*) AS total FROM problems', 'total'),
+        problemsOpen: pick("SELECT COUNT(*) AS total FROM problems WHERE status IN ('pending', 'in_progress', 'waiting_acceptance')", 'total'),
+      },
+      // 物资管理
+      material: {
+        materials: pick('SELECT COUNT(*) AS total FROM materials', 'total'),
+        materialsLowStock: pick('SELECT COUNT(*) AS total FROM materials WHERE minStock > 0 AND quantity < minStock', 'total'),
+        suppliers: pick('SELECT COUNT(*) AS total FROM suppliers', 'total'),
+        suppliersActive: pick("SELECT COUNT(*) AS total FROM suppliers WHERE status = 'active'", 'total'),
+        // 只统计正单向入库单，排除冲销单（recordType = 'reversal'）
+        inboundRecords: pick("SELECT COUNT(*) AS total FROM inbound_records WHERE recordType = 'inbound'", 'total'),
+        materialRequests: pick('SELECT COUNT(*) AS total FROM material_requests', 'total'),
+        materialRequestsPending: pick("SELECT COUNT(*) AS total FROM material_requests WHERE status = 'pending'", 'total'),
+      },
+      // 审批管理
+      approval: {
+        total: pick('SELECT COUNT(*) AS total FROM approvals', 'total'),
+        pending: pick("SELECT COUNT(*) AS total FROM approvals WHERE status = 'pending'", 'total'),
+        approved: pick("SELECT COUNT(*) AS total FROM approvals WHERE status = 'approved'", 'total'),
+        rejected: pick("SELECT COUNT(*) AS total FROM approvals WHERE status = 'rejected'", 'total'),
+      },
+      // 人工管理
+      labor: {
+        employees: pick("SELECT COUNT(*) AS total FROM employees WHERE status = 'active'", 'total'),
+        attendanceRecords: pick('SELECT COUNT(*) AS total FROM attendance_records', 'total'),
+        workHours: pick('SELECT COALESCE(SUM(work_hours), 0) AS total FROM labor_records', 'total'),
+        workLogs: pick('SELECT COUNT(*) AS total FROM work_logs', 'total'),
+      },
+    };
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('获取模块体检概览失败:', error);
+    res.status(500).json({ success: false, error: '获取模块体检概览失败' });
   }
 });
 

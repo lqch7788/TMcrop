@@ -101,17 +101,23 @@ function normalizeWithMap(raw: Record<string, unknown>, fieldMap: Record<string,
   return result;
 }
 
-/** 从概览 API 原始数据提取 DashboardStats */
+/**
+ * 从概览 API 原始数据提取 DashboardStats
+ *
+ * 2026-09-29 修复：原按蛇形键读取（month_total_yield 等），但 /api/summary/overview
+ * 实际返回驼峰键（后端 queryToObjects + 响应中间件双重转换），导致基地总览的
+ * 批次/产量/成本/工时四个统计恒为 0。现统一按驼峰读取。
+ */
 function extractDashboardStats(overviewData: Record<string, unknown>): DashboardStats {
   const yieldData = (overviewData.yield as Record<string, unknown>) || {};
   const batchData = (overviewData.batch as Record<string, unknown>) || {};
   const laborData = (overviewData.labor as Record<string, unknown>) || {};
 
   return {
-    totalBatches: (batchData.active_count as number) || 0,
-    totalYield: (yieldData.month_total_yield as number) || 0,
-    totalCost: (laborData.total_labor_cost as number) || 0,
-    totalLabor: (laborData.total_hours as number) || 0,
+    totalBatches: (batchData.activeCount as number) || 0,
+    totalYield: (yieldData.monthTotalYield as number) || 0,
+    totalCost: (laborData.totalLaborCost as number) || 0,
+    totalLabor: (laborData.totalHours as number) || 0,
   };
 }
 
@@ -178,20 +184,21 @@ export const useDashboardStore = create<DashboardState>()(
         set({ isLoading: true, error: null });
         try {
           // 并行获取概览数据和告警统计
+          // 注意：enhancedApiClient 已自动解包 { success, data } 外层，返回的即 data 本体
           const [overviewRes, alertsRes] = await Promise.all([
-            enhancedApiClient.get<{ success: boolean; data: Record<string, unknown> }>('/summary/overview'),
-            enhancedApiClient.get<{ data: Record<string, unknown> }>('/alerts/stats/summary').catch(() => null),
+            enhancedApiClient.get<Record<string, unknown>>('/summary/overview'),
+            enhancedApiClient.get<Record<string, unknown>>('/alerts/stats/summary').catch(() => null),
           ]);
 
           // 处理概览数据
-          if (overviewRes && overviewRes.success && overviewRes.data) {
-            const stats = extractDashboardStats(overviewRes.data);
+          if (overviewRes) {
+            const stats = extractDashboardStats(overviewRes);
             set({ dashboardStats: stats });
           }
 
           // 处理告警数据
-          if (alertsRes && alertsRes.data) {
-            const alertData = alertsRes.data as Record<string, unknown>;
+          if (alertsRes) {
+            const alertData = alertsRes as Record<string, unknown>;
             set({
               alertsBreakdown: {
                 total: (alertData.total as number) || 0,

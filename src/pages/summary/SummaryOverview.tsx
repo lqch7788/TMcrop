@@ -1,30 +1,45 @@
 /**
- * 汇总看板页面 - 生产汇总表总览
- * 展示核心 KPI 指标、趋势图表和预警信息
+ * 汇总看板 —— 生产汇总表总览（管理者视角）
  *
- * 数据源：useSummaryDataStore（Zustand Store）
- * 架构：Store → API（无缓存层，V2.1 铁律）
+ * 布局（自上而下，"待办优先"）：
+ *   ① 待办与风险条   待审批 / 逾期任务 / 待验收 / 未解决问题 —— 点击直达
+ *   ② 经营核心指标   产量 / 产值 / 成本 / 采收次数 / 任务完成率 / 活跃批次
+ *   ③ 六大模块体检   计划 / 作物 / 农事 / 物资 / 审批 / 人工 六张卡片
+ *   ④ 趋势与结构     产量趋势 + 成本构成
+ *   ⑤ 关注清单       生产预警聚合 + 批次进度 Top5
+ *
+ * 数据源：useSummaryDataStore
+ *   → /api/summary/overview | module-health | yield-stats | cost-stats | batch-stats
+ * 架构：组件 → Store → enhancedApiClient → API（V2.1 铁律，无缓存层）
+ *
+ * 时间口径：默认「本年度」。库里业务数据集中在年中，默认"本月"会显示成一屏 0。
+ *           模块体检（②⑥ 之外的 ③）与批次是存量快照，不随时间筛选变化。
  */
 
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Sprout, TrendingUp, DollarSign,
-  Clock, CheckCircle2, Layers, AlertTriangle,
-  Loader2, MapPin, ChevronRight, Package,
+  CheckCircle2, Layers, AlertTriangle,
+  Loader2, Package,
   BarChart3, PieChart,
+  FileCheck, ClipboardCheck, AlertCircle,
+  ClipboardList, Boxes, Users, Flower2, Wallet,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart as RePieChart, Pie, Cell,
 } from 'recharts';
 import {
-  PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter
+  PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter,
+  TodoStrip, ModuleHealthGrid,
 } from '../../components/summary';
+import type { TodoItem, ModuleCard } from '../../components/summary';
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
 import { getTaskStatus } from '../../components/summary/constants';
+import { todayLocal } from '../../lib/dateUtils';
 
-// ========== 批次状态中文映射 ==========
+// ========== 批次状态字典 ==========
 
 /** 批次状态 → 中文标签 */
 const STATUS_LABEL: Record<string, string> = {
@@ -56,9 +71,30 @@ const STATUS_BADGE: Record<string, string> = {
   overdue: 'bg-red-50 text-red-600',
 };
 
-// ========== 产量趋势柱状图 ==========
+// ========== 时间范围（本地时间计算，避免 UTC 偏移）==========
 
-/** 产量趋势简易柱状图 - 使用 yieldItems 按月展示 */
+/** 本年度范围：YYYY-01-01 ~ 今天 */
+function currentYearRange(): { startDate: string; endDate: string } {
+  return { startDate: `${new Date().getFullYear()}-01-01`, endDate: todayLocal() };
+}
+
+/** 按筛选模式计算日期范围 */
+function rangeByMode(mode: 'month' | 'quarter' | 'year'): { startDate: string; endDate: string } {
+  const now = new Date();
+  const end = todayLocal();
+  if (mode === 'month') {
+    return { startDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, endDate: end };
+  }
+  if (mode === 'quarter') {
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3 + 1;
+    return { startDate: `${now.getFullYear()}-${String(qStartMonth).padStart(2, '0')}-01`, endDate: end };
+  }
+  return currentYearRange();
+}
+
+// ========== 图表组件 ==========
+
+/** 产量趋势柱状图 */
 function YieldTrendChart({ data }: { data: { name: string; 产量: number }[] }) {
   if (data.length === 0) return <EmptyChart />;
   return (
@@ -92,9 +128,7 @@ function YieldTrendChart({ data }: { data: { name: string; 产量: number }[] })
   );
 }
 
-// ========== 成本构成饼图 ==========
-
-/** 成本构成简易饼图 */
+/** 成本构成饼图（中心显示总成本） */
 function CostBreakdownPie({ data }: { data: { name: string; value: number; fill: string }[] }) {
   if (data.length === 0) return <EmptyChart />;
   const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -128,7 +162,7 @@ function CostBreakdownPie({ data }: { data: { name: string; value: number; fill:
           />
         </RePieChart>
       </ResponsiveContainer>
-      {/* 中心总计文字 */}
+      {/* 中心总计 */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
           <div className="text-lg font-bold text-gray-800">
@@ -162,7 +196,6 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
               {batch.completionRate}%
             </span>
           </div>
-          {/* 进度条 */}
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
@@ -177,7 +210,6 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
               style={{ width: `${Math.min(batch.completionRate, 100)}%` }}
             />
           </div>
-          {/* 状态标签 */}
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <span>{batch.greenhouse || '-'}</span>
             <span>|</span>
@@ -191,52 +223,7 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
   );
 }
 
-// ========== 温室快照横向滚动卡片 ==========
-
-/** 单个温室快照卡片 */
-function GreenhouseSnapshotCard({ batch }: { batch: import('../../stores/useSummaryDataStore').BatchStatItem }) {
-  const navigate = useNavigate();
-  return (
-    <div
-      className="flex-shrink-0 w-56 bg-white rounded-lg border border-gray-100 p-4 hover:shadow-sm transition-shadow cursor-pointer"
-      onClick={() => navigate('/summary/batch')}
-    >
-      {/* 顶部：温室名 */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-md bg-emerald-100 flex items-center justify-center">
-          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-        </div>
-        <span className="text-sm font-semibold text-gray-800 truncate" title={batch.greenhouse || batch.batchName}>
-          {batch.greenhouse || batch.batchName || batch.batchCode}
-        </span>
-      </div>
-      {/* 作物信息 */}
-      <div className="text-xs text-gray-500 mb-3">
-        <span>{batch.cropName}</span>
-        {batch.variety && <span className="text-gray-300 ml-1">·{batch.variety}</span>}
-      </div>
-      {/* 进度条 */}
-      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-        <div
-          className={`h-full rounded-full ${
-            batch.completionRate >= 100 ? 'bg-emerald-500' :
-            batch.completionRate >= 60 ? 'bg-blue-500' : 'bg-amber-500'
-          }`}
-          style={{ width: `${Math.min(batch.completionRate, 100)}%` }}
-        />
-      </div>
-      {/* 底部指标 */}
-      <div className="flex items-center justify-between text-xs">
-        <span className={STATUS_COLOR[batch.status] || 'text-gray-400'}>
-          {STATUS_LABEL[batch.status] || batch.status || '-'}
-        </span>
-        <span className="text-gray-400">{batch.completionRate}%</span>
-      </div>
-    </div>
-  );
-}
-
-// ========== 空状态组件 ==========
+// ========== 通用容器与空态 ==========
 
 function EmptyState({ text = '暂无数据' }: { text?: string }) {
   return (
@@ -256,8 +243,6 @@ function EmptyChart() {
   );
 }
 
-// ========== 加载状态 ==========
-
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center h-64">
@@ -265,8 +250,6 @@ function LoadingSpinner() {
     </div>
   );
 }
-
-// ========== 卡片容器 ==========
 
 function CardWrapper({ title, icon, children, className = '' }: {
   title: string;
@@ -294,105 +277,249 @@ export default function SummaryOverview() {
 
   // Store 数据
   const overview = useSummaryDataStore((s) => s.overview);
+  const moduleHealth = useSummaryDataStore((s) => s.moduleHealth);
   const yieldItems = useSummaryDataStore((s) => s.yieldItems);
   const costSummary = useSummaryDataStore((s) => s.costSummary);
   const batchItems = useSummaryDataStore((s) => s.batchItems);
   const isLoading = useSummaryDataStore((s) => s.isLoading);
-  const fetchAll = useSummaryDataStore((s) => s.fetchAll);
+  const fetchOverview = useSummaryDataStore((s) => s.fetchOverview);
+  const fetchModuleHealth = useSummaryDataStore((s) => s.fetchModuleHealth);
   const fetchYieldStats = useSummaryDataStore((s) => s.fetchYieldStats);
   const fetchCostStats = useSummaryDataStore((s) => s.fetchCostStats);
   const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
-  const isCacheStale = useSummaryDataStore((s) => s.isCacheStale);
 
-  // 日期筛选状态
-  const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('month');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // 时间范围：默认本年度
+  const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
+  const [range, setRange] = useState(currentYearRange);
 
-  // 初始化加载数据
+  // 时间范围变化 → 刷新受时间影响的统计
   useEffect(() => {
-    if (isCacheStale('overview', 5 * 60 * 1000)) {
-      fetchAll();
-    }
+    fetchOverview({ startDate: range.startDate, endDate: range.endDate });
+    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate });
+    fetchCostStats({ startDate: range.startDate, endDate: range.endDate });
+  }, [range]);
+
+  // 存量快照（模块体检、批次）与时间无关，挂载时取一次
+  useEffect(() => {
+    fetchModuleHealth();
+    fetchBatchStats({});
   }, []);
 
-  // 日期变更时重新获取数据
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchYieldStats({ startDate, endDate });
-      fetchCostStats({ startDate, endDate });
-      fetchBatchStats({});
-    }
-  }, [startDate, endDate]);
+  // ========== ① 待办与风险 ==========
 
-  // ========== KPI 值计算 ==========
+  const todoItems: TodoItem[] = useMemo(() => [
+    {
+      key: 'approval',
+      icon: <FileCheck className="w-5 h-5 text-white" />,
+      label: '待审批单据',
+      value: moduleHealth?.approval.pending ?? 0,
+      path: '/pending-approval',
+      tone: 'amber',
+    },
+    {
+      key: 'overdue',
+      icon: <AlertTriangle className="w-5 h-5 text-white" />,
+      label: '逾期任务',
+      value: moduleHealth?.farm.tasksOverdue ?? 0,
+      path: '/farm-hub',
+      tone: 'red',
+    },
+    {
+      key: 'acceptance',
+      icon: <ClipboardCheck className="w-5 h-5 text-white" />,
+      label: '待验收任务',
+      value: moduleHealth?.farm.tasksWaitingAcceptance ?? 0,
+      path: '/farm-hub',
+      tone: 'blue',
+    },
+    {
+      key: 'problems',
+      icon: <AlertCircle className="w-5 h-5 text-white" />,
+      label: '未解决问题',
+      value: moduleHealth?.farm.problemsOpen ?? 0,
+      path: '/summary/problems',
+      tone: 'purple',
+    },
+  ], [moduleHealth]);
 
-  const activeBatches = overview?.batch?.activeCount ?? 0;
-  const monthYield = overview?.yield?.monthTotalYield ?? 0;
-  const monthAmount = overview?.yield?.monthTotalAmount ?? 0;
-  const completionRate = overview?.task?.completionRate ?? 0;
-  const totalHours = overview?.labor?.totalHours ?? 0;
-  const totalCost = overview?.totalCost ?? 0;
+  // ========== ③ 六大模块体检 ==========
 
-  // ========== 预警列表（从数据阈值推导） ==========
+  const moduleCards: ModuleCard[] = useMemo(() => {
+    const h = moduleHealth;
+    // 任务完成率（模块体检口径，与经营核心的「本年度完成率」不同：这里是全量存量）
+    const tasksTotal = h?.farm.tasksTotal ?? 0;
+    const taskRate = tasksTotal > 0 ? Math.round(((h?.farm.tasksCompleted ?? 0) / tasksTotal) * 100) : 0;
+
+    return [
+      {
+        key: 'plan',
+        title: '计划管理',
+        icon: <ClipboardList className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+        path: '/production',
+        metrics: [
+          { label: '订单（进行中）', value: `${h?.plan.orders ?? 0}（${h?.plan.ordersInProgress ?? 0}）` },
+          { label: '生产计划', value: h?.plan.productionPlans ?? 0 },
+          { label: '技术方案', value: h?.plan.techSolutions ?? 0 },
+          { label: '采购计划', value: h?.plan.purchasePlans ?? 0, highlight: (h?.plan.purchasePlansPending ?? 0) > 0 },
+        ],
+      },
+      {
+        key: 'crop',
+        title: '作物管理',
+        icon: <Flower2 className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-emerald-500 to-green-600',
+        path: '/crop/seed-source',
+        metrics: [
+          { label: '可用种源', value: h?.crop.seedSources ?? 0 },
+          { label: '育苗（在育）', value: `${h?.crop.seedlings ?? 0}（${h?.crop.seedlingsInProgress ?? 0}）` },
+          { label: '种植（采收中）', value: `${h?.crop.plantings ?? 0}（${h?.crop.plantingsHarvesting ?? 0}）` },
+          { label: '作物库存（项）', value: h?.crop.inventoryInstances ?? 0 },
+        ],
+      },
+      {
+        key: 'farm',
+        title: '农事管理',
+        icon: <Sprout className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-lime-500 to-green-600',
+        path: '/farm-hub',
+        metrics: [
+          { label: '任务（已完成）', value: `${h?.farm.tasksTotal ?? 0}（${h?.farm.tasksCompleted ?? 0}）` },
+          { label: '任务完成率', value: `${taskRate}%` },
+          { label: '待验收', value: h?.farm.tasksWaitingAcceptance ?? 0, highlight: (h?.farm.tasksWaitingAcceptance ?? 0) > 0 },
+          { label: '问题（待处理）', value: `${h?.farm.problemsTotal ?? 0}（${h?.farm.problemsOpen ?? 0}）` },
+        ],
+      },
+      {
+        key: 'material',
+        title: '物资管理',
+        icon: <Boxes className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
+        path: '/warehouse-overview',
+        metrics: [
+          { label: '物料（低于安全库存）', value: `${h?.material.materials ?? 0}（${h?.material.materialsLowStock ?? 0}）`, highlight: (h?.material.materialsLowStock ?? 0) > 0 },
+          { label: '供应商（启用）', value: `${h?.material.suppliers ?? 0}（${h?.material.suppliersActive ?? 0}）` },
+          { label: '入库单', value: h?.material.inboundRecords ?? 0 },
+          { label: '领料单（待审）', value: `${h?.material.materialRequests ?? 0}（${h?.material.materialRequestsPending ?? 0}）`, highlight: (h?.material.materialRequestsPending ?? 0) > 0 },
+        ],
+      },
+      {
+        key: 'approval',
+        title: '审批管理',
+        icon: <FileCheck className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
+        path: '/pending-approval',
+        metrics: [
+          { label: '审批总量', value: h?.approval.total ?? 0 },
+          { label: '待审批', value: h?.approval.pending ?? 0, highlight: (h?.approval.pending ?? 0) > 0 },
+          { label: '已通过', value: h?.approval.approved ?? 0 },
+          { label: '已驳回', value: h?.approval.rejected ?? 0 },
+        ],
+      },
+      {
+        key: 'labor',
+        title: '人工管理',
+        icon: <Users className="w-4 h-4 text-white" />,
+        iconBg: 'bg-gradient-to-br from-slate-500 to-slate-600',
+        path: '/labor/attendance',
+        metrics: [
+          { label: '在岗人员', value: h?.labor.employees ?? 0 },
+          { label: '考勤记录', value: h?.labor.attendanceRecords ?? 0 },
+          { label: '累计工时 (h)', value: h?.labor.workHours ?? 0 },
+          { label: '工单记录', value: h?.labor.workLogs ?? 0 },
+        ],
+      },
+    ];
+  }, [moduleHealth]);
+
+  // ========== ⑤ 生产预警（跨模块聚合）==========
 
   const alerts = useMemo(() => {
     const result: { title: string; description: string; severity: 'warning' | 'critical' }[] = [];
-    if (!overview) return result;
+    const h = moduleHealth;
 
-    // 任务完成率预警
-    const taskStatus = getTaskStatus(overview.task.completionRate);
-    if (taskStatus === 'critical') {
+    // 逾期任务
+    if ((h?.farm.tasksOverdue ?? 0) > 0) {
       result.push({
-        title: '任务完成率严重偏低',
-        description: `当前完成率 ${overview.task.completionRate}%，未完成任务 ${overview.task.totalTasks - overview.task.completedTasks} 个`,
+        title: '存在逾期任务',
+        description: `当前有 ${h?.farm.tasksOverdue} 个任务已过计划日期仍未完成，请安排跟进`,
         severity: 'critical',
-      });
-    } else if (taskStatus === 'warning') {
-      result.push({
-        title: '任务完成率偏低',
-        description: `当前完成率 ${overview.task.completionRate}%，建议加快任务执行进度`,
-        severity: 'warning',
       });
     }
 
-    // 问题解决率预警
-    if (overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 60) {
+    // 问题解决率
+    if (overview && overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 60) {
       result.push({
         title: '问题堆积：解决率不足',
         description: `当前解决率 ${overview.problem.resolutionRate}%，仍有 ${overview.problem.totalProblems - overview.problem.resolvedProblems} 个问题待解决`,
         severity: 'critical',
       });
-    } else if (overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 80) {
+    } else if (overview && overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 80) {
       result.push({
         title: '问题解决进度偏慢',
-        description: `当前解决率 ${overview.problem.resolutionRate}%，建议加强问题跟踪处理`,
+        description: `当前解决率 ${overview.problem.resolutionRate}%，建议加强跟踪处理`,
+        severity: 'warning',
+      });
+    }
+
+    // 审批积压
+    if ((h?.approval.pending ?? 0) >= 5) {
+      result.push({
+        title: '审批积压',
+        description: `有 ${h?.approval.pending} 张单据待审批，可能阻塞下游领料/生产环节`,
+        severity: (h?.approval.pending ?? 0) >= 10 ? 'critical' : 'warning',
+      });
+    }
+
+    // 库存告警
+    const lowStock = (h?.material.materialsLowStock ?? 0);
+    if (lowStock > 0) {
+      result.push({
+        title: '物料低于安全库存',
+        description: `${lowStock} 种物料的当前库存已低于设定的安全库存线，请及时补货`,
+        severity: 'warning',
+      });
+    }
+
+    // 任务完成率
+    if (overview && overview.task.totalTasks > 0) {
+      const status = getTaskStatus(overview.task.completionRate);
+      if (status === 'critical') {
+        result.push({
+          title: '任务完成率严重偏低',
+          description: `当前完成率 ${overview.task.completionRate}%，未完成任务 ${overview.task.totalTasks - overview.task.completedTasks} 个`,
+          severity: 'critical',
+        });
+      }
+    }
+
+    // 待验收积压
+    if ((h?.farm.tasksWaitingAcceptance ?? 0) >= 3) {
+      result.push({
+        title: '待验收任务积压',
+        description: `有 ${h?.farm.tasksWaitingAcceptance} 个任务等待验收确认`,
         severity: 'warning',
       });
     }
 
     return result;
-  }, [overview]);
+  }, [overview, moduleHealth]);
 
-  // ========== Top5 批次（按完成率排序） ==========
+  // ========== 榜单与图表数据 ==========
 
-  const topBatches = useMemo(() => {
-    return [...batchItems]
-      .sort((a, b) => b.completionRate - a.completionRate)
-      .slice(0, 5);
-  }, [batchItems]);
+  /** Top5 批次（按完成率） */
+  const topBatches = useMemo(
+    () => [...batchItems].sort((a, b) => b.completionRate - a.completionRate).slice(0, 5),
+    [batchItems]
+  );
 
-  // ========== 产量图表数据 ==========
+  /** 产量趋势数据 */
+  const yieldChartData = useMemo(
+    () => yieldItems.map((item) => ({ name: item.name, 产量: item.value })),
+    [yieldItems]
+  );
 
-  const yieldChartData = useMemo(() => {
-    return yieldItems.map((item) => ({
-      name: item.name,
-      产量: item.value,
-    }));
-  }, [yieldItems]);
-
-  // ========== 成本饼图数据 ==========
-
+  /** 成本构成数据 */
   const costPieData = useMemo(() => {
     if (!costSummary) return [];
     return [
@@ -402,162 +529,127 @@ export default function SummaryOverview() {
     ].filter((d) => d.value > 0);
   }, [costSummary]);
 
-  // ========== 日期筛选器回调 ==========
+  // ========== 事件处理 ==========
 
   const handleModeChange = (mode: 'month' | 'quarter' | 'year' | 'custom') => {
     setFilterMode(mode);
     if (mode !== 'custom') {
-      // 非自定义模式使用预设日期范围
-      const now = new Date();
-      let start = '';
-      let end = now.toISOString().slice(0, 10);
-
-      if (mode === 'month') {
-        start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-      } else if (mode === 'quarter') {
-        const quarterStart = Math.floor(now.getMonth() / 3) * 3;
-        start = new Date(now.getFullYear(), quarterStart, 1).toISOString().slice(0, 10);
-      } else if (mode === 'year') {
-        start = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-      }
-
-      setStartDate(start);
-      setEndDate(end);
+      setRange(rangeByMode(mode));
     }
   };
 
-  const handleDateChange = (start: string, end: string) => {
-    setStartDate(start);
-    setEndDate(end);
+  const handleDateChange = (startDate: string, endDate: string) => {
+    setRange({ startDate, endDate });
   };
 
-  // ========== 加载状态 ==========
+  // ========== 加载态 ==========
 
-  if (isLoading && !overview) {
+  if (isLoading && !overview && !moduleHealth) {
     return (
       <div className="space-y-6">
         <PageHeader
           icon={<LayoutDashboard className="w-6 h-6 text-white" />}
           title="汇总看板"
-          description="生产汇总表总览，展示所有核心 KPI 指标和趋势"
+          description="基地各模块运营总览，面向管理者的经营视图"
         />
         <LoadingSpinner />
       </div>
     );
   }
 
-  // ========== 页面渲染 ==========
+  // ========== 渲染 ==========
 
   return (
     <div className="space-y-6">
-      {/* 页面头部 + 日期筛选 */}
+      {/* 页面头部 + 时间筛选 */}
       <PageHeader
         icon={<LayoutDashboard className="w-6 h-6 text-white" />}
         title="汇总看板"
-        description="生产汇总表总览，展示所有核心 KPI 指标和趋势"
+        description="基地各模块运营总览，面向管理者的经营视图"
       />
       <div className="flex justify-start">
         <SummaryDateFilter
           mode={filterMode}
           onModeChange={handleModeChange}
-          startDate={startDate}
-          endDate={endDate}
+          startDate={range.startDate}
+          endDate={range.endDate}
           onDateChange={handleDateChange}
         />
       </div>
 
-      {/* 6 个核心 KPI 卡片 */}
+      {/* ① 待办与风险条 */}
+      <TodoStrip items={todoItems} onNavigate={navigate} />
+
+      {/* ② 经营核心指标 */}
       <KpiCardGrid columns={6} compact>
         <KpiCard
-          icon={<Sprout className="w-4 h-4 text-white" />}
-          label="活跃批次"
-          value={activeBatches}
-          colorScheme="purple"
-          onClick={() => navigate('/summary/batch')}
-          compact
-        />
-        <KpiCard
           icon={<TrendingUp className="w-4 h-4 text-white" />}
-          label="月产量 (kg)"
-          value={monthYield.toLocaleString()}
+          label="产量 (kg)"
+          value={(overview?.yield.monthTotalYield ?? 0).toLocaleString()}
           colorScheme="emerald"
-          onClick={() => navigate('/summary/yield')}
+          onClick={() => navigate('/summary/business-analysis')}
           compact
         />
         <KpiCard
           icon={<DollarSign className="w-4 h-4 text-white" />}
-          label={`月产值 (元)`}
-          value={`¥${monthAmount.toLocaleString()}`}
+          label="产值 (元)"
+          value={`¥${(overview?.yield.monthTotalAmount ?? 0).toLocaleString()}`}
           colorScheme="emerald"
-          onClick={() => navigate('/summary/yield')}
+          onClick={() => navigate('/summary/business-analysis')}
+          compact
+        />
+        <KpiCard
+          icon={<Wallet className="w-4 h-4 text-white" />}
+          label="总成本 (元)"
+          value={`¥${(overview?.totalCost ?? 0).toLocaleString()}`}
+          colorScheme="amber"
+          onClick={() => navigate('/summary/business-analysis')}
+          compact
+        />
+        <KpiCard
+          icon={<Sprout className="w-4 h-4 text-white" />}
+          label="采收次数"
+          value={(overview?.yield.monthHarvestCount ?? 0).toLocaleString()}
+          colorScheme="blue"
+          onClick={() => navigate('/summary/business-analysis')}
           compact
         />
         <KpiCard
           icon={<CheckCircle2 className="w-4 h-4 text-white" />}
           label="任务完成率"
-          value={`${completionRate}%`}
-          trend={completionRate >= 50 ? completionRate - 50 : completionRate - 50}
+          value={`${overview?.task.completionRate ?? 0}%`}
           colorScheme="blue"
           onClick={() => navigate('/summary/indicators')}
           compact
         />
         <KpiCard
-          icon={<Clock className="w-4 h-4 text-white" />}
-          label="总工时 (h)"
-          value={totalHours.toLocaleString()}
-          colorScheme="blue"
-          onClick={() => navigate('/summary/labor')}
-          compact
-        />
-        <KpiCard
-          icon={<DollarSign className="w-4 h-4 text-white" />}
-          label={`总成本 (元)`}
-          value={`¥${totalCost.toLocaleString()}`}
-          colorScheme="amber"
-          onClick={() => navigate('/summary/cost')}
+          icon={<Layers className="w-4 h-4 text-white" />}
+          label="活跃批次"
+          value={overview?.batch.activeCount ?? 0}
+          colorScheme="purple"
+          onClick={() => navigate('/summary/batch-management')}
           compact
         />
       </KpiCardGrid>
 
-      {/* 中间双列布局：温室快照 + 产量趋势 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 温室快照 - 横向滚动卡片 */}
-        <CardWrapper title="温室快照" icon={<MapPin className="w-3.5 h-3.5 text-emerald-600" />}>
-          {batchItems.length === 0 ? (
-            <EmptyState text="暂无温室数据" />
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin">
-              {batchItems.slice(0, 10).map((batch) => (
-                <GreenhouseSnapshotCard key={batch.id} batch={batch} />
-              ))}
-            </div>
-          )}
-        </CardWrapper>
-
-        {/* 产量趋势柱状图 */}
-        <CardWrapper title="产量趋势" icon={<BarChart3 className="w-3.5 h-3.5 text-blue-600" />}>
-          <div className="h-56">
-            {yieldChartData.length === 0 ? (
-              <EmptyChart />
-            ) : (
-              <YieldTrendChart data={yieldChartData} />
-            )}
-          </div>
-        </CardWrapper>
+      {/* ③ 六大模块体检 */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">模块体检</h2>
+        <ModuleHealthGrid cards={moduleCards} onNavigate={navigate} />
       </div>
 
-      {/* 下半部分双列：成本构成 + 批次进度 */}
+      {/* ④ 趋势与结构 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 成本构成饼图 */}
+        <CardWrapper title="产量趋势" icon={<BarChart3 className="w-3.5 h-3.5 text-blue-600" />}>
+          <div className="h-56">
+            <YieldTrendChart data={yieldChartData} />
+          </div>
+        </CardWrapper>
+
         <CardWrapper title="成本构成" icon={<PieChart className="w-3.5 h-3.5 text-amber-600" />}>
           <div className="h-56">
-            {costPieData.length === 0 ? (
-              <EmptyChart />
-            ) : (
-              <CostBreakdownPie data={costPieData} />
-            )}
+            <CostBreakdownPie data={costPieData} />
           </div>
-          {/* 图例 */}
           {costPieData.length > 0 && (
             <div className="flex items-center justify-center gap-6 mt-3">
               {costPieData.map((item) => (
@@ -569,19 +661,13 @@ export default function SummaryOverview() {
             </div>
           )}
         </CardWrapper>
-
-        {/* 批次进度 Top5 */}
-        <CardWrapper title="批次进度" icon={<Layers className="w-3.5 h-3.5 text-purple-600" />}>
-          <BatchProgressBars batches={topBatches} />
-        </CardWrapper>
       </div>
 
-      {/* 生产预警 + 最近批次状态 */}
+      {/* ⑤ 关注清单 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 生产预警列表 */}
         <CardWrapper title="生产预警" icon={<AlertTriangle className="w-3.5 h-3.5 text-red-600" />}>
           {alerts.length === 0 ? (
-            <EmptyState text="暂无预警信息" />
+            <EmptyState text="暂无预警，各模块运行正常" />
           ) : (
             <div className="space-y-3">
               {alerts.map((alert, i) => (
@@ -596,40 +682,8 @@ export default function SummaryOverview() {
           )}
         </CardWrapper>
 
-        {/* 最近批次 - 列表视图 */}
-        <CardWrapper title="最近批次" icon={<Package className="w-3.5 h-3.5 text-slate-600" />}>
-          {batchItems.length === 0 ? (
-            <EmptyState text="暂无批次数据" />
-          ) : (
-            <div className="space-y-2">
-              {batchItems.slice(0, 6).map((batch) => (
-                <div
-                  key={batch.id}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-transparent hover:border-gray-100"
-                  onClick={() => navigate('/summary/batch')}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-700 truncate">
-                      {batch.batchName || batch.batchCode}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                      <span>{batch.cropName}</span>
-                      <span>|</span>
-                      <span>{batch.greenhouse}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      STATUS_BADGE[batch.status] || 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {STATUS_LABEL[batch.status] || batch.status || '-'}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <CardWrapper title="批次进度 Top5" icon={<Layers className="w-3.5 h-3.5 text-purple-600" />}>
+          <BatchProgressBars batches={topBatches} />
         </CardWrapper>
       </div>
     </div>

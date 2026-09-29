@@ -230,9 +230,78 @@ export interface IndicatorsRaw {
   overall_score: number;
 }
 
+/**
+ * 六大模块体检数据（对应 GET /api/summary/module-health）
+ *
+ * 2026-09-29 新增：汇总看板的「模块体检」区需要跨模块的存量快照。
+ * 该端点是实时存量（有多少物料/多少批次），不受时间筛选影响。
+ */
+export interface ModuleHealth {
+  /** 计划管理 */
+  plan: {
+    orders: number;
+    ordersInProgress: number;
+    productionPlans: number;
+    techSolutions: number;
+    purchasePlans: number;
+    purchasePlansPending: number;
+  };
+  /** 作物管理（已排除软删记录） */
+  crop: {
+    seedSources: number;
+    seedlings: number;
+    seedlingsInProgress: number;
+    plantings: number;
+    plantingsHarvesting: number;
+    inventoryInstances: number;
+    inventoryQuantity: number;
+  };
+  /** 农事管理 */
+  farm: {
+    tasksTotal: number;
+    tasksCompleted: number;
+    tasksWaitingAcceptance: number;
+    tasksOverdue: number;
+    problemsTotal: number;
+    problemsOpen: number;
+  };
+  /** 物资管理 */
+  material: {
+    materials: number;
+    materialsLowStock: number;
+    suppliers: number;
+    suppliersActive: number;
+    inboundRecords: number;
+    materialRequests: number;
+    materialRequestsPending: number;
+  };
+  /** 审批管理 */
+  approval: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  /** 人工管理 */
+  labor: {
+    employees: number;
+    attendanceRecords: number;
+    workHours: number;
+    workLogs: number;
+  };
+}
+
 // ========== 字段映射表 ==========
 
-/** 后端蛇形 → 前端驼峰（overview 字段映射） */
+/**
+ * 后端 → 前端字段映射（overview）
+ *
+ * 2026-09-29 修复：原先按蛇形键读取（y.month_harvest_count 等），但
+ * ① 后端 queryToObjects 已把结果转驼峰，② 响应中间件 camelCaseResponse 又会
+ * 把输出键名转一次驼峰 —— 双重转换下蛇形键永远读不到，导致 KPI 恒为 0
+ * （唯独 `count` 这类无下划线别名不受影响，这就是此前只有批次统计正确的原因）。
+ * 现统一按驼峰读取，与 `GET /api/summary/overview` 的实际返回一致。
+ */
 function mapOverview(raw: Record<string, unknown>): SummaryOverview {
   const y = (raw.yield || {}) as Record<string, number>;
   const t = (raw.task || {}) as Record<string, number>;
@@ -242,31 +311,31 @@ function mapOverview(raw: Record<string, unknown>): SummaryOverview {
 
   return {
     yield: {
-      monthHarvestCount: y.month_harvest_count || 0,
-      monthTotalYield: y.month_total_yield || 0,
-      monthTotalAmount: y.month_total_amount || 0,
+      monthHarvestCount: y.monthHarvestCount || 0,
+      monthTotalYield: y.monthTotalYield || 0,
+      monthTotalAmount: y.monthTotalAmount || 0,
     },
     task: {
-      totalTasks: t.total_tasks || 0,
-      completedTasks: t.completed_tasks || 0,
-      inProgressTasks: t.in_progress_tasks || 0,
-      pendingTasks: t.pending_tasks || 0,
-      completionRate: t.completion_rate || 0,
+      totalTasks: t.totalTasks || 0,
+      completedTasks: t.completedTasks || 0,
+      inProgressTasks: t.inProgressTasks || 0,
+      pendingTasks: t.pendingTasks || 0,
+      completionRate: t.completionRate || 0,
     },
     labor: {
-      totalHours: l.total_hours || 0,
-      totalLaborCost: l.total_labor_cost || 0,
+      totalHours: l.totalHours || 0,
+      totalLaborCost: l.totalLaborCost || 0,
     },
     problem: {
-      totalProblems: p.total_problems || 0,
-      resolvedProblems: p.resolved_problems || 0,
-      resolutionRate: p.resolution_rate || 0,
+      totalProblems: p.totalProblems || 0,
+      resolvedProblems: p.resolvedProblems || 0,
+      resolutionRate: p.resolutionRate || 0,
     },
     batch: {
-      activeCount: b.active_count || 0,
-      totalBatches: b.total_batches || b.active_count || 0,
+      activeCount: b.activeCount || 0,
+      totalBatches: b.totalBatches || b.activeCount || 0,
     },
-    totalCost: (raw.total_cost as number) || 0,
+    totalCost: (raw.totalCost as number) || 0,
   };
 }
 
@@ -358,12 +427,15 @@ interface SummaryDataState {
   problemItems: ProblemDailyItem[];
   indicators: ProductionIndicator[];
   indicatorsRaw: IndicatorsRaw | null;
+  /** 六大模块体检快照（实时存量，不受时间筛选影响） */
+  moduleHealth: ModuleHealth | null;
   isLoading: boolean;
   error: string | null;
   lastFetchTimestamps: Record<string, number>;
   schemaVersion: number;
 
-  fetchOverview: () => Promise<void>;
+  fetchOverview: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
+  fetchModuleHealth: () => Promise<void>;
   fetchYieldStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchLaborStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
@@ -398,6 +470,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       problemItems: [],
       indicators: [],
       indicatorsRaw: null,
+      moduleHealth: null,
       isLoading: false,
       error: null,
       lastFetchTimestamps: {},
@@ -406,13 +479,22 @@ export const useSummaryDataStore = create<SummaryDataState>()(
 
       /**
        * 获取生产报表概览
-       * GET /api/summary/overview
-       * 后端手动构造返回蛇形命名，前端做字段映射
+       * GET /api/summary/overview?start_date={}&end_date={}
+       *
+       * 不传参数时后端默认统计「本月」；汇总看板传「本年度」，
+       * 避免业务数据不在当月时展示成一屏 0（库里数据集中在 2026-06~08）。
        */
-      fetchOverview: async () => {
+      fetchOverview: async (params) => {
         set({ isLoading: true, error: null });
         try {
-          const data = await enhancedApiClient.get<Record<string, unknown>>('/summary/overview');
+          const queryParams = new URLSearchParams();
+          if (params?.startDate) queryParams.set('start_date', params.startDate);
+          if (params?.endDate) queryParams.set('end_date', params.endDate);
+          const query = queryParams.toString();
+
+          const data = await enhancedApiClient.get<Record<string, unknown>>(
+            `/summary/overview${query ? `?${query}` : ''}`
+          );
           // enhancedApiClient 已提取 .data，返回的值直接就是 overview 对象
           const overview = mapOverview(data as Record<string, unknown>);
           set({
@@ -422,6 +504,26 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           });
         } catch (error) {
           console.warn('[SummaryDataStore] 获取概览失败:', error);
+          set({ error: (error as Error).message, isLoading: false });
+        }
+      },
+
+      /**
+       * 获取六大模块体检快照
+       * GET /api/summary/module-health
+       * 实时存量数据（计划/作物/农事/物资/审批/人工 六模块），无时间参数
+       */
+      fetchModuleHealth: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const data = await enhancedApiClient.get<ModuleHealth>('/summary/module-health');
+          set({
+            moduleHealth: (data as ModuleHealth) || null,
+            isLoading: false,
+            lastFetchTimestamps: { ...get().lastFetchTimestamps, moduleHealth: Date.now() },
+          });
+        } catch (error) {
+          console.warn('[SummaryDataStore] 获取模块体检失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -655,6 +757,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
         set({ isLoading: true, error: null });
         try {
           await Promise.all([
+            get().fetchModuleHealth(),
             get().fetchOverview(),
             get().fetchYieldStats(),
             get().fetchCostStats(),
@@ -688,6 +791,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           problemItems: [],
           indicators: [],
           indicatorsRaw: null,
+          moduleHealth: null,
           error: null,
           lastFetchTimestamps: {},
         });
