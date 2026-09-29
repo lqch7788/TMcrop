@@ -100,6 +100,7 @@ openspec/
 
 # 数据库备份文件（不提交）
 server/data/backups/
+server/data/_backup/
 server/data/yuanxingtu_backup_*.db
 server/data/yuanxingtu.db.before-*.db
 
