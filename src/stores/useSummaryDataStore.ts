@@ -323,8 +323,12 @@ export interface IndicatorBoardItem {
   status: 'good' | 'warning' | 'bad';
   /** higher=越高越好；lower=越低越好（成本率/损耗率/发生率等） */
   direction: 'higher' | 'lower';
-  /** 口径说明（如"已采收 41,285 / 计划 62,789 kg"） */
+  /** 口径明细（如"已采收 41,285 / 计划 62,789 kg"） */
   detail?: string;
+  /** 计算口径说明（悬停提示用，如"已采收量 ÷ 计划量 × 100%"） */
+  formula?: string;
+  /** 数据来源（悬停提示用，如"采收记录、生产计划"） */
+  sourceLabel?: string;
   /** 关联的指标库 code */
   linkCode?: string | null;
   /** 目标值是否沿用了指标库定义 */
@@ -338,11 +342,64 @@ export interface IndicatorBoardItem {
    * - demo：底层含系统演示/模拟数据（如成本表里的 SIMM/SIME 记录），页面需标注
    */
   dataSource?: 'live' | 'demo';
+  /** 上一等长区间的同指标值；存量类指标为 null */
+  previousValue?: number | null;
+  /** 环比变化率（%）：本期相对上期。上期为 0 或缺失时为 null（不编造数字） */
+  changeRate?: number | null;
+}
+
+/** 物料去向（结构透视） */
+export interface MaterialFlowItem {
+  type: string;
+  label: string;
+  count: number;
+  quantity: number;
+}
+
+/** 审批类型分布（识别瓶颈） */
+export interface ApprovalTypeItem {
+  type: string;
+  label: string;
+  count: number;
+  pending: number;
+}
+
+/** 人员负荷 */
+export interface WorkloadItem {
+  name: string;
+  total: number;
+  completed: number;
+}
+
+/** 结构透视数据（「运营透视」TAB 用） */
+export interface BoardStructure {
+  materialFlow: MaterialFlowItem[];
+  approvalByType: ApprovalTypeItem[];
+  workload: WorkloadItem[];
+}
+
+/** 下钻明细单条记录 */
+export interface DrilldownRow {
+  id: string;
+  title: string;
+  meta: string;
+  status: string;
+  path: string;
+}
+
+/** 下钻明细响应 */
+export interface DrilldownData {
+  type: string;
+  title: string;
+  total: number;
+  rows: DrilldownRow[];
 }
 
 /** 指标看板完整数据 */
 export interface IndicatorBoard {
   period: { start: string; end: string };
+  /** 环比所用的上一等长区间 */
+  previousPeriod?: { start: string; end: string };
   /** 自动指标：实际值实时计算 */
   autoIndicators: IndicatorBoardItem[];
   /** 手工指标：指标库中未被自动覆盖的条目 */
@@ -353,6 +410,8 @@ export interface IndicatorBoard {
   byCategory: { category: string; achievement: number; count: number }[];
   /** 成本结构（自动指标的原料） */
   costBreakdown: { labor: number; material: number; energy: number; total: number };
+  /** 结构透视数据 */
+  structure?: BoardStructure;
 }
 
 // ========== 字段映射表 ==========
@@ -495,6 +554,8 @@ interface SummaryDataState {
   moduleHealth: ModuleHealth | null;
   /** 指标看板数据（自动指标实时计算 + 指标库手工指标） */
   indicatorBoard: IndicatorBoard | null;
+  /** 下钻明细（点击待办项 / 指标卡后加载） */
+  drilldown: DrilldownData | null;
   isLoading: boolean;
   error: string | null;
   lastFetchTimestamps: Record<string, number>;
@@ -503,6 +564,7 @@ interface SummaryDataState {
   fetchOverview: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
   fetchModuleHealth: () => Promise<void>;
   fetchIndicatorBoard: (params?: { startDate?: string; endDate?: string }) => Promise<void>;
+  fetchDrilldown: (type: string) => Promise<void>;
   fetchYieldStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchCostStats: (params?: { batchCode?: string; startDate?: string; endDate?: string }) => Promise<void>;
   fetchLaborStats: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => Promise<void>;
@@ -539,6 +601,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
       indicatorsRaw: null,
       moduleHealth: null,
       indicatorBoard: null,
+      drilldown: null,
       isLoading: false,
       error: null,
       lastFetchTimestamps: {},
@@ -621,6 +684,29 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           });
         } catch (error) {
           console.warn('[SummaryDataStore] 获取指标看板失败:', error);
+          set({ error: (error as Error).message, isLoading: false });
+        }
+      },
+
+      /**
+       * 获取下钻明细
+       * GET /api/summary/indicator-drilldown?type=xxx
+       *
+       * 让看板上的数字可以点进去看具体是哪些记录（此前只能看总数）。
+       */
+      fetchDrilldown: async (type) => {
+        set({ isLoading: true, error: null });
+        try {
+          const data = await enhancedApiClient.get<DrilldownData>(
+            `/summary/indicator-drilldown?type=${encodeURIComponent(type)}`
+          );
+          set({
+            drilldown: (data as DrilldownData) || null,
+            isLoading: false,
+            lastFetchTimestamps: { ...get().lastFetchTimestamps, drilldown: Date.now() },
+          });
+        } catch (error) {
+          console.warn('[SummaryDataStore] 获取下钻明细失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -891,6 +977,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           indicatorsRaw: null,
           moduleHealth: null,
           indicatorBoard: null,
+          drilldown: null,
           error: null,
           lastFetchTimestamps: {},
         });

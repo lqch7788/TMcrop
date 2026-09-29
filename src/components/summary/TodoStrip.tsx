@@ -14,15 +14,18 @@ export interface TodoItem {
   icon: ReactNode;
   label: string;
   value: number;
-  /** 点击跳转的路由 */
+  /** 点击跳转的路由（无 drilldownType 时使用） */
   path: string;
   /** 风险色调：数值 > 0 时生效 */
   tone: 'red' | 'amber' | 'blue' | 'purple';
+  /** 有值时点击改为弹出明细弹窗（可查看是哪几条并直接处理） */
+  drilldownType?: string;
 }
 
 export interface TodoStripProps {
   items: TodoItem[];
-  onNavigate: (path: string) => void;
+  /** 点击回调：带 drilldownType 的项由调用方决定弹窗还是跳转 */
+  onNavigate: (item: TodoItem) => void;
 }
 
 /** 色调 → Tailwind 类名映射 */
@@ -43,7 +46,7 @@ export function TodoStrip({ items, onNavigate }: TodoStripProps) {
           <button
             key={item.key}
             type="button"
-            onClick={() => onNavigate(item.path)}
+            onClick={() => onNavigate(item)}
             className="bg-white rounded-xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow flex items-center gap-3"
           >
             <div

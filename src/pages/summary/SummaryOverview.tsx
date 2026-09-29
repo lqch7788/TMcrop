@@ -32,7 +32,7 @@ import {
 } from 'recharts';
 import {
   PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter,
-  TodoStrip, ModuleHealthGrid,
+  TodoStrip, ModuleHealthGrid, DrilldownModal,
 } from '../../components/summary';
 import type { TodoItem, ModuleCard } from '../../components/summary';
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
@@ -263,6 +263,8 @@ export default function SummaryOverview() {
   const isLoading = useSummaryDataStore((s) => s.isLoading);
   const fetchOverview = useSummaryDataStore((s) => s.fetchOverview);
   const fetchModuleHealth = useSummaryDataStore((s) => s.fetchModuleHealth);
+  const drilldown = useSummaryDataStore((s) => s.drilldown);
+  const fetchDrilldown = useSummaryDataStore((s) => s.fetchDrilldown);
   const fetchYieldStats = useSummaryDataStore((s) => s.fetchYieldStats);
   const fetchCostStats = useSummaryDataStore((s) => s.fetchCostStats);
   const fetchBatchStats = useSummaryDataStore((s) => s.fetchBatchStats);
@@ -270,6 +272,10 @@ export default function SummaryOverview() {
   // 时间范围：默认本年度
   const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
   const [range, setRange] = useState(currentYearRange);
+
+  // 下钻明细弹窗（点击待办项查看具体是哪些记录）
+  const [drilldownOpen, setDrilldownOpen] = useState(false);
+  const [drilldownType, setDrilldownType] = useState<string | null>(null);
 
   // 时间范围变化 → 刷新受时间影响的统计
   useEffect(() => {
@@ -284,6 +290,13 @@ export default function SummaryOverview() {
     fetchBatchStats({});
   }, []);
 
+  // 打开下钻弹窗时加载对应明细
+  useEffect(() => {
+    if (drilldownOpen && drilldownType) {
+      fetchDrilldown(drilldownType);
+    }
+  }, [drilldownOpen, drilldownType]);
+
   // ========== ① 待办与风险 ==========
 
   const todoItems: TodoItem[] = useMemo(() => [
@@ -294,6 +307,7 @@ export default function SummaryOverview() {
       value: moduleHealth?.approval.pending ?? 0,
       path: '/pending-approval',
       tone: 'amber',
+      drilldownType: 'pendingApprovals',
     },
     {
       key: 'overdue',
@@ -302,6 +316,7 @@ export default function SummaryOverview() {
       value: moduleHealth?.farm.tasksOverdue ?? 0,
       path: '/farm-hub',
       tone: 'red',
+      drilldownType: 'overdueTasks',
     },
     {
       key: 'acceptance',
@@ -310,6 +325,7 @@ export default function SummaryOverview() {
       value: moduleHealth?.farm.tasksWaitingAcceptance ?? 0,
       path: '/farm-hub',
       tone: 'blue',
+      drilldownType: 'pendingAcceptance',
     },
     {
       key: 'problems',
@@ -318,6 +334,7 @@ export default function SummaryOverview() {
       value: moduleHealth?.farm.problemsOpen ?? 0,
       path: '/summary/problems',
       tone: 'purple',
+      drilldownType: 'problems',
     },
   ], [moduleHealth]);
 
@@ -557,7 +574,26 @@ export default function SummaryOverview() {
       </div>
 
       {/* ① 待办与风险条 */}
-      <TodoStrip items={todoItems} onNavigate={navigate} />
+      <TodoStrip
+        items={todoItems}
+        onNavigate={(item) => {
+          // 带明细类型的项：先弹出「是哪几条」的清单，而不是直接跳走
+          if (item.drilldownType) {
+            setDrilldownType(item.drilldownType);
+            setDrilldownOpen(true);
+          } else {
+            navigate(item.path);
+          }
+        }}
+      />
+
+      {/* 下钻明细弹窗 */}
+      <DrilldownModal
+        isOpen={drilldownOpen}
+        onClose={() => { setDrilldownOpen(false); setDrilldownType(null); }}
+        data={drilldown}
+        loading={isLoading && !drilldown}
+      />
 
       {/* ② 经营核心指标 */}
       <KpiCardGrid columns={6} compact>
