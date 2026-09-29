@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Sprout, ClipboardList, Package, Eye,
   Warehouse, BarChart3, CheckSquare, Bell, Menu, X,
-  Users, MapPin, Target, ScrollText,
+  Users, MapPin, ScrollText,
   Wifi, Thermometer, Activity, AlertTriangle, Gauge, FileText, Hash,
   ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map,
@@ -214,28 +214,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
             </li>
             )}
 
-            {/* 指标数据 */}
-            {canAccess('/indicators') && (
-            <li>
-              <Link
-                to="/indicators"
-                onClick={onClose}
-                className={`
-                  flex items-center rounded-lg transition-all duration-200
-                  ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
-                  ${isActive('/indicators')
-                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
-                    : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
-                  }
-                `}
-              >
-                <Target className="flex-shrink-0 w-5 h-5" />
-                {!collapsed && (
-                  <span className="text-sm font-medium">指标数据</span>
-                )}
-              </Link>
-            </li>
-            )}
+            {/* 指标数据 —— 2026-09-29 已合并进「生产汇总表 → 指标看板」，此处菜单移除 */}
 
             {/* 公告管理 */}
             {canAccess('/announcement') && (

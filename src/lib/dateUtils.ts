@@ -32,6 +32,33 @@ export function currentTimeLocal(date?: Date | string): string {
 export const EXPIRY_WARN_DAYS = 30;
 
 /**
+ * 本年度日期范围（本地时间）：YYYY-01-01 ~ 今天
+ *
+ * 汇总表各页面（看板/指标看板）默认用本年度而非"本月"：
+ * 库里业务数据集中在年中，默认本月会让首屏显示成一屏 0。
+ */
+export function currentYearRange(): { startDate: string; endDate: string } {
+  return { startDate: `${new Date().getFullYear()}-01-01`, endDate: todayLocal() };
+}
+
+/**
+ * 按筛选模式计算日期范围（month / quarter / year），全部用本地时间拼接，
+ * 避免 toISOString 的 UTC 偏移（东八区在 08:00 前会取到前一天）。
+ */
+export function rangeByMode(mode: 'month' | 'quarter' | 'year'): { startDate: string; endDate: string } {
+  const now = new Date();
+  const end = todayLocal();
+  if (mode === 'month') {
+    return { startDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, endDate: end };
+  }
+  if (mode === 'quarter') {
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3 + 1;
+    return { startDate: `${now.getFullYear()}-${String(qStartMonth).padStart(2, '0')}-01`, endDate: end };
+  }
+  return currentYearRange();
+}
+
+/**
  * 距离到期天数（按自然日、本地时区）
  * 2026-09-27：物料库存/批次明细临期预警共用；无法解析的日期返回 null
  * @returns 正数=还有 N 天到期；0=今天到期；负数=已过期 N 天；null=无日期/格式非法

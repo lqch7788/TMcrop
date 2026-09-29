@@ -37,7 +37,7 @@ import {
 import type { TodoItem, ModuleCard } from '../../components/summary';
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
 import { getTaskStatus } from '../../components/summary/constants';
-import { todayLocal } from '../../lib/dateUtils';
+import { currentYearRange, rangeByMode } from '../../lib/dateUtils';
 
 // ========== 批次状态字典 ==========
 
@@ -70,27 +70,6 @@ const STATUS_BADGE: Record<string, string> = {
   completed: 'bg-emerald-50 text-emerald-600',
   overdue: 'bg-red-50 text-red-600',
 };
-
-// ========== 时间范围（本地时间计算，避免 UTC 偏移）==========
-
-/** 本年度范围：YYYY-01-01 ~ 今天 */
-function currentYearRange(): { startDate: string; endDate: string } {
-  return { startDate: `${new Date().getFullYear()}-01-01`, endDate: todayLocal() };
-}
-
-/** 按筛选模式计算日期范围 */
-function rangeByMode(mode: 'month' | 'quarter' | 'year'): { startDate: string; endDate: string } {
-  const now = new Date();
-  const end = todayLocal();
-  if (mode === 'month') {
-    return { startDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, endDate: end };
-  }
-  if (mode === 'quarter') {
-    const qStartMonth = Math.floor(now.getMonth() / 3) * 3 + 1;
-    return { startDate: `${now.getFullYear()}-${String(qStartMonth).padStart(2, '0')}-01`, endDate: end };
-  }
-  return currentYearRange();
-}
 
 // ========== 图表组件 ==========
 
