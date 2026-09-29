@@ -128,7 +128,24 @@ export async function initDatabase(): Promise<Database> {
     const buffer = fs.readFileSync(effectivePath);
     db = new SQL.Database(buffer);
   } else {
-    db = new SQL.Database();
+    // 2026-09-29：运行时库已移出版本控制（.gitignore），首次运行/换机时从**基线库**初始化。
+    // 基线库 server/data/yuanxingtu-seed.db 是**提交到 git** 的数据快照，
+    // 由 server/scripts/export-db-baseline.cjs 从清理后的运行时库导出。
+    // 找不到基线时回退为空库（随后 initializeDatabase + 各 GREEN 种子函数会补齐结构与基础数据）。
+    const baselinePath = path.join(path.dirname(effectivePath), 'yuanxingtu-seed.db');
+    if (fs.existsSync(baselinePath)) {
+      try {
+        const buffer = fs.readFileSync(baselinePath);
+        db = new SQL.Database(buffer);
+        console.log(`[db] 首次运行：已从基线库 ${path.basename(baselinePath)} 初始化（${(buffer.length / 1024 / 1024).toFixed(1)}MB）`);
+      } catch (e) {
+        console.warn(`[db] 基线库读取失败，回退为空库（将由种子函数重建）：${e instanceof Error ? e.message : e}`);
+        db = new SQL.Database();
+      }
+    } else {
+      console.log('[db] 首次运行且无基线库，创建空库（将由种子函数重建基础数据）');
+      db = new SQL.Database();
+    }
   }
 
   // 修补 db.run() 和 stmt.bind() 自动将 undefined 绑定值转为 null（sql.js 不接受 undefined）
