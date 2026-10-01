@@ -4,17 +4,21 @@
  * 路由：/summary/problems
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import {
   AlertTriangle, AlertOctagon, CheckCircle,
-  Clock, BarChart3
+  Clock, BarChart3, ListChecks
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line
 } from 'recharts';
 import { PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter } from '../../components/summary';
+import { Tabs, TabsList, TabsTrigger, TabsContent, Skeleton } from '@/components/ui';
 import { useSummaryDataStore } from '../../stores';
+
+// 2026-10-01：明细 TAB 复用 DailyProblemSummary（hideHeader 模式）—— lazy load 避免初次加载整页
+const DailyProblemSummary = lazy(() => import('../DailyProblemSummary'));
 
 // ========== 颜色常量 ==========
 const COLORS = {
@@ -105,6 +109,9 @@ export default function ProblemSummary() {
   const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
   const [startDate, setStartDate] = useState(initRange.start);
   const [endDate, setEndDate] = useState(initRange.end);
+
+  // 2026-10-01：TAB 切换（趋势图 vs 问题明细）
+  const [activeTab, setActiveTab] = useState<'trend' | 'detail'>('trend');
 
   // 挂载时 + 筛选模式/日期变更时获取数据
   useEffect(() => {
@@ -225,248 +232,274 @@ export default function ProblemSummary() {
         description="种植过程异常记录、分类统计与处理跟踪"
       />
 
-      {/* 日期筛选 + 统计概览 */}
-      <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <SummaryDateFilter
-          mode={filterMode}
-          onModeChange={handleModeChange}
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
-        />
-        <div className="text-sm text-gray-500">
-          共 <span className="font-semibold text-gray-700">{problemItems.length}</span> 条日汇总记录
-        </div>
-      </div>
+      {/* 2026-10-01：TAB 切换 —— 趋势图（KPI + 图表 + 预警）vs 问题明细（复用 DailyProblemSummary） */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'trend' | 'detail')}>
+        <TabsList className="bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100">
+          <TabsTrigger value="trend">
+            <span className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              趋势图
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="detail">
+            <span className="flex items-center gap-2">
+              <ListChecks className="w-4 h-4" />
+              问题明细
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* KPI 指标卡片（5列） */}
-      <KpiCardGrid columns={5} compact>
-        <KpiCard
-          icon={<BarChart3 className="w-4 h-4 text-white" />}
-          label="总问题数"
-          value={kpiData.total}
-          colorScheme="slate"
-          compact
-        />
-        <KpiCard
-          icon={<AlertOctagon className="w-4 h-4 text-white" />}
-          label="待处理"
-          value={kpiData.pending}
-          colorScheme="red"
-          compact
-        />
-        <KpiCard
-          icon={<Clock className="w-4 h-4 text-white" />}
-          label="处理中"
-          value={kpiData.inProgress}
-          colorScheme="amber"
-          compact
-        />
-        <KpiCard
-          icon={<CheckCircle className="w-4 h-4 text-white" />}
-          label="已处理"
-          value={kpiData.resolved}
-          colorScheme="emerald"
-          trend={overallResolutionRate}
-          compact
-        />
-        <KpiCard
-          icon={<AlertTriangle className="w-4 h-4 text-white" />}
-          label="高优先级"
-          value={kpiData.highPriority}
-          colorScheme="red"
-          compact
-        />
-      </KpiCardGrid>
-
-      {/* 图表行：趋势图 + 优先级饼图 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 问题趋势图（柱状 + 折线） */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">问题趋势图</h3>
-          {trendData.length > 0 ? (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11 }}
-                    stroke="#9ca3af"
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    tick={{ fontSize: 11 }}
-                    stroke="#9ca3af"
-                    allowDecimals={false}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    tick={{ fontSize: 11 }}
-                    stroke="#9ca3af"
-                    domain={[0, 100]}
-                    unit="%"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="问题总数"
-                    fill={COLORS.red}
-                    radius={[4, 4, 0, 0]}
-                    name="问题总数"
-                  />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="已处理"
-                    fill={COLORS.emerald}
-                    radius={[4, 4, 0, 0]}
-                    name="已处理"
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="解决率"
-                    stroke={COLORS.blue}
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: COLORS.blue }}
-                    name="解决率(%)"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+        <TabsContent value="trend" className="mt-4 space-y-6">
+          {/* 日期筛选 + 统计概览（仅控制"趋势图" TAB） */}
+          <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <SummaryDateFilter
+              mode={filterMode}
+              onModeChange={handleModeChange}
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={handleDateChange}
+            />
+            <div className="text-sm text-gray-500">
+              共 <span className="font-semibold text-gray-700">{problemItems.length}</span> 条日汇总记录
             </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-400">暂无趋势数据</div>
-          )}
-        </div>
+          </div>
 
-        {/* 优先级分布饼图 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">优先级分布</h3>
-          {priorityPieData.length > 0 ? (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={priorityPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={95}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={({ name, value, percent }) =>
-                      `${name} ${value}个 (${(percent * 100).toFixed(0)}%)`
-                    }
-                    labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}
-                  >
-                    {priorityPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+          {/* KPI 指标卡片（5列） */}
+          <KpiCardGrid columns={5} compact>
+            <KpiCard
+              icon={<BarChart3 className="w-4 h-4 text-white" />}
+              label="总问题数"
+              value={kpiData.total}
+              colorScheme="slate"
+              compact
+            />
+            <KpiCard
+              icon={<AlertOctagon className="w-4 h-4 text-white" />}
+              label="待处理"
+              value={kpiData.pending}
+              colorScheme="red"
+              compact
+            />
+            <KpiCard
+              icon={<Clock className="w-4 h-4 text-white" />}
+              label="处理中"
+              value={kpiData.inProgress}
+              colorScheme="amber"
+              compact
+            />
+            <KpiCard
+              icon={<CheckCircle className="w-4 h-4 text-white" />}
+              label="已处理"
+              value={kpiData.resolved}
+              colorScheme="emerald"
+              trend={overallResolutionRate}
+              compact
+            />
+            <KpiCard
+              icon={<AlertTriangle className="w-4 h-4 text-white" />}
+              label="高优先级"
+              value={kpiData.highPriority}
+              colorScheme="red"
+              compact
+            />
+          </KpiCardGrid>
+
+          {/* 图表行：趋势图 + 优先级饼图 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 问题趋势图（柱状 + 折线） */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-4">问题趋势图</h3>
+              {trendData.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11 }}
+                        stroke="#9ca3af"
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        tick={{ fontSize: 11 }}
+                        stroke="#9ca3af"
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fontSize: 11 }}
+                        stroke="#9ca3af"
+                        domain={[0, 100]}
+                        unit="%"
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="问题总数"
+                        fill={COLORS.red}
+                        radius={[4, 4, 0, 0]}
+                        name="问题总数"
+                      />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="已处理"
+                        fill={COLORS.emerald}
+                        radius={[4, 4, 0, 0]}
+                        name="已处理"
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="解决率"
+                        stroke={COLORS.blue}
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: COLORS.blue }}
+                        name="解决率(%)"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-400">暂无趋势数据</div>
+              )}
+            </div>
+
+            {/* 优先级分布饼图 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-4">优先级分布</h3>
+              {priorityPieData.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={priorityPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={95}
+                        paddingAngle={3}
+                        dataKey="value"
+                        label={({ name, value, percent }) =>
+                          `${name} ${value}个 (${(percent * 100).toFixed(0)}%)`
+                        }
+                        labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}
+                      >
+                        {priorityPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                        formatter={(value: number) => [`${value} 个`, '']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-400">暂无分类数据</div>
+              )}
+            </div>
+          </div>
+
+          {/* 底部行：月度分布 + 高优先级预警 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 月度问题分布（横向柱状图） */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-base font-semibold text-gray-800 mb-4">月度问题分布</h3>
+                {monthlyData.length > 0 ? (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={monthlyData}
+                        layout="vertical"
+                        margin={{ left: 60, right: 20, top: 5, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" allowDecimals={false} />
+                        <YAxis
+                          type="category"
+                          dataKey="month"
+                          tick={{ fontSize: 11 }}
+                          stroke="#9ca3af"
+                          width={60}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Bar dataKey="问题总数" fill={COLORS.red} radius={[0, 4, 4, 0]} name="问题总数" barSize={20} />
+                        <Bar dataKey="已处理" fill={COLORS.emerald} radius={[0, 4, 4, 0]} name="已处理" barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-80 flex items-center justify-center text-gray-400">暂无月度数据</div>
+                )}
+              </div>
+
+              {/* 高优先级问题预警 */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-base font-semibold text-gray-800 mb-4">
+                  高优先级问题预警
+                  {highPriorityAlerts.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-gray-400">
+                      ({highPriorityAlerts.length})
+                    </span>
+                  )}
+                </h3>
+                {highPriorityAlerts.length > 0 ? (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {highPriorityAlerts.map((alert, index) => (
+                      <AlertCard
+                        key={index}
+                        title={alert.title}
+                        description={alert.description}
+                        severity={alert.severity}
+                      />
                     ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value} 个`, '']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-80 flex items-center justify-center text-gray-400">
+                    暂无高优先级问题预警
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-400">暂无分类数据</div>
-          )}
-        </div>
-      </div>
 
-      {/* 底部行：月度分布 + 高优先级预警 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 月度问题分布（横向柱状图） */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">月度问题分布</h3>
-          {monthlyData.length > 0 ? (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={monthlyData}
-                  layout="vertical"
-                  margin={{ left: 60, right: 20, top: 5, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="month"
-                    tick={{ fontSize: 11 }}
-                    stroke="#9ca3af"
-                    width={60}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="问题总数" fill={COLORS.red} radius={[0, 4, 4, 0]} name="问题总数" barSize={20} />
-                  <Bar dataKey="已处理" fill={COLORS.emerald} radius={[0, 4, 4, 0]} name="已处理" barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-400">暂无月度数据</div>
-          )}
-        </div>
-
-        {/* 高优先级问题预警 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">
-            高优先级问题预警
-            {highPriorityAlerts.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-400">
-                ({highPriorityAlerts.length})
-              </span>
-            )}
-          </h3>
-          {highPriorityAlerts.length > 0 ? (
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-              {highPriorityAlerts.map((alert, index) => (
-                <AlertCard
-                  key={index}
-                  title={alert.title}
-                  description={alert.description}
-                  severity={alert.severity}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center text-gray-400">
-              暂无高优先级问题预警
+          {/* 错误提示 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+              数据加载异常：{error}
             </div>
           )}
-        </div>
-      </div>
+        </TabsContent>
 
-      {/* 错误提示 */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-          数据加载异常：{error}
-        </div>
-      )}
+        <TabsContent value="detail" className="mt-4">
+          <Suspense fallback={<Skeleton className="h-96" />}>
+            <DailyProblemSummary hideHeader />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
