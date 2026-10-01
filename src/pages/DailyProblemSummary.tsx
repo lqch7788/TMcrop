@@ -17,7 +17,16 @@ import { useDailyProblemSummary, useProblemDispatch } from '../hooks';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
 import { problemStatusToCN, isProblemStatus } from '../utils/problemStatus';
 
-export default function DailyProblemSummary() {
+interface DailyProblemSummaryProps {
+  /**
+   * 2026-10-01：复用入口开关。
+   * - true：跳过 PageHeader，用于嵌入到 /summary/problems 的「问题明细」TAB
+   * - false/不传：完整页面（标题+内容），用于独立路由 /daily-problem-summary
+   */
+  hideHeader?: boolean;
+}
+
+export default function DailyProblemSummary({ hideHeader = false }: DailyProblemSummaryProps = {}) {
   // 筛选状态
   const [dateFilter, setDateFilter] = useState('');
   const [greenhouseFilter, setGreenhouseFilter] = useState('');
@@ -147,12 +156,14 @@ export default function DailyProblemSummary() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <PageHeader
-        icon={<AlertTriangle className="w-6 h-6 text-white" />}
-        title="每日问题汇总表"
-        description="每日生产问题记录与处理情况"
-      />
+      {/* 页面标题 - hideHeader=true 时跳过（用于嵌入到其他页面） */}
+      {!hideHeader && (
+        <PageHeader
+          icon={<AlertTriangle className="w-6 h-6 text-white" />}
+          title="每日问题汇总表"
+          description="每日生产问题记录与处理情况"
+        />
+      )}
 
       {/* 统计卡片 - 使用 Hook 返回的动态数据 */}
       <StatCards cards={statCards} />

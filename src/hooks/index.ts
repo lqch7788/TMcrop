@@ -67,8 +67,7 @@ export { usePageSize } from './usePageSize';
 export { useFeatureFlag, getFeatureFlag } from './useFeatureFlag';
 
 // 生产计划人工成本统计
-export { useLaborCostCalc, calculateLaborCost } from './useLaborCostCalc';
-export type { LaborCostSummary, LaborCostItem } from './useLaborCostCalc';
+// 2026-10-01：useLaborCostCalc 与上游 data/costConfig 失联，孤儿代码已删除（Vite import-analysis 修复）
 
 // 农事任务排班 Hook
 export { useFarmTaskSchedule } from './useFarmTaskSchedule';
