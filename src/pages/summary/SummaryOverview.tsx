@@ -1,19 +1,27 @@
 /**
- * 汇总看板 —— 生产汇总表总览（管理者视角）
+ * 汇总看板 —— 生产汇总表（管理者视角）v2（2026-10-01 重构）
  *
- * 布局（自上而下，"待办优先"）：
- *   ① 待办与风险条   待审批 / 逾期任务 / 待验收 / 未解决问题 —— 点击直达
- *   ② 经营核心指标   产量 / 产值 / 成本 / 采收次数 / 任务完成率 / 活跃批次
- *   ③ 六大模块体检   计划 / 作物 / 农事 / 物资 / 审批 / 人工 六张卡片
- *   ④ 趋势与结构     产量趋势 + 成本构成
- *   ⑤ 关注清单       生产预警聚合 + 批次进度 Top5
+ * 布局（自上而下，"待办优先" + 顶部全息 Hero）：
+ *   ① HeroPageHeader          深色玻璃条（标题 + 时间口径 + 最后更新时间）
+ *   ① HERO 全息看板            深色玻璃，含 综合评分环 / 4 KPI / 4 待办风险塔
+ *   ② 模块体检                 6 模块卡片（统一高度 + 健康灯）
+ *   ③ 趋势与结构               产量趋势 + 成本构成（左右对称）
+ *   ④ 关注清单                 AlertTicker + 批次进度 Top5（左右对称）
+ *   Footer                    数据口径说明
  *
  * 数据源：useSummaryDataStore
- *   → /api/summary/overview | module-health | yield-stats | cost-stats | batch-stats
+ *   → /api/summary/overview | module-health | indicator-board
+ *   → /api/summary/yield-stats | cost-stats | batch-stats | indicator-drilldown
  * 架构：组件 → Store → enhancedApiClient → API（V2.1 铁律，无缓存层）
  *
  * 时间口径：默认「本年度」。库里业务数据集中在年中，默认"本月"会显示成一屏 0。
- *           模块体检（②⑥ 之外的 ③）与批次是存量快照，不随时间筛选变化。
+ *           模块体检与批次是存量快照，不随时间筛选变化。
+ *
+ * 设计风格：浅色基底 + 顶部深色玻璃 Hero（Tech-Light）
+ *   - 顶部 Hero 用 .tech-hero + 扫描线 + 角落发光
+ *   - KPI 用 KpiCard variant="hero"（深色玻璃）
+ *   - 待办用 TodoStrip 升级版（霓虹风险塔 + critical pulse）
+ *   - 卡片统一高度 + 健康灯（绿/黄/红/灰）
  */
 
 import { useEffect, useState, useMemo } from 'react';
@@ -21,8 +29,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Sprout, TrendingUp, DollarSign,
   CheckCircle2, Layers, AlertTriangle,
-  Loader2, Package,
-  BarChart3, PieChart,
+  Loader2,
+  BarChart3, PieChart, RefreshCw,
   FileCheck, ClipboardCheck, AlertCircle,
   ClipboardList, Boxes, Users, Flower2, Wallet,
 } from 'lucide-react';
@@ -31,10 +39,13 @@ import {
   PieChart as RePieChart, Pie, Cell,
 } from 'recharts';
 import {
-  PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter,
-  TodoStrip, ModuleHealthGrid, DrilldownModal,
+  HeroPageHeader, HeroScoreGauge, DenseKpiGrid,
+  TodoStrip, ModuleHealthGrid, AlertTicker, DrilldownModal,
 } from '../../components/summary';
-import type { TodoItem, ModuleCard } from '../../components/summary';
+import type {
+  TodoItem, ModuleCard,
+  DenseKpiItem, AlertTickerItem,
+} from '../../components/summary';
 import { useSummaryDataStore } from '../../stores/useSummaryDataStore';
 import { getTaskStatus } from '../../components/summary/constants';
 import { currentYearRange, rangeByMode } from '../../lib/dateUtils';
@@ -61,21 +72,20 @@ const STATUS_COLOR: Record<string, string> = {
   overdue: 'text-red-500',
 };
 
-/** 批次状态 → Badge 样式 */
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-500',
-  planning: 'bg-gray-100 text-gray-600',
-  published: 'bg-blue-50 text-blue-500',
-  in_progress: 'bg-blue-50 text-blue-600',
-  completed: 'bg-emerald-50 text-emerald-600',
-  overdue: 'bg-red-50 text-red-600',
-};
-
 // ========== 图表组件 ==========
 
 /** 产量趋势柱状图 */
 function YieldTrendChart({ data }: { data: { name: string; 产量: number }[] }) {
-  if (data.length === 0) return <EmptyChart />;
+  if (data.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-400">
+        <div className="text-center">
+          <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">暂无产量数据</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -109,7 +119,16 @@ function YieldTrendChart({ data }: { data: { name: string; 产量: number }[] })
 
 /** 成本构成饼图（中心显示总成本） */
 function CostBreakdownPie({ data }: { data: { name: string; value: number; fill: string }[] }) {
-  if (data.length === 0) return <EmptyChart />;
+  if (data.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-400">
+        <div className="text-center">
+          <PieChart className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">暂无成本数据</p>
+        </div>
+      </div>
+    );
+  }
   const total = data.reduce((sum, d) => sum + d.value, 0);
   return (
     <div className="h-full relative">
@@ -144,7 +163,7 @@ function CostBreakdownPie({ data }: { data: { name: string; value: number; fill:
       {/* 中心总计 */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
-          <div className="text-lg font-bold text-gray-800">
+          <div className="text-lg font-bold text-gray-800 tabular-nums">
             ¥{(total / 10000).toFixed(1)}万
           </div>
           <div className="text-xs text-gray-400">总成本</div>
@@ -158,7 +177,16 @@ function CostBreakdownPie({ data }: { data: { name: string; value: number; fill:
 
 /** Top5 批次进度条 */
 function BatchProgressBars({ batches }: { batches: import('../../stores/useSummaryDataStore').BatchStatItem[] }) {
-  if (batches.length === 0) return <EmptyState text="暂无批次数据" />;
+  if (batches.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-400">
+        <div className="text-center">
+          <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">暂无批次数据</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       {batches.map((batch) => (
@@ -171,7 +199,7 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
               <span className="text-xs text-gray-400">|</span>
               <span className="text-xs text-gray-500 truncate">{batch.cropName}</span>
             </div>
-            <span className="text-xs font-semibold text-gray-700 flex-shrink-0 ml-2">
+            <span className="text-xs font-semibold text-gray-700 flex-shrink-0 ml-2 tabular-nums">
               {batch.completionRate}%
             </span>
           </div>
@@ -202,25 +230,7 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
   );
 }
 
-// ========== 通用容器与空态 ==========
-
-function EmptyState({ text = '暂无数据' }: { text?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-gray-400 py-12">
-      <Package className="w-10 h-10 mb-2 opacity-30" />
-      <span className="text-sm">{text}</span>
-    </div>
-  );
-}
-
-function EmptyChart() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-      <BarChart3 className="w-10 h-10 mb-2 opacity-30" />
-      <span className="text-sm">暂无图表数据</span>
-    </div>
-  );
-}
+// ========== 通用容器 ==========
 
 function LoadingSpinner() {
   return (
@@ -230,19 +240,21 @@ function LoadingSpinner() {
   );
 }
 
-function CardWrapper({ title, icon, children, className = '' }: {
+function CardWrapper({ title, icon, children, className = '', rightSlot }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  rightSlot?: React.ReactNode;
 }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-5 ${className}`}>
+    <div className={`bg-white rounded-xl shadow-sm border border-slate-100 p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-7 h-7 rounded-md bg-gray-50 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-md bg-slate-50 flex items-center justify-center">
           {icon}
         </div>
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+        <h3 className="text-sm font-semibold text-gray-800 flex-1">{title}</h3>
+        {rightSlot}
       </div>
       {children}
     </div>
@@ -257,12 +269,14 @@ export default function SummaryOverview() {
   // Store 数据
   const overview = useSummaryDataStore((s) => s.overview);
   const moduleHealth = useSummaryDataStore((s) => s.moduleHealth);
+  const indicatorBoard = useSummaryDataStore((s) => s.indicatorBoard);
   const yieldItems = useSummaryDataStore((s) => s.yieldItems);
   const costSummary = useSummaryDataStore((s) => s.costSummary);
   const batchItems = useSummaryDataStore((s) => s.batchItems);
   const isLoading = useSummaryDataStore((s) => s.isLoading);
   const fetchOverview = useSummaryDataStore((s) => s.fetchOverview);
   const fetchModuleHealth = useSummaryDataStore((s) => s.fetchModuleHealth);
+  const fetchIndicatorBoard = useSummaryDataStore((s) => s.fetchIndicatorBoard);
   const drilldown = useSummaryDataStore((s) => s.drilldown);
   const fetchDrilldown = useSummaryDataStore((s) => s.fetchDrilldown);
   const fetchYieldStats = useSummaryDataStore((s) => s.fetchYieldStats);
@@ -272,6 +286,7 @@ export default function SummaryOverview() {
   // 时间范围：默认本年度
   const [filterMode, setFilterMode] = useState<'month' | 'quarter' | 'year' | 'custom'>('year');
   const [range, setRange] = useState(currentYearRange);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
   // 下钻明细弹窗（点击待办项查看具体是哪些记录）
   const [drilldownOpen, setDrilldownOpen] = useState(false);
@@ -279,9 +294,13 @@ export default function SummaryOverview() {
 
   // 时间范围变化 → 刷新受时间影响的统计
   useEffect(() => {
+    const stamp = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    setLastUpdated(stamp);
+
     fetchOverview({ startDate: range.startDate, endDate: range.endDate });
     fetchYieldStats({ startDate: range.startDate, endDate: range.endDate });
     fetchCostStats({ startDate: range.startDate, endDate: range.endDate });
+    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate });
   }, [range]);
 
   // 存量快照（模块体检、批次）与时间无关，挂载时取一次
@@ -338,13 +357,71 @@ export default function SummaryOverview() {
     },
   ], [moduleHealth]);
 
-  // ========== ③ 六大模块体检 ==========
+  // ========== ① HERO 4 项 KPI ==========
+
+  const heroKpis: DenseKpiItem[] = useMemo(() => [
+    {
+      key: 'yield',
+      icon: <TrendingUp className="w-4 h-4 text-white" />,
+      label: '产量 (kg)',
+      value: (overview?.yield.monthTotalYield ?? 0).toLocaleString(),
+      colorScheme: 'emerald',
+      onClick: () => navigate('/summary/business-analysis'),
+    },
+    {
+      key: 'amount',
+      icon: <DollarSign className="w-4 h-4 text-white" />,
+      label: '产值 (元)',
+      value: `¥${(overview?.yield.monthTotalAmount ?? 0).toLocaleString()}`,
+      colorScheme: 'emerald',
+      onClick: () => navigate('/summary/business-analysis'),
+    },
+    {
+      key: 'cost',
+      icon: <Wallet className="w-4 h-4 text-white" />,
+      label: '总成本 (元)',
+      value: `¥${(overview?.totalCost ?? 0).toLocaleString()}`,
+      colorScheme: 'amber',
+      onClick: () => navigate('/summary/business-analysis'),
+    },
+    {
+      key: 'taskRate',
+      icon: <CheckCircle2 className="w-4 h-4 text-white" />,
+      label: '任务完成率',
+      value: `${overview?.task.completionRate ?? 0}%`,
+      colorScheme: 'blue',
+      onClick: () => navigate('/summary/indicators'),
+    },
+  ], [overview]);
+
+  // ========== ① HERO 综合评分环 ==========
+
+  const heroScore = indicatorBoard?.score ?? 0;
+  const heroScoreStatus: 'good' | 'warning' | 'critical' =
+    heroScore >= 80 ? 'good' : heroScore >= 60 ? 'warning' : 'critical';
+
+  // ========== ② 六大模块体检 ==========
 
   const moduleCards: ModuleCard[] = useMemo(() => {
     const h = moduleHealth;
-    // 任务完成率（模块体检口径，与经营核心的「本年度完成率」不同：这里是全量存量）
     const tasksTotal = h?.farm.tasksTotal ?? 0;
     const taskRate = tasksTotal > 0 ? Math.round(((h?.farm.tasksCompleted ?? 0) / tasksTotal) * 100) : 0;
+
+    // 健康灯规则
+    const planHealth: ModuleCard['healthStatus'] =
+      (h?.plan.purchasePlansPending ?? 0) > 0 ? 'yellow' : 'green';
+    const cropHealth: ModuleCard['healthStatus'] =
+      (h?.crop.seedSources ?? 0) > 0 ? 'green' : 'gray';
+    const farmHealth: ModuleCard['healthStatus'] =
+      (h?.farm.tasksOverdue ?? 0) > 0 ? 'red' :
+      (h?.farm.tasksWaitingAcceptance ?? 0) > 0 ? 'yellow' : 'green';
+    const materialHealth: ModuleCard['healthStatus'] =
+      (h?.material.materialsLowStock ?? 0) > 0 ? 'yellow' : 'green';
+    const approvalHealth: ModuleCard['healthStatus'] =
+      (h?.approval.pending ?? 0) >= 10 ? 'red' :
+      (h?.approval.pending ?? 0) >= 1 ? 'yellow' : 'green';
+    const laborHealth: ModuleCard['healthStatus'] =
+      (h?.labor.employees ?? 0) > 0 ? 'green' : 'gray';
 
     return [
       {
@@ -353,6 +430,7 @@ export default function SummaryOverview() {
         icon: <ClipboardList className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
         path: '/production',
+        healthStatus: planHealth,
         metrics: [
           { label: '订单（进行中）', value: `${h?.plan.orders ?? 0}（${h?.plan.ordersInProgress ?? 0}）` },
           { label: '生产计划', value: h?.plan.productionPlans ?? 0 },
@@ -366,6 +444,7 @@ export default function SummaryOverview() {
         icon: <Flower2 className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-emerald-500 to-green-600',
         path: '/crop/seed-source',
+        healthStatus: cropHealth,
         metrics: [
           { label: '可用种源', value: h?.crop.seedSources ?? 0 },
           { label: '育苗（在育）', value: `${h?.crop.seedlings ?? 0}（${h?.crop.seedlingsInProgress ?? 0}）` },
@@ -379,6 +458,7 @@ export default function SummaryOverview() {
         icon: <Sprout className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-lime-500 to-green-600',
         path: '/farm-hub',
+        healthStatus: farmHealth,
         metrics: [
           { label: '任务（已完成）', value: `${h?.farm.tasksTotal ?? 0}（${h?.farm.tasksCompleted ?? 0}）` },
           { label: '任务完成率', value: `${taskRate}%` },
@@ -392,6 +472,7 @@ export default function SummaryOverview() {
         icon: <Boxes className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
         path: '/warehouse-overview',
+        healthStatus: materialHealth,
         metrics: [
           { label: '物料（低于安全库存）', value: `${h?.material.materials ?? 0}（${h?.material.materialsLowStock ?? 0}）`, highlight: (h?.material.materialsLowStock ?? 0) > 0 },
           { label: '供应商（启用）', value: `${h?.material.suppliers ?? 0}（${h?.material.suppliersActive ?? 0}）` },
@@ -405,6 +486,7 @@ export default function SummaryOverview() {
         icon: <FileCheck className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
         path: '/pending-approval',
+        healthStatus: approvalHealth,
         metrics: [
           { label: '审批总量', value: h?.approval.total ?? 0 },
           { label: '待审批', value: h?.approval.pending ?? 0, highlight: (h?.approval.pending ?? 0) > 0 },
@@ -418,6 +500,7 @@ export default function SummaryOverview() {
         icon: <Users className="w-4 h-4 text-white" />,
         iconBg: 'bg-gradient-to-br from-slate-500 to-slate-600',
         path: '/labor/attendance',
+        healthStatus: laborHealth,
         metrics: [
           { label: '在岗人员', value: h?.labor.employees ?? 0 },
           { label: '考勤记录', value: h?.labor.attendanceRecords ?? 0 },
@@ -428,73 +511,81 @@ export default function SummaryOverview() {
     ];
   }, [moduleHealth]);
 
-  // ========== ⑤ 生产预警（跨模块聚合）==========
+  // ========== ④ 生产预警（跨模块聚合）==========
 
-  const alerts = useMemo(() => {
-    const result: { title: string; description: string; severity: 'warning' | 'critical' }[] = [];
+  const alerts: AlertTickerItem[] = useMemo(() => {
+    const result: AlertTickerItem[] = [];
     const h = moduleHealth;
 
-    // 逾期任务
     if ((h?.farm.tasksOverdue ?? 0) > 0) {
       result.push({
+        key: 'overdue',
+        severity: 'critical',
         title: '存在逾期任务',
         description: `当前有 ${h?.farm.tasksOverdue} 个任务已过计划日期仍未完成，请安排跟进`,
-        severity: 'critical',
+        path: '/farm-hub',
       });
     }
 
-    // 问题解决率
     if (overview && overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 60) {
       result.push({
+        key: 'problemLow',
+        severity: 'critical',
         title: '问题堆积：解决率不足',
         description: `当前解决率 ${overview.problem.resolutionRate}%，仍有 ${overview.problem.totalProblems - overview.problem.resolvedProblems} 个问题待解决`,
-        severity: 'critical',
+        path: '/summary/problems',
       });
     } else if (overview && overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 80) {
       result.push({
+        key: 'problemMid',
+        severity: 'warning',
         title: '问题解决进度偏慢',
         description: `当前解决率 ${overview.problem.resolutionRate}%，建议加强跟踪处理`,
-        severity: 'warning',
+        path: '/summary/problems',
       });
     }
 
-    // 审批积压
     if ((h?.approval.pending ?? 0) >= 5) {
       result.push({
+        key: 'approvalPending',
+        severity: (h?.approval.pending ?? 0) >= 10 ? 'critical' : 'warning',
         title: '审批积压',
         description: `有 ${h?.approval.pending} 张单据待审批，可能阻塞下游领料/生产环节`,
-        severity: (h?.approval.pending ?? 0) >= 10 ? 'critical' : 'warning',
+        path: '/pending-approval',
       });
     }
 
-    // 库存告警
     const lowStock = (h?.material.materialsLowStock ?? 0);
     if (lowStock > 0) {
       result.push({
+        key: 'lowStock',
+        severity: 'warning',
         title: '物料低于安全库存',
         description: `${lowStock} 种物料的当前库存已低于设定的安全库存线，请及时补货`,
-        severity: 'warning',
+        path: '/warehouse-overview',
       });
     }
 
-    // 任务完成率
     if (overview && overview.task.totalTasks > 0) {
       const status = getTaskStatus(overview.task.completionRate);
       if (status === 'critical') {
         result.push({
+          key: 'taskRateLow',
+          severity: 'critical',
           title: '任务完成率严重偏低',
           description: `当前完成率 ${overview.task.completionRate}%，未完成任务 ${overview.task.totalTasks - overview.task.completedTasks} 个`,
-          severity: 'critical',
+          path: '/farm-hub',
         });
       }
     }
 
-    // 待验收积压
     if ((h?.farm.tasksWaitingAcceptance ?? 0) >= 3) {
       result.push({
+        key: 'acceptance',
+        severity: 'warning',
         title: '待验收任务积压',
         description: `有 ${h?.farm.tasksWaitingAcceptance} 个任务等待验收确认`,
-        severity: 'warning',
+        path: '/farm-hub',
       });
     }
 
@@ -538,15 +629,32 @@ export default function SummaryOverview() {
     setRange({ startDate, endDate });
   };
 
+  const handleRefresh = () => {
+    fetchOverview({ startDate: range.startDate, endDate: range.endDate });
+    fetchYieldStats({ startDate: range.startDate, endDate: range.endDate });
+    fetchCostStats({ startDate: range.startDate, endDate: range.endDate });
+    fetchIndicatorBoard({ startDate: range.startDate, endDate: range.endDate });
+    fetchModuleHealth();
+    fetchBatchStats({});
+  };
+
+  // ========== 时间胶囊内容 ==========
+
+  const periodText = `${range.startDate} ~ ${range.endDate}`;
+  const modeText = filterMode === 'month' ? '本月'
+    : filterMode === 'quarter' ? '本季度'
+    : filterMode === 'year' ? '本年度' : '自定义';
+
   // ========== 加载态 ==========
 
   if (isLoading && !overview && !moduleHealth) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          icon={<LayoutDashboard className="w-6 h-6 text-white" />}
+      <div className="space-y-5">
+        <HeroPageHeader
+          icon={<LayoutDashboard className="w-5 h-5 text-white" />}
           title="汇总看板"
           description="基地各模块运营总览，面向管理者的经营视图"
+          period={`${modeText} · ${periodText}`}
         />
         <LoadingSpinner />
       </div>
@@ -556,36 +664,102 @@ export default function SummaryOverview() {
   // ========== 渲染 ==========
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 + 时间筛选 */}
-      <PageHeader
-        icon={<LayoutDashboard className="w-6 h-6 text-white" />}
+    <div className="space-y-5">
+      {/* HeroPageHeader — 深色玻璃条 */}
+      <HeroPageHeader
+        icon={<LayoutDashboard className="w-5 h-5 text-white" />}
         title="汇总看板"
         description="基地各模块运营总览，面向管理者的经营视图"
+        period={`${modeText} · ${periodText}`}
+        lastUpdated={lastUpdated}
+        actions={
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-xs transition-colors"
+            title="刷新数据"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>刷新</span>
+          </button>
+        }
       />
-      <div className="flex justify-start">
-        <SummaryDateFilter
-          mode={filterMode}
-          onModeChange={handleModeChange}
-          startDate={range.startDate}
-          endDate={range.endDate}
-          onDateChange={handleDateChange}
-        />
+
+      {/* 日期筛选（保持浅色原版，避免与深色 Hero 重复） */}
+      <div className="flex justify-between items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+            {(['month', 'quarter', 'year', 'custom'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => handleModeChange(m)}
+                className={`
+                  px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+                  ${filterMode === m
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }
+                `}
+              >
+                {m === 'month' ? '本月' : m === 'quarter' ? '本季度' : m === 'year' ? '本年度' : '自定义'}
+              </button>
+            ))}
+          </div>
+          {filterMode === 'custom' && (
+            <div className="flex items-center gap-2 text-xs">
+              <input
+                type="date"
+                value={range.startDate}
+                onChange={(e) => handleDateChange(e.target.value, range.endDate)}
+                className="border border-slate-200 rounded-md px-2 py-1 text-xs"
+              />
+              <span className="text-slate-400">至</span>
+              <input
+                type="date"
+                value={range.endDate}
+                onChange={(e) => handleDateChange(range.startDate, e.target.value)}
+                className="border border-slate-200 rounded-md px-2 py-1 text-xs"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ① 待办与风险条 */}
-      <TodoStrip
-        items={todoItems}
-        onNavigate={(item) => {
-          // 带明细类型的项：先弹出「是哪几条」的清单，而不是直接跳走
-          if (item.drilldownType) {
-            setDrilldownType(item.drilldownType);
-            setDrilldownOpen(true);
-          } else {
-            navigate(item.path);
-          }
-        }}
-      />
+      {/* ① HERO 全息看板（浅色基底 — 与系统其他汇总页面统一） */}
+      <div className="stagger-in stagger-in-2 bg-white rounded-xl border border-slate-200/70 shadow-sm p-5">
+        <div className="grid grid-cols-12 gap-4">
+          {/* 左：综合经营评分环 */}
+          <div className="col-span-12 md:col-span-4 flex flex-col items-center justify-center border-r border-slate-200/60 pr-4">
+            <HeroScoreGauge
+              score={heroScore}
+              status={heroScoreStatus}
+              label="综合经营评分"
+            />
+          </div>
+
+          {/* 中：4 项核心 KPI 紧凑网格 */}
+          <div className="col-span-12 md:col-span-5 flex flex-col justify-center">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">核心 KPI</div>
+            <DenseKpiGrid items={heroKpis} columns={2} />
+          </div>
+
+          {/* 右：4 待办风险塔 */}
+          <div className="col-span-12 md:col-span-3 flex flex-col justify-center border-l border-slate-200/60 pl-4">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">待办风险</div>
+            <TodoStrip
+              items={todoItems}
+              onNavigate={(item) => {
+                if (item.drilldownType) {
+                  setDrilldownType(item.drilldownType);
+                  setDrilldownOpen(true);
+                } else {
+                  navigate(item.path);
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* 下钻明细弹窗 */}
       <DrilldownModal
@@ -595,66 +769,17 @@ export default function SummaryOverview() {
         loading={isLoading && !drilldown}
       />
 
-      {/* ② 经营核心指标 */}
-      <KpiCardGrid columns={6} compact>
-        <KpiCard
-          icon={<TrendingUp className="w-4 h-4 text-white" />}
-          label="产量 (kg)"
-          value={(overview?.yield.monthTotalYield ?? 0).toLocaleString()}
-          colorScheme="emerald"
-          onClick={() => navigate('/summary/business-analysis')}
-          compact
-        />
-        <KpiCard
-          icon={<DollarSign className="w-4 h-4 text-white" />}
-          label="产值 (元)"
-          value={`¥${(overview?.yield.monthTotalAmount ?? 0).toLocaleString()}`}
-          colorScheme="emerald"
-          onClick={() => navigate('/summary/business-analysis')}
-          compact
-        />
-        <KpiCard
-          icon={<Wallet className="w-4 h-4 text-white" />}
-          label="总成本 (元)"
-          value={`¥${(overview?.totalCost ?? 0).toLocaleString()}`}
-          colorScheme="amber"
-          onClick={() => navigate('/summary/business-analysis')}
-          compact
-        />
-        <KpiCard
-          icon={<Sprout className="w-4 h-4 text-white" />}
-          label="采收次数"
-          value={(overview?.yield.monthHarvestCount ?? 0).toLocaleString()}
-          colorScheme="blue"
-          onClick={() => navigate('/summary/business-analysis')}
-          compact
-        />
-        <KpiCard
-          icon={<CheckCircle2 className="w-4 h-4 text-white" />}
-          label="任务完成率"
-          value={`${overview?.task.completionRate ?? 0}%`}
-          colorScheme="blue"
-          onClick={() => navigate('/summary/indicators')}
-          compact
-        />
-        <KpiCard
-          icon={<Layers className="w-4 h-4 text-white" />}
-          label="活跃批次"
-          value={overview?.batch.activeCount ?? 0}
-          colorScheme="purple"
-          onClick={() => navigate('/summary/batch-management')}
-          compact
-        />
-      </KpiCardGrid>
-
-      {/* ③ 六大模块体检 */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">模块体检</h2>
+      {/* ② 六大模块体检 */}
+      <div className="stagger-in stagger-in-3">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">模块体检</h2>
+          <span className="text-[11px] text-slate-400">6 模块 · 健康灯实时</span>
+        </div>
         <ModuleHealthGrid cards={moduleCards} onNavigate={navigate} />
       </div>
 
-      {/* ④ 趋势与结构 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ③ 趋势与结构 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-in stagger-in-4">
         <CardWrapper title="产量趋势" icon={<BarChart3 className="w-3.5 h-3.5 text-blue-600" />}>
           <div className="h-56">
             <YieldTrendChart data={yieldChartData} />
@@ -678,28 +803,26 @@ export default function SummaryOverview() {
         </CardWrapper>
       </div>
 
-      {/* ⑤ 关注清单 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ④ 关注清单 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-in stagger-in-5">
         <CardWrapper title="生产预警" icon={<AlertTriangle className="w-3.5 h-3.5 text-red-600" />}>
-          {alerts.length === 0 ? (
-            <EmptyState text="暂无预警，各模块运行正常" />
-          ) : (
-            <div className="space-y-3">
-              {alerts.map((alert, i) => (
-                <AlertCard
-                  key={i}
-                  title={alert.title}
-                  description={alert.description}
-                  severity={alert.severity}
-                />
-              ))}
-            </div>
-          )}
+          <AlertTicker
+            items={alerts}
+            maxItems={5}
+            onItemClick={(item) => {
+              if (item.path) navigate(item.path);
+            }}
+          />
         </CardWrapper>
 
         <CardWrapper title="批次进度 Top5" icon={<Layers className="w-3.5 h-3.5 text-purple-600" />}>
           <BatchProgressBars batches={topBatches} />
         </CardWrapper>
+      </div>
+
+      {/* Footer — 数据口径说明 */}
+      <div className="text-[11px] text-slate-400 text-center pt-2 pb-1">
+        数据口径：{periodText}（区间统计）+ 实时存量快照（模块/批次）· 演示数据可能与真实统计不同
       </div>
     </div>
   );

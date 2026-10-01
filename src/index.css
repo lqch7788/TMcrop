@@ -359,3 +359,133 @@ img {
 .modal-form-inputs textarea {
   font-size: 0.75rem;
 }
+
+/* ============================================
+   汇总看板设计令牌（2026-10-01）
+   浅色基底 + 顶部深色玻璃 Hero（Tech-Light 风格）
+   ============================================ */
+
+/* Hero 深色玻璃容器 */
+.tech-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hero 顶部扫描线 */
+.tech-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #10b981 30%,
+    #06b6d4 50%,
+    #10b981 70%,
+    transparent 100%
+  );
+  animation: hero-scan 4s linear infinite;
+  z-index: 1;
+}
+
+@keyframes hero-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 角落发光（emerald/red/amber/blue） */
+.corner-glow-emerald,
+.corner-glow-red,
+.corner-glow-amber,
+.corner-glow-blue {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  pointer-events: none;
+}
+.corner-glow-emerald { background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, transparent 70%); }
+.corner-glow-red     { background: radial-gradient(circle, rgba(239, 68, 68, 0.18) 0%, transparent 70%); }
+.corner-glow-amber   { background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 70%); }
+.corner-glow-blue    { background: radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, transparent 70%); }
+
+/* 入场 stagger 动画 */
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stagger-in { animation: stagger-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger-in-1 { animation-delay: 0ms; }
+.stagger-in-2 { animation-delay: 50ms; }
+.stagger-in-3 { animation-delay: 100ms; }
+.stagger-in-4 { animation-delay: 150ms; }
+.stagger-in-5 { animation-delay: 200ms; }
+.stagger-in-6 { animation-delay: 250ms; }
+
+/* critical 数值 pulse（仅当值 > 0 时启用） */
+@keyframes critical-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+.critical-pulse { animation: critical-pulse 2s ease-in-out infinite; }
+
+/* 数字更新微闪（tabular-nums + scale） */
+@keyframes number-pop {
+  0% { transform: scale(0.95); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.number-pop { animation: number-pop 200ms ease-out; }
+
+/* 健康灯（绿/黄/红/灰） */
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.health-dot-green {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+.health-dot-yellow {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+.health-dot-red {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+.health-dot-gray {
+  background: #cbd5e1;
+}
+.health-dot-green-pulse { animation: green-pulse 2s ease-in-out infinite; }
+.health-dot-red-pulse   { animation: red-pulse 2s ease-in-out infinite; }
+
+@keyframes green-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(16, 185, 129, 0.5); }
+  50%      { box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
+}
+@keyframes red-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
+  50%      { box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+}
+
+/* 综合评分环 */
+@keyframes score-ring-fill {
+  from { stroke-dasharray: 0 283; }
+}
+.score-ring { animation: score-ring-fill 1.2s cubic-bezier(0.16, 1, 0.3, 1); }

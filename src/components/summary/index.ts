@@ -37,6 +37,18 @@ export type { OperationsPerspectiveProps } from './OperationsPerspective';
 export { DrilldownModal } from './DrilldownModal';
 export type { DrilldownModalProps } from './DrilldownModal';
 
+// 汇总看板 v2 新增组件（2026-10-01 浅色基底 + 顶部深色玻璃 Hero）
+export { HeroPageHeader } from './HeroPageHeader';
+export type { HeroPageHeaderProps } from './HeroPageHeader';
+export { HeroScoreGauge } from './HeroScoreGauge';
+export type { HeroScoreGaugeProps } from './HeroScoreGauge';
+export { DenseKpiGrid } from './DenseKpiGrid';
+export type { DenseKpiGridProps, DenseKpiItem } from './DenseKpiGrid';
+export { AlertTicker } from './AlertTicker';
+export type { AlertTickerProps, AlertTickerItem } from './AlertTicker';
+export { CornerGlow } from './CornerGlow';
+export type { CornerGlowProps, GlowColor } from './CornerGlow';
+
 // Hooks
 export { useExport } from './useExport';
 
