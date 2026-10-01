@@ -489,3 +489,20 @@ img {
   from { stroke-dasharray: 0 283; }
 }
 .score-ring { animation: score-ring-fill 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ============================================
+   无障碍：尊重用户 prefers-reduced-motion
+   关闭所有入场 / pulse / scan / number-pop 动画
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-in,
+  .animate-scan,
+  .animate-glow-pulse,
+  .critical-pulse,
+  .number-pop,
+  .health-dot-green-pulse,
+  .health-dot-red-pulse,
+  .score-ring {
+    animation: none !important;
+  }
+}

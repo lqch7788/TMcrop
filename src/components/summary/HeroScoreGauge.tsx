@@ -1,14 +1,16 @@
 /**
- * 综合经营评分 — 浅色 SVG 仪表盘（2026-10-01 第二版）
+ * 综合经营评分 — 浅色 SVG 仪表盘（2026-10-01 第二版 + P0-2 加 Tooltip）
  *
  * 设计调整：
  * - 不再用深色背景，整体浅色基底
  * - 进度环颜色根据状态切换（emerald / amber / red）
  * - 大字号 + tabular-nums（领导一眼看到）
  * - 入场动画保留（stroke-dasharray 从 0 过渡到目标值）
+ * - P0-2：右上加"?"问号 → Tooltip 显示计算口径说明
  */
 
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
+import { Tooltip } from '@/components/ui';
 
 export interface HeroScoreGaugeProps {
   /** 综合得分，0~100 */
@@ -19,6 +21,8 @@ export interface HeroScoreGaugeProps {
   changeRate?: number | null;
   /** 副标题，默认"综合经营评分" */
   label?: string;
+  /** P0-2：自定义计算口径说明（悬停 ? 时显示），不传则用默认 */
+  formulaDescription?: string;
 }
 
 const STATUS_LABEL: Record<HeroScoreGaugeProps['status'], string> = {
@@ -60,7 +64,13 @@ const STATUS_COLOR: Record<HeroScoreGaugeProps['status'], {
 const RADIUS = 78;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function HeroScoreGauge({ score, status, changeRate, label = '综合经营评分' }: HeroScoreGaugeProps) {
+export function HeroScoreGauge({
+  score,
+  status,
+  changeRate,
+  label = '综合经营评分',
+  formulaDescription,
+}: HeroScoreGaugeProps) {
   const safeScore = Math.max(0, Math.min(100, score || 0));
   const dashOffset = CIRCUMFERENCE - (CIRCUMFERENCE * safeScore) / 100;
   const colors = STATUS_COLOR[status];
@@ -103,9 +113,33 @@ export function HeroScoreGauge({ score, status, changeRate, label = '综合经�
         </div>
       </div>
 
-      {/* 标签 + 状态 */}
+      {/* 标签 + 状态 + 口径说明 ? — P0-2 */}
       <div className="mt-3 flex flex-col items-center gap-1.5">
-        <div className="text-xs text-slate-500 tracking-wider">{label}</div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-slate-500 tracking-wider">{label}</span>
+          <Tooltip
+            content={
+              <div className="text-left space-y-1">
+                <div className="font-medium text-white">综合经营评分口径</div>
+                <div className="text-xs text-slate-200 leading-relaxed">
+                  {formulaDescription ?? '基于指标库中所有「自动指标」的加权达成率综合得分（0-100），分越高说明经营状况越健康。'}
+                </div>
+                <div className="text-xs text-slate-300 pt-1 border-t border-slate-600">
+                  80+ 良好 · 60~80 关注 · &lt;60 亟需改善
+                </div>
+              </div>
+            }
+            position="bottom"
+            delay={150}
+            multiline
+            maxWidth={280}
+          >
+            <HelpCircle
+              className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 cursor-help"
+              aria-label="评分口径说明"
+            />
+          </Tooltip>
+        </div>
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${colors.bg}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${colors.dot} ${colors.pulseClass}`} />
           <span className={`text-[11px] font-medium ${colors.text}`}>{STATUS_LABEL[status]}</span>
