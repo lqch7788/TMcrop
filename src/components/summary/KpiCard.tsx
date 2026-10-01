@@ -2,7 +2,9 @@
  * KPI 指标卡片 - 可复用的关键指标展示组件
  * 设计参考：Dashboard StatCard (src/components/dashboard/cards/StatCard.tsx)
  *
- * 2026-10-01 升级：新增 variant="hero" — 深色玻璃 + 大字号 + corner-glow（汇总看板 Hero 区专用）
+ * 2026-10-01 第二轮升级：
+ * - 新增 secondary 副标（"暂无数据" / 单位）
+ * - 新增 dataSource 徽章（live / demo / empty）— P0-1
  */
 
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -96,6 +98,15 @@ export interface KpiCardProps {
    * - 'hero'：深色玻璃（用于汇总看板 Hero 区）
    */
   variant?: 'standard' | 'hero';
+  /** 副标文字（用于"暂无数据"提示或附加信息），P1-10 */
+  secondary?: string;
+  /** 数据可信度，hero 变体专属 — P0-1
+   * - 'live'：实时真实数据（emerald 点）
+   * - 'demo'：含演示数据（amber 点）
+   * - 'empty'：空数据（slate 点）
+   * - undefined：不显示徽章
+   */
+  dataSource?: 'live' | 'demo' | 'empty';
 }
 
 export function KpiCard({
@@ -107,8 +118,22 @@ export function KpiCard({
   onClick,
   compact,
   variant: variantProp = 'standard',
+  secondary,
+  dataSource,
 }: KpiCardProps) {
   const colors = COLOR_SCHEMES[colorScheme] || COLOR_SCHEMES.emerald;
+
+  // 数据可信度徽章配置 — P0-1
+  const DATA_SOURCE_DOT: Record<NonNullable<KpiCardProps['dataSource']>, string> = {
+    live: 'health-dot health-dot-green health-dot-green-pulse',
+    demo: 'health-dot health-dot-yellow',
+    empty: 'health-dot health-dot-gray',
+  };
+  const DATA_SOURCE_LABEL: Record<NonNullable<KpiCardProps['dataSource']>, string> = {
+    live: '实时数据',
+    demo: '含演示数据',
+    empty: '暂无数据',
+  };
 
   // ============ Hero 变体（2026-10-01 第二版：浅色基底） ============
   if (variantProp === 'hero') {
@@ -126,21 +151,36 @@ export function KpiCard({
               {value}
             </p>
             <p className={`text-[11px] mt-0.5 ${colors.heroSub} truncate`}>{label}</p>
+            {/* P1-10：value=0 / undefined 时显示副标「暂无数据」 */}
+            {(value === 0 || value === '0' || value === '' || secondary) && (
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                {secondary ?? (value === 0 || value === '0' ? '暂无数据' : '')}
+              </p>
+            )}
           </div>
-          {trend !== undefined && (
-            <div
-              className={`flex items-center gap-0.5 text-xs flex-shrink-0 ${
-                trend >= 0 ? 'text-emerald-600' : 'text-red-600'
-              }`}
-            >
-              {trend >= 0 ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : (
-                <TrendingDown className="w-3 h-3" />
-              )}
-              <span>{Math.abs(trend)}%</span>
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            {trend !== undefined && (
+              <div
+                className={`flex items-center gap-0.5 text-xs ${
+                  trend >= 0 ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {trend >= 0 ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                <span>{Math.abs(trend)}%</span>
+              </div>
+            )}
+            {/* P0-1：数据可信度徽章 */}
+            {dataSource && (
+              <span
+                className={DATA_SOURCE_DOT[dataSource]}
+                title={DATA_SOURCE_LABEL[dataSource]}
+              />
+            )}
+          </div>
         </div>
       </div>
     );

@@ -24,16 +24,18 @@
  *   - 卡片统一高度 + 健康灯（绿/黄/红/灰）
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Sprout, TrendingUp, DollarSign,
   CheckCircle2, Layers, AlertTriangle,
   Loader2,
-  BarChart3, PieChart, RefreshCw,
+  BarChart3, PieChart, RefreshCw, Download,
   FileCheck, ClipboardCheck, AlertCircle,
   ClipboardList, Boxes, Users, Flower2, Wallet,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { todayLocal } from '../../lib/dateUtils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart as RePieChart, Pie, Cell,
@@ -175,7 +177,7 @@ function CostBreakdownPie({ data }: { data: { name: string; value: number; fill:
 
 // ========== 批次进度条 ==========
 
-/** Top5 批次进度条 */
+/** Top5 批次进度条 — P1-6 信息密度增强 */
 function BatchProgressBars({ batches }: { batches: import('../../stores/useSummaryDataStore').BatchStatItem[] }) {
   if (batches.length === 0) {
     return (
@@ -217,12 +219,35 @@ function BatchProgressBars({ batches }: { batches: import('../../stores/useSumma
               style={{ width: `${Math.min(batch.completionRate, 100)}%` }}
             />
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-[11px] text-gray-400 flex-wrap">
             <span>{batch.greenhouse || '-'}</span>
             <span>|</span>
             <span className={STATUS_COLOR[batch.status] || 'text-gray-400'}>
               {STATUS_LABEL[batch.status] || batch.status || '-'}
             </span>
+            {/* P1-6：剩余产量 */}
+            {batch.remainingYield > 0 && (
+              <>
+                <span>|</span>
+                <span>剩 {(batch.remainingYield ?? 0).toLocaleString()} kg</span>
+              </>
+            )}
+            {/* P1-6：预计采收日 */}
+            {batch.expectedHarvestDate && (
+              <>
+                <span>|</span>
+                <span title={`预计采收：${batch.expectedHarvestDate}`}>
+                  预计采收 {batch.expectedHarvestDate.slice(5)}
+                </span>
+              </>
+            )}
+            {/* P1-6：任务完成情况（已完成/总） */}
+            {(batch.taskCount ?? 0) > 0 && (
+              <>
+                <span>|</span>
+                <span>任务 {batch.completedTaskCount}/{batch.taskCount}</span>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -359,46 +384,101 @@ export default function SummaryOverview() {
 
   // ========== ① HERO 4 项 KPI ==========
 
-  const heroKpis: DenseKpiItem[] = useMemo(() => [
-    {
-      key: 'yield',
-      icon: <TrendingUp className="w-4 h-4 text-white" />,
-      label: '产量 (kg)',
-      value: (overview?.yield.monthTotalYield ?? 0).toLocaleString(),
-      colorScheme: 'emerald',
-      onClick: () => navigate('/summary/business-analysis'),
-    },
-    {
-      key: 'amount',
-      icon: <DollarSign className="w-4 h-4 text-white" />,
-      label: '产值 (元)',
-      value: `¥${(overview?.yield.monthTotalAmount ?? 0).toLocaleString()}`,
-      colorScheme: 'emerald',
-      onClick: () => navigate('/summary/business-analysis'),
-    },
-    {
-      key: 'cost',
-      icon: <Wallet className="w-4 h-4 text-white" />,
-      label: '总成本 (元)',
-      value: `¥${(overview?.totalCost ?? 0).toLocaleString()}`,
-      colorScheme: 'amber',
-      onClick: () => navigate('/summary/business-analysis'),
-    },
-    {
-      key: 'taskRate',
-      icon: <CheckCircle2 className="w-4 h-4 text-white" />,
-      label: '任务完成率',
-      value: `${overview?.task.completionRate ?? 0}%`,
-      colorScheme: 'blue',
-      onClick: () => navigate('/summary/indicators'),
-    },
-  ], [overview]);
+  /** 把 Dashboard 范围透传给目标页 query，避免"跳到 0 屏"断层（P0-3） */
+  const buildDeepLink = (base: string): string => {
+    const params = new URLSearchParams({
+      mode: filterMode,
+      start: range.startDate,
+      end: range.endDate,
+    });
+    return `${base}?${params.toString()}`;
+  };
+
+  const heroKpis: DenseKpiItem[] = useMemo(() => {
+    const totalYield = overview?.yield.monthTotalYield ?? 0;
+    const totalAmount = overview?.yield.monthTotalAmount ?? 0;
+    const totalCost = overview?.totalCost ?? 0;
+    const taskRate = overview?.task.completionRate ?? 0;
+    return [
+      {
+        key: 'yield',
+        icon: <TrendingUp className="w-4 h-4 text-white" />,
+        label: '产量 (kg)',
+        value: totalYield.toLocaleString(),
+        secondary: totalYield === 0 ? '暂无数据' : undefined, // P1-10
+        dataSource: totalYield > 0 ? 'live' : 'empty',         // P0-1
+        colorScheme: 'emerald',
+        onClick: () => navigate(buildDeepLink('/summary/business-analysis')),
+      },
+      {
+        key: 'amount',
+        icon: <DollarSign className="w-4 h-4 text-white" />,
+        label: '产值 (元)',
+        value: `¥${totalAmount.toLocaleString()}`,
+        secondary: totalAmount === 0 ? '暂无数据' : undefined,
+        dataSource: totalAmount > 0 ? 'live' : 'empty',
+        colorScheme: 'emerald',
+        onClick: () => navigate(buildDeepLink('/summary/business-analysis')),
+      },
+      {
+        key: 'cost',
+        icon: <Wallet className="w-4 h-4 text-white" />,
+        label: '总成本 (元)',
+        value: `¥${totalCost.toLocaleString()}`,
+        secondary: totalCost === 0 ? '暂无数据' : undefined,
+        dataSource: totalCost > 0 ? 'live' : 'empty',
+        colorScheme: 'amber',
+        onClick: () => navigate(buildDeepLink('/summary/business-analysis')),
+      },
+      {
+        key: 'taskRate',
+        icon: <CheckCircle2 className="w-4 h-4 text-white" />,
+        label: '任务完成率',
+        value: `${taskRate}%`,
+        secondary: taskRate === 0 ? '暂无数据' : undefined,
+        dataSource: taskRate > 0 ? 'live' : 'empty',
+        colorScheme: 'blue',
+        onClick: () => navigate(buildDeepLink('/summary/indicators')),
+      },
+    ];
+  }, [overview, filterMode, range]);
 
   // ========== ① HERO 综合评分环 ==========
 
   const heroScore = indicatorBoard?.score ?? 0;
   const heroScoreStatus: 'good' | 'warning' | 'critical' =
     heroScore >= 80 ? 'good' : heroScore >= 60 ? 'warning' : 'critical';
+
+  /** P0-2：评分环 Tooltip 的个性化文案（从 indicatorBoard 自动指标拼接） */
+  const heroScoreFormula = useMemo(() => {
+    const autos = indicatorBoard?.autoIndicators ?? [];
+    if (autos.length === 0) return undefined;
+    const goodCount = autos.filter((i) => i.status === 'good').length;
+    const warningCount = autos.filter((i) => i.status === 'warning').length;
+    const badCount = autos.filter((i) => i.status === 'bad').length;
+    return `基于 ${autos.length} 项自动指标的加权达成率（绿 ${goodCount} / 黄 ${warningCount} / 红 ${badCount}）。分越高说明经营状况越健康。`;
+  }, [indicatorBoard]);
+
+  // ========== P1-9：数字变化 number-pop 微动效 ==========
+  /** 记录上一次 heroKpis 数值的快照；新值不同时给卡片加 number-pop class */
+  const prevHeroValuesRef = useRef<Record<string, string | number>>({});
+  const [popKeys, setPopKeys] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const prev = prevHeroValuesRef.current;
+    const changed: string[] = [];
+    heroKpis.forEach((k) => {
+      if (prev[k.key] !== undefined && prev[k.key] !== k.value) {
+        changed.push(k.key);
+      }
+    });
+    // 始终更新快照
+    const nextSnap = Object.fromEntries(heroKpis.map((k) => [k.key, k.value]));
+    prevHeroValuesRef.current = nextSnap;
+    if (changed.length === 0) return undefined;
+    setPopKeys(new Set(changed));
+    const timer = setTimeout(() => setPopKeys(new Set()), 250);
+    return () => clearTimeout(timer);
+  }, [heroKpis]);
 
   // ========== ② 六大模块体检 ==========
 
@@ -431,10 +511,12 @@ export default function SummaryOverview() {
         iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
         path: '/production',
         healthStatus: planHealth,
+        healthTooltip: planHealth === 'yellow' ? `有 ${h?.plan.purchasePlansPending ?? 0} 个采购计划待审` : undefined,
         metrics: [
-          { label: '订单（进行中）', value: `${h?.plan.orders ?? 0}（${h?.plan.ordersInProgress ?? 0}）` },
+          // P1-5：去掉括号嵌套，统一格式为「单一名词」
+          { label: '订单', value: h?.plan.orders ?? 0 },
+          { label: '进行中', value: h?.plan.ordersInProgress ?? 0, highlight: (h?.plan.ordersInProgress ?? 0) > 0 },
           { label: '生产计划', value: h?.plan.productionPlans ?? 0 },
-          { label: '技术方案', value: h?.plan.techSolutions ?? 0 },
           { label: '采购计划', value: h?.plan.purchasePlans ?? 0, highlight: (h?.plan.purchasePlansPending ?? 0) > 0 },
         ],
       },
@@ -447,9 +529,9 @@ export default function SummaryOverview() {
         healthStatus: cropHealth,
         metrics: [
           { label: '可用种源', value: h?.crop.seedSources ?? 0 },
-          { label: '育苗（在育）', value: `${h?.crop.seedlings ?? 0}（${h?.crop.seedlingsInProgress ?? 0}）` },
-          { label: '种植（采收中）', value: `${h?.crop.plantings ?? 0}（${h?.crop.plantingsHarvesting ?? 0}）` },
-          { label: '作物库存（项）', value: h?.crop.inventoryInstances ?? 0 },
+          { label: '育苗总数', value: h?.crop.seedlings ?? 0 },
+          { label: '种植总数', value: h?.crop.plantings ?? 0 },
+          { label: '采收中', value: h?.crop.plantingsHarvesting ?? 0, highlight: (h?.crop.plantingsHarvesting ?? 0) > 0 },
         ],
       },
       {
@@ -459,11 +541,16 @@ export default function SummaryOverview() {
         iconBg: 'bg-gradient-to-br from-lime-500 to-green-600',
         path: '/farm-hub',
         healthStatus: farmHealth,
+        healthTooltip: farmHealth === 'red'
+          ? `存在 ${h?.farm.tasksOverdue ?? 0} 个逾期任务`
+          : farmHealth === 'yellow'
+          ? `存在 ${h?.farm.tasksWaitingAcceptance ?? 0} 个待验收任务`
+          : undefined,
         metrics: [
-          { label: '任务（已完成）', value: `${h?.farm.tasksTotal ?? 0}（${h?.farm.tasksCompleted ?? 0}）` },
-          { label: '任务完成率', value: `${taskRate}%` },
+          { label: '总任务', value: h?.farm.tasksTotal ?? 0 },
+          { label: '已完成', value: h?.farm.tasksCompleted ?? 0 },
+          { label: '完成率', value: `${taskRate}%` },
           { label: '待验收', value: h?.farm.tasksWaitingAcceptance ?? 0, highlight: (h?.farm.tasksWaitingAcceptance ?? 0) > 0 },
-          { label: '问题（待处理）', value: `${h?.farm.problemsTotal ?? 0}（${h?.farm.problemsOpen ?? 0}）` },
         ],
       },
       {
@@ -473,11 +560,12 @@ export default function SummaryOverview() {
         iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
         path: '/warehouse-overview',
         healthStatus: materialHealth,
+        healthTooltip: materialHealth === 'yellow' ? `${h?.material.materialsLowStock ?? 0} 种物料低于安全库存` : undefined,
         metrics: [
-          { label: '物料（低于安全库存）', value: `${h?.material.materials ?? 0}（${h?.material.materialsLowStock ?? 0}）`, highlight: (h?.material.materialsLowStock ?? 0) > 0 },
-          { label: '供应商（启用）', value: `${h?.material.suppliers ?? 0}（${h?.material.suppliersActive ?? 0}）` },
-          { label: '入库单', value: h?.material.inboundRecords ?? 0 },
-          { label: '领料单（待审）', value: `${h?.material.materialRequests ?? 0}（${h?.material.materialRequestsPending ?? 0}）`, highlight: (h?.material.materialRequestsPending ?? 0) > 0 },
+          { label: '物料总数', value: h?.material.materials ?? 0 },
+          { label: '低于安全库存', value: h?.material.materialsLowStock ?? 0, highlight: (h?.material.materialsLowStock ?? 0) > 0 },
+          { label: '供应商', value: h?.material.suppliers ?? 0 },
+          { label: '领料待审', value: h?.material.materialRequestsPending ?? 0, highlight: (h?.material.materialRequestsPending ?? 0) > 0 },
         ],
       },
       {
@@ -487,6 +575,11 @@ export default function SummaryOverview() {
         iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
         path: '/pending-approval',
         healthStatus: approvalHealth,
+        healthTooltip: approvalHealth === 'red'
+          ? `审批积压 ${h?.approval.pending ?? 0} 张（>=10 紧急）`
+          : approvalHealth === 'yellow'
+          ? `待审批 ${h?.approval.pending ?? 0} 张`
+          : undefined,
         metrics: [
           { label: '审批总量', value: h?.approval.total ?? 0 },
           { label: '待审批', value: h?.approval.pending ?? 0, highlight: (h?.approval.pending ?? 0) > 0 },
@@ -504,29 +597,22 @@ export default function SummaryOverview() {
         metrics: [
           { label: '在岗人员', value: h?.labor.employees ?? 0 },
           { label: '考勤记录', value: h?.labor.attendanceRecords ?? 0 },
-          { label: '累计工时 (h)', value: h?.labor.workHours ?? 0 },
+          { label: '累计工时', value: h?.labor.workHours ?? 0 },
           { label: '工单记录', value: h?.labor.workLogs ?? 0 },
         ],
       },
     ];
   }, [moduleHealth]);
 
-  // ========== ④ 生产预警（跨模块聚合）==========
+  // ========== ④ 生产预警（被动观察类，P0-4 去重） ==========
+  // 原则——Hero 区"立即行动"（todoItems）与本页"被动观察"（alerts）严格分离：
+  //   - 立即行动（todoItems）：逾期任务、待审批、待验收、未解决问题（4 项，点点跳走处理）
+  //   - 被动观察（alerts）：问题解决率低、库存告警、任务完成率严重偏低（领导看一眼即可）
 
   const alerts: AlertTickerItem[] = useMemo(() => {
     const result: AlertTickerItem[] = [];
-    const h = moduleHealth;
 
-    if ((h?.farm.tasksOverdue ?? 0) > 0) {
-      result.push({
-        key: 'overdue',
-        severity: 'critical',
-        title: '存在逾期任务',
-        description: `当前有 ${h?.farm.tasksOverdue} 个任务已过计划日期仍未完成，请安排跟进`,
-        path: '/farm-hub',
-      });
-    }
-
+    // 问题解决率低（指标层面，不是具体某条问题，与 todoItems 的"未解决问题"数量互补）
     if (overview && overview.problem.totalProblems > 0 && overview.problem.resolutionRate < 60) {
       result.push({
         key: 'problemLow',
@@ -545,17 +631,8 @@ export default function SummaryOverview() {
       });
     }
 
-    if ((h?.approval.pending ?? 0) >= 5) {
-      result.push({
-        key: 'approvalPending',
-        severity: (h?.approval.pending ?? 0) >= 10 ? 'critical' : 'warning',
-        title: '审批积压',
-        description: `有 ${h?.approval.pending} 张单据待审批，可能阻塞下游领料/生产环节`,
-        path: '/pending-approval',
-      });
-    }
-
-    const lowStock = (h?.material.materialsLowStock ?? 0);
+    // 库存告警（被动观察类，与"立即行动"完全独立）
+    const lowStock = (moduleHealth?.material.materialsLowStock ?? 0);
     if (lowStock > 0) {
       result.push({
         key: 'lowStock',
@@ -566,6 +643,7 @@ export default function SummaryOverview() {
       });
     }
 
+    // 任务完成率严重偏低（整体 KPI 信号，不是单条任务）
     if (overview && overview.task.totalTasks > 0) {
       const status = getTaskStatus(overview.task.completionRate);
       if (status === 'critical') {
@@ -579,15 +657,8 @@ export default function SummaryOverview() {
       }
     }
 
-    if ((h?.farm.tasksWaitingAcceptance ?? 0) >= 3) {
-      result.push({
-        key: 'acceptance',
-        severity: 'warning',
-        title: '待验收任务积压',
-        description: `有 ${h?.farm.tasksWaitingAcceptance} 个任务等待验收确认`,
-        path: '/farm-hub',
-      });
-    }
+    // 注：原"存在逾期任务""审批积压""待验收积压"已并入 Hero 区 todoItems（立即行动），
+    // 避免领导在两处看到同一信号造成认知冲突。
 
     return result;
   }, [overview, moduleHealth]);
@@ -638,6 +709,56 @@ export default function SummaryOverview() {
     fetchBatchStats({});
   };
 
+  // ========== P2-14：一键导出 Dashboard 摘要为 Excel ==========
+  /** 导出当前 Dashboard 快照（4 KPI + 6 模块 + Top5 批次 + 关注清单） */
+  const handleExportDashboard = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: 核心 KPI
+    const kpiRows: (string | number)[][] = [
+      ['指标', '数值', '单位'],
+      ['产量', overview?.yield.monthTotalYield ?? 0, 'kg'],
+      ['产值', overview?.yield.monthTotalAmount ?? 0, '元'],
+      ['总成本', overview?.totalCost ?? 0, '元'],
+      ['任务完成率', overview?.task.completionRate ?? 0, '%'],
+      ['任务总数', overview?.task.totalTasks ?? 0, '个'],
+      ['在育育苗', overview?.crop?.seedlings ?? 0, '个'],
+      ['活跃批次', overview?.batch?.activeCount ?? 0, '个'],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), '核心 KPI');
+
+    // Sheet 2: 六大模块体检
+    const moduleRows: (string | number)[][] = [
+      ['模块', '总指标', '活跃', '待办/关注'],
+      ['计划管理', moduleHealth?.plan.orders ?? 0, moduleHealth?.plan.ordersInProgress ?? 0, `采购计划待审 ${moduleHealth?.plan.purchasePlansPending ?? 0}`],
+      ['作物管理', moduleHealth?.crop.seedlings ?? 0, moduleHealth?.crop.seedlingsInProgress ?? 0, `采收中 ${moduleHealth?.crop.plantingsHarvesting ?? 0}`],
+      ['农事管理', moduleHealth?.farm.tasksTotal ?? 0, moduleHealth?.farm.tasksCompleted ?? 0, `待验收 ${moduleHealth?.farm.tasksWaitingAcceptance ?? 0} / 逾期 ${moduleHealth?.farm.tasksOverdue ?? 0}`],
+      ['物资管理', moduleHealth?.material.materials ?? 0, '-', `低于安全库存 ${moduleHealth?.material.materialsLowStock ?? 0} / 待审 ${moduleHealth?.material.materialRequestsPending ?? 0}`],
+      ['审批管理', moduleHealth?.approval.total ?? 0, moduleHealth?.approval.approved ?? 0, `待审 ${moduleHealth?.approval.pending ?? 0}`],
+      ['人工管理', moduleHealth?.labor.employees ?? 0, '-', `累计工时 ${moduleHealth?.labor.workHours ?? 0}`],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(moduleRows), '六大模块体检');
+
+    // Sheet 3: Top5 批次
+    const batchRows: (string | number)[][] = [
+      ['批次编号', '批次名称', '作物', '温室', '完成率', '状态', '剩余产量(kg)'],
+      ...topBatches.map((b) => [
+        b.batchCode, b.batchName, b.cropName, b.greenhouse,
+        `${b.completionRate}%`, STATUS_LABEL[b.status] ?? b.status, b.remainingYield ?? 0,
+      ]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(batchRows), '批次 Top5');
+
+    // Sheet 4: 关注清单
+    const alertRows: (string | number)[][] = [
+      ['严重程度', '标题', '说明'],
+      ...alerts.map((a) => [a.severity, a.title, a.description]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(alertRows), '关注清单');
+
+    XLSX.writeFile(wb, `汇总看板_${todayLocal()}.xlsx`);
+  };
+
   // ========== 时间胶囊内容 ==========
 
   const periodText = `${range.startDate} ~ ${range.endDate}`;
@@ -673,15 +794,26 @@ export default function SummaryOverview() {
         period={`${modeText} · ${periodText}`}
         lastUpdated={lastUpdated}
         actions={
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-xs transition-colors"
-            title="刷新数据"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>刷新</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleExportDashboard}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-xs transition-colors"
+              title="导出当前 Dashboard 为 Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>导出</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 text-xs transition-colors"
+              title="刷新数据"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>刷新</span>
+            </button>
+          </>
         }
       />
 
@@ -734,13 +866,14 @@ export default function SummaryOverview() {
               score={heroScore}
               status={heroScoreStatus}
               label="综合经营评分"
+              formulaDescription={heroScoreFormula}
             />
           </div>
 
           {/* 中：4 项核心 KPI 紧凑网格 */}
           <div className="col-span-12 md:col-span-5 flex flex-col justify-center">
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">核心 KPI</div>
-            <DenseKpiGrid items={heroKpis} columns={2} />
+            <DenseKpiGrid items={heroKpis} columns={2} popKeys={popKeys} />
           </div>
 
           {/* 右：4 待办风险塔 */}
