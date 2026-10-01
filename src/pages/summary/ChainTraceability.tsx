@@ -57,6 +57,72 @@ const STATUS_LABEL: Record<BatchStatus, string> = {
   overdue: '已逾期',
 };
 
+/** 库存/种源/采收等环节 status 字段英文 → 中文（覆盖各环节非 BatchStatus 的 status 字段） */
+const STATUS_LABEL_EXT: Record<string, string> = {
+  active: '在用',
+  available: '可用',
+  reserved: '已预留',
+  used: '已用完',
+  empty: '已用完',
+  transferred: '已调拨',
+  outbound: '已出库',
+  frozen_full: '全部冻结',
+  frozen_partial: '部分冻结',
+  pending: '待处理',
+  processing: '进行中',
+  harvesting: '采收中',
+  published: '已发布',
+};
+
+/** 单位英文/缩写 → 中文（数据库里 unit 字段为 'kg' / 'g' / '株' 等时映射） */
+const UNIT_LABEL: Record<string, string> = {
+  kg: '千克',
+  g: '克',
+  t: '吨',
+  l: '升',
+  ml: '毫升',
+  株: '株',
+  棵: '棵',
+  袋: '袋',
+  包: '包',
+};
+
+/** 采收 quality_grade 字段（A/B/C 等） → 中文 */
+const QUALITY_GRADE_LABEL: Record<string, string> = {
+  A: 'A级（优等）',
+  B: 'B级（良等）',
+  C: 'C级（合格）',
+  D: 'D级（次品）',
+  premium: '特等',
+  excellent: '优等',
+  good: '良等',
+  normal: '合格',
+  bad: '次品',
+};
+
+/** 获取状态的本地化文本（兼容 BatchStatus 与其他环节 status） */
+function localizeStatus(status: string | undefined | null): string {
+  if (!status) return '-';
+  return (
+    STATUS_LABEL[status as BatchStatus] ||
+    STATUS_LABEL_EXT[status] ||
+    status
+  );
+}
+
+/** 获取单位的本地化文本 */
+function localizeUnit(unit: string | undefined | null): string {
+  if (!unit) return '';
+  const lower = String(unit).toLowerCase();
+  return UNIT_LABEL[lower] || UNIT_LABEL[unit] || unit;
+}
+
+/** 获取质量等级的本地化文本 */
+function localizeQualityGrade(grade: string | undefined | null): string {
+  if (!grade) return '';
+  return QUALITY_GRADE_LABEL[grade] || grade;
+}
+
 /** 确定批次处于哪个追溯环节（按种源→育苗→种植→采收→库存 优先级由后往前判断） */
 function getBatchStage(batch: BatchStatItem): ChainStageKey {
   if (batch.status === 'completed') return 'inventory';
@@ -188,15 +254,19 @@ function StageDetailPanel({
                   {item.cropName && item.variety && <span>|</span>}
                   {item.variety && <span>{item.variety}</span>}
                   {item.greenhouse && <><span>|</span><span>{item.greenhouse}</span></>}
+                  {item.warehouseName && <><span>|</span><span>{item.warehouseName}</span></>}
                   {item.supplierName && <><span>|</span><span>{item.supplierName}</span></>}
-                  {item.quantity != null && <><span>|</span><span>{item.quantity}{item.unit || ''}</span></>}
+                  {item.quantity != null && <><span>|</span><span>{item.quantity}{localizeUnit(item.unit)}</span></>}
+                  {item.survivalRate != null && <><span>|</span><span>成活率 {(item.survivalRate * 100).toFixed(1)}%</span></>}
+                  {item.unitPrice != null && <><span>|</span><span>单价 ¥{Number(item.unitPrice).toLocaleString()}</span></>}
                   {item.totalAmount != null && <><span>|</span><span className="text-amber-600 font-medium">¥{Number(item.totalAmount).toLocaleString()}</span></>}
+                  {item.qualityGrade && <><span>|</span><span>{localizeQualityGrade(item.qualityGrade)}</span></>}
                 </div>
               </div>
               {item.status && (
                 <div className="mt-1.5">
                   <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${(STATUS_STYLE as Record<string, string>)[item.status] || 'bg-gray-100 text-gray-700'}`}>
-                    {(STATUS_LABEL as Record<string, string>)[item.status] || item.status}
+                    {localizeStatus(item.status)}
                   </span>
                 </div>
               )}
@@ -519,8 +589,8 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">产量进度</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-400">目标产量：</span><span className="text-gray-900 font-medium">{selectedBatch.targetYield?.toLocaleString()} kg</span></div>
-                <div><span className="text-gray-400">实际产量：</span><span className="text-gray-900 font-medium">{selectedBatch.actualQuantity?.toLocaleString()} kg</span></div>
+                <div><span className="text-gray-400">目标产量：</span><span className="text-gray-900 font-medium">{selectedBatch.targetYield?.toLocaleString()} 千克</span></div>
+                <div><span className="text-gray-400">实际产量：</span><span className="text-gray-900 font-medium">{selectedBatch.actualQuantity?.toLocaleString()} 千克</span></div>
               </div>
               <div className="mt-2">
                 <div className="flex items-center justify-between text-xs text-gray-400 mb-1">

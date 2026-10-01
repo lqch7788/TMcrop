@@ -391,11 +391,11 @@ export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
                 <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</TableHead>
                 <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</TableHead>
                 <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
-                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">目标产量(kg)</TableHead>
-                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实际产量(kg)</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">目标产量（千克）</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实际产量（千克）</TableHead>
                 <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">完成率</TableHead>
-                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总工时(h)</TableHead>
-                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人工成本(元)</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总工时（小时）</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人工成本（元）</TableHead>
                 <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -548,19 +548,19 @@ export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-gray-400">目标产量：</span>
-                  <span className="text-gray-900 font-medium">{formatNumber(selectedBatch.targetYield)} kg</span>
+                  <span className="text-gray-900 font-medium">{formatNumber(selectedBatch.targetYield)} 千克</span>
                 </div>
                 <div>
                   <span className="text-gray-400">实际产量：</span>
-                  <span className="text-gray-900 font-medium">{formatNumber(selectedBatch.actualQuantity)} kg</span>
+                  <span className="text-gray-900 font-medium">{formatNumber(selectedBatch.actualQuantity)} 千克</span>
                 </div>
                 <div>
                   <span className="text-gray-400">采收数量：</span>
-                  <span className="text-gray-900">{formatNumber(selectedBatch.harvestQuantity)} kg</span>
+                  <span className="text-gray-900">{formatNumber(selectedBatch.harvestQuantity)} 千克</span>
                 </div>
                 <div>
                   <span className="text-gray-400">剩余产量：</span>
-                  <span className="text-gray-900">{formatNumber(selectedBatch.remainingYield)} kg</span>
+                  <span className="text-gray-900">{formatNumber(selectedBatch.remainingYield)} 千克</span>
                 </div>
                 <div className="col-span-2">
                   <span className="text-gray-400">完成率：</span>

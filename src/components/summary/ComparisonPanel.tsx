@@ -4,7 +4,7 @@
  * V10.0 新增 — 对标旧系统 yield.ejs + fertilizer.ejs
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BarChart3, Table2, LineChart, PieChart, RefreshCw, Download, Camera } from 'lucide-react';
+import { BarChart3, Table2, LineChart, PieChart, RefreshCw, RotateCcw, Download, Camera } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, DateRangePicker, EmptyState, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Label } from '@/components/ui';
 import { useSummaryDataStore } from '@/stores';
 import { BarChart, Bar, LineChart as RLineChart, Line, PieChart as RPieChart, Pie, Cell,
@@ -57,6 +57,22 @@ export default function ComparisonPanel() {
       sampling,
     });
   }, [mainParam, compareParam1, compareParam2, dateRange, sampling, fetchComparisonStats]);
+
+  // 2026-10-01：新增「重置」按钮
+  // 重置对比参数、日期范围、采样粒度到默认值（保留主参数），并立即用重置后的状态查询
+  const handleReset = useCallback(() => {
+    setCompareParam1('');
+    setCompareParam2('');
+    setDateRange({});
+    setSampling('month');
+    // 主参数保持不变（用户最关心的维度）
+    fetchComparisonStats({
+      mainParam,
+      compareParam1: undefined,
+      compareParam2: undefined,
+      sampling: 'month',
+    });
+  }, [mainParam, fetchComparisonStats]);
 
   useEffect(() => {
     handleQuery();
@@ -260,9 +276,13 @@ export default function ComparisonPanel() {
               </Button>
             ))}
           </div>
-          <Button onClick={handleQuery} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+          <Button onClick={handleQuery} disabled={isLoading} size="sm">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             查询
+          </Button>
+          <Button onClick={handleReset} disabled={isLoading} variant="warning" size="sm">
+            <RotateCcw className="w-4 h-4" />
+            重置
           </Button>
         </CardContent>
       </Card>
