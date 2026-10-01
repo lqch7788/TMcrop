@@ -1,8 +1,16 @@
 /**
- * 待办与风险条 - 汇总看板首屏
+ * 待办与风险塔 - 汇总看板 Hero 区专用（2026-10-01 升级）
  *
  * 展示需要管理者处理的积压项（待审批 / 逾期任务 / 待验收 / 未解决问题），
  * 点击直达对应模块。数值为 0 时灰显，避免"满屏红色"的狼来了效应。
+ *
+ * 升级要点（v2）：
+ * - 保留 API 不变（其他汇总页面仍在 import）
+ * - 视觉从「横向紧凑卡」改为「霓虹风险塔」：
+ *   - 顶部色条（emerald/red/amber/blue/purple）作为分类标识
+ *   - critical 值 > 0 时启用 pulse（不再仅作静态灰显）
+ *   - 数字大字号 + tabular-nums + hover 时显示 corner-glow
+ *   - 圆角 8px，统一高度 h-20
  */
 
 import { ReactNode } from 'react';
@@ -28,17 +36,17 @@ export interface TodoStripProps {
   onNavigate: (item: TodoItem) => void;
 }
 
-/** 色调 → Tailwind 类名映射 */
-const TONE_STYLE: Record<TodoItem['tone'], { iconBg: string; value: string }> = {
-  red: { iconBg: 'bg-gradient-to-br from-red-500 to-red-600', value: 'text-red-600' },
-  amber: { iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600', value: 'text-amber-600' },
-  blue: { iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', value: 'text-blue-600' },
-  purple: { iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', value: 'text-purple-600' },
+/** 色调 → 顶部色条 + 数字色 */
+const TONE_STYLE: Record<TodoItem['tone'], { bar: string; value: string; bg: string }> = {
+  red: { bar: 'bg-red-500', value: 'text-red-600', bg: 'bg-red-50' },
+  amber: { bar: 'bg-amber-500', value: 'text-amber-600', bg: 'bg-amber-50' },
+  blue: { bar: 'bg-blue-500', value: 'text-blue-600', bg: 'bg-blue-50' },
+  purple: { bar: 'bg-purple-500', value: 'text-purple-600', bg: 'bg-purple-50' },
 };
 
 export function TodoStrip({ items, onNavigate }: TodoStripProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="space-y-2">
       {items.map((item) => {
         const tone = TONE_STYLE[item.tone];
         const hasWork = item.value > 0;
@@ -47,22 +55,38 @@ export function TodoStrip({ items, onNavigate }: TodoStripProps) {
             key={item.key}
             type="button"
             onClick={() => onNavigate(item)}
-            className="bg-white rounded-xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow flex items-center gap-3"
+            className={`w-full relative bg-white rounded-lg border border-slate-200/70 hover:shadow-md transition-all overflow-hidden text-left ${
+              hasWork ? 'critical-pulse' : ''
+            }`}
+            style={{ minHeight: 64 }}
           >
-            <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                hasWork ? tone.iconBg : 'bg-gray-200'
-              }`}
-            >
-              {item.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className={`text-2xl font-bold leading-tight ${hasWork ? tone.value : 'text-gray-300'}`}>
-                {item.value}
+            {/* 顶部色条 */}
+            <div className={`h-[3px] w-full ${hasWork ? tone.bar : 'bg-slate-200'}`} />
+
+            <div className="flex items-center gap-2.5 px-3 py-2.5">
+              {/* 图标 */}
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  hasWork ? tone.bg : 'bg-slate-100'
+                }`}
+              >
+                <span className={hasWork ? '' : 'opacity-40'}>{item.icon}</span>
               </div>
-              <div className="text-xs text-gray-500 truncate">{item.label}</div>
+
+              {/* 数字 + 标签 */}
+              <div className="flex-1 min-w-0">
+                <div
+                  className={`text-2xl font-bold leading-none tabular-nums ${
+                    hasWork ? tone.value : 'text-slate-300'
+                  }`}
+                >
+                  {item.value}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1 truncate">{item.label}</div>
+              </div>
+
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
           </button>
         );
       })}

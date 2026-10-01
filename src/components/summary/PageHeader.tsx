@@ -38,3 +38,5 @@ export function PageHeader({ icon, title, description, backTo, backTitle }: Page
     </div>
   );
 }
+
+export default PageHeader;

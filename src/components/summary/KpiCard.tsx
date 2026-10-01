@@ -1,23 +1,83 @@
 /**
  * KPI 指标卡片 - 可复用的关键指标展示组件
  * 设计参考：Dashboard StatCard (src/components/dashboard/cards/StatCard.tsx)
+ *
+ * 2026-10-01 升级：新增 variant="hero" — 深色玻璃 + 大字号 + corner-glow（汇总看板 Hero 区专用）
  */
 
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 /** KPI 卡片颜色方案映射 */
-const COLOR_SCHEMES: Record<string, { bg: string; iconBg: string; trendUp: string }> = {
-  emerald: { bg: 'bg-emerald-50', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600', trendUp: 'text-emerald-600' },
-  amber:   { bg: 'bg-amber-50',   iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',     trendUp: 'text-amber-600' },
-  red:     { bg: 'bg-red-50',     iconBg: 'bg-gradient-to-br from-red-500 to-red-600',         trendUp: 'text-red-600' },
-  blue:    { bg: 'bg-blue-50',    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',       trendUp: 'text-blue-600' },
-  purple:  { bg: 'bg-purple-50',  iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',   trendUp: 'text-purple-600' },
-  slate:   { bg: 'bg-slate-50',   iconBg: 'bg-gradient-to-br from-slate-500 to-slate-600',     trendUp: 'text-slate-600' },
+const COLOR_SCHEMES: Record<string, {
+  bg: string;
+  iconBg: string;
+  trendUp: string;
+  /** hero 模式专属（2026-10-01 第二版：浅色基底，不再深色） */
+  heroBg: string;
+  heroText: string;
+  heroSub: string;
+  heroBorder: string;
+}> = {
+  emerald: {
+    bg: 'bg-emerald-50',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    trendUp: 'text-emerald-600',
+    heroBg: 'bg-emerald-50/50',
+    heroText: 'text-emerald-700',
+    heroSub: 'text-emerald-600/80',
+    heroBorder: 'border-emerald-200/60',
+  },
+  amber: {
+    bg: 'bg-amber-50',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    trendUp: 'text-amber-600',
+    heroBg: 'bg-amber-50/50',
+    heroText: 'text-amber-700',
+    heroSub: 'text-amber-600/80',
+    heroBorder: 'border-amber-200/60',
+  },
+  red: {
+    bg: 'bg-red-50',
+    iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
+    trendUp: 'text-red-600',
+    heroBg: 'bg-red-50/50',
+    heroText: 'text-red-700',
+    heroSub: 'text-red-600/80',
+    heroBorder: 'border-red-200/60',
+  },
+  blue: {
+    bg: 'bg-blue-50',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    trendUp: 'text-blue-600',
+    heroBg: 'bg-blue-50/50',
+    heroText: 'text-blue-700',
+    heroSub: 'text-blue-600/80',
+    heroBorder: 'border-blue-200/60',
+  },
+  purple: {
+    bg: 'bg-purple-50',
+    iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    trendUp: 'text-purple-600',
+    heroBg: 'bg-purple-50/50',
+    heroText: 'text-purple-700',
+    heroSub: 'text-purple-600/80',
+    heroBorder: 'border-purple-200/60',
+  },
+  slate: {
+    bg: 'bg-slate-50',
+    iconBg: 'bg-gradient-to-br from-slate-500 to-slate-600',
+    trendUp: 'text-slate-600',
+    heroBg: 'bg-slate-50/50',
+    heroText: 'text-slate-700',
+    heroSub: 'text-slate-600/80',
+    heroBorder: 'border-slate-200/60',
+  },
 };
 
 export interface KpiCardProps {
   /** 图标元素（ReactNode，如 lucide-react 图标） */
-  icon: React.ReactNode;
+  icon: ReactNode;
   /** 指标标签 */
   label: string;
   /** 指标数值 */
@@ -30,12 +90,63 @@ export interface KpiCardProps {
   onClick?: () => void;
   /** 紧凑模式，缩小内边距和字体 */
   compact?: boolean;
+  /**
+   * 视觉变体：
+   * - 'standard'（默认）：浅色卡片
+   * - 'hero'：深色玻璃（用于汇总看板 Hero 区）
+   */
+  variant?: 'standard' | 'hero';
 }
 
-export function KpiCard({ icon, label, value, trend, colorScheme = 'emerald', onClick, compact }: KpiCardProps) {
+export function KpiCard({
+  icon,
+  label,
+  value,
+  trend,
+  colorScheme = 'emerald',
+  onClick,
+  compact,
+  variant: variantProp = 'standard',
+}: KpiCardProps) {
   const colors = COLOR_SCHEMES[colorScheme] || COLOR_SCHEMES.emerald;
 
-  // 紧凑模式：横向布局（图标-文字-趋势）
+  // ============ Hero 变体（2026-10-01 第二版：浅色基底） ============
+  if (variantProp === 'hero') {
+    return (
+      <div
+        className={`relative ${colors.heroBg} border ${colors.heroBorder} rounded-xl px-4 py-3 overflow-hidden hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-lg ${colors.iconBg} flex items-center justify-center shadow-sm flex-shrink-0`}>
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-2xl font-bold tabular-nums leading-tight truncate ${colors.heroText}`}>
+              {value}
+            </p>
+            <p className={`text-[11px] mt-0.5 ${colors.heroSub} truncate`}>{label}</p>
+          </div>
+          {trend !== undefined && (
+            <div
+              className={`flex items-center gap-0.5 text-xs flex-shrink-0 ${
+                trend >= 0 ? 'text-emerald-600' : 'text-red-600'
+              }`}
+            >
+              {trend >= 0 ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              <span>{Math.abs(trend)}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============ Compact 紧凑模式：浅色 ============
   if (compact) {
     return (
       <div
@@ -65,7 +176,7 @@ export function KpiCard({ icon, label, value, trend, colorScheme = 'emerald', on
     );
   }
 
-  // 标准模式：纵向布局（上图标 + 下文字）
+  // ============ Standard 标准模式：浅色 ============
   return (
     <div
       className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-5 ${onClick ? 'cursor-pointer' : ''}`}
