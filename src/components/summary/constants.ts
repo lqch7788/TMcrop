@@ -9,7 +9,42 @@ export const ALERT_THRESHOLDS = {
   cost: { warning: 1.1, critical: 1.3 },
   task: { warning: 0.7, critical: 0.5 },
   overdue: { warning: 3, critical: 7 },
+  /** 2026-10-05：问题汇总页高优先级预警阈值（P1-3）
+   * - 高优数量 >= critical 阈值（默认 3）→ 严重预警
+   * - 高优数量 >= warning 阈值（默认 1）→ 一般预警
+   * - 同日 0 个高优 → 不预警 */
+  problem: { warning: 1, critical: 3 },
 } as const;
+
+/** 高优预警等级判定（P1-3） */
+export function getProblemAlertSeverity(highPriorityCount: number): 'critical' | 'warning' | null {
+  if (highPriorityCount >= ALERT_THRESHOLDS.problem.critical) return 'critical';
+  if (highPriorityCount >= ALERT_THRESHOLDS.problem.warning) return 'warning';
+  return null;
+}
+
+/** 问题来源模块 → 中文标签（P2-2）
+ *  key 与 usePersistentProblems.ProblemEntry.sourceModule 字面量联合一致 */
+export const PROBLEM_SOURCE_LABEL: Record<
+  'inspection' | 'manual' | 'production' | 'equipment' | 'other',
+  string
+> = {
+  inspection: '巡查',
+  manual: '手动',
+  production: '生产',
+  equipment: '设备',
+  other: '其他',
+};
+
+/** 问题状态 → 中文标签（P2-2 辅助）
+ *  与 problemStatusToCN 工具并存；这里用于显示 fallback */
+export const PROBLEM_STATUS_CN: Record<string, string> = {
+  pending: '待处理',
+  in_progress: '处理中',
+  completed: '已处理',
+  待验收: '待验收',
+  待处理: '待处理',
+};
 
 /** 状态 → Tailwind颜色名映射 */
 export const COLOR_BY_STATUS: Record<string, string> = {

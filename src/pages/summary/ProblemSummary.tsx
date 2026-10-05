@@ -16,6 +16,7 @@ import {
 import { PageHeader, KpiCard, KpiCardGrid, AlertCard, SummaryDateFilter } from '../../components/summary';
 import { Tabs, TabsList, TabsTrigger, TabsContent, Skeleton } from '@/components/ui';
 import { useSummaryDataStore } from '../../stores';
+import { getProblemAlertSeverity } from '../../components/summary/constants';
 
 // 2026-10-01：明细 TAB 复用 DailyProblemSummary（hideHeader 模式）—— lazy load 避免初次加载整页
 const DailyProblemSummary = lazy(() => import('../DailyProblemSummary'));
@@ -42,7 +43,18 @@ function LoadingView() {
 }
 
 // ========== 空状态组件 ==========
-function EmptyView({ onRetry }: { onRetry: () => void }) {
+function EmptyView({ onRetry, onLoadRange }: {
+  onRetry: () => void;
+  onLoadRange: (startDate: string, endDate: string) => void;
+}) {
+  // 计算"近 30 天""近 90 天"日期范围
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+  const d90 = new Date(now); d90.setDate(d90.getDate() - 90);
+  const start30 = d30.toISOString().split('T')[0];
+  const start90 = d90.toISOString().split('T')[0];
+
   return (
     <div className="space-y-6 bg-[#F2F6FA] p-6">
       <PageHeader
@@ -52,13 +64,28 @@ function EmptyView({ onRetry }: { onRetry: () => void }) {
       />
       <div className="bg-white rounded-xl p-12 text-center">
         <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 text-lg mb-4">暂无问题数据</p>
-        <button
-          onClick={onRetry}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-        >
-          重新加载
-        </button>
+        <p className="text-gray-500 text-lg mb-2">暂无问题数据</p>
+        <p className="text-gray-400 text-xs mb-6">当前时间范围内没有记录。可以试试其他时间段，或检查后端数据。</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => onLoadRange(start30, today)}
+            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors text-sm"
+          >
+            最近 30 天
+          </button>
+          <button
+            onClick={() => onLoadRange(start90, today)}
+            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors text-sm"
+          >
+            最近 90 天
+          </button>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+          >
+            重新加载
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -187,21 +214,30 @@ export default function ProblemSummary() {
     ].filter((d) => d.value > 0);
   }, [problemItems]);
 
-  /** 月度问题分布（按月份分组汇总） */
+  /** 月度问题分布（按月份分组汇总）
+ *  P2-3：增加「待处理」和「高优先级」分项（之前只有「问题总数 + 已处理」） */
   const monthlyData = useMemo(() => {
-    const groups: Record<string, { month: string; 问题总数: number; 已处理: number }> = {};
+    const groups: Record<string, {
+      month: string;
+      问题总数: number;
+      已处理: number;
+      待处理: number;
+      高优先级: number;
+    }> = {};
     problemItems.forEach((item) => {
       const m = item.month || item.date?.substring(0, 7) || '未知';
       if (!groups[m]) {
-        groups[m] = { month: m, 问题总数: 0, 已处理: 0 };
+        groups[m] = { month: m, 问题总数: 0, 已处理: 0, 待处理: 0, 高优先级: 0 };
       }
       groups[m].问题总数 += item.total;
       groups[m].已处理 += item.resolved;
+      groups[m].待处理 += item.pending;
+      groups[m].高优先级 += item.highPriority;
     });
     return Object.values(groups).sort((a, b) => a.month.localeCompare(b.month));
   }, [problemItems]);
 
-  /** 高优先级问题预警（取前10条高优先级>0的日汇总） */
+  /** 高优先级问题预警（取前8条高优先级>0的日汇总） */
   const highPriorityAlerts = useMemo(() => {
     return problemItems
       .filter((item) => item.highPriority > 0)
@@ -210,8 +246,11 @@ export default function ProblemSummary() {
       .map((item) => ({
         title: `${item.date} - ${item.highPriority}个高优先级问题`,
         description: `共${item.total}个问题，待处理${item.pending}，处理中${item.inProgress}，已处理${item.resolved}`,
-        severity: (item.highPriority >= 3 ? 'critical' : 'warning') as 'critical' | 'warning',
-      }));
+        // P1-3：阈值提到 constants（warning: 1, critical: 3）
+        severity: getProblemAlertSeverity(item.highPriority) ?? 'warning',
+      }))
+      // 过滤掉非预警的（getProblemAlertSeverity 返回 null 时）
+      .filter((a): a is { title: string; description: string; severity: 'critical' | 'warning' } => a.severity !== null);
   }, [problemItems]);
 
   // ========== 加载/空状态 ==========
@@ -220,7 +259,12 @@ export default function ProblemSummary() {
   }
 
   if (!isLoading && !problemItems.length) {
-    return <EmptyView onRetry={() => fetchProblems()} />;
+    return (
+      <EmptyView
+        onRetry={() => fetchProblems({ startDate, endDate })}
+        onLoadRange={(start, end) => fetchProblems({ startDate: start, endDate: end })}
+      />
+    );
   }
 
   return (
@@ -447,8 +491,10 @@ export default function ProblemSummary() {
                           }}
                         />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Bar dataKey="问题总数" fill={COLORS.red} radius={[0, 4, 4, 0]} name="问题总数" barSize={20} />
-                        <Bar dataKey="已处理" fill={COLORS.emerald} radius={[0, 4, 4, 0]} name="已处理" barSize={20} />
+                        <Bar dataKey="问题总数" fill={COLORS.red} radius={[0, 4, 4, 0]} name="问题总数" barSize={16} />
+                        <Bar dataKey="待处理" fill={COLORS.amber} radius={[0, 4, 4, 0]} name="待处理" barSize={16} />
+                        <Bar dataKey="已处理" fill={COLORS.emerald} radius={[0, 4, 4, 0]} name="已处理" barSize={16} />
+                        <Bar dataKey="高优先级" fill="#dc2626" radius={[0, 4, 4, 0]} name="高优先级" barSize={16} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -486,17 +532,28 @@ export default function ProblemSummary() {
               </div>
             </div>
 
-          {/* 错误提示 */}
+          {/* 错误提示（P3-2：加重试按钮） */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-              数据加载异常：{error}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between gap-3 text-sm text-red-700">
+              <span>数据加载异常：{error}</span>
+              <button
+                type="button"
+                onClick={() => fetchProblems({ startDate, endDate })}
+                className="px-3 py-1 text-xs bg-red-100 hover:bg-red-200 rounded transition-colors"
+              >
+                重试
+              </button>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="detail" className="mt-4">
           <Suspense fallback={<Skeleton className="h-96" />}>
-            <DailyProblemSummary hideHeader />
+            {/* 2026-10-05：传递 dateRange prop，让明细 TAB 按趋势图同口径筛选（避免 P0-2 日期口径不一致） */}
+            <DailyProblemSummary
+              hideHeader
+              dateRange={{ startDate, endDate }}
+            />
           </Suspense>
         </TabsContent>
       </Tabs>

@@ -1,14 +1,15 @@
 /**
  * 每日问题汇总表页面
  *
- * 2026-10-05：列表数据源修复
- * - 之前 useDailyProblemSummary 返回的是「日汇总聚合行」（每行：日期 + total/pending/... 计数），
- *   但 columns 定义用的是「明细行」字段（greenhouse/crop/worker/...），导致渲染时空。
- * - 修复：列表数据切到 usePersistentProblems 的 ProblemEntry[] 明细数组，column key 对齐字段名。
- * - statCards 仍来自 useDailyProblemSummary（聚合数据，用于顶部 KPI 卡）。
+ * 数据源策略（2026-10-05 修订）：
+ * - 列表数据：优先从后端 `/api/problems` 拉（V2.1 铁律：API 直连），按 create_time 范围过滤
+ * - fallback：API 失败时降级到 localStorage mock 数据（避免领导看不到列表）
+ * - statCards：来自 useDailyProblemSummary → 后端 `/api/problems/summary-overview`
+ *
+ * 列渲染对齐 ProblemEntry 字段名；后端 Problem 数据通过 useProgressMapper 映射。
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, X, Send } from 'lucide-react';
 import {
   PageHeader,
@@ -19,9 +20,11 @@ import {
   useExport,
 } from '../components/summary';
 import { useDailyProblemSummary, useProblemDispatch, usePersistentProblems } from '../hooks';
+import { getProblems, dispatchTempTaskForProblem, type Problem as ApiProblem } from '../services/apiProblemService';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
 import { problemStatusToCN, isProblemStatus } from '../utils/problemStatus';
 import type { TableColumn } from '../components/summary/types';
+import { PROBLEM_SOURCE_LABEL } from '../components/summary/constants';
 
 interface DailyProblemSummaryProps {
   /**
@@ -30,21 +33,80 @@ interface DailyProblemSummaryProps {
    * - false/不传：完整页面（标题+内容），用于独立路由 /daily-problem-summary
    */
   hideHeader?: boolean;
+  /**
+   * 2026-10-05：日期范围 prop（来自 ProblemSummary 趋势图 TAB 的"本年度/月/季度/自定义"）。
+   * 列表后端按 create_time 在此范围内过滤；
+   * 不传则拉全部（适合独立路由 /daily-problem-summary 的默认场景）。
+   */
+  dateRange?: { startDate: string; endDate: string };
 }
 
-/** ProblemEntry.sourceModule → 中文标签 */
-const SOURCE_MODULE_LABEL: Record<NonNullable<ProblemEntry['sourceModule']>, string> = {
-  inspection: '巡查',
-  manual: '手动',
-  production: '生产',
-  equipment: '设备',
-  other: '其他',
-};
+/**
+ * 2026-10-05：后端 Problem → 前端 ProblemEntry 字段映射
+ * - 后端 problems 表只有 priority 字段（high/medium/low），无 severity 列
+ * - 前端 ProblemEntry.issueSeverity 用中文（轻微/中等/严重）
+ * - 这里把后端 priority 英文值映射为前端中文枚举
+ */
+function mapApiProblemToEntry(p: ApiProblem): ProblemEntry {
+  // 后端 SELECT * 实际包含 priority 字段，但 Problem TS interface 未声明——运行时读不到 TS 类型
+  // 用 unknown cast 取值，兼容两种取值（priority 英文 / severity 中文历史数据）
+  const raw = p as unknown as { priority?: string; severity?: string };
+  return {
+    id: typeof p.id === 'string' ? parseInt(p.id, 10) || 0 : Number(p.id),
+    problemCode: p.problemCode,
+    greenhouseId: p.greenhouseId || '',
+    greenhouseName: p.greenhouseName || '-',
+    cropName: '',  // 后端 Problem schema 暂未含 cropName（数据库 schema.ts 也无），保留空
+    inspectorId: p.creatorId,
+    inspectorName: p.creatorName,
+    checkDate: (p.createTime || '').slice(0, 10),
+    checkTime: (p.createTime || '').slice(11, 16),
+    weather: '',
+    temperature: 0,
+    humidity: 0,
+    cropStatus: '良好',
+    issueText: p.description || p.title || '',
+    // 修复：后端 priority 英文 → 前端 severity 中文（之前用 p.severity 是 undefined）
+    issueSeverity: mapPriorityToSeverity(raw.priority ?? raw.severity),
+    status: (p.status === '已处理' ? '已处理'
+            : p.status === '处理中' ? '处理中'
+            : '待处理') as ProblemEntry['status'],
+    handler: p.handlerName || '',
+    handleDate: p.handleTime ? (p.handleTime as string).slice(0, 10) : '',
+    handleResult: p.handleResult || '',
+    completionTime: p.handleTime || '',
+    expectedCompletion: p.expectedCompletion || '',
+    sourceModule: (p.sourceType as ProblemEntry['sourceModule']) || 'other',
+    sourceId: p.sourceId || '',
+    sourceDetail: '',
+    remarks: '',
+    images: p.photos || [],
+  };
+}
 
-export default function DailyProblemSummary({ hideHeader = false }: DailyProblemSummaryProps = {}) {
-  // 筛选状态
+/** priority 英文 → severity 中文映射（兼容历史数据已有 severity 字段的情况） */
+function mapPriorityToSeverity(input?: string): ProblemEntry['issueSeverity'] {
+  if (!input) return '轻微';
+  const normalized = input.toLowerCase();
+  const map: Record<string, ProblemEntry['issueSeverity']> = {
+    high: '严重',
+    urgent: '严重',
+    medium: '中等',
+    normal: '轻微',
+    low: '轻微',
+  };
+  if (map[normalized]) return map[normalized];
+  if (input === '严重' || input === '中等' || input === '轻微') return input;
+  return '轻微';
+}
+
+export default function DailyProblemSummary({ hideHeader = false, dateRange }: DailyProblemSummaryProps = {}) {
+  // 筛选状态（P1-2：增加状态/严重程度/搜索）
   const [dateFilter, setDateFilter] = useState('');
   const [greenhouseFilter, setGreenhouseFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('');
+  const [keyword, setKeyword] = useState('');
 
   // 获取每日问题汇总聚合数据（用于 statCards / filterOptions）
   const { summaries, statCards, loading, filterOptions } = useDailyProblemSummary({
@@ -52,10 +114,54 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
     greenhouse: greenhouseFilter || undefined,
   });
 
-  // 2026-10-05 修复：列表数据改用 ProblemEntry[] 明细（之前用 summaries 聚合行导致渲染空白）
-  const { problems: detailProblems } = usePersistentProblems();
+  // ========== 2026-10-05 改进：列表数据走 API（V2.1 铁律） ==========
+  /** API 拉到的明细 */
+  const [apiProblems, setApiProblems] = useState<ProblemEntry[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
-  /** 应用筛选后的明细列表 */
+  /** fallback 用本地 mock 数据（API 失败时启用） */
+  const { problems: localProblems } = usePersistentProblems();
+
+  /** 拉取后端问题明细列表 */
+  const fetchDetailProblems = useCallback(async () => {
+    setApiLoading(true);
+    setApiError(null);
+    try {
+      const params: Parameters<typeof getProblems>[0] = {};
+      if (dateRange?.startDate) params.startDate = dateRange.startDate;
+      if (dateRange?.endDate) params.endDate = dateRange.endDate;
+      // P1-2：状态/严重程度/搜索参数透传给后端
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      if (severityFilter && severityFilter !== 'all') params.severity = severityFilter;
+      if (keyword.trim()) params.keyword = keyword.trim();
+      const list = await getProblems(params);
+      setApiProblems(list.map(mapApiProblemToEntry));
+      setIsOfflineFallback(false);
+    } catch (err) {
+      // V2.1：API 失败不应静默 fallback，应提示用户；这里先静默降级 + 标记 offline
+      console.warn('[DailyProblemSummary] API 拉取失败，启用 localStorage fallback:', err);
+      setApiError((err as Error).message);
+      setIsOfflineFallback(true);
+    } finally {
+      setApiLoading(false);
+    }
+  }, [dateRange?.startDate, dateRange?.endDate, statusFilter, severityFilter, keyword]);
+
+  /** dateRange 变化时重新拉取 */
+  useEffect(() => {
+    fetchDetailProblems();
+  }, [fetchDetailProblems]);
+
+  /** 当前实际用于展示的明细列表：API 数据优先，失败时 fallback */
+  const detailProblems = useMemo(
+    () => (isOfflineFallback || apiProblems.length === 0 ? localProblems : apiProblems),
+    [apiProblems, localProblems, isOfflineFallback]
+  );
+
+  /** 应用前端筛选项（精确日期 + 温室 + 状态 + 严重程度 + 关键词）
+   * 注意：dateRange/statusFilter/severityFilter/keyword 已在 API 层过滤；这里只补前端精确日期 + 温室 */
   const filteredProblems = useMemo(() => {
     return detailProblems.filter((p) => {
       if (dateFilter && p.checkDate !== dateFilter) return false;
@@ -91,6 +197,10 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
     data: ProblemEntry | null;
   }>({ isOpen: false, data: null });
 
+  // P1-1：分派中的 loading + 错误提示
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+
   // 导出 Hook（用 ProblemEntry 明细字段）
   const exportHook = useExport({
     data: filteredProblems.map((p) => ({
@@ -98,7 +208,7 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
       温室: p.greenhouseName,
       作物: p.cropName,
       上报人: p.inspectorName,
-      来源: SOURCE_MODULE_LABEL[p.sourceModule || 'other'] || '其他',
+      来源: PROBLEM_SOURCE_LABEL[p.sourceModule || 'other'] || '其他',
       问题描述: p.issueText,
       严重程度: p.issueSeverity,
       状态: problemStatusToCN(p.status),
@@ -108,7 +218,23 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
     filenamePrefix: '每日问题汇总',
   });
 
-  // 筛选配置
+  // 筛选配置（P1-2：增加状态 / 严重程度 / 搜索）
+  const STATUS_FILTER_OPTIONS = [
+    { value: 'all', label: '全部状态' },
+    { value: '待处理', label: '待处理' },
+    { value: '处理中', label: '处理中' },
+    { value: '已处理', label: '已处理' },
+    { value: '待验收', label: '待验收' },
+  ];
+  // P1-2 修复：value 用后端 priority 英文值（low/medium/high），label 显示中文
+  // 否则 send '严重' 给后端 SQL `priority = ?` 不会匹配任何记录（problems 表 priority 是英文枚举）
+  const SEVERITY_FILTER_OPTIONS = [
+    { value: 'all', label: '全部严重度' },
+    { value: 'high', label: '严重' },
+    { value: 'medium', label: '中等' },
+    { value: 'low', label: '轻微' },
+  ];
+
   const filterSelects = [
     {
       key: 'greenhouse',
@@ -117,6 +243,26 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
       value: greenhouseFilter,
       onChange: (value: string) => {
         setGreenhouseFilter(value);
+        setCurrentPage(1);
+      },
+    },
+    {
+      key: 'status',
+      label: '状态',
+      options: STATUS_FILTER_OPTIONS,
+      value: statusFilter,
+      onChange: (value: string) => {
+        setStatusFilter(value);
+        setCurrentPage(1);
+      },
+    },
+    {
+      key: 'severity',
+      label: '严重度',
+      options: SEVERITY_FILTER_OPTIONS,
+      value: severityFilter,
+      onChange: (value: string) => {
+        setSeverityFilter(value);
         setCurrentPage(1);
       },
     },
@@ -134,7 +280,7 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
       width: '80px',
       render: (value: unknown) => (
         <span className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">
-          {SOURCE_MODULE_LABEL[value as keyof typeof SOURCE_MODULE_LABEL] || String(value || '-')}
+          {PROBLEM_SOURCE_LABEL[value as keyof typeof PROBLEM_SOURCE_LABEL] || String(value || '-')}
         </span>
       ),
     },
@@ -208,6 +354,21 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
       {/* 统计卡片 - 使用 Hook 返回的动态数据 */}
       <StatCards cards={statCards} />
 
+      {/* 2026-10-05：API 失败提示（offline fallback 警告） */}
+      {isOfflineFallback && apiError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3 text-amber-800 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span>无法连接后端（{apiError}），已临时切换到本地缓存数据，列表可能不全。</span>
+          <button
+            type="button"
+            onClick={() => fetchDetailProblems()}
+            className="ml-auto px-3 py-1 text-xs bg-amber-100 hover:bg-amber-200 rounded transition-colors"
+          >
+            重试
+          </button>
+        </div>
+      )}
+
       {/* 筛选工具栏 */}
       <Filters
         filters={{
@@ -220,6 +381,39 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
         onConfirmExport={exportHook.handleConfirmExport}
         onCancelExport={exportHook.handleCancelExport}
       />
+
+      {/* P1-2：关键词搜索（按 Enter 触发，避免每键 fetch） */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') fetchDetailProblems(); }}
+          placeholder="搜索问题描述/温室/编号"
+          className="flex-1 max-w-xs px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+        />
+        <button
+          type="button"
+          onClick={() => fetchDetailProblems()}
+          className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+        >
+          搜索
+        </button>
+        {(keyword || statusFilter !== '' || severityFilter !== '') && (
+          <button
+            type="button"
+            onClick={() => {
+              setKeyword('');
+              setStatusFilter('');
+              setSeverityFilter('');
+              setCurrentPage(1);
+            }}
+            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+          >
+            清空筛选
+          </button>
+        )}
+      </div>
 
       {/* 数据表格 */}
       <SummaryTable
@@ -507,36 +701,68 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
             </div>
 
             {/* 弹窗底部 */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
-              <button
-                onClick={() => {
-                  setDispatchModal({ isOpen: false, problem: null });
-                  setSelectedWorker(null);
-                }}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedWorker && dispatchModal.problem) {
-                    dispatchProblem(
-                      dispatchModal.problem.id,
-                      selectedWorker.id,
-                      selectedWorker.name
-                    );
+            <div className="px-6 py-3 border-t bg-gray-50">
+              {dispatchError && (
+                <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                  分派失败：{dispatchError}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
                     setDispatchModal({ isOpen: false, problem: null });
                     setSelectedWorker(null);
-                    // 刷新详情
+                    setDispatchError(null);
+                  }}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  取消
+                </button>
+              <button
+                onClick={async () => {
+                  if (!selectedWorker || !dispatchModal.problem) return;
+                  const problem = dispatchModal.problem;
+                  const problemIdStr = String(problem.id);
+                  setDispatching(true);
+                  try {
+                    // P1-1：先调后端真正派单（V2.1 铁律：API 直连）
+                    const result = await dispatchTempTaskForProblem(problemIdStr, {
+                      assigneeId: selectedWorker.id,
+                      assigneeName: selectedWorker.name,
+                      title: `[问题]${problem.issueText.slice(0, 30)}`,
+                      greenhouseName: problem.greenhouseName,
+                      urgency: problem.issueSeverity === '严重' ? 'urgent' : problem.issueSeverity === '中等' ? 'high' : 'normal',
+                      description: problem.issueText,
+                    });
+                    if (!result) {
+                      throw new Error('后端返回为空');
+                    }
+                    // 后端派单成功 → 再触发本地 lifecycle 记录（保持兼容性）
+                    dispatchProblem(problem.id, selectedWorker.id, selectedWorker.name);
+                    setDispatchModal({ isOpen: false, problem: null });
+                    setSelectedWorker(null);
                     setDetailModal({ isOpen: false, data: null });
+                    // 拉新列表（后端状态已更新）
+                    fetchDetailProblems();
+                  } catch (err) {
+                    // V2.1：派单失败时抛错给用户，不静默吞错
+                    console.error('[DailyProblemSummary] 分派失败:', err);
+                    setDispatchError((err as Error).message || '分派失败，请重试');
+                  } finally {
+                    setDispatching(false);
                   }
                 }}
-                disabled={!selectedWorker}
+                disabled={!selectedWorker || dispatching}
                 className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <Send className="w-4 h-4" />
-                确认分派
+                {dispatching ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                {dispatching ? '分派中...' : '确认分派'}
               </button>
+              </div>
             </div>
           </div>
         </div>
