@@ -360,17 +360,19 @@ router.get('/daily-summary', (req: Request, res: Response) => {
       `;
     } else {
       // 按日期分组（默认）
+      // 2026-10-05：兼容历史数据——status / priority 字段既有英文（新数据）也有中文（旧数据）；
+      // 增加 IN 子句同时匹配两种枚举值；增加「待验收」归入 pending（待人为干预）。
       sql = `
         SELECT
           strftime('%Y-%m-%d', create_time) as date,
           strftime('%Y-%m', create_time) as month,
           COUNT(*) as total,
-          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as resolved,
-          SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority,
-          SUM(CASE WHEN priority = 'medium' THEN 1 ELSE 0 END) as medium_priority,
-          SUM(CASE WHEN priority = 'low' THEN 1 ELSE 0 END) as low_priority
+          SUM(CASE WHEN status IN ('pending', '待处理', '待验收') THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status IN ('in_progress', '处理中') THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status IN ('completed', '已处理') THEN 1 ELSE 0 END) as resolved,
+          SUM(CASE WHEN priority IN ('high', '严重') THEN 1 ELSE 0 END) as high_priority,
+          SUM(CASE WHEN priority IN ('medium', '中等') THEN 1 ELSE 0 END) as medium_priority,
+          SUM(CASE WHEN priority IN ('low', '轻微') THEN 1 ELSE 0 END) as low_priority
         FROM problems
         WHERE 1=1
       `;
