@@ -1,9 +1,14 @@
 /**
  * 每日问题汇总表页面
- * 使用 useDailyProblemSummary Hook 获取动态数据
+ *
+ * 2026-10-05：列表数据源修复
+ * - 之前 useDailyProblemSummary 返回的是「日汇总聚合行」（每行：日期 + total/pending/... 计数），
+ *   但 columns 定义用的是「明细行」字段（greenhouse/crop/worker/...），导致渲染时空。
+ * - 修复：列表数据切到 usePersistentProblems 的 ProblemEntry[] 明细数组，column key 对齐字段名。
+ * - statCards 仍来自 useDailyProblemSummary（聚合数据，用于顶部 KPI 卡）。
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangle, X, Send } from 'lucide-react';
 import {
   PageHeader,
@@ -13,9 +18,10 @@ import {
   ExportModal,
   useExport,
 } from '../components/summary';
-import { useDailyProblemSummary, useProblemDispatch } from '../hooks';
+import { useDailyProblemSummary, useProblemDispatch, usePersistentProblems } from '../hooks';
 import type { ProblemEntry } from '../hooks/usePersistentProblems';
 import { problemStatusToCN, isProblemStatus } from '../utils/problemStatus';
+import type { TableColumn } from '../components/summary/types';
 
 interface DailyProblemSummaryProps {
   /**
@@ -26,16 +32,37 @@ interface DailyProblemSummaryProps {
   hideHeader?: boolean;
 }
 
+/** ProblemEntry.sourceModule → 中文标签 */
+const SOURCE_MODULE_LABEL: Record<NonNullable<ProblemEntry['sourceModule']>, string> = {
+  inspection: '巡查',
+  manual: '手动',
+  production: '生产',
+  equipment: '设备',
+  other: '其他',
+};
+
 export default function DailyProblemSummary({ hideHeader = false }: DailyProblemSummaryProps = {}) {
   // 筛选状态
   const [dateFilter, setDateFilter] = useState('');
   const [greenhouseFilter, setGreenhouseFilter] = useState('');
 
-  // 获取每日问题汇总数据
+  // 获取每日问题汇总聚合数据（用于 statCards / filterOptions）
   const { summaries, statCards, loading, filterOptions } = useDailyProblemSummary({
     date: dateFilter || undefined,
     greenhouse: greenhouseFilter || undefined,
   });
+
+  // 2026-10-05 修复：列表数据改用 ProblemEntry[] 明细（之前用 summaries 聚合行导致渲染空白）
+  const { problems: detailProblems } = usePersistentProblems();
+
+  /** 应用筛选后的明细列表 */
+  const filteredProblems = useMemo(() => {
+    return detailProblems.filter((p) => {
+      if (dateFilter && p.checkDate !== dateFilter) return false;
+      if (greenhouseFilter && greenhouseFilter !== '全部' && p.greenhouseName !== greenhouseFilter) return false;
+      return true;
+    });
+  }, [detailProblems, dateFilter, greenhouseFilter]);
 
   // 问题分派 Hook
   const { dispatchProblem, workerList } = useProblemDispatch();
@@ -55,8 +82,8 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
-  const totalPages = Math.ceil(summaries.length || 1);
-  const paginatedData = summaries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(filteredProblems.length || 1);
+  const paginatedData = filteredProblems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // 详情弹窗状态
   const [detailModal, setDetailModal] = useState<{
@@ -64,20 +91,20 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
     data: ProblemEntry | null;
   }>({ isOpen: false, data: null });
 
-  // 导出 Hook
+  // 导出 Hook（用 ProblemEntry 明细字段）
   const exportHook = useExport({
-    data: summaries.map((p) => ({
-      日期: p.date,
-      温室: p.greenhouse,
-      作物: p.crop,
-      上报人: p.worker,
-      问题类型: p.problemType,
-      问题描述: p.description,
-      严重程度: p.severity,
-      状态: p.status,
-      处理人: p.handler,
+    data: filteredProblems.map((p) => ({
+      日期: p.checkDate,
+      温室: p.greenhouseName,
+      作物: p.cropName,
+      上报人: p.inspectorName,
+      来源: SOURCE_MODULE_LABEL[p.sourceModule || 'other'] || '其他',
+      问题描述: p.issueText,
+      严重程度: p.issueSeverity,
+      状态: problemStatusToCN(p.status),
+      处理人: p.handler || '-',
     })),
-    headers: ['日期', '温室', '作物', '上报人', '问题类型', '问题描述', '严重程度', '状态', '处理人'],
+    headers: ['日期', '温室', '作物', '上报人', '来源', '问题描述', '严重程度', '状态', '处理人'],
     filenamePrefix: '每日问题汇总',
   });
 
@@ -95,48 +122,61 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
     },
   ];
 
-  // 表格列配置
-  const columns = [
-    { key: 'date', label: '日期', width: '120px' },
-    { key: 'greenhouse', label: '温室', width: '80px' },
-    { key: 'crop', label: '作物', width: '80px' },
-    { key: 'worker', label: '上报人', width: '80px' },
-    { key: 'problemType', label: '问题类型', width: '80px' },
+  // 表格列配置（key 对齐 ProblemEntry 字段名）
+  const columns: TableColumn<ProblemEntry>[] = [
+    { key: 'checkDate', label: '日期', width: '120px' },
+    { key: 'greenhouseName', label: '温室', width: '80px' },
+    { key: 'cropName', label: '作物', width: '80px' },
+    { key: 'inspectorName', label: '上报人', width: '80px' },
     {
-      key: 'description',
-      label: '问题描述',
-      width: '200px',
-      render: (value: string, record: unknown) => {
-        const row = record as { _problemData?: ProblemEntry };
-        return (
-          <span
-            className="max-w-[150px] truncate block cursor-pointer text-blue-600 hover:text-blue-800"
-            onClick={() => row._problemData && setDetailModal({ isOpen: true, data: row._problemData })}
-            title="点击查看详情"
-          >
-            {value}
-          </span>
-        );
-      },
+      key: 'sourceModule',
+      label: '来源',
+      width: '80px',
+      render: (value: unknown) => (
+        <span className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">
+          {SOURCE_MODULE_LABEL[value as keyof typeof SOURCE_MODULE_LABEL] || String(value || '-')}
+        </span>
+      ),
     },
     {
-      key: 'severity',
+      key: 'issueText',
+      label: '问题描述',
+      width: '200px',
+      render: (value: unknown, record: ProblemEntry) => (
+        <span
+          className="max-w-[150px] truncate block cursor-pointer text-blue-600 hover:text-blue-800"
+          onClick={() => setDetailModal({ isOpen: true, data: record })}
+          title="点击查看详情"
+        >
+          {String(value || '')}
+        </span>
+      ),
+    },
+    {
+      key: 'issueSeverity',
       label: '严重程度',
       width: '100px',
-      render: (value: string) => {
-        const severity = value;
-        const className = severity === '严重' ? 'bg-red-100 text-red-700' : severity === '中等' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700';
-        return <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${className}`}>{severity}</span>;
+      render: (value: unknown) => {
+        const v = String(value);
+        const className =
+          v === '严重' ? 'bg-red-100 text-red-700' :
+          v === '中等' ? 'bg-amber-100 text-amber-700' :
+          'bg-blue-100 text-blue-700';
+        return <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${className}`}>{v}</span>;
       },
     },
     {
       key: 'status',
       label: '状态',
       width: '100px',
-      render: (value: string) => {
-        const status = value;
-        const className = status === '已处理' ? 'bg-green-100 text-green-700' : status === '处理中' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700';
-        return <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${className}`}>{status}</span>;
+      render: (value: unknown) => {
+        // value 来自 ProblemEntry.status，统一用 problemStatusToCN 转中文（兼容枚举别名）
+        const cn = problemStatusToCN(String(value));
+        const className =
+          cn === '已处理' ? 'bg-green-100 text-green-700' :
+          cn === '处理中' ? 'bg-amber-100 text-amber-700' :
+          'bg-gray-100 text-gray-700';
+        return <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${className}`}>{cn}</span>;
       },
     },
     { key: 'handler', label: '处理人', width: '80px' },
@@ -191,13 +231,11 @@ export default function DailyProblemSummary({ hideHeader = false }: DailyProblem
         exportMode={exportHook.exportMode}
         selectedRows={exportHook.selectedRows}
         onPageChange={setCurrentPage}
-        onSelectAll={() => exportHook.handleSelectAll(summaries.map((s) => s.id))}
-        onSelectRow={(id) => exportHook.handleSelectRow(id as string)}
+        onSelectAll={() => exportHook.handleSelectAll(filteredProblems.map((p) => p.id))}
+        onSelectRow={(id) => exportHook.handleSelectRow(id as number)}
         onView={(record) => {
-          const r = record as { _problemData?: ProblemEntry };
-          if (r._problemData) {
-            setDetailModal({ isOpen: true, data: r._problemData });
-          }
+          // 2026-10-05 修复：record 本身就是 ProblemEntry，不再读取不存在的 _problemData 字段
+          setDetailModal({ isOpen: true, data: record });
         }}
       />
 
