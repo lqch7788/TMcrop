@@ -122,9 +122,67 @@ export function updateMaterial(id: number, updates: Record<string, any>): any | 
 
   const values = Object.keys(updates).map(k => updates[k]);
   db.run(`UPDATE materials SET ${fields} WHERE id = ?`, [...values, id]);
+
+  // 2026-10-06 P0 修复：当 updates 含 expiryDate 时，**同步更新 batch_inventory 表**
+  // 列表 MaterialsTable 的"有效期至"列优先显示 earliestExpiry（来自 batch_inventory 联表聚合），
+  // 仅改主表 materials.expiryDate 不会反映到列表。需要同步批次账。
+  if (typeof updates.expiryDate === 'string' && updates.expiryDate !== '') {
+    const codeRow = db.exec('SELECT code FROM materials WHERE id = ?', [id]);
+    const code = codeRow[0]?.values[0]?.[0] as string | undefined;
+    if (code) {
+      syncExpiryToBatches(code, updates.expiryDate);
+    }
+  }
+
   saveDatabase();
   // 修复：返回更新后的完整记录（不再只返回 true），符合"POST/PUT 必须返回完整记录"
   return getMaterialById(id);
+}
+
+/**
+ * 2026-10-06 P0 修复：把指定物料的所有"未用完批次"的有效期统一更新为新值
+ * 用于物料编辑弹窗保存 expiryDate 时同步 batch_inventory
+ */
+export function syncExpiryToBatches(materialCode: string, expiryDate: string): number {
+  const db = getDatabase();
+  db.run(
+    `UPDATE batch_inventory
+     SET expiry_date = ?, update_time = datetime('now','localtime')
+     WHERE material_code = ? AND remaining_quantity > 0`,
+    [expiryDate, materialCode]
+  );
+  // sql.js 1.10+ 提供 getRowsModified()；旧版本返回 0 也可接受（前端通过重新 GET 拿到最新数据）
+  return typeof (db as any).getRowsModified === 'function' ? (db as any).getRowsModified() : 0;
+}
+
+/**
+ * 2026-10-06 P0 一次性修复：把所有物料的主表 expiryDate 同步到 batch_inventory 的未用完批次
+ * 适用：物料编辑弹窗修复上线前已存在"主表已改但 batch_inventory 没改"的不一致数据
+ * 返回：受影响行数（batch_inventory 被更新的行数）
+ */
+export function repairAllExpiryFromMaster(): { affectedRows: number; affectedMaterials: number } {
+  const db = getDatabase();
+  // 仅同步 remaining_quantity > 0 的未用完批次；空值保护
+  const updateStmt = db.prepare(`
+    UPDATE batch_inventory
+    SET expiry_date = (
+      SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code
+    ),
+        update_time = datetime('now','localtime')
+    WHERE remaining_quantity > 0
+      AND (SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code) IS NOT NULL
+      AND (SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code) <> ''
+  `);
+  updateStmt.run();
+  updateStmt.free();
+  const affectedRows = typeof (db as any).getRowsModified === 'function' ? (db as any).getRowsModified() : 0;
+  saveDatabase();
+  // 受影响物料数（去重）
+  const materialsResult = db.exec(
+    `SELECT COUNT(DISTINCT material_code) FROM batch_inventory WHERE remaining_quantity > 0`
+  );
+  const affectedMaterials = (materialsResult[0]?.values[0]?.[0] as number) || 0;
+  return { affectedRows, affectedMaterials };
 }
 
 /**

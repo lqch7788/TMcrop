@@ -22,6 +22,8 @@ import { categoryConfig } from '../../types/warehouseInbound.types';
 // 2026-09-27 修复（P2-10）：导出改用真正的 .xlsx（此前 HTML 伪装 .xls，Excel 打开弹格式警告）
 import { exportXlsx } from '@/services/exporters';
 import { showAlert } from '@/lib/dialogService';
+import { Wrench } from 'lucide-react';
+import { repairAllExpiryFromMaster } from '../../services/apiWarehouseMaterialService';
 
 export default function WarehouseOverviewPage() {
   // Zustand Store 数据
@@ -119,7 +121,7 @@ export default function WarehouseOverviewPage() {
       showAlert('没有可导出的数据');
       return;
     }
-    const headers = ['物料编码', '物料名称', '分类', '规格', '条形码', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '存放位置', '批次号', '生产日期', '有效期至', '备注', '数据状态'];
+    const headers = ['物料编码', '物料名称', '分类', '规格', '条形码', '单位', '库存数量', '最低库存', '最高库存', '单价', '供应商', '供应商ID', '存放位置', '批次号', '生产日期', '有效期至', '备注', '数据状态'];
     const rows = rowsToExport.map(m => ({
       '物料编码': m.code,
       '物料名称': m.name,
@@ -133,6 +135,8 @@ export default function WarehouseOverviewPage() {
       '最高库存': m.maxStock,
       '单价': m.price,
       '供应商': m.supplier,
+      // 2026-10-06 P1 修复：补上供应商 ID 列（列表已显示，但导出漏了）
+      '供应商ID': m.supplierId || '',
       '存放位置': m.location,
       '批次号': m.batchNo,
       '生产日期': m.productionDate,
@@ -237,6 +241,19 @@ export default function WarehouseOverviewPage() {
     await loadItems();
   };
 
+  // 2026-10-06 P0 修复：一次性同步所有物料的"主表 expiryDate"到"batch_inventory 未用完批次"
+  // 适用：物料编辑弹窗修复上线前已存在的"主表已改但批次账未改"的不一致数据
+  const handleRepairExpiry = async () => {
+    showAlert('正在修复批次有效期，请稍候…');
+    const result = await repairAllExpiryFromMaster();
+    await loadItems();
+    if (result) {
+      showAlert(`修复完成：影响 ${result.affectedMaterials} 个物料的 ${result.affectedRows} 条批次记录`);
+    } else {
+      showAlert('修复失败，请检查后端日志');
+    }
+  };
+
   // 批量删除确认
   const handleBatchDeleteConfirm = () => {
     handleBatchDelete(selectedRows);
@@ -246,6 +263,19 @@ export default function WarehouseOverviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="物料库存" subtitle="仓库物料库存一览" />
+
+      {/* 2026-10-06 P0 修复：一次性工具——同步已损坏的"主表/批次账"有效期 */}
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={handleRepairExpiry}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
+          title="将所有物料的主表 expiryDate 同步到 batch_inventory 的未用完批次（修复上线前已存在的不一致数据）"
+        >
+          <Wrench className="w-3.5 h-3.5" />
+          修复批次有效期（一次性）
+        </button>
+      </div>
 
       <MaterialFilters
         filters={filters}

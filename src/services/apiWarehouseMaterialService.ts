@@ -102,8 +102,23 @@ export async function createMaterial(material: Omit<Material, 'id'>): Promise<Ma
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateMaterial(id: number, updates: Partial<Material>): Promise<Material | null> {
-  const result = await enhancedApiClient.put<Material>(`/materials/${id}`, updates);
-  return result;
+  const result = enhancedApiClient.put<Material>(`/materials/${id}`, updates);
+  return result ?? null;
+}
+
+/**
+ * 2026-10-06 P0 修复：一次性同步所有物料的主表 expiryDate 到 batch_inventory
+ */
+export async function repairAllExpiryFromMaster(): Promise<{ affectedRows: number; affectedMaterials: number } | null> {
+  try {
+    const result = await enhancedApiClient.post<{ affectedRows: number; affectedMaterials: number }>(
+      '/materials/repair-expiry', {}
+    );
+    return result ?? null;
+  } catch (err) {
+    console.error('[repairAllExpiryFromMaster] 失败:', err);
+    return null;
+  }
 }
 
 /**

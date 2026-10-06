@@ -5,6 +5,8 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import * as materialsDb from '../db/materials';
+// 2026-10-06 P0 修复：用于"一次性同步所有物料主表 expiryDate 到 batch_inventory"的 API
+import { repairAllExpiryFromMaster } from '../db/materials';
 // （2026-09-27 重构：入库的 主表/批次账/流水 逻辑已抽到 services/materialInboundStock.service.ts）
 // 2026-09-27 审计修复：入库写库存流水（复用出库侧的 writeStockTransaction）+
 // 入库撤销回收库存（reverseInboundStock，与出库恢复同模式）
@@ -909,6 +911,8 @@ const MATERIAL_UPDATE_COLUMNS = new Set([
   'code', 'name', 'category', 'specification', 'unit', 'quantity', 'minStock', 'maxStock',
   'price', 'supplier', 'supplierId', 'location', 'barcode', 'batchNo', 'productionDate', 'expiryDate',
   'lastUpdateTime', 'dataStatus', 'remarks',
+  // 2026-10-06 P1 修复：dataStatus 已存在白名单（line 911），但弹窗之前没有可编辑控件——
+  // 给弹窗加编辑入口后白名单保持兼容，无须再加
 ]);
 
 router.put('/:id', (req: Request, res: Response) => {
@@ -928,6 +932,21 @@ router.put('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('更新物料失败:', error);
     res.status(500).json({ error: '更新物料失败' });
+  }
+});
+
+/**
+ * 2026-10-06 P0 修复：一次性同步所有物料的"主表 expiryDate"到"batch_inventory 的未用完批次"
+ * 适用：物料编辑弹窗修复上线前已存在"主表已改但批次账未改"的不一致数据
+ * 路由必须在 /:id 路由之前定义（与其它 list-aggregate 类路由同顺序约束）
+ */
+router.post('/repair-expiry', (_req: Request, res: Response) => {
+  try {
+    const result = materialsDb.repairAllExpiryFromMaster();
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[repair-expiry] 修复失败:', error);
+    res.status(500).json({ success: false, error: '修复失败' });
   }
 });
 

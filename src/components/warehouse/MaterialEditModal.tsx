@@ -7,6 +7,7 @@ import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { SupplierSearchInput } from '@/components/common/settings/SupplierSearchInput';
 
@@ -77,6 +78,22 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             <Label className="block text-xs font-medium text-gray-500 mb-1">最后更新</Label>
             <span className="text-sm font-medium text-gray-900">{material.lastUpdateTime || '-'}</span>
           </div>
+        </div>
+      </div>
+
+      {/* 2026-10-06 P1 修复：数据状态原为只读列表展示，弹窗加编辑入口（与列表数据状态列同步） */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">数据状态</Label>
+          <Select value={form.dataStatus || '启用'} onValueChange={(v) => handleChange('dataStatus', v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="启用">启用</SelectItem>
+              <SelectItem value="停用">停用</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
