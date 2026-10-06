@@ -101,6 +101,8 @@ export function MaterialsTable({
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最高库存</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">单价（元）</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商</TableHead>
+              {/* 2026-10-06 P1 修复：supplierId 之前弹窗可改但列表看不到——加列 */}
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">供应商ID</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">存放位置</TableHead>
               <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</TableHead>
               {/* 2026-09-29 修复日期被截断：原 w-24(96px) 扣 px-4 后内容区仅 64px，放不下 "2026-03-26"(约 71px) */}
@@ -166,6 +168,10 @@ export function MaterialsTable({
                 {/* 2026-09-27 修复：price 为 null 时 .replace 崩溃（一行坏数据炸整页）——防御式兜底 */}
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.price || ''}>{(item.price || '').replace('元', '')}</TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.supplier}>{item.supplier}</TableCell>
+                {/* 2026-10-06 P1 修复：supplierId 列（悬停 title 显示完整 ID） */}
+                <TableCell className="px-4 py-3 text-sm text-gray-500 font-mono truncate" title={item.supplierId || ''}>
+                  {item.supplierId || '-'}
+                </TableCell>
                 <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.location}>{item.location}</TableCell>
                 {/* 2026-09-27 多批次方案 A：批次号 + "共 N 批"徽章（批次数来自 batch_inventory 聚合，
                     主表仍是按 code 唯一总量行不拆行；批次明细在详情弹窗"批次明细"tab 查看） */}
