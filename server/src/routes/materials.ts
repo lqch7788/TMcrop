@@ -951,6 +951,34 @@ router.post('/repair-expiry', (_req: Request, res: Response) => {
 });
 
 /**
+ * 2026-10-07 临时调试：列出指定物料的所有 batch_inventory 行（含 remaining_quantity）
+ * 排查修复无效根因。返回数据：[{batchNo, productionDate, expiry_date, total_quantity, remaining_quantity}]
+ */
+router.get('/debug-batch/:code', (req: Request, res: Response) => {
+  try {
+    const code = req.params.code;
+    const db = getDatabase();
+    const result = db.exec(
+      `SELECT material_code, batch_no, production_date, expiry_date, total_quantity, remaining_quantity
+       FROM batch_inventory WHERE material_code = ?`,
+      [code]
+    );
+    const rows = result.length > 0 ? result[0].values.map((row: any[]) => ({
+      material_code: row[0],
+      batch_no: row[1],
+      production_date: row[2],
+      expiry_date: row[3],
+      total_quantity: row[4],
+      remaining_quantity: row[5],
+    })) : [];
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (error) {
+    console.error('[debug-batch] 查询失败:', error);
+    res.status(500).json({ success: false, error: '查询失败' });
+  }
+});
+
+/**
  * 删除物料
  */
 router.delete('/:id', (req: Request, res: Response) => {
