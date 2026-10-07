@@ -241,16 +241,16 @@ export default function WarehouseOverviewPage() {
     await loadItems();
   };
 
-  // 2026-10-06 P0 修复：一次性同步所有物料的"主表 expiryDate"到"batch_inventory 未用完批次"
-  // 适用：物料编辑弹窗修复上线前已存在的"主表已改但批次账未改"的不一致数据
+  // 2026-10-06 修复工具：把主表 expiryDate 回填到 batch_inventory 的**空值批次**
+  // 2026-10-07 加固：只填空值，不覆盖已有值（避免压平多批次不同效期）
   const handleRepairExpiry = async () => {
-    showAlert('正在修复批次有效期，请稍候…');
+    showAlert('正在回填空的批次效期，请稍候…');
     const result = await repairAllExpiryFromMaster();
     await loadItems();
     if (result) {
-      showAlert(`修复完成：影响 ${result.affectedMaterials} 个物料的 ${result.affectedRows} 条批次记录`);
+      showAlert(`回填完成：影响 ${result.affectedMaterials} 个物料的 ${result.affectedRows} 条批次记录`);
     } else {
-      showAlert('修复失败，请检查后端日志');
+      showAlert('回填失败，请检查后端日志');
     }
   };
 
@@ -270,10 +270,10 @@ export default function WarehouseOverviewPage() {
           type="button"
           onClick={handleRepairExpiry}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
-          title="将所有物料的主表 expiryDate 同步到 batch_inventory 的未用完批次（修复上线前已存在的不一致数据）"
+          title="仅回填 batch_inventory 中效期为空的批次行（不覆盖已有值，避免压平多批次的不同效期）"
         >
           <Wrench className="w-3.5 h-3.5" />
-          修复批次有效期（一次性）
+          回填空批次效期
         </button>
       </div>
 

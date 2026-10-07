@@ -140,11 +140,32 @@ export function updateMaterial(id: number, updates: Record<string, any>): any | 
 }
 
 /**
- * 2026-10-06 P0 修复：把指定物料的所有"未用完批次"的有效期统一更新为新值
+ * 2026-10-06 P0 修复：把指定物料的"未用完批次"的有效期同步为新值
  * 用于物料编辑弹窗保存 expiryDate 时同步 batch_inventory
+ *
+ * ⚠️ 2026-10-07 加固：**仅当该物料只有 1 个未用完批次时才同步**。
+ * 原因：多批次物料的各批次效期是独立业务数据（不同进货时间 → 不同效期），
+ * 把主表值强推到所有批次会压平效期、破坏 FEFO（先过期先出）出库逻辑。
+ * 实测 MAT_FERT_002 有 3 个不同效期批次（2026-12-31 / 2027-06-30 / 2028-12-31），
+ * 压平后无法区分先后。多批次场景应由用户在批次管理中逐条维护。
+ *
+ * @returns 受影响行数（0 表示未同步 —— 多批次或无需同步）
  */
 export function syncExpiryToBatches(materialCode: string, expiryDate: string): number {
   const db = getDatabase();
+
+  // 安全检查：统计该物料的未用完批次数
+  const countResult = db.exec(
+    'SELECT COUNT(*) FROM batch_inventory WHERE material_code = ? AND remaining_quantity > 0',
+    [materialCode]
+  );
+  const batchCount = (countResult[0]?.values[0]?.[0] as number) || 0;
+
+  // 多批次（>1）：不同步，避免破坏批次级效期（FEFO 依赖）
+  if (batchCount > 1) {
+    return 0;
+  }
+
   db.run(
     `UPDATE batch_inventory
      SET expiry_date = ?, update_time = datetime('now','localtime')
@@ -156,25 +177,29 @@ export function syncExpiryToBatches(materialCode: string, expiryDate: string): n
 }
 
 /**
- * 2026-10-06 P0 一次性修复：把所有物料的主表 expiryDate 同步到 batch_inventory 的未用完批次
- * 适用：物料编辑弹窗修复上线前已存在"主表已改但 batch_inventory 没改"的不一致数据
- * 返回：受影响行数（batch_inventory 被更新的行数）
+ * 2026-10-06 修复工具：把主表 expiryDate 回填到 batch_inventory 的**空值批次**
+ *
+ * ⚠️ 2026-10-07 加固：**只填充空值行，绝不覆盖已有值**。
+ * 原实现无条件覆盖所有批次 → 会把多批次物料的不同效期压平（实测 27 条中 12 条被改差，
+ * 其中 SP0104001 从"未过期 2026-10-15"被改成"已过期 2026-05-25"）。
+ * 现仅处理 expiry_date 为 NULL 或空串的行（无信息 → 有信息，纯增益）。
+ *
+ * @returns 受影响统计
  */
 export function repairAllExpiryFromMaster(): { affectedRows: number; affectedMaterials: number } {
   const db = getDatabase();
-  // 仅同步 remaining_quantity > 0 的未用完批次；空值保护
-  const updateStmt = db.prepare(`
+  // 仅填充空值行（不覆盖已有值）
+  db.run(`
     UPDATE batch_inventory
     SET expiry_date = (
       SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code
     ),
         update_time = datetime('now','localtime')
     WHERE remaining_quantity > 0
+      AND (expiry_date IS NULL OR expiry_date = '')
       AND (SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code) IS NOT NULL
       AND (SELECT expiryDate FROM materials WHERE code = batch_inventory.material_code) <> ''
   `);
-  updateStmt.run();
-  updateStmt.free();
   const affectedRows = typeof (db as any).getRowsModified === 'function' ? (db as any).getRowsModified() : 0;
   saveDatabase();
   // 受影响物料数（去重）

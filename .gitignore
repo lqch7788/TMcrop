@@ -125,5 +125,7 @@ tsconfig.tsbuildinfo
 *.db-wal
 server/data/yuanxingtu.db.backup-*
 server/data/yuanxingtu.db.save.tmp
+# 2026-10-07：数据修复脚本产生的备份（18MB 二进制，勿提交）
+server/data/*.bak-*
 uploads/
 server/models/pest_image.onnx
