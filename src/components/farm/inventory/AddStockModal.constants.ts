@@ -99,7 +99,9 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
   ],
   transfer: [
     // 2026-07-09：调出仓库从 text 改为 select-warehouse-name（与入库仓库一致的下拉体验）
-    { key: 'sourceWarehouseName', label: '调出仓库', required: false, type: 'select-warehouse-name' },
+    // 2026-10-09：required 改 true——调拨必须选"有该作物可用库存"的调出仓库（下拉由库存联动驱动），
+    // 避免无源仓/无库存的无效提交卡在审批页
+    { key: 'sourceWarehouseName', label: '调出仓库', required: true, type: 'select-warehouse-name' },
     // 2026-07-08 T13 Bug 2
     { key: 'cropForm', label: '作物形态', required: true, type: 'select-dict-crop-form' },
   ],

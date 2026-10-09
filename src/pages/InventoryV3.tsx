@@ -109,6 +109,9 @@ export default function InventoryV3Page() {
       const keyword = filters.keyword.toLowerCase();
       result = result.filter(stock =>
         (stock.instanceId || '').toLowerCase().includes(keyword) ||
+        // 2026-10-09：搜索兼容内部主键 id（如 STK-20260619-0002）——instance_id 与 id 在历史数据中
+        // 并不相同（种苗/种源行 instance_id 为 ISE-/INS- 前缀），只搜 instanceId 会搜不到内部 id
+        (stock.id || '').toLowerCase().includes(keyword) ||
         (stock.cropName || '').toLowerCase().includes(keyword) ||
         (stock.varietyName || '').toLowerCase().includes(keyword) ||
         (stock.warehouseName || '').toLowerCase().includes(keyword)

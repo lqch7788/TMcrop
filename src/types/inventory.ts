@@ -113,6 +113,12 @@ export enum FreezeStatus {
  * 库存中心表 - instance_id 为唯一标识
  */
 export interface InventoryStock {
+  /**
+   * 2026-10-09：内部主键 id（如 STK-20260619-0002）
+   * 注意与 instanceId 区分：种苗/种源行的 instance_id 为 ISE-/INS- 前缀，两者并不相同
+   */
+  id?: string;
+
   /** 库存实例ID（格式：类型-日期-序号，如 INS-20260430-001） */
   instanceId: string;
 

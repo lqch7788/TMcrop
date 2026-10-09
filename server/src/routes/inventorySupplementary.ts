@@ -233,7 +233,9 @@ router.post('/', (req: Request, res: Response) => {
       input.sourceModule,
       input.sourceId || '',
       input.cropId || '',
-      input.cropCode || '',
+      // 2026-10-09：作物编码截 9 位——前端品种库输出 11 位（FR010100100），库存体系标准 9 位
+      // （FR0101001，尾部两位细分层恒 '00'）；不截断会与同作物历史行编码割裂
+      String(input.cropCode || '').slice(0, 9),
       input.cropName,
       input.varietyName || '',
       input.quantity, input.quantity, input.unit,

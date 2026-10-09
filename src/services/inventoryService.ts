@@ -217,6 +217,11 @@ export async function getInventoryList(filters?: {
   if (filters?.cropName) params.crop_name = filters.cropName;
   if (filters?.page) params.page = String(filters.page);
   if (filters?.limit) params.limit = String(filters.limit);
+  // 2026-10-09：未显式传 limit 时兜底 500——后端 /list 默认 50 会静默截断列表。
+  // 此前 2026-08-14 的同款修复只做在 apiInventoryService.getInventoryList，
+  // 而 store.loadAll 走的是本函数（不传 limit）→ 列表只加载 50 行：
+  // 更早的库存行（如 6 月的源实例行）不在内存 → 客户端搜索/翻页永远看不到（"搜实例ID无结果"根因）。
+  if (!params.limit) params.limit = '500';
 
   const query = new URLSearchParams(params).toString();
   // 注意：enhancedApiClient 已自动解包一层 data，这里直接得到数组
@@ -428,6 +433,9 @@ export async function getActiveOrders(): Promise<ActiveOrder[]> {
 function toCamelStock(row: any): InventoryStock {
   if (!row) return row;
   return {
+    // 2026-10-09：补内部主键 id——此前白名单映射丢弃该字段，导致"搜索内部 id"（如 STK-20260619-0002）
+    // 恒无结果（库存行的 id 与 instance_id 在种苗/种源行并不相同：ISE-/INS- 前缀）
+    id: String(row.id ?? ''),
     instanceId: row.instance_id ?? row.instanceId,
     stockType: (row.stock_type ?? row.stockType) as StockType,
     businessId: row.business_id ?? row.businessId,

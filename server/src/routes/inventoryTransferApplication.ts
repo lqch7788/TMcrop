@@ -25,7 +25,10 @@ router.use(authenticate);
 // ==================== Zod Schema ====================
 
 const ApplicationSchema = z.object({
-  sourceWarehouseId: z.string().min(1, { message: 'sourceWarehouseId 必填' }),
+  // 2026-10-09 修复：sourceWarehouseId 改 optional——"调拨入库"的产品语义是"从其他基地/仓库调入"，
+  // 源仓库可能不在本系统（外部仓库自由文本），前端只有名称下拉。强制必填导致前端提交 100% 400 失败。
+  // 若前端能反查到系统内仓库 id 会传值（内部调拨，联动作源扣减）；外部仓库场景为空。
+  sourceWarehouseId: z.string().optional(),
   sourceWarehouseName: z.string().optional(),
   targetWarehouseId: z.string().min(1, { message: 'targetWarehouseId 必填' }),
   targetWarehouseName: z.string().optional(),
@@ -95,7 +98,7 @@ router.post('/', (req: Request, res: Response) => {
       input.applicantId || '',
       input.applicantName,
       input.applicantDepartment || '',
-      input.sourceWarehouseId,
+      input.sourceWarehouseId || '',
       input.sourceWarehouseName || '',
       input.targetWarehouseId,
       input.targetWarehouseName || '',
