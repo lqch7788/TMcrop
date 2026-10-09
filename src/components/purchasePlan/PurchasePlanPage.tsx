@@ -9,7 +9,7 @@ import { ExportFormatModal } from '../common/ExportFormatModal';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { Approval } from '../../types/approval';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
-import { calculateOverdueAlert } from '../../types/purchase';
+import { calculateOverdueAlert, PURCHASE_TYPE_TEXT } from '../../types/purchase';
 import { useUserStore, usePurchasePlanStore, useApprovalStore } from '../../stores';
 import { showAlert, showToast } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
@@ -352,7 +352,8 @@ export function PurchasePlanPage() {
           approvalResult = await submitPurchaseApproval({
             purchaseId: result.id,
             purchaseCode: result.purchaseApplicationCode || createForm.purchaseApplicationCode,
-            purchaseName: result.planTitle || `${createForm.purchaseType} - ${createForm.purchaseApplicationCode}`,
+            // 2026-10-09：把 purchaseType 英文 enum 翻译成中文，避免审批列表标题显示英文
+            purchaseName: result.planTitle || `${PURCHASE_TYPE_TEXT[createForm.purchaseType as keyof typeof PURCHASE_TYPE_TEXT] || createForm.purchaseType} - ${createForm.purchaseApplicationCode}`,
             amount: approvalAmount,
             applicantId: result.applicantId || planData.applicantId,
             applicantName: result.applicant,

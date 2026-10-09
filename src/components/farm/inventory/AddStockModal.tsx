@@ -42,6 +42,9 @@ import {
   type FieldConfig,
 } from './AddStockModal.constants';
 import { toPayload, buildOperatorInfo } from '@/services/addStockFormAdapter';
+// 2026-10-09：补录/调拨审批流接入（self_produced → 物料审批→补录审批 tab；transfer → 物料审批→库存调拨 tab）
+import { submitSupplementaryApplication } from '@/services/apiInventorySupplementary';
+import { submitTransferApplication } from '@/services/apiInventoryTransfer';
 import { useAuthStore } from '@/stores/useAuthStore';
 import CropCodeSelector from '../common/CropCodeSelector';
 // 2026-07-13 v6：补录原因复合组件（下拉 + "其他"时自定义文本框）
@@ -728,12 +731,77 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       const currentUser = useAuthStore.getState().currentUser;
       const operator = buildOperatorInfo(currentUser);
       const payload = toPayload(formData, sourceType, sourceRecord, operator, { stockType });
-      const result = await submitInbound(payload);
-      if (result) {
-        await showAlert('入库成功');
-        notifyChange();
+
+      // 2026-10-09：补录/调拨走审批流；其它 4 种来源（external_purchased/gift/commissioned/manual）维持原样直入库
+      // 注意：审批通过才真正入库（前端 addStockFormAdapter 的 payload 字段映射对审批端点部分字段名不同，需做适配）
+      if (sourceType === 'self_produced') {
+        // 补录入库 → 物料审批 → 补录审批 tab
+        const result = await submitSupplementaryApplication({
+          sourceId: payload.sourceId || '',
+          sourceModule: payload.sourceModule || 'manual',
+          sourceCode: '',
+          stockType: payload.stockType,
+          cropId: payload.cropId || '',
+          cropCode: payload.cropCode || '',
+          cropName: payload.cropName || '',
+          varietyName: (payload as any).varietyName || (payload as any).variety_name || '',
+          plantingMode: (payload as any).plantingMode || '',
+          quantity: payload.quantity,
+          unit: payload.unit,
+          qualityGrade: (payload as any).qualityGrade || (payload as any).quality_grade || 'qualified',
+          warehouseId: payload.warehouseId,
+          warehouseName: payload.warehouseName || '',
+          supplementaryReason: (payload as any).supplementaryReason || (formData as any).supplementaryReason || '补录入库',
+          unitPrice: (payload as any).unitPrice || (payload as any).unit_price || 0,
+          supplierId: (payload as any).supplierId || (payload as any).supplier_id || '',
+          supplierName: (payload as any).supplierName || (payload as any).supplier_name || '',
+          productionPlanId: (payload as any).productionPlanId || (payload as any).production_plan_id || '',
+          productionPlanCode: (payload as any).productionPlanCode || (payload as any).production_plan_code || '',
+          notes: payload.notes || '',
+          applicantId: (currentUser as any)?.id || (currentUser as any)?.oid || '',
+          applicantName: operator.operatorName || 'system',
+          applicantDepartment: (currentUser as any)?.department || '',
+          operatorName: operator.operatorName,
+        });
+        await showAlert(`已提交补录审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「物料审批 → 补录审批」tab 查看`);
         onSuccess?.();
         onClose();
+      } else if (sourceType === 'transfer') {
+        // 调拨入库 → 物料审批 → 库存调拨 tab
+        const result = await submitTransferApplication({
+          sourceWarehouseId: (formData as any).sourceWarehouseId || '',
+          sourceWarehouseName: (formData as any).sourceWarehouseName || '',
+          targetWarehouseId: payload.warehouseId,
+          targetWarehouseName: payload.warehouseName || '',
+          sourceStockId: '',
+          sourceStockCode: '',
+          materialId: payload.cropId || '',
+          materialCode: payload.cropCode || '',
+          materialName: payload.cropName || '',
+          category: (payload as any).category || '',
+          specification: (payload as any).specification || (payload as any).varietyName || '',
+          quantity: payload.quantity,
+          unit: payload.unit,
+          transferReason: (formData as any).transferReason || (payload as any).remarks || '库存调拨',
+          transferType: 'cross_warehouse',
+          notes: payload.notes || '',
+          applicantId: (currentUser as any)?.id || (currentUser as any)?.oid || '',
+          applicantName: operator.operatorName || 'system',
+          applicantDepartment: (currentUser as any)?.department || '',
+          operatorName: operator.operatorName,
+        });
+        await showAlert(`已提交调拨审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「物料审批 → 库存调拨」tab 查看`);
+        onSuccess?.();
+        onClose();
+      } else {
+        // 其它 4 种来源（external_purchased/gift/commissioned/manual）→ 直入库（维持现状）
+        const result = await submitInbound(payload);
+        if (result) {
+          await showAlert('入库成功');
+          notifyChange();
+          onSuccess?.();
+          onClose();
+        }
       }
     } catch (e) {
       setTopError(e instanceof Error ? e.message : '入库失败');
@@ -777,7 +845,13 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           <span>新建入库（作物库存）</span>
         </div>
       }
-      submitText={submitting ? '提交中...' : '确认入库'}
+      submitText={
+        submitting
+          ? '提交中...'
+          : (sourceType === 'self_produced' || sourceType === 'transfer')
+            ? '提交'
+            : '确认入库'
+      }
       cancelText="取消"
       width={1000}
       height={800}

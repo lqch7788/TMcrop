@@ -90,7 +90,13 @@ const getStatusBadge = (status: InventoryStatus | string) => {
   switch (status) {
     case InventoryStatus.IN_STOCK:
     case 'in_stock':
+    case 'active': // 2026-10-09 兜底：早期补录遗留的 active 状态视为库存中
       return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">库存中</span>;
+    // 2026-10-09：补录入库申请单提交后状态
+    case 'pending':
+      return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">审核中</span>;
+    case 'cancelled':
+      return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">已取消</span>;
     case InventoryStatus.LOW_STOCK:
     case 'low_stock':
       return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">低库存</span>;

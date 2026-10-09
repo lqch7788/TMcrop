@@ -25,6 +25,26 @@ import { KpiCard, KpiCardGrid } from '@/components/summary';
 import { BatchDetailModal } from '@/components/production/modals';
 import { CropBatch } from '@/types';
 import { getProductionPlanById } from '@/services/apiProductionPlanService';
+import { PURCHASE_TYPE_TEXT, PurchaseType } from '@/types/purchase';
+
+// 2026-10-09：审批列表标题兜底翻译
+// 历史 bug：采购计划审批 title 拼接时未翻译 purchaseType（production/urgent/...），导致列表里显示英文
+// 这里把"采购申请: <英文> - 单号"统一替换为"采购申请: <中文> - 单号"
+const PURCHASE_TYPE_KEYS = Object.keys(PURCHASE_TYPE_TEXT) as PurchaseType[];
+const translateApprovalTitle = (title: string, approvalType: string): string => {
+  if (!title) return title;
+  if (approvalType !== ApprovalType.PURCHASE_REQUEST) return title;
+  // 仅处理"采购申请:"前缀的历史脏数据，避免误改其它业务的 title
+  if (!title.startsWith('采购申请:')) return title;
+  let translated = title;
+  for (const key of PURCHASE_TYPE_KEYS) {
+    const cn = PURCHASE_TYPE_TEXT[key];
+    // 整词匹配，避免把"production_xxx"误改；用空格/连字符/冒号/结尾作为边界
+    const re = new RegExp(`(^|[\\s\\-:])(${key})(?=$|[\\s\\-:])`, 'g');
+    translated = translated.replace(re, (_m, prefix: string) => `${prefix}${cn}`);
+  }
+  return translated;
+};
 
 export default function ProductionApproval() {
   const { approvals, approve, reject, refreshApprovals } = useApproval();
@@ -456,7 +476,7 @@ export default function ProductionApproval() {
                   <TableCell className="font-medium text-gray-900">{item.code}</TableCell>
                   <TableCell className="text-gray-600">{item.applicantName}</TableCell>
                   <TableCell className="text-gray-600">{item.applicantDepartment}</TableCell>
-                  <TableCell className="text-gray-900">{item.title}</TableCell>
+                  <TableCell className="text-gray-900">{translateApprovalTitle(item.title, item.type)}</TableCell>
                   <TableCell className="text-gray-600">{item.applyDate}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell>
@@ -557,7 +577,7 @@ export default function ProductionApproval() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-gray-400">申请标题</Label>
-                <p className="text-sm font-medium text-gray-900">{detailModal.approval.title}</p>
+                <p className="text-sm font-medium text-gray-900">{translateApprovalTitle(detailModal.approval.title, detailModal.approval.type)}</p>
               </div>
               <div>
                 <Label className="text-xs text-gray-400">申请人</Label>
@@ -822,7 +842,7 @@ export default function ProductionApproval() {
 
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">申请标题：</span>{approvalModal.approval.title}
+              <span className="font-medium">申请标题：</span>{translateApprovalTitle(approvalModal.approval.title, approvalModal.approval.type)}
             </p>
             <p className="text-sm text-gray-600 mt-1">
               <span className="font-medium">申请人：</span>{approvalModal.approval.applicantName}

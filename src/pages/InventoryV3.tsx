@@ -239,7 +239,9 @@ export default function InventoryV3Page() {
       const stockTypeLabel = s.stockType === 'seed'
         ? `商品种源${s.businessType === 'seed_source' ? '（历史迁移）' : ''}`
         : s.stockType === 'seedling' ? '种苗' : '成品';
-      const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
+      // 2026-10-09：status 强转 string 比较——补录占位记录的 active/pending/cancelled 不在 InventoryStatus 枚举内
+      const st = String(s.status);
+      const statusLabel = st === 'in_stock' || st === 'active' ? '库存中' : st === 'pending' ? '审核中' : st === 'cancelled' ? '已取消' : st === 'low_stock' ? '低库存' : st === 'frozen' ? '已冻结' : st === 'outbound' ? '已出库' : '已用完';
       const sourceLabel = s.sourceType === 'self_produced' ? '自产' : s.sourceType === 'external_purchase' ? '外购' : s.sourceType === 'transfer' ? '调拨' : s.sourceType || '-';
       const formLabel = s.sourceForm || s.productForm || '-';
       return {

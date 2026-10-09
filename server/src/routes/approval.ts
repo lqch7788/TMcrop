@@ -809,6 +809,11 @@ router.patch('/:id/action', (req, res) => {
     // 现改为**服务端复核免审批资格**：以申请人身份操作时，只有该单据确实符合免审批规则
     // （类型免审 / 金额低于阈值）才放行；否则拒绝，要求由他人审批。
     // 这样既保留免审批直通，又堵住"任意单据自己批自己"的口子。
+    //
+    // 2026-10-09 测试阶段临时放开：当前系统仅 1 个登录用户（陆启闯），无他人可审批。
+    // 自审自批检测仍会触发，但只 console.warn 提示，**不再返回 403 拒绝**。
+    // 由环境变量 APPROVAL_STRICT_SELF_CHECK=1 重新开启严格模式（生产上线前）。
+    const STRICT_SELF_CHECK = process.env.APPROVAL_STRICT_SELF_CHECK === '1';
     const applicantId = String(approval.applicant_id || '').trim();
     const applicantName = String(approval.applicant_name || '').trim();
     const isSelfApproval = (!!applicantId && applicantId === finalApproverId)
@@ -816,12 +821,17 @@ router.patch('/:id/action', (req, res) => {
     if (isSelfApproval) {
       const verdict = evaluateExemptEligibility(db, approval);
       if (!verdict.eligible) {
-        return res.status(403).json({
-          success: false,
-          error: `不能审批自己提交的单据：${verdict.reason}`,
-        });
+        if (STRICT_SELF_CHECK) {
+          return res.status(403).json({
+            success: false,
+            error: `不能审批自己提交的单据：${verdict.reason}`,
+          });
+        }
+        // 测试阶段：仅警告，不拒绝
+        console.warn(`[审批] 自审自批警告（测试阶段已放开，APPROVAL_STRICT_SELF_CHECK=1 恢复严格模式）：单 ${id} applicantId=${applicantId} applicantName=${applicantName} - ${verdict.reason}`);
+      } else {
+        console.log(`[审批] 单 ${id} 以申请人身份通过（免审批资格成立）：${verdict.reason}`);
       }
-      console.log(`[审批] 单 ${id} 以申请人身份通过（免审批资格成立）：${verdict.reason}`);
     }
 
     // 添加审批记录
@@ -955,10 +965,9 @@ router.patch('/:id/action', (req, res) => {
             // 2026-08-10 修复：updateBusinessTable 只 UPDATE 内存 db，需显式 saveDatabase 落盘，否则列表刷新读到脏数据
             saveDatabase();
             console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
-          } else if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
-            // 2026-09-28 审计修复：入库单 / 退料单联动失败=硬失败（两者都影响库存账实）。
-            // 回滚审批终态并返回 409，让审批人看到真实原因
-            // （此前静默成功 → 审批"已通过"但库存永远没动，且终态不可重试）
+          } else if (businessLink.type === 'material_inbound' || businessLink.type === 'return' || businessLink.type === 'crop_storage' || businessLink.type === 'material_transfer' || businessLink.type === 'seedling') {
+            // 2026-10-09 修复：补录/调拨/育苗种源审批也直接影响库存账实（之前漏了，导致联动失败时
+            //   approval.status 改为 approved 但库存/回流永远没写入，用户重试也无效）
             db.run(
               `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,
               [prevApprovalState.status, prevApprovalState.current_step, prevApprovalState.approvers, prevApprovalState.records, prevApprovalState.updated_at, id]

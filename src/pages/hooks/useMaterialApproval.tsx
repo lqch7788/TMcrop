@@ -2,7 +2,7 @@
 // 物料审批页面的状态管理和业务逻辑
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  Package, ClipboardList, RotateCcw, ShoppingCart,
+  ClipboardList, RotateCcw, ShoppingCart,
   Truck, Sprout, FileText, CheckCircle, XCircle, Clock, Eye
 } from 'lucide-react';
 import { useApproval } from '@/hooks/useApproval';
@@ -69,13 +69,16 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
   });
 
   // Tab配置
+  // 2026-10-09：移除种源入库 tab（按用户要求；后端联动代码保留用于未来其它入口）
+  // 2026-10-09：库存调拨 / 补录审批 tab path 修正：
+  //   - material_transfer：/warehouse-overview → /crop-inventory（作物库存页有"调拨入库"按钮）
+  //   - supplementary：/crop/seed-source → /crop-inventory（作物库存页有"补录入库"按钮）
   const tabs = [
     { key: 'material', label: '领料审批', icon: ClipboardList, path: '/material-receiving', types: [ApprovalType.MATERIAL_REQUEST] },
     { key: 'return', label: '退料审批', icon: RotateCcw, path: '/material-return', types: [ApprovalType.RETURN_MATERIAL] },
     { key: 'material_inbound', label: '物料入库', icon: Truck, path: '/warehouse-inbound', types: [ApprovalType.MATERIAL_INBOUND] },
-    { key: 'material_transfer', label: '库存调拨', icon: RotateCcw, path: '/warehouse-overview', types: [ApprovalType.MATERIAL_TRANSFER] },
-    { key: 'seed_inbound', label: '种源入库', icon: Package, path: '/crop/seed-source', types: [ApprovalType.SEED_SOURCE_INBOUND] },
-    { key: 'supplementary', label: '补录审批', icon: FileText, path: '/crop/seed-source', types: [ApprovalType.SEEDLING_SUPPLEMENTARY, ApprovalType.CROP_STORAGE_SUPPLEMENTARY] },
+    { key: 'material_transfer', label: '库存调拨', icon: RotateCcw, path: '/crop-inventory', types: [ApprovalType.MATERIAL_TRANSFER] },
+    { key: 'supplementary', label: '补录审批', icon: FileText, path: '/crop-inventory', types: [ApprovalType.SEEDLING_SUPPLEMENTARY, ApprovalType.CROP_STORAGE_SUPPLEMENTARY] },
   ] as const;
 
   // 根据Tab类型筛选数据
