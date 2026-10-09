@@ -205,6 +205,8 @@ export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, { label: string; b
   commissioned:        { label: '委托生产',     bg: 'bg-amber-100',   text: 'text-amber-700' },
   gift:                { label: '赠送/受赠',    bg: 'bg-purple-100',  text: 'text-purple-700' },
   transfer:            { label: '调拨入库',     bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  // 2026-10-09：作物调拨目标仓行的 sourceType（approvalLinkage case 'material_transfer' 写入）
+  cross_warehouse:     { label: '调拨入库',     bg: 'bg-cyan-100',    text: 'text-cyan-700' },
   manual:              { label: '手动录入',     bg: 'bg-slate-100',   text: 'text-slate-700' },
   // 老数据兼容
   tissue_culture:      { label: '组培苗',       bg: 'bg-pink-100',    text: 'text-pink-700' },

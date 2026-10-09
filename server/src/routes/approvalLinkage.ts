@@ -662,14 +662,20 @@ export function updateBusinessTable(
       try {
         if (status === 'approved') {
           const srcWhId = String(trVal[trIdx['source_warehouse_id']] || '');
+          const srcWhName = String(trVal[trIdx['source_warehouse_name']] || '');
           const tgtWhId = String(trVal[trIdx['target_warehouse_id']] || '');
           const qty = Number(trVal[trIdx['quantity']]) || 0;
           const unit = String(trVal[trIdx['unit']] || '');
           const matName = String(trVal[trIdx['material_name']] || '');
           const matCode = String(trVal[trIdx['material_code']] || '');
           const appName = String(trVal[trIdx['applicant_name']] || '');
+          // 2026-10-09：实际扣减的源库存行 id——写入目标行的 source_instance_id（追溯"从哪条源库存调入"）
+          let firstDeductedId = '';
 
-          // 1. 源仓库扣减：从 source_stock_id 对应的 inventory_stock 行扣减
+          // 1. 源仓库扣减（2026-10-09 增强 + fail loud）
+          //    优先级 a) source_stock_id 精确指定 → 扣该行
+          //           b) source_warehouse_id 命中系统内仓库 → 按 (warehouse + crop_code) FEFO 找库存行扣减；不足则拒绝
+          //           c) 都为空（外部仓库调入语义）→ 跳过并留痕（仅目标仓加）
           const srcStockId = String(trVal[trIdx['source_stock_id']] || '');
           if (srcStockId) {
             const beforeRows = db.exec('SELECT current_quantity, available_quantity FROM inventory_stock WHERE id = ?', [srcStockId]);
@@ -678,6 +684,11 @@ export function updateBusinessTable(
               const newQty = beforeQty - qty;
               db.run(`UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE id = ?`,
                 [newQty, newQty, now, srcStockId]);
+              // 2026-10-09：记用户可见 instance_id（同 FEFO 分支口径）
+              const instRow = db.exec('SELECT instance_id FROM inventory_stock WHERE id = ?', [srcStockId]);
+              firstDeductedId = (instRow.length > 0 && instRow[0].values.length > 0 && instRow[0].values[0][0])
+                ? String(instRow[0].values[0][0])
+                : srcStockId;
               // 源流水（transfer_out）
               db.run(`
                 INSERT INTO inventory_transaction (
@@ -697,7 +708,56 @@ export function updateBusinessTable(
                 `调出：${trCode}`, now,
               ]);
             }
+          } else if (srcWhId) {
+            // b) 系统内源仓库：按 FEFO 找该仓库该作物的库存行（available>0），逐行扣减
+            // 2026-10-09：crop_code 前 9 位归一化匹配——库存表存在 9 位历史编码（FR0101001）
+            // 与 12 位新编码（FR010100100）两种格式，同品种前 9 位一致；精确匹配会漏掉历史编码库存
+            // （与 /inventory/available-by-crop 端点过滤条件完全一致，保证"展示的可用量=实际可扣量"）
+            const srcRows = db.exec(`
+              SELECT id, instance_id, current_quantity, available_quantity FROM inventory_stock
+              WHERE warehouse_id = ? AND SUBSTR(crop_code, 1, 9) = SUBSTR(?, 1, 9)
+                AND status IN ('in_stock','low_stock')
+                AND available_quantity > 0
+              ORDER BY inbound_date ASC, id ASC
+            `, [srcWhId, matCode]);
+            const srcLines: Array<{ id: string; instId: string; cur: number; avail: number }> = srcRows.length > 0
+              ? srcRows[0].values.map((v: any[]) => ({ id: String(v[0]), instId: String(v[1] || ''), cur: Number(v[2]) || 0, avail: Number(v[3]) || 0 }))
+              : [];
+            const totalAvail = srcLines.reduce((s: number, l) => s + l.avail, 0);
+            if (totalAvail < qty) {
+              // fail loud：源库存不足 → 审批联动失败（approval.ts 硬回滚清单已含 material_transfer，会回滚 409）
+              return { success: false, message: `源仓库 ${srcWhId} 的作物 ${matCode || matName} 库存不足（需 ${qty}，可用 ${totalAvail}），调拨未执行` };
+            }
+            let remaining = qty;
+            for (const line of srcLines) {
+              if (remaining <= 0) break;
+              const deduct = Math.min(line.avail, remaining);
+              const newQty = line.cur - deduct;
+              // 2026-10-09：记录源行的"用户可见实例 ID"（instance_id，如 ISE-20260619-0004），
+              // 而非内部主键 id（STK-...）——列表"实例ID"列与搜索都用 instance_id，展示也须用它才能被搜到
+              if (!firstDeductedId) firstDeductedId = line.instId || line.id;
+              db.run('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE id = ?',
+                [newQty, newQty, now, line.id]);
+              db.run(`
+                INSERT INTO inventory_transaction (
+                  id, transaction_id, instance_id, stock_type, transaction_type,
+                  quantity, balance_before, balance_after,
+                  business_id, business_type, business_code,
+                  operator_id, operator_name, operate_date, remarks, create_time
+                ) VALUES (?, ?, ?, 'product', 'transfer_out', ?, ?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)
+              `, [
+                `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                line.id,
+                deduct, line.cur, newQty,
+                requestId, trCode,
+                '', appName, now.slice(0, 10),
+                `调出（FEFO）：${trCode}`, now,
+              ]);
+              remaining -= deduct;
+            }
           }
+          // c) 外部仓库调入：不做源扣减（业务语义：从系统外调入），流转备注会在下方注明
 
           // 2. 目标仓库加：INSERT 新 inventory_stock 行（只覆盖必要字段，其余 DEFAULT）
           // 2026-10-09 修复 ID 格式：调拨目标仓 ID 用 IPR-YYYYMMDD-NNNN（调拨当前仅 product 场景；
@@ -723,27 +783,31 @@ export function updateBusinessTable(
           db.run(`
             INSERT INTO inventory_stock (
               id, instance_id, stock_type, business_id, business_type, business_code,
-              source_module, source_id, source_type,
+              source_module, source_id, source_type, source_instance_id,
               crop_code, crop_name,
               current_quantity, available_quantity, unit,
               warehouse_id, warehouse_name,
               inbound_date,
               notes, status, version, create_time, update_time
-            ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
+            ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
           `, [
             tgtStockId,                                   // id
             tgtStockId,                                   // instance_id
             'product',                                    // stock_type
             requestId,                                    // business_id
             trCode,                                       // business_code
-            srcStockId || '',                             // source_id
-            matCode,                                      // crop_code
+            // 2026-10-09：写入实际扣减的源库存行 id（追溯"从哪条源库存调入"；无源扣减=外部调入时为空）
+            firstDeductedId || srcStockId || '',          // source_id
+            firstDeductedId || srcStockId || '',          // source_instance_id
+            // 2026-10-09：作物编码截 9 位——前端品种库输出 11 位（FR010100100），库存体系标准 9 位
+            // （FR0101001，尾部两位细分层恒 '00'）；保证目标行与同作物历史行编码一致（FEFO 也按前 9 位匹配）
+            String(matCode || '').slice(0, 9),            // crop_code
             matName,                                      // crop_name
             qty, qty, unit,                               // current/available/unit
             tgtWhId,                                      // warehouse_id
             String(trVal[trIdx['target_warehouse_name']] || ''),  // warehouse_name
             now.slice(0, 10),                             // inbound_date
-            `调入：${trCode}`,                            // notes
+            `调入：${trCode}${srcWhName ? `（自 ${srcWhName}）` : ''}`,  // notes（含源仓库）
             now,                                          // create_time
             now,                                          // update_time
           ]);
@@ -764,7 +828,8 @@ export function updateBusinessTable(
             qty, qty,
             requestId, trCode,
             '', appName, now.slice(0, 10),
-            `调入：${trCode}`, now,
+            // 2026-10-09：备注含源仓库名——操作历史 tab 直接可见"从哪个仓库调入"
+            `调入：${trCode}${srcWhName ? `（自 ${srcWhName}）` : ''}`, now,
           ]);
 
           // 3. UPDATE 申请单 status='approved'

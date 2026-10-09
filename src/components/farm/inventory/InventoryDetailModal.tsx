@@ -126,6 +126,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   // 数据
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
   const [freezes, setFreezes] = useState<unknown[]>([]);
+  // 2026-10-09：调拨入库行——调出仓库名（来源信息区展示"从哪个仓库调入"）
+  const [transferSourceWh, setTransferSourceWh] = useState<string>('');
   const [upstream, setUpstream] = useState<TraceResult[]>([]);
   const [downstream, setDownstream] = useState<DownstreamTraceResult[]>([]);
 
@@ -161,6 +163,32 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   const effectiveStock: InventoryStock | null = (!stock?.cropName && !stock?.stockType)
     ? resolvedStock
     : stock;
+
+  // 2026-10-09：调拨入库行（sourceType='cross_warehouse'）→ 查调拨申请单取"调出仓库"
+  // 库存行本身不存源仓库名；通过 businessId（=调拨申请单 id）关联查询
+  // （新单已在备注/流水中写源仓库；此查询同时覆盖存量数据，是展示层的统一来源）
+  useEffect(() => {
+    const st = effectiveStock;
+    // SourceType 枚举不含 'cross_warehouse'（调拨写入的字面量）→ 放开为 string 比较
+    if (!isOpen || String(st?.sourceType || '') !== 'cross_warehouse' || !st?.businessId) {
+      setTransferSourceWh('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { enhancedApiClient } = await import('@/lib/apiClient');
+        // enhancedApiClient 已自动解包 data（api-client-response-unwrapping）
+        const res = await enhancedApiClient.get<any>(`/inventory-transfer-applications/${st.businessId}`);
+        if (!cancelled) setTransferSourceWh(String(res?.sourceWarehouseName || ''));
+      } catch (e) {
+        console.warn('[InventoryDetailModal] 查询调拨来源失败:', e);
+        if (!cancelled) setTransferSourceWh('');
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, effectiveStock?.instanceId, effectiveStock?.sourceType, effectiveStock?.businessId]);
 
   const loadAllData = useCallback(async () => {
     if (!stock?.instanceId) return;
@@ -312,6 +340,12 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
         <BasicTab
           stock={effectiveStock}
           sourceInfo={sourceInfo}
+          // 2026-10-09 修复：sourceLabel 之前只在父组件作用域定义，BasicTab 内引用未定义变量 →
+          // sourceInfo 为空（如调拨行的 cross_warehouse 未映射）时点开详情直接 ReferenceError 白屏。
+          // 现作为 prop 传入（保留完整兜底链：映射 label → 中文表 → 原始码 → '-'）
+          sourceLabel={sourceLabel}
+          // 2026-10-09：调拨行的调出仓库名（来源信息区展示；非调拨行为空）
+          transferSourceWh={transferSourceWh}
           statusInfo={statusInfo}
           gradeInfo={gradeInfo}
           available={available}
@@ -394,11 +428,15 @@ function TabBtn({ current, value, icon, label, count, onClick }: TabBtnProps) {
 
 // ---------- 基本信息 Tab ----------
 function BasicTab({
-  stock, sourceInfo, statusInfo, gradeInfo, available, freezes,
+  stock, sourceInfo, sourceLabel, transferSourceWh, statusInfo, gradeInfo, available, freezes,
   onUnfreeze,
 }: {
   stock: InventoryStock;
   sourceInfo: any;
+  /** 2026-10-09：来源兜底标签（父组件传入；sourceInfo 为空时展示） */
+  sourceLabel?: string;
+  /** 2026-10-09：调拨行的调出仓库名（来源信息区展示；非调拨行为空） */
+  transferSourceWh?: string;
   statusInfo: any;
   gradeInfo: any;
   available: number;
@@ -509,6 +547,18 @@ function BasicTab({
         ['入库来源', sourceInfo
           ? <span className={`px-2 py-0.5 ${sourceInfo.bg} ${sourceInfo.text} text-xs rounded font-medium`}>{sourceInfo.label}</span>
           : <span className="text-gray-700">{sourceLabel}</span>],
+        // 2026-10-09：调拨入库行——展示"从哪个仓库的哪条实例调入"（一眼看全追溯信息）
+        // 仓库名：父组件按 business_id 反查调拨申请单；源实例：stock.sourceInstanceId（FEFO 首行）
+        ...(String(stock.sourceType || '') === 'cross_warehouse' && transferSourceWh
+          ? [['调出仓库', (
+              <span className="text-gray-700">
+                {transferSourceWh}
+                {stock.sourceInstanceId && (
+                  <span className="ml-1 font-mono text-xs text-gray-400">（源实例 {stock.sourceInstanceId}）</span>
+                )}
+              </span>
+            )] as [string, React.ReactNode]]
+          : []),
         // 2026-07-09：补上游业务 ID/类型（与 InventoryStock 类型对齐，溯源用）
         ['上游业务ID',   <span className="font-mono text-xs">{stock.sourceBusinessId || '-'}</span>],
         ['上游业务类型', stock.sourceBusinessType || '-'],
@@ -547,7 +597,13 @@ function BasicTab({
         ['所属基地',   stock.baseName || '-'],
         ['赠方名称',   stock.giftFrom || '-'],
         ['委托方',     stock.consignor || '-'],
-        ['调出仓库',   stock.sourceWarehouseName || '-'],
+        // 2026-10-09：调拨行（cross_warehouse）跳过——此处的 stock.sourceWarehouseName 来自
+        //   inbound_records join（调拨目标行无该记录 → 恒 '-'），与"来源信息"组按 business_id
+        //   反查调拨申请单的"调出仓库"（transferSourceWh）形成"一空一有"矛盾，误导用户。
+        //   调拨行的来源仓库统一在"来源信息"组展示。
+        ...(String(stock.sourceType || '') !== 'cross_warehouse'
+          ? [['调出仓库', stock.sourceWarehouseName || '-'] as [string, React.ReactNode]]
+          : []),
         ['盘点单号',   stock.stocktakeNo || '-'],
       ],
     },

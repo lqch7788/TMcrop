@@ -204,6 +204,8 @@ export default function MaterialApproval() {
         {tabs.map(tab => (
           <button
             key={tab.key}
+            // 2026-10-09：悬停提示——告知该 tab 对应的业务页面与提交入口
+            title={tab.hint}
             onClick={() => {
               setActiveTab(tab.key as typeof activeTab);
               setCurrentPage(1);

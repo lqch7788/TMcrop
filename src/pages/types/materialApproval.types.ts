@@ -22,7 +22,10 @@ export interface TabConfig {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
-  types: ApprovalType[];
+  // 2026-10-09：改 readonly——tabs 定义用 as const（readonly tuple），原 mutable 数组类型不兼容
+  types: readonly ApprovalType[];
+  /** 2026-10-09：tab 悬停提示——告知用户该 tab 对应哪个业务页面的提交入口 */
+  hint?: string;
 }
 
 // 统计数据

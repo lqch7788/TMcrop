@@ -231,6 +231,9 @@ function renderFieldByType(
     // 2026-07-13 方案 B：sourceId 搜索框输入值 + 变化回调
     sourceIdSearch?: string;
     onSourceIdSearchChange?: (v: string) => void;
+    // 2026-10-09：调拨模式——有该作物可用库存的仓库列表（含可用量/单位/形态），供"调出仓库"下拉使用
+    cropWarehouses?: Array<{ warehouseId: string; warehouseName: string; available: number; unit: string; form?: string }>;
+    cropWarehousesLoading?: boolean;
     /**
      * 2026-07-09：联动写入多个字段（解决供应商/基地只存 id 不存 name 的 bug）
      * supplier-select 选完后同时写 supplierId + supplierName
@@ -321,22 +324,66 @@ function renderFieldByType(
           </SelectContent>
         </Select>
       );
-    case 'select-warehouse-name':
-      // 2026-07-09：调出仓库下拉（与入库仓库同样 UI；value=name，适配后端 sourceWarehouseName 存仓库名）
+    case 'select-warehouse-name': {
+      // 2026-10-09 改造：调出仓库只能选"确实有该作物可用库存"的仓库，并显示可用量
+      // 背景：此前下拉列出全部仓库，用户常选到无该作物库存的仓库或填超量数量
+      //   → 提交后卡在审批页（审批时 fail-loud 拒绝，无法通过）
+      // 数据源：ctx.cropWarehouses（按所选作物从 /inventory/available-by-crop 拉取）
+      const cropCodeVal = String((ctx.formData as any)?.cropCode || '');
+      const whList = ctx.cropWarehouses || [];
+      if (!cropCodeVal) {
+        return (
+          <Select value="" disabled>
+            <SelectTrigger><SelectValue placeholder="请先选择作物" /></SelectTrigger>
+            <SelectContent />
+          </Select>
+        );
+      }
+      if (whList.length === 0) {
+        return (
+          <Select value="" disabled>
+            <SelectTrigger>
+              <SelectValue placeholder={ctx.cropWarehousesLoading ? '加载中...' : '该作物暂无可调拨库存（任何仓库均无可用量）'} />
+            </SelectTrigger>
+            <SelectContent />
+          </Select>
+        );
+      }
       return (
-        <Select value={value || ''} onValueChange={onChange}>
+        <Select
+          value={value || ''}
+          onValueChange={(v) => {
+            const found = whList.find((w) => w.warehouseName === v);
+            if (found && ctx.onMultiFieldChange) {
+              // 一次性写多字段：仓库名/ id / 可用量 / 单位（数量上限校验用）
+              const updates: Record<string, any> = {
+                sourceWarehouseName: found.warehouseName,
+                sourceWarehouseId: String(found.warehouseId || ''),
+                sourceAvailable: found.available,
+                sourceUnit: found.unit || '',
+              };
+              // 2026-10-09：形态/单位自动带出——按调出仓库该作物库存行的原值填充（用户仍可修改）
+              if (found.form) updates.cropForm = found.form;
+              if (found.unit) updates.unit = found.unit;
+              ctx.onMultiFieldChange(updates);
+            } else {
+              onChange(v);
+            }
+          }}
+        >
           <SelectTrigger>
             <SelectValue placeholder="选择调出仓库" />
           </SelectTrigger>
           <SelectContent>
-            {ctx.warehouses.map((w) => (
-              <SelectItem key={w.id || w.oid || ''} value={w.name}>
-                {w.name}
+            {whList.map((w) => (
+              <SelectItem key={w.warehouseId || w.warehouseName} value={w.warehouseName}>
+                {w.warehouseName}（可用 {w.available}{w.unit || ''}）
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       );
+    }
     case 'select-enum-quality':
       return (
         <Select value={value || ''} onValueChange={onChange}>
@@ -388,6 +435,9 @@ function renderFieldByType(
                   cropName: found.cropName,
                   cropCode: found.cropCode,
                   cropSelector: found.cropCode,  // 联动"作物选择"字段显示已选
+                  // 2026-10-09：补齐 cropId/cropVariety——源行即作物来源，缺失导致列表"品种"列为空
+                  cropId: src?.cropId || '',
+                  cropVariety: src?.cropVariety || src?.varietyName || '',
                   greenhouseName,  // 联动"采收区域"字段
                 });
               }
@@ -510,6 +560,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   const [cropFormOptions, setCropFormOptions] = useState<Array<{ value: string; label: string }>>([]);
   // 2026-07-09 v5 阶段三（路径 B）：自产（兜底）模式 sourceId 下拉选项
   const [sourceIdOptions, setSourceIdOptions] = useState<Array<{ value: string; label: string; module: string; code?: string; cropName?: string; cropCode?: string }>>([]);
+  // 2026-10-09：调拨模式——调出仓库候选（只含"确实有该作物可用库存"的仓库 + 可用量/单位/形态）
+  // 目的：从源头避免"调出仓库无该作物/数量超库存"的无效提交（此类提交会卡在审批页无法通过）
+  const [cropWarehouses, setCropWarehouses] = useState<Array<{ warehouseId: string; warehouseName: string; available: number; unit: string; form?: string }>>([]);
+  const [cropWarehousesLoading, setCropWarehousesLoading] = useState(false);
   // 2026-07-13 方案 B：sourceId 搜索框输入
   const [sourceIdSearch, setSourceIdSearch] = useState('');
   // 搜索过滤后的 options（按 label/code/cropName 模糊匹配）
@@ -612,6 +666,45 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       }
     })();
   }, [isOpen])
+
+  // 2026-10-09：调拨模式下按所选作物拉取"各仓库可用库存"
+  // - 调出仓库下拉只显示确实有该作物库存的仓库（带可用量）
+  // - 作物切换后若已选调出仓库不在新列表 → 清空（避免残留无效选择）
+  // - 过滤条件与后端 FEFO 扣减完全一致（in_stock/low_stock + available>0 + 编码前9位归一化）
+  useEffect(() => {
+    if (!isOpen || sourceType !== 'transfer' || !formData.cropCode) {
+      setCropWarehouses([]);
+      return;
+    }
+    let cancelled = false;
+    setCropWarehousesLoading(true);
+    (async () => {
+      try {
+        const { enhancedApiClient } = await import('@/lib/apiClient');
+        const res = await enhancedApiClient.get<any[]>(
+          `/inventory/available-by-crop?cropCode=${encodeURIComponent(String(formData.cropCode))}`,
+        );
+        const list: Array<{ warehouseId: string; warehouseName: string; available: number; unit: string; form?: string }> =
+          Array.isArray(res) ? res : ((res as any)?.data || []);
+        if (cancelled) return;
+        setCropWarehouses(list);
+        setFormData((prev) => {
+          const cur = String((prev as any).sourceWarehouseName || '');
+          if (cur && !list.some((w) => w.warehouseName === cur)) {
+            return { ...prev, sourceWarehouseName: '', sourceWarehouseId: '', sourceAvailable: undefined, sourceUnit: undefined } as any;
+          }
+          return prev;
+        });
+      } catch (e) {
+        console.warn('[AddStockModal] 查询作物可用库存失败:', e);
+        if (!cancelled) setCropWarehouses([]);
+      } finally {
+        if (!cancelled) setCropWarehousesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, sourceType, formData.cropCode])
 
   // 字典加载完成后切出 unit / crop_form 两类选项
   useEffect(() => {
@@ -739,7 +832,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         const result = await submitSupplementaryApplication({
           sourceId: payload.sourceId || '',
           sourceModule: payload.sourceModule || 'manual',
-          sourceCode: '',
+          // 2026-10-09：源行编码取联动写入的 formData.sourceCode（此前硬编码空串，申请单追溯缺失源行编码）
+          sourceCode: String((formData as any).sourceCode || ''),
           stockType: payload.stockType,
           cropId: payload.cropId || '',
           cropCode: payload.cropCode || '',
@@ -767,10 +861,31 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         onSuccess?.();
         onClose();
       } else if (sourceType === 'transfer') {
-        // 调拨入库 → 物料审批 → 库存调拨 tab
+        // 调拨入库 → 物料审批 → 作物调拨审批 tab
+        // 2026-10-09 修复：sourceWarehouseId 反查——"调出仓库"下拉 value 是仓库名（formData.sourceWarehouseName），
+        // 此前直接读 formData.sourceWarehouseId（不存在）恒为空串 → 后端 Zod 400。现在按名称反查主数据 id，
+        // 命中=系统内仓库（后端可做源扣减）；未命中=外部仓库（外部调入语义，仅目标仓加库存）
+        const srcWhName = String((formData as any).sourceWarehouseName || '');
+        // 2026-10-09：提交前硬校验——调出仓库必选 + 数量不得超出该仓库该作物可用量
+        // （源头拦截无效提交；此类提交在审批时会被 fail-loud 拒绝而卡单）
+        if (!srcWhName) {
+          setTopError('请选择调出仓库（下拉只显示确实有该作物库存的仓库）');
+          return;
+        }
+        const srcAvail = Number((formData as any).sourceAvailable);
+        const submitQty = Number(formData.quantity) || 0;
+        if (Number.isFinite(srcAvail) && srcAvail >= 0 && submitQty > srcAvail) {
+          setTopError(`调拨数量 ${submitQty} 超出调出仓库「${srcWhName}」该作物可用库存 ${srcAvail}${(formData as any).sourceUnit || ''}，请调整数量`);
+          return;
+        }
+        const matchedSourceWh = srcWhName
+          ? warehouses.find((w: any) => w.name === srcWhName)
+          : null;
         const result = await submitTransferApplication({
-          sourceWarehouseId: (formData as any).sourceWarehouseId || '',
-          sourceWarehouseName: (formData as any).sourceWarehouseName || '',
+          // 2026-10-09：优先用选仓库时写入的 id（来自库存端点的 warehouseId，定位精确）；
+          // fallback 按名称反查主数据（兼容边缘场景）
+          sourceWarehouseId: String((formData as any).sourceWarehouseId || (matchedSourceWh ? String(matchedSourceWh.id || matchedSourceWh.oid || '') : '')),
+          sourceWarehouseName: srcWhName,
           targetWarehouseId: payload.warehouseId,
           targetWarehouseName: payload.warehouseName || '',
           sourceStockId: '',
@@ -813,6 +928,80 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
   // ---- 当前来源下要渲染的字段列表 ----
   const fieldsToRender: FieldConfig[] = [...COMMON_FIELDS, ...FIELD_CONFIG[sourceType]];
 
+  // 2026-10-09：作物相关字段抽为变量——调拨模式需重排布局
+  //   transfer：作物选择|调出仓库 → 作物形态|品质等级 → 数量|单位 → 入库仓库
+  //   （形态/单位在选调出仓库后按库存行原值自动带出，仍可修改）
+  //   其它来源沿用"作物选择|形态+品质"同行布局
+  const cropSelectorField = (
+    <FormField label="作物选择 *">
+      {/* 2026-10-09：补录模式下源行已带出作物（cropCode 有值）→ 只读展示，不允许再选
+          （作物由源种植/育苗行唯一决定，避免作物与源行不一致的脏数据）
+          源行数据不全（无 cropCode）时回退手动选择作为兜底 */}
+      {sourceType === 'self_produced' && formData.cropCode ? (
+        <div className="px-4 py-3 border border-emerald-300 bg-emerald-50 rounded-lg text-sm flex items-center gap-2">
+          <span className="font-medium text-gray-900">{formData.cropName || '-'}</span>
+          {formData.cropVariety && <span className="text-gray-500">· {formData.cropVariety}</span>}
+          <span className="ml-auto text-xs text-emerald-600 whitespace-nowrap">源行自动带出</span>
+        </div>
+      ) : (
+        <CropCodeSelector
+          value={String(formData.cropSelector || '')}
+          onChange={handleCropChange}
+          placeholder="搜索或选择作物品种..."
+          showFullPath
+        />
+      )}
+      {errors.cropSelector && <div className="text-xs text-red-500 mt-1">{errors.cropSelector}</div>}
+    </FormField>
+  );
+
+  const cropFormField = (
+    <FormField label="作物形态 *">
+      <Select
+        value={formData.cropForm || ''}
+        onValueChange={(v) => handleFieldChange('cropForm', v)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="请选择作物形态" />
+        </SelectTrigger>
+        <SelectContent>
+          {cropFormOptions.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {errors.cropForm && <div className="text-xs text-red-500 mt-1">{errors.cropForm}</div>}
+    </FormField>
+  );
+
+  const qualityField = (
+    <FormField label="品质等级">
+      <Select
+        value={formData.qualityGrade || ''}
+        onValueChange={(v) => handleFieldChange('qualityGrade', v)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="等级" />
+        </SelectTrigger>
+        <SelectContent>
+          {QUALITY_GRADES.map((g) => (
+            <SelectItem key={g.value} value={g.value}>
+              {g.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {errors.qualityGrade && <div className="text-xs text-red-500 mt-1">{errors.qualityGrade}</div>}
+    </FormField>
+  );
+
+  // 2026-10-09：调拨模式单位自动带出后，库存单位（如 'kg'）可能不在字典选项中 → 临时补充，避免 Select 显示空白
+  const effectiveUnitOptions = sourceType === 'transfer' && formData.unit && !unitOptions.some(u => u.value === formData.unit)
+    ? [...unitOptions, { value: String(formData.unit), label: String(formData.unit) }]
+    : unitOptions;
+
   const renderCtx = {
     warehouses: warehouses as any,
     // 2026-09-28 审计修复：只列「合作中」的供应商（停用/终止不应能用于新建入库）
@@ -832,6 +1021,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     sourceIdOptions: filteredSourceIdOptions,
     sourceIdSearch: sourceIdSearch,
     onSourceIdSearchChange: setSourceIdSearch,
+    // 2026-10-09：调拨模式——调出仓库候选（有该作物可用库存的仓库+可用量）
+    cropWarehouses,
+    cropWarehousesLoading,
   };
 
   return (
@@ -933,61 +1125,38 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           </FormField>
         )}
 
-        {/* 第 2 行：作物选择(50%) + 作物形态+品质等级(50% 合成块) */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="作物选择 *">
-            <CropCodeSelector
-              value={String(formData.cropSelector || '')}
-              onChange={handleCropChange}
-              placeholder="搜索或选择作物品种..."
-              showFullPath
-            />
-            {errors.cropSelector && <div className="text-xs text-red-500 mt-1">{errors.cropSelector}</div>}
-          </FormField>
-          {/* 作物形态 + 品质等级（占 50%，内部 flex-1 形态 + 140px 品质等级） */}
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
-              <FormField label="作物形态 *">
-                <Select
-                  value={formData.cropForm || ''}
-                  onValueChange={(v) => handleFieldChange('cropForm', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="请选择作物形态" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cropFormOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.cropForm && <div className="text-xs text-red-500 mt-1">{errors.cropForm}</div>}
+        {/* 第 2 行：调拨模式重排（2026-10-09）——调出仓库紧跟作物选择，形态/品质独立成行
+            （形态/单位在选调出仓库后按库存行原值自动带出）
+            其它来源沿用：作物选择(50%) + 作物形态+品质等级(50% 合成块) */}
+        {sourceType === 'transfer' ? (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              {cropSelectorField}
+              <FormField label="调出仓库 *">
+                {renderFieldByType(
+                  FIELD_CONFIG.transfer.find(f => f.key === 'sourceWarehouseName')!,
+                  formData.sourceWarehouseName,
+                  (v) => handleFieldChange('sourceWarehouseName', v),
+                  renderCtx,
+                )}
+                {errors.sourceWarehouseName && <div className="text-xs text-red-500 mt-1">{errors.sourceWarehouseName}</div>}
               </FormField>
             </div>
-            <div className="w-[140px] flex-shrink-0">
-              <FormField label="品质等级">
-                <Select
-                  value={formData.qualityGrade || ''}
-                  onValueChange={(v) => handleFieldChange('qualityGrade', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="等级" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUALITY_GRADES.map((g) => (
-                      <SelectItem key={g.value} value={g.value}>
-                        {g.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.qualityGrade && <div className="text-xs text-red-500 mt-1">{errors.qualityGrade}</div>}
-              </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              {cropFormField}
+              {qualityField}
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {cropSelectorField}
+            {/* 作物形态 + 品质等级（占 50%，内部 flex-1 形态 + 140px 品质等级） */}
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">{cropFormField}</div>
+              <div className="w-[140px] flex-shrink-0">{qualityField}</div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 2026-07-13 v9：补录模式（self_produced）下，"采收区域"与"数量+单位"同一行（grid-cols-2 各占 50%）
             选源行后"采收区域"自动联动填（从源记录读 greenhouseName）
@@ -1043,7 +1212,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
         {/* 字段矩阵渲染：公共 + 来源专属（排除已单独渲染的 recordDate + cropSelector + cropForm + quantity + unit + notes） */}
         <div className="grid grid-cols-2 gap-4">
           {fieldsToRender
-            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId' && field.key !== 'plantingMode' && field.key !== 'greenhouseName')  // 2026-07-13 v9：sourceId/greenhouseName 补录模式下独立渲染（plantingMode 已删除但保留在 filter 中以防误判）
+            .filter((field) => field.key !== 'recordDate' && field.key !== 'cropSelector' && field.key !== 'cropForm' && field.key !== 'quantity' && field.key !== 'unit' && field.key !== 'notes' && field.key !== 'qualityGrade' && field.key !== 'unitPrice' && field.key !== 'totalAmount' && field.key !== 'purchaseDate' && field.key !== 'sourceId' && field.key !== 'plantingMode' && field.key !== 'greenhouseName'
+              && field.key !== 'sourceWarehouseName'  // 2026-10-09：调出仓库独立渲染（在作物选择同行，transfer 专属）
+              && !(sourceType === 'transfer' && field.key === 'warehouseId')  // 2026-10-09：transfer 入库仓库独立渲染（放单位行之后，符合调出流程）
+            )  // 2026-07-13 v9：sourceId/greenhouseName 补录模式下独立渲染（plantingMode 已删除但保留在 filter 中以防误判）
             .map((field) => {
               const value = formData[field.key];
               const errMsg = errors[field.key];
@@ -1075,6 +1247,17 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                     className={deepInputClass}
                   />
                   {errors.quantity && <div className="text-xs text-red-500 mt-1">{errors.quantity}</div>}
+                  {/* 2026-10-09：调拨模式——显示调出仓库该作物可用量；超量时标红提醒（提交前另有硬校验拦截） */}
+                  {sourceType === 'transfer' && (formData as any).sourceWarehouseName && (
+                    <div className={`text-xs mt-1 ${
+                      Number(formData.quantity) > Number((formData as any).sourceAvailable || 0)
+                        ? 'text-red-500 font-medium'
+                        : 'text-emerald-600'
+                    }`}>
+                      调出仓库可用：{(formData as any).sourceAvailable ?? 0}{(formData as any).sourceUnit || ''}
+                      {Number(formData.quantity) > Number((formData as any).sourceAvailable || 0) && '（数量已超出可用量！）'}
+                    </div>
+                  )}
                 </FormField>
               </div>
               <div className="w-[120px] flex-shrink-0">
@@ -1087,7 +1270,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                       <SelectValue placeholder="单位" />
                     </SelectTrigger>
                     <SelectContent>
-                      {unitOptions.map((u) => (
+                      {effectiveUnitOptions.map((u) => (
                         <SelectItem key={u.value} value={u.value}>
                           {u.label}
                         </SelectItem>
@@ -1123,6 +1306,21 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 2026-10-09：调拨模式——入库仓库独立一行（在"数量+单位"下方，符合"先选调出→数量→调到哪"的调出流程） */}
+        {sourceType === 'transfer' && (
+          <div className="w-1/2">
+            <FormField label="入库仓库 *">
+              {renderFieldByType(
+                COMMON_FIELDS.find(f => f.key === 'warehouseId')!,
+                formData.warehouseId,
+                (v) => handleFieldChange('warehouseId', v),
+                renderCtx,
+              )}
+              {errors.warehouseId && <div className="text-xs text-red-500 mt-1">{errors.warehouseId}</div>}
+            </FormField>
           </div>
         )}
 

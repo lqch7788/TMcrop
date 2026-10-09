@@ -537,6 +537,62 @@ router.get('/inventory-stock/trace-source', (req, res) => {
 router.get('/list', inventoryController.getList.bind(inventoryController));
 router.get('/stats', inventoryController.getStats.bind(inventoryController));
 router.get('/aggregate/by-crop', inventoryController.aggregateByCrop.bind(inventoryController));
+
+/**
+ * GET /api/inventory/available-by-crop?cropCode=FR010100100
+ * 2026-10-09：按作物聚合"各仓库可用库存"——供调拨弹窗"调出仓库"下拉使用
+ * （只显示确实有该作物可用库存的仓库 + 可用量，从源头避免无效调拨提交）
+ *
+ * 匹配规则：作物编码前 9 位归一化（库存表存在 9 位历史编码 FR0101001 与 12 位新编码
+ * FR010100100 两种格式，同品种前 9 位一致；精确匹配会漏掉历史编码库存）
+ * 过滤条件与调拨联动 FEFO 完全一致（in_stock/low_stock + available>0），保证展示=可调
+ */
+router.get('/available-by-crop', (req: Request, res: Response) => {
+  try {
+    const cropCode = String(req.query.cropCode || '').trim();
+    if (!cropCode) {
+      return res.status(400).json({ success: false, error: 'cropCode 必填' });
+    }
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT warehouse_id, warehouse_name,
+             SUM(available_quantity) AS available,
+             MIN(unit) AS unit,
+             (SELECT s2.source_form FROM inventory_stock s2
+               WHERE s2.warehouse_id = s1.warehouse_id
+                 AND SUBSTR(s2.crop_code, 1, 9) = SUBSTR(s1.crop_code, 1, 9)
+                 AND s2.status IN ('in_stock', 'low_stock')
+                 AND s2.available_quantity > 0
+                 AND IFNULL(s2.source_form, '') != ''
+               ORDER BY s2.available_quantity DESC LIMIT 1) AS form
+      FROM inventory_stock s1
+      WHERE SUBSTR(crop_code, 1, 9) = SUBSTR(?, 1, 9)
+        AND status IN ('in_stock', 'low_stock')
+        AND available_quantity > 0
+      GROUP BY warehouse_id, warehouse_name
+      ORDER BY available DESC
+    `);
+    stmt.bind([cropCode]);
+    const data: any[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      data.push({
+        warehouseId: row.warehouse_id,
+        warehouseName: row.warehouse_name,
+        available: row.available,
+        unit: row.unit,
+        // 2026-10-09：该仓库该作物的形态（供调拨表单"作物形态"自动带出）
+        // 取值策略：该仓库该作物"可用量最大"行的 source_form（最有代表性；全空则 ''→前端不覆盖）
+        form: row.form || '',
+      });
+    }
+    stmt.free();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('[GET /inventory/available-by-crop]', error);
+    res.status(500).json({ success: false, error: '查询可用库存失败' });
+  }
+});
 router.get('/trace/upstream/:instanceId', inventoryController.traceUpstream.bind(inventoryController));
 router.get('/trace/downstream/:instanceId', inventoryController.traceDownstream.bind(inventoryController));
 router.get('/available/:instanceId', inventoryController.getAvailableQuantity.bind(inventoryController));
