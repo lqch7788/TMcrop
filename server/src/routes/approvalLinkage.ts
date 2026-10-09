@@ -11,6 +11,8 @@ import { inventoryStockRepository } from '../repositories/inventory.repository';
 // 2026-09-28 审批流接入：退料单审批通过时恢复库存 / 审批取消或驳回时回滚（与入库单同等对待）
 import { applyReturnStockOnApproval, revertReturnStockOnApproval } from './materialReturn';
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
+// 2026-10-10：本地日期工具——调拨联动写"日期类字段"（实例ID日期段/入库日期/流水操作日期）必须用本地日期
+import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -669,6 +671,10 @@ export function updateBusinessTable(
           const matName = String(trVal[trIdx['material_name']] || '');
           const matCode = String(trVal[trIdx['material_code']] || '');
           const appName = String(trVal[trIdx['applicant_name']] || '');
+          // 2026-10-10：日期类字段必须用「本地日期」——原 now.slice(0,10) 取的是 UTC 日期，
+          // 中国时间 0:00-8:00 创建的调拨行会把实例 ID/入库日期打成"昨天"（项目既有 UTC ID 铁律）
+          const localDateCompact = formatLocalDateYYYYMMDD(); // YYYYMMDD（本地，用于实例 ID 日期段）
+          const localDateIso = formatLocalDateISO();          // YYYY-MM-DD（本地，用于 inbound_date / operate_date）
           // 2026-10-09：实际扣减的源库存行 id——写入目标行的 source_instance_id（追溯"从哪条源库存调入"）
           let firstDeductedId = '';
 
@@ -690,6 +696,9 @@ export function updateBusinessTable(
                 ? String(instRow[0].values[0][0])
                 : srcStockId;
               // 源流水（transfer_out）
+              // 2026-10-09 修复：instance_id 必须写「用户可见实例 ID」（firstDeductedId）而非内部主键 srcStockId——
+              // 详情弹窗"操作历史"/上下游追溯都按 instance_id 精确查询（inventory-tx.repository.findByInstanceId），
+              // 写内部 id 会查不到该调出记录（quantity 同理用负数，与全库既有 transfer_out 惯例一致）
               db.run(`
                 INSERT INTO inventory_transaction (
                   id, transaction_id, instance_id, stock_type, transaction_type,
@@ -700,11 +709,11 @@ export function updateBusinessTable(
               `, [
                 `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
                 `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-                srcStockId,
+                firstDeductedId,
                 'product',
-                qty, beforeQty, newQty,
+                -qty, beforeQty, newQty,
                 requestId, trCode,
-                '', appName, now.slice(0, 10),
+                '', appName, localDateIso,
                 `调出：${trCode}`, now,
               ]);
             }
@@ -738,6 +747,9 @@ export function updateBusinessTable(
               if (!firstDeductedId) firstDeductedId = line.instId || line.id;
               db.run('UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE id = ?',
                 [newQty, newQty, now, line.id]);
+              // 2026-10-09 修复：流水的 instance_id 列写「用户可见实例 ID」（line.instId），
+              // 不能写内部主键 line.id——否则详情弹窗"操作历史"（按 instance_id 精确查询）看不到这笔调出；
+              // quantity 用负数（与全库既有 transfer_out 惯例一致，UI 按负号+红色展示扣减）
               db.run(`
                 INSERT INTO inventory_transaction (
                   id, transaction_id, instance_id, stock_type, transaction_type,
@@ -748,10 +760,10 @@ export function updateBusinessTable(
               `, [
                 `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
                 `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-                line.id,
-                deduct, line.cur, newQty,
+                line.instId || line.id,
+                -deduct, line.cur, newQty,
                 requestId, trCode,
-                '', appName, now.slice(0, 10),
+                '', appName, localDateIso,
                 `调出（FEFO）：${trCode}`, now,
               ]);
               remaining -= deduct;
@@ -759,12 +771,32 @@ export function updateBusinessTable(
           }
           // c) 外部仓库调入：不做源扣减（业务语义：从系统外调入），流转备注会在下方注明
 
+          // 2a. 2026-10-10：读取"属性锚点行"（FEFO 首行 / 精确指定行，即 source_instance_id 记录的那条源库存），
+          //     用于下方把源行的作物信息整体继承到目标行——此前目标行只带 crop_code/crop_name，
+          //     导致调拨后详情/列表的品种、形态、品质、采收区域、库存类型全空或误标（种苗显示成"成品"）
+          let srcAttr: Record<string, any> = {};
+          const anchorId = firstDeductedId || srcStockId;
+          if (anchorId) {
+            const attrRes = db.exec(`
+              SELECT stock_type, crop_id, crop_code, crop_name, variety_id, variety_name, grade,
+                     source_form, product_form, planting_mode, greenhouse_name, area_name,
+                     target_yield, production_plan_code, unit
+              FROM inventory_stock WHERE instance_id = ? OR id = ? LIMIT 1
+            `, [anchorId, anchorId]);
+            if (attrRes.length > 0 && attrRes[0].values.length > 0) {
+              const attrCols = attrRes[0].columns;
+              const attrVals = attrRes[0].values[0];
+              attrCols.forEach((c: string, i: number) => { srcAttr[c] = attrVals[i]; });
+            }
+          }
+
           // 2. 目标仓库加：INSERT 新 inventory_stock 行（只覆盖必要字段，其余 DEFAULT）
           // 2026-10-09 修复 ID 格式：调拨目标仓 ID 用 IPR-YYYYMMDD-NNNN（调拨当前仅 product 场景；
           //   未来调拨 seed/seedling 时按 stockType 切换 INS/ISE）
           // 注：sync 函数内不能 await；同步计算 maxInst（同 inventory.ts 逻辑）
           const trPrefixInst = 'IPR';
-          const trDateStr = now.slice(0, 10).replace(/-/g, '');
+          // 2026-10-10：ID 日期段用本地日期（原 now 为 UTC——0:00-8:00 会打成昨天）
+          const trDateStr = localDateCompact;
           const trExpectedLen = trPrefixInst.length + 1 + 8 + 1 + 4;
           const trStmt = db.prepare(`
             SELECT instance_id FROM inventory_stock
@@ -784,29 +816,48 @@ export function updateBusinessTable(
             INSERT INTO inventory_stock (
               id, instance_id, stock_type, business_id, business_type, business_code,
               source_module, source_id, source_type, source_instance_id,
-              crop_code, crop_name,
+              crop_code, crop_name, crop_id, variety_id, variety_name, grade,
+              source_form, product_form, planting_mode, greenhouse_name, area_name, target_yield,
+              production_plan_code,
               current_quantity, available_quantity, unit,
               warehouse_id, warehouse_name,
               inbound_date,
               notes, status, version, create_time, update_time
-            ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
+            ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse',
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      'active', 1, ?, ?)
           `, [
             tgtStockId,                                   // id
             tgtStockId,                                   // instance_id
-            'product',                                    // stock_type
+            // 2026-10-10：库存类型继承源行（种苗调拨不再被误标为"成品"；外部调入无源行时才兜底 product）
+            srcAttr.stock_type || 'product',              // stock_type
             requestId,                                    // business_id
             trCode,                                       // business_code
             // 2026-10-09：写入实际扣减的源库存行 id（追溯"从哪条源库存调入"；无源扣减=外部调入时为空）
-            firstDeductedId || srcStockId || '',          // source_id
-            firstDeductedId || srcStockId || '',          // source_instance_id
+            anchorId || '',                               // source_id
+            anchorId || '',                               // source_instance_id
             // 2026-10-09：作物编码截 9 位——前端品种库输出 11 位（FR010100100），库存体系标准 9 位
             // （FR0101001，尾部两位细分层恒 '00'）；保证目标行与同作物历史行编码一致（FEFO 也按前 9 位匹配）
-            String(matCode || '').slice(0, 9),            // crop_code
-            matName,                                      // crop_name
-            qty, qty, unit,                               // current/available/unit
+            // 2026-10-10：优先继承源行 crop_code（与 FEFO 匹配口径完全一致）
+            srcAttr.crop_code || String(matCode || '').slice(0, 9),  // crop_code
+            srcAttr.crop_name || matName,                 // crop_name
+            // 2026-10-10：以下 11 个作物属性字段全部继承源行（详情"品种信息"组 + 列表列的数据源）
+            srcAttr.crop_id ?? null,                      // crop_id
+            srcAttr.variety_id ?? null,                   // variety_id
+            srcAttr.variety_name ?? null,                 // variety_name（列表"作物信息"副行）
+            srcAttr.grade ?? null,                        // grade（品质等级）
+            srcAttr.source_form ?? null,                  // source_form（形态列主字段）
+            srcAttr.product_form ?? null,                 // product_form（形态列兜底）
+            srcAttr.planting_mode ?? null,                // planting_mode（种植模式）
+            srcAttr.greenhouse_name ?? null,              // greenhouse_name（采收区域主）
+            srcAttr.area_name ?? null,                    // area_name（采收区域兜底）
+            srcAttr.target_yield ?? null,                 // target_yield（目标产量）
+            srcAttr.production_plan_code ?? null,         // production_plan_code（生产计划）
+            qty, qty,                                     // current/available
+            srcAttr.unit || unit,                         // unit（优先源行单位）
             tgtWhId,                                      // warehouse_id
             String(trVal[trIdx['target_warehouse_name']] || ''),  // warehouse_name
-            now.slice(0, 10),                             // inbound_date
+            localDateIso,                                 // inbound_date（本地日期）
             `调入：${trCode}${srcWhName ? `（自 ${srcWhName}）` : ''}`,  // notes（含源仓库）
             now,                                          // create_time
             now,                                          // update_time
@@ -824,10 +875,10 @@ export function updateBusinessTable(
             `TXN_IN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
             `TXN_IN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
             tgtStockId,
-            'product',
+            srcAttr.stock_type || 'product',  // 2026-10-10：流水类型与目标库存行保持一致
             qty, qty,
             requestId, trCode,
-            '', appName, now.slice(0, 10),
+            '', appName, localDateIso,
             // 2026-10-09：备注含源仓库名——操作历史 tab 直接可见"从哪个仓库调入"
             `调入：${trCode}${srcWhName ? `（自 ${srcWhName}）` : ''}`, now,
           ]);
