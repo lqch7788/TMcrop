@@ -36,6 +36,12 @@ import workLogRouter from './workLog';
 import reminderRouter from './reminder';
 import farmOperationRecordsRouter from './farmOperationRecords';
 import inventoryTransactionsRouter from './inventoryTransactions';
+// 2026-10-09：补录申请单路由（物料审批 → 补录审批 tab 后端通路）
+import inventorySupplementaryRouter from './inventorySupplementary';
+// 2026-10-09：调拨申请单路由（物料审批 → 库存调拨 tab 后端通路）
+import inventoryTransferApplicationRouter from './inventoryTransferApplication';
+// 2026-10-09：育苗补录申请单路由（HarvestRecordModal planting_self_kept → 物料审批→补录审批 tab）
+import seedlingSupplementaryRouter from './seedlingSupplementary';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
 import techSolutionRouter from './techSolution';
@@ -179,6 +185,12 @@ router.use('/crop-varieties', requireAuth, cropVarietyRouter);
 
 // 库存路由 - 需要认证
 router.use('/inventory', requireAuth, inventoryRouter);
+// 2026-10-09：补录申请单路由（物料审批 → 补录审批 tab 后端通路）
+router.use('/inventory-supplementary-applications', requireAuth, inventorySupplementaryRouter);
+// 2026-10-09：调拨申请单路由（物料审批 → 库存调拨 tab 后端通路）
+router.use('/inventory-transfer-applications', requireAuth, inventoryTransferApplicationRouter);
+// 2026-10-09：育苗补录申请单路由（HarvestRecordModal planting_self_kept → 物料审批→补录审批 tab）
+router.use('/seedling-supplementary-applications', requireAuth, seedlingSupplementaryRouter);
 
 // 育苗管理路由 - 需要认证
 router.use('/seedlings', requireAuth, seedlingRouter);

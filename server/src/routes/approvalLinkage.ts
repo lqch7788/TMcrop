@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { getDatabase, saveDatabase } from '../db/index';
 import { applyMaterialInboundApproval } from '../services/materialInboundStock.service';
+// 2026-10-09：补录/调拨入库写入时按 stockType 生成符合 ID 规则的 instance_id（IPR/ISE/INS-YYYYMMDD-NNNN）
+import { inventoryStockRepository } from '../repositories/inventory.repository';
 // 2026-09-28 审批流接入：退料单审批通过时恢复库存 / 审批取消或驳回时回滚（与入库单同等对待）
 import { applyReturnStockOnApproval, revertReturnStockOnApproval } from './materialReturn';
 import { deductLeaveQuota, deductOvertimeQuota, initEmployeeQuotas, deleteEmployeeQuotas, releaseLeaveQuota } from '../services/leaveQuotaService';
@@ -642,20 +644,142 @@ export function updateBusinessTable(
       }
 
     case 'material_transfer':
-      // 库存调拨使用 inventory 表
+      // 2026-10-09：库存调拨（AddStockModal transfer 来源 / inventoryTransferApplication 表）
+      // 审批通过 → 真做跨仓库：源库存 current_quantity 扣减 + 目标库存 INSERT/累加 + 2 条流水
+      // 审批驳回 → UPDATE 申请单 status=rejected，不调拨
+      // 注：此前的 UPDATE legacy `inventory` 表路径是"幽灵路径"——目标表无 inventory 列导致 0 行匹配恒返回 success，
+      // 审批通过实际未真调拨。详见原 L680-684 注释（已删除）。
+      const trRows = db.exec('SELECT * FROM inventory_transfer_applications WHERE id = ?', [requestId]);
+      if (trRows.length === 0 || trRows[0].values.length === 0) {
+        return { success: false, message: `调拨申请单 ${requestId} 不存在` };
+      }
+      const trCols = trRows[0].columns;
+      const trIdx: Record<string, number> = {};
+      trCols.forEach((c: string, i: number) => { trIdx[c] = i; });
+      const trVal = trRows[0].values[0];
+      const trCode = String(trVal[trIdx['application_code']] || '');
+      const trAppStatus = status === 'approved' ? 'approved' : (status === 'rejected' ? 'rejected' : 'voided');
       try {
-        db.run(`
-          UPDATE inventory SET
-            status = ?,
-            approval_code = ?,
-            transfer_at = ?,
-            update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
-        return { success: true, message: '库存调拨状态已更新' };
+        if (status === 'approved') {
+          const srcWhId = String(trVal[trIdx['source_warehouse_id']] || '');
+          const tgtWhId = String(trVal[trIdx['target_warehouse_id']] || '');
+          const qty = Number(trVal[trIdx['quantity']]) || 0;
+          const unit = String(trVal[trIdx['unit']] || '');
+          const matName = String(trVal[trIdx['material_name']] || '');
+          const matCode = String(trVal[trIdx['material_code']] || '');
+          const appName = String(trVal[trIdx['applicant_name']] || '');
+
+          // 1. 源仓库扣减：从 source_stock_id 对应的 inventory_stock 行扣减
+          const srcStockId = String(trVal[trIdx['source_stock_id']] || '');
+          if (srcStockId) {
+            const beforeRows = db.exec('SELECT current_quantity, available_quantity FROM inventory_stock WHERE id = ?', [srcStockId]);
+            if (beforeRows.length > 0 && beforeRows[0].values.length > 0) {
+              const beforeQty = Number(beforeRows[0].values[0][0]) || 0;
+              const newQty = beforeQty - qty;
+              db.run(`UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, update_time = ? WHERE id = ?`,
+                [newQty, newQty, now, srcStockId]);
+              // 源流水（transfer_out）
+              db.run(`
+                INSERT INTO inventory_transaction (
+                  id, transaction_id, instance_id, stock_type, transaction_type,
+                  quantity, balance_before, balance_after,
+                  business_id, business_type, business_code,
+                  operator_id, operator_name, operate_date, remarks, create_time
+                ) VALUES (?, ?, ?, ?, 'transfer_out', ?, ?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)
+              `, [
+                `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                `TXN_OUT_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                srcStockId,
+                'product',
+                qty, beforeQty, newQty,
+                requestId, trCode,
+                '', appName, now.slice(0, 10),
+                `调出：${trCode}`, now,
+              ]);
+            }
+          }
+
+          // 2. 目标仓库加：INSERT 新 inventory_stock 行（只覆盖必要字段，其余 DEFAULT）
+          // 2026-10-09 修复 ID 格式：调拨目标仓 ID 用 IPR-YYYYMMDD-NNNN（调拨当前仅 product 场景；
+          //   未来调拨 seed/seedling 时按 stockType 切换 INS/ISE）
+          // 注：sync 函数内不能 await；同步计算 maxInst（同 inventory.ts 逻辑）
+          const trPrefixInst = 'IPR';
+          const trDateStr = now.slice(0, 10).replace(/-/g, '');
+          const trExpectedLen = trPrefixInst.length + 1 + 8 + 1 + 4;
+          const trStmt = db.prepare(`
+            SELECT instance_id FROM inventory_stock
+            WHERE instance_id LIKE ? AND LENGTH(instance_id) = ? AND SUBSTR(instance_id, -4) GLOB '[0-9][0-9][0-9][0-9]'
+            ORDER BY SUBSTR(instance_id, -4) DESC LIMIT 1
+          `);
+          trStmt.bind([`${trPrefixInst}-${trDateStr}-____`, trExpectedLen]);
+          let trMaxSerial = 0;
+          if (trStmt.step()) {
+            const r = trStmt.getAsObject() as { instance_id: string };
+            const n = parseInt(r.instance_id.slice(-4), 10);
+            trMaxSerial = isNaN(n) ? 0 : n;
+          }
+          trStmt.free();
+          const tgtStockId = `${trPrefixInst}-${trDateStr}-${String(trMaxSerial + 1).padStart(4, '0')}`;
+          db.run(`
+            INSERT INTO inventory_stock (
+              id, instance_id, stock_type, business_id, business_type, business_code,
+              source_module, source_id, source_type,
+              crop_code, crop_name,
+              current_quantity, available_quantity, unit,
+              warehouse_id, warehouse_name,
+              inbound_date,
+              notes, status, version, create_time, update_time
+            ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
+          `, [
+            tgtStockId,                                   // id
+            tgtStockId,                                   // instance_id
+            'product',                                    // stock_type
+            requestId,                                    // business_id
+            trCode,                                       // business_code
+            srcStockId || '',                             // source_id
+            matCode,                                      // crop_code
+            matName,                                      // crop_name
+            qty, qty, unit,                               // current/available/unit
+            tgtWhId,                                      // warehouse_id
+            String(trVal[trIdx['target_warehouse_name']] || ''),  // warehouse_name
+            now.slice(0, 10),                             // inbound_date
+            `调入：${trCode}`,                            // notes
+            now,                                          // create_time
+            now,                                          // update_time
+          ]);
+          // 2026-10-09：调拨目标仓的 stock 暂不设 is_supplementary（不是补录）
+          // 目标流水（transfer_in）
+          db.run(`
+            INSERT INTO inventory_transaction (
+              id, transaction_id, instance_id, stock_type, transaction_type,
+              quantity, balance_before, balance_after,
+              business_id, business_type, business_code,
+              operator_id, operator_name, operate_date, remarks, create_time
+            ) VALUES (?, ?, ?, ?, 'transfer_in', ?, 0, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?)
+          `, [
+            `TXN_IN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            `TXN_IN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            tgtStockId,
+            'product',
+            qty, qty,
+            requestId, trCode,
+            '', appName, now.slice(0, 10),
+            `调入：${trCode}`, now,
+          ]);
+
+          // 3. UPDATE 申请单 status='approved'
+          db.run(`UPDATE inventory_transfer_applications SET status = ?, update_time = ? WHERE id = ?`,
+            ['approved', now, requestId]);
+          return { success: true, message: `调拨申请单 ${trCode} 已审批通过并完成跨仓库调拨` };
+        } else {
+          // rejected / cancelled / voided → 仅改申请单状态
+          db.run(`UPDATE inventory_transfer_applications SET status = ?, update_time = ? WHERE id = ?`,
+            [trAppStatus, now, requestId]);
+          return { success: true, message: `调拨申请单 ${trCode} 状态已更新为 ${trAppStatus}` };
+        }
       } catch (e) {
         console.error('更新库存调拨失败:', e);
-        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
+        return { success: false, message: '调拨联动失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -821,36 +945,186 @@ export function updateBusinessTable(
       break;
 
     case 'seedling':
+      // 2026-10-09：育苗补录（HarvestRecordModal planting_self_kept → submitSeedlingSupplementaryApplication）
+      // 审批通过 → 真做回流：写 planting_harvest_records + UPDATE 申请单 status=approved
+      // 审批驳回 → 仅改申请单状态
+      const seedRows = db.exec('SELECT * FROM seedling_supplementary_applications WHERE id = ?', [requestId]);
+      if (seedRows.length === 0 || seedRows[0].values.length === 0) {
+        return { success: false, message: `育苗补录申请单 ${requestId} 不存在` };
+      }
+      const seedCols = seedRows[0].columns;
+      const seedIdx: Record<string, number> = {};
+      seedCols.forEach((c: string, i: number) => { seedIdx[c] = i; });
+      const seedVal = seedRows[0].values[0];
+      const seedAppCode = String(seedVal[seedIdx['application_code']] || '');
+      const seedStatus = status === 'approved' ? 'approved' : (status === 'rejected' ? 'rejected' : 'voided');
       try {
-        db.run(`
-          UPDATE seedlings SET
-            status = ?,
-            approval_code = ?,
-            supplementary_approved_at = ?,
-            update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
-        return { success: true, message: '育苗补录状态已更新' };
+        if (status === 'approved') {
+          // 1. 写 planting_harvest_records（与 HarvestRecordModal 直入库流程对齐，destination=planting_self_kept）
+          const phrId = `PHR_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+          db.run(`
+            INSERT INTO planting_harvest_records (
+              id, planting_id, record_date, destination,
+              quantity, unit, notes, source_form, sub_type,
+              operator_name, create_by, create_time, update_time
+            ) VALUES (?, ?, ?, 'planting_self_kept', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            phrId,
+            String(seedVal[seedIdx['source_id']] || ''),
+            now.slice(0, 10),
+            Number(seedVal[seedIdx['quantity']]) || 0,
+            String(seedVal[seedIdx['unit']] || ''),
+            String(seedVal[seedIdx['notes']] || ''),
+            String(seedVal[seedIdx['seed_form']] || ''),  // 映射到 source_form 列
+            String(seedVal[seedIdx['seed_form']] || ''),  // sub_type (与 source_form 同步)
+            String(seedVal[seedIdx['operator_name']] || String(seedVal[seedIdx['applicant_name']] || '')),
+            String(seedVal[seedIdx['create_by']] || ''),
+            now, now,
+          ]);
+          // 2. UPDATE 申请单 status='approved' + 审批元数据
+          db.run(`UPDATE seedling_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,
+            ['approved', now, requestId]);
+          return { success: true, message: `育苗补录申请 ${seedAppCode} 已审批通过，回流到种源` };
+        } else {
+          // rejected / cancelled / voided → 仅改申请单状态
+          db.run(`UPDATE seedling_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,
+            [seedStatus, now, requestId]);
+          return { success: true, message: `育苗补录申请 ${seedAppCode} 状态已更新为 ${seedStatus}` };
+        }
       } catch (e) {
         console.error('更新育苗补录失败:', e);
-        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
+        return { success: false, message: '育苗补录联动失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
     case 'crop_storage':
+      // 2026-10-09：作物入库补录（AddStockModal self_produced 来源）
+      // 审批通过 → 真正写 inventory_inbound_records + 写流水 + UPDATE 申请单 status=approved
+      // 审批驳回 → UPDATE 申请单 status=rejected，不入库
+      // 注：此前的 UPDATE legacy `inventory` 表路径是"幽灵路径"——目标表无 inventory 列导致 0 行匹配恒返回 success，
+      // 审批通过实际未真正入库。详见 src/routes/approvalLinkage.ts:842-849 注释（已删除）。
+      const supRows = db.exec('SELECT * FROM inventory_supplementary_applications WHERE id = ?', [requestId]);
+      if (supRows.length === 0 || supRows[0].values.length === 0) {
+        return { success: false, message: `补录申请单 ${requestId} 不存在` };
+      }
+      const supCols = supRows[0].columns;
+      const supIdx: Record<string, number> = {};
+      supCols.forEach((c: string, i: number) => { supIdx[c] = i; });
+      const supVal = supRows[0].values[0];
+      const appCode = String(supVal[supIdx['application_code']] || '');
+      const appStatus = status === 'approved' ? 'approved' : (status === 'rejected' ? 'rejected' : 'voided');
       try {
-        db.run(`
-          UPDATE inventory SET
-            status = ?,
-            approval_code = ?,
-            supplementary_approved_at = ?,
-            update_time = ?
-          WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
-        return { success: true, message: '作物入库补录状态已更新' };
+        if (status === 'approved') {
+          // 1. 写 inventory_inbound_records（与作物库存表对齐）
+          const recordId = `INB_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+          db.run(`
+            INSERT INTO inventory_inbound_records (
+              id, record_type, record_date, source_module, source_id, source_code,
+              stock_type, source_type, warehouse_id, warehouse_name,
+              crop_id, crop_code, crop_name, variety_name,
+              quantity, returned_quantity, unit, unit_price, total_amount,
+              quality_grade, supplier_id, supplier_name,
+              production_plan_id, production_plan_code,
+              business_id, notes, operator_name, create_by, create_time, update_time
+            ) VALUES (?, 'inbound', ?, 'supplementary', ?, ?, ?, 'self_produced', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            recordId,
+            now.slice(0, 10),
+            String(supVal[supIdx['source_id']] || ''),
+            String(supVal[supIdx['source_code']] || ''),
+            String(supVal[supIdx['stock_type']] || 'product'),
+            String(supVal[supIdx['warehouse_id']] || ''),
+            String(supVal[supIdx['warehouse_name']] || ''),
+            String(supVal[supIdx['crop_id']] || ''),
+            String(supVal[supIdx['crop_code']] || ''),
+            String(supVal[supIdx['crop_name']] || ''),
+            String(supVal[supIdx['variety_name']] || ''),
+            Number(supVal[supIdx['quantity']]) || 0,
+            String(supVal[supIdx['unit']] || ''),
+            Number(supVal[supIdx['unit_price']]) || 0,
+            Number(supVal[supIdx['total_amount']]) || 0,
+            String(supVal[supIdx['quality_grade']] || 'qualified'),
+            String(supVal[supIdx['supplier_id']] || ''),
+            String(supVal[supIdx['supplier_name']] || ''),
+            String(supVal[supIdx['production_plan_id']] || ''),
+            String(supVal[supIdx['production_plan_code']] || ''),
+            requestId,
+            String(supVal[supIdx['notes']] || ''),
+            String(supVal[supIdx['operator_name']] || ''),
+            String(supVal[supIdx['create_by']] || ''),
+            now,
+            now,
+          ]);
+          // 2. 写 inventory_stock（库存主表）
+          // 2026-10-09 修复 ID 格式：按 stockType 区分 prefix，与 inventory.ts:255 保持统一（IPR/ISE/INS-YYYYMMDD-NNNN）
+          // 同时补录需要 is_supplementary=1，前端 InventoryTable.tsx:325 据此显示"⚙️ 补录"徽章
+          // 注：updateBusinessTable 是 sync 函数不能 await，这里直接同步计算 maxInst（沿用 inventory.repository.ts 内部逻辑）
+          const stockTypeVal = String(supVal[supIdx['stock_type']] || 'product');
+          const prefixInst = stockTypeVal === 'seed' ? 'INS' : stockTypeVal === 'seedling' ? 'ISE' : 'IPR';
+          const dateStrInst = now.slice(0, 10).replace(/-/g, '');
+          const suppExpectedLen = prefixInst.length + 1 + 8 + 1 + 4; // 17
+          const suppStmt = db.prepare(`
+            SELECT instance_id FROM inventory_stock
+            WHERE instance_id LIKE ? AND LENGTH(instance_id) = ? AND SUBSTR(instance_id, -4) GLOB '[0-9][0-9][0-9][0-9]'
+            ORDER BY SUBSTR(instance_id, -4) DESC LIMIT 1
+          `);
+          suppStmt.bind([`${prefixInst}-${dateStrInst}-____`, suppExpectedLen]);
+          let suppMaxSerial = 0;
+          if (suppStmt.step()) {
+            const r = suppStmt.getAsObject() as { instance_id: string };
+            const n = parseInt(r.instance_id.slice(-4), 10);
+            suppMaxSerial = isNaN(n) ? 0 : n;
+          }
+          suppStmt.free();
+          // 2026-10-09：占位记录已在 POST 端点写入（status='pending'），现在审批通过只需 UPDATE status='in_stock'
+          // 同时查占位 ID 用于写 inventory_transaction
+          const placeholderRow = db.exec('SELECT id FROM inventory_stock WHERE business_id = ? AND status = ? LIMIT 1', [requestId, 'pending']);
+          const placeholderId = placeholderRow.length > 0 && placeholderRow[0].values.length > 0 ? String(placeholderRow[0].values[0][0]) : '';
+          db.run(`
+            UPDATE inventory_stock
+            SET status = 'in_stock', update_time = ?
+            WHERE business_id = ? AND status = 'pending'
+          `, [now, requestId]);
+          // 3. 写 inventory_transaction（库存流水）
+          if (placeholderId) {
+            db.run(`
+              INSERT INTO inventory_transaction (
+                id, transaction_id, instance_id, stock_type, transaction_type,
+                quantity, balance_before, balance_after,
+                business_id, business_type, business_code,
+                operator_id, operator_name, operate_date, remarks, create_time
+              ) VALUES (?, ?, ?, ?, 'inbound', ?, 0, ?, ?, 'supplementary', ?, ?, ?, ?, ?, ?)
+            `, [
+              `TXN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              `TXN_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              placeholderId,
+              String(supVal[supIdx['stock_type']] || 'product'),
+              Number(supVal[supIdx['quantity']]) || 0,
+              Number(supVal[supIdx['quantity']]) || 0,
+              recordId,
+              appCode,
+              '',
+              String(supVal[supIdx['operator_name']] || String(supVal[supIdx['applicant_name']] || '')),
+              now.slice(0, 10),
+              `补录入库审批通过：${appCode}`,
+              now,
+            ]);
+          }
+          // 4. UPDATE 申请单 status='approved' + 写回审批元数据
+          db.run(`UPDATE inventory_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,
+            ['approved', now, requestId]);
+          return { success: true, message: `补录申请单 ${appCode} 已审批通过并入库` };
+        } else {
+          // rejected / cancelled / voided → UPDATE 申请单 + inventory_stock status='cancelled'
+          db.run(`UPDATE inventory_supplementary_applications SET status = ?, update_time = ? WHERE id = ?`,
+            [appStatus, now, requestId]);
+          db.run(`UPDATE inventory_stock SET status = 'cancelled', update_time = ? WHERE business_id = ? AND status = 'pending'`,
+            [now, requestId]);
+          return { success: true, message: `补录申请单 ${appCode} 状态已更新为 ${appStatus}` };
+        }
       } catch (e) {
         console.error('更新作物入库补录失败:', e);
-        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
+        return { success: false, message: '补录联动失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 

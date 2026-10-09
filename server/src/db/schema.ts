@@ -3691,6 +3691,129 @@ export function initializeDatabase() {
     )
   `);
 
+  // 2026-10-09：补录申请单表（物料审批 → 补录审批 tab 后端骨架）
+  // 流程：AddStockModal (sourceType='self_produced') 提交 → 写本表 + 写 approvals 表
+  // 审批通过 → approvalLinkage case 'crop_storage' 真正写 inventory_inbound_records + 流水
+  // 审批驳回 → status='rejected'，不入库
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_supplementary_applications (
+      id TEXT PRIMARY KEY,
+      application_code TEXT NOT NULL UNIQUE,
+      applicant_id TEXT,
+      applicant_name TEXT NOT NULL,
+      applicant_department TEXT,
+      source_id TEXT NOT NULL,
+      source_module TEXT NOT NULL,
+      source_code TEXT,
+      stock_type TEXT NOT NULL,
+      crop_id TEXT,
+      crop_code TEXT,
+      crop_name TEXT NOT NULL,
+      variety_name TEXT,
+      planting_mode TEXT,
+      quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL,
+      quality_grade TEXT DEFAULT 'qualified',
+      warehouse_id TEXT NOT NULL,
+      warehouse_name TEXT,
+      supplementary_reason TEXT NOT NULL,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      supplier_id TEXT,
+      supplier_name TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT,
+      notes TEXT,
+      approval_id TEXT,
+      approval_code TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      operator_name TEXT,
+      create_by TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT
+    )
+  `);
+  // 索引（幂等）
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_sup_app_status ON inventory_supplementary_applications (status, create_time)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_sup_app_source ON inventory_supplementary_applications (source_module, source_id)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_sup_app_approval ON inventory_supplementary_applications (approval_id)'); } catch (e) {}
+
+  // 2026-10-09：库存调拨申请单表（物料审批 → 库存调拨 tab 后端骨架）
+  // 流程：AddStockModal (sourceType='transfer') 提交 → 写本表 + 写 approvals 表
+  // 审批通过 → approvalLinkage case 'material_transfer' 真做跨仓库：源扣减 + 目标加 + 写 2 条流水
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_transfer_applications (
+      id TEXT PRIMARY KEY,
+      application_code TEXT NOT NULL UNIQUE,
+      applicant_id TEXT,
+      applicant_name TEXT NOT NULL,
+      applicant_department TEXT,
+      source_warehouse_id TEXT NOT NULL,
+      source_warehouse_name TEXT,
+      target_warehouse_id TEXT NOT NULL,
+      target_warehouse_name TEXT,
+      source_stock_id TEXT,
+      source_stock_code TEXT,
+      material_id TEXT,
+      material_code TEXT,
+      material_name TEXT NOT NULL,
+      category TEXT,
+      specification TEXT,
+      quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL,
+      transfer_reason TEXT NOT NULL,
+      transfer_type TEXT DEFAULT 'cross_warehouse',
+      expected_date TEXT,
+      approval_id TEXT,
+      approval_code TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      operator_name TEXT,
+      create_by TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT
+    )
+  `);
+  // 索引（幂等）
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_transfer_app_status ON inventory_transfer_applications (status, create_time)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_transfer_app_approval ON inventory_transfer_applications (approval_id)'); } catch (e) {}
+
+  // 2026-10-09：育苗补录申请单表（HarvestRecordModal 的 planting_self_kept → submitSeedlingSupplementaryApproval）
+  // 流程：HarvestRecordModal planting_self_kept 模式 → 写本表 + 写 approvals 表
+  // 审批通过 → approvalLinkage case 'seedling' 写 planting_harvest_records (回流到种源)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS seedling_supplementary_applications (
+      id TEXT PRIMARY KEY,
+      application_code TEXT NOT NULL UNIQUE,
+      applicant_id TEXT,
+      applicant_name TEXT NOT NULL,
+      applicant_department TEXT,
+      source_id TEXT NOT NULL,                     -- planting.id
+      source_module TEXT NOT NULL DEFAULT 'planting',
+      source_code TEXT,                           -- planting.plantCode
+      crop_id TEXT,
+      crop_code TEXT,
+      crop_name TEXT NOT NULL,
+      variety_name TEXT,
+      seed_form TEXT NOT NULL,                     -- 采收形态（果实/种子/枝条等），用于回流种源
+      generation TEXT,                            -- 世代（合并键）
+      force_new INTEGER DEFAULT 0,                 -- 强制新建
+      quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL,
+      supplementary_reason TEXT NOT NULL,
+      notes TEXT,
+      approval_id TEXT,
+      approval_code TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      operator_name TEXT,
+      create_by TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT
+    )
+  `);
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_seed_app_status ON seedling_supplementary_applications (status, create_time)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_seed_app_source ON seedling_supplementary_applications (source_module, source_id)'); } catch (e) {}
+
   console.log('库存中心表初始化完成');
   // 2026-07-14：移除 harvest_inbounds 表定义（独立采收入库页面已下线）
 

@@ -33,8 +33,9 @@ export type PurchasePriority = 'low' | 'normal' | 'high' | 'urgent';
 
 /**
  * 采购申请单类型（业务分类）
+ * 2026-10-09：补 'safety'（劳保用品）—— CreatePlanModal 下拉里就有，但旧 PurchaseType 联合未覆盖，导致 PURCHASE_TYPE_TEXT[...] 兜底拿不到中文
  */
-export type PurchaseType = 'production' | 'urgent' | 'routine' | 'material' | 'equipment' | 'other';
+export type PurchaseType = 'production' | 'urgent' | 'routine' | 'material' | 'safety' | 'equipment' | 'other';
 
 /**
  * 物料明细项 - 对齐物料库存字段结构
@@ -312,6 +313,7 @@ export const PURCHASE_TYPE_TEXT: Record<PurchaseType, string> = {
   urgent: '紧急采购',
   routine: '常规采购',
   material: '通用物资',
+  safety: '劳保用品',
   equipment: '设备采购',
   other: '其他',
 };

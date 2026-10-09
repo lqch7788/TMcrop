@@ -54,6 +54,8 @@ import { todayLocal } from '@/lib/dateUtils'
 // 字段集参照行级采收入库弹窗 UnifiedRowHarvestInboundModal（种源/育苗/种植 3 页面共用一致）
 // 提交到 POST /api/inventory/inbound-from-source → 4 表写入 + 跨页刷新
 import { submitUnifiedInbound, type InboundProduct } from '@/services/unifiedHarvestInboundService'
+// 2026-10-09：种植自留种走育苗补录审批流（之前 addHarvestRecord 是完成即生效，不进审批）
+import { submitSeedlingSupplementaryApplication } from '@/services/apiSeedlingSupplementary'
 
 interface HarvestRecordModalProps {
   isOpen: boolean
@@ -484,19 +486,49 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         operatorId: requiresSelfKept ? (currentUser?.oid || undefined) : undefined,
         operatorName: currentUser?.realName || 'system',
       }
-      const result = await addHarvestRecord(record.id, input)
-      if (result) {
-        showAlert('采收记录添加成功')
-        // 2026-06-29: 种植自留种 提交后跨页通知种源列表刷新
-        // 否则新种源不会在 SeedSourcePage 立即出现（用户需要手动刷新）
-        if (requiresSelfKept) {
-          // 2026-07-10 P0-6 修复：catch(_) {} → catch(e) { console.warn(...) }
-          try { await useSeedSourceStore.getState().loadItems() } catch (e) { console.warn('[HarvestRecordModal] 刷新种源列表失败:', e) }
-        }
-        resetForm()
-        onSuccess?.()
+
+      // 2026-10-09：种植自留种走育苗补录审批流（先审批后写库）
+      // 之前 addHarvestRecord 直接回流到 seed_sources；现在改写为写 seedling_supplementary_applications 表 + approvals
+      // 审批通过 → approvalLinkage case 'seedling' 真做回流（写 planting_harvest_records）
+      if (destination === 'planting_self_kept') {
+        const seedResult = await submitSeedlingSupplementaryApplication({
+          sourceId: String(record.id || ''),
+          sourceModule: 'planting',
+          sourceCode: String(record.plantCode || ''),
+          // Planting 类型无 cropId 字段，从可选扩展读取（申请单该字段可不传）
+          cropId: String((record as { cropId?: string } | null)?.cropId || ''),
+          cropCode: String(record.cropCode || ''),
+          cropName: String(record.cropName || ''),
+          varietyName: String(record.cropVariety || ''),
+          seedForm: String(sourceForm || ''),
+          generation: String(generation || ''),
+          forceNew: forceNew ? 1 : 0,
+          quantity: qtyNum,
+          unit: String(unit || ''),
+          supplementaryReason: notes || '种植自留种补录',
+          notes: notes || '',
+          applicantId: String(currentUser?.oid || ''),
+          applicantName: String(currentUser?.realName || 'system'),
+          // CurrentUser 无 department 字段，从可选扩展读取（兼容未来类型补充）
+          applicantDepartment: String((currentUser as { department?: string } | null)?.department || ''),
+          operatorName: String(currentUser?.realName || 'system'),
+        });
+        showAlert(`已提交种植自留种审批：${seedResult.applicationCode}（审批单 ${seedResult.approvalCode}），请到「物料审批 → 补录审批」tab 查看`);
+        resetForm();
+        onSuccess?.();
       } else {
-        showAlert('添加失败')
+        // harvest 模式仍走原 addHarvestRecord（采收入库 4 表写入）
+        const result = await addHarvestRecord(record.id, input);
+        if (result) {
+          showAlert('采收记录添加成功');
+          if (requiresSelfKept) {
+            try { await useSeedSourceStore.getState().loadItems() } catch (e) { console.warn('[HarvestRecordModal] 刷新种源列表失败:', e) }
+          }
+          resetForm();
+          onSuccess?.();
+        } else {
+          showAlert('添加失败');
+        }
       }
     } catch (e) {
       // 2026-07-10 P0-2 修复：catch(e) + instanceof 守卫
