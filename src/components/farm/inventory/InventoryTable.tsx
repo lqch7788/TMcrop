@@ -171,9 +171,12 @@ export function InventoryTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-auto max-h-[calc(100vh-380px)]">
+      {/* 2026-10-09 修复：去掉固定高度滚动容器（原 overflow-auto max-h-[calc(100vh-380px)]）——
+          用户切换"每页显示数量"后表格应随行数向下延伸、由页面整体滚动（与种源/物料库存等页面一致），
+          原内部滚动条导致行数增加时可视区域不变，看起来与其它页面不同 */}
+      <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckboxes && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-12 whitespace-nowrap">
