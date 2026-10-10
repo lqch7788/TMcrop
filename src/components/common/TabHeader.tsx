@@ -24,6 +24,9 @@ interface TabHeaderProps {
   tabs: TabItem[];
   activeTab: string;
   onTabChange: (tab: string) => void;
+  /** 2026-10-10：tab 名称加粗（font-bold，覆盖 TabsTrigger 默认的 font-semibold）——
+   *  按模块显式开启（农事管理页面首用），不影响其它使用方 */
+  bold?: boolean;
 }
 
 export function TabHeader({
@@ -33,6 +36,7 @@ export function TabHeader({
   tabs,
   activeTab,
   onTabChange,
+  bold = false,
 }: TabHeaderProps) {
   return (
     <div className="bg-white rounded-xl p-6 shadow-none">
@@ -55,7 +59,7 @@ export function TabHeader({
         <Tabs value={activeTab} onValueChange={onTabChange}>
           <TabsList>
             {tabs.map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-2">
+              <TabsTrigger key={tab.key} value={tab.key} className={`flex items-center gap-2 ${bold ? 'font-bold' : ''}`}>
                 {tab.icon && <tab.icon className="w-4 h-4" />}
                 {tab.label}
               </TabsTrigger>

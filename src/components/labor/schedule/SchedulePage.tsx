@@ -443,6 +443,7 @@ export function SchedulePage() {
             <Button
               variant={displayMode === 'table' ? 'default' : 'outline'}
               size="sm"
+              className="font-bold"
               onClick={() => setDisplayMode('table')}
             >
               <List className="w-4 h-4" />
@@ -451,6 +452,7 @@ export function SchedulePage() {
             <Button
               variant={displayMode === 'calendar' ? 'default' : 'outline'}
               size="sm"
+              className="font-bold"
               onClick={() => setDisplayMode('calendar')}
             >
               <CalendarDays className="w-4 h-4" />
