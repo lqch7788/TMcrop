@@ -80,6 +80,10 @@ export function ProductionTaskTableRow({
   const taskWithExtras = task as TaskWithExtras;
   const types = task.types || [];
 
+  // 2026-10-10（审核修复 H3）：巡查来源的动作按钮仅在关联了整改问题时显示（同 ProblemTaskTableRow）
+  const isInspectionTask = !!(task as { sourceInspectionId?: string }).sourceInspectionId;
+  const canOperate = !isInspectionTask || !!(taskWithExtras as { sourceProblemId?: string }).sourceProblemId;
+
   return (
     <>
       {/* 任务ID */}
@@ -168,7 +172,7 @@ export function ProductionTaskTableRow({
       </td>
       {/* 操作 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        {task.status === 'pending' && (
+        {task.status === 'pending' && canOperate && (
           <div className="flex items-center gap-1">
             <Button
               size="sm"
@@ -190,7 +194,7 @@ export function ProductionTaskTableRow({
             </Button>
           </div>
         )}
-        {(task.status === 'accepted' || task.status === 'in_progress') && (
+        {(task.status === 'accepted' || task.status === 'in_progress') && canOperate && (
           <Button
             size="sm"
             variant="blue"
@@ -203,15 +207,17 @@ export function ProductionTaskTableRow({
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => onContinueExecution(task)}
-              title="点击继续执行"
-            >
-              <Play className="w-4 h-4" />
-              继续执行
-            </Button>
+            {!isInspectionTask && (
+              <Button
+                size="sm"
+                variant="warning"
+                onClick={() => onContinueExecution(task)}
+                title="点击继续执行"
+              >
+                <Play className="w-4 h-4" />
+                继续执行
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"
@@ -229,6 +235,18 @@ export function ProductionTaskTableRow({
             variant="secondary"
             onClick={() => onOpenDetailModal(task)}
             title="点击查看详情"
+          >
+            <Eye className="w-4 h-4" />
+            查看
+          </Button>
+        )}
+        {/* 2026-10-10：巡查来源但无关联整改问题时无动作按钮，兜底显示「查看」 */}
+        {isInspectionTask && !canOperate && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onOpenDetailModal(task)}
+            title="该巡查暂无关联整改问题，可查看详情"
           >
             <Eye className="w-4 h-4" />
             查看

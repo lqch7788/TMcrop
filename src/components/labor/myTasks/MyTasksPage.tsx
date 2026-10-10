@@ -129,6 +129,11 @@ export function MyTasksPage() {
         sourceProblemId: (t as TaskWithExtras).sourceProblemId,
         // 来源类型（用于区分临时任务和生产任务）
         sourceType: (t as TaskWithExtras).sourceType,
+        // 2026-10-10（审核修复 H1）：补 dispatchMode / sourceInspectionId ——
+        //   "巡查反馈处理"tab 过滤（filteredTasks case 'problem'）依赖这两个字段，
+        //   修正前映射丢失它们 → 13 条巡查被整体过滤、tab 显示为 4 条错位内容
+        dispatchMode: (t as any).dispatchMode,
+        sourceInspectionId: (t as TaskWithExtras).sourceInspectionId,
         // 临时任务特有字段
         workLocation: (t as TaskWithExtras).workLocation || '',
         urgency: (t as TaskWithExtras).urgency || 'normal',
@@ -193,6 +198,9 @@ export function MyTasksPage() {
         tools: t.tools || [],
         sourceProblemId: t.sourceProblemId,
         sourceType: t.sourceType,
+        // 2026-10-10（审核修复 H1）：降级映射同步补字段，与 unifiedTasks 映射口径一致
+        dispatchMode: (t as any).dispatchMode,
+        sourceInspectionId: (t as any).sourceInspectionId,
         workLocation: t.greenhouseName || '',
         urgency: t.priority || 'normal',
         tempTaskType: '',
@@ -356,14 +364,19 @@ export function MyTasksPage() {
 
   // 处理接单 - 使用统一任务管理
   const handleAccept = (task: any) => {
+    // 2026-10-10（审核修复 H3/M1）：巡查来源的任务动作只走问题通道 ——
+    //   巡查记录在 farm/temp store 中不存在，acceptTask 会发往 /farm-tasks（幽灵/404）
+    const isInspectionTask = !!(task as any).sourceInspectionId;
     if (task.sourceProblemId) {
       acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
     }
     // 查找 unifiedTasks 中对应的任务并接受
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
-      acceptTask(unifiedTask.id);
-      // 记录接单操作
+      if (!isInspectionTask) {
+        acceptTask(unifiedTask.id);
+      }
+      // 记录接单操作（巡查/农事/临时统一记录，供详情弹窗"操作记录"读取）
       addTaskRecord({
         operationType: unifiedTask.type,
         operationTypeName: unifiedTask.typeName,
@@ -393,13 +406,17 @@ export function MyTasksPage() {
   const handleReject = () => {
     if (!rejectModal.task || !rejectReason.trim()) return;
     const task = rejectModal.task;
+    // 2026-10-10（审核修复 H3/M1）：巡查来源只走问题通道，不发 farm/temp 幽灵调用
+    const isInspectionTask = !!(task as any).sourceInspectionId;
     if (task.sourceProblemId) {
       rejectProblem(task.sourceProblemId, 'U013', '陆启闯', rejectReason);
     }
     // 查找 unifiedTasks 中对应的任务
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
-      rejectByExecutor(unifiedTask.id, rejectReason, unifiedTask.assigneeId, unifiedTask.assigneeName);
+      if (!isInspectionTask) {
+        rejectByExecutor(unifiedTask.id, rejectReason, unifiedTask.assigneeId, unifiedTask.assigneeName);
+      }
       // 记录拒绝操作
       addTaskRecord({
         operationType: unifiedTask.type,
@@ -425,8 +442,10 @@ export function MyTasksPage() {
 
   // 开始处理 - 使用统一任务管理
   const handleStartProcessing = (task: any) => {
+    // 2026-10-10（审核修复 H3/M1）：巡查来源不发 farm/temp 幽灵调用
+    const isInspectionTask = !!(task as any).sourceInspectionId;
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
-    if (unifiedTask) {
+    if (unifiedTask && !isInspectionTask) {
       updateTaskStatus(unifiedTask.id, 'in_progress');
     }
     setShowDetailModal(false);
@@ -500,13 +519,15 @@ export function MyTasksPage() {
         // 查找 unifiedTasks 中对应的任务
         const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
         if (unifiedTask) {
-          // 1. 更新任务状态为已拒绝
-          rejectByExecutor(
-            unifiedTask.id,
-            feedbackForm.cannotContinueReason,
-            unifiedTask.assigneeId,
-            unifiedTask.assigneeName
-          );
+          // 1. 更新任务状态为已拒绝（巡查来源跳过 farm/temp 幽灵调用，只走下方问题通道）
+          if (!(task as any).sourceInspectionId) {
+            rejectByExecutor(
+              unifiedTask.id,
+              feedbackForm.cannotContinueReason,
+              unifiedTask.assigneeId,
+              unifiedTask.assigneeName
+            );
+          }
           // 2. 同步更新问题状态（这样巡查反馈页面也能看到最新状态）
           if (task.sourceProblemId) {
             rejectProblem(task.sourceProblemId, 'U013', '陆启闯', feedbackForm.cannotContinueReason);
@@ -583,6 +604,9 @@ export function MyTasksPage() {
       const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
       if (unifiedTask) {
         const isFinal = feedbackForm.progress === 100;
+        // 2026-10-10（审核修复 H3/M1）：巡查来源跳过 useTasks 同步链路（其进度走上方问题通道
+        //   addProgressRecord/submitProblemFeedback），避免 submitProgress 发往 farm-tasks 幽灵端点
+        if (!(task as any).sourceInspectionId) {
         // 调用 submitProgress 创建 TaskRecord（useTasks 系统的记录）
         submitProgress(unifiedTask.id, feedbackForm.progress, {
           remarks: feedbackForm.resultText || feedbackForm.progressText,
@@ -599,6 +623,7 @@ export function MyTasksPage() {
           workloadHours: feedbackForm.workloadConfirm?.hours,
           workers: feedbackForm.workloadConfirm?.workers,
         });
+        }
 
         // ========== 数据闭环：同步到 useOperationRecords ==========
         addTaskRecord({
@@ -732,9 +757,13 @@ export function MyTasksPage() {
 
   // 继续执行 - 返工后恢复任务执行
   const handleContinueExecution = (task: any) => {
+    // 2026-10-10（审核修复 H3/M1）：巡查来源不发 farm/temp 幽灵调用（巡查行不显示"继续执行"按钮）
+    const isInspectionTask = !!(task as any).sourceInspectionId;
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
     if (unifiedTask) {
-      continueExecution(unifiedTask.id);
+      if (!isInspectionTask) {
+        continueExecution(unifiedTask.id);
+      }
       // 记录操作
       addTaskRecord({
         operationType: unifiedTask.type,
