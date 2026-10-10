@@ -34,9 +34,6 @@ import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '../../lib/apiClient';
 import { useFarmTaskStore } from '../../stores/farmTaskStore';
-// 2026-10-10：任务派发接线审批（样板）——「选执行人确认」即派发动作，提交审批后通过才生效
-import { submitTaskDispatchApproval } from '../../services/approvalSubmitService';
-import { useAuthStore } from '../../stores/useAuthStore';
 
 // 导入弹窗适配器
 import { WithdrawCancelAdapter } from '../../components/farm/hub/modals/WithdrawCancelAdapter';
@@ -313,10 +310,10 @@ export function FarmTaskHub() {
   };
 
   // 确认选择执行人
-  // 2026-10-10：任务派发接线（样板）——确认执行人 = "派发"动作：
-  //   先写执行人并把任务置为「审批中」，再提交派发审批单；
-  //   通过 → 联动转为「待接受」（正式派发）；拒绝 → 退回「待派发」且清空执行人。
-  //   审批提交失败 → 回退任务为「待派发·未指派」并提示（不产生半吊子状态）。
+  // 2026-10-10：统一为「直接派发」（用户决策）——5 条派发入口（新建/选执行人/发布重派/
+  //   重新派发/批量派发）行为一致：写执行人 + 状态置「待接受」（pending），不再提交派发审批单。
+  //   理由：派发不消耗资源、可撤回，执行质量由「验收」环节把关；纠错路径（撤回重派）不再设卡。
+  //   服务端 task_dispatch 审批联动与历史审批单保留不动（仅入口退出使用）。
   const handleConfirmSelectExecutor = async (assigneeId: string, assigneeName: string) => {
     if (!selectExecutorTask) return;
     const task = selectExecutorTask;
@@ -324,33 +321,10 @@ export function FarmTaskHub() {
       await useFarmTaskStore.getState().updateTask(task.id, {
         assigneeId,
         assigneeName,
-        status: 'pending_approval' as Task['status'],
+        status: 'pending' as Task['status'],
       });
     } catch (error) {
-      showAlert(`任务状态更新失败：${(error as Error).message}`);
-      return;
-    }
-    try {
-      const currentUser = useAuthStore.getState().currentUser;
-      await submitTaskDispatchApproval({
-        taskId: task.id,
-        taskCode: task.taskCode,
-        taskName: task.title,
-        assigneeName,
-        applicantId: currentUser?.oid || '',
-        applicantName: currentUser?.realName || '系统',
-        department: '',
-      });
-    } catch (error) {
-      // 回退：审批未提交成功 → 任务退回「待派发·未指派」，可重新选择执行人
-      try {
-        await useFarmTaskStore.getState().updateTask(task.id, {
-          assigneeId: '',
-          assigneeName: '',
-          status: 'pending' as Task['status'],
-        });
-      } catch { /* 回退失败仅记录，任务可由用户手动重试 */ }
-      showAlert(`提交派发审批失败：${(error as Error).message}\n任务已退回「待派发」，请重试。`);
+      showAlert(`任务派发失败：${(error as Error).message}`);
       return;
     }
     setSelectExecutorTask(null);
@@ -366,40 +340,22 @@ export function FarmTaskHub() {
   const confirmBatchDispatch = async (assigneeId: string, assigneeName: string) => {
     const now = new Date().toISOString();
     const taskIdSet = new Set(batchDispatchTaskIds);
-    // 2026-10-10：批量派发同样接线审批——批量置「审批中」+ 逐任务提交派发审批单
-    // P1-8：一次批量 API 置状态（保留性能优化），再并发提交审批
+    // 2026-10-10：统一为「直接派发」——批量置「待接受」（pending），与单条派发行为一致（不再提交审批单）
+    // P1-8：一次批量 API + 一次批量 setState 替代 N 次串行调用
     try {
       await enhancedApiClient.put('/farm-tasks/batch', {
         ids: batchDispatchTaskIds,
-        updates: { assigneeId, assigneeName, status: 'pending_approval' },
+        updates: { assigneeId, assigneeName, status: 'pending' },
       });
     } catch (error) {
       // 2026-09-21 修复保留：失败即中止（不写本地）+ 明确提示
       showAlert(`批量派发失败：${(error as Error).message}`);
       return;
     }
-    // 逐任务提交派发审批（并发）；部分失败时保持任务在「审批中」，由用户重试或驳回处理
-    try {
-      const currentUser = useAuthStore.getState().currentUser;
-      const tasks = useFarmTaskStore.getState().tasks.filter((t: any) => taskIdSet.has(t.id));
-      await Promise.all(tasks.map((t: any) =>
-        submitTaskDispatchApproval({
-          taskId: t.id,
-          taskCode: t.taskCode,
-          taskName: t.title,
-          assigneeName,
-          applicantId: currentUser?.oid || '',
-          applicantName: currentUser?.realName || '系统',
-          department: '',
-        })
-      ));
-    } catch (error) {
-      showAlert(`部分派发审批提交失败：${(error as Error).message}\n已完成的任务保持「审批中」，请稍后重试。`);
-    }
     // 直接 setState 更新 store（不触发 N 次独立 API）
     useFarmTaskStore.setState((prev: any) => ({
       tasks: prev.tasks.map((t: any) =>
-        taskIdSet.has(t.id) ? { ...t, assigneeId, assigneeName, status: 'pending_approval', updatedAt: now, version: (t.version || 1) + 1 } : t
+        taskIdSet.has(t.id) ? { ...t, assigneeId, assigneeName, status: 'pending', updatedAt: now, version: (t.version || 1) + 1 } : t
       ),
     }));
     setShowBatchDispatchModal(false);

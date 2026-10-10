@@ -56,7 +56,7 @@ export default function FarmApproval() {
   // 加载审批关联的业务数据
   const { data: businessData, isLoading: businessLoading } = useApprovalBusinessDetail(detailApproval);
 
-  // 2026-10-10：仅"任务派发"已接入业务入口（样板）；其余 3 个 tab 的提交入口尚未接线
+  // 2026-10-10：任务派发已退出审批（改为直接派发）；DISPATCH_READY 现用于区分"历史记录"说明与"未接入"提示
   const DISPATCH_READY = 'task_dispatch';
   const tabs = [
     { key: 'task_dispatch', label: '任务派发', icon: FileText, path: '/farm-hub', types: [ApprovalType.TASK_DISPATCH] },
@@ -444,7 +444,15 @@ export default function FarmApproval() {
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>
               该审批流程尚未接入业务提交入口（对应业务动作中暂无"提交审批"），列表为空属正常。
-              当前已启用的样板为「任务派发」：在农事任务中心发布草稿任务并指派执行人后，将在此生成派发审批单。
+            </span>
+          </div>
+        )}
+        {/* 2026-10-10：任务派发已改为「直接派发」（用户决策）——不再从派发入口生成审批单，本 tab 仅保留历史记录 */}
+        {activeTab === DISPATCH_READY && (
+          <div className="mx-4 mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>
+              任务派发现已改为「直接派发」：在农事任务中心选择执行人并确认后立即生效（待接受），不再生成审批单。本页仅保留历史审批记录。
             </span>
           </div>
         )}

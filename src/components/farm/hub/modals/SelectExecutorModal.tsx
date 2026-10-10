@@ -214,7 +214,7 @@ function SelectExecutorModalContent({
               为任务 "{task.title || task.id}" 选择执行人
             </p>
             <p className="text-sm text-blue-700 mt-1">
-              确认后任务将进入「审批中」并提交派发审批，审批通过后正式派发（待接受）
+              确认后任务将直接派发（待接受），可在任务列表中随时撤回
             </p>
           </div>
         </div>
