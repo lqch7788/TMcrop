@@ -1,5 +1,5 @@
 // MaterialApproval 类型定义
-// 物料审批页面的类型定义
+// 库存审批页面的类型定义（页面原「物料审批」，2026-10-10 更名）
 
 import { Approval, ApprovalStatus, ApprovalType } from '@/types/approval';
 

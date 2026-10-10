@@ -1,5 +1,5 @@
 // DetailModal 组件
-// 物料审批详情弹窗
+// 库存审批详情弹窗（页面原「物料审批」，2026-10-10 更名）
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { Check, CheckCircle, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';

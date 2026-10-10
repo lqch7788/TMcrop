@@ -42,7 +42,7 @@ import {
   type FieldConfig,
 } from './AddStockModal.constants';
 import { toPayload, buildOperatorInfo } from '@/services/addStockFormAdapter';
-// 2026-10-09：补录/调拨审批流接入（self_produced → 物料审批→补录审批 tab；transfer → 物料审批→库存调拨 tab）
+// 2026-10-09：补录/调拨审批流接入（self_produced → 库存审批→补录审批 tab；transfer → 库存审批→作物调拨审批 tab）
 import { submitSupplementaryApplication } from '@/services/apiInventorySupplementary';
 import { submitTransferApplication } from '@/services/apiInventoryTransfer';
 // 2026-10-10：组件内直连 API 抽到 service 层——源行查找 + 调拨可用仓查询
@@ -809,7 +809,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
       // 2026-10-09：补录/调拨走审批流；其它 4 种来源（external_purchased/gift/commissioned/manual）维持原样直入库
       // 注意：审批通过才真正入库（前端 addStockFormAdapter 的 payload 字段映射对审批端点部分字段名不同，需做适配）
       if (sourceType === 'self_produced') {
-        // 补录入库 → 物料审批 → 补录审批 tab
+        // 补录入库 → 库存审批 → 补录审批 tab
         const result = await submitSupplementaryApplication({
           sourceId: payload.sourceId || '',
           sourceModule: payload.sourceModule || 'manual',
@@ -838,11 +838,11 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           applicantDepartment: (currentUser as any)?.department || '',
           operatorName: operator.operatorName,
         });
-        await showAlert(`已提交补录审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「物料审批 → 补录审批」tab 查看`);
+        await showAlert(`已提交补录审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「库存审批 → 补录审批」tab 查看`);
         onSuccess?.();
         onClose();
       } else if (sourceType === 'transfer') {
-        // 调拨入库 → 物料审批 → 作物调拨审批 tab
+        // 调拨入库 → 库存审批 → 作物调拨审批 tab
         // 2026-10-09 修复：sourceWarehouseId 反查——"调出仓库"下拉 value 是仓库名（formData.sourceWarehouseName），
         // 此前直接读 formData.sourceWarehouseId（不存在）恒为空串 → 后端 Zod 400。现在按名称反查主数据 id，
         // 命中=系统内仓库（后端可做源扣减）；未命中=外部仓库（外部调入语义，仅目标仓加库存）
@@ -886,7 +886,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
           applicantDepartment: (currentUser as any)?.department || '',
           operatorName: operator.operatorName,
         });
-        await showAlert(`已提交调拨审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「物料审批 → 库存调拨」tab 查看`);
+        await showAlert(`已提交调拨审批：${result.applicationCode}（审批单 ${result.approvalCode}），请到「库存审批 → 作物调拨审批」tab 查看`);
         onSuccess?.();
         onClose();
       } else {

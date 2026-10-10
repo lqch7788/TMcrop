@@ -1,5 +1,5 @@
 // MaterialApprovalTable 组件
-// 物料审批页面的表格组件
+// 库存审批页面的表格组件（页面原「物料审批」，2026-10-10 更名）
 import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -59,7 +59,7 @@ interface MaterialApprovalTableProps {
 
 /**
  * MaterialApprovalTable 组件
- * 物料审批页面的表格区域，包含领料、退料、采购三种表格
+ * 库存审批页面的表格区域（领料、退料、物料入库、作物调拨、补录共用一个通用表格）
  */
 export function MaterialApprovalTable({
   paginatedData,

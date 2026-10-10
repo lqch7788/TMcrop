@@ -84,7 +84,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
     inboundDate: today,
     supplier: '',
     operator: currentUserName,
-    // 2026-09-27：默认待审核（统一走"物料审批 → 物料入库"），直接入库仅限紧急场景
+    // 2026-09-27：默认待审核（统一走"库存审批 → 物料入库"），直接入库仅限紧急场景
     status: 'pending' as 'completed' | 'pending',
   });
 
