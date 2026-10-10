@@ -27,7 +27,6 @@ import {
   OVERTIME_CONFIG,
   DEADLINE_CONFIG,
   REMINDER_CONFIG,
-  REWORK_CONFIG,
   TASK_PERMISSIONS,
   TASK_ACTION_CONFIG,
   STATUS_TRANSITIONS,
@@ -1354,7 +1353,6 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
     const newReworkCount = task.reworkCount + 1;
-    const newStatus: TaskStatus = newReworkCount >= REWORK_CONFIG.maxReworkCount ? 'failed' : 'rejected';
 
     const reworkRecord: ReworkRecord = {
       reworkCount: newReworkCount,
@@ -1369,18 +1367,28 @@ export function useTasks(): UseTasksReturn {
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // P0-3：改用 enhancedApiClient.post
+    // 2026-10-10 修复：status / reworkCount 完全由服务端权威计算（POST /reject 基于 DB 的
+    //   rework_count 自增），响应回来后校正本地。此前前端也在乐观更新里写这两个字段并 PUT
+    //   落库，形成"双写各自计算"：一次驳回 rework_count 0→1(PUT)→2(POST) 双增，
+    //   且前端(0+1→rejected)与后端(1+1→failed)各算一次 → 页面显示"返工中"、刷新后变
+    //   "任务失败"（与"重新派发刷新丢执行人"同型的刷新跳变，2026-10-10 实测）
     syncToApi(async () => {
-      await enhancedApiClient.post(`/farm-tasks/${id}/reject`, {
+      const resp = await enhancedApiClient.post<{ status?: string; reworkCount?: number }>(`/farm-tasks/${id}/reject`, {
         operator_id: task.assignerId || '',
         operator_name: task.assignerName || '',
         reason,
       });
+      // 用服务端结果校正本地（本地 reworkCount 可能 stale，服务端才看得到 DB 真值）
+      if (resp && resp.status) {
+        getStoreForTask(task).updateTask(id, {
+          status: resp.status as TaskStatus,
+          reworkCount: typeof resp.reworkCount === 'number' ? resp.reworkCount : task.reworkCount + 1,
+        });
+      }
     }, 'rejectForRework');
 
-    // 本地状态更新（乐观更新）
+    // 本地状态更新（乐观更新）：只写本地展示字段，不写 status/reworkCount（见上方注释）
     getStoreForTask(task).updateTask(id, {
-      status: newStatus,
-      reworkCount: newReworkCount,
       reworkHistory: [...task.reworkHistory, reworkRecord],
       rejectReason: reason,
       updatedAt: now,
@@ -1484,12 +1492,16 @@ export function useTasks(): UseTasksReturn {
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // P0-3：改用 enhancedApiClient.post
+    // 2026-10-10 修复：字段名必须与后端契约一致（farmTask.ts POST /:id/reassign 读取
+    //   assigneeId / assigneeName）。原用 new_assignee_id / new_assignee_name，后端读不到
+    //   → sql.js 把 undefined 静默绑为 NULL，且本 POST 晚于 updateTask 的 PUT 落库，
+    //   把 PUT 写好的执行人覆盖成 NULL → "重新派发成功但刷新后执行人丢失"（用户 10-10 反馈）
     syncToApi(async () => {
       await enhancedApiClient.post(`/farm-tasks/${id}/reassign`, {
         operator_id: task.assignerId || '',
         operator_name: task.assignerName || '',
-        new_assignee_id: finalAssigneeId,
-        new_assignee_name: finalAssigneeName,
+        assigneeId: finalAssigneeId,
+        assigneeName: finalAssigneeName,
       });
     }, 'reassignTask');
 

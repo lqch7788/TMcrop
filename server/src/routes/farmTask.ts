@@ -1612,6 +1612,13 @@ router.post('/:id/reassign', (req: Request, res: Response) => {
     const { id } = req.params;
     const { assigneeId, assigneeName, operator_id, operator_name, reason } = req.body;
 
+    // 2026-10-10：参数防御（Fail Loud）——此前前端用错字段名（new_assignee_id）时，
+    //   undefined 被 sql.js 静默绑为 NULL，"重新派发成功但执行人丢失"。
+    //   缺参直接 400，避免再次静默写坏数据；空字符串是合法值（返工满 2 次时强制清空执行人）
+    if (assigneeId === undefined) {
+      return res.status(400).json({ success: false, error: '缺少 assigneeId 参数：重新派发必须指定执行人字段' });
+    }
+
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
     stmt.bind([id]);
