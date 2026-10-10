@@ -8,6 +8,34 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+/** 问题状态 → 巡查「问题处理状态」(issueStatus) 映射 */
+function mapProblemStatusToIssueStatus(problemStatus: string): string {
+  if (problemStatus === 'completed') return 'resolved';
+  if (problemStatus === 'pending') return 'pending';
+  // in_progress / waiting_acceptance / rejected 等均处于处理流程中
+  return 'processing';
+}
+
+/**
+ * 推导巡查记录的 issueStatus（问题处理状态）—— 2026-10-10 新增。
+ *
+ * 优先取「关联问题」的真实状态（inspections.problem_id / source_problem_id → problems.status）；
+ * 无关联问题时按巡查自身性质兜底：attention / critical / pending 均为「未处理」。
+ *
+ * 背景：原推导「非 attention 一律 resolved」把 critical 等未处理巡查误标为"已解决"，
+ *   前端 useTasks 映射为 completed → "我的任务·巡查反馈处理"显示假完成（审核缺陷 H2）。
+ */
+function resolveIssueStatus(item: any, problemStatusById: Map<string, string>): string {
+  if (item.issueStatus) return item.issueStatus;
+  const linkedId = item.problemId || item.problem_id || item.sourceProblemId || item.source_problem_id;
+  if (linkedId) {
+    const linked = problemStatusById.get(String(linkedId));
+    if (linked) return mapProblemStatusToIssueStatus(linked);
+  }
+  const selfStatus = item.status || '';
+  return ['attention', 'critical', 'pending'].includes(selfStatus) ? 'pending' : 'resolved';
+}
+
 /**
  * 将数据库记录转换为前端 InspectionRecord 格式
  * 数据库仅存储核心字段，其余字段填充默认值确保前端不丢数据
@@ -41,7 +69,10 @@ function transformInspectionRecord(db: any) {
     issuePresets: Array.isArray(db.issuePresets) ? db.issuePresets : [],
     issuePhotos: Array.isArray(db.issuePhotos) ? db.issuePhotos : [],
     feedbackUsers: feedbackUsers,
-    issueStatus: db.issueStatus || db.issue_status || (db.status === 'attention' ? 'pending' : 'resolved'),
+    // 2026-10-10：只透传显式字段，兜底推导移交 resolveIssueStatus()（路由层，可访问 problems 表）。
+    //   原兜底「非 attention 一律 resolved」会把 critical 等未处理巡查误标为"已解决"，
+    //   前端映射为 completed → "我的任务"假完成（审核缺陷 H2）
+    issueStatus: db.issueStatus || db.issue_status || undefined,
     expectedCompletion: db.expectedCompletion || db.expected_completion || '',
     // 环境参数
     airTemperature: db.airTemperature || db.air_temperature || 0,
@@ -103,8 +134,24 @@ router.get('/', (req: Request, res: Response) => {
     // 获取数据列表
     const items = queryToObjects(db, sql, params);
 
+    // 2026-10-10：issueStatus 由关联问题的真实状态推导（见 resolveIssueStatus）
+    const problemStatusById = new Map<string, string>();
+    for (const p of queryToObjects(db, 'SELECT id, status FROM problems', [])) {
+      problemStatusById.set(String(p.id), String(p.status || ''));
+    }
+
     // 转换字段，补充缺失字段默认值
-    const transformed = items.map(transformInspectionRecord);
+    const transformed = items.map(transformInspectionRecord).map(it => {
+      const linkedId = it.problemId || it.problem_id || it.sourceProblemId || it.source_problem_id;
+      const linkedStatus = linkedId ? (problemStatusById.get(String(linkedId)) || '') : '';
+      return {
+        ...it,
+        issueStatus: resolveIssueStatus(it, problemStatusById),
+        // 2026-10-10：关联问题原始状态（completed/waiting_acceptance/in_progress/...）——
+        //   前端据此精确驱动"巡查反馈处理"的任务态展示与操作按钮（比 issueStatus 三态精细）
+        linkedProblemStatus: linkedStatus,
+      };
+    });
 
     res.json({ success: true, data: transformed, meta: { total, page: Number(page), limit: Number(limit) } });
   } catch (error) {
@@ -129,7 +176,25 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '巡查记录不存在' });
     }
 
-    res.json({ success: true, data: transformInspectionRecord(item) });
+    // 2026-10-10：issueStatus / linkedProblemStatus 由关联问题的真实状态推导
+    const transformed = transformInspectionRecord(item);
+    const linkedId = transformed.problemId || transformed.problem_id
+      || transformed.sourceProblemId || transformed.source_problem_id;
+    const problemStatusById = new Map<string, string>();
+    if (linkedId) {
+      const rows = queryToObjects(db, 'SELECT id, status FROM problems WHERE id = ?', [String(linkedId)]);
+      for (const p of rows) problemStatusById.set(String(p.id), String(p.status || ''));
+    }
+    const linkedStatus = linkedId ? (problemStatusById.get(String(linkedId)) || '') : '';
+
+    res.json({
+      success: true,
+      data: {
+        ...transformed,
+        issueStatus: resolveIssueStatus(transformed, problemStatusById),
+        linkedProblemStatus: linkedStatus,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取巡查详情失败' });
   }

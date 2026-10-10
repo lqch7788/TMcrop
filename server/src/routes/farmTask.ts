@@ -428,6 +428,15 @@ router.post('/', (req: Request, res: Response) => {
       source_code || sourceCode || null,
     ]);
 
+    // 2026-10-10（审核修复）：任务由问题分派创建时（source_problem_id 有值），把真实任务 id
+    //   回写到问题的 source_task_id —— 前端 createTask 同步返回的是乐观 TEMP- id（真实 id
+    //   由本端点生成），此前持久化的乐观 id 让"关联任务"全部悬空（28/28 实测），读取侧只能
+    //   靠 findTaskByProblem 兜底。此处以服务端回写为唯一写入者（无竞态）
+    const linkedProblemId = source_problem_id || sourceProblemId;
+    if (linkedProblemId) {
+      db.run('UPDATE problems SET source_task_id = ?, update_time = ? WHERE id = ?', [newId, now, linkedProblemId]);
+    }
+
     saveDatabase();
 
     // 查询刚创建的完整记录，返回给前端（避免Store乐观更新被空数据覆盖）
@@ -472,6 +481,11 @@ const FIELD_NAME_MAP: Record<string, string> = {
   completedAt: 'completed_at',
   reworkCount: 'rework_count',
   reworkHistory: 'rework_history',
+  // 2026-10-10（审核修复）：补两个缺失的 camelCase 映射 —— 此前前端乐观更新携带的
+  //   executorRejectCount / rejectReason 因无映射被 PUT 静默丢弃（console.warn 噪音），
+  //   导致"拒绝 2 次必须换人"的计数永远写不进 DB、执行人拒绝原因丢失（实测确认）
+  executorRejectCount: 'executor_reject_count',
+  rejectReason: 'rejected_reason',
   deadlineExtensions: 'deadline_extensions',
   dispatchMode: 'dispatch_mode',
   feedbackRequirements: 'feedback_requirements',
@@ -591,6 +605,11 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE farm_tasks SET ${setClauses}, update_time = ? WHERE id = ?`, values);
+    // 2026-10-10：0 行更新 → 404（Fail Loud）。此前对不存在的 id 更新返回 200"幽灵成功"
+    //   （如巡查记录误发给本端点），前端乐观更新不回滚、刷新后数据回退且无任何提示
+    if (db.getRowsModified() === 0) {
+      return res.status(404).json({ success: false, error: '农事任务不存在' });
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
