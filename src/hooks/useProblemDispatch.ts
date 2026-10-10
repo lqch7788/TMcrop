@@ -286,7 +286,10 @@ export function useProblemDispatch() {
       handler: assigneeName,
       handleDate: '',
       handleResult: '',
-      sourceTaskId: newTask.id,
+      // 2026-10-10（审核修复）：不再写 sourceTaskId: newTask.id —— createTask 同步返回的是
+      //   乐观 TEMP- id（真实 id 由后端创建任务后回写到 problems.source_task_id，
+      //   见 farmTask.ts POST / 的 linkedProblemId 回写）。原写法持久化乐观 id 导致
+      //   关联任务悬空（实测 28/28 悬空）
       flowRecords: [...currentFlowRecords, flowRecord] as any,
       expectedCompletion: expectedCompletion || '',
     });

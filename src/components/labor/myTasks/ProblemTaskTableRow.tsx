@@ -30,6 +30,12 @@ export function ProblemTaskTableRow({
 }: ProblemTaskTableRowProps) {
   const taskWithExtras = task as TaskWithExtras;
 
+  // 2026-10-10（审核修复 H3）：巡查来源（sourceInspectionId）的动作按钮仅在关联了整改问题
+  //   （sourceProblemId）时显示 —— 巡查的动作走问题通道（acceptProblem / submitProblemFeedback）；
+  //   无关联问题的纯巡查报告没有处理对象，只保留"查看"，防止点击落到不存在的 farm/temp 记录。
+  const isInspectionTask = !!(task as { sourceInspectionId?: string }).sourceInspectionId;
+  const canOperate = !isInspectionTask || !!(taskWithExtras as { sourceProblemId?: string }).sourceProblemId;
+
   // 巡查类型映射
   const getInspectionTypeConfig = (type: string) => {
     const typeMap: Record<string, { label: string; className: string }> = {
@@ -208,7 +214,7 @@ export function ProblemTaskTableRow({
       </td>
       {/* 操作列 */}
       <td className="px-3 py-3 whitespace-nowrap">
-        {task.status === 'pending' && (
+        {task.status === 'pending' && canOperate && (
           <div className="flex items-center gap-1">
             <Button
               size="sm"
@@ -230,7 +236,7 @@ export function ProblemTaskTableRow({
             </Button>
           </div>
         )}
-        {(task.status === 'accepted' || task.status === 'in_progress') && (
+        {(task.status === 'accepted' || task.status === 'in_progress') && canOperate && (
           <Button
             size="sm"
             variant="blue"
@@ -243,15 +249,17 @@ export function ProblemTaskTableRow({
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => onContinueExecution(task)}
-              title="点击继续执行"
-            >
-              <Play className="w-4 h-4" />
-              继续执行
-            </Button>
+            {!isInspectionTask && (
+              <Button
+                size="sm"
+                variant="warning"
+                onClick={() => onContinueExecution(task)}
+                title="点击继续执行"
+              >
+                <Play className="w-4 h-4" />
+                继续执行
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"
@@ -269,6 +277,18 @@ export function ProblemTaskTableRow({
             variant="secondary"
             onClick={() => onOpenDetailModal(task)}
             title="点击查看详情"
+          >
+            <Eye className="w-4 h-4" />
+            查看
+          </Button>
+        )}
+        {/* 2026-10-10：巡查来源但无关联整改问题时无动作按钮，兜底显示「查看」 */}
+        {isInspectionTask && !canOperate && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onOpenDetailModal(task)}
+            title="该巡查暂无关联整改问题，可查看详情"
           >
             <Eye className="w-4 h-4" />
             查看
