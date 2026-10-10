@@ -6,7 +6,7 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Check, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Coins, Download, Eye, Search, Square, Target, XCircle } from 'lucide-react';
+import { AlertTriangle, BarChart3, Check, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Coins, Download, Eye, Search, Square, Target, XCircle } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
@@ -158,6 +158,15 @@ export default function IndicatorBudgetApproval() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 2026-10-10：未接入提示——4 类审批均无业务提交入口（前端零调用），列表恒为空属正常。
+          避免演示/使用时误以为"恰好为空"；将来指标/预算管理功能建设接入审批时移除本提示。 */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <span>
+          本页 4 类审批（指标发布/指标调整/预算编制/预算调整）尚未接入业务提交入口（对应业务动作中暂无"提交审批"），列表为空属正常。
+        </span>
       </div>
 
       {/* 统计卡片 */}
