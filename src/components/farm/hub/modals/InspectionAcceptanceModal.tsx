@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { AlertTriangle, Camera, Clock, FileText, MapPin, Mic, User, X } from 'lucide-react';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
+import { problemStatusToCN } from '../../../../utils/problemStatus';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -139,9 +140,12 @@ export function InspectionAcceptanceModal({
 
   // 获取问题状态标签
   const getProblemStatusBadge = (status: string) => {
-    const config = INSPECTION_STATUS_CONFIG[status];
+    // 2026-10-10（审核修复）：问题 status 为英文枚举（waiting_acceptance），而配置键为中文 ——
+    //   原实现直接查表失败后原样渲染，向用户泄露英文枚举（实测）。先经英文→中文转换再查表
+    const cn = problemStatusToCN(status);
+    const config = INSPECTION_STATUS_CONFIG[cn];
     if (!config) {
-      return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{status}</span>;
+      return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{cn || status}</span>;
     }
     return (
       <span className={`px-2 py-0.5 ${config.bg} ${config.color} text-xs rounded`}>

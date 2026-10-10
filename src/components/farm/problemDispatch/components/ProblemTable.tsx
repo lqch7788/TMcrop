@@ -45,6 +45,9 @@ interface ProblemTableProps {
   onBatchSelectAll: () => void;
   // 操作按钮回调
   onSingleDispatch?: (problem: ProblemEntry) => void;
+  // 2026-10-10（审核修复）：问题验收回调 —— 原「验收」按钮 onClick 是 onViewDetail（只读），
+  //   与页面文案"点击验收通过才会自动标记为已处理"矛盾、待验收问题无真实验收入口
+  onAcceptance?: (problem: ProblemEntry) => void;
 }
 
 export function ProblemTable({
@@ -60,6 +63,7 @@ export function ProblemTable({
   onToggleSelectAll,
   onBatchSelectAll,
   onSingleDispatch,
+  onAcceptance,
 }: ProblemTableProps) {
   const showCheckbox = batchDeleteMode || exportMode || batchDispatchMode;
 
@@ -222,7 +226,7 @@ export function ProblemTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onViewDetail(problem)}
+                        onClick={() => (onAcceptance || onViewDetail)(problem)}
                         className="h-6"
                       >
                         <CheckCircle className="w-4 h-4" /> 验收
