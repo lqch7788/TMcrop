@@ -480,7 +480,8 @@ export function FarmTaskHub() {
                   <button
                     key={tab.key}
                     onClick={() => hub.setActiveTab(tab.key)}
-                    className={`px-6 py-3 text-base rounded-t-lg transition-all ${getTabStyle()}`}
+                    // 2026-10-10：tab 名称统一加粗（inactive 原无字重，active 的 font-bold 保留在 getTabStyle）
+                    className={`px-6 py-3 text-base rounded-t-lg transition-all font-bold ${getTabStyle()}`}
                   >
                     {tab.label}
                     <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-medium ${

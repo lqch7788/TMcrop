@@ -51,6 +51,7 @@ export default function TaskCenterPage() {
         tabs={TABS}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        bold
       />
 
       {/* Tab内容区域 */}

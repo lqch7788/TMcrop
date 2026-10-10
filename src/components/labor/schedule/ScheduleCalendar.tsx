@@ -399,7 +399,7 @@ export function ScheduleCalendar({
             variant={viewMode === 'month' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('month')}
-            className={viewMode === 'month' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+            className={`font-bold ${viewMode === 'month' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
           >
             月
           </Button>
@@ -407,14 +407,14 @@ export function ScheduleCalendar({
             variant={viewMode === 'week' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('week')}
-            className={viewMode === 'week' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+            className={`font-bold ${viewMode === 'week' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
           >
             周
           </Button>
           <Button
             variant={viewMode === 'day' ? 'default' : 'ghost'}
             size="sm"
-            className={viewMode === 'day' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+            className={`font-bold ${viewMode === 'day' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
             onClick={() => onViewModeChange('day')}
           >
             日
