@@ -408,7 +408,7 @@ export default function ProductionApproval() {
               setSelectedIds(new Set());
               setExportMode(false);
             }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${
               activeTab === tab.key
                 ? 'bg-emerald-600 text-white'
                 : 'text-gray-600 hover:bg-gray-100'
