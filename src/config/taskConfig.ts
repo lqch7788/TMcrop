@@ -35,6 +35,9 @@ export const REMINDER_DEFAULTS = {
   minIntervalMinutes: 60,
   maxRemindersPerDay: 5,
   autoReminderHours: 12,
+  /** 催办按钮显示窗口（小时）：距截止日期不足该值（含已过期）才显示催办。
+   *  2026-10-10 新增，口径与临时任务 getTaskOverdueStatus 的"即将到期 24h"一致 */
+  nearDueHours: 24,
 } as const;
 
 export const REWORK_DEFAULTS = {
@@ -75,12 +78,13 @@ export function getDeadlineConfig(): typeof DEADLINE_DEFAULTS {
   } as any;
 }
 
-/** 催办限制配置（3个参数，前缀 task.reminder.*） */
+/** 催办限制配置（4个参数，前缀 task.reminder.*） */
 export function getReminderConfig(): typeof REMINDER_DEFAULTS {
   return {
     minIntervalMinutes: getSystemConfigValueNumber('task.reminder.min-interval-minutes', REMINDER_DEFAULTS.minIntervalMinutes) as any,
     maxRemindersPerDay: getSystemConfigValueNumber('task.reminder.max-per-day', REMINDER_DEFAULTS.maxRemindersPerDay) as any,
     autoReminderHours: getSystemConfigValueNumber('task.reminder.auto-reminder-hours', REMINDER_DEFAULTS.autoReminderHours) as any,
+    nearDueHours: getSystemConfigValueNumber('task.reminder.near-due-hours', REMINDER_DEFAULTS.nearDueHours) as any,
   } as any;
 }
 

@@ -7,6 +7,7 @@ import { Bell, CheckCircle, FileText, Layers, Play, Send, Undo2, X, XCircle } fr
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours, BATCH_ASSIGNABLE_STATUSES } from '../constants_taskDispatch';
+import { getReminderConfig } from '@/config/taskConfig';
 import { OvertimeBadge } from './OvertimeBadge';
 import { showAlert } from '@/lib/dialogService';
 
@@ -142,6 +143,22 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
   sendReminder,
 }: TaskTableRowProps) => {
   const statusInfo = STATUS_MAP[task.status] || { label: task.status, bg: 'bg-gray-100', color: 'text-gray-600' };
+
+  // 催办显示条件（2026-10-10 重构，用户反馈）：
+  //   催办是「任务即将/已经到期」的管理动作，不应随状态常驻——原实现对全部非终态
+  //   （含验收驳回后的 rejected/failed）一律显示催办，驳回刚产生的行也带出催办按钮。
+  //   新口径与临时任务 getTaskOverdueStatus 一致：仅当任务在执行人手上
+  //   （accepted / in_progress）且距截止日期不足 nearDueHours 小时（含已过期）时显示；
+  //   无截止日期的任务不催办（无法界定"快要到期"）。
+  const nearDueHours = getReminderConfig().nearDueHours;
+  const dueTime = task.dueDate ? new Date(task.dueDate).getTime() : NaN;
+  const hoursUntilDue = (dueTime - Date.now()) / (1000 * 60 * 60);
+  const isNearOrPastDue = !Number.isNaN(hoursUntilDue) && hoursUntilDue <= nearDueHours;
+  const showRemind =
+    ['accepted', 'in_progress'].includes(task.status) &&
+    isNearOrPastDue &&
+    !!(task.assigneeId || task.assignee) &&
+    !!onRemind;
 
   return (
     <tr key={task.id} className="hover:bg-blue-100 transition-colors">
@@ -442,8 +459,8 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             </Button>
           )}
 
-          {/* 催办按钮 - 已发布状态且非终态显示（pending无执行人时不显示催办） */}
-          {!['draft', 'completed', 'cancelled', 'abandoned', 'pending'].includes(task.status) && onRemind && (
+          {/* 催办按钮 - 仅「执行中 + 临近/超过截止日期」显示（条件见上方 showRemind 注释） */}
+          {showRemind && (
             <Button
               variant={remindProps?.allowed ? 'destructive' : 'secondary'}
               size="sm"
