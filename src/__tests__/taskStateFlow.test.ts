@@ -150,12 +150,16 @@ describe('状态转换表 — STATUS_TRANSITIONS', () => {
     STATUS_TRANSITIONS = mod.STATUS_TRANSITIONS;
   });
 
-  it('pending 只能转到 accepted 或 cancelled', () => {
-    expect(STATUS_TRANSITIONS.pending).toEqual(['accepted', 'cancelled']);
+  // 2026-10-10 同步（ff6d883f "对齐撤回状态语义" 时遗漏的测试更新）：
+  // 撤回（withdraw）语义 = 收回派发回到草稿，后端 POST /farm-tasks/:id/withdraw 直接写
+  // status='draft'；状态机为 pending/accepted 补充 'draft' 出口以对齐后端能力，
+  // 避免"前端判非法拦下、后端实际可写"的两端不一致（即 ff6d883f 修复的 bug 类型）。
+  it('pending 可转到 accepted、cancelled 或 draft（撤回）', () => {
+    expect(STATUS_TRANSITIONS.pending).toEqual(['accepted', 'cancelled', 'draft']);
   });
 
-  it('accepted 只能转到 in_progress 或 cancelled', () => {
-    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'cancelled']);
+  it('accepted 可转到 in_progress、cancelled 或 draft（撤回）', () => {
+    expect(STATUS_TRANSITIONS.accepted).toEqual(['in_progress', 'cancelled', 'draft']);
   });
 
   it('in_progress 只能转到 waiting_acceptance、cancelled 或 abandoned', () => {
