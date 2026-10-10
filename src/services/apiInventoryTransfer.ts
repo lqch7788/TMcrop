@@ -49,3 +49,25 @@ export async function submitTransferApplication(
     payload,
   );
 }
+
+/** GET /api/inventory-transfer-applications/:id 申请单详情（详情弹窗展示"调出仓库"用） */
+export interface TransferApplicationDetail {
+  id: string;
+  applicationCode?: string;
+  sourceWarehouseId?: string;
+  sourceWarehouseName?: string;
+  targetWarehouseId?: string;
+  targetWarehouseName?: string;
+  materialCode?: string;
+  materialName?: string;
+  quantity?: number;
+  unit?: string;
+  status?: string;
+}
+
+export async function getTransferApplicationById(id: string): Promise<TransferApplicationDetail> {
+  // 2026-10-10：从 InventoryDetailModal 组件内直连 enhancedApiClient 抽到 service 层（V2.1 铁律）
+  return await enhancedApiClient.get<TransferApplicationDetail>(
+    `/inventory-transfer-applications/${encodeURIComponent(id)}`,
+  );
+}

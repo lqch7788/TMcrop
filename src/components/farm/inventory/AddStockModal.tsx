@@ -45,6 +45,9 @@ import { toPayload, buildOperatorInfo } from '@/services/addStockFormAdapter';
 // 2026-10-09：补录/调拨审批流接入（self_produced → 物料审批→补录审批 tab；transfer → 物料审批→库存调拨 tab）
 import { submitSupplementaryApplication } from '@/services/apiInventorySupplementary';
 import { submitTransferApplication } from '@/services/apiInventoryTransfer';
+// 2026-10-10：组件内直连 API 抽到 service 层——源行查找 + 调拨可用仓查询
+import { fetchEndedSourceRows } from '@/services/sourceRecordLookup';
+import { getAvailableByCrop } from '@/services/inventoryService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import CropCodeSelector from '../common/CropCodeSelector';
 // 2026-07-13 v6：补录原因复合组件（下拉 + "其他"时自定义文本框）
@@ -612,53 +615,35 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     if (sourceIdOptions.length > 0) return;
     (async () => {
       try {
-        const { enhancedApiClient } = await import('@/lib/apiClient');
-        const query = new URLSearchParams({ page: '1', pageSize: '200' }).toString();
-        // 2026-07-13 v7：补录只针对已结束的育苗/种植行（种源不能采收，不入补录范围）
-        // 前端过滤 status==='ended' || status==='cancelled'（行级流程已关闭）
-        const [seedlingRes, plantingRes] = await Promise.all([
-          enhancedApiClient.get<any[]>(`/seedlings?${query}`),
-          enhancedApiClient.get<any[]>(`/plantings?${query}`),
-        ]);
-        // enhancedApiClient 已自动解包 result.data（per memory api-client-response-unwrapping）
-        const extractItems = (res: any): any[] =>
-          Array.isArray(res) ? res : ((res as any)?.data?.items || (res as any)?.data || []);
-
-        // 过滤：只保留已结束的（行级流程已关闭）
-        // - 种植：status in ['ended', 'cancelled']
-        // - 育苗：status in ['completed', 'transplanted']（育苗表枚举与种植不同）
-        // - 种源：已从加载列表移除（种源不能采收）
-        const isEnded = (it: any, module: string) =>
-          module === 'seedling'
-            ? (it.status === 'completed' || it.status === 'transplanted')
-            : (it.status === 'ended' || it.status === 'cancelled');
-
+        // 2026-10-10：改走 service 层（sourceRecordLookup.fetchEndedSourceRows）——
+        // 此前组件内动态 import enhancedApiClient 直连 /seedlings、/plantings（违反 V2.1 铁律）
+        const rows = await fetchEndedSourceRows();
         const options: typeof sourceIdOptions = [];
-
-        // 育苗（字段：seedlingCode）
-        for (const it of extractItems(seedlingRes).filter((it) => isEnded(it, 'seedling'))) {
-          options.push({
-            value: String(it.id),
-            label: `[育苗] ${it.seedlingCode || it.code || it.id} - ${it.cropName || ''}`,
-            module: 'seedling',
-            code: it.seedlingCode || it.code,
-            cropName: it.cropName,
-            cropCode: it.cropCode,
-            // 2026-07-13 v8：保存完整源记录供 select 时联动读 propagationMode/greenhouseName
-            raw: it,
-          });
-        }
-        // 种植（字段：plantCode）
-        for (const it of extractItems(plantingRes).filter((it) => isEnded(it, 'planting'))) {
-          options.push({
-            value: String(it.id),
-            label: `[种植] ${it.plantCode || it.code || it.id} - ${it.cropName || ''}`,
-            module: 'planting',
-            code: it.plantCode || it.code,
-            cropName: it.cropName,
-            cropCode: it.cropCode,
-            raw: it,
-          });
+        for (const { module, raw: it } of rows) {
+          if (module === 'seedling') {
+            // 育苗（字段：seedlingCode）
+            options.push({
+              value: String(it.id),
+              label: `[育苗] ${it.seedlingCode || it.code || it.id} - ${it.cropName || ''}`,
+              module: 'seedling',
+              code: it.seedlingCode || it.code,
+              cropName: it.cropName,
+              cropCode: it.cropCode,
+              // 2026-07-13 v8：保存完整源记录供 select 时联动读 propagationMode/greenhouseName
+              raw: it,
+            });
+          } else {
+            // 种植（字段：plantCode）
+            options.push({
+              value: String(it.id),
+              label: `[种植] ${it.plantCode || it.code || it.id} - ${it.cropName || ''}`,
+              module: 'planting',
+              code: it.plantCode || it.code,
+              cropName: it.cropName,
+              cropCode: it.cropCode,
+              raw: it,
+            });
+          }
         }
         setSourceIdOptions(options);
       } catch (e) {
@@ -680,12 +665,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
     setCropWarehousesLoading(true);
     (async () => {
       try {
-        const { enhancedApiClient } = await import('@/lib/apiClient');
-        const res = await enhancedApiClient.get<any[]>(
-          `/inventory/available-by-crop?cropCode=${encodeURIComponent(String(formData.cropCode))}`,
-        );
-        const list: Array<{ warehouseId: string; warehouseName: string; available: number; unit: string; form?: string }> =
-          Array.isArray(res) ? res : ((res as any)?.data || []);
+        // 2026-10-10：改走 service 层（inventoryService.getAvailableByCrop）——组件不再直连 API
+        const list = await getAvailableByCrop(String(formData.cropCode));
         if (cancelled) return;
         setCropWarehouses(list);
         setFormData((prev) => {

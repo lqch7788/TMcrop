@@ -18,7 +18,8 @@ import {
   InventoryStock,
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
-import { SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
+// 2026-10-10：补 UNIT_MAP——单位列此前直接显示原始值（'kg' 等英文码未翻译）
+import { SOURCE_ORIGIN_MAP, UNIT_MAP } from '../../../constants/cropConstants';
 import { translateForm, translateArea } from '../../../constants/formDictionary';
 
 interface InventoryTableProps {
@@ -287,7 +288,8 @@ export function InventoryTable({
                           <span className={`px-2.5 py-0.5 text-xs rounded-full font-bold text-white shadow-sm ${
                             info?.bg || 'bg-slate-600'
                           }`}>
-                            {info?.label || stock.grade}
+                            {/* 2026-10-10：未映射的品质码不再显示原始英文，统一显示「其他」 */}
+                            {info?.label || '其他'}
                           </span>
                         );
                       })() : <span className="text-gray-400">-</span>}
@@ -323,7 +325,8 @@ export function InventoryTable({
                       {stock.frozenQuantity}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {stock.unit || '-'}
+                      {/* 2026-10-10：单位英文码翻译（kg→公斤；未命中 UNIT_MAP 时兜底原值） */}
+                      {stock.unit ? (UNIT_MAP[stock.unit] || stock.unit) : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs" title={stock.warehouseName}>
                       {stock.warehouseName || '-'}
@@ -348,10 +351,10 @@ export function InventoryTable({
                               </span>
                             );
                           }
-                          // 未知来源码：fallback 显示原文
+                          // 2026-10-10：未知来源码不再显示原始英文——统一显示「其他」（中文显示要求）
                           return (
                             <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                              {stock.sourceType}
+                              其他
                             </span>
                           );
                         })() : <span className="text-gray-400">-</span>}

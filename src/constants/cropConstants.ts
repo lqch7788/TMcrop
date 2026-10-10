@@ -465,7 +465,40 @@ export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; t
   outbound:       { label: '已出库',   bg: 'bg-gray-100',    text: 'text-gray-700' },
   empty:          { label: '已用完',   bg: 'bg-red-100',     text: 'text-red-700' },
   transferred:    { label: '已调拨',   bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  // 2026-10-10 修复：详情/编辑等复用本表时，以下状态此前无映射 → 走 in_stock 兜底，
+  // 导致"审核中/已取消"的补录占位行在详情弹窗错误显示为"库存中"；调拨目标行 active 亦靠兜底
+  active:         { label: '库存中',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  pending:        { label: '审核中',   bg: 'bg-amber-100',   text: 'text-amber-700' },
+  cancelled:      { label: '已取消',   bg: 'bg-gray-100',    text: 'text-gray-600' },
+  depleted:       { label: '已用完',   bg: 'bg-red-100',     text: 'text-red-700' }, // 历史脏值兜底
 };
+
+// ========== 作物库存页筛选选项（2026-10-10：与真实数据对齐 + 客户端别名匹配） ==========
+// 背景：原筛选项覆盖不全（状态 5 项/来源 2 项），且服务端过滤要求"精确单值"，
+//       无法覆盖历史别名（external_purchase 与 external_purchased、active 等）。
+// 现改为客户端过滤：value=选项值，match=实际匹配的原始值集合（含历史别名）。
+export const INVENTORY_STATUS_FILTER_OPTIONS: Array<{ value: string; label: string; match: string[] }> = [
+  { value: 'in_stock',       label: '库存中',   match: ['in_stock', 'active'] }, // active=调拨历史脏值兼容
+  { value: 'low_stock',      label: '低库存',   match: ['low_stock'] },
+  { value: 'frozen_partial', label: '部分冻结', match: ['frozen_partial', 'frozen'] },
+  { value: 'frozen_full',    label: '全部冻结', match: ['frozen_full'] },
+  { value: 'pending',        label: '审核中',   match: ['pending'] },
+  { value: 'cancelled',      label: '已取消',   match: ['cancelled'] },
+  { value: 'outbound',       label: '已出库',   match: ['outbound'] },
+  { value: 'empty',          label: '已用完',   match: ['empty', 'depleted'] },
+];
+
+export const INVENTORY_SOURCE_FILTER_OPTIONS: Array<{ value: string; label: string; match: string[] }> = [
+  { value: 'self_produced',      label: '自产',     match: ['self_produced'] },
+  { value: 'external_purchased', label: '外购',     match: ['external_purchased', 'external_purchase', 'external_harvest'] },
+  { value: 'gift',               label: '赠送/受赠', match: ['gift'] },
+  { value: 'commissioned',       label: '委托生产', match: ['commissioned'] },
+  { value: 'transfer',           label: '调拨入库', match: ['transfer', 'cross_warehouse', 'inventory_transfer', 'transfer_from_inventory'] },
+  { value: 'manual',             label: '手动录入', match: ['manual'] },
+  { value: 'planting',           label: '种植采收', match: ['planting', 'harvest'] },
+  { value: 'seed_source',        label: '种源',     match: ['seed_source'] },
+  { value: 'seedling',           label: '育苗',     match: ['seedling'] },
+];
 
 // ========== 采收状态映射 ==========
 export const HARVEST_STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -490,6 +523,11 @@ export const DEFAULT_ALERT_SETTINGS = {
 
 // ========== 分页选项 ==========
 export const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+// ========== 低库存阈值（2026-10-10 常量化：原为 InventoryV3 里两处硬编码的 10） ==========
+// 口径：currentQuantity < LOW_STOCK_THRESHOLD 视为低库存。
+// 后端同名常量在 server/src/repositories/inventory.repository.ts（getStats.lowStockCount），两处必须一致。
+export const LOW_STOCK_THRESHOLD = 10;
 
 // ========== 等级选项 ==========
 export const GRADE_OPTIONS = [

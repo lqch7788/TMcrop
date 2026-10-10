@@ -19,6 +19,9 @@ import { showAlert } from '@/lib/dialogService';
 import { freezeInventory, getActiveOrders } from '@/services/inventoryService';
 import type { ActiveOrder } from '@/services/inventoryService';
 import type { InventoryStock } from '@/types/inventory';
+// 2026-10-10：补操作人——此前冻结不传 operator，冻结流水操作人恒为空
+import { useAuthStore } from '@/stores/useAuthStore';
+import { buildOperatorInfo } from '@/services/addStockFormAdapter';
 
 interface FreezeModalProps {
   isOpen: boolean;
@@ -93,6 +96,8 @@ export function FreezeModal({ isOpen, stock, onClose, onSuccess }: FreezeModalPr
       return;
     }
 
+    // 2026-10-10：补操作人（此前不传 → 冻结/解冻流水"操作人"列恒为空）
+    const currentUser = useAuthStore.getState().currentUser;
     const result = await freezeInventory({
       instanceId: stock.instanceId,
       freezeType: mode,
@@ -100,6 +105,8 @@ export function FreezeModal({ isOpen, stock, onClose, onSuccess }: FreezeModalPr
       orderId: mode === 'order' ? selectedOrderId : undefined,
       purpose: mode === 'manual' ? purpose.trim() : `订单预留: ${selectedOrder?.orderCode || selectedOrderId}`,
       remarks: remarks.trim() || undefined,
+      operatorId: currentUser?.oid || undefined,
+      operatorName: buildOperatorInfo(currentUser).operatorName,
     });
 
     if (result.success) {
