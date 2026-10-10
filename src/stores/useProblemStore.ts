@@ -244,19 +244,36 @@ export const useProblemStore = create<ProblemState>()(
           set((state) => ({ problems: [newProblem, ...state.problems] }));
           return newProblem;
         } catch (error) {
-          // logger.warn('[ProblemStore] 创建失败:', error);
+          // 2026-10-10（审核修复）：原 catch 静默 return null，调用方弹窗照关零提示。
+          //   现显式记录错误（Fail Loud）；返回值保持 null，由调用方检查并提示用户
+          console.error('[ProblemStore] 创建问题失败:', error);
           return null;
         }
       },
 
       updateProblem: async (id, updates) => {
+        // 2026-10-10（审核修复）：原 catch 为空 —— 乐观更新失败时界面停在假状态、
+        //   刷新即回滚且零提示（与 farmTaskStore 的 Fail Loud 不对称）。
+        //   现失败回滚本地改动 + console 报告（不重抛：调用方均为 fire-and-forget，
+        //   抛错只会产生 unhandled rejection，用户仍无感知；回滚让用户能立即看到状态弹回）
+        const prev = get().problems.find((p) => p.id === id);
         set((state) => ({
           problems: state.problems.map((p) => (p.id === id ? { ...p, ...updates } : p)),
         }));
         try {
           await enhancedApiClient.put(`/problems/${id}`, updates);
         } catch (error) {
-          // logger.warn('[ProblemStore] 更新失败:', error);
+          if (prev) {
+            set((state) => ({
+              problems: state.problems.map((p) => (p.id === id ? prev : p)),
+            }));
+          }
+          console.error('[ProblemStore] 更新问题失败，已回滚本地改动:', error);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('api-sync-failed', {
+              detail: { label: `updateProblem(${id})`, error: error instanceof Error ? error.message : String(error), timestamp: Date.now() },
+            }));
+          }
         }
       },
 

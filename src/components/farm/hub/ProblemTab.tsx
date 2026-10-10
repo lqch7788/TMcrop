@@ -15,6 +15,8 @@ import { useTempTaskStore } from '../../../stores/useTempTaskStore';
 import { useInspectionDataStore } from '../../../stores/useInspectionDataStore';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
+// 2026-10-10（审核修复）：复用巡查侧通用验收弹窗，为问题管理 tab 的「验收」按钮提供真实动作
+import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
 import { ExportFormatModal } from '../problemDispatch/modals'
 import { todayLocal } from '@/lib/dateUtils';;
 import { showAlert } from '@/lib/dialogService';
@@ -85,7 +87,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   // 使用 useProblemDispatch 获取分派功能
   // 2026-09-20：补 waitingAcceptanceProblems —— hook 早已导出但组件从未消费，
   //   导致"待验收"状态的问题既不在"全部"列表、也没有筛选入口（后端 28 条只渲染 19 条）
-  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, totalCount } = useProblemDispatch();
+  const { dispatchProblem, workerList, pendingProblems, dispatchedProblems, waitingAcceptanceProblems, handledProblems, totalCount, approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
   // 使用 useComprehensiveDispatch 获取AI推荐功能
   const { getRecommendations } = useComprehensiveDispatch();
   // 使用 useTasks 获取任务数据（用于关联任务标签页）
@@ -161,6 +163,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     problem: ProblemEntry | null;
   }>({ isOpen: false, problem: null });
 
+  // ========== 验收弹窗状态（2026-10-10）：问题管理 tab 的「验收」入口 ==========
+  const [acceptanceModal, setAcceptanceModal] = useState<{
+    isOpen: boolean;
+    problem: ProblemEntry | null;
+  }>({ isOpen: false, problem: null });
+
   // ========== 分派表单状态 ==========
   const [dispatchMode, setDispatchMode] = useState<'ai_assisted' | 'manual'>('ai_assisted');
   const [selectedWorkers, setSelectedWorkers] = useState<{ id: string; name: string }[]>([]);
@@ -180,8 +188,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     greenhouseId: '',
     greenhouseName: '',
     cropName: '',
-    inspectorId: defaultInspector.id,
-    inspectorName: defaultInspector.name,
+    // 2026-10-10（审核修复）：可选链防御 —— 冷启动直开 /farm-hub 时 users 尚未加载，
+    //   原 defaultInspector.id 对 null 取属性直接白屏崩溃（打开新建弹窗时会重设实际巡查人）
+    inspectorId: defaultInspector?.id || '',
+    inspectorName: defaultInspector?.name || '',
     checkDate: todayLocal(),
     checkTime: new Date().toTimeString().slice(0, 5),
     issueText: '',
@@ -560,11 +570,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   };
 
   // ========== 处理新增提交 ==========
-  const handleCreateSubmit = () => {
+  const handleCreateSubmit = async () => {
     if (!validateForm()) return;
 
-    // 通过 Zustand Store 创建问题（API 写入 + 乐观更新）
-    store.createProblem({
+    // 2026-10-10（审核修复）：检查创建结果 —— 原实现不 await 不看返回值，
+    //   创建失败（如后端 500）时弹窗照关、零提示（假成功）。失败时保持弹窗打开便于重试
+    const created = await store.createProblem({
       title: formData.issueText.slice(0, 100),
       description: formData.issueText,
       severity: formData.issueSeverity,
@@ -586,6 +597,12 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       issueSeverity: formData.issueSeverity,
       sourceModule: 'manual',
     } as Record<string, unknown>);
+
+    if (!created) {
+      // 创建失败：保持弹窗打开，提示用户重试（Fail Loud）
+      showAlert('创建问题失败，请稍后重试');
+      return;
+    }
 
     setShowCreateModal(false);
     setFormData({
@@ -1238,6 +1255,11 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
   const currentUserName = useAuthStore(
     (s: any) => s.currentUser?.realName || s.currentUser?.username || ''
   );
+  // 2026-10-10（审核修复）：验收等写操作的操作人取当前登录用户（原多处硬编码 U001/U013）
+  const operatorId = useAuthStore((s: any) => s.currentUser?.oid || '');
+  const operatorName = useAuthStore(
+    (s: any) => s.currentUser?.realName || s.currentUser?.username || ''
+  );
   const linkedTasks = useMemo(() => {
     const farmList = (externalTasks || tasks || []) as any[];
     const farmLinked = farmList
@@ -1408,7 +1430,16 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               <Button
                 variant="blue"
                 size="sm"
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => {
+                  // 2026-10-10（审核修复）：打开弹窗时重设实际巡查人 —— formData 只在挂载时
+                  //   初始化一次，冷启动 users 晚加载时初始 inspectorId 为空，这里补齐
+                  setFormData(prev => ({
+                    ...prev,
+                    inspectorId: defaultInspector?.id || '',
+                    inspectorName: defaultInspector?.name || '',
+                  }));
+                  setShowCreateModal(true);
+                }}
               >
                 <Plus className="w-4 h-4" />
                 新建
@@ -1468,6 +1499,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           onToggleSelectAll={handleBatchSelectAll}
           onBatchSelectAll={toggleSelectAll}
           onSingleDispatch={(problem) => setDispatchModal({ isOpen: true, problem, batchMode: false })}
+          // 2026-10-10（审核修复）：「验收」按钮接真实验收动作（原只打开详情）
+          // （as any：两个模块各自定义的同名 ProblemEntry 类型不互通，与上方既有 prop 同款处理）
+          onAcceptance={((problem: any) => setAcceptanceModal({ isOpen: true, problem })) as any}
         />
 
         {/* 2026-09-21：问题列表分页（与农事任务表格一致：底部 Pagination 组件） */}
@@ -1518,12 +1552,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               <div>
                 <div className="text-sm font-medium text-blue-800">关联任务说明</div>
                 {/* 2026-09-21：更新文案（更准确描述3 类任务的来源 + 验收流程） */}
+                {/* 2026-10-10（审核修复）：原文案称"与**本问题**关联"—— 本 tab 是总览页、
+                    无"当前问题"上下文，列表实为全部已分派问题的关联任务，文案与内容不符 */}
                 <div className="text-sm text-blue-600 mt-1 space-y-1">
                   <div>
-                    本面板列出与<strong>本问题</strong>关联的全部任务与巡查记录，包含由"问题分派"接口派出的<strong>农事任务</strong>和<strong>临时任务</strong>，以及手工关联的<strong>巡查记录</strong>。
+                    本面板汇总列出<strong>所有已分派问题</strong>关联的全部任务与巡查记录，包含由"问题分派"接口派出的<strong>农事任务</strong>和<strong>临时任务</strong>，以及手工关联的<strong>巡查记录</strong>。
                   </div>
                   <div>
-                    完成任务后（农事/临时任务），需由分派员或验收员在任务详情页<strong>点击"验收通过"</strong>，才会自动将本问题标记为"已处理"。
+                    完成任务后（农事/临时任务），需由分派员或验收员在任务详情页<strong>点击"验收通过"</strong>，才会自动将<strong>对应问题</strong>标记为"已处理"。
                   </div>
                   <div>
                     点击表格中的<strong>任务编号</strong>可跳转到对应任务的详情/验收页。
@@ -1752,6 +1788,37 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
       />
+
+      {/* 验收弹窗（2026-10-10 审核修复）：问题管理 tab「验收」按钮的真实验收入口 ——
+          复用巡查侧通用弹窗；通过 → 问题标记已处理 + 关联任务联动完成；驳回 → 返回处理人 */}
+      {acceptanceModal.isOpen && acceptanceModal.problem && (() => {
+        // 流转记录取 store 里的最新值（弹窗打开期间可能有进度更新）
+        const liveProblem = store.problems.find(
+          (p) => String(p.id) === String(acceptanceModal.problem!.id)
+        );
+        const target = (liveProblem || acceptanceModal.problem!) as any;
+        return (
+          <InspectionAcceptanceModal
+            isOpen={acceptanceModal.isOpen}
+            problem={target}
+            records={(target.flowRecords || []) as any}
+            onAccept={(comments) => {
+              approveProblemCompletion(
+                target.id,
+                operatorId,
+                operatorName,
+                comments || '验收通过'
+              );
+              setAcceptanceModal({ isOpen: false, problem: null });
+            }}
+            onReject={(reason) => {
+              rejectAcceptance(target.id, operatorId, operatorName, reason);
+              setAcceptanceModal({ isOpen: false, problem: null });
+            }}
+            onClose={() => setAcceptanceModal({ isOpen: false, problem: null })}
+          />
+        );
+      })()}
     </div>
   );
 }
