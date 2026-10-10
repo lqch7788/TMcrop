@@ -4808,17 +4808,18 @@ function seedApprovalTypeRules() {
     // 成本审批（2种）
     { type: 'budget_create', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '预算编制，高金额需要严格审批' },
     { type: 'budget_adjust', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '预算调整，高金额需要严格审批' },
-    // HR审批（10种）
-    { type: 'leave', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '请假，3天内快速审批' },
-    { type: 'overtime', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '加班，2小时内免审批' },
-    { type: 'resignation', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '离职，强制严格审批' },
-    { type: 'recruitment', forceExempt: 0, forceStrict: 0, forcedLevel: 'standard', batch: 0, customCount: null, remark: '招聘，标准二级审批（部门主管+经理）' },
-    { type: 'onboarding', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '入职' },
-    { type: 'attendance_repair', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '考勤补录' },
-    { type: 'salary_adjustment', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '调薪，强制严格审批' },
-    { type: 'contract_renewal', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '合同续签' },
-    { type: 'salary_budget', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '工资预算，强制严格审批' },
-    { type: 'transfer', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '转岗，强制严格审批' },
+    // HR审批（10种）——2026-10-10：labor 接入人事审批页前置，7 类统一 quick 单人审批
+    //   （原 NULL → amount=0 会落入免审批档"提交即自动通过"；standard → 点两次；与农事 5 类同型事故）
+    { type: 'leave', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '请假（单人审批）' },
+    { type: 'overtime', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '加班（单人审批）' },
+    { type: 'resignation', forceExempt: 0, forceStrict: 1, forcedLevel: 'quick', batch: 0, customCount: null, remark: '离职（单人审批）' },
+    { type: 'recruitment', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '招聘（单人审批）' },
+    { type: 'onboarding', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '入职（单人审批）' },
+    { type: 'attendance_repair', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '考勤补录（功能未建设）' },
+    { type: 'salary_adjustment', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '调薪（功能未建设）' },
+    { type: 'contract_renewal', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '合同续签（单人审批）' },
+    { type: 'salary_budget', forceExempt: 0, forceStrict: 1, forcedLevel: 'quick', batch: 0, customCount: null, remark: '工资预算（单人审批）' },
+    { type: 'transfer', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '转岗（功能未建设）' },
   ];
 
   const stmt = db.prepare(`
@@ -4871,6 +4872,44 @@ export async function alignFarmApprovalTypeRulesStandalone(): Promise<{ updated:
   const updated = db.getRowsModified();
   saveDatabase();
   seedLog.info(`已对齐农事审批类型规则: ${updated} 行 → quick（单人审批）`);
+  return { updated, skipped: false };
+}
+
+/**
+ * 2026-10-10：HR 7 类审批规则对齐（labor 模块接入人事审批页的前置修复，幂等）
+ *
+ * 与农事 5 类同因：这些类型提交时 amount 恒为 0——
+ *   · forced_level=NULL → 回落"金额<1000 免审批"档 → 提交即自动通过（SP20261010RW475 同型事故）
+ *   · forced_level='standard'（招聘种子残留）→ 二级链"点两次才通过"（SP20261010RW874 同型）
+ * 统一对齐为 quick（单人审批，一次通过即终审；与 labor 页面就地审批的实际做法一致）。
+ *
+ * 覆盖范围：NULL / 空串 / 'standard' 三类残留值；已手工设为其它级别（strict 等）的行不覆盖。
+ * 无待修复行时跳过（不落盘）；有修复则显式 saveDatabase（sql.js 唯一落盘路径）。
+ */
+export async function alignHrApprovalTypeRulesStandalone(): Promise<{ updated: number; skipped: boolean }> {
+  const db = getDatabase();
+  const TYPES = "('leave','overtime','resignation','recruitment','onboarding','contract_renewal','salary_budget')";
+  const pending = db.exec(`
+    SELECT COUNT(*) FROM approval_type_rules
+    WHERE approval_type IN ${TYPES}
+      AND (forced_level IS NULL OR forced_level = '' OR forced_level = 'standard')
+  `);
+  const n = Number(pending[0]?.values[0]?.[0]) || 0;
+  if (n === 0) {
+    seedLog.skip('• HR 7 类审批类型规则已对齐（quick），跳过');
+    return { updated: 0, skipped: true };
+  }
+  db.run(`
+    UPDATE approval_type_rules
+    SET forced_level = 'quick',
+        remark = '与金额无关，单人审批（quick）',
+        updated_at = ?
+    WHERE approval_type IN ${TYPES}
+      AND (forced_level IS NULL OR forced_level = '' OR forced_level = 'standard')
+  `, [new Date().toISOString()]);
+  const updated = db.getRowsModified();
+  saveDatabase();
+  seedLog.info(`已对齐 HR 审批类型规则: ${updated} 行 → quick（单人审批）`);
   return { updated, skipped: false };
 }
 

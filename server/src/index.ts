@@ -204,6 +204,18 @@ async function start() {
       console.warn('[alignFarmApprovalTypeRules] 启动对齐失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-10-10：HR 7 类审批规则对齐（labor 模块接入人事审批页前置）——同农事机制，
+    //   覆盖 NULL/''/standard 残留（免审批自动通过 / 二级点两次两种同型风险）
+    try {
+      const { alignHrApprovalTypeRulesStandalone } = await import('./db/seedData');
+      const hrAlignResult = await alignHrApprovalTypeRulesStandalone();
+      if (!hrAlignResult.skipped) {
+        console.log(`[alignHrApprovalTypeRules] 已对齐 ${hrAlignResult.updated} 行 → quick（单人审批）`);
+      }
+    } catch (e: any) {
+      console.warn('[alignHrApprovalTypeRules] 启动对齐失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-08-29：GREEN 级独立 seed — 设备监控中心 monitoring_devices 种子（绕过 YELLOW 级 fixMissingSchema 禁用）
     try {
       const { seedMonitoringDevicesStandalone } = await import('./db/seedData');

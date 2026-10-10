@@ -1391,26 +1391,44 @@ export function updateBusinessTable(
       break;
 
     case 'resign':
-      if (updateEmployee(db, requestId, 'resigned', approvalCode, extra)) {
-        // 额度服务调用 - 离职审批通过后删除员工额度
-        if (action === 'approved' && extra && extra.worker_id) {
-          deleteEmployeeQuotas(db, extra.worker_id as string);
+      // 2026-10-10 重构：原实现只更新 employees 表，且**无论通过/驳回都置为 resigned**
+      //   （驳回也把员工改离职！），并从不更新 resignation_records → 离职页面状态不同步。
+      //   新语义：requestId = resignation_records.id；记录按结果流转；仅通过时联动员工表。
+      try {
+        const resignRec = db.prepare('SELECT id, worker_id FROM resignation_records WHERE id = ?').get(requestId) as { id: string; worker_id: string } | undefined;
+        if (!resignRec) {
+          return { success: false, message: `离职记录 ${requestId} 不存在，无法更新` };
         }
-        return { success: true, message: '员工离职状态已更新' };
+        const resignLabel = status === 'approved' ? '已通过' : status === 'rejected' ? '已拒绝' : status === 'cancelled' ? '已取消' : '待审批';
+        const resignActor = readApprovalActor(db, approvalCode);
+        db.run(`
+          UPDATE resignation_records SET
+            status = ?, status_label = ?, approver = ?, approve_time = ?, update_time = ?
+          WHERE id = ?
+        `, [status, resignLabel, resignActor.name || '', now, now, requestId]);
+        // 仅审批通过时联动员工表（置离职 + 删额度）
+        if (status === 'approved' && resignRec.worker_id) {
+          updateEmployee(db, resignRec.worker_id, 'resigned', approvalCode, { resignedAt: now });
+          deleteEmployeeQuotas(db, resignRec.worker_id);
+        }
+        return { success: true, message: '离职状态已更新' };
+      } catch (e) {
+        console.error('更新离职状态失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
     case 'recruitment':
-      // 招聘使用临时任务表或专门表
+      // 2026-10-10 修复：原实现 UPDATE temp_tasks（错表——招聘记录在 recruitment_records），
+      //   属"幽灵路径"：目标行永不匹配却恒返回成功，审批结果从未落到招聘单。
       try {
+        const recruitLabel = status === 'approved' ? '已通过' : status === 'rejected' ? '已拒绝' : status === 'cancelled' ? '已取消' : '待审批';
+        const recruitActor = readApprovalActor(db, approvalCode);
         db.run(`
-          UPDATE temp_tasks SET
-            status = ?,
-            approval_code = ?,
-            approved_at = ?,
-            update_time = ?
+          UPDATE recruitment_records SET
+            status = ?, status_label = ?, approver = ?, approve_time = ?, update_time = ?
           WHERE id = ?
-        `, [status, approvalCode, now, now, requestId]);
+        `, [status, recruitLabel, recruitActor.name || '', now, now, requestId]);
         return { success: true, message: '招聘状态已更新' };
       } catch (e) {
         console.error('更新招聘状态失败:', e);
@@ -1419,12 +1437,22 @@ export function updateBusinessTable(
       break;
 
     case 'onboarding':
-      if (updateEmployee(db, requestId, 'onboarding_completed', approvalCode, extra)) {
-        // 额度服务调用 - 入职审批通过后初始化员工额度
-        if (action === 'approved' && extra && extra.worker_id) {
-          initEmployeeQuotas(db, extra.worker_id as string, (extra.worker_name as string) || '', new Date().getFullYear());
-        }
-        return { success: true, message: '员工入职状态已更新' };
+      // 2026-10-10 修复：原实现仅 updateEmployee('onboarding_completed')——不更新
+      //   onboarding_records（页面不同步），且向员工表写一个不存在的状态值。
+      //   新语义（对齐 labor 活跃页字典：pending/processing/onboarded）：
+      //   通过 → 'onboarded'（已入职）；驳回 → 'processing'（退回办理中，可修正重提）。
+      //   员工档案自动建档属后续功能，暂不动 employees。
+      try {
+        const onboardStatus = status === 'approved' ? 'onboarded' : status === 'rejected' ? 'processing' : status;
+        db.run(`
+          UPDATE onboarding_records SET
+            status = ?, approved_at = ?, update_time = ?
+          WHERE id = ?
+        `, [onboardStatus, now, now, requestId]);
+        return { success: true, message: '入职记录状态已更新' };
+      } catch (e) {
+        console.error('更新入职状态失败:', e);
+        return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
       }
       break;
 
@@ -1441,22 +1469,17 @@ export function updateBusinessTable(
       break;
 
     case 'contract_renewal':
-      // 合同续签
+      // 2026-10-10 修复：原实现 UPDATE contracts（错表——续签记录在 contract_renewal_records，
+      //   且 contracts 表 0 行）→ 审批结果从未落到续签单（幽灵成功）。
       try {
-        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contracts'");
-        if (tableCheck.step()) {
-          tableCheck.free();
-          db.run(`
-            UPDATE contracts SET
-              status = ?,
-              renewal_approval_code = ?,
-              renewed_at = ?,
-              update_time = ?
-            WHERE id = ?
-          `, ['renewed', approvalCode, now, now, requestId]);
-          return { success: true, message: '合同续签状态已更新' };
-        }
-        tableCheck.free();
+        const renewalLabel = status === 'approved' ? '已通过' : status === 'rejected' ? '已拒绝' : status === 'cancelled' ? '已取消' : '待审批';
+        const renewalActor = readApprovalActor(db, approvalCode);
+        db.run(`
+          UPDATE contract_renewal_records SET
+            status = ?, status_label = ?, approver = ?, approve_time = ?, update_time = ?
+          WHERE id = ?
+        `, [status, renewalLabel, renewalActor.name || '', now, now, requestId]);
+        return { success: true, message: '合同续签状态已更新' };
       } catch (e) {
         console.error('更新合同续签失败:', e);
         return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
@@ -1464,22 +1487,16 @@ export function updateBusinessTable(
       break;
 
     case 'salary_budget':
-      // 工资预算
+      // 2026-10-10 修复：原实现 UPDATE salary_budgets——该表不存在（实际 salary_budget_records），
+      //   审批处理必然失败/无落点。
       try {
-        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='salary_budgets'");
-        if (tableCheck.step()) {
-          tableCheck.free();
-          db.run(`
-            UPDATE salary_budgets SET
-              status = ?,
-              approval_code = ?,
-              approved_at = ?,
-              update_time = ?
-            WHERE id = ?
-          `, [status, approvalCode, now, now, requestId]);
-          return { success: true, message: '工资预算状态已更新' };
-        }
-        tableCheck.free();
+        const salaryBudgetLabel = status === 'approved' ? '已通过' : status === 'rejected' ? '已拒绝' : status === 'cancelled' ? '已取消' : '待审批';
+        db.run(`
+          UPDATE salary_budget_records SET
+            status = ?, status_label = ?, update_time = ?
+          WHERE id = ?
+        `, [status, salaryBudgetLabel, now, requestId]);
+        return { success: true, message: '工资预算状态已更新' };
       } catch (e) {
         console.error('更新工资预算失败:', e);
         return { success: false, message: '数据库更新失败: ' + (e instanceof Error ? e.message : String(e)) };
