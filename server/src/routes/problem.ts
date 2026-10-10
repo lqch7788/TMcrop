@@ -178,6 +178,22 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     const db = getDatabase();
+
+    // 2026-10-10（审核修复）：problem_code 列 NOT NULL，而前端「新建问题」不传该字段 ——
+    //   此前直接 INSERT 违反约束 → 500 → store 返回 null → 弹窗照关零提示（静默失败）。
+    //   缺失时按 DB 既有格式生成 PD{YYYYMMDD}{3位序号}（当日最大序号 +1）
+    let finalProblemCode = problem_code;
+    if (!finalProblemCode) {
+      const d = new Date();
+      const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const lastRows = queryToObjects(db,
+        'SELECT problem_code FROM problems WHERE problem_code LIKE ? ORDER BY problem_code DESC LIMIT 1',
+        [`PD${ymd}%`]);
+      const lastCode = String(lastRows[0]?.problem_code || '');
+      const seq = lastCode ? (parseInt(lastCode.slice(-3), 10) || 0) + 1 : 1;
+      finalProblemCode = `PD${ymd}${String(seq).padStart(3, '0')}`;
+    }
+
     db.run(`
       INSERT INTO problems (
         id, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id,
@@ -194,7 +210,7 @@ router.post('/', (req: Request, res: Response) => {
         create_time, update_time
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId, problem_code, problem_type, title, description, greenhouse_name, greenhouse_id || '',
+      newId, finalProblemCode, problem_type, title, description, greenhouse_name, greenhouse_id || '',
       reporter_id, reporter_name, assignee_id, assignee_name, priority || 'medium', normalizeProblemStatus(status),
       crop_name || '', inspector_id || '', inspector_name || '', check_date || '', check_time || '',
       weather || '', temperature || 0, humidity || 0, crop_status || '', plant_height || 0, leaf_count || 0,

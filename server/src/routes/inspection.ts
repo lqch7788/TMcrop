@@ -298,22 +298,74 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * 巡查记录可写列白名单 + camelCase 字段映射（2026-10-10 新增，审核修复）
+ *
+ * 背景：此前 PUT 直接把请求体的键当列名拼 SQL —— 前端批量编辑发 camelCase 键
+ * （inspectorId / checkDate / issueCategories …）会 `no such column` 500，
+ * 且调用方（InspectionTab 批量编辑 forEach）不 await 不提示，整批静默失败。
+ * 现对齐 problems PUT 的模式：camelCase→snake_case 映射 + 白名单校验（Fail Loud）。
+ */
+const INSPECTION_FIELD_MAP: Record<string, string> = {
+  recordCode: 'record_code', inspectionType: 'inspection_type',
+  inspectorId: 'inspector_id', inspectorName: 'inspector_name',
+  greenhouseId: 'greenhouse_id', greenhouseName: 'greenhouse_name',
+  checkDate: 'check_date', checkTime: 'check_time', checkResult: 'check_result',
+  issueSeverity: 'issue_severity', issueText: 'issue_text',
+  issueCategories: 'issue_categories', issuePresets: 'issue_presets', issuePhotos: 'issue_photos',
+  cropName: 'crop_name', cropStatus: 'crop_status',
+  batchId: 'batch_id', batchCode: 'batch_code',
+  equipmentId: 'equipment_id', equipmentName: 'equipment_name',
+  infrastructureId: 'infrastructure_id', infrastructureName: 'infrastructure_name',
+  plantHeight: 'plant_height', leafCount: 'leaf_count',
+  problemId: 'problem_id', sourceProblemId: 'source_problem_id',
+  airTemperature: 'air_temperature', airHumidity: 'air_humidity',
+  lightIntensity: 'light_intensity', co2Concentration: 'co2_concentration',
+  soilTemperature: 'soil_temperature', soilMoisture: 'soil_moisture',
+  soilEc: 'soil_ec', soilPh: 'soil_ph',
+  createTime: 'create_time', updateTime: 'update_time',
+};
+
+/** inspections 表允许写入的列（按表实际结构） */
+const INSPECTION_DB_COLUMNS = new Set<string>([
+  'record_code', 'inspection_type', 'inspector_id', 'inspector_name',
+  'greenhouse_name', 'greenhouse_id', 'check_date', 'check_time', 'check_result',
+  'issue_severity', 'issue_text', 'images', 'status',
+  'feedback_users', 'crop_name', 'crop_status', 'batch_id', 'batch_code',
+  'equipment_id', 'equipment_name', 'infrastructure_id', 'infrastructure_name',
+  'plant_height', 'leaf_count', 'duration', 'weather', 'temperature', 'humidity',
+  'issue_categories', 'issue_presets', 'issue_photos', 'problem_id', 'source_problem_id',
+  'remarks', 'air_temperature', 'air_humidity', 'light_intensity', 'co2_concentration',
+  'soil_temperature', 'soil_moisture', 'soil_ec', 'soil_ph',
+  'create_time', 'update_time',
+]);
+
+/** 需序列化为 JSON 字符串存储的列 */
+const INSPECTION_JSON_COLUMNS = new Set<string>([
+  'images', 'feedback_users', 'issue_categories', 'issue_presets', 'issue_photos',
+]);
+
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = { ...req.body };
-
-    // 特殊处理：feedbackUsers 序列化为 JSON 字符串存储
-    if ('feedbackUsers' in updates) {
-      updates.feedback_users = Array.isArray(updates.feedbackUsers)
-        ? JSON.stringify(updates.feedbackUsers) : null;
-      delete updates.feedbackUsers;
-    }
-    // 移除 id 字段防止更新主键
-    delete updates.id;
-
     const now = new Date().toISOString();
     const db = getDatabase();
+
+    // camelCase → snake_case 映射 + 白名单过滤（Fail Loud：丢弃字段必须可见）
+    const updates: Record<string, any> = {};
+    const droppedKeys: string[] = [];
+    for (const [k, v] of Object.entries(req.body)) {
+      if (k === 'id' || v === undefined) continue;
+      const col = INSPECTION_FIELD_MAP[k] || k;
+      if (!INSPECTION_DB_COLUMNS.has(col)) {
+        droppedKeys.push(k);
+        continue;
+      }
+      updates[col] = INSPECTION_JSON_COLUMNS.has(col) && Array.isArray(v) ? JSON.stringify(v) : v;
+    }
+    if (droppedKeys.length > 0) {
+      console.warn(`[inspections PUT] 忽略非白名单字段: ${droppedKeys.join(', ')}`);
+    }
 
     const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
     if (fields.length === 0) {
@@ -324,9 +376,14 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE inspections SET ${fields}, update_time = ? WHERE id = ?`, values);
+    // 2026-10-10：0 行更新 → 404（Fail Loud，防幽灵成功）
+    if (db.getRowsModified() === 0) {
+      return res.status(404).json({ success: false, error: '巡查记录不存在' });
+    }
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
+    console.error('更新巡查记录失败:', error);
     res.status(500).json({ success: false, error: '更新巡查记录失败' });
   }
 });
