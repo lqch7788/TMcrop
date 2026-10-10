@@ -96,6 +96,18 @@ function getStoreForTask(task: Task) {
   return useFarmTaskStore.getState();
 }
 
+/**
+ * 该任务的动作是否应同步到 /farm-tasks 端点（2026-10-10 审核修复 M1）。
+ *
+ * 临时任务（tempTask）与巡查记录（inspection）此前也会发 POST /farm-tasks/:id/accept 等，
+ * 产生必然 404 的噪音请求（"农事任务不存在"）；temp 的落库由 updateTask→PUT /temp-tasks 承担，
+ * 巡查的动作走问题通道（acceptProblem / submitProblemFeedback）。此处仅 farm 任务发端点。
+ */
+function shouldSyncToFarmEndpoint(task: Task): boolean {
+  return task.dispatchMode !== 'tempTask' && task.sourceType !== 'tempTask'
+    && task.dispatchMode !== 'inspection' && task.sourceType !== 'inspection';
+}
+
 /** 异步API同步（fire-and-forget）
  * 2026-06-27 P0 修复：失败必须显式 log + 上报（CLAUDE.md Rule 12: Fail Loud）
  * 失败不再静默吞错，让用户在浏览器 console 能看到 API 同步失败
@@ -329,13 +341,26 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
   const feedbackUsers = Array.isArray(t.feedbackUsers) ? t.feedbackUsers : [];
   const assigneeName = feedbackUsers.length > 0 ? feedbackUsers[0] : inspectorName;
   const status = t.status || 'pending';
-  // P0：巡查 status 字段是巡查性质（critical/normal/attention），
-  //   但每日工单汇总需要反映"问题处理进度"。当 issueStatus=resolved 时，
-  //   把 status 改为 completed（已完成），否则保持巡查原状态。
+  // 2026-10-10（审核修复 H2/H3）：巡查的「任务态」按以下优先级推导——
+  //   1) 关联问题的原始状态（服务端 linkedProblemStatus）——巡查的整改对象是关联问题，
+  //      问题状态即任务进度（completed / waiting_acceptance / in_progress / pending）
+  //   2) issueStatus 三态推导（resolved→完成 / processing→处理中）
+  //   3) 兜底保持巡查自身状态（无关联问题的纯巡查报告，无处理动作）
+  //   修正前：仅 resolved→completed，其余保留巡查性质（critical/attention），
+  //   造成"严重异常巡查显示已完成"（假完成）与原始枚举裸露。
   const issueStatus = t.issueStatus || (t as any).issue_status;
+  const linkedProblemStatus = String((t as any).linkedProblemStatus || '');
+  const taskStatusFromProblem: TaskStatus | null =
+    linkedProblemStatus === 'completed' ? 'completed'
+    : linkedProblemStatus === 'waiting_acceptance' ? 'waiting_acceptance'
+    : linkedProblemStatus === 'in_progress' || linkedProblemStatus === 'rejected' ? 'in_progress'
+    : linkedProblemStatus === 'pending' ? 'pending'
+    : null;
   const taskStatusFromIssue: TaskStatus | null =
-    issueStatus === 'resolved' || issueStatus === '已处理' ? 'completed' : null;
-  const finalStatus: TaskStatus = (taskStatusFromIssue || status) as TaskStatus;
+    issueStatus === 'resolved' || issueStatus === '已处理' ? 'completed'
+    : issueStatus === 'processing' || issueStatus === '处理中' ? 'in_progress'
+    : null;
+  const finalStatus: TaskStatus = (taskStatusFromProblem || taskStatusFromIssue || status) as TaskStatus;
   const issueSeverity = t.issueSeverity || t.issue_severity || '轻微';
 
   return {
@@ -371,7 +396,11 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     tools: [],
     sopContent: '',
     typeConfig: {},
-    sourceProblemId: undefined,
+    // 2026-10-10（审核修复 H3）：带出关联问题 id —— "我的任务·巡查反馈处理"的
+    //   动作按钮据此走问题通道（acceptProblem / submitProblemFeedback → PUT /problems/:id），
+    //   修正前恒 undefined 导致巡查动作全部落到 farm-tasks 幽灵端点
+    sourceProblemId: (t as any).problemId || (t as any).problem_id
+      || (t as any).sourceProblemId || (t as any).source_problem_id || undefined,
     sourceInspectionId: id,
     sourceId: id,
     recordCode: (recordCode || '') as any,
@@ -386,9 +415,11 @@ function convertStoreInspectionToTask(t: InspectionData): Task {
     issueSeverity,
     issueText: t.issueText || t.issue_text || '',
     photos: Array.isArray(t.images) ? t.images : [],
-    feedbackStatus: status === 'pending' ? '待接受' : status === 'in_progress' ? '处理中' : status === 'rejected' ? '已返工' : status === 'waiting_acceptance' ? '待验收' : status === 'completed' ? '已完成' : '未知',
+    feedbackStatus: finalStatus === 'pending' ? '待接受' : finalStatus === 'in_progress' ? '处理中' : finalStatus === 'rejected' ? '已返工' : finalStatus === 'waiting_acceptance' ? '待验收' : finalStatus === 'completed' ? '已完成' : '待处理',
     feedbackUsers,
-    processProgress: PROGRESS_MAP[status] ? String(PROGRESS_MAP[status]) : '0',
+    // 2026-10-10（审核修复）：用 finalStatus 映射（原用巡查性质 status，critical/attention
+    //   无进度映射 → 恒 '0'，与状态列"已完成/处理中"矛盾显示 0%）
+    processProgress: PROGRESS_MAP[finalStatus] ? String(PROGRESS_MAP[finalStatus]) : '0',
     inspectorId,
     inspectorName,
     reworkCount: 0,
@@ -969,6 +1000,8 @@ export function useTasks(): UseTasksReturn {
 
     // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
+      // 2026-10-10 审核修复 M1：temp/巡查不发 /farm-tasks 端点（必然 404 的噪音）
+      if (!shouldSyncToFarmEndpoint(task)) return;
       await enhancedApiClient.post(`/farm-tasks/${id}/accept`, {
         operator_id: task.assigneeId || '',
         operator_name: task.assigneeName || '',
@@ -1117,6 +1150,8 @@ export function useTasks(): UseTasksReturn {
     // P0-3：改用 enhancedApiClient.post（4 个分支统一替换）
     // P0-4：progress 端点额外传 status 字段，让前端状态机同步到后端（修 bug，不改业务）
     syncToApi(async () => {
+      // 2026-10-10 审核修复 M1：巡查记录不发端点（其进度走问题通道，见 MyTasksPage 分流）
+      if (task.dispatchMode === 'inspection' || task.sourceType === 'inspection') return;
       const basePayload = {
         operator_id: task.assigneeId || '',
         operator_name: task.assigneeName || '',
@@ -1412,6 +1447,8 @@ export function useTasks(): UseTasksReturn {
 
     // P0-3：改用 enhancedApiClient.post
     syncToApi(async () => {
+      // 2026-10-10 审核修复 M1：temp/巡查不发 /farm-tasks 端点（temp 走 updateTask 的 PUT 落库）
+      if (!shouldSyncToFarmEndpoint(task)) return;
       await enhancedApiClient.post(`/farm-tasks/${id}/continue`, {
         operator_id: task.assigneeId || '',
         operator_name: task.assigneeName || '',
@@ -1445,14 +1482,12 @@ export function useTasks(): UseTasksReturn {
     );
     saveTaskRecords([record, ...taskRecordsRef.current]);
 
-    // P0-3：改用 enhancedApiClient.post
-    syncToApi(async () => {
-      await enhancedApiClient.post(`/farm-tasks/${task.id}/reject`, {
-        operator_id: executorId,
-        operator_name: executorName,
-        reason: rejectReason,
-      });
-    }, 'rejectByExecutor');
+    // 2026-10-10 审核修复 M1（语义污染）：原实现 POST /farm-tasks/:id/reject —— 那是
+    //   「验收驳回」端点（rework_count+1、满 2 次置 failed、操作记录写"验收驳回"），
+    //   执行人拒绝走它会造成：一次执行人拒绝把返工计数推高、第二次直接置 failed、
+    //   审计记录张冠李戴（实测 2026-10-10 06:03 赵六的拒绝被记为"验收驳回"）。
+    //   本地 updateTask（PUT /farm-tasks|temp-tasks/:id）已完整落库
+    //   status/assignee/rejectReason/executorRejectCount，此处不再调用验收端点
 
     // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(task.id, {
