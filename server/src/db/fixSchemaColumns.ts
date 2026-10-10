@@ -197,6 +197,10 @@ export function fixSchemaColumns(): { addedColumns: number; addedIndexes: number
     ['total_pause_seconds', 'INTEGER', '0'],
     ['outsource_cost', 'REAL', '0'],
     ['tenant_id', 'INTEGER', '1'],
+    // 2026-10-10：任务派发审批接线——审批元数据回写列（updateFarmTask 联动写入；
+    // 此前这两列不存在，联动 UPDATE 直接 SQL 报错，被"幽灵成功"掩盖）
+    ['approval_code', 'TEXT'],
+    ['approved_at', 'TEXT'],
   ];
   for (const [col, typeDef, def] of farmTaskColumnsToAdd) {
     addedColumns += safeAddColumn(db, 'farm_tasks', col, typeDef, def) ? 1 : 0;

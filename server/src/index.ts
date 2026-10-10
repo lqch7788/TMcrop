@@ -192,6 +192,18 @@ async function start() {
       console.warn('[seedMarkStatus] 启动种子失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-10-10：GREEN 级对齐修复（幂等）——农事 5 类审批类型规则 forced_level 为 NULL 时对齐为 quick。
+    // 防 amount=0 回落到"金额免审批"档自动通过（曾致提交即批准），同时消除误配二级链导致"点两次才通过"。
+    try {
+      const { alignFarmApprovalTypeRulesStandalone } = await import('./db/seedData');
+      const alignResult = await alignFarmApprovalTypeRulesStandalone();
+      if (!alignResult.skipped) {
+        console.log(`[alignFarmApprovalTypeRules] 已对齐 ${alignResult.updated} 行 → quick（单人审批）`);
+      }
+    } catch (e: any) {
+      console.warn('[alignFarmApprovalTypeRules] 启动对齐失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-08-29：GREEN 级独立 seed — 设备监控中心 monitoring_devices 种子（绕过 YELLOW 级 fixMissingSchema 禁用）
     try {
       const { seedMonitoringDevicesStandalone } = await import('./db/seedData');

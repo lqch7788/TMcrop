@@ -955,17 +955,24 @@ router.patch('/:id/action', (req, res) => {
       // 2026-08-10 修复：用 parseJsonObject 兼容双层转义（之前 JSON.parse(business_link) 失败导致联动静默跳过）
       const businessLink = parseJsonObject(approval.business_link) as { type?: string; requestId?: string; requestCode?: string };
       if (businessLink?.type && businessLink?.requestId) {
+        // 2026-10-10：linkageAction 上提到 try 之外——catch 分支也要用它做（approved 专属）回滚判定，
+        // try 块内的 const 在 catch 里不可见（块级作用域）
+        const linkageAction = newStatus === 'approved' ? 'approved' as const
+          : newStatus === 'rejected' ? 'rejected' as const
+          : newStatus === 'cancelled' ? 'cancelled' as const
+          : 'partially_approved' as const;
         try {
-          const linkageAction = newStatus === 'approved' ? 'approved' as const
-            : newStatus === 'rejected' ? 'rejected' as const
-            : newStatus === 'cancelled' ? 'cancelled' as const
-            : 'partially_approved' as const;
           const result = updateBusinessTable(db, businessLink.type, businessLink.requestId, linkageAction, approval.code as string, businessLink);
           if (result.success) {
             // 2026-08-10 修复：updateBusinessTable 只 UPDATE 内存 db，需显式 saveDatabase 落盘，否则列表刷新读到脏数据
             saveDatabase();
             console.log(`【审批联动】${businessLink.type} 状态已更新: ${businessLink.requestId} -> ${linkageAction}`);
-          } else if (businessLink.type === 'material_inbound' || businessLink.type === 'return' || businessLink.type === 'crop_storage' || businessLink.type === 'material_transfer' || businessLink.type === 'seedling') {
+          } else if (businessLink.type === 'material_inbound' || businessLink.type === 'return' || businessLink.type === 'crop_storage' || businessLink.type === 'material_transfer' || businessLink.type === 'seedling'
+            // 2026-10-10：生产/采购/技术方案的【通过】也必须真实更新业务表——此前联动 0 行匹配也放行，
+            // 审批显示"已通过"而业务纹丝不动（幽灵成功；线上 6 条陈年待审批全中）。
+            // 仅对 approved 硬失败：拒绝/作废的影响是"作废业务单"，单据已不存在时无需拦截（支持归档陈年单）
+            || ((businessLink.type === 'production' || businessLink.type === 'purchase' || businessLink.type === 'tech_solution' || businessLink.type === 'task_dispatch') && linkageAction === 'approved')
+          ) {
             // 2026-10-09 修复：补录/调拨/育苗种源审批也直接影响库存账实（之前漏了，导致联动失败时
             //   approval.status 改为 approved 但库存/回流永远没写入，用户重试也无效）
             db.run(
@@ -982,7 +989,9 @@ router.patch('/:id/action', (req, res) => {
           // 2026-09-29 审计修复：退回路径此前只覆盖 material_inbound，漏了 'return'。
           // 两者都直接影响库存账实（入库加库存、退料恢复库存），异常时若不回滚，
           // 审批显示"已通过"但库存永远没动，且终态不可重试 → 账实不符。
-          if (businessLink.type === 'material_inbound' || businessLink.type === 'return') {
+          // 2026-10-10：生产/采购/技术方案的 approved 异常同样回滚（幽灵成功治理的异常路径）
+          if (businessLink.type === 'material_inbound' || businessLink.type === 'return'
+            || ((businessLink.type === 'production' || businessLink.type === 'purchase' || businessLink.type === 'tech_solution' || businessLink.type === 'task_dispatch') && linkageAction === 'approved')) {
             // 同上：异常也必须是硬失败，不能让审批看似成功
             db.run(
               `UPDATE approvals SET status = ?, current_step = ?, approvers = ?, records = ?, updated_at = ? WHERE id = ?`,

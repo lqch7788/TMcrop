@@ -1297,6 +1297,10 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'cancelled_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_at TEXT' },
     { name: 'cancelled_by', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_by TEXT' },
     { name: 'cancelled_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN cancelled_reason TEXT' },
+    // 2026-10-10：任务派发审批接线——审批元数据回写列（updateFarmTask 联动写入；
+    // 此前这两列不存在，联动 UPDATE 直接 SQL 报错，被"幽灵成功"掩盖）
+    { name: 'approval_code', sql: 'ALTER TABLE farm_tasks ADD COLUMN approval_code TEXT' },
+    { name: 'approved_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN approved_at TEXT' },
     { name: 'abandoned_at', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_at TEXT' },
     { name: 'abandoned_by', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_by TEXT' },
     { name: 'abandoned_reason', sql: 'ALTER TABLE farm_tasks ADD COLUMN abandoned_reason TEXT' },

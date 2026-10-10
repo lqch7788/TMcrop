@@ -43,6 +43,27 @@ async function refreshRelatedBusinessStores(): Promise<void> {
   } catch {
     // 静默失败 — 不阻塞审批主流程
   }
+  // 2026-10-10：生产审批页涉及的三类业务——补采购计划/技术方案 Store 联动刷新
+  // （此前只刷新生产计划；审批通过后切回采购/技术方案页若未重新挂载，列表状态不更新）
+  try {
+    const { usePurchasePlanStore } = await import('./usePurchasePlanStore');
+    await usePurchasePlanStore.getState().fetchPlans();
+  } catch {
+    // 静默失败 — 不阻塞审批主流程
+  }
+  try {
+    const { useTechSolutionStore } = await import('./useTechSolutionStore');
+    await useTechSolutionStore.getState().fetchSolutions();
+  } catch {
+    // 静默失败 — 不阻塞审批主流程
+  }
+  // 2026-10-10：任务派发审批——通过/拒绝后刷新农事任务列表（任务中心即时感知"审批中→待接受/退回"）
+  try {
+    const { useFarmTaskStore } = await import('./farmTaskStore');
+    await useFarmTaskStore.getState().fetchTasks();
+  } catch {
+    // 静默失败 — 不阻塞审批主流程
+  }
 }
 
 /** 后端(snake_case) → 前端(camelCase) 字段名映射 */
@@ -344,15 +365,14 @@ export const useApprovalStore = create<ApprovalStore>()(
       approve: async (id, comment) => {
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
-        console.log('[DEBUG] approve 开始:', id, `${API_BASE}/${id}/action`);
+        // 2026-10-10：移除遗留的 [DEBUG] console.log（approve 开始/成功 两条调试输出）
         try {
           // enhancedApiClient.patch 返回的是 result.data（已经过 apiClient 解析）
           // 如果成功，result.data 是 truthy；如果失败，apiClient 会抛异常
-          const result = await enhancedApiClient.patch(
+          await enhancedApiClient.patch(
             `${API_BASE}/${id}/action`,
             { action: 'approve', comment, approverId, approverName }
           );
-          console.log('[DEBUG] approve 成功:', result);
           // 乐观更新本地状态
           set((state) => {
             const approvals = state.approvals.map((a) =>

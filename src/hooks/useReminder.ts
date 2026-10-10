@@ -1,34 +1,17 @@
 /**
  * 催办管理 Hook
  * 功能：管理催办记录、催办间隔限制、每日催办次数限制
+ * 2026-10-10 修复（农事任务中心卡死根因之一）：
+ *   原实现挂载时读写 localStorage（farm_task_reminders），每次挂载都可能向其它标签页
+ *   广播 storage 事件——多标签页场景下成为渲染风暴的触发源之一。
+ *   按 V2.1 铁律改为纯内存：催办记录仅存于 useReminderStore（API 同步），不再读写 localStorage。
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { REMINDER_CONFIG } from '../config/taskConfig';
 import type { ReminderRecord } from '../types/task';
-// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useReminderStore 同步双写
+// 2026-06-04 V2.1 铁律改造：useReminderStore 同步双写（API → SQLite）
 import { useReminderStore } from '../stores/useReminderStore';
-
-const REMINDER_STORAGE_KEY = 'farm_task_reminders';
-
-/**
- * 获取所有催办记录
- */
-function getAllReminderRecords(): ReminderRecord[] {
-  try {
-    const data = localStorage.getItem(REMINDER_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * 保存催办记录
- */
-function saveReminderRecords(records: ReminderRecord[]): void {
-  localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(records));
-}
 
 /**
  * 生成唯一ID
@@ -61,20 +44,8 @@ export interface UseReminderReturn {
 }
 
 export function useReminder(): UseReminderReturn {
+  // 2026-10-10：纯内存状态（V2.1 铁律：禁 localStorage）
   const [reminderRecords, setReminderRecords] = useState<ReminderRecord[]>([]);
-
-  // 初始化：从 localStorage 加载
-  useEffect(() => {
-    const records = getAllReminderRecords();
-    // 清理7天前的旧记录
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const filteredRecords = records.filter(r => new Date(r.remindedAt) > sevenDaysAgo);
-    if (filteredRecords.length !== records.length) {
-      saveReminderRecords(filteredRecords);
-    }
-    setReminderRecords(filteredRecords);
-  }, []);
 
   /**
    * 检查任务是否可以催办
@@ -146,7 +117,7 @@ export function useReminder(): UseReminderReturn {
     };
 
     const updatedRecords = [...reminderRecords, newRecord];
-    saveReminderRecords(updatedRecords);
+    // 2026-10-10：不再写 localStorage（跨标签页 storage 事件会触发其它标签页整体重渲染）
     setReminderRecords(updatedRecords);
 
     // 2026-06-04 V2.1 铁律改造：双写 Store（异步，失败不影响主流程）

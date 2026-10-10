@@ -14,6 +14,14 @@ const router = Router();
 // ========== 参数验证辅助函数 ==========
 
 /**
+ * 数值安全转换：非 number 一律按 0
+ * 2026-10-10 修复（ReferenceError 崩溃）：原为 /indicator-board 处理器内的局部函数，
+ * 但 /indicator-drilldown 下钻接口（低碳库存/临期物料等）也引用它 → 运行时 ReferenceError（500）。
+ * 提升为模块级共用，两处处理器共享同一实现。
+ */
+const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+
+/**
  * 验证日期格式 (YYYY-MM-DD)
  */
 function isValidDate(dateStr: string): boolean {
@@ -905,7 +913,6 @@ router.get('/indicator-board', (req: Request, res: Response) => {
       const r = queryToObjects<Record<string, unknown>>(db, sql, params);
       return r[0] || {};
     };
-    const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
     /** a / b 的百分比，保留 1 位小数 */
     const pct = (a: number, b: number): number => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
     const r1 = (v: number): number => Math.round(v * 10) / 10;

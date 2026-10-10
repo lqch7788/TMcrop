@@ -162,8 +162,12 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
       WHERE id = ? OR plan_code = ?
     `);
 
+    // 2026-10-10：fail-loud——统计实际命中行数，0 行匹配不再假装成功
+    // （幽灵成功：审批显示"已通过"、业务表纹丝不动；线上 6 条陈年待审批全中）
+    let modified = 0;
     for (const matchId of matchIds) {
       stmt.run([status, status, now, matchId, matchId]);
+      modified += db.getRowsModified();
     }
     stmt.free();
 
@@ -174,11 +178,12 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
       `);
       for (const matchId of matchIds) {
         execStmt.run([executionStatus, matchId, matchId]);
+        modified += db.getRowsModified();
       }
       execStmt.free();
     }
 
-    return true;
+    return modified > 0;
   } catch (e) {
     console.error('更新采购计划失败:', e);
     return false;
@@ -220,7 +225,8 @@ function updateProductionPlan(db: any, id: string, status: string, approvalCode:
         update_time = ?
       WHERE id = ?
     `, [planStatus, planStatus, now, now, id]);
-    return true;
+    // 2026-10-10：fail-loud——0 行匹配不再假装成功（幽灵成功治理，同 updatePurchasePlan）
+    return db.getRowsModified() > 0;
   } catch (e) {
     console.error('更新生产计划失败:', e);
     return false;
@@ -254,7 +260,8 @@ function updateTechSolution(db: any, id: string, status: string, approvalCode: s
         update_time = ?
       WHERE id = ?
     `, [solutionStatus, solutionStatus, approvalCode, now, now, id]);
-    return true;
+    // 2026-10-10：fail-loud——0 行匹配不再假装成功（幽灵成功治理，同 updatePurchasePlan）
+    return db.getRowsModified() > 0;
   } catch (e) {
     console.error('更新技术方案失败:', e);
     return false;
@@ -263,19 +270,47 @@ function updateTechSolution(db: any, id: string, status: string, approvalCode: s
 
 /**
  * 更新农事任务状态
+ * 2026-10-10：任务派发审批接线（样板）——
+ *   - 审批结果映射为任务状态（不再把 'approved'/'rejected' 原样写进 farm_tasks.status，
+ *     任务枚举为 draft/pending/accepted/... 不含审批态）：
+ *       通过 → 'pending'（保留执行人，正式派发为「待接受」）
+ *       拒绝/作废 → 'pending' 且清空执行人（退回「待派发」，可重新指派）
+ *   - fail-loud：0 行匹配返回 false（幽灵成功治理，调用方回滚审批）
+ *   注：task_change（变更审批）尚未接入创建入口；接入时需在此区分映射
  */
 function updateFarmTask(db: any, id: string, status: string, approvalCode: string, extra?: Record<string, unknown>): boolean {
   try {
     const now = new Date().toISOString();
-    db.run(`
-      UPDATE farm_tasks SET
-        status = ?,
-        approval_code = ?,
-        approved_at = ?,
-        update_time = ?
-      WHERE id = ?
-    `, [status, approvalCode, now, now, id]);
-    return true;
+    let taskStatus = status;
+    let clearAssignee = false;
+    if (status === 'approved') {
+      taskStatus = 'pending';
+    } else if (status === 'rejected' || status === 'cancelled') {
+      taskStatus = 'pending';
+      clearAssignee = true;
+    }
+    if (clearAssignee) {
+      db.run(`
+        UPDATE farm_tasks SET
+          status = ?,
+          approval_code = ?,
+          approved_at = ?,
+          assignee_id = NULL,
+          assignee_name = NULL,
+          update_time = ?
+        WHERE id = ?
+      `, [taskStatus, approvalCode, now, now, id]);
+    } else {
+      db.run(`
+        UPDATE farm_tasks SET
+          status = ?,
+          approval_code = ?,
+          approved_at = ?,
+          update_time = ?
+        WHERE id = ?
+      `, [taskStatus, approvalCode, now, now, id]);
+    }
+    return db.getRowsModified() > 0;
   } catch (e) {
     console.error('更新农事任务失败:', e);
     return false;
@@ -632,7 +667,8 @@ export function updateBusinessTable(
       if (updatePurchasePlan(db, requestId, status, approvalCode, extra)) {
         return { success: true, message: '采购计划状态已更新' };
       }
-      break;
+      // 2026-10-10：精确报错（此前落到通用"更新失败"，用户无法知道业务单据不存在）
+      return { success: false, message: `采购计划 ${requestId} 不存在或已变更，无法更新` };
 
     case 'material_inbound':
       // 2026-09-27 修复：此前 UPDATE legacy `inventory` 表（11 行种子数据、无读取方，
@@ -983,7 +1019,8 @@ export function updateBusinessTable(
       if (updateProductionPlan(db, requestId, action, approvalCode, extra)) {
         return { success: true, message: '生产计划状态已更新' };
       }
-      break;
+      // 2026-10-10：精确报错（同 purchase case）
+      return { success: false, message: `生产计划 ${requestId} 不存在或已变更，无法更新` };
 
     case 'production_batch':
       // 生产批次使用 crop_instances 表
@@ -1027,7 +1064,8 @@ export function updateBusinessTable(
       if (updateTechSolution(db, requestId, status, approvalCode, extra)) {
         return { success: true, message: '技术方案状态已更新' };
       }
-      break;
+      // 2026-10-10：精确报错（同 purchase case）
+      return { success: false, message: `技术方案 ${requestId} 不存在或已变更，无法更新` };
 
     // ========== 农事审批（4种）==========
     case 'task_dispatch':

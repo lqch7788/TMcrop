@@ -38,6 +38,31 @@ export function SelectExecutorModal({
   onConfirm,
   onClose,
 }: SelectExecutorModalProps) {
+  // 2026-10-10 修复（AI 推荐减少调用频率 + 农事任务中心卡死根因）：
+  // 原实现关闭状态下也初始化整条 AI 派工链（useComprehensiveDispatch →
+  // useEnvironmentData 30 秒传感器定时器 → 连锁重渲染风暴，30~60 秒卡死）。
+  // 改为两层组件：外层无 hook，关闭时直接返回 null；内层（Content）持有全部 hook，
+  // 只在弹窗真正打开时才挂载运行 —— 满足 hooks 顺序规则且重型链不再随页面常驻。
+  if (!isOpen || !task) return null;
+  return (
+    <SelectExecutorModalContent
+      task={task}
+      onConfirm={onConfirm}
+      onClose={onClose}
+    />
+  );
+}
+
+/** 弹窗内容（仅在打开时挂载——重型 AI 派工链 hooks 全部在此运行） */
+function SelectExecutorModalContent({
+  task,
+  onConfirm,
+  onClose,
+}: {
+  task: Task;
+  onConfirm: (assigneeId: string, assigneeName: string) => void;
+  onClose: () => void;
+}) {
   // 从Store获取员工列表（替换原 taskDispatchStaff mock数据）
   const workers = useWorkerStore((s) => s.workers);
   const loadWorkers = useWorkerStore((s) => s.loadWorkers);
@@ -171,12 +196,10 @@ export function SelectExecutorModal({
     onClose();
   };
 
-  // 如果任务为空，不渲染弹窗
-  if (!isOpen || !task) return null;
-
+  // Content 仅在弹窗打开时挂载（外层已保证 task 非空），isOpen 恒为 true
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={true}
       onClose={handleClose}
       title="选择执行人"
       size="xl"
@@ -191,7 +214,7 @@ export function SelectExecutorModal({
               为任务 "{task.title || task.id}" 选择执行人
             </p>
             <p className="text-sm text-blue-700 mt-1">
-              选择执行人后，任务将直接变为已接受状态并推送到执行人的任务列表
+              确认后任务将进入「审批中」并提交派发审批，审批通过后正式派发（待接受）
             </p>
           </div>
         </div>

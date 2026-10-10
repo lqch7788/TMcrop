@@ -18,6 +18,20 @@ import { getDatabase } from '../db';
 /** 默认免审批金额上限（system_configs 缺该键时的兜底，与 seedData 一致） */
 const DEFAULT_EXEMPT_MAX = 1000;
 
+/**
+ * 与金额无关的审批类型（2026-10-10 修复）——这些类型提交时 amount 恒为 0，
+ * 若允许走入"金额 < 阈值 → 免审批"规则会导致"提交即自动通过"（实测事故：
+ * 任务派发单 SP20261010RW475 创建后 61ms 被自动批准）。
+ * 名单与前端 src/config/approvalHierarchy.ts 的 forcedLevel=STANDARD 配置保持一致。
+ */
+const NON_AMOUNT_DRIVEN_TYPES = new Set([
+  'task_dispatch',
+  'task_change',
+  'inspection_issue',
+  'issue_resolve',
+  'seedling_plan',
+]);
+
 export interface ExemptVerdict {
   /** 是否具备免审批资格（即以申请人身份自动通过） */
   eligible: boolean;
@@ -82,6 +96,10 @@ export function evaluateExemptEligibility(db: any, approvalRow: Record<string, u
   }
   if (rule.forceExempt) {
     return { eligible: true, reason: `审批类型「${type}」配置为强制免审批` };
+  }
+  // 2026-10-10：与金额无关的类型不走金额免审批（提交时 amount=0 会被误判为"低于阈值"→ 自动通过）
+  if (NON_AMOUNT_DRIVEN_TYPES.has(type)) {
+    return { eligible: false, reason: `审批类型「${type}」与金额无关，不适用金额免审批规则（需人工审批）` };
   }
   const raw = approvalRow?.amount;
   if (raw === null || raw === undefined || String(raw).trim() === '') {

@@ -3,7 +3,7 @@
  * 提供天气预报、IoT传感器数据、环境告警等功能
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type {
   WeatherForecast,
   WeatherType,
@@ -328,9 +328,18 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
   }, []);
 
   // 模拟实时更新传感器数据（每30秒更新一次）
+  // 2026-10-10 修复（农事任务中心卡死根因）：原 effect 依赖数组包含自己输出的 `sensors` ——
+  // 定时器 setSensors 后 effect 清理并重建 interval，触发全链（useComprehensiveDispatch 等）
+  // 连锁重渲染，叠加多实例后形成 30~60 秒的渲染风暴。
+  // 改为 ref 读取最新值 + 空依赖（interval 仅随挂载创建一次），30 秒 tick 只更新状态不重建定时器。
+  const sensorsRef = useRef(sensors);
+  sensorsRef.current = sensors;
+  const alertRulesRef = useRef(alertRules);
+  alertRulesRef.current = alertRules;
   useEffect(() => {
     const interval = setInterval(() => {
-      const newSensors = sensors.map(sensor => {
+      const prevSensors = sensorsRef.current;
+      const newSensors = prevSensors.map(sensor => {
         const variance = sensor.type === 'soil_ph' || sensor.type === 'soil_ec' ? 0.5 : 5;
         const newValue = sensor.value + (Math.random() - 0.5) * variance;
         const roundedValue = sensor.type === 'soil_ph' || sensor.type === 'soil_ec'
@@ -341,14 +350,14 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
       });
 
       setSensors(newSensors);
-      setAlerts(generateAlerts(newSensors, alertRules));
+      setAlerts(generateAlerts(newSensors, alertRulesRef.current));
       // 更新环境告警触发的任务
       const plans = useProductionPlanStore.getState().batches;
       setAlertTriggeredTasks(generateAlertTriggeredTasks(newSensors, plans));
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [sensors, alertRules]);
+  }, []);
 
   // 今日天气
   const todayWeather = useMemo(() => {

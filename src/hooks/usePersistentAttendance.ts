@@ -1,10 +1,13 @@
 /**
  * 考勤持久化 Hook
- * 考勤数据保存到 localStorage
+ * 2026-10-10 修复（农事任务中心卡死根因之一）：
+ *   原实现用 useLocalStorage（localStorage 读写 + storage 跨标签页事件监听）。
+ *   该监听器会让"任意标签页写一次 localStorage → 所有开着任务中心的标签页整体重渲染"，
+ *   多标签页（或多实例）场景下互相触发形成渲染风暴 → 页面卡死 30~60 秒。
+ *   按 V2.1 铁律改为纯内存 useState：数据源为 API/Store，刷新即重置，不再读写 localStorage。
  */
 
-import { useCallback } from 'react';
-import { useLocalStorage, STORAGE_KEYS, clearAllPersistedData } from './useLocalStorage';
+import { useState, useCallback } from 'react';
 
 // 考勤记录类型
 export interface AttendanceEntry {
@@ -40,10 +43,8 @@ let nextAttendanceId = INITIAL_ATTENDANCE.length + 1;
  * 考勤持久化 Hook
  */
 export function usePersistentAttendance() {
-  const [attendance, setAttendance] = useLocalStorage<AttendanceEntry[]>(
-    STORAGE_KEYS.ATTENDANCE,
-    INITIAL_ATTENDANCE
-  );
+  // 2026-10-10：纯内存状态（V2.1 铁律：禁 localStorage）
+  const [attendance, setAttendance] = useState<AttendanceEntry[]>(INITIAL_ATTENDANCE);
 
   // 添加考勤记录
   const addAttendance = useCallback((entry: Omit<AttendanceEntry, 'id'>) => {
@@ -53,24 +54,23 @@ export function usePersistentAttendance() {
     };
     setAttendance(prev => [newEntry, ...prev]);
     return newEntry;
-  }, [setAttendance]);
+  }, []);
 
   // 更新考勤记录
   const updateAttendance = useCallback((id: number, updates: Partial<AttendanceEntry>) => {
     setAttendance(prev => prev.map(record => record.id === id ? { ...record, ...updates } : record));
-  }, [setAttendance]);
+  }, []);
 
   // 删除考勤记录
   const deleteAttendance = useCallback((id: number) => {
     setAttendance(prev => prev.filter(record => record.id !== id));
-  }, [setAttendance]);
+  }, []);
 
   // 重置为初始数据
   const resetToInitial = useCallback(() => {
-    clearAllPersistedData();
     setAttendance(INITIAL_ATTENDANCE);
     nextAttendanceId = INITIAL_ATTENDANCE.length + 1;
-  }, [setAttendance]);
+  }, []);
 
   return {
     attendance,

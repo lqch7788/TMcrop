@@ -119,6 +119,30 @@ describe('分级审批解析器', () => {
       expect(result.reason).toContain('强制');
     });
 
+    // 2026-10-10：农事 5 类审批与金额无关（amount=0）——曾因无配置落入"金额<1000 免审批"档
+    // 提交即自动通过；首次修复误配 STANDARD 二级又导致"点两次才通过"。现统一 QUICK 单人审批。
+    it('任务派发应该单人审批且不自动通过 (forcedLevel=quick)', () => {
+      const result = resolveApprovalLevel(ApprovalType.TASK_DISPATCH, 0);
+      expect(result.level).toBe(ApprovalLevel.QUICK);
+      expect(result.approverCount).toBe(1);
+      expect(result.autoApprove).toBe(false);
+    });
+
+    it('任务变更/巡查问题/问题整改/育苗计划应同为单人审批且不自动通过', () => {
+      const types = [
+        ApprovalType.TASK_CHANGE,
+        ApprovalType.INSPECTION_ISSUE,
+        ApprovalType.ISSUE_RESOLVE,
+        ApprovalType.SEEDLING_PLAN,
+      ];
+      for (const t of types) {
+        const result = resolveApprovalLevel(t, 0);
+        expect(result.level, `${t} 应为 QUICK 单人审批`).toBe(ApprovalLevel.QUICK);
+        expect(result.approverCount, `${t} 审批人数应为 1`).toBe(1);
+        expect(result.autoApprove, `${t} 不应自动通过`).toBe(false);
+      }
+    });
+
     // 注意: RESIGNATION, SALARY_ADJUSTMENT, SALARY_BUDGET, TRANSFER, BATCH_VOID
     // 配置了 forceStrict: true 但代码未实现此逻辑，仅实现了 forcedLevel
     // 当前测试反映实际代码行为

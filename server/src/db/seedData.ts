@@ -4782,7 +4782,7 @@ function seedApprovalTypeRules() {
     { type: 'material_inbound', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '物料入库' },
     { type: 'material_transfer', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 1, customCount: null, remark: '库存调拨' },
     { type: 'seed_source_inbound', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '种源入库，需要严格审批' },
-    { type: 'seedling_plan', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '育苗计划' },
+    { type: 'seedling_plan', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '育苗计划（与金额无关，单人审批）' },
     { type: 'planting_plan', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '种植计划' },
     { type: 'order_create', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '订单创建，高价值订单需要严格审批' },
     { type: 'order_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '订单变更' },
@@ -4792,11 +4792,11 @@ function seedApprovalTypeRules() {
     { type: 'batch_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '批次变更' },
     { type: 'batch_void', forceExempt: 0, forceStrict: 1, forcedLevel: null, batch: 0, customCount: null, remark: '批次作废，强制严格审批' },
     { type: 'tech_solution', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '技术方案' },
-    // 农事审批（4种）
-    { type: 'task_dispatch', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '任务派发' },
-    { type: 'task_change', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '任务变更' },
-    { type: 'inspection_issue', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '巡查问题' },
-    { type: 'issue_resolve', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '问题整改' },
+    // 农事审批（4种）——2026-10-10：与金额无关，强制 quick 单人审批（防止 amount=0 落入免审批档自动通过）
+    { type: 'task_dispatch', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '任务派发（与金额无关，单人审批）' },
+    { type: 'task_change', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '任务变更（与金额无关，单人审批）' },
+    { type: 'inspection_issue', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '巡查问题（与金额无关，单人审批）' },
+    { type: 'issue_resolve', forceExempt: 0, forceStrict: 0, forcedLevel: 'quick', batch: 0, customCount: null, remark: '问题整改（与金额无关，单人审批）' },
     // 采收审批（1种）
     { type: 'harvest_request', forceExempt: 0, forceStrict: 0, forcedLevel: null, batch: 0, customCount: null, remark: '采收申请' },
     // 作物补录审批（2种）
@@ -4833,6 +4833,45 @@ function seedApprovalTypeRules() {
   stmt.free();
 
   seedLog.info(`已导入审批类型规则种子数据: ${rules.length}条`);
+}
+
+/**
+ * 2026-10-10：GREEN 级独立对齐修复（幂等，启动白名单显式调用）
+ *
+ * 背景：农事 5 类审批（任务派发/变更/巡查/整改/育苗计划）与金额无关，amount 恒为 0。
+ * 语义注册表（approval_type_rules.forced_level）若为 NULL，前端 Store 同步 DB 规则为
+ * 首选配置后，forcedLevel=NULL 会静默回落到"金额档位"兜底 → amount=0 < 1000 → 免审批自动通过
+ * （实测事故：任务派发单创建后 61ms 被自动批准）；且历史上曾误配 STANDARD 二级
+ * 导致"需点两次通过才终审"（SP20261010RW874/SP166 实测）。
+ * 统一对齐为 quick（单人审批，一次通过即终审）。
+ *
+ * 安全边界：只补 forced_level 为 NULL/空串的行，不覆盖管理员在"审批级别配置"页手工修改过的值。
+ * 无待修复行时直接跳过（不落盘）；有修复则显式 saveDatabase（sql.js 唯一落盘路径）。
+ */
+export async function alignFarmApprovalTypeRulesStandalone(): Promise<{ updated: number; skipped: boolean }> {
+  const db = getDatabase();
+  const pending = db.exec(`
+    SELECT COUNT(*) FROM approval_type_rules
+    WHERE approval_type IN ('task_dispatch','task_change','inspection_issue','issue_resolve','seedling_plan')
+      AND (forced_level IS NULL OR forced_level = '')
+  `);
+  const n = Number(pending[0]?.values[0]?.[0]) || 0;
+  if (n === 0) {
+    seedLog.skip('• 农事 5 类审批类型规则已对齐（quick），跳过');
+    return { updated: 0, skipped: true };
+  }
+  db.run(`
+    UPDATE approval_type_rules
+    SET forced_level = 'quick',
+        remark = '与金额无关，单人审批（quick）',
+        updated_at = ?
+    WHERE approval_type IN ('task_dispatch','task_change','inspection_issue','issue_resolve','seedling_plan')
+      AND (forced_level IS NULL OR forced_level = '')
+  `, [new Date().toISOString()]);
+  const updated = db.getRowsModified();
+  saveDatabase();
+  seedLog.info(`已对齐农事审批类型规则: ${updated} 行 → quick（单人审批）`);
+  return { updated, skipped: false };
 }
 
 /**
