@@ -68,6 +68,20 @@ export interface ApprovalSubmitResult {
 // 审批提交服务
 // ============================================================
 
+/** HR 审批类型集合（人事审批页按 category='hr' 过滤——见 HrApproval/useHrApprovals） */
+const HR_CATEGORY_TYPES = new Set<ApprovalType>([
+  ApprovalType.LEAVE,
+  ApprovalType.OVERTIME,
+  ApprovalType.RESIGNATION,
+  ApprovalType.RECRUITMENT,
+  ApprovalType.ONBOARDING,
+  ApprovalType.ATTENDANCE_REPAIR,
+  ApprovalType.SALARY_ADJUSTMENT,
+  ApprovalType.CONTRACT_RENEWAL,
+  ApprovalType.SALARY_BUDGET,
+  ApprovalType.TRANSFER,
+]);
+
 class ApprovalSubmitService {
   /**
    * 提交审批
@@ -90,11 +104,15 @@ class ApprovalSubmitService {
       const approvalCode = this.generateApprovalCode(businessData.type);
 
       // 3. 补全审批数据（统一以 pending 提交，自动通过走 PATCH 联动）
+      // 2026-10-10：按类型自动归类 category——人事审批页按 category='hr' 过滤，
+      //   此前本服务创建的所有单 category 缺省为 'business' → HR 新单在人事审批页不可见
+      //   （端到端实测发现：请假提交后 approvals 已创建但页面查不到）
       const fullApproval = {
         ...approval,
         id: this.generateId(),
         code: approvalCode,
         status: 'pending' as const,
+        category: HR_CATEGORY_TYPES.has(businessData.type) ? 'hr' : 'business',
       };
 
       // 4. 调用 API 保存审批数据（使用 enhancedApiClient，走无缓存层（V2.1 铁律））
@@ -397,6 +415,36 @@ export async function submitResignationApproval(params: {
       employeeId: params.employeeId,
       employeeName: params.employeeName,
       expectedResignDate: params.expectedDate,
+    },
+  });
+}
+
+/**
+ * 提交招聘申请审批
+ * 2026-10-10 新增：labor 招聘申请接入统一审批体系（此前无快捷提交函数）
+ */
+export async function submitRecruitmentApproval(params: {
+  recruitmentId: string;
+  recruitmentCode: string;
+  position: string;
+  headcount: number;
+  applicantId: string;
+  applicantName: string;
+  department: string;
+}): Promise<ApprovalSubmitResult> {
+  return approvalSubmitService.submitApproval({
+    id: params.recruitmentId,
+    code: params.recruitmentCode,
+    title: `招聘申请: ${params.position} ${params.headcount}人`,
+    type: ApprovalType.RECRUITMENT,
+    amount: 0,
+    applicantId: params.applicantId,
+    applicantName: params.applicantName,
+    applicantDepartment: params.department,
+    businessLink: {
+      type: 'recruitment',
+      requestId: params.recruitmentId,
+      requestCode: params.recruitmentCode,
     },
   });
 }

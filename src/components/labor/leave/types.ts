@@ -64,25 +64,22 @@ export interface LeaveFiltersProps {
   filters: LeaveFilters;
   onFiltersChange: (filters: LeaveFilters) => void;
   onSearch: () => void;
-  onAdd: () => void;
+  // 2026-10-10：删除废接口 onAdd——组件从未使用（新增入口在 LeaveTable 的 onAddClick）
 }
 
+// 2026-10-10：onApprove/onReject 已移除（审批动作迁移至「人事审批 → 请假审批」tab）
 export interface LeaveTableProps {
   data: LeaveRecord[];
   pagination: PaginationInfo;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onViewDetail: (record: LeaveRecord) => void;
-  onApprove: (record: LeaveRecord) => void;
-  onReject: (record: LeaveRecord) => void;
 }
 
 export interface LeaveDetailModalProps {
   record: LeaveRecord | null;
   open: boolean;
   onClose: () => void;
-  onApprove: (record: LeaveRecord) => void;
-  onReject: (record: LeaveRecord) => void;
 }
 
 export interface LeaveFormModalProps {
@@ -106,7 +103,5 @@ export interface UseLeaveReturn {
   isFormOpen: boolean;
   setIsFormOpen: (open: boolean) => void;
   handleSave: (data: Partial<LeaveRecord>) => void;
-  handleApprove: (record: LeaveRecord) => void;
-  handleReject: (record: LeaveRecord) => void;
   handleCancel: (record: LeaveRecord) => void;
 }

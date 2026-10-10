@@ -2,10 +2,8 @@
  * 离职申请页面详情弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
-import { Check, XCircle } from 'lucide-react';
 
 import { Label } from '@/components/ui';
-import { Button } from '@/components/ui';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
 import { ResignationRecord } from '../../../types/resignationPage.types';
 
@@ -13,16 +11,12 @@ interface ResignationPageDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: ResignationRecord | null;
-  onApprove: (record: ResignationRecord) => void;
-  onReject: (record: ResignationRecord) => void;
 }
 
 export function ResignationPageDetailModal({
   isOpen,
   onClose,
   record,
-  onApprove,
-  onReject,
 }: ResignationPageDetailModalProps) {
   if (!record) return null;
 
@@ -83,22 +77,7 @@ export function ResignationPageDetailModal({
           </div>
         </div>
 
-        {/* 审批操作 */}
-        {record.status === '待审批' && (
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button
-              onClick={() => { onReject(record); onClose(); }}
-              variant="destructive"
-            >
-              <XCircle className="w-4 h-4" /> 驳回
-            </Button>
-            <Button
-              onClick={() => { onApprove(record); onClose(); }}
-            >
-              <Check className="w-4 h-4" /> 通过
-            </Button>
-          </div>
-        )}
+        {/* 2026-10-10：通过/驳回按钮已迁移至「人事审批 → 人员异动」tab（统一审批体系） */}
       </div>
     </UnifiedModal>
   );

@@ -29,8 +29,6 @@ export function LeavePage() {
     isFormOpen,
     setIsFormOpen,
     handleSave,
-    handleApprove,
-    handleReject,
   } = useLeave();
 
   // 批量操作状态
@@ -60,20 +58,6 @@ export function LeavePage() {
   const handleAdd = () => {
     setSelectedRecord(null);
     setIsFormOpen(true);
-  };
-
-  // 处理审批
-  const handleApproveClick = (record: typeof selectedRecord) => {
-    if (record) {
-      handleApprove(record);
-    }
-  };
-
-  // 处理驳回
-  const handleRejectClick = (record: typeof selectedRecord) => {
-    if (record) {
-      handleReject(record);
-    }
   };
 
   // 处理搜索
@@ -249,8 +233,6 @@ export function LeavePage() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onViewDetail={handleViewDetail}
-        onApprove={handleApproveClick}
-        onReject={handleRejectClick}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
         onAddClick={exportMode || batchEditMode || batchDeleteMode ? undefined : handleAdd}
@@ -305,8 +287,6 @@ export function LeavePage() {
         record={selectedRecord}
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onApprove={handleApproveClick}
-        onReject={handleRejectClick}
       />
 
       {/* 表单弹窗 */}

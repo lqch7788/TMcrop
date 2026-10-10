@@ -38,10 +38,6 @@ export default function ResignationPage() {
     handleHandoverUserChange,
     handleResignationTypeChange,
     handleSubmit,
-    handleApprove,
-    handleReject,
-    handleBatchApprove,
-    handleBatchReject,
     handleExport,
     setFormData,
   } = useResignationPage();
@@ -118,14 +114,8 @@ export default function ResignationPage() {
         onSelectionChange={setSelectedRowKeys}
         batchMode={batchMode}
         onOpenDetail={handleOpenDetailModal}
-        onApprove={handleApprove}
-        onReject={handleReject}
         onOpenFormModal={handleOpenFormModal}
-        onBatchApprove={() => setBatchMode('approve')}
-        onBatchReject={() => setBatchMode('reject')}
         onBatchExport={() => setBatchMode('export')}
-        onConfirmBatchApprove={handleBatchApprove}
-        onConfirmBatchReject={handleBatchReject}
         onConfirmBatchExport={handleExport}
         onCancelBatch={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
       />
@@ -147,8 +137,6 @@ export default function ResignationPage() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         record={selectedRecord}
-        onApprove={handleApprove}
-        onReject={handleReject}
       />
     </div>
   );

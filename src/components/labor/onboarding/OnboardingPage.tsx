@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Download, Edit2, Eye, Filter, Play, RotateCcw, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { submitOnboardingApproval } from '@/services/approvalSubmitService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
 import { Modal } from '@/components/ui';
@@ -211,12 +212,29 @@ export function OnboardingPage() {
   };
 
   // 更新办理进度
+  // 2026-10-10：接入统一审批体系——"完成入职办理"（→已入职）改为提交入职审批
+  //   （人事审批 → 人员异动 tab；审批通过后由后端联动写入 status='onboarded'，驳回退回办理中）。
+  //   "开始办理"（→办理中）为内部办理动作，仍直接流转。
   const handleProgress = async (record: OnboardingRecord, newStatus: OnboardingStatus) => {
     if (newStatus === '办理中' && record.status === '待入职') {
       updateStatus(record.id, '办理中', currentUser.id, currentUser.name);
     } else if (newStatus === '已入职') {
-      if (await showConfirm('确定要完成入职办理吗？这将创建员工档案。')) {
-        updateStatus(record.id, '已入职', currentUser.id, currentUser.name);
+      if (await showConfirm('确定要完成入职办理吗？提交后将进入人事审批（人员异动），审批通过后正式建档。')) {
+        const submitResult = await submitOnboardingApproval({
+          onboardingId: record.id,
+          onboardingCode: record.requestCode || record.id,
+          employeeName: record.name,
+          department: record.department,
+          position: record.position,
+          expectedStartDate: record.joinDate,
+          applicantId: currentUser.id,
+          applicantName: currentUser.name,
+        });
+        if (submitResult.success) {
+          await showAlert('已提交入职审批，请到「人事审批 → 人员异动」查看进度');
+        } else {
+          await showAlert(`提交入职审批失败：${submitResult.message}`);
+        }
       }
     }
   };

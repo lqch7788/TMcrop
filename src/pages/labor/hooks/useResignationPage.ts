@@ -10,6 +10,7 @@ import type { ResignationData } from '@/stores';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
+import { submitResignationApproval } from '@/services/approvalSubmitService';
 import type {
   ResignationRecord,
   ResignationFilters,
@@ -104,7 +105,6 @@ export function useResignationPage() {
   const items = useResignationStore((s) => s.items);
   const fetchItems = useResignationStore((s) => s.fetchItems);
   const createItem = useResignationStore((s) => s.createItem);
-  const updateItem = useResignationStore((s) => s.updateItem);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -223,57 +223,39 @@ export function useResignationPage() {
         handoverNote: formData.handoverNote,
       });
 
-      if (result) {
-        setIsFormModalOpen(false);
-        await showAlert('提交成功！');
-      } else {
+      if (!result) {
         await showAlert('提交失败，请重试');
+        return;
       }
+      // 2026-10-10：接入统一审批体系——提交后创建人事审批单（人事审批 → 人员异动 tab）；
+      //   审批单创建失败则回滚业务记录（避免"待审批但无审批单"的僵死单）
+      const submitResult = await submitResignationApproval({
+        resignationId: result.id,
+        resignationCode: (result as { resignationCode?: string }).resignationCode || result.id,
+        employeeName: formData.workerName,
+        employeeId: formData.workerId,
+        applicantId: formData.workerId,
+        applicantName: formData.workerName,
+        department: '',
+        expectedDate: formData.expectedLastDay,
+      });
+      if (!submitResult.success) {
+        const rollbackOk = await useResignationStore.getState().deleteItem(result.id);
+        await showAlert(
+          rollbackOk
+            ? `提交失败：审批单创建失败（${submitResult.message}），请重试`
+            : `部分失败：离职记录已创建，但审批单创建失败（${submitResult.message}），请联系管理员处理`
+        );
+        if (!rollbackOk) setIsFormModalOpen(false);
+        return;
+      }
+      setIsFormModalOpen(false);
+      await showAlert('提交成功！已进入人事审批流程');
     } catch (error) {
       logger.error('提交离职申请失败', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
-
-  /** 审批通过 */
-  const handleApprove = useCallback(async (record: ResignationRecord) => {
-    try {
-      await updateItem(record.id, { status: 'approved' });
-    } catch (error) {
-      logger.error('审批通过失败', error);
-      await showAlert('审批失败，请重试');
-    }
-  }, [updateItem]);
-
-  /** 审批驳回 */
-  const handleReject = useCallback(async (record: ResignationRecord) => {
-    try {
-      await updateItem(record.id, { status: 'rejected' });
-    } catch (error) {
-      logger.error('审批驳回失败', error);
-      await showAlert('操作失败，请重试');
-    }
-  }, [updateItem]);
-
-  /** 批量审批通过 */
-  const handleBatchApprove = useCallback(() => {
-    selectedRowKeys.forEach(key => {
-      const record = resignationRecords.find(r => r.id === key);
-      if (record) handleApprove(record);
-    });
-    setSelectedRowKeys([]);
-    setBatchMode('none');
-  }, [selectedRowKeys, resignationRecords, handleApprove]);
-
-  /** 批量审批驳回 */
-  const handleBatchReject = useCallback(() => {
-    selectedRowKeys.forEach(key => {
-      const record = resignationRecords.find(r => r.id === key);
-      if (record) handleReject(record);
-    });
-    setSelectedRowKeys([]);
-    setBatchMode('none');
-  }, [selectedRowKeys, resignationRecords, handleReject]);
 
   /** 导出功能 */
   const handleExport = useCallback(() => {
@@ -344,10 +326,6 @@ export function useResignationPage() {
     handleHandoverUserChange,
     handleResignationTypeChange,
     handleSubmit,
-    handleApprove,
-    handleReject,
-    handleBatchApprove,
-    handleBatchReject,
     handleExport,
   };
 }

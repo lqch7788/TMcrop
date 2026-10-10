@@ -1,4 +1,4 @@
-import { Eye, Check, X, Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Eye, X, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import type { OvertimeTableProps, OvertimeRecord, OvertimeType } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -14,8 +14,6 @@ export function OvertimeTable({
   onPageChange,
   onPageSizeChange,
   onViewDetail,
-  onApprove,
-  onReject,
   showCheckbox = false,
   exportMode = false,
   batchEditMode = false,
@@ -256,26 +254,7 @@ export function OvertimeTable({
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      {record.status === '待审批' && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onApprove(record)}
-                            title="批准"
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onReject(record)}
-                            title="驳回"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
+                      {/* 2026-10-10：批准/驳回已迁移至「人事审批 → 加班审批」tab（统一审批体系） */}
                     </div>
                   </TableCell>
                 )}

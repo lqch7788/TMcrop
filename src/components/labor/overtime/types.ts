@@ -60,22 +60,19 @@ export interface OvertimeFiltersProps {
   onAdd: () => void;
 }
 
+// 2026-10-10：onApprove/onReject 已移除（审批动作迁移至「人事审批 → 加班审批」tab）
 export interface OvertimeTableProps {
   data: OvertimeRecord[];
   pagination: OvertimePaginationInfo;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onViewDetail: (record: OvertimeRecord) => void;
-  onApprove: (record: OvertimeRecord) => void;
-  onReject: (record: OvertimeRecord) => void;
 }
 
 export interface OvertimeDetailModalProps {
   record: OvertimeRecord | null;
   open: boolean;
   onClose: () => void;
-  onApprove: (record: OvertimeRecord) => void;
-  onReject: (record: OvertimeRecord) => void;
 }
 
 export interface OvertimeFormModalProps {
@@ -100,7 +97,5 @@ export interface UseOvertimeReturn {
   isFormOpen: boolean;
   setIsFormOpen: (open: boolean) => void;
   handleSave: (data: OvertimeFormData) => void;
-  handleApprove: (record: OvertimeRecord) => void;
-  handleReject: (record: OvertimeRecord) => void;
   handleCancel: (record: OvertimeRecord) => void;
 }

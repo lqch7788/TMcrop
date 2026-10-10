@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 
 import { showAlert } from '@/lib/dialogService';
+import { useOvertimeStore } from '@/stores/overtimeStore';
 import { useOvertime } from './hooks/useOvertime';
 import { OvertimeFilters } from './OvertimeFilters';
 import { OvertimeTable } from './OvertimeTable';
@@ -30,8 +31,6 @@ export function OvertimePage() {
     isFormOpen,
     setIsFormOpen,
     handleSave,
-    handleApprove,
-    handleReject,
   } = useOvertime();
 
   // 批量操作状态
@@ -61,20 +60,6 @@ export function OvertimePage() {
   const handleAdd = () => {
     setSelectedRecord(null);
     setIsFormOpen(true);
-  };
-
-  // 处理审批
-  const handleApproveClick = (record: OvertimeRecord) => {
-    if (record) {
-      handleApprove(record);
-    }
-  };
-
-  // 处理驳回
-  const handleRejectClick = (record: OvertimeRecord) => {
-    if (record) {
-      handleReject(record);
-    }
   };
 
   // 处理搜索
@@ -142,15 +127,18 @@ export function OvertimePage() {
     handleCancelBatch();
   };
 
-  const handleConfirmBatchDelete = () => {
+  const handleConfirmBatchDelete = async () => {
     if (selectedRows.length === 0) return;
-    // 执行删除
-    selectedRows.forEach(id => {
-      const record = data.find(r => r.id.toString() === id);
-      if (record) {
-        handleReject(record); // 使用 handleReject 模拟删除/取消
-      }
-    });
+    // 执行删除（2026-10-10：原来借用 handleReject"模拟删除"——驳回已迁移至人事审批页，
+    //   改为调用 store 真删除，并刷新列表）
+    const store = useOvertimeStore.getState();
+    await Promise.all(
+      selectedRows.map(id => {
+        const record = data.find(r => r.id.toString() === id);
+        return record ? store.deleteItem(record.id) : Promise.resolve(false);
+      })
+    );
+    await store.fetchItems();
     setShowDeleteWarning(false);
     handleCancelBatch();
   };
@@ -256,8 +244,6 @@ export function OvertimePage() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         onViewDetail={handleViewDetail}
-        onApprove={handleApproveClick}
-        onReject={handleRejectClick}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
         onAddClick={exportMode || batchEditMode || batchDeleteMode ? undefined : handleAdd}
@@ -312,8 +298,6 @@ export function OvertimePage() {
         record={selectedRecord}
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        onApprove={handleApproveClick}
-        onReject={handleRejectClick}
       />
 
       {/* 表单弹窗 */}

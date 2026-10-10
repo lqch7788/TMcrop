@@ -6,6 +6,8 @@
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useOvertimeStore } from '@/stores/overtimeStore';
+import { submitOvertimeApproval } from '@/services/approvalSubmitService';
+import { showAlert } from '@/lib/dialogService';
 import type {
   OvertimeRecord as StoreOvertimeRecord,
   OvertimeType as StoreOvertimeType,
@@ -97,9 +99,9 @@ export function useOvertime(): UseOvertimeReturn {
   const fetchItems = useOvertimeStore((s) => s.fetchItems);
   const createItem = useOvertimeStore((s) => s.createItem);
   const updateItem = useOvertimeStore((s) => s.updateItem);
-  const approveOvertime = useOvertimeStore((s) => s.approveOvertime);
-  const rejectOvertime = useOvertimeStore((s) => s.rejectOvertime);
   const cancelOvertime = useOvertimeStore((s) => s.cancelOvertime);
+  // 2026-10-10：approveOvertime/rejectOvertime（就地审批）不再使用——审批动作已迁移至
+  //   「人事审批 → 加班审批」tab（统一审批体系，审批通过后由后端联动回写 overtime_records）
 
   // ========== 挂载时加载数据 ==========
   useEffect(() => {
@@ -172,7 +174,9 @@ export function useOvertime(): UseOvertimeReturn {
       await updateItem(selectedRecord.id, updates);
     } else {
       // 创建新记录 — 调用 Store 的 createItem
-      await createItem({
+      // 2026-10-10：接入统一审批体系——创建后提交加班审批单（人事审批 → 加班审批 tab）；
+      //   审批单创建失败则回滚业务记录（避免"待审批但无审批单"的僵死单）
+      const created = await createItem({
         workerId: formData.staffId,
         workerName: formData.staffName,
         overtimeType: (OVERTIME_TYPE_CN_TO_EN[formData.type] || 'workday') as StoreOvertimeType,
@@ -185,24 +189,30 @@ export function useOvertime(): UseOvertimeReturn {
         reason: formData.reason,
         status: 'pending' as StoreOvertimeStatus,
       });
+      if (created) {
+        const submitResult = await submitOvertimeApproval({
+          overtimeId: created.id,
+          overtimeCode: created.id,
+          overtimeType: OVERTIME_TYPE_CN_TO_EN[formData.type] || formData.type,
+          hours: formData.hours,
+          applicantId: formData.staffId,
+          applicantName: formData.staffName,
+          department: '',
+          date: formData.date,
+        });
+        if (!submitResult.success) {
+          const rollbackOk = await useOvertimeStore.getState().deleteItem(created.id);
+          await showAlert(
+            rollbackOk
+              ? `提交失败：审批单创建失败（${submitResult.message}），请重试`
+              : `部分失败：加班记录已创建，但审批单创建失败（${submitResult.message}），请联系管理员处理`
+          );
+        }
+      }
     }
     setIsFormOpen(false);
     fetchItems();
   }, [selectedRecord, createItem, updateItem, fetchItems]);
-
-  // ========== 审批通过 ==========
-  const handleApprove = useCallback(async (record: OvertimeRecord) => {
-    await approveOvertime(record.id);
-    setIsDetailOpen(false);
-    fetchItems();
-  }, [approveOvertime, fetchItems]);
-
-  // ========== 驳回 ==========
-  const handleReject = useCallback(async (record: OvertimeRecord) => {
-    await rejectOvertime(record.id, '审批驳回');
-    setIsDetailOpen(false);
-    fetchItems();
-  }, [rejectOvertime, fetchItems]);
 
   // ========== 取消申请 ==========
   const handleCancel = useCallback(async (record: OvertimeRecord) => {
@@ -224,8 +234,6 @@ export function useOvertime(): UseOvertimeReturn {
     isFormOpen,
     setIsFormOpen,
     handleSave,
-    handleApprove,
-    handleReject,
     handleCancel,
   };
 }

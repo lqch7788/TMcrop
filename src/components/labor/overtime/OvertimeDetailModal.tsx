@@ -1,4 +1,4 @@
-import { X, Check, XCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { OvertimeDetailModalProps, OvertimeType } from './types';
@@ -6,7 +6,7 @@ import type { OvertimeDetailModalProps, OvertimeType } from './types';
 /**
  * 加班详情弹窗组件
  */
-export function OvertimeDetailModal({ record, open, onClose, onApprove, onReject }: OvertimeDetailModalProps) {
+export function OvertimeDetailModal({ record, open, onClose }: OvertimeDetailModalProps) {
   if (!open || !record) return null;
 
   // 获取加班类型信息
@@ -122,20 +122,9 @@ export function OvertimeDetailModal({ record, open, onClose, onApprove, onReject
     </div>
   );
 
+  // 2026-10-10：批准/驳回按钮已迁移至「人事审批 → 加班审批」tab（统一审批体系）
   const footer = (
     <>
-      {record.status === '待审批' && (
-        <>
-          <Button variant="destructive" onClick={() => onReject(record)}>
-            <XCircle className="w-4 h-4 mr-1" />
-            驳回
-          </Button>
-          <Button onClick={() => onApprove(record)}>
-            <Check className="w-4 h-4 mr-1" />
-            批准
-          </Button>
-        </>
-      )}
       <Button variant="outline" onClick={onClose}>
         <X className="w-4 h-4" /> 关闭
       </Button>

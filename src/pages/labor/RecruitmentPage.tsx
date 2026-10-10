@@ -43,10 +43,6 @@ export default function RecruitmentPage() {
     handleDeptChange,
     handleHeadcountChange,
     handleSubmit,
-    handleApprove,
-    handleReject,
-    handleBatchApprove,
-    handleBatchReject,
     handleExport,
     setBatchMode,
   } = useRecruitment(departments, positions);
@@ -74,14 +70,7 @@ export default function RecruitmentPage() {
                   <Plus className="w-4 h-4" />
                   新增招聘
                 </Button>
-                <Button variant="blue" size="sm" onClick={() => setBatchMode('approve')}>
-                  <Check className="w-4 h-4" />
-                  批量通过
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => setBatchMode('reject')}>
-                  <X className="w-4 h-4" />
-                  批量驳回
-                </Button>
+                {/* 2026-10-10：批量通过/驳回已迁移至「人事审批 → 人员异动」tab（统一审批体系） */}
                 <Button variant="default" size="sm" onClick={() => setBatchMode('export')}>
                   <Download className="w-4 h-4" />
                   导出
@@ -89,18 +78,6 @@ export default function RecruitmentPage() {
               </>
             ) : (
               <>
-                {batchMode === 'approve' && (
-                  <Button variant="blue" size="sm" onClick={handleBatchApprove} disabled={selectedRowKeys.length === 0}>
-                    <Check className="w-4 h-4" />
-                    确认通过 ({selectedRowKeys.length})
-                  </Button>
-                )}
-                {batchMode === 'reject' && (
-                  <Button variant="destructive" size="sm" onClick={handleBatchReject} disabled={selectedRowKeys.length === 0}>
-                    <X className="w-4 h-4" />
-                    确认驳回 ({selectedRowKeys.length})
-                  </Button>
-                )}
                 {batchMode === 'export' && (
                   <Button variant="default" size="sm" onClick={handleExport}>
                     <Download className="w-4 h-4" />
@@ -125,8 +102,6 @@ export default function RecruitmentPage() {
           selectedRowKeys={selectedRowKeys}
           onSelectionChange={setSelectedRowKeys}
           onViewDetail={handleOpenDetailModal}
-          onApprove={handleApprove}
-          onReject={handleReject}
         />
       </div>
 
@@ -149,8 +124,6 @@ export default function RecruitmentPage() {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         record={selectedRecord}
-        onApprove={handleApprove}
-        onReject={handleReject}
       />
     </div>
   );
