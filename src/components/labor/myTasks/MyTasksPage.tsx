@@ -10,7 +10,7 @@ import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
 
-import { useUserStore } from '@/stores/useUserStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { todayLocal } from '@/lib/dateUtils';
 
 // 导入统一任务管理 Hook（数据闭环核心）
@@ -64,6 +64,38 @@ const getTypeLabel = (type: string): string => {
   return taskType?.label || type;
 };
 
+// ============================================================
+// 2026-10-10（审核修复）：三个 tab 的过滤谓词提取为单一真相源。
+//   此前列表过滤（filteredTasks）与徽章计数（taskCounts）各写一套条件、
+//   口径互不一致（巡查反馈徽章 14 vs 内容 17、农事任务处理 37 vs 22）。
+//   现两处共用以下谓词，口径永不分叉。
+// ============================================================
+
+/** 「巡查反馈处理」tab：巡查/问题来源的记录 */
+function matchesProblemTabFilter(task: any): boolean {
+  const dm = task.dispatchMode;
+  if (dm === 'problem' || dm === 'inspection') return true;
+  if (task.sourceProblemId !== undefined || task.sourceInspectionId !== undefined) return true;
+  return false;
+}
+
+/** 「农事任务处理」tab：NS 开头的纯农事任务 */
+function matchesProductionTabFilter(task: any): boolean {
+  if (!task.taskCode || !task.taskCode.startsWith('NS')) return false;
+  const dm = task.dispatchMode;
+  if (dm === 'problem' || dm === 'inspection' || dm === 'tempTask') return false;
+  if (task.sourceType === 'tempTask') return false;
+  if (task.sourceProblemId !== undefined) return false;
+  return true;
+}
+
+/** 「临时任务处理」tab：TT 开头且非草稿的临时任务 */
+function matchesTempTabFilter(task: any): boolean {
+  if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
+  if (task.status === 'draft') return false;
+  return task.sourceType === 'tempTask' || task.dispatchMode === 'tempTask';
+}
+
 export function MyTasksPage() {
   // 使用统一任务管理 Hook（数据闭环核心）
   const { tasks: unifiedTasks, updateTaskStatus, updateTask, updateTaskProgress, submitProgress, acceptTask, rejectByExecutor, continueExecution, getTaskRecordsByTaskId } = useTasks() as any;
@@ -83,8 +115,12 @@ export function MyTasksPage() {
   // 强制刷新key，用于刷新任务列表状态
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 获取当前用户名（从 Zustand Store，原型阶段默认使用陆启闯）
-  const currentUserName = useUserStore((s) => s.users[0]?.name) || '陆启闯';
+  // 2026-10-10（审核修复）：操作人取自当前登录用户 —— 原为 useUserStore.users[0].name +
+  //   硬编码兜底「陆启闯」、操作 id 写死 'U013'，与登录账号无关，审计记录张冠李戴。
+  //   本页所有 acceptProblem/rejectProblem/addTaskRecord/submitProblemFeedback 均以此为操作人
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const currentUserName = currentUser?.realName || currentUser?.username || '未知用户';
+  const operatorId = currentUser?.oid || '';
 
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 降级：unifiedTasks 为空时使用 Store 数据
@@ -255,38 +291,19 @@ export function MyTasksPage() {
 
     switch (taskFilter) {
       case 'problem':
-        // 巡查反馈/问题处理：dispatchMode 为 problem 或 inspection 的记录，按创建时间倒序
+        // 巡查反馈/问题处理（过滤谓词见 matchesProblemTabFilter，与徽章计数共用）
         return myTasks
-          .filter((task: any) => {
-            const t = task as unknown as TaskWithExtras;
-            const dm = (t as any).dispatchMode;
-            if (dm === 'problem' || dm === 'inspection') return true;
-            if (task.sourceProblemId !== undefined || (t as any).sourceInspectionId !== undefined) return true;
-            return false;
-          })
+          .filter(matchesProblemTabFilter)
           .sort(sortByCreatedAt);
       case 'production':
-        // 农事任务：仅显示 NS 开头 + dispatchMode 为 farm（或未设置）的任务，按创建时间倒序
+        // 农事任务（过滤谓词见 matchesProductionTabFilter，与徽章计数共用）
         return myTasks
-          .filter((task: any) => {
-            const t = task as unknown as TaskWithExtras;
-            if (!task.taskCode || !task.taskCode.startsWith('NS')) return false;
-            const dm = (t as any).dispatchMode;
-            if (dm === 'problem' || dm === 'inspection' || dm === 'tempTask') return false;
-            if (t.sourceType === 'tempTask') return false;
-            if (task.sourceProblemId !== undefined) return false;
-            return true;
-          })
+          .filter(matchesProductionTabFilter)
           .sort(sortByCreatedAt);
       case 'temp':
-        // 临时任务处理：仅显示 TT 开头 + sourceType 为 tempTask 且非草稿状态，按开始时间倒序
+        // 临时任务处理（过滤谓词见 matchesTempTabFilter，与徽章计数共用），按开始时间倒序
         return myTasks
-          .filter((task: any) => {
-            const t = task as unknown as TaskWithExtras;
-            if (!task.taskCode || !task.taskCode.startsWith('TT')) return false;
-            if (task.status === 'draft') return false;
-            return t.sourceType === 'tempTask' || (t as any).dispatchMode === 'tempTask';
-          })
+          .filter(matchesTempTabFilter)
           .sort((a, b) => {
             const getTime = (t: TaskWithExtras): number => {
               const timeStr = t.startDate || t.planStart || '';
@@ -309,11 +326,13 @@ export function MyTasksPage() {
   const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
 
   // 统计各类型任务数量
+  // 2026-10-10（审核修复）：徽章计数与列表过滤共用同一组谓词（口径统一，
+  //   修正前巡查反馈徽章 14 vs 内容 17、农事任务处理 37 vs 22 的两套标准问题）
   const taskCounts = useMemo(() => ({
     all: myTasks.length,
-    problem: myTasks.filter(t => t.sourceProblemId !== undefined).length,
-    production: myTasks.filter(t => !t.sourceProblemId && (t as TaskWithExtras).sourceType !== 'tempTask').length,
-    temp: myTasks.filter(t => (t as TaskWithExtras).sourceType === 'tempTask').length,
+    problem: myTasks.filter(matchesProblemTabFilter).length,
+    production: myTasks.filter(matchesProductionTabFilter).length,
+    temp: myTasks.filter(matchesTempTabFilter).length,
   }), [myTasks]);
 
   // 详情弹窗状态
@@ -368,7 +387,7 @@ export function MyTasksPage() {
     //   巡查记录在 farm/temp store 中不存在，acceptTask 会发往 /farm-tasks（幽灵/404）
     const isInspectionTask = !!(task as any).sourceInspectionId;
     if (task.sourceProblemId) {
-      acceptProblem(task.sourceProblemId, 'U013', '陆启闯');
+      acceptProblem(task.sourceProblemId, operatorId, currentUserName);
     }
     // 查找 unifiedTasks 中对应的任务并接受
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
@@ -384,7 +403,7 @@ export function MyTasksPage() {
         greenhouseId: '',
         greenhouseName: task.field || '',
         cropName: task.crop || '',
-        operatorId: 'U013',
+        operatorId,
         operatorName: currentUserName,
         operationDate: todayLocal(),
         sourceId: unifiedTask.id,
@@ -409,7 +428,7 @@ export function MyTasksPage() {
     // 2026-10-10（审核修复 H3/M1）：巡查来源只走问题通道，不发 farm/temp 幽灵调用
     const isInspectionTask = !!(task as any).sourceInspectionId;
     if (task.sourceProblemId) {
-      rejectProblem(task.sourceProblemId, 'U013', '陆启闯', rejectReason);
+      rejectProblem(task.sourceProblemId, operatorId, currentUserName, rejectReason);
     }
     // 查找 unifiedTasks 中对应的任务
     const unifiedTask = unifiedTasks.find((t: any) => t.taskCode === task.id || t.id === task.id);
@@ -425,7 +444,7 @@ export function MyTasksPage() {
         greenhouseId: '',
         greenhouseName: task.field || '',
         cropName: task.crop || '',
-        operatorId: 'U013',
+        operatorId,
         operatorName: currentUserName,
         operationDate: todayLocal(),
         sourceId: unifiedTask.id,
@@ -530,7 +549,7 @@ export function MyTasksPage() {
           }
           // 2. 同步更新问题状态（这样巡查反馈页面也能看到最新状态）
           if (task.sourceProblemId) {
-            rejectProblem(task.sourceProblemId, 'U013', '陆启闯', feedbackForm.cannotContinueReason);
+            rejectProblem(task.sourceProblemId, operatorId, currentUserName, feedbackForm.cannotContinueReason);
           }
           // 记录操作
           addTaskRecord({
@@ -540,7 +559,7 @@ export function MyTasksPage() {
             greenhouseId: '',
             greenhouseName: task.field || '',
             cropName: task.crop || '',
-            operatorId: 'U013',
+            operatorId,
             operatorName: currentUserName,
             operationDate: todayLocal(),
             sourceId: unifiedTask.id,
@@ -579,15 +598,15 @@ export function MyTasksPage() {
         // 先记录进度流转（包含反馈数据）
         addProgressRecord(
           task.sourceProblemId,
-          'U013',
-          '陆启闯',
+          operatorId,
+          currentUserName,
           feedbackForm.progress,
           feedbackForm.progressText || feedbackForm.resultText,
           feedbackData
         );
         // 进度100%时提交验收，否则只是进度反馈
         if (feedbackForm.progress === 100) {
-          submitProblemFeedback(task.sourceProblemId, 'U013', '陆启闯', {
+          submitProblemFeedback(task.sourceProblemId, operatorId, currentUserName, {
             resultText: feedbackForm.resultText,
             actualWorkload: feedbackForm.workloadConfirm
               ? (feedbackForm.workloadConfirm.days * 24 + feedbackForm.workloadConfirm.hours)
@@ -633,7 +652,7 @@ export function MyTasksPage() {
           greenhouseId: '',
           greenhouseName: task.field || '',
           cropName: task.crop || '',
-          operatorId: 'U013',
+          operatorId,
           operatorName: currentUserName,
           operationDate: todayLocal(),
           sourceId: unifiedTask.id,
@@ -772,7 +791,7 @@ export function MyTasksPage() {
         greenhouseId: '',
         greenhouseName: task.field || '',
         cropName: task.crop || '',
-        operatorId: 'U013',
+        operatorId,
         operatorName: currentUserName,
         operationDate: todayLocal(),
         sourceId: unifiedTask.id,

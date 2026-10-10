@@ -141,15 +141,20 @@ export function TempTaskTableRow({
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => onContinueExecution(task)}
-              title="点击继续执行"
-            >
-              <Play className="w-4 h-4" />
-              继续执行
-            </Button>
+            {/* 2026-10-10（审核修复）：拒单会清空执行人（assigneeId=''），此时"继续执行"会把
+                任务推到 in_progress+无执行人的卡死态（hub 只剩"取消"、无派发入口）——
+                仅当任务仍有执行人（验收驳回产生的 rejected）时才显示 */}
+            {!!task.assigneeId && (
+              <Button
+                size="sm"
+                variant="warning"
+                onClick={() => onContinueExecution(task)}
+                title="点击继续执行"
+              >
+                <Play className="w-4 h-4" />
+                继续执行
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"

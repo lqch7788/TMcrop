@@ -20,6 +20,7 @@ import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
 import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructureStore } from '../../../stores';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -225,6 +226,12 @@ export function InspectionTab({
     return problems;
   }, [storeProblems, problems]);
   const { approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
+
+  // 2026-10-10（审核修复）：验收操作人取自当前登录用户（原硬编码 'U001'/'系统管理员'，
+  //   与登录账号无关，问题流转记录的操作人张冠李戴）
+  const loginUser = useAuthStore((s) => s.currentUser);
+  const operatorId = loginUser?.oid || '';
+  const operatorName = loginUser?.realName || loginUser?.username || '';
 
   // 任务数据（用于获取实际处理进度，从 Zustand Store 读取）
   const tasks = useFarmTaskStore((s) => s.tasks);
@@ -722,8 +729,16 @@ export function InspectionTab({
       '天气': row.weather,
       '温度(°C)': row.temperature,
       '湿度(%)': row.humidity,
-      '发现问题': (row.issues && row.issues.length > 0) ? row.issues.join('; ') : '-',
-      '问题照片': (row.images && row.images.length > 0) ? `有${row.images.length}张照片` : '-',
+      // 2026-10-10（审核修复）：原取 row.issues/row.images —— issues 是 issueText 的派生值
+      //   （显示描述而非分类）、images 列无人写入（创建路径写的是 issuePhotos）→「问题照片」恒 '-'。
+      //   现优先取真实字段（issueCategories / issuePhotos），保留旧字段兜底
+      '发现问题': (row.issueCategories && row.issueCategories.length > 0)
+        ? row.issueCategories.join('; ')
+        : ((row.issues && row.issues.length > 0) ? row.issues.join('; ') : '-'),
+      '问题照片': (() => {
+        const photos = (row.issuePhotos && row.issuePhotos.length > 0) ? row.issuePhotos : (row.images || []);
+        return photos.length > 0 ? `有${photos.length}张照片` : '-';
+      })(),
       '问题处理': row.issueStatus === 'resolved' ? '已解决' : row.issueStatus === 'processing' ? '处理中' : row.issueStatus === 'pending' ? '待处理' : '-',
       '状态': row.status === 'normal' ? '正常' : (row.status as any) === 'warning' ? '注意' : row.status === 'critical' ? '异常' : row.status === 'attention' ? '需关注' : '-'
     }));
@@ -859,14 +874,15 @@ export function InspectionTab({
     onClearSelection();
   };
 
-  // 验收通过
-  const handleApproveAcceptance = () => {
+  // 验收通过（2026-10-10：接收弹窗备注 —— 此前 onAccept 回调丢弃 comments，
+  //   用户填写的验收备注永远不会进入问题流转记录）
+  const handleApproveAcceptance = (comments?: string) => {
     if (!acceptanceModal.problemId) return;
     approveProblemCompletion(
       acceptanceModal.problemId,
-      'U001',
-      '系统管理员',
-      acceptanceComment || '验收通过'
+      operatorId,
+      operatorName,
+      comments || acceptanceComment || '验收通过'
     );
     fetchProblems();
     setAcceptanceModal({ isOpen: false, problemId: null });
@@ -878,8 +894,8 @@ export function InspectionTab({
     if (!acceptanceModal.problemId) return;
     rejectAcceptance(
       acceptanceModal.problemId,
-      'U001',
-      '系统管理员',
+      operatorId,
+      operatorName,
       reason
     );
     fetchProblems();
@@ -1094,7 +1110,8 @@ export function InspectionTab({
               records={problem.flowRecords || []}
               isLoadingRecords={false}
               onAccept={(comments) => {
-                handleApproveAcceptance();
+                // 2026-10-10（审核修复）：透传弹窗备注（原实现丢弃 comments）
+                handleApproveAcceptance(comments);
               }}
               onReject={(reason) => {
                 handleRejectToDispatch(reason);
