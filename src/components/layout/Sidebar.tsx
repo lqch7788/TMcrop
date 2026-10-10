@@ -5,7 +5,7 @@ import {
   Warehouse, BarChart3, CheckSquare, Bell, Menu, X,
   Users, MapPin, ScrollText,
   Wifi, Thermometer, Activity, AlertTriangle, Gauge, FileText, Hash,
-  ChevronLeft, ChevronRight, ClipboardCheck, ShoppingCart, FileCode,
+  ChevronLeft, ChevronRight, ShoppingCart, FileCode,
   Calendar, CalendarDays, CalendarCheck, CalendarRange, BookMarked, Truck, Tags, Box, ArrowLeftRight, Archive, Folder, Megaphone, MoreHorizontal, Map,
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
@@ -73,10 +73,11 @@ const summarySubItems = [
   { icon: Gauge, label: '指标看板', path: '/summary/indicators' },
 ];
 
+// 2026-10-10：移除「农事审批」入口——4 类农事审批均无业务提交入口（派发已改直派，
+// 变更/巡查/整改从未接入且业务上由问题管理闭环/任务验收承担），菜单+路由下线；页面文件保留备复活
 const approvalSubItems = [
-  { icon: Package, label: '物料审批', path: '/material-approval' },
+  { icon: Package, label: '库存审批', path: '/material-approval' },
   { icon: Sprout, label: '生产审批', path: '/production-approval' },
-  { icon: ClipboardCheck, label: '农事审批', path: '/farm-approval' },
   { icon: BarChart3, label: '指标预算审批', path: '/indicator-budget-approval' },
   { icon: Users, label: '人事审批', path: '/hr-approval' },
 ];

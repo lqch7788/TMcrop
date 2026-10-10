@@ -26,7 +26,7 @@ import ProduceCodeRule from './pages/ProduceCodeRule';
 // Reports 已迁移至 /summary/overview（生产汇总表 V1.0）
 import MaterialApproval from './pages/MaterialApproval';
 import ProductionApproval from './pages/ProductionApproval';
-import FarmApproval from './pages/FarmApproval';
+// 2026-10-10：FarmApproval 页面下线（无业务提交入口）——组件文件保留：src/pages/FarmApproval.tsx
 import IndicatorBudgetApproval from './pages/IndicatorBudgetApproval';
 import MyApplications from './pages/MyApplications';
 import Messages from './pages/Messages';
@@ -627,7 +627,8 @@ function AppContent() {
           <Route path="/summary/chain-traceability" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />
-          <Route path="/farm-approval" element={<FarmApproval />} />
+          {/* 2026-10-10：农事审批页下线（对齐 /tasks 先例做重定向，便于旧链接/书签落回审批管理） */}
+          <Route path="/farm-approval" element={<Navigate to="/material-approval" replace />} />
           <Route path="/indicator-budget-approval" element={<IndicatorBudgetApproval />} />
           <Route path="/my-applications" element={<MyApplications />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
