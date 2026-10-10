@@ -277,60 +277,70 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
   },
 
   // ========== HR审批 ==========
+  // 2026-10-10 统一（labor 模块接入人事审批页的前置修复）：
+  //   此前 LEAVE/OVERTIME/ONBOARDING/CONTRACT_RENEWAL 无级别配置 → 提交 amount=0 落入
+  //   "金额<1000 免审批"档 → 走统一审批体系时会"提交即自动通过"（与农事 5 类事故同型）；
+  //   RECRUITMENT 残留 STANDARD 二级（从未接入过）；RESIGNATION/SALARY_BUDGET 为 forceStrict。
+  //   现 7 类统一 forcedLevel=QUICK（单人审批，一次通过即终审）——与 labor 页面就地审批的
+  //   实际做法及农事 5 类先例一致；如后续要分级可在此调整。
   {
     type: ApprovalType.LEAVE,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '请假，3天内快速审批',
+    remark: '请假（单人审批）',
   },
   {
     type: ApprovalType.OVERTIME,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '加班，2小时内免审批',
+    remark: '加班（单人审批）',
   },
   {
     type: ApprovalType.RESIGNATION,
-    forceStrict: true,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '离职，强制严格审批',
+    remark: '离职（单人审批）',
   },
   {
     type: ApprovalType.RECRUITMENT,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    forcedLevel: ApprovalLevel.STANDARD,
-    remark: '招聘，标准二级审批（部门主管+经理）',
+    remark: '招聘（单人审批）',
   },
   {
     type: ApprovalType.ONBOARDING,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '入职',
+    remark: '入职（单人审批）',
   },
   {
     type: ApprovalType.ATTENDANCE_REPAIR,
     batchApprovalSupported: false,
-    remark: '考勤补录',
+    remark: '考勤补录（功能未建设）',
   },
   {
     type: ApprovalType.SALARY_ADJUSTMENT,
     forceStrict: true,
     batchApprovalSupported: false,
-    remark: '调薪，强制严格审批',
+    remark: '调薪（功能未建设）',
   },
   {
     type: ApprovalType.CONTRACT_RENEWAL,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '合同续签',
+    remark: '合同续签（单人审批）',
   },
   {
     type: ApprovalType.SALARY_BUDGET,
-    forceStrict: true,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '工资预算，强制严格审批',
+    remark: '工资预算（单人审批）',
   },
   {
     type: ApprovalType.TRANSFER,
     forceStrict: true,
     batchApprovalSupported: false,
-    remark: '转岗，强制严格审批',
+    remark: '转岗（功能未建设）',
   },
 ];
 

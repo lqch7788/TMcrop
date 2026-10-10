@@ -30,6 +30,15 @@ const NON_AMOUNT_DRIVEN_TYPES = new Set([
   'inspection_issue',
   'issue_resolve',
   'seedling_plan',
+  // 2026-10-10：HR 7 类（labor 模块接入人事审批页）——提交时 amount 恒为 0，
+  // 若允许走金额免审批档会"提交即自动通过"，统一排除（前端已配 forcedLevel=QUICK）
+  'leave',
+  'overtime',
+  'resignation',
+  'recruitment',
+  'onboarding',
+  'contract_renewal',
+  'salary_budget',
 ]);
 
 export interface ExemptVerdict {
