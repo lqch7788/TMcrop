@@ -19,8 +19,6 @@ interface ResignationPageTableProps {
   onSelectionChange: (keys: React.Key[]) => void;
   batchMode: 'none' | 'approve' | 'reject' | 'export';
   onOpenDetail: (record: ResignationRecord) => void;
-  onApprove: (record: ResignationRecord) => void;
-  onReject: (record: ResignationRecord) => void;
   onOpenFormModal?: () => void;
   onBatchApprove?: () => void;
   onBatchReject?: () => void;
@@ -41,8 +39,6 @@ export function ResignationPageTable({
   onSelectionChange,
   batchMode,
   onOpenDetail,
-  onApprove,
-  onReject,
   onOpenFormModal,
   onBatchApprove,
   onBatchReject,
@@ -121,26 +117,7 @@ export function ResignationPageTable({
           >
             <Eye className="w-4 h-4" />
           </Button>
-          {record.status === '待审批' && (
-            <>
-              <Button
-                onClick={() => onApprove(record)}
-                variant="ghost"
-                size="icon"
-                title="批准"
-              >
-                <Check className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={() => onReject(record)}
-                variant="ghost"
-                size="icon"
-                title="驳回"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </>
-          )}
+          {/* 2026-10-10：批准/驳回已迁移至「人事审批 → 人员异动」tab（统一审批体系） */}
         </div>
       ),
     },

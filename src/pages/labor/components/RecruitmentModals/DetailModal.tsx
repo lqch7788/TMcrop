@@ -2,19 +2,15 @@
  * 招聘申请详情弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
-import { Check, XCircle } from 'lucide-react';
 
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { Label } from '@/components/ui';
 import { RecruitmentRecord } from '../../types/recruitment.types';
-import { Button } from '@/components/ui';
 
 export interface DetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: RecruitmentRecord | null;
-  onApprove: (record: RecruitmentRecord) => void;
-  onReject: (record: RecruitmentRecord) => void;
 }
 
 /** 获取优先级颜色 */
@@ -32,8 +28,6 @@ export function DetailModal({
   isOpen,
   onClose,
   record,
-  onApprove,
-  onReject,
 }: DetailModalProps) {
   if (!record) return null;
 
@@ -112,25 +106,7 @@ export function DetailModal({
           )}
         </div>
 
-        {/* 审批操作 */}
-        {record.status === '待审批' && (
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => { onReject(record); onClose(); }}
-            >
-              <XCircle className="w-4 h-4" /> 驳回
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => { onApprove(record); onClose(); }}
-            >
-              <Check className="w-4 h-4" /> 通过
-            </Button>
-          </div>
-        )}
+        {/* 2026-10-10：通过/驳回按钮已迁移至「人事审批 → 人员异动」tab（统一审批体系） */}
       </div>
     </UnifiedModal>
   );

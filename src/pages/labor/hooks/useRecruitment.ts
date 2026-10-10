@@ -9,6 +9,7 @@ import type { RecruitmentData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
+import { submitRecruitmentApproval } from '@/services/approvalSubmitService';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -53,7 +54,7 @@ export interface UseRecruitmentReturn {
   setSelectedRecord: React.Dispatch<React.SetStateAction<RecruitmentRecord | null>>;
   selectedRowKeys: React.Key[];
   setSelectedRowKeys: React.Dispatch<React.SetStateAction<React.Key[]>>;
-  batchMode: 'none' | 'approve' | 'reject' | 'export';
+  batchMode: 'none' | 'export';
 
   // 弹窗状态
   isFormModalOpen: boolean;
@@ -74,12 +75,8 @@ export interface UseRecruitmentReturn {
   handleDeptChange: (deptId: string) => void;
   handleHeadcountChange: (value: number) => void;
   handleSubmit: () => Promise<void>;
-  handleApprove: (record: RecruitmentRecord) => Promise<void>;
-  handleReject: (record: RecruitmentRecord) => Promise<void>;
-  handleBatchApprove: () => void;
-  handleBatchReject: () => void;
   handleExport: () => void;
-  setBatchMode: React.Dispatch<React.SetStateAction<'none' | 'approve' | 'reject' | 'export'>>;
+  setBatchMode: React.Dispatch<React.SetStateAction<'none' | 'export'>>;
 }
 
 export function useRecruitment(
@@ -126,7 +123,7 @@ export function useRecruitment(
   });
 
   /** 批量操作模式 */
-  const [batchMode, setBatchMode] = useState<'none' | 'approve' | 'reject' | 'export'>('none');
+  const [batchMode, setBatchMode] = useState<'none' | 'export'>('none');
 
   // ============================================================
   // Zustand Store
@@ -136,7 +133,6 @@ export function useRecruitment(
   const isLoading = useRecruitmentStore((s) => s.isLoading);
   const fetchItems = useRecruitmentStore((s) => s.fetchItems);
   const createItem = useRecruitmentStore((s) => s.createItem);
-  const updateItem = useRecruitmentStore((s) => s.updateItem);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -266,57 +262,38 @@ export function useRecruitment(
         applicantId: 'U001',
         applicantName: '王建华',
       });
-      if (result) {
-        setIsFormModalOpen(false);
-        await showAlert('提交成功！');
-      } else {
+      if (!result) {
         await showAlert('提交失败，请重试');
+        return;
       }
+      // 2026-10-10：接入统一审批体系——提交后创建人事审批单（人事审批 → 人员异动 tab）；
+      //   审批单创建失败则回滚业务记录（避免"待审批但无审批单"的僵死单）
+      const submitResult = await submitRecruitmentApproval({
+        recruitmentId: result.id,
+        recruitmentCode: (result as { recruitmentCode?: string }).recruitmentCode || result.id,
+        position: position?.name || '',
+        headcount: formData.headcount,
+        applicantId: 'U001',
+        applicantName: '王建华',
+        department: dept?.name || '',
+      });
+      if (!submitResult.success) {
+        const rollbackOk = await useRecruitmentStore.getState().deleteItem(result.id);
+        await showAlert(
+          rollbackOk
+            ? `提交失败：审批单创建失败（${submitResult.message}），请重试`
+            : `部分失败：招聘记录已创建，但审批单创建失败（${submitResult.message}），请联系管理员处理`
+        );
+        if (!rollbackOk) setIsFormModalOpen(false);
+        return;
+      }
+      setIsFormModalOpen(false);
+      await showAlert('提交成功！已进入人事审批流程');
     } catch (error) {
       logger.error('提交招聘申请失败', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, departments, positions, createItem]);
-
-  /** 审批通过 */
-  const handleApprove = useCallback(async (record: RecruitmentRecord) => {
-    try {
-      await updateItem(record.id, { status: 'approved' });
-    } catch (error) {
-      logger.error('审批通过失败', error);
-      await showAlert('审批失败，请重试');
-    }
-  }, [updateItem]);
-
-  /** 审批驳回 */
-  const handleReject = useCallback(async (record: RecruitmentRecord) => {
-    try {
-      await updateItem(record.id, { status: 'rejected' });
-    } catch (error) {
-      logger.error('审批驳回失败', error);
-      await showAlert('操作失败，请重试');
-    }
-  }, [updateItem]);
-
-  /** 批量审批通过 */
-  const handleBatchApprove = useCallback(() => {
-    selectedRowKeys.forEach(key => {
-      const record = records.find(r => r.id === key);
-      if (record) handleApprove(record);
-    });
-    setSelectedRowKeys([]);
-    setBatchMode('none');
-  }, [selectedRowKeys, records, handleApprove]);
-
-  /** 批量审批驳回 */
-  const handleBatchReject = useCallback(() => {
-    selectedRowKeys.forEach(key => {
-      const record = records.find(r => r.id === key);
-      if (record) handleReject(record);
-    });
-    setSelectedRowKeys([]);
-    setBatchMode('none');
-  }, [selectedRowKeys, records, handleReject]);
 
   /** 导出功能 */
   const handleExport = useCallback(() => {
@@ -388,10 +365,6 @@ export function useRecruitment(
     handleDeptChange,
     handleHeadcountChange,
     handleSubmit,
-    handleApprove,
-    handleReject,
-    handleBatchApprove,
-    handleBatchReject,
     handleExport,
     setBatchMode,
   };

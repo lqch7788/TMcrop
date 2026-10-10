@@ -1,7 +1,7 @@
 /**
  * 招聘申请表格组件
  */
-import { Eye, Check, X } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import ProTable from '../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../components/common/labor/LaborStatusBadge';
 import { RecruitmentRecord, RecruitmentStatus } from '../types/recruitment.types';
@@ -18,8 +18,6 @@ export interface RecruitmentTableProps {
   selectedRowKeys: React.Key[];
   onSelectionChange: (keys: React.Key[]) => void;
   onViewDetail: (record: RecruitmentRecord) => void;
-  onApprove: (record: RecruitmentRecord) => void;
-  onReject: (record: RecruitmentRecord) => void;
 }
 
 /** 获取优先级颜色 */
@@ -37,9 +35,7 @@ function getPriorityColor(priority: string) {
  * 招聘申请表格列定义
  */
 const getColumns = (
-  onViewDetail: (record: RecruitmentRecord) => void,
-  onApprove: (record: RecruitmentRecord) => void,
-  onReject: (record: RecruitmentRecord) => void
+  onViewDetail: (record: RecruitmentRecord) => void
 ) => [
   {
     title: '招聘编号',
@@ -120,26 +116,7 @@ const getColumns = (
         >
           <Eye className="w-4 h-4" />
         </Button>
-        {record.status === '待审批' && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onApprove(record)}
-              title="批准"
-            >
-              <Check className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onReject(record)}
-              title="驳回"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </>
-        )}
+        {/* 2026-10-10：批准/驳回已迁移至「人事审批 → 人员异动」tab（统一审批体系） */}
       </div>
     ),
   },
@@ -154,10 +131,8 @@ export function RecruitmentTable({
   selectedRowKeys,
   onSelectionChange,
   onViewDetail,
-  onApprove,
-  onReject,
 }: RecruitmentTableProps) {
-  const columns = getColumns(onViewDetail, onApprove, onReject);
+  const columns = getColumns(onViewDetail);
 
   return (
     <ProTable

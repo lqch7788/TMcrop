@@ -7,6 +7,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useLeaveStore } from '@/stores/leaveStore';
 import type { LeaveRecord as StoreLeaveRecord, LeaveType as StoreLeaveType, LeaveStatus as StoreLeaveStatus } from '@/stores/leaveStore';
+import { submitLeaveApproval } from '@/services/approvalSubmitService';
+import { showAlert } from '@/lib/dialogService';
 import type { LeaveRecord, LeaveFilters, PaginationInfo, UseLeaveReturn, LeaveType, LeaveStatus } from '../types';
 
 // ==================== 枚举映射 ====================
@@ -142,6 +144,8 @@ export function useLeave(): UseLeaveReturn {
   }, []);
 
   // ========== 保存记录（新建/编辑） ==========
+  // 2026-10-10：接入统一审批体系——新建提交后创建人事审批单（审批动作转移至「人事审批 → 请假审批」tab）；
+  //   审批单创建失败则回滚业务记录并报错（避免"待审批但无审批单"的僵死单）
   const handleSave = useCallback(async (saveData: Partial<LeaveRecord>) => {
     if (selectedRecord) {
       // 更新现有记录
@@ -158,7 +162,7 @@ export function useLeave(): UseLeaveReturn {
       await updateItem(selectedRecord.id, updates);
     } else {
       // 创建新记录
-      await createItem({
+      const created = await createItem({
         workerId: saveData.staffId || '',
         workerName: saveData.staffName || '',
         leaveType: (LEAVE_TYPE_CN_TO_EN[saveData.leaveType || ''] || 'personal') as StoreLeaveType,
@@ -169,26 +173,36 @@ export function useLeave(): UseLeaveReturn {
         remarks: saveData.remarks,
         status: 'pending' as StoreLeaveStatus,
       });
+      if (!created) {
+        setIsFormOpen(false);
+        fetchItems();
+        return;
+      }
+
+      // 创建审批单（在「人事审批 → 请假审批」tab 处理）
+      const submitResult = await submitLeaveApproval({
+        leaveId: created.id,
+        leaveCode: created.id,
+        leaveType: saveData.leaveType || '',
+        days: saveData.days || 0,
+        applicantId: saveData.staffId || '',
+        applicantName: saveData.staffName || '',
+        department: '',
+        reason: saveData.reason || '',
+      });
+      if (!submitResult.success) {
+        // 回滚：删除刚创建的业务记录，保证"业务记录与审批单"成对（不产生僵死单）
+        const rollbackOk = await useLeaveStore.getState().deleteItem(created.id);
+        await showAlert(
+          rollbackOk
+            ? `提交失败：审批单创建失败（${submitResult.message}），请重试`
+            : `部分失败：请假记录已创建，但审批单创建失败（${submitResult.message}），请联系管理员处理`
+        );
+      }
     }
     setIsFormOpen(false);
     fetchItems();
   }, [selectedRecord, createItem, updateItem, fetchItems]);
-
-  // ========== 审批通过 ==========
-  const handleApprove = useCallback(async (record: LeaveRecord) => {
-    const store = useLeaveStore.getState();
-    await store.approveLeave(record.id, record.approver);
-    setIsDetailOpen(false);
-    fetchItems();
-  }, [fetchItems]);
-
-  // ========== 驳回 ==========
-  const handleReject = useCallback(async (record: LeaveRecord) => {
-    const store = useLeaveStore.getState();
-    await store.rejectLeave(record.id, '审批驳回');
-    setIsDetailOpen(false);
-    fetchItems();
-  }, [fetchItems]);
 
   // ========== 取消申请 ==========
   const handleCancel = useCallback(async (record: LeaveRecord) => {
@@ -212,8 +226,6 @@ export function useLeave(): UseLeaveReturn {
     isFormOpen,
     setIsFormOpen,
     handleSave,
-    handleApprove,
-    handleReject,
     handleCancel,
   };
 }

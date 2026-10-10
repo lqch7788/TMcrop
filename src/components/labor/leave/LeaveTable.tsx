@@ -1,4 +1,4 @@
-import { CheckCircle, Download, Edit2, Eye, Plus, Trash2, X, XCircle } from 'lucide-react';
+import { Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import type { LeaveTableProps } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -14,8 +14,6 @@ export function LeaveTable({
   onPageChange,
   onPageSizeChange,
   onViewDetail,
-  onApprove,
-  onReject,
   showCheckbox = false,
   exportMode = false,
   batchEditMode = false,
@@ -237,26 +235,7 @@ export function LeaveTable({
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {record.status === '待审批' && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onApprove(record)}
-                          title="批准"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onReject(record)}
-                          title="驳回"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
+                    {/* 2026-10-10：批准/驳回已迁移至「人事审批 → 请假审批」tab（统一审批体系） */}
                   </div>
                 </TableCell>
               )}

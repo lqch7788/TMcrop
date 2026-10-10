@@ -1,4 +1,4 @@
-import { X, CheckCircle, XCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { LeaveDetailModalProps } from './types';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui';
 /**
  * 请假详情弹窗组件
  */
-export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }: LeaveDetailModalProps) {
+export function LeaveDetailModal({ record, open, onClose }: LeaveDetailModalProps) {
   if (!open || !record) return null;
 
   // 状态颜色映射
@@ -104,23 +104,12 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
     </div>
   );
 
+  // 2026-10-10：批准/驳回按钮已迁移至「人事审批 → 请假审批」tab（统一审批体系）
   const footer = (
     <>
       <Button size="sm" variant="secondary" onClick={onClose}>
         <X className="w-4 h-4" /> 关闭
       </Button>
-      {record.status === '待审批' && (
-        <>
-          <Button size="sm" variant="destructive" onClick={() => onReject(record)}>
-            <XCircle className="w-4 h-4" />
-            驳回
-          </Button>
-          <Button size="sm" variant="default" onClick={() => onApprove(record)}>
-            <CheckCircle className="w-4 h-4" />
-            批准
-          </Button>
-        </>
-      )}
     </>
   );
 
