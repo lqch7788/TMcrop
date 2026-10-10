@@ -1,7 +1,9 @@
 // ============================================================
-// 物料审批页面
+// 库存审批页面
 // 文件路径：src/pages/MaterialApproval.tsx
-// 功能：领料审批、退料审批、采购审批的统一管理
+// 功能：领料、退料、物料入库、作物调拨、补录的统一审批管理
+//   （2026-10-10 更名：原「物料审批」——页名为历史遗留，内容实为"库存动作"审批；
+//     文件名/路由/权限码保持 material-* 不变以兼容历史，仅显示名与文案更新）
 // 使用真实数据：从ApprovalContext获取
 // ============================================================
 
@@ -129,7 +131,7 @@ export default function MaterialApproval() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `物料审批_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `库存审批_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -160,8 +162,8 @@ export default function MaterialApproval() {
               <Package className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">物料审批</h1>
-              <p className="text-gray-500">领料、退料、采购审批流程管理</p>
+              <h1 className="text-2xl font-bold text-gray-900">库存审批</h1>
+              <p className="text-gray-500">领料、退料、物料入库、作物调拨、补录审批流程管理</p>
             </div>
           </div>
         </div>

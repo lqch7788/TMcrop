@@ -1,5 +1,5 @@
 // useMaterialApproval Hook
-// 物料审批页面的状态管理和业务逻辑
+// 库存审批页面的状态管理和业务逻辑（页面 2026-10-10 由「物料审批」更名，文件名保持历史）
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ClipboardList, RotateCcw, ShoppingCart,
@@ -20,7 +20,7 @@ import type {
 
 /**
  * useMaterialApproval Hook
- * 管理物料审批页面的所有状态和业务逻辑
+ * 管理库存审批页面的所有状态和业务逻辑
  */
 export function useMaterialApproval(): UseMaterialApprovalReturn {
   const { approvals, approve, reject, refreshApprovals, isLoading } = useApproval();

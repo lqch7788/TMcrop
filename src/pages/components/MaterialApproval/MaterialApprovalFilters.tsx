@@ -1,5 +1,5 @@
 // MaterialApprovalFilters 组件
-// 物料审批页面的筛选区域组件
+// 库存审批页面的筛选区域组件（页面原「物料审批」，2026-10-10 更名）
 import { RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -30,7 +30,7 @@ interface MaterialApprovalFiltersProps {
 
 /**
  * MaterialApprovalFilters 组件
- * 物料审批页面的筛选区域，包含单号、申请人、部门、批次号、日期、状态筛选
+ * 库存审批页面的筛选区域，包含单号、申请人、部门、批次号、日期、状态筛选
  */
 export function MaterialApprovalFilters({
   searchTerm,

@@ -513,7 +513,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           applicantDepartment: String((currentUser as { department?: string } | null)?.department || ''),
           operatorName: String(currentUser?.realName || 'system'),
         });
-        showAlert(`已提交种植自留种审批：${seedResult.applicationCode}（审批单 ${seedResult.approvalCode}），请到「物料审批 → 补录审批」tab 查看`);
+        showAlert(`已提交种植自留种审批：${seedResult.applicationCode}（审批单 ${seedResult.approvalCode}），请到「库存审批 → 补录审批」tab 查看`);
         resetForm();
         onSuccess?.();
       } else {

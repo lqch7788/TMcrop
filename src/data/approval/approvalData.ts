@@ -15,7 +15,7 @@ export const messages: Message[] = [
 
 // 审批数据
 export const approvals: Approval[] = [
-  // ========== 物料审批模拟数据 ==========
+  // ========== 库存审批模拟数据 ==========
   // 领料审批
   {
     id: 'MAT-AP-001',
