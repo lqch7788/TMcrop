@@ -208,7 +208,7 @@ export default function IndicatorBudgetApproval() {
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
             onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 font-bold"
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
