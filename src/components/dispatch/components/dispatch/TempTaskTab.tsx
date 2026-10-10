@@ -6,6 +6,7 @@
 import { useState, useReducer, useEffect, useCallback } from 'react';
 import { AlertTriangle, Camera, Check, Clock, Download, Edit2, FileText, MapPin, Mic, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
+import { enhancedApiClient } from '@/lib/apiClient';
 import { todayLocal } from '@/lib/dateUtils';
 import { TEMP_TASK_TYPES, TEMP_TASK_URGENCY_CONFIG } from '../../../../types';
 import { TEMP_TASK_STATUS_CONFIG, getTaskOverdueDesc } from '../../../../hooks/useTempTasks';
@@ -869,12 +870,14 @@ export const TempTaskTab: React.FC = () => {
     setSelectedTask(task);
     setIsDetailModalOpen(true);
     setDetailRecords([]);
-    fetch(`/api/temp-tasks/${task.id}/records`)
-      .then(res => res.json())
+    // 2026-10-10（审核修复）：裸 fetch → enhancedApiClient（原无 token/无错误处理）
+    enhancedApiClient.get<Array<Record<string, unknown>>>(`/temp-tasks/${task.id}/records`)
       .then(result => {
-        if (result.success && Array.isArray(result.data)) {
+        // enhancedApiClient 已解包 data，result 即记录数组
+        const data = Array.isArray(result) ? result : [];
+        if (data.length > 0) {
           // 格式化记录数据，与农事任务保持一致
-          const formattedRecords = result.data.map((r: Record<string, unknown>) => {
+          const formattedRecords = data.map((r: Record<string, unknown>) => {
             let feedback: TaskRecord['feedback'] = undefined;
             if (r.feedback && typeof r.feedback === 'string') {
               try {
@@ -908,7 +911,9 @@ export const TempTaskTab: React.FC = () => {
           setDetailRecords(formattedRecords);
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error('[TempTaskTab] 加载操作记录失败:', error);
+      });
   };
 
   // 打开创建弹窗
@@ -945,14 +950,13 @@ export const TempTaskTab: React.FC = () => {
       remarks: '临时任务开始执行',
     });
     // 调用后端 API 持久化操作记录
-    fetch(`/api/temp-tasks/${task.id}/accept`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        operator_id: task.assigneeId || '',
-        operator_name: task.assigneeName || '',
-      }),
-    }).catch(() => {});
+    // 2026-10-10（审核修复）：裸 fetch → enhancedApiClient；失败保留 console
+    enhancedApiClient.post(`/temp-tasks/${task.id}/accept`, {
+      operator_id: task.assigneeId || '',
+      operator_name: task.assigneeName || '',
+    }).catch((error) => {
+      console.error('[TempTaskTab] 开始任务-接单记录失败:', error);
+    });
     closeDetailModal();
     // 刷新页面数据以显示更新
     triggerRefresh();
@@ -974,21 +978,14 @@ export const TempTaskTab: React.FC = () => {
 
     try {
       // 1. 先调用后端 API 记录 submit_progress（包含反馈数据）
-      const response = await fetch(`/api/temp-tasks/${task.id}/submit-progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          progress: 100,
-          operator_id: task.assigneeId || '',
-          operator_name: task.assigneeName || '',
-          comment: remarks || '处理完成，提交验收',
-          feedback: feedbackData,
-        }),
+      // 2026-10-10（审核修复）：裸 fetch → enhancedApiClient（token/重试/错误抛出统一）
+      await enhancedApiClient.post(`/temp-tasks/${task.id}/submit-progress`, {
+        progress: 100,
+        operator_id: task.assigneeId || '',
+        operator_name: task.assigneeName || '',
+        comment: remarks || '处理完成，提交验收',
+        feedback: feedbackData,
       });
-
-      if (!response.ok) {
-        throw new Error('提交失败');
-      }
 
       // 2. 更新本地状态
       updateTempTask(task.id, {
@@ -1013,7 +1010,10 @@ export const TempTaskTab: React.FC = () => {
         remarks: remarks || '任务已完成，提交验收',
       });
     } catch (error) {
-      // 提交完成失败
+      // 2026-10-10（审核修复）：失败必须可见（原空 catch 静默吞错）
+      console.error('[TempTaskTab] 提交验收失败:', error);
+      showAlert(`提交失败：${(error as Error).message || '请稍后重试'}`);
+      return;
     }
 
     closeDetailModal();
@@ -1033,19 +1033,13 @@ export const TempTaskTab: React.FC = () => {
 
     try {
       // 1. 先调用后端 API 记录验收通过
-      const response = await fetch(`/api/temp-tasks/${verifyTargetTask.id}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: verifyTargetTask.assignerId || '',
-          operator_name: verifyTargetTask.assignerName || '',
-          acceptance_remarks: remarks || '验收通过',
-        }),
+      // 2026-10-10（审核修复）：换 enhancedApiClient —— 原裸 fetch 无 token/无 base URL 处理
+      //   （生产模式必然 401），失败仅 throw 后被空 catch 吞掉、弹窗照关、用户以为成功
+      await enhancedApiClient.post(`/temp-tasks/${verifyTargetTask.id}/complete`, {
+        operator_id: verifyTargetTask.assignerId || '',
+        operator_name: verifyTargetTask.assignerName || '',
+        acceptance_remarks: remarks || '验收通过',
       });
-
-      if (!response.ok) {
-        throw new Error('验收失败');
-      }
 
       // 2. 更新本地状态
       updateTempTask(verifyTargetTask.id, {
@@ -1070,7 +1064,10 @@ export const TempTaskTab: React.FC = () => {
         remarks: remarks || '临时任务验收通过',
       });
     } catch (error) {
-      // 验收确认失败
+      // 2026-10-10（审核修复）：失败必须可见（原空 catch 静默吞错）——保持弹窗打开便于重试
+      console.error('[TempTaskTab] 验收通过失败:', error);
+      showAlert(`验收失败：${(error as Error).message || '请稍后重试'}`);
+      return;
     }
 
     setShowVerifyModal(false);
@@ -1086,19 +1083,12 @@ export const TempTaskTab: React.FC = () => {
 
     try {
       // 1. 先调用后端 API 记录驳回
-      const response = await fetch(`/api/temp-tasks/${verifyTargetTask.id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: verifyTargetTask.assignerId || '',
-          operator_name: verifyTargetTask.assignerName || '',
-          reject_reason: reason || '验收不通过',
-        }),
+      // 2026-10-10（审核修复）：同 handleVerifyConfirm，裸 fetch → enhancedApiClient
+      await enhancedApiClient.post(`/temp-tasks/${verifyTargetTask.id}/reject`, {
+        operator_id: verifyTargetTask.assignerId || '',
+        operator_name: verifyTargetTask.assignerName || '',
+        reject_reason: reason || '验收不通过',
       });
-
-      if (!response.ok) {
-        throw new Error('驳回失败');
-      }
 
       // 2. 更新本地状态
       updateTempTask(verifyTargetTask.id, {
@@ -1124,7 +1114,10 @@ export const TempTaskTab: React.FC = () => {
         remarks: reason || '任务被驳回',
       });
     } catch (error) {
-      // 验收驳回失败
+      // 2026-10-10（审核修复）：失败必须可见（原空 catch 静默吞错）——保持弹窗打开便于重试
+      console.error('[TempTaskTab] 验收驳回失败:', error);
+      showAlert(`驳回失败：${(error as Error).message || '请稍后重试'}`);
+      return;
     }
 
     setShowVerifyModal(false);
@@ -1259,14 +1252,13 @@ export const TempTaskTab: React.FC = () => {
   const handleReassignConfirm = async (newAssigneeId: string, newAssigneeName: string) => {
     if (reassignTask) {
       // 1. 先调用 /accept 记录接单动作（状态变为 accepted）
-      await fetch(`/api/temp-tasks/${reassignTask.id}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operator_id: newAssigneeId,
-          operator_name: newAssigneeName,
-        }),
-      }).catch(() => { /* accept failed */ });
+      // 2026-10-10（审核修复）：裸 fetch → enhancedApiClient；失败不再彻底静默（保留 console）
+      await enhancedApiClient.post(`/temp-tasks/${reassignTask.id}/accept`, {
+        operator_id: newAssigneeId,
+        operator_name: newAssigneeName,
+      }).catch((error) => {
+        console.error('[TempTaskTab] 重新派发-接单记录失败:', error);
+      });
 
       // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
       updateTempTask(reassignTask.id, {
@@ -1278,16 +1270,15 @@ export const TempTaskTab: React.FC = () => {
 
       // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
       setTimeout(() => {
-        fetch(`/api/temp-tasks/${reassignTask.id}/submit-progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            progress: 0,
-            operator_id: newAssigneeId,
-            operator_name: newAssigneeName,
-            comment: '开始执行任务',
-          }),
-        }).catch(() => { /* submit-progress failed */ });
+        // 2026-10-10（审核修复）：裸 fetch → enhancedApiClient；失败保留 console
+        enhancedApiClient.post(`/temp-tasks/${reassignTask.id}/submit-progress`, {
+          progress: 0,
+          operator_id: newAssigneeId,
+          operator_name: newAssigneeName,
+          comment: '开始执行任务',
+        }).catch((error) => {
+          console.error('[TempTaskTab] 重新派发-开始执行记录失败:', error);
+        });
       }, 100);
 
       addTempTaskRecord({

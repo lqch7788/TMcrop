@@ -207,7 +207,8 @@ export function ProductionTaskTableRow({
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">
-            {!isInspectionTask && (
+            {/* 2026-10-10（审核修复）：拒单清空执行人后不再显示"继续执行"（防 in_progress+无执行人卡死） */}
+            {!isInspectionTask && !!task.assigneeId && (
               <Button
                 size="sm"
                 variant="warning"
