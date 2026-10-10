@@ -6,11 +6,13 @@
 // 使用组件：ProModal、ProTable、StatusBadge、BatchActionBar
 // ============================================================
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Search, Calendar, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Users, Search, Calendar, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Download, FileText, Coins } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useHrApprovals } from '../hooks/useApproval';
+import { useApprovalStore } from '../stores/useApprovalStore';
+import { todayLocal } from '../lib/dateUtils';
 import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprovalStatusName } from '../types/approval';
 import ProModal from '../components/common/modal/ProModal';
 import ProTable, { Column } from '../components/common/table/ProTable';
@@ -25,21 +27,19 @@ import { Pagination } from '@/components/ui';
 import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 // ============================================================
-// 审批类型选项（10种类型）
+// 审批 Tab 划分（2026-10-10：按业务家族分 5 组，对齐库存审批页的 tab 模式）
+//   考勤补录 / 调薪 / 转岗三类功能未建设（无页面/无路由/无表），暂不设 tab，
+//   将来建设后按家族并入（考勤补录→假勤、调薪→薪酬、转岗→人员异动）
 // ============================================================
-const APPROVAL_TYPE_OPTIONS = [
-  { value: 'all', label: '全部类型' },
-  { value: ApprovalType.LEAVE, label: '请假申请' },
-  { value: ApprovalType.OVERTIME, label: '加班申请' },
-  { value: ApprovalType.RESIGNATION, label: '离职申请' },
-  { value: ApprovalType.RECRUITMENT, label: '招聘申请' },
-  { value: ApprovalType.ONBOARDING, label: '入职办理' },
-  { value: ApprovalType.ATTENDANCE_REPAIR, label: '考勤补录' },
-  { value: ApprovalType.SALARY_ADJUSTMENT, label: '调薪申请' },
-  { value: ApprovalType.CONTRACT_RENEWAL, label: '合同续签' },
-  { value: ApprovalType.SALARY_BUDGET, label: '工资预算' },
-  { value: ApprovalType.TRANSFER, label: '转岗申请' },
-];
+const HR_TABS = [
+  { key: 'leave', label: '请假审批', icon: Calendar, types: [ApprovalType.LEAVE] },
+  { key: 'overtime', label: '加班审批', icon: Clock, types: [ApprovalType.OVERTIME] },
+  { key: 'mobility', label: '人员异动', icon: Users, types: [ApprovalType.RECRUITMENT, ApprovalType.ONBOARDING, ApprovalType.RESIGNATION] },
+  { key: 'contract', label: '合同审批', icon: FileText, types: [ApprovalType.CONTRACT_RENEWAL] },
+  { key: 'salary', label: '薪酬审批', icon: Coins, types: [ApprovalType.SALARY_BUDGET] },
+] as const;
+
+type HrTabKey = typeof HR_TABS[number]['key'];
 
 // ============================================================
 // 审批状态选项（含已拒绝）
@@ -58,8 +58,16 @@ export default function HrApproval() {
   const { hrApprovals, getApprovalById, approve, reject } = useHrApprovals();
   const { toast } = useToast();
 
-  // 筛选状态
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  // 2026-10-10 审计修复：页面从不主动拉取审批数据——直接进入本页时 store 为空（整页加载后
+  //   Zustand 重新初始化），列表恒"暂无数据"；先访问其它审批页再进本页才有数据。
+  //   补挂载拉取（与 FarmApproval 2026-10-10 同款修复；失败由 store error 承载）
+  useEffect(() => {
+    useApprovalStore.getState().fetchApprovals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 筛选状态（2026-10-10：类型筛选下拉改为 5 组业务家族 tab）
+  const [activeTab, setActiveTab] = useState<HrTabKey>('leave');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -88,11 +96,17 @@ export default function HrApproval() {
   // 批量审批意见
   const [batchApproveComment, setBatchApproveComment] = useState<string>('');
 
+  // 2026-10-10 审计修复：驳回原因（此前拒绝弹窗无输入框、硬编码"审批拒绝"，意见永远无法填写）
+  const [rejectComment, setRejectComment] = useState<string>('');
+  const [batchRejectComment, setBatchRejectComment] = useState<string>('');
+
   // 筛选后的数据
   const filteredData = useMemo(() => {
+    const currentTab = HR_TABS.find(t => t.key === activeTab);
+    if (!currentTab) return [];
     return hrApprovals.filter(a => {
-      // 类型筛选
-      const matchType = typeFilter === 'all' || a.type === typeFilter;
+      // Tab 分组筛选（当前组内成员类型）
+      const matchTab = (currentTab.types as readonly string[]).includes(a.type);
       // 状态筛选
       const matchStatus = statusFilter === 'all' || a.status === statusFilter;
       // 日期范围筛选
@@ -104,9 +118,9 @@ export default function HrApproval() {
         a.applicantName?.includes(searchTerm) ||
         a.code?.includes(searchTerm);
 
-      return matchType && matchStatus && matchStartDate && matchEndDate && matchSearch;
+      return matchTab && matchStatus && matchStartDate && matchEndDate && matchSearch;
     });
-  }, [hrApprovals, typeFilter, statusFilter, startDate, endDate, searchTerm]);
+  }, [hrApprovals, activeTab, statusFilter, startDate, endDate, searchTerm]);
 
   // 分页数据
   const paginatedData = useMemo(() => {
@@ -117,14 +131,19 @@ export default function HrApproval() {
   const totalCount = filteredData.length;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // 统计数据
+  // 统计数据（2026-10-10：跟随当前 tab——与库存审批页口径一致）
   const stats = useMemo(() => {
+    const currentTab = HR_TABS.find(t => t.key === activeTab);
+    const tabData = currentTab
+      ? hrApprovals.filter(a => (currentTab.types as readonly string[]).includes(a.type))
+      : [];
     return {
-      pending: hrApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
-      approved: hrApprovals.filter(a => a.status === ApprovalStatus.APPROVED).length,
-      rejected: hrApprovals.filter(a => a.status === ApprovalStatus.REJECTED).length,
+      pending: tabData.filter(a => a.status === ApprovalStatus.PENDING).length,
+      approved: tabData.filter(a => a.status === ApprovalStatus.APPROVED).length,
+      rejected: tabData.filter(a => a.status === ApprovalStatus.REJECTED).length,
+      total: tabData.length,
     };
-  }, [hrApprovals]);
+  }, [hrApprovals, activeTab]);
 
   // 查看详情
   const handleViewDetail = useCallback((record: Approval) => {
@@ -145,25 +164,40 @@ export default function HrApproval() {
   }, []);
 
   // 确认通过
-  const handleConfirmApprove = useCallback(() => {
-    if (currentRecord) {
-      approve(currentRecord.id, approveComment || '审批通过');
-      toast({ title: '审批已通过', variant: 'success' });
-      setApproveModalOpen(false);
-      setCurrentRecord(null);
-      setApproveComment('');
+  // 2026-10-10 审计修复：必须 await 审批结果——此前 fire-and-forget 立即报成功，
+  // 后端失败（如联动失败）时界面照常关闭、用户以为审批成功（对照物料审批页 2026-09-28 同款修复）
+  const handleConfirmApprove = useCallback(async () => {
+    if (!currentRecord) return;
+    const ok = await approve(currentRecord.id, approveComment || '审批通过');
+    if (!ok) {
+      const reason = useApprovalStore.getState().error || '未知原因';
+      toast.error(`审批通过失败：${reason}`);
+      return;
     }
-  }, [currentRecord, approve, approveComment]);
+    toast.success('审批已通过');
+    setApproveModalOpen(false);
+    setCurrentRecord(null);
+    setApproveComment('');
+  }, [currentRecord, approve, approveComment, toast]);
 
-  // 确认拒绝
-  const handleConfirmReject = useCallback(() => {
-    if (currentRecord) {
-      reject(currentRecord.id, '审批拒绝');
-      toast({ title: '已驳回', variant: 'destructive' });
-      setRejectModalOpen(false);
-      setCurrentRecord(null);
+  // 确认拒绝（驳回原因必填）
+  const handleConfirmReject = useCallback(async () => {
+    if (!currentRecord) return;
+    if (!rejectComment.trim()) {
+      toast.error('请填写驳回原因');
+      return;
     }
-  }, [currentRecord, reject]);
+    const ok = await reject(currentRecord.id, rejectComment.trim());
+    if (!ok) {
+      const reason = useApprovalStore.getState().error || '未知原因';
+      toast.error(`驳回失败：${reason}`);
+      return;
+    }
+    toast.success('已驳回');
+    setRejectModalOpen(false);
+    setCurrentRecord(null);
+    setRejectComment('');
+  }, [currentRecord, reject, rejectComment, toast]);
 
   // 批量通过
   const handleBatchApprove = useCallback(() => {
@@ -177,27 +211,50 @@ export default function HrApproval() {
     setBatchRejectModalOpen(true);
   }, [selectedRowKeys]);
 
-  // 确认批量通过
-  const handleConfirmBatchApprove = useCallback(() => {
+  // 确认批量通过（2026-10-10：逐条 await 收集结果，部分失败如实报告——此前 forEach 并发零反馈）
+  const handleConfirmBatchApprove = useCallback(async () => {
     const comment = batchApproveComment || '批量审批通过';
-    selectedRowKeys.forEach(key => {
-      approve(key as string, comment);
-    });
-    toast({ title: `已通过 ${selectedRowKeys.length} 项审批`, variant: 'success' });
+    const ids = selectedRowKeys as string[];
+    let okCount = 0;
+    let failCount = 0;
+    for (const id of ids) {
+      const ok = await approve(id, comment);
+      if (ok) okCount++; else failCount++;
+    }
+    if (failCount > 0) {
+      const reason = useApprovalStore.getState().error || '未知原因';
+      toast.error(`批量通过：成功 ${okCount} 条，失败 ${failCount} 条（${reason}）`);
+    } else {
+      toast.success(`已通过 ${okCount} 项审批`);
+    }
     setSelectedRowKeys([]);
     setBatchApproveModalOpen(false);
     setBatchApproveComment('');
-  }, [selectedRowKeys, approve, batchApproveComment]);
+  }, [selectedRowKeys, approve, batchApproveComment, toast]);
 
-  // 确认批量拒绝
-  const handleConfirmBatchReject = useCallback(() => {
-    selectedRowKeys.forEach(key => {
-      reject(key as string, '批量驳回');
-    });
-    toast({ title: `已驳回 ${selectedRowKeys.length} 项审批`, variant: 'destructive' });
+  // 确认批量拒绝（驳回原因必填 + 逐条 await 收集结果）
+  const handleConfirmBatchReject = useCallback(async () => {
+    if (!batchRejectComment.trim()) {
+      toast.error('请填写驳回原因');
+      return;
+    }
+    const ids = selectedRowKeys as string[];
+    let okCount = 0;
+    let failCount = 0;
+    for (const id of ids) {
+      const ok = await reject(id, batchRejectComment.trim());
+      if (ok) okCount++; else failCount++;
+    }
+    if (failCount > 0) {
+      const reason = useApprovalStore.getState().error || '未知原因';
+      toast.error(`批量驳回：成功 ${okCount} 条，失败 ${failCount} 条（${reason}）`);
+    } else {
+      toast.success(`已驳回 ${okCount} 项审批`);
+    }
     setSelectedRowKeys([]);
     setBatchRejectModalOpen(false);
-  }, [selectedRowKeys, reject]);
+    setBatchRejectComment('');
+  }, [selectedRowKeys, reject, batchRejectComment, toast]);
 
   // 取消批量选择
   const handleCancelBatch = useCallback(() => {
@@ -259,7 +316,7 @@ export default function HrApproval() {
       title: '类型',
       dataIndex: 'typeName',
       width: 100,
-      filters: APPROVAL_TYPE_OPTIONS.slice(1).map(t => ({ text: t.label, value: t.value })),
+      filters: HR_TABS.flatMap(t => t.types.map(tp => ({ text: getApprovalTypeName(tp), value: tp }))),
     },
     {
       title: '申请时间',
@@ -493,11 +550,26 @@ export default function HrApproval() {
         <KpiCard
           icon={<Users className="w-4 h-4 text-white" />}
           label="总记录"
-          value={totalCount}
+          value={stats.total}
           colorScheme="blue"
           compact
         />
       </KpiCardGrid>
+
+      {/* Tab 切换（2026-10-10：5 组业务家族——请假/加班/人员异动/合同/薪酬，对齐库存审批页模式） */}
+      <div className="bg-white rounded-xl p-1 inline-flex shadow-sm flex-wrap">
+        {HR_TABS.map(tab => (
+          <Button
+            key={tab.key}
+            variant={activeTab === tab.key ? 'default' : 'ghost'}
+            onClick={() => { setActiveTab(tab.key); setCurrentPage(1); setSelectedRowKeys([]); }}
+            className="flex items-center gap-2"
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </Button>
+        ))}
+      </div>
 
       {/* 筛选栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -511,20 +583,6 @@ export default function HrApproval() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
             />
-          </div>
-          {/* 类型筛选 */}
-          <div className="min-w-[150px]">
-            <Label className="text-gray-700">审批类型</Label>
-            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="全部类型" />
-              </SelectTrigger>
-              <SelectContent>
-                {APPROVAL_TYPE_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           {/* 状态筛选 */}
           <div className="min-w-[150px]">
@@ -545,7 +603,8 @@ export default function HrApproval() {
             <Label className="text-gray-700">开始日期</Label>
             <DatePicker
               selected={startDate ? new Date(startDate) : undefined}
-              onChange={(date) => setStartDate(date.toISOString().slice(0, 10))}
+              // 2026-10-10 审计修复：toISOString 是 UTC——东八区选 10-10 会存成 10-09（项目 UTC 铁律）
+              onChange={(date) => setStartDate(todayLocal(date))}
             />
           </div>
           {/* 结束日期 */}
@@ -553,7 +612,7 @@ export default function HrApproval() {
             <Label className="text-gray-700">结束日期</Label>
             <DatePicker
               selected={endDate ? new Date(endDate) : undefined}
-              onChange={(date) => setEndDate(date.toISOString().slice(0, 10))}
+              onChange={(date) => setEndDate(todayLocal(date))}
             />
           </div>
           {/* 搜索按钮 */}
@@ -700,6 +759,17 @@ export default function HrApproval() {
             <p><strong>类型：</strong>{currentRecord.typeName}</p>
           </div>
         )}
+        <div className="mt-4">
+          <Label className="text-gray-700">
+            驳回原因 <span className="text-red-500">*</span>
+          </Label>
+          <TextArea
+            value={rejectComment}
+            onChange={(e) => setRejectComment(e.target.value)}
+            placeholder="请输入驳回原因..."
+            minRows={3}
+          />
+        </div>
       </ProModal>
 
       {/* 批量通过确认弹窗 */}
@@ -737,6 +807,17 @@ export default function HrApproval() {
         <p className="text-gray-700">
           确定要驳回选中的 <strong className="text-red-600">{selectedRowKeys.length}</strong> 项审批吗？
         </p>
+        <div className="mt-4">
+          <Label className="text-gray-700">
+            驳回原因 <span className="text-red-500">*</span>
+          </Label>
+          <TextArea
+            value={batchRejectComment}
+            onChange={(e) => setBatchRejectComment(e.target.value)}
+            placeholder="请输入驳回原因..."
+            minRows={3}
+          />
+        </div>
       </ProModal>
     </div>
   );
