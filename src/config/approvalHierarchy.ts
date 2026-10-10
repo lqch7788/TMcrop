@@ -157,7 +157,10 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
     type: ApprovalType.SEEDLING_PLAN,
     batchApprovalSupported: false,
     forceStrict: false,
-    remark: '育苗计划',
+    // 2026-10-10 修复：同"任务四类"——amount 恒为 0 且无级别配置，原会落入金额免审批档位自动通过；
+    // 且与任务四类同步由 STANDARD 二级改为 QUICK 单人（避免"点两次才通过"的同一问题）
+    forcedLevel: ApprovalLevel.QUICK,
+    remark: '育苗计划（与金额无关，单人审批）',
   },
   {
     type: ApprovalType.PLANTING_PLAN,
@@ -204,25 +207,35 @@ export const TYPE_SPECIFIC_CONFIGS: TypeSpecificConfig[] = [
   },
 
   // ========== 农事审批 ==========
+  // 2026-10-10 修复：以下 4 类提交时 amount 恒为 0，此前无级别配置 → 落入"金额<1000 免审批"
+  // 档位 → 提交即自动通过（用户实测：任务派发单 SP20261010RW475 创建后 61ms 自动批准）。
+  // 这些审批与金额无关，强制走人工审批（QUICK 单人），杜绝金额档误判。
+  // 2026-10-10 二次修复：首次修复误设为 STANDARD（部门主管+经理二级）→ 用户实测
+  // SP20261010RW874/SP166 需点两次「通过」才终审（第一次仅推进到第 2 级，行仍显示待审批）。
+  // 农事审批不做多级会签，统一 QUICK（单人审批）：一次通过即终审。
   {
     type: ApprovalType.TASK_DISPATCH,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '任务派发',
+    remark: '任务派发（与金额无关，单人审批）',
   },
   {
     type: ApprovalType.TASK_CHANGE,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '任务变更',
+    remark: '任务变更（与金额无关，单人审批）',
   },
   {
     type: ApprovalType.INSPECTION_ISSUE,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '巡查问题',
+    remark: '巡查问题（与金额无关，单人审批）',
   },
   {
     type: ApprovalType.ISSUE_RESOLVE,
+    forcedLevel: ApprovalLevel.QUICK,
     batchApprovalSupported: false,
-    remark: '问题整改',
+    remark: '问题整改（与金额无关，单人审批）',
   },
 
   // ========== 作物补录审批 ==========

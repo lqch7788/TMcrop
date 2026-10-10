@@ -8,6 +8,7 @@
 // ============================================
 export type TaskStatus =
   | 'draft'           // 草稿
+  | 'pending_approval' // 2026-10-10：派发审批中（选执行人后提交审批，通过→pending，拒绝→退回待派发）
   | 'pending'         // 已发布（待接受）
   | 'accepted'        // 已接受
   | 'in_progress'     // 处理中

@@ -11,7 +11,7 @@ import { Calendar, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, Che
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
-import { showConfirm } from '@/lib/dialogService';
+import { showConfirm, showAlert } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
@@ -26,6 +26,10 @@ import { BatchDetailModal } from '@/components/production/modals';
 import { CropBatch } from '@/types';
 import { getProductionPlanById } from '@/services/apiProductionPlanService';
 import { PURCHASE_TYPE_TEXT, PurchaseType } from '@/types/purchase';
+// 2026-10-10：批量导出改 CSV/Excel（与全站一致）+ 本地日期文件名
+import { exportCsv, exportXlsx } from '@/services/exporters';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 2026-10-09：审批列表标题兜底翻译
 // 历史 bug：采购计划审批 title 拼接时未翻译 purchaseType（production/urgent/...），导致列表里显示英文
@@ -47,7 +51,8 @@ const translateApprovalTitle = (title: string, approvalType: string): string => 
 };
 
 export default function ProductionApproval() {
-  const { approvals, approve, reject, refreshApprovals } = useApproval();
+  // 2026-10-10：批量操作改走 store 的 batchApprove/batchReject（Promise.all + 单次重拉），替代原逐条 fire-and-forget
+  const { approvals, approve, reject, batchApprove, batchReject, refreshApprovals } = useApproval();
 
   // 页面加载时获取审批数据
   useEffect(() => {
@@ -61,7 +66,18 @@ export default function ProductionApproval() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  // 2026-10-10 修复：原为 const pageSize = 10（常量），而分页组件回调调 setPageSize(size)——
+  // 未定义标识符，点击"每页条数"直接抛 Uncaught ReferenceError、永远改不了（已实测捕获）
+  const [pageSize, setPageSize] = useState(10);
+  // 批量操作进行中标记（防止重复点击 / 提供"处理中"反馈）
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  // 2026-10-10：批量导出改为"两段式勾选模式"（与作物库存等页面一致）——
+  // 点击"批量导出"进入勾选模式（全部行出现复选框），用户勾选所需数据后确认导出；
+  // 绝不默认导出全量（用户明确要求：勾选什么导出什么）
+  const [exportMode, setExportMode] = useState(false);
+  // 导出弹窗状态（2026-10-10：JSON 直下 → ExportFormatModal 两步流程，与全站一致）
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailModal, setDetailModal] = useState<{
     show: boolean;
@@ -212,10 +228,10 @@ export default function ProductionApproval() {
   // 批量操作处理
   const handleSelectAll = (selectAll: boolean) => {
     if (selectAll) {
-      const pendingIds = paginatedData
-        .filter(d => d.status === ApprovalStatus.PENDING)
+      // 审批模式：仅待审批行可选；导出模式：当前页全部行可选
+      const ids = (exportMode ? paginatedData : paginatedData.filter(d => d.status === ApprovalStatus.PENDING))
         .map(d => d.id);
-      setSelectedIds(new Set(pendingIds));
+      setSelectedIds(new Set(ids));
     } else {
       setSelectedIds(new Set());
     }
@@ -232,43 +248,104 @@ export default function ProductionApproval() {
   };
 
   const handleBatchApprove = async () => {
-    if (selectedIds.size === 0) return;
-    if (await showConfirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
-      selectedIds.forEach(id => approve(id));
+    if (selectedIds.size === 0 || batchProcessing) return;
+    const ids = [...selectedIds];
+    if (!(await showConfirm(`确定要批量通过 ${ids.length} 项审批吗？`))) return;
+    setBatchProcessing(true);
+    try {
+      // 2026-10-10 修复：原为逐条 fire-and-forget（不 await、失败静默、N 次全量重拉）——
+      // 改走 store.batchApprove（Promise.all 并发 + 完成后单次重拉）+ 明确的成功/失败提示
+      await batchApprove(ids);
       setSelectedIds(new Set());
+      showAlert(`已批量通过 ${ids.length} 项审批`);
+    } catch (e) {
+      // fail loud：原实现批量失败用户零感知
+      const msg = e instanceof Error ? e.message : String(e);
+      showAlert(`批量通过失败：${msg}\n\n（可能部分已成功，请刷新核对后重试未成功的项）`);
+      await refreshApprovals();
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
   const handleBatchReject = async () => {
-    if (selectedIds.size === 0) return;
-    if (await showConfirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
-      selectedIds.forEach(id => reject(id, '批量拒绝'));
+    if (selectedIds.size === 0 || batchProcessing) return;
+    const ids = [...selectedIds];
+    if (!(await showConfirm(`确定要批量拒绝 ${ids.length} 项审批吗？`))) return;
+    setBatchProcessing(true);
+    try {
+      await batchReject(ids, '批量拒绝');
       setSelectedIds(new Set());
+      showAlert(`已批量拒绝 ${ids.length} 项审批`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showAlert(`批量拒绝失败：${msg}\n\n（可能部分已成功，请刷新核对后重试未成功的项）`);
+      await refreshApprovals();
+    } finally {
+      setBatchProcessing(false);
     }
   };
 
+  // 2026-10-10 重构：批量导出——两段式勾选模式 + CSV/Excel 格式弹窗（与全站一致）
+  // 用户在勾选模式中选中哪些行就导出哪些行（绝不默认全量导出）
   const handleExport = () => {
-    if (selectedIds.size === 0) return;
-    const selectedData = paginatedData.filter(d => selectedIds.has(d.id));
-    const exportData = selectedData.map(d => ({
+    if (selectedIds.size === 0) return; // 兜底：必须已勾选
+    setShowExportModal(true);
+  };
+
+  /** 退出导出勾选模式并清空选中 */
+  const exitExportMode = () => {
+    setExportMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleExportFormatConfirm = async () => {
+    // 只导出勾选行（两段式模式保证进入导出时必有勾选）
+    const rowsToExport = filteredData.filter(d => selectedIds.has(d.id));
+    // 状态枚举 → 中文（导出文件里不出现英文枚举）
+    const STATUS_TEXT: Record<string, string> = {
+      pending: '待审批', approved: '已通过', rejected: '已拒绝',
+      cancelled: '已取消', partially_approved: '部分通过', draft: '草稿',
+    };
+    const headers = ['单号', '标题', '申请人', '部门', '申请时间', '状态'];
+    const exportData = rowsToExport.map(d => ({
       单号: d.code,
-      标题: d.title,
+      标题: translateApprovalTitle(d.title, d.type),
       申请人: d.applicantName,
       部门: d.applicantDepartment,
       申请时间: d.applyDate,
-      状态: d.status
+      状态: STATUS_TEXT[d.status] || d.status,
     }));
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `生产审批_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const filename = `生产审批_${todayLocal()}`;
+    try {
+      if (exportFormat === 'csv') {
+        await exportCsv({ filename: `${filename}.csv`, headers, rows: exportData });
+        showAlert(`CSV 导出完成（共 ${rowsToExport.length} 条）`);
+        setShowExportModal(false);
+        exitExportMode(); // 导出成功后退出勾选模式
+      } else if (exportFormat === 'excel') {
+        await exportXlsx({ filename: `${filename}.xlsx`, headers, rows: exportData });
+        showAlert(`Excel 导出完成（共 ${rowsToExport.length} 条）`);
+        setShowExportModal(false);
+        exitExportMode(); // 导出成功后退出勾选模式
+      } else {
+        // Word 选择时仅提示，弹窗保留让用户改选其他格式（保持在勾选模式）
+        showAlert('Word 格式暂不支持，请选择 Excel 或 CSV');
+      }
+    } catch (e) {
+      showAlert(`导出失败：${e instanceof Error ? e.message : '未知错误'}`);
+      setShowExportModal(false);
+      // 失败时保留勾选，便于重试
+    }
   };
 
-  // 获取待审批数据用于批量操作栏
-  const pendingApprovals = getCurrentData.filter(d => d.status === ApprovalStatus.PENDING);
+  // 2026-10-10：表头全选按"当前页可选行"口径（原实现按页选、图标却与全表待审计数比较，状态不一致）；
+  // 审批模式可选=待审批行，导出模式可选=当前页全部行
+  const pageSelectableIds = (exportMode
+    ? paginatedData
+    : paginatedData.filter(d => d.status === ApprovalStatus.PENDING)
+  ).map(d => d.id);
+  const allPageSelectableSelected = pageSelectableIds.length > 0 && pageSelectableIds.every(id => selectedIds.has(id));
 
   return (
     <div className="space-y-6">
@@ -327,6 +404,9 @@ export default function ProductionApproval() {
             onClick={() => {
               setActiveTab(tab.key);
               setCurrentPage(1);
+              // 2026-10-10：切 tab 时清空选中并退出导出勾选模式（避免跨 tab 残留选择被误操作）
+              setSelectedIds(new Set());
+              setExportMode(false);
             }}
             className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
               activeTab === tab.key
@@ -376,48 +456,70 @@ export default function ProductionApproval() {
           <h3 className="text-lg font-semibold text-gray-900">{tabs.find(t => t.key === activeTab)?.label}</h3>
           {/* 批量操作按钮 */}
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleBatchApprove}
-              disabled={selectedIds.size === 0}
-              className={`
-                ${selectedIds.size === 0
-                  ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
-                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
-                }
-                transition-all duration-200 font-medium h-8 px-3 text-xs
-              `}
-            >
-              <CheckCircle className="w-3 h-3 mr-1" />
-              批量通过
-            </Button>
-            <Button
-              onClick={handleBatchReject}
-              disabled={selectedIds.size === 0}
-              className={`
-                ${selectedIds.size === 0
-                  ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
-                  : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
-                }
-                transition-all duration-200 font-medium h-8 px-3 text-xs
-              `}
-            >
-              <XCircle className="w-3 h-3 mr-1" />
-              批量拒绝
-            </Button>
-            <Button
-              onClick={handleExport}
-              disabled={selectedIds.size === 0}
-              className={`
-                ${selectedIds.size === 0
-                  ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
-                }
-                transition-all duration-200 font-medium h-8 px-3 text-xs
-              `}
-            >
-              <Download className="w-3 h-3 mr-1" />
-              批量导出
-            </Button>
+            {!exportMode ? (
+              <>
+                <Button
+                  onClick={handleBatchApprove}
+                  disabled={selectedIds.size === 0 || batchProcessing}
+                  className={`
+                    ${selectedIds.size === 0 || batchProcessing
+                      ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
+                      : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
+                    }
+                    transition-all duration-200 font-medium h-8 px-3 text-xs
+                  `}
+                >
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  {batchProcessing ? '处理中...' : '批量通过'}
+                </Button>
+                <Button
+                  onClick={handleBatchReject}
+                  disabled={selectedIds.size === 0 || batchProcessing}
+                  className={`
+                    ${selectedIds.size === 0 || batchProcessing
+                      ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
+                      : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
+                    }
+                    transition-all duration-200 font-medium h-8 px-3 text-xs
+                  `}
+                >
+                  <XCircle className="w-3 h-3 mr-1" />
+                  {batchProcessing ? '处理中...' : '批量拒绝'}
+                </Button>
+                <Button
+                  // 2026-10-10：批量导出进入"勾选模式"——先勾选要导出的行，再确认导出（不默认全量）
+                  onClick={() => { setExportMode(true); setSelectedIds(new Set()); }}
+                  className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm transition-all duration-200 font-medium h-8 px-3 text-xs"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  批量导出
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={handleExport}
+                  disabled={selectedIds.size === 0}
+                  className={`
+                    ${selectedIds.size === 0
+                      ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
+                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
+                    }
+                    transition-all duration-200 font-medium h-8 px-3 text-xs
+                  `}
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  {selectedIds.size > 0 ? `确认导出（${selectedIds.size}）` : '确认导出'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={exitExportMode}
+                  className="h-8 px-3 text-xs"
+                >
+                  取消
+                </Button>
+              </>
+            )}
             <Link
               to={tabs.find(t => t.key === activeTab)?.path || '/'}
               className="text-sm text-emerald-600 hover:text-emerald-700 font-medium ml-2"
@@ -434,10 +536,11 @@ export default function ProductionApproval() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleSelectAll(selectedIds.size !== pendingApprovals.length)}
+                    onClick={() => handleSelectAll(!allPageSelectableSelected)}
                     className="text-white hover:bg-blue-400"
+                    title={exportMode ? '全选本页（导出模式）' : '全选本页待审批'}
                   >
-                    {selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0 ? (
+                    {allPageSelectableSelected ? (
                       <CheckSquareIcon className="w-4 h-4 text-white" />
                     ) : (
                       <Square className="w-4 h-4 text-white" />
@@ -457,7 +560,8 @@ export default function ProductionApproval() {
               {paginatedData.map((item) => (
                 <TableRow key={item.id} className={selectedIds.has(item.id) ? 'bg-emerald-50' : ''}>
                   <TableCell>
-                    {item.status === ApprovalStatus.PENDING ? (
+                    {/* 2026-10-10：审批模式仅待审批行可勾选；导出模式全部行可勾选（导出需自选数据） */}
+                    {item.status === ApprovalStatus.PENDING || exportMode ? (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -851,6 +955,16 @@ export default function ProductionApproval() {
         </div>
         )}
       </UnifiedModal>
+
+      {/* 批量导出：格式选择弹窗（2026-10-10：与全站一致的 CSV/Excel 两步流程） */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        exportFileType={exportFormat}
+        onChange={setExportFormat}
+        onClose={() => setShowExportModal(false)}
+        onConfirm={handleExportFormatConfirm}
+        selectedCount={selectedIds.size}
+      />
     </div>
   );
 }

@@ -1,13 +1,16 @@
 /**
  * 工单持久化 Hook
- * 工单数据保存到 localStorage，刷新页面不丢失
+ * 2026-10-10 修复（农事任务中心卡死根因之一）：
+ *   原实现用 useLocalStorage（localStorage 读写 + storage 跨标签页事件监听）。
+ *   该监听器会让"任意标签页写一次 localStorage → 所有开着任务中心的标签页整体重渲染"，
+ *   多标签页（或多实例）场景下互相触发形成渲染风暴 → 页面卡死 30~60 秒。
+ *   按 V2.1 铁律改为纯内存 useState：数据源为 API/Store（useWorkLogStore），
+ *   本地副本只作瞬时状态，刷新即重置，不再读写 localStorage、不再监听 storage 事件。
  */
 
-import { useCallback, useMemo } from 'react';
-import { useLocalStorage, STORAGE_KEYS, clearAllPersistedData } from './useLocalStorage';
+import { useState, useCallback, useMemo } from 'react';
 import { todayLocal } from '@/lib/dateUtils';
-// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useWorkLogStore 同步双写
-// Store 异步同步到后端（API → SQLite），失败不影响主流程（localStorage 仍是数据源）
+// Store 同步到后端（API → SQLite），失败不影响主流程
 import { useWorkLogStore } from '../stores/useWorkLogStore';
 
 // 工单类型
@@ -116,10 +119,8 @@ let nextWorkLogId = INITIAL_WORK_LOGS.length + 1; // 初始为8
  * 工单持久化 Hook
  */
 export function usePersistentWorkLogs() {
-  const [workLogs, setWorkLogs] = useLocalStorage<WorkLogEntry[]>(
-    STORAGE_KEYS.WORK_LOGS,
-    INITIAL_WORK_LOGS
-  );
+  // 2026-10-10：纯内存状态（V2.1 铁律：禁 localStorage）
+  const [workLogs, setWorkLogs] = useState<WorkLogEntry[]>(INITIAL_WORK_LOGS);
 
   // 添加新工单
   const addWorkLog = useCallback((entry: Omit<WorkLogEntry, 'id'>) => {
@@ -170,10 +171,9 @@ export function usePersistentWorkLogs() {
 
   // 重置为初始数据
   const resetToInitial = useCallback(() => {
-    clearAllPersistedData();
     setWorkLogs(INITIAL_WORK_LOGS);
     nextWorkLogId = INITIAL_WORK_LOGS.length + 1;
-  }, [setWorkLogs]);
+  }, []);
 
   // 生成新的工单编号 (WL+年月日+3位数流水号)
   const generateWorkLogCode = useCallback(() => {

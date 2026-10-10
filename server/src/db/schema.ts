@@ -820,7 +820,10 @@ export function initializeDatabase() {
       source_problem_id TEXT,
       source_inspection_id TEXT,
       source_id TEXT,
-      source_code TEXT
+      source_code TEXT,
+      -- 2026-10-10：任务派发审批接线——审批元数据回写（fixMissingSchema 同步补列，防老库缺列）
+      approval_code TEXT,
+      approved_at TEXT
     )
   `);
 

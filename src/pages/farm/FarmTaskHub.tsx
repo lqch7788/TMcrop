@@ -4,7 +4,7 @@
  * 样式与 TaskDispatchPage 统一
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFarmHub, HubTab } from '../../hooks/useFarmHub';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { useReminder } from '../../hooks/useReminder';
@@ -24,7 +24,7 @@ import { CreateTaskModal } from '../../components/farm/hub/modals/CreateTaskModa
 import { BatchAssignModal } from '../../components/farm/hub/modals/BatchAssignModal';
 import { TodayOperationRecords } from '../../components/farm/hub/TodayOperationRecords';
 import { BatchImportModal, ImportRow } from '../../components/farm/hub/modals/BatchImportModal';
-import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, Sparkles, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
+import { ClipboardList, Plus, ChevronRight, AlertCircle, Upload, MapPin, Package, Camera, Mic, Clock, X } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 // 2026-09-21：批量派发/验收/重派三个弹窗由手写 div + 原生 select/button 改为统一组件
 import { Button, Label, Select } from '@/components/ui';
@@ -34,6 +34,9 @@ import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { enhancedApiClient } from '../../lib/apiClient';
 import { useFarmTaskStore } from '../../stores/farmTaskStore';
+// 2026-10-10：任务派发接线审批（样板）——「选执行人确认」即派发动作，提交审批后通过才生效
+import { submitTaskDispatchApproval } from '../../services/approvalSubmitService';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 // 导入弹窗适配器
 import { WithdrawCancelAdapter } from '../../components/farm/hub/modals/WithdrawCancelAdapter';
@@ -42,9 +45,6 @@ import { OvertimeHandleAdapter } from '../../components/farm/hub/modals/Overtime
 import { DeleteWarningAdapter } from '../../components/farm/hub/modals/DeleteWarningAdapter';
 import { ExportFormatAdapter } from '../../components/farm/hub/modals/ExportFormatAdapter';
 import { BatchEditAdapter } from '../../components/farm/hub/modals/BatchEditAdapter';
-import { AIRecommendationPanel } from '../../components/dispatch/AIRecommendationPanel';
-import { useSmartRecommendation } from '../../hooks/farm';
-import type { WorkerRecommendation } from '../../hooks/useComprehensiveDispatch';
 
 // Tab配置
 const TAB_CONFIG: { key: HubTab; label: string }[] = [
@@ -220,25 +220,11 @@ export function FarmTaskHub() {
   const [batchAssignTaskId, setBatchAssignTaskId] = useState<string | null>(null);
   const [batchAssignTaskInfo, setBatchAssignTaskInfo] = useState<{ id: string; taskName?: string; taskType?: string } | null>(null);
 
-  // AI推荐相关状态
-  const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>('manual');
-  const [assignedTo, setAssignedTo] = useState<string | null>(null);
-  const [aiConfidenceScore, setAiConfidenceScore] = useState<number | null>(null);
-  const [aiRecommendations, setAiRecommendations] = useState<WorkerRecommendation[]>([]);
-
-  // AI推荐 Hook
-  const smartRecommend = useSmartRecommendation();
-
-  // 智能推荐弹窗状态
-  const [showRecommendModal, setShowRecommendModal] = useState(false);
-  const [recommendModalMaximized, setRecommendModalMaximized] = useState(false);
-  const [recommendModalPosition, setRecommendModalPosition] = useState({ x: 0, y: 0 });
-  const [recommendModalSize, setRecommendModalSize] = useState({ width: 1200, height: 700 });
-  const recommendModalRef = useCallback((node: HTMLDivElement | null) => {
-    if (node !== null) {
-      // 保存引用用于拖动
-    }
-  }, []);
+  // 2026-10-10 AI 推荐优化：此处原本无条件调用 useSmartRecommendation()——
+  // 每次进入农事任务中心都会跑一遍 环境预警+病虫害预警+工人匹配+推荐生成 整条链，
+  // 但渲染树里没有任何 AI 推荐面板使用其结果（纯死计算，用户实测页面卡顿的嫌疑点之一）。
+  // AI 推荐功能尚处规划阶段，正式接入时应在打开 AI 面板的弹窗内部按需调用，
+  // 不允许挂在页面级组件上每次挂载都执行。
 
   // 迁移弹窗状态
   const [withdrawTask, setWithdrawTask] = useState<import('../../types/task').Task | null>(null);
@@ -327,13 +313,48 @@ export function FarmTaskHub() {
   };
 
   // 确认选择执行人
-  const handleConfirmSelectExecutor = (assigneeId: string, assigneeName: string) => {
-    if (selectExecutorTask) {
-      // 调用 acceptAndAssign 函数：设置执行人并将状态变为 accepted
-      tasksHook.acceptAndAssign(selectExecutorTask.id, assigneeId, assigneeName);
-      setSelectExecutorTask(null);
-      hub.refresh();
+  // 2026-10-10：任务派发接线（样板）——确认执行人 = "派发"动作：
+  //   先写执行人并把任务置为「审批中」，再提交派发审批单；
+  //   通过 → 联动转为「待接受」（正式派发）；拒绝 → 退回「待派发」且清空执行人。
+  //   审批提交失败 → 回退任务为「待派发·未指派」并提示（不产生半吊子状态）。
+  const handleConfirmSelectExecutor = async (assigneeId: string, assigneeName: string) => {
+    if (!selectExecutorTask) return;
+    const task = selectExecutorTask;
+    try {
+      await useFarmTaskStore.getState().updateTask(task.id, {
+        assigneeId,
+        assigneeName,
+        status: 'pending_approval' as Task['status'],
+      });
+    } catch (error) {
+      showAlert(`任务状态更新失败：${(error as Error).message}`);
+      return;
     }
+    try {
+      const currentUser = useAuthStore.getState().currentUser;
+      await submitTaskDispatchApproval({
+        taskId: task.id,
+        taskCode: task.taskCode,
+        taskName: task.title,
+        assigneeName,
+        applicantId: currentUser?.oid || '',
+        applicantName: currentUser?.realName || '系统',
+        department: '',
+      });
+    } catch (error) {
+      // 回退：审批未提交成功 → 任务退回「待派发·未指派」，可重新选择执行人
+      try {
+        await useFarmTaskStore.getState().updateTask(task.id, {
+          assigneeId: '',
+          assigneeName: '',
+          status: 'pending' as Task['status'],
+        });
+      } catch { /* 回退失败仅记录，任务可由用户手动重试 */ }
+      showAlert(`提交派发审批失败：${(error as Error).message}\n任务已退回「待派发」，请重试。`);
+      return;
+    }
+    setSelectExecutorTask(null);
+    hub.refresh();
   };
 
   // 批量操作回调 (从 TaskDispatchPage 合并完整逻辑)
@@ -345,23 +366,40 @@ export function FarmTaskHub() {
   const confirmBatchDispatch = async (assigneeId: string, assigneeName: string) => {
     const now = new Date().toISOString();
     const taskIdSet = new Set(batchDispatchTaskIds);
-    // P1-8：一次批量 API + 一次批量 setState 替代 N 次串行 PUT（性能优化）
+    // 2026-10-10：批量派发同样接线审批——批量置「审批中」+ 逐任务提交派发审批单
+    // P1-8：一次批量 API 置状态（保留性能优化），再并发提交审批
     try {
       await enhancedApiClient.put('/farm-tasks/batch', {
         ids: batchDispatchTaskIds,
-        updates: { assigneeId, assigneeName, status: 'pending' },
+        updates: { assigneeId, assigneeName, status: 'pending_approval' },
       });
     } catch (error) {
-      // 2026-09-21 修复：原 catch 是 `{ /* API 失败乐观更新仍生效 */ }`，
-      //   后端失败时照样强制改本地 state → 界面全显示"已派发"、刷新后集体回滚，用户白忙一场。
-      //   现改为失败即中止（不写本地）+ 明确提示。
+      // 2026-09-21 修复保留：失败即中止（不写本地）+ 明确提示
       showAlert(`批量派发失败：${(error as Error).message}`);
       return;
+    }
+    // 逐任务提交派发审批（并发）；部分失败时保持任务在「审批中」，由用户重试或驳回处理
+    try {
+      const currentUser = useAuthStore.getState().currentUser;
+      const tasks = useFarmTaskStore.getState().tasks.filter((t: any) => taskIdSet.has(t.id));
+      await Promise.all(tasks.map((t: any) =>
+        submitTaskDispatchApproval({
+          taskId: t.id,
+          taskCode: t.taskCode,
+          taskName: t.title,
+          assigneeName,
+          applicantId: currentUser?.oid || '',
+          applicantName: currentUser?.realName || '系统',
+          department: '',
+        })
+      ));
+    } catch (error) {
+      showAlert(`部分派发审批提交失败：${(error as Error).message}\n已完成的任务保持「审批中」，请稍后重试。`);
     }
     // 直接 setState 更新 store（不触发 N 次独立 API）
     useFarmTaskStore.setState((prev: any) => ({
       tasks: prev.tasks.map((t: any) =>
-        taskIdSet.has(t.id) ? { ...t, assigneeId, assigneeName, status: 'pending', updatedAt: now, version: (t.version || 1) + 1 } : t
+        taskIdSet.has(t.id) ? { ...t, assigneeId, assigneeName, status: 'pending_approval', updatedAt: now, version: (t.version || 1) + 1 } : t
       ),
     }));
     setShowBatchDispatchModal(false);
@@ -525,7 +563,9 @@ export function FarmTaskHub() {
                 onCreateTask={() => setShowCreateModal(true)}
                 onBatchAssign={(task) => {
                   setBatchAssignTaskId(task.id);
-                  setBatchAssignTaskInfo({ id: task.id, taskName: task.taskName, taskType: task.taskType });
+                  // 2026-10-10 修复：Task 类型无 taskName/taskType 字段（tsc 编译错误），
+                  // 弹窗展示信息改用 title/type 映射
+                  setBatchAssignTaskInfo({ id: task.id, taskName: task.title, taskType: task.type });
                   setShowBatchAssignModal(true);
                 }}
                 onWithdraw={handleTaskWithdraw}

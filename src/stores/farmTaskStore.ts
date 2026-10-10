@@ -11,7 +11,10 @@ import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
 
-export type TaskStatus = 'draft' | 'pending' | 'accepted' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'rejected' | 'failed' | 'cancelled' | 'abandoned';
+// 2026-10-10：新增 pending_approval（派发审批中）——任务派发接线审批后，
+// 「确认执行人」先把任务置为审批中，审批通过才转「待接受」；缺此枚举导致
+// FarmTaskHub 两处 `status: 'pending_approval'` 的 updateTask 调用 TS2322 编译错误
+export type TaskStatus = 'draft' | 'pending' | 'pending_approval' | 'accepted' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'rejected' | 'failed' | 'cancelled' | 'abandoned';
 
 export interface Task {
   id: string;

@@ -1368,17 +1368,10 @@ router.put('/:id', (req: Request, res: Response) => {
     if (fields.length === 0) {
       return res.json({ success: true, data: { id, noop: true } });
     }
-    // 2026-10-10 修复：编辑了 current_quantity 但未显式改 available_quantity 时，联动重算
-    // available = max(0, 新数量 - frozen)——此前编辑只改数量，available 列残留旧值（列表"可用"列虚高）
-    const curQtyUpd = fields.findIndex(f => f.startsWith('current_quantity'));
-    if (curQtyUpd >= 0 && !fields.some(f => f.startsWith('available_quantity'))) {
-      fields.push('available_quantity = ?');
-      values.push(Math.max(0, Number(values[curQtyUpd]) - (Number(oldStockObj.frozen_quantity) || 0)));
-    }
-    fields.push('update_time = ?', 'version = version + 1');
-    values.push(new Date().toISOString());
     // 2026-08-21 修复：先查老 current_quantity，UPDATE 后对比 delta 写 material_flow_log correction
     // 2026-10-10：补查 frozen_quantity——编辑数量时联动重算 available_quantity 用
+    // 2026-10-10 修复（TDZ 崩溃）：本查询必须先于下方 available_quantity 重算执行——
+    //   原顺序在重算之后，oldStockObj 尚未初始化即被引用，编辑数量保存必抛 ReferenceError（500）
     const oldStockRows = db.exec(
       `SELECT id, instance_id, current_quantity, frozen_quantity, crop_name, variety_name, unit, stock_type
        FROM inventory_stock WHERE id = ? OR instance_id = ? LIMIT 1`,
@@ -1388,6 +1381,15 @@ router.put('/:id', (req: Request, res: Response) => {
     const oldCols = oldStockRows[0]?.columns || [];
     const oldStockObj: Record<string, any> = {};
     oldCols.forEach((c, i) => { oldStockObj[c] = (oldStock as any[])?.[i]; });
+    // 2026-10-10 修复：编辑了 current_quantity 但未显式改 available_quantity 时，联动重算
+    // available = max(0, 新数量 - frozen)——此前编辑只改数量，available 列残留旧值（列表"可用"列虚高）
+    const curQtyUpd = fields.findIndex(f => f.startsWith('current_quantity'));
+    if (curQtyUpd >= 0 && !fields.some(f => f.startsWith('available_quantity'))) {
+      fields.push('available_quantity = ?');
+      values.push(Math.max(0, Number(values[curQtyUpd]) - (Number(oldStockObj.frozen_quantity) || 0)));
+    }
+    fields.push('update_time = ?', 'version = version + 1');
+    values.push(new Date().toISOString());
 
     db.run(`UPDATE inventory_stock SET ${fields.join(', ')} WHERE id = ? OR instance_id = ?`,
       [...values, id, id]);
