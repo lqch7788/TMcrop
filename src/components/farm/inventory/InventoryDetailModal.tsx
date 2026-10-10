@@ -39,9 +39,12 @@ import {
   getPlantingModeLabel,
   SOURCE_ORIGIN_MAP,
   SOURCE_ORIGIN_LABEL_MAP,
+  UNIT_MAP,
 } from '../../../constants/cropConstants';
 import { translateForm, translateArea } from '../../../constants/formDictionary';
 import { useInventoryStore } from '../../../stores/useInventoryStore';
+// 2026-10-10：组件内直连 API 抽到 service 层（调拨申请单详情查询）
+import { getTransferApplicationById } from '../../../services/apiInventoryTransfer';
 
 type TabKey = 'basic' | 'history' | 'trace';
 
@@ -177,9 +180,8 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
     let cancelled = false;
     (async () => {
       try {
-        const { enhancedApiClient } = await import('@/lib/apiClient');
-        // enhancedApiClient 已自动解包 data（api-client-response-unwrapping）
-        const res = await enhancedApiClient.get<any>(`/inventory-transfer-applications/${st.businessId}`);
+        // 2026-10-10：改走 service 层（apiInventoryTransfer.getTransferApplicationById）——组件不再直连 API
+        const res = await getTransferApplicationById(String(st.businessId));
         if (!cancelled) setTransferSourceWh(String(res?.sourceWarehouseName || ''));
       } catch (e) {
         console.warn('[InventoryDetailModal] 查询调拨来源失败:', e);
@@ -231,10 +233,10 @@ export function InventoryDetailModal({ isOpen, stock, onClose, onNavigateToInsta
   // 兼容历史脏数据（status='active' / 'depleted' 等已废弃值）
   const statusInfo = INVENTORY_STATUS_MAP[effectiveStock?.status ?? ''] || INVENTORY_STATUS_MAP.in_stock;
   // sourceType 兜底：未在 SOURCE_ORIGIN_MAP 映射时显示中文（避免英文原始值）
+  // 2026-10-10：最后一级兜底从"原始英文码"改为「其他」（中文显示要求）
   const sourceLabel = sourceInfo?.label
     || (effectiveStock?.sourceType ? SOURCE_ORIGIN_LABEL_MAP[effectiveStock.sourceType] : null)
-    || effectiveStock?.sourceType
-    || '-';
+    || (effectiveStock?.sourceType ? '其他' : '-');
   const gradeInfo = effectiveStock?.grade ? QUALITY_GRADE_MAP[effectiveStock.grade] : null;
   const available = (effectiveStock?.currentQuantity ?? 0) - (effectiveStock?.frozenQuantity ?? 0);
 
@@ -445,6 +447,8 @@ function BasicTab({
 }) {
   const freezesCount = freezes.length;
   const [showFreezeDetail, setShowFreezeDetail] = useState(false);
+  // 2026-10-10：单位英文码翻译（kg→公斤），数量信息组统一用它
+  const unitLabel = stock.unit ? (UNIT_MAP[stock.unit] || stock.unit) : '';
   const availableRatio = (stock.currentQuantity ?? 0) > 0
     ? Math.round((available / (stock.currentQuantity ?? 0)) * 100)
     : 0;
@@ -513,7 +517,7 @@ function BasicTab({
         ['采收区域', translateArea(stock.greenhouseName) || translateArea(stock.areaName) || '-'],
         ['品质等级', gradeInfo
           ? <span className={`px-2 py-0.5 ${gradeInfo.bg} ${gradeInfo.text} text-xs rounded font-medium`}>{gradeInfo.label}</span>
-          : (stock.grade || '-')],
+          : (stock.grade ? '其他' : '-')],
       ],
     },
     {
@@ -522,10 +526,10 @@ function BasicTab({
       border: 'border-amber-300',
       text: 'text-amber-700',
       items: [
-        ['当前数量', <span className="font-mono font-semibold text-lg text-emerald-600">{stock.currentQuantity} {stock.unit}</span>],
-        ['已冻结',   <span className="font-mono text-blue-600">{stock.frozenQuantity} {stock.unit}</span>],
-        ['可用数量', <span className="font-mono font-medium">{available} {stock.unit} <span className="text-xs text-gray-500">({availableRatio}%)</span></span>],
-        ['目标产量', stock.targetYield ? `${stock.targetYield} ${stock.unit}` : '-'],
+        ['当前数量', <span className="font-mono font-semibold text-lg text-emerald-600">{stock.currentQuantity} {unitLabel}</span>],
+        ['已冻结',   <span className="font-mono text-blue-600">{stock.frozenQuantity} {unitLabel}</span>],
+        ['可用数量', <span className="font-mono font-medium">{available} {unitLabel} <span className="text-xs text-gray-500">({availableRatio}%)</span></span>],
+        ['目标产量', stock.targetYield ? `${stock.targetYield} ${unitLabel}` : '-'],
         ['冻结记录', (
           <button
             type="button"
@@ -559,9 +563,9 @@ function BasicTab({
               </span>
             )] as [string, React.ReactNode]]
           : []),
-        // 2026-07-09：补上游业务 ID/类型（与 InventoryStock 类型对齐，溯源用）
-        ['上游业务ID',   <span className="font-mono text-xs">{stock.sourceBusinessId || '-'}</span>],
-        ['上游业务类型', stock.sourceBusinessType || '-'],
+        // 2026-10-10 清理：删除「上游业务ID / 上游业务类型」两行——inventory_stock 表根本没有
+        // source_business_id / source_business_type 列，两行恒显示 '-'（死字段）；
+        // 上游追溯统一看「上下游追溯」tab（有真实数据）
         ['上游实例',     <span className="font-mono">{stock.sourceInstanceId || '-'}</span>],
         ['生产计划',     stock.productionPlanCode || '-'],
         ['入库日期',     stock.inboundDate ? new Date(stock.inboundDate).toLocaleDateString('zh-CN') : '-'],
@@ -632,8 +636,12 @@ function BasicTab({
             ['补录标记', <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded font-medium">⚙️ 补录入库</span>],
             ['补录原因', <span className="text-purple-900 font-medium">{stock.supplementaryReason || '-'}</span>],
             ['来源类型', (() => {
-              const labelMap: Record<string, string> = { planting: '种植行', seedling: '育苗行', 'seed-source': '种源' };
-              return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{labelMap[stock.sourceModule || ''] || stock.sourceModule || '-'}</span>;
+              // 2026-10-10：补全 manual/transfer/seed_source 映射；未覆盖值兜底「其他」（不再显示英文原文）
+              const labelMap: Record<string, string> = {
+                planting: '种植行', seedling: '育苗行', 'seed-source': '种源', seed_source: '种源',
+                manual: '手动录入', transfer: '库存调拨',
+              };
+              return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{labelMap[stock.sourceModule || ''] || (stock.sourceModule ? '其他' : '-')}</span>;
             })()],
             ['来源行ID', <span className="font-mono text-xs">{stock.sourceRecordId || '-'}</span>],
             ['来源行编码', <span className="font-mono text-xs font-semibold">{stock.sourceCode || '-'}</span>],

@@ -10,14 +10,11 @@
  */
 
 import { create } from 'zustand';
-import { logger } from '../lib/logger';
 import {
   getInventoryList,
-  getInventoryStats,
 } from '../services/inventoryService';
 import {
   InventoryStock,
-  InventoryStats,
   StockType,
   InventoryStatus,
   SourceType,
@@ -33,27 +30,18 @@ export interface InventoryFilters {
 interface InventoryState {
   // 数据
   items: InventoryStock[];
-  stats: InventoryStats | null;
   loading: boolean;
   error: string | null;
-
-  // 过滤
-  filters: InventoryFilters;
 
   // 变更版本（用于跨页刷新）
   version: number;
 
   // 方法
-  setFilters: (filters: InventoryFilters) => void;
-  loadItems: (filters?: InventoryFilters) => Promise<void>;
-  // 2026-07-18 P2-M4：fetchItems 别名
-  fetchItems: (filters?: InventoryFilters) => Promise<void>;
-  loadStats: () => Promise<void>;
+  // 2026-10-10 死代码清理：删除 setFilters / loadItems / fetchItems / loadStats / reset 五个零消费 action
+  // （筛选已改为页面客户端过滤，store 不再承担筛选；stats 无任何消费方，loadAll 也不再请求）
   loadAll: (filters?: InventoryFilters) => Promise<void>;
   /** 通知一次变更（写操作成功后调用） */
   notifyChange: () => void;
-  /** 重置 store */
-  reset: () => void;
   /**
    * 2026-06-04 V2.1 铁律改造：批量删除（写操作走 Store action）
    * 薄包装 inventoryService.deleteInventoryBatch，写后 notifyChange 跨页刷新
@@ -68,7 +56,7 @@ interface InventoryState {
   }>;
   /**
    * 2026-07-28 审核 H-4：编辑库存（写操作走 Store action，符合 V2.1 铁律）
-   * 写后 notifyChange 跨页刷新 + 乐观更新本地 items
+   * 写后 notifyChange 跨页刷新
    */
   updateItem: (
     instanceId: string,
@@ -78,56 +66,21 @@ interface InventoryState {
 
 export const useInventoryStore = create<InventoryState>()((set, get) => ({
   items: [],
-  stats: null,
   loading: false,
   error: null,
-  filters: {},
   version: 0,
 
-  setFilters: (filters) => set({ filters }),
-
-  loadItems: async (filters) => {
+  loadAll: async (filters) => {
     set({ loading: true, error: null });
     try {
-      const activeFilter = filters || get().filters;
-      const data = await getInventoryList({
+      const activeFilter = filters || {};
+      const items = await getInventoryList({
         stockType: activeFilter.stockType || undefined,
         status: activeFilter.status || undefined,
         sourceType: activeFilter.sourceType || undefined,
         cropName: activeFilter.cropName || undefined,
       });
-      set({ items: data, loading: false });
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : '加载库存失败', loading: false });
-    }
-  },
-
-  // 2026-07-18 P2-M4：fetchItems 别名
-  fetchItems: async (filters) => { await get().loadItems(filters); },
-
-  loadStats: async () => {
-    try {
-      const data = await getInventoryStats();
-      set({ stats: data });
-    } catch (error) {
-      logger.error('[useInventoryStore] 加载统计失败', error);
-    }
-  },
-
-  loadAll: async (filters) => {
-    set({ loading: true, error: null });
-    try {
-      const activeFilter = filters || get().filters;
-      const [items, stats] = await Promise.all([
-        getInventoryList({
-          stockType: activeFilter.stockType || undefined,
-          status: activeFilter.status || undefined,
-          sourceType: activeFilter.sourceType || undefined,
-          cropName: activeFilter.cropName || undefined,
-        }),
-        getInventoryStats(),
-      ]);
-      set({ items, stats, loading: false });
+      set({ items, loading: false });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : '加载库存失败', loading: false });
     }
@@ -135,10 +88,6 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
 
   notifyChange: () => {
     set((s) => ({ version: s.version + 1 }));
-  },
-
-  reset: () => {
-    set({ items: [], stats: null, loading: false, error: null, filters: {}, version: 0 });
   },
 
   deleteBatch: async (ids) => {
@@ -156,18 +105,12 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
   updateItem: async (instanceId, updates) => {
     try {
       const { updateInventory: svc } = await import('../services/apiInventoryService');
-      const ok = await svc(instanceId, updates as any);
-      if (ok) {
-        get().notifyChange();
-        // 乐观更新本地 items
-        set((s) => ({
-          items: s.items.map((it) =>
-            it.instanceId === instanceId ? { ...it, ...(updates as any) } : it,
-          ),
-        }));
-        return { success: true };
-      }
-      return { success: false, error: '编辑失败' };
+      // 2026-10-10：service 失败改为抛出 → 由下方 catch 透出后端真实错误信息
+      await svc(instanceId, updates as any);
+      get().notifyChange();
+      // 2026-10-10 清理：删除原"乐观 merge"——updates 是 snake_case，merge 进 camelCase item 会
+      // 产生 current_quantity/instanceId 混键的脏对象；notifyChange 已触发全量 reload（权威数据源）
+      return { success: true };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       set({ error: msg });

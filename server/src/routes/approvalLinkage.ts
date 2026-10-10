@@ -723,14 +723,25 @@ export function updateBusinessTable(
             // 与 12 位新编码（FR010100100）两种格式，同品种前 9 位一致；精确匹配会漏掉历史编码库存
             // （与 /inventory/available-by-crop 端点过滤条件完全一致，保证"展示的可用量=实际可扣量"）
             const srcRows = db.exec(`
-              SELECT id, instance_id, current_quantity, available_quantity FROM inventory_stock
+              SELECT id, instance_id, current_quantity, available_quantity, frozen_quantity FROM inventory_stock
               WHERE warehouse_id = ? AND SUBSTR(crop_code, 1, 9) = SUBSTR(?, 1, 9)
                 AND status IN ('in_stock','low_stock')
                 AND available_quantity > 0
               ORDER BY inbound_date ASC, id ASC
             `, [srcWhId, matCode]);
+            // 2026-10-10：可用量取"存储列"与"实时值(current-frozen)"的较小者——
+            // available_quantity 列历史上被部分写入端漏维护（freeze/outbound/PUT 曾不更新），
+            // 存储值虚高时 FEFO 按它扣减会把 current 扣成负数；min() 双保险（列修为一致后等价）
             const srcLines: Array<{ id: string; instId: string; cur: number; avail: number }> = srcRows.length > 0
-              ? srcRows[0].values.map((v: any[]) => ({ id: String(v[0]), instId: String(v[1] || ''), cur: Number(v[2]) || 0, avail: Number(v[3]) || 0 }))
+              ? srcRows[0].values.map((v: any[]) => {
+                  const cur = Number(v[2]) || 0;
+                  const stored = Number(v[3]) || 0;
+                  const frozen = Number(v[4]) || 0;
+                  return {
+                    id: String(v[0]), instId: String(v[1] || ''), cur,
+                    avail: Math.max(0, Math.min(stored, cur - frozen)),
+                  };
+                }).filter((l: { avail: number }) => l.avail > 0)
               : [];
             const totalAvail = srcLines.reduce((s: number, l) => s + l.avail, 0);
             if (totalAvail < qty) {
@@ -825,12 +836,15 @@ export function updateBusinessTable(
               notes, status, version, create_time, update_time
             ) VALUES (?, ?, ?, ?, 'inbound', ?, 'transfer', ?, 'cross_warehouse',
                       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      'active', 1, ?, ?)
+                      'in_stock', 1, ?, ?)
           `, [
             tgtStockId,                                   // id
             tgtStockId,                                   // instance_id
             // 2026-10-10：库存类型继承源行（种苗调拨不再被误标为"成品"；外部调入无源行时才兜底 product）
             srcAttr.stock_type || 'product',              // stock_type
+            // 2026-10-10 修复：状态此前写非法值 'active'（不在任何枚举/@map 内）——连锁后果：
+            // 状态筛选查不到、无出库/冻结按钮、FEFO/可用仓过滤（in_stock/low_stock）把它排除导致无法再调拨。
+            // 统一写规范状态 'in_stock'（status 位置在下方 VALUES 尾部 'in_stock', 1）
             requestId,                                    // business_id
             trCode,                                       // business_code
             // 2026-10-09：写入实际扣减的源库存行 id（追溯"从哪条源库存调入"；无源扣减=外部调入时为空）

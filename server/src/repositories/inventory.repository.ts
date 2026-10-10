@@ -6,6 +6,13 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 
+/**
+ * 低库存阈值（2026-10-10 常量化：原为散落的魔法数字 10）
+ * 口径：current_quantity < LOW_STOCK_THRESHOLD 视为低库存。
+ * 前端同名常量在 src/constants/cropConstants.ts（LOW_STOCK_THRESHOLD），两处必须保持一致。
+ */
+const LOW_STOCK_THRESHOLD = 10;
+
 /** 库存记录查询参数 */
 export interface InventoryStockQuery {
   stockType?: string;
@@ -372,9 +379,13 @@ export class InventoryStockRepository {
 
     // 分页
     sql += ` ORDER BY s.create_time DESC`;
-    const offset = (Number(page) - 1) * Number(limit);
-    sql += ` LIMIT ? OFFSET ?`;
-    params.push(Number(limit), offset);
+    // 2026-10-10：limit<=0 表示"不限制"（返回全量）——作物库存页的搜索/筛选/分页全部在客户端，
+    // 任何静默截断都会让被截掉的行永久不可见（此前 limit=500 兜底就是同类隐患）
+    if (Number(limit) > 0) {
+      const offset = (Number(page) - 1) * Number(limit);
+      sql += ` LIMIT ? OFFSET ?`;
+      params.push(Number(limit), offset);
+    }
 
     const items = queryToObjects<InventoryStock>(db, sql, params);
 
@@ -430,9 +441,9 @@ export class InventoryStockRepository {
       };
     }
 
-    // 低库存与临期（简化：低库存=current<10；临期=inbound_date>180天）
+    // 低库存与临期（简化：低库存=current<LOW_STOCK_THRESHOLD；临期=inbound_date>180天）
     const lowStock = queryToObjects<{ c: number }>(db,
-      `SELECT COUNT(*) as c FROM inventory_stock ${whereClause} AND current_quantity < 10`, params);
+      `SELECT COUNT(*) as c FROM inventory_stock ${whereClause} AND current_quantity < ${LOW_STOCK_THRESHOLD}`, params);
     const expiring = queryToObjects<{ c: number }>(db,
       `SELECT COUNT(*) as c FROM inventory_stock ${whereClause} AND inbound_date < date('now', '-180 days')`, params);
 

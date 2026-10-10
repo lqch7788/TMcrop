@@ -11,11 +11,15 @@ import ActionToolbar from '../components/warehouse/ActionToolbar';
 // 一次性动作（CSV 导出）保留直调 client-side
 import { useInventoryStore } from '../stores';
 import {
-  StockType,
-  SourceType,
   InventoryStatus,
   InventoryStock,
 } from '../types/inventory';
+// 2026-10-10：状态/来源筛选改为客户端匹配（含历史别名集合）——选项常量与 match 集合统一来自此处
+import {
+  INVENTORY_STATUS_FILTER_OPTIONS,
+  INVENTORY_SOURCE_FILTER_OPTIONS,
+  LOW_STOCK_THRESHOLD,
+} from '../constants/cropConstants';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { FreezeModal } from '../components/farm/inventory/FreezeModal';
@@ -52,7 +56,7 @@ export default function InventoryV3Page() {
   const { toast } = useToast();
   // 持久化数据：list/stats/loading 全部从 useInventoryStore 读取
   const stocks = useInventoryStore((s) => s.items);
-  const stats = useInventoryStore((s) => s.stats);
+  // 2026-10-10 死代码清理：删除未使用的 stats 选择器（低库存徽章一直是本地重算）
   const loading = useInventoryStore((s) => s.loading);
   const loadAll = useInventoryStore((s) => s.loadAll);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
@@ -83,7 +87,8 @@ export default function InventoryV3Page() {
 
   // 批量操作状态（与 ActionToolbar 协同）
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [batchEditMode, setBatchEditMode] = useState(false);
+  // 2026-10-10 死路径清理：删除 batchEditMode——工具栏早已移除"批量编辑"按钮，
+  // 该状态进入后无任何确认/退出入口（半死状态）；ActionToolbar 为共享组件仍要求传 prop，固定传 false
   const [deleteMode, setDeleteMode] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
@@ -93,18 +98,35 @@ export default function InventoryV3Page() {
   const inventoryVersion = useInventoryStore((s) => s.version);
 
   useEffect(() => {
-    // 2026-06-11 修复: 直接传 filters 给 loadAll, 消除 setStoreFilters 竞态
-    loadAll({
-      stockType: filters.stockType as StockType,
-      status: filters.status as InventoryStatus,
-      sourceType: filters.sourceType as SourceType,
-    });
-  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, loadAll]);
+    // 2026-10-10：改为只拉一次全量（服务端 500 上限），筛选在客户端做——
+    // 原因：服务端过滤要求"精确单值"，无法覆盖历史别名（external_purchase/external_purchased、
+    // active 等），且每次筛选都重发请求；关键词/低库存本来就是客户端过滤，口径统一
+    loadAll();
+    // 注：loadAll 不传参 → 使用 store 默认空筛选
+  }, [inventoryVersion, loadAll]);
 
   // 2026-07-13 方案 B：删除 URL 自动开弹窗 useEffect（补录走内部按钮）
-  // 关键字过滤（前端）+ 低库存过滤
+  // 2026-10-10：关键词 + 类型/状态/来源 + 低库存 全部客户端过滤（别名集合匹配）
   const filteredStocks = useMemo(() => {
     let result = stocks;
+    // 类型（枚举值精确匹配）
+    if (filters.stockType) {
+      result = result.filter(stock => stock.stockType === filters.stockType);
+    }
+    // 状态（含历史别名：active→库存中、frozen→部分冻结 等，见常量 match 集合）
+    if (filters.status) {
+      const statusOpt = INVENTORY_STATUS_FILTER_OPTIONS.find(o => o.value === filters.status);
+      if (statusOpt) {
+        result = result.filter(stock => statusOpt.match.includes(String(stock.status || '')));
+      }
+    }
+    // 来源（含历史别名：external_purchase/external_harvest、transfer/cross_warehouse 等）
+    if (filters.sourceType) {
+      const sourceOpt = INVENTORY_SOURCE_FILTER_OPTIONS.find(o => o.value === filters.sourceType);
+      if (sourceOpt) {
+        result = result.filter(stock => sourceOpt.match.includes(String(stock.sourceType || '')));
+      }
+    }
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase();
       result = result.filter(stock =>
@@ -118,18 +140,23 @@ export default function InventoryV3Page() {
       );
     }
     if (showLowStockOnly) {
-      // 数量 < 10 视为低库存（与后端 stats.lowStockCount 一致）
-      result = result.filter(s => (s.currentQuantity ?? 0) < 10);
+      // 数量 < LOW_STOCK_THRESHOLD 视为低库存（与后端 repository getStats 口径一致）
+      result = result.filter(s => (s.currentQuantity ?? 0) < LOW_STOCK_THRESHOLD);
     }
     return result;
-  }, [stocks, filters.keyword, showLowStockOnly]);
+  }, [stocks, filters.stockType, filters.status, filters.sourceType, filters.keyword, showLowStockOnly]);
+
+  // 2026-10-10：筛选条件变化时回到第 1 页（此前停留在旧页码，筛出结果可能为空页）
+  useEffect(() => {
+    setPagination((p) => (p.current === 1 ? p : { ...p, current: 1 }));
+  }, [filters.stockType, filters.status, filters.sourceType, filters.keyword, showLowStockOnly]);
 
   // 退出批量模式时清空选中
   useEffect(() => {
-    if (!batchEditMode && !deleteMode && !exportMode) {
+    if (!deleteMode && !exportMode) {
       setSelectedRows([]);
     }
-  }, [batchEditMode, deleteMode, exportMode]);
+  }, [deleteMode, exportMode]);
 
   // ===== 操作按钮处理 =====
   const handleAdd = () => {
@@ -137,10 +164,7 @@ export default function InventoryV3Page() {
   };
 
   const handleBatchEdit = () => {
-    if (!showLowStockOnly && !batchEditMode) {
-      setBatchEditMode(true);
-      return;
-    }
+    // 2026-10-10：批量编辑从未实现（工具栏也早已移除入口）——直接提示，不再进入半死模式
     showAlert('批量编辑暂未实现，请到出库弹窗调整单条库存数量。');
   };
 
@@ -271,7 +295,9 @@ export default function InventoryV3Page() {
         await exportCsv({ filename: `作物库存_${todayLocal()}.csv`, headers, rows: exportData });
         toast.success(`CSV 下载已开始（共 ${rowsToExport.length} 条）`);
       } else if (exportFormat === 'excel') {
-        exportXlsx({ filename: `作物库存_${todayLocal()}.xlsx`, headers, rows: exportData });
+        // 2026-10-10 修复：exportXlsx 是 async——此前未 await，失败会逃出 catch
+        // （且成功提示先于实际完成），改为 await 与 CSV 分支对齐
+        await exportXlsx({ filename: `作物库存_${todayLocal()}.xlsx`, headers, rows: exportData });
         toast.success(`Excel 下载已开始（共 ${rowsToExport.length} 条）`);
       } else {
         toast.warning('Word 格式作物库存暂不支持，请选 Excel 或 CSV');
@@ -304,7 +330,7 @@ export default function InventoryV3Page() {
 
   // 统计当前低库存数（用于 ActionToolbar 红点徽章）
   const lowStockCount = useMemo(
-    () => stocks.filter(s => (s.currentQuantity ?? 0) < 10).length,
+    () => stocks.filter(s => (s.currentQuantity ?? 0) < LOW_STOCK_THRESHOLD).length,
     [stocks]
   );
 
@@ -386,7 +412,7 @@ export default function InventoryV3Page() {
       {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
       <ActionToolbar
         title="库存列表"
-        batchEditMode={batchEditMode}
+        batchEditMode={false}
         deleteMode={deleteMode}
         exportMode={exportMode}
         selectedRows={selectedRows}
@@ -397,7 +423,8 @@ export default function InventoryV3Page() {
         onDelete={handleDelete}
         onExport={handleExport}
         onConfirmBatchEdit={() => showAlert('批量编辑暂未实现')}
-        onCancelBatchEdit={() => setBatchEditMode(false)}
+        // batchEditMode 恒为 false → 该取消键永不渲染，回调留空壳仅为满足共享组件必填 prop
+        onCancelBatchEdit={() => {}}
         onConfirmDelete={handleConfirmDelete}
         onCancelDelete={handleCancelDelete}
         onConfirmExport={handleConfirmExport}
@@ -425,7 +452,7 @@ export default function InventoryV3Page() {
         onEdit={handleEdit}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
-        showCheckboxes={batchEditMode || deleteMode || exportMode}
+        showCheckboxes={deleteMode || exportMode}
         onSelectAll={handleSelectAll}
       />
 

@@ -8,6 +8,8 @@ import { AlertTriangle, X } from 'lucide-react';
 import { InventoryStock } from '../../types/inventory';
 import { useInventoryTransactionStore } from '../../stores/useInventoryTransactionStore';
 import { useInventoryStore } from '../../stores/useInventoryStore';
+// 2026-10-10：出库操作人改取登录用户（原硬编码"系统操作员"）
+import { useAuthStore } from '../../stores/useAuthStore';
 import { OutboundBusinessType, OUTBOUND_BUSINESS_TYPE_META } from '../../constants/outboundConstants';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -57,14 +59,17 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
     try {
       // 2026-06-04 V2.1 铁律改造：写操作走 Store action（addTransaction 内部已 notifyChange 跨页刷新）
+      // 2026-10-10 修复：原硬编码 operatorId:'system' / operatorName:'系统操作员'（出库流水操作人恒为系统）；
+      // 改为取登录用户；取不到时不传 → 后端按 JWT 兜底（inventoryTransactions POST 的 jwtUser 分支）
+      const currentUser = useAuthStore.getState().currentUser;
       const result = await useInventoryTransactionStore.getState().addTransaction({
         instanceId: stock.instanceId,
         businessId: stock.businessId,
         businessType: businessType,
         businessCode: businessCode || undefined,
         quantity: qty,
-        operatorId: 'system',
-        operatorName: '系统操作员',
+        operatorId: currentUser?.oid || undefined,
+        operatorName: currentUser?.realName || currentUser?.username || undefined,
         remarks: remarks || undefined,
       });
 

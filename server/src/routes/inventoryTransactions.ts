@@ -200,10 +200,13 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     let txId: string | null = null;  // 2026-07-21 修复：提升作用域到 try 块外
     db.exec('BEGIN');  // 2026-07-21 修复：扣库存 + 写流水加事务包裹
     try {
+    // 2026-10-10 修复：扣减 current 时同步维护 available_quantity（= current - frozen）——
+    // 此前出库只改 current，available 列残留旧值（列表"可用"列虚高、FEFO 依据该列有超扣风险）
+    const newAvailable = Math.max(0, newQty - frozenQty);
     const updateStmt = db.prepare(
-      'UPDATE inventory_stock SET current_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ? AND version = ?'
+      'UPDATE inventory_stock SET current_quantity = ?, available_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ? AND version = ?'
     );
-    updateStmt.run([newQty, nowIso, body.instanceId, version]);
+    updateStmt.run([newQty, newAvailable, nowIso, body.instanceId, version]);
     const modified = db.getRowsModified();
     updateStmt.free();
     if (modified === 0) {
@@ -352,7 +355,13 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
     const txBusinessType = txRow.business_type || txRow.businessType || '';
     const instanceId = txRow.instance_id || txRow.instanceId;
     // 白名单：仅出库/调拨/损耗/退货/调整/赠送/其他 等 VALID_OUTBOUND_TYPES 才回填
-    const shouldRollback = txQty < 0 && VALID_OUTBOUND_TYPES.has(txBusinessType) && instanceId;
+    // 2026-10-10 修复：freeze/unfreeze 流水也满足"qty<0 + businessType='other'"（冻结算 other），
+    //   之前会被误回填 current_quantity（冻结根本不改 current，删除冻结流水却给库存加量——实测把 1700 抬到 1710）；
+    //   按 transaction_type 显式排除冻结/解冻，并保持 rolledBack 为布尔
+    const shouldRollback = txQty < 0
+      && VALID_OUTBOUND_TYPES.has(txBusinessType)
+      && !['freeze', 'unfreeze'].includes(String(txType))
+      && !!instanceId;
     db.exec('BEGIN');  // 2026-07-21 修复：回填库存 + 删流水加事务包裹
     try {
     if (shouldRollback) {

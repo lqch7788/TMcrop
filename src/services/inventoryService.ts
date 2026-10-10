@@ -17,7 +17,6 @@ import {
   StockType,
   BusinessType,
   InventoryOperationResult,
-  AvailableQuantityResult,
   InboundRequest,
   OutboundRequest,
   FreezeRequest,
@@ -25,7 +24,6 @@ import {
   FreezeRecord,
   TraceResult,
   DownstreamTraceResult,
-  InventoryStats,
   SourceType,
   TransactionType,
 } from '../types/inventory';
@@ -217,11 +215,13 @@ export async function getInventoryList(filters?: {
   if (filters?.cropName) params.crop_name = filters.cropName;
   if (filters?.page) params.page = String(filters.page);
   if (filters?.limit) params.limit = String(filters.limit);
-  // 2026-10-09：未显式传 limit 时兜底 500——后端 /list 默认 50 会静默截断列表。
+  // 2026-10-09：未显式传 limit 时兜底——后端 /list 默认 50 会静默截断列表。
   // 此前 2026-08-14 的同款修复只做在 apiInventoryService.getInventoryList，
   // 而 store.loadAll 走的是本函数（不传 limit）→ 列表只加载 50 行：
   // 更早的库存行（如 6 月的源实例行）不在内存 → 客户端搜索/翻页永远看不到（"搜实例ID无结果"根因）。
-  if (!params.limit) params.limit = '500';
+  // 2026-10-10：兜底值 500 曾导致 >500 行时同样静默截断（本页筛选/搜索全在客户端，
+  // 截断=数据永久不可见）→ 改为 0（后端约定 limit<=0 = 不限制，返回全量）。
+  if (!params.limit) params.limit = '0';
 
   const query = new URLSearchParams(params).toString();
   // 注意：enhancedApiClient 已自动解包一层 data，这里直接得到数组
@@ -235,39 +235,23 @@ export async function getInventoryList(filters?: {
 }
 
 /**
- * 获取库存统计
- * 调用后端 GET /api/inventory/stats
+ * 按作物聚合"各仓库可用库存"（调拨弹窗"调出仓库"下拉数据源）
+ * 调用后端 GET /api/inventory/available-by-crop?cropCode=xxx
+ * 2026-10-10：从 AddStockModal 组件内直连 enhancedApiClient 抽到 service 层（V2.1 铁律）
  */
-export async function getInventoryStats(filters?: {
-  stockType?: StockType;
-  page?: number;
-  limit?: number;
-}): Promise<InventoryStats> {
-  const params: Record<string, string> = {};
-  if (filters?.stockType) params.stockType = filters.stockType;
-
-  const query = new URLSearchParams(params).toString();
-  const data = await enhancedApiClient.get<InventoryStats>(
-    `/inventory/stats${query ? `?${query}` : ''}`
-  );
-  return data;
+export interface WarehouseAvailability {
+  warehouseId: string;
+  warehouseName: string;
+  available: number;
+  unit: string;
+  form?: string;
 }
 
-/**
- * 查询可用数量
- * 调用后端 GET /api/inventory/available/:instanceId
- */
-export async function getAvailableQuantity(
-  instanceId: string
-): Promise<AvailableQuantityResult | null> {
-  try {
-    return await enhancedApiClient.get<AvailableQuantityResult>(
-      `/inventory/available/${encodeURIComponent(instanceId)}`
-    );
-  } catch (e) {
-    console.warn('[getAvailableQuantity] 请求失败，返回 null:', e);
-    return null;
-  }
+export async function getAvailableByCrop(cropCode: string): Promise<WarehouseAvailability[]> {
+  const data = await enhancedApiClient.get<WarehouseAvailability[]>(
+    `/inventory/available-by-crop?cropCode=${encodeURIComponent(cropCode)}`
+  );
+  return data || [];
 }
 
 /**

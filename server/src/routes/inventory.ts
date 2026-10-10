@@ -799,10 +799,13 @@ router.post('/freeze', async (req: Request, res: Response) => {
       ]);
 
       // 4b. UPDATE inventory_stock.frozen_quantity
+      // 2026-10-10 修复：同步维护 available_quantity（= current - frozen）——
+      // 此前只改 frozen_quantity，available 列保持旧值虚高；列表"可用"列/FEFO 扣减读取该列
       const newFrozen = alreadyFrozen + body.freezeQuantity;
+      const newAvailable = Math.max(0, currentQty - newFrozen);
       db.run(
-        'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
-        [newFrozen, now, body.instanceId]
+        'UPDATE inventory_stock SET frozen_quantity = ?, available_quantity = ?, update_time = ? WHERE instance_id = ?',
+        [newFrozen, newAvailable, now, body.instanceId]
       );
       // 2026-07-14：方案 C — 冻结后重算 status（frozen_quantity > 0 → 'frozen'）
       recomputeAndUpdateStockStatus(getDatabase(), body.instanceId);
@@ -940,11 +943,13 @@ router.post('/unfreeze/:freezeId', async (req: Request, res: Response) => {
       );
 
       // 3b. UPDATE inventory_stock.frozen_quantity
+      // 2026-10-10 修复：同步维护 available_quantity（= current - frozen），与 freeze 端对称
       const currentFrozen = Number(stock.frozen_quantity) || 0;
       const newFrozen = Math.max(0, currentFrozen - unfreezeQty);
+      const newAvailable = Math.max(0, (Number(stock.current_quantity) || 0) - newFrozen);
       db.run(
-        'UPDATE inventory_stock SET frozen_quantity = ?, update_time = ? WHERE instance_id = ?',
-        [newFrozen, now, freeze.instance_id]
+        'UPDATE inventory_stock SET frozen_quantity = ?, available_quantity = ?, update_time = ? WHERE instance_id = ?',
+        [newFrozen, newAvailable, now, freeze.instance_id]
       );
       // 2026-07-14：方案 C — 解冻后重算 status（frozen_quantity=0 → 检查数量 → in_stock/low_stock/empty）
       recomputeAndUpdateStockStatus(getDatabase(), String(freeze.instance_id));
@@ -1228,12 +1233,12 @@ router.get('/:id', (req: Request, res: Response) => {
         product_code: r.business_code || `SKU-${r.instance_id}`,
         variety: r.variety_name || '',
         quantity: r.current_quantity || 0,
-        grade: 'A',
+        // 2026-10-10 修复：删除 grade:'A' / greenhouse_name:'' / planting_mode:'' 三个硬编码覆盖——
+        // 它们是 V2 老形状兼容字段，但会盖掉库存行的真实品质/采收区域/种植模式，
+        // 导致从出库记录页等"仅传 instanceId"的跨页入口打开详情时显示错误信息（真实值随 ...r 展开保留）
         storage_location: '',
         harvest_date: r.inbound_date || '',
         storage_date: r.create_time || '',
-        greenhouse_name: '',
-        planting_mode: '',
         expiration_date: '',
         batch_code: r.business_code || '',
       },
@@ -1268,16 +1273,18 @@ router.post('/', async (req: Request, res: Response) => {
     db.run(`
       INSERT INTO inventory_stock (
         id, instance_id, stock_type, business_id, business_code,
-        crop_name, variety_name, current_quantity, frozen_quantity, available_quantity,
+        crop_name, variety_name, grade, current_quantity, frozen_quantity, available_quantity,
         unit, warehouse_id, warehouse_name, inbound_date,
         source_type, production_plan_code, status, version, create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id, instanceId, stock_type,
       `MANUAL-${Date.now()}`,  // business_id（手动新增）
       product_code || '',
       crop_name || '',
       variety || '',
+      // 2026-10-10 修复：grade 此前接收参数但从未落库（静默丢弃）
+      grade || null,
       quantity, 0, quantity,
       unit || '公斤',
       warehouse_id || '', warehouse_name || '',
@@ -1295,6 +1302,9 @@ router.post('/', async (req: Request, res: Response) => {
       operatorName: (req.body as any)?.create_by || (req as any).user?.name,
       opinion: `新增库存 ${crop_name} ${quantity}${unit}`,
     });
+    // 2026-10-10 修复：原代码遗漏 res.json()（与 2026-08-21 在 PUT /:id 修过的同款 bug）——
+    // 请求会挂到客户端超时（enhancedApiClient 30s × 3 次重试），且超时后重试可能重复建单
+    res.json({ success: true, data: { id, instanceId } });
   } catch (error) {
     console.error('[inventory] 兼容 POST / 失败:', error);
     res.status(500).json({ success: false, error: '新增库存失败' });
@@ -1358,11 +1368,19 @@ router.put('/:id', (req: Request, res: Response) => {
     if (fields.length === 0) {
       return res.json({ success: true, data: { id, noop: true } });
     }
+    // 2026-10-10 修复：编辑了 current_quantity 但未显式改 available_quantity 时，联动重算
+    // available = max(0, 新数量 - frozen)——此前编辑只改数量，available 列残留旧值（列表"可用"列虚高）
+    const curQtyUpd = fields.findIndex(f => f.startsWith('current_quantity'));
+    if (curQtyUpd >= 0 && !fields.some(f => f.startsWith('available_quantity'))) {
+      fields.push('available_quantity = ?');
+      values.push(Math.max(0, Number(values[curQtyUpd]) - (Number(oldStockObj.frozen_quantity) || 0)));
+    }
     fields.push('update_time = ?', 'version = version + 1');
     values.push(new Date().toISOString());
     // 2026-08-21 修复：先查老 current_quantity，UPDATE 后对比 delta 写 material_flow_log correction
+    // 2026-10-10：补查 frozen_quantity——编辑数量时联动重算 available_quantity 用
     const oldStockRows = db.exec(
-      `SELECT id, instance_id, current_quantity, crop_name, variety_name, unit, stock_type
+      `SELECT id, instance_id, current_quantity, frozen_quantity, crop_name, variety_name, unit, stock_type
        FROM inventory_stock WHERE id = ? OR instance_id = ? LIMIT 1`,
       [id, id]
     );

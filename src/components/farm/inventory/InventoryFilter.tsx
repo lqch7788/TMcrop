@@ -11,14 +11,18 @@ import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import {
   StockType,
-  SourceType,
-  InventoryStatus,
 } from '../../../types/inventory';
+// 2026-10-10：状态/来源筛选项改为常量驱动（与真实数据对齐，含历史别名匹配集合）
+import {
+  INVENTORY_STATUS_FILTER_OPTIONS,
+  INVENTORY_SOURCE_FILTER_OPTIONS,
+} from '../../../constants/cropConstants';
 
 export interface InventoryFilterState {
   stockType: StockType | '';
-  status: InventoryStatus | '';
-  sourceType: SourceType | '';
+  // 2026-10-10：放宽为 string——状态/来源含枚举外的真实值（frozen_partial/pending 等）
+  status: string;
+  sourceType: string;
   keyword: string;
 }
 
@@ -67,41 +71,40 @@ export function InventoryFilter({ filters, onChange, onReset }: InventoryFilterP
           </Select>
         </div>
 
-        {/* 状态 */}
+        {/* 状态（2026-10-10：选项来自常量，覆盖全部真实状态） */}
         <div className="w-40">
           <Label className="text-gray-700">状态</Label>
           <Select
             value={filters.status}
-            onValueChange={(val) => onChange({ ...filters, status: val as InventoryStatus | '' })}
+            onValueChange={(val) => onChange({ ...filters, status: val })}
           >
             <SelectTrigger className="border-gray-300">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">全部状态</SelectItem>
-              <SelectItem value={InventoryStatus.IN_STOCK}>库存中</SelectItem>
-              <SelectItem value={InventoryStatus.LOW_STOCK}>低库存</SelectItem>
-              <SelectItem value={InventoryStatus.FROZEN}>已冻结</SelectItem>
-              <SelectItem value={InventoryStatus.OUTBOUND}>已出库</SelectItem>
-              <SelectItem value={InventoryStatus.EMPTY}>已用完</SelectItem>
+              {INVENTORY_STATUS_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* 来源 */}
+        {/* 来源（2026-10-10：选项来自常量，覆盖全部真实来源） */}
         <div className="w-40">
           <Label className="text-gray-700">来源</Label>
           <Select
             value={filters.sourceType}
-            onValueChange={(val) => onChange({ ...filters, sourceType: val as SourceType | '' })}
+            onValueChange={(val) => onChange({ ...filters, sourceType: val })}
           >
             <SelectTrigger className="border-gray-300">
               <SelectValue placeholder="全部来源" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">全部来源</SelectItem>
-              <SelectItem value={SourceType.SELF_PRODUCED}>自产</SelectItem>
-              <SelectItem value={SourceType.EXTERNAL_PURCHASED}>外购</SelectItem>
+              {INVENTORY_SOURCE_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
