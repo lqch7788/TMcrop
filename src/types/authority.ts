@@ -106,6 +106,8 @@ export interface User {
   role?: string;
   /** 后端 users 表的岗位列（useUserStore 归一化时映射到 role） */
   position?: string;
+  /** 后端 users 表的部门名称列（请假/调薪弹窗的下拉展示需要） */
+  department_name?: string;
 }
 
 // 用户角色关联
