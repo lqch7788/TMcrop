@@ -189,6 +189,10 @@ export async function getBatchStats(filters?: {
 /**
  * 获取产量统计
  * GET /api/summary/yield-stats
+ *
+ * 2026-10-11 修复：原把查询条件作为 enhancedApiClient.get 第二参数传入，
+ * 但第二参数是 ApiOptions（重试配置），查询条件被静默丢弃（group_by=crop 恒返回月度数据）。
+ * 改为 URLSearchParams 拼到 URL（与 apiWeatherService / costService 一致的正确模式）。
  */
 export async function getYieldStats(filters?: {
   start_date?: string;
@@ -197,15 +201,16 @@ export async function getYieldStats(filters?: {
   crop_name?: string;
   greenhouse_name?: string;
 }): Promise<YieldStatsItem[]> {
-  const params: Record<string, string> = {};
+  const params = new URLSearchParams();
   if (filters) {
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    if (filters.group_by) params.group_by = filters.group_by;
-    if (filters.crop_name) params.crop_name = filters.crop_name;
-    if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
+    if (filters.start_date) params.set('start_date', filters.start_date);
+    if (filters.end_date) params.set('end_date', filters.end_date);
+    if (filters.group_by) params.set('group_by', filters.group_by);
+    if (filters.crop_name) params.set('crop_name', filters.crop_name);
+    if (filters.greenhouse_name) params.set('greenhouse_name', filters.greenhouse_name);
   }
-  return await apiClient.get<YieldStatsItem[]>('/summary/yield-stats', params);
+  const qs = params.toString();
+  return await apiClient.get<YieldStatsItem[]>(`/summary/yield-stats${qs ? `?${qs}` : ''}`);
 }
 
 // ============================================

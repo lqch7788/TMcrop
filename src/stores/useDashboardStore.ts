@@ -8,6 +8,8 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { getYieldStats, type YieldStatsItem } from '../services/summaryService';
+import { getCostStats, type CostStatsResult } from '../services/costService';
 
 // ========== 类型定义 ==========
 
@@ -130,6 +132,12 @@ interface DashboardState {
   dashboardStats: DashboardStats;
   /** 告警分类统计 */
   alertsBreakdown: AlertsBreakdown;
+  /** 月度产量统计（/api/summary/yield-stats group_by=month，2026-10-11 接入） */
+  yieldStats: YieldStatsItem[];
+  /** 按作物的产量合计（用于作物筛选下拉选项） */
+  yieldByCrop: YieldStatsItem[];
+  /** 成本统计数据（/api/summary/cost-stats，2026-10-11 接入） */
+  costStats: CostStatsResult['data'] | null;
   /** 加载状态 */
   isLoading: boolean;
   error: string | null;
@@ -138,6 +146,10 @@ interface DashboardState {
   fetchBatchStats: (params?: Record<string, string>) => Promise<void>;
   /** 获取概览统计数据 */
   fetchDashboardStats: () => Promise<void>;
+  /** 获取产量统计（月度 + 按作物，供基地总览产量图） */
+  fetchYieldStats: (params?: { crop_name?: string }) => Promise<void>;
+  /** 获取成本统计（人工 + 物料 + 能源，供基地总览成本图/能耗卡） */
+  fetchCostStats: () => Promise<void>;
 }
 
 // ========== Store 实现 ==========
@@ -148,6 +160,9 @@ export const useDashboardStore = create<DashboardState>()(
       batchStats: [],
       dashboardStats: { totalBatches: 0, totalYield: 0, totalCost: 0, totalLabor: 0 },
       alertsBreakdown: { total: 0, environment: 0, equipment: 0, pest: 0, farming: 0 },
+      yieldStats: [],
+      yieldByCrop: [],
+      costStats: null,
       isLoading: false,
       error: null,
 
@@ -214,6 +229,35 @@ export const useDashboardStore = create<DashboardState>()(
         } catch (error) {
           // logger.warn('[DashboardStore] 获取概览统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
+        }
+      },
+
+      /** 获取产量统计 - 月度 + 按作物两组（2026-10-11：替代 farmData.yieldStats mock） */
+      fetchYieldStats: async (params) => {
+        try {
+          // 并发拉月度数据（图表主数据）与按作物数据（作物筛选下拉选项）
+          const [monthly, byCrop] = await Promise.all([
+            getYieldStats({ group_by: 'month', crop_name: params?.crop_name }),
+            getYieldStats({ group_by: 'crop' }),
+          ]);
+          set({
+            yieldStats: Array.isArray(monthly) ? monthly : [],
+            yieldByCrop: Array.isArray(byCrop) ? byCrop : [],
+          });
+        } catch (error) {
+          // Fail Loud：保留错误信息供 UI 显示，不清空已有数据
+          set({ error: (error as Error).message });
+        }
+      },
+
+      /** 获取成本统计 - 人工/物料/能源（2026-10-11：替代 farmData.costAnalysis mock） */
+      fetchCostStats: async () => {
+        try {
+          const result = await getCostStats();
+          set({ costStats: result.data });
+        } catch (error) {
+          // Fail Loud：保留错误信息供 UI 显示
+          set({ error: (error as Error).message });
         }
       },
     })

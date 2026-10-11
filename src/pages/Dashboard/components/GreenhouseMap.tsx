@@ -1,14 +1,25 @@
 // 基地总览图组件 - SVG 平面科技风格地图
+// 2026-10-11：4 个分区（玻璃/连栋/日光/大田）绑定 greenhouses 表真实区域名称与面积，
+//             未匹配到真实数据时回退原示意文案
 import { MapPin } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import type { MapZones } from '../types/dashboard.types';
 
 interface GreenhouseMapProps {
   expanded: boolean;
   onToggle: () => void;
   onMapClick: () => void;
+  /** 真实分区数据（按温室类型匹配，缺省回退示意文案） */
+  zones?: MapZones;
 }
 
-export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapProps) {
+/** 分区面积文案（如 "100亩"） */
+function zoneAreaText(zone?: { area: number; unit: string }): string {
+  if (!zone) return '';
+  return `${zone.area}${zone.unit}`;
+}
+
+export function GreenhouseMap({ expanded, onToggle, onMapClick, zones }: GreenhouseMapProps) {
   return (
     <div className="animate-card-in" style={{ animationDelay: '0.1s' }}>
       <div className="flex items-center justify-between mb-3">
@@ -93,11 +104,8 @@ export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapP
               <line x1="100" y1="20" x2="100" y2="120" stroke="#93c5fd" strokeWidth="1" opacity="0.4"/>
               <rect x="20" y="20" width="160" height="25" fill="#ffffff" opacity="0.15" rx="6"/>
               <rect x="20" y="20" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="6"/>
-              <text x="100" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">玻璃温室A区</text>
-              <text x="60" y="48" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
-              <text x="140" y="48" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
-              <text x="60" y="88" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">9-12号棚</text>
-              <text x="140" y="88" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">13-16号棚</text>
+              <text x="100" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">{zones?.glass?.name || '玻璃温室A区'}</text>
+              <text x="100" y="48" fill="#dbeafe" fontSize="9" fontFamily="Arial" textAnchor="middle">{zoneAreaText(zones?.glass)}</text>
             </g>
 
             {/* 连栋温室B区 */}
@@ -107,11 +115,8 @@ export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapP
               <line x1="300" y1="20" x2="300" y2="120" stroke="#5eead4" strokeWidth="1" opacity="0.4"/>
               <rect x="220" y="20" width="160" height="25" fill="#ffffff" opacity="0.15" rx="6"/>
               <rect x="220" y="20" width="160" height="6" fill="#2dd4bf" opacity="0.5" rx="6"/>
-              <text x="300" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">连栋温室B区</text>
-              <text x="260" y="48" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
-              <text x="340" y="48" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
-              <text x="260" y="88" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">9-12号棚</text>
-              <text x="340" y="88" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">13-16号棚</text>
+              <text x="300" y="112" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">{zones?.film?.name || '连栋温室B区'}</text>
+              <text x="300" y="48" fill="#ccfbf1" fontSize="9" fontFamily="Arial" textAnchor="middle">{zoneAreaText(zones?.film)}</text>
             </g>
 
             {/* 日光温室C区 */}
@@ -121,9 +126,8 @@ export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapP
               <line x1="300" y1="150" x2="300" y2="210" stroke="#fde68a" strokeWidth="1" opacity="0.4"/>
               <rect x="220" y="150" width="160" height="18" fill="#ffffff" opacity="0.15" rx="6"/>
               <rect x="220" y="150" width="160" height="5" fill="#fbbf24" opacity="0.5" rx="6"/>
-              <text x="300" y="205" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">日光温室C区</text>
-              <text x="260" y="168" fill="#fef3c7" fontSize="9" fontFamily="Arial" textAnchor="middle">1-4号棚</text>
-              <text x="340" y="168" fill="#fef3c7" fontSize="9" fontFamily="Arial" textAnchor="middle">5-8号棚</text>
+              <text x="300" y="205" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">{zones?.solar?.name || '日光温室C区'}</text>
+              <text x="300" y="168" fill="#fef3c7" fontSize="9" fontFamily="Arial" textAnchor="middle">{zoneAreaText(zones?.solar)}</text>
             </g>
 
             {/* 大田种植区 */}
@@ -136,10 +140,8 @@ export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapP
               <line x1="126" y1="150" x2="126" y2="250" stroke="#bbf7d0" strokeWidth="1" opacity="0.3"/>
               <rect x="20" y="150" width="160" height="22" fill="#ffffff" opacity="0.15" rx="6"/>
               <rect x="20" y="150" width="160" height="5" fill="#4ade80" opacity="0.5" rx="6"/>
-              <text x="100" y="242" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">大田种植区</text>
-              <text x="47" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">A区</text>
-              <text x="100" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">B区</text>
-              <text x="153" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">C区</text>
+              <text x="100" y="242" fill="#ffffff" fontSize="13" fontFamily="Arial" fontWeight="bold" textAnchor="middle">{zones?.open?.name || '大田种植区'}</text>
+              <text x="100" y="165" fill="#dcfce7" fontSize="10" fontFamily="Arial" textAnchor="middle">{zoneAreaText(zones?.open)}</text>
             </g>
 
             {/* 仓库 */}
@@ -154,13 +156,13 @@ export function GreenhouseMap({ expanded, onToggle, onMapClick }: GreenhouseMapP
             <g transform="translate(200, 268)">
               <rect x="-160" y="-10" width="320" height="22" fill="#111111" fillOpacity="0.8" rx="4" stroke="#333333" strokeWidth="0.5"/>
               <rect x="-150" y="-5" width="12" height="12" fill="url(#glassGrad)" rx="2"/>
-              <text x="-135" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">玻璃温室A区</text>
+              <text x="-135" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">{zones?.glass?.name || '玻璃温室A区'}</text>
               <rect x="-55" y="-5" width="12" height="12" fill="url(#filmGrad)" rx="2"/>
-              <text x="-40" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">连栋温室B区</text>
+              <text x="-40" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">{zones?.film?.name || '连栋温室B区'}</text>
               <rect x="40" y="-5" width="12" height="12" fill="url(#sunGrad)" rx="2"/>
-              <text x="55" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">日光温室C区</text>
+              <text x="55" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">{zones?.solar?.name || '日光温室C区'}</text>
               <rect x="115" y="-5" width="12" height="12" fill="url(#fieldGrad)" rx="2"/>
-              <text x="130" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">大田种植区</text>
+              <text x="130" y="5" fill="#ffffff" fontSize="8" fontFamily="Arial">{zones?.open?.name || '大田种植区'}</text>
             </g>
           </svg>
         </div>

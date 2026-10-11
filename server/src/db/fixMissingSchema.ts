@@ -599,6 +599,7 @@ export async function fixMissingSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS iot_sensors (
         id TEXT PRIMARY KEY,
         greenhouse_id TEXT,
+        greenhouse_name TEXT,
         sensor_id TEXT,
         type TEXT,
         type_name TEXT,
@@ -613,6 +614,17 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.info('✓ iot_sensors 表创建成功');
   } catch (e: any) {
     seedLog.skip('• iot_sensors:', e.message);
+  }
+
+  // 2026-10-11：iot_sensors 补 greenhouse_name 列（前端 iotStore 契约要求该字段显示温室名，
+  // 原表缺失导致"种植区环境参数表"的区域名恒为空）
+  try {
+    db.run(`ALTER TABLE iot_sensors ADD COLUMN greenhouse_name TEXT`);
+    seedLog.info('✓ iot_sensors 表添加 greenhouse_name 列');
+  } catch (addErr: any) {
+    if (!addErr.message.includes('duplicate column')) {
+      // 列已存在或表未创建，忽略
+    }
   }
 
   // 2026-08-29：设备监控中心表（IoT 设备监控元数据，与 iot_sensors 传感器表分开）
