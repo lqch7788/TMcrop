@@ -1,9 +1,10 @@
 // Dashboard 页面主组件
 // 基地总览页面 - 实时监控农业生产运营状况
+// 2026-10-11：删除未使用的 StatCard/ImageEnlargementModal 导入（占位图片功能移除）；概况头改为 greenhouses 真实聚合
+import { useMemo } from 'react';
 import { LayoutDashboard, MapPin, Settings } from 'lucide-react';
 
 // 导入已有组件
-import { StatCard } from '../components/dashboard/cards/StatCard';
 import { EquipmentStatusCard } from '../components/dashboard/cards/EquipmentStatusCard';
 import { InventoryAlertCard } from '../components/dashboard/cards/InventoryAlertCard';
 import { ProductionProgressCard } from '../components/dashboard/cards/ProductionProgressCard';
@@ -11,7 +12,6 @@ import { EnergyCard } from '../components/dashboard/cards/EnergyCard';
 import { TodayTasksCard } from '../components/dashboard/cards/TodayTasksCard';
 import { AlertsCard } from '../components/dashboard/cards/AlertsCard';
 import { WeatherWidget } from '../components/dashboard/widgets/WeatherWidget';
-import { ImageEnlargementModal } from '../components/dashboard/ImageEnlargementModal';
 
 // 导入子组件
 import { useDashboard } from './Dashboard/hooks/useDashboard';
@@ -39,23 +39,24 @@ export default function Dashboard() {
     isDetailModalOpen,
     selectedGreenhouse,
     selectedDetail,
-    enlargedImageIndex,
     greenhouseEnvData,
     totalGreenhousePages,
     paginatedGreenhouseData,
     mappedBatches,
     greenhouseList,
     filteredYieldStats,
+    yieldCropOptions,
     filteredCostAnalysis,
     todayTasks,
     selectedRegion,
     greenhousePage,
     greenhousePageSize,
-    yieldRegion,
     yieldCrop,
     costPeriod,
-    costCrop,
-    costAreaType,
+    greenhouseRows,
+    fieldRows,
+    overviewStats,
+    mapZones,
     // setter
     setGreenhouseTableExpanded,
     setOverviewExpanded,
@@ -63,20 +64,22 @@ export default function Dashboard() {
     setIsDetailModalOpen,
     setSelectedGreenhouse,
     setSelectedDetail,
-    setEnlargedImageIndex,
     setSelectedRegion,
     setGreenhousePage,
     setGreenhousePageSize,
-    setYieldRegion,
     setYieldCrop,
     setCostPeriod,
-    setCostCrop,
-    setCostAreaType,
     // 函数
     handleDetailClick,
     getCropInfo,
     navigate,
   } = useDashboard();
+
+  // 基地/地块详情弹窗对应的实时环境数据（按区域名称匹配 IoT 传感器分组）
+  const selectedDetailEnv = useMemo(() => {
+    if (!selectedDetail) return null;
+    return greenhouseEnvData.find(g => g.name === selectedDetail.data.no) || null;
+  }, [selectedDetail, greenhouseEnvData]);
 
   // 处理详情点击（温室/大田表格）
   const handleDetailClickWrapper = (detail: { type: 'greenhouse' | 'field'; data: any }) => {
@@ -134,11 +137,10 @@ export default function Dashboard() {
                   <h3 className="text-base font-bold text-gray-800">崇明岛基地概况</h3>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
-                  <span><span className="text-emerald-600 font-medium">总面积：</span><span className="font-semibold text-gray-700">1500亩</span></span>
-                  <span><span className="text-emerald-600 font-medium">温室区域：</span><span className="font-semibold text-gray-700">12个 (80000㎡)</span></span>
-                  <span><span className="text-amber-600 font-medium">大田面积：</span><span className="font-semibold text-gray-700">700亩</span></span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-gray-500">启用时间：2020年3月</span>
+                  {/* 2026-10-11：概况数字改为 greenhouses 表 active 记录真实聚合 */}
+                  <span><span className="text-emerald-600 font-medium">总面积：</span><span className="font-semibold text-gray-700">{overviewStats.totalArea}亩</span></span>
+                  <span><span className="text-emerald-600 font-medium">温室区域：</span><span className="font-semibold text-gray-700">{overviewStats.greenhouseCount}个</span></span>
+                  <span><span className="text-amber-600 font-medium">大田面积：</span><span className="font-semibold text-gray-700">{overviewStats.fieldArea}亩</span></span>
                 </div>
               </div>
             </div>
@@ -148,6 +150,7 @@ export default function Dashboard() {
                 expanded={overviewExpanded}
                 onToggle={() => setOverviewExpanded(!overviewExpanded)}
                 onMapClick={() => setGreenhouseTableExpanded(true)}
+                zones={mapZones}
               />
 
               {/* 温室区域表格 */}
@@ -155,6 +158,7 @@ export default function Dashboard() {
                 expanded={greenhouseTableExpanded}
                 onToggle={() => setGreenhouseTableExpanded(!greenhouseTableExpanded)}
                 onDetailClick={handleDetailClickWrapper}
+                rows={greenhouseRows}
               />
 
               {/* 大田区域表格 */}
@@ -162,6 +166,7 @@ export default function Dashboard() {
                 expanded={fieldTableExpanded}
                 onToggle={() => setFieldTableExpanded(!fieldTableExpanded)}
                 onDetailClick={handleDetailClickWrapper}
+                rows={fieldRows}
               />
             </div>
           </div>
@@ -195,22 +200,17 @@ export default function Dashboard() {
 
           {/* 月度产量统计图表 */}
           <YieldChart
-            yieldRegion={yieldRegion}
             yieldCrop={yieldCrop}
             filteredYieldStats={filteredYieldStats}
-            onRegionChange={setYieldRegion}
+            yieldCropOptions={yieldCropOptions}
             onCropChange={setYieldCrop}
           />
 
           {/* 成本构成分析图表 */}
           <CostChart
             costPeriod={costPeriod}
-            costCrop={costCrop}
-            costAreaType={costAreaType}
             filteredCostAnalysis={filteredCostAnalysis}
             onPeriodChange={setCostPeriod}
-            onCropChange={setCostCrop}
-            onAreaTypeChange={setCostAreaType}
           />
         </div>
       </div>
@@ -229,16 +229,8 @@ export default function Dashboard() {
         isOpen={!!selectedDetail}
         onClose={() => setSelectedDetail(null)}
         selectedDetail={selectedDetail}
-        enlargedImageIndex={enlargedImageIndex}
-        onImageClick={setEnlargedImageIndex}
+        envData={selectedDetailEnv}
         onEnter={handleEnterClick}
-      />
-
-      {/* 图片放大查看弹窗 */}
-      <ImageEnlargementModal
-        isOpen={enlargedImageIndex !== null}
-        imageIndex={enlargedImageIndex || 0}
-        onClose={() => setEnlargedImageIndex(null)}
       />
     </div>
   );

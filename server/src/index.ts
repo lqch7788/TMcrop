@@ -255,6 +255,20 @@ async function start() {
       console.warn('[seedIotEnergyReadings] 启动种子失败（不影响主流程）:', e?.message || e);
     }
 
+    // 2026-10-11：GREEN 级独立 seed — 环境传感器 iot_sensors 种子（4 温室 × 8 类 = 32 条）
+    // 修复"种植区环境参数表"无数据源问题（原表无任何写入路径，恒 0 条）
+    try {
+      const { seedIotSensorsStandalone } = await import('./db/seedData');
+      const result = await seedIotSensorsStandalone();
+      if (!result.skipped) {
+        console.log(`[seedIotSensors] 已导入 ${result.inserted} 条传感器种子`);
+      } else {
+        console.log(`[seedIotSensors] 已有数据，跳过`);
+      }
+    } catch (e: any) {
+      console.warn('[seedIotSensors] 启动种子失败（不影响主流程）:', e?.message || e);
+    }
+
     // 2026-08-29：GREEN 级独立 seed — 历史数据 iot_history 种子
     try {
       const { seedIotHistoryStandalone } = await import('./db/seedData');

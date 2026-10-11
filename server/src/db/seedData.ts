@@ -6117,6 +6117,136 @@ export async function seedIotAlertsStandalone(): Promise<{ inserted: number; ski
  * 2026-08-29：GREEN 级独立 seed（绕过 YELLOW 级 fixMissingSchema 禁用）
  * 能耗监测 iot_energy_readings 种子
  */
+export async function seedIotSensorsStandalone(): Promise<{ inserted: number; skipped: boolean }> {
+  const db = getDatabase();
+
+  // 自包含建表/补列：fixMissingSchema 在启动白名单中属 YELLOW 级被禁用，
+  // 此处独立保证表结构（旧库缺 greenhouse_name 列会导致 INSERT 失败）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS iot_sensors (
+        id TEXT PRIMARY KEY,
+        greenhouse_id TEXT,
+        greenhouse_name TEXT,
+        sensor_id TEXT,
+        type TEXT,
+        type_name TEXT,
+        status TEXT DEFAULT 'online',
+        value TEXT,
+        unit TEXT,
+        last_update TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+  } catch (e: any) {
+    seedLog.skip('• iot_sensors 建表: ' + e.message);
+  }
+  try {
+    db.run(`ALTER TABLE iot_sensors ADD COLUMN greenhouse_name TEXT`);
+  } catch (addErr: any) {
+    if (!String(addErr?.message || '').includes('duplicate column')) {
+      seedLog.skip('• iot_sensors 补列: ' + addErr.message);
+    }
+  }
+
+  const existing = db.exec('SELECT COUNT(*) FROM iot_sensors');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    seedLog.skip('• iot_sensors 已有数据，跳过');
+    return { inserted: 0, skipped: true };
+  }
+
+  // 2026-10-11：IoT 传感器种子 —— 宁波北仑基地 4 个温室区域 × 8 类环境传感器 = 32 条
+  // （与前端 iotStore 注释"32 个传感器（4 个温室，8 种类型）"一致；
+  //   温室 id/名称取 greenhouses 表真实记录，供"种植区环境参数表"与温室详情弹窗读取）
+  const greenhouses = [
+    { id: 'GH007', name: '连栋温室区' },
+    { id: 'GH1780064185192', name: '玻璃温室区' },
+    { id: 'GH1780064784224', name: '日光温室区' },
+    { id: 'GH1780092366860', name: '育苗区' },
+  ];
+
+  // 每个温室一套传感器的读数（单位与类型对齐前端 EnvironmentTable 的 8 列）
+  const readingsByGreenhouse: Array<Array<{ type: string; typeName: string; value: number; unit: string }>> = [
+    // 连栋温室区
+    [
+      { type: 'air_temp', typeName: '空气温度', value: 24.5, unit: '℃' },
+      { type: 'air_humidity', typeName: '空气湿度', value: 62, unit: '%' },
+      { type: 'light', typeName: '光照强度', value: 18500, unit: 'Lux' },
+      { type: 'co2', typeName: 'CO2浓度', value: 458, unit: 'ppm' },
+      { type: 'soil_temp', typeName: '土壤温度', value: 20.1, unit: '℃' },
+      { type: 'soil_moisture', typeName: '土壤湿度', value: 38, unit: '%' },
+      { type: 'soil_ec', typeName: '土壤EC值', value: 1.5, unit: 'mS/cm' },
+      { type: 'soil_ph', typeName: '土壤PH值', value: 6.5, unit: '' },
+    ],
+    // 玻璃温室区
+    [
+      { type: 'air_temp', typeName: '空气温度', value: 26.2, unit: '℃' },
+      { type: 'air_humidity', typeName: '空气湿度', value: 55, unit: '%' },
+      { type: 'light', typeName: '光照强度', value: 25300, unit: 'Lux' },
+      { type: 'co2', typeName: 'CO2浓度', value: 512, unit: 'ppm' },
+      { type: 'soil_temp', typeName: '土壤温度', value: 21.8, unit: '℃' },
+      { type: 'soil_moisture', typeName: '土壤湿度', value: 33, unit: '%' },
+      { type: 'soil_ec', typeName: '土壤EC值', value: 1.8, unit: 'mS/cm' },
+      { type: 'soil_ph', typeName: '土壤PH值', value: 6.3, unit: '' },
+    ],
+    // 日光温室区
+    [
+      { type: 'air_temp', typeName: '空气温度', value: 23.1, unit: '℃' },
+      { type: 'air_humidity', typeName: '空气湿度', value: 68, unit: '%' },
+      { type: 'light', typeName: '光照强度', value: 16800, unit: 'Lux' },
+      { type: 'co2', typeName: 'CO2浓度', value: 430, unit: 'ppm' },
+      { type: 'soil_temp', typeName: '土壤温度', value: 19.4, unit: '℃' },
+      { type: 'soil_moisture', typeName: '土壤湿度', value: 42, unit: '%' },
+      { type: 'soil_ec', typeName: '土壤EC值', value: 1.2, unit: 'mS/cm' },
+      { type: 'soil_ph', typeName: '土壤PH值', value: 6.8, unit: '' },
+    ],
+    // 育苗区
+    [
+      { type: 'air_temp', typeName: '空气温度', value: 25.0, unit: '℃' },
+      { type: 'air_humidity', typeName: '空气湿度', value: 72, unit: '%' },
+      { type: 'light', typeName: '光照强度', value: 21000, unit: 'Lux' },
+      { type: 'co2', typeName: 'CO2浓度', value: 480, unit: 'ppm' },
+      { type: 'soil_temp', typeName: '土壤温度', value: 22.3, unit: '℃' },
+      { type: 'soil_moisture', typeName: '土壤湿度', value: 45, unit: '%' },
+      { type: 'soil_ec', typeName: '土壤EC值', value: 0.9, unit: 'mS/cm' },
+      { type: 'soil_ph', typeName: '土壤PH值', value: 6.6, unit: '' },
+    ],
+  ];
+
+  // 观测时间取当前本地时间（YYYY-MM-DD HH:mm:ss）
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const lastUpdate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  const stmt = db.prepare(
+    `INSERT INTO iot_sensors (id, greenhouse_id, greenhouse_name, sensor_id, type, type_name, status, value, unit, last_update)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  let inserted = 0;
+  greenhouses.forEach((gh, ghIdx) => {
+    readingsByGreenhouse[ghIdx].forEach((r, rIdx) => {
+      stmt.run([
+        `SENSOR-${gh.id}-${r.type}`,
+        gh.id,
+        gh.name,
+        `S-${gh.id}-${rIdx + 1}`,
+        r.type,
+        r.typeName,
+        'normal', // 前端 DeviceStatus 契约（normal/warning/critical/offline）
+        String(r.value),
+        r.unit,
+        lastUpdate,
+      ]);
+      inserted += 1;
+    });
+  });
+  stmt.free();
+  seedLog.info(`已导入 IoT 传感器种子: ${inserted}条（${greenhouses.length} 个温室 × 8 类）`);
+  return { inserted, skipped: false };
+}
+
 export async function seedIotEnergyReadingsStandalone(): Promise<{ inserted: number; skipped: boolean }> {
   const db = getDatabase();
   const existing = db.exec('SELECT COUNT(*) FROM iot_energy_readings');

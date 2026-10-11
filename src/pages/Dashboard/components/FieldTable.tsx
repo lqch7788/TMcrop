@@ -1,27 +1,18 @@
 // 大田区域表格组件
+// 2026-10-11：数据源改为 greenhouses 表真实记录（useDashboard 的 fieldRows），删除原 8 行硬编码 mock
 import { Eye, Sprout } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import type { FieldDetailData } from '../types/dashboard.types';
+import type { GreenhouseRow } from '../types/dashboard.types';
 
 interface FieldTableProps {
   expanded: boolean;
   onToggle: () => void;
-  onDetailClick: (data: { type: 'field'; data: FieldDetailData }) => void;
+  onDetailClick: (data: { type: 'field'; data: GreenhouseRow }) => void;
+  /** 真实大田行（greenhouses 表 active 露天记录） */
+  rows: GreenhouseRow[];
 }
 
-// 大田数据
-const fieldData = [
-  { no: 'A1地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强' },
-  { no: 'A2地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强' },
-  { no: 'A3地块', crop: '水稻', area: '100', fieldType: '水田', status: '生长中', plantedDate: '2024-03-05', expectedHarvest: '2024-09-15', manager: '周志强' },
-  { no: 'B1地块', crop: '小麦', area: '100', fieldType: '旱田', status: '生长中', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十' },
-  { no: 'B2地块', crop: '小麦', area: '100', fieldType: '旱田', status: '返青期', plantedDate: '2023-11-20', expectedHarvest: '2024-05-30', manager: '郑十' },
-  { no: 'C1地块', crop: '油菜', area: '80', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一' },
-  { no: 'C2地块', crop: '油菜', area: '70', fieldType: '旱田', status: '生长中', plantedDate: '2023-10-15', expectedHarvest: '2024-04-20', manager: '吴十一' },
-  { no: 'D1地块', crop: '蔬菜', area: '50', fieldType: '旱田', status: '采收中', plantedDate: '2024-02-01', expectedHarvest: '2024-03-18', manager: '郑十' },
-];
-
-export function FieldTable({ expanded, onToggle, onDetailClick }: FieldTableProps) {
+export function FieldTable({ expanded, onToggle, onDetailClick, rows }: FieldTableProps) {
   return (
     <div className="card-field animate-card-in" style={{ animationDelay: '0.3s' }}>
       <div className="card-title">
@@ -56,27 +47,29 @@ export function FieldTable({ expanded, onToggle, onDetailClick }: FieldTableProp
           <table className="w-full text-sm">
             <thead className="table-header text-white sticky top-0">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold">地块号</th>
+                <th className="px-3 py-2 text-left font-semibold">区域</th>
                 <th className="px-3 py-2 text-left font-semibold">作物</th>
-                <th className="px-3 py-2 text-left font-semibold">面积(亩)</th>
+                <th className="px-3 py-2 text-left font-semibold">面积</th>
                 <th className="px-3 py-2 text-left font-semibold">田地类型</th>
-                <th className="px-3 py-2 text-left font-semibold">种植状态</th>
-                <th className="px-3 py-2 text-left font-semibold">种植时间</th>
+                <th className="px-3 py-2 text-left font-semibold">状态</th>
+                <th className="px-3 py-2 text-left font-semibold">建档日期</th>
                 <th className="px-3 py-2 text-center font-semibold">详情</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-amber-200">
-              {fieldData.map((item) => (
-                <tr key={item.no}>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-4 text-center text-gray-400">暂无大田数据</td>
+                </tr>
+              ) : rows.map((item) => (
+                <tr key={item.id}>
                   <td className="px-3 py-2 font-medium">{item.no}</td>
                   <td className="px-3 py-2">{item.crop}</td>
-                  <td className="px-3 py-2">{item.area}</td>
-                  <td className="px-3 py-2">{item.fieldType}</td>
+                  <td className="px-3 py-2">{item.area}{item.unit}</td>
+                  <td className="px-3 py-2">{item.type}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-sm ${
-                      item.status === '生长中' ? 'status-growing' :
-                      item.status === '返青期' ? 'status-seedling' :
-                      item.status === '采收中' ? 'status-harvest' : ''
+                      item.status === '启用中' ? 'status-growing' : ''
                     }`}>
                       {item.status}
                     </span>
