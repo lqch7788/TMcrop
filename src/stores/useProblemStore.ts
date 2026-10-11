@@ -154,7 +154,9 @@ function normalize(db: Record<string, unknown>): ProblemData {
   }
   r.title = r.title || r.problem_title || '';
   r.status = r.status || 'pending';
-  r.createdAt = r.createdAt || r.create_time || new Date().toISOString();
+  // 2026-10-11 修复：API 经 camelCase 中间件返回 createTime（无 create_time 键），
+  //   原 fallback 链全部未命中导致 createdAt 被填成"当前时间"（假数据，且排序失效）
+  r.createdAt = r.createdAt || r.createTime || r.create_time || new Date().toISOString();
   // flowRecords JSON 解析
   if (typeof r.flowRecords === 'string' && r.flowRecords) {
     try { r.flowRecords = JSON.parse(r.flowRecords as string); } catch { r.flowRecords = []; }
