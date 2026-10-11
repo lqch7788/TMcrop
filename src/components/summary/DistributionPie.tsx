@@ -125,7 +125,11 @@ export function DistributionPie({
                 borderRadius: '12px',
                 border: '1px solid rgba(0,0,0,0.08)',
               }}
-              formatter={tooltipFormatter || defaultFormatter}
+              formatter={
+                tooltipFormatter
+                  ? (value: number, name: string) => tooltipFormatter(value, name, total)
+                  : defaultFormatter
+              }
             />
             {showLegend && (
               <Legend

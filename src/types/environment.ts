@@ -28,6 +28,7 @@ export interface WeatherImpact {
   suitable: boolean;          // 是否适合执行
   reason: string;            // 原因
   suggestion: string;         // 建议
+  temperature?: number;       // 温度（℃），可选：由天气数据补充
 }
 
 // ============================================

@@ -3,7 +3,7 @@
  * 覆盖：detectOvertime 超时检测 / 状态转换常量 / 字段映射
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { detectOvertime } from '../hooks/useTasks';
 import type { Task, TaskTimeout } from '../types/task';
 import { OVERTIME_CONFIG } from '../config/taskConfig';

@@ -295,7 +295,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
         restoredBiz.push({
           type: 'planting',
           id: pid,
-          code: plantingCodes[i] || p.plantCode || p.plantingCode || '',
+          // 2026-10-11：Planting 无 plantingCode 字段（应为 plantCode），移除恒 undefined 的兜底段
+          code: plantingCodes[i] || p.plantCode || '',
           // 2026-07-24：与种植管理列表一致，存品种（红颜）而非作物大类（草莓）
           cropName: p.subVariety1Name || p.cropVariety || p.cropName || '',
           area: p.rootName || p.areaName || '',
@@ -321,7 +322,8 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: {
           id: sid,
           code: seedlingCodes[i] || s.seedlingCode || '',
           // 2026-07-24：与种植管理列表一致，存品种
-          cropName: s.subVariety1Name || s.cropVariety || s.cropName || '',
+          // 2026-10-11：Seedling 的子品种字段名是 subVarietyName（无 subVariety1Name）
+          cropName: s.subVarietyName || s.cropVariety || s.cropName || '',
           area: s.siteName || '',
         });
       } else if (seedlingCodes[i]) {

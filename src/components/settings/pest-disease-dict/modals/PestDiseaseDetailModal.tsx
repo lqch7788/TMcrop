@@ -10,7 +10,9 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 // 2026-07-10：pesticideTypes 多值 label 翻译
 import { useDictionaryStore, getDictLabel } from '@/stores/useDictionaryStore';
-import { usePestDiseaseDictStore, PestDiseaseDict, PesticideForRelation } from '@/stores';
+import { usePestDiseaseDictStore, PestDiseaseDict } from '@/stores';
+// PesticideForRelation 未在 @/stores 桶文件重导出，直接从 store 模块导入
+import type { PesticideForRelation } from '@/stores/usePestDiseaseDictStore';
 
 interface PestDiseaseDetailModalProps {
   isOpen: boolean;

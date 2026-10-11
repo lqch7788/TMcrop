@@ -42,7 +42,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeTodayOnly, setExecuteTodayOnly] = useState(false);
   const [executeMineOnly, setExecuteMineOnly] = useState(false);
   // 当前登录用户（"我经手的"筛选用）
-  const execCurrentUser = useAuthStore((s) => s.currentUser?.name || '');
+  // 2026-10-11：改读 realName（CurrentUser 的姓名字段；此前读 name 恒 undefined，筛选不生效）
+  const execCurrentUser = useAuthStore((s) => s.currentUser?.realName || '');
   const [executeCurrentPage, setExecuteCurrentPage] = useState(1);
   const [executePageSize, setExecutePageSize] = useState(10);
 
@@ -58,7 +59,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   const [executeShowDeleteConfirm, setExecuteShowDeleteConfirm] = useState(false);
   const [executeShowAddModal, setExecuteShowAddModal] = useState(false);
   const [executeSelectedRecord, setExecuteSelectedRecord] = useState<MaterialExecuteRecord | null>(null);
-  const [executeDeletingId, setExecuteDeletingId] = useState<number | null>(null);
+  // MaterialExecuteRecord.id 为 string | number，删除目标需同时兼容两种形态
+  const [executeDeletingId, setExecuteDeletingId] = useState<string | number | null>(null);
   // 2026-09-27 审计方案：作废确认弹窗状态（已发料单据唯一撤销方式）
   const [executeShowVoidConfirm, setExecuteShowVoidConfirm] = useState(false);
   const [executeVoidTarget, setExecuteVoidTarget] = useState<MaterialExecuteRecord | null>(null);
@@ -102,6 +104,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     warehouseLocation: '',
     reviewer: '',
     operator: '',
+    productionBatchCode: '',
+    sourceApplicationCodes: [],
+    remarks: '',
     materials: [] as ExecuteMaterialItem[]
   });
 
@@ -400,6 +405,8 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       reviewer: '',
       operator: '',
       productionBatchCode: '',
+      sourceApplicationCodes: [],
+      remarks: '',
       materials: []
     });
     setExecuteSelectedApplicationCode('');
@@ -688,6 +695,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       warehouseLocation: '仓库A区',
       reviewer: '',
       operator: '',
+      productionBatchCode: '',
+      sourceApplicationCodes: [],
+      remarks: '',
       materials: []
     });
     showAlert(directIssue ? '出库完成，库存已扣减' : '已建单（待出库），仓库确认发料后扣减库存');
@@ -845,6 +855,9 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     // 2026-09-27 能力对齐：快捷筛选 + 详情来源申请单 + 草稿
     executeDetailSources,
     executeHasDraft,
+    // 2026-10-11 类型清理：补上 setter 返回（类型已声明、ExecuteTab「恢复草稿」按钮会调用，
+    // 此前未返回导致该按钮点击时报 setExecuteHasDraft is not a function）
+    setExecuteHasDraft,
     checkExecDraft,
     restoreExecDraft,
     discardExecDraft,

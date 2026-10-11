@@ -150,6 +150,8 @@ function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
 // ============================================
 export const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string }> = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-100' },
+  // 2026-10-11：TaskStatus 含 pending_approval（历史派发审批态），配置表此前缺该键
+  pending_approval: { label: '派发审批中', color: 'text-amber-600', bg: 'bg-amber-100' },
   pending: { label: '待接受', color: 'text-gray-600', bg: 'bg-gray-100' },
   accepted: { label: '已接受', color: 'text-blue-600', bg: 'bg-blue-100' },
   in_progress: { label: '处理中', color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -676,6 +678,8 @@ export interface UseTasksReturn {
 
   // 验收通过
   acceptCompletion: (id: string, comments?: string) => void;
+  /** 2026-10-11：acceptCompletion 的别名（AgricultureRecordPage 按该名调用，语义一致） */
+  acceptTaskCompletion: (id: string, comments?: string) => void;
 
   // 验收驳回（最多2次）
   rejectForRework: (id: string, reason: string) => void;
@@ -1743,6 +1747,8 @@ export function useTasks(): UseTasksReturn {
     submitProgress,
     handleOvertime,
     acceptCompletion,
+    // 2026-10-11：别名（同一实现）
+    acceptTaskCompletion: acceptCompletion,
     rejectForRework,
     rejectByExecutor: rejectByExecutor as any,
     continueExecution,

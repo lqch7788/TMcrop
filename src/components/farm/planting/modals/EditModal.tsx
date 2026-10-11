@@ -95,7 +95,8 @@ export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps
         areaId: formData.areaId,
         areaName: formData.areaName || record.areaName || '',
         rootName: formData.rootName || record.rootName || '',
-        greenhouseName: (formData as any).greenhouseName || record.greenhouseName || '',
+        // 2026-10-11：去掉 (formData as any) —— 表单无 greenhouseName 字段，取值本就来自 record（已补类型）
+        greenhouseName: record.greenhouseName || '',
         plantingCount: formData.plantingCount,
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,

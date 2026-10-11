@@ -5,6 +5,7 @@
 import React from 'react';
 import { Download, Send, Trash2, X } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
+import type { SourceModuleType } from '../constants/sourceConfig';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -17,7 +18,7 @@ interface ProblemFilterToolbarProps {
   // 2026-09-20：补 'waiting_acceptance'（待验收筛选）
   statusFilter: 'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled';
   severityFilter: 'all' | '轻微' | '中等' | '严重';
-  sourceModuleFilter: string;
+  sourceModuleFilter: SourceModuleType | 'all';
   // 模式状态
   exportMode: boolean;
   batchDeleteMode: boolean;
@@ -29,7 +30,7 @@ interface ProblemFilterToolbarProps {
   onDateRangeChange: (range: { start: string; end: string }) => void;
   onStatusFilterChange: (value: 'all' | 'pending' | 'dispatched' | 'waiting_acceptance' | 'handled') => void;
   onSeverityFilterChange: (value: 'all' | '轻微' | '中等' | '严重') => void;
-  onSourceModuleChange: (value: any) => void;
+  onSourceModuleChange: (value: SourceModuleType | 'all') => void;
   // 操作回调
   onBatchDispatch: () => void;
   onBatchDelete: () => void;

@@ -69,6 +69,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
               specId: rowSpecId, fertilizerName: row.fertilizerName,
               fertilizerCode: '', fertilizerType: record.fertilizerType||'',
               brandName: row.specBrandName||'', specContent: '', manufacturer: '',
+              // 2026-10-11：池行携带的 spec 快照批次号（保存时回写 spec_batch_number）
+              batchNumber: row.specBatchNumber||'',
               dosage: String(row.quantity), unit: row.unit||'kg', dilutionRatio: row.dilutionRatio||'',
               fertilizationMethod: row.fertilizationMethod||'',
               unitPrice: Number(row.unitPrice)||0, stockQuantity: 0, stockUnit: row.unit||'kg',
@@ -119,7 +121,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
       : { type:'seedling',id:item.id,code:item.seedlingCode||item.code,cropName:item.cropName,area:item.siteName||'育苗区',greenhouseId:item.greenhouseId,greenhouseName:item.greenhouseName||item.greenhouseName};
     if (selectedAreas.some(a=>a.id===area.id)) return;
     setSelectedAreas(p=>[...p,area]);
-    if (!form.greenhouseName&&area.greenhouseName) setForm(f=>({...f,greenhouseName:area.greenhouseName}));
+    if (!form.greenhouseName&&area.greenhouseName) setForm(f=>({...f,greenhouseName:area.greenhouseName ?? ''}));
     setAreaSearch(''); setShowAreaDropdown(false);
   }, [areaTab,selectedAreas,form.greenhouseName]);
 
@@ -155,7 +157,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: {
           // 2026-07-25：写入用水量（公式：肥料用量 × 稀释倍数；≥1000L 自动切 m³）
           waterAmount: water?.amount ?? 0,
           waterUnit: water?.unit ?? 'L',
-          specBrandName:fert.brandName,specUnitPrice:Number(fert.unitPrice),specBatchNumber:'',
+          // 2026-10-11：批次号改为回写池中携带的快照值（原先恒写 '' → 编辑一次即丢失原批次号）
+          specBrandName:fert.brandName,specUnitPrice:Number(fert.unitPrice),specBatchNumber:fert.batchNumber||'',
         };
       }));
       const totalQty=poolRows.reduce((s,r)=>s+r.quantity,0);

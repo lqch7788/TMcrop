@@ -364,8 +364,7 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
       description: input.description,
       dueDate: input.scheduledDate,
       rejectCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      // 2026-10-11：createdAt/updatedAt 由 addTempTask 内部统一写入（传入也会被覆盖），且入参类型已 Omit 掉，故不再传
     };
 
     const created = addTempTask(newTempTask);
@@ -396,7 +395,9 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
       problemPriority
     );
 
-    return created;
+    // 2026-10-11：useProblemDispatch 返回的是 types/index 的遗留 Task 类型（与本文件使用的 types/task Task 同名不同源），
+    //   两者结构高度重叠，此处按边界断言返回（Task 类型收敛属结构性改造，见修复报告）
+    return created as unknown as Task | null;
   }, [dispatchProblem]);
 
   // 统一创建任务入口
@@ -518,9 +519,9 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
       return null;
     }
 
-    // 获取温室名称（从不同类型的任务中提取）
-    const greenhouseName = 'greenhouse' in task ? task.greenhouse :
-      ('greenhouseName' in task ? task.greenhouseName : '');
+    // 获取温室名称（从不同类型的任务中提取；2026-10-11：兜底空串，避免作为索引键时类型为 undefined）
+    const greenhouseName = ('greenhouse' in task ? task.greenhouse :
+      ('greenhouseName' in task ? task.greenhouseName : '')) || '';
 
     const factors: OptimizationFactors = {
       workerLoad: worker.currentLoad,

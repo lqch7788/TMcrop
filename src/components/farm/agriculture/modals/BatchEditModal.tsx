@@ -220,13 +220,17 @@ export function BatchEditModal({
             </FormField>
 
             {/* 备注 - 可编辑 */}
-            <FormField label="备注" className="md:col-span-2">
-              <Input
-                value={editedData.remarks ?? currentRecord.remarks ?? ''}
-                onChange={(e) => handleFieldChange('remarks', e.target.value)}
-                placeholder="请输入备注"
-              />
-            </FormField>
+            {/* 2026-10-11：FormField 无 className prop（ui/Modal 未支持），原写法被静默忽略 →
+                备注只占 1/4 列。改用外层 div 承载跨列样式，恢复「跨 2 列」的设计意图 */}
+            <div className="md:col-span-2">
+              <FormField label="备注">
+                <Input
+                  value={editedData.remarks ?? currentRecord.remarks ?? ''}
+                  onChange={(e) => handleFieldChange('remarks', e.target.value)}
+                  placeholder="请输入备注"
+                />
+              </FormField>
+            </div>
           </div>
         )}
       </div>

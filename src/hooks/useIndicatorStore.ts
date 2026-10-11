@@ -21,5 +21,3 @@ export function useIndicatorStore() {
     refreshKey: 0,
   };
 }
-
-export { updateIndicatorStatus, getIndicatorWithStatus, getStatusUpdates } from '../stores/useIndicatorStore';

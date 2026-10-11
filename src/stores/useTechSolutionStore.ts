@@ -28,8 +28,9 @@ interface TechSolutionState {
 
   // Actions
   fetchSolutions: (filters?: TechSolutionFilters) => Promise<void>;
-  addSolution: (data: Omit<TechSolution, 'id'>) => Promise<TechSolution>;
-  updateSolution: (id: string, updates: Partial<TechSolution>) => Promise<TechSolution | null>;
+  // 2026-10-11：写操作入参改为"写载荷"（页面按后端字段 solutionCode/solutionTitle/cropName/scopeNames… 组装）
+  addSolution: (data: techService.TechSolutionPayload) => Promise<TechSolution>;
+  updateSolution: (id: string, updates: Partial<techService.TechSolutionPayload>) => Promise<TechSolution | null>;
   deleteSolution: (id: string) => Promise<boolean>;
   deleteSolutions: (ids: string[]) => Promise<boolean>;
 }
@@ -54,7 +55,8 @@ export const useTechSolutionStore = create<TechSolutionState>()(
     addSolution: async (data) => {
       const result = await techService.addTechSolution(data);
       // 使用后端返回的完整数据，如果失败则使用前端数据作为降级
-      const solutionData = result || data;
+      // 2026-10-11：入参为写载荷形态，降级分支仅在后端不回完整记录时启用（addTechSolution 的兜底已构造完整对象）
+      const solutionData: TechSolution = result || (data as unknown as TechSolution);
       set((state) => ({ solutions: [solutionData, ...state.solutions] }));
       return solutionData;
     },

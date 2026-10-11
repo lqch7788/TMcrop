@@ -21,5 +21,3 @@ export function useInspectionStore() {
     refreshKey: 0,
   };
 }
-
-export { updateInspectionStatus, getInspectionWithStatus, getStatusUpdates } from '../stores/useInspectionStore';

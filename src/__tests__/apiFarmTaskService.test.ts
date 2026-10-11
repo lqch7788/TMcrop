@@ -173,6 +173,13 @@ describe('农事任务 API 服务', () => {
         assignerId: 'M001',
         assignerName: '王主管',
         priority: 'normal' as const,
+        // 补全 Task 必需字段（Omit<Task, id|taskCode|createdAt|updatedAt> 要求）
+        progress: 0,
+        reworkCount: 0,
+        reworkHistory: [],
+        deadlineExtensions: [],
+        feedbackRequirements: [],
+        version: 1,
       };
 
       const createdTask: Task = {

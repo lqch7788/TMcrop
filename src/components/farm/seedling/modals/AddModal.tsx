@@ -112,6 +112,9 @@ export function AddModal({
     cropVariety: '',
     seedlingType: '',
     seedlingTypeOther: '',
+    // 2026-10-11：补齐两个此前只在运行时动态挂到 state 上的字段（原代码靠 (formData as any) 读写）
+    seedForm: '',        // 种源形态（选择种源后自动带入，只读展示）
+    seedlingForm: '',    // 育苗后形态（必填，写入 seedlings.seedling_form）
     unit: '株',  // 2026-07-01: 单位（株/粒/颗/盆等）
     siteId: '',
     siteName: '',
@@ -373,7 +376,7 @@ export function AddModal({
     }
 
     // 2026-07-23：育苗后形态必填（入库后写入详情弹窗"种苗类型"列）
-    if (!(formData as any).seedlingForm) {
+    if (!formData.seedlingForm) {
       await showAlert('请选择育苗后形态（必填）');
       return;
     }
@@ -450,6 +453,10 @@ export function AddModal({
       cropCode: formData.selectedCropCode,
       unit: formData.unit || '株',  // 2026-07-01: 单位
       seedlingType: finalSeedlingType,
+      // 2026-10-11：补 seedlingForm —— 必填校验已拦「育苗后形态」，但 payload 从未带该字段，
+      //   导致 seedlings.seedling_form 恒为 null、详情弹窗"种苗类型"永远为空
+      //   （services/apiSeedlingService.ts 已有 seedlingForm → seedling_form 映射）
+      seedlingForm: formData.seedlingForm,
       siteId: formData.siteId,
       siteName,
       startDate: formData.startDate,
@@ -522,11 +529,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         sourceId: addedSeedlingId,
         sourceCode: formData.seedlingCode,
         remarks: workContent,
-        siteName: siteName,
-        startDate: formData.startDate,
-        endDate: formData.expectedEndDate,
-        initialCount: formData.initialCount,
-        targetSurvivalCount: targetSurvivalCount,
+        // 2026-10-11：Task 无 siteName 字段，育苗场地写入 greenhouseName（farm_tasks.greenhouse_name 在白名单内，可落库）
+        greenhouseName: siteName,
+        // 2026-10-11：原 startDate/initialCount/targetSurvivalCount 均非 Task 字段，
+        //   后端白名单也无对应列（恒被丢弃）；数量/成活率已写在 remarks 的 workContent 文本中
       }, 'farm', 'draft');
     }
 
@@ -904,7 +910,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <Label className="text-gray-700">种源形态</Label>
                 <Input
                   type="text"
-                  value={formatSeedFormDisplay((formData as any).seedForm) || '请先选择种源'}
+                  value={formatSeedFormDisplay(formData.seedForm) || '请先选择种源'}
                   readOnly
                   className={`${deepInputClass} bg-gray-100 text-gray-600`}
                 />
@@ -1227,7 +1233,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 育苗后形态 <span className="text-red-500">*</span>
               </Label>
               <Select
-                value={(formData as any).seedlingForm || '__none__'}
+                value={formData.seedlingForm || '__none__'}
                 onValueChange={(v) => setFormData({ ...formData, seedlingForm: v === '__none__' ? '' : v })}
               >
                 <SelectTrigger>

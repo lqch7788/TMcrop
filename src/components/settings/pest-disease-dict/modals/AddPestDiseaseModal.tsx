@@ -29,7 +29,8 @@ interface AddPestDiseaseModalProps {
 const defaultForm = {
   dictCode: '',
   dictName: '',
-  dictType: 'pest' as const,
+  // 显式声明联合类型：弹窗按 dictType 复用（虫害/病害），不能收窄为字面量 'pest'
+  dictType: 'pest' as 'pest' | 'disease',
   targetCrops: '',
   description: '',
   // 2026-07-16：病虫害图片（base64 data URL 数组，最多 5 张）

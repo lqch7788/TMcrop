@@ -87,6 +87,8 @@ interface UserMultiSelectProps {
   disabled?: boolean;
   roleFilter?: string[];
   activeOnly?: boolean;
+  /** 选项值字段：'oid'=用户ID, 'name'=用户姓名，默认 'oid'（与 UserSelect 保持一致） */
+  valueField?: 'oid' | 'name';
 }
 
 export function UserMultiSelect({
@@ -95,6 +97,7 @@ export function UserMultiSelect({
   placeholder = '选择用户',
   disabled = false,
   activeOnly = true,
+  valueField = 'oid',
 }: UserMultiSelectProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);

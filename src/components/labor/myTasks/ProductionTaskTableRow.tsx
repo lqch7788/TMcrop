@@ -5,6 +5,7 @@
 import { CheckCircle, XCircle, Play, Eye, Edit2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
+import type { Task } from '../../../hooks/useTasks';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
 
 /**

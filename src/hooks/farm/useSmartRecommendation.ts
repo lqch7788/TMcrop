@@ -173,7 +173,8 @@ export function useSmartRecommendation() {
       assigneeId: task.assigneeId || '',
       assigneeName: task.assigneeName || '',
       status: task.status,
-      planEnd: task.planEnd || task.dueDate,
+      // 2026-10-11：TaskHistory.planEnd 为必填 string，Task.planEnd/dueDate 均可选 → 兜底空串
+      planEnd: task.planEnd || task.dueDate || '',
       completedAt: task.completedAt,
     }));
   }, []);

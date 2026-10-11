@@ -22,39 +22,39 @@ export const getCategoryByCode = (code: string): string => {
 import type { MaterialReceivingRecord } from '../types/materialReceiving';
 
 export const materialReceivingDetails: MaterialReceivingRecord[] = [
-  { id: 1, code: 'LL20260301001', date: '2026-03-01', applicant: '张伟民', department: '生产部', warehouseLocation: '仓库A区', plantArea: '1号棚-叶菜区', reviewer: '王志刚', productionBatchCode: 'FQ2024-001', status: '已审批', statusClass: 'approved', materials: [
+  { id: 1, code: 'LL20260301001', date: '2026-03-01', applicant: '张伟民', department: '生产部', warehouseLocation: '仓库A区', plantArea: '1号棚-叶菜区', plantAreas: [], reviewer: '王志刚', productionBatchCode: 'FQ2024-001', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'SP0201001', materialName: '商品有机肥', spec: '50kg/袋', unit: '袋', category: '肥料与土壤改良剂', requestedQuantity: 10, stockQuantity: 150, unitPrice: 45.00, warehousePosition: 'A-01-01', remark: '正常出库' },
     { materialCode: 'SP0202001', materialName: '尿素', spec: '50kg/袋', unit: '袋', category: '肥料与土壤改良剂', requestedQuantity: 5, stockQuantity: 80, unitPrice: 85.00, warehousePosition: 'A-01-02', remark: '正常出库' },
   ]},
-  { id: 2, code: 'LL20260302002', date: '2026-03-02', applicant: '李明轩', department: '生产部', warehouseLocation: '仓库B区', plantArea: '2号棚-茄果区', reviewer: '李志刚', productionBatchCode: 'FQ2024-002', status: '已审批', statusClass: 'approved', materials: [
+  { id: 2, code: 'LL20260302002', date: '2026-03-02', applicant: '李明轩', department: '生产部', warehouseLocation: '仓库B区', plantArea: '2号棚-茄果区', plantAreas: [], reviewer: '李志刚', productionBatchCode: 'FQ2024-002', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'SP0301001', materialName: '吡虫啉', spec: '100g/瓶', unit: '瓶', category: '农药与植保产品', requestedQuantity: 8, stockQuantity: 120, unitPrice: 28.00, warehousePosition: 'B-02-03', remark: '正常出库' },
   ]},
-  { id: 3, code: 'LL20260303003', date: '2026-03-03', applicant: '王建国', department: '生产部', warehouseLocation: '仓库C区', plantArea: '3号棚-育苗区', reviewer: '张志远', productionBatchCode: 'FQ2024-003', status: '待审批', statusClass: 'pending', materials: [
+  { id: 3, code: 'LL20260303003', date: '2026-03-03', applicant: '王建国', department: '生产部', warehouseLocation: '仓库C区', plantArea: '3号棚-育苗区', plantAreas: [], reviewer: '张志远', productionBatchCode: 'FQ2024-003', status: '待审批', statusClass: 'pending', materials: [
     { materialCode: 'SP0302001', materialName: '多菌灵', spec: '200g/袋', unit: '袋', category: '农药与植保产品', requestedQuantity: 15, stockQuantity: 45, unitPrice: 35.00, warehousePosition: 'C-03-01', remark: '待审批' },
     { materialCode: 'SP0301001', materialName: '吡虫啉', spec: '100g/瓶', unit: '瓶', category: '农药与植保产品', requestedQuantity: 10, stockQuantity: 120, unitPrice: 28.00, warehousePosition: 'C-03-02', remark: '待审批' },
   ]},
-  { id: 4, code: 'LL20260304004', date: '2026-03-04', applicant: '赵俊杰', department: '生产部', warehouseLocation: '仓库A区', plantArea: '1号棚-叶菜区', reviewer: '王志刚', productionBatchCode: 'FQ2024-004', status: '已审批', statusClass: 'approved', materials: [
+  { id: 4, code: 'LL20260304004', date: '2026-03-04', applicant: '赵俊杰', department: '生产部', warehouseLocation: '仓库A区', plantArea: '1号棚-叶菜区', plantAreas: [], reviewer: '王志刚', productionBatchCode: 'FQ2024-004', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'SP0103001', materialName: '番茄种子', spec: '50g/袋', unit: '袋', category: '种质资源', requestedQuantity: 12, stockQuantity: 60, unitPrice: 120.00, warehousePosition: 'A-02-01', remark: '正常出库' },
   ]},
-  { id: 5, code: 'LL20260305005', date: '2026-03-05', applicant: '钱文涛', department: '后勤部', warehouseLocation: '仓库D区', plantArea: '办公区绿化', reviewer: '陈志明', productionBatchCode: 'FQ2024-005', status: '已拒绝', statusClass: 'rejected', rejectReason: '库存不足，该物料当前库存为0，无法满足申请数量', materials: []},
-  { id: 6, code: 'LL20260306006', date: '2026-03-06', applicant: '孙晓峰', department: '生产部', warehouseLocation: '仓库B区', plantArea: '4号棚-水稻区', reviewer: '李志刚', productionBatchCode: 'FQ2024-006', status: '待审批', statusClass: 'pending', materials: [
+  { id: 5, code: 'LL20260305005', date: '2026-03-05', applicant: '钱文涛', department: '后勤部', warehouseLocation: '仓库D区', plantArea: '办公区绿化', plantAreas: [], reviewer: '陈志明', productionBatchCode: 'FQ2024-005', status: '已拒绝', statusClass: 'rejected', rejectReason: '库存不足，该物料当前库存为0，无法满足申请数量', materials: []},
+  { id: 6, code: 'LL20260306006', date: '2026-03-06', applicant: '孙晓峰', department: '生产部', warehouseLocation: '仓库B区', plantArea: '4号棚-水稻区', plantAreas: [], reviewer: '李志刚', productionBatchCode: 'FQ2024-006', status: '待审批', statusClass: 'pending', materials: [
     { materialCode: 'SP0202001', materialName: '尿素', spec: '50kg/袋', unit: '袋', category: '肥料与土壤改良剂', requestedQuantity: 20, stockQuantity: 80, unitPrice: 85.00, warehousePosition: 'B-01-02', remark: '库存充足' },
   ]},
-  { id: 7, code: 'LL20260307007', date: '2026-03-07', applicant: '周志强', department: '生产部', warehouseLocation: '仓库C区', plantArea: '5号棚-水果区', reviewer: '张志远', productionBatchCode: 'FQ2024-007', status: '已审批', statusClass: 'approved', materials: [
+  { id: 7, code: 'LL20260307007', date: '2026-03-07', applicant: '周志强', department: '生产部', warehouseLocation: '仓库C区', plantArea: '5号棚-水果区', plantAreas: [], reviewer: '张志远', productionBatchCode: 'FQ2024-007', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'OP0201001', materialName: '锄头', spec: '标准型', unit: '把', category: '劳保与防护用品', requestedQuantity: 5, stockQuantity: 35, unitPrice: 42.00, warehousePosition: 'C-04-01', remark: '正常出库' },
     { materialCode: 'OP0102001', materialName: '劳保胶靴', spec: '标准码', unit: '双', category: '劳保与防护用品', requestedQuantity: 10, stockQuantity: 50, unitPrice: 68.00, warehousePosition: 'C-04-02', remark: '正常出库' },
   ]},
-  { id: 8, code: 'LL20260308008', date: '2026-03-08', applicant: '吴海龙', department: '设备部', warehouseLocation: '仓库A区', plantArea: '灌溉系统维护', reviewer: '王志刚', productionBatchCode: 'FQ2024-008', status: '已审批', statusClass: 'approved', materials: [
+  { id: 8, code: 'LL20260308008', date: '2026-03-08', applicant: '吴海龙', department: '设备部', warehouseLocation: '仓库A区', plantArea: '灌溉系统维护', plantAreas: [], reviewer: '王志刚', productionBatchCode: 'FQ2024-008', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'EQ0103001', materialName: '电动喷雾机', spec: '标准型', unit: '台', category: '农业机械', requestedQuantity: 2, stockQuantity: 15, unitPrice: 580.00, warehousePosition: 'A-05-01', remark: '正常出库' },
   ]},
-  { id: 9, code: 'LL20260309009', date: '2026-03-09', applicant: '郑志远', department: '技术部', warehouseLocation: '仓库E区', plantArea: '实验室', reviewer: '赵志鹏', productionBatchCode: 'FQ2024-001', status: '已取消', statusClass: 'cancelled', materials: []},
-  { id: 10, code: 'LL20260310010', date: '2026-03-10', applicant: '陈思远', department: '生产部', warehouseLocation: '仓库B区', plantArea: '2号棚-茄果区', reviewer: '李志刚', productionBatchCode: 'FQ2024-002', status: '已审批', statusClass: 'approved', materials: [
+  { id: 9, code: 'LL20260309009', date: '2026-03-09', applicant: '郑志远', department: '技术部', warehouseLocation: '仓库E区', plantArea: '实验室', plantAreas: [], reviewer: '赵志鹏', productionBatchCode: 'FQ2024-001', status: '已取消', statusClass: 'cancelled', materials: []},
+  { id: 10, code: 'LL20260310010', date: '2026-03-10', applicant: '陈思远', department: '生产部', warehouseLocation: '仓库B区', plantArea: '2号棚-茄果区', plantAreas: [], reviewer: '李志刚', productionBatchCode: 'FQ2024-002', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'SP0101001', materialName: '水稻种子', spec: '20kg/袋', unit: '袋', category: '种质资源', requestedQuantity: 30, stockQuantity: 100, unitPrice: 65.00, warehousePosition: 'B-02-01', remark: '正常出库' },
   ]},
-  { id: 11, code: 'LL20260311011', date: '2026-03-11', applicant: '刘志伟', department: '生产部', warehouseLocation: '仓库C区', plantArea: '6号棚-花卉区', reviewer: '张志远', productionBatchCode: 'FQ2024-003', status: '待审批', statusClass: 'pending', materials: [
+  { id: 11, code: 'LL20260311011', date: '2026-03-11', applicant: '刘志伟', department: '生产部', warehouseLocation: '仓库C区', plantArea: '6号棚-花卉区', plantAreas: [], reviewer: '张志远', productionBatchCode: 'FQ2024-003', status: '待审批', statusClass: 'pending', materials: [
     { materialCode: 'EQ0306001', materialName: '滴灌带', spec: '50m/卷', unit: '卷', category: '农业机械', requestedQuantity: 20, stockQuantity: 200, unitPrice: 38.00, warehousePosition: 'C-05-01', remark: '待审批' },
   ]},
-  { id: 12, code: 'LL20260312012', date: '2026-03-12', applicant: '杨文博', department: '采后处理部', warehouseLocation: '仓库A区', plantArea: '采后处理车间', reviewer: '王志刚', productionBatchCode: 'FQ2024-004', status: '已审批', statusClass: 'approved', materials: [
+  { id: 12, code: 'LL20260312012', date: '2026-03-12', applicant: '杨文博', department: '采后处理部', warehouseLocation: '仓库A区', plantArea: '采后处理车间', plantAreas: [], reviewer: '王志刚', productionBatchCode: 'FQ2024-004', status: '已审批', statusClass: 'approved', materials: [
     { materialCode: 'PH0104001', materialName: '塑料袋', spec: '标准型', unit: '卷', category: '采收容器', requestedQuantity: 50, stockQuantity: 500, unitPrice: 8.50, warehousePosition: 'A-03-01', remark: '正常出库' },
     { materialCode: 'IT0101001', materialName: '土壤温湿度传感器', spec: '标准型', unit: '个', category: '监测设备', requestedQuantity: 5, stockQuantity: 30, unitPrice: 260.00, warehousePosition: 'A-04-01', remark: '正常出库' },
   ]},
@@ -238,7 +238,13 @@ export const CATEGORY_COLORS: Record<string, { gradient: string[]; solid: string
 // 物料分类年度汇总数据
 import type { CategorySummary } from '../types/materialReceiving';
 
-export const categorySummaryData: CategorySummary[] = [
+/** 成本分类维度名——与 CategoryTrend 的 7 个中文数值字段名一一对应 */
+export type CostCategoryKey = '生产投入' | '设施装备' | '作业支持' | '采后流通' | '数字管理' | '能源耗材' | '其他';
+
+/** 分类汇总（key 收窄为 CostCategoryKey，便于直接以 monthData[cat.key] 取月度趋势数值） */
+type TypedCategorySummary = Omit<CategorySummary, 'key'> & { key: CostCategoryKey };
+
+export const categorySummaryData: TypedCategorySummary[] = [
   { name: 'SP-生产投入类', key: '生产投入', value: 12580, amount: 38.5, percentage: 34.2, ...CATEGORY_COLORS.生产投入 },
   { name: 'EQ-设施与装备类', key: '设施装备', value: 6280, amount: 18.6, percentage: 20.8, ...CATEGORY_COLORS.设施装备 },
   { name: 'OP-作业支持类', key: '作业支持', value: 4180, amount: 12.8, percentage: 13.8, ...CATEGORY_COLORS.作业支持 },
@@ -274,7 +280,7 @@ export const getMonthCategoryData = (month: string) => {
   if (!monthData) return [];
 
   return categorySummaryData.map(cat => {
-    const value = (monthData as Record<string, number>)[cat.key] || 0;
+    const value = monthData[cat.key] || 0;
     const amount = Math.round(value * 30);
     return {
       ...cat,
@@ -304,7 +310,7 @@ export const getMonthSummaries = (year: string): MonthSummaryRowType[] => {
   return categoryTrendData
     .filter(d => d.month.startsWith(year))
     .map(data => {
-      const totalQuantity = categorySummaryData.reduce((sum, cat) => sum + ((data as Record<string, number>)[cat.key] || 0), 0);
+      const totalQuantity = categorySummaryData.reduce((sum, cat) => sum + (data[cat.key] || 0), 0);
       const totalAmount = totalQuantity * 30;
       const yearTotal = getYearTotalQuantity(year);
       return {
@@ -322,10 +328,10 @@ export const getMonthDetails = (month: string): MonthDetailRow[] => {
   const monthData = categoryTrendData.find(d => d.month === month);
   if (!monthData) return [];
 
-  const totalQuantity = categorySummaryData.reduce((sum, cat) => sum + ((monthData as Record<string, number>)[cat.key] || 0), 0);
+  const totalQuantity = categorySummaryData.reduce((sum, cat) => sum + (monthData[cat.key] || 0), 0);
 
   return categorySummaryData.map(cat => {
-    const quantity = (monthData as Record<string, number>)[cat.key] || 0;
+    const quantity = monthData[cat.key] || 0;
     return {
       month: monthData.month,
       monthName: `${parseInt(monthData.month.split('-')[1])}月`,
@@ -343,7 +349,7 @@ export const getYearTotalQuantity = (year: string): number => {
   return categoryTrendData
     .filter(d => d.month.startsWith(year))
     .reduce((sum, data) => {
-      return sum + categorySummaryData.reduce((s, cat) => s + ((data as Record<string, number>)[cat.key] || 0), 0);
+      return sum + categorySummaryData.reduce((s, cat) => s + (data[cat.key] || 0), 0);
     }, 0);
 };
 

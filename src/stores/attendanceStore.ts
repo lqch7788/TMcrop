@@ -135,9 +135,6 @@ interface AttendanceState {
   // Actions - 筛选
   setFilters: (filters: Partial<AttendanceFilters>) => void;
 
-  // Actions - 同步
-  syncPendingChanges: () => Promise<void>;
-
   // 内部方法
   _initializeSeedData: () => void;
 }

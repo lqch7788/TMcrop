@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, NumberInput, Label } from '@/components/ui';
-import type { MonthlyBudget } from '../types';
+import type { MonthlyBudget } from './types';
 import { showAlert } from '@/lib/dialogService';
 
 // 深度输入框样式
@@ -9,7 +9,8 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 interface BudgetFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: Omit<MonthlyBudget, 'costPerUnit'>) => void;
+  // 弹窗会带上计算后的 costPerUnit（单位成本），故此处按完整 MonthlyBudget 传递
+  onConfirm: (data: MonthlyBudget) => void;
   title?: string;
   editingRecord?: MonthlyBudget | null;
 }

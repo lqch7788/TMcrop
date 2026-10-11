@@ -3,7 +3,7 @@
  * 用于详情弹窗中显示来源信息
  */
 
-import type { ProblemEntry } from '../../../hooks/usePersistentProblems';
+import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
 import { getSourceConfig } from '../constants/sourceConfig';
 
 interface SourceBadgeProps {

@@ -20,7 +20,7 @@ export interface DispatchWeights {
 
 /** 动态权重调整规则 */
 export interface DynamicWeightAdjustment {
-  skill?: number;
+  skillMatch?: number;   // 技能匹配度权重（与 DispatchWeights.skillMatch 同名）
   load?: number;
   location?: number;
   performance?: number;

@@ -87,7 +87,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const userStoreUsers = useUserStore((s) => s.users);
   const loadUsers = useUserStore((s) => s.loadUsers);
   // 2026-09-27 P2-9：当前登录用户姓名（"我的申请"/"待我审批"筛选用）
-  const currentUserName = useAuthStore((s) => s.currentUser?.name || '');
+  // 2026-10-11：改读 realName —— CurrentUser 的姓名字段是 realName（登录链路只写它），
+  // 此前读 name 恒为 undefined 导致「我的申请/待我审批」筛选永远不生效
+  const currentUserName = useAuthStore((s) => s.currentUser?.realName || '');
 
   useEffect(() => {
     if (userStoreUsers.length === 0) loadUsers();
@@ -96,7 +98,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
   const userMap = useMemo(() => {
     const map: Record<string, string> = {};
     userStoreUsers.forEach((u) => {
-      map[u.oid] = u.name;
+      // oid 可选（历史兼容），缺失时跳过，避免写入 "undefined" 键
+      // 2026-10-11 类型清理：name 同样可能缺失，一并跳过（消费方均为 `userMap[x] || 兜底`，取值结果不变）
+      if (u.oid && u.name) map[u.oid] = u.name;
     });
     return map;
   }, [userStoreUsers]);
@@ -370,10 +374,9 @@ export function useApplicationTab(): UseApplicationTabReturn {
 
   // 2026-09-27：新增弹窗打开且非复制模式时，自动存草稿（防丢失）
   useEffect(() => {
-    if (showAddModal && !copyPrefill) {
-      const t = setTimeout(() => saveDraft(addForm), 800);
-      return () => clearTimeout(t);
-    }
+    if (!showAddModal || copyPrefill) return;
+    const t = setTimeout(() => saveDraft(addForm), 800);
+    return () => clearTimeout(t);
   }, [addForm, showAddModal, copyPrefill, saveDraft]);
 
   // ============================================
@@ -750,7 +753,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
           approvers: [{ userId: item.reviewer, userName: item.reviewer, role: '审批人', order: 1, status: 'pending' }],
           records: [],
           // 2026-09-29 审计修复：补传 amount（同新增路径，此前缺该字段导致金额分级失效）
-          amount: item.totalAmount ?? 0,
+          // 2026-10-11 类型清理：Approval.amount 为 string（对应后端 TEXT 列），此处显式转换
+          amount: String(item.totalAmount ?? 0),
           status: ApprovalStatus.PENDING,
           priority: 'normal',
           reminderCount: 0,
@@ -840,13 +844,13 @@ export function useApplicationTab(): UseApplicationTabReturn {
     const lines: string[] = [];
     try {
       const priceResp = await enhancedApiClient.get<{ prices?: number[] }>(`/material-requests/material-price-history?materialCode=${encodeURIComponent(materialCode)}`);
-      const prices = (priceResp as any)?.prices || [];
+      const prices = priceResp?.prices || [];
       if (prices.length > 0) lines.push(`最近领用价：${prices.map((p) => `¥${p}`).join('、')}`);
     } catch { /* 历史价失败不阻断 */ }
     try {
       const { fefoAllocate } = await import('@/services/apiWarehouseMaterialService');
       const result = await fefoAllocate(materialCode, 999999);
-      const allocs = (result as any)?.allocations || [];
+      const allocs = result?.allocations || [];
       if (allocs.length > 0) {
         lines.push('批次明细：' + allocs.slice(0, 5).map((a: any) => `${a.batchNo}(剩${a.quantity}${a.unit}，效期${a.expiryDate || '无'})`).join('；') + (allocs.length > 5 ? ' 等' : ''));
         // 2026-09-27 P1-5：临期预警（效期距今 < 30 天）
@@ -955,7 +959,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   // 编辑弹窗 - 更新物料行（函数式 setState，避免连续多次调用互相覆盖）
   // ============================================
-  const handleEditMaterialChange = (index: number, field: keyof MaterialItem, value: string | number) => {
+  // value 含 boolean：MaterialItem.returnable 等开关字段直接透传 checkbox 值
+  const handleEditMaterialChange = (index: number, field: keyof MaterialItem, value: string | number | boolean) => {
     setEditForm((prev) => {
       const newMaterials = [...prev.materials];
       newMaterials[index] = { ...newMaterials[index], [field]: value };
@@ -1146,7 +1151,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   // 更新物料行（函数式 setState，避免连续多次调用互相覆盖）
   // ============================================
-  const handleMaterialChange = (index: number, field: keyof MaterialItem, value: string | number) => {
+  // value 含 boolean：MaterialItem.returnable 等开关字段直接透传 checkbox 值
+  const handleMaterialChange = (index: number, field: keyof MaterialItem, value: string | number | boolean) => {
     setAddForm((prev) => {
       const newMaterials = [...prev.materials];
       newMaterials[index] = { ...newMaterials[index], [field]: value };
@@ -1287,7 +1293,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
           records: [],
           // 2026-09-29 审计修复：补传 amount（此前缺该字段 → 金额分级审批对该业务线完全失效）。
           // 免审批阈值 / 分级规则都基于金额，缺失时后端无从判定，只能全部进人工队列。
-          amount: newRecord.totalAmount ?? 0,
+          // 2026-10-11 类型清理：Approval.amount 为 string（对应后端 TEXT 列），此处显式转换
+          amount: String(newRecord.totalAmount ?? 0),
           status: ApprovalStatus.PENDING,
           priority: 'normal',
           reminderCount: 0,

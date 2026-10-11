@@ -39,12 +39,14 @@ export function useBatchSummary(filters?: BatchFilters) {
         cropName: batch.cropName,
         variety: batch.variety,
         greenhouse: batch.greenhouseName || '',
-        plantingArea: batch.plantingArea,
+        // 2026-10-11：BatchStatsItem.plantingArea 声明为 string（后端 summary 返回 pp.area_name），此处对齐
+        plantingArea: String(batch.plantingArea ?? ''),
         targetYield: batch.targetYield,
         actualQuantity: batch.actualYield,
         harvestQuantity: batch.actualYield,
         completionRate,
-        status: batch.status,
+        // 2026-10-11：CropBatch.status 为可选兼容字段，BatchStatsItem.status 必填 → 兜底空串
+        status: batch.status || '',
         plantingDate: batch.startDate,
         expectedHarvestDate: (batch as any).endDate || batch.expectedHarvestDate || '',
         actualHarvestDate: '',
@@ -101,7 +103,8 @@ export function useBatchSummary(filters?: BatchFilters) {
         targetYield: batch.targetYield,
         actualYield: batch.harvestQuantity || batch.actualQuantity,
         completionRate: batch.completionRate.toString() + '%',
-        status: batch.status,
+        // 2026-10-11：BatchStatsItem.status 为 string，BatchSummaryRow.status 为字面量联合 —— 数据源未做枚举校验，按边界断言
+        status: batch.status as BatchSummaryRow['status'],
         statusClass,
         taskCount: batch.taskCount,
         completedTaskCount: batch.completedTaskCount,

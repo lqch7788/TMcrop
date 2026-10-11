@@ -6,7 +6,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { RecommendedExecutor } from '../types/dispatch';
 import { WorkerInfo, RecommendInput, getUnifiedRecommendations } from '../utils/recommendAlgorithm';
-import { SkillTag } from '../../skill/types';
+import { SkillTag } from '../../labor/skill/types';
 
 // Mock员工数据
 interface MockWorker {

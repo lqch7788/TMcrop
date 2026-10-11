@@ -6,6 +6,10 @@ interface ProductionStatsCardsProps {
   batches: CropBatch[];
 }
 
+// CropBatch.batchStatus 的类型联合未包含 'pending_complete'（提交完成审批时由 useProductionActions 写入），
+// 用 string 常量比较，避免字面量无交集误报
+const PENDING_COMPLETE_STATUS: string = 'pending_complete';
+
 export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
   // M-06: useMemo 缓存派生统计，batches 不变就不重算（避免 5 次 filter × 每次渲染）
   const stats = useMemo(() => [
@@ -28,7 +32,7 @@ export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
       label: '已审批',
       value: batches.filter(b =>
         b.batchStatus === 'pending' ||
-        b.batchStatus === 'pending_complete' ||
+        b.batchStatus === PENDING_COMPLETE_STATUS ||
         b.batchStatus === 'published' ||
         b.batchStatus === 'approved'
       ).length,

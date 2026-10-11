@@ -35,7 +35,7 @@ export function VerifyTaskModal({
 
   if (!task) return null;
 
-  const statusConfig = TASK_STATUS_CONFIG[task.status];
+  const statusConfig = TASK_STATUS_CONFIG[task.status as keyof typeof TASK_STATUS_CONFIG];
 
   const handleSubmit = () => {
     if (handleType === 'approve') {

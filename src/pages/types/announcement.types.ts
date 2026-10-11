@@ -10,8 +10,9 @@ export interface Notice {
   title: string;
   type: string;
   category: string;
-  priority: '高' | '中' | '低';
-  status: '已发布' | '审批中' | '草稿';
+  // priority / status 对齐 Store 的 AnnouncementData（后端列为自由文本，取值域为 高/中/低、已发布/审批中/草稿）
+  priority: string;
+  status: string;
   sender: string;
   date: string;
   deadline: string;

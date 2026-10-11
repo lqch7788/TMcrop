@@ -15,7 +15,8 @@ interface TempTaskFormData {
   dueDate: string;
   description: string;
   notes: string;
-  priority: 'high' | 'medium' | 'low';
+  // 2026-10-11 类型清理：与权威类型 TempTask['priority'] 对齐（含 'normal'，编辑既有任务时会回填该值）
+  priority: TempTask['priority'];
   estimatedDays: number;
   greenhouseId: string;
   workerCount: number;
@@ -159,7 +160,7 @@ export function useTempTaskForm({ initialData, users, onSubmit }: UseTempTaskFor
       taskCode: generateTaskCode(),
       title: '',
       urgency: 'normal',
-      tempTaskType: TEMP_TASK_TYPES[0],
+      tempTaskType: TEMP_TASK_TYPES[0].value,
       workLocation: '',
       estimatedHours: 1,
       assigneeId: '',

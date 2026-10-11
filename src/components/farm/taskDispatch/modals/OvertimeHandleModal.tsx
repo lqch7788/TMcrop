@@ -198,7 +198,6 @@ export function OvertimeHandleModal({
               <DatePicker
                 selected={newDeadline ? new Date(newDeadline) : undefined}
                 onChange={(date) => setNewDeadline(todayLocal(date))}
-                minDate={new Date()}
                 className={deepInputClass}
               />
               <p className="text-xs text-gray-500 mt-1">

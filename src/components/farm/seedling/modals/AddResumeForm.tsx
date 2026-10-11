@@ -301,7 +301,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         // 数量变更
         if (quantityChange !== '') {
           payload.quantity_change = Number(quantityChange);
-          payload.expected_quantity = selectedLabel.quantity ?? undefined;
+          payload.expected_quantity = selectedLabel?.quantity ?? undefined;
         }
         // 原因
         if (reason.trim()) {
@@ -316,13 +316,15 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         }
       }
     } catch (e) {
-      showAlert('网络错误：' + (e.message));
+      showAlert('网络错误：' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setAddSubmitting(false);
     }
   };
 
-  const selectedLabelNumber = selectedLabel?.labelNumber || '-';
+  // PlantLabel 的 TS 定义是 snake_case（历史遗留），API 经 camelCase 中间件返回，故此处按运行时字段取值
+  const selectedLabelNumber =
+    (selectedLabel as { labelNumber?: string } | null)?.labelNumber || '-';
   const guide = OP_GUIDE[addOpType];
 
   return (

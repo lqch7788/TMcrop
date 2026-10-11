@@ -183,7 +183,8 @@ export default function PlantingPage() {
   // 2026-07-10 P1-3：用 Planting 子集 interface 替代 any（弹窗只需要种植行 + 状态/单位子集）
   interface InboundUnifiedRecord {
     id: string;
-    plantingCode: string;
+    /** 种植批号（对应 Planting.plantCode，下方 sourceRecord.code 直接读取） */
+    plantCode: string;
     cropName?: string;
     cropVariety?: string;
     cropCode?: string;
@@ -215,8 +216,9 @@ export default function PlantingPage() {
     record: Planting | null;
   }>({ open: false, record: null });
   const handleTimeline = (record: Planting) => {
-    if (record.batchCode) {
-      navigate(`/agronomy/batch-timeline/${encodeURIComponent(record.batchCode)}`);
+    // 2026-10-11：批次时间线按生产计划批次号（productionPlanCode）查——Planting 无 batchCode 字段
+    if (record.productionPlanCode) {
+      navigate(`/agronomy/batch-timeline/${encodeURIComponent(record.productionPlanCode)}`);
     }
   };
 
@@ -238,7 +240,13 @@ export default function PlantingPage() {
   // 2026-06-29：标签管理弹窗状态（合并原 labelDetailOpen + markModalOpen）
   const [labelManageOpen, setLabelManageOpen] = useState(false);
   // 标签管理弹窗用：只存 id+code 即可，避免 Planting 全量 state 引起不必要的 re-render
-  const [labelManageRecord, setLabelManageRecord] = useState<{ id: string; plantCode: string } | null>(null);
+  // 2026-10-11：补 status/endType（可选）—— 弹窗 readOnly 判定需要，此前读不到只能恒为 false
+  const [labelManageRecord, setLabelManageRecord] = useState<{
+    id: string;
+    plantCode: string;
+    status?: string;
+    endType?: string;
+  } | null>(null);
   // 2026-06-29：扫码跳转 — 自动选中指定 labelNumber
   const [autoSelectLabelNumber, setAutoSelectLabelNumber] = useState<string | undefined>(undefined);
   // 移入/移出弹窗状态（保留 — 种植特有全批级操作）
@@ -347,12 +355,14 @@ export default function PlantingPage() {
 
     setEndConfirm({ record: null });
 
+    // isHarvestLocked 在 DB 是 0/1 整数列（服务端 SQL 亦直接写 is_harvest_locked = 0），
+    // 而 Planting 类型声明为 boolean；为保持既有写入值（0 = 未锁定）不变，此处保留数值并显式断言
     const result = await updateItem(record.id, {
       endType: 'normal',
       endTime: todayLocal(),
       status: endStatus,
       isHarvestLocked: 0,
-    } as Partial<Planting>);
+    } as unknown as Partial<Planting>);
     if (result) {
       await showAlert('种植记录已结束（仍可补录遗漏库存）');
       await loadItems();
@@ -400,7 +410,12 @@ export default function PlantingPage() {
 
   // 2026-06-29：标签管理（合并原 handleLabelDetail + handleMark）— 装载标签后打开新 PlantingLabelManageModal
   const handleLabelManage = (record: Planting) => {
-    setLabelManageRecord({ id: record.id, plantCode: record.plantCode || '' });
+    setLabelManageRecord({
+      id: record.id,
+      plantCode: record.plantCode || '',
+      status: record.status,
+      endType: record.endType,
+    });
     setAutoSelectLabelNumber(undefined);
     setLabelManageOpen(true);
   };
@@ -548,7 +563,7 @@ export default function PlantingPage() {
         '来源批号': record.sourceCode,
         '作物品种': record.cropName,
         '品种': record.cropVariety,
-        '品种路径': record.varietyPath || [record.categoryName, record.typeName, record.varietyName, record.subVariety1Name].filter(Boolean).join(' > ') || '-',
+        '品种路径': [record.categoryName, record.typeName, record.varietyName, record.subVariety1Name].filter(Boolean).join(' > ') || '-',
         '种植区域': record.areaName,
         '大棚名称': record.rootName,
         '种植数量': record.plantingCount,

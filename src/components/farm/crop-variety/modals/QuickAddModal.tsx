@@ -19,6 +19,9 @@ import {
 } from '../../../../services/cropVarietyExtensionService';
 import { CropVariety } from '../../../../types/cropVariety';
 
+/** 作物类别代码（来源类型未导出该别名，取 CropVariety 字段类型） */
+type ProduceCategoryCode = CropVariety['categoryCode'];
+
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
@@ -130,7 +133,8 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
       // 2026-07-27 审核 C-3：改用 apiCropVarietyService 走 V2.1 架构（替代老 cropVarietyService 走 localStorage）
       // 移除废弃字段 growthCycle/targetYield/yieldUnit（2026-07-27 重构后这些字段已不属于 CropVariety）
       const newId = await apiCropVarietyService.createVariety({
-        categoryCode: selectedCategory,
+        // 下拉选项来自 getCategoryOptions（作物类别字典），取值域即 ProduceCategoryCode，故此处断言
+        categoryCode: selectedCategory as ProduceCategoryCode,
         categoryName,
         typeCode: selectedType,
         typeName,
@@ -145,7 +149,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
       const newVariety: CropVariety = {
         id: newId,
         cropCode: previewCode || '',
-        categoryCode: selectedCategory,
+        categoryCode: selectedCategory as ProduceCategoryCode,
         categoryName,
         typeCode: selectedType,
         typeName,

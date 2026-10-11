@@ -429,6 +429,15 @@ function TabBtn({ current, value, icon, label, count, onClick }: TabBtnProps) {
 }
 
 // ---------- 基本信息 Tab ----------
+
+/** 基本信息分组区块：items 每行为 [字段名, 渲染值] 元组 */
+type InfoSection = {
+  title: string;
+  bg: string;        // 卡片底色
+  border: string;    // 标题栏下边框
+  text: string;      // 标题文字色
+  items: Array<[string, React.ReactNode]>;
+};
 function BasicTab({
   stock, sourceInfo, sourceLabel, transferSourceWh, statusInfo, gradeInfo, available, freezes,
   onUnfreeze,
@@ -452,15 +461,14 @@ function BasicTab({
   const availableRatio = (stock.currentQuantity ?? 0) > 0
     ? Math.round((available / (stock.currentQuantity ?? 0)) * 100)
     : 0;
+  // 2026-10-11：extensions 是 Record<string, unknown>，取值前先做字符串收窄（原来直接把 unknown 渲染成 ReactNode）
+  const extBusinessCode = typeof stock.extensions?.businessCode === 'string' ? stock.extensions.businessCode : '';
 
   // 字段分组（每组用不同淡色底色 + 对应深色边框标题栏）
-  const sections: Array<{
-    title: string;
-    bg: string;        // 卡片底色
-    border: string;    // 标题栏下边框
-    text: string;      // 标题文字色
-    items: Array<[string, React.ReactNode]>;
-  }> = [
+  // 2026-10-11：抽出 InfoSection 具名类型 —— 下方「补录信息」用条件表达式展开（...ternary），
+  //   内联对象字面量拿不到上下文类型，items 会被推断成 (string|JSX.Element)[] 而非元组数组，
+  //   具名类型后可用 satisfies 补上下文。
+  const sections: InfoSection[] = [
     {
       title: '基础信息',
       bg: 'bg-blue-50',
@@ -475,7 +483,7 @@ function BasicTab({
           // 2026-07-14：未知 business_type 不显示原始英文，改用"其他"兜底
           return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">{stock.businessType ? '其他' : '-'}</span>;
         })()],
-        ['业务编号',   stock.businessCode || stock.extensions?.businessCode || '-'],
+        ['业务编号',   stock.businessCode || extBusinessCode || '-'],
         ['状态',       <span className={`px-2 py-0.5 ${statusInfo.bg} ${statusInfo.text} text-xs rounded font-medium`}>{statusInfo.label}</span>],
         ['乐观锁版本', (
           <span className="inline-flex items-center gap-1">
@@ -646,7 +654,7 @@ function BasicTab({
             ['来源行ID', <span className="font-mono text-xs">{stock.sourceRecordId || '-'}</span>],
             ['来源行编码', <span className="font-mono text-xs font-semibold">{stock.sourceCode || '-'}</span>],
           ],
-        }]
+        }] satisfies InfoSection[]
       : []),
     // ========== 2026-07-09：移除"🏷️ 业务信息"组（业务ID/类型/编码已与"基础信息"组重复）==========
     // ========== 2026-07-09：移除"🌱 来源专属"组（字段已分散到"💰 财务与来源专属" + "品种信息"组）==========

@@ -377,7 +377,8 @@ export function WaterTable({
                                     <tr key={`${aName}-${seq}`} className="hover:bg-emerald-50/40">
                                       <td className="px-3 py-2 text-center text-gray-500">{seq}</td>
                                       {/* 2026-07-25 v4：批号列移到区域列前 */}
-                                      <td className="px-3 py-2 text-center text-gray-600 font-mono text-xs">{r.code || '-'}</td>
+                                      {/* code/cropName/remark 未在 WateringPoolRow 中声明（走索引签名 → unknown），故按文本转换 */}
+                                      <td className="px-3 py-2 text-center text-gray-600 font-mono text-xs">{String(r.code || '-')}</td>
                                       {isFirst && (
                                         <td
                                           rowSpan={groupSize}
@@ -388,14 +389,14 @@ export function WaterTable({
                                       )}
                                       {/* 2026-07-25 v4：作物品种列从 pool 行 r.cropName 取（精准按行） */}
                                       <td className="px-3 py-2 text-center text-gray-800 font-medium text-xs">
-                                        {r.cropName || '-'}
+                                        {String(r.cropName || '-')}
                                       </td>
                                       <td className="px-3 py-2 text-center text-gray-800 font-medium">{methodLabel}</td>
                                       <td className="px-3 py-2 text-center font-bold text-emerald-600">
                                         {Number(r.waterAmount ?? 0).toLocaleString()}
                                       </td>
                                       <td className="px-3 py-2 text-center text-gray-600">{r.waterUnit || rec.waterUnit || 'L'}</td>
-                                      <td className="px-3 py-2 text-center text-gray-600">{r.remark || '-'}</td>
+                                      <td className="px-3 py-2 text-center text-gray-600">{String(r.remark || '-')}</td>
                                     </tr>
                                   );
                                 });

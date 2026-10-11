@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useMemo, useCallback } from 'react';
-import { ApprovalType, Approval, Approver } from '../types/approval';
+import { ApprovalType, ApprovalStatus, Approval, Approver } from '../types/approval';
 import { ApprovalLevel } from '../config/approvalHierarchy';
 import {
   resolveApprovalLevel,
@@ -13,6 +13,8 @@ import {
   generateInitialApprovers,
   approverConfigsToApprovers,
   getApprovalLevelName,
+  // 2026-10-11：isBatchSupported 的实现依赖该函数，此前未导入（原依赖底部 require，已删除）
+  isBatchApprovalSupported,
 } from '../utils/approvalLevelResolver';
 
 // ============================================================
@@ -21,7 +23,11 @@ import {
 
 export interface UseApprovalLevelReturn {
   /** 根据类型和金额解析审批级别 */
-  resolveLevel: (type: ApprovalType, amount: number, additionalData?: unknown) => ApprovalLevelResult;
+  resolveLevel: (
+    type: ApprovalType,
+    amount: number,
+    additionalData?: { leaveDays?: number; overtimeHours?: number; isHighValue?: boolean }
+  ) => ApprovalLevelResult;
   /** 根据类型和金额生成初始审批人配置 */
   generateApprovers: (
     type: ApprovalType,
@@ -52,7 +58,11 @@ export interface UseApprovalLevelReturn {
 export function useApprovalLevel(): UseApprovalLevelReturn {
   // 根据类型和金额解析审批级别
   const resolveLevel = useCallback(
-    (type: ApprovalType, amount: number, additionalData?: unknown): ApprovalLevelResult => {
+    (
+      type: ApprovalType,
+      amount: number,
+      additionalData?: { leaveDays?: number; overtimeHours?: number; isHighValue?: boolean }
+    ): ApprovalLevelResult => {
       return resolveApprovalLevel(type, amount, additionalData);
     },
     []
@@ -161,7 +171,8 @@ export function createApprovalWithLevel(options: CreateApprovalOptions): {
     currentStep: levelResult.autoApprove ? 1 : 1,
     totalSteps: levelResult.approverCount,
     approvers: approverConfigsToApprovers(levelResult.approvers),
-    status: levelResult.autoApprove ? 'approved' as const : 'pending' as const,
+    // 2026-10-11：status 为 ApprovalStatus 枚举，字符串字面量不可直接赋值
+    status: levelResult.autoApprove ? ApprovalStatus.APPROVED : ApprovalStatus.PENDING,
     businessLink,
     priority: 'normal',
     reminderCount: 0,

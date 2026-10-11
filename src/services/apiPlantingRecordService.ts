@@ -23,6 +23,11 @@ export interface PlantingRecord {
   notes: string;
   facilityName?: string;
   facilityCode?: string;
+  /**
+   * 2026-10-11：所属区域 oid（planting_records.zone_oid）。
+   * BaseOperationsCenterV2 的"区域→种植"树按该字段分组，后端响应实际带该列
+   */
+  zoneOid?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

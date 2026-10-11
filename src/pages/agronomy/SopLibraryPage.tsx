@@ -56,8 +56,8 @@ export default function SopLibraryPage() {
     setLoading(true);
     try {
       const data = await listSop({
-        crop_code: cropFilter,
-        task_type: taskTypeFilter,
+        cropCode: cropFilter,
+        taskType: taskTypeFilter,
       });
       setSops(data);
     } catch (err: unknown) {
@@ -76,8 +76,8 @@ export default function SopLibraryPage() {
       setLoading(true);
       try {
         const data = await listSop({
-          crop_code: cropFilter,
-          task_type: taskTypeFilter,
+          cropCode: cropFilter,
+          taskType: taskTypeFilter,
         });
         if (cancelled) return;
         setSops(data);

@@ -71,7 +71,14 @@ export const COMMON_FIELDS: FieldConfig[] = [
  * - 手动：盘点单号（选填，区分盘点 vs 期初）
  * - 自产：所属基地（必填）+ 种植模式 + 采收区域
  */
-export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
+/**
+ * 2026-10-11：本弹窗只产生 6 种来源的入库单；SourceType 联合里多出的 'inventory_transfer'
+ * （后端调拨入库记录标识，见 types/inventoryInbound.ts）没有专属字段矩阵，
+ * 因此矩阵按 Exclude 收窄，并在消费处用 isAddStockSourceType 守卫 —— 避免取到 undefined 后遍历崩溃。
+ */
+export type AddStockSourceType = Exclude<SourceType, 'inventory_transfer'>;
+
+export const FIELD_CONFIG: Record<AddStockSourceType, FieldConfig[]> = {
   external_purchased: [
     { key: 'supplierId', label: '供应商', required: true, type: 'supplier-select' },
     // 2026-07-08 T13 Bug 3：移除 supplierPhone（供应商实体的电话号码字段已在 supplier 表维护，弹窗不重复收集）
@@ -129,6 +136,13 @@ export const FIELD_CONFIG: Record<SourceType, FieldConfig[]> = {
 };
 
 /**
+ * 判断来源类型是否属于本弹窗的 6 套字段矩阵（排除后端专属的 inventory_transfer）。
+ */
+export function isAddStockSourceType(sourceType: SourceType): sourceType is AddStockSourceType {
+  return Object.prototype.hasOwnProperty.call(FIELD_CONFIG, sourceType);
+}
+
+/**
  * 判断表单值是否为空，用于必填字段校验。
  */
 function isBlank(value: unknown): boolean {
@@ -159,9 +173,12 @@ export function validateBySourceType(
   }
 
   // 来源专属必填项按声明式矩阵校验，避免切换来源后出现不相关字段阻断提交。
-  for (const field of FIELD_CONFIG[sourceType]) {
-    if (field.required && isBlank(formData[field.key])) {
-      errors[field.key] = '必填';
+  // 非矩阵来源（inventory_transfer）只有公共必填项约束。
+  if (isAddStockSourceType(sourceType)) {
+    for (const field of FIELD_CONFIG[sourceType]) {
+      if (field.required && isBlank(formData[field.key])) {
+        errors[field.key] = '必填';
+      }
     }
   }
 

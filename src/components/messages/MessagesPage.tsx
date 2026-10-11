@@ -66,7 +66,8 @@ export function MessagesPage() {
 
   const filteredMessages = messages.filter(m => filter === 'all' || m.type === filter);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  // 修复：pageSize 原为硬编码常量，但分页控件调用 setPageSize 改每页条数 → 运行时 ReferenceError
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(filteredMessages.length / pageSize);
   const paginatedMessages = filteredMessages.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 

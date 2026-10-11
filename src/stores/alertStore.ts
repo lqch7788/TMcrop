@@ -129,7 +129,8 @@ export const useAlertStore = create<AlertState>()(
 
       fetchAlertStats: async () => {
         try {
-          const data = await enhancedApiClient.get<{ data: AlertStats }>('/alerts/stats/summary');
+          // enhancedApiClient 已自动解包响应 data，这里拿到的就是 AlertStats
+          const data = await enhancedApiClient.get<AlertStats>('/alerts/stats/summary');
           if (data) {
             set({ stats: data });
           }
@@ -140,7 +141,8 @@ export const useAlertStore = create<AlertState>()(
 
       fetchAlertById: async (id) => {
         try {
-          const data = await enhancedApiClient.get<{ data: Alert }>(`/alerts/${id}`);
+          // enhancedApiClient 已自动解包响应 data，这里拿到的就是 Alert
+          const data = await enhancedApiClient.get<Alert>(`/alerts/${id}`);
           return data || null;
         } catch (error) {
           console.warn('[AlertStore] 获取告警详情失败:', error);

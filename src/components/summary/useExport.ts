@@ -262,6 +262,4 @@ export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
   };
 }
 
-// 导出类型供外部使用
-export type { AttachmentItem };
 

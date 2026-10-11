@@ -20,6 +20,7 @@ import type {
   OvertimeFormData,
   UseOvertimeReturn,
   OvertimeType,
+  OvertimeStatus,
 } from '../types';
 
 // ==================== 常量 ====================
@@ -77,9 +78,10 @@ function mapStoreToComponent(record: StoreOvertimeRecord): OvertimeRecord {
     staffName: record.workerName,
     date: record.workDate,
     hours: record.hours,
-    type: OVERTIME_TYPE_EN_TO_CN[record.overtimeType] || record.overtimeType,
+    // 英文枚举 → 中文标签（映射缺失时回退原值），与本模块 leave 侧约定一致
+    type: (OVERTIME_TYPE_EN_TO_CN[record.overtimeType] || record.overtimeType) as OvertimeType,
     reason: record.reason,
-    status: OVERTIME_STATUS_EN_TO_CN[record.status] || record.status,
+    status: (OVERTIME_STATUS_EN_TO_CN[record.status] || record.status) as OvertimeStatus,
     approver: undefined, // Store中approver字段通过approvedAt判断
     approveTime: record.approvedAt,
     remarks: record.remarks,

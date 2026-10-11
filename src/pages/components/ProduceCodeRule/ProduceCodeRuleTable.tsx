@@ -68,7 +68,8 @@ const renderEditCell = (
   onEditValueChange: (value: string) => void,
   onSaveEdit: () => void,
   onCancelEdit: () => void,
-  isEditing: boolean
+  isEditing: boolean,
+  onStartEdit: ProduceCodeRuleTableProps['onStartEdit']
 ) => {
   if (!isEditing) {
     return (
@@ -208,7 +209,7 @@ export function ProduceCodeRuleTable({
                   </td>
                   <td className="px-4 py-3">
                     {isEditing ? (
-                      renderEditCell('category', category.code, undefined, undefined, category.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing)
+                      renderEditCell('category', category.code, undefined, undefined, category.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing, onStartEdit)
                     ) : (
                       <div className="flex items-center">
                         <span className="font-semibold text-gray-800 text-sm">{category.name}</span>
@@ -246,7 +247,7 @@ export function ProduceCodeRuleTable({
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
                             {isEditing ? (
-                              renderEditCell('type', category.code, type.code, undefined, type.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing)
+                              renderEditCell('type', category.code, type.code, undefined, type.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing, onStartEdit)
                             ) : (
                               <span className="font-medium text-gray-700 text-sm">{type.name}</span>
                             )}
@@ -310,7 +311,7 @@ export function ProduceCodeRuleTable({
                               <td className="px-4 py-1">
                                 <div className="flex items-center gap-2">
                                   {isEditing ? (
-                                    renderEditCell('sub', category.code, type.code, sub.code, sub.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing)
+                                    renderEditCell('sub', category.code, type.code, sub.code, sub.name, editingCell, editValue, onEditValueChange, onSaveEdit, onCancelEdit, isEditing, onStartEdit)
                                   ) : (
                                     <span className="text-sm text-gray-600">{sub.name}</span>
                                   )}

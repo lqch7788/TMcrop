@@ -631,7 +631,7 @@ export default function DataMigrationPage() {
       const dataConflicts = await checkDataConflicts(item);
 
       // 如果有数据冲突或字段映射错误，状态为 blocked
-      const hasBlockingIssue = fieldMapping.status === 'error'; // 只对字段映射错误阻止
+      const hasBlockingIssue = fieldMapping?.status === 'error'; // 只对字段映射错误阻止
 
       results.push({
         ...item,
@@ -654,8 +654,7 @@ export default function DataMigrationPage() {
         .join('\n');
 
       showAlert(
-        `⚠️ 检测到字段映射错误，迁移已阻止：\n\n${errorDetails}\n\n请修复这些问题后再执行迁移！`,
-        '字段映射错误'
+        `⚠️ 检测到字段映射错误，迁移已阻止：\n\n${errorDetails}\n\n请修复这些问题后再执行迁移！`
       );
     } else {
       // 显示检测到的冲突信息，但允许继续迁移（系统会自动处理）
@@ -668,8 +667,7 @@ export default function DataMigrationPage() {
         showAlert(
           `📋 检测到以下数据冲突（系统将自动处理）：\n\n${conflictSummary}\n\n` +
           `解决方案：对于 id 冲突的记录，系统将自动生成新的唯一ID后迁移。\n` +
-          `这样可以保留 localStorage 中的所有数据，不会丢失！`,
-          '冲突检测结果'
+          `这样可以保留 localStorage 中的所有数据，不会丢失！`
         );
       }
     }
@@ -684,8 +682,7 @@ export default function DataMigrationPage() {
       '• 只添加后端没有的记录\n' +
       '• 不覆盖、不删除后端已有数据\n' +
       '• 对于 id 冲突的记录，将自动生成新ID\n' +
-      '• 建议先备份数据库',
-      '确认迁移'
+      '• 建议先备份数据库'
     );
 
     if (!confirmed) return;
@@ -707,8 +704,7 @@ export default function DataMigrationPage() {
           `⚠️ 迁移已停止！\n\n` +
           `发现阻塞性问题：${item.name}\n` +
           `字段映射错误，无法迁移\n\n` +
-          `请先修复这些问题后再执行迁移！`,
-          '迁移被阻止'
+          `请先修复这些问题后再执行迁移！`
         );
 
         // 将所有待处理的项标记为未执行（因为整个迁移被中止）
@@ -831,8 +827,7 @@ export default function DataMigrationPage() {
 
     // 显示完成提示
     showAlert(
-      `迁移完成！\n成功: ${successfulItems} 项\n失败: ${failedItems} 项\n共迁移: ${totalMigrated} 条记录`,
-      '迁移结果'
+      `迁移完成！\n成功: ${successfulItems} 项\n失败: ${failedItems} 项\n共迁移: ${totalMigrated} 条记录`
     );
   };
 

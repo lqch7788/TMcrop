@@ -14,7 +14,8 @@ export interface BatchSummaryRow {
   cropName: string;            // 作物名称
   variety: string;            // 品种
   greenhouse: string;          // 温室
-  plantingArea: number;        // 种植面积(亩)
+  // 2026-10-11：来源可能是种植面积(亩，mock/生产计划)或区域名称(后端 summary 的 pp.area_name)，故放宽为两者之一
+  plantingArea: number | string;
   targetYield: number;         // 目标产量(kg)
   actualYield: number;         // 实际产量(kg)
   completionRate: string;      // 完成率

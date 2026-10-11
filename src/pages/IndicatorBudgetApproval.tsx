@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, BarChart3, Check, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Coins, Download, Eye, Search, Square, Target, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
@@ -26,17 +27,27 @@ export default function IndicatorBudgetApproval() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  // 2026-10-11：原为硬编码常量 → 分页控件 onPageSizeChange 调 setPageSize 会 ReferenceError
+  const [pageSize, setPageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailApproval, setDetailApproval] = useState<Approval | null>(null);
   const { data: businessData, isLoading: businessLoading } = useApprovalBusinessDetail(detailApproval);
 
-  const tabs = [
+  // 2026-10-11：显式声明 Tab 元素类型 —— 原 `as const` 会把 types 收窄为 readonly [单个枚举]，
+  // 使 currentTab.types.includes(a.type) 的参数类型收窄为 never；
+  // 本页 Tab 未配置跳转路径，path 声明为可选（渲染处 `?.path || '/'` 兜底）
+  const tabs: Array<{
+    key: 'indicator' | 'indicator_adjust' | 'budget_create' | 'budget_adjust';
+    label: string;
+    icon: LucideIcon;
+    path?: string;
+    types: ApprovalType[];
+  }> = [
     { key: 'indicator', label: '指标发布', icon: Target, types: [ApprovalType.INDICATOR_APPROVAL] },
     { key: 'indicator_adjust', label: '指标调整', icon: BarChart3, types: [ApprovalType.INDICATOR_ADJUST] },
     { key: 'budget_create', label: '预算编制', icon: Coins, types: [ApprovalType.BUDGET_CREATE] },
     { key: 'budget_adjust', label: '预算调整', icon: BarChart3, types: [ApprovalType.BUDGET_ADJUST] },
-  ] as const;
+  ];
 
   const getCurrentData = useMemo(() => {
     const currentTab = tabs.find(t => t.key === activeTab);
@@ -394,7 +405,7 @@ export default function IndicatorBudgetApproval() {
             <div className="space-y-4">
               <ApprovalDetail approval={detailApproval} />
               {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
-              {businessData && (
+              {!!businessData && (
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
                   <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>

@@ -179,7 +179,7 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
         if (!Array.isArray(item.pesticideTypes) && rawType) {
           item.pesticideTypes = parsePesticideTypes(rawType);
         }
-        return item as PesticideSpec;
+        return item as unknown as PesticideSpec;
       } catch {
         return null;
       }
@@ -226,7 +226,8 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
       }
     },
 
-    stockIn: async (id, quantity, remark) => {
+    // 2026-10-11：参数可选项与接口声明对齐，返回值收敛为 number | null（调用方以 != null 判断）
+    stockIn: async (id: string, quantity: number, remark?: string): Promise<number | null> => {
       try {
         const response = await enhancedApiClient.post<{ newStock?: number }>(
           `/pesticide-library/${id}/stock-in`,
@@ -241,7 +242,7 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
             ),
           }));
         }
-        return newStock;
+        return newStock ?? null;
       } catch (err) {
         set({ error: (err as Error).message });
         return null;

@@ -4,13 +4,16 @@
  */
 import { enhancedApiClient } from '../lib/apiClient';
 
+/** 流转记录/统计行（后端原始行，字段动态，由调用方按需读取） */
+type FlowRow = Record<string, unknown>;
+
 export async function getFlowLogs(params: {
   page?: number; pageSize?: number; flowType?: string;
   cropName?: string; sourceCode?: string; targetCode?: string;
   // 2026-08-21：批次号合并筛选（替代原批次追溯 tab 的 /trace 端点功能）
   batchCode?: string;
   startDate?: string; endDate?: string;
-}) {
+}): Promise<{ list: FlowRow[]; total: number; page?: number; pageSize?: number }> {
   // enhancedApiClient.get 不支持 params 参数，必须用 URLSearchParams 拼到 URL
   const qs = new URLSearchParams();
   if (params.page) qs.set('page', String(params.page));
@@ -26,26 +29,26 @@ export async function getFlowLogs(params: {
   return enhancedApiClient.get(`/material-flow-log${query ? `?${query}` : ''}`);
 }
 
-export async function traceFlow(code: string) {
+export async function traceFlow(code: string): Promise<FlowRow[]> {
   return enhancedApiClient.get(`/material-flow-log/trace?code=${encodeURIComponent(code)}`);
 }
 
-export async function getCropStats(year?: number) {
+export async function getCropStats(year?: number): Promise<FlowRow[]> {
   const qs = year ? `?year=${year}` : '';
   return enhancedApiClient.get(`/material-flow-log/stats/by-crop${qs}`);
 }
 
-export async function getSourceStats(year?: number) {
+export async function getSourceStats(year?: number): Promise<FlowRow[]> {
   const qs = year ? `?year=${year}` : '';
   return enhancedApiClient.get(`/material-flow-log/stats/by-source${qs}`);
 }
 
-export async function getAnnualStats(year?: number) {
+export async function getAnnualStats(year?: number): Promise<FlowRow[]> {
   const qs = year ? `?year=${year}` : '';
   return enhancedApiClient.get(`/material-flow-log/stats/annual${qs}`);
 }
 
-export async function getInventoryTrace(instanceId: string) {
+export async function getInventoryTrace(instanceId: string): Promise<FlowRow[]> {
   return enhancedApiClient.get(`/material-flow-log/stats/inventory-trace?instanceId=${encodeURIComponent(instanceId)}`);
 }
 

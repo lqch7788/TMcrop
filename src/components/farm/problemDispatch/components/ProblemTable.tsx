@@ -9,21 +9,22 @@ import { Button } from '@/components/ui';
 import { SourceCell } from './SourceCell';
 import { Input } from '@/components/ui';
 import { problemStatusToCN } from '@/utils/problemStatus';
+import type { ProblemEntry as BaseProblemEntry } from '../../../../hooks/usePersistentProblems';
 
 // 2026-09-21：状态映射表已上移到 src/utils/problemStatus.ts（唯一真相源）。
 //   原先本文件与 ProblemTab 各维护一份 STATUS_CN_MAP，内容已有细微出入。
 //   保留原函数名做薄封装，避免改动本文件内已有调用点。
 const getStatusCN = problemStatusToCN;
 
-interface ProblemEntry {
-  id: number;
-  problemCode: string;
-  sourceModule?: string;
-  sourceTaskId?: string;
-  issueText: string;
-  issueSeverity: '轻微' | '中等' | '严重';
-  status: string; // 后端返回英文状态值
-  handler?: string;
+/**
+ * 问题条目 —— 复用唯一真相源类型（hooks/usePersistentProblems）并补充分派模块字段
+ *
+ * 2026-10-11：原为本文件私自复制的一份同名字段子集，与 ProblemTab / SourceCell 使用的
+ *   ProblemEntry 类型不互通，导致父组件传入的回调签名不匹配（需靠 as any 绕过）。
+ *   handlerName / assigneeName 来自 store 字段映射（useProblemStore FIELD_MAP），
+ *   上游 usePersistentProblems 尚未声明，故在此扩展而非另起一套。
+ */
+interface ProblemEntry extends BaseProblemEntry {
   handlerName?: string;
   assigneeName?: string; // 分派处理人别名
 }
@@ -31,8 +32,10 @@ interface ProblemEntry {
 interface ProblemTableProps {
   problems: ProblemEntry[];
   // 选择状态
-  selectedRows: number[];
-  selectedProblems: number[];
+  // 2026-10-11：问题 ID 的真实类型是 number | string（useProblemStore.Problem.id），
+  //   选中集与回调按真实类型放宽，避免调用方（ProblemTab）为 includes(problem.id) 反复 as any
+  selectedRows: Array<number | string>;
+  selectedProblems: Array<number | string>;
   batchDeleteMode: boolean;
   batchDispatchMode: boolean;
   exportMode: boolean;
@@ -40,7 +43,7 @@ interface ProblemTableProps {
   pendingProblems: ProblemEntry[];
   // 回调
   onViewDetail: (problem: ProblemEntry) => void;
-  onToggleSelect: (id: number) => void;
+  onToggleSelect: (id: number | string) => void;
   onToggleSelectAll: () => void;
   onBatchSelectAll: () => void;
   // 操作按钮回调

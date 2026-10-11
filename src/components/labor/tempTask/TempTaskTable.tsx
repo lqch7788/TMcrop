@@ -7,6 +7,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
+// useTempTasks.TempTask 的 urgency 联合未包含 'critical'（筛选器/表单实际使用该值），
+// 用 string 常量比较，避免字面量无交集误报
+const CRITICAL_URGENCY: string = 'critical';
+
 // 本地 statusConfig 补充 TEMP_TASK_STATUS_CONFIG 中不存在但 UI 需要的状态
 const statusConfig: Record<TempTaskStatus, { label: string; color: string; bg: string }> = {
   ...TEMP_TASK_STATUS_CONFIG,
@@ -195,7 +199,7 @@ export function TempTaskTable({
               return (
               <TableRow
                 key={task.id}
-                className={`hover:bg-blue-100 transition-colors ${task.urgency === 'critical' ? 'bg-red-50' : ''} ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''} ${overdueStatus === 'overdue' ? 'bg-red-50' : ''} ${overdueStatus === 'warning' ? 'bg-orange-50' : ''}`}
+                className={`hover:bg-blue-100 transition-colors ${task.urgency === CRITICAL_URGENCY ? 'bg-red-50' : ''} ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''} ${overdueStatus === 'overdue' ? 'bg-red-50' : ''} ${overdueStatus === 'warning' ? 'bg-orange-50' : ''}`}
               >
                 {showCheckbox && (
                   <TableCell className="px-3 py-3 text-center" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
@@ -223,7 +227,7 @@ export function TempTaskTable({
                 </TableCell>
                 <TableCell className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                    {task.urgency === 'critical' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                    {task.urgency === CRITICAL_URGENCY && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
                     <span className="font-medium text-gray-900 text-sm">{task.title}</span>
                   </div>
                 </TableCell>

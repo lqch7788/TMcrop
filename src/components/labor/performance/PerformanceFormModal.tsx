@@ -12,7 +12,8 @@ import { PerformanceRecord } from './types';
 interface PerformanceFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: Omit<PerformanceRecord, 'id' | 'totalScore'>) => void;
+  // 2026-10-11 类型清理：表单不产出服务端时间字段（createTime），提交数据中排除
+  onConfirm: (data: Omit<PerformanceRecord, 'id' | 'totalScore' | 'createTime'>) => void;
   title?: string;
   editingRecord?: PerformanceRecord | null;
 }

@@ -80,7 +80,8 @@ export interface TableColumn<T> {
   key: keyof T | string;
   label: string;
   width?: string;
-  render?: (value: unknown, record: T) => React.ReactNode;
+  // value 为 record 的字段值，与 ProTable 的列签名保持一致（宽松类型）
+  render?: (value: any, record: T) => React.ReactNode;
 }
 
 // ==================== 状态标签 ====================

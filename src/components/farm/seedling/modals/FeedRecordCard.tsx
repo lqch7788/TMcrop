@@ -19,6 +19,7 @@ import {
   FEED_UNIT_MAP,
 } from '@/constants/cropConstants'
 import { useFertilizerLibraryStore, usePesticideLibraryStore, useDictionaryStore } from '@/stores'
+import type { Dictionary } from '@/services/apiBasicDataService'
 // 2026-07-15: 施肥类型使用库表对齐的常量（之前用基肥/追肥不匹配后端 fertilizer_type）
 import { FERTILIZER_TYPE_OPTIONS } from '../../../settings/fertilizer-library/constants'
 // 2026-07-21：稀释用水量自动计算
@@ -105,7 +106,9 @@ export function FeedRecordCard({
   // 2026-07-15：按 mode 决定用哪本字典
   //   fertilizer → fertilization_method；pesticide → application_method
   const methodDictKey = mode === 'pesticide' ? METHOD_DICT_KEY_PEST : METHOD_DICT_KEY_FERT
-  const methodItems = useMemo(() =>
+  // 字典项 code 兼容两个键名：dictCode（camelCase 中间件转换后）+ dict_code（历史来源），
+  // 与全站 `d.dictCode || d.dict_code` 的兜底写法保持一致
+  const methodItems = useMemo<Array<Dictionary & { dict_code?: string }>>(() =>
     dictStore.dictionaries.filter((d: any) => (d.categoryCode || d.category) === methodDictKey),
   [dictStore.dictionaries, methodDictKey])
 
@@ -212,7 +215,7 @@ export function FeedRecordCard({
             <span className="truncate block px-2 py-1 rounded bg-blue-500 text-xs text-white" title={[
               value.name, value.fertilizerCode, categoryMap[value.category] || '',
               [value.brandName, value.specContent].filter(Boolean).join(' '),
-              value.unitPrice > 0 ? `¥${Number(value.unitPrice).toFixed(2)}` : '',
+              (value.unitPrice ?? 0) > 0 ? `¥${Number(value.unitPrice).toFixed(2)}` : '',
               `库存${Number(value.stockQuantity || 0).toFixed(1)}${value.stockUnit || 'kg'}`
             ].filter(Boolean).join(' | ')}>
               <span className="font-medium text-white">{value.name}</span>
@@ -221,7 +224,7 @@ export function FeedRecordCard({
               {[value.brandName, value.specContent].filter(Boolean).length > 0 && (
                 <span className="text-blue-100"> | {[value.brandName, value.specContent].filter(Boolean).join(' ')}</span>
               )}
-              {value.unitPrice > 0 && <span className="text-amber-200"> | ¥{Number(value.unitPrice).toFixed(2)}</span>}
+              {(value.unitPrice ?? 0) > 0 && <span className="text-amber-200"> | ¥{Number(value.unitPrice).toFixed(2)}</span>}
               {value.stockQuantity !== undefined && <span className="text-emerald-200"> | 库存{Number(value.stockQuantity || 0).toFixed(1)}{value.stockUnit || 'kg'}</span>}
             </span>
           ) : (

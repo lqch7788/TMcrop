@@ -188,7 +188,6 @@ export function BatchEditModal({
               <NumberInput
                 value={editedData.temperature ?? currentRecord.temperature ?? ''}
                 onChange={(val) => handleFieldChange('temperature', val)}
-                onBlur={(val) => handleFieldChange('temperature', val)}
                 placeholder="0.00"
               />
             </FormField>
@@ -198,7 +197,6 @@ export function BatchEditModal({
               <NumberInput
                 value={editedData.humidity ?? currentRecord.humidity ?? ''}
                 onChange={(val) => handleFieldChange('humidity', val)}
-                onBlur={(val) => handleFieldChange('humidity', val)}
                 placeholder="0.00"
               />
             </FormField>

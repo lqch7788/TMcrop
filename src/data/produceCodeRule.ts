@@ -1425,6 +1425,12 @@ export interface ProduceCodeInfo {
   categoryName: string;
   typeName: string;
   subName: string;
+  /** 多级品种层级（1=品种本身，2=子品种，依次递增） */
+  level?: number;
+  /** 上级品种编码（子品种时才有值） */
+  parentVarietyCode?: string;
+  /** 上级品种名称（子品种时才有值） */
+  parentVarietyName?: string;
 }
 
 // 缓存作物名称到编码信息的映射
@@ -1432,7 +1438,7 @@ let cropNameToCodeCache: Map<string, ProduceCodeInfo> | null = null;
 
 // 递归构建名称缓存（支持多级子品种）
 const buildCropNameCacheRecursive = (
-  categoryCode: string,
+  categoryCode: ProduceCategoryCode,
   categoryName: string,
   typeCode: string,
   typeName: string,
@@ -1581,6 +1587,15 @@ export const getSubVarietyOptions = (
   return [];
 };
 
+/** 品种完整路径信息（分类 > 类型 > 品种 > 子品种 > 更细分类） */
+export interface VarietyPathInfo {
+  categoryName: string;
+  typeName: string;
+  varietyName: string;
+  subVarietyName?: string;
+  subSubVarietyName?: string;
+}
+
 /**
  * 获取品种的完整路径信息
  */
@@ -1590,13 +1605,7 @@ export const getVarietyPath = (
   varietyCode: string,
   subCode?: string,
   subSubCode?: string
-): {
-  categoryName: string;
-  typeName: string;
-  varietyName: string;
-  subVarietyName?: string;
-  subSubVarietyName?: string;
-} | null => {
+): VarietyPathInfo | null => {
   const types = getProduceTypesByCategory(categoryCode as ProduceCategoryCode);
   const type = types.find(t => t.code === typeCode);
   if (!type) return null;
@@ -1604,7 +1613,7 @@ export const getVarietyPath = (
   const variety = type.subCategories.find(v => v.code === varietyCode);
   if (!variety) return null;
 
-  const result = {
+  const result: VarietyPathInfo = {
     categoryName: produceCategories.find(c => c.code === categoryCode)?.name || '',
     typeName: type.name,
     varietyName: variety.name,

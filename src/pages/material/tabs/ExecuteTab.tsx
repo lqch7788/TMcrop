@@ -529,7 +529,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
               <Button variant="outline" onClick={() => setExecuteShowDeleteConfirm(false)}>
                 <X className="w-4 h-4" /> 取消
               </Button>
-              <Button variant="destructive" onClick={confirmExecuteDelete}>
+              {/* 2026-10-11：原 onClick={confirmExecuteDelete} 会把 MouseEvent 当作删除原因传给后端 */}
+              <Button variant="destructive" onClick={() => confirmExecuteDelete('')}>
                 <Trash2 className="w-4 h-4" /> 确认删除
               </Button>
             </div>

@@ -80,6 +80,7 @@ export function OnboardingPageTable({
     },
     {
       title: '操作',
+      dataIndex: 'action',
       key: 'action',
       width: 150,
       render: (_: any, record: OnboardingRecord) => (

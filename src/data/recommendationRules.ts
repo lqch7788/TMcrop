@@ -625,7 +625,8 @@ export const CROP_STAGE_TASK_MAP: CropStageTaskMap = {
  * 技能到农事操作的映射
  * 定义各操作类型需要的技能标签
  */
-export const SKILL_OPERATION_MAP: SkillOperationMap = {
+// 该映射只覆盖常用作业类型（消费方均以 `|| []` 兜底），故声明为 Partial
+export const SKILL_OPERATION_MAP: Partial<SkillOperationMap> = {
   irrigation: ['浇水灌溉', '灌溉系统操作', '水肥一体化'],
   fertilization: ['施肥作业', '水肥一体化', '基肥施用', '追肥操作'],
   pest_control: ['病虫害防治', '打药操作', '农药配制', '病害识别', '虫害识别', '生物防治'],

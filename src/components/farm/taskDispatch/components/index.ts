@@ -9,7 +9,7 @@ export { FilterToolbar } from './FilterToolbar';
 export { TaskTable } from './TaskTable';
 export { TaskTableHeader } from './TaskTableHeader';
 export { TaskTableRow } from './TaskTableRow';
-export { Pagination } from './Pagination';
+export { Pagination } from '@/components/ui';
 export { TaskProgressTimeline } from './TaskProgressTimeline';
 export { OvertimeBadge } from './OvertimeBadge';
 export { TaskTypeConfigPanel } from './TaskTypeConfigPanel';

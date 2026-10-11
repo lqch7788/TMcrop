@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Check, CheckCircle, CheckSquare, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Download, Eye, FileText, Search, Sprout, Square, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { useApprovalStore } from '../stores/useApprovalStore';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
@@ -48,7 +49,8 @@ export default function FarmApproval() {
   // 2026-10-10：导出两段式勾选模式（与生产审批/作物库存一致：先勾选再导出，绝不默认全量）
   const [exportMode, setExportMode] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+  // 导出格式：ExportFormatModal 的回调签名为 (format: string)，故此处用 string（取值仍为 excel/csv/word）
+  const [exportFormat, setExportFormat] = useState<string>('excel');
   // 2026-10-10：单条通过/拒绝确认弹窗（原直接提交：无确认、无意见输入、失败静默）
   const [approvalModal, setApprovalModal] = useState<{ show: boolean; approval: Approval | null; action: 'approve' | 'reject' | null }>({ show: false, approval: null, action: null });
   const [approvalComment, setApprovalComment] = useState('');
@@ -58,12 +60,20 @@ export default function FarmApproval() {
 
   // 2026-10-10：任务派发已退出审批（改为直接派发）；DISPATCH_READY 现用于区分"历史记录"说明与"未接入"提示
   const DISPATCH_READY = 'task_dispatch';
-  const tabs = [
+  // 2026-10-11：显式声明 Tab 元素类型 —— 原 `as const` 会把 types 收窄为 readonly [单个枚举]，
+  // 使 currentTab.types.includes(a.type) 的参数类型收窄为 never（TS2345）
+  const tabs: Array<{
+    key: 'task_dispatch' | 'task_change' | 'inspection' | 'resolve';
+    label: string;
+    icon: LucideIcon;
+    path: string;
+    types: ApprovalType[];
+  }> = [
     { key: 'task_dispatch', label: '任务派发', icon: FileText, path: '/farm-hub', types: [ApprovalType.TASK_DISPATCH] },
     { key: 'task_change', label: '任务变更', icon: AlertTriangle, path: '/farm-hub', types: [ApprovalType.TASK_CHANGE] },
     { key: 'inspection', label: '巡查问题', icon: CheckSquare, path: '/farm-hub', types: [ApprovalType.INSPECTION_ISSUE] },
     { key: 'resolve', label: '问题整改', icon: CheckCircle, path: '/farm-hub', types: [ApprovalType.ISSUE_RESOLVE] },
-  ] as const;
+  ];
 
   const getCurrentData = useMemo(() => {
     const currentTab = tabs.find(t => t.key === activeTab);
@@ -569,7 +579,7 @@ export default function FarmApproval() {
             <div className="space-y-4">
               <ApprovalDetail approval={detailApproval} />
               {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
-              {businessData && (
+              {!!businessData && (
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
                   <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>

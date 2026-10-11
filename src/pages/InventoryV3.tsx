@@ -240,7 +240,8 @@ export default function InventoryV3Page() {
   //   - 新版：handleConfirmExport 只 setShowExportModal(true)，等用户在弹窗选格式
   //     + handleExportFormatConfirm 真正执行导出（按选中格式）
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'excel' | 'csv' | 'word'>('excel');
+  // 导出格式：ExportFormatModal 的回调签名为 (format: string)，故此处用 string（取值仍为 excel/csv/word）
+  const [exportFormat, setExportFormat] = useState<string>('excel');
 
   const handleConfirmExport = () => {
     // 第 2 步：进入格式选择弹窗
@@ -269,7 +270,7 @@ export default function InventoryV3Page() {
       // 2026-10-09：status 强转 string 比较——补录占位记录的 active/pending/cancelled 不在 InventoryStatus 枚举内
       const st = String(s.status);
       const statusLabel = st === 'in_stock' || st === 'active' ? '库存中' : st === 'pending' ? '审核中' : st === 'cancelled' ? '已取消' : st === 'low_stock' ? '低库存' : st === 'frozen' ? '已冻结' : st === 'outbound' ? '已出库' : '已用完';
-      const sourceLabel = s.sourceType === 'self_produced' ? '自产' : s.sourceType === 'external_purchase' ? '外购' : s.sourceType === 'transfer' ? '调拨' : s.sourceType || '-';
+      const sourceLabel = s.sourceType === 'self_produced' ? '自产' : s.sourceType === 'external_purchased' ? '外购' : s.sourceType === 'transfer' ? '调拨' : s.sourceType || '-';
       const formLabel = s.sourceForm || s.productForm || '-';
       return {
         '实例ID': s.instanceId,
@@ -348,8 +349,7 @@ export default function InventoryV3Page() {
 
   // 打开冻结弹窗
   const handleOpenFreeze = (stock: InventoryStock) => {
-    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
-      && stock.status !== 'in_stock' && stock.status !== 'low_stock') {
+    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
       showAlert('只有库存中或低库存状态的物品可以冻结');
       return;
     }
@@ -359,8 +359,7 @@ export default function InventoryV3Page() {
 
   // 打开出库弹窗
   const handleOpenOutbound = (stock: InventoryStock) => {
-    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
-      && stock.status !== 'in_stock' && stock.status !== 'low_stock') {
+    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
       showAlert('只有库存中或低库存状态的物品可以出库');
       return;
     }

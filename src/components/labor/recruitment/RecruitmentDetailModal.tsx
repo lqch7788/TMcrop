@@ -179,7 +179,7 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
         <Button
           onClick={onClose}
           variant="ghost"
-          size="smIcon"
+          size="icon"
         >
           <XCircle className="w-5 h-5 text-gray-400" />
         </Button>

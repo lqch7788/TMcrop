@@ -10,6 +10,8 @@ import type { LeaveRecord as StoreLeaveRecord, LeaveType as StoreLeaveType, Leav
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import type { LeaveType, LeaveStatus, LeaveFilters } from '../../../components/labor/leave/types';
+// 2026-10-11 类型清理：人员列表参数对齐 Store 侧权威类型（该参数当前未被 Hook 使用）
+import type { User } from '@/types/authority';
 
 // ==================== 类型定义 ====================
 
@@ -178,7 +180,7 @@ function calculateDays(start: string, end: string): number {
 // ==================== Hook 实现 ====================
 
 export function useLeave(
-  _workers: { workerId: string; name: string; department: string }[]
+  _workers: User[]
 ): UseLeaveReturn {
   // ========== 从 Store 获取数据和方法 ==========
   const storeRecords = useLeaveStore((s) => s.leaveRecords);

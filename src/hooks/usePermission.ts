@@ -268,7 +268,9 @@ export function useAuthPermission() {
    */
   const can = useCallback((
     processOid: string,
-    actionCode: 'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
+    // 2026-10-11：放宽为 string —— 原窄联合与 InboundTable 期望的 `(module: string, action: string) => boolean`
+    // 逆变不兼容；ACTION_CODE_TO_OID 本就是 Record<string, string>，未知 action 已有兜底分支（见下方 !actionOid）
+    actionCode: string
   ): boolean => {
     // 管理员拥有所有权限
     if (isAdmin) {

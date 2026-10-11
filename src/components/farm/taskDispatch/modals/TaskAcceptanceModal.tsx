@@ -99,7 +99,7 @@ export function TaskAcceptanceModal({
             ) : (
               sortedRecords.map((record, index) => {
                 const actionConfig = TASK_ACTION_CONFIG[record.action];
-                const statusConfig = TASK_STATUS_CONFIG[record.toStatus];
+                const statusConfig = TASK_STATUS_CONFIG[record.toStatus as keyof typeof TASK_STATUS_CONFIG];
                 const isLatest = index === 0;
 
                 return (

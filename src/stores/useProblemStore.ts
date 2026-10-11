@@ -166,7 +166,8 @@ function normalize(db: Record<string, unknown>): ProblemData {
   if (typeof r.images === 'string' && r.images) {
     try { r.images = JSON.parse(r.images as string); } catch { r.images = []; }
   }
-  return r as ProblemData;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return r as unknown as ProblemData;
 }
 
 // ========== Store ==========

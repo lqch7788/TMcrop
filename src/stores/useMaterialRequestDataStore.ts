@@ -156,7 +156,8 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
     try { result.materials = JSON.parse(result.materials); } catch { result.materials = []; }
   }
   if (!Array.isArray(result.materials)) result.materials = [];
-  return result as MaterialReceivingRecord;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return result as unknown as MaterialReceivingRecord;
 }
 
 /** 前端数据 → 后端数据（DB snake_case 列名） */
@@ -263,8 +264,9 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         // 2026-08-10 修复：normalize FIELD_MAP 改用 camelCase key（适配 camelCaseResponse 中间件），
         //   所以传给 normalize 的对象必须用 camelCase 字段名（之前用 snake_case 导致主字段全空）
         const newItem = normalize({
-          id: result?.data?.id || result?.id || `MR${Date.now()}`,
-          requestCode: result?.data?.requestCode || body.request_code,
+          // 2026-10-11：enhancedApiClient 已解包响应 data，不能再取 result.data.*
+          id: result?.id || `MR${Date.now()}`,
+          requestCode: result?.requestCode || body.request_code,
           requestTitle: body.request_title,
           applyDate: body.apply_date,
           applicantName: body.applicant_name,

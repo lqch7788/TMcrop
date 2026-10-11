@@ -35,6 +35,9 @@ export interface OutboundRow {
   plantingMode?: string;
   grade?: string;
   greenhouseName?: string;
+  // 2026-09-27 后端补充：material 类型并入后由 LEFT JOIN materials 提供（仅领料流水有值）
+  // 2026-10-11 前端类型补齐（pdfExporter 已按该字段兜底显示）
+  materialName?: string;
 }
 
 export interface OutboundSummary {

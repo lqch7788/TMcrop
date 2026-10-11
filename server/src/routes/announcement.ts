@@ -198,22 +198,35 @@ router.put('/templates/:id', (req: Request, res: Response) => {
       title_template: 'title_template',
       content: 'content',
       default_priority: 'default_priority',
+      priority: 'default_priority', // 2026-10-11：兼容前端旧字段名 priority（表列名为 default_priority）
       usage_count: 'usage_count',
       status: 'status'
     };
 
     const updateFields: string[] = [];
     const values: (string | number | null)[] = [];
+    const ignoredFields: string[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'id') continue;
-      const dbField = fieldMap[key] || key;
+      // 2026-10-11：改为白名单匹配——未映射的字段直接拼进 SQL 会触发
+      // "no such column" 500（编辑模板保存失败的根因），且字段名来自请求体存在 SQL 注入面
+      const dbField = fieldMap[key];
+      if (!dbField) {
+        ignoredFields.push(key);
+        continue;
+      }
       updateFields.push(`${dbField} = ?`);
       values.push(value as string | number | null);
     }
 
     if (updateFields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return res.status(400).json({
+        success: false,
+        error: ignoredFields.length > 0
+          ? `没有可更新的字段（已忽略非法字段: ${ignoredFields.join(', ')}）`
+          : '没有需要更新的字段'
+      });
     }
 
     updateFields.push('update_time = ?');
@@ -223,7 +236,12 @@ router.put('/templates/:id', (req: Request, res: Response) => {
     db.run(`UPDATE announcement_templates SET ${updateFields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
-    res.json({ success: true, message: '公告模板更新成功' });
+    // 回传被忽略的字段，避免"保存成功但某个字段没生效"被静默吞掉
+    res.json({
+      success: true,
+      message: '公告模板更新成功',
+      ...(ignoredFields.length > 0 ? { ignored: ignoredFields } : {})
+    });
   } catch (error) {
     console.error('更新公告模板失败:', error);
     res.status(500).json({ success: false, error: '更新公告模板失败' });
@@ -258,6 +276,43 @@ router.delete('/templates/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('删除公告模板失败:', error);
     res.status(500).json({ success: false, error: '删除公告模板失败' });
+  }
+});
+
+/**
+ * 使用模板：使用次数 +1
+ * POST /api/announcements/templates/:id/use
+ * 2026-10-11 新增：前端选用模板时调用，使"使用次数"真实反映模板使用情况
+ */
+router.post('/templates/:id/use', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const stmt = db.prepare('SELECT id, usage_count FROM announcement_templates WHERE id = ?');
+    stmt.bind([id]);
+    let template: Record<string, unknown> | null = null;
+    if (stmt.step()) {
+      template = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!template) {
+      return res.status(404).json({ success: false, error: '公告模板不存在' });
+    }
+
+    const nextCount = (Number(template.usage_count) || 0) + 1;
+    db.run('UPDATE announcement_templates SET usage_count = ?, update_time = ? WHERE id = ?', [
+      nextCount,
+      new Date().toISOString(),
+      id
+    ]);
+    saveDatabase();
+
+    res.json({ success: true, data: { id, usageCount: nextCount } });
+  } catch (error) {
+    console.error('更新模板使用次数失败:', error);
+    res.status(500).json({ success: false, error: '更新模板使用次数失败' });
   }
 });
 
@@ -495,17 +550,28 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const updateFields: string[] = [];
     const values: (string | number | null)[] = [];
+    const ignoredFields: string[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'id') continue;
 
-      const dbField = fieldMap[key] || key;
+      // 2026-10-11：白名单匹配，未映射字段跳过（防 "no such column" 500 + SQL 注入面）
+      const dbField = fieldMap[key];
+      if (!dbField) {
+        ignoredFields.push(key);
+        continue;
+      }
       updateFields.push(`${dbField} = ?`);
       values.push(value as string | number | null);
     }
 
     if (updateFields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return res.status(400).json({
+        success: false,
+        error: ignoredFields.length > 0
+          ? `没有可更新的字段（已忽略非法字段: ${ignoredFields.join(', ')}）`
+          : '没有需要更新的字段'
+      });
     }
 
     updateFields.push('update_time = ?');
@@ -515,10 +581,40 @@ router.put('/:id', (req: Request, res: Response) => {
     db.run(`UPDATE announcements SET ${updateFields.join(', ')} WHERE id = ?`, values);
     saveDatabase();
 
-    res.json({ success: true, message: '公告更新成功' });
+    res.json({
+      success: true,
+      message: '公告更新成功',
+      ...(ignoredFields.length > 0 ? { ignored: ignoredFields } : {})
+    });
   } catch (error) {
     console.error('更新公告失败:', error);
     res.status(500).json({ success: false, error: '更新公告失败' });
+  }
+});
+
+/**
+ * 批量删除公告
+ * DELETE /api/announcements/batch
+ * Body: { ids: string[] }
+ * 2026-10-11：本路由必须注册在 /:id 之前，否则 "batch" 会被 /:id 当作 id 匹配而永远不可达
+ */
+router.delete('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '请提供要删除的公告ID列表' });
+    }
+
+    const db = getDatabase();
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`DELETE FROM announcements WHERE id IN (${placeholders})`, ids);
+    saveDatabase();
+
+    res.json({ success: true, message: `成功删除 ${ids.length} 个公告` });
+  } catch (error) {
+    console.error('批量删除公告失败:', error);
+    res.status(500).json({ success: false, error: '批量删除公告失败' });
   }
 });
 
@@ -551,31 +647,6 @@ router.delete('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('删除公告失败:', error);
     res.status(500).json({ success: false, error: '删除公告失败' });
-  }
-});
-
-/**
- * 批量删除公告
- * DELETE /api/announcements/batch
- * Body: { ids: string[] }
- */
-router.delete('/batch', (req: Request, res: Response) => {
-  try {
-    const { ids } = req.body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: '请提供要删除的公告ID列表' });
-    }
-
-    const db = getDatabase();
-    const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM announcements WHERE id IN (${placeholders})`, ids);
-    saveDatabase();
-
-    res.json({ success: true, message: `成功删除 ${ids.length} 个公告` });
-  } catch (error) {
-    console.error('批量删除公告失败:', error);
-    res.status(500).json({ success: false, error: '批量删除公告失败' });
   }
 });
 

@@ -205,7 +205,8 @@ export function PerformancePage() {
   };
 
   // 新增/编辑记录
-  const handleAdd = (data: Omit<PerformanceRecord, 'id' | 'totalScore'>) => {
+  // 2026-10-11 类型清理：与 PerformanceFormModal 的提交签名保持一致（表单不产出 createTime）
+  const handleAdd = (data: Omit<PerformanceRecord, 'id' | 'totalScore' | 'createTime'>) => {
     // logger.info('新增考核记录:', data);
   };
 
@@ -214,7 +215,7 @@ export function PerformancePage() {
     setShowEditModal(true);
   };
 
-  const handleUpdate = (data: Omit<PerformanceRecord, 'id' | 'totalScore'>) => {
+  const handleUpdate = (data: Omit<PerformanceRecord, 'id' | 'totalScore' | 'createTime'>) => {
     // logger.info('更新考核记录:', data);
   };
 

@@ -9,6 +9,7 @@ import { RecruitmentFormModal } from './RecruitmentFormModal';
 import { RecruitmentBatchEditModal } from './RecruitmentBatchEditModal';
 import { RecruitmentRequest, RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
+import { useApprovalStore } from '@/stores';
 import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
 import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
 import { Button } from '@/components/ui';
@@ -126,7 +127,7 @@ export function RecruitmentPage() {
   } = useRecruitment();
 
   // 审批上下文
-  const { addApproval, approvals, approve, reject } = useApprovalContext();
+  const { approvals, approve, reject } = useApprovalContext();
 
   // 分级审批hook
   const { generateApprovers } = useApprovalLevel();
@@ -296,7 +297,9 @@ export function RecruitmentPage() {
 
       // 创建审批记录
       // C2 阶段 2: 删 code 字段（让后端 generateApprovalCode 派生 SP-RE 前缀，替代 Math.random 违规）
-      const approval: Approval = {
+      // 按 Partial<Approval> 组装：code 由后端 generateApprovalCode 派生（见下方注释），
+      // 与 useApproval.addApproval(approval: Partial<Approval>) 的契约一致
+      const approval: Partial<Approval> = {
         id: `APR-RE-${Date.now()}`,
         type: ApprovalType.RECRUITMENT,
         typeName: '招聘申请',
@@ -314,7 +317,6 @@ export function RecruitmentPage() {
         totalSteps: approvalLevelResult.totalSteps,
         approvers: approvalLevelResult.approvers,
         records: [],
-        remark: formData.remarks,
         reminderCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -322,6 +324,8 @@ export function RecruitmentPage() {
         businessLink: {
           type: 'recruitment',
           requestId: newRecruitment.id,
+          // BusinessLink 必填：业务单号
+          requestCode: newRecruitment.requestCode,
           recruitmentId: newRecruitment.id,
           department: formData.department,
           position: formData.position,
@@ -330,15 +334,20 @@ export function RecruitmentPage() {
           salaryMin: formData.salaryMin,
           salaryMax: formData.salaryMax,
           priority: formData.priority as 'low' | 'normal' | 'high' | 'urgent',
-          expectedDate: formData.expectedDate,
+          // 审批单 businessLink 的约定字段名为 expectedUseDate（期望到岗日期）
+          expectedUseDate: formData.expectedDate,
           reason: formData.reason,
-          requirements: formData.requirements,
-          source: formData.source,
+          // 备注挂在 businessLink 内（Approval 顶层无 remark/remarks 字段）
+          remarks: formData.remarks,
+          // 注：requirements（岗位要求）/ source（招聘渠道）不在 BusinessLink 定义内，
+          //     招聘记录本身已保存这两个字段，此处不再冗余写入
         },
       };
 
-      // 添加到审批上下文
-      addApproval(approval);
+      // 添加到审批：走 Store 入口（与其它业务模块一致）
+      // 说明：这里只带部分字段（code 由后端 generateApprovalCode 派生），
+      //       ApprovalContext.addApproval 的入参声明为完整 Approval，故直接调用 Store
+      useApprovalStore.getState().addApproval(approval);
 
       closeFormModal();
       showAlert('提交成功！');

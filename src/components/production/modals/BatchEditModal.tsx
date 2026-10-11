@@ -6,7 +6,8 @@
 import { AlertTriangle, Check, Upload } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal } from '@/components/ui';
-import { CropBatch, Greenhouse, PlanType } from '../../../types';
+import { CropBatch, PlanType } from '../../../types';
+import type { EditedBatch } from '../hooks/types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -24,13 +25,14 @@ interface BatchEditModalProps {
   isOpen: boolean;
   selectedRows: string[];  // 改为 string[] (id)
   batches: CropBatch[];
-  greenhouses: Greenhouse[];
+  /** 温室下拉数据（只需 id/name/status，兼容 store 与 types/index 两种 Greenhouse 定义） */
+  greenhouses: { id: string; name: string; status?: string }[];
   editedBatchCodes: string[];
-  // L-07: 用 Omit 明确排除 id / 父表关联字段，避免误改 PK
-  editedBatches: Record<string, Omit<Partial<CropBatch>, 'id' | 'createTime' | 'updateTime'>>;
+  // L-07: 编辑数据统一用 EditedBatch（与 useProductionPage 状态同源），排除 id 等主键字段
+  editedBatches: Record<string, EditedBatch>;
   selectedBatchCode: string;
   onSelectedBatchCodeChange: (code: string) => void;
-  onEditedBatchesChange: (batches: Record<string, Omit<Partial<CropBatch>, 'id' | 'createTime' | 'updateTime'>>) => void;
+  onEditedBatchesChange: (batches: Record<string, EditedBatch>) => void;
   onEditedBatchCodesChange: (codes: string[]) => void;
   onClose: () => void;
   onVoidWarning: () => void;
@@ -57,7 +59,9 @@ export function BatchEditModal({
   onConfirmNext,
 }: BatchEditModalProps) {
   // 作物变更状态（必须在条件返回之前）
-  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+  // 当前选中品种（仅用于展示路径/编码，兜底构造时不需要完整 CropVariety 的编码字段）
+  type SelectedCropView = Pick<CropVariety, 'cropCode' | 'categoryName' | 'typeName' | 'varietyName' | 'subVariety1Name'>;
+  const [selectedCrop, setSelectedCrop] = useState<SelectedCropView | null>(null);
   // 种植区域展开状态
   const [greenhouseExpanded, setGreenhouseExpanded] = useState(false);
   // 种植模式展开状态
@@ -100,16 +104,8 @@ export function BatchEditModal({
     if (keyword) {
       const results = searchVarieties(keyword);
       if (results.length > 0) {
-        const hit = results[0];
-        setSelectedCrop({
-          id: '',
-          cropCode: hit.value,
-          categoryName: '',
-          typeName: '',
-          varietyName: hit.label,
-          subVariety1Name: '',
-          fullPath: hit.fullPath,
-        });
+        // searchVarieties 返回 { variety, matchField, matchText }，直接取命中的品种对象
+        setSelectedCrop(results[0].variety);
         return;
       }
     }
@@ -117,15 +113,12 @@ export function BatchEditModal({
     // 兜底 3：**完全脱离 crop_varieties 表**直接用 currentBatch 自身字段拼路径
     // 确保即使 crop_varieties 表里没数据，老数据也没灌上 cropCode，也能显示
     if (cropName || variety) {
-      const fallbackPath = [cropName, variety].filter(Boolean).join(' > ');
       setSelectedCrop({
-        id: '',
         cropCode: currentBatch.cropCode || '',
         categoryName: '',
         typeName: '',
         varietyName: variety || cropName,
         subVariety1Name: '',
-        fullPath: fallbackPath,
       });
       return;
     }

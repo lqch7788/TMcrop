@@ -119,7 +119,8 @@ function generateSensorData(): SensorData[] {
           else if (roundedValue > 28 || roundedValue < 18) status = 'warning';
           break;
         default:
-          threshold = {};
+          // 2026-10-11：threshold 声明为 { min: number | undefined; max: number | undefined }，需显式给出两键
+          threshold = { min: undefined, max: undefined };
       }
 
       sensors.push({

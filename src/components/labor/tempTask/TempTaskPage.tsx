@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AlertTriangle, Check, CheckCircle, Clock, Download, Edit2, FileText, Plus, Send, Trash2, X, XCircle } from 'lucide-react';
 import { TEMP_TASK_TYPES, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 import { TEMP_TASK_STATUS_CONFIG, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
@@ -553,6 +553,12 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
 
 export function TempTaskPage() {
   const users = useUserStore((state) => state.users);
+
+  // users 来自 authority User（id/name 为可选字段），归一化为下拉组件所需的 { id, name }
+  const userOptions = useMemo(
+    () => users.map(u => ({ id: u.id ?? u.oid, name: u.name ?? u.real_name ?? '' })),
+    [users]
+  );
   const loadUsers = useUserStore((state) => state.loadUsers);
 
   useEffect(() => {
@@ -648,7 +654,7 @@ export function TempTaskPage() {
     generateNewTaskCode,
   } = useTempTaskForm({
     initialData: editingTask as any,
-    users: users.map(u => ({ id: u.id, name: u.name })),
+    users: userOptions,
     onSubmit: (taskData, status) => {
       if (editingTask) {
         // 更新逻辑（后续实现）
@@ -1518,7 +1524,7 @@ export function TempTaskPage() {
         task={editingTask as any}
         formData={formData}
         errors={errors}
-        workerUsers={users.map(u => ({ id: u.id, name: u.name }))}
+        workerUsers={userOptions}
         onClose={closeFormModal}
         onSubmitDraft={handleSubmitDraft}
         onSubmit={() => handleFormSubmit('pending')}
@@ -1533,7 +1539,7 @@ export function TempTaskPage() {
         isOpen={showBatchEditModal}
         selectedRows={selectedRows}
         tasks={tempTasks}
-        users={users.map(u => ({ id: u.id, name: u.name }))}
+        users={userOptions}
         onClose={() => setShowBatchEditModal(false)}
         onConfirm={handleBatchEditConfirm}
       />
@@ -1584,7 +1590,7 @@ export function TempTaskPage() {
       <ReassignTaskModal
         isOpen={showReassignModal}
         task={reassignTask}
-        users={users.map(u => ({ id: u.id, name: u.name, role: u.role }))}
+        users={userOptions}
         onConfirm={handleReassignConfirm}
         onClose={() => {
           setShowReassignModal(false);

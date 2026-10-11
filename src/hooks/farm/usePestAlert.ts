@@ -6,11 +6,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
 import { useInspectionDataStore, useProductionPlanStore, usePestControlStore } from '@/stores';
+// 2026-10-11：移除 InspectionRecord（types/farm/common 无此导出，且本文件用的是下方本地 InspectionRecordData）
 import {
   PestAlert,
   PestAlertRule,
   FarmOperationType,
-  InspectionRecord,
 } from '../../types/farm/common';
 import { PEST_ALERT_RULES } from '../../data/recommendationRules';
 
@@ -111,19 +111,20 @@ export function usePestAlert(daysBack: number = 7) {
     setIsLoading(true);
     try {
       // 从 InspectionDataStore 获取巡田记录
+      // 2026-10-11：InspectionData 各字段声明为可选，此处按 InspectionRecordData 的必填要求做空值兜底
       const inspectionData: InspectionRecordData[] = useInspectionDataStore.getState().records.map((record) => ({
         id: record.id,
-        recordCode: record.recordCode,
-        inspectorId: record.inspectorId,
-        inspectorName: record.inspectorName,
-        greenhouseId: record.greenhouseId,
-        greenhouseName: record.greenhouseName,
-        cropName: record.cropName,
+        recordCode: record.recordCode || '',
+        inspectorId: record.inspectorId || '',
+        inspectorName: record.inspectorName || '',
+        greenhouseId: record.greenhouseId || '',
+        greenhouseName: record.greenhouseName || '',
+        cropName: record.cropName || '',
         batchId: record.batchId,
         batchCode: record.batchCode,
-        checkDate: record.checkDate,
-        cropStatus: record.cropStatus,
-        issues: record.issues,
+        checkDate: record.checkDate || '',
+        cropStatus: record.cropStatus || '',
+        issues: record.issues || [],
         status: record.status as 'normal' | 'attention' | 'critical',
         weather: record.weather,
         temperature: record.temperature,

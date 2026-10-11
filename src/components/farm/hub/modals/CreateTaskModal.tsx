@@ -12,7 +12,7 @@ import { TextArea } from '@/components/ui';
 import { AlertCircle, Camera, Clock, MapPin, Mic, Package, Save, Send, Upload, Wand2, Search, X } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
-import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
+import type { TaskConfigValues } from '../hooks/useTaskTypeConfig';
 import { todayLocal } from '@/lib/dateUtils';
 import { useUserStore, useTeamManageStore, useGreenhouseStore, usePlantingStore, useSeedlingStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
@@ -211,15 +211,15 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
     }
 
     setStepError('');
-    setCreateStep(createStep + 1);
   };
 
-  const handleTypeConfigChange = (type: string, values: Record<string, string>) => {
+  // 面板回调签名：(字段key, 字段值)；字段值类型与 TaskConfigValues 取值一致（含多条目记录数组）
+  const handleTypeConfigChange = (key: string, value: TaskConfigValues[string]) => {
     setNewTask(prev => ({
       ...prev,
       typeConfig: {
         ...prev.typeConfig,
-        [type]: values,
+        [key]: value,
       },
     }));
   };
@@ -296,8 +296,6 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
       assignee: finalAssigneeName,
       crop: cropValue,
       sopContent: newTask.sopContent || '',
-      plantingId: selectedAreas.find(a => a.type === 'planting')?.id,
-      seedlingId: selectedAreas.find(a => a.type === 'seedling')?.id,
     });
 
     // 重置状态
@@ -373,8 +371,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         const data = await getDictionaries('responsible_person');
         // 转换为下拉框需要的格式
         const persons = data.map(item => ({
-          code: item.dictCode || item.code || '',
-          name: item.dictLabel || item.name || ''
+          code: item.code || '',
+          name: item.name || ''
         })).filter(item => item.code || item.name);
         setResponsiblePersons(persons);
       } catch (error) {
@@ -910,7 +908,12 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </p>
             )}
             {/* 2026-09-15：班组能力匹配 + 当日可用工时预览（实时校验派工合理性） */}
-            <TeamCapabilityPreview teamId={newTask.teamId} taskType={newTask.taskType} />
+            {/* 2026-10-11：taskType 取首个已选任务类型的中文名 —— team_task_capabilities.task_type
+                存的是中文技能标签（施肥/灌溉/…），必须与 getTypeLabel 的标签同域才能比对成功 */}
+            <TeamCapabilityPreview
+              teamId={newTask.teamId}
+              taskType={newTask.types[0] ? getTypeLabel(newTask.types[0]) : ''}
+            />
             {/* 执行人 | 备注（2列对齐） */}
             <div className="grid grid-cols-2 gap-4">
               <div>

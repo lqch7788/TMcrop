@@ -11,8 +11,14 @@
 /** 库存类型（与 types/inventory.ts 的 StockType enum 一致） */
 export type StockType = 'seed' | 'seedling' | 'product'
 
-/** 入库数据的来源业务模块 */
-export type SourceModule = 'seed_source' | 'seedling' | 'planting'
+/**
+ * 入库数据的来源业务模块
+ * 2026-10-11：补 'manual' —— 页面级入库（无行级来源记录）用该标识，
+ *   后端 inventory.ts fetchSourceRow 显式短路 `sourceModule === 'manual'`，且原值会写入 source_module 列
+ * 2026-10-11：补 'inventory' —— 调拨入库补录（server/src/db/backfillTransferInboundRecords.ts 直接 INSERT
+ *   `source_module = 'inventory'`；seedSourceReturn.service.ts 也按该值查询退料候选）
+ */
+export type SourceModule = 'seed_source' | 'seedling' | 'planting' | 'manual' | 'inventory'
 
 /** 入库来源类型（与 types/inventory.ts 的 SourceType enum 保持一致） */
 export type SourceType =
@@ -22,6 +28,9 @@ export type SourceType =
   | 'transfer'
   | 'manual'
   | 'self_produced'
+  // 2026-10-11：库存调拨入库（后端 backfillTransferInboundRecords 写入 source_type='inventory_transfer'；
+  //   前端种源/库存页也按该值做展示与判断，读取记录时会遇到）
+  | 'inventory_transfer'
 
 /** 入库记录实体（GET /inbound-records 返回结构） */
 export interface InventoryInboundRecord {
@@ -101,6 +110,12 @@ export interface InventoryInboundInput {
   baseId?: string
   /** 2026-07-08 新增：自产入库 — 基地名称 */
   baseName?: string
+  /**
+   * 2026-07-08 T13：作物形态（整株/果实/种子/叶片/花朵/其他）
+   * 后端 inventory.ts InboundSchema 有 cropForm: z.string().optional()，并写入 inventory_inbound_records.crop_form 列
+   * 2026-10-11：前端类型漏补
+   */
+  cropForm?: string
   productionPlanId?: string
   productionPlanCode?: string
   businessId?: string

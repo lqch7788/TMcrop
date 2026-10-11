@@ -195,7 +195,10 @@ export function TempWorkerPage() {
 
   const handleDeleteConfirm = () => {
     // 从列表移除
-    selectedRows.forEach(id => handleDelete(data.find(r => r.id === id)));
+    selectedRows.forEach(id => {
+      const record = data.find(r => r.id === id);
+      if (record) handleDelete(record);
+    });
     setSelectedRows([]);
     setShowDeleteWarning(false);
   };

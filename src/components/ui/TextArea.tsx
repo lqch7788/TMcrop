@@ -25,7 +25,8 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     onChange,
     ...props
   }, ref) => {
-    const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+    // 泛型含 null 才会得到可写的 MutableRefObject（否则 useRef 返回只读 RefObject）
+    const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
 
     const adjustHeight = React.useCallback(() => {
       const textarea = textareaRef.current

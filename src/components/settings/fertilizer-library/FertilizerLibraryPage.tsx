@@ -12,6 +12,7 @@ import { Input } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
 import { useFertilizerLibraryStore, useToastStore } from '@/stores';
+import type { FertilizerLibrary } from '@/stores';
 import { FertilizerType } from './constants';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
 import { AddFertilizerModal } from './modals/AddFertilizerModal';

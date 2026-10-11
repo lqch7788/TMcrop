@@ -160,6 +160,9 @@ export function getStatusTransitions(): Record<string, string[]> {
 /** 状态配置默认值 */
 export const TASK_STATUS_DEFAULTS = {
   draft: { label: '草稿', color: 'text-gray-600', bg: 'bg-gray-100' },
+  // 2026-10-11：补 pending_approval（派发审批中的历史状态，TaskStatus 类型保留此成员用于兼容历史数据/审批联动，
+  //   配置表原先缺此 key，导致按 status 索引配置时得到 undefined）
+  pending_approval: { label: '派发审批中', color: 'text-amber-600', bg: 'bg-amber-100' },
   pending: { label: '待接受', color: 'text-gray-600', bg: 'bg-gray-100' },
   accepted: { label: '已接受', color: 'text-blue-600', bg: 'bg-blue-100' },
   in_progress: { label: '处理中', color: 'text-blue-600', bg: 'bg-blue-100' },

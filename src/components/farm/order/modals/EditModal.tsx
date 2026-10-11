@@ -55,6 +55,9 @@ export function EditModal({
     // PLANNED 状态不存储，由 completedQuantity=0 隐式表达
     orderStatus: 'in_progress' as 'in_progress' | 'completed' | 'cancelled',
     // 客户相关字段
+    // 2026-10-11：补 customerName —— 提交时要写后端 customer_name，
+    //   原先 state 缺该字段（读取恒 undefined），切换客户后仍沿用旧客户名，订单客户名与 customerId 不一致
+    customerName: '',
     customerId: '',
     customerPhone: '',
     deliveryAddress: '',
@@ -90,14 +93,11 @@ export function EditModal({
         orderDate: record.orderDate || '',
         expectedCompletionDate: record.expectedCompletionDate || '',
         remarks: record.remarks || '',
-        // COMPLETED/CANCELLED 是终态，在下拉中可选
-        // PLANNED 状态在表单中用 'in_progress' 表示（都是可编辑状态的起点）
-        orderStatus: record.status === CropOrderStatus.COMPLETED
-          ? 'completed'
-          : record.status === CropOrderStatus.CANCELLED
-          ? 'cancelled'
-          : 'in_progress',
+        // COMPLETED/CANCELLED 是终态，已在上方守卫中拦截（不进入本分支）
+        // 剩余状态（PLANNED/IN_PROGRESS）在表单中统一用 'in_progress' 表示（可编辑起点）
+        orderStatus: 'in_progress',
         // 客户相关字段
+        customerName: record.customerName || '',
         customerId: record.customerId || '',
         customerPhone: record.customerPhone || '',
         deliveryAddress: record.deliveryAddress || '',
@@ -131,11 +131,19 @@ export function EditModal({
         setSelectedCrop({
           id: '',
           cropCode: hit.value,
+          // 2026-10-11：CropVariety 的三个必填代码位；兜底对象只用于展示路径，取「其他」类别占位
+          categoryCode: 'OT',
           categoryName: '',
+          typeCode: '',
           typeName: '',
+          varietyCode: '',
           varietyName: hit.label,
           subVariety1Name: '',
           fullPath: hit.fullPath,
+          // CropVariety 另三个必填位（兜底对象不落库，仅满足类型）
+          status: 'active',
+          createTime: '',
+          updateTime: '',
         });
         return;
       }
@@ -144,11 +152,19 @@ export function EditModal({
       setSelectedCrop({
         id: '',
         cropCode: cropCodeValue,
+        // 同上：仅用于展示路径，三个代码位用「其他」类别占位
+        categoryCode: 'OT',
         categoryName: '',
+        typeCode: '',
         typeName: '',
+        varietyCode: '',
         varietyName: cropName,
         subVariety1Name: '',
         fullPath: record.cropCategory || cropName,
+        // 同兜底 2：补 CropVariety 的 status/createTime/updateTime 必填位
+        status: 'active',
+        createTime: '',
+        updateTime: '',
       });
       return;
     }
@@ -445,6 +461,8 @@ export function EditModal({
             if (customer) {
               setFormData(prev => ({
                 ...prev,
+                // 2026-10-11：切换客户时同步姓名（与 AddModal 一致），否则订单客户名停留在旧客户
+                customerName: customer.customerName || '',
                 customerId: customer.id,
                 customerPhone: customer.contactPhone || '',
                 deliveryAddress: customer.deliveryAddress || '',

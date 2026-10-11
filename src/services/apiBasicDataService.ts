@@ -80,6 +80,8 @@ export interface Greenhouse {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** 2026-10-11：温室说明（BaseOperationsCenterV2 的温室档案卡片读取，后端 greenhouse 表有 description 列） */
+  description?: string;
 }
 
 /**
@@ -99,6 +101,17 @@ export interface Zone {
   status?: string;
   description?: string;
   createdAt?: string;
+  /**
+   * 2026-10-11：区域已聚合的种植信息（BaseOperationsCenterV2 注释写明"2026-07-25 改用 zones[].aggregatedPlantings API 字段"）
+   * 后端 /basic-data/zones 聚合返回，前端类型此前缺失
+   */
+  aggregatedPlantings?: {
+    count: number;
+    seedlingCount?: number;
+    currentCrop?: string;
+    /** 2026-10-11：占用面积（BaseOperationsCenterV2 在读取） */
+    occupiedArea?: number;
+  };
 }
 
 /**

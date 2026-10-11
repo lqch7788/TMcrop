@@ -166,7 +166,7 @@ function dataSourceLabel(s: string | undefined): string {
                                 : (() => { const w = calcWaterFromPoolRow(r as any); return w ? `${w.amount.toLocaleString()} ${w.unit}` : '-'; })()}
                             </td>
                             <td className="px-2 py-2 text-center text-gray-600 truncate" title={methodLabel}>{methodLabel}</td>
-                            <td className="px-2 py-2 text-center text-gray-600 truncate">{r.unitPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 truncate">{(r.unitPrice ?? 0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                             <td className="px-2 py-2 text-center font-bold text-amber-600 truncate">{subTotal.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                           </tr>
                         );

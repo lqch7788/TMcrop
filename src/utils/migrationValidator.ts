@@ -19,6 +19,8 @@ interface ValidationResult {
     localCount?: number;
     sqliteCount?: number;
     issues?: any[];
+    // 2026-10-11：业务规则校验返回的是 violations（与 issues 同语义），补齐字段
+    violations?: any[];
   };
 }
 

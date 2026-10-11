@@ -269,14 +269,14 @@ export function FertilizerTable({ data, isLoading, operationMode, selectedIds, o
                                     <td className="px-3 py-2 text-center font-mono text-xs text-gray-600">{r.code||'-'}</td>
                                     {/* 作物品种列：与「作物」列同源 r.cropName */}
                                     <td className="px-3 py-2 text-center text-gray-800 font-medium text-xs">{r.cropName||'-'}</td>
-                                    <td className="px-3 py-2 text-center font-bold text-emerald-600">{r.quantity.toLocaleString()} {r.unit}</td>
+                                    <td className="px-3 py-2 text-center font-bold text-emerald-600">{(r.quantity ?? 0).toLocaleString()} {r.unit}</td>
                                     <td className="px-3 py-2 text-center text-gray-600">{r.dilutionRatio||'-'}</td>
                                     <td className="px-3 py-2 text-center text-blue-600 font-medium">
                                       {(() => { const w = calcWaterFromPoolRow(r as any); return w ? `${w.amount.toLocaleString()} ${w.unit}` : '-'; })()}
                                     </td>
                                     <td className="px-3 py-2 text-center text-gray-600">{r.fertilizationMethod?getMethodLabel(r.fertilizationMethod):'-'}</td>
-                                    <td className="px-3 py-2 text-center text-gray-600">{r.unitPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
-                                    <td className="px-3 py-2 text-center font-bold text-amber-600">{(r.quantity*r.unitPrice).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                                    <td className="px-3 py-2 text-center text-gray-600">{(r.unitPrice ?? 0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                                    <td className="px-3 py-2 text-center font-bold text-amber-600">{((r.quantity ?? 0)*(r.unitPrice ?? 0)).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
                                   </tr>
                                 ));
                               })()}

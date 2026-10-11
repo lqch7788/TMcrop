@@ -87,7 +87,8 @@ function highlightText(text: string, query: string): React.ReactNode {
  * @param searchQuery 搜索关键词
  * @returns 树形节点数组
  */
-function buildTreeData(
+// 2026-10-11：导出——src/components/farm/base-ops/hooks/useBaseOpsTreeData.ts 在 import 它
+export function buildTreeData(
   bases: { oid: string; code: string; name: string }[],
   greenhouses: { oid: string; code: string; name: string; baseOid: string }[],
   zones: { oid: string; zoneCode: string; zoneName: string; greenhouseOid: string }[],
@@ -317,6 +318,8 @@ export default function BaseOperationsCenterV2() {
     type: 'greenhouse' | 'zone' | 'block' | null
     oid: string | null
     data: Record<string, any> | null
+    /** 编辑区域（zone）时携带的所属温室 OID——handleEdit 直接存入 Zone 记录对象 */
+    greenhouseOid?: string
   }
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 

@@ -8,6 +8,8 @@ import type { CropBatch } from '../../../types';
 
 // 编辑中的批次数据
 export interface EditedBatch {
+  /** 计划类型（批量编辑弹窗按此切换显示字段） */
+  planType?: PlanType;
   targetQuantity?: number;
   targetYield?: number;
   // 2026-06-14: 育苗目标语义字段（仅育苗计划用）
@@ -19,6 +21,8 @@ export interface EditedBatch {
   greenhouseName?: string;
   greenhouseId?: string;
   plantingArea?: number;
+  /** 面积单位（批量编辑弹窗可修改，默认 m²） */
+  plantingAreaUnit?: string;
   plantingMode?: string;
   startDate?: string;
   expectedHarvestDate?: string;
@@ -51,6 +55,8 @@ export interface ProductionFormData {
   publisher: string;
   description: string;
   planDetail: string;
+  /** 导入的计划详情文件名（CreateBatchModal 导入文件时写入） */
+  planDetailFileName?: string;
   // 关联订单字段
   orderId: string[];
   orderCode: string[];
@@ -85,8 +91,9 @@ export interface UseProductionPageReturn {
   showDeleteWarning: boolean;
   batches: CropBatch[];
   filteredBatches: CropBatch[];
-  greenhouses: ReturnType<typeof useGreenhouseStore>['greenhouses'];
-  orders: ReturnType<typeof useOrderDataStore>['orders'];
+  // 取 store 的 getState 返回类型：useBoundStore 的 ReturnType 会落到 selector 重载（返回 unknown）
+  greenhouses: ReturnType<typeof useGreenhouseStore.getState>['greenhouses'];
+  orders: ReturnType<typeof useOrderDataStore.getState>['orders'];
   batchesLength: number;
 
   // 搜索状态

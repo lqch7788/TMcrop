@@ -25,12 +25,13 @@ export function OvertimeHandleAdapter({
   const [localTask, setLocalTask] = useState<Task | null>(task);
 
   // 构造超时信息（实际应从 useTasks 获取，但这里基于任务状态推断）
+  // 2026-10-11：按 TaskTimeout 真实形状修正 —— startedAt 是字符串（弹窗用 new Date(x).toLocaleString 渲染）、
+  //   severity 仅取 warning/critical（原 medium/high 不在类型内）、deadline 为必填。
   const mockTimeout: TaskTimeout = {
-    id: `timeout-${localTask?.id || 'unknown'}`,
-    taskId: localTask?.id || '',
     type: localTask?.status === 'accepted' ? 'accept' : 'execution',
-    startedAt: new Date().getTime() - 3600000,
-    severity: localTask?.priority === 'urgent' ? 'critical' : localTask?.priority === 'high' ? 'high' : 'medium',
+    startedAt: new Date(Date.now() - 3600000).toISOString(),
+    deadline: localTask?.dueDate || '',
+    severity: localTask?.priority === 'urgent' ? 'critical' : 'warning',
   };
 
   const handleContinue = (reason: string, newDeadline: string) => {

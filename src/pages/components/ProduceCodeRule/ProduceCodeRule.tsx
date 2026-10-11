@@ -157,7 +157,7 @@ export default function ProduceCodeRule() {
         </div>
       )}
 
-      {/* 分类表格 */}
+      {/* 分类表格 — 2026-10-11：补透传 showAddCategory（此前子组件「添加分类」按钮改 state 后从未传回，点了没反应） */}
       <ProduceCodeRuleTable
         categories={categories}
         expandedCategory={expandedCategory}
@@ -166,6 +166,7 @@ export default function ProduceCodeRule() {
         isEditing={isEditing}
         editingCell={editingCell}
         editValue={editValue}
+        showAddCategory={showAddCategory}
         showAddType={showAddType}
         showAddSub={showAddSub}
         showAddSubVariety1={showAddSubVariety1}

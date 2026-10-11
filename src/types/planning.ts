@@ -100,7 +100,9 @@ export interface ToolRequirement {
   unit: string;
   estimatedUnitPrice: number;
   estimatedTotalPrice: number;
-  status: 'available' | 'need_repair' | 'need_purchase';
+  // 2026-10-11：改为可选 —— useMonthlyTaskPlanning 生成的工具需求不产出该字段（其本地 ToolRequirement 亦无），
+  //   且当前无任何消费方读取（保留字段以备后续补充）
+  status?: 'available' | 'need_repair' | 'need_purchase';
   notes?: string;
 }
 

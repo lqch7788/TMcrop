@@ -3,7 +3,7 @@
  * 显示来源模块名称和原始单据ID
  */
 
-import type { ProblemEntry } from '../../../hooks/usePersistentProblems';
+import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
 import { getSourceConfig } from '../constants/sourceConfig';
 
 interface SourceCellProps {

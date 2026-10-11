@@ -73,7 +73,6 @@ export function ResignationPageTable({
       dataIndex: 'reason',
       key: 'reason',
       width: 120,
-      ellipsis: true,
     },
     {
       title: '预计最后工作日',
@@ -105,6 +104,7 @@ export function ResignationPageTable({
     },
     {
       title: '操作',
+      dataIndex: 'action',
       key: 'action',
       width: 150,
       render: (_: any, record: ResignationRecord) => (

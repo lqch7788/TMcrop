@@ -47,6 +47,12 @@ export const ApprovalStatusLabels: Record<ApprovalStatus, ApprovalStatusLabel> =
     bgColor: 'bg-green-50',
     borderColor: 'border-green-300',
   },
+  [ApprovalStatus.PARTIALLY_APPROVED]: {
+    label: '部分通过',
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-50',
+    borderColor: 'border-yellow-300',
+  },
   [ApprovalStatus.REJECTED]: {
     label: '已拒绝',
     color: 'text-red-700',

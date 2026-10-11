@@ -186,7 +186,7 @@ export default function QuickTaskCompletePage() {
                   status={
                     taskInfo.progress === 100
                       ? 'success'
-                      : taskInfo.progress > 50
+                      : (taskInfo.progress ?? 0) > 50
                       ? 'active'
                       : 'normal'
                   }

@@ -58,7 +58,8 @@ interface BatchEditModalProps {
 }
 
 // 天气选项（从常量文件导入）
-const weatherOptions = WEATHER_OPTIONS;
+// Select.options 需要可变数组，WEATHER_OPTIONS 是 as const 只读元组，故展开复制一份
+const weatherOptions = [...WEATHER_OPTIONS];
 const inspectionTypeOptions = [
   { value: 'farm', label: '种植区域巡查' },
   { value: 'equipment', label: '设备保养巡查' },
@@ -195,7 +196,6 @@ export function BatchEditModal({
               <NumberInput
                 value={editedData.temperature ?? currentRecord.temperature ?? ''}
                 onChange={(val) => handleFieldChange('temperature', val)}
-                onBlur={(val) => handleFieldChange('temperature', val)}
                 placeholder="0.00"
               />
             </FormField>
@@ -205,7 +205,6 @@ export function BatchEditModal({
               <NumberInput
                 value={editedData.humidity ?? currentRecord.humidity ?? ''}
                 onChange={(val) => handleFieldChange('humidity', val)}
-                onBlur={(val) => handleFieldChange('humidity', val)}
                 placeholder="0.00"
               />
             </FormField>

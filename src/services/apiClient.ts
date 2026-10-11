@@ -104,7 +104,9 @@ class ApiClient {
       }
 
       // 如果是标准格式 {success, data, meta}，检查 success
-      if ('success' in result) {
+      // 2026-10-11：T 未约束，`in` 运算符要求右侧为对象类型 —— 补 typeof 守卫
+      //（对对象响应行为不变；对 null/原始值响应由"抛 TypeError"改为按原值返回）
+      if (result && typeof result === 'object' && 'success' in result) {
         if (!result.success) {
           throw new Error((result as ApiResponse<T>).error || 'API request failed');
         }

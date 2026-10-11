@@ -9,7 +9,8 @@
 
 export { useScheduleStore, getScheduleByDate, getScheduleByStaffAndDate, getWeekDateRange, getMonthDateRange } from './scheduleStore';
 export { useCustomerStore } from './useCustomerStore';
-export type { ScheduleRecord, ShiftConfig, ShiftType, ScheduleStatus, SwapRequest, Staff } from './scheduleStore';
+// 2026-10-11：补 ScheduleOccupation（useDispatchScheduleBridge 从 barrel 引入该类型）
+export type { ScheduleRecord, ShiftConfig, ShiftType, ScheduleStatus, SwapRequest, Staff, ScheduleOccupation } from './scheduleStore';
 
 export { useAttendanceStore, getAttendanceByDate, getAttendanceByWorker, getAttendanceByDateRange } from './attendanceStore';
 export type { AttendanceRecord, AttendanceFilters, AttendanceStatus, StatusClass } from './attendanceStore';
@@ -348,8 +349,9 @@ export { useMonitoringDeviceStore } from './useMonitoringDeviceStore';
 export type { MonitoringDevice, MonitoringDeviceStatus } from '@/services/apiMonitoringDevicesService';
 
 // 2026-08-29：预警信息中心 Store（对接 /api/iot-alerts）
+// 注：AlertStatus/AlertLevel 已在第 36 行由 alertStore 导出，此处 IoT 版本加 Iot 前缀避免重名
 export { useIotAlertStore } from './useIotAlertStore';
-export type { IotAlert, AlertStatus, AlertLevel } from '@/services/apiIotAlertsService';
+export type { IotAlert, AlertStatus as IotAlertStatus, AlertLevel as IotAlertLevel } from '@/services/apiIotAlertsService';
 
 // 2026-08-29：能耗监测 Store（对接 /api/iot-energy-readings）
 export { useIotEnergyStore } from './useIotEnergyStore';

@@ -93,6 +93,9 @@ export function TaskAcceptanceAdapter({
       const converted: TaskRecord = {
         id: apiRecord.id,
         taskId: apiRecord.taskId || apiRecord.task_id,
+        // 2026-10-11：TaskRecord 必填字段，后端流转记录同样返回（TaskDetailModal 亦按此读取）
+        taskCode: apiRecord.taskCode || apiRecord.task_code || '',
+        taskTitle: apiRecord.taskTitle || apiRecord.task_title || '',
         operatorId: apiRecord.operatorId || apiRecord.operator_id,
         operatorName: apiRecord.operatorName || apiRecord.operator_name,
         action: apiRecord.action,

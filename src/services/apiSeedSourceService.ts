@@ -154,7 +154,8 @@ interface BackendSeedSource {
   propagationStatus?: string;
   propagationMethod?: string;
   // 2026-06-29: 种植自留种回流时的采收形态
-  seedForm?: string;
+  // 2026-10-11：与前端 SeedSource.seedForm 字面量联合对齐（原 string 无法直接赋值给 SeedSource）
+  seedForm?: SeedSource['seedForm'];
   parentMaleId?: string;
   parentMaleCode?: string;
   parentFemaleId?: string;

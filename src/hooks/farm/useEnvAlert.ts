@@ -27,7 +27,8 @@ interface IoTSensorData {
   typeName: string;
   value: number;
   unit: string;
-  status: 'normal' | 'warning' | 'critical';
+  // 2026-10-11：与 iotStore.DeviceStatus 对齐（含 'offline'，此前缺失导致从 Store 赋值时报错）
+  status: 'normal' | 'warning' | 'critical' | 'offline';
   lastUpdate: string;
 }
 

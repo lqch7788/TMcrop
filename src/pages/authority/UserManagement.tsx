@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
 import { Edit2, Key, Plus, RefreshCw, RotateCcw, Save, Search, Shield, Trash2, UserCheck, UserX, Users, X } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
-import type { User } from '@/types/authority';
+import type { User, OrgStatus } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -43,7 +43,7 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
   const [userForm, setUserForm] = useState({
     username: '', realName: '', password: '', orgOid: '',
-    email: '', phone: '', status: 'active' as string,
+    email: '', phone: '', status: 'active' as OrgStatus,
   });
   const [userRoleOids, setUserRoleOids] = useState<string[]>([]);
 
@@ -411,10 +411,10 @@ export default function UserManagement() {
                     <label key={role.oid} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-blue-50 py-0.5 px-1 rounded">
                       <input
                         type="checkbox"
-                        checked={userRoleOids.includes(role.oid)}
+                        checked={userRoleOids.includes(role.oid ?? '')}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setUserRoleOids([...userRoleOids, role.oid]);
+                            setUserRoleOids([...userRoleOids, role.oid ?? '']);
                           } else {
                             setUserRoleOids(userRoleOids.filter((r) => r !== role.oid));
                           }

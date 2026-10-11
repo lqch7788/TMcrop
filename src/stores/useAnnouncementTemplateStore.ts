@@ -11,6 +11,7 @@
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 // ========== 类型定义 ==========
 
@@ -23,6 +24,8 @@ export interface AnnouncementTemplate {
   category: string;
   titleTemplate?: string;
   content?: string;
+  /** 默认优先级（选用模板创建公告时的初始优先级：高/中/低） */
+  defaultPriority?: string;
   usageCount: number;
   status: string;
   createTime?: string;
@@ -38,6 +41,7 @@ const FIELD_MAP: Record<string, string> = {
   category: 'category',
   title_template: 'titleTemplate',
   content: 'content',
+  default_priority: 'defaultPriority',
   usage_count: 'usageCount',
   status: 'status',
   create_time: 'createTime',
@@ -54,7 +58,8 @@ function normalizeItem(db: Record<string, unknown>): AnnouncementTemplate {
   }
   result.usageCount = result.usageCount ?? result.usage_count ?? 0;
   result.status = result.status || '启用';
-  return result as AnnouncementTemplate;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return result as unknown as AnnouncementTemplate;
 }
 
 /** 前端驼峰 → 后端蛇形 转换 */
@@ -94,6 +99,11 @@ interface AnnouncementTemplateState {
 
   /** 删除模板 */
   deleteTemplate: (id: string) => Promise<boolean>;
+
+  /** 记录一次模板使用（使用次数 +1）
+   *  2026-10-11：命名为 recordTemplateUsage 而非 useTemplate —— 后者带 use 前缀会被 ESLint
+   *  的 react-hooks/rules-of-hooks 当作 Hook，在普通函数里调用即报错 */
+  recordTemplateUsage: (id: string) => Promise<void>;
 }
 
 // ========== Store ==========
@@ -123,15 +133,15 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
       // ---------- 创建模板（乐观更新） ----------
       createTemplate: async (data) => {
         const localId = data.id || generateLocalId();
+        // 后端 POST 只认 snake_case：type 由后端从 category 推断，usage_count 固定从 0 开始
         const body = {
           id: localId,
           code: data.code || '',
           name: data.name || '',
-          type: data.type || '',
           category: data.category || '',
           title_template: data.titleTemplate || '',
-          content: data.contentTemplate || data.content || '',
-          usageCount: data.usageCount ?? 0,
+          content: data.content || '',
+          default_priority: data.defaultPriority || '中',
           status: data.status || '启用',
         };
 
@@ -141,11 +151,12 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           id: localId,
           code: data.code || '',
           name: data.name || '',
-          type: data.type || '',
+          type: data.category || '',
           category: data.category || '',
           titleTemplate: data.titleTemplate || '',
-          content: data.contentTemplate || data.content || '',
-          usageCount: data.usageCount ?? 0,
+          content: data.content || '',
+          defaultPriority: data.defaultPriority || '中',
+          usageCount: 0,
           status: data.status || '启用',
           createTime: now,
           updateTime: now,
@@ -187,13 +198,8 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           ),
         }));
         try {
-          // 字段名转换：前端驼峰 → 后端蛇形
-          const normalized: Record<string, unknown> = { ...updates };
-          if ('contentTemplate' in normalized) {
-            normalized.content = normalized.contentTemplate;
-            delete normalized.contentTemplate;
-          }
-          const body = denormalizeItem(normalized as Partial<AnnouncementTemplate>);
+          // 字段名转换：前端驼峰 → 后端蛇形（titleTemplate→title_template / defaultPriority→default_priority）
+          const body = denormalizeItem(updates);
           await enhancedApiClient.put(`/announcements/templates/${id}`, body);
         } catch (error) {
           // API失败：回滚乐观更新
@@ -218,6 +224,22 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
         } catch (error) {
           // logger.warn('[AnnouncementTemplateStore] 删除模板API失败:', error);
           return false;
+        }
+      },
+
+      // ---------- 记录一次模板使用 ----------
+      recordTemplateUsage: async (id) => {
+        // 乐观 +1，让卡片立即反映
+        set((state) => ({
+          templates: state.templates.map((t) =>
+            t.id === id ? { ...t, usageCount: (t.usageCount || 0) + 1 } : t
+          ),
+        }));
+        try {
+          await enhancedApiClient.post(`/announcements/templates/${id}/use`);
+        } catch (error) {
+          // 计数失败不回滚、不阻塞"使用模板"主流程，但必须留下日志（不静默吞错）
+          logger.warn('[AnnouncementTemplateStore] 使用次数递增失败:', error);
         }
       },
     })

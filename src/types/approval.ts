@@ -134,7 +134,8 @@ export interface MaterialItem {
 
 export interface BusinessLink {
   // 业务类型 - 支持全部42种审批类型
-  type: 'material' | 'purchase' | 'production' | 'leave' | 'overtime' | 'transfer' |
+  // 2026-10-11：补 'production_plan'（BusinessPreview 的 case、useApprovalBusinessDetail 的映射键、生产计划审批数据都在用）
+  type: 'material' | 'purchase' | 'production' | 'production_plan' | 'leave' | 'overtime' | 'transfer' |
         'resign' | 'return' | 'recruitment' | 'harvest' | 'seed_source' | 'seedling' |
         'material_inbound' | 'material_transfer' | 'seed_source_inbound' | 'seedling_plan' |
         'planting_plan' | 'order_create' | 'order_change' | 'production_batch' |
@@ -144,6 +145,8 @@ export interface BusinessLink {
         'salary_adjustment' | 'salary_budget' | 'attendance_repair' | 'contract_renewal' | 'onboarding';
   requestId: string;
   requestCode: string;
+  /** 2026-10-11：业务处理结果类型（useMaterialApproval 提交时携带，用于区分通过/驳回后的联动动作） */
+  returnType?: string;
 
   // ========== 物料相关字段 ==========
   materials?: MaterialItem[];
@@ -394,8 +397,14 @@ export const getApprovalTypeName = (type: ApprovalType): string => {
 // 获取状态名称
 // ============================================================
 
-export const getApprovalStatusName = (status: ApprovalStatus): string => {
-  const statusNames: Record<ApprovalStatus, string> = {
+/**
+ * 获取审批状态名称
+ *
+ * 2026-10-11 类型清理：参数放宽为 ApprovalStatus | string，因 Store 侧 status 为 string（后端枚举值）；
+ * 函数内部本就有 fallback 返回原值，放宽后运行时行为不变
+ */
+export const getApprovalStatusName = (status: ApprovalStatus | string): string => {
+  const statusNames: Record<string, string> = {
     [ApprovalStatus.DRAFT]: '草稿',
     [ApprovalStatus.PENDING]: '待审批',
     [ApprovalStatus.APPROVED]: '已通过',

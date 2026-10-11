@@ -84,7 +84,7 @@ export default function HistoryData() {
     const selected = filteredData.filter(d => selectedIds.includes(d.id));
     const rows = selected.map(d => ({
       '记录ID': d.id,
-      '传感器ID': d.sensorId,
+      '传感器ID': d.sensorCode,
       '传感器名称': d.sensorName,
       '数据类型': d.dataType,
       '温度(°C)': d.temp ?? '',
@@ -97,7 +97,7 @@ export default function HistoryData() {
       '风速(km/h)': d.windSpeed ?? '',
       '功率(kW)': d.power ?? '',
       '电压(V)': d.voltage ?? '',
-      '电流(A)': d.current ?? '',
+      '电流(A)': d.currentValue ?? '',
       '时间戳': d.timestamp,
     }));
     const filename = `历史数据_${todayLocal()}`;
@@ -276,7 +276,7 @@ export default function HistoryData() {
                 <td className="px-4 py-3 text-sm text-gray-600 font-mono">{item.id}</td>
                 <td className="px-4 py-3">
                   <div className="text-sm font-medium text-gray-800">{item.sensorName}</div>
-                  <div className="text-xs text-gray-500">{item.sensorId}</div>
+                  <div className="text-xs text-gray-500">{item.sensorCode}</div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getDataTypeBadge(item.dataType)}`}>

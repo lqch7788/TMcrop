@@ -70,7 +70,23 @@ interface InspectionRecord {
   soilPh?: number;
   // 关联问题ID（用于关联问题分派记录）
   problemId?: number;
+  // 问题分类（多选）与问题照片，对应后端 inspection_records 的 issue_categories / issue_photos 列
+  issueCategories?: string[];
+  issuePhotos?: string[];
 }
+
+/**
+ * 流转记录（含历史渲染兜底字段）
+ *
+ * 后端 problems.flow_records 实际只写入 id/problemId/operatorId/operatorName/action/
+ * fromStatus/toStatus/comment/actionTime/feedbackData；actionName/progress/reason 为
+ * 历史版本的渲染兜底，渲染处已做存在性判断，不影响现实数据。
+ */
+type FlowRecordCompat = ProblemFlowRecord & {
+  actionName?: string;
+  progress?: number;
+  reason?: string;
+};
 
 interface DetailInspectionModalProps {
   isOpen: boolean;
@@ -117,7 +133,7 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
     : undefined;
 
   // 获取流转记录（按时间正序，最早的在前）
-  const flowRecords = problem?.flowRecords
+  const flowRecords: FlowRecordCompat[] = problem?.flowRecords
     ? [...problem.flowRecords].sort((a, b) =>
         new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime()
       )

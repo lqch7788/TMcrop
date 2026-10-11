@@ -14,6 +14,9 @@ import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { getVarietyByCode } from '../../services/cropVarietyService';
 // 使用 import type 确保类型导入在编译时被擦除
 import type { TechSolution } from '../../types/techSolution';
+// 审批单枚举：Approval.type / status 为字符串枚举，必须用枚举成员而非字面量
+import { ApprovalStatus, ApprovalType } from '../../types/approval';
+import type { Approval } from '../../types/approval';
 import { TechSolutionHeader } from './Header';
 import { todayLocal } from '@/lib/dateUtils';
 import { TechSolutionFilters } from './TechSolutionFilters';
@@ -306,7 +309,7 @@ export function TechSolutionPage() {
     }
     // 根据 cropCode 获取品种信息
     const varietyInfo = tech.cropCode ? getVarietyByCode(tech.cropCode) : null;
-    setSelectedCropEdit(varietyInfo);
+    setSelectedCropEdit(varietyInfo ?? null);
     setSelectedTech(tech);
     setEditForm({
       title: tech.title,
@@ -395,9 +398,9 @@ export function TechSolutionPage() {
 
         // 只有提交审批模式才创建审批单
         if (submitMode === 'submit') {
-          const approvalData = {
+          const approvalData: Partial<Approval> = {
             id: `AP${Date.now()}`,
-            type: 'tech_solution',
+            type: ApprovalType.TECH_SOLUTION,
             typeName: '技术方案',
             title: `技术方案审批：${newPlanForm.title}`,
             description: `作物：${newPlanForm.crop}\n种植模式：${getDictItemName('planting_mode', newPlanForm.plantingMode)}\n适用范围：${newPlanForm.stage}`,
@@ -405,7 +408,7 @@ export function TechSolutionPage() {
             applicantName: currentUsername,
             applicantDepartment: currentDepartment,
             applyDate: today,
-            status: 'pending',
+            status: ApprovalStatus.PENDING,
             priority: 'normal',
             businessLink: {
               type: 'tech_solution',
@@ -485,7 +488,8 @@ export function TechSolutionPage() {
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
     const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '状态', '方案是否有效'];
-    const exportData = selectedData.map(row => ({
+    // 显式声明 Record<string,string>：下方按表头（string）动态取值
+    const exportData = selectedData.map((row): Record<string, string> => ({
       '方案编号': row.code,
       '关联生产计划批次': row.relatedBatchCode || '-',
       '方案标题': row.title,
@@ -756,7 +760,7 @@ export function TechSolutionPage() {
         onFormChange={setNewPlanForm}
         onScopeToggle={() => setScopeExpanded(!scopeExpanded)}
         onCropChange={handleCropChange}
-        onGenerateCode={generateCode}
+        onGenerateCode={async () => generateCode()}
         onSubmitDraft={() => handleCreateSubmit('draft')}
         onSubmitApprove={() => handleCreateSubmit('submit')}
       />

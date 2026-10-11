@@ -8,7 +8,7 @@ import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { Approval } from '../../types/approval';
-import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
+import type { PurchasePlan, PurchasePlanItem, PurchaseType, PurchasePriority, PurchaseExecutionStatus } from '../../types/purchase';
 import { calculateOverdueAlert, PURCHASE_TYPE_TEXT } from '../../types/purchase';
 import { useUserStore, usePurchasePlanStore, useApprovalStore } from '../../stores';
 import { showAlert, showToast } from '@/lib/dialogService';
@@ -318,16 +318,19 @@ export function PurchasePlanPage() {
       const headerSupplierName = firstWithSupplierId ? firstWithSupplierId.supplier : '';
 
       // 表单已是英文编码，直接提交无需映射
+      // 2026-10-11：purchaseType 断言为 PurchaseType —— 表单选项来自 PURCHASE_TYPE_TEXT（即 PurchaseType 的值域），
+      // createForm 的 useState 推断为 string 故需收窄
       const planData = {
         purchaseApplicationCode: createForm.purchaseApplicationCode,
         relatedBatchCode: createForm.relatedBatchCode,
-        purchaseType: createForm.purchaseType,
+        purchaseType: createForm.purchaseType as PurchaseType,
         applicant: createForm.applicant,
         applicantId: localStorage.getItem('userId') || '',
         applicantDepartment: createForm.applicantDepartment,
         applyDate: createForm.applyDate,
         requiredDate: createForm.requiredDate,
-        priority: createForm.priority,
+        // 2026-10-11：同 purchaseType —— 表单选项来自 PRIORITY 常量域，useState 推断为 string 需收窄
+        priority: createForm.priority as PurchasePriority,
         status: 'pending' as const,
         approvalStatus: 'pending' as const,
         remarks: createForm.remark,
@@ -687,6 +690,18 @@ export function PurchasePlanPage() {
     setSelectedCodes([]);
   };
 
+  // 关闭批量编辑弹窗并重置编辑态（与 BatchEditModal 的 onClose 行为一致）
+  const handleBatchEditCancel = () => {
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedCodes([]);
+    setEditedPlanCodes([]);
+    setEditedPlans({});
+    setSelectedPlanCode('');
+    setCurrentEditingPlan(null);
+    setBatchEditItems([]);
+  };
+
   // 批量编辑"下一个"：保存当前编辑 → 自动切到下一个未编辑的 plan
   // 若已是最后一个，则关闭弹窗
   const handleBatchEditNext = async () => {
@@ -699,14 +714,15 @@ export function PurchasePlanPage() {
     try {
       // 1. 保存当前编辑
       const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
-      const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
+      // User 类型（types/authority）声明为 real_name，但 API 响应经 camelCase 中间件返回 realName，两种都兜底
+      const applicantName = (selectedUser as { realName?: string } | undefined)?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
       await updatePlan(currentEditingPlan.id, {
         relatedBatchCode: batchEditData.relatedBatchCode || currentEditingPlan.relatedBatchCode,
-        purchaseType: batchEditData.purchaseType,
-        priority: batchEditData.priority,
+        purchaseType: batchEditData.purchaseType as PurchaseType,
+        priority: batchEditData.priority as PurchasePriority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
-        executionStatus: batchEditData.executionStatus,
+        executionStatus: batchEditData.executionStatus as PurchaseExecutionStatus,
         applicantId: currentEditingPlan.applicantId,
         applicantName: batchEditData.applicant || applicantName,
         applicantDepartment: batchEditData.applicantDepartment || currentEditingPlan.applicantDepartment,
@@ -772,18 +788,19 @@ export function PurchasePlanPage() {
 
       // 1. 保存当前正在编辑的计划
       const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
-      const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
+      // User 类型（types/authority）声明为 real_name，但 API 响应经 camelCase 中间件返回 realName，两种都兜底
+      const applicantName = (selectedUser as { realName?: string } | undefined)?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
 
       // logger.info('[保存采购计划] currentEditingPlan:', currentEditingPlan);
       // logger.info('[保存采购计划] batchEditItems:', batchEditItems);
 
       await updatePlan(currentEditingPlan.id, {
         relatedBatchCode: batchEditData.relatedBatchCode || currentEditingPlan.relatedBatchCode,
-        purchaseType: batchEditData.purchaseType,
-        priority: batchEditData.priority,
+        purchaseType: batchEditData.purchaseType as PurchaseType,
+        priority: batchEditData.priority as PurchasePriority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
-        executionStatus: batchEditData.executionStatus,
+        executionStatus: batchEditData.executionStatus as PurchaseExecutionStatus,
         applicantId: currentEditingPlan.applicantId,
         applicantName: batchEditData.applicant || applicantName,
         applicantDepartment: batchEditData.applicantDepartment || currentEditingPlan.applicantDepartment,
@@ -809,7 +826,7 @@ export function PurchasePlanPage() {
 
         try {
           const userForEdit = users.find(u => u.id === (editData.applicantId || originalPlan.applicantId));
-          const editApplicantName = userForEdit?.realName || userForEdit?.name || editData.applicant || originalPlan.applicant || '';
+          const editApplicantName = (userForEdit as { realName?: string } | undefined)?.realName || userForEdit?.name || editData.applicant || originalPlan.applicant || '';
 
           await updatePlan(originalPlan.id, {
             ...editData,

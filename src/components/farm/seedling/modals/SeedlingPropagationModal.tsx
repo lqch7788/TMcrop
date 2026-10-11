@@ -21,8 +21,8 @@ import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import {
   apiSeedlingPropagationService,
-  // 2026-07-28 审核 M：SeedlingSeedlingPropagationRecord 未使用，删除避免误导
-  type SeedlingPropagationRecordInput,
+  type SeedlingPropagationRecord,
+  type PropagationRecordInput,
   type AsexualOperationType,
   type ReproductionMode,
 } from '@/services/apiSeedlingPropagationService';
@@ -51,7 +51,7 @@ interface SeedlingPropagationModalProps {
 // 继承 BreedingFields 的 deepInputClass 样式
 const deepInputClass = inputClass;
 
-const EMPTY_FORM: SeedlingPropagationRecordInput = {
+const EMPTY_FORM: PropagationRecordInput = {
   recordDate: todayLocal(),
   operationType: 'cutting',
   reproductionMode: 'asexual',
@@ -79,7 +79,7 @@ export function SeedlingPropagationModal({
   const [records, setRecords] = useState<SeedlingPropagationRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<SeedlingPropagationRecordInput>(EMPTY_FORM);
+  const [form, setForm] = useState<PropagationRecordInput>(EMPTY_FORM);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);

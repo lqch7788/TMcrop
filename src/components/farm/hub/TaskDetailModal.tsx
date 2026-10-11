@@ -22,13 +22,15 @@ interface TaskDetailModalProps {
   onVerify?: (taskId: string) => void;
   /** v0.3 P0-2：快速完成回调（可选，未传则不显示按钮） */
   onQuickComplete?: (taskId: string) => void;
+  /** 2026-10-11：实际工时录入成功后的刷新回调（可选，未传则仅组件内部提示成功） */
+  onRefresh?: () => void;
   /** 从父组件传入的完整任务列表（复用 useTasks 数据源） */
   tasks: Task[];
   /** 从父组件传入的任务记录获取函数（复用 useTasks 实例） */
   getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
 }
 
-export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, tasks, getTaskRecordsByTaskId }: TaskDetailModalProps) {
+export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, onRefresh, tasks, getTaskRecordsByTaskId }: TaskDetailModalProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [records, setRecords] = useState<TaskRecord[]>([]);
 
@@ -530,7 +532,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, onQuickComplete, ta
         <div className="mt-4 px-1">
           <ActualHoursRecorder
             taskId={taskId}
-            taskType={task.taskType || '其他'}
+            taskType={task.type || '其他'}
             taskCode={task.taskCode}
             estimatedHours={task.estimatedHours}
             onSuccess={() => onRefresh?.()}

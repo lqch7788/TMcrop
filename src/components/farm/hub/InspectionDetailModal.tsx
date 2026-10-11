@@ -28,16 +28,8 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   critical: { bg: 'bg-red-100', text: 'text-red-700', label: '异常' },
 };
 
-interface InspectionIssue {
-  id: string;
-  description: string;
-  severity: '轻微' | '中等' | '严重';
-  status: string;
-}
-
 export function InspectionDetailModal({ recordId, onClose, onReportProblem }: InspectionDetailModalProps) {
   const [inspection, setInspection] = useState<InspectionRecord | null>(null);
-  const [issues, setIssues] = useState<InspectionIssue[]>([]);
 
   useEffect(() => {
     try {
@@ -45,7 +37,6 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
       const foundInspection = inspectionsList.find((i: InspectionRecord) => i.id === recordId);
       if (foundInspection) {
         setInspection(foundInspection);
-        setIssues(foundInspection.issues || []);
       }
     } catch (error) {
       // 加载数据失败，无需额外处理
@@ -64,7 +55,9 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
   }
 
   const statusConfig = STATUS_CONFIG[inspection.status] || STATUS_CONFIG.normal;
-  const typeLabel = INSPECTION_TYPE_CONFIG[inspection.inspectionType] || '种植巡查';
+  /** 发现的问题列表（string[]，缺省空数组） */
+  const inspectionIssues = inspection.issues || [];
+  const typeLabel = INSPECTION_TYPE_CONFIG[inspection.inspectionType ?? ''] || '种植巡查';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -165,7 +158,7 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-bold text-red-700 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                发现问题 ({issues.length})
+                发现问题 ({inspectionIssues.length})
               </h4>
               {onReportProblem && (
                 <Button
@@ -177,24 +170,16 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
                 </Button>
               )}
             </div>
-            {issues.length === 0 ? (
+            {inspectionIssues.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">未发现问题</p>
             ) : (
-              <div className="space-y-2">
-                {issues.map((issue) => (
-                  <div key={issue.id} className="p-3 bg-white rounded border border-red-200">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-900">{issue.description}</p>
-                      <span className={`px-2 py-0.5 text-xs rounded ${
-                        issue.severity === '严重' ? 'bg-red-100 text-red-700' :
-                        issue.severity === '中等' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {issue.severity}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">状态: {issue.status}</p>
-                  </div>
+              /* 2026-10-11：issues 权威类型为 string[]（types/index.ts + 后端 inspection.ts 均已确认），
+                 按字符串渲染；旧代码按对象读 issue.id/description/severity/status 只出空壳卡片 */
+              <div className="flex gap-2 flex-wrap">
+                {inspectionIssues.map((issue: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-sm rounded-full">
+                    {issue}
+                  </span>
                 ))}
               </div>
             )}
@@ -208,7 +193,7 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
                 现场照片
               </h4>
               <div className="grid grid-cols-3 gap-2">
-                {inspection.photos.map((photo, index) => (
+                {inspection.photos.map((photo: string, index: number) => (
                   <div key={index} className="aspect-square bg-gray-200 rounded overflow-hidden">
                     <img
                       src={photo}

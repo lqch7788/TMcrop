@@ -66,7 +66,8 @@ export function MergePreview({
       if (generation) params.set('generation', generation);
       // 2026-07-18: 同种植批次优先匹配
       if (linkedPlantingId) params.set('linkedPlantingId', linkedPlantingId);
-      const result = await enhancedApiClient.get(`/seed-sources/matchable?${params}`);
+      // 2026-10-11：补泛型 —— 无泛型时返回 {}，后续 result.id/sourceCode/unit 全部报类型错
+      const result = await enhancedApiClient.get<MatchedRecord | null>(`/seed-sources/matchable?${params}`);
       if (signal.aborted) return;
       setMatched(result || null);
       onMatchFoundRef.current?.(result ? { id: result.id, sourceCode: result.sourceCode, unit: result.unit } : null);

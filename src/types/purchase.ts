@@ -295,6 +295,7 @@ export interface PurchaseFilters {
 export const PURCHASE_STATUS_TEXT: Record<PurchaseStatus, string> = {
   draft: '草稿',
   pending: '待审批',
+  rejected: '已拒绝',
   approved: '已通过',
   purchasing: '采购中',
   completed: '已完成',
@@ -324,6 +325,7 @@ export const PURCHASE_TYPE_TEXT: Record<PurchaseType, string> = {
 export const PURCHASE_STATUS_STYLE: Record<PurchaseStatus, { bg: string; text: string }> = {
   draft: { bg: 'bg-gray-100', text: 'text-gray-700' },
   pending: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  rejected: { bg: 'bg-red-100', text: 'text-red-700' },
   approved: { bg: 'bg-blue-100', text: 'text-blue-700' },
   purchasing: { bg: 'bg-purple-100', text: 'text-purple-700' },
   completed: { bg: 'bg-green-100', text: 'text-green-700' },

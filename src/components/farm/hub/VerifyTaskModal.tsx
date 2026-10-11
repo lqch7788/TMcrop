@@ -157,11 +157,8 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
                 <p className="text-gray-400">暂无执行反馈记录</p>
               )}
             </div>
-            {task.feedback && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-sm text-gray-600">{task.feedback}</p>
-              </div>
-            )}
+            {/* 2026-10-11：删除 task.feedback 展示块 —— farm_tasks 表无 feedback 列、
+                Task 类型也无该字段，此分支恒为假（死代码）；执行反馈已由上方进度记录完整呈现 */}
           </div>
 
           {/* 验收结果 */}

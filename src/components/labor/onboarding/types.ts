@@ -1,31 +1,17 @@
 // 入职办理模块类型定义
 
+// 2026-10-11 类型清理：入职记录统一使用 service 侧权威类型（apiOnboardingService.OnboardingRecord）
+import type { OnboardingRecord as ApiOnboardingRecord } from '@/services/apiOnboardingService';
+
 export type OnboardingStatus = '待入职' | '办理中' | '已入职';
 
 /**
  * 入职记录
+ *
+ * 2026-10-11 类型清理：统一使用 service 侧权威类型，不再重复定义，
+ * 避免与 useOnboarding 返回的数据类型互不兼容
  */
-export interface OnboardingRecord {
-  id: string;
-  recruitmentId?: string;      // 关联的招聘记录ID
-  requestCode?: string;       // 招聘申请编号
-  name: string;               // 姓名
-  idCard: string;             // 身份证号
-  phone: string;              // 联系电话
-  position: string;           // 岗位
-  department: string;          // 部门
-  contractType: ContractType; // 合同类型
-  dailyWage?: number;         // 日工资（临时工）
-  hourlyWage?: number;        // 时工资
-  joinDate: string;           // 入职日期
-  status: OnboardingStatus;
-  createdAt: string;
-  updatedAt: string;
-  operatorId: string;
-  operatorName: string;
-  // 办理进度
-  progress?: OnboardingProgress[];
-}
+export type OnboardingRecord = ApiOnboardingRecord;
 
 export type ContractType = '劳动合同' | '实习协议' | '劳务合同';
 

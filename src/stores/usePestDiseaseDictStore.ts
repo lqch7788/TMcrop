@@ -129,7 +129,8 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
     createItem: async (item) => {
       try {
         const body = denormalize(item);
-        const response = await enhancedApiClient.post('/pest-disease-dict', body);
+        // 2026-10-11：与同文件 get<any> 一致 —— 响应可能带 data 包裹，用 any 承接再归一化
+        const response = await enhancedApiClient.post<any>('/pest-disease-dict', body);
         const newItem = normalize((response.data ?? response) as Record<string, unknown>);
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
@@ -142,7 +143,7 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
     updateItem: async (id, updates) => {
       try {
         const body = denormalize(updates);
-        const response = await enhancedApiClient.put(`/pest-disease-dict/${id}`, body);
+        const response = await enhancedApiClient.put<any>(`/pest-disease-dict/${id}`, body);
         const updated = normalize((response.data ?? response) as Record<string, unknown>);
         set((state) => ({ items: state.items.map((i) => (i.id === id ? updated : i)) }));
         return updated;
@@ -193,7 +194,7 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
         // 2026-07-17 审核修复：补 camelCase 单数 pesticideType 分支（camelCase 中间件已把 pesticide_type
         // 转成 pesticideType，原代码只查 snake_case 恒 miss → 类型 chips 永远为空）
         return items.map((item: Record<string, unknown>) => {
-          if (Array.isArray(item.pesticideTypes)) return item as PesticideForRelation;
+          if (Array.isArray(item.pesticideTypes)) return item as unknown as PesticideForRelation;
           let arr: string[] = [];
           const rawTypes = item.pesticide_types ?? item.pesticideType ?? item.pesticide_type;
           if (Array.isArray(rawTypes)) {

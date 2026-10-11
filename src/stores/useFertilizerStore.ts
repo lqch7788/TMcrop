@@ -113,7 +113,8 @@ function normalizeFertilizer(db: Record<string, unknown>): FertilizerData {
   for (const [dbKey, camelKey] of Object.entries(FIELD_MAP)) {
     result[camelKey] = db[dbKey] ?? null;
   }
-  return result as FertilizerData;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return result as unknown as FertilizerData;
 }
 
 function denormalizeFertilizer(item: Partial<FertilizerData>): Record<string, unknown> {
@@ -181,7 +182,8 @@ export const useFertilizerStore = create<FertilizerState>()(
     createItem: async (item) => {
       try {
         // 直接发 camelCase（后端 Zod schema 期望 camelCase，camelCaseRequestMiddleware 未注册）
-        const response = await enhancedApiClient.post('/fertilizer', item);
+        // 2026-10-11：与同文件 get<any> 一致 —— 响应可能带 data 包裹，用 any 承接再断言
+        const response = await enhancedApiClient.post<any>('/fertilizer', item);
         const newItem = (response.data ?? response) as FertilizerData;
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
@@ -194,7 +196,7 @@ export const useFertilizerStore = create<FertilizerState>()(
     updateItem: async (id, updates) => {
       try {
         // 直接发 camelCase（与 createItem 一致）
-        const response = await enhancedApiClient.put(`/fertilizer/${id}`, updates);
+        const response = await enhancedApiClient.put<any>(`/fertilizer/${id}`, updates);
         const updated = (response.data ?? response) as FertilizerData;
         set((state) => ({
           items: state.items.map((i) => (i.id === id ? updated : i)),
@@ -221,7 +223,7 @@ export const useFertilizerStore = create<FertilizerState>()(
 
     deleteItems: async (ids) => {
       try {
-        const response = await enhancedApiClient.post('/fertilizer/batch-delete', { ids });
+        const response = await enhancedApiClient.post<any>('/fertilizer/batch-delete', { ids });
         const result = response.data ?? response;
         if (result.deleted > 0) {
           set((state) => ({ items: state.items.filter((i) => !ids.includes(i.id)) }));

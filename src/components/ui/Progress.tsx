@@ -31,6 +31,8 @@ const sizeMap: Record<ProgressSize, { lineHeight: number; circleSize: number; st
 const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
   ({
     value,
+    percent,
+    format,
     max = 100,
     showLabel = false,
     type = 'line',
@@ -41,7 +43,10 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     className,
     ...props
   }, ref) => {
-    const percentage = Math.min(100, Math.max(0, (value / max) * 100))
+    // value 为可选属性，未传时按 0 计算，避免 NaN
+    // 2026-10-11：补 percent 别名支持——此前 props 声明了 percent/format 但解构时未取出，
+    //   9 处传 percent 的调用方进度条恒为 0%（空条）
+    const percentage = Math.min(100, Math.max(0, (((value ?? percent) ?? 0) / max) * 100))
     const config = sizeMap[size]
 
     if (type === 'circle') {
@@ -82,7 +87,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           </svg>
           {showLabel && (
             <span className="absolute text-sm font-medium text-gray-700">
-              {Math.round(percentage)}%
+              {format ? format(Math.round(percentage)) : `${Math.round(percentage)}%`}
             </span>
           )}
         </div>
@@ -127,7 +132,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           </svg>
           {showLabel && (
             <span className="absolute text-sm font-medium text-gray-700">
-              {Math.round(percentage)}%
+              {format ? format(Math.round(percentage)) : `${Math.round(percentage)}%`}
             </span>
           )}
         </div>
@@ -149,7 +154,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         </div>
         {showLabel && (
           <span className="text-sm text-gray-600 mt-1 inline-block">
-            {Math.round(percentage)}%
+            {format ? format(Math.round(percentage)) : `${Math.round(percentage)}%`}
           </span>
         )}
       </div>

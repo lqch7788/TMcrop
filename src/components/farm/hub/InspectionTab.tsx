@@ -445,7 +445,8 @@ export function InspectionTab({
       recordCode: prev.recordCode || generateRecordCode(),
       checkDate: prev.checkDate || todayLocal(),
       checkTime: prev.checkTime || new Date().toTimeString().slice(0, 5),
-      inspectorId: prev.inspectorId || defaultInspector.id, // 默认巡查人员
+      // User.id 为可选字段（types/authority.ts），补空串兜底以保证 string 类型
+      inspectorId: prev.inspectorId || defaultInspector.id || '', // 默认巡查人员
     }));
     onOpenCreateModal();
   };

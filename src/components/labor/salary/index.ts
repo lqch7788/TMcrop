@@ -9,7 +9,7 @@ export { useSalary } from './hooks/useSalary';
 // 类型导出
 export type {
   SalaryRecord,
-  SalaryFilters,
+  // 注：SalaryFilters 与组件同名，冲突，类型请从 './types' 直接导入
   SalaryPagination,
   SalaryCalcType,
   SalaryStatus,

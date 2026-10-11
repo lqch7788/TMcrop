@@ -186,8 +186,9 @@ export function OutboundRecordsTable({
   selectedRows = [], onSelectionChange, onSelectAll,
 }: OutboundRecordsTableProps) {
   // 字典/标签全部从映射取（不硬编码）
-  const stockLabel = (s: string) => STOCK_TYPE_LABEL[s]?.label || s;
-  const stockColor = (s: string) => STOCK_TYPE_LABEL[s]?.color || 'bg-gray-500';
+  // 2026-10-11：OutboundRow.stockType 为可选字段，缺省时按表格统一风格显示 '-'
+  const stockLabel = (s?: string) => (s ? STOCK_TYPE_LABEL[s]?.label || s : '-');
+  const stockColor = (s?: string) => (s ? STOCK_TYPE_LABEL[s]?.color || 'bg-gray-500' : 'bg-gray-500');
   const bizMeta = (b?: string) => {
     const normalized = mapLegacyBusinessType(b);
     return OUTBOUND_BUSINESS_TYPE_META[normalized];
@@ -220,9 +221,10 @@ export function OutboundRecordsTable({
             <tr>
               {(exportMode || deleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">
+                  {/* 2026-10-11：删除 ref 里的 indeterminate 赋值 —— ui/Checkbox 底层是 <button>，
+                      没有 indeterminate 属性（原写法恒不生效的死代码），与 MaterialFlowPage 同项修复口径一致 */}
                   <Checkbox
                     checked={allSelected}
-                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
                     onCheckedChange={onSelectAll}
                     className="border-white rounded"
                   />
@@ -275,7 +277,7 @@ export function OutboundRecordsTable({
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     <button
                       type="button"
-                      onClick={() => onViewDetail(row.instanceId)}
+                      onClick={() => row.instanceId && onViewDetail(row.instanceId)}
                       className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
                     >
                       {row.instanceId}
@@ -294,7 +296,7 @@ export function OutboundRecordsTable({
                   <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{row.cropName || row.materialName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    {QUALITY_GRADE_MAP[row.grade]?.label || row.grade || '-'}
+                    {row.grade ? QUALITY_GRADE_MAP[row.grade]?.label || row.grade : '-'}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-right text-emerald-600 whitespace-nowrap">
                     {row.quantityOut} {row.unit || ''}

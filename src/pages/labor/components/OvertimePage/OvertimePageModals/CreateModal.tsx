@@ -18,7 +18,8 @@ interface CreateModalProps {
   formData: OvertimeFormData;
   overtimeFeePreview: OvertimeFeePreview | null;
   onFormDataChange: (data: OvertimeFormData) => void;
-  onStaffChange: (staffId: string) => void;
+  // 2026-10-11：补 staffName（hook 的 handleStaffChange 需要两参，原签名只传 id 致 formData.staffName 恒 undefined）
+  onStaffChange: (staffId: string, staffName: string) => void;
   onTimeChange: (field: 'startTime' | 'endTime', value: string) => void;
   onSubmit: () => void;
 }
@@ -58,7 +59,11 @@ export function OvertimePageCreateModal({
           </Label>
           <select
             value={formData.staffId}
-            onChange={(e) => onStaffChange(e.target.value)}
+            onChange={(e) => {
+              const staffId = e.target.value;
+              const staffName = workers.find(w => w.workerId === staffId)?.name ?? '';
+              onStaffChange(staffId, staffName);
+            }}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           >
             <option value="">请选择员工</option>

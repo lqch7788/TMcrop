@@ -5,7 +5,7 @@
 
 import { DISPATCH_WEIGHTS } from '../config/dispatchConfig';
 import type { RecommendedExecutor } from '../types/dispatch';
-import { SkillTag } from '../../skill/types';
+import { SkillTag } from '../../labor/skill/types';
 
 /**
  * 员工基础信息

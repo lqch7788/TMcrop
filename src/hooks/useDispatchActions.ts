@@ -442,9 +442,5 @@ export function useDispatchActions(): UseDispatchActionsReturn {
     lastResult,
   };
 }
-
-// 导出类型
-export type {
-  DispatchActionType,
-  DispatchActionResult,
-};
+// 2026-10-11：DispatchActionType / DispatchActionResult 已在文件内具名导出，
+// 原末尾 `export type { ... }`（无 from）构成重复导出（TS2484），已移除

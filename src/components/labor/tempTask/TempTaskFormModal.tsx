@@ -8,6 +8,7 @@ import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { Camera, Clock, FileText, MapPin, Mic, Package, Send, Wand2 } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
+import { DEFAULT_AI_RECOMMEND_CONFIG } from '@/types/dispatch';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
 import { Label } from '@/components/ui';
@@ -33,7 +34,8 @@ interface TempTaskFormModalProps {
     dueDate: string;
     description: string;
     notes: string;
-    priority: 'high' | 'medium' | 'low';
+    // 2026-10-11 类型清理：与 TempTask['priority'] 对齐（含 'normal'，编辑既有任务时会回填该值）
+    priority: TempTask['priority'];
     estimatedDays: number;
     greenhouseId: string;
     workerCount: number;
@@ -366,7 +368,7 @@ export function TempTaskFormModal({
                     onWorkerSelect={handleAIWorkerSelect}
                     onManualSelect={() => handleDispatchModeChange('manual')}
                     selectedWorkerId={selectedWorkerId}
-                    config={{ defaultSelectTop: true, showTopN: 3 }}
+                    config={{ ...DEFAULT_AI_RECOMMEND_CONFIG, defaultSelectTop: true, showTopN: 3 }}
                   />
                 ) : (
                   /* 任务信息不完整时显示提示 */
@@ -427,7 +429,6 @@ export function TempTaskFormModal({
             <NumberInput
               value={formData.estimatedDays}
               onChange={(value) => onChange('estimatedDays', parseInt(value) || 0)}
-              min={0}
               placeholder="0"
               className="w-full"
             />
@@ -437,7 +438,6 @@ export function TempTaskFormModal({
             <NumberInput
               value={formData.estimatedHours}
               onChange={(value) => onChange('estimatedHours', parseInt(value) || 0)}
-              min={0}
               placeholder="0"
               className="w-full"
             />
@@ -450,7 +450,6 @@ export function TempTaskFormModal({
             <NumberInput
               value={formData.workerCount}
               onChange={(value) => onChange('workerCount', parseInt(value) || 1)}
-              min={1}
               placeholder="1"
               className="w-full"
             />

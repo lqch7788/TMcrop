@@ -6,10 +6,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { Seedling, SeedSource } from '../../../../types/crop';
+import { Seedling, SeedSource, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
-import { CropVarietyOption } from '../../../../types/cropVariety';
+import { CropVariety, CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -71,14 +71,17 @@ export function EditModal({
     // 补齐 AddModal 同名字段 — 否则编辑保存会丢这些值
     targetSurvivalRate: record.targetSurvivalRate || 0,
     productionPlanId: record.productionPlanCode || '',
-    planType: record.planType || 'routine',
-    calculateMode: record.calculateMode || 'single',
+    planType: record.planType || SeedlingPlanType.ROUTINE,
+    calculateMode: record.calculateMode || SeedlingCalculateMode.SINGLE,
     motherPlantCount: record.motherPlantCount || 0,
     propagationMultiple: record.propagationMultiple || 0,
     customMultiple: record.customMultiple || 0,
     theoreticalYield: record.theoreticalYield || 0,
     // 2026-06-15: 数量体系重构 — 4 业务字段（统一显示，2026-06-25 移除 autoPlantedCount，2026-06-28 移除 transplantedCount）
     motherLossCount: record.motherLossCount ?? 0,
+    // 2026-10-11：小苗累计产出（Seedling.expandedPlantCount），此前遗漏在表单状态之外，
+    //   导致下方「小苗累计产出」输入框读不到值、提交时该字段为 undefined 而不落库
+    expandedPlantCount: record.expandedPlantCount ?? 0,
     seedlingLossCount: record.seedlingLossCount ?? 0,
     harvestStockedCount: record.harvestStockedCount ?? 0,
     replantCount: record.replantCount ?? 0,  // 2026-06-16: 补苗累计
@@ -134,6 +137,9 @@ export function EditModal({
       cropName: record.cropName,
       cropVariety: record.cropVariety,
       seedlingType: record.seedlingType,
+      // 2026-10-11：补 unit / replantCount / expandedPlantCount —— setFormData 是整体替换，
+      //   这三项此前未随重置写回，重置后会被清成 undefined
+      unit: record.unit || '株',
       siteId: resolvedSiteId,
       siteName: record.siteName,
       startDate: record.startDate,
@@ -141,7 +147,9 @@ export function EditModal({
       endDate: record.endDate || '',
       initialCount: record.initialCount,
       survivalCount: record.survivalCount,
-      // 2026-06-28：移除 plantedCount 字段（业务规则：种植管理不再从育苗取苗）
+      // 2026-06-28：前端不再使用 plantedCount（业务规则：种植管理不再从育苗取苗），
+      //   但 state 声明中保留该键以兼容后端 PUT 白名单 → 整体替换时必须带回（原缺失导致 TS2345）
+      plantedCount: 0,
       remarks: record.remarks || '',
       // 2026-07-28 审核 H-6：workHours 字段不存在，正确的是 seedlingTaskTime（与 useState 行 65 对齐）
       workHours: record.seedlingTaskTime || 0,
@@ -153,16 +161,18 @@ export function EditModal({
       // 补齐 AddModal 同名字段
       targetSurvivalRate: record.targetSurvivalRate || 0,
       productionPlanId: record.productionPlanCode || '',
-      planType: record.planType || 'routine',
-      calculateMode: record.calculateMode || 'single',
+      planType: record.planType || SeedlingPlanType.ROUTINE,
+      calculateMode: record.calculateMode || SeedlingCalculateMode.SINGLE,
       motherPlantCount: record.motherPlantCount || 0,
       propagationMultiple: record.propagationMultiple || 0,
       customMultiple: record.customMultiple || 0,
       theoreticalYield: record.theoreticalYield || 0,
       // 2026-06-15: 数量体系重构 — 4 业务字段（2026-06-25 移除 autoPlantedCount，2026-06-28 移除 transplantedCount）
       motherLossCount: record.motherLossCount ?? 0,
+      expandedPlantCount: record.expandedPlantCount ?? 0,
       seedlingLossCount: record.seedlingLossCount ?? 0,
       harvestStockedCount: record.harvestStockedCount ?? 0,
+      replantCount: record.replantCount ?? 0,
     });
   }, [record]);
 
@@ -249,7 +259,8 @@ export function EditModal({
   };
 
   // 处理作物品种选择
-  const handleCropCodeChange = (cropCode: string, varietyInfo: unknown) => {
+  // 与 CropCodeSelector 的 onChange 签名对齐：(cropCode, varietyInfo)
+  const handleCropCodeChange = (cropCode: string, varietyInfo: CropVariety | null) => {
     setFormData({
       ...formData,
       selectedCropCode: cropCode,

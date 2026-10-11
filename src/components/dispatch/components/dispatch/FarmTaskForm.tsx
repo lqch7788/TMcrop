@@ -105,7 +105,8 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
       setDueDate(task.dueDate || '');
       setEstimatedDays(task.estimatedDays || 1);
       setEstimatedHours(task.estimatedHours || 0);
-      setMaterials(task.materials || []);
+      // Task.materials 兼容旧数据 string[]，表单只处理结构化物料
+      setMaterials((task.materials || []).filter((m): m is { name: string; qty: number; unit: string } => typeof m !== 'string'));
     }
   }, [task]);
 

@@ -14,6 +14,8 @@ import { useComprehensiveDispatch } from '../../../../hooks/useComprehensiveDisp
 // ★ 排班联动：派发后同步 schedule.dispatched_task_ids
 import { useDispatchScheduleBridge } from '../../../../hooks/useDispatchScheduleBridge';
 import type { WorkerRecommendation } from '../../../../hooks/useComprehensiveDispatch';
+// 2026-10-11：AI 推荐配置基线（config 为整体替换语义，只传 showTopN 会丢掉其余开关）
+import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../../types/dispatch';
 import {
   Select,
   SelectContent,
@@ -71,7 +73,7 @@ function SelectExecutorModalContent({
     name: w.name,
     status: w.status,
     role: w.position || 'worker',
-    skills: [] as string[],
+    skills: w.skillTags || [],
     workZone: w.department || '',
     workLoad: 0,
   })), [workers]);
@@ -289,8 +291,6 @@ function SelectExecutorModalContent({
                   <AIRecommendationPanel
                     taskInfo={{
                       id: task.id,
-                      source: 'farm' as const,
-                      sourceId: '',
                       taskCode: task.taskCode || task.id,
                       title: task.title || '农事任务',
                       type: task.type || 'other',
@@ -304,15 +304,13 @@ function SelectExecutorModalContent({
                       requiredSkills: [],
                       estimatedHours: 2,
                       dueDate: task.dueDate || '',
-                      description: task.description || '',
-                      createdAt: new Date().toISOString(),
                     }}
                     recommendations={aiRecommendations}
                     onWorkerSelect={(workerId, score) => {
                       handleAIRecommendSelect(workerId);
                     }}
                     onManualSelect={() => handleModeChange('manual')}
-                    config={{ defaultSelectTop: true, maxResults: 5 }}
+                    config={{ ...DEFAULT_AI_RECOMMEND_CONFIG, showTopN: 5 }}
                     selectedWorkerId={selectedAssignee}
                   />
                 )}
@@ -348,7 +346,7 @@ function SelectExecutorModalContent({
                           <Clock className="w-3 h-3 inline mr-1" />
                           {getStatusLabel(staff.status || 'available')}
                         </span>
-                        {staff.skillTags?.slice(0, 2).map(tag => (
+                        {staff.skills?.slice(0, 2).map((tag: string) => (
                           <span
                             key={tag}
                             className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"

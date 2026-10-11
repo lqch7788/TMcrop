@@ -83,8 +83,8 @@ export interface VarietyTreeProps {
   categoryFilter?: string;
   /** 选中回调 */
   onSelect: (variety: CropVariety) => void;
-  /** 新增回调 */
-  onAdd: (node?: VarietyTreeNode) => void;
+  /** 新增回调（调用方 VarietyTreeNode 始终传入节点，故 node 为必填） */
+  onAdd: (node: VarietyTreeNode) => void;
   /** 编辑回调 */
   onEdit: (variety: CropVariety) => void;
   /** 删除回调 */

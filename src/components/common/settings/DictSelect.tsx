@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useDictionaryStore, getDictItems } from '../../../stores';
+import { useDictionaryStore, getDictItems, getDictItemName } from '../../../stores';
 
 interface DictSelectProps {
   value?: string;

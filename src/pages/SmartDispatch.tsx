@@ -132,6 +132,8 @@ function TaskCard({
   onAcceptOptimization?: () => void;
 }) {
   const status = STATUS_COLORS[task.dispatchStatus] || STATUS_COLORS.pending_ai;
+  // 温室列表：TaskCard 在 SmartDispatchPage 之外定义，无法访问页面内的同名变量，直接订阅 Store
+  const greenhouses = useGreenhouseStore((s) => s.greenhouses);
 
   return (
     <div

@@ -66,7 +66,8 @@ function normalizeItem(db: Record<string, unknown>): AnnouncementData {
   result.priority = result.priority || '中';
   result.status = result.status || '草稿';
   result.createTime = result.createTime || result.create_time || new Date().toISOString();
-  return result as AnnouncementData;
+  // 动态组装的后端行数据 → 前端结构（字段已按 FIELD_MAP 归一，类型系统无法静态验证）
+  return result as unknown as AnnouncementData;
 }
 
 /** 前端驼峰 → 后端蛇形 转换（POST/PUT 用驼峰，后端 route 自行转换） */
@@ -164,8 +165,8 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
         };
 
         // 乐观更新：先插入本地数据
+        // 2026-10-11：id 由后面的 ...body 提供（body.id === localId），此处不再重复声明
         const optimisticItem: AnnouncementData = {
-          id: localId,
           code: '',
           ...data,
           ...body,
@@ -254,9 +255,12 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           try {
             const { useAuthStore } = await import('../stores/useAuthStore');
             const auth = useAuthStore.getState();
-            applicantId = auth.user?.oid || auth.user?.id || 'system';
-            applicantName = auth.user?.name || '系统';
-            department = auth.user?.departmentId || '';
+            // 2026-10-11：AuthState 字段是 currentUser（无 user/id/name/departmentId），
+            //   CurrentUser 提供 oid / realName。此前 auth.user 恒为 undefined，申请人一直落到默认值。
+            applicantId = auth.currentUser?.oid || 'system';
+            applicantName = auth.currentUser?.realName || '系统';
+            // CurrentUser 无部门字段，保持既有空值行为
+            department = '';
           } catch {
             // 获取用户信息失败，使用默认值
           }

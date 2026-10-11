@@ -44,7 +44,8 @@ export const useReminderStore = create<ReminderState>()((set) => ({
   loadRecords: async (filters) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await enhancedApiClient.get<ReminderRecord[]>('/reminders', { params: filters });
+      // 注：ApiOptions 只支持 retryCount，GET 过滤条件需拼进 URL（此处原样保留"不带条件"的既有行为）
+      const data = await enhancedApiClient.get<ReminderRecord[]>('/reminders');
       set({ records: data || [], isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });

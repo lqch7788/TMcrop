@@ -41,7 +41,8 @@ interface BackendTechSolution {
   updateTime: string;
   status: string;
   batchStatus: string;
-  statusClass: string;
+  // 2026-10-11：与 TechSolution.statusClass 字面量联合对齐（transformSingle 直接透传该字段）
+  statusClass: 'normal' | 'pending' | 'draft';
   approveStatus: string;
   approvalCode: string;
   approvalDate: string;
@@ -119,30 +120,64 @@ export async function getTechSolutionById(id: string): Promise<TechSolution | un
 }
 
 /**
+ * 2026-10-11：技术方案"写入载荷"（与后端 techSolution 路由读取的字段一致）。
+ *
+ * 说明：读接口返回前端模型 TechSolution（code/title/crop/createDate/status…），
+ * 写接口（POST/PUT）收的是 solutionCode/solutionTitle/cropName/cropCode/plantingMode/stage/scopeNames/…
+ * —— 此前写接口复用了 TechSolution 模型，导致页面按后端字段组装的对象无法通过类型检查。
+ */
+export interface TechSolutionPayload {
+  /** 方案编号（后端兼容 code / solutionCode 两种写法） */
+  code?: string;
+  solutionCode?: string;
+  solutionTitle?: string;
+  cropName?: string;
+  cropCode?: string;
+  plantingMode?: string;
+  stage?: string;
+  /** V9.0：适用范围 scopes（后端落库为 scope_names） */
+  scopeNames?: string[];
+  version?: string;
+  content?: string;
+  remarks?: string;
+  author?: string;
+  authorId?: string;
+  relatedBatchCode?: string;
+  planDetailFileName?: string;
+  priority?: string;
+  batchStatus?: string;
+  /** 其余后端字段原样透传（如 lastSubmitTime / isValid / approvalCode 等） */
+  [key: string]: unknown;
+}
+
+/**
  * 创建技术方案
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
-export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
+export async function addTechSolution(solution: TechSolutionPayload): Promise<TechSolution> {
   // H-6 修复：enhancedApiClient.request 已自动解包 result.data（apiClient.ts:215），
   // 此处返回的就是后端写入的完整记录，无需再访问 .data
-  const result = await enhancedApiClient.post<{ success: boolean; data?: TechSolution }>('/tech-solutions', solution);
+  // 2026-10-11：泛型改为 TechSolution（客户端已解包 data，原先声明 {success,data} 与实际返回不符）
+  const result = await enhancedApiClient.post<TechSolution>('/tech-solutions', solution);
   // 兜底：万一后端未来不返回完整记录，使用前端构造数据
   if (result && typeof result === 'object' && 'id' in result) {
-    return result as TechSolution;
+    return result;
   }
-  return { ...solution, id: (result as any).id } as TechSolution;
+  // 运行时与原先一致（{...入参, id}），仅因入参是写载荷需显式转型
+  return { ...solution, id: (result as any).id } as unknown as TechSolution;
 }
 
 /**
  * 更新技术方案
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
-export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
+export async function updateTechSolution(id: string, updates: Partial<TechSolutionPayload>): Promise<TechSolution | null> {
   // H-6 修复：enhancedApiClient.request 已自动解包 result.data（apiClient.ts:215），
   // 此处返回的就是后端更新后的完整记录
-  const result = await enhancedApiClient.put<{ success: boolean; data?: TechSolution }>(`/tech-solutions/${id}`, updates);
+  // 2026-10-11：泛型改为 TechSolution（客户端已解包 data，原先声明 {success,data} 与实际返回不符）
+  const result = await enhancedApiClient.put<TechSolution>(`/tech-solutions/${id}`, updates);
   if (result && typeof result === 'object' && 'id' in result) {
-    return result as TechSolution;
+    return result;
   }
   return null;
 }

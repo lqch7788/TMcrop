@@ -18,6 +18,8 @@ export interface TaskDetailProps {
     description?: string;
     status: string;
     priority?: string;
+    /** 所需物资（结构化物料明细） */
+    materials?: { name: string; qty: number; unit: string }[];
     dispatchMode?: 'farm' | 'tempTask' | 'smart';
     greenhouseName?: string;
     taskTypeName?: string;

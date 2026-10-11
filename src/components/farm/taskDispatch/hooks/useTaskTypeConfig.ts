@@ -108,12 +108,13 @@ export function useTaskTypeConfig(): UseTaskTypeConfigReturn {
           }
         }
 
-        // 范围验证
-        if (typeof values[field.key] === 'number') {
-          if (field.min !== undefined && values[field.key] < field.min) {
+        // 范围验证（取值先落到局部常量，避免重复索引导致 TS 无法收窄）
+        const currentValue = values[field.key];
+        if (typeof currentValue === 'number') {
+          if (field.min !== undefined && currentValue < field.min) {
             errors[field.key] = `${field.label}不能小于${field.min}`;
           }
-          if (field.max !== undefined && values[field.key] > field.max) {
+          if (field.max !== undefined && currentValue > field.max) {
             errors[field.key] = `${field.label}不能大于${field.max}`;
           }
         }

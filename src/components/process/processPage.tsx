@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ScrollText, Plus, Edit, Trash2 } from 'lucide-react';
+import { ChevronLeft, ScrollText, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -28,7 +28,8 @@ const processData: Process[] = [
 
 export function ProcessPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  // 修复：pageSize 原为硬编码常量，但分页控件调用 setPageSize 改每页条数 → 运行时 ReferenceError
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(processData.length / pageSize);
   const paginatedData = processData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (

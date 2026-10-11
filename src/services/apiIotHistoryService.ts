@@ -43,6 +43,19 @@ export interface IotHistory {
   /** 显示用其他：能耗=power+kW, 气象=windSpeed, 土壤=ec, 温湿度=co2 */
   otherDisplay: string;
   timestamp: string;
+  // 2026-10-11：保留原始数值字段——历史数据页（HistoryData.tsx）按各数据类型明细列展示与导出，
+  // Display 三字段是按类型归一的展示视图，无法还原 16 列原始数据
+  temp?: number | null;
+  humidity?: number | null;
+  co2?: number | null;
+  soilMoisture?: number | null;
+  soilTemp?: number | null;
+  ph?: number | null;
+  ec?: number | null;
+  windSpeed?: number | null;
+  power?: number | null;
+  voltage?: number | null;
+  currentValue?: number | null;
 }
 
 function buildOtherDisplay(raw: IotHistoryRaw): string {
@@ -71,10 +84,23 @@ function normalize(raw: IotHistoryRaw): IotHistory {
     humidityDisplay: isSoil ? raw.soilMoisture ?? null : raw.humidity ?? null,
     otherDisplay: buildOtherDisplay(raw),
     timestamp: raw.timestamp,
+    // 原始数值透传（见接口注释）
+    temp: raw.temp ?? null,
+    humidity: raw.humidity ?? null,
+    co2: raw.co2 ?? null,
+    soilMoisture: raw.soilMoisture ?? null,
+    soilTemp: raw.soilTemp ?? null,
+    ph: raw.ph ?? null,
+    ec: raw.ec ?? null,
+    windSpeed: raw.windSpeed ?? null,
+    power: raw.power ?? null,
+    voltage: raw.voltage ?? null,
+    currentValue: raw.currentValue ?? null,
   };
 }
 
-export async function getIotHistory(dataType?: HistoryDataType): Promise<IotHistory[]> {
+// 2026-10-11：dataType 兼容筛选栏的 '全部' 哨兵值（页面 dataTypeFilter 即为 HistoryDataType | '全部'）
+export async function getIotHistory(dataType?: HistoryDataType | '全部'): Promise<IotHistory[]> {
   const qs = dataType && dataType !== '全部' ? `?dataType=${encodeURIComponent(dataType)}` : '';
   const raws = await enhancedApiClient.get<IotHistoryRaw[]>(`/iot-history${qs}`);
   return raws.map(normalize);

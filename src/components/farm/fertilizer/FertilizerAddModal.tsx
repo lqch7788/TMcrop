@@ -96,7 +96,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
       : { type:'seedling', id:item.id, code:item.seedlingCode||item.code, cropName:displayCrop, area:item.siteName||'育苗区', greenhouseId:item.greenhouseId, greenhouseName:item.greenhouseName||item.greenhouseName };
     if (selectedAreas.some((a) => a.id === area.id)) return;
     setSelectedAreas((prev) => [...prev, area]);
-    if (!form.greenhouseName && area.greenhouseName) setForm((f) => ({ ...f, greenhouseName: area.greenhouseName }));
+    if (!form.greenhouseName && area.greenhouseName) setForm((f) => ({ ...f, greenhouseName: area.greenhouseName ?? '' }));
     setAreaSearch('');
     setShowAreaDropdown(false);
   }, [areaTab, selectedAreas, form.greenhouseName]);
@@ -219,7 +219,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: {
         specId: primaryFert?.specId,
         specBrandName: primaryFert?.brandName,
         specUnitPriceSnapshot: primaryFert?.unitPrice,
-        specBatchNumber: primaryFert?.specBatchNumber || '',
+        // 2026-10-11：批次号改取池项的 batchNumber（FertilizerPoolItem 原先无该字段，读取恒 undefined）
+        specBatchNumber: primaryFert?.batchNumber || '',
       });
       onSaved();
     } catch (err) {

@@ -391,7 +391,7 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
           icon={<Layers className="w-4 h-4 text-white" />}
           label="追踪批次数"
           value={totalBatches}
-          colorScheme="teal"
+          colorScheme="emerald"
           compact
         />
         <KpiCard

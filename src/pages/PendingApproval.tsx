@@ -203,7 +203,7 @@ export default function PendingApproval() {
             <div className="space-y-4">
               <ApprovalDetail approval={detailApproval} />
               {businessLoading && <div className="text-sm text-gray-500">加载业务数据中...</div>}
-              {businessData && (
+              {!!businessData && (
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">关联业务数据</h4>
                   <pre className="text-xs text-gray-600 bg-gray-50 rounded p-3 overflow-auto max-h-48">{JSON.stringify(businessData, null, 2)}</pre>

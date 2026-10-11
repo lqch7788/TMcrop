@@ -1,8 +1,8 @@
 // ApplicationTab 类型定义
 // 用于领料申请单管理的类型约束
 
-import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '../../../types/materialReceiving';
-import type { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
+import type { MaterialItem, MaterialReceivingRecord, SelectedArea } from '../../../../types/materialReceiving';
+import type { Approval, ApprovalType, ApprovalStatus } from '../../../../types/approval';
 
 // ============================================
 // Props 类型
@@ -253,7 +253,7 @@ export interface UseApplicationTabReturn {
   handleEdit: (item: MaterialReceivingRecord) => void;
   handleEditAddMaterial: () => void;
   handleEditRemoveMaterial: (index: number) => void;
-  handleEditMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
+  handleEditMaterialChange: (index: number, field: keyof MaterialItem, value: string | number | boolean) => void;
   handleDeleteClick: (id: number) => void;
   // 2026-09-27 审计方案：删除原因由确认弹窗传入
   confirmDelete: (reason: string) => Promise<void>;
@@ -270,8 +270,10 @@ export interface UseApplicationTabReturn {
   submitVoidApply: () => void;
   handleAddMaterial: () => void;
   handleRemoveMaterial: (index: number) => void;
-  handleMaterialChange: (index: number, field: keyof MaterialItem, value: string | number) => void;
+  handleMaterialChange: (index: number, field: keyof MaterialItem, value: string | number | boolean) => void;
   handleGenerateAddCode: () => void;
   handleSaveAdd: () => void;
   handleCancelAdd: () => void;
+  /** 2026-06-04 V2.1：批次操作后调 loadItems 刷新列表（Store 唯一真相） */
+  loadItems: () => Promise<void>;
 }

@@ -10,7 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { InspectionRecord } from '../types/views';
+import { InspectionRecord } from '../types';
 
 /**
  * 获取所有巡查记录

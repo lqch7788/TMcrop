@@ -288,10 +288,15 @@ export function PlantingTable({
   // 根据showCheckbox动态生成列
   const getColumns = () => {
     const cols: Array<{
-      title: string;
+      // 2026-10-11：放宽为 ReactNode —— 「种植自留种量」列头是带 title 悬停提示的 <span>
+      //   （与 ui/Modal title 同一处理口径：运行时本就正常）
+      title: React.ReactNode;
       dataIndex?: string;
       width?: number;
-      render?: (value: unknown, record: Planting) => React.ReactNode;
+      // 2026-10-11：value 放宽为 any —— 各列 render 按自身列类型声明形参（number/string/PlantingStatus），
+      //   与 unknown 形参不满足逆变。⚠️ 本 getColumns()/columns 目前**无任何消费方**（表格 body 是下方手写 JSX），
+      //   属死代码；确认可删后此处可一并移除（见任务报告）。
+      render?: (value: any, record: Planting) => React.ReactNode;
     }> = [];
 
     // 选择列（编辑/删除/导出/打印模式显示）
@@ -356,13 +361,13 @@ export function PlantingTable({
         title: '作物品种',
         dataIndex: 'cropName',
         width: 100,
-        render: (name: string, record: Planting) => getCropVarietyName(record)
+        render: (_: unknown, record: Planting) => getCropVarietyName(record)
       },
       {
         title: '品种路径',
         dataIndex: 'cropVariety',
         width: 180,
-        render: (value: string, record: Planting) => getVarietyPath(record)
+        render: (_: unknown, record: Planting) => getVarietyPath(record)
       },
       {
         title: '种植区域',
@@ -637,7 +642,9 @@ export function PlantingTable({
                 </Button>
               )}
               {/* v0.3 P0-1：批次时间线跳转按钮（可选，按需显示） */}
-              {onTimeline && record.batchCode && (
+              {/* 2026-10-11：批次号取 productionPlanCode —— Planting 无 batchCode 字段，
+                  批次日落对应「关联生产计划批次号」；原写法恒 undefined → 时间线按钮永不显示 */}
+              {onTimeline && record.productionPlanCode && (
                 <Button
                   variant="ghost"
                   size="icon"

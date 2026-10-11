@@ -26,7 +26,8 @@ declare global {
       }>;
     }) => Promise<{
       createWritable: () => Promise<{
-        write: (data: string) => Promise<void>;
+        // 与真实 File System Access API 对齐：支持 Blob / BufferSource / string
+        write: (data: Blob | BufferSource | string) => Promise<void>;
         close: () => Promise<void>;
       }>;
     }>;
@@ -176,7 +177,8 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   // 执行导出
   const handleDoExport = useCallback(async () => {
     const selectedData = attendanceRecords.filter((a) => selectedRows.includes(a.id));
-    const exportData = selectedData.map((row) => ({
+    // 显式声明索引类型：下方按表头（string）动态取值
+    const exportData = selectedData.map((row): Record<string, string | number | undefined> => ({
       '工号': row.workerId,
       '姓名': row.name,
       '部门': row.dept,

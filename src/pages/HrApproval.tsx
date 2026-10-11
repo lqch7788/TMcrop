@@ -75,7 +75,8 @@ export default function HrApproval() {
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  // 2026-10-11：原为硬编码常量 → 分页控件 onPageSizeChange 调 setPageSize 会 ReferenceError
+  const [pageSize, setPageSize] = useState(10);
 
   // 选中状态（批量操作）
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);

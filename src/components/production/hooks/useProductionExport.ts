@@ -64,7 +64,8 @@ export function useProductionExport({
         '最后修改时间': row.lastModifyDate || '-',
         '当前状态': batchStatusLabels[row.batchStatus || 'draft'] || '-',
         '版本号': 'V1.0',
-        '备注': row.description || '-',
+        // CropBatch 的备注字段为 remarks（表单 description 落库到 remarks）
+        '备注': row.remarks || '-',
       }));
 
       if (exportFormat === 'excel') {

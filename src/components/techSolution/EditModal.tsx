@@ -28,6 +28,8 @@ export interface EditForm {
   stage: string;
   // V9.0: 新增适用范围数组（替代字符串拼接）
   scopes: string[];
+  // 编制人（与 NewPlanForm 一致，第 5 行 Select 可编辑）
+  author: string;
   version: string;
   content: string;
   remarks: string;

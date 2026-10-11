@@ -621,7 +621,8 @@ function InboundRecordsPanel({ seedSourceId, seedCode }: { seedSourceId: string;
                 {audits.map((log) => {
                   const before = log.beforeQuantity;
                   const after = log.afterQuantity ?? 0;
-                  const delta = after - before;
+                  // 2026-10-11：beforeQuantity 可为 null，?? 0 与 JS 中 null 的数值隐式转换等价（原写法触发 TS18047）
+                  const delta = after - (before ?? 0);
                   const sign = delta > 0 ? '+' : '';
                   const qtyChange = `${before ?? '-'} → ${after}${log.unit ? ` ${log.unit}` : ''}（${sign}${delta}）`;
                   const actionLabel = log.sourceType === 'crop_circulation_records'

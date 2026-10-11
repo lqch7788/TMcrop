@@ -9,6 +9,7 @@ import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '@/components/ui';
 import FeedbackInput from '../../../common/FeedbackInput';
 import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 
@@ -35,7 +36,8 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
 
   if (!task) return null;
 
-  const statusConfig = TASK_STATUS_CONFIG[task.status];
+  // TaskStatus 含配置表未收录的历史状态（pending_approval），按 keyof 断言取配置
+  const statusConfig = TASK_STATUS_CONFIG[task.status as keyof typeof TASK_STATUS_CONFIG];
   const isCompleted = task.status === 'completed' || task.status === 'waiting_acceptance';
   const canSubmit = task.status === 'accepted' || task.status === 'in_progress';
 

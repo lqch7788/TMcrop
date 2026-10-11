@@ -16,7 +16,7 @@ export interface DividerProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode
 }
 
-const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
+const Divider = React.forwardRef<HTMLElement, DividerProps>(
   ({
     direction = 'horizontal',
     type = 'solid',
@@ -26,6 +26,15 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
     ...props
   }, ref) => {
     const isHorizontal = direction === 'horizontal'
+
+    // 组件按场景渲染 <hr> 或 <div>，ref 统一按 HTMLElement 收敛后转发
+    const assignRef = React.useCallback((node: HTMLElement | null) => {
+      if (typeof ref === 'function') {
+        ref(node)
+      } else if (ref) {
+        ref.current = node
+      }
+    }, [ref])
 
     const lineClass = cn(
       "flex-1",
@@ -45,7 +54,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
       if (isHorizontal) {
         return (
           <hr
-            ref={ref}
+            ref={assignRef}
             className={cn(
               "w-full border-t my-4",
               type === 'solid' && "border-gray-200",
@@ -60,7 +69,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
 
       return (
         <div
-          ref={ref}
+          ref={assignRef}
           className={cn(
             "h-full border-l mx-4",
             type === 'solid' && "border-gray-200",
@@ -77,7 +86,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
     if (isHorizontal) {
       return (
         <div
-          ref={ref}
+          ref={assignRef}
           className={cn("flex items-center my-4", className)}
           {...props}
         >
@@ -98,7 +107,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
     // 垂直带文字分割线
     return (
       <div
-        ref={ref}
+        ref={assignRef}
         className={cn("inline-flex items-center", className)}
         {...props}
       >

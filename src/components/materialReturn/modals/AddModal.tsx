@@ -60,7 +60,8 @@ export function AddModal({
   const currentUserName = authUser?.realName || authUser?.username || users[0]?.name || '当前用户';
 
   // 申请人 / 操作人：从 useUserStore 派生的真实用户列表（去重）
-  const userNames = useMemo(() => Array.from(new Set(users.map((u) => u.name).filter(Boolean))), [users]);
+  // 2026-10-11：filter 加类型守卫——原 .filter(Boolean) 不改变类型，导致 value 可能是 undefined（SearchableSelect 的 Option 要求 string）
+  const userNames = useMemo(() => Array.from(new Set(users.map((u) => u.name).filter((n): n is string => Boolean(n)))), [users]);
   const warehouseNames = useMemo(() => Array.from(new Set(warehouses.map((w) => (w as any).name || (w as any).warehouseName || '').filter(Boolean))), [warehouses]);
 
   // 仓库位置自动取来源领料单所属出库单的仓库位置（2026-09-28）：

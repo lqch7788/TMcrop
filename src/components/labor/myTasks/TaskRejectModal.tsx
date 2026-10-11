@@ -6,6 +6,8 @@ import { Modal, Button } from '@/components/ui';
 import { Check, X } from 'lucide-react';
 
 import { Label } from '@/components/ui';
+import type { TaskDispatchTask } from './types';
+import type { Task } from '../../../hooks/useTasks';
 
 interface TaskRejectModalProps {
   isOpen: boolean;

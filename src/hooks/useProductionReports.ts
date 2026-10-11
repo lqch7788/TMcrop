@@ -178,7 +178,8 @@ export function useProductionReports() {
     }
 
     return yieldStats.map(s => ({
-      month: s.name || s.month,  // API返回 name="2026-04" 格式
+      // 2026-10-11：YieldStatRow.month 为必填 string，两个来源字段均为可选 → 兜底空串
+      month: s.name || s.month || '',  // API返回 name="2026-04" 格式
       yield: s.value,
       region: 'G001',
       crop: s.name,

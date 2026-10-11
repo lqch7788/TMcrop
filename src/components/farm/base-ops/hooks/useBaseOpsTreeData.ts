@@ -18,6 +18,8 @@ export function useBaseOpsTreeData(
   searchTerm: string,
 ): any[] {
   return useMemo(() => {
-    return buildTreeData(bases, greenhouses, zones, blocks, baseOidFromUrl, searchTerm) as any[];
+    // 2026-10-11：baseOidFromUrl 允许 undefined（URL 无 baseOid 时），buildTreeData 内部按
+    //   `if (currentBaseOid)` 判断，空串与 undefined 行为一致
+    return buildTreeData(bases, greenhouses, zones, blocks, baseOidFromUrl || '', searchTerm) as any[];
   }, [bases, greenhouses, zones, blocks, baseOidFromUrl, searchTerm]);
 }

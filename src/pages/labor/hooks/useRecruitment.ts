@@ -10,6 +10,8 @@ import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
 import { submitRecruitmentApproval } from '@/services/approvalSubmitService';
+// 2026-10-11 类型清理：岗位选项统一使用 Store 侧权威类型（apiBasicDataService.Position）
+import type { Position } from '@/services/apiBasicDataService';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -64,7 +66,7 @@ export interface UseRecruitmentReturn {
 
   // 过滤后的数据
   filteredData: RecruitmentRecord[];
-  availablePositions: { id: string; name: string; departmentOid: string }[];
+  availablePositions: Position[];
 
   // 事件处理
   handleFilterChange: (field: keyof RecruitmentFilters, value: string) => void;
@@ -81,7 +83,7 @@ export interface UseRecruitmentReturn {
 
 export function useRecruitment(
   departments: { oid: string; name: string }[],
-  positions: { id: string; name: string; departmentOid: string }[]
+  positions: Position[]
 ): UseRecruitmentReturn {
   // ============================================================
   // 状态定义

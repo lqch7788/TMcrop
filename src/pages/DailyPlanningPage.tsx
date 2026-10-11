@@ -86,7 +86,7 @@ function TaskProgressTable({ title, description, data }: TaskProgressTableProps)
                     ) : <span className="text-gray-400">-</span>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.actualAssignee}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{escapeHtml(item.delayReason) || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{escapeHtml(item.delayReason ?? '') || '-'}</td>
                 </tr>
               );
             })}

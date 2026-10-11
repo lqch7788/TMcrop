@@ -10,7 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { Worker } from '../types/views';
+import { Worker } from '../types';
 import { Employee, EmployeeFilter, CreateEmployeeParams, UpdateEmployeeParams } from '../types/labor/employee';
 import { TrainingRecord, AssessmentRecord, WorkExperience } from '../types';
 

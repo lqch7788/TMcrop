@@ -138,9 +138,8 @@ export function LaborTable<T>({
               <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                 {selectable && (
                   <TableHead className="w-12 px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
-                    <Checkbox checked={allSelected} ref={(el) => {
-                      if (el) el.checked = allSelected
-                    }} onCheckedChange={handleSelectAll} />
+                    {/* 全选状态由 checked 受控属性驱动（Radix Checkbox 渲染为 button，无原生 checked 属性） */}
+                    <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
                   </TableHead>
                 )}
                 {columns.map((col) => (

@@ -215,7 +215,8 @@ function getInitialInspections(): InspectionRecord[] {
   try {
     const storeRecords = useInspectionDataStore.getState().records;
     if (storeRecords && storeRecords.length > 0) {
-      return storeRecords.map(normalizeInspectionRecord);
+      // 2026-10-11：Store 的 InspectionData 字段全可选，与规范化的 InspectionRecord 形状不同，此处按边界断言传入
+      return storeRecords.map((r) => normalizeInspectionRecord(r as unknown as InspectionRecord));
     }
   } catch { /* store 未初始化或数据为空，返回空数组 */ }
   return [];
@@ -356,9 +357,8 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       isToday(i.checkDate)
     ).length;
     const totalInspections = inspections.length;
-    const abnormalInspections = inspections.filter(i =>
-      i.status === 'critical' || i.status === 'abnormal'
-    ).length;
+    // 2026-10-11：InspectionRecord.status 的取值域为 normal/attention/critical，'abnormal' 分支恒为 false，移除
+    const abnormalInspections = inspections.filter(i => i.status === 'critical').length;
     // 2026-09-21 修复：原先用中文比对英文枚举，两个统计恒为 0
     //   （顶部看板的「待处理问题 / 已处理问题」一直显示 0，而库里实际有 30 条问题）
     const pendingProblems = problems.filter(p =>
@@ -397,12 +397,14 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
 
       // 问题数据：从 useProblemStore 获取
       const storeProblems = useProblemStore.getState().problems;
-      setProblems(storeProblems.length > 0 ? storeProblems : []);
+      // 2026-10-11：ProblemData（API 宽松行，含 snake/camel 双写字段）→ ProblemEntry（前端展示结构）形状不同，
+      //   这里保持既有"原样赋值"行为，仅做边界断言（形状统一需业务侧确认，见修复报告）
+      setProblems(storeProblems.length > 0 ? (storeProblems as unknown as ProblemEntry[]) : []);
 
       // 巡查数据：从 useInspectionDataStore 获取（直接替换，不合并）
       const storeInspections = useInspectionDataStore.getState().records;
-      // 从 Store 获取巡查记录
-      const normalizedInspections = storeInspections.map((r: Record<string, unknown>) => normalizeInspectionRecord(r as InspectionRecord));
+      // 从 Store 获取巡查记录（同样按边界断言传入规范化函数）
+      const normalizedInspections = storeInspections.map((r) => normalizeInspectionRecord(r as unknown as InspectionRecord));
       setInspections(normalizedInspections);
       // 设置 inspections
 
@@ -555,7 +557,8 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         return false;
       }
       // 区域筛选
-      if (filters.area !== 'all' && problem.greehouseName !== filters.area) {
+      // 2026-10-11：字段名拼写修正（greehouseName 全文仅此一处，原先恒为 undefined → 区域筛选一律过滤掉全部问题）
+      if (filters.area !== 'all' && problem.greenhouseName !== filters.area) {
         return false;
       }
       // 搜索筛选
@@ -633,7 +636,8 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         targetCode: log.taskCode || log.code || '',
         targetTitle: log.tasks || '',
         content: `${log.worker || '未知'} 完成了任务【${log.tasks || ''}】`,
-        extra: log,
+        // 2026-10-11：extra 目标类型为 Record<string, unknown>，WorkLog 是 interface（无隐式索引签名）→ 边界断言
+        extra: log as unknown as Record<string, unknown>,
       });
     });
 
@@ -671,7 +675,8 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         targetCode: log.taskCode || log.code || '',
         targetTitle: log.tasks || '',
         content: `${log.worker || '未知'} 完成了任务【${log.tasks || ''}】`,
-        extra: log,
+        // 2026-10-11：extra 目标类型为 Record<string, unknown>，WorkLog 是 interface（无隐式索引签名）→ 边界断言
+        extra: log as unknown as Record<string, unknown>,
       });
     });
 

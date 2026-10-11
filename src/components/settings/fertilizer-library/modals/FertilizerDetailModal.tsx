@@ -279,7 +279,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
     const isFert = r.source === 'fertilization';
     const sourceLabel = isFert ? '施肥记录' : '防治记录';
     const confirmMsg = `确定要删除${sourceLabel}「${r.recordCode}」吗？\n\n这将从「${r.cropName} - ${r.greenhouseName || '-'}」移除 ${Number(r.totalDosage).toFixed(2)} ${record?.stockUnit || 'kg'} 肥料用量，并自动恢复库存。`;
-    const ok = await showConfirm(confirmMsg, { title: '确认删除', confirmText: '删除', cancelText: '取消' });
+    const ok = await showConfirm(confirmMsg);
     if (!ok) return;
     try {
       await deleteUsageRecord(r.recordId, r.source);

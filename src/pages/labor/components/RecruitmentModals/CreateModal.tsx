@@ -8,6 +8,8 @@ import { RecruitmentFormData, EMPLOYMENT_TYPE_OPTIONS, PRIORITY_OPTIONS } from '
 import { Button } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { Label } from '@/components/ui';
+// 2026-10-11 类型清理：岗位选项统一使用 Store 侧权威类型（apiBasicDataService.Position）
+import type { Position } from '@/services/apiBasicDataService';
 
 export interface CreateModalProps {
   isOpen: boolean;
@@ -18,8 +20,8 @@ export interface CreateModalProps {
   onHeadcountChange: (value: number) => void;
   onSubmit: () => void;
   departments: { oid: string; name: string }[];
-  positions: { id: string; name: string; departmentOid: string }[];
-  availablePositions: { id: string; name: string; departmentOid: string }[];
+  positions: Position[];
+  availablePositions: Position[];
 }
 
 /**

@@ -61,16 +61,10 @@ export interface DailyWorkOrderReport {
  * 判断任务是否超期
  */
 function isTaskOverdue(task: Task | TempTask, targetDate: string): boolean {
-  if ('status' in task) {
-    // 已完成、已取消、已放弃的任务不算超期
-    if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
-      return false;
-    }
-  } else {
-    // TempTask
-    if (['completed', 'cancelled'].includes(task.status)) {
-      return false;
-    }
+  // 2026-10-11：status 在 Task/TempTask 上均存在，原 `'status' in task` 的 else 分支恒不可达（收窄为 never），
+  //   运行时同样恒走 if 分支，故合并为一条判断
+  if (['completed', 'cancelled', 'abandoned', 'failed'].includes(task.status)) {
+    return false;
   }
 
   if (!task.dueDate) return false;
@@ -131,14 +125,16 @@ function isCompletedOnTime(task: Task | TempTask, targetDate: string): boolean {
  * 获取任务名称
  */
 function getTaskName(task: Task | TempTask): string {
-  return 'title' in task ? task.title : task.title;
+  // 2026-10-11：title 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
+  return task.title;
 }
 
 /**
  * 获取执行人名称
  */
 function getAssigneeName(task: Task | TempTask): string {
-  return 'assigneeName' in task ? task.assigneeName : task.assigneeName;
+  // 2026-10-11：assigneeName 两个类型都有，原三元两分支相同（且 else 分支收窄为 never），直接返回
+  return task.assigneeName;
 }
 
 // ============================================
@@ -601,10 +597,5 @@ export function useDailyWorkOrderAnalysis() {
     generateAIRecommendations,
   };
 }
-
-// 导出类型
-export type {
-  TaskProgressAnalysis,
-  WorkerLoadAnalysis,
-  DailyWorkOrderReport,
-};
+// 2026-10-11：文件顶部的 TaskProgressAnalysis / WorkerLoadAnalysis / DailyWorkOrderReport 已是具名导出，
+// 原末尾 `export type { ... }`（无 from）构成重复导出（TS2484），已移除

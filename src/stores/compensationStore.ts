@@ -30,7 +30,8 @@ export interface SalaryRecord {
   bonus: number;
   deduction: number;
   netSalary: number;
-  status: 'pending' | 'calculated' | 'approved' | 'paid';
+  // 2026-10-11：补 'cancelled'（getTotalPayroll 已有 `status !== 'cancelled'` 过滤，联合缺失导致比较报错）
+  status: 'pending' | 'calculated' | 'approved' | 'paid' | 'cancelled';
   calculatedAt?: string;
   approvedAt?: string;
   paidAt?: string;
@@ -149,9 +150,6 @@ interface CompensationState {
 
   // Actions - 筛选
   setFilters: (filters: Partial<CompensationFilters>) => void;
-
-  // Actions - 同步
-  syncPendingChanges: () => Promise<void>;
 }
 
 // ==================== Store 实现 ====================

@@ -90,7 +90,8 @@ function normalize(db: Record<string, unknown>): SalaryAdjustmentData {
   result.status = result.status || 'pending';
   result.statusLabel = result.statusLabel || result.status_label || '待审批';
   result.createTime = result.createTime || result.create_time || new Date().toISOString();
-  return result as SalaryAdjustmentData;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return result as unknown as SalaryAdjustmentData;
 }
 
 /** 前端数据 → 后端数据 */

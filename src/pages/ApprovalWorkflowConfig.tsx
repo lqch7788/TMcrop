@@ -95,6 +95,9 @@ export default function ApprovalWorkflowConfig() {
   const addNode = () => {
     const newNode: ApprovalNode = {
       id: `n${Date.now()}`,
+      // nodeName / approverType 为类型必填字段；本页表单编辑的是旧字段 name / approverRole
+      nodeName: '',
+      approverType: 'role',
       name: '',
       approverRole: '',
       timeoutHours: 24,

@@ -304,7 +304,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
 
   // 2026-06-19: 采收人员切换
   const toggleHarvester = (u: UserLite) => {
-    const name = u.realName || u.real_name || u.username
+    const name = u.realName || u.real_name || u.username || ''
     const id = u.oid || u.id || `H${harvesterNames.length}`
     if (harvesterNames.includes(name)) {
       setHarvesterNames((prev) => prev.filter((n) => n !== name))
@@ -409,11 +409,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           greenhouseNames: [],
           harvesterIds,
           harvesterNames,
-          operator: operator || currentUser?.realName || 'system',
           remarks: notes || undefined,
           unit,
           warehouseId,
-          warehouseName: warehouse?.name || warehouse?.warehouseName,
+          warehouseName: warehouse?.name,
           products: products.map((p) => ({
             ...p,
             harvestQuantity: Number(p.harvestQuantity) || 0,
@@ -438,7 +437,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
             notes,
             createBy: currentUser?.realName || 'system',
             operatorName: currentUser?.realName || 'system',
-            seedForm: sourceForm,
+            // sourceForm 由固定形态下拉（SEED_FORM_OPTIONS / 硬编码 SelectItem）写入，
+            // 取值域与 seedForm 一致；此处仅做类型断言，运行时值不变
+            seedForm: sourceForm as AddHarvestRecordInput['seedForm'],
           })
           resetForm()
           onSuccess?.()
@@ -471,7 +472,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         subType: undefined,  // 2026-06-29: 前端不再传 subType（后端基于 seedForm 派生）
         generation: destination === 'planting_self_kept' ? (generation || '') : '',  // 2026-07-18: 种源合并键 — 2026-08-16 后端 Zod schema 用 z.string().optional()，不接 null
         forceNew: destination === 'planting_self_kept' ? forceNew : undefined,  // 2026-07-18: 用户选择强制新建
-        seedForm: (requiresSelfKept || destination === 'harvest') ? sourceForm : undefined,  // 2026-07-02: harvest 分支也写形态
+        // 2026-07-02: harvest 分支也写形态（该分支已在 376 行 return，此处只需判 requiresSelfKept）
+        seedForm: requiresSelfKept ? (sourceForm as AddHarvestRecordInput['seedForm']) : undefined,
         warehouseId: requiresWarehouse ? warehouseId : undefined,
         warehouseName: requiresWarehouse
           ? activeWarehouses.find((w: WarehouseLite) => w.id === warehouseId || w.oid === warehouseId)?.name
@@ -731,15 +733,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 <Label>数量 *</Label>
                 <div className="flex gap-1">
                   <NumberInput
-                    style={{ width: '60%' }}
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
-                    min={0}
                     className={deepInputClass}
                     placeholder="0"
                   />
                   <Select
-                    style={{ width: '40%' }}
                     value={unit}
                     onValueChange={(v) => {
                       setUnit(v)
@@ -869,7 +868,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     </SelectTrigger>
                     <SelectContent>
                       {activeWarehouses.map((w: WarehouseLite) => (
-                        <SelectItem key={w.id || w.oid} value={w.id || w.oid}>
+                        <SelectItem key={w.id || w.oid || ''} value={w.id || w.oid || ''}>
                           {w.name || w.warehouseName || w.id}
                         </SelectItem>
                       ))}
@@ -921,7 +920,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                         <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
                       ) : (
                         users.map((u: UserLite) => {
-                          const name = u.realName || u.real_name || u.username
+                          const name = u.realName || u.real_name || u.username || ''
                           const checked = harvesterNames.includes(name)
                           return (
                             <label key={u.oid || u.id} className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer">
@@ -944,14 +943,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 <Label>数量 *</Label>
                 <div className="flex gap-1">
                   <NumberInput
-                    style={{ width: '65%' }}
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
-                    min={0}
                     className={deepInputClass}
                     placeholder="0"
                   />
-                  <Select style={{ width: '35%' }} value={unit} onValueChange={setUnit}>
+                  <Select value={unit} onValueChange={setUnit}>
                     <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="单位" />
                     </SelectTrigger>
@@ -1021,14 +1018,12 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                         <div className="text-xs text-gray-500 mb-1">数量 *</div>
                         <div className="flex gap-1">
                           <NumberInput
-                            style={{ width: '65%' }}
                             value={p.harvestQuantity}
                             onChange={(v) => updateProduct(idx, { harvestQuantity: Number(v) || 0 })}
-                            min={0}
                             className={deepInputClass}
                             placeholder="0"
                           />
-                          <Select style={{ width: '35%' }} value={p.unit} onValueChange={(v) => updateProduct(idx, { unit: v })}>
+                          <Select value={p.unit} onValueChange={(v) => updateProduct(idx, { unit: v })}>
                             <SelectTrigger className={deepInputClass}>
                               <SelectValue placeholder="单位" />
                             </SelectTrigger>

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Task } from '../../../hooks/useTasks';
+import { Task } from '../../../../hooks/useTasks';
 import {
   format,
   isSameDay,
@@ -122,14 +122,14 @@ function DayView({
                   <div>
                     <h4 className="font-medium text-gray-900">{task.title}</h4>
                     <p className="text-sm text-gray-500 mt-1">
-                      {task.greenhouseName || task.fieldName || ''} · {task.assigneeName || '未分配'}
+                      {task.greenhouseName || ''} · {task.assigneeName || '未分配'}
                     </p>
                   </div>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-xs ${
                   statusColors[task.status]?.bg || 'bg-gray-100'
                 } ${statusColors[task.status]?.text || 'text-gray-600'}`}>
-                  {task.statusName || task.status}
+                  {task.status}
                 </span>
               </div>
               <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">

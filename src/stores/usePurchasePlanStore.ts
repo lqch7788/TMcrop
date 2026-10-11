@@ -14,11 +14,22 @@ export interface PurchasePlanStatusUpdate {
   updatedAt: string;
 }
 
-/** 创建采购计划入参（前端侧，不含 id/timestamps） */
-export type CreatePurchasePlanInput = Omit<PurchasePlan, 'id' | 'createdAt' | 'updatedAt'> & {
+/**
+ * 创建采购计划入参（前端侧，不含 id/timestamps）
+ * 2026-10-11：purchaseTypeName / priorityText / statusText / itemCount 是"展示/冗余派生字段"，
+ *   表单侧不提供（由后端或列表渲染补齐），故在创建入参中改为可选；实体 PurchasePlan 仍保持必填
+ */
+export type CreatePurchasePlanInput = Omit<
+  PurchasePlan,
+  'id' | 'createdAt' | 'updatedAt' | 'purchaseTypeName' | 'priorityText' | 'statusText' | 'itemCount'
+> & {
   id?: string;
   createdAt?: string;
   updatedAt?: string;
+  purchaseTypeName?: string;
+  priorityText?: string;
+  statusText?: string;
+  itemCount?: number;
 };
 
 /** 更新采购计划入参（部分字段） */

@@ -23,7 +23,8 @@ let dialogType: 'alert' | 'confirm' = 'alert';
 // React setState 注册
 let setDialogState: ((state: DialogState) => void) | null = null;
 
-interface DialogState {
+// 2026-10-11：导出类型——src/components/common/GlobalDialog.tsx 需要引用它
+export interface DialogState {
   visible: boolean;
   type: 'alert' | 'confirm';
   message: string;

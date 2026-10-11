@@ -333,8 +333,9 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
   }, []);
 
   // 辅助方法：获取类型文本
+  // 2026-10-11：此处只覆盖常用 8 种类型，其余走末尾 `|| type` 兜底，故标注为 Partial
   const getTypeText = useCallback((type: ApprovalType): string => {
-    const typeMap: Record<ApprovalType, string> = {
+    const typeMap: Partial<Record<ApprovalType, string>> = {
       [ApprovalType.MATERIAL_REQUEST]: '领料单',
       [ApprovalType.PURCHASE_REQUEST]: '采购申请',
       [ApprovalType.PRODUCTION_PLAN]: '生产计划',

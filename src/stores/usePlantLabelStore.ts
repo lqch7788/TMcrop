@@ -169,7 +169,8 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   loadMarks: async () => {
     set({ marksLoading: true });
     try {
-      const res = await enhancedApiClient.get('/plant-labels/marks/all');
+      // 2026-10-11：与同文件 loadLabels 一致，用 any 承接"可能已解包/可能仍带 {success,data} 包裹"的响应
+      const res = await enhancedApiClient.get<any>('/plant-labels/marks/all');
       if (res.success && res.data?.length > 0) {
         set({ marks: res.data, marksLoading: false });
       } else {
@@ -188,7 +189,7 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
       const { useAuthStore } = await import('@/stores/useAuthStore')
       const currentUser = useAuthStore.getState().currentUser
       const operatorName = currentUser?.realName || currentUser?.username || 'system'
-      const res = await enhancedApiClient.post(`/plant-labels/${labelId}/resumes`, {
+      const res = await enhancedApiClient.post<any>(`/plant-labels/${labelId}/resumes`, {
         operation_type: data.operationType,
         to_area_name: data.targetArea,
         operation_date: data.operationDate,
@@ -212,7 +213,7 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** 分配标记给标签 */
   submitMark: async (markId, labelIds) => {
     try {
-      const res = await enhancedApiClient.post('/plant-labels/assign', {
+      const res = await enhancedApiClient.post<any>('/plant-labels/assign', {
         mark_id: markId,
         label_ids: labelIds,
       });
@@ -234,7 +235,13 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
       // 2026-06-28 修复：enhancedApiClient.post 已自动解包，res 是后端的 data 字段
       // 成功响应：{ inserted: N, insertedIds: [...] } — 用 inserted 字段判断成功
       // 失败响应：apiClient 会自动 throw，所以走 catch
-      const res = await enhancedApiClient.post<{ inserted?: number; insertedIds?: number[] }>(
+      // 2026-10-11：响应还带 skipped/skippedLabelNumbers（调用方按 any 读取），此处按实际返回标注
+      const res = await enhancedApiClient.post<{
+        inserted: number;
+        insertedIds: number[];
+        skipped?: number;
+        skippedLabelNumbers?: string[];
+      }>(
         '/plant-labels/batch-create',
         {
           labels: labels.map(l => ({

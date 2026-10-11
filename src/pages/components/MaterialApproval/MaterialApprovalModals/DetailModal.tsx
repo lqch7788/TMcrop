@@ -1,6 +1,7 @@
 // DetailModal 组件
 // 库存审批详情弹窗（页面原「物料审批」，2026-10-10 更名）
 import { Approval, ApprovalStatus } from '@/types/approval';
+import type { MaterialApprovalTab } from '../../../types/materialApproval.types';
 import { Check, CheckCircle, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -12,8 +13,8 @@ interface DetailModalProps {
   show: boolean;
   item: Approval | null;
 
-  // Tab类型
-  activeTab: 'material' | 'return' | 'purchase';
+  // Tab类型（与页面 TabKey 对齐，弹窗内仅 material/return/purchase 有专属展示，其余回落为领料单文案）
+  activeTab: MaterialApprovalTab;
 
   // 回调函数
   onClose: () => void;
@@ -114,7 +115,7 @@ export function DetailModal({
               <div>
                 <Label className="text-gray-500">物料种类</Label>
                 <p className="font-semibold text-gray-900">
-                  {item.materials?.length > 0 ? `${item.materials.length}种` : '-'}
+                  {item.materials && item.materials.length > 0 ? `${item.materials.length}种` : '-'}
                 </p>
               </div>
               <div>

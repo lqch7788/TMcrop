@@ -494,7 +494,8 @@ export const useOvertimeStore = create<OvertimeState>()(
         try {
           await enhancedApiClient.put(
             `/overtime/${id}`,
-            denormalize({ ...updates, approver: approverName || '' }),
+            // 2026-10-11：approver 不属于 OvertimeRecord，改为在反规范化结果上附加（payload 与原实现一致）
+            { ...denormalize(updates), approver: approverName || '' },
             {}
           );
         } catch (error) {

@@ -249,7 +249,7 @@ export default function UserAuthorityConfig() {
                       <div className="text-xs text-gray-400 font-mono">{proc.aid}</div>
                     </td>
                     {ACTION_LIST.map((act) => {
-                      const { val, source } = getAuthValue(proc.oid, act.code);
+                      const { val, source } = getAuthValue(proc.oid ?? '', act.code);
                       // 计算当前值和颜色
                       let currentValue = 'inherit';
                       let textColor = 'text-blue-600';
@@ -273,9 +273,9 @@ export default function UserAuthorityConfig() {
                             value={currentValue}
                             onChange={(e) => {
                               const v = e.target.value;
-                              if (v === 'inherit') setAuthValue(proc.oid, act.code, null);
-                              else if (v === 'allow') setAuthValue(proc.oid, act.code, 1);
-                              else if (v === 'deny') setAuthValue(proc.oid, act.code, 0);
+                              if (v === 'inherit') setAuthValue(proc.oid ?? '', act.code, null);
+                              else if (v === 'allow') setAuthValue(proc.oid ?? '', act.code, 1);
+                              else if (v === 'deny') setAuthValue(proc.oid ?? '', act.code, 0);
                             }}
                             className={`h-7 px-1 text-xs border border-gray-300 rounded cursor-pointer ${bgStyle} ${textColor} font-medium`}
                           >

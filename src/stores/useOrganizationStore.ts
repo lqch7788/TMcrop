@@ -128,7 +128,8 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   loadRoles: async (orgOid) => {
     try {
       set({ loading: true, error: null });
-      const data = await authorityService.getRoles(orgOid);
+      // getRoles 接收筛选对象而非字符串（orgOid 为空时传 undefined，行为与原来一致）
+      const data = await authorityService.getRoles(orgOid ? { orgOid } : undefined);
       set({ roles: data });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '加载角色失败' });

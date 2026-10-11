@@ -43,6 +43,11 @@ export interface InspectionData {
   feedbackUsers?: string[];
   cropName?: string;
   cropStatus?: string;
+  // 2026-10-11：后端 inspection 路由返回 batchId/batchCode（batch_id/batch_code 列），类型此前缺失
+  batchId?: string;
+  batchCode?: string;
+  /** 2026-10-11：问题处理状态（后端 inspection 路由 issueStatus: db.issueStatus || db.issue_status），useTasks 任务态推导依赖 */
+  issueStatus?: string;
   weather?: string;
   temperature?: number;
   humidity?: number;
@@ -83,7 +88,8 @@ function normalize(db: Record<string, unknown>): InspectionData {
     try { r.images = JSON.parse(r.images as string); } catch { r.images = []; }
   }
   if (!Array.isArray(r.images)) r.images = [];
-  return r as InspectionData;
+  // 动态组装的后端行数据 → 前端结构（类型系统无法静态验证）
+  return r as unknown as InspectionData;
 }
 
 // ========== Store ==========
