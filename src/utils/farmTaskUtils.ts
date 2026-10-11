@@ -23,6 +23,11 @@ const TYPE_LABEL_MAP: Record<string, string> = {
   soil_management: '土壤管理',
   seedling: '育苗',
   transplanting: '移栽',
+  // 2026-10-11：补临时任务类型（CreateTaskModal 用它拼 type_name 落库；
+  //   缺失会导致 type_name/title 出现英文 code，如"除草,farm_repair,cleaning"）
+  farm_repair: '农场维修',
+  equipment_repair: '设备维修',
+  cleaning: '清洁卫生',
 };
 
 /** 根据任务类型编码返回中文标签 */

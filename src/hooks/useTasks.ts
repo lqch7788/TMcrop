@@ -31,6 +31,20 @@ import {
   TASK_ACTION_CONFIG,
   STATUS_TRANSITIONS,
 } from '../config/taskConfig';
+import { TEMP_TASK_TYPES } from '../types';
+import { getOperationTypeName } from '../types/farm/common';
+
+/**
+ * 2026-10-11：任务类型 code → 中文标签（临时任务字典优先，回退农事操作总字典）
+ * 背景：临时任务转换层原把英文 code 直接写入 typeName 且缺 types 数组，
+ *       导致"全部任务"tab 类型列空白、"临时任务"tab 类型列显示 equipment_repair 等英文
+ */
+function resolveTypeLabel(type: string): string {
+  if (!type) return '其他';
+  const tempType = (TEMP_TASK_TYPES as ReadonlyArray<{ value: string; label: string }>).find(t => t.value === type);
+  if (tempType) return tempType.label;
+  return getOperationTypeName(type);
+}
 
 // ============================================
 // P1-2：统一状态机校验（替代 24 个散落的 if status !== 'x' return）
@@ -181,7 +195,7 @@ function convertStoreFarmTaskToTask(t: StoreTaskCompat): Task {
     taskCode: t.taskCode || t.id || '',
     title: t.title || '',
     type: t.type || 'other',
-    typeName: t.typeName || t.type || '其他',
+    typeName: t.typeName || resolveTypeLabel(t.type || ''),
     status: (t.status as TaskStatus) || 'pending',
     priority: (t.priority as 'urgent' | 'high' | 'normal') || 'normal',
     progress: t.progress || 0,
@@ -254,7 +268,9 @@ function convertStoreTempTaskToTask(t: TempTaskDataCompat): Task {
     taskCode: id,
     title,
     type: type || 'other',
-    typeName: type || '其他',
+    // 2026-10-11：typeName 由英文 code 改为中文标签；补 types 数组（原缺失导致"全部任务"tab 类型列空白）
+    typeName: resolveTypeLabel(type),
+    types: type ? [type] : [],
     status: status as TaskStatus,
     priority: (t.priority as 'urgent' | 'high' | 'normal') || (t.urgency as 'urgent' | 'high' | 'normal') || 'normal',
     progress: t.progress || 0,

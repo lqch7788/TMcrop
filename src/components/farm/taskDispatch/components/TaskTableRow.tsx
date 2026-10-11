@@ -5,7 +5,7 @@
 import React from 'react';
 import { Bell, CheckCircle, FileText, Play, Send, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
+import { STATUS_MAP, PRIORITY_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
 import { OvertimeBadge } from './OvertimeBadge';
 import { Input } from '@/components/ui';
 import { TableRow, TableCell } from '@/components/ui';
@@ -149,10 +149,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         </div>
       </TableCell>
 
-      {/* 优先级 */}
+      {/* 优先级（2026-10-11：改用统一 PRIORITY_MAP，补 medium→"中"/low→"低"，原三元把 medium 归为"普通"） */}
       <TableCell className="px-3 py-3 whitespace-nowrap">
-        <span className={`text-xs font-medium ${task.priority === 'urgent' ? 'text-red-500' : task.priority === 'high' ? 'text-orange-500' : 'text-gray-500'}`}>
-          {task.priority === 'urgent' ? '紧急' : task.priority === 'high' ? '高' : '普通'}
+        <span className={`text-xs font-medium ${PRIORITY_MAP[task.priority]?.color || 'text-gray-500'}`}>
+          {PRIORITY_MAP[task.priority]?.label || task.priority}
         </span>
       </TableCell>
 

@@ -1,16 +1,18 @@
 // 今日任务表格组件
+// 2026-10-11：Task 接口与 farmTaskStore.Task 真实字段对齐（原 workDuration 字段不存在于 store，
+//             计划时长改用 estimatedHours，修复 props 类型不兼容与"undefined小时"显示）
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 interface Task {
   id: string;
   title: string;
-  greenhouseName: string;
+  greenhouseName?: string;
   priority: string;
   status: string;
   assigneeName: string;
-  workDuration: number;
-  dueDate: string;
+  estimatedHours?: number;
+  dueDate?: string;
 }
 
 interface TodayTasksTableProps {
@@ -18,11 +20,14 @@ interface TodayTasksTableProps {
 }
 
 // 优先级颜色映射
+// 2026-10-11：补 medium/low（DB 实际存在 medium，缺失时该列直接显示英文 "medium"）
 function getPriorityColor(priority: string): string {
   switch (priority) {
     case 'urgent': return 'text-red-600 bg-red-50';
     case 'high': return 'text-orange-600 bg-orange-50';
+    case 'medium': return 'text-amber-600 bg-amber-50';
     case 'normal': return 'text-blue-600 bg-blue-50';
+    case 'low': return 'text-green-600 bg-green-50';
     default: return 'text-gray-600 bg-gray-50';
   }
 }
@@ -62,11 +67,14 @@ function getStatusText(status: string): string {
 }
 
 // 优先级文本映射（后端值 → 中文）
+// 2026-10-11：补 medium/low
 function getPriorityText(priority: string): string {
   switch (priority) {
     case 'urgent': return '紧急';
     case 'high': return '高';
+    case 'medium': return '中';
     case 'normal': return '普通';
+    case 'low': return '低';
     default: return priority;
   }
 }
@@ -100,7 +108,7 @@ export function TodayTasksTable({ tasks }: TodayTasksTableProps) {
                 <td className="py-3 px-4 whitespace-nowrap">
                   <span className="text-sm font-medium text-gray-900">{task.title}</span>
                 </td>
-                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.greenhouseName}</td>
+                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.greenhouseName || '-'}</td>
                 <td className="py-3 px-4 whitespace-nowrap">
                   <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(task.priority)}`}>
                     {getPriorityText(task.priority)}
@@ -111,9 +119,9 @@ export function TodayTasksTable({ tasks }: TodayTasksTableProps) {
                     {getStatusText(task.status)}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.assigneeName}</td>
-                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.workDuration}小时</td>
-                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.dueDate}</td>
+                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.assigneeName || '-'}</td>
+                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.estimatedHours != null ? `${task.estimatedHours}小时` : '-'}</td>
+                <td className="py-3 px-4 text-sm text-gray-600 whitespace-nowrap">{task.dueDate || '-'}</td>
               </tr>
             ))}
           </tbody>
