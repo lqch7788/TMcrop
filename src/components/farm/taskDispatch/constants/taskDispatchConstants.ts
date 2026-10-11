@@ -6,6 +6,7 @@
 import {
   Leaf, Droplets, Scissors, Bug, Edit, Trees, ShoppingBasket,
 } from 'lucide-react';
+import { getOperationTypeName } from '../../../../types/farm/common';
 
 // ========== 任务状态映射（从 farmMockData 迁出，内联定义） ==========
 const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
@@ -25,7 +26,10 @@ const TASK_STATUS_MAP: Record<string, { label: string; color: string; bg: string
 const TASK_PRIORITY_MAP: Record<string, { label: string; color: string }> = {
   urgent: { label: '紧急', color: 'text-red-500' },
   high: { label: '高', color: 'text-orange-500' },
+  // 2026-10-11：补 medium/low（DB 实际存在 medium，缺失会显示成"普通"或英文）
+  medium: { label: '中', color: 'text-yellow-500' },
   normal: { label: '普通', color: 'text-gray-500' },
+  low: { label: '低', color: 'text-green-500' },
 };
 
 // ========== 任务类型定义 ==========
@@ -91,10 +95,13 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 /**
  * 根据任务类型值获取类型标签
+ * 2026-10-11：一级字典未命中时回退农事操作类型总字典（含 farm_repair/equipment_repair/cleaning/seedling），
+ * 避免列表"任务类型"列显示英文 code
  */
 export const getTypeLabel = (typeValue: string): string => {
   const found = TASK_TYPES.find(t => t.value === typeValue);
-  return found?.label || typeValue;
+  if (found) return found.label;
+  return getOperationTypeName(typeValue);
 };
 
 /**

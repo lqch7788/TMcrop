@@ -38,6 +38,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 
 // 导入 Task 类型（从 useTasks）
 import { Task } from '../../../hooks/useTasks';
+import { useUserStore } from '../../../stores/useUserStore';
 
 // 任务类型定义
 const taskTypes = [
@@ -122,6 +123,18 @@ export function MyTasksPage() {
   const currentUserName = currentUser?.realName || currentUser?.username || '未知用户';
   const operatorId = currentUser?.oid || '';
 
+  // 用户列表：用于把巡查"反馈人员"列存用户 OID 的值解析为姓名显示（2026-10-11）
+  const users = useUserStore((s) => s.users);
+  const loadUsers = useUserStore((s) => s.loadUsers);
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+  const userDisplayName = (v: string) => {
+    // 存量数据两种写法都有：users.id（USER_ID_xxx）与 oid（user-admin），双字段匹配
+    const u = users.find((x) => x.id === v || x.oid === v);
+    return u ? (u.name || (u as any).realName || u.username || v) : v;
+  };
+
   // 使用统一任务数据（优先使用 unifiedTasks，因为它有正确的持久化）
   // 降级：unifiedTasks 为空时使用 Store 数据
   const myTasks: any[] = unifiedTasks.length > 0
@@ -191,7 +204,13 @@ export function MyTasksPage() {
         issueText: (t as TaskWithExtras).issueText || '',
         photos: (t as TaskWithExtras).photos || [],
         feedbackStatus: (t as TaskWithExtras).feedbackStatus || t.status,
-        feedbackUsers: (t as TaskWithExtras).feedbackUsers || [],
+        // 2026-10-11：反馈人员存的是用户 OID（如 user-admin）时解析为姓名显示；
+        //   兼容 string[]（实际数据）与 {id,name}[]（类型定义）两种形态
+        feedbackUsers: (() => {
+          const fq = (t as any).feedbackUsers;
+          if (!Array.isArray(fq)) return [];
+          return fq.map((v: any) => typeof v === 'string' ? userDisplayName(v) : (v?.name || v?.id || '')).filter(Boolean);
+        })(),
         processProgress: (t as TaskWithExtras).processProgress || t.progress || 0,
         inspectorId: (t as TaskWithExtras).inspectorId,
         inspectorName: (t as TaskWithExtras).inspectorName || (t as TaskWithExtras).assignerName || '',

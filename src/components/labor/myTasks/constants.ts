@@ -3,6 +3,8 @@
  */
 
 import { TaskTypeConfig, StatusConfig, PriorityConfig } from './types';
+import { TEMP_TASK_TYPES } from '../../../types';
+import { getOperationTypeName } from '../../../types/farm/common';
 
 // 任务类型定义
 export const TASK_TYPES: TaskTypeConfig[] = [
@@ -32,7 +34,10 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
 };
 
 // 优先级映射
+// 2026-10-11：补 critical（temp_tasks.priority 实际存在该值，缺失会导致"全部任务"表优先级列显示英文；
+//   中文口径与 TEMP_TASK_URGENCY_CONFIG 的 critical='非常紧急' 保持一致）
 export const PRIORITY_MAP: Record<string, PriorityConfig> = {
+  critical: { color: 'text-red-600', label: '非常紧急' },
   urgent: { color: 'text-red-500', label: '紧急' },
   high: { color: 'text-orange-500', label: '高' },
   medium: { color: 'text-yellow-500', label: '中' },
@@ -50,10 +55,15 @@ export const getTypeColor = (type: string): string => {
 
 /**
  * 获取任务类型标签
+ * 2026-10-11：多级回退 —— TaskType(9) → 临时任务类型字典（staff_dispatch 等仅此有）
+ * → 农事操作总字典（farm_repair/cleaning/seedling 等），避免"任务类型"列显示英文 code
  */
 export const getTypeLabel = (type: string): string => {
   const taskType = TASK_TYPES.find(t => t.value === type);
-  return taskType?.label || type;
+  if (taskType) return taskType.label;
+  const tempType = (TEMP_TASK_TYPES as ReadonlyArray<{ value: string; label: string }>).find(t => t.value === type);
+  if (tempType) return tempType.label;
+  return getOperationTypeName(type);
 };
 
 /**
